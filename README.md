@@ -7,6 +7,21 @@
 ```text
 Click/
 ├─ Frontend/
+│  ├─ app/
+│  │  └─ src/
+│  │     ├─ main/
+│  │     │  ├─ java/com/click/
+│  │     │  │  ├─ core/          # 공통 설정, 권한, 오류 처리
+│  │     │  │  ├─ data/          # API, DTO, Repository 구현
+│  │     │  │  ├─ domain/        # 모델, Repository 계약, Use Case
+│  │     │  │  ├─ service/       # Accessibility, Overlay, STT·TTS 서비스
+│  │     │  │  ├─ ui/            # 앱 내부 화면과 Overlay UI
+│  │     │  │  └─ util/          # 공통 유틸리티
+│  │     │  ├─ res/               # layout, drawable, values 등 Android 리소스
+│  │     │  └─ assets/            # 로컬 정적 자산
+│  │     ├─ test/                 # 단위 테스트
+│  │     └─ androidTest/          # Android 통합·UI 테스트
+│  └─ docs/                       # Frontend 구현 상세 문서
 ├─ Backend/
 │  ├─ app/
 │  │  ├─ api/v1/endpoints/  # 클라이언트가 호출하는 API endpoint
