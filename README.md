@@ -1,1 +1,76 @@
-# sangsang-challenge
+# Click
+
+익숙하지 않은 모바일 앱에서 사용자의 목적과 현재 화면을 이해하고, 다음 행동을 실시간으로 안내하는 모바일 사용 지원 AI Agent입니다.
+
+## Repository Structure
+
+```text
+Click/
+├─ Frontend/
+├─ Backend/
+│  ├─ app/
+│  │  ├─ api/v1/endpoints/  # 클라이언트가 호출하는 API endpoint
+│  │  ├─ core/              # 환경설정, 공통 예외, 인증 등 핵심 설정
+│  │  ├─ db/                # DB 연결, 세션, 마이그레이션 설정
+│  │  ├─ models/            # DB 모델 및 영속화 대상 도메인 객체
+│  │  ├─ schemas/           # API 요청·응답 스키마
+│  │  ├─ repositories/      # 데이터 조회·저장 추상화
+│  │  ├─ services/          # Task 실행, 화면 관찰, 안내·검증 조율
+│  │  └─ clients/           # AI Agent, 외부 서비스 연동 client
+│  ├─ tests/
+│  └─ docs/
+└─ AI-Agent/
+	 ├─ src/
+	 │  ├─ prompts/           # Agent prompt 및 모델 입력 템플릿
+	 │  └─ workflows/         # Goal → Observe → Decide → Guide → Verify → Re-plan
+	 └─ tests/
+```
+
+## Responsibilities
+
+### Frontend
+
+- 사용자 입력(음성 또는 텍스트)과 안내 UI
+- Android Accessibility Tree 수집
+- 화면 위 UI 요소 하이라이트 및 단계별 안내 표시
+- 사용자 행동 후 변경된 화면 정보 전송
+
+### Backend
+
+- 사용자 요청과 현재 화면 정보를 받아 Task 실행 세션 관리
+- API 요청·응답 검증 및 Task 상태 관리
+- 화면 정보와 Agent 판단 결과의 전달 조율
+- Safety Gate, 개인정보 마스킹, 완료 여부 및 실행 로그 관리
+- 데이터베이스와 외부 AI Agent 연동
+
+### AI-Agent
+
+- 사용자의 자연어 요청에서 최종 Goal 파악
+- 현재 화면에서 다음 행동 결정
+- 행동 안내 및 사용자 행동 이후 결과 검증
+- 예상하지 못한 화면이나 잘못된 행동 발생 시 Re-plan
+
+## MVP Scope
+
+지원 앱은 쿠팡, Android 설정 앱, 정부24이며 대표 Task는 상품 구매, 설정 변경, 행정 서류 발급입니다.
+
+기본 처리 흐름은 다음과 같습니다.
+
+```text
+사용자 Goal 입력
+	→ 현재 화면 관찰
+	→ 다음 UI 요소 결정
+	→ Safety Gate 확인
+	→ 화면 하이라이트 및 행동 안내
+	→ 사용자 행동 후 재관찰
+	→ 완료 검증 또는 Re-plan
+```
+
+Accessibility Tree를 기본 정보원으로 사용하고, Tree만으로 UI 요소를 파악하기 어려운 경우에만 사용자 동의 후 Vision을 fallback으로 사용합니다. 외부 전송이 필요한 화면 데이터는 개인정보 마스킹 이후에만 처리합니다.
+
+## Development Notes
+
+- `Backend`는 API, 도메인 로직, 저장소, 외부 연동을 분리해 구현합니다.
+- 위험 행동은 자동 실행하지 않고 사용자 확인을 거칩니다.
+- 비밀번호·인증번호 자동 입력, 결제·송금 자동 수행, 개인정보 자동 입력은 MVP에서 제외합니다.
+- 기술 스택과 배포 방식은 팀 합의 후 각 디렉터리의 설정 파일에 반영합니다.
