@@ -14,13 +14,13 @@ Agent는 사용자가 익숙하지 않은 모바일 앱에서 스스로 목적�
 
 MVP의 기본 원칙은 Human-in-the-loop이다.
 
-- Agent는 FE가 전달한 raw 자연어를 입력받는다.
+- Agent는 FE가 음성 입력을 STT로 변환하거나 텍스트 입력에서 수집한 raw 자연어를 입력받는다.
 - Agent는 raw 자연어 의도를 분석해 `goal_type`, `target_app`, `task_type`, `slots`를 생성한다.
 - Agent는 Typed Goal에 맞는 Task Graph를 선택하거나 Task Template로부터 생성한다.
 - Agent는 현재 화면의 UI 요소를 분석한다.
 - Agent는 다음에 눌러야 할 UI를 선택한다.
 - Agent는 Guide Command를 생성한다.
-- FE는 Guide Command를 받아 실제 Overlay, Highlight, 안내 문구를 렌더링한다.
+- FE는 Guide Command를 받아 실제 Overlay, Highlight, 안내 문구를 렌더링하고 TTS 음성을 출력한다.
 - Agent는 조작 이후 화면 변화를 확인한다.
 - Agent는 예상과 다르면 재계획한다.
 - Agent는 tap을 자동 수행하지 않는다.
@@ -29,7 +29,7 @@ MVP의 기본 원칙은 Human-in-the-loop이다.
 
 ## 3. 입력 구조
 
-FE는 사용자의 raw 자연어를 Agent에 전달한다. Agent는 이 입력을 내부 Goal Typing 파이프라인으로 정규화한 뒤 Task Graph를 선택하거나 생성한다.
+FE는 음성 입력을 STT 모델로 raw 텍스트로 변환하거나 사용자의 텍스트 입력을 그대로 Agent에 전달한다. STT는 음성을 텍스트로 바꾸는 데까지만 담당하며 사용자 의도나 Task 유형을 판단하지 않는다. Agent는 이 raw 자연어를 내부 Goal Typing 파이프라인으로 정규화한 뒤 Task Graph를 선택하거나 생성한다.
 
 FE 입력 예시:
 
@@ -161,6 +161,8 @@ MVP에서는 자동 tap을 제공하지 않는다. Agent는 사용자가 눌러�
 - scroll 전후에는 Accessibility Tree를 재수집해 target UI 발견 여부를 검증한다.
 - scroll 횟수와 방향은 Task Graph의 `scroll_policy`로 제한한다.
 - scroll 중 사용자가 직접 조작하면 Agent는 즉시 재관찰 루프로 돌아간다.
+- scroll은 FE의 Android Accessibility Service가 실행하고, FE는 실행 중 상태를 시각적으로 표시한다.
+- 결제·동의·개인정보 입력 등 민감 화면에서는 자동 scroll도 중단한다.
 
 ### 4.5 Task Graph 학습 원칙
 
@@ -204,8 +206,9 @@ flowchart TD
     R -->|Confirmed| P
     P --> T[FE Overlay Render]
     T --> U[User Action]
-    Q --> V[BE Scroll Execution]
-    V --> W[Observe New Screen]
+    Q --> V[Backend Relay to FE]
+    V --> VE[FE Accessibility Scroll]
+    VE --> W[Observe New Screen]
     U --> W
     W --> X[Verification]
     X --> Y[Trace Logger]
@@ -229,7 +232,7 @@ flowchart TD
 | Safety-level | 이 행동을 안내해도 되는가? | Rule-based Safety Gate | LOW_RISK, CONFIRM_REQUIRED, BLOCKED |
 | Guide-level | 사용자에게 무엇을 보여줄 것인가? | Guide Command Builder | Guide Command |
 | Presentation-level | 안내를 실제 화면에 어떻게 렌더링할 것인가? | FE Overlay Renderer | Overlay, Highlight, Cursor, Text Guide |
-| Execution-level | 허용된 자동 탐색 행동이 있는가? | BE Accessibility Action Executor | Scroll Result |
+| Execution-level | 허용된 자동 탐색 행동이 있는가? | FE Accessibility Service | Scroll Result |
 | Verification-level | 의도한 화면 전이가 일어났는가? | Verifier, State Classifier | SUCCESS, DONE, REPLAN |
 | Learning-level | Task Graph를 어떻게 개선할 것인가? | Trace Logger, Graph Learner, Graph Validator | Graph Update Proposal |
 | Fallback-level | 규칙 기반 판단이 실패했는가? | LLM/VLM Fallback | 보조 판단 또는 사용자 확인 |
@@ -290,16 +293,16 @@ Task Graph는 전체 구조 문서에 직접 넣지 않고 Task별 문서에서 
 
 ### 7.3 Accessibility Tree Parser
 
-Android Accessibility Service를 통해 현재 화면의 UI Tree를 수집한다.
+FE의 Android Accessibility Service가 수집·직렬화한 Screen Snapshot을 전달받아 원본 UI Tree를 파싱한다. Android 프레임워크를 통한 실제 수집은 FE가 담당한다.
 
 수집 대상:
 
-- `packageName`
-- `className`
+- `package_name`
+- `class_name`
 - `text`
-- `contentDescription`
-- `resourceId`
-- `boundsInScreen`
+- `content_description`
+- `resource_id`
+- `bounds`
 - `clickable`
 - `enabled`
 - `selected`
@@ -308,7 +311,7 @@ Android Accessibility Service를 통해 현재 화면의 UI Tree를 수집한다
 
 ### 7.4 UI Normalizer
 
-원본 Accessibility Node를 Agent가 비교하기 쉬운 정규화 Node로 변환한다.
+FE가 원본 속성을 유지해 직렬화한 Accessibility Node를 Agent가 비교하기 쉬운 정규화 Node로 변환한다. label 병합, role 추론, semantic tag 생성 등 의미 기반 정규화는 Agent가 담당한다.
 
 정규화 기준:
 
@@ -401,7 +404,7 @@ Agent가 안내하려는 Action의 위험도를 판단한다.
 
 ### 7.8 Guide
 
-Agent는 Target Node의 위치와 다음 행동을 Guide Command로 생성한다. FE는 이 명령을 받아 실제 Overlay를 렌더링한다.
+Agent는 Target Node의 위치와 다음 행동을 Guide Command로 생성한다. FE는 이 명령을 받아 실제 Overlay를 렌더링하고, 안내 문장과 질문을 TTS 모델로 음성 변환해 재생할 수 있다.
 
 Agent가 생성하는 정보:
 
@@ -420,6 +423,7 @@ FE 책임:
 - 움직이는 커서 또는 포인터 렌더링
 - 짧은 텍스트 안내 렌더링
 - 필요 시 사용자 확인 UI 렌더링
+- 마이크 상태가 켜져 있으면 안내 문장과 질문을 TTS로 출력
 - Overlay가 대상 UI를 가리지 않도록 위치 조정
 - 실제 tap 수행 금지
 
@@ -455,7 +459,7 @@ Agent가 FE에 전달하는 정보:
 - `target_hint`: 찾고 있는 label/keyword
 - `manual_override_allowed: true`
 
-Agent가 BE에 전달하는 정보:
+Agent가 Backend를 경유해 FE에 전달하는 Scroll Command:
 
 - `scroll_command_id`
 - `session_id`, `task_id`, `state_id`, `transition_id`
@@ -466,12 +470,15 @@ Agent가 BE에 전달하는 정보:
 - `stop_condition`: target keyword, target embedding threshold, target state, end-of-list
 - `safety_level: "LOW_RISK"`
 
-BE 처리:
+Frontend 처리:
 
-- Accessibility action으로 scroll을 수행한다.
+- Android Accessibility Service의 Accessibility action으로 scroll을 수행한다.
+- scroll 실행 중임을 Overlay에 시각적으로 표시한다.
 - scroll 후 새 Accessibility Tree, viewport bounds, scroll 가능 여부, 실제 이동 여부를 Agent에 반환한다.
 - target이 발견되면 Agent는 tap을 실행하지 않고 Guide Command를 생성해 FE Overlay로 안내한다.
 - `max_attempts` 도달, end-of-list, 화면 변화 없음이 반복되면 Re-plan으로 넘긴다.
+
+Backend는 Scroll Command와 실행 결과를 Agent와 FE 사이에서 중계하며 Android Accessibility action을 직접 실행하지 않는다.
 
 ### 7.10 Verification
 

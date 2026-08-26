@@ -12,6 +12,7 @@ AI Agent의 판단 파이프라인과 Task별 State/Transition은 별도 문서�
 ## 2. Frontend 목표
 
 - 사용자가 음성 또는 텍스트로 목표를 입력할 수 있게 한다.
+- 음성 입력을 STT 모델로 Raw 텍스트로 변환하고, Agent 안내 문장을 TTS 모델로 출력한다.
 - 현재 화면의 Accessibility Tree를 수집해 Backend에 전달한다.
 - Agent가 선택한 UI 요소를 화면 위에서 명확하게 강조한다.
 - 한 번에 하나의 행동을 텍스트 또는 음성으로 안내한다.
@@ -20,6 +21,8 @@ AI Agent의 판단 파이프라인과 Task별 State/Transition은 별도 문서�
 - 앱 내부에서 권한, 온보딩, 기록, 설정을 관리한다.
 
 MVP에서는 사용자가 직접 화면을 조작하는 Human-in-the-loop 방식을 기본으로 한다. 결제, 송금, 인증번호 입력 등 고위험 행동은 자동 수행하지 않는다.
+
+Frontend의 STT·TTS는 음성과 텍스트 사이의 형식 변환을 담당한다. 사용자 의도 분석, Goal Typing, Task Graph 선택은 AI-Agent가 담당한다.
 
 ## 3. Information Architecture
 
@@ -114,6 +117,14 @@ Click App
 2. Frontend가 완료 메시지와 "Click을 종료할까요?" 질문을 출력한다.
 3. 사용자의 응답에 따라 Agent를 종료하거나 대기 상태로 유지한다.
 
+### 4.4 자동 조작 범위
+
+- 자동 탭은 제공하지 않으며 사용자가 직접 수행한다.
+- Target UI 탐색에 필요한 저위험 스크롤만 자동으로 수행할 수 있다.
+- 자동 스크롤은 AI-Agent의 `LOW_RISK` 판정과 Scroll Command가 있을 때만 실행한다.
+- 스크롤 중에는 자동 조작 상태를 시각적으로 표시한다.
+- 민감 화면 또는 사용자의 확인이 필요한 상태에서는 자동 스크롤을 중단한다.
+
 ## 5. 전체 런타임 흐름
 
 ```mermaid
@@ -121,21 +132,22 @@ flowchart TD
     A[사용자 목표 입력] --> B{마이크 상태}
     B -->|ON| C[STT 변환]
     B -->|OFF| D[텍스트 입력]
-    C --> E[Backend에 Goal 전달]
+    C --> E[Backend 경유 Raw Goal 전달]
     D --> E
-    E --> F[Accessibility Tree 수집 및 전달]
-    F --> G[Agent 판단 결과 수신]
-    G --> H{Safety 결과}
-    H -->|LOW RISK| I[하이라이트 및 단계 안내]
-    H -->|CONFIRM REQUIRED| J[사용자 확인]
-    H -->|BLOCKED| K[중단 및 경고]
-    J -->|확인| I
-    I --> L[사용자 직접 조작]
-    L --> M[변경 화면 재수집]
-    M --> N{Task 상태}
-    N -->|진행| G
-    N -->|재계획| F
-    N -->|완료| O[완료 및 종료 확인]
+    E --> F[AI-Agent Goal Typing]
+    F --> G[Accessibility Tree 수집 및 전달]
+    G --> H[Agent 판단 결과 수신]
+    H --> I{Safety 결과}
+    I -->|LOW RISK| J[하이라이트 및 단계 안내]
+    I -->|CONFIRM REQUIRED| K[사용자 확인]
+    I -->|BLOCKED| L[중단 및 경고]
+    K -->|확인| J
+    J --> M[사용자 직접 조작 또는 저위험 자동 스크롤]
+    M --> N[변경 화면 재수집]
+    N --> O{Task 상태}
+    O -->|진행| H
+    O -->|재계획| G
+    O -->|완료| P[완료 및 종료 확인]
 ```
 
 ## 6. 계층 및 폴더 구조
@@ -188,7 +200,7 @@ Frontend/
 ### 7.2 Data
 
 - Backend API 요청·응답 변환
-- Goal, 화면 정보, 사용자 응답 전송
+- Raw Goal, 화면 정보, 사용자 응답 전송
 - 안내 결과와 Task 상태 수신
 - 네트워크 오류 및 재시도 처리
 
@@ -202,10 +214,11 @@ Frontend/
 
 - 현재 앱의 package와 Accessibility Node 정보 수집
 - 화면 변경 이벤트 감지
-- 수집 데이터를 전송 가능한 Screen Snapshot으로 변환
+- 원본 속성을 유지한 채 수집 데이터를 전송 가능한 Screen Snapshot으로 직렬화
 - 비밀번호, 인증번호 등 민감 Node 감지 시 수집·전송 제한
+- AI-Agent의 `LOW_RISK` Scroll Command에 한해 Accessibility scroll action 실행
 
-주요 수집 필드는 Agent 문서의 Accessibility Tree Parser 계약을 따른다.
+주요 수집 필드는 Agent 문서의 Accessibility Tree Parser 계약을 따른다. label 병합, role 추론, semantic tag 생성 등 의미 기반 정규화는 AI-Agent가 담당한다.
 
 ### 7.5 Overlay Service
 
@@ -213,14 +226,17 @@ Frontend/
 - Agent 아이콘 탭 및 드래그 처리
 - Agent가 전달한 bounds에 맞춰 Target UI 강조
 - 안내, 확인, 오류, 진행 상태를 다른 앱 위에 표시
+- 저위험 자동 스크롤 상태 표시
+- Tap Command는 자동 실행하지 않고 사용자가 직접 탭하도록 안내
 
 ### 7.6 Speech Service
 
 - 마이크 세션 시작과 종료
-- STT 결과를 텍스트 Goal 또는 확인 응답으로 전달
-- 안내 문장과 질문을 TTS로 재생
+- STT 모델로 음성을 Raw 텍스트 Goal 또는 확인 응답으로 변환해 전달
+- AI-Agent가 생성한 안내 문장과 질문을 TTS 모델로 음성 변환 및 재생
 - 음성 명령에 의한 Agent 종료 처리
 - 녹음, 변환, 재생, 실패 상태를 UI에 노출
+- 사용자 의도 분석, Goal Typing과 Task Graph 선택은 수행하지 않음
 
 ### 7.7 UI Features
 
@@ -247,7 +263,10 @@ Frontend/
       "class_name": "android.widget.TextView",
       "bounds": [24, 320, 1056, 408],
       "clickable": true,
-      "enabled": true
+      "enabled": true,
+      "selected": false,
+      "scrollable": false,
+      "checkable": false
     }
   ]
 }
@@ -305,6 +324,8 @@ Overlay와 Speech는 별도 상태를 갖더라도 하나의 Agent Session 상�
 - Target bounds와 하이라이트 정렬
 - 권한 허용, 거부, 영구 거부 흐름
 - 화면 변경 후 Snapshot 재전송
+- 저위험 Scroll Command 실행과 자동 스크롤 상태 표시
+- Tap Action이 자동 실행되지 않는지 검증
 - 네트워크 실패와 Agent 재계획 표시
 - 위험 및 민감 화면에서 중단 처리
 - Task 완료 후 종료 또는 대기 분기
@@ -318,4 +339,3 @@ Overlay와 Speech는 별도 상태를 갖더라도 하나의 Agent Session 상�
 - Vision fallback 동의 UI
 - Frontend와 Backend 사이 개인정보 마스킹 책임
 - Backend API 스키마와 실시간 통신 방식
-- 저위험 자동 스크롤·이동의 MVP 포함 여부
