@@ -1,0 +1,133 @@
+{
+  "task": {
+    "task_id": "MVP-01",
+    "goal_type": "settings.font_size.increase",
+    "name": "Android 설정 앱에서 글자 크기 확대",
+    "target_app": "android_settings",
+    "task_type": "settings_change",
+    "start_states": ["S0_UNKNOWN", "S1_SETTINGS_HOME"],
+    "done_state": "S_DONE",
+    "graph_version": "1.0.0"
+  },
+  "states": {
+    "S0_UNKNOWN": {
+      "name": "알 수 없는 화면",
+      "required_keywords": [],
+      "optional_keywords": []
+    },
+    "S1_SETTINGS_HOME": {
+      "name": "설정 홈",
+      "required_keywords": ["설정"],
+      "optional_keywords": ["디스플레이", "접근성", "연결", "알림", "배터리"],
+      "confidence_threshold": 0.75
+    },
+    "S2_DISPLAY_MENU": {
+      "name": "디스플레이 메뉴",
+      "required_keywords": ["디스플레이"],
+      "optional_keywords": ["밝기", "글자 크기", "화면 크기", "다크 모드"],
+      "confidence_threshold": 0.75
+    },
+    "S3_FONT_MENU": {
+      "name": "글자 관련 메뉴",
+      "required_keywords": ["글자"],
+      "optional_keywords": ["글꼴", "스타일", "크기", "Font"],
+      "confidence_threshold": 0.75
+    },
+    "S4_FONT_SIZE_CONTROL": {
+      "name": "글자 크기 조절 화면",
+      "required_keywords": ["글자 크기"],
+      "optional_keywords": ["slider", "미리보기", "작게", "크게"],
+      "confidence_threshold": 0.75
+    },
+    "S5_FONT_SIZE_CHANGED": {
+      "name": "글자 크기 변경됨",
+      "required_keywords": ["글자 크기"],
+      "optional_keywords": ["크게", "미리보기"],
+      "confidence_threshold": 0.75
+    },
+    "S_DONE": {
+      "name": "완료",
+      "required_keywords": [],
+      "optional_keywords": []
+    }
+  },
+  "transitions": [
+    {
+      "transition_id": "S0_TO_S1_SETTINGS_HOME",
+      "from": "S0_UNKNOWN",
+      "to": "S1_SETTINGS_HOME",
+      "action_type": "tap",
+      "target_keywords": ["설정"],
+      "target_role": "app_icon",
+      "safety_level": "LOW_RISK",
+      "allow_scroll": false
+    },
+    {
+      "transition_id": "S1_TO_S2_DISPLAY",
+      "from": "S1_SETTINGS_HOME",
+      "to": "S2_DISPLAY_MENU",
+      "action_type": "tap",
+      "target_keywords": ["디스플레이", "화면", "Display"],
+      "target_role": "menu_item",
+      "safety_level": "LOW_RISK",
+      "allow_scroll": true
+    },
+    {
+      "transition_id": "S1_TO_S3_ACCESSIBILITY",
+      "from": "S1_SETTINGS_HOME",
+      "to": "S3_FONT_MENU",
+      "action_type": "tap",
+      "target_keywords": ["접근성", "시인성 향상"],
+      "target_role": "menu_item",
+      "safety_level": "LOW_RISK",
+      "allow_scroll": true
+    },
+    {
+      "transition_id": "S2_TO_S3_FONT_MENU",
+      "from": "S2_DISPLAY_MENU",
+      "to": "S3_FONT_MENU",
+      "action_type": "tap",
+      "target_keywords": ["글자 크기와 스타일", "글꼴 크기", "Font size"],
+      "target_role": "menu_item",
+      "safety_level": "LOW_RISK",
+      "allow_scroll": true
+    },
+    {
+      "transition_id": "S3_TO_S4_FONT_SIZE_CONTROL",
+      "from": "S3_FONT_MENU",
+      "to": "S4_FONT_SIZE_CONTROL",
+      "action_type": "tap",
+      "target_keywords": ["글자 크기", "글꼴 크기"],
+      "target_role": "menu_item",
+      "safety_level": "LOW_RISK",
+      "allow_scroll": true
+    },
+    {
+      "transition_id": "S4_TO_S5_INCREASE",
+      "from": "S4_FONT_SIZE_CONTROL",
+      "to": "S5_FONT_SIZE_CHANGED",
+      "action_type": "drag",
+      "target_keywords": ["슬라이더", "크게", "큰 글자"],
+      "target_role": "slider",
+      "safety_level": "CONFIRM_REQUIRED",
+      "allow_scroll": false
+    },
+    {
+      "transition_id": "S5_TO_DONE",
+      "from": "S5_FONT_SIZE_CHANGED",
+      "to": "S_DONE",
+      "action_type": "observe_only",
+      "target_keywords": ["미리보기", "글자 크기"],
+      "target_role": null,
+      "safety_level": "LOW_RISK",
+      "allow_scroll": false
+    }
+  ],
+  "scroll_policy": {
+    "default": {
+      "max_attempts": 3,
+      "scroll_amount": "half_page",
+      "stop_condition": ["target_found", "end_of_list", "max_attempts"]
+    }
+  }
+}

@@ -1,0 +1,1 @@
+"""Goal typing modules."""
