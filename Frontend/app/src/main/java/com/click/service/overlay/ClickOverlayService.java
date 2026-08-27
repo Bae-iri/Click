@@ -60,12 +60,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             windowParams.gravity = Gravity.END | Gravity.BOTTOM;
             windowParams.x = dp(12);
         } else if (mode == ClickOverlayLayout.Mode.VOICE) {
-            windowParams.width = dp(218);
-            windowParams.height = dp(82);
+            windowParams.width = dp(250);
+            windowParams.height = dp(154);
             windowParams.gravity = Gravity.END | Gravity.BOTTOM;
             windowParams.x = dp(12);
         } else {
-            windowParams.width = Math.min(getResources().getDisplayMetrics().widthPixels - dp(24), dp(360));
+            windowParams.width = Math.min(getResources().getDisplayMetrics().widthPixels - dp(16), dp(400));
             windowParams.height = dp(68);
             windowParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
             windowParams.x = 0;
