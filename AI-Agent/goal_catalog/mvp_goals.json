@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "goals": [
+    {
+      "goal_type": "settings.font_size.increase",
+      "target_app": "android_settings",
+      "task_type": "settings_change",
+      "required_slots": ["setting", "direction"],
+      "utterances": [
+        "글자가 너무 작아",
+        "글자 크기 키우고 싶어",
+        "휴대폰 글씨를 크게 보고 싶어",
+        "폰트가 작아서 크게 하고 싶어"
+      ],
+      "synonyms": {
+        "font_size": ["글자 크기", "글꼴 크기", "폰트 크기", "Font size", "text size"],
+        "increase": ["크게", "확대", "키우기", "오른쪽", "큰 글자"]
+      }
+    }
+  ]
+}

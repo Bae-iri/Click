@@ -1,0 +1,10 @@
+[project]
+name = "click-ai-agent"
+version = "0.1.0"
+description = "Mobile app guidance AI Agent scaffold"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

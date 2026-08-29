@@ -13,6 +13,7 @@
 | Agent 역할 | 설정 앱에서 글자 크기 조절 화면까지 안내하고, 사용자가 직접 글자 크기를 확대하도록 돕는다 |
 | 자동 클릭 여부 | 없음 |
 | 자동 스크롤 여부 | 허용. 대상 메뉴 탐색 목적의 제한적 scroll만 가능 |
+| Graph 업데이트 방식 | runtime trace 기반 후보 생성 후 검증/승인 |
 
 ## 2. Raw Goal / Typed Goal 입력
 
@@ -374,7 +375,198 @@ flowchart TD
 - scroll 후 같은 State가 유지되고 후보가 없으면 다음 대체 Transition을 선택한다.
 - scroll 중 target 후보가 발견되면 즉시 자동 tap 없이 Guide Command를 생성한다.
 
-## 13. 필요한 Accessibility Tree Dataset
+## 13. Task Graph 학습 / 업데이트
+
+이 Task Graph는 사람이 처음 seed를 만들지만, 운영 중 Agent가 trace를 모아 업데이트 후보를 생성한다. 사용자가 매번 markdown을 직접 고치는 구조로 두지 않는다.
+
+### 13.1 수집 trace
+
+| Trace | 목적 |
+| --- | --- |
+| `source_text`, Typed Goal, confidence | Goal Typing 개선 |
+| app package, OS version, 제조사 | 제조사/버전별 graph 분기 |
+| state sequence | 실제 이동 경로 학습 |
+| transition sequence | 성공/실패 transition 분석 |
+| normalized node labels | keyword/synonym 보강 |
+| target candidate scores | matching threshold 조정 |
+| Guide Command | 어떤 안내가 나갔는지 재현 |
+| user action result | 안내 후 사용자가 성공했는지 검증 |
+| scroll command/result | scroll policy 조정 |
+| verifier result | 완료/실패 ground truth 생성 |
+| user-corrected path | 기존 graph에 없는 성공 경로 발견 |
+
+### 13.2 업데이트 후보 생성 기준
+
+| 상황 | 생성 후보 |
+| --- | --- |
+| 같은 실패가 반복됨 | target selector 또는 synonym 보강 |
+| 사용자가 다른 메뉴를 눌러 성공함 | 새 Transition 후보 |
+| 기존 State와 다른 화면이 반복 등장 | 새 State 후보 |
+| 특정 제조사에서만 경로가 다름 | device/app variant branch |
+| scroll 후에만 target이 발견됨 | `scroll_policy` 보강 |
+| top-1/top-2 후보가 자주 흔들림 | confidence threshold 또는 score weight 조정 |
+| "화면 크게" 발화가 자주 혼동됨 | Goal Typing clarification rule 추가 |
+
+### 13.3 승인 정책
+
+- synonym, target keyword, non-risk selector 보강은 offline 검증 통과 시 자동 승인 가능하다.
+- 새 State 또는 새 Transition 추가는 사람이 검토한다.
+- `CONFIRM_REQUIRED`, `BLOCKED` safety 변경은 항상 사람이 승인한다.
+- Graph Learner는 runtime 중 현재 사용자 세션의 production graph를 즉시 바꾸지 않는다.
+- 승인된 변경만 `graph_version`을 올려 배포한다.
+- 문제가 생기면 이전 graph version으로 rollback한다.
+
+### 13.4 업데이트 로직 상세
+
+MVP-01에서 Graph Learner는 아래 순서로 Task Graph 업데이트 후보를 만든다.
+
+1. 실패 유형 분류
+   - `target_not_found`: 디스플레이, 글자 크기, 접근성 후보를 찾지 못한 경우
+   - `wrong_state`: 안내한 메뉴를 눌렀지만 예상 State로 이동하지 않은 경우
+   - `no_change`: 사용자가 눌렀지만 화면이 바뀌지 않은 경우
+   - `end_of_list`: scroll 끝까지 갔지만 target을 찾지 못한 경우
+   - `ambiguous_goal`: 글자 크기와 화면 확대 의도가 섞인 경우
+
+2. 사용자 우회 성공 path 추출
+   - Agent 안내가 실패한 뒤 사용자가 직접 이동해서 `S4_FONT_SIZE_CONTROL` 또는 `S_DONE`에 도달한 trace를 찾는다.
+   - 사용자가 실제 누른 node sequence를 기존 transition과 비교한다.
+   - 기존 graph에 없는 edge가 반복되면 새 Transition 후보로 만든다.
+
+3. label/synonym 후보 생성
+   - 성공 trace에서 target으로 사용된 node label을 수집한다.
+   - 기존 dictionary에 없는 label이 반복되면 synonym 후보로 만든다.
+   - 예: "글자 및 화면 스타일", "폰트 크기", "텍스트 크기"가 반복 등장하면 `font_size` synonym 후보가 된다.
+
+4. selector 후보 생성
+   - label이 비어 있거나 제조사별 label이 다른 경우 resourceId, className, role, parent label을 selector 후보로 묶는다.
+   - 같은 selector가 성공 trace에서 반복되면 transition의 보조 selector로 제안한다.
+
+5. scroll policy 후보 생성
+   - target 발견 직전 scroll 방향과 횟수를 기록한다.
+   - 특정 화면에서 항상 1-2회 아래 scroll 후 target이 발견되면 해당 transition의 `allow_scroll=true`, `max_attempts` 조정 후보를 만든다.
+   - `end_of_list`가 자주 발생하면 검색 경로 우선순위를 높이는 후보를 만든다.
+
+6. device/app variant 후보 생성
+   - Samsung, Pixel, Xiaomi 등 제조사별로 성공 path가 다르면 variant branch를 만든다.
+   - 예: Samsung은 `디스플레이 -> 글자 크기와 스타일`, Pixel은 `디스플레이 -> 표시 크기 및 텍스트`로 갈 수 있다.
+
+7. offline replay
+   - 후보 graph를 저장된 Accessibility Tree dataset에 replay한다.
+   - 기존 성공 path가 깨지면 proposal을 폐기하거나 human review로 보낸다.
+   - target top-1 confidence와 top-2 gap이 기준 미만이면 자동 승인하지 않는다.
+
+### 13.5 이 Task에서 학습이 필요한 위치
+
+| 위치 | 학습 대상 | 예시 | 모델 구현 필요성 |
+| --- | --- | --- | --- |
+| Goal Typing | 글자 크기 vs 화면 크기 구분 | "화면 크게 해줘" | 필요 |
+| Slot Extraction | `direction=increase` 추출 | "좀 더 잘 보이게" | 초기 rule, 이후 모델 가능 |
+| State Classification | 설정 홈/디스플레이/글자 메뉴 구분 | 제조사별 설정 화면 | 필요 |
+| UI Matching | 메뉴 label과 target node 매칭 | "표시 크기 및 텍스트" | 필요 |
+| Scroll Policy | target이 아래에 있는지 판단 | 디스플레이 메뉴 하단의 글자 항목 | 초기 rule, 이후 통계/모델 |
+| Re-plan | 디스플레이 실패 후 접근성/검색 경로 선택 | 검색창 우선 vs 접근성 우선 | 이후 필요 |
+| Graph Update | 새 State/Transition 제안 | Pixel 전용 경로 추가 | 필요 |
+
+### 13.6 필요한 모델/비모델 컴포넌트
+
+| 컴포넌트 | 입력 | 출력 | MVP 구현 | 학습 데이터 |
+| --- | --- | --- | --- | --- |
+| Goal Embedding Retriever | raw 발화 | top-k `goal_type` | embedding index | 발화, 정답 goal, 완료 여부 |
+| Slot Rule Extractor | raw 발화 | `setting`, `direction` | dictionary/rule | clarification 결과 |
+| State Classifier | normalized tree | `state_id` | rule + embedding | 화면 snapshot, 정답 state |
+| UI Target Ranker | transition + node list | target ranking | score fusion | 후보 node, 사용자가 누른 node, verifier 결과 |
+| Scroll Policy Estimator | state + scroll history | 방향/횟수 | rule + 통계 | scroll result, target 발견 여부 |
+| Transition Miner | before/after state + action | edge 후보 | sequence mining | user-corrected success trace |
+| Graph Validator | proposal + dataset | approve/reject signal | replay test | Accessibility Tree dataset |
+
+초기에는 Goal Embedding Retriever, State Classifier, UI Target Ranker가 가장 중요하다. Scroll Policy Estimator와 Transition Miner는 trace가 쌓인 뒤 정확도가 의미 있게 올라간다.
+
+### 13.7 학습 데이터 라벨링 기준
+
+| 결과 | 라벨 |
+| --- | --- |
+| verifier가 `DONE` 반환 | positive path |
+| 사용자가 Agent 안내와 다른 node를 눌러 완료 | user-corrected positive |
+| target 후보를 눌렀지만 `NO_CHANGE` | negative target |
+| 예상과 다른 State로 이동 | wrong transition |
+| scroll 후 target 발견 | scroll success |
+| scroll 끝까지 target 없음 | scroll failure |
+| 사용자가 clarification에 답함 | goal/slot label |
+
+이 라벨을 기준으로 모델별 dataset을 만든다.
+
+- Goal dataset: `source_text -> goal_type, slots`
+- State dataset: `normalized node summary -> state_id`
+- UI matching dataset: `(transition, candidate nodes) -> selected node`
+- Scroll dataset: `(state, viewport, history) -> direction, stop`
+- Re-plan dataset: `(failure context) -> next transition`
+
+### 13.8 운영 업데이트 예시
+
+예시 1: Samsung에서 label이 다르게 나오는 경우
+
+- 기존 target keyword: "글자 크기와 스타일"
+- trace에서 반복 발견: "글자 및 화면 스타일"
+- verifier 결과: 해당 node tap 후 `S3_FONT_MENU` 도달률 0.90
+- proposal: `S2_TO_S3_FONT_MENU.target_keywords`에 "글자 및 화면 스타일" 추가
+- 승인: low-risk synonym update라 offline replay 통과 시 자동 승인 가능
+
+예시 2: Pixel에서 새로운 경로가 필요한 경우
+
+- 기존 path: `S1_SETTINGS_HOME -> S2_DISPLAY_MENU -> S3_FONT_MENU`
+- user-corrected path: `S1_SETTINGS_HOME -> S2_DISPLAY_MENU -> S4_FONT_SIZE_CONTROL`
+- 반복 trace: Pixel Android에서 "표시 크기 및 텍스트"를 누르면 바로 조절 화면으로 이동
+- proposal: Pixel variant에 `S2_DISPLAY_MENU -> S4_FONT_SIZE_CONTROL` Transition 추가
+- 승인: 새 Transition이므로 human review 필요
+
+예시 3: scroll policy 변경
+
+- 실패 원인: `target_not_found`
+- trace 분석: 디스플레이 메뉴에서 아래로 1회 scroll 후 target 발견 비율 0.78
+- proposal: `S2_TO_S3_FONT_MENU.allow_scroll=true`, `max_attempts=2`, `scroll_amount=half_page`
+- 승인: low-risk이고 replay 통과 시 자동 승인 가능
+
+### 13.9 배포 지표
+
+Graph version별로 아래 지표를 비교한다.
+
+- `task_success_rate`
+- `avg_step_count`
+- `target_not_found_rate`
+- `wrong_state_rate`
+- `scroll_success_rate`
+- `fallback_rate`
+- `clarification_rate`
+- `user_cancel_rate`
+- `rollback_trigger_count`
+
+새 graph version은 canary 배포에서 기존 version보다 `task_success_rate`가 낮거나 `wrong_state_rate`가 높으면 full rollout하지 않는다.
+
+Graph Update Proposal 예시:
+
+```json
+{
+  "proposal_id": "graph_proposal_font_001",
+  "task_id": "MVP-01",
+  "base_graph_version": "1.0.0",
+  "proposal_type": "add_transition",
+  "change": {
+    "from": "S1_SETTINGS_HOME",
+    "to": "S3_FONT_MENU",
+    "action_type": "tap",
+    "target_keywords": ["접근성", "시인성 향상"]
+  },
+  "evidence": {
+    "trace_count": 31,
+    "success_rate_after_user_correction": 0.82,
+    "device_family": "samsung_android"
+  },
+  "proposal_confidence": 0.84,
+  "requires_human_review": true
+}
+```
+
+## 14. 필요한 Accessibility Tree Dataset
 
 | Dataset | 목적 |
 | --- | --- |
@@ -389,8 +581,9 @@ flowchart TD
 | 설정 앱 검색 화면 | 대체 경로 검증 |
 | 접근성 메뉴 화면 | 대체 경로 검증 |
 | 예외 팝업 화면 | Re-plan/fallback 검증 |
+| 사용자 우회 성공 trace | graph update proposal 검증 |
 
-## 14. 성공 기준
+## 15. 성공 기준
 
 - raw 자연어가 LLM 없이 `settings.font_size.increase` Typed Goal과 `MVP-01`로 매핑된다.
 - Accessibility Tree로 현재 설정 화면을 수집한다.
@@ -403,3 +596,5 @@ flowchart TD
 - target이 viewport 밖에 있으면 허용된 범위에서 scroll 탐색 후 재관찰한다.
 - Verification이 글자 크기 확대 결과를 확인한다.
 - 실패 시 Re-plan이 scroll, 검색 또는 접근성 대체 경로를 제시한다.
+- 실행 trace를 기반으로 Task Graph 업데이트 후보를 생성한다.
+- 승인된 업데이트만 graph version을 올려 배포한다.
