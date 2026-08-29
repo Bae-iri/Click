@@ -216,6 +216,45 @@ flowchart TD
 | Verification-level | 의도한 화면 전이가 일어났는가? | Verifier, State Classifier | SUCCESS, DONE, REPLAN |
 | Fallback-level | 규칙 기반 판단이 실패했는가? | LLM/VLM Fallback | 보조 판단 또는 사용자 확인 |
 
+### 6.1 L3 Agent 런타임 기준
+
+MVP의 기본 UX는 Human-in-the-loop이지만, Agent 내부 구조는 L3 수준의 다중 단계 실행을 전제로 둔다. 여기서 L3는 사용자의 직접 조작을 유지하면서도 Agent가 목표, 현재 State, 실패 이력, 화면 변화, 사용자 행동 이벤트를 기억하고 다음 행동을 자율적으로 재선택하는 수준을 의미한다.
+
+L3 Agent가 유지해야 하는 런타임 상태:
+
+- `session_id` 기준의 Task 실행 상태
+- 확정된 `TypedGoal`
+- 선택된 `task_id`와 `TaskGraph`
+- 현재 State와 직전 State
+- 직전 Guide Command와 target node
+- pending transition
+- pending confirmation transition
+- transition별 실패/재시도 횟수
+- 실패한 node 목록
+- 직전 화면 snapshot
+- slider/progress 등 값 기반 설정 상태
+- FE가 전달한 user action event
+
+Session 저장소 원칙:
+
+- Agent Engine은 `SessionStore` 인터페이스 뒤에서 session 상태를 읽고 쓴다.
+- MVP local runtime은 `InMemorySessionStore`를 사용한다.
+- BE 연동 후 서버 재시작, 멀티 프로세스, 여러 인스턴스를 고려해야 하면 Redis 또는 DB 기반 `SessionStore` 구현으로 교체한다.
+- 저장소가 바뀌어도 `AgentTurnRequest -> AgentTurnResponse` 계약과 Agent Engine 흐름은 유지한다.
+
+L3 Agent 분기 원칙:
+
+- 첫 turn에는 `raw_goal`을 반드시 요구한다.
+- follow-up turn은 같은 `session_id`가 기존 Agent session에 연결되어 있을 때만 `raw_goal` 없이 허용한다.
+- 사용자 의도가 바뀌면 FE는 같은 session 또는 새 session으로 `raw_goal`을 다시 전달하고, Agent는 Goal Typing을 다시 수행한다.
+- Agent는 매 turn마다 새 Accessibility Tree를 정규화하고 현재 State를 재판별한다.
+- 직전 pending transition이 있으면 현재 State와 화면 snapshot을 비교해 전이 성공 여부를 검증한다.
+- `NO_CHANGE`가 반복되면 같은 node를 실패 후보로 기록하고 다음 matching에서 제외한다.
+- `WRONG_STATE`가 나오면 현재 State 기준으로 가능한 Transition을 다시 선택한다.
+- slider/progress 값이 증가하면 화면 State가 그대로여도 설정 변경 성공으로 인정할 수 있다.
+- `CONFIRM_REQUIRED` action은 사용자 확인 전에는 실제 조작 안내를 내보내지 않는다.
+- 자동 tap, submit, consent, text input은 L3에서도 수행하지 않는다.
+
 ## 7. 모듈별 책임
 
 ### 7.1 Goal Typer / Goal Validator / Task Mapper
@@ -266,6 +305,12 @@ Task별로 정의된 State와 Transition을 관리한다.
 - 실패한 Transition 기록
 - 대체 경로 탐색
 - scroll_policy 적용
+- session별 `TypedGoal`, 현재 State, pending transition 저장
+- 직전 Guide Command와 target node 저장
+- transition별 retry count 저장
+- 실패 node 목록 관리
+- 직전 화면 snapshot과 slider/progress 값 저장
+- 사용자 action event 저장
 
 Task Graph는 전체 구조 문서에 직접 넣지 않고 Task별 문서에서 관리한다.
 
@@ -298,6 +343,9 @@ Android Accessibility Service를 통해 현재 화면의 UI Tree를 수집한다
 - 화면 위치를 `top`, `middle`, `bottom` 등으로 변환
 - 비활성, 숨김, 중복 Node 제거
 - Task별 synonym dictionary 적용
+- `글꼴`, `폰트`, `글씨`, `font`, `text` 계열 표현을 canonical keyword인 `글자`로 정규화
+- `글꼴 크기`, `폰트 크기`, `font size`, `text size` 계열 표현을 `글자 크기`로 정규화
+- slider/progress/value 정보가 있으면 numeric value로 추출
 
 예시:
 
@@ -308,7 +356,8 @@ Android Accessibility Service를 통해 현재 화면의 UI Tree를 수집한다
   "role": "menu_item",
   "semantic_tags": ["display", "screen"],
   "bounds": [24, 320, 1056, 408],
-  "actionable": true
+  "actionable": true,
+  "value": null
 }
 ```
 
@@ -347,6 +396,7 @@ fallback 조건:
 - 후보가 여러 개이고 score 차이가 작음
 - 최고 후보 confidence가 threshold 미만
 - 후보 Node가 실제로 clickable/actionable하지 않음
+- Re-plan에서 실패 node로 기록된 후보는 matching 대상에서 제외
 
 예시 출력:
 
@@ -458,6 +508,16 @@ BE 처리:
 
 사용자 행동 이후 새 화면을 관찰해 목표 State로 이동했는지 확인한다.
 
+검증 입력:
+
+- 직전 State
+- 현재 State
+- pending transition
+- 직전 화면 snapshot
+- 현재 화면 snapshot
+- slider/progress value 변화
+- 사용자 action event
+
 결과:
 
 | 결과 | 조건 | 다음 처리 |
@@ -467,6 +527,12 @@ BE 처리:
 | `NO_CHANGE` | 화면 변화 없음 | 재안내 |
 | `WRONG_STATE` | 예상과 다른 State | Re-plan |
 | `UNKNOWN` | 화면 판별 실패 | fallback 검토 |
+
+값 기반 검증:
+
+- 글자 크기 확대처럼 설정 값 변경이 목표인 Task는 slider/progress 값이 이전보다 증가했는지 확인한다.
+- 값이 증가했다면 화면 State가 `S4_FONT_SIZE_CONTROL`에 머물러 있어도 확대 조작은 성공으로 판단할 수 있다.
+- 값 비교를 위해 FE는 Accessibility Node의 `extras.value`, `extras.progress`, `extras.current`, `extras.range_current`, `extras.percent` 중 가능한 값을 전달한다.
 
 ### 7.11 Re-plan
 
@@ -481,6 +547,15 @@ BE 처리:
 - 허용된 scroll 범위 안에서 추가 탐색 가능 여부 확인
 - 반복 실패 시 LLM/VLM fallback
 - 사용자의 추가 설명 요청
+
+MVP L3 Re-plan 최소 구현:
+
+- `NO_CHANGE`: 같은 State가 유지되면 직전 transition을 재시도한다.
+- `NO_CHANGE`가 동일 transition에서 2회 이상 반복되면 직전 target node를 `failed_node_ids`에 추가하고 다음 UI Matching에서 제외한다.
+- `WRONG_STATE`: 현재 관찰된 State를 기준으로 Task Graph의 가능한 Transition을 다시 조회한다.
+- `UNKNOWN`: fallback 안내를 생성하고, 이후 Gemini similarity 또는 LLM/VLM fallback 후보로 넘긴다.
+- `SUCCESS`: transition retry count를 초기화하고 다음 State의 Transition으로 진행한다.
+- `DONE`: 완료 Guide Command를 반환하고 session을 완료 처리할 수 있다.
 
 ### 7.12 LLM/VLM Fallback
 
@@ -581,11 +656,62 @@ LLM/VLM은 기본 UI 판단 흐름이 실패했을 때만 보조적으로 사용
   "bounds": [24, 320, 1056, 408],
   "clickable": true,
   "enabled": true,
+  "value": null,
   "embedding": "vector_ref"
 }
 ```
 
-### 8.7 Guide Command
+### 8.7 Agent Turn Request
+
+FE는 매 관찰 주기마다 Agent에 `AgentTurnRequest`를 전달한다.
+
+첫 turn에서는 `raw_goal`이 필수다. follow-up turn에서는 동일한 `session_id`가 기존 Agent session에 연결되어 있을 때만 `raw_goal` 없이 요청할 수 있다.
+
+```json
+{
+  "request_id": "req_001",
+  "session_id": "session_001",
+  "raw_goal": {
+    "source_text": "글자 크기 키우고 싶어",
+    "locale": "ko-KR",
+    "device_context": {
+      "platform": "android",
+      "foreground_app": null,
+      "app_package": "com.android.settings",
+      "screen_bounds": [0, 0, 1080, 2400]
+    }
+  },
+  "accessibility_tree": [],
+  "previous_state_id": null,
+  "previous_guide_command_id": null,
+  "user_confirmation": null,
+  "user_action_event": null
+}
+```
+
+### 8.8 User Action Event
+
+FE는 사용자가 Agent 안내 이후 실제로 어떤 조작을 했는지 가능한 범위에서 전달한다.
+
+```json
+{
+  "action_type": "tap_completed",
+  "guide_command_id": "guide_session_001_S1_TO_S2_DISPLAY_MENU",
+  "target_node_id": "node_12",
+  "target_bounds": [24, 320, 1056, 408],
+  "occurred_at_ms": 1798617600000
+}
+```
+
+허용 값:
+
+- `tap_completed`
+- `drag_completed`
+- `back_navigated`
+- `manual_override`
+- `observe_only`
+
+### 8.9 Guide Command
 
 ```json
 {
@@ -604,7 +730,113 @@ LLM/VLM은 기본 UI 판단 흐름이 실패했을 때만 보조적으로 사용
 }
 ```
 
-### 8.8 Scroll Command
+### 8.10 Agent Session State
+
+Agent는 `session_id` 기준으로 아래 상태를 저장한다. 내장 MVP 구현은 `InMemorySessionStore`를 사용하지만, BE 연동 시 같은 `SessionStore` 인터페이스를 구현하는 Redis 또는 DB 저장소로 교체할 수 있다.
+
+```json
+{
+  "session_id": "session_001",
+  "task_id": "MVP-01",
+  "typed_goal": {
+    "goal_type": "settings.font_size.increase",
+    "target_app": "android_settings",
+    "task_type": "settings_change",
+    "slots": {
+      "setting": "font_size",
+      "direction": "increase"
+    },
+    "confidence": 0.85
+  },
+  "current_state_id": "S1_SETTINGS_HOME",
+  "pending_transition_id": "S1_TO_S2_DISPLAY_MENU",
+  "pending_confirmation_transition_id": null,
+  "last_guide_command_id": "guide_session_001_S1_TO_S2_DISPLAY_MENU",
+  "last_target_node_id": "node_12",
+  "failed_node_ids": [],
+  "transition_attempts": {
+    "S1_TO_S2_DISPLAY_MENU": 1
+  },
+  "last_snapshot": {
+    "state_id": "S1_SETTINGS_HOME",
+    "fingerprint": "stable screen fingerprint",
+    "slider_values": {}
+  },
+  "last_user_action_event": null
+}
+```
+
+### 8.11 Screen Snapshot
+
+화면 snapshot은 화면 변화 여부와 값 기반 검증을 위해 저장한다.
+
+```json
+{
+  "state_id": "S4_FONT_SIZE_CONTROL",
+  "fingerprint": "node labels, roles, bounds, selection, values",
+  "slider_values": {
+    "font_slider": 3
+  }
+}
+```
+
+### 8.12 Replan Decision
+
+Re-plan 모듈은 검증 결과와 세션 이력을 보고 다음 matching에 반영할 결정을 만든다.
+
+```json
+{
+  "should_replan": true,
+  "reason": "same_screen_retry_limit_reached",
+  "excluded_node_ids": ["node_12"],
+  "prefer_current_state": true
+}
+```
+
+### 8.13 Agent Turn Response
+
+Agent는 매 turn마다 FE가 바로 렌더링할 수 있는 `GuideCommand`를 포함해 응답한다. `debug`는 초기 연동과 QA를 위한 필드이며, 프로덕션에서 사용자에게 직접 노출하지 않는다.
+
+```json
+{
+  "request_id": "req_001",
+  "session_id": "session_001",
+  "task_id": "MVP-01",
+  "typed_goal": {
+    "goal_type": "settings.font_size.increase",
+    "target_app": "android_settings",
+    "task_type": "settings_change",
+    "slots": {
+      "setting": "font_size",
+      "direction": "increase"
+    },
+    "confidence": 0.85
+  },
+  "current_state_id": "S1_SETTINGS_HOME",
+  "guide_command": {
+    "guide_command_id": "guide_session_001_S1_TO_S2_DISPLAY_MENU",
+    "command_type": "highlight",
+    "action_type": "tap",
+    "target_node_id": "node_12",
+    "target_label": "디스플레이",
+    "target_bounds": [24, 320, 1056, 408],
+    "message": "디스플레이를 눌러주세요.",
+    "safety_level": "LOW_RISK",
+    "requires_user_action": true
+  },
+  "match_result": {},
+  "verification_result": null,
+  "debug": {
+    "session_stateful": true,
+    "similarity_provider": "not_configured",
+    "replan_decision": {
+      "should_replan": false
+    }
+  }
+}
+```
+
+### 8.14 Scroll Command
 
 ```json
 {
@@ -637,10 +869,14 @@ LLM/VLM은 기본 UI 판단 흐름이 실패했을 때만 보조적으로 사용
 | 7 | UI Matching | keyword + embedding 기반 Target Node 선택 |
 | 8 | Safety Gate | 위험 행동 판단 |
 | 9 | Guide Command Builder | FE Overlay 렌더링용 명령 |
-| 10 | Scroll Executor 연동 | 허용된 자동 scroll 실행 및 결과 |
-| 11 | Verification | State 전이 확인 |
-| 12 | Re-plan | 예상 외 화면 처리 |
-| 13 | LLM/VLM fallback | 실패 케이스 보완 |
+| 10 | Session State Manager | session별 goal/state/pending transition/failure history 저장 |
+| 11 | User Action Event 연동 | FE 사용자 조작 이벤트 수집 |
+| 12 | Screen Snapshot | 화면 변화와 slider/progress 값 추적 |
+| 13 | Verification | State 전이 및 값 변화 확인 |
+| 14 | Re-plan | 예상 외 화면, 화면 미변화, 반복 실패 처리 |
+| 15 | Scroll Executor 연동 | 허용된 자동 scroll 실행 및 결과 |
+| 16 | Gemini Similarity Scorer | keyword matching 보조 similarity |
+| 17 | LLM/VLM fallback | 실패 케이스 보완 |
 
 ## 10. Task 문서 작성 규칙
 
@@ -674,3 +910,7 @@ Task별 문서는 다음 항목을 포함한다.
 - Agent는 Guide Command를 생성하고 FE는 Overlay를 렌더링한다.
 - 자동 tap은 수행하지 않고, 허용된 범위의 scroll만 target 탐색 목적으로 수행한다.
 - Verification이 State 전이를 확인하고, 실패 시 Re-plan한다.
+- L3 Agent는 `session_id` 기준으로 Task 상태, pending transition, 실패 node, retry count, 화면 snapshot을 유지한다.
+- 사용자의 tap/drag/back/manual override 이벤트를 받아 다음 관찰 결과와 함께 검증한다.
+- 동일 transition에서 `NO_CHANGE`가 반복되면 직전 target node를 제외하고 대체 후보를 탐색한다.
+- slider/progress 값이 증가하면 화면 State가 동일해도 설정 변경 성공으로 판단할 수 있다.

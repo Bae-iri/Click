@@ -1,0 +1,347 @@
+"""Shared data contracts for the Click AI Agent.
+
+The module intentionally uses only Python standard-library types so the MVP can
+run in tests before Backend, FE, or Gemini similarity integrations are wired in.
+"""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, field
+from enum import Enum
+from typing import Any, Literal
+
+
+Bounds = tuple[int, int, int, int]
+JsonDict = dict[str, Any]
+
+
+class ActionType(str, Enum):
+    TAP = "tap"
+    DRAG = "drag"
+    SCROLL = "scroll"
+    OBSERVE_ONLY = "observe_only"
+
+
+class CommandType(str, Enum):
+    HIGHLIGHT = "highlight"
+    GESTURE_HINT = "gesture_hint"
+    CONFIRMATION = "confirmation"
+    DONE = "done"
+    BLOCKED = "blocked"
+
+
+class SafetyLevel(str, Enum):
+    LOW_RISK = "LOW_RISK"
+    CONFIRM_REQUIRED = "CONFIRM_REQUIRED"
+    BLOCKED = "BLOCKED"
+
+
+class VerificationStatus(str, Enum):
+    SUCCESS = "SUCCESS"
+    DONE = "DONE"
+    NO_CHANGE = "NO_CHANGE"
+    WRONG_STATE = "WRONG_STATE"
+    UNKNOWN = "UNKNOWN"
+
+
+class TurnPhase(str, Enum):
+    FIRST_TURN = "first_turn"
+    FOLLOW_UP = "follow_up"
+
+
+class UserActionType(str, Enum):
+    TAP_COMPLETED = "tap_completed"
+    DRAG_COMPLETED = "drag_completed"
+    BACK_NAVIGATED = "back_navigated"
+    MANUAL_OVERRIDE = "manual_override"
+    OBSERVE_ONLY = "observe_only"
+
+
+@dataclass(frozen=True, slots=True)
+class DeviceContext:
+    platform: Literal["android", "ios", "web"]
+    foreground_app: str | None = None
+    app_package: str | None = None
+    manufacturer: str | None = None
+    os_version: str | None = None
+    screen_bounds: Bounds | None = None
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class RawGoalInput:
+    source_text: str
+    locale: str
+    device_context: DeviceContext
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class TypedGoal:
+    goal_type: str
+    target_app: str
+    task_type: str
+    slots: dict[str, str]
+    source_text: str
+    confidence: float
+    task_id: str | None = None
+    typing_method: str | None = None
+    is_supported: bool = False
+    required_slots_filled: bool = False
+    needs_clarification: bool = False
+    clarification_message: str | None = None
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class AccessibilityNode:
+    node_id: str
+    package_name: str | None = None
+    class_name: str | None = None
+    text: str | None = None
+    content_description: str | None = None
+    resource_id: str | None = None
+    bounds_in_screen: Bounds | None = None
+    clickable: bool = False
+    enabled: bool = True
+    selected: bool = False
+    scrollable: bool = False
+    checkable: bool = False
+    extras: JsonDict = field(default_factory=dict)
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class NormalizedNode:
+    node_id: str
+    label: str
+    role: str
+    semantic_tags: tuple[str, ...] = ()
+    bounds: Bounds | None = None
+    actionable: bool = False
+    clickable: bool = False
+    enabled: bool = True
+    selected: bool = False
+    scrollable: bool = False
+    checkable: bool = False
+    resource_id: str | None = None
+    class_name: str | None = None
+    package_name: str | None = None
+    position_hint: Literal["top", "middle", "bottom", "unknown"] = "unknown"
+    value: float | None = None
+    similarity_ref: str | None = None
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class TaskDefinition:
+    task_id: str
+    goal_type: str
+    name: str
+    target_app: str
+    task_type: str
+    start_states: tuple[str, ...]
+    done_state: str
+    required_slots: dict[str, str]
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class TaskState:
+    state_id: str
+    name: str
+    required_keywords: tuple[str, ...] = ()
+    required_keyword_groups: tuple[tuple[str, ...], ...] = ()
+    optional_keywords: tuple[str, ...] = ()
+    package_candidates: tuple[str, ...] = ()
+    role_hints: tuple[str, ...] = ()
+    confidence_threshold: float = 0.75
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class Transition:
+    transition_id: str
+    from_state: str
+    to_state: str
+    action_type: ActionType
+    action_name: str
+    target_keywords: tuple[str, ...]
+    target_role: str | None
+    safety_level: SafetyLevel
+    guide_message: str
+    allow_scroll: bool = False
+    requires_user_action: bool = True
+    confirmation_message: str | None = None
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class TaskGraph:
+    definition: TaskDefinition
+    states: dict[str, TaskState]
+    transitions: tuple[Transition, ...]
+    synonyms: dict[str, tuple[str, ...]]
+
+    def transitions_from(self, state_id: str) -> tuple[Transition, ...]:
+        return tuple(
+            transition
+            for transition in self.transitions
+            if transition.from_state == state_id
+        )
+
+    def state(self, state_id: str) -> TaskState:
+        return self.states[state_id]
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class MatchResult:
+    state_id: str
+    next_state_id: str
+    action_type: ActionType
+    target_node_id: str | None
+    target_label: str | None
+    target_bounds: Bounds | None
+    match_method: str
+    confidence: float
+    transition_id: str | None = None
+    fallback_reason: str | None = None
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class GuideCommand:
+    guide_command_id: str
+    command_type: CommandType
+    action_type: ActionType
+    message: str
+    safety_level: SafetyLevel
+    requires_user_action: bool
+    target_node_id: str | None = None
+    target_label: str | None = None
+    target_bounds: Bounds | None = None
+    render_policy: JsonDict = field(
+        default_factory=lambda: {
+            "avoid_covering_target": True,
+            "preferred_position": "below_target",
+        }
+    )
+    ttl_ms: int = 10_000
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class VerificationResult:
+    status: VerificationStatus
+    current_state_id: str
+    expected_state_id: str | None = None
+    message: str | None = None
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class UserActionEvent:
+    action_type: UserActionType
+    guide_command_id: str | None = None
+    target_node_id: str | None = None
+    target_bounds: Bounds | None = None
+    occurred_at_ms: int | None = None
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class AgentTurnRequest:
+    request_id: str
+    session_id: str
+    raw_goal: RawGoalInput | None
+    accessibility_tree: tuple[AccessibilityNode, ...]
+    previous_state_id: str | None = None
+    previous_guide_command_id: str | None = None
+    user_confirmation: Literal["accepted", "rejected"] | None = None
+    user_action_event: UserActionEvent | None = None
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class ScreenSnapshot:
+    state_id: str
+    fingerprint: str
+    slider_values: dict[str, float] = field(default_factory=dict)
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class ReplanDecision:
+    should_replan: bool
+    reason: str | None = None
+    excluded_node_ids: tuple[str, ...] = ()
+    prefer_current_state: bool = True
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class AgentSessionState:
+    session_id: str
+    task_id: str
+    typed_goal: TypedGoal
+    current_state_id: str
+    pending_transition_id: str | None = None
+    pending_confirmation_transition_id: str | None = None
+    last_guide_command_id: str | None = None
+    last_target_node_id: str | None = None
+    failed_node_ids: tuple[str, ...] = ()
+    transition_attempts: dict[str, int] = field(default_factory=dict)
+    last_snapshot: ScreenSnapshot | None = None
+    last_user_action_event: UserActionEvent | None = None
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class AgentTurnResponse:
+    request_id: str
+    session_id: str
+    task_id: str | None
+    typed_goal: TypedGoal | None
+    current_state_id: str
+    guide_command: GuideCommand
+    match_result: MatchResult | None = None
+    verification_result: VerificationResult | None = None
+    debug: JsonDict = field(default_factory=dict)
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
