@@ -14,7 +14,10 @@ from ai_agent.safety.safety_gate import SafetyGate
 from ai_agent.schemas import NormalizedNode, TaskDefinition, TransitionDefinition
 from ai_agent.task_graph.graph import TaskGraph
 
-from app.schemas.guidance import GuideCommandResponse, ScreenSnapshot
+from app.models.session import GuidanceSession, utc_now
+from app.repositories.sessions import InMemorySessionRepository, SessionNotFoundError
+from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
+from app.schemas.guidance import AccessibilityNode, GuideCommandResponse, ScreenSnapshot
 
 
 class UnsupportedGoalError(ValueError):
@@ -233,3 +236,126 @@ class AgentClient:
             requires_user_action=False,
         )
         return AgentDecision(state_id, confidence, "S_DONE", guide, completed=True)
+
+
+class ClickAgentEngine(AgentClient):
+    """Turn-based Agent entry point used by the backend API boundary."""
+
+    def __init__(
+        self,
+        sessions: InMemorySessionRepository,
+        repository_root: Path | None = None,
+    ) -> None:
+        super().__init__(repository_root)
+        self.sessions = sessions
+
+    def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
+        session = self.sessions.find(request.session_id)
+        if session is None:
+            if request.raw_goal is None:
+                raise SessionNotFoundError(request.session_id)
+            if not self.supports_goal(request.raw_goal):
+                raise UnsupportedGoalError("The requested goal is not supported.")
+            task = self.graph.task
+            session = GuidanceSession(
+                session_id=request.session_id,
+                task_id=task.task_id,
+                goal=request.raw_goal,
+                goal_type=task.goal_type,
+                graph_version=task.graph_version,
+            )
+            self.sessions.add(session)
+
+        if request.raw_goal is not None and request.raw_goal != session.goal:
+            raise ValueError("raw_goal cannot be changed after the first turn")
+
+        snapshot = self._to_snapshot(request)
+        if request.user_confirmation == "rejected":
+            decision = self._rejected(session.current_state or "S0_UNKNOWN")
+        else:
+            decision = self.decide(
+                snapshot,
+                session.current_state,
+                request.user_confirmation == "accepted",
+            )
+
+        if decision.completed:
+            session.status = "COMPLETED"
+            session.current_state = "S_DONE"
+        elif decision.guide.command_type == "blocked":
+            session.status = "BLOCKED"
+            session.current_state = decision.state_id
+        elif decision.guide.command_type == "confirmation":
+            session.status = "WAITING_CONFIRMATION"
+            session.current_state = decision.state_id
+        else:
+            session.status = "IN_PROGRESS"
+            session.current_state = decision.next_state if request.user_confirmation == "accepted" else decision.state_id
+
+        session.step = self._step_for_state(decision.state_id)
+        session.updated_at = utc_now()
+        self.sessions.save(session)
+        return AgentTurnResponse(
+            request_id=request.request_id,
+            session_id=session.session_id,
+            task_id=session.task_id,
+            step=session.step,
+            total_steps=4,
+            state_id=decision.state_id,
+            state_confidence=decision.state_confidence,
+            task_status=session.status,
+            guide_command=decision.guide,
+            metadata={"graph_version": session.graph_version},
+        )
+
+    @staticmethod
+    def _step_for_state(state_id: str) -> int:
+        return {
+            "S0_UNKNOWN": 0,
+            "S1_SETTINGS_HOME": 1,
+            "S2_DISPLAY_MENU": 2,
+            "S3_FONT_MENU": 3,
+            "S4_FONT_SIZE_CONTROL": 4,
+            "S5_FONT_SIZE_CHANGED": 4,
+            "S_DONE": 4,
+        }.get(state_id, 0)
+
+    @staticmethod
+    def _to_snapshot(request: AgentTurnRequest) -> ScreenSnapshot:
+        tree = request.accessibility_tree
+        return ScreenSnapshot(
+            package_name=tree.package_name or "",
+            captured_at=tree.captured_at or utc_now(),
+            screen_width=tree.screen_width,
+            screen_height=tree.screen_height,
+            nodes=[
+                AccessibilityNode(
+                    node_id=node.node_id,
+                    text=node.text,
+                    content_description=node.content_description,
+                    resource_id=node.resource_id,
+                    class_name=node.class_name,
+                    role=node.role,
+                    bounds=node.bounds_in_screen,
+                    clickable=node.clickable,
+                    enabled=node.enabled,
+                    selected=node.selected,
+                    scrollable=node.scrollable,
+                    checkable=node.checkable,
+                )
+                for node in tree.nodes
+            ],
+        )
+
+    @staticmethod
+    def _rejected(state_id: str) -> AgentDecision:
+        guide = GuideCommandResponse(
+            guide_command_id=f"guide_{uuid4().hex}",
+            command_type="blocked",
+            action_type="observe_only",
+            message="User rejected the requested action.",
+            safety_level="BLOCKED",
+            requires_user_action=False,
+            render_policy={"reason": "user_rejected"},
+        )
+        return AgentDecision(state_id, 1.0, state_id, guide)

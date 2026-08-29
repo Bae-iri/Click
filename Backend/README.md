@@ -1,5 +1,53 @@
 # Click Backend
 
+## Agent turn API
+
+FE should use `POST /api/v1/agent/turn` for the turn-based integration.
+
+First turn:
+
+```json
+{
+  "request_id": "req-001",
+  "session_id": "session-001",
+  "raw_goal": "글자 크기를 키워줘",
+  "accessibility_tree": {
+    "package_name": "com.android.settings",
+    "screen_width": 1080,
+    "screen_height": 2400,
+    "nodes": [
+      {
+        "node_id": "node-12",
+        "package_name": "com.android.settings",
+        "class_name": "android.widget.TextView",
+        "text": "디스플레이",
+        "content_description": null,
+        "resource_id": "android:id/title",
+        "bounds_in_screen": [24, 320, 1056, 408],
+        "clickable": true,
+        "enabled": true,
+        "selected": false,
+        "scrollable": false,
+        "checkable": false
+      }
+    ]
+  }
+}
+```
+
+On later turns, keep `session_id`, create a new `request_id`, send a fresh
+`accessibility_tree`, and omit `raw_goal`. When responding to a confirmation,
+also send `user_confirmation` as `"accepted"` or `"rejected"`.
+
+The response contains a `guide_command`. FE renders the overlay using
+`target_bounds`; `tap`, `drag`, and `scroll` are guidance types and must not be
+treated as permission to operate the UI automatically. A `confirmation`
+command must be shown to the user before sending the next turn.
+
+Sessions and request-id responses are currently stored in process memory. They
+are cleared on restart and are not shared between server processes; use Redis
+or a database before multi-process deployment.
+
 Android 설정 앱에서 글자 크기를 키우는 과정을 오버레이로 안내하는 MVP API다. 세션은 현재 프로세스 메모리에 저장되며 서버 재시작 시 초기화된다.
 
 ## 실행
@@ -66,4 +114,3 @@ python -m uvicorn app.main:app --reload
 ```powershell
 python -m pytest
 ```
-

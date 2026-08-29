@@ -25,9 +25,12 @@ class InMemorySessionRepository:
             except KeyError as error:
                 raise SessionNotFoundError(session_id) from error
 
+    def find(self, session_id: str) -> GuidanceSession | None:
+        with self._lock:
+            return self._sessions.get(session_id)
+
     def save(self, session: GuidanceSession) -> None:
         with self._lock:
             if session.session_id not in self._sessions:
                 raise SessionNotFoundError(session.session_id)
             self._sessions[session.session_id] = session
-
