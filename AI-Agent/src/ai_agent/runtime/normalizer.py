@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from click_agent.keywords import any_keyword_matches, normalize_text
-from click_agent.types import AccessibilityNode, Bounds, NormalizedNode
+from ai_agent.runtime.keywords import any_keyword_matches, normalize_text
+from ai_agent.runtime.types import AccessibilityNode, Bounds, NormalizedNode
 
 
 def normalize_accessibility_tree(

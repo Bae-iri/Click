@@ -5,7 +5,6 @@ from typing import Any
 
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.clients.agent import ClickAgentEngine
 from app.repositories.personalization import PersonalizationRepository, UserNotFoundError
 from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
 
@@ -43,7 +42,7 @@ class InMemoryTurnResponseStore:
 class AgentTurnService:
     def __init__(
         self,
-        engine: ClickAgentEngine,
+        engine,
         responses: InMemoryTurnResponseStore | None = None,
         session_factory: sessionmaker[Session] | None = None,
     ) -> None:

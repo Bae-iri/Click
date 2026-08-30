@@ -3,6 +3,11 @@
 신규 Android FE 연동 계약은
 [`docs/frontend-backend-contract.md`](../docs/frontend-backend-contract.md)를 따른다.
 
+`POST /api/v1/agent/turn`은 단일 L3 런타임인 `ai_agent.runtime`을 사용한다.
+이전 `click_agent` 패키지는 제거되었으며 Goal Typing, 상태 검증, re-plan,
+행동 이벤트, trace, scroll 안내가 같은 런타임에서 처리된다. `GEMINI_API_KEY`가
+없거나 호출이 실패하면 로컬 keyword scorer로 자동 복귀한다.
+
 ## PostgreSQL and personalization
 
 The backend stores user UI profiles, consent history, and UI behavior events in

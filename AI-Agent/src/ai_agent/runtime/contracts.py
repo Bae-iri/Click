@@ -6,7 +6,7 @@ schemas can import or mirror these names when the HTTP boundary is added.
 
 from __future__ import annotations
 
-from click_agent.types import ActionType, CommandType, SafetyLevel
+from ai_agent.runtime.types import ActionType, CommandType, SafetyLevel
 
 
 CONTRACT_VERSION = "agent-fe-contract.v0.1"
@@ -73,7 +73,7 @@ FE_OUTPUT_RULES = (
     "FE should expire stale guidance after ttl_ms unless a newer response arrives.",
     "When command_type is confirmation, FE must collect explicit user confirmation.",
     "When safety_level is BLOCKED, FE must stop task guidance for that action.",
-    "Scroll handling is excluded from the current implementation scope.",
+    "For scroll commands, FE executes Accessibility scroll and sends a fresh tree plus user_action_event.",
 )
 
 

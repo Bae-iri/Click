@@ -70,6 +70,17 @@ class AgentTurnRequest(BaseModel):
     raw_goal: str | None = Field(default=None, min_length=1, max_length=500)
     accessibility_tree: AccessibilityTree
     user_confirmation: Literal["accepted", "rejected"] | None = None
+    user_action_event: "UserActionEventRequest | None" = None
+
+
+class UserActionEventRequest(BaseModel):
+    action_type: Literal[
+        "tap_completed", "drag_completed", "back_navigated", "manual_override", "observe_only"
+    ]
+    guide_command_id: str | None = None
+    target_node_id: str | None = None
+    target_bounds: tuple[int, int, int, int] | None = None
+    occurred_at_ms: int | None = None
 
 
 class AgentTurnResponse(BaseModel):

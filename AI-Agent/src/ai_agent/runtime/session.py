@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Protocol
 
-from click_agent.types import AgentSessionState, ScreenSnapshot, TypedGoal, UserActionEvent
+from ai_agent.runtime.types import AgentSessionState, ScreenSnapshot, TypedGoal, UserActionEvent
 
 
 class SessionStore(Protocol):

@@ -53,6 +53,22 @@ Accessibility Tree를 함께 보낸다.
 사용자가 화면을 조작한 후에는 Accessibility 이벤트를 기다려 새 Tree를 캡처하고,
 새 `request_id`와 기존 `session_id`로 다시 호출한다.
 
+조작 결과는 가능하면 `user_action_event`로 함께 보낸다.
+
+```json
+{
+  "user_action_event": {
+    "action_type": "tap_completed",
+    "guide_command_id": "guide-session-001-step-1",
+    "target_node_id": "display-title",
+    "target_bounds": [24, 320, 1056, 408]
+  }
+}
+```
+
+허용 값은 `tap_completed`, `drag_completed`, `back_navigated`,
+`manual_override`, `observe_only`다.
+
 ## Confirmation
 
 응답의 `guide_command.command_type`이 `confirmation`이면 FE가 확인 UI만 표시한다.
@@ -108,6 +124,8 @@ FE는 `guide_command`를 렌더링한다.
 - `command_type: blocked`: 중단 사유 표시
 
 `tap`과 `drag`는 자동 조작 권한이 아니다. 실제 조작은 사용자가 수행한다.
+`scroll`만 FE Accessibility Service가 실행하며, 실행 후 fresh tree와 결과 이벤트를
+다시 전송한다.
 
 지원 패키지는 현재 다음 두 개다.
 

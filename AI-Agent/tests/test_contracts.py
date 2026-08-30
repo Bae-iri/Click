@@ -1,6 +1,6 @@
 import unittest
 
-from click_agent.contracts import (
+from ai_agent.runtime.contracts import (
     ACCESSIBILITY_NODE_REQUIRED_FIELDS,
     CONTRACT_VERSION,
     GUIDE_COMMAND_ALLOWED_ACTIONS,

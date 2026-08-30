@@ -1,0 +1,143 @@
+from __future__ import annotations
+
+from ai_agent.runtime import (
+    AccessibilityNode,
+    AgentTurnRequest as RuntimeRequest,
+    ClickAgentEngine,
+    ContractViolationError,
+    DeviceContext,
+    RawGoalInput,
+    UserActionEvent,
+    UserActionType,
+)
+
+from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
+from app.schemas.guidance import GuideCommandResponse
+from app.repositories.sessions import SessionNotFoundError
+
+
+class RuntimeAgentAdapter:
+    """Translate the HTTP contract to the single ai_agent L3 runtime."""
+
+    def __init__(self) -> None:
+        self.runtime = ClickAgentEngine()
+
+    def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
+        tree = request.accessibility_tree
+        runtime_request = RuntimeRequest(
+            request_id=request.request_id,
+            session_id=request.session_id,
+            raw_goal=RawGoalInput(
+                source_text=request.raw_goal,
+                locale="ko-KR",
+                device_context=DeviceContext(
+                    platform="android",
+                    foreground_app=tree.package_name,
+                    app_package=tree.package_name,
+                    screen_bounds=(0, 0, tree.screen_width, tree.screen_height),
+                ),
+            ) if request.raw_goal else None,
+            accessibility_tree=tuple(
+                AccessibilityNode(
+                    node_id=node.node_id,
+                    package_name=node.package_name or tree.package_name,
+                    class_name=node.class_name,
+                    text=node.text,
+                    content_description=node.content_description,
+                    resource_id=node.resource_id,
+                    bounds_in_screen=node.bounds_in_screen,
+                    clickable=node.clickable,
+                    enabled=node.enabled,
+                    selected=node.selected,
+                    scrollable=node.scrollable,
+                    checkable=node.checkable,
+                    extras=node.extras,
+                ) for node in tree.nodes
+            ),
+            user_confirmation=request.user_confirmation,
+            user_action_event=self._action_event(request),
+        )
+        try:
+            result = self.runtime.handle_turn(runtime_request)
+        except ContractViolationError as error:
+            if request.raw_goal is None:
+                raise SessionNotFoundError(request.session_id) from error
+            raise ValueError(str(error)) from error
+        guide = result.guide_command
+        command_type = guide.command_type.value
+        slider_completed = bool(
+            result.verification_result
+            and result.verification_result.message
+            == "Slider value increased in the requested direction."
+        )
+        if slider_completed:
+            command_type = "done"
+        status = {
+            "confirmation": "WAITING_CONFIRMATION",
+            "done": "COMPLETED",
+            "blocked": "BLOCKED",
+        }.get(command_type, "IN_PROGRESS")
+        step = {
+            "S0_UNKNOWN": 0, "S1_SETTINGS_HOME": 1, "S2_DISPLAY_MENU": 2,
+            "S3_FONT_MENU": 3, "S4_FONT_SIZE_CONTROL": 4,
+            "S5_FONT_SIZE_CHANGED": 4, "S_DONE": 4,
+        }.get(result.current_state_id, 0)
+        runtime_session = self.runtime.session_store.get(request.session_id)
+        slider_values = (
+            runtime_session.last_snapshot.slider_values
+            if runtime_session and runtime_session.last_snapshot else {}
+        )
+        verification = result.verification_result.to_dict() if result.verification_result else None
+        render_policy = dict(guide.render_policy)
+        if guide.action_type.value == "scroll":
+            render_policy.update({"direction": "down", "execution_owner": "frontend_accessibility_service"})
+        return AgentTurnResponse(
+            request_id=result.request_id,
+            session_id=result.session_id,
+            task_id=result.task_id or "unknown",
+            step=step,
+            total_steps=4,
+            state_id=result.current_state_id,
+            state_confidence=result.match_result.confidence if result.match_result else 0.0,
+            task_status=status,
+            guide_command=GuideCommandResponse(
+                guide_command_id=guide.guide_command_id,
+                command_type=command_type,
+                action_type="observe_only" if slider_completed else guide.action_type.value,
+                message=guide.message,
+                target_node_id=guide.target_node_id,
+                target_label=guide.target_label,
+                target_bounds=guide.target_bounds,
+                safety_level=guide.safety_level.value,
+                requires_user_action=False if slider_completed else guide.requires_user_action,
+                render_policy=render_policy,
+            ),
+            metadata={
+                "runtime": "ai_agent.runtime",
+                "typed_goal": result.typed_goal.to_dict() if result.typed_goal else None,
+                "verification": {
+                    "result": verification,
+                    "slider_value_increased": bool(
+                        verification and verification.get("status") == "SUCCESS"
+                        and verification.get("message") == "Slider value increased in the requested direction."
+                    ),
+                    "slider_values": slider_values,
+                },
+                "match_result": result.match_result.to_dict() if result.match_result else None,
+                "debug": result.debug,
+                "trace_count": len(self.runtime.traces),
+            },
+        )
+
+    @staticmethod
+    def _action_event(request: AgentTurnRequest) -> UserActionEvent | None:
+        event = request.user_action_event
+        if event is None:
+            return None
+        return UserActionEvent(
+            action_type=UserActionType(event.action_type),
+            guide_command_id=event.guide_command_id,
+            target_node_id=event.target_node_id,
+            target_bounds=event.target_bounds,
+            occurred_at_ms=event.occurred_at_ms,
+        )

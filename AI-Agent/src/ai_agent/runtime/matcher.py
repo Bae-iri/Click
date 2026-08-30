@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from click_agent.keywords import any_keyword_matches
-from click_agent.types import ActionType, MatchResult, NormalizedNode, TaskGraph, Transition
+from ai_agent.runtime.keywords import any_keyword_matches
+from ai_agent.runtime.types import ActionType, MatchResult, NormalizedNode, TaskGraph, Transition
+from ai_agent.runtime.similarity import SimilarityScorer
 
 
 MATCH_THRESHOLD = 0.7
@@ -15,6 +16,7 @@ def match_next_ui(
     graph: TaskGraph,
     *,
     excluded_node_ids: tuple[str, ...] = (),
+    similarity_scorer: SimilarityScorer | None = None,
 ) -> MatchResult:
     transitions = graph.transitions_from(state_id)
     if not transitions:
@@ -44,7 +46,7 @@ def match_next_ui(
                 transition_id=transition.transition_id,
             )
 
-        candidate = _best_candidate(transition, nodes, excluded_node_ids)
+        candidate = _best_candidate(transition, nodes, excluded_node_ids, similarity_scorer)
         if candidate and candidate[1] >= MATCH_THRESHOLD:
             node, confidence, method = candidate
             return MatchResult(
@@ -60,6 +62,14 @@ def match_next_ui(
             )
 
     fallback_transition = transitions[0]
+    scroll_node = next((node for node in nodes if node.scrollable), None)
+    if fallback_transition.allow_scroll and scroll_node:
+        return MatchResult(
+            state_id=state_id, next_state_id=state_id, action_type=ActionType.SCROLL,
+            target_node_id=scroll_node.node_id, target_label=scroll_node.label,
+            target_bounds=scroll_node.bounds, match_method="scroll_fallback", confidence=0.6,
+            transition_id=fallback_transition.transition_id,
+        )
     return MatchResult(
         state_id=state_id,
         next_state_id=fallback_transition.to_state,
@@ -78,6 +88,7 @@ def _best_candidate(
     transition: Transition,
     nodes: tuple[NormalizedNode, ...],
     excluded_node_ids: tuple[str, ...],
+    similarity_scorer: SimilarityScorer | None,
 ) -> tuple[NormalizedNode, float, str] | None:
     best: tuple[NormalizedNode, float, str] | None = None
     excluded = set(excluded_node_ids)
@@ -91,6 +102,15 @@ def _best_candidate(
         if any_keyword_matches(node.label, transition.target_keywords):
             confidence += 0.72
             methods.append("keyword")
+
+        if similarity_scorer:
+            semantic_score = max(
+                (similarity_scorer.score(node.label, keyword) for keyword in transition.target_keywords),
+                default=0.0,
+            )
+            confidence += semantic_score * 0.25
+            if semantic_score:
+                methods.append("similarity")
 
         if set(node.semantic_tags).intersection(_semantic_targets(transition)):
             confidence += 0.12

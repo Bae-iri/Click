@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from click_agent.types import AgentTurnRequest, TurnPhase
+from ai_agent.runtime.types import AgentTurnRequest, TurnPhase
 
 
 class ContractViolationError(ValueError):
