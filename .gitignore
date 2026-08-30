@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Android / Gradle
+**/.gradle/
+**/build/
+**/local.properties
+Frontend/_wrapper/

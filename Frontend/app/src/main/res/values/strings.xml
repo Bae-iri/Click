@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Click</string>
+    <string name="app_ready">Click Frontend 준비 완료</string>
+    <string name="overlay_demo_title">Click Overlay</string>
+    <string name="overlay_demo_description">다른 앱 위에 표시되는 Click 아이콘을 실행합니다.\n아이콘을 눌러 음성·텍스트 모드를 전환해보세요.</string>
+    <string name="start_overlay">Click 아이콘 시작</string>
+    <string name="stop_overlay">Click 아이콘 종료</string>
+    <string name="text_goal_hint">무엇을 도와드릴까요?</string>
+    <string name="accessibility_service_label">Click 화면 안내</string>
+    <string name="accessibility_service_description">설정 화면의 항목과 위치를 읽어 다음 조작 위치를 안내합니다.</string>
+    <string name="accessibility_permission">접근성 권한 설정</string>
+    <string name="accessibility_enabled">접근성 권한: 허용됨</string>
+    <string name="accessibility_disabled">접근성 권한: 허용 필요</string>
+</resources>
