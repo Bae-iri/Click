@@ -128,9 +128,6 @@ class RuntimeAgentAdapter:
             if runtime_session and runtime_session.last_snapshot else {}
         )
         verification = result.verification_result.to_dict() if result.verification_result else None
-        render_policy = dict(guide.render_policy)
-        if guide.action_type.value == "scroll":
-            render_policy.update({"direction": "down", "execution_owner": "frontend_accessibility_service"})
         return AgentTurnResponse(
             request_id=result.request_id,
             session_id=result.session_id,
@@ -150,7 +147,7 @@ class RuntimeAgentAdapter:
                 target_bounds=guide.target_bounds,
                 safety_level=guide.safety_level.value,
                 requires_user_action=False if slider_completed else guide.requires_user_action,
-                render_policy=render_policy,
+                render_policy=dict(guide.render_policy),
             ),
             metadata={
                 "runtime": "ai_agent.runtime",

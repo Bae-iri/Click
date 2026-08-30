@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
@@ -227,3 +228,69 @@ def test_vision_snapshot_can_be_sent_without_accessibility_tree() -> None:
     assert body["state_id"] == "S1_SETTINGS_HOME"
     assert body["guide_command"]["target_node_id"] == "vision:display"
     assert body["metadata"]["debug"]["vision_fallback"]["status"] == "used"
+
+
+@pytest.mark.parametrize("action_type", ["scroll_completed", "scroll_failed"])
+def test_scroll_action_events_are_accepted(action_type: str) -> None:
+    client = TestClient(create_app())
+    response = client.post(
+        "/api/v1/agent/turn",
+        json={
+            "request_id": f"{action_type}-request",
+            "session_id": f"{action_type}-session",
+            "raw_goal": "increase font size",
+            "accessibility_tree": tree(),
+            "user_action_event": {"action_type": action_type},
+        },
+    )
+
+    assert response.status_code == 200
+
+
+def test_empty_accessibility_tree_returns_runtime_fallback_contract() -> None:
+    client = TestClient(create_app())
+    response = client.post(
+        "/api/v1/agent/turn",
+        json={
+            "request_id": "empty-tree-request",
+            "session_id": "empty-tree-session",
+            "raw_goal": "increase font size",
+            "accessibility_tree": {
+                "screen_width": 1080,
+                "screen_height": 2400,
+                "nodes": [],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["metadata"]["debug"]["observation"]["accessibility_node_count"] == 0
+    assert body["metadata"]["debug"]["fallback"]["type"] == "vision_fallback"
+    assert body["guide_command"]["render_policy"] == {
+        "avoid_covering_target": False,
+        "preferred_position": "center",
+        "vision_fallback": {
+            "requires_user_consent": False,
+            "accepted_payloads": [
+                "vision_snapshot.elements",
+                "vision_snapshot.ocr_text",
+                "vision_snapshot.screenshot_base64",
+            ],
+            "send_fresh_accessibility_tree": True,
+        },
+    }
+
+
+def test_screen_observation_is_still_required() -> None:
+    client = TestClient(create_app())
+    response = client.post(
+        "/api/v1/agent/turn",
+        json={
+            "request_id": "missing-observation-request",
+            "session_id": "missing-observation-session",
+            "raw_goal": "increase font size",
+        },
+    )
+
+    assert response.status_code == 422
