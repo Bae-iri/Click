@@ -55,9 +55,12 @@ def normalize_accessibility_tree(
 
 def infer_role(node: AccessibilityNode) -> str:
     class_name = (node.class_name or "").lower()
+    package_name = (node.package_name or "").lower()
     resource_id = (node.resource_id or "").lower()
     label = normalize_text(_merge_label(node))
 
+    if _looks_like_launcher_app_icon(package_name, resource_id, label, node.clickable):
+        return "app_icon"
     if "seekbar" in class_name or "slider" in class_name or "slider" in resource_id:
         return "slider"
     if "switch" in class_name:
@@ -73,6 +76,29 @@ def infer_role(node: AccessibilityNode) -> str:
     if node.clickable and label:
         return "menu_item"
     return "text"
+
+
+def _looks_like_launcher_app_icon(
+    package_name: str,
+    resource_id: str,
+    label: str,
+    clickable: bool,
+) -> bool:
+    if not clickable or not label:
+        return False
+    launcher_packages = (
+        "launcher",
+        "nexuslauncher",
+        "trebuchet",
+        "com.miui.home",
+        "com.huawei.android.launcher",
+        "com.oppo.launcher",
+        "com.vivo.launcher",
+    )
+    launcher_resources = ("workspace", "hotseat", "apps_view", "app_icon")
+    return any(candidate in package_name for candidate in launcher_packages) or any(
+        candidate in resource_id for candidate in launcher_resources
+    )
 
 
 def semantic_tags(label: str) -> tuple[str, ...]:

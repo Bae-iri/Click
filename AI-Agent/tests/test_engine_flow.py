@@ -149,6 +149,70 @@ class EngineFlowTests(unittest.TestCase):
         self.assertEqual(response.typed_goal.slots["direction"], "increase")
         self.assertEqual(response.guide_command.target_label, "디스플레이")
 
+    def test_unknown_state_does_not_target_settings_menu_inside_other_app(self) -> None:
+        engine = ClickAgentEngine()
+
+        response = engine.handle_turn(
+            AgentTurnRequest(
+                request_id="req-other-app-settings",
+                session_id="session-other-app-settings",
+                raw_goal=_raw_goal(
+                    "글자 크기 키워줘",
+                    device_context=DeviceContext(
+                        platform="android",
+                        app_package="com.some.otherapp",
+                    ),
+                ),
+                accessibility_tree=(
+                    AccessibilityNode(
+                        node_id="other-app-settings",
+                        package_name="com.some.otherapp",
+                        class_name="android.widget.TextView",
+                        text="설정",
+                        bounds_in_screen=(24, 200, 400, 280),
+                        clickable=True,
+                        enabled=True,
+                    ),
+                ),
+            )
+        )
+
+        self.assertEqual(response.current_state_id, "S0_UNKNOWN")
+        self.assertIsNone(response.guide_command.target_node_id)
+        self.assertEqual(response.guide_command.action_type.value, "observe_only")
+
+    def test_unknown_state_can_target_settings_icon_on_launcher(self) -> None:
+        engine = ClickAgentEngine()
+
+        response = engine.handle_turn(
+            AgentTurnRequest(
+                request_id="req-launcher-settings",
+                session_id="session-launcher-settings",
+                raw_goal=_raw_goal(
+                    "글자 크기 키워줘",
+                    device_context=DeviceContext(
+                        platform="android",
+                        app_package="com.google.android.apps.nexuslauncher",
+                    ),
+                ),
+                accessibility_tree=(
+                    AccessibilityNode(
+                        node_id="launcher-settings",
+                        package_name="com.google.android.apps.nexuslauncher",
+                        class_name="android.widget.TextView",
+                        text="설정",
+                        bounds_in_screen=(24, 200, 220, 360),
+                        clickable=True,
+                        enabled=True,
+                    ),
+                ),
+            )
+        )
+
+        self.assertEqual(response.current_state_id, "S0_UNKNOWN")
+        self.assertEqual(response.guide_command.target_node_id, "launcher-settings")
+        self.assertEqual(response.guide_command.action_type.value, "tap")
+
     def test_replanner_excludes_failed_node_after_repeated_no_change(self) -> None:
         engine = ClickAgentEngine()
         first_response = engine.handle_turn(

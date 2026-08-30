@@ -98,6 +98,8 @@ def _best_candidate(
             continue
         if transition.action_type in {ActionType.TAP, ActionType.DRAG} and not node.actionable:
             continue
+        if transition.target_role == "app_icon" and node.role != "app_icon":
+            continue
         confidence = 0.0
         methods: list[str] = []
 
