@@ -197,7 +197,7 @@ class ClickAgentEngine:
                 user_confirmation=request.user_confirmation,
             )
         pending_transition_id = _pending_transition_id(
-            guide_command.command_type,
+            guide_command,
             match_result.transition_id,
         )
         pending_confirmation_transition_id = _pending_confirmation_transition_id(
@@ -342,14 +342,16 @@ class ClickAgentEngine:
 
 
 def _pending_transition_id(
-    command_type: CommandType,
+    guide_command: GuideCommand,
     transition_id: str | None,
 ) -> str | None:
-    if command_type in {
+    if guide_command.command_type in {
         CommandType.CONFIRMATION,
         CommandType.DONE,
         CommandType.BLOCKED,
     }:
+        return None
+    if not guide_command.requires_user_action:
         return None
     return transition_id
 

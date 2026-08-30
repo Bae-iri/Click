@@ -179,6 +179,32 @@ FE는 `guide_command`를 렌더링한다.
 `scroll`만 FE Accessibility Service가 실행하며, 실행 후 fresh tree와 결과 이벤트를
 다시 전송한다.
 
+현재 화면에서 설정 앱 아이콘을 찾지 못하면 Agent는 target 없는 `observe_only`
+command와 함께 `render_policy.recovery_action`을 보낼 수 있다. FE는 이 값을 보고
+사용자 활성화가 필요한 버튼 또는 안내를 표시한다.
+
+```json
+{
+  "guide_command": {
+    "command_type": "highlight",
+    "action_type": "observe_only",
+    "message": "설정 앱을 현재 화면에서 찾지 못했어요. 설정 앱을 열 수 있는 화면으로 이동해 주세요.",
+    "target_node_id": null,
+    "requires_user_action": true,
+    "render_policy": {
+      "recovery_action": {
+        "type": "open_android_settings_or_show_app_drawer",
+        "target_app": "android_settings",
+        "android_intent_action": "android.settings.SETTINGS",
+        "fallback_screen": "launcher_or_app_drawer",
+        "requires_user_activation": true,
+        "reason": "settings_app_icon_not_visible"
+      }
+    }
+  }
+}
+```
+
 지원 패키지는 현재 다음 두 개다.
 
 - `com.android.settings`

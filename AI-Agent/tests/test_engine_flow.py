@@ -180,6 +180,11 @@ class EngineFlowTests(unittest.TestCase):
         self.assertEqual(response.current_state_id, "S0_UNKNOWN")
         self.assertIsNone(response.guide_command.target_node_id)
         self.assertEqual(response.guide_command.action_type.value, "observe_only")
+        self.assertTrue(response.guide_command.requires_user_action)
+        self.assertEqual(
+            response.guide_command.render_policy["recovery_action"]["type"],
+            "open_android_settings_or_show_app_drawer",
+        )
 
     def test_unknown_state_can_target_settings_icon_on_launcher(self) -> None:
         engine = ClickAgentEngine()
@@ -212,6 +217,48 @@ class EngineFlowTests(unittest.TestCase):
         self.assertEqual(response.current_state_id, "S0_UNKNOWN")
         self.assertEqual(response.guide_command.target_node_id, "launcher-settings")
         self.assertEqual(response.guide_command.action_type.value, "tap")
+
+    def test_generic_fallback_does_not_create_pending_transition(self) -> None:
+        engine = ClickAgentEngine()
+        missing_display_tree = (
+            _node("title", "설정", clickable=False, bounds=(24, 40, 1056, 96)),
+            AccessibilityNode(
+                node_id="settings-list",
+                package_name=SETTINGS_PACKAGE,
+                class_name="androidx.recyclerview.widget.RecyclerView",
+                text="설정 목록",
+                bounds_in_screen=(0, 120, 1080, 2200),
+                clickable=False,
+                scrollable=True,
+                enabled=True,
+            ),
+        )
+
+        first_response = engine.handle_turn(
+            AgentTurnRequest(
+                request_id="req-generic-fallback-1",
+                session_id="session-generic-fallback",
+                raw_goal=_raw_goal("글자 크기 키워줘"),
+                accessibility_tree=missing_display_tree,
+            )
+        )
+        session = engine.session_store.get("session-generic-fallback")
+
+        self.assertEqual(first_response.current_state_id, "S1_SETTINGS_HOME")
+        self.assertIsNone(first_response.guide_command.target_node_id)
+        self.assertFalse(first_response.guide_command.requires_user_action)
+        self.assertIsNone(session.pending_transition_id)
+
+        second_response = engine.handle_turn(
+            AgentTurnRequest(
+                request_id="req-generic-fallback-2",
+                session_id="session-generic-fallback",
+                raw_goal=None,
+                accessibility_tree=missing_display_tree,
+            )
+        )
+
+        self.assertIsNone(second_response.verification_result)
 
     def test_replanner_excludes_failed_node_after_repeated_no_change(self) -> None:
         engine = ClickAgentEngine()

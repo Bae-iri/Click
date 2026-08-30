@@ -44,6 +44,27 @@ def build_guide_command(
             )
 
     if match_result.fallback_reason:
+        if match_result.transition_id == "S0_TO_S1_OPEN_SETTINGS":
+            return GuideCommand(
+                guide_command_id=f"guide_{session_id}_{match_result.state_id}_open_settings_recovery",
+                command_type=CommandType.HIGHLIGHT,
+                action_type=ActionType.OBSERVE_ONLY,
+                message="설정 앱을 현재 화면에서 찾지 못했어요. 설정 앱을 열 수 있는 화면으로 이동해 주세요.",
+                safety_level=SafetyLevel.LOW_RISK,
+                requires_user_action=True,
+                render_policy={
+                    "avoid_covering_target": False,
+                    "preferred_position": "center",
+                    "recovery_action": {
+                        "type": "open_android_settings_or_show_app_drawer",
+                        "target_app": "android_settings",
+                        "android_intent_action": "android.settings.SETTINGS",
+                        "fallback_screen": "launcher_or_app_drawer",
+                        "requires_user_activation": True,
+                        "reason": "settings_app_icon_not_visible",
+                    },
+                },
+            )
         return GuideCommand(
             guide_command_id=f"guide_{session_id}_{match_result.state_id}_fallback",
             command_type=CommandType.HIGHLIGHT,
