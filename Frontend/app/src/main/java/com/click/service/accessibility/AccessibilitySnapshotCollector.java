@@ -13,11 +13,12 @@ import java.util.List;
 final class AccessibilitySnapshotCollector {
     ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, int width, int height) {
         List<AccessibilityNodeSnapshot> nodes = new ArrayList<>();
-        visit(root, "node_0", packageName, nodes);
+        visit(root, "node_0", packageName, width, height, nodes);
         return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes);
     }
 
     private void visit(AccessibilityNodeInfo node, String nodeId, String packageName,
+                       int screenWidth, int screenHeight,
                        List<AccessibilityNodeSnapshot> output) {
         if (node == null) return;
         Rect bounds = new Rect();
@@ -25,24 +26,33 @@ final class AccessibilitySnapshotCollector {
         String className = string(node.getClassName());
         AccessibilityNodeInfo.RangeInfo range = node.getRangeInfo();
         Float progress = range == null ? null : range.getCurrent();
-        output.add(new AccessibilityNodeSnapshot(
-                nodeId,
-                packageName,
-                string(node.getText()),
-                string(node.getContentDescription()),
-                node.getViewIdResourceName(),
-                className,
-                inferRole(className, node),
-                new int[]{bounds.left, bounds.top, bounds.right, bounds.bottom},
-                node.isClickable(),
-                node.isEnabled(),
-                node.isSelected(),
-                node.isScrollable(),
-                node.isCheckable(),
-                progress
-        ));
+        boolean intersectsScreen = bounds.right >= 0 && bounds.bottom >= 0
+                && bounds.left <= screenWidth && bounds.top <= screenHeight;
+        if (intersectsScreen && bounds.right >= bounds.left && bounds.bottom >= bounds.top) {
+            int left = Math.max(0, Math.min(bounds.left, screenWidth));
+            int top = Math.max(0, Math.min(bounds.top, screenHeight));
+            int right = Math.max(left, Math.min(bounds.right, screenWidth));
+            int bottom = Math.max(top, Math.min(bounds.bottom, screenHeight));
+            output.add(new AccessibilityNodeSnapshot(
+                    nodeId,
+                    packageName,
+                    string(node.getText()),
+                    string(node.getContentDescription()),
+                    node.getViewIdResourceName(),
+                    className,
+                    inferRole(className, node),
+                    new int[]{left, top, right, bottom},
+                    node.isClickable(),
+                    node.isEnabled(),
+                    node.isSelected(),
+                    node.isScrollable(),
+                    node.isCheckable(),
+                    progress
+            ));
+        }
         for (int index = 0; index < node.getChildCount(); index++) {
-            visit(node.getChild(index), nodeId + "_" + index, packageName, output);
+            visit(node.getChild(index), nodeId + "_" + index, packageName,
+                    screenWidth, screenHeight, output);
         }
     }
 
