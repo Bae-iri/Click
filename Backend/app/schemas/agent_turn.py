@@ -29,6 +29,7 @@ class AccessibilityNode(BaseModel):
     scrollable: bool = False
     checkable: bool = False
     role: str | None = None
+    extras: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("bounds_in_screen")
     @classmethod

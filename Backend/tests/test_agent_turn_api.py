@@ -108,3 +108,75 @@ def test_rejected_confirmation_blocks_without_automatic_action() -> None:
     assert body["task_status"] == "BLOCKED"
     assert body["guide_command"]["command_type"] == "blocked"
     assert body["guide_command"]["action_type"] == "observe_only"
+
+
+def slider_tree(progress: int) -> dict:
+    return {
+        "package_name": "com.android.settings",
+        "captured_at": "2026-08-30T10:00:00Z",
+        "screen_width": 1080,
+        "screen_height": 2400,
+        "nodes": [
+            {
+                "node_id": "font-slider",
+                "text": "Font size",
+                "class_name": "android.widget.SeekBar",
+                "role": "slider",
+                "bounds": [160, 430, 920, 480],
+                "clickable": True,
+                "extras": {"progress": progress},
+            }
+        ],
+    }
+
+
+def test_slider_progress_must_increase_before_task_completes() -> None:
+    client = TestClient(create_app())
+    first = client.post(
+        "/api/v1/agent/turn",
+        json={
+            "request_id": "slider-1",
+            "session_id": "slider-session",
+            "raw_goal": "increase font size",
+            "accessibility_tree": slider_tree(3),
+        },
+    )
+    assert first.status_code == 200
+    assert first.json()["guide_command"]["command_type"] == "confirmation"
+    assert first.json()["metadata"]["verification"]["slider_values"] == {
+        "font-slider": 3.0
+    }
+
+    accepted = client.post(
+        "/api/v1/agent/turn",
+        json={
+            "request_id": "slider-2",
+            "session_id": "slider-session",
+            "accessibility_tree": slider_tree(3),
+            "user_confirmation": "accepted",
+        },
+    )
+    assert accepted.json()["guide_command"]["action_type"] == "drag"
+    assert accepted.json()["task_status"] == "IN_PROGRESS"
+
+    unchanged = client.post(
+        "/api/v1/agent/turn",
+        json={
+            "request_id": "slider-3",
+            "session_id": "slider-session",
+            "accessibility_tree": slider_tree(3),
+        },
+    )
+    assert unchanged.json()["task_status"] != "COMPLETED"
+
+    completed = client.post(
+        "/api/v1/agent/turn",
+        json={
+            "request_id": "slider-4",
+            "session_id": "slider-session",
+            "accessibility_tree": slider_tree(4),
+        },
+    )
+    assert completed.status_code == 200
+    assert completed.json()["task_status"] == "COMPLETED"
+    assert completed.json()["metadata"]["verification"]["slider_value_increased"] is True

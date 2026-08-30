@@ -18,6 +18,6 @@ class GuidanceSession:
     status: str = "WAITING_FOR_SCREEN"
     current_state: str | None = None
     step: int = 0
+    slider_values: dict[str, float] = field(default_factory=dict)
     created_at: datetime = field(default_factory=utc_now)
     updated_at: datetime = field(default_factory=utc_now)
-
