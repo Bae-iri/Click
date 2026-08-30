@@ -25,6 +25,8 @@ from .types import (
     UserActionType,
     VerificationResult,
     VerificationStatus,
+    VisionElement,
+    VisionSnapshot,
 )
 from .engine import ClickAgentEngine
 from .session import InMemorySessionStore, SessionStore
@@ -55,6 +57,8 @@ __all__ = [
     "UserActionType",
     "VerificationResult",
     "VerificationStatus",
+    "VisionElement",
+    "VisionSnapshot",
     "ClickAgentEngine",
     "ContractViolationError",
     "InMemorySessionStore",

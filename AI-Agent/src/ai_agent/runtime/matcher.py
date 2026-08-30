@@ -96,6 +96,8 @@ def _best_candidate(
     for node in nodes:
         if node.node_id in excluded:
             continue
+        if transition.action_type in {ActionType.TAP, ActionType.DRAG} and not node.actionable:
+            continue
         confidence = 0.0
         methods: list[str] = []
 

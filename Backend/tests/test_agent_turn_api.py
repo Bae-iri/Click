@@ -188,3 +188,42 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
     assert completed.json()["metadata"]["verification"]["slider_value_increased"] is True
     assert completed.json()["metadata"]["runtime"] == "ai_agent.runtime"
     assert completed.json()["metadata"]["trace_count"] >= 1
+
+
+def test_vision_snapshot_can_be_sent_without_accessibility_tree() -> None:
+    client = TestClient(create_app())
+    response = client.post(
+        "/api/v1/agent/turn",
+        json={
+            "request_id": "vision-only-1",
+            "session_id": "vision-only-session",
+            "raw_goal": "increase font size",
+            "vision_snapshot": {
+                "user_consented": True,
+                "redaction_applied": True,
+                "provider": "frontend_ocr",
+                "package_name": "com.android.settings",
+                "screen_width": 1080,
+                "screen_height": 2400,
+                "elements": [
+                    {
+                        "element_id": "title",
+                        "text": "Settings",
+                        "bounds_in_screen": [24, 40, 1056, 96],
+                        "actionable": False,
+                    },
+                    {
+                        "element_id": "display",
+                        "text": "Display",
+                        "bounds_in_screen": [24, 320, 1056, 408],
+                    },
+                ],
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["state_id"] == "S1_SETTINGS_HOME"
+    assert body["guide_command"]["target_node_id"] == "vision:display"
+    assert body["metadata"]["debug"]["vision_fallback"]["status"] == "used"

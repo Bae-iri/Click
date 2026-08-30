@@ -7,7 +7,8 @@
 ## 요청 흐름
 
 첫 요청은 FE가 생성한 `request_id`, `session_id`, 사용자의 `raw_goal`과 현재
-Accessibility Tree를 함께 보낸다.
+화면 관찰 정보를 함께 보낸다. 기본 관찰 정보는 Accessibility Tree이고, Tree를
+받지 못하는 화면에서는 사용자 동의를 받은 `vision_snapshot`을 대신 보낼 수 있다.
 
 ```json
 {
@@ -45,6 +46,8 @@ Accessibility Tree를 함께 보낸다.
 - `session_id`: 같은 작업이 진행되는 동안 동일한 값
 - `user_id`: 개인화를 사용하는 경우 전달하는 사용자 UUID
 - `raw_goal`: 첫 요청에서 필수, 후속 요청에서는 생략
+- `accessibility_tree`: 기본 화면 관찰 값. `vision_snapshot`이 없으면 필수
+- `vision_snapshot`: Accessibility Tree를 못 받거나 target을 못 찾은 경우의 fallback
 - `captured_at`: ISO 8601 UTC 권장
 - `bounds_in_screen`: `[left, top, right, bottom]`, physical pixel 기준
 - `bounds`: `bounds_in_screen`의 입력 alias로도 허용하지만 FE DTO는 한 이름으로
@@ -68,6 +71,55 @@ Accessibility Tree를 함께 보낸다.
 
 허용 값은 `tap_completed`, `drag_completed`, `back_navigated`,
 `manual_override`, `observe_only`다.
+
+## Vision fallback
+
+Vision fallback은 Accessibility Tree를 대체하는 기본 경로가 아니라 예외 경로다.
+FE는 Tree가 비었거나 target node를 찾지 못하는 화면에서만 사용한다.
+
+요청에는 `accessibility_tree` 또는 `vision_snapshot` 중 하나가 반드시 있어야 한다.
+`vision_snapshot`을 보낼 때 원본 스크린샷을 외부 VLM으로 처리하려면 먼저 사용자
+동의를 받아 `user_consented: true`를 보내야 한다. 가능하면 FE에서 먼저 마스킹 또는
+온디바이스 OCR을 수행하고, `elements`만 전달한다.
+
+```json
+{
+  "request_id": "req-vision-001",
+  "session_id": "session-001",
+  "raw_goal": "글자 크기를 키우고 싶어",
+  "vision_snapshot": {
+    "user_consented": true,
+    "redaction_applied": true,
+    "provider": "frontend_ocr",
+    "package_name": "com.android.settings",
+    "screen_width": 1080,
+    "screen_height": 2400,
+    "elements": [
+      {
+        "element_id": "display",
+        "text": "디스플레이",
+        "bounds_in_screen": [24, 320, 1056, 408],
+        "role": "menu_item",
+        "confidence": 0.92,
+        "actionable": true
+      }
+    ]
+  }
+}
+```
+
+`vision_snapshot.elements`는 Agent 내부에서 `vision:{element_id}` 형태의 synthetic
+node로 변환된다. 응답의 `metadata.debug.vision_fallback.status`에서 사용 여부를
+확인한다.
+
+허용 status:
+
+- `not_requested`: vision fallback을 요청하지 않음
+- `consent_required`: 화면 이미지 분석 동의가 필요함
+- `used`: vision element/OCR을 기존 Agent 흐름에 사용함
+- `not_configured`: vision provider 또는 입력 정보가 부족함
+- `provider_error`: 외부 VLM 호출 실패
+- `no_signal`: vision provider가 유효한 UI signal을 반환하지 못함
 
 ## Confirmation
 

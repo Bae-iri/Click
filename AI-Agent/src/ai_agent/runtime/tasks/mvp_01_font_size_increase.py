@@ -37,7 +37,7 @@ MVP_01_STATES = {
     "S1_SETTINGS_HOME": TaskState(
         state_id="S1_SETTINGS_HOME",
         name="설정 홈",
-        required_keywords=("설정",),
+        required_keyword_groups=(("설정", "Settings"),),
         optional_keywords=("디스플레이", "접근성", "연결", "알림", "배터리"),
         package_candidates=("com.android.settings",),
         role_hints=("menu_item", "list"),

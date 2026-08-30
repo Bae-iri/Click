@@ -11,6 +11,8 @@ from ai_agent.runtime import (
     UserActionEvent,
     UserActionType,
     VerificationStatus,
+    VisionElement,
+    VisionSnapshot,
 )
 from ai_agent.runtime.types import AgentTurnRequest
 
@@ -131,6 +133,22 @@ class EngineFlowTests(unittest.TestCase):
         self.assertEqual(response.current_state_id, "S3_FONT_MENU")
         self.assertEqual(response.guide_command.target_label, "글자 크기")
 
+    def test_casual_increase_goal_phrase_is_supported(self) -> None:
+        engine = ClickAgentEngine()
+
+        response = engine.handle_turn(
+            AgentTurnRequest(
+                request_id="req-casual-goal",
+                session_id="session-casual-goal",
+                raw_goal=_raw_goal("글자 크기 키워줘"),
+                accessibility_tree=_settings_home_tree(),
+            )
+        )
+
+        self.assertEqual(response.task_id, "MVP-01")
+        self.assertEqual(response.typed_goal.slots["direction"], "increase")
+        self.assertEqual(response.guide_command.target_label, "디스플레이")
+
     def test_replanner_excludes_failed_node_after_repeated_no_change(self) -> None:
         engine = ClickAgentEngine()
         first_response = engine.handle_turn(
@@ -212,12 +230,120 @@ class EngineFlowTests(unittest.TestCase):
         self.assertEqual(response.verification_result.status, VerificationStatus.SUCCESS)
         self.assertEqual(response.guide_command.command_type, CommandType.DONE)
 
+    def test_vision_snapshot_can_replace_empty_accessibility_tree(self) -> None:
+        engine = ClickAgentEngine()
 
-def _raw_goal(source_text: str) -> RawGoalInput:
+        response = engine.handle_turn(
+            AgentTurnRequest(
+                request_id="req-vision-1",
+                session_id="session-vision",
+                raw_goal=_raw_goal(
+                    "글자 크기 키우고 싶어",
+                    device_context=DeviceContext(
+                        platform="android",
+                        app_package=SETTINGS_PACKAGE,
+                        screen_bounds=(0, 0, 1080, 2400),
+                    ),
+                ),
+                accessibility_tree=(),
+                vision_snapshot=VisionSnapshot(
+                    user_consented=True,
+                    redaction_applied=True,
+                    provider="frontend_ocr",
+                    package_name=SETTINGS_PACKAGE,
+                    screen_width=1080,
+                    screen_height=2400,
+                    elements=(
+                        VisionElement(
+                            element_id="title",
+                            text="설정",
+                            bounds_in_screen=(24, 40, 1056, 96),
+                            actionable=False,
+                        ),
+                        VisionElement(
+                            element_id="display",
+                            text="디스플레이",
+                            bounds_in_screen=(24, 240, 1056, 320),
+                        ),
+                    ),
+                ),
+            )
+        )
+
+        self.assertEqual(response.current_state_id, "S1_SETTINGS_HOME")
+        self.assertEqual(response.guide_command.target_node_id, "vision:display")
+        self.assertEqual(response.guide_command.message, "디스플레이를 눌러주세요.")
+        self.assertEqual(response.debug["vision_fallback"]["status"], "used")
+
+    def test_vision_snapshot_augments_tree_when_accessibility_target_is_missing(self) -> None:
+        engine = ClickAgentEngine()
+
+        response = engine.handle_turn(
+            AgentTurnRequest(
+                request_id="req-vision-augment",
+                session_id="session-vision-augment",
+                raw_goal=_raw_goal(
+                    "글자 크기 키워줘",
+                    device_context=DeviceContext(
+                        platform="android",
+                        app_package=SETTINGS_PACKAGE,
+                        screen_bounds=(0, 0, 1080, 2400),
+                    ),
+                ),
+                accessibility_tree=(
+                    _node("title", "설정", clickable=False, bounds=(24, 40, 1056, 96)),
+                ),
+                vision_snapshot=VisionSnapshot(
+                    user_consented=True,
+                    redaction_applied=True,
+                    provider="frontend_ocr",
+                    package_name=SETTINGS_PACKAGE,
+                    elements=(
+                        VisionElement(
+                            element_id="display",
+                            text="디스플레이",
+                            bounds_in_screen=(24, 240, 1056, 320),
+                        ),
+                    ),
+                ),
+            )
+        )
+
+        self.assertEqual(response.current_state_id, "S1_SETTINGS_HOME")
+        self.assertEqual(response.guide_command.target_node_id, "vision:display")
+        self.assertEqual(response.debug["vision_fallback"]["status"], "used")
+
+    def test_vision_snapshot_requires_consent_when_tree_is_empty(self) -> None:
+        engine = ClickAgentEngine()
+
+        response = engine.handle_turn(
+            AgentTurnRequest(
+                request_id="req-vision-consent",
+                session_id="session-vision-consent",
+                raw_goal=_raw_goal("글자 크기 키우고 싶어"),
+                accessibility_tree=(),
+                vision_snapshot=VisionSnapshot(
+                    user_consented=False,
+                    screenshot_base64="redacted",
+                ),
+            )
+        )
+
+        self.assertEqual(response.current_state_id, "S0_UNKNOWN")
+        self.assertEqual(response.guide_command.command_type, CommandType.CONFIRMATION)
+        self.assertIn("화면 이미지 분석", response.guide_command.message)
+        self.assertEqual(response.debug["vision_fallback"]["status"], "consent_required")
+
+
+def _raw_goal(
+    source_text: str,
+    *,
+    device_context: DeviceContext | None = None,
+) -> RawGoalInput:
     return RawGoalInput(
         source_text=source_text,
         locale="ko-KR",
-        device_context=DeviceContext(platform="android"),
+        device_context=device_context or DeviceContext(platform="android"),
     )
 
 

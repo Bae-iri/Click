@@ -9,6 +9,8 @@ from ai_agent.runtime import (
     RawGoalInput,
     UserActionEvent,
     UserActionType,
+    VisionElement as RuntimeVisionElement,
+    VisionSnapshot as RuntimeVisionSnapshot,
 )
 
 from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
@@ -24,6 +26,19 @@ class RuntimeAgentAdapter:
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
         tree = request.accessibility_tree
+        vision_snapshot = request.vision_snapshot
+        package_name = (
+            (tree.package_name if tree else None)
+            or (vision_snapshot.package_name if vision_snapshot else None)
+        )
+        screen_width = (
+            (tree.screen_width if tree else None)
+            or (vision_snapshot.screen_width if vision_snapshot else None)
+        )
+        screen_height = (
+            (tree.screen_height if tree else None)
+            or (vision_snapshot.screen_height if vision_snapshot else None)
+        )
         runtime_request = RuntimeRequest(
             request_id=request.request_id,
             session_id=request.session_id,
@@ -32,15 +47,17 @@ class RuntimeAgentAdapter:
                 locale="ko-KR",
                 device_context=DeviceContext(
                     platform="android",
-                    foreground_app=tree.package_name,
-                    app_package=tree.package_name,
-                    screen_bounds=(0, 0, tree.screen_width, tree.screen_height),
+                    foreground_app=package_name,
+                    app_package=package_name,
+                    screen_bounds=(0, 0, screen_width, screen_height)
+                    if screen_width and screen_height
+                    else None,
                 ),
             ) if request.raw_goal else None,
             accessibility_tree=tuple(
                 AccessibilityNode(
                     node_id=node.node_id,
-                    package_name=node.package_name or tree.package_name,
+                    package_name=node.package_name or package_name,
                     class_name=node.class_name,
                     text=node.text,
                     content_description=node.content_description,
@@ -53,7 +70,30 @@ class RuntimeAgentAdapter:
                     checkable=node.checkable,
                     extras=node.extras,
                 ) for node in tree.nodes
-            ),
+            ) if tree else (),
+            vision_snapshot=RuntimeVisionSnapshot(
+                user_consented=vision_snapshot.user_consented,
+                redaction_applied=vision_snapshot.redaction_applied,
+                provider=vision_snapshot.provider,
+                screenshot_base64=vision_snapshot.screenshot_base64,
+                mime_type=vision_snapshot.mime_type,
+                ocr_text=vision_snapshot.ocr_text,
+                elements=tuple(
+                    RuntimeVisionElement(
+                        element_id=element.element_id,
+                        text=element.text,
+                        bounds_in_screen=element.bounds_in_screen,
+                        role=element.role,
+                        confidence=element.confidence,
+                        actionable=element.actionable,
+                    )
+                    for element in vision_snapshot.elements
+                ),
+                package_name=vision_snapshot.package_name or package_name,
+                screen_width=vision_snapshot.screen_width or screen_width,
+                screen_height=vision_snapshot.screen_height or screen_height,
+                captured_at_ms=vision_snapshot.captured_at_ms,
+            ) if vision_snapshot else None,
             user_confirmation=request.user_confirmation,
             user_action_event=self._action_event(request),
         )

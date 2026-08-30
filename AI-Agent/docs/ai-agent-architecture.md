@@ -149,6 +149,23 @@ LLM/VLM은 다음 상황에서 fallback으로만 사용한다.
 - 팝업, 권한 요청, 오류 화면 등 예외 화면이 등장한 경우
 - embedding 및 keyword matching confidence가 낮은 경우
 
+현재 구현된 Vision fallback의 runtime 위치:
+
+1. FE가 Accessibility Tree를 수집하지 못하면 `vision_snapshot`을 보낸다.
+2. `vision_snapshot.user_consented`가 false면 Agent는 화면 이미지 분석 동의 요청 command를 반환한다.
+3. 동의된 `vision_snapshot.elements` 또는 OCR 결과는 `vision:{element_id}` synthetic node로 변환한다.
+4. 변환된 node는 기존 `Normalize -> Classify -> Match -> Guide` 흐름에 합류한다.
+5. 원본 screenshot은 trace/debug에 저장하지 않고, `vision_fallback.status`와 provider 요약만 남긴다.
+
+Vision fallback status:
+
+- `not_requested`: vision fallback을 사용하지 않음
+- `consent_required`: 외부 화면 이미지 분석 동의 필요
+- `used`: vision payload를 Agent 판단에 사용함
+- `not_configured`: provider 또는 입력 정보 부족
+- `provider_error`: 외부 provider 호출 실패
+- `no_signal`: 화면 분석 결과에서 유효한 UI signal 없음
+
 ### 4.4 자동 조작 제한
 
 MVP에서는 자동 tap을 제공하지 않는다. Agent는 사용자가 눌러야 할 위치를 Guide Command로 만들고, FE는 이를 Overlay로 렌더링하지만, 실제 tap은 사용자가 직접 수행한다.

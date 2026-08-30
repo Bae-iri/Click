@@ -24,6 +24,10 @@ def validate_agent_turn_request(
         raise ContractViolationError("request_id is required.")
     if not request.session_id:
         raise ContractViolationError("session_id is required.")
+    if not request.accessibility_tree and request.vision_snapshot is None:
+        raise ContractViolationError(
+            "accessibility_tree is required unless vision_snapshot is provided."
+        )
 
     phase = determine_turn_phase(request, has_session)
     if phase == TurnPhase.FIRST_TURN and request.raw_goal is None:

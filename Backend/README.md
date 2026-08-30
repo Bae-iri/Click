@@ -78,6 +78,34 @@ On later turns, keep `session_id`, create a new `request_id`, send a fresh
 `accessibility_tree`, and omit `raw_goal`. When responding to a confirmation,
 also send `user_confirmation` as `"accepted"` or `"rejected"`.
 
+If the Accessibility Tree is unavailable, FE can send `vision_snapshot` instead.
+Use it only after user consent, and prefer redacted/on-device OCR elements over a
+raw screenshot.
+
+```json
+{
+  "request_id": "req-vision-001",
+  "session_id": "session-001",
+  "raw_goal": "글자 크기를 키워줘",
+  "vision_snapshot": {
+    "user_consented": true,
+    "redaction_applied": true,
+    "provider": "frontend_ocr",
+    "package_name": "com.android.settings",
+    "screen_width": 1080,
+    "screen_height": 2400,
+    "elements": [
+      {
+        "element_id": "display",
+        "text": "디스플레이",
+        "bounds_in_screen": [24, 320, 1056, 408],
+        "actionable": true
+      }
+    ]
+  }
+}
+```
+
 The response contains a `guide_command`. FE renders the overlay using
 `target_bounds`; `tap`, `drag`, and `scroll` are guidance types and must not be
 treated as permission to operate the UI automatically. A `confirmation`

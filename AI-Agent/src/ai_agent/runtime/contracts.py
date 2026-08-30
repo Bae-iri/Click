@@ -15,11 +15,12 @@ CONTRACT_VERSION = "agent-fe-contract.v0.1"
 FE_TO_AGENT_REQUIRED_FIELDS = (
     "request_id",
     "session_id",
-    "accessibility_tree",
 )
 
 FE_TO_AGENT_OPTIONAL_FIELDS = (
     "raw_goal",
+    "accessibility_tree",
+    "vision_snapshot",
     "previous_state_id",
     "previous_guide_command_id",
     "user_confirmation",
@@ -55,7 +56,10 @@ FE_INPUT_RULES = (
     "session_id must stay stable while the user is pursuing the same goal.",
     "raw_goal is required on the first turn and when the user changes intent.",
     "raw_goal.device_context.platform must be android for MVP-01.",
-    "accessibility_tree must contain the currently visible Android Accessibility nodes.",
+    "accessibility_tree should contain the currently visible Android Accessibility nodes.",
+    "If accessibility_tree is unavailable, FE may send vision_snapshot after user consent.",
+    "Vision fallback is used only when Accessibility data is empty or target matching fails.",
+    "FE should redact or run on-device OCR before sending vision_snapshot whenever possible.",
     "bounds_in_screen uses physical screen pixels as [left, top, right, bottom].",
     "FE must preserve Android node identity when possible by passing stable node_id values.",
     "FE must send a fresh accessibility_tree after every user action.",

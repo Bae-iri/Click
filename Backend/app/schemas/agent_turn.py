@@ -56,9 +56,48 @@ class AccessibilityTree(BaseModel):
                 (node.package_name for node in self.nodes if node.package_name),
                 None,
             )
-        if self.package_name is None:
+        if self.package_name is None and self.nodes:
             raise ValueError("package_name is required on the tree or at least one node")
         return self
+
+
+class VisionElement(BaseModel):
+    element_id: str
+    text: str = Field(min_length=1, max_length=500)
+    bounds_in_screen: tuple[int, int, int, int] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("bounds_in_screen", "bounds"),
+    )
+    role: str | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    actionable: bool = True
+
+    @field_validator("bounds_in_screen")
+    @classmethod
+    def validate_bounds(
+        cls,
+        value: tuple[int, int, int, int] | None,
+    ) -> tuple[int, int, int, int] | None:
+        if value is None:
+            return None
+        left, top, right, bottom = value
+        if right < left or bottom < top:
+            raise ValueError("bounds_in_screen must be [left, top, right, bottom]")
+        return value
+
+
+class VisionSnapshot(BaseModel):
+    user_consented: bool = False
+    redaction_applied: bool = False
+    provider: str | None = None
+    screenshot_base64: str | None = Field(default=None, max_length=8_000_000)
+    mime_type: str = "image/png"
+    ocr_text: str | None = Field(default=None, max_length=10_000)
+    elements: list[VisionElement] = Field(default_factory=list)
+    package_name: str | None = None
+    screen_width: int | None = Field(default=None, gt=0)
+    screen_height: int | None = Field(default=None, gt=0)
+    captured_at_ms: int | None = None
 
 
 class AgentTurnRequest(BaseModel):
@@ -68,9 +107,16 @@ class AgentTurnRequest(BaseModel):
     session_id: str = Field(min_length=1, max_length=200)
     user_id: str | None = Field(default=None, min_length=36, max_length=36)
     raw_goal: str | None = Field(default=None, min_length=1, max_length=500)
-    accessibility_tree: AccessibilityTree
+    accessibility_tree: AccessibilityTree | None = None
+    vision_snapshot: VisionSnapshot | None = None
     user_confirmation: Literal["accepted", "rejected"] | None = None
     user_action_event: "UserActionEventRequest | None" = None
+
+    @model_validator(mode="after")
+    def require_screen_observation(self) -> "AgentTurnRequest":
+        if self.accessibility_tree is None and self.vision_snapshot is None:
+            raise ValueError("accessibility_tree or vision_snapshot is required")
+        return self
 
 
 class UserActionEventRequest(BaseModel):

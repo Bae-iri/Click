@@ -120,6 +120,37 @@ class AccessibilityNode:
 
 
 @dataclass(frozen=True, slots=True)
+class VisionElement:
+    element_id: str
+    text: str
+    bounds_in_screen: Bounds | None = None
+    role: str | None = None
+    confidence: float | None = None
+    actionable: bool = True
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class VisionSnapshot:
+    user_consented: bool = False
+    redaction_applied: bool = False
+    provider: str | None = None
+    screenshot_base64: str | None = None
+    mime_type: str = "image/png"
+    ocr_text: str | None = None
+    elements: tuple[VisionElement, ...] = ()
+    package_name: str | None = None
+    screen_width: int | None = None
+    screen_height: int | None = None
+    captured_at_ms: int | None = None
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class NormalizedNode:
     node_id: str
     label: str
@@ -282,6 +313,7 @@ class AgentTurnRequest:
     session_id: str
     raw_goal: RawGoalInput | None
     accessibility_tree: tuple[AccessibilityNode, ...]
+    vision_snapshot: VisionSnapshot | None = None
     previous_state_id: str | None = None
     previous_guide_command_id: str | None = None
     user_confirmation: Literal["accepted", "rejected"] | None = None

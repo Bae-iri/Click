@@ -9,7 +9,19 @@ from ai_agent.runtime.types import RawGoalInput, TypedGoal
 
 FONT_SIZE_TERMS = ("글자 크기", "글자", "font size", "text size", "font", "text")
 DISPLAY_SIZE_TERMS = ("화면 크기", "화면 확대", "화면 크게", "display size", "screen size")
-INCREASE_TERMS = ("increase", "bigger", "larger", "크게", "키우", "확대", "잘 보이", "더 크게", "작아", "작게 보여")
+INCREASE_TERMS = (
+    "increase",
+    "bigger",
+    "larger",
+    "크게",
+    "키우",
+    "키워",
+    "확대",
+    "잘 보이",
+    "더 크게",
+    "작아",
+    "작게 보여",
+)
 SETTINGS_TERMS = ("설정", "휴대폰", "핸드폰", "폰", "android")
 
 

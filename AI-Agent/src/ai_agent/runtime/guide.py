@@ -93,6 +93,23 @@ def clarification_command(
     )
 
 
+def vision_fallback_command(
+    *,
+    session_id: str,
+    message: str,
+    command_type: CommandType = CommandType.CONFIRMATION,
+    safety_level: SafetyLevel = SafetyLevel.CONFIRM_REQUIRED,
+) -> GuideCommand:
+    return GuideCommand(
+        guide_command_id=f"guide_{session_id}_vision_fallback",
+        command_type=command_type,
+        action_type=ActionType.OBSERVE_ONLY,
+        message=message,
+        safety_level=safety_level,
+        requires_user_action=command_type == CommandType.CONFIRMATION,
+    )
+
+
 def _transition_by_id(graph: TaskGraph, transition_id: str | None) -> Transition | None:
     if not transition_id:
         return None
