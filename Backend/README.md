@@ -1,5 +1,36 @@
 # Click Backend
 
+## PostgreSQL and personalization
+
+The backend stores user UI profiles, consent history, and UI behavior events in
+PostgreSQL. Exact birth dates and raw conversation history are intentionally not
+required. Without `DATABASE_URL`, the app uses an in-memory SQLite database for
+local tests only.
+
+```powershell
+cd C:\click_server\Click
+Copy-Item .env.example .env
+docker compose up -d postgres
+
+cd Backend
+$env:DATABASE_URL="postgresql+psycopg://click:replace-me@localhost:5432/click"
+python -m alembic upgrade head
+python -m uvicorn app.main:app --reload
+```
+
+Personalization flow:
+
+1. `POST /api/v1/users` creates a pseudonymous user and UI profile.
+2. `POST /api/v1/users/{id}/consents` records purpose-specific consent.
+3. `POST /api/v1/users/{id}/events` records allowed behavior evidence and updates the profile.
+4. Add `user_id` to `POST /api/v1/agent/turn`; consented profile context adjusts the guide message.
+5. `DELETE /api/v1/users/{id}` deletes the profile, consents, and events together.
+
+Use separate consent purposes for `personalization`, `conversation_storage`, and
+`model_training`. This implementation does not store raw conversations or train a
+model; both should remain disabled until retention, redaction, and deletion policies
+are defined.
+
 ## Agent turn API
 
 FE should use `POST /api/v1/agent/turn` for the turn-based integration.

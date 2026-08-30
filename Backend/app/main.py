@@ -13,23 +13,39 @@ if str(AI_AGENT_SOURCE) not in sys.path:
 
 from app.api.v1.endpoints.agent_turn import build_router as build_agent_router  # noqa: E402
 from app.api.v1.endpoints.guidance import build_router as build_guidance_router  # noqa: E402
+from app.api.v1.endpoints.users import build_router as build_users_router  # noqa: E402
 from app.clients.agent import AgentClient, ClickAgentEngine  # noqa: E402
+from app.database import Base, build_engine, build_session_factory, session_scope  # noqa: E402
+from app import models as _models  # noqa: E402,F401
 from app.repositories.sessions import InMemorySessionRepository  # noqa: E402
 from app.services.agent_turn import AgentTurnService  # noqa: E402
 from app.services.guidance import GuidanceService  # noqa: E402
 
 
-def create_app() -> FastAPI:
+def create_app(database_url: str | None = None) -> FastAPI:
     app = FastAPI(
         title="Click Backend API",
         version="0.1.0",
         description="Android 설정 앱 위 오버레이 안내를 위한 MVP API",
     )
+    engine = build_engine(database_url)
+    if engine.dialect.name == "sqlite":
+        Base.metadata.create_all(engine)
+    session_factory = build_session_factory(engine)
     sessions = InMemorySessionRepository()
     guidance_service = GuidanceService(sessions, AgentClient(REPOSITORY_ROOT))
-    turn_service = AgentTurnService(ClickAgentEngine(sessions, REPOSITORY_ROOT))
+    turn_service = AgentTurnService(
+        ClickAgentEngine(sessions, REPOSITORY_ROOT), session_factory=session_factory
+    )
+    app.state.engine = engine
+    app.state.session_factory = session_factory
+
+    def get_db():
+        yield from session_scope(session_factory)
+
     app.include_router(build_guidance_router(guidance_service), prefix="/api/v1")
     app.include_router(build_agent_router(turn_service), prefix="/api/v1")
+    app.include_router(build_users_router(get_db), prefix="/api/v1")
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:
