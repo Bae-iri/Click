@@ -167,11 +167,21 @@ Vision fallback status:
 - `provider_error`: 외부 provider 호출 실패
 - `no_signal`: 화면 분석 결과에서 유효한 UI signal 없음
 
+Fallback 연결 규칙:
+
+- Agent 응답은 `metadata.debug.observation`에 실제 수신한 Accessibility/Vision 입력 요약을 남긴다.
+- Agent 응답은 `metadata.debug.fallback`에 fallback type, reason, recovery action, 다음 관측 요구사항을 남긴다.
+- `accessibility_tree.nodes`가 빈 경우는 관측 실패로 보고, vision snapshot이 없으면 정보 부족 fallback command로 응답한다.
+- `render_policy.recovery_action`은 FE가 사용자 활성화 기반으로 설정 앱 열기 또는 앱스 화면 이동을 제공해야 하는 경우 사용한다.
+- `render_policy.fallback_action.type=request_fresh_observation`은 현재 viewport에서 target을 찾지 못했으니 fresh tree와 필요 시 vision snapshot을 다시 보내라는 의미다.
+- 같은 logical state로 분류되더라도 화면 fingerprint가 바뀌었으면 `NO_CHANGE`가 아니라 `UNKNOWN`으로 기록해 스와이프, 앱스 화면 이동, 수동 이동을 단순 실패로 오판하지 않는다.
+- runtime trace는 training/evaluation에 쓸 수 있도록 observation, fallback, agent chain, match, guide, verification을 기록하되 원본 screenshot payload는 저장하지 않는다.
+
 ### 4.4 자동 조작 제한
 
 MVP에서는 자동 tap을 제공하지 않는다. Agent는 사용자가 눌러야 할 위치를 Guide Command로 만들고, FE는 이를 Overlay로 렌더링하지만, 실제 tap은 사용자가 직접 수행한다.
 
-단, target UI가 현재 viewport에 없고 아래/위로 이동해야 발견될 가능성이 높은 경우 scroll은 제한적으로 허용한다.
+단, target UI가 현재 viewport에 없고 아래/위로 이동해야 발견될 가능성이 높은 경우 architecture 차원에서는 scroll을 제한적으로 허용할 수 있다. 현재 MVP-01 구현에서는 scroll handling을 제외하고, fresh observation, settings recovery action, vision fallback을 우선 사용한다.
 
 - tap, long press, text input, submit, purchase, consent는 자동 수행하지 않는다.
 - scroll은 탐색 목적의 LOW_RISK action으로만 허용한다.

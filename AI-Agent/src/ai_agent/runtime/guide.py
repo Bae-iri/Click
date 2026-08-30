@@ -63,6 +63,15 @@ def build_guide_command(
                         "requires_user_activation": True,
                         "reason": "settings_app_icon_not_visible",
                     },
+                    "expected_next_observation": {
+                        "state_id": "S1_SETTINGS_HOME",
+                        "package_candidates": [
+                            "com.android.settings",
+                            "com.samsung.android.settings",
+                        ],
+                        "send_fresh_accessibility_tree": True,
+                        "send_user_action_event": "manual_override",
+                    },
                 },
             )
         return GuideCommand(
@@ -72,6 +81,18 @@ def build_guide_command(
             message="현재 화면에서 다음에 누를 항목을 찾지 못했어요.",
             safety_level=SafetyLevel.LOW_RISK,
             requires_user_action=False,
+            render_policy={
+                "avoid_covering_target": False,
+                "preferred_position": "center",
+                "fallback_action": {
+                    "type": "request_fresh_observation",
+                    "reason": match_result.fallback_reason,
+                    "expected_next_observation": {
+                        "send_fresh_accessibility_tree": True,
+                        "send_vision_snapshot_if_target_missing": True,
+                    },
+                },
+            },
         )
 
     if transition and transition.to_state == graph.definition.done_state:
@@ -128,6 +149,19 @@ def vision_fallback_command(
         message=message,
         safety_level=safety_level,
         requires_user_action=command_type == CommandType.CONFIRMATION,
+        render_policy={
+            "avoid_covering_target": False,
+            "preferred_position": "center",
+            "vision_fallback": {
+                "requires_user_consent": command_type == CommandType.CONFIRMATION,
+                "accepted_payloads": [
+                    "vision_snapshot.elements",
+                    "vision_snapshot.ocr_text",
+                    "vision_snapshot.screenshot_base64",
+                ],
+                "send_fresh_accessibility_tree": True,
+            },
+        },
     )
 
 

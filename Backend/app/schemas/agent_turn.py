@@ -121,7 +121,13 @@ class AgentTurnRequest(BaseModel):
 
 class UserActionEventRequest(BaseModel):
     action_type: Literal[
-        "tap_completed", "drag_completed", "back_navigated", "manual_override", "observe_only"
+        "tap_completed",
+        "drag_completed",
+        "scroll_completed",
+        "scroll_failed",
+        "back_navigated",
+        "manual_override",
+        "observe_only",
     ]
     guide_command_id: str | None = None
     target_node_id: str | None = None

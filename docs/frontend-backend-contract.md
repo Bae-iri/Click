@@ -69,8 +69,8 @@
 }
 ```
 
-허용 값은 `tap_completed`, `drag_completed`, `back_navigated`,
-`manual_override`, `observe_only`다.
+허용 값은 `tap_completed`, `drag_completed`, `scroll_completed`,
+`scroll_failed`, `back_navigated`, `manual_override`, `observe_only`다.
 
 ## Vision fallback
 
@@ -78,6 +78,8 @@ Vision fallback은 Accessibility Tree를 대체하는 기본 경로가 아니라
 FE는 Tree가 비었거나 target node를 찾지 못하는 화면에서만 사용한다.
 
 요청에는 `accessibility_tree` 또는 `vision_snapshot` 중 하나가 반드시 있어야 한다.
+`accessibility_tree.nodes`가 빈 배열이면 “접근성 정보를 못 받음”으로 해석하고,
+Agent는 에러 대신 fallback command를 반환한다.
 `vision_snapshot`을 보낼 때 원본 스크린샷을 외부 VLM으로 처리하려면 먼저 사용자
 동의를 받아 `user_consented: true`를 보내야 한다. 가능하면 FE에서 먼저 마스킹 또는
 온디바이스 OCR을 수행하고, `elements`만 전달한다.
@@ -181,7 +183,8 @@ FE는 `guide_command`를 렌더링한다.
 
 현재 화면에서 설정 앱 아이콘을 찾지 못하면 Agent는 target 없는 `observe_only`
 command와 함께 `render_policy.recovery_action`을 보낼 수 있다. FE는 이 값을 보고
-사용자 활성화가 필요한 버튼 또는 안내를 표시한다.
+사용자 활성화가 필요한 버튼 또는 안내를 표시한다. recovery 실행 뒤에는 fresh
+Accessibility Tree와 `user_action_event.action_type: manual_override`를 다시 보낸다.
 
 ```json
 {
@@ -199,6 +202,15 @@ command와 함께 `render_policy.recovery_action`을 보낼 수 있다. FE는 �
         "fallback_screen": "launcher_or_app_drawer",
         "requires_user_activation": true,
         "reason": "settings_app_icon_not_visible"
+      },
+      "expected_next_observation": {
+        "state_id": "S1_SETTINGS_HOME",
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "send_fresh_accessibility_tree": true,
+        "send_user_action_event": "manual_override"
       }
     }
   }
@@ -209,3 +221,27 @@ command와 함께 `render_policy.recovery_action`을 보낼 수 있다. FE는 �
 
 - `com.android.settings`
 - `com.samsung.android.settings`
+
+일반 target match 실패에서는 `render_policy.fallback_action`이 내려간다.
+
+```json
+{
+  "fallback_action": {
+    "type": "request_fresh_observation",
+    "reason": "No matching target node found in current viewport.",
+    "expected_next_observation": {
+      "send_fresh_accessibility_tree": true,
+      "send_vision_snapshot_if_target_missing": true
+    }
+  }
+}
+```
+
+FE 연동 디버깅은 응답의 `metadata.debug`를 우선 본다.
+
+- `metadata.debug.observation`: Agent가 실제로 받은 tree/vision 수, package,
+  normalized node 수, visible role/tag, vision synthetic node 수
+- `metadata.debug.fallback`: 선택된 fallback type, reason, recovery_action,
+  fallback_action, expected_next_observation
+- `metadata.debug.agent_chain`: Goal Typing, Screen Classifier, Matcher,
+  Verification, Replanner, Guide Builder 연결 상태

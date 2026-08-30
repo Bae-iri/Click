@@ -72,10 +72,10 @@ def verify_transition(
                 message="Screen snapshot did not change after user action.",
             )
         return VerificationResult(
-            status=VerificationStatus.NO_CHANGE,
+            status=VerificationStatus.UNKNOWN,
             current_state_id=current_state_id,
             expected_state_id=transition.to_state,
-            message="Screen did not change after user action.",
+            message="Screen changed but the expected state was not reached.",
         )
 
     return VerificationResult(

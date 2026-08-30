@@ -185,6 +185,20 @@ class EngineFlowTests(unittest.TestCase):
             response.guide_command.render_policy["recovery_action"]["type"],
             "open_android_settings_or_show_app_drawer",
         )
+        self.assertEqual(
+            response.guide_command.render_policy["expected_next_observation"][
+                "send_user_action_event"
+            ],
+            "manual_override",
+        )
+        self.assertEqual(
+            response.debug["fallback"]["type"],
+            "settings_app_recovery",
+        )
+        self.assertEqual(
+            response.debug["observation"]["observed_packages"],
+            ["com.some.otherapp"],
+        )
 
     def test_unknown_state_can_target_settings_icon_on_launcher(self) -> None:
         engine = ClickAgentEngine()
@@ -247,6 +261,15 @@ class EngineFlowTests(unittest.TestCase):
         self.assertEqual(first_response.current_state_id, "S1_SETTINGS_HOME")
         self.assertIsNone(first_response.guide_command.target_node_id)
         self.assertFalse(first_response.guide_command.requires_user_action)
+        self.assertEqual(
+            first_response.guide_command.render_policy["fallback_action"]["type"],
+            "request_fresh_observation",
+        )
+        self.assertTrue(
+            first_response.debug["fallback"]["expected_next_observation"][
+                "send_vision_snapshot_if_target_missing"
+            ]
+        )
         self.assertIsNone(session.pending_transition_id)
 
         second_response = engine.handle_turn(
@@ -259,6 +282,43 @@ class EngineFlowTests(unittest.TestCase):
         )
 
         self.assertIsNone(second_response.verification_result)
+
+    def test_same_state_with_changed_snapshot_is_unknown_not_no_change(self) -> None:
+        engine = ClickAgentEngine()
+        first_response = engine.handle_turn(
+            AgentTurnRequest(
+                request_id="req-same-state-change-1",
+                session_id="session-same-state-change",
+                raw_goal=_raw_goal("글자 크기 키워줘"),
+                accessibility_tree=_settings_home_tree(),
+            )
+        )
+
+        response = engine.handle_turn(
+            AgentTurnRequest(
+                request_id="req-same-state-change-2",
+                session_id="session-same-state-change",
+                raw_goal=None,
+                accessibility_tree=(
+                    _node("title", "설정", clickable=False, bounds=(24, 40, 1056, 96)),
+                    _node("sound", "소리 및 진동", bounds=(24, 240, 1056, 320)),
+                    _node("wallpaper", "배경화면", bounds=(24, 340, 1056, 420)),
+                ),
+                user_action_event=UserActionEvent(
+                    action_type=UserActionType.TAP_COMPLETED,
+                    guide_command_id=first_response.guide_command.guide_command_id,
+                    target_node_id="display",
+                ),
+            )
+        )
+
+        self.assertEqual(response.current_state_id, "S1_SETTINGS_HOME")
+        self.assertEqual(response.verification_result.status, VerificationStatus.UNKNOWN)
+        self.assertEqual(
+            response.verification_result.message,
+            "Screen changed but the expected state was not reached.",
+        )
+        self.assertEqual(response.debug["replan_decision"]["reason"], "state_unknown")
 
     def test_replanner_excludes_failed_node_after_repeated_no_change(self) -> None:
         engine = ClickAgentEngine()
@@ -385,6 +445,12 @@ class EngineFlowTests(unittest.TestCase):
         self.assertEqual(response.guide_command.target_node_id, "vision:display")
         self.assertEqual(response.guide_command.message, "디스플레이를 눌러주세요.")
         self.assertEqual(response.debug["vision_fallback"]["status"], "used")
+        self.assertEqual(response.debug["observation"]["synthetic_vision_node_count"], 2)
+        self.assertEqual(response.debug["fallback"]["type"], "vision_augmented_match")
+        self.assertTrue(response.debug["fallback"]["matched_from_vision"])
+        self.assertEqual(response.debug["agent_chain"]["fallback"], "enabled")
+        self.assertEqual(engine.traces[-1]["schema_version"], "agent-runtime-trace.v1")
+        self.assertEqual(engine.traces[-1]["observation"]["vision_status"], "used")
 
     def test_vision_snapshot_augments_tree_when_accessibility_target_is_missing(self) -> None:
         engine = ClickAgentEngine()
@@ -444,6 +510,30 @@ class EngineFlowTests(unittest.TestCase):
         self.assertEqual(response.guide_command.command_type, CommandType.CONFIRMATION)
         self.assertIn("화면 이미지 분석", response.guide_command.message)
         self.assertEqual(response.debug["vision_fallback"]["status"], "consent_required")
+        self.assertTrue(
+            response.guide_command.render_policy["vision_fallback"][
+                "requires_user_consent"
+            ]
+        )
+        self.assertEqual(response.debug["fallback"]["type"], "vision_fallback")
+
+    def test_empty_tree_without_vision_returns_information_blocked_fallback(self) -> None:
+        engine = ClickAgentEngine()
+
+        response = engine.handle_turn(
+            AgentTurnRequest(
+                request_id="req-empty-tree",
+                session_id="session-empty-tree",
+                raw_goal=_raw_goal("글자 크기 키워줘"),
+                accessibility_tree=(),
+            )
+        )
+
+        self.assertEqual(response.current_state_id, "S0_UNKNOWN")
+        self.assertEqual(response.guide_command.command_type, CommandType.BLOCKED)
+        self.assertEqual(response.debug["observation"]["accessibility_node_count"], 0)
+        self.assertEqual(response.debug["fallback"]["type"], "vision_fallback")
+        self.assertEqual(response.debug["vision_fallback"]["status"], "not_requested")
 
 
 def _raw_goal(

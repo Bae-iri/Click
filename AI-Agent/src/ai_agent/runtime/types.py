@@ -52,6 +52,8 @@ class TurnPhase(str, Enum):
 class UserActionType(str, Enum):
     TAP_COMPLETED = "tap_completed"
     DRAG_COMPLETED = "drag_completed"
+    SCROLL_COMPLETED = "scroll_completed"
+    SCROLL_FAILED = "scroll_failed"
     BACK_NAVIGATED = "back_navigated"
     MANUAL_OVERRIDE = "manual_override"
     OBSERVE_ONLY = "observe_only"

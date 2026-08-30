@@ -57,6 +57,7 @@ FE_INPUT_RULES = (
     "raw_goal is required on the first turn and when the user changes intent.",
     "raw_goal.device_context.platform must be android for MVP-01.",
     "accessibility_tree should contain the currently visible Android Accessibility nodes.",
+    "An explicit empty accessibility_tree means Accessibility data was unavailable; Agent returns a fallback command instead of treating it as a successful observation.",
     "If accessibility_tree is unavailable, FE may send vision_snapshot after user consent.",
     "Vision fallback is used only when Accessibility data is empty or target matching fails.",
     "FE should redact or run on-device OCR before sending vision_snapshot whenever possible.",
@@ -64,7 +65,7 @@ FE_INPUT_RULES = (
     "FE must preserve Android node identity when possible by passing stable node_id values.",
     "FE must send a fresh accessibility_tree after every user action.",
     "user_confirmation is only accepted as accepted or rejected.",
-    "FE should send user_action_event after tap, drag, back navigation, or manual override.",
+    "FE should send user_action_event after tap, drag, scroll, back navigation, or manual override.",
 )
 
 
@@ -77,7 +78,11 @@ FE_OUTPUT_RULES = (
     "FE should expire stale guidance after ttl_ms unless a newer response arrives.",
     "When command_type is confirmation, FE must collect explicit user confirmation.",
     "When safety_level is BLOCKED, FE must stop task guidance for that action.",
-    "For scroll commands, FE executes Accessibility scroll and sends a fresh tree plus user_action_event.",
+    "For scroll commands, FE executes Accessibility scroll and sends a fresh tree plus scroll_completed or scroll_failed.",
+    "When render_policy has recovery_action, FE should execute or present that recovery path and send a fresh tree plus manual_override.",
+    "When render_policy has fallback_action.request_fresh_observation, FE should send a fresh tree and may include vision_snapshot if the target is still missing.",
+    "metadata.debug.observation shows what the Agent actually received and normalized.",
+    "metadata.debug.fallback shows which fallback branch, if any, was selected.",
 )
 
 
@@ -94,6 +99,8 @@ SESSION_STATE_RULES = (
 USER_ACTION_EVENT_TYPES = (
     "tap_completed",
     "drag_completed",
+    "scroll_completed",
+    "scroll_failed",
     "back_navigated",
     "manual_override",
     "observe_only",
