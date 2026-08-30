@@ -20,31 +20,35 @@ public final class ClickOverlayLayout extends ViewGroup {
     public enum Mode { COLLAPSED, VOICE, TEXT }
 
     public interface Callback {
-        void onModeChanged(Mode mode);
-        void onDragBy(int deltaX, int deltaY);
+        void onModeChanged(Mode oldMode, Mode newMode);
+        void onDragStarted();
+        void onDragBy(float deltaX, float deltaY);
+        void onDragEnded();
+        void onTextSubmitted(String text);
         void onCloseRequested();
     }
 
     private static final int CLICK_RED = Color.rgb(255, 59, 77);
     private static final int MIC_ON_GREEN = Color.rgb(143, 209, 79);
     private static final int MIC_OFF_RED = Color.rgb(225, 62, 70);
-
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final EditText goalInput;
     private Mode mode = Mode.COLLAPSED;
+    private Mode lastExpandedMode = Mode.VOICE;
     private Callback callback;
     private float downRawX;
     private float downRawY;
     private float lastRawX;
     private float lastRawY;
     private boolean dragging;
+    private String recognizedSpeech = "듣고 있어요…";
 
     public ClickOverlayLayout(Context context) {
         super(context);
         setWillNotDraw(false);
         setClipToPadding(false);
-        setContentDescription("Click 도우미");
+        setContentDescription("Click 도우미 열기");
 
         goalInput = new EditText(context);
         goalInput.setSingleLine(true);
@@ -53,37 +57,67 @@ public final class ClickOverlayLayout extends ViewGroup {
         goalInput.setHintTextColor(Color.rgb(138, 145, 158));
         goalInput.setHint(R.string.text_goal_hint);
         goalInput.setInputType(InputType.TYPE_CLASS_TEXT);
-        goalInput.setPadding(dp(4), 0, dp(8), 0);
+        goalInput.setPadding(dp(14), 0, dp(8), 0);
         goalInput.setBackgroundColor(Color.TRANSPARENT);
         goalInput.setVisibility(GONE);
+        goalInput.setFocusableInTouchMode(true);
+        goalInput.setOnTouchListener((view, event) -> handleInputTouch(event));
         addView(goalInput);
+
     }
 
-    public void setCallback(Callback callback) {
-        this.callback = callback;
+    public void setCallback(Callback callback) { this.callback = callback; }
+    public Mode getMode() { return mode; }
+
+    public void setRecognizedSpeech(String text) {
+        recognizedSpeech = text == null || text.trim().isEmpty() ? "듣고 있어요…" : text.trim();
+        invalidate();
     }
 
-    public Mode getMode() {
-        return mode;
+    public void collapse() {
+        if (mode == Mode.COLLAPSED) return;
+        hideKeyboard();
+        changeMode(Mode.COLLAPSED);
     }
 
     @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        int width = MeasureSpec.getSize(widthMeasureSpec);
-        int height = MeasureSpec.getSize(heightMeasureSpec);
-        setMeasuredDimension(width, height);
+    public void onWindowFocusChanged(boolean hasWindowFocus) {
+        super.onWindowFocusChanged(hasWindowFocus);
+        if (!hasWindowFocus && mode == Mode.TEXT) post(this::collapse);
+    }
 
+    public int getWindowWidth(Mode targetMode, int screenWidth) {
+        if (targetMode == Mode.COLLAPSED) return dp(64);
+        return Math.min(screenWidth - dp(72), dp(320));
+    }
+
+    public int getWindowHeight(Mode targetMode) {
+        if (targetMode == Mode.COLLAPSED) return dp(64);
+        return dp(68);
+    }
+
+    public float getClickCenterX(Mode targetMode) {
+        if (targetMode == Mode.COLLAPSED) return dp(32);
+        return getWindowWidth(targetMode, getResources().getDisplayMetrics().widthPixels) - dp(88);
+    }
+
+    public float getClickCenterY(Mode targetMode) {
+        if (targetMode == Mode.COLLAPSED) return dp(32);
+        return dp(34);
+    }
+
+    @Override
+    protected void onMeasure(int widthSpec, int heightSpec) {
+        int width = MeasureSpec.getSize(widthSpec);
+        int height = MeasureSpec.getSize(heightSpec);
+        setMeasuredDimension(width, height);
         if (mode == Mode.TEXT) {
-            int inputWidth = Math.max(0, width - dp(126));
             goalInput.measure(
-                    MeasureSpec.makeMeasureSpec(inputWidth, MeasureSpec.EXACTLY),
-                    MeasureSpec.makeMeasureSpec(dp(46), MeasureSpec.EXACTLY)
-            );
+                    MeasureSpec.makeMeasureSpec(Math.max(0, width - dp(176)), MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(dp(46), MeasureSpec.EXACTLY));
         } else {
-            goalInput.measure(
-                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY),
-                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY)
-            );
+            goalInput.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY));
         }
     }
 
@@ -91,105 +125,79 @@ public final class ClickOverlayLayout extends ViewGroup {
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         if (mode == Mode.TEXT) {
             int inputTop = (getHeight() - dp(46)) / 2;
-            goalInput.layout(dp(4), inputTop, getWidth() - dp(122), inputTop + dp(46));
-        } else {
-            goalInput.layout(0, 0, 0, 0);
-        }
+            goalInput.layout(dp(4), inputTop, getWidth() - dp(172), inputTop + dp(46));
+        } else goalInput.layout(0, 0, 0, 0);
     }
 
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
-        if (mode == Mode.COLLAPSED) {
-            drawClickIcon(canvas, getWidth() / 2f, getHeight() / 2f, dp(29));
-        } else if (mode == Mode.VOICE) {
-            drawVoiceControls(canvas);
-        } else {
-            drawTextControls(canvas);
-        }
+        if (mode == Mode.COLLAPSED) drawClickIcon(canvas, getWidth() / 2f, getHeight() / 2f, dp(29));
+        else if (mode == Mode.VOICE) drawVoiceControls(canvas);
+        else drawTextControls(canvas);
     }
 
     private void drawVoiceControls(Canvas canvas) {
-        float centerY = getHeight() - dp(39);
-        drawPromptBubble(canvas, centerY - dp(98));
-
+        float centerY = getHeight() / 2f;
         paint.setColor(Color.argb(245, 255, 255, 255));
-        paint.setShadowLayer(dp(8), 0, dp(3), Color.argb(55, 20, 28, 40));
+        paint.setShadowLayer(dp(7), 0, dp(3), Color.argb(50, 20, 28, 40));
         setLayerType(LAYER_TYPE_SOFTWARE, paint);
-        canvas.drawRoundRect(new RectF(dp(4), centerY - dp(31), getWidth() - dp(4), centerY + dp(31)), dp(32), dp(32), paint);
+        canvas.drawRoundRect(new RectF(dp(3), dp(6), getWidth() - dp(3), getHeight() - dp(6)), dp(28), dp(28), paint);
         paint.clearShadowLayer();
+        drawListeningChip(canvas, centerY);
+        drawClickIcon(canvas, getWidth() - dp(88), centerY, dp(29));
+        drawMic(canvas, getWidth() - dp(30), centerY, MIC_ON_GREEN);
+    }
 
-        drawTrash(canvas, dp(45), centerY, CLICK_RED);
-        drawClickIcon(canvas, getWidth() / 2f, centerY, dp(35));
-        drawMic(canvas, getWidth() - dp(45), centerY, MIC_ON_GREEN);
+    private void drawListeningChip(Canvas canvas, float centerY) {
+        RectF bubble = new RectF(dp(4), centerY - dp(23), getWidth() - dp(122), centerY + dp(23));
+        paint.setColor(Color.rgb(245, 247, 250));
+        canvas.drawRoundRect(bubble, dp(18), dp(18), paint);
+        paint.setColor(Color.rgb(38, 44, 55));
+        paint.setTextSize(dp(12));
+        float available = bubble.width() - dp(24);
+        int firstLength = paint.breakText(recognizedSpeech, true, available, null);
+        String first = recognizedSpeech.substring(0, firstLength);
+        String second = recognizedSpeech.substring(firstLength);
+        if (paint.measureText(second) > available) {
+            int secondLength = Math.max(0, paint.breakText(second, true, available - paint.measureText("…"), null));
+            second = second.substring(0, secondLength) + "…";
+        }
+        float firstY = second.isEmpty() ? centerY + dp(4) : centerY - dp(4);
+        canvas.drawText(first, bubble.left + dp(12), firstY, paint);
+        if (!second.isEmpty()) canvas.drawText(second, bubble.left + dp(12), centerY + dp(12), paint);
     }
 
     private void drawTextControls(Canvas canvas) {
-        float clickX = getWidth() - dp(88);
         float centerY = getHeight() / 2f;
         paint.setColor(Color.argb(248, 255, 255, 255));
         paint.setShadowLayer(dp(7), 0, dp(3), Color.argb(50, 20, 28, 40));
         setLayerType(LAYER_TYPE_SOFTWARE, paint);
         canvas.drawRoundRect(new RectF(dp(3), dp(6), getWidth() - dp(3), getHeight() - dp(6)), dp(28), dp(28), paint);
         paint.clearShadowLayer();
-        drawClickIcon(canvas, clickX, centerY, dp(29));
+        drawSend(canvas, getWidth() - dp(146), centerY);
+        drawClickIcon(canvas, getWidth() - dp(88), centerY, dp(29));
         drawMicOff(canvas, getWidth() - dp(30), centerY);
     }
 
-    private void drawPromptBubble(Canvas canvas, float top) {
-        float left = dp(18);
-        float right = getWidth() - dp(8);
-        float bottom = top + dp(65);
-        paint.setColor(Color.argb(250, 255, 255, 255));
-        paint.setShadowLayer(dp(7), 0, dp(3), Color.argb(52, 20, 28, 40));
-        setLayerType(LAYER_TYPE_SOFTWARE, paint);
-        canvas.drawRoundRect(new RectF(left, top, right, bottom), dp(14), dp(14), paint);
+    private void drawSend(Canvas canvas, float cx, float cy) {
+        paint.setColor(Color.rgb(80, 92, 112));
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(dp(2));
+        canvas.drawCircle(cx, cy, dp(19), paint);
+        paint.setStrokeJoin(Paint.Join.ROUND);
         path.reset();
-        path.moveTo(getWidth() / 2f - dp(10), bottom - dp(1));
-        path.lineTo(getWidth() / 2f, bottom + dp(11));
-        path.lineTo(getWidth() / 2f + dp(10), bottom - dp(1));
+        path.moveTo(cx - dp(7), cy - dp(6));
+        path.lineTo(cx + dp(8), cy);
+        path.lineTo(cx - dp(7), cy + dp(6));
         path.close();
         canvas.drawPath(path, paint);
-        paint.clearShadowLayer();
-
-        paint.setColor(Color.rgb(43, 48, 59));
-        paint.setTextSize(dp(14));
-        paint.setTypeface(android.graphics.Typeface.create("sans", android.graphics.Typeface.NORMAL));
-        canvas.drawText("무엇을 도와드릴까요?", left + dp(18), top + dp(27), paint);
-        canvas.drawText("말씀해주세요.", left + dp(18), top + dp(49), paint);
+        canvas.drawLine(cx - dp(6), cy, cx + dp(6), cy, paint);
+        paint.setStyle(Paint.Style.FILL);
     }
 
     private void drawClickIcon(Canvas canvas, float cx, float cy, float radius) {
-        paint.setColor(CLICK_RED);
-        paint.setShadowLayer(dp(6), 0, dp(3), Color.argb(65, 30, 35, 50));
-        setLayerType(LAYER_TYPE_SOFTWARE, paint);
-        canvas.drawCircle(cx, cy - radius * 0.06f, radius, paint);
-
-        path.reset();
-        path.moveTo(cx - radius * 0.56f, cy + radius * 0.62f);
-        path.lineTo(cx - radius * 0.76f, cy + radius * 1.02f);
-        path.lineTo(cx - radius * 0.18f, cy + radius * 0.78f);
-        path.close();
-        canvas.drawPath(path, paint);
-        paint.clearShadowLayer();
-
-        paint.setColor(Color.WHITE);
-        path.reset();
-        path.moveTo(cx - radius * 0.30f, cy - radius * 0.50f);
-        path.lineTo(cx + radius * 0.42f, cy - radius * 0.02f);
-        path.lineTo(cx + radius * 0.08f, cy + radius * 0.08f);
-        path.lineTo(cx + radius * 0.30f, cy + radius * 0.50f);
-        path.lineTo(cx + radius * 0.06f, cy + radius * 0.62f);
-        path.lineTo(cx - radius * 0.14f, cy + radius * 0.18f);
-        path.lineTo(cx - radius * 0.42f, cy + radius * 0.42f);
-        path.close();
-        canvas.drawPath(path, paint);
-
-        paint.setStrokeWidth(dp(2));
-        paint.setStrokeCap(Paint.Cap.ROUND);
-        canvas.drawLine(cx + radius * 0.25f, cy - radius * 0.63f, cx + radius * 0.36f, cy - radius * 0.88f, paint);
-        canvas.drawLine(cx + radius * 0.47f, cy - radius * 0.48f, cx + radius * 0.68f, cy - radius * 0.65f, paint);
-        canvas.drawLine(cx + radius * 0.55f, cy - radius * 0.20f, cx + radius * 0.80f, cy - radius * 0.22f, paint);
+        ClickIconRenderer.draw(this, canvas, paint, path, cx, cy, radius, 0f, false);
     }
 
     private void drawMic(Canvas canvas, float cx, float cy, int color) {
@@ -209,7 +217,6 @@ public final class ClickOverlayLayout extends ViewGroup {
         paint.setColor(MIC_OFF_RED);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(dp(3));
-        paint.setStrokeCap(Paint.Cap.ROUND);
         canvas.drawLine(cx - dp(14), cy - dp(17), cx + dp(14), cy + dp(19), paint);
         paint.setStyle(Paint.Style.FILL);
     }
@@ -229,6 +236,20 @@ public final class ClickOverlayLayout extends ViewGroup {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        return handleDragOrTap(event, false);
+    }
+
+    private boolean handleInputTouch(MotionEvent event) {
+        boolean handled = handleDragOrTap(event, true);
+        if (event.getActionMasked() == MotionEvent.ACTION_UP && !dragging) {
+            goalInput.requestFocus();
+            InputMethodManager keyboard = getContext().getSystemService(InputMethodManager.class);
+            keyboard.showSoftInput(goalInput, InputMethodManager.SHOW_IMPLICIT);
+        }
+        return handled;
+    }
+
+    private boolean handleDragOrTap(MotionEvent event, boolean fromInput) {
         float rawX = event.getRawX();
         float rawY = event.getRawY();
         if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
@@ -237,48 +258,40 @@ public final class ClickOverlayLayout extends ViewGroup {
             dragging = false;
             return true;
         }
-        if (event.getActionMasked() == MotionEvent.ACTION_MOVE && mode == Mode.COLLAPSED) {
-            int dx = Math.round(rawX - lastRawX);
-            int dy = Math.round(rawY - lastRawY);
-            if (Math.hypot(rawX - downRawX, rawY - downRawY) > dp(6)) {
+        if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
+            if (Math.hypot(rawX - downRawX, rawY - downRawY) > dp(5)) {
+                if (!dragging && callback != null) callback.onDragStarted();
                 dragging = true;
-                if (callback != null) {
-                    callback.onDragBy(dx, dy);
-                }
             }
+            if (dragging && callback != null) callback.onDragBy(rawX - lastRawX, rawY - lastRawY);
             lastRawX = rawX;
             lastRawY = rawY;
             return true;
         }
-        if (event.getActionMasked() == MotionEvent.ACTION_UP && !dragging) {
-            handleTap(event.getX(), event.getY());
+        if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+            if (dragging) {
+                if (callback != null) callback.onDragEnded();
+            } else if (!fromInput) handleTap(event.getX(), event.getY());
             return true;
         }
+        if (event.getActionMasked() == MotionEvent.ACTION_CANCEL && dragging && callback != null) callback.onDragEnded();
         return true;
     }
 
     private void handleTap(float x, float y) {
         if (mode == Mode.COLLAPSED) {
-            changeMode(Mode.VOICE);
+            changeMode(lastExpandedMode);
             return;
         }
         if (mode == Mode.VOICE) {
-            if (y < getHeight() - dp(78)) {
-                return;
-            }
-            if (x < dp(76)) {
-                if (callback != null) {
-                    callback.onCloseRequested();
-                }
-            } else if (x > getWidth() - dp(76)) {
-                changeMode(Mode.TEXT);
-            } else {
-                changeMode(Mode.COLLAPSED);
-            }
+            if (y < getHeight() - dp(78)) return;
+            if (x > getWidth() - dp(76)) changeMode(Mode.TEXT);
+            else changeMode(Mode.COLLAPSED);
             return;
         }
-
-        if (x >= getWidth() - dp(118) && x < getWidth() - dp(58)) {
+        if (x >= getWidth() - dp(170) && x < getWidth() - dp(122)) {
+            submitText();
+        } else if (x >= getWidth() - dp(118) && x < getWidth() - dp(58)) {
             hideKeyboard();
             changeMode(Mode.COLLAPSED);
         } else if (x >= getWidth() - dp(58)) {
@@ -288,21 +301,22 @@ public final class ClickOverlayLayout extends ViewGroup {
     }
 
     private void changeMode(Mode newMode) {
+        Mode oldMode = mode;
+        if (newMode != Mode.COLLAPSED) lastExpandedMode = newMode;
         mode = newMode;
         goalInput.setVisibility(mode == Mode.TEXT ? VISIBLE : GONE);
+        if (mode == Mode.TEXT) goalInput.clearFocus();
         setContentDescription(mode == Mode.COLLAPSED ? "Click 도우미 열기" : "Click 도우미 컨트롤");
-        if (callback != null) {
-            callback.onModeChanged(mode);
-        }
+        if (callback != null) callback.onModeChanged(oldMode, newMode);
         requestLayout();
         invalidate();
-        if (mode == Mode.TEXT) {
-            goalInput.requestFocus();
-            postDelayed(() -> {
-                InputMethodManager keyboard = getContext().getSystemService(InputMethodManager.class);
-                keyboard.showSoftInput(goalInput, InputMethodManager.SHOW_IMPLICIT);
-            }, 120);
-        }
+    }
+
+    private void submitText() {
+        String text = goalInput.getText().toString().trim();
+        if (text.isEmpty()) return;
+        hideKeyboard();
+        if (callback != null) callback.onTextSubmitted(text);
     }
 
     private void hideKeyboard() {

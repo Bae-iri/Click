@@ -1,94 +1,47 @@
 package com.click;
 
 import android.content.Intent;
-import android.graphics.Color;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.Settings;
-import android.view.Gravity;
-import android.view.ViewGroup;
-import android.widget.Button;
+import android.text.InputType;
+import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.click.service.overlay.ClickOverlayService;
+import com.click.data.local.LocalAccountStore;
+import com.click.ui.common.ClickUi;
 
 public class MainActivity extends AppCompatActivity {
-    private static final int OVERLAY_PERMISSION_REQUEST = 1001;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        LocalAccountStore account = new LocalAccountStore(this);
+        LinearLayout page = ClickUi.page(this);
 
-        int spacing = dp(24);
+        page.addView(ClickUi.title(this, "Click 로그인"));
+        page.addView(ClickUi.body(this, "큰 글씨와 음성 안내로\n휴대폰 설정을 쉽게 도와드릴게요."),
+                ClickUi.wrap(ClickUi.dp(this, 18)));
 
-        LinearLayout content = new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setGravity(Gravity.CENTER);
-        content.setPadding(spacing, spacing, spacing, spacing);
-        content.setBackgroundColor(Color.rgb(250, 250, 252));
+        EditText email = ClickUi.input(this, "이메일", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        email.setText(account.email());
+        EditText password = ClickUi.input(this, "비밀번호", ClickUi.passwordType());
+        page.addView(email, ClickUi.fullWidth(this, 62, 34));
+        page.addView(password, ClickUi.fullWidth(this, 62, 12));
 
-        TextView title = new TextView(this);
-        title.setText(R.string.overlay_demo_title);
-        title.setTextSize(24);
-        title.setTextColor(Color.rgb(24, 33, 47));
-        title.setGravity(Gravity.CENTER);
+        android.widget.Button login = ClickUi.primaryButton(this, "로그인");
+        login.setOnClickListener(view -> {
+            if (email.getText().toString().trim().isEmpty() || password.getText().toString().isEmpty()) {
+                Toast.makeText(this, "이메일과 비밀번호를 입력해주세요.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            startActivity(new Intent(this, HomeActivity.class));
+        });
+        page.addView(login, ClickUi.fullWidth(this, 64, 28));
 
-        TextView description = new TextView(this);
-        description.setText(R.string.overlay_demo_description);
-        description.setTextSize(15);
-        description.setTextColor(Color.rgb(83, 94, 112));
-        description.setGravity(Gravity.CENTER);
-        description.setPadding(0, dp(12), 0, dp(28));
-
-        Button start = new Button(this);
-        start.setText(R.string.start_overlay);
-        start.setOnClickListener(view -> startClickOverlay());
-
-        Button stop = new Button(this);
-        stop.setText(R.string.stop_overlay);
-        stop.setOnClickListener(view -> stopService(new Intent(this, ClickOverlayService.class)));
-
-        content.addView(title, matchWrap());
-        content.addView(description, matchWrap());
-        content.addView(start, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52)));
-        LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52));
-        stopParams.topMargin = dp(10);
-        content.addView(stop, stopParams);
-        setContentView(content);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == OVERLAY_PERMISSION_REQUEST && Settings.canDrawOverlays(this)) {
-            startService(new Intent(this, ClickOverlayService.class));
-        }
-    }
-
-    private void startClickOverlay() {
-        if (!Settings.canDrawOverlays(this)) {
-            Intent permissionIntent = new Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:" + getPackageName())
-            );
-            startActivityForResult(permissionIntent, OVERLAY_PERMISSION_REQUEST);
-            return;
-        }
-        startService(new Intent(this, ClickOverlayService.class));
-        moveTaskToBack(true);
-    }
-
-    private LinearLayout.LayoutParams matchWrap() {
-        return new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-    }
-
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
+        android.widget.Button signup = ClickUi.secondaryButton(this, "처음이신가요? 회원가입");
+        signup.setOnClickListener(view -> startActivity(new Intent(this, SignUpActivity.class)));
+        page.addView(signup, ClickUi.fullWidth(this, 60, 12));
+        setContentView(ClickUi.scrollPage(this, page));
     }
 }
