@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from click_agent.classifier import classify_screen_state
-from click_agent.goal_typing import type_goal
-from click_agent.guide import build_guide_command, clarification_command
-from click_agent.matcher import match_next_ui
-from click_agent.normalizer import normalize_accessibility_tree
-from click_agent.replanner import decide_replan
-from click_agent.session import InMemorySessionStore, SessionStore
-from click_agent.state_manager import build_screen_snapshot, register_attempt_outcome
-from click_agent.tasks import TASK_GRAPHS
-from click_agent.types import (
+from ai_agent.runtime.classifier import classify_screen_state
+from ai_agent.runtime.goal_typing import type_goal
+from ai_agent.runtime.guide import build_guide_command, clarification_command
+from ai_agent.runtime.matcher import match_next_ui
+from ai_agent.runtime.normalizer import normalize_accessibility_tree
+from ai_agent.runtime.replanner import decide_replan
+from ai_agent.runtime.session import InMemorySessionStore, SessionStore
+from ai_agent.runtime.state_manager import build_screen_snapshot, register_attempt_outcome
+from ai_agent.runtime.tasks import TASK_GRAPHS
+from ai_agent.runtime.types import (
     AgentTurnRequest,
     AgentTurnResponse,
     CommandType,
@@ -20,8 +20,10 @@ from click_agent.types import (
     VerificationResult,
     VerificationStatus,
 )
-from click_agent.validation import ContractViolationError, validate_agent_turn_request
-from click_agent.verification import verify_transition
+from ai_agent.runtime.validation import ContractViolationError, validate_agent_turn_request
+from ai_agent.runtime.verification import verify_transition
+from ai_agent.runtime.similarity import default_similarity_scorer
+from ai_agent.learning.trace_logger import TraceLogger
 
 
 class ClickAgentEngine:
@@ -30,9 +32,14 @@ class ClickAgentEngine:
         *,
         session_store: SessionStore | None = None,
         task_graphs: dict[str, TaskGraph] | None = None,
+        similarity_scorer=None,
+        trace_logger: TraceLogger | None = None,
     ) -> None:
         self.session_store = session_store or InMemorySessionStore()
         self.task_graphs = task_graphs or TASK_GRAPHS
+        self.similarity_scorer = similarity_scorer or default_similarity_scorer()
+        self.trace_logger = trace_logger or TraceLogger()
+        self.traces = self.trace_logger.traces
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
         existing_session = self.session_store.get(request.session_id)
@@ -113,6 +120,7 @@ class ClickAgentEngine:
             normalized_nodes,
             graph,
             excluded_node_ids=replan_decision.excluded_node_ids,
+            similarity_scorer=self.similarity_scorer,
         )
         guide_command = build_guide_command(
             session_id=request.session_id,
@@ -160,7 +168,7 @@ class ClickAgentEngine:
                 last_user_action_event=request.user_action_event,
             )
 
-        return AgentTurnResponse(
+        response = AgentTurnResponse(
             request_id=request.request_id,
             session_id=request.session_id,
             task_id=graph.definition.task_id,
@@ -172,12 +180,26 @@ class ClickAgentEngine:
             debug={
                 "normalized_node_count": len(normalized_nodes),
                 "session_stateful": True,
-                "similarity_provider": "not_configured",
+                "similarity_provider": getattr(self.similarity_scorer, "provider", "custom"),
                 "replan_decision": replan_decision.to_dict(),
                 "failed_node_ids": failed_node_ids,
                 "transition_attempts": transition_attempts,
             },
         )
+        self.trace_logger.record({
+            "request_id": request.request_id,
+            "session_id": request.session_id,
+            "task_id": graph.definition.task_id,
+            "graph_version": "mvp-01.v1",
+            "typed_goal": typed_goal.to_dict(),
+            "state_id": effective_state_id,
+            "match": match_result.to_dict(),
+            "guide": guide_command.to_dict(),
+            "verification": verification_result.to_dict() if verification_result else None,
+            "user_action_event": request.user_action_event.to_dict() if request.user_action_event else None,
+            "failure_reason": match_result.fallback_reason,
+        })
+        return response
 
     def _resolve_typed_goal(
         self,

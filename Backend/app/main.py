@@ -15,6 +15,7 @@ from app.api.v1.endpoints.agent_turn import build_router as build_agent_router  
 from app.api.v1.endpoints.guidance import build_router as build_guidance_router  # noqa: E402
 from app.api.v1.endpoints.users import build_router as build_users_router  # noqa: E402
 from app.clients.agent import AgentClient, ClickAgentEngine  # noqa: E402
+from app.clients.runtime_agent import RuntimeAgentAdapter  # noqa: E402
 from app.database import Base, build_engine, build_session_factory, session_scope  # noqa: E402
 from app import models as _models  # noqa: E402,F401
 from app.repositories.sessions import InMemorySessionRepository  # noqa: E402
@@ -34,9 +35,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
     session_factory = build_session_factory(engine)
     sessions = InMemorySessionRepository()
     guidance_service = GuidanceService(sessions, AgentClient(REPOSITORY_ROOT))
-    turn_service = AgentTurnService(
-        ClickAgentEngine(sessions, REPOSITORY_ROOT), session_factory=session_factory
-    )
+    turn_service = AgentTurnService(RuntimeAgentAdapter(), session_factory=session_factory)
     app.state.engine = engine
     app.state.session_factory = session_factory
 

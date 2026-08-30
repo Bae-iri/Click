@@ -175,8 +175,16 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
             "request_id": "slider-4",
             "session_id": "slider-session",
             "accessibility_tree": slider_tree(4),
+            "user_action_event": {
+                "action_type": "drag_completed",
+                "guide_command_id": accepted.json()["guide_command"]["guide_command_id"],
+                "target_node_id": "font-slider",
+                "target_bounds": [160, 430, 920, 480],
+            },
         },
     )
     assert completed.status_code == 200
     assert completed.json()["task_status"] == "COMPLETED"
     assert completed.json()["metadata"]["verification"]["slider_value_increased"] is True
+    assert completed.json()["metadata"]["runtime"] == "ai_agent.runtime"
+    assert completed.json()["metadata"]["trace_count"] >= 1

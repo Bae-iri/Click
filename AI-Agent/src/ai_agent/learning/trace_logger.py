@@ -7,7 +7,7 @@ from ai_agent.schemas import RuntimeTrace
 
 class TraceLogger:
     def __init__(self) -> None:
-        self.traces: list[RuntimeTrace] = []
+        self.traces: list[RuntimeTrace | dict] = []
 
-    def record(self, trace: RuntimeTrace) -> None:
+    def record(self, trace: RuntimeTrace | dict) -> None:
         self.traces.append(trace)

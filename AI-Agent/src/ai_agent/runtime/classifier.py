@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from click_agent.keywords import any_keyword_matches
-from click_agent.types import DeviceContext, NormalizedNode, TaskGraph, TaskState
+from ai_agent.runtime.keywords import any_keyword_matches
+from ai_agent.runtime.types import DeviceContext, NormalizedNode, TaskGraph, TaskState
 
 
 def classify_screen_state(

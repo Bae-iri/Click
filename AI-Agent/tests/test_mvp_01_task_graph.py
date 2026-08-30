@@ -1,7 +1,7 @@
 import unittest
 
-from click_agent.tasks import MVP_01_TASK_GRAPH, TASK_GRAPHS
-from click_agent.types import ActionType, SafetyLevel
+from ai_agent.runtime.tasks import MVP_01_TASK_GRAPH, TASK_GRAPHS
+from ai_agent.runtime.types import ActionType, SafetyLevel
 
 
 class Mvp01TaskGraphTests(unittest.TestCase):

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from click_agent.state_manager import RETRY_LIMIT_BEFORE_EXCLUSION
-from click_agent.types import AgentSessionState, ReplanDecision, VerificationResult, VerificationStatus
+from ai_agent.runtime.state_manager import RETRY_LIMIT_BEFORE_EXCLUSION
+from ai_agent.runtime.types import AgentSessionState, ReplanDecision, VerificationResult, VerificationStatus
 
 
 def decide_replan(

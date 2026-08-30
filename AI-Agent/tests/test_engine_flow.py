@@ -1,6 +1,6 @@
 import unittest
 
-from click_agent import (
+from ai_agent.runtime import (
     AccessibilityNode,
     ClickAgentEngine,
     CommandType,
@@ -12,7 +12,7 @@ from click_agent import (
     UserActionType,
     VerificationStatus,
 )
-from click_agent.types import AgentTurnRequest
+from ai_agent.runtime.types import AgentTurnRequest
 
 
 SETTINGS_PACKAGE = "com.android.settings"

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from click_agent.types import ScreenSnapshot, TaskGraph, VerificationResult, VerificationStatus
+from ai_agent.runtime.types import ScreenSnapshot, TaskGraph, VerificationResult, VerificationStatus
 
 
 def verify_transition(
@@ -14,6 +14,17 @@ def verify_transition(
     previous_snapshot: ScreenSnapshot | None = None,
     current_snapshot: ScreenSnapshot | None = None,
 ) -> VerificationResult | None:
+    if _slider_value_increased(previous_snapshot, current_snapshot):
+        return VerificationResult(
+            status=VerificationStatus.SUCCESS,
+            current_state_id=current_state_id,
+            expected_state_id=(
+                "S5_FONT_SIZE_CHANGED"
+                if "S5_FONT_SIZE_CHANGED" in graph.states
+                else graph.definition.done_state
+            ),
+            message="Slider value increased in the requested direction.",
+        )
     if not previous_state_id or not pending_transition_id:
         return None
 
@@ -30,14 +41,6 @@ def verify_transition(
             status=VerificationStatus.UNKNOWN,
             current_state_id=current_state_id,
             message="Pending transition is unknown.",
-        )
-
-    if _slider_value_increased(previous_snapshot, current_snapshot):
-        return VerificationResult(
-            status=VerificationStatus.SUCCESS,
-            current_state_id=current_state_id,
-            expected_state_id=transition.to_state,
-            message="Slider value increased in the requested direction.",
         )
 
     if transition.to_state == graph.definition.done_state:
