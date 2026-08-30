@@ -65,6 +65,7 @@ class AgentTurnRequest(BaseModel):
 
     request_id: str = Field(min_length=1, max_length=200)
     session_id: str = Field(min_length=1, max_length=200)
+    user_id: str | None = Field(default=None, min_length=36, max_length=36)
     raw_goal: str | None = Field(default=None, min_length=1, max_length=500)
     accessibility_tree: AccessibilityTree
     user_confirmation: Literal["accepted", "rejected"] | None = None
