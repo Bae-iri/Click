@@ -43,4 +43,16 @@ public final class ScreenSnapshot {
             throw new IllegalStateException("ScreenSnapshot JSON 생성 실패", error);
         }
     }
+
+    public String fingerprint() {
+        StringBuilder value = new StringBuilder(packageName).append('|').append(screenWidth)
+                .append('x').append(screenHeight);
+        for (AccessibilityNodeSnapshot node : nodes) {
+            value.append('|').append(node.nodeId).append(':').append(node.text)
+                    .append(':').append(node.contentDescription).append(':').append(node.className)
+                    .append(':').append(java.util.Arrays.toString(node.bounds))
+                    .append(':').append(node.selected).append(':').append(node.progress);
+        }
+        return Integer.toHexString(value.toString().hashCode());
+    }
 }

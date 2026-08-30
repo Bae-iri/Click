@@ -23,11 +23,18 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
+import com.click.data.remote.AgentTurnContract;
+import com.click.data.remote.AgentTurnGateway;
+import com.click.data.snapshot.ScreenSnapshot;
+import com.click.service.accessibility.LatestScreenSnapshot;
 import com.click.ui.overlay.ClickOverlayLayout;
+import com.click.ui.overlay.ConfirmationOverlayView;
+import com.click.ui.overlay.GuideOverlayView;
 import com.click.ui.overlay.TrashDropView;
 
 import java.util.ArrayList;
 import java.lang.ref.WeakReference;
+import java.util.UUID;
 
 public final class ClickOverlayService extends Service implements ClickOverlayLayout.Callback {
     private static WeakReference<ClickOverlayService> runningService = new WeakReference<>(null);
@@ -41,11 +48,23 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private Handler speechHandler;
     private boolean listening;
     private boolean overTrashTarget;
+    private AgentTurnGateway agentGateway;
+    private String agentSessionId;
+    private String initialGoal;
+    private boolean firstTurnSent;
+    private boolean turnInFlight;
+    private String lastSnapshotFingerprint;
+    private GuideOverlayView guideOverlayView;
+    private WindowManager.LayoutParams guideOverlayParams;
+    private ConfirmationOverlayView confirmationView;
+    private WindowManager.LayoutParams confirmationParams;
     private final BroadcastReceiver collapseReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (OverlayActions.ACTION_COLLAPSE.equals(intent.getAction()) && overlayView != null) {
                 overlayView.collapse();
+            } else if (OverlayActions.ACTION_SNAPSHOT_UPDATED.equals(intent.getAction())) {
+                sendAgentTurn(null, false);
             }
         }
     };
@@ -82,8 +101,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         trashDropParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
         trashDropParams.y = dp(18);
         speechHandler = new Handler(getMainLooper());
+        agentGateway = new AgentTurnGateway();
         prepareSpeechRecognizer();
-        registerReceiver(collapseReceiver, new IntentFilter(OverlayActions.ACTION_COLLAPSE), Context.RECEIVER_NOT_EXPORTED);
+        IntentFilter overlayFilter = new IntentFilter(OverlayActions.ACTION_COLLAPSE);
+        overlayFilter.addAction(OverlayActions.ACTION_SNAPSHOT_UPDATED);
+        registerReceiver(collapseReceiver, overlayFilter, Context.RECEIVER_NOT_EXPORTED);
         windowParams = new WindowManager.LayoutParams(
                 dp(64), dp(64), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
@@ -161,7 +183,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     @Override
     public void onTextSubmitted(String text) {
-        Toast.makeText(this, "입력 내용을 확인했습니다.", Toast.LENGTH_SHORT).show();
+        beginAgentSession(text);
     }
 
     @Override
@@ -179,7 +201,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             speechRecognizer.destroy();
         }
         listening = false;
+        if (agentGateway != null) agentGateway.close();
         unregisterReceiver(collapseReceiver);
+        hideGuideOverlay();
+        hideConfirmation();
         hideTrashTarget();
         if (windowManager != null && overlayView != null && overlayView.isAttachedToWindow()) {
             windowManager.removeView(overlayView);
@@ -293,7 +318,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             @Override public void onResults(Bundle results) {
                 listening = false;
-                showRecognitionText(results);
+                String text = showRecognitionText(results);
+                if (text != null && agentSessionId == null) beginAgentSession(text);
                 if (overlayView != null && overlayView.getMode() == ClickOverlayLayout.Mode.VOICE) {
                     speechHandler.postDelayed(ClickOverlayService.this::startListening, 1100L);
                 }
@@ -323,11 +349,122 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         listening = false;
     }
 
-    private void showRecognitionText(Bundle bundle) {
+    private String showRecognitionText(Bundle bundle) {
         ArrayList<String> matches = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         if (matches != null && !matches.isEmpty() && overlayView != null) {
-            overlayView.setRecognizedSpeech(matches.get(0));
+            String text = matches.get(0);
+            overlayView.setRecognizedSpeech(text);
+            return text;
         }
+        return null;
+    }
+
+    private void beginAgentSession(String goal) {
+        if (goal == null || goal.trim().isEmpty()) return;
+        agentSessionId = UUID.randomUUID().toString();
+        initialGoal = goal.trim();
+        firstTurnSent = false;
+        lastSnapshotFingerprint = null;
+        if (overlayView != null) overlayView.setRecognizedSpeech("화면을 확인하고 있어요…");
+        sendAgentTurn(null, true);
+    }
+
+    private void sendAgentTurn(String confirmation, boolean force) {
+        if (agentSessionId == null || turnInFlight || agentGateway == null) return;
+        ScreenSnapshot snapshot = LatestScreenSnapshot.get();
+        if (snapshot == null) {
+            if (overlayView != null) overlayView.setRecognizedSpeech("접근성 화면 정보를 기다리고 있어요…");
+            return;
+        }
+        String fingerprint = snapshot.fingerprint();
+        if (!force && firstTurnSent && confirmation == null && fingerprint.equals(lastSnapshotFingerprint)) return;
+        AgentTurnContract.Request request = new AgentTurnContract.Request(
+                agentSessionId, firstTurnSent ? null : initialGoal, snapshot, confirmation);
+        turnInFlight = true;
+        lastSnapshotFingerprint = fingerprint;
+        agentGateway.send(request, new AgentTurnGateway.Callback() {
+            @Override public void onSuccess(AgentTurnContract.Response response) {
+                turnInFlight = false;
+                firstTurnSent = true;
+                renderGuide(response);
+                ScreenSnapshot latest = LatestScreenSnapshot.get();
+                if (latest != null && !latest.fingerprint().equals(lastSnapshotFingerprint)) {
+                    sendAgentTurn(null, false);
+                }
+            }
+
+            @Override public void onFailure(Throwable error) {
+                turnInFlight = false;
+                android.util.Log.e("ClickAgent", "Agent turn failed", error);
+                if (overlayView != null) overlayView.setRecognizedSpeech("서버 연결을 확인해주세요.");
+            }
+        });
+    }
+
+    private void renderGuide(AgentTurnContract.Response response) {
+        AgentTurnContract.GuideCommand command = response.guideCommand;
+        if (overlayView != null && command.message != null && !command.message.isEmpty()) {
+            overlayView.setRecognizedSpeech(command.message);
+        }
+        if ("confirmation".equals(command.commandType)) {
+            hideGuideOverlay();
+            showConfirmation(command.message);
+            return;
+        }
+        hideConfirmation();
+        if ("done".equals(command.commandType) || "blocked".equals(command.commandType)) {
+            hideGuideOverlay();
+            if ("done".equals(command.commandType)) agentSessionId = null;
+            return;
+        }
+        showGuideOverlay(command.targetBounds, command.actionType);
+    }
+
+    private void showGuideOverlay(int[] bounds, String actionType) {
+        if (bounds == null || windowManager == null) {
+            hideGuideOverlay();
+            return;
+        }
+        if (guideOverlayView == null) guideOverlayView = new GuideOverlayView(this);
+        guideOverlayView.showTarget(bounds, actionType);
+        if (guideOverlayView.isAttachedToWindow()) return;
+        guideOverlayParams = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                        | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT);
+        guideOverlayParams.gravity = Gravity.START | Gravity.TOP;
+        windowManager.addView(guideOverlayView, guideOverlayParams);
+    }
+
+    private void hideGuideOverlay() {
+        if (windowManager != null && guideOverlayView != null && guideOverlayView.isAttachedToWindow()) {
+            windowManager.removeView(guideOverlayView);
+        }
+    }
+
+    private void showConfirmation(String message) {
+        hideConfirmation();
+        if (windowManager == null) return;
+        confirmationView = new ConfirmationOverlayView(this, message, accepted -> {
+            hideConfirmation();
+            sendAgentTurn(accepted ? "accepted" : "rejected", true);
+        });
+        confirmationParams = new WindowManager.LayoutParams(
+                screenWidth() - dp(28), dp(176), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT);
+        confirmationParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+        confirmationParams.y = dp(28);
+        windowManager.addView(confirmationView, confirmationParams);
+    }
+
+    private void hideConfirmation() {
+        if (windowManager != null && confirmationView != null && confirmationView.isAttachedToWindow()) {
+            windowManager.removeView(confirmationView);
+        }
+        confirmationView = null;
     }
 
     private int screenWidth() {

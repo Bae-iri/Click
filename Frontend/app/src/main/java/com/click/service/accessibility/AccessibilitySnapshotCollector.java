@@ -13,17 +13,21 @@ import java.util.List;
 final class AccessibilitySnapshotCollector {
     ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, int width, int height) {
         List<AccessibilityNodeSnapshot> nodes = new ArrayList<>();
-        visit(root, "node_0", nodes);
+        visit(root, "node_0", packageName, nodes);
         return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes);
     }
 
-    private void visit(AccessibilityNodeInfo node, String nodeId, List<AccessibilityNodeSnapshot> output) {
+    private void visit(AccessibilityNodeInfo node, String nodeId, String packageName,
+                       List<AccessibilityNodeSnapshot> output) {
         if (node == null) return;
         Rect bounds = new Rect();
         node.getBoundsInScreen(bounds);
         String className = string(node.getClassName());
+        AccessibilityNodeInfo.RangeInfo range = node.getRangeInfo();
+        Float progress = range == null ? null : range.getCurrent();
         output.add(new AccessibilityNodeSnapshot(
                 nodeId,
+                packageName,
                 string(node.getText()),
                 string(node.getContentDescription()),
                 node.getViewIdResourceName(),
@@ -34,10 +38,11 @@ final class AccessibilitySnapshotCollector {
                 node.isEnabled(),
                 node.isSelected(),
                 node.isScrollable(),
-                node.isCheckable()
+                node.isCheckable(),
+                progress
         ));
         for (int index = 0; index < node.getChildCount(); index++) {
-            visit(node.getChild(index), nodeId + "_" + index, output);
+            visit(node.getChild(index), nodeId + "_" + index, packageName, output);
         }
     }
 

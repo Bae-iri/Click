@@ -2,6 +2,9 @@ plugins {
     id "com.android.application"
 }
 
+def clickApiBaseUrl = providers.gradleProperty("CLICK_API_BASE_URL")
+        .getOrElse("http://192.168.137.1:8000")
+
 android {
     namespace "com.click"
     compileSdk 34
@@ -14,6 +17,7 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField "String", "CLICK_API_BASE_URL", "\"${clickApiBaseUrl}\""
     }
 
     buildTypes {
@@ -26,6 +30,10 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 }
 

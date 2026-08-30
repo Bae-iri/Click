@@ -24,6 +24,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         mainHandler = new Handler(getMainLooper());
         Log.i(TAG, "Click accessibility service connected");
+        mainHandler.postDelayed(captureRunnable, SNAPSHOT_DEBOUNCE_MS);
     }
 
     @Override
@@ -35,7 +36,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
             sendBroadcast(collapse);
             return;
         }
-        if (packageName == null || !isSettingsPackage(packageName.toString())) return;
+        if (packageName == null || packageName.toString().equals(getPackageName())) return;
         if (mainHandler == null) mainHandler = new Handler(getMainLooper());
         mainHandler.removeCallbacks(captureRunnable);
         mainHandler.postDelayed(captureRunnable, SNAPSHOT_DEBOUNCE_MS);
@@ -50,7 +51,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null || root.getPackageName() == null) return;
         String packageName = root.getPackageName().toString();
-        if (!isSettingsPackage(packageName)) return;
+        if (packageName.equals(getPackageName())) return;
         WindowManager windowManager = getSystemService(WindowManager.class);
         int width = getResources().getDisplayMetrics().widthPixels;
         int height = getResources().getDisplayMetrics().heightPixels;
@@ -60,6 +61,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         }
         ScreenSnapshot snapshot = collector.collect(root, packageName, width, height);
         LatestScreenSnapshot.set(snapshot);
+        sendBroadcast(new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED).setPackage(getPackageName()));
         logSnapshot(snapshot.toJson());
     }
 

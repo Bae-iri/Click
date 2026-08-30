@@ -6,6 +6,7 @@ import org.json.JSONObject;
 
 public final class AccessibilityNodeSnapshot {
     public final String nodeId;
+    public final String packageName;
     public final String text;
     public final String contentDescription;
     public final String resourceId;
@@ -17,9 +18,11 @@ public final class AccessibilityNodeSnapshot {
     public final boolean selected;
     public final boolean scrollable;
     public final boolean checkable;
+    public final Float progress;
 
     public AccessibilityNodeSnapshot(
             String nodeId,
+            String packageName,
             String text,
             String contentDescription,
             String resourceId,
@@ -30,9 +33,11 @@ public final class AccessibilityNodeSnapshot {
             boolean enabled,
             boolean selected,
             boolean scrollable,
-            boolean checkable
+            boolean checkable,
+            Float progress
     ) {
         this.nodeId = nodeId;
+        this.packageName = packageName;
         this.text = text;
         this.contentDescription = contentDescription;
         this.resourceId = resourceId;
@@ -44,23 +49,27 @@ public final class AccessibilityNodeSnapshot {
         this.selected = selected;
         this.scrollable = scrollable;
         this.checkable = checkable;
+        this.progress = progress;
     }
 
     JSONObject toJson() throws JSONException {
         JSONObject object = new JSONObject();
         object.put("node_id", nodeId);
+        object.put("package_name", nullable(packageName));
         object.put("text", nullable(text));
         object.put("content_description", nullable(contentDescription));
         object.put("resource_id", nullable(resourceId));
         object.put("class_name", nullable(className));
         object.put("role", nullable(role));
-        object.put("bounds", new JSONArray(bounds));
+        object.put("bounds_in_screen", new JSONArray(bounds));
         object.put("clickable", clickable);
         object.put("enabled", enabled);
         object.put("selected", selected);
         object.put("scrollable", scrollable);
         object.put("checkable", checkable);
-        object.put("extras", new JSONObject());
+        JSONObject extras = new JSONObject();
+        if (progress != null) extras.put("progress", progress);
+        object.put("extras", extras);
         return object;
     }
 
