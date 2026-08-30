@@ -270,8 +270,16 @@ class ClickAgentEngine(AgentClient):
             raise ValueError("raw_goal cannot be changed after the first turn")
 
         snapshot = self._to_snapshot(request)
+        current_slider_values = self._slider_values(request)
+        slider_increased = any(
+            node_id in current_slider_values
+            and current_slider_values[node_id] > previous_value
+            for node_id, previous_value in session.slider_values.items()
+        )
         if request.user_confirmation == "rejected":
             decision = self._rejected(session.current_state or "S0_UNKNOWN")
+        elif session.current_state == "S4_FONT_SIZE_CONTROL" and slider_increased:
+            decision = self._done("S5_FONT_SIZE_CHANGED", 1.0)
         else:
             decision = self.decide(
                 snapshot,
@@ -290,7 +298,18 @@ class ClickAgentEngine(AgentClient):
             session.current_state = decision.state_id
         else:
             session.status = "IN_PROGRESS"
-            session.current_state = decision.next_state if request.user_confirmation == "accepted" else decision.state_id
+            # A drag command is only a visual cue. Keep the observed state until a
+            # fresh snapshot proves that the slider value actually increased.
+            session.current_state = (
+                decision.state_id
+                if decision.guide.action_type == "drag"
+                else decision.next_state
+                if request.user_confirmation == "accepted"
+                else decision.state_id
+            )
+
+        if current_slider_values and not slider_increased:
+            session.slider_values = current_slider_values
 
         session.step = self._step_for_state(decision.state_id)
         session.updated_at = utc_now()
@@ -305,7 +324,13 @@ class ClickAgentEngine(AgentClient):
             state_confidence=decision.state_confidence,
             task_status=session.status,
             guide_command=decision.guide,
-            metadata={"graph_version": session.graph_version},
+            metadata={
+                "graph_version": session.graph_version,
+                "verification": {
+                    "slider_value_increased": slider_increased,
+                    "slider_values": current_slider_values,
+                },
+            },
         )
 
     @staticmethod
@@ -342,10 +367,31 @@ class ClickAgentEngine(AgentClient):
                     selected=node.selected,
                     scrollable=node.scrollable,
                     checkable=node.checkable,
+                    extras=node.extras,
                 )
                 for node in tree.nodes
             ],
         )
+
+    @staticmethod
+    def _slider_values(request: AgentTurnRequest) -> dict[str, float]:
+        values: dict[str, float] = {}
+        keys = ("progress", "value", "current", "range_current", "percent")
+        for node in request.accessibility_tree.nodes:
+            for key in keys:
+                raw_value = node.extras.get(key)
+                if isinstance(raw_value, bool):
+                    continue
+                if isinstance(raw_value, (int, float)):
+                    values[node.node_id] = float(raw_value)
+                    break
+                if isinstance(raw_value, str):
+                    try:
+                        values[node.node_id] = float(raw_value.strip().rstrip("%"))
+                        break
+                    except ValueError:
+                        continue
+        return values
 
     @staticmethod
     def _rejected(state_id: str) -> AgentDecision:

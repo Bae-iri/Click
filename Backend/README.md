@@ -1,5 +1,8 @@
 # Click Backend
 
+신규 Android FE 연동 계약은
+[`docs/frontend-backend-contract.md`](../docs/frontend-backend-contract.md)를 따른다.
+
 ## PostgreSQL and personalization
 
 The backend stores user UI profiles, consent history, and UI behavior events in
