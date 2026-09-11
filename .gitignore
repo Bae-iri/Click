@@ -224,3 +224,7 @@ __marimo__/
 **/build/
 **/local.properties
 Frontend/_wrapper/
+
+# Local backend database (including SQLite journal files)
+Backend/click-dev.db
+Backend/click-dev.db-*

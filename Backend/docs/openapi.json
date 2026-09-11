@@ -1,0 +1,2008 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Click Backend API",
+    "description": "Android 설정 앱 위 오버레이 안내를 위한 MVP API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/sessions": {
+      "post": {
+        "tags": [
+          "guidance"
+        ],
+        "summary": "Create Session",
+        "description": "Legacy API. New frontend integrations must use POST /api/v1/agent/turn.",
+        "operationId": "create_session_api_v1_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateSessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/api/v1/sessions/{session_id}/observations": {
+      "post": {
+        "tags": [
+          "guidance"
+        ],
+        "summary": "Observe",
+        "description": "Legacy API. New frontend integrations must use POST /api/v1/agent/turn.",
+        "operationId": "observe_api_v1_sessions__session_id__observations_post",
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObserveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObserveResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{session_id}": {
+      "get": {
+        "tags": [
+          "guidance"
+        ],
+        "summary": "Get Session",
+        "operationId": "get_session_api_v1_sessions__session_id__get",
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent/turn": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Handle Turn",
+        "operationId": "handle_turn_api_v1_agent_turn_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentTurnRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentTurnResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Create User",
+        "operationId": "create_user_api_v1_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{user_id}": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get User",
+        "operationId": "get_user_api_v1_users__user_id__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Delete User",
+        "operationId": "delete_user_api_v1_users__user_id__delete",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{user_id}/profile": {
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Update Profile",
+        "operationId": "update_profile_api_v1_users__user_id__profile_patch",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UIProfileResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{user_id}/consents": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Record Consent",
+        "operationId": "record_consent_api_v1_users__user_id__consents_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordConsentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{user_id}/events": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Record Event",
+        "operationId": "record_event_api_v1_users__user_id__events_post",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUIEventRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UIEventResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Readiness",
+        "operationId": "readiness_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "503": {
+            "description": "Database unavailable or schema missing"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AccessibilityTree": {
+        "properties": {
+          "package_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Name"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "screen_width": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Screen Width",
+            "default": 1
+          },
+          "screen_height": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Screen Height",
+            "default": 1
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/app__schemas__agent_turn__AccessibilityNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "nodes"
+        ],
+        "title": "AccessibilityTree"
+      },
+      "AgentTurnRequest": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Request Id"
+          },
+          "session_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Session Id"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 36,
+                "minLength": 36
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          },
+          "raw_goal": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Goal"
+          },
+          "accessibility_tree": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AccessibilityTree"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vision_snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VisionSnapshot"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "user_confirmation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "accepted",
+                  "rejected"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Confirmation"
+          },
+          "user_action_event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserActionEventRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "session_id"
+        ],
+        "title": "AgentTurnRequest"
+      },
+      "AgentTurnResponse": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "step": {
+            "type": "integer",
+            "title": "Step"
+          },
+          "total_steps": {
+            "type": "integer",
+            "title": "Total Steps"
+          },
+          "state_id": {
+            "type": "string",
+            "title": "State Id"
+          },
+          "state_confidence": {
+            "type": "number",
+            "title": "State Confidence"
+          },
+          "task_status": {
+            "type": "string",
+            "enum": [
+              "IN_PROGRESS",
+              "WAITING_CONFIRMATION",
+              "COMPLETED",
+              "BLOCKED"
+            ],
+            "title": "Task Status"
+          },
+          "guide_command": {
+            "$ref": "#/components/schemas/GuideCommandResponse"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "session_id",
+          "task_id",
+          "step",
+          "total_steps",
+          "state_id",
+          "state_confidence",
+          "task_status",
+          "guide_command"
+        ],
+        "title": "AgentTurnResponse"
+      },
+      "ConsentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "purpose": {
+            "type": "string",
+            "title": "Purpose"
+          },
+          "consented": {
+            "type": "boolean",
+            "title": "Consented"
+          },
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "purpose",
+          "consented",
+          "policy_version",
+          "recorded_at"
+        ],
+        "title": "ConsentResponse"
+      },
+      "CreateSessionRequest": {
+        "properties": {
+          "goal": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Goal"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale",
+            "default": "ko-KR"
+          },
+          "device_context": {
+            "$ref": "#/components/schemas/DeviceContext"
+          }
+        },
+        "type": "object",
+        "required": [
+          "goal"
+        ],
+        "title": "CreateSessionRequest"
+      },
+      "CreateSessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "goal_type": {
+            "type": "string",
+            "title": "Goal Type"
+          },
+          "graph_version": {
+            "type": "string",
+            "title": "Graph Version"
+          },
+          "status": {
+            "type": "string",
+            "const": "WAITING_FOR_SCREEN",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "task_id",
+          "goal_type",
+          "graph_version",
+          "status"
+        ],
+        "title": "CreateSessionResponse"
+      },
+      "CreateUIEventRequest": {
+        "properties": {
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "guide_step_completed",
+              "guide_step_failed",
+              "help_opened",
+              "guide_repeated",
+              "user_confused",
+              "explanation_changed",
+              "task_completed"
+            ],
+            "title": "Event Type"
+          },
+          "screen_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen Name"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_type"
+        ],
+        "title": "CreateUIEventRequest"
+      },
+      "CreateUserRequest": {
+        "properties": {
+          "age_group": {
+            "type": "string",
+            "enum": [
+              "under_14",
+              "14_19",
+              "20_29",
+              "30_39",
+              "40_49",
+              "50_59",
+              "60_plus",
+              "unknown"
+            ],
+            "title": "Age Group",
+            "default": "unknown"
+          },
+          "occupation_category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occupation Category"
+          }
+        },
+        "type": "object",
+        "title": "CreateUserRequest"
+      },
+      "DeviceContext": {
+        "properties": {
+          "manufacturer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manufacturer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "android_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Android Version"
+          }
+        },
+        "type": "object",
+        "title": "DeviceContext"
+      },
+      "GuideCommandResponse": {
+        "properties": {
+          "guide_command_id": {
+            "type": "string",
+            "title": "Guide Command Id"
+          },
+          "command_type": {
+            "type": "string",
+            "enum": [
+              "highlight",
+              "gesture_hint",
+              "confirmation",
+              "done",
+              "blocked"
+            ],
+            "title": "Command Type"
+          },
+          "action_type": {
+            "type": "string",
+            "enum": [
+              "tap",
+              "drag",
+              "scroll",
+              "observe_only"
+            ],
+            "title": "Action Type"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "target_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Node Id"
+          },
+          "target_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Label"
+          },
+          "target_bounds": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 4,
+                "minItems": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Bounds"
+          },
+          "safety_level": {
+            "type": "string",
+            "enum": [
+              "LOW_RISK",
+              "CONFIRM_REQUIRED",
+              "BLOCKED"
+            ],
+            "title": "Safety Level"
+          },
+          "requires_user_action": {
+            "type": "boolean",
+            "title": "Requires User Action"
+          },
+          "render_policy": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Render Policy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "guide_command_id",
+          "command_type",
+          "action_type",
+          "message",
+          "safety_level",
+          "requires_user_action"
+        ],
+        "title": "GuideCommandResponse"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ObserveRequest": {
+        "properties": {
+          "snapshot": {
+            "$ref": "#/components/schemas/ScreenSnapshot"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "snapshot"
+        ],
+        "title": "ObserveRequest"
+      },
+      "ObserveResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "step": {
+            "type": "integer",
+            "title": "Step"
+          },
+          "total_steps": {
+            "type": "integer",
+            "title": "Total Steps"
+          },
+          "state_id": {
+            "type": "string",
+            "title": "State Id"
+          },
+          "state_confidence": {
+            "type": "number",
+            "title": "State Confidence"
+          },
+          "task_status": {
+            "type": "string",
+            "enum": [
+              "IN_PROGRESS",
+              "WAITING_CONFIRMATION",
+              "COMPLETED",
+              "BLOCKED"
+            ],
+            "title": "Task Status"
+          },
+          "guide": {
+            "$ref": "#/components/schemas/GuideCommandResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "task_id",
+          "step",
+          "total_steps",
+          "state_id",
+          "state_confidence",
+          "task_status",
+          "guide"
+        ],
+        "title": "ObserveResponse"
+      },
+      "RecordConsentRequest": {
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "personalization",
+              "conversation_storage",
+              "model_training"
+            ],
+            "title": "Purpose"
+          },
+          "consented": {
+            "type": "boolean",
+            "title": "Consented"
+          },
+          "policy_version": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Policy Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "purpose",
+          "consented",
+          "policy_version"
+        ],
+        "title": "RecordConsentRequest"
+      },
+      "ScreenSnapshot": {
+        "properties": {
+          "package_name": {
+            "type": "string",
+            "title": "Package Name"
+          },
+          "captured_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Captured At"
+          },
+          "screen_width": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Screen Width"
+          },
+          "screen_height": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Screen Height"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/app__schemas__guidance__AccessibilityNode"
+            },
+            "type": "array",
+            "title": "Nodes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "package_name",
+          "captured_at",
+          "screen_width",
+          "screen_height",
+          "nodes"
+        ],
+        "title": "ScreenSnapshot"
+      },
+      "SessionResponse": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "goal": {
+            "type": "string",
+            "title": "Goal"
+          },
+          "goal_type": {
+            "type": "string",
+            "title": "Goal Type"
+          },
+          "graph_version": {
+            "type": "string",
+            "title": "Graph Version"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "current_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current State"
+          },
+          "step": {
+            "type": "integer",
+            "title": "Step"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "task_id",
+          "goal",
+          "goal_type",
+          "graph_version",
+          "status",
+          "current_state",
+          "step",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SessionResponse"
+      },
+      "UIEventResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_id": {
+            "type": "string",
+            "title": "User Id"
+          },
+          "event_type": {
+            "type": "string",
+            "title": "Event Type"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/UIProfileResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "event_type",
+          "profile"
+        ],
+        "title": "UIEventResponse"
+      },
+      "UIProfileResponse": {
+        "properties": {
+          "comprehension_level": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "beginner",
+              "intermediate",
+              "advanced"
+            ],
+            "title": "Comprehension Level"
+          },
+          "explanation_depth": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "normal",
+              "detailed"
+            ],
+            "title": "Explanation Depth"
+          },
+          "prefers_step_by_step": {
+            "type": "boolean",
+            "title": "Prefers Step By Step"
+          },
+          "confidence_score": {
+            "type": "number",
+            "title": "Confidence Score"
+          },
+          "evidence_count": {
+            "type": "integer",
+            "title": "Evidence Count"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "comprehension_level",
+          "explanation_depth",
+          "prefers_step_by_step",
+          "confidence_score",
+          "evidence_count",
+          "updated_at"
+        ],
+        "title": "UIProfileResponse"
+      },
+      "UpdateProfileRequest": {
+        "properties": {
+          "comprehension_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "unknown",
+                  "beginner",
+                  "intermediate",
+                  "advanced"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comprehension Level"
+          },
+          "explanation_depth": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "concise",
+                  "normal",
+                  "detailed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation Depth"
+          },
+          "prefers_step_by_step": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prefers Step By Step"
+          }
+        },
+        "type": "object",
+        "title": "UpdateProfileRequest"
+      },
+      "UserActionEventRequest": {
+        "properties": {
+          "action_type": {
+            "type": "string",
+            "enum": [
+              "tap_completed",
+              "drag_completed",
+              "scroll_completed",
+              "scroll_failed",
+              "back_navigated",
+              "manual_override",
+              "observe_only"
+            ],
+            "title": "Action Type"
+          },
+          "guide_command_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guide Command Id"
+          },
+          "target_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Node Id"
+          },
+          "target_bounds": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 4,
+                "minItems": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Bounds"
+          },
+          "occurred_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred At Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action_type"
+        ],
+        "title": "UserActionEventRequest"
+      },
+      "UserResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "age_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Group"
+          },
+          "occupation_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occupation Category"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "profile": {
+            "$ref": "#/components/schemas/UIProfileResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "age_group",
+          "occupation_category",
+          "created_at",
+          "profile"
+        ],
+        "title": "UserResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VisionElement": {
+        "properties": {
+          "element_id": {
+            "type": "string",
+            "title": "Element Id"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "bounds_in_screen": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 4,
+                "minItems": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bounds In Screen"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "actionable": {
+            "type": "boolean",
+            "title": "Actionable",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "element_id",
+          "text"
+        ],
+        "title": "VisionElement"
+      },
+      "VisionSnapshot": {
+        "properties": {
+          "user_consented": {
+            "type": "boolean",
+            "title": "User Consented",
+            "default": false
+          },
+          "redaction_applied": {
+            "type": "boolean",
+            "title": "Redaction Applied",
+            "default": false
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "screenshot_base64": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 8000000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screenshot Base64"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type",
+            "default": "image/png"
+          },
+          "ocr_text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Text"
+          },
+          "elements": {
+            "items": {
+              "$ref": "#/components/schemas/VisionElement"
+            },
+            "type": "array",
+            "title": "Elements"
+          },
+          "package_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Name"
+          },
+          "screen_width": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen Width"
+          },
+          "screen_height": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen Height"
+          },
+          "captured_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At Ms"
+          }
+        },
+        "type": "object",
+        "title": "VisionSnapshot"
+      },
+      "app__schemas__agent_turn__AccessibilityNode": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "package_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Name"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "content_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Description"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "bounds_in_screen": {
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bounds In Screen",
+            "default": [
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "clickable": {
+            "type": "boolean",
+            "title": "Clickable",
+            "default": false
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "Selected",
+            "default": false
+          },
+          "scrollable": {
+            "type": "boolean",
+            "title": "Scrollable",
+            "default": false
+          },
+          "checkable": {
+            "type": "boolean",
+            "title": "Checkable",
+            "default": false
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "extras": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Extras"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "node_id"
+        ],
+        "title": "AccessibilityNode",
+        "description": "Android AccessibilityNode payload accepted at the BE/Agent boundary."
+      },
+      "app__schemas__guidance__AccessibilityNode": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "content_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Description"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "bounds": {
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bounds",
+            "default": [
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "clickable": {
+            "type": "boolean",
+            "title": "Clickable",
+            "default": false
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "Selected",
+            "default": false
+          },
+          "scrollable": {
+            "type": "boolean",
+            "title": "Scrollable",
+            "default": false
+          },
+          "checkable": {
+            "type": "boolean",
+            "title": "Checkable",
+            "default": false
+          },
+          "extras": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Extras"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node_id"
+        ],
+        "title": "AccessibilityNode"
+      }
+    }
+  }
+}
