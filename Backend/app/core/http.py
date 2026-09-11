@@ -33,10 +33,10 @@ def install_error_handlers(app):
     @app.exception_handler(HTTPException)
     async def http_error(request, exc):
         codes = {401: "UNAUTHENTICATED", 403: "FORBIDDEN", 404: "NOT_FOUND",
-                 409: "CONFLICT", 413: "PAYLOAD_TOO_LARGE", 422: "INVALID_REQUEST", 429: "RATE_LIMITED"}
+                 409: "CONFLICT", 410: "SESSION_EXPIRED", 413: "PAYLOAD_TOO_LARGE", 422: "INVALID_REQUEST", 429: "RATE_LIMITED"}
         # Exception details may contain provider payloads or database identifiers.
         messages = {401: "Authentication required.", 403: "Access denied.",
-                    404: "Resource not found.", 409: "Request conflicts with existing data.",
+                    404: "Resource not found.", 409: "Request conflicts with existing data.", 410: "Session expired. Start a new session.",
                     413: "Request body too large.", 422: "Invalid request.",
                     429: "Too many requests. Try again later."}
         return error_response(exc.status_code, codes.get(exc.status_code, "HTTP_ERROR"),

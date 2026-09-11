@@ -46,6 +46,7 @@ def test_first_and_follow_up_turn_use_client_session_id() -> None:
         json={
             "request_id": "request-2",
             "session_id": "session-from-fe",
+            "expected_version": first.json()["session_version"],
             "accessibility_tree": tree(),
         },
     )
@@ -153,6 +154,7 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
         json={
             "request_id": "slider-2",
             "session_id": "slider-session",
+            "expected_version": first.json()["session_version"],
             "accessibility_tree": slider_tree(3),
             "user_confirmation": "accepted",
         },
@@ -165,6 +167,7 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
         json={
             "request_id": "slider-3",
             "session_id": "slider-session",
+            "expected_version": accepted.json()["session_version"],
             "accessibility_tree": slider_tree(3),
         },
     )
@@ -175,6 +178,7 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
         json={
             "request_id": "slider-4",
             "session_id": "slider-session",
+            "expected_version": unchanged.json()["session_version"],
             "accessibility_tree": slider_tree(4),
             "user_action_event": {
                 "action_type": "drag_completed",

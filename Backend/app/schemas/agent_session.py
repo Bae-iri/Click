@@ -1,0 +1,22 @@
+from typing import Literal
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class CancelSessionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_version: int = Field(ge=0)
+
+
+class AgentSessionResponse(BaseModel):
+    session_id: str
+    status: Literal["IN_PROGRESS", "WAITING_CONFIRMATION", "COMPLETED", "BLOCKED", "CANCELLED", "EXPIRED"]
+    version: int
+    task_id: str | None
+    state_id: str | None
+    last_guide_command_id: str | None
+    created_at: int
+    updated_at: int
+    expires_at: int
+    processing: bool
+    requires_fresh_observation: bool
+    requires_goal: bool

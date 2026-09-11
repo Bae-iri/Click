@@ -1,5 +1,7 @@
 # API Specification
 
+**3주 차:** [세션 계약](week3.md) 참조. `GET /api/v1/agent/sessions/{id}`와 `POST /api/v1/agent/sessions/{id}/cancel`을 구현했다. 신규 turn 응답에는 session_version이 있고 후속 요청의 expected_version은 필수다. 요청 ID·본문 hash·중립 응답은 이제 DB에 저장하며 같은 ID의 다른 본문은 409로 거절한다.
+
 현재 구현의 필드·타입·필수값은 [OpenAPI](openapi.json)가 기준이다. `python scripts/export_openapi.py`로 코드에서 재생성한다. 서버에서는 `/docs`와 `/openapi.json`으로 확인한다.
 
 ## 구현된 API
@@ -54,7 +56,7 @@
 응답은 `request_id`, `session_id`, `task_id`, `step`, `total_steps`, `state_id`, `state_confidence`, `task_status`, `guide_command`, `metadata`를 포함한다. guide의 좌표는 기기 화면의 physical pixel이다. 구체적인 응답은 [샘플 요청](../examples/agent-turn.json)을 서버로 보내 확인한다.
 
 - 첫 turn: `raw_goal`과 tree 또는 vision 필요. 기존 세션의 후속 turn: raw_goal 생략, 같은 session ID, 새 request ID.
-- 네트워크 재전송: 원래 ID와 동일 본문 유지. 현재 캐시는 본문 해시를 검사하지 않아 **동일 ID·다른 본문 거절은 향후 작업**이다.
+- 네트워크 재전송: 원래 ID와 동일 본문 유지. DB 본문 해시로 동일 ID·다른 본문을 거절하며, 더 최신 turn이 처리된 뒤 과거 안내는 재전송하지 않는다.
 - 확인 응답: `user_confirmation: "accepted"` 또는 `"rejected"`와 새 화면 전송.
 - 행동 보고: `user_action_event`에 `action_type`과 관련 guide ID를 전달. 이것만으로 성공을 확정하지 않는다.
 - `guide_command.command_type`: highlight / gesture_hint / confirmation / done / blocked.
@@ -75,9 +77,7 @@
 
 | 후보 API | 입력·출력 방향 | 선행 작업 |
 |---|---|---|
-| GET /api/v1/agent/sessions/{id} | 인증된 본인의 상태·최근 guide ID·version | 영속 세션·인증 |
-| POST /api/v1/agent/sessions/{id}/cancel | 기대 version → 취소 상태; 중복 취소는 같은 결과 | 상태 전이·경쟁 제어 |
 | GET /api/v1/users/me/history | cursor·limit → 최소 task 결과·다음 cursor | 보존 정책·소유권 |
 | POST /api/v1/agent/sessions/{id}/feedback | 제한된 rating·reason enum → 생성 ID | 최소 정보 스키마·동의 정책 |
 
-위 경로는 아직 호출할 수 없다. 새 상태·인증·오류 envelope 변경은 FE와 함께 적용한다.
+이력·피드백 경로는 아직 호출할 수 없다. 조회·취소는 위 3주 차 계약의 구현 API를 사용한다.

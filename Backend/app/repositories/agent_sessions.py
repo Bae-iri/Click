@@ -1,0 +1,208 @@
+"""Short SQL transactions and expiring leases fence concurrent runtime calls."""
+from copy import deepcopy
+import time
+from uuid import uuid4
+
+from fastapi import HTTPException
+from sqlalchemy import delete, or_, select, update
+from sqlalchemy.exc import IntegrityError, OperationalError
+
+from app.models.agent_session import AgentCheckpoint, AgentSession, AgentTurn
+from app.schemas.agent_session import AgentSessionResponse
+
+ACTIVE = ("IN_PROGRESS", "WAITING_CONFIRMATION")
+
+
+class AgentSessionRepository:
+    def __init__(self, factory, idle_seconds=1800, lease_seconds=60, clock=time.time):
+        if idle_seconds <= 0 or lease_seconds <= 0:
+            raise ValueError("Session timeouts must be positive")
+        self.factory = factory
+        self.idle_seconds = idle_seconds
+        self.lease_seconds = lease_seconds
+        self.clock = clock
+
+    @staticmethod
+    def conflict(code):
+        raise HTTPException(409, headers={"X-Conflict-Code": code})
+
+    @staticmethod
+    def owned(db, session_id, user_id):
+        row = db.get(AgentSession, session_id)
+        if row is None:
+            raise HTTPException(404)
+        if row.user_id != user_id:
+            raise HTTPException(403)
+        return row
+
+    def expire(self, db, row, now):
+        if row.status in ACTIVE and row.expires_at <= now:
+            db.execute(update(AgentSession).where(AgentSession.id == row.id,
+                AgentSession.status.in_(ACTIVE), AgentSession.expires_at <= now).values(
+                status="EXPIRED", version=AgentSession.version + 1, lease_token=None,
+                lease_until=None, updated_at=now))
+            db.commit()
+            db.refresh(row)
+
+    def claim(self, request, request_hash):
+        now = int(self.clock())
+        with self.factory() as db:
+            try:
+                row = db.get(AgentSession, request.session_id)
+                if row is not None and row.user_id != request.user_id:
+                    raise HTTPException(403)
+                previous = db.scalar(select(AgentTurn).where(AgentTurn.user_id == request.user_id,
+                                                            AgentTurn.request_id == request.request_id))
+                if previous and (previous.session_id != request.session_id or previous.request_hash != request_hash):
+                    self.conflict("REQUEST_ID_REUSED")
+                if row is None:
+                    if request.raw_goal is None:
+                        raise HTTPException(404)
+                    if request.expected_version not in (None, 0):
+                        self.conflict("STALE_VERSION")
+                    row = AgentSession(id=request.session_id, user_id=request.user_id,
+                        status="IN_PROGRESS", version=0, created_at=now, updated_at=now,
+                        expires_at=now + self.idle_seconds)
+                    db.add(row)
+                    db.flush()
+                self.expire(db, row, now)
+                if row.status == "EXPIRED":
+                    raise HTTPException(410)
+                if row.status == "CANCELLED":
+                    self.conflict("SESSION_CANCELLED")
+                if previous and previous.response is not None:
+                    if previous.version != row.version:
+                        self.conflict("STALE_REPLAY")
+                    saved = db.get(AgentCheckpoint, row.id)
+                    return {"cached": deepcopy(previous.response),
+                        "schema_version": saved.schema_version if saved else None,
+                        "graph_version": saved.graph_version if saved else None}
+                if row.status not in ACTIVE:
+                    self.conflict("SESSION_CLOSED")
+                if (row.version > 0 and request.expected_version != row.version) or (
+                    row.version == 0 and request.expected_version not in (None, 0)
+                ):
+                    self.conflict("STALE_VERSION")
+                if previous and previous.version != row.version + 1:
+                    self.conflict("STALE_VERSION")
+                token = str(uuid4())
+                version = row.version
+                changed = db.execute(update(AgentSession).where(AgentSession.id == row.id,
+                    AgentSession.version == version, AgentSession.status.in_(ACTIVE),
+                    AgentSession.expires_at > now,
+                    or_(AgentSession.lease_token.is_(None), AgentSession.lease_until <= now)).values(
+                        lease_token=token, lease_until=now + self.lease_seconds))
+                if changed.rowcount != 1:
+                    self.conflict("TURN_IN_PROGRESS")
+                if previous is None:
+                    previous = AgentTurn(session_id=row.id, user_id=request.user_id,
+                        request_id=request.request_id, request_hash=request_hash,
+                        version=version + 1, created_at=now)
+                    db.add(previous)
+                checkpoint = db.get(AgentCheckpoint, row.id)
+                result = {"token": token, "version": version,
+                    "checkpoint": deepcopy(checkpoint.state) if checkpoint else None,
+                    "schema_version": checkpoint.schema_version if checkpoint else None,
+                    "graph_version": checkpoint.graph_version if checkpoint else None}
+                db.commit()
+                return result
+            except IntegrityError as error:
+                db.rollback()
+                # Concurrent creation/ID reservation. Retry the identical request.
+                raise HTTPException(409, headers={"X-Conflict-Code": "TURN_IN_PROGRESS"}) from error
+            except OperationalError as error:
+                db.rollback()
+                if (db.bind.dialect.name == "sqlite" and "locked" in str(error.orig).lower()) or (
+                    getattr(error.orig, "sqlstate", None) in {"40001", "40P01"}
+                ):
+                    raise HTTPException(409, headers={"X-Conflict-Code": "TURN_IN_PROGRESS"}) from error
+                raise
+
+    def finish(self, request, claim, response, checkpoint, schema_version, graph_version):
+        now = int(self.clock())
+        with self.factory() as db:
+            updated = db.execute(update(AgentSession).where(AgentSession.id == request.session_id,
+                AgentSession.user_id == request.user_id, AgentSession.version == claim["version"],
+                AgentSession.lease_token == claim["token"], AgentSession.lease_until > now,
+                AgentSession.expires_at > now, AgentSession.status.in_(ACTIVE)).values(
+                    version=claim["version"] + 1, status=response.task_status,
+                    task_id=response.task_id, state_id=response.state_id,
+                    last_guide_command_id=response.guide_command.guide_command_id,
+                    updated_at=now, expires_at=now + self.idle_seconds,
+                    lease_token=None, lease_until=None))
+            if updated.rowcount != 1:
+                self.conflict("TURN_SUPERSEDED")
+            stored = db.get(AgentCheckpoint, request.session_id)
+            if checkpoint is not None:
+                if stored is None:
+                    db.add(AgentCheckpoint(session_id=request.session_id, schema_version=schema_version,
+                                           graph_version=graph_version, state=checkpoint))
+                else:
+                    stored.state = checkpoint
+                    stored.schema_version = schema_version
+                    stored.graph_version = graph_version
+            elif stored is not None:
+                db.delete(stored)
+            turn = db.scalar(select(AgentTurn).where(AgentTurn.user_id == request.user_id,
+                                                     AgentTurn.request_id == request.request_id))
+            turn.response = response.model_dump(mode="json")
+            db.commit()
+
+    def release(self, session_id, token):
+        with self.factory() as db:
+            db.execute(update(AgentSession).where(AgentSession.id == session_id,
+                AgentSession.lease_token == token).values(lease_token=None, lease_until=None))
+            db.commit()
+
+    def get(self, session_id, user_id):
+        now = int(self.clock())
+        with self.factory() as db:
+            row = self.owned(db, session_id, user_id)
+            self.expire(db, row, now)
+            return self.describe(db, row, now)
+
+    def cancel(self, session_id, user_id, expected_version):
+        now = int(self.clock())
+        with self.factory() as db:
+            row = self.owned(db, session_id, user_id)
+            self.expire(db, row, now)
+            if row.status == "CANCELLED":
+                return self.describe(db, row, now)
+            if row.status == "EXPIRED":
+                raise HTTPException(410)
+            if row.status not in ACTIVE or row.version != expected_version:
+                self.conflict("STALE_VERSION")
+            changed = db.execute(update(AgentSession).where(AgentSession.id == session_id,
+                AgentSession.version == expected_version, AgentSession.status.in_(ACTIVE),
+                AgentSession.expires_at > now).values(status="CANCELLED", version=expected_version + 1,
+                    updated_at=now, lease_token=None, lease_until=None))
+            if changed.rowcount != 1:
+                self.conflict("STALE_VERSION")
+            # Cancelled guides must never be replayed; clear payloads immediately.
+            db.execute(update(AgentTurn).where(AgentTurn.session_id == session_id).values(response=None))
+            db.execute(delete(AgentCheckpoint).where(AgentCheckpoint.session_id == session_id))
+            db.commit()
+            db.refresh(row)
+            return self.describe(db, row, now)
+
+    @staticmethod
+    def describe(db, row, now):
+        return AgentSessionResponse(session_id=row.id, status=row.status, version=row.version,
+            task_id=row.task_id, state_id=row.state_id, last_guide_command_id=row.last_guide_command_id,
+            created_at=row.created_at, updated_at=row.updated_at, expires_at=row.expires_at,
+            processing=bool(row.lease_token and row.lease_until and row.lease_until > now),
+            requires_fresh_observation=row.status in ACTIVE,
+            requires_goal=row.status in ACTIVE and db.get(AgentCheckpoint, row.id) is None)
+
+    def cleanup(self, retention_seconds=86400):
+        if retention_seconds < 0:
+            raise ValueError("Retention must not be negative")
+        now = int(self.clock())
+        with self.factory() as db:
+            expired = db.execute(update(AgentSession).where(AgentSession.status.in_(ACTIVE),
+                AgentSession.expires_at <= now).values(status="EXPIRED", version=AgentSession.version + 1,
+                    lease_token=None, lease_until=None, updated_at=now)).rowcount
+            removed = db.execute(delete(AgentSession).where(AgentSession.status.not_in(ACTIVE),
+                AgentSession.updated_at <= now - retention_seconds)).rowcount
+            db.commit()
+            return {"expired": expired, "removed": removed}

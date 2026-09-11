@@ -25,11 +25,12 @@ def main() -> None:
             reserved.bind(("127.0.0.1", 0))
             port = reserved.getsockname()[1]
         with (Path(temporary) / "server.log").open("w+", encoding="utf-8") as log:
-            server = subprocess.Popen(
-                [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(port),
-                 "--no-access-log", "--no-proxy-headers", "--log-config", "logging.json"],
-                cwd=BACKEND, env=env, stdout=log, stderr=log,
-            )
+            def start_server():
+                return subprocess.Popen(
+                    [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(port),
+                     "--no-access-log", "--no-proxy-headers", "--log-config", "logging.json"],
+                    cwd=BACKEND, env=env, stdout=log, stderr=log)
+            server = start_server()
             try:
                 base = f"http://127.0.0.1:{port}"
                 token = None
@@ -67,12 +68,35 @@ def main() -> None:
                 status, user = fetch("/api/v1/users/me")
                 assert status == 200
                 assert fetch(f"/api/v1/users/{user['id']}")[1]["id"] == user["id"]
+                server.terminate()
+                server.wait(timeout=10)
+                server = start_server()
+                deadline = time.monotonic() + 20
+                while True:
+                    if server.poll() is not None:
+                        raise RuntimeError("Restarted server exited")
+                    try:
+                        fetch("/health")
+                        break
+                    except URLError:
+                        if time.monotonic() >= deadline:
+                            raise RuntimeError("Restart timed out")
+                        time.sleep(0.2)
+                state_path = "/api/v1/agent/sessions/example-session-001"
+                assert fetch(state_path)[1]["version"] == 1
+                sample = (BACKEND / "examples/agent-turn.json").read_bytes()
+                assert fetch("/api/v1/agent/turn", sample)[1] == result
+                next_turn = json.loads(sample)
+                next_turn.pop("raw_goal")
+                next_turn.update(request_id="example-turn-002", expected_version=1)
+                assert fetch("/api/v1/agent/turn", json.dumps(next_turn).encode())[1]["session_version"] == 2
+                assert fetch(state_path + "/cancel", b'{"expected_version":2}')[1]["status"] == "CANCELLED"
                 log.flush()
                 log.seek(0)
                 output = log.read()
                 assert "trace_id=" in output
                 assert "smoke-password" not in output and token not in output
-                print("PASS: migrations up/down/up + schema check; live health/ready/OpenAPI/auth/turn/user APIs")
+                print("PASS: migrations; live auth/turn; process restart/replay/resume/cancel; safe logs")
             finally:
                 server.terminate()
                 try:
