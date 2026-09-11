@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from sqlalchemy import inspect, text
+from sqlalchemy.exc import SQLAlchemyError
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -24,9 +28,17 @@ from app.services.guidance import GuidanceService  # noqa: E402
 
 
 def create_app(database_url: str | None = None) -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(application: FastAPI):
+        try:
+            yield
+        finally:
+            application.state.engine.dispose()
+
     app = FastAPI(
         title="Click Backend API",
         version="0.1.0",
+        lifespan=lifespan,
         description="Android 설정 앱 위 오버레이 안내를 위한 MVP API",
     )
     engine = build_engine(database_url)
@@ -49,6 +61,23 @@ def create_app(database_url: str | None = None) -> FastAPI:
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/ready", tags=["system"], responses={503: {"description": "Database unavailable or schema missing"}})
+    def readiness():
+        # A reachable but unmigrated database must not be marked ready.
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+                existing = set(inspect(connection).get_table_names())
+                if not set(Base.metadata.tables).issubset(existing):
+                    return JSONResponse(status_code=503, content={
+                        "status": "not_ready", "database": "schema_missing",
+                    })
+        except SQLAlchemyError:
+            return JSONResponse(status_code=503, content={
+                "status": "not_ready", "database": "unavailable",
+            })
+        return {"status": "ready", "database": "ok"}
 
     return app
 

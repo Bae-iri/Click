@@ -1,0 +1,24 @@
+{
+  "request_id": "example-turn-001",
+  "session_id": "example-session-001",
+  "raw_goal": "글자 크기를 키워줘",
+  "accessibility_tree": {
+    "package_name": "com.android.settings",
+    "screen_width": 1080,
+    "screen_height": 2400,
+    "nodes": [
+      {
+        "node_id": "settings-title",
+        "text": "설정",
+        "class_name": "android.widget.TextView",
+        "bounds_in_screen": [24, 100, 1056, 200]
+      },
+      {
+        "node_id": "display",
+        "text": "디스플레이",
+        "bounds_in_screen": [24, 320, 1056, 408],
+        "clickable": true
+      }
+    ]
+  }
+}

@@ -1,5 +1,18 @@
 # Click Backend
 
+## 백엔드 본개발 시작
+
+전체 기능·설계·주차별 작업은 [개발 현황 문서](docs/README.md)를 기준으로 관리한다.
+재현 가능한 현재 실행 방법은 [로컬 실행 가이드](docs/runbook.md)를 따른다.
+아래 내용은 기존 글자 크기 시범 구현과 개인화 API의 참고 문서다.
+
+```powershell
+python -m pip install -e ".[test]"
+.\scripts\dev.ps1
+```
+
+`/health`는 서버 생존, `/ready`는 DB 연결과 필수 테이블 존재를 확인한다.
+
 신규 Android FE 연동 계약은
 [`docs/frontend-backend-contract.md`](../docs/frontend-backend-contract.md)를 따른다.
 
