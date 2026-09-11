@@ -26,15 +26,20 @@ def main() -> None:
             port = reserved.getsockname()[1]
         with (Path(temporary) / "server.log").open("w+", encoding="utf-8") as log:
             server = subprocess.Popen(
-                [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(port)],
+                [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(port),
+                 "--no-access-log", "--no-proxy-headers", "--log-config", "logging.json"],
                 cwd=BACKEND, env=env, stdout=log, stderr=log,
             )
             try:
                 base = f"http://127.0.0.1:{port}"
+                token = None
 
                 def fetch(path, payload=None):
+                    headers = {"Content-Type": "application/json"}
+                    if token:
+                        headers["Authorization"] = f"Bearer {token}"
                     request = Request(base + path, data=payload,
-                                      headers={"Content-Type": "application/json"})
+                                      headers=headers)
                     with urlopen(request, timeout=5) as response:
                         return response.status, json.load(response)
 
@@ -51,13 +56,23 @@ def main() -> None:
                         time.sleep(0.2)
                 assert fetch("/ready")[1] == {"status": "ready", "database": "ok"}
                 assert "/api/v1/agent/turn" in fetch("/openapi.json")[1]["paths"]
+                status, auth = fetch("/api/v1/auth/register", json.dumps({
+                    "email": "smoke@example.com", "password": "smoke-password-1234",
+                }).encode())
+                assert status == 201
+                token = auth["access_token"]
                 status, result = fetch("/api/v1/agent/turn", (BACKEND / "examples/agent-turn.json").read_bytes())
                 assert status == 200 and result["session_id"] == "example-session-001"
                 assert result["guide_command"]["target_node_id"] == "display"
-                status, user = fetch("/api/v1/users", b'{"age_group":"unknown"}')
-                assert status == 201
+                status, user = fetch("/api/v1/users/me")
+                assert status == 200
                 assert fetch(f"/api/v1/users/{user['id']}")[1]["id"] == user["id"]
-                print("PASS: migrations up/down/up + schema check; live health/ready/OpenAPI/turn/user APIs")
+                log.flush()
+                log.seek(0)
+                output = log.read()
+                assert "trace_id=" in output
+                assert "smoke-password" not in output and token not in output
+                print("PASS: migrations up/down/up + schema check; live health/ready/OpenAPI/auth/turn/user APIs")
             finally:
                 server.terminate()
                 try:

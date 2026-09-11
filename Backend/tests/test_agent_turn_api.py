@@ -1,5 +1,5 @@
 import pytest
-from fastapi.testclient import TestClient
+from tests.helpers import authenticated_client as TestClient
 
 from app.main import create_app
 
