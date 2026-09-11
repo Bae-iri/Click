@@ -1,5 +1,7 @@
 # System Architecture
 
+3주 차 이후 신규 turn은 DB 세션·lease·checkpoint와 요청별 독립 runtime을 사용한다. 아래 메모리 구조 설명은 초기 기준이다. 현재 실행 흐름과 원자적 결과 저장은 [3주 차 구조](week3.md)를 따른다.
+
 ## 현재 구조와 개발 방향
 
 ```mermaid

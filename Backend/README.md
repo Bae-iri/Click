@@ -1,5 +1,7 @@
 # Click Backend
 
+3주 차에 신규 안내 세션을 DB로 옮겼다. [현재 세션 API 계약](docs/week3.md)에 따라 후속 turn에 expected_version을 보내야 한다. 레거시 `/sessions`는 메모리 호환 경로다.
+
 ## 백엔드 본개발 시작
 
 2주 차에 인증을 적용했다. 회원가입·로그인 후 Bearer 토큰이 있어야 사용자·안내 API를 호출할 수 있다.

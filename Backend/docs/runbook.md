@@ -21,7 +21,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload --no-access
 
 개발 스크립트는 DATABASE_URL이 없으면 로컬 SQLite 파일을 선택하고 migration을 실행한다. 이미 설정된 URL은 유지한다. 사용하려는 개발 DB인지 확인하고 실행한다. 로컬 주소에 바인딩하며 단일 worker를 사용한다.
 
-환경변수를 전혀 주지 않고 `app.main:app`만 실행하면 기존 코드의 메모리 SQLite가 사용되어 재시작 시 데이터가 사라진다. 파일 DB에서도 **안내 세션·응답 캐시는 여전히 메모리**다.
+환경변수를 전혀 주지 않고 `app.main:app`만 실행하면 메모리 SQLite가 사용되어 재시작 시 데이터가 사라진다. 파일 DB 또는 PostgreSQL을 설정하면 신규 `/agent/turn`의 로그인·안내 세션·응답·checkpoint가 유지된다. 레거시 `/sessions`는 여전히 메모리다.
 
 ## 환경 파일
 
@@ -75,4 +75,6 @@ cd ..\AI-Agent
 python -m pytest -q
 ```
 
-smoke_check는 임시 SQLite DB에 migration을 적용하고 임시 포트로 실제 서버를 실행해 HTTP를 검증한 뒤 해당 프로세스와 임시 파일을 정리한다. 기존 DB와 서버를 사용하지 않는다. 외부 AI 키는 자식 프로세스에서 비운다.
+smoke_check는 임시 SQLite DB에 migration을 적용하고 임시 포트로 실제 서버를 실행해 HTTP를 검증한다. 서버 프로세스를 종료·재실행한 뒤 세션 조회·응답 재전송·새 화면으로 이어가기·취소까지 확인하고 정리한다. 기존 DB와 서버를 사용하지 않는다. 외부 AI 키는 자식 프로세스에서 비운다.
+
+세션 유휴 만료 기본값은 30분, 처리 lease는 60초다. [세션 계약](week3.md)에 따라 후속 요청에는 현재 session_version을 expected_version으로 전송한다. 주기적 DB 정리는 동일 DATABASE_URL 환경에서 `python scripts/cleanup_agent_sessions.py --retention-seconds 86400`을 실행한다. 이는 개발용 terminal 기록을 24시간 보존한 뒤 삭제하는 명령이며 운영 보존 기간은 별도로 결정한다.

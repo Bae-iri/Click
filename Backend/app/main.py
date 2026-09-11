@@ -42,7 +42,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         title="Click Backend API",
         version="0.1.0",
         lifespan=lifespan,
-        responses={code: {"model": ErrorEnvelope} for code in (401, 403, 404, 409, 413, 422, 429, 500)},
+        responses={code: {"model": ErrorEnvelope} for code in (401, 403, 404, 409, 410, 413, 422, 429, 500)},
         description="Android 설정 앱 위 오버레이 안내를 위한 MVP API",
     )
     engine = build_engine(database_url)
@@ -51,7 +51,8 @@ def create_app(database_url: str | None = None) -> FastAPI:
     session_factory = build_session_factory(engine)
     sessions = InMemorySessionRepository()
     guidance_service = GuidanceService(sessions, AgentClient(REPOSITORY_ROOT))
-    turn_service = AgentTurnService(RuntimeAgentAdapter(), session_factory=session_factory)
+    turn_service = AgentTurnService(session_factory)
+    app.state.turn_service = turn_service
     app.state.engine = engine
     app.state.session_factory = session_factory
     auth_service = AuthService(session_factory)

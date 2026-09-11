@@ -1,5 +1,18 @@
 # 첫 주 산출물 검증 기록
 
+## 3주 차 추가 검증 (2026-09-11)
+
+- Backend 전체: **51 passed**, 기존 httpx deprecation warning 1건.
+- AI-Agent 전체: **27 passed**.
+- 신규 세션 검증 17개 포함: 재시작 복구·재전송, 다른 본문 ID 재사용, stale version/replay, 소유권, 취소·만료·종료 상태, DB 최소 정보 저장, 사용자 삭제 cascade, runtime 실패 rollback, 버려진 lease 복구, schema/graph 불일치, 개인화 동의 철회, 모호한 목표 재입력.
+- 두 독립 앱 인스턴스 + 같은 SQLite 파일 DB: 동시 첫 요청, 동일·다른 후속 요청의 경쟁, 처리 중 취소·lease 만료·세션 만료·탈퇴에서 결과 commit 차단 확인.
+- 실제 Uvicorn 자식 프로세스: 로그인·안내 실행 → 프로세스 종료 → 같은 DB로 재실행 → 세션 조회·동일 응답 재전송·목표 생략 후속 turn·취소 통과.
+- SQLite migration 20260911_03까지 upgrade → downgrade → upgrade 및 Alembic check 통과.
+- OpenAPI 18개 path, 세션 조회·취소·expected_version·session_version·410 반영. 스크립트 구문·문서 링크·git diff --check 확인.
+- PostgreSQL 검증 스크립트에도 재시작·응답 재사용·두 앱의 취소 경쟁 시나리오 추가.
+
+**미실행:** 실제 PostgreSQL·Docker/클라우드 배포·Android 기기 연동·외부 AI 호출. 위 검증은 로컬 SQLite 기반 결과이며 PostgreSQL의 실제 동시성 보장을 검증한 것으로 해석하지 않는다. 노션에는 직접 쓰지 않았고 사용자에게 대화에서 요약을 제공한다.
+
 ## 2주 차 추가 검증 (2026-09-11)
 
 - Backend: **34 passed**, 기존 httpx deprecation warning 1건.

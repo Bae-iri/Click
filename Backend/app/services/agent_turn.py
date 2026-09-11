@@ -1,105 +1,73 @@
-from __future__ import annotations
+from hashlib import sha256
+import json
+import os
 
-from threading import RLock
-from typing import Any
-
-from sqlalchemy.orm import Session, sessionmaker
 from fastapi import HTTPException
 
+from app.clients.checkpoint import SCHEMA_VERSION, capture, graph_version, restore, safe_response
+from app.clients.runtime_agent import RuntimeAgentAdapter
+from app.repositories.agent_sessions import AgentSessionRepository
 from app.repositories.personalization import PersonalizationRepository, UserNotFoundError
-from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
-
-
-class RequestIdConflictError(ValueError):
-    pass
-
-
-class InMemoryTurnResponseStore:
-    """Small idempotency store for retries; replace together with sessions in production."""
-
-    def __init__(self) -> None:
-        self._responses: dict[str, tuple[str, str | None, AgentTurnResponse]] = {}
-        self._lock = RLock()
-
-    def get(
-        self, request_id: str, session_id: str, user_id: str | None
-    ) -> AgentTurnResponse | None:
-        with self._lock:
-            stored = self._responses.get(request_id)
-            if stored is None:
-                return None
-            stored_session_id, stored_user_id, response = stored
-            if stored_session_id != session_id or stored_user_id != user_id:
-                raise RequestIdConflictError(
-                    "request_id is already used by another session or user"
-                )
-            return response
-
-    def save(self, response: AgentTurnResponse, user_id: str | None) -> None:
-        with self._lock:
-            self._responses[response.request_id] = (response.session_id, user_id, response)
+from app.schemas.agent_turn import AgentTurnResponse
 
 
 class AgentTurnService:
-    def __init__(
-        self,
-        engine,
-        responses: InMemoryTurnResponseStore | None = None,
-        session_factory: sessionmaker[Session] | None = None,
-    ) -> None:
-        self.engine = engine
-        self.responses = responses or InMemoryTurnResponseStore()
+    def __init__(self, session_factory, engine_factory=RuntimeAgentAdapter):
         self.session_factory = session_factory
-        self._owners: dict[str, str] = {}
-        self._turn_lock = RLock()
+        self.engine_factory = engine_factory
+        self.repository = AgentSessionRepository(session_factory,
+            idle_seconds=int(os.getenv("AGENT_SESSION_IDLE_SECONDS", "1800")),
+            lease_seconds=int(os.getenv("AGENT_TURN_LEASE_SECONDS", "60")))
 
-    def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
-        # Temporary single-process ownership boundary; persistent locking is week 3.
-        with self._turn_lock:
-            owner = self._owners.get(request.session_id)
-            if owner is not None and owner != request.user_id:
-                raise HTTPException(403)
-            self._owners[request.session_id] = request.user_id
-            response = self._handle_turn(request)
-            return response
+    def handle_turn(self, request):
+        canonical = json.dumps(request.model_dump(mode="json"), sort_keys=True,
+                               separators=(",", ":"), ensure_ascii=False)
+        digest = sha256(canonical.encode()).hexdigest()
+        claim = self.repository.claim(request, digest)
+        if "cached" in claim:
+            if claim["graph_version"] is not None and (
+                claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] != graph_version()
+            ):
+                self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
+            return self.personalize(AgentTurnResponse.model_validate(claim["cached"]), request.user_id)
+        try:
+            if claim["checkpoint"] is not None and (
+                claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] != graph_version()
+            ):
+                self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
+            # An isolated runtime per turn prevents cross-request state corruption.
+            store = restore(claim["checkpoint"])
+            engine = self.engine_factory(session_store=store)
+            response = safe_response(engine.handle_turn(request))
+            response.session_version = claim["version"] + 1
+            checkpoint = capture(store, request.session_id)
+            self.repository.finish(request, claim, response, checkpoint, SCHEMA_VERSION, graph_version())
+        except Exception:
+            self.repository.release(request.session_id, claim["token"])
+            raise
+        # Persist a neutral response; reevaluate consent even on retries.
+        return self.personalize(response, request.user_id)
 
-    def _handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
-        cached = self.responses.get(request.request_id, request.session_id, request.user_id)
-        if cached is not None:
-            return cached
-        response = self.engine.handle_turn(request)
-        profile = self._profile_context(request.user_id)
-        if profile is not None:
-            response.metadata["ui_profile"] = profile
-            response.guide_command.message = self._personalize_message(
-                response.guide_command.message, profile
-            )
-        self.responses.save(response, request.user_id)
-        return response
-
-    def _profile_context(self, user_id: str | None) -> dict[str, Any] | None:
-        if user_id is None or self.session_factory is None:
-            return None
-        with self.session_factory() as session:
-            repository = PersonalizationRepository(session)
+    def personalize(self, response, user_id):
+        with self.session_factory() as db:
+            repository = PersonalizationRepository(db)
             try:
                 consent = repository.latest_consent(user_id, "personalization")
                 if consent is None or not consent.consented:
-                    return None
+                    return response
                 profile = repository.get_profile(user_id)
             except UserNotFoundError as error:
-                raise ValueError("Unknown user_id.") from error
-            return {
+                raise HTTPException(401) from error
+            context = {
                 "comprehension_level": profile.comprehension_level,
                 "explanation_depth": profile.explanation_depth,
                 "prefers_step_by_step": profile.prefers_step_by_step,
                 "confidence_score": profile.confidence_score,
             }
-
-    @staticmethod
-    def _personalize_message(message: str, profile: dict[str, Any]) -> str:
-        if profile["comprehension_level"] == "beginner" or profile["explanation_depth"] == "detailed":
-            return f"천천히 한 단계씩 진행할게요. {message}"
-        if profile["explanation_depth"] == "concise":
-            return message.split(".", 1)[0].strip() + ("." if "." in message else "")
-        return message
+            response.metadata["ui_profile"] = context
+            message = response.guide_command.message
+            if context["comprehension_level"] == "beginner" or context["explanation_depth"] == "detailed":
+                response.guide_command.message = f"천천히 한 단계씩 진행할게요. {message}"
+            elif context["explanation_depth"] == "concise":
+                response.guide_command.message = message.split(".", 1)[0].strip() + ("." if "." in message else "")
+            return response

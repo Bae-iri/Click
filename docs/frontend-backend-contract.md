@@ -1,5 +1,11 @@
 # FE/BE Agent 연동 계약
 
+## 3주 차 세션 변경
+
+신규 turn 세션은 DB에 저장한다. 첫 turn 응답의 `session_version`을 보관하고 이후 요청에 `expected_version`으로 보낸다. 정확한 재전송은 이전 ID·본문·version을 그대로 유지한다. 409 응답은 `X-Conflict-Code`를 보고 처리 중 재시도와 오래된 화면 재수집을 구분한다. 조회 `GET /api/v1/agent/sessions/{id}`, 취소 `POST /api/v1/agent/sessions/{id}/cancel`이 추가됐다. 취소 이후 또는 최신 version보다 오래된 안내 응답은 적용하지 않는다.
+
+`source_text`, UI label 샘플, target_label 및 일부 진단 필드는 저장·응답에서 제거한다. 표시할 안내 문구와 target_bounds를 사용한다. [3주 차 상세 계약](../Backend/docs/week3.md)을 따른다. 아래 본문 예시는 최초 요청 중심이며 후속 요청에는 expected_version을 추가해야 한다.
+
 ## 2주 차 인증 변경
 
 사용자·Agent·레거시 세션 API에 `Authorization: Bearer <access_token>`이 필수다.

@@ -1,5 +1,7 @@
 # DB Schema
 
+**3주 차 갱신:** migration `20260911_03`에 agent_sessions·agent_turns·agent_checkpoints를 구현했다. 아래 영속화 설계안의 실제 필드·lease·시간 정책은 [3주 차 계약](week3.md)이 기준이다. safety_confirmations와 task_feedback은 아직 미구현이다.
+
 **2주 차 갱신:** accounts·auth_sessions를 migration `20260911_02`로 추가했다. PostgreSQL metadata JSON/JSONB 차이도 이 migration에서 해소한다. [현재 인증 스키마](week2.md)를 함께 본다. 아래 개인화 4개 테이블과 영속 안내 세션 설계는 유지한다.
 
 ## 현재 구현

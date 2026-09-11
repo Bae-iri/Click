@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime, timezone
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, joinedload
@@ -46,6 +47,7 @@ class PersonalizationRepository:
             purpose=purpose,
             consented=consented,
             policy_version=policy_version,
+            recorded_at=datetime.now(timezone.utc),
         )
         self.session.add(consent)
         self.session.commit()

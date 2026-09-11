@@ -21,8 +21,8 @@ from app.repositories.sessions import SessionNotFoundError
 class RuntimeAgentAdapter:
     """Translate the HTTP contract to the single ai_agent L3 runtime."""
 
-    def __init__(self) -> None:
-        self.runtime = ClickAgentEngine()
+    def __init__(self, session_store=None) -> None:
+        self.runtime = ClickAgentEngine(session_store=session_store)
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
         tree = request.accessibility_tree

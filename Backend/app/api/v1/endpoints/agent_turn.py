@@ -3,7 +3,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from app.clients.agent import UnsupportedGoalError
 from app.repositories.sessions import SessionNotFoundError
 from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
-from app.services.agent_turn import AgentTurnService, RequestIdConflictError
+from app.services.agent_turn import AgentTurnService
+from app.schemas.agent_session import AgentSessionResponse, CancelSessionRequest
 
 
 def build_router(service: AgentTurnService, principal) -> APIRouter:
@@ -21,9 +22,15 @@ def build_router(service: AgentTurnService, principal) -> APIRouter:
                 status_code=404,
                 detail="Unknown session_id; raw_goal is required on the first turn.",
             ) from error
-        except RequestIdConflictError as error:
-            raise HTTPException(status_code=409, detail=str(error)) from error
         except (UnsupportedGoalError, ValueError) as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @router.get("/sessions/{session_id}", response_model=AgentSessionResponse)
+    def get_session(session_id: str, user=Depends(principal)):
+        return service.repository.get(session_id, user.user_id)
+
+    @router.post("/sessions/{session_id}/cancel", response_model=AgentSessionResponse)
+    def cancel_session(session_id: str, request: CancelSessionRequest, user=Depends(principal)):
+        return service.repository.cancel(session_id, user.user_id, request.expected_version)
 
     return router

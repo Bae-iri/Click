@@ -1,6 +1,7 @@
 """State tracking helpers for L3-style multi-turn task execution."""
 
 from __future__ import annotations
+from hashlib import sha256
 
 from ai_agent.runtime.types import (
     AgentSessionState,
@@ -39,7 +40,7 @@ def build_screen_snapshot(
     }
     return ScreenSnapshot(
         state_id=state_id,
-        fingerprint="\n".join(stable_parts),
+        fingerprint=sha256("\n".join(stable_parts).encode("utf-8")).hexdigest(),
         slider_values=slider_values,
     )
 

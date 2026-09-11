@@ -106,6 +106,7 @@ class AgentTurnRequest(BaseModel):
     request_id: str = Field(min_length=1, max_length=200)
     session_id: str = Field(min_length=1, max_length=200)
     user_id: str | None = Field(default=None, min_length=36, max_length=36)
+    expected_version: int | None = Field(default=None, ge=0)
     raw_goal: str | None = Field(default=None, min_length=1, max_length=500)
     accessibility_tree: AccessibilityTree | None = None
     vision_snapshot: VisionSnapshot | None = None
@@ -138,6 +139,7 @@ class UserActionEventRequest(BaseModel):
 class AgentTurnResponse(BaseModel):
     request_id: str
     session_id: str
+    session_version: int = 0
     task_id: str
     step: int
     total_steps: int
