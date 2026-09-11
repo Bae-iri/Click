@@ -47,7 +47,7 @@ class AccessibilityTree(BaseModel):
     captured_at: datetime | None = None
     screen_width: int = Field(default=1, gt=0)
     screen_height: int = Field(default=1, gt=0)
-    nodes: list[AccessibilityNode]
+    nodes: list[AccessibilityNode] = Field(max_length=2000)
 
     @model_validator(mode="after")
     def require_package_name(self) -> "AccessibilityTree":
@@ -93,7 +93,7 @@ class VisionSnapshot(BaseModel):
     screenshot_base64: str | None = Field(default=None, max_length=8_000_000)
     mime_type: str = "image/png"
     ocr_text: str | None = Field(default=None, max_length=10_000)
-    elements: list[VisionElement] = Field(default_factory=list)
+    elements: list[VisionElement] = Field(default_factory=list, max_length=2000)
     package_name: str | None = None
     screen_width: int | None = Field(default=None, gt=0)
     screen_height: int | None = Field(default=None, gt=0)

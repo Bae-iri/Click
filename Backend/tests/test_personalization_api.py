@@ -4,12 +4,8 @@ from app.main import create_app
 
 
 def create_user(client: TestClient) -> str:
-    response = client.post(
-        "/api/v1/users",
-        json={"age_group": "60_plus", "occupation_category": "retired"},
-    )
-    assert response.status_code == 201
-    return response.json()["id"]
+    from tests.helpers import register
+    return register(client)["user_id"]
 
 
 def test_user_profile_lifecycle_and_deletion() -> None:
@@ -25,7 +21,7 @@ def test_user_profile_lifecycle_and_deletion() -> None:
 
     deleted = client.delete(f"/api/v1/users/{user_id}")
     assert deleted.status_code == 204
-    assert client.get(f"/api/v1/users/{user_id}").status_code == 404
+    assert client.get(f"/api/v1/users/{user_id}").status_code == 401
 
 
 def test_ui_events_require_consent_and_update_profile() -> None:
@@ -85,4 +81,4 @@ def test_profile_personalizes_agent_message_only_after_consent() -> None:
         "/api/v1/agent/turn",
         json={**payload, "user_id": different_user},
     )
-    assert replay.status_code == 409
+    assert replay.status_code == 403

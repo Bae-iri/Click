@@ -1,5 +1,22 @@
 # 첫 주 산출물 검증 기록
 
+## 2주 차 추가 검증 (2026-09-11)
+
+- Backend: **34 passed**, 기존 httpx deprecation warning 1건.
+- AI-Agent: **27 passed**.
+- 실제 로컬 Uvicorn: health/ready/OpenAPI, 회원가입 → Bearer 인증 → 사용자 조회 → 샘플 turn 통과.
+- SQLite migration: 기존 revision부터 인증 migration까지 upgrade → downgrade → upgrade 및 Alembic check 통과.
+- 비밀번호·토큰 해시 저장, 만료·변조·누락 토큰 거절, refresh 회전·동시 요청 단일 성공, 로그아웃·비밀번호 변경·탈퇴 시 토큰 폐기 검증.
+- 사용자 API·turn·레거시 세션의 타인 접근 거절, 파일 DB의 로그인·폐기 상태 재시작 후 유지 검증.
+- Content-Length 및 chunked body 한도, tree 노드 개수, 오류 응답·로그의 합성 민감값 미노출 검증.
+- 실제 서버 로그에서 trace_id 출력과 비밀번호·access token 미출력 확인.
+- OpenAPI: 16개 path, Bearer security와 공통 오류 스키마 반영.
+- Markdown 링크, JSON/YAML 파싱, dev.ps1 구문, git diff --check 확인.
+
+**미실행:** 실제 PostgreSQL, Docker 빌드·Compose 기동, GitHub Actions, 원격 개발 서버 배포, Android 인증 화면 연동. 현재 환경에 Docker/PostgreSQL 실행 도구와 배포 대상 정보가 없어 준비된 스크립트·설정의 실제 검증은 남아 있다.
+
+아래는 첫 주 당시 기록으로 보존한다.
+
 검증일: 2026-09-11. Windows / Python 3.14, 기존 설치 환경 사용.
 
 ## 실행 결과

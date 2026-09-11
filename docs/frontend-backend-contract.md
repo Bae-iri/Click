@@ -1,5 +1,11 @@
 # FE/BE Agent 연동 계약
 
+## 2주 차 인증 변경
+
+사용자·Agent·레거시 세션 API에 `Authorization: Bearer <access_token>`이 필수다.
+`/api/v1/auth/register` 또는 `/login`으로 받은 토큰을 사용한다. 현재 Android Gateway에는 아직 헤더 연동이 없어 수정 전에는 401이 반환된다.
+토큰 갱신·로그아웃·공통 오류 규약은 [서버 인증 계약](../Backend/docs/week2.md)을 따른다. 아래 turn 본문 규격은 유지하며 user_id는 서버가 인증 사용자로 제한한다.
+
 신규 FE 연동은 `POST /api/v1/agent/turn`만 사용한다. 기존
 `/api/v1/sessions` 계열은 이전 버전 호환을 위해 남겨 두었으며 신규 코드에서는
 사용하지 않는다.

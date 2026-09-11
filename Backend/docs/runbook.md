@@ -16,7 +16,7 @@ python -m venv .venv
 ```powershell
 $env:DATABASE_URL = "sqlite+pysqlite:///./click-dev.db"
 python -m alembic upgrade head
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload --no-access-log --no-proxy-headers
 ```
 
 개발 스크립트는 DATABASE_URL이 없으면 로컬 SQLite 파일을 선택하고 migration을 실행한다. 이미 설정된 URL은 유지한다. 사용하려는 개발 DB인지 확인하고 실행한다. 로컬 주소에 바인딩하며 단일 worker를 사용한다.
@@ -34,14 +34,18 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/health
 Invoke-RestMethod http://127.0.0.1:8000/ready
+$registration = @{ email = "local-test@example.com"; password = "local-test-password-1234" } | ConvertTo-Json
+$auth = Invoke-RestMethod http://127.0.0.1:8000/api/v1/auth/register -Method Post -ContentType "application/json" -Body $registration
+$headers = @{ Authorization = "Bearer $($auth.access_token)" }
 $sample = [System.IO.File]::ReadAllBytes((Join-Path (Get-Location) "examples/agent-turn.json"))
-Invoke-RestMethod http://127.0.0.1:8000/api/v1/agent/turn -Method Post -ContentType "application/json; charset=utf-8" -Body $sample
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/agent/turn -Method Post -Headers $headers -ContentType "application/json; charset=utf-8" -Body $sample
 ```
 
 - `/health`: `{"status":"ok"}`
 - `/ready`: `{"status":"ready","database":"ok"}`. 연결 불가·테이블 누락은 503.
 - `/docs`: Swagger UI, `/openapi.json`: 현재 스키마.
 - 샘플 turn은 기존 글자 크기 시범 runtime의 응답 확인용이며 실제 기기 연동 검증은 아니다.
+- 이미 가입한 테스트 이메일이면 register 대신 auth/login을 호출한다. 위 비밀번호는 합성 로컬 예시다. 토큰은 화면·로그에 출력하지 않는다.
 
 ## PostgreSQL
 
@@ -53,10 +57,12 @@ docker compose up -d postgres
 cd Backend
 $env:DATABASE_URL = "postgresql+psycopg://click:YOUR_DEV_PASSWORD@localhost:5432/click"
 python -m alembic upgrade head
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log --no-proxy-headers
 ```
 
 비밀번호는 URL 인코딩 규칙을 지켜 구성한다. 접속 문자열과 `.env`는 커밋하지 않는다. 실제 PostgreSQL 확인 여부는 검증 기록에 별도로 표시한다.
+
+DB·migration·API를 함께 실행하는 Docker Compose 및 독립 PostgreSQL 검증은 [2주 차 배포 안내](week2.md)를 따른다.
 
 ## 테스트와 문서 갱신
 

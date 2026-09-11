@@ -9,14 +9,19 @@
 | GET | /health | 200 | 프로세스 응답 확인 |
 | GET | /ready | 200 / 준비 안 됨 503 | DB 연결·테이블 존재 확인 |
 | POST | /api/v1/agent/turn | 200 | 목표·관찰 → 다음 안내 |
-| POST | /api/v1/users | 201 | 가명 사용자·UI 프로필 생성; 인증 아님 |
+| POST | /api/v1/auth/register | 201 | 계정·프로필 생성 및 토큰 발급 |
+| POST | /api/v1/auth/login | 200 | 로그인·토큰 발급 |
+| POST | /api/v1/auth/refresh | 200 | 토큰 쌍 회전 |
+| POST | /api/v1/auth/logout | 204 | 현재 로그인 폐기 |
+| POST | /api/v1/auth/password | 204 | 비밀번호 변경·모든 로그인 폐기 |
+| GET | /api/v1/users/me | 200 | 인증 사용자 조회 |
 | GET | /api/v1/users/{user_id} | 200 | 사용자·프로필 조회 |
 | PATCH | /api/v1/users/{user_id}/profile | 200 | 안내 선호도 수정 |
 | POST | /api/v1/users/{user_id}/consents | 201 | 목적별 동의·철회 이력 추가 |
 | POST | /api/v1/users/{user_id}/events | 201 | 동의된 행동 이벤트 기록·프로필 갱신 |
 | DELETE | /api/v1/users/{user_id} | 204 | 사용자와 관계 데이터 삭제 |
 
-현재 인증·세션 소유권 검사가 없으므로 UUID를 인증 수단으로 취급하지 않는다. 향후 인증 추가 시 공통 Authorization 계약과 401/403을 명세에 반영한다.
+사용자·안내 API는 Bearer 토큰이 필수다. UUID만으로 인증하지 않는다. 인증·토큰 만료·401/403 처리와 Android 변경 사항은 [2주 차 계약](week2.md)을 따른다.
 
 레거시 `POST /api/v1/sessions`, `GET /api/v1/sessions/{session_id}`, `POST /api/v1/sessions/{session_id}/observations`는 별도 서비스의 호환용 경로다. turn 세션을 이 GET으로 조회할 수 없다.
 
@@ -58,7 +63,7 @@
 
 ## 개인화 예시
 
-사용자 생성 본문은 `{"age_group":"unknown"}`. 생성된 id로 동의를 기록한다.
+`/auth/register`에 email·password와 선택 age_group을 보내 등록하고 토큰을 받는다. 인증 헤더를 넣고 생성된 user_id로 동의를 기록한다.
 
 ```json
 {"purpose":"personalization","consented":true,"policy_version":"v1"}

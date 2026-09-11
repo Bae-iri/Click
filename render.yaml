@@ -1,0 +1,30 @@
+# Deployment proposal. Creating these resources incurs charges.
+services:
+  - type: web
+    name: click-dev-api
+    runtime: docker
+    plan: 0.5c-512mb
+    region: singapore
+    branch: develop
+    dockerfilePath: ./Backend/Dockerfile
+    dockerContext: .
+    dockerCommand: python scripts/render_start.py
+    preDeployCommand: python scripts/render_start.py --migrate
+    healthCheckPath: /ready
+    numInstances: 1
+    autoDeployTrigger: "off"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: click-dev-db
+          property: connectionString
+      - key: GEMINI_API_KEY
+        value: ""
+databases:
+  - name: click-dev-db
+    plan: 0.1c-256mb
+    region: singapore
+    postgresMajorVersion: "17"
+    databaseName: click
+    user: click
+    ipAllowList: []

@@ -18,24 +18,29 @@ from app.schemas.personalization import (
 from app.services.personalization import ConsentRequiredError, PersonalizationService
 
 
-def build_router(session_dependency: Callable) -> APIRouter:
+def build_router(session_dependency: Callable, principal: Callable) -> APIRouter:
     router = APIRouter(prefix="/users", tags=["users"])
 
     def service(session=Depends(session_dependency)) -> PersonalizationService:
         return PersonalizationService(PersonalizationRepository(session))
 
-    @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-    def create_user(request: CreateUserRequest, svc=Depends(service)) -> UserResponse:
-        return svc.create_user(request)
+    def owner(user_id: str, user=Depends(principal)):
+        if user_id != user.user_id:
+            raise HTTPException(403)
+        return user
 
-    @router.get("/{user_id}", response_model=UserResponse)
+    @router.get("/me", response_model=UserResponse)
+    def me(user=Depends(principal), svc=Depends(service)):
+        return svc.get_user(user.user_id)
+
+    @router.get("/{user_id}", response_model=UserResponse, dependencies=[Depends(owner)])
     def get_user(user_id: str, svc=Depends(service)) -> UserResponse:
         try:
             return svc.get_user(user_id)
         except UserNotFoundError as error:
             raise HTTPException(status_code=404, detail="User not found.") from error
 
-    @router.patch("/{user_id}/profile", response_model=UIProfileResponse)
+    @router.patch("/{user_id}/profile", response_model=UIProfileResponse, dependencies=[Depends(owner)])
     def update_profile(
         user_id: str, request: UpdateProfileRequest, svc=Depends(service)
     ) -> UIProfileResponse:
@@ -44,7 +49,7 @@ def build_router(session_dependency: Callable) -> APIRouter:
         except UserNotFoundError as error:
             raise HTTPException(status_code=404, detail="User not found.") from error
 
-    @router.post("/{user_id}/consents", response_model=ConsentResponse, status_code=201)
+    @router.post("/{user_id}/consents", response_model=ConsentResponse, status_code=201, dependencies=[Depends(owner)])
     def record_consent(
         user_id: str, request: RecordConsentRequest, svc=Depends(service)
     ) -> ConsentResponse:
@@ -53,7 +58,7 @@ def build_router(session_dependency: Callable) -> APIRouter:
         except UserNotFoundError as error:
             raise HTTPException(status_code=404, detail="User not found.") from error
 
-    @router.post("/{user_id}/events", response_model=UIEventResponse, status_code=201)
+    @router.post("/{user_id}/events", response_model=UIEventResponse, status_code=201, dependencies=[Depends(owner)])
     def record_event(
         user_id: str, request: CreateUIEventRequest, svc=Depends(service)
     ) -> UIEventResponse:
@@ -64,7 +69,7 @@ def build_router(session_dependency: Callable) -> APIRouter:
         except ConsentRequiredError as error:
             raise HTTPException(status_code=403, detail=str(error)) from error
 
-    @router.delete("/{user_id}", status_code=204)
+    @router.delete("/{user_id}", status_code=204, dependencies=[Depends(owner)])
     def delete_user(user_id: str, svc=Depends(service)) -> Response:
         try:
             svc.delete_user(user_id)

@@ -4,6 +4,7 @@ from threading import RLock
 from typing import Any
 
 from sqlalchemy.orm import Session, sessionmaker
+from fastapi import HTTPException
 
 from app.repositories.personalization import PersonalizationRepository, UserNotFoundError
 from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
@@ -49,8 +50,20 @@ class AgentTurnService:
         self.engine = engine
         self.responses = responses or InMemoryTurnResponseStore()
         self.session_factory = session_factory
+        self._owners: dict[str, str] = {}
+        self._turn_lock = RLock()
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
+        # Temporary single-process ownership boundary; persistent locking is week 3.
+        with self._turn_lock:
+            owner = self._owners.get(request.session_id)
+            if owner is not None and owner != request.user_id:
+                raise HTTPException(403)
+            self._owners[request.session_id] = request.user_id
+            response = self._handle_turn(request)
+            return response
+
+    def _handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
         cached = self.responses.get(request.request_id, request.session_id, request.user_id)
         if cached is not None:
             return cached

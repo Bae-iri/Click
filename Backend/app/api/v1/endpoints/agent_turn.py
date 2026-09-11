@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 
 from app.clients.agent import UnsupportedGoalError
 from app.repositories.sessions import SessionNotFoundError
@@ -6,11 +6,14 @@ from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
 from app.services.agent_turn import AgentTurnService, RequestIdConflictError
 
 
-def build_router(service: AgentTurnService) -> APIRouter:
+def build_router(service: AgentTurnService, principal) -> APIRouter:
     router = APIRouter(prefix="/agent", tags=["agent"])
 
     @router.post("/turn", response_model=AgentTurnResponse)
-    def handle_turn(request: AgentTurnRequest) -> AgentTurnResponse:
+    def handle_turn(request: AgentTurnRequest, user=Depends(principal)) -> AgentTurnResponse:
+        if request.user_id is not None and request.user_id != user.user_id:
+            raise HTTPException(403)
+        request = request.model_copy(update={"user_id": user.user_id})
         try:
             return service.handle_turn(request)
         except SessionNotFoundError as error:

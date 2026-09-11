@@ -1,5 +1,7 @@
 # DB Schema
 
+**2주 차 갱신:** accounts·auth_sessions를 migration `20260911_02`로 추가했다. PostgreSQL metadata JSON/JSONB 차이도 이 migration에서 해소한다. [현재 인증 스키마](week2.md)를 함께 본다. 아래 개인화 4개 테이블과 영속 안내 세션 설계는 유지한다.
+
 ## 현재 구현
 
 모델: `app/models/personalization.py`. Migration: `20260830_01_personalization`.
