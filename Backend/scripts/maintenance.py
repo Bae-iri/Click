@@ -10,13 +10,16 @@ from app.models.auth import AuthSession
 from app.models.lifecycle import AccountAction, SafetyConfirmation
 from app.repositories.agent_sessions import AgentSessionRepository
 from scripts.cleanup_ui_events import cleanup
+from app.services.voice_queue import VoiceQueueService
 
 
 def run(factory, retention=86400):
     if retention <= 0:
         raise ValueError("Retention must be positive")
     now = int(time.time())
+    voice_removed = VoiceQueueService(factory).cleanup(retention)
     result = AgentSessionRepository(factory).cleanup(retention)
+    result["voice_requests"] = voice_removed
     result["events"] = cleanup(factory, retention)
     with factory() as db, db.begin():
         for model, field, name in ((AuthSession, AuthSession.refresh_expires_at, "auth_sessions"),
