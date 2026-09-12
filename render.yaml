@@ -1,4 +1,5 @@
-# Deployment proposal. Creating these resources incurs charges.
+# Web service only. Reuse the existing click_db (Singapore, PostgreSQL 18).
+# Supply its Internal Database URL as DATABASE_URL. No database is created here.
 services:
   - type: web
     name: click-dev-api
@@ -15,16 +16,6 @@ services:
     autoDeployTrigger: "off"
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: click-dev-db
-          property: connectionString
+        sync: false
       - key: GEMINI_API_KEY
         value: ""
-databases:
-  - name: click-dev-db
-    plan: 0.1c-256mb
-    region: singapore
-    postgresMajorVersion: "17"
-    databaseName: click
-    user: click
-    ipAllowList: []
