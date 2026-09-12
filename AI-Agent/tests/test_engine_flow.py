@@ -283,7 +283,7 @@ class EngineFlowTests(unittest.TestCase):
 
         self.assertIsNone(second_response.verification_result)
 
-    def test_same_state_with_changed_snapshot_is_unknown_not_no_change(self) -> None:
+    def test_same_state_with_changed_snapshot_waits_for_stable_observation(self) -> None:
         engine = ClickAgentEngine()
         first_response = engine.handle_turn(
             AgentTurnRequest(
@@ -313,56 +313,17 @@ class EngineFlowTests(unittest.TestCase):
         )
 
         self.assertEqual(response.current_state_id, "S1_SETTINGS_HOME")
-        self.assertEqual(response.verification_result.status, VerificationStatus.UNKNOWN)
-        self.assertEqual(
-            response.verification_result.message,
-            "Screen changed but the expected state was not reached.",
-        )
-        self.assertEqual(response.debug["replan_decision"]["reason"], "state_unknown")
+        self.assertEqual(response.verification_result.status, VerificationStatus.WAITING_FOR_OBSERVATION)
+        self.assertFalse(response.verification_result.count_attempt)
+        self.assertEqual(response.debug["replan_decision"]["strategy"], "reobserve")
 
-    def test_replanner_excludes_failed_node_after_repeated_no_change(self) -> None:
-        engine = ClickAgentEngine()
-        first_response = engine.handle_turn(
-            AgentTurnRequest(
-                request_id="req-1",
-                session_id="session-1",
-                raw_goal=_raw_goal("글자 크기 키우고 싶어"),
-                accessibility_tree=_settings_home_tree_with_two_display_candidates(),
-            )
-        )
-
-        self.assertEqual(first_response.guide_command.target_node_id, "display-primary")
-
-        engine.handle_turn(
-            AgentTurnRequest(
-                request_id="req-2",
-                session_id="session-1",
-                raw_goal=None,
-                accessibility_tree=_settings_home_tree_with_two_display_candidates(),
-                user_action_event=UserActionEvent(
-                    action_type=UserActionType.TAP_COMPLETED,
-                    guide_command_id=first_response.guide_command.guide_command_id,
-                    target_node_id="display-primary",
-                ),
-            )
-        )
-        second_retry = engine.handle_turn(
-            AgentTurnRequest(
-                request_id="req-3",
-                session_id="session-1",
-                raw_goal=None,
-                accessibility_tree=_settings_home_tree_with_two_display_candidates(),
-                user_action_event=UserActionEvent(
-                    action_type=UserActionType.TAP_COMPLETED,
-                    guide_command_id=first_response.guide_command.guide_command_id,
-                    target_node_id="display-primary",
-                ),
-            )
-        )
-
-        self.assertEqual(second_retry.verification_result.status, VerificationStatus.NO_CHANGE)
-        self.assertEqual(second_retry.guide_command.target_node_id, "display-secondary")
-        self.assertIn("display-primary", second_retry.debug["failed_node_ids"])
+    def test_equal_display_candidates_require_disambiguation(self) -> None:
+        response = ClickAgentEngine().handle_turn(AgentTurnRequest(
+            request_id="ambiguous", session_id="ambiguous",
+            raw_goal=_raw_goal("글자 크기 키우고 싶어"),
+            accessibility_tree=_settings_home_tree_with_two_display_candidates()))
+        self.assertIsNone(response.guide_command.target_node_id)
+        self.assertEqual(response.match_result.fallback_reason, "ambiguous_target")
 
     def test_slider_value_increase_flows_to_done_guide(self) -> None:
         engine = ClickAgentEngine()
@@ -374,7 +335,7 @@ class EngineFlowTests(unittest.TestCase):
                 accessibility_tree=_font_size_control_tree(slider_value=2),
             )
         )
-        engine.handle_turn(
+        accepted = engine.handle_turn(
             AgentTurnRequest(
                 request_id="req-2",
                 session_id="session-1",
@@ -392,6 +353,7 @@ class EngineFlowTests(unittest.TestCase):
                 accessibility_tree=_font_size_control_tree(slider_value=3),
                 user_action_event=UserActionEvent(
                     action_type=UserActionType.DRAG_COMPLETED,
+                    guide_command_id=accepted.guide_command.guide_command_id,
                     target_node_id="font-slider",
                 ),
             )
@@ -449,7 +411,7 @@ class EngineFlowTests(unittest.TestCase):
         self.assertEqual(response.debug["fallback"]["type"], "vision_augmented_match")
         self.assertTrue(response.debug["fallback"]["matched_from_vision"])
         self.assertEqual(response.debug["agent_chain"]["fallback"], "enabled")
-        self.assertEqual(engine.traces[-1]["schema_version"], "agent-runtime-trace.v1")
+        self.assertEqual(engine.traces[-1]["schema_version"], "agent-runtime-trace.v2")
         self.assertEqual(engine.traces[-1]["observation"]["vision_status"], "used")
 
     def test_vision_snapshot_augments_tree_when_accessibility_target_is_missing(self) -> None:

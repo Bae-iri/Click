@@ -1,5 +1,7 @@
 # AI-Agent(1): 사용자 작업 수행 Runtime Agent
 
+> 2026-09-12 신뢰성 수정 반영: 실제 동작과 전송 필드·제한은 [검증·UI 선택·Re-plan 실행 정책](./ai-agent-1-runtime-policy.md)을 함께 본다. FE typed 입력과 Backend DB graph 주입의 전체 전환은 별도 작업이다.
+
 ## 1. 문서 목적
 
 이 문서는 **AI-Agent(1)**의 목표 아키텍처와 런타임 흐름을 정의한다. AI-Agent(1)은 **Backend가 DB에서 선택해 전달한 Task Graph와 확정된 목표·실행 상태를 받아 실행하는 단계부터** 시작한다. Goal/Command 분류는 FE, graph 조회·선택·버전 고정·복원은 Backend 책임이다. 이후 현재 화면을 읽어 guide/action을 결정하며, 새 관측으로 결과를 검증하고 Re-plan하는 사용자용 에이전트다. 특정 Task 하나에 종속되지 않고, Android 설정 앱, 커머스 앱, 공공 서비스 앱 등 여러 절차형 Task에 공통으로 적용되는 Agent 파이프라인을 설명한다.
@@ -150,7 +152,7 @@ Fallback 연결 규칙:
 - `accessibility_tree.nodes`가 빈 경우는 관측 실패로 보고, vision snapshot이 없으면 정보 부족 fallback command로 응답한다.
 - `render_policy.recovery_action`은 FE가 사용자 활성화 기반으로 설정 앱 열기 또는 앱스 화면 이동을 제공해야 하는 경우 사용한다.
 - `render_policy.fallback_action.type=request_fresh_observation`은 현재 viewport에서 target을 찾지 못했으니 fresh tree와 필요 시 vision snapshot을 다시 보내라는 의미다.
-- 같은 logical state로 분류되더라도 화면 fingerprint가 바뀌었으면 `NO_CHANGE`가 아니라 `UNKNOWN`으로 기록해 스와이프, 앱스 화면 이동, 수동 이동을 단순 실패로 오판하지 않는다.
+- 같은 화면이나 fingerprint 변화만으로 실패를 만들지 않는다. 행동 귀속·관측 순서·안정화 조건에 따라 `WAITING_FOR_ACTION`, `WAITING_FOR_OBSERVATION`, `UNKNOWN`을 구분한다.
 - 현재 runtime trace는 허용된 진단 상태·수치만 보존한다. training/evaluation에 필요한 observation·action·verification 연결과 snapshot은 별도의 개인정보 정책을 갖춘 event 저장 계약으로 추가해야 한다.
 
 비판적 기준:
@@ -436,8 +438,9 @@ FE가 원본 속성을 유지해 직렬화한 Accessibility Node를 Agent가 비
 
 현재 코드 반영:
 
-- `classify_screen_state()`는 state id만 반환한다.
-- Backend response의 `state_confidence`는 실제 state confidence가 아니라 match confidence를 사용하고 있다.
+- `classify_screen_state()`는 state ID를 반환하면서 evidence 출력에 classifier 점수를 제공한다.
+- Backend `state_confidence`는 classifier 점수, `match_result.confidence`는 UI 선택 점수다. 둘 다 보정된 성공 확률은 아니다.
+- `verification_only` state는 화면 분류로 도달하지 않는다.
 
 개선 필요:
 
@@ -447,113 +450,47 @@ FE가 원본 속성을 유지해 직렬화한 Accessibility Node를 Agent가 비
 
 ### 7.7 Verification
 
-사용자 행동 이후 새 화면을 관찰해 목표 State로 이동했는지 확인한다. Verification은 Guide 이후에만 동작하는 별도 단계가 아니라, 매 turn 초반에 pending transition을 보고 수행되는 핵심 runtime 단계다.
+직전 pending attempt의 guide·action·target과 새 관측을 연결한 뒤 전이 predicate를 평가한다. Vision 보조 관측도 먼저 확정하며, verifier가 본 화면과 matcher가 본 화면이 달라지는 순서를 피한다.
 
-결과:
-
-| 결과 | 조건 | 다음 처리 |
+| 결과 | 조건 | 처리 |
 | --- | --- | --- |
-| `SUCCESS` | 예상 State로 이동 또는 값 변화 성공 | 다음 Transition 진행 |
-| `DONE` | 완료 State 도달 | 완료 안내 |
-| `NO_CHANGE` | 화면 fingerprint가 변하지 않음 | 재안내 또는 target 제외 |
-| `WRONG_STATE` | 예상과 다른 State | Re-plan |
-| `UNKNOWN` | 화면은 바뀌었지만 State 판별 실패 | fallback 또는 재계획 |
+| `WAITING_FOR_ACTION` | 해당 guide에 귀속된 행동 없음 | 유효한 guide 유지, 실패 누적 안 함 |
+| `WAITING_FOR_OBSERVATION` | 행동은 있으나 관측이 오래됐거나 안정화 전 | 최신 관측 요청 |
+| `UNKNOWN` | 대상 값·상태 등 검증 근거 부족 | 제한된 재관측, 실패 누적 안 함 |
+| `NO_CHANGE` | 행동 후 안정된 두 관측에서 원래 state 유지·조건 미충족 | 실제 attempt 한 번 실패 |
+| `WRONG_STATE` | 행동 후 안정된 관측에서 다른 알려진 state 확인 | 실제 attempt 한 번 실패 |
+| `SUCCESS` | 선언된 predicate 충족 | 다음 step 또는 검증된 완료 |
 
-현재 코드 반영:
+안정화 기준은 서로 다른 post-action 관측 두 개, 500ms 이상 간격, 동일 fingerprint다. 값 변경은 안내 당시의 target·window·기준값을 유지해 비교한다. 같은 label의 후보를 유일하게 특정하지 못하면 완료를 보류한다. `S5_FONT_SIZE_CHANGED`는 글자 크기 target의 증가 predicate로만 도달한다. 밝기 증가나 terminal transition 정의 자체는 완료 근거가 아니다.
 
-- pending transition의 `to_state`와 현재 state를 비교한다.
-- 이전 snapshot과 현재 snapshot의 fingerprint가 같으면 `NO_CHANGE`로 본다.
-- 같은 logical state라도 fingerprint가 달라지면 `UNKNOWN`으로 본다.
-- slider value가 증가하면 `S5_FONT_SIZE_CHANGED` 성공으로 본다.
-
-비판적 기준:
-
-- Verification은 state classifier에 강하게 의존하므로 classifier confidence와 evidence가 필요하다.
-- 값 변경 task는 가능하면 OS/system setting signal로도 검증해야 한다.
-- slider node id가 바뀌거나 이미 최대값인 경우를 별도로 처리해야 한다.
-- 현재 `verify_transition()`은 pending transition의 목적지가 done state이면 실제 현재 state와 비교하기 전에 `DONE`을 반환하는 분기가 있다. 목표 설계에서는 완료 predicate의 관측 근거 없이 terminal transition 정의만으로 완료를 선언하지 않아야 한다.
-- runtime의 `SUCCESS`/`DONE`은 온라인 판단 결과다. AI-Agent(2)의 정답 라벨로 그대로 복사하지 않으며, 후속 관측과 검증 근거로 재평가한다.
+수동 이동으로 예상 화면을 확인한 경우 `observed_progress`로 이어가되, 직전 action 실행 성공으로 집계하지 않는다. 실제 완료는 predicate와 `completes_task=True`가 함께 필요하다. Backend는 화면 progress로 완료를 덮어쓰지 않는다. 온라인 검증 결과를 AI2 정답 라벨로 복사하지 않는다.
 
 ### 7.8 Re-plan
 
-예상과 다른 화면이 나타났을 때 **전달받은 graph 내부에서** 현재 위치와 다음 경로를 다시 판단한다. graph 내 복구가 불가능하면 근거를 Backend에 반환해 재선택/실행 재시작 또는 지원 불가 처리를 요청한다. AI1이 DB를 조회하거나 graph에 없는 state/transition을 생성하지 않는다.
+Re-plan은 현재 실행의 선택을 바꾼다. graph에 없는 경로를 생성하거나 DB graph를 수정하지 않는다.
 
-전략:
+| strategy | 실행 |
+| --- | --- |
+| `continue` | 현재 graph의 다음 단계 |
+| `wait_for_action` | 현재 유효 guide 유지 |
+| `reobserve` | 최신 관측·동의된 fallback |
+| `retry_target` | 실패 확인 후 새 attempt 발급 |
+| `alternate_transition` | graph가 허용한 다른 target/전이 |
+| `backend_reselection` | 중단과 graph 재선택 필요 사유 반환 |
 
-- 현재 State 재분류
-- 직전 실패 Node 제외
-- 대체 Transition 탐색
-- 검색 기능 사용 가능 여부 확인
-- 허용된 scroll 범위 안에서 추가 탐색 가능 여부 확인
-- 반복 실패 시 LLM/VLM fallback
-- 사용자의 추가 설명 요청
+실패 카운터는 transition과 의미 target의 조합에 귀속한다. 기본 2회 실패 후 제외한다. bounds·tree index 변화나 target 없는 guide 반환만으로 제외를 해제하지 않는다. 새로운 실행/graph 재시작에서 초기화한다. 연속 관측 복구 기본 3회, 실제 실패 전체 6회로 제한하며 `RuntimePolicy`에서 설정한다. 정상 미조작 대기는 예산을 소비하지 않는다.
 
-현재 코드 반영:
-
-- `NO_CHANGE`, `WRONG_STATE`, `UNKNOWN`이면 replan decision을 만든다.
-- 같은 transition이 `RETRY_LIMIT_BEFORE_EXCLUSION = 2` 이상 실패하면 마지막 target node를 제외한다.
-- 이후 matcher가 같은 transition의 다른 node를 선택할 수 있다.
-
-비판적 기준:
-
-- 현재 구현은 “진짜 graph-level replanning”이라기보다 retry exclusion이다.
-- 이상적인 Re-plan은 alternate transition ranking, recovery action, user-corrected path capture를 포함해야 한다.
+경로는 명시된 `Transition.priority` 순으로 검토한다. MVP Display 경로는 10, Accessibility 경로는 20이다. UI match score와 경로 우선순위를 구분한다. Backend는 재선택 요청을 `BLOCKED`와 handoff 사유로 보존하며, DB 자동 재선택 연결은 별도 구현 사항이다.
 
 ### 7.9 UI Matching
 
-현재 State에서 다음 Transition을 수행하기 위한 Target Node를 선택한다.
+visible/enabled·유효 bounds·앱/window·action-compatible role을 먼저 확인하고, graph selector와 제외 목록을 적용한다. drag에는 slider만 허용한다. 후보를 못 찾았는데 먼저 변경 승인을 받지 않는다.
 
-1차 판단:
+`Transition.selector`는 graph 동의어 참조, package, resource ID, 화면 문맥, 제외 keyword, 이름 없는 control 허용 조건을 명시한다. matcher와 verifier가 같은 selector를 사용한다. resource ID 정확 일치 1.0, 이름/동의어 정확 일치 0.9, keyword 또는 유일한 control의 명시된 문맥 0.8을 사용한다. 일반 UI similarity는 최대 0.79이며 slider의 의미 조건을 우회하지 않는다.
 
-- keyword matching
-- synonym matching
-- resourceId matching
-- role matching
-- enabled/actionable check
+채택 기준은 0.7, top-2 격차 하한은 0.05다. 동점/작은 격차면 `ambiguous_target`으로 선택을 보류한다. 입력 node 순서로 승자를 정하지 않는다. 이름 없는 slider는 명시된 글자 크기 문맥에서 유일할 때만 허용하고, 밝기 등 이름이 있는 다른 설정은 제외한다. slider role만으로 0.82를 주던 규칙은 제거했다.
 
-2차 판단:
-
-- normalized label embedding similarity
-- 현재 State와 후보 Node의 semantic similarity
-- Task goal과 후보 Node의 semantic similarity
-- bounds/position pattern
-- top-1/top-2 score gap
-
-fallback 조건:
-
-- 후보가 없음
-- 후보가 여러 개이고 score 차이가 작음
-- 최고 후보 confidence가 threshold 미만
-- 후보 Node가 실제로 clickable/actionable하지 않음
-
-예시 출력:
-
-```json
-{
-  "state_id": "S1_SETTINGS_HOME",
-  "next_state_id": "S2_DISPLAY_MENU",
-  "action_type": "tap",
-  "target_node_id": "node_12",
-  "target_label": "디스플레이",
-  "target_bounds": [24, 320, 1056, 408],
-  "match_method": "keyword+embedding+role",
-  "confidence": 0.91,
-  "transition_id": "S1_TO_S2_DISPLAY_MENU",
-  "fallback_reason": null
-}
-```
-
-현재 코드 반영:
-
-- keyword match, similarity score, semantic tag, role, actionable score를 합산한다.
-- 현재 match threshold는 `0.7`이다.
-- Gemini API key가 없으면 similarity는 keyword-only Jaccard fallback이다.
-
-개선 필요:
-
-- top-k 후보와 score breakdown을 response/debug에 남겨야 한다.
-- top-2 gap이 낮으면 바로 안내하지 말고 사용자 확인 또는 후보 선택을 해야 한다.
-- resourceId selector를 transition spec에 명시적으로 포함해야 한다.
+점수·격차는 초기 휴리스틱이며 실측 확률이 아니다. 기기별 평가를 통한 보정, 상세 후보 evidence, occlusion/hit-test는 후속 보완이다. 구체적 계약·사례는 [실행 정책](./ai-agent-1-runtime-policy.md)을 따른다.
 
 ### 7.10 Safety Gate
 
@@ -776,13 +713,13 @@ FE에 전달한 command는 guide ID와 TTL을 가진다. 화면 전환, 새 guid
 | 초기부터 목표를 만족 | already-satisfied 의미 명시 | 불필요한 조작 없이 완료 가능 |
 | 더 증가 요청이나 이미 최대값 | 증가 성공을 선언하지 않음 | 제약 설명·대안 질문 |
 
-값 변경은 Task별 기준이 필요하다. `increase`는 episode 시작 기준값과의 비교, 특정 값 설정은 목표값·허용 오차·단위 일치, 메뉴 이동은 목적 화면과 핵심 요소 확인을 사용한다. 설정 반영에 지연이 있으면 제한된 관측 대기 정책을 둔다.
+값 변경은 Task별 기준이 필요하다. 현재 `increase`는 승인된 안내 시점의 target 기준값과의 비교, 특정 값 설정은 목표값·허용 오차·단위 일치, 메뉴 이동은 목적 화면과 핵심 요소 확인을 사용한다. 설정 반영에 지연이 있으면 제한된 관측 대기 정책을 둔다.
 
 Re-plan은 최신 화면 재확인, 같은 transition의 다른 유효 target, 승인된 대체 transition, 복구 action, 동의된 fallback, 사용자 추가 설명 또는 중단을 선택한다. graph에 없는 위험 action을 임의 생성하지 않는다.
 
 시도 횟수는 guide 생성 횟수와 구분한다. action이 확인되지 않은 observe-only 요청까지 실패로 누적하지 않는다. 실패 node 제외는 해당 state·관측 context에 한정하고 새 화면에서 ID가 재사용되었을 때 영구 제외하지 않는다.
 
-현재 구현은 같은 transition의 반복 실패 후 node 제외가 중심이다. 이후 step별 retry, episode 전체 step 수, fallback 호출, scroll 횟수, 경과 시간의 상한을 정책으로 관리한다. 현재는 `runtime/budget.py`와 Backend `turn_executor.py`가 turn deadline과 동시 실행 상한을 적용한다. episode 전체의 retry·복구 예산은 추가할 정책이며, 예산 소진 시 이유와 가능한 복구 방법을 안내하고 종료한다.
+현재 runtime은 target별 확인된 실패, 연속 관측 복구, 실행 전체 실제 실패 예산을 관리한다. `runtime/budget.py`와 Backend `turn_executor.py`의 turn deadline·동시 실행 상한도 유지한다. 모든 종류의 episode 비용·전체 실행 시간·scroll 예산 통합은 후속 보완이다. 예산 소진은 완료가 아니라 Backend handoff와 중단이다.
 
 ### 7.17 Trace 생산 계약
 
@@ -1105,10 +1042,10 @@ Task별 문서는 다음 항목을 포함한다.
 | --- | --- |
 | 실행 입력 / Graph 수신 | Backend가 선택한 graph를 주입받는 경계로 전환하고 AI1의 legacy Goal Typer·graph lookup을 제거해야 한다. |
 | Task Graph | DB 승인 artifact를 source of truth로 두고 Python/JSON seed와의 동기화·버전을 관리해야 한다. |
-| State Classification | state id만 반환한다. confidence와 evidence가 필요하다. |
-| UI Matching | top-2 ambiguity 처리가 없다. 후보가 비슷하면 확인해야 한다. |
-| Verification | slider value 증가만으로 완료 판단하는 것은 약하다. system setting 또는 value boundary 처리가 필요하다. |
-| Replan | 현재는 node exclusion이다. alternate transition ranking이 필요하다. |
+| State Classification | classifier 점수와 match 점수를 분리했다. 상세 state evidence와 정확도 보정이 필요하다. |
+| UI Matching | 역할·앱/window 필터, graph selector·동의어, top-2 선택 보류를 반영했다. 기기별 실측 평가가 필요하다. |
+| Verification | 실제 행동과 동일 target의 증가 predicate를 연결했다. OS 설정값·최대값·단위 처리가 남는다. |
+| Replan | 명시된 전이 priority·실패 제외 유지·복구 예산·Backend handoff를 반영했다. 자동 DB 재선택 연동이 남는다. |
 | Vision Fallback | 동의된 OCR/element는 활용하며 원본 screenshot 외부 호출은 차단한다. 이미지 fallback 활성화에는 서버 redaction과 graph context가 필요하다. |
 | Trace | in-memory라 학습 자산이 되기 어렵다. persistent trace store가 필요하다. |
 | Backend | DB 기반 session·turn·checkpoint는 구현되어 있다. graph artifact 버전 고정과 영속 학습 trace 연계는 추가해야 한다. |
@@ -1166,9 +1103,9 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 | `AI-Agent/src/ai_agent/runtime/engine.py` | turn orchestration | 모든 종료 경로 event, 검증 대상 step 명시 |
 | 신규 runtime input validator / graph receiver | Backend 전달 입력 검증·graph 실행 | graph 주입 DTO, Goal Typing/lookup 제거 |
 | `runtime/normalizer.py`, `classifier.py` | UI 정규화 및 State 판단 | evidence, confidence 분리 |
-| `runtime/matcher.py`, `similarity.py` | UI 후보 선택 | 후보별 점수, selector, top-2 gap |
-| `runtime/verification.py`, `state_manager.py` | 이전 관측과 결과 비교 | 완료 predicate, 지연 관측, action 귀속 |
-| `runtime/replanner.py` | 실패 이력과 node 제외 | 대체 transition, 재시도·복구 예산 |
+| `runtime/matcher.py`, `targeting.py`, `similarity.py` | hard filter·공통 selector·top-2 gap | 후보 상세 evidence·평가 보정 |
+| `runtime/verification.py`, `state_manager.py` | 행동 귀속·관측 순서·target predicate·실패 집계 | OS 값 검증·최대값 안내 |
+| `runtime/replanner.py` | 구체적 복구 전략·예산·Backend 반환 | DB 재선택 흐름 연결 |
 | `runtime/guide.py`, `contracts.py` | guide와 허용 action 계약 | 독립 Safety Gate, 실행 capability 확인 |
 | `runtime/session.py` | turn 중 세션 상태 | 승인 artifact version과 episode 연결 |
 | `telemetry/trace_logger.py` | 공통 진단 producer를 사용 | 필터를 유지하며 별도 영속 event 연결 |
@@ -1182,7 +1119,7 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 
 ### 15.1 정상 작업과 복구
 
-글자 크기 확대의 첫 turn에서 Agent(1)은 FE의 `start_task`와 `settings.font_size.increase`를 받아 `MVP-01`을 선택하고 현재 설정 홈의 디스플레이 메뉴를 안내한다. 다음 turn에서 디스플레이 화면이 확인되면 직전 step을 검증하고 글자 크기 메뉴를 안내한다. 설정 변경 확인 후 사용자가 slider를 조작하면 기준값 대비 증가를 검증해 완료한다.
+목표 계약에서 글자 크기 확대의 첫 turn은 Backend가 `start_task`와 `settings.font_size.increase`에 맞춰 선택한 `MVP-01`을 AI1에 전달하고, AI1이 현재 설정 홈의 디스플레이 메뉴를 안내한다. 다음 turn에서 디스플레이 화면이 확인되면 직전 step을 검증하고 글자 크기 메뉴를 안내한다. 설정 변경 확인 후 사용자가 slider를 조작하면 기준값 대비 증가를 검증해 완료한다.
 
 메뉴 이름이 달라 target을 찾지 못하면 graph의 synonym·selector 후보를 검사하고 새 관측 또는 동의 기반 Vision을 요청한다. 다른 승인 경로가 있으면 Re-plan한다. 새 화면·우회 경로는 trace에 남기고, 여러 세션에 적용할 graph 변경은 Agent(2)가 처리한다.
 

@@ -43,11 +43,24 @@ class AgentTurnService:
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
             # An isolated runtime per turn prevents cross-request state corruption.
             store = restore(claim["checkpoint"])
+            previous = store.get(request.session_id)
+            authorization = ((previous.pending_attempt or {}).get("authorization") or {}) if previous else {}
+            if authorization and authorization.get("expires_at", 0) <= int(self.repository.clock()):
+                store.update(request.session_id, pending_attempt=None, pending_transition_id=None)
             engine = self.engine_factory(session_store=store)
             response = safe_response(execute(lambda: engine.handle_turn(request), self.timeout_seconds))
-            validate_output(request, response, approved)
+            validate_output(request, response, approved, checkpoint=claim["checkpoint"],
+                            now=int(self.repository.clock()))
             response.session_version = claim["version"] + 1
             checkpoint = capture(store, request.session_id)
+            if approved and checkpoint and checkpoint.get("pending_attempt"):
+                guide = response.guide_command
+                checkpoint["pending_attempt"]["authorization"] = {
+                    "expires_at": approved["approval_expires_at"],
+                    "guide_command_id": guide.guide_command_id, "action_type": guide.action_type,
+                    "target_node_id": guide.target_node_id, "target_bounds": list(guide.target_bounds or ()),
+                    "task_id": response.task_id, "state_id": response.state_id,
+                }
             self.repository.finish(request, claim, response, checkpoint, SCHEMA_VERSION, graph_version())
         except Exception:
             self.repository.release(request.session_id, claim["token"])

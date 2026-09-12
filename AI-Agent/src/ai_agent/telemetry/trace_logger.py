@@ -2,19 +2,21 @@
 from collections.abc import Mapping
 from time import monotonic
 import math
+import re
 
 CONTAINERS = {"observation", "agent_chain", "goal_typing", "vision_fallback",
-              "verification", "match", "guide", "fallback", "debug", "result"}
+              "verification", "match", "guide", "fallback", "debug", "result", "correlation", "replan_decision"}
 VISION = {"used", "not_requested", "not_configured", "provider_error", "no_signal", "consent_required"}
 ENUMS = {
-    "status": VISION | {"SUCCESS", "DONE", "NO_CHANGE", "WRONG_STATE", "UNKNOWN"},
+    "strategy": {"continue", "wait_for_action", "reobserve", "retry_target", "alternate_transition", "backend_reselection"},
+    "status": VISION | {"SUCCESS", "DONE", "NO_CHANGE", "WRONG_STATE", "UNKNOWN", "WAITING_FOR_ACTION", "WAITING_FOR_OBSERVATION"},
     "vision_status": VISION,
     "command_type": {"highlight", "gesture_hint", "confirmation", "done", "blocked"},
     "action_type": {"tap", "drag", "scroll", "observe_only"},
     "safety_level": {"LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"},
     "type": {"none", "settings_app_recovery", "vision_fallback", "vision_augmented_match", "target_match_fallback", "replan"},
 }
-METRICS = {"confidence", "element_count", "accessibility_node_count", "vision_element_count",
+METRICS = {"count_attempt", "task_completed", "state_score", "score_gap", "recovery_count", "confidence", "element_count", "accessibility_node_count", "vision_element_count",
            "normalized_node_count", "actionable_node_count", "synthetic_vision_node_count",
            "accessibility_tree_present", "vision_snapshot_present", "vision_has_screenshot",
            "vision_has_ocr_text", "requires_user_action", "session_stateful", "matched_from_vision"}
@@ -24,6 +26,9 @@ def diagnostic_payload(value, depth=0):
     if not isinstance(value, Mapping) or depth > 5:
         return {}
     output = {}
+    for key in {"session_hash", "request_hash", "graph_hash", "observation_hash", "guide_hash", "attempt_hash", "action_hash"} & value.keys():
+        if isinstance(value[key], str) and re.fullmatch(r"[0-9a-f]{64}", value[key]):
+            output[key] = value[key]
     for key in CONTAINERS & value.keys():
         output[key] = diagnostic_payload(value[key], depth + 1)
     for key in ENUMS.keys() & value.keys():
@@ -57,7 +62,7 @@ class TraceLogger:
 
     def record(self, trace):
         payload = diagnostic_payload(trace)
-        payload["schema_version"] = "agent-runtime-trace.v1"
+        payload["schema_version"] = "agent-runtime-trace.v2"
         self._records.append(payload)
         self._times.append(self.clock())
         self._prune()

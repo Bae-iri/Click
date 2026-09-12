@@ -10,7 +10,10 @@ def normalize_accessibility_tree(
     nodes: tuple[AccessibilityNode, ...],
     *,
     screen_bounds: Bounds | None = None,
+    active_window_id: int | None = None,
 ) -> tuple[NormalizedNode, ...]:
+    if active_window_id is not None:
+        nodes = tuple(node for node in nodes if node.window_id == active_window_id)
     normalized: list[NormalizedNode] = []
     seen: set[tuple] = set()
     nodes_by_id = {node.node_id: node for node in nodes}
@@ -48,6 +51,7 @@ def normalize_accessibility_tree(
             resource_id=node.resource_id,
             class_name=node.class_name,
             package_name=node.package_name,
+            window_id=node.window_id,
             position_hint=position_hint(node.bounds_in_screen, screen_bounds),
             value=extract_numeric_value(node),
         )

@@ -115,7 +115,10 @@ def test_terminal_completion_survives_restart_and_blocks_new_turns(tmp_path):
         client.headers["Authorization"] = "Bearer " + auth["access_token"]
         unchanged = post(client, {**follow(2, "r3"), "accessibility_tree": slider_tree(3)})
         assert unchanged.json()["task_status"] != "COMPLETED"
-        complete = {**follow(3, "r4"), "accessibility_tree": slider_tree(4)}
+        complete = {**follow(3, "r4"), "accessibility_tree": {**slider_tree(4), "captured_at": "2026-08-30T10:00:01Z"},
+            "user_action_event": {"event_id": "completed-drag", "action_type": "drag_completed",
+                "guide_command_id": unchanged.json()["guide_command"]["guide_command_id"],
+                "target_node_id": "font-slider"}}
         done = post(client, complete)
         assert done.json()["task_status"] == "COMPLETED"
         assert post(client, complete).json() == done.json()
@@ -206,7 +209,14 @@ def test_inflight_turn_fencing_across_two_apps(tmp_path, action):
             finally:
                 finish.set()
             result = pending.result(timeout=10)
-        assert result.status_code == (200 if action == "compete" else 409)
+        # Account deletion is rejected by the owner guard before session fencing.
+        expected_status = 200 if action == "compete" else 401 if action == "delete" else 409
+        assert result.status_code == expected_status
+        if action == "delete":
+            with other_app.state.session_factory() as db:
+                assert db.get(AgentSession, "s1") is None
+                assert db.get(AgentCheckpoint, "s1") is None
+                assert db.scalar(select(func.count()).select_from(AgentTurn)) == 0
         if action in ("compete", "lease_expire"):
             assert session(other).json()["version"] == 2
             assert post(other, follow(1)).status_code == 200

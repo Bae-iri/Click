@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+from uuid import uuid4
+from hashlib import sha256
+import json
+
 from ai_agent.runtime.classifier import classify_screen_state
 from ai_agent.runtime.goal_typing import type_goal
 from ai_agent.runtime.guide import (
@@ -17,6 +22,7 @@ from ai_agent.runtime.state_manager import build_screen_snapshot, register_attem
 from ai_agent.runtime.tasks import TASK_GRAPHS
 from ai_agent.runtime.types import (
     AccessibilityNode,
+    ActionType,
     AgentTurnRequest,
     AgentTurnResponse,
     Bounds,
@@ -32,7 +38,7 @@ from ai_agent.runtime.types import (
     VerificationStatus,
 )
 from ai_agent.runtime.validation import ContractViolationError, validate_agent_turn_request
-from ai_agent.runtime.verification import verify_transition
+from ai_agent.runtime.verification import correlate_action, verify_transition
 from ai_agent.runtime.similarity import default_similarity_scorer
 from ai_agent.fallback.llm_vlm_fallback import (
     LLMVLMFallback,
@@ -128,6 +134,7 @@ class ClickAgentEngine:
         normalized_nodes = normalize_accessibility_tree(
             accessibility_nodes,
             screen_bounds=screen_bounds,
+            active_window_id=request.active_window_id,
         )
         current_state_id = classify_screen_state(
             normalized_nodes,
@@ -135,97 +142,134 @@ class ClickAgentEngine:
             device_context=request.raw_goal.device_context if request.raw_goal else None,
             previous_state_id=previous_state_id,
         )
-        current_snapshot = build_screen_snapshot(current_state_id, normalized_nodes)
-        verification_result = verify_transition(
-            graph=graph,
-            previous_state_id=previous_state_id,
-            pending_transition_id=existing_session.pending_transition_id
-            if existing_session
-            else None,
-            current_state_id=current_state_id,
-            previous_snapshot=existing_session.last_snapshot
-            if existing_session
-            else None,
-            current_snapshot=current_snapshot,
-        )
-        transition_attempts, failed_node_ids = register_attempt_outcome(
-            existing_session,
-            pending_transition_id=existing_session.pending_transition_id
-            if existing_session
-            else None,
-            verification_result=verification_result,
-        )
-        replan_decision = decide_replan(
-            session=existing_session,
-            verification_result=verification_result,
-            failed_node_ids=failed_node_ids,
-            transition_attempts=transition_attempts,
-        )
-        effective_state_id = _effective_state_id(current_state_id, verification_result)
-        match_result = match_next_ui(
-            effective_state_id,
-            normalized_nodes,
-            graph,
-            excluded_node_ids=replan_decision.excluded_node_ids,
-            similarity_scorer=self.similarity_scorer,
-        )
-        if match_result.fallback_reason and request.vision_snapshot:
+        # Finish observation acquisition before verification/accounting, including vision.
+        previous_exclusions = existing_session.failed_target_keys if existing_session else {}
+        preliminary = match_next_ui(current_state_id, normalized_nodes, graph,
+            excluded_target_keys=previous_exclusions, similarity_scorer=self.similarity_scorer)
+        if preliminary.fallback_reason and request.vision_snapshot:
             retry_nodes, vision_analysis = self._retry_with_vision_nodes(
-                request=request,
-                existing_nodes=accessibility_nodes,
-                current_analysis=vision_analysis,
-                graph=graph,
-                previous_state_id=previous_state_id,
-                excluded_node_ids=replan_decision.excluded_node_ids,
-                screen_bounds=screen_bounds,
-            )
+                request=request, existing_nodes=accessibility_nodes,
+                current_analysis=vision_analysis, graph=graph, previous_state_id=previous_state_id,
+                excluded_node_ids=(), screen_bounds=screen_bounds)
             if retry_nodes:
                 normalized_nodes = retry_nodes
-                current_state_id = classify_screen_state(
-                    normalized_nodes,
-                    graph,
-                    device_context=request.raw_goal.device_context if request.raw_goal else None,
-                    previous_state_id=previous_state_id,
-                )
-                current_snapshot = build_screen_snapshot(current_state_id, normalized_nodes)
-                effective_state_id = _effective_state_id(current_state_id, verification_result)
-                match_result = match_next_ui(
-                    effective_state_id,
-                    normalized_nodes,
-                    graph,
-                    excluded_node_ids=replan_decision.excluded_node_ids,
-                    similarity_scorer=self.similarity_scorer,
-                )
-        if match_result.fallback_reason and vision_analysis:
-            vision_command = _command_for_vision_analysis(
-                request.session_id,
-                vision_analysis,
-                tree_was_empty=not request.accessibility_tree,
-            )
+        state_evidence = {}
+        current_state_id = classify_screen_state(normalized_nodes, graph,
+            device_context=request.raw_goal.device_context if request.raw_goal else None,
+            previous_state_id=previous_state_id, evidence=state_evidence)
+        current_snapshot = build_screen_snapshot(current_state_id, normalized_nodes,
+            observation_id=request.observation_id or request.request_id,
+            captured_at_ms=request.captured_at_ms)
+        previous_transition = next((t for t in graph.transitions if existing_session
+            and t.transition_id == existing_session.pending_transition_id), None)
+        attempt, processed_events = correlate_action(existing_session, request, previous_transition)
+        verified_attempt = attempt
+        verification_result = verify_transition(
+            graph=graph, previous_state_id=previous_state_id,
+            pending_transition_id=existing_session.pending_transition_id if existing_session else None,
+            current_state_id=current_state_id,
+            previous_snapshot=existing_session.last_snapshot if existing_session else None,
+            current_snapshot=current_snapshot, attempt=attempt, nodes=normalized_nodes)
+        transition_attempts, failed_node_ids = register_attempt_outcome(
+            existing_session,
+            pending_transition_id=existing_session.pending_transition_id if existing_session else None,
+            verification_result=verification_result, retry_limit=graph.policy.retry_limit)
+        failed_target_keys = dict(previous_exclusions)
+        failed_attempt = bool(verification_result and verification_result.count_attempt
+            and verification_result.status in {VerificationStatus.NO_CHANGE, VerificationStatus.WRONG_STATE})
+        if failed_attempt and attempt and previous_transition:
+            counter_key = previous_transition.transition_id + ':' + attempt['target_key']
+            if transition_attempts.get(counter_key, 0) >= graph.policy.retry_limit:
+                failed_target_keys[previous_transition.transition_id] = tuple(sorted({
+                    *failed_target_keys.get(previous_transition.transition_id, ()), attempt['target_key']}))
+        total_failed_attempts = (existing_session.total_failed_attempts if existing_session else 0) + int(failed_attempt)
+        task_completed = bool((existing_session and existing_session.task_completed)
+                              or (verification_result and verification_result.task_completed))
+        effective_state_id = _effective_state_id(current_state_id, verification_result)
+        if existing_session and existing_session.task_completed:
+            effective_state_id = existing_session.current_state_id
+        match_result = match_next_ui(effective_state_id, normalized_nodes, graph,
+            excluded_target_keys=failed_target_keys, similarity_scorer=self.similarity_scorer)
+        awaiting_observation = bool(attempt and attempt.get('event_key') and verification_result
+            and verification_result.status in {VerificationStatus.WAITING_FOR_OBSERVATION, VerificationStatus.UNKNOWN})
+        action_time = attempt.get('action_at_ms') if attempt else None
+        within_settling_interval = bool(awaiting_observation and action_time is not None
+            and request.captured_at_ms is not None
+            and 0 <= request.captured_at_ms - action_time < graph.policy.settle_ms)
+        needs_recovery = (not task_completed and not within_settling_interval
+                          and (awaiting_observation or bool(match_result.fallback_reason)))
+        recovery_count = (existing_session.recovery_count if existing_session else 0) + 1 if needs_recovery else 0
+        replan_decision = decide_replan(session=existing_session, verification_result=verification_result,
+            failed_node_ids=failed_node_ids, recovery_count=recovery_count, recovery_limit=graph.policy.recovery_limit,
+            total_failed_attempts=total_failed_attempts, max_failed_attempts=graph.policy.max_failed_attempts,
+            match_result=match_result)
+        matched_target = next((node for node in normalized_nodes if node.node_id == match_result.target_node_id), None)
+        same_binding = bool(attempt and match_result.target_key == attempt.get('target_key')
+            and match_result.transition_id == attempt.get('transition_id')
+            and match_result.target_node_id == attempt.get('target_node_id')
+            and matched_target and matched_target.window_id == attempt.get('target_window_id')
+            and match_result.target_bounds == tuple(attempt.get('target_bounds', ()))
+            and (attempt.get('event_key') or matched_target.value == attempt.get('baseline_value')))
+        keep_attempt = bool(attempt and not failed_attempt and not task_completed and
+            (awaiting_observation or (same_binding and verification_result
+             and verification_result.status == VerificationStatus.WAITING_FOR_ACTION)))
+        confirmation = request.user_confirmation
+        if keep_attempt and same_binding:
+            # Already approved this exact pending operation; do not ask again while waiting.
+            confirmation = 'accepted'
+        guide_command = build_guide_command(session_id=request.session_id, match_result=match_result,
+            graph=graph, user_confirmation=confirmation, task_completed=task_completed)
+        if match_result.fallback_reason and vision_analysis and not awaiting_observation:
+            vision_command = _command_for_vision_analysis(request.session_id, vision_analysis,
+                tree_was_empty=not request.accessibility_tree)
             if vision_command:
                 guide_command = vision_command
-            else:
-                guide_command = build_guide_command(
-                    session_id=request.session_id,
-                    match_result=match_result,
-                    graph=graph,
-                    user_confirmation=request.user_confirmation,
-                )
+        if awaiting_observation:
+            guide_command = GuideCommand(
+                guide_command_id=attempt['guide_command_id'], command_type=CommandType.HIGHLIGHT,
+                action_type=ActionType.OBSERVE_ONLY, message='조작 결과를 확인하고 있어요.',
+                safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
+                render_policy={'fallback_action': {'type': 'request_fresh_observation',
+                    'reason': verification_result.evidence,
+                    'expected_next_observation': {'send_fresh_accessibility_tree': True}}})
+        if replan_decision.strategy == 'backend_reselection' and not task_completed:
+            guide_command = GuideCommand(
+                guide_command_id='guide_' + uuid4().hex, command_type=CommandType.BLOCKED,
+                action_type=ActionType.OBSERVE_ONLY,
+                message='현재 작업 경로로 진행할 수 없어 경로를 다시 확인해야 해요.',
+                safety_level=SafetyLevel.BLOCKED, requires_user_action=False,
+                render_policy={'backend_handoff': {'type': 'task_graph_reselection_required',
+                    'reason': replan_decision.reason, 'task_id': graph.definition.task_id}})
+            keep_attempt = False
+        if request.user_confirmation == 'rejected':
+            guide_command = build_guide_command(session_id=request.session_id,
+                match_result=match_result, graph=graph, user_confirmation='rejected')
+            keep_attempt = False
+        if keep_attempt:
+            guide_command = replace(guide_command, guide_command_id=attempt['guide_command_id'])
+            pending_transition_id = attempt['transition_id']
         else:
-            guide_command = build_guide_command(
-                session_id=request.session_id,
-                match_result=match_result,
-                graph=graph,
-                user_confirmation=request.user_confirmation,
-            )
-        pending_transition_id = _pending_transition_id(
-            guide_command,
-            match_result.transition_id,
-        )
+            guide_command = replace(guide_command, guide_command_id='guide_' + uuid4().hex)
+            pending_transition_id = _pending_transition_id(guide_command, match_result.transition_id)
+            attempt = None
+            if pending_transition_id and match_result.target_node_id:
+                target = next(n for n in normalized_nodes if n.node_id == match_result.target_node_id)
+                attempt = {
+                    'attempt_id': uuid4().hex, 'step_id': pending_transition_id,
+                    'transition_id': pending_transition_id,
+                    'guide_command_id': guide_command.guide_command_id,
+                    'target_node_id': target.node_id, 'target_key': match_result.target_key,
+                    'target_window_id': target.window_id,
+                    'target_bounds': target.bounds, 'baseline_value': target.value,
+                    'baseline_observation_id': current_snapshot.observation_id,
+                    'baseline_captured_at_ms': current_snapshot.captured_at_ms,
+                }
         pending_confirmation_transition_id = _pending_confirmation_transition_id(
-            guide_command.command_type,
-            match_result.transition_id,
-        )
+            guide_command.command_type, match_result.transition_id)
+        guide_command = replace(guide_command, render_policy={**guide_command.render_policy,
+            'runtime_strategy': replan_decision.strategy,
+            'attempt_id': attempt['attempt_id'] if attempt else None,
+            'step_id': pending_transition_id})
         observation_debug = _observation_debug(
             request=request,
             normalized_nodes=normalized_nodes,
@@ -246,36 +290,21 @@ class ClickAgentEngine:
             guide_command=guide_command,
         )
 
+        session_changes = dict(
+            task_id=graph.definition.task_id, typed_goal=typed_goal, current_state_id=effective_state_id,
+            pending_transition_id=pending_transition_id,
+            pending_confirmation_transition_id=pending_confirmation_transition_id,
+            last_guide_command_id=guide_command.guide_command_id,
+            last_target_node_id=attempt['target_node_id'] if attempt else match_result.target_node_id,
+            failed_node_ids=failed_node_ids, transition_attempts=transition_attempts,
+            last_snapshot=current_snapshot, last_user_action_event=None,
+            pending_attempt=attempt, processed_event_keys=processed_events,
+            failed_target_keys=failed_target_keys, recovery_count=recovery_count,
+            total_failed_attempts=total_failed_attempts, task_completed=task_completed)
         if existing_session:
-            self.session_store.update(
-                request.session_id,
-                task_id=graph.definition.task_id,
-                typed_goal=typed_goal,
-                current_state_id=effective_state_id,
-                pending_transition_id=pending_transition_id,
-                pending_confirmation_transition_id=pending_confirmation_transition_id,
-                last_guide_command_id=guide_command.guide_command_id,
-                last_target_node_id=match_result.target_node_id,
-                failed_node_ids=failed_node_ids,
-                transition_attempts=transition_attempts,
-                last_snapshot=current_snapshot,
-                last_user_action_event=request.user_action_event,
-            )
+            self.session_store.update(request.session_id, **session_changes)
         else:
-            self.session_store.start(
-                session_id=request.session_id,
-                task_id=graph.definition.task_id,
-                typed_goal=typed_goal,
-                current_state_id=effective_state_id,
-                pending_transition_id=pending_transition_id,
-                pending_confirmation_transition_id=pending_confirmation_transition_id,
-                last_guide_command_id=guide_command.guide_command_id,
-                last_target_node_id=match_result.target_node_id,
-                failed_node_ids=failed_node_ids,
-                transition_attempts=transition_attempts,
-                last_snapshot=current_snapshot,
-                last_user_action_event=request.user_action_event,
-            )
+            self.session_store.start(session_id=request.session_id, **session_changes)
 
         response = AgentTurnResponse(
             request_id=request.request_id,
@@ -288,6 +317,15 @@ class ClickAgentEngine:
             verification_result=verification_result,
             debug={
                 "normalized_node_count": len(normalized_nodes),
+                "state_score": state_evidence['state_score'],
+                "task_completed": task_completed,
+                "recovery_count": recovery_count,
+                "failed_target_keys": failed_target_keys,
+                "correlation": {
+                    "observation_id": current_snapshot.observation_id,
+                    "attempt_id": verification_result.attempt_id if verification_result else None,
+                    "next_attempt_id": attempt['attempt_id'] if attempt else None,
+                },
                 "session_stateful": True,
                 "similarity_provider": getattr(self.similarity_scorer, "provider", "custom"),
                 "observation": observation_debug,
@@ -305,7 +343,16 @@ class ClickAgentEngine:
             "request_id": request.request_id,
             "session_id": request.session_id,
             "task_id": graph.definition.task_id,
-            "graph_version": "mvp-01.v1",
+            "correlation": {
+                "session_hash": sha256(request.session_id.encode()).hexdigest(),
+                "request_hash": sha256(request.request_id.encode()).hexdigest(),
+                "graph_hash": sha256(json.dumps(graph.to_dict(), sort_keys=True).encode()).hexdigest(),
+                "observation_hash": sha256(current_snapshot.observation_id.encode()).hexdigest(),
+                "guide_hash": sha256(guide_command.guide_command_id.encode()).hexdigest(),
+                "attempt_hash": sha256(verification_result.attempt_id.encode()).hexdigest()
+                    if verification_result and verification_result.attempt_id else None,
+                "action_hash": verified_attempt.get("event_key") if verified_attempt else None,
+            },
             "typed_goal": typed_goal.to_dict(),
             "state_id": effective_state_id,
             "observation": observation_debug,
@@ -369,6 +416,7 @@ class ClickAgentEngine:
         normalized_nodes = normalize_accessibility_tree(
             augmented_nodes,
             screen_bounds=screen_bounds,
+            active_window_id=request.active_window_id,
         )
         current_state_id = classify_screen_state(
             normalized_nodes,
@@ -533,7 +581,7 @@ def _pending_transition_id(
         CommandType.BLOCKED,
     }:
         return None
-    if not guide_command.requires_user_action:
+    if not guide_command.requires_user_action or guide_command.action_type == ActionType.OBSERVE_ONLY:
         return None
     return transition_id
 
