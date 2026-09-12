@@ -377,7 +377,9 @@ flowchart TD
 
 ## 13. Task Graph 학습 / 업데이트
 
-이 Task Graph는 사람이 처음 seed를 만들지만, 운영 중 Agent가 trace를 모아 업데이트 후보를 생성한다. 사용자가 매번 markdown을 직접 고치는 구조로 두지 않는다.
+이 Task Graph는 사람이 처음 seed를 만들고, AI-Agent(1)이 실행 trace를 생산하며, AI-Agent(2)가 전체 runtime 결과를 라벨링해 업데이트 후보를 생성한다. 사용자가 매번 markdown을 직접 고치는 구조로 두지 않는다.
+
+이 절은 Task별 개선 사례다. 공통 라벨링·평가·승인 정책은 [AI-Agent(2) 상세 설계](../ai-agent-2-graph-proposal.md)를 기준으로 한다. 아래 `Graph Learner`는 AI-Agent(2)의 후보 생성 모듈을 뜻하며, 현재 자동 개선 기능은 구현할 목표다.
 
 ### 13.1 수집 trace
 
@@ -392,7 +394,7 @@ flowchart TD
 | Guide Command | 어떤 안내가 나갔는지 재현 |
 | user action result | 안내 후 사용자가 성공했는지 검증 |
 | scroll command/result | scroll policy 조정 |
-| verifier result | 완료/실패 ground truth 생성 |
+| verifier result | 완료/실패 라벨의 입력 신호; 실제 관측·완료 predicate로 별도 검증 |
 | user-corrected path | 기존 graph에 없는 성공 경로 발견 |
 
 ### 13.2 업데이트 후보 생성 기준
@@ -409,9 +411,9 @@ flowchart TD
 
 ### 13.3 승인 정책
 
-- synonym, target keyword, non-risk selector 보강은 offline 검증 통과 시 자동 승인 가능하다.
+- 초기에는 synonym, target keyword, non-risk selector 보강도 offline 검증 후 내부 검토한다. 향후 명시적 allowlist와 평가 정책을 갖추면 자동 승인을 검토할 수 있다.
 - 새 State 또는 새 Transition 추가는 사람이 검토한다.
-- `CONFIRM_REQUIRED`, `BLOCKED` safety 변경은 항상 사람이 승인한다.
+- `CONFIRM_REQUIRED`, `BLOCKED` safety 변경은 별도 정책 검토 대상이며 graph 성공률만으로 자동 완화하지 않는다. 자동 tap 금지 정책을 유지한다.
 - Graph Learner는 runtime 중 현재 사용자 세션의 production graph를 즉시 바꾸지 않는다.
 - 승인된 변경만 `graph_version`을 올려 배포한다.
 - 문제가 생기면 이전 graph version으로 rollback한다.
@@ -428,7 +430,7 @@ MVP-01에서 Graph Learner는 아래 순서로 Task Graph 업데이트 후보를
    - `ambiguous_goal`: 글자 크기와 화면 확대 의도가 섞인 경우
 
 2. 사용자 우회 성공 path 추출
-   - Agent 안내가 실패한 뒤 사용자가 직접 이동해서 `S4_FONT_SIZE_CONTROL` 또는 `S_DONE`에 도달한 trace를 찾는다.
+   - Agent 안내가 실패한 뒤 사용자가 직접 이동하고 실제 글자 크기 증가 등 목표 완료 근거가 확인된 trace를 찾는다. `S4_FONT_SIZE_CONTROL` 또는 `S_DONE` 판별만으로 최종 성공 라벨을 확정하지 않는다.
    - 사용자가 실제 누른 node sequence를 기존 transition과 비교한다.
    - 기존 graph에 없는 edge가 반복되면 새 Transition 후보로 만든다.
 
@@ -509,7 +511,7 @@ MVP-01에서 Graph Learner는 아래 순서로 Task Graph 업데이트 후보를
 - trace에서 반복 발견: "글자 및 화면 스타일"
 - verifier 결과: 해당 node tap 후 `S3_FONT_MENU` 도달률 0.90
 - proposal: `S2_TO_S3_FONT_MENU.target_keywords`에 "글자 및 화면 스타일" 추가
-- 승인: low-risk synonym update라 offline replay 통과 시 자동 승인 가능
+- 승인: 초기에는 offline replay 통과 후 내부 검토. 향후 승인된 synonym allowlist 정책 안에서 자동 승인 검토 가능
 
 예시 2: Pixel에서 새로운 경로가 필요한 경우
 
@@ -524,7 +526,7 @@ MVP-01에서 Graph Learner는 아래 순서로 Task Graph 업데이트 후보를
 - 실패 원인: `target_not_found`
 - trace 분석: 디스플레이 메뉴에서 아래로 1회 scroll 후 target 발견 비율 0.78
 - proposal: `S2_TO_S3_FONT_MENU.allow_scroll=true`, `max_attempts=2`, `scroll_amount=half_page`
-- 승인: low-risk이고 replay 통과 시 자동 승인 가능
+- 승인: 초기에는 replay 통과 후 내부 검토. 향후 명시적인 적용 범위와 평가 정책을 갖추면 자동 승인 검토 가능
 
 ### 13.9 배포 지표
 
