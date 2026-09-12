@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat;
 import com.click.core.permission.PermissionStatus;
 import com.click.data.local.LocalAccountStore;
 import com.click.service.overlay.ClickOverlayService;
+import com.click.data.local.AuthTokenStore;
 import com.click.ui.common.ClickUi;
 
 public final class MenuActivity extends AppCompatActivity {
@@ -169,6 +170,7 @@ public final class MenuActivity extends AppCompatActivity {
     }
 
     private void returnToLogin() {
+        new AuthTokenStore(this).clear();
         startActivity(new Intent(this, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
         finish();

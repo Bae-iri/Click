@@ -18,21 +18,24 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import com.click.data.local.LocalAccountStore;
+import com.click.data.remote.AuthGateway;
 import com.click.ui.common.ClickUi;
 
 public final class SignUpActivity extends AppCompatActivity {
+    private AuthGateway authGateway;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        authGateway = new AuthGateway(this);
         LinearLayout page = ClickUi.page(this);
         page.addView(ClickUi.title(this, "회원가입"));
         page.addView(ClickUi.body(this, "안내를 더 편하게 맞춰드리기 위해\n아래 정보를 입력해주세요."), ClickUi.wrap(ClickUi.dp(this, 14)));
 
         EditText email = ClickUi.input(this, "예) click@gmail.com", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         EditText age = ClickUi.input(this, "나이", InputType.TYPE_CLASS_NUMBER);
-        EditText password = ClickUi.input(this, "예) 123456", ClickUi.passwordType());
+        EditText password = ClickUi.input(this, "예) click12345678", ClickUi.passwordType());
         EditText passwordConfirm = ClickUi.input(this, "비밀번호를 다시 입력해주세요", ClickUi.passwordType());
-        TextView passwordGuide = ClickUi.body(this, "비밀번호를 6글자 이상으로 입력해주세요.");
+        TextView passwordGuide = ClickUi.body(this, "비밀번호를 12글자 이상으로 입력해주세요.");
         passwordGuide.setTextSize(13);
         Spinner job = new Spinner(this);
         String[] jobs = {
@@ -67,8 +70,8 @@ public final class SignUpActivity extends AppCompatActivity {
                 email.requestFocus();
                 return;
             }
-            if (passwordValue.length() < 6) {
-                password.setError("비밀번호를 6글자 이상으로 입력해주세요.");
+            if (passwordValue.length() < 12) {
+                password.setError("비밀번호를 12글자 이상으로 입력해주세요.");
                 password.requestFocus();
                 return;
             }
@@ -82,12 +85,47 @@ public final class SignUpActivity extends AppCompatActivity {
                 Toast.makeText(this, "모든 항목을 입력해주세요.", Toast.LENGTH_LONG).show();
                 return;
             }
-            new LocalAccountStore(this).saveProfile(
-                    emailValue, ageValue, job.getSelectedItem().toString(), gender.getSelectedItem().toString());
-            showAccessibilityConsent();
+            complete.setEnabled(false);
+            String occupation = job.getSelectedItem().toString();
+            authGateway.register(emailValue, passwordValue, ageGroup(ageValue), occupation,
+                    new AuthGateway.Callback() {
+                @Override public void onSuccess() {
+                    new LocalAccountStore(SignUpActivity.this).saveProfile(
+                            emailValue, ageValue, occupation, gender.getSelectedItem().toString());
+                    showAccessibilityConsent();
+                }
+
+                @Override public void onFailure(Throwable error) {
+                    complete.setEnabled(true);
+                    String message = error.getMessage() != null && error.getMessage().contains("409")
+                            ? "이미 가입된 이메일입니다."
+                            : "회원가입 서버에 연결하지 못했습니다: " + error.getMessage();
+                    Toast.makeText(SignUpActivity.this, message, Toast.LENGTH_LONG).show();
+                }
+            });
         });
         page.addView(complete, ClickUi.fullWidth(this, 68, 26));
         setContentView(ClickUi.scrollPage(this, page));
+    }
+
+    private String ageGroup(String value) {
+        try {
+            int age = Integer.parseInt(value);
+            if (age < 14) return "under_14";
+            if (age < 20) return "14_19";
+            if (age < 30) return "20_29";
+            if (age < 40) return "30_39";
+            if (age < 50) return "40_49";
+            if (age < 60) return "50_59";
+            return "60_plus";
+        } catch (NumberFormatException ignored) {
+            return "unknown";
+        }
+    }
+
+    @Override protected void onDestroy() {
+        if (authGateway != null) authGateway.close();
+        super.onDestroy();
     }
 
     @Override
