@@ -17,7 +17,7 @@ final class AuthenticatedHttpClient {
         if (result.status == 401 && AuthGateway.refresh(tokens)) {
             result = AuthGateway.post(path, body, tokens.accessToken());
         }
-        if (result.status < 200 || result.status >= 300) throw AuthGateway.apiError(result);
+        if (result.status < 200 || result.status >= 300) throw AuthGateway.apiError(path, result);
         return result;
     }
 }

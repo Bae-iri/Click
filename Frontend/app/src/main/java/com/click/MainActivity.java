@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.click.data.local.LocalAccountStore;
 import com.click.data.local.AuthTokenStore;
 import com.click.data.remote.AuthGateway;
+import com.click.data.remote.ErrorDetails;
 import com.click.ui.common.ClickUi;
 
 public class MainActivity extends AppCompatActivity {
@@ -66,10 +67,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override public void onFailure(Throwable error) {
                     login.setEnabled(true);
                     Toast.makeText(MainActivity.this,
-                            error.getMessage() != null && error.getMessage().contains("401")
-                                    ? "이메일 또는 비밀번호가 올바르지 않습니다."
-                                    : "로그인 서버에 연결하지 못했습니다: " + error.getMessage(),
-                            Toast.LENGTH_LONG).show();
+                            ErrorDetails.describe("로그인", error), Toast.LENGTH_LONG).show();
                 }
             });
         });

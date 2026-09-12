@@ -55,7 +55,7 @@ public final class AuthGateway {
         executor.execute(() -> {
             try {
                 HttpResult result = post(path, body.toString(), null);
-                if (result.status < 200 || result.status >= 300) throw apiError(result);
+                if (result.status < 200 || result.status >= 300) throw apiError(path, result);
                 tokens.save(new JSONObject(result.body));
                 main.post(callback::onSuccess);
             } catch (Throwable error) {
@@ -70,7 +70,7 @@ public final class AuthGateway {
         HttpResult result = post("/api/v1/auth/refresh", body.toString(), null);
         if (result.status < 200 || result.status >= 300) {
             tokens.clear();
-            return false;
+            throw apiError("/api/v1/auth/refresh", result);
         }
         tokens.save(new JSONObject(result.body));
         return true;
@@ -95,9 +95,8 @@ public final class AuthGateway {
         return new HttpResult(status, response, conflict);
     }
 
-    static IOException apiError(HttpResult result) {
-        return new IOException("API " + result.status + (result.conflictCode == null ? "" : " [" + result.conflictCode + "]")
-                + ": " + result.body);
+    static ApiException apiError(String path, HttpResult result) {
+        return new ApiException("POST", path, result);
     }
 
     private static String read(InputStream stream) throws IOException {
