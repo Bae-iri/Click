@@ -69,7 +69,9 @@ public final class GalaxyTutorialView extends View {
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
-        float availableHeight = getHeight() - dp(12);
+        // Leave breathing room around the simulated phone so its status bar and page title
+        // are not clipped on short screens or devices using a large system font scale.
+        float availableHeight = (getHeight() - dp(32)) * .86f;
         float phoneWidth = Math.min(getWidth() - dp(8), availableHeight * 9f / 19.5f);
         float phoneHeight = Math.min(availableHeight, phoneWidth * 19.5f / 9f);
         float left = (getWidth() - phoneWidth) / 2f;

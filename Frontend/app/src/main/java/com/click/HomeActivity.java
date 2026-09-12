@@ -6,9 +6,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -20,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.click.service.overlay.ClickOverlayService;
+import com.click.core.permission.PermissionStatus;
 import com.click.ui.common.ClickUi;
 import com.click.ui.overlay.ClickHeroView;
 
@@ -45,6 +44,7 @@ public final class HomeActivity extends AppCompatActivity {
         TextView homeLabel = new TextView(this);
         homeLabel.setText("❖  홈 화면");
         homeLabel.setTextSize(18);
+        homeLabel.setText("");
         homeLabel.setTextColor(PURPLE);
         homeLabel.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         topBar.addView(homeLabel, new LinearLayout.LayoutParams(0, ClickUi.dp(this, 52), 1f));
@@ -121,9 +121,8 @@ public final class HomeActivity extends AppCompatActivity {
     }
 
     private void startOverlay() {
-        if (!Settings.canDrawOverlays(this)) {
-            startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:" + getPackageName())));
+        if (!PermissionStatus.isAccessibilityEnabled(this)) {
+            startActivity(new Intent(this, AccessibilityPermissionTutorialActivity.class));
             return;
         }
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)

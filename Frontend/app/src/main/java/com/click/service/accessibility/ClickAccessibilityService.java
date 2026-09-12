@@ -10,6 +10,8 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.click.data.snapshot.ScreenSnapshot;
+import com.click.TutorialActivity;
+import com.click.data.local.AccessibilityOnboardingState;
 import com.click.service.overlay.OverlayActions;
 import com.click.service.overlay.ClickOverlayService;
 
@@ -30,6 +32,14 @@ public final class ClickAccessibilityService extends AccessibilityService {
         mainHandler = new Handler(getMainLooper());
         Log.i(TAG, "Click accessibility service connected");
         ClickOverlayService.onAccessibilityOverlayAvailable();
+        AccessibilityOnboardingState onboarding = new AccessibilityOnboardingState(this);
+        if (onboarding.isPending()) {
+            onboarding.markTutorialLaunched();
+            Intent tutorial = new Intent(this, TutorialActivity.class)
+                    .putExtra(TutorialActivity.EXTRA_FROM_SIGN_UP, true)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(tutorial);
+        }
         mainHandler.postDelayed(captureRunnable, SNAPSHOT_DEBOUNCE_MS);
     }
 
