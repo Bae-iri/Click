@@ -1,8 +1,9 @@
-"""Shared data contracts for the AI Agent.
+"""Agent(1) component contracts and shared declarative graph definitions.
 
-These dataclasses mirror docs/ai-agent-architecture.md. They are intentionally
-lightweight so each module can evolve without committing to storage or API
-framework choices too early.
+The active turn runtime uses ai_agent.runtime.types. These lightweight contracts
+also support the existing Backend guidance adapter. Offline graph proposals
+belong exclusively to ai_agent.graph_proposal.schemas; observation summaries
+belong to ai_agent.telemetry.schemas.
 """
 
 from __future__ import annotations
@@ -10,11 +11,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from ai_agent.telemetry.schemas import RuntimeVerificationStatus as VerificationResult
+
 
 SafetyLevel = Literal["LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"]
 ActionType = Literal["tap", "drag", "scroll", "observe_only"]
 GuideCommandType = Literal["highlight", "gesture_hint", "confirmation", "done", "blocked"]
-VerificationResult = Literal["SUCCESS", "DONE", "NO_CHANGE", "WRONG_STATE", "UNKNOWN"]
 
 
 @dataclass(frozen=True)
@@ -108,28 +110,3 @@ class ScrollCommand:
     stop_condition: tuple[str, ...]
     scrollable_node_id: str | None = None
     target_hint: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class RuntimeTrace:
-    trace_id: str
-    task_id: str
-    graph_version: str
-    goal_type: str
-    state_sequence: list[str]
-    transition_sequence: list[str]
-    result: VerificationResult
-    failure_reason: str | None
-    user_corrected_path: bool
-
-
-@dataclass(frozen=True)
-class GraphUpdateProposal:
-    proposal_id: str
-    task_id: str
-    base_graph_version: str
-    proposal_type: str
-    change: dict[str, Any]
-    evidence: dict[str, Any]
-    proposal_confidence: float
-    requires_human_review: bool

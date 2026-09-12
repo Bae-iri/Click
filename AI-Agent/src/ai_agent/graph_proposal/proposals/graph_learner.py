@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from ai_agent.schemas import GraphUpdateProposal, RuntimeTrace
+from ai_agent.graph_proposal.schemas import GraphUpdateProposal
+from ai_agent.telemetry.schemas import RuntimeTrace
 
 
 class GraphLearner:

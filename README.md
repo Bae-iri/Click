@@ -37,7 +37,8 @@ Click/
 └─ AI-Agent/
    ├─ src/ai_agent/
    │  ├─ runtime/           # AI-Agent(1): Goal → Observe → Guide → Verify → Re-plan
-   │  ├─ learning/          # AI-Agent(2)로 확장할 데이터·Graph Proposal 골격
+   │  ├─ graph_proposal/    # AI-Agent(2): 데이터·Graph 후보·평가·release
+   │  ├─ telemetry/         # 공통 관측 계약·진단 producer
    │  └─ task_graph/        # Task Graph 구조와 Registry
    ├─ task_graphs/          # Graph seed
    └─ tests/
@@ -77,7 +78,7 @@ Click/
 
 상세 설계: [전체 구조](docs/ai-agent-architecture.md) · [AI-Agent(1)](docs/ai-agent-1-runtime.md) · [AI-Agent(2)](docs/ai-agent-2-graph-proposal.md)
 
-위 두 역할은 목표 설계이며, 현재 `runtime/*`에 사용자 실행 흐름이 구현되어 있고 `learning/*`의 graph proposal 및 dataset 생성은 골격 단계다.
+두 역할은 `runtime/*`와 `graph_proposal/*`로 분리했고, 공통 trace는 `telemetry/*`에서 관리한다. 사용자 실행 흐름은 구현되어 있으며 Agent(2)의 라벨링·graph proposal·dataset 생성은 아직 구현할 골격이다. [실제 파일 구조와 경계](AI-Agent/README.md)를 참고한다.
 
 ## MVP Scope
 
