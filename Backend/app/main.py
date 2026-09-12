@@ -42,7 +42,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         title="Click Backend API",
         version="0.1.0",
         lifespan=lifespan,
-        responses={code: {"model": ErrorEnvelope} for code in (401, 403, 404, 409, 410, 413, 422, 429, 500)},
+        responses={code: {"model": ErrorEnvelope} for code in (401, 403, 404, 409, 410, 413, 422, 429, 500, 503, 504)},
         description="Android 설정 앱 위 오버레이 안내를 위한 MVP API",
     )
     engine = build_engine(database_url)

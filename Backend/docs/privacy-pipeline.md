@@ -1,5 +1,7 @@
 # 마스킹 / 개인정보 파이프라인
 
+**Week 4 implemented:** input-field removal, known-pattern text redaction, catalog-only external text, disabled raw-image egress, trace/event allowlists and cleanup. See [current limits](week4.md). This does not claim universal PII detection or completed consent/deletion integration.
+
 ## 데이터 정책 초안
 
 | 데이터 | 필요한 용도 | 전송·저장 방향 |

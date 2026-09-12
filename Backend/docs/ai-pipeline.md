@@ -1,5 +1,7 @@
 # AI Pipeline
 
+**Week 4 implemented:** graph-derived progress, bounded runtime execution, catalog-only embedding egress, provider validation/fallback, input redaction and diagnostic allowlists. See [week4.md](week4.md); earlier future-work statements below are historical.
+
 ## 현재 코드에 맞춘 흐름
 
 `RuntimeAgentAdapter`가 HTTP DTO를 `ai_agent.runtime` 타입으로 바꾼다. runtime은 목표 typing → 화면 정규화·분류 → UI 매칭 → 이전 행동 검증 → 재계획 → guide 생성 과정을 수행한다. 이후 서버가 동의된 UI 프로필로 안내 문구를 조정한다.

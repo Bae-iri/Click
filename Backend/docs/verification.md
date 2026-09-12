@@ -1,5 +1,19 @@
 # 첫 주 산출물 검증 기록
 
+## 4주 차 추가 검증 (2026-09-12)
+
+- Backend 전체: **72 passed**, 기존 httpx deprecation warning 1건.
+- AI-Agent 전체: **27 passed**.
+- 신규 검증 21개: 민감 입력 필드·텍스트 제거, HTTP/DB 저장값의 합성 개인정보 미노출, 동의 유무와 관계없는 원본 이미지 외부 호출 차단, embedding 전송 용어 제한, provider 형식 오류·장애·예산 만료 fallback.
+- trace allowlist·건수·TTL, 이벤트 metadata·화면 이름 제한, 오래된 UI 이벤트 삭제 검증.
+- 지연된 runtime의 504 응답·늦은 결과 미저장·정확한 재시도 성공, 실행 슬롯 포화 503 검증.
+- state 이름을 변경한 graph에서도 진행률 계산 일치 확인.
+- 실제 Uvicorn 프로세스의 인증·안내, 종료·재실행 후 재전송·재개·취소, 안전 로그 검증 통과.
+- SQLite migration upgrade → downgrade → upgrade 및 Alembic check 통과. 새 DB 스키마 변경은 없음.
+- OpenAPI 18개 path 재생성: 503/504와 Vision·이벤트 제약 설명 반영. `git diff --check` 통과.
+
+실제 외부 AI 호출은 사용하지 않고 테스트 대역으로 전송 내용·실패 처리를 검증했다. 실제 PostgreSQL·Docker·Android·클라우드 검증은 미실행이다. 구현 범위와 제한은 [week4.md](week4.md)를 따른다.
+
 ## 3주 차 추가 검증 (2026-09-11)
 
 - Backend 전체: **51 passed**, 기존 httpx deprecation warning 1건.

@@ -16,6 +16,7 @@ from ai_agent.runtime import (
 from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
 from app.schemas.guidance import GuideCommandResponse
 from app.repositories.sessions import SessionNotFoundError
+from ai_agent.runtime.progress import graph_progress
 
 
 class RuntimeAgentAdapter:
@@ -68,7 +69,9 @@ class RuntimeAgentAdapter:
                     selected=node.selected,
                     scrollable=node.scrollable,
                     checkable=node.checkable,
-                    extras=node.extras,
+                    extras={**node.extras, **{key: True for key in
+                        ("password", "is_password", "isPassword", "editable", "isEditable")
+                        if (node.model_extra or {}).get(key)}},
                 ) for node in tree.nodes
             ) if tree else (),
             vision_snapshot=RuntimeVisionSnapshot(
@@ -105,23 +108,22 @@ class RuntimeAgentAdapter:
             raise ValueError(str(error)) from error
         guide = result.guide_command
         command_type = guide.command_type.value
-        slider_completed = bool(
+        graph = next((g for g in self.runtime.task_graphs.values()
+                      if g.definition.task_id == result.task_id), None)
+        step, total_steps = graph_progress(graph, result.current_state_id)
+        task_completed = bool(
             result.verification_result
-            and result.verification_result.message
-            == "Slider value increased in the requested direction."
+            and result.verification_result.status.value in {"SUCCESS", "DONE"}
+            and total_steps > 0 and step == total_steps
         )
-        if slider_completed:
+        if task_completed:
             command_type = "done"
         status = {
             "confirmation": "WAITING_CONFIRMATION",
             "done": "COMPLETED",
             "blocked": "BLOCKED",
         }.get(command_type, "IN_PROGRESS")
-        step = {
-            "S0_UNKNOWN": 0, "S1_SETTINGS_HOME": 1, "S2_DISPLAY_MENU": 2,
-            "S3_FONT_MENU": 3, "S4_FONT_SIZE_CONTROL": 4,
-            "S5_FONT_SIZE_CHANGED": 4, "S_DONE": 4,
-        }.get(result.current_state_id, 0)
+        step, total_steps = graph_progress(graph, result.current_state_id, status == "COMPLETED")
         runtime_session = self.runtime.session_store.get(request.session_id)
         slider_values = (
             runtime_session.last_snapshot.slider_values
@@ -133,20 +135,20 @@ class RuntimeAgentAdapter:
             session_id=result.session_id,
             task_id=result.task_id or "unknown",
             step=step,
-            total_steps=4,
+            total_steps=total_steps,
             state_id=result.current_state_id,
             state_confidence=result.match_result.confidence if result.match_result else 0.0,
             task_status=status,
             guide_command=GuideCommandResponse(
                 guide_command_id=guide.guide_command_id,
                 command_type=command_type,
-                action_type="observe_only" if slider_completed else guide.action_type.value,
+                action_type="observe_only" if task_completed else guide.action_type.value,
                 message=guide.message,
                 target_node_id=guide.target_node_id,
                 target_label=guide.target_label,
                 target_bounds=guide.target_bounds,
                 safety_level=guide.safety_level.value,
-                requires_user_action=False if slider_completed else guide.requires_user_action,
+                requires_user_action=False if task_completed else guide.requires_user_action,
                 render_policy=dict(guide.render_policy),
             ),
             metadata={
