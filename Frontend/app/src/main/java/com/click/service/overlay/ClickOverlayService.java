@@ -31,6 +31,7 @@ import com.click.BuildConfig;
 import com.click.core.permission.PermissionStatus;
 import com.click.data.remote.AgentTurnContract;
 import com.click.data.remote.AgentTurnGateway;
+import com.click.data.remote.VoiceQueueGateway;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
 import com.click.data.snapshot.AgentVisionSnapshot;
 import com.click.data.snapshot.ScreenSnapshot;
@@ -45,7 +46,6 @@ import com.click.ui.overlay.TrashDropView;
 
 import java.util.ArrayList;
 import java.lang.ref.WeakReference;
-import java.util.UUID;
 import java.util.Locale;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
@@ -67,7 +67,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean ttsSpeaking;
     private boolean awaitingReplacement;
     private int executionGeneration;
-    private final VoiceRequestQueue voiceRequests = new VoiceRequestQueue();
+    private VoiceQueueGateway queueGateway;
+    private String activeVoiceRequestId;
     private TextToSpeech textToSpeech;
     private boolean ttsReady;
     private String pendingSpeech;
@@ -75,6 +76,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean overTrashTarget;
     private AgentTurnGateway agentGateway;
     private String agentSessionId;
+    private int agentSessionVersion;
+    private String agentConfirmationId;
     private String initialGoal;
     private boolean firstTurnSent;
     private boolean turnInFlight;
@@ -179,7 +182,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 }
             }
         });
-        agentGateway = new AgentTurnGateway();
+        agentGateway = new AgentTurnGateway(this);
+        queueGateway = new VoiceQueueGateway(this);
         prepareSpeechRecognizer();
         IntentFilter overlayFilter = new IntentFilter(OverlayActions.ACTION_COLLAPSE);
         overlayFilter.addAction(OverlayActions.ACTION_SNAPSHOT_UPDATED);
@@ -194,6 +198,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         windowParams.x = screenWidth() - dp(64) - dp(12);
         windowParams.y = screenHeight() - dp(64) - dp(48);
         windowManager.addView(overlayView, windowParams);
+        claimNextQueuedRequest();
     }
 
     @Override
@@ -289,6 +294,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         listening = false;
         if (agentGateway != null) agentGateway.close();
+        if (queueGateway != null) queueGateway.close();
         unregisterReceiver(collapseReceiver);
         hideGuideOverlay();
         hideConfirmation();
@@ -496,8 +502,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (overlayView != null) overlayView.setRecognizedSpeech(repeated);
             speak(repeated);
         } else if (isInterruptCommand(command)) {
-            voiceRequests.offerVip(command);
-            processVipRequest();
+            processVipRequest(command);
         } else {
             enqueueNormalRequest(command);
         }
@@ -505,29 +510,42 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void enqueueNormalRequest(String text) {
-        if (text == null || text.trim().isEmpty()) return;
-        if (awaitingReplacement) {
-            voiceRequests.clearNormal();
-            awaitingReplacement = false;
-        }
-        voiceRequests.offerNormal(text.trim());
-        startNextQueuedRequest();
+        if (text == null || text.trim().isEmpty() || queueGateway == null) return;
+        queueGateway.enqueue(text.trim(), new VoiceQueueGateway.Callback() {
+            @Override public void onSuccess(VoiceQueueGateway.Response response) {
+                awaitingReplacement = response.awaitingReplacement;
+                if (overlayView != null && agentSessionId != null) {
+                    overlayView.setRecognizedSpeech("요청을 대기열에 추가했어요. 대기 요청 "
+                            + response.queuedCount + "개입니다.");
+                }
+                if (agentSessionId == null && !turnInFlight) claimNextQueuedRequest();
+            }
+
+            @Override public void onFailure(Throwable error) { showQueueError(error); }
+        });
     }
 
-    private void processVipRequest() {
-        VoiceRequestQueue.Entry entry = voiceRequests.poll();
-        if (entry == null || entry.priority != VoiceRequestQueue.Priority.VIP) return;
-        abortActiveRequest();
-        awaitingReplacement = true;
-        if (overlayView != null) {
-            overlayView.setRecognizedSpeech("현재 작업을 멈췄어요. 새 요청을 말씀해주세요.");
-        }
-        speak("현재 작업을 멈췄어요. 새 요청을 말씀해주세요.");
+    private void processVipRequest(String command) {
+        if (queueGateway == null) return;
+        queueGateway.interrupt(command, new VoiceQueueGateway.Callback() {
+            @Override public void onSuccess(VoiceQueueGateway.Response response) {
+                abortActiveRequest();
+                awaitingReplacement = response.awaitingReplacement;
+                activeVoiceRequestId = null;
+                String message = "현재 작업을 멈췄어요. 새 요청을 말씀해주세요.";
+                if (overlayView != null) overlayView.setRecognizedSpeech(message);
+                speak(message);
+            }
+
+            @Override public void onFailure(Throwable error) { showQueueError(error); }
+        });
     }
 
     private void abortActiveRequest() {
         executionGeneration++;
         agentSessionId = null;
+        agentSessionVersion = 0;
+        agentConfirmationId = null;
         initialGoal = null;
         firstTurnSent = false;
         turnInFlight = false;
@@ -539,15 +557,59 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         hideSettingsOpenButton();
     }
 
-    private void startNextQueuedRequest() {
-        if (agentSessionId != null || turnInFlight || awaitingReplacement) return;
-        VoiceRequestQueue.Entry next = voiceRequests.poll();
-        if (next == null) return;
-        if (next.priority == VoiceRequestQueue.Priority.VIP) {
-            processVipRequest();
+    private void claimNextQueuedRequest() {
+        if (queueGateway == null || agentSessionId != null || turnInFlight || awaitingReplacement) return;
+        queueGateway.claim(new VoiceQueueGateway.Callback() {
+            @Override public void onSuccess(VoiceQueueGateway.Response response) {
+                awaitingReplacement = response.awaitingReplacement;
+                if (response.running != null && response.running.agentSessionId != null
+                        && response.running.rawGoal != null) {
+                    activeVoiceRequestId = response.running.id;
+                    beginAgentSession(response.running.rawGoal, response.running.agentSessionId);
+                }
+            }
+
+            @Override public void onFailure(Throwable error) { showQueueError(error); }
+        });
+    }
+
+    private void finishActiveQueueRequest(String failureCode) {
+        if (activeVoiceRequestId == null || queueGateway == null) {
+            agentSessionId = null;
+            claimNextQueuedRequest();
             return;
         }
-        beginAgentSession(next.text);
+        String finishedId = activeVoiceRequestId;
+        VoiceQueueGateway.Callback callback = new VoiceQueueGateway.Callback() {
+            @Override public void onSuccess(VoiceQueueGateway.Response response) {
+                activeVoiceRequestId = null;
+                agentSessionId = null;
+                turnInFlight = false;
+                awaitingReplacement = response.awaitingReplacement;
+                if (response.running != null && response.running.agentSessionId != null
+                        && response.running.rawGoal != null) {
+                    activeVoiceRequestId = response.running.id;
+                    beginAgentSession(response.running.rawGoal, response.running.agentSessionId);
+                } else {
+                    claimNextQueuedRequest();
+                }
+            }
+
+            @Override public void onFailure(Throwable error) { showQueueError(error); }
+        };
+        if (failureCode == null) queueGateway.complete(finishedId, callback);
+        else queueGateway.fail(finishedId, failureCode, callback);
+    }
+
+    private void failActiveQueueRequest(String failureCode) {
+        if (activeVoiceRequestId != null) finishActiveQueueRequest(failureCode);
+    }
+
+    private void showQueueError(Throwable error) {
+        android.util.Log.e("ClickQueue", "Voice queue request failed", error);
+        String message = userMessageForAgentError(error);
+        if (overlayView != null) overlayView.setRecognizedSpeech(message);
+        speak(message);
     }
 
     private boolean isInterruptCommand(String text) {
@@ -578,10 +640,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         return null;
     }
 
-    private void beginAgentSession(String goal) {
+    private void beginAgentSession(String goal, String sessionId) {
         if (goal == null || goal.trim().isEmpty()) return;
         executionGeneration++;
-        agentSessionId = UUID.randomUUID().toString();
+        agentSessionId = sessionId;
+        agentSessionVersion = 0;
+        agentConfirmationId = null;
         initialGoal = goal.trim();
         firstTurnSent = false;
         lastSnapshotFingerprint = null;
@@ -630,7 +694,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String fingerprint = snapshot.fingerprint();
         if (!force && firstTurnSent && confirmation == null && fingerprint.equals(lastSnapshotFingerprint)) return;
         AgentTurnContract.Request request = new AgentTurnContract.Request(
-                agentSessionId, firstTurnSent ? null : initialGoal, snapshot, confirmation);
+                agentSessionId, firstTurnSent ? null : initialGoal, snapshot, confirmation)
+                .withSessionState(agentSessionVersion, confirmation == null ? null : agentConfirmationId);
         if (pendingActionType != null) {
             request.withActionEvent(AgentActionEvents.of(
                     pendingActionType, lastGuideCommandId, lastTargetNodeId, lastTargetBounds));
@@ -648,6 +713,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if (requestGeneration != executionGeneration) return;
                 turnInFlight = false;
                 firstTurnSent = true;
+                agentSessionVersion = response.sessionVersion;
+                JSONObject confirmationState = response.metadata == null
+                        ? null : response.metadata.optJSONObject("confirmation");
+                agentConfirmationId = confirmationState == null
+                        ? null : confirmationState.optString("id", null);
                 renderGuide(response);
                 ScreenSnapshot latest = LatestScreenSnapshot.get();
                 if (latest != null && !latest.fingerprint().equals(lastSnapshotFingerprint)) {
@@ -658,6 +728,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             @Override public void onFailure(Throwable error) {
                 if (requestGeneration != executionGeneration) return;
                 turnInFlight = false;
+                failActiveQueueRequest("NETWORK_ERROR");
                 android.util.Log.e("ClickAgent", "Agent turn failed", error);
                 String userMessage = userMessageForAgentError(error);
                 if (overlayView != null) overlayView.setRecognizedSpeech(userMessage);
@@ -816,8 +887,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || "COMPLETED".equals(response.taskStatus) || "BLOCKED".equals(response.taskStatus)) {
             hideGuideOverlay();
             hideSettingsOpenButton();
-            agentSessionId = null;
-            startNextQueuedRequest();
+            boolean completed = "done".equals(command.commandType)
+                    || "COMPLETED".equals(response.taskStatus);
+            finishActiveQueueRequest(completed ? null : "AGENT_ERROR");
             return;
         }
 
@@ -921,6 +993,21 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return "서버 응답 형식이 올바르지 않습니다. 백엔드 응답 규격을 확인해주세요.";
         }
         String message = error.getMessage() == null ? "" : error.getMessage();
+        if (message.contains("AUTH_REQUIRED") || message.startsWith("API 401")) {
+            return "로그인이 만료되었습니다. 앱에서 다시 로그인해주세요.";
+        }
+        if (message.contains("QUEUE_BUSY") || message.contains("QUEUE_CONFLICT")) {
+            return "요청 대기열을 다른 작업이 갱신 중입니다. 잠시 후 같은 요청을 다시 보내주세요.";
+        }
+        if (message.startsWith("API 409")) {
+            return "요청 대기열 상태가 변경되어 처리하지 못했습니다. 오류 코드: " + message;
+        }
+        if (message.startsWith("API 429")) {
+            return "요청 대기열이 가득 찼거나 호출이 너무 많습니다. 잠시 후 다시 시도해주세요.";
+        }
+        if (message.startsWith("API 422")) {
+            return "서버가 요청 형식을 거부했습니다. 상세 응답: " + message;
+        }
         if (message.startsWith("Agent API 400")) return "요청 형식이 올바르지 않습니다.";
         if (message.startsWith("Agent API 401") || message.startsWith("Agent API 403")) {
             return "서버 인증 또는 접근 권한을 확인해주세요.";
