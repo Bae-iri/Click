@@ -792,7 +792,7 @@ Graph schema version, graph 내용 version, runtime contract, content hash를 �
 
 ### 14.1 논리 저장소
 
-아래는 설계 단위이며 기존 DB table이 만들어졌다는 뜻은 아니다.
+아래는 설계 단위다. `graph_proposals`, `evaluation_reports`는 기존 `click` Postgres에 최소 스키마로 만들어졌다(`Backend/app/models/graph_proposal.py`, 마이그레이션 `20260912_06`). 필드는 현재 코드의 `GraphUpdateProposal` dataclass와 `GraphValidator.validate()` 반환값만 반영하며, `status`·`revision` 등 이 문서의 lifecycle 필드는 아직 없다 — ingestion/labeling/승인 로직이 실제로 구현될 때 추가한다. 나머지 테이블은 아직 존재하지 않는다.
 
 | 저장 대상 | 주요 key | 보존할 정보 |
 | --- | --- | --- |
@@ -802,8 +802,8 @@ Graph schema version, graph 내용 version, runtime contract, content hash를 �
 | `outcome_labels` | label ID/revision | 결과, 근거, 정책, supersedes |
 | `review_items` | review ID | 충돌·미확정 사례와 검토 결과 |
 | `dataset_manifests`, `dataset_samples` | dataset version/sample ID | split, 원천, label lineage |
-| `graph_proposals` | proposal ID/revision | patch, base hash, evidence, 상태 |
-| `evaluation_reports` | eval ID | dataset·candidate·metric·판정 |
+| `graph_proposals` (구현됨) | proposal ID | patch, base hash, evidence |
+| `evaluation_reports` (구현됨) | eval ID | proposal 참조, decision, regression |
 | `graph_releases` | task/version/hash | artifact, 호환성, 승인, rollout |
 | `pipeline_jobs` | job ID | 입력 snapshot, 단계, cursor, 재시도 |
 
