@@ -11,6 +11,8 @@ from app.models.agent_session import AgentCheckpoint, AgentSession, AgentTurn
 from app.schemas.agent_session import AgentSessionResponse
 from app.services.safety import save_confirmation
 from app.models.lifecycle import SafetyConfirmation
+from app.models.voice_queue import VoiceRequest
+from app.models.personalization import User
 
 ACTIVE = ("IN_PROGRESS", "WAITING_CONFIRMATION")
 
@@ -50,6 +52,7 @@ class AgentSessionRepository:
         now = int(self.clock())
         with self.factory() as db:
             try:
+                self.guard_voice_request(db, request, now)
                 row = db.get(AgentSession, request.session_id)
                 if row is not None and row.user_id != request.user_id:
                     raise HTTPException(403)
@@ -123,6 +126,7 @@ class AgentSessionRepository:
     def finish(self, request, claim, response, checkpoint, schema_version, graph_version):
         now = int(self.clock())
         with self.factory() as db:
+            self.guard_voice_request(db, request, now)
             if request.user_confirmation == "accepted":
                 approval = db.get(SafetyConfirmation, request.session_id)
                 if approval is None or approval.id != request.confirmation_id or approval.expires_at <= now:
@@ -160,6 +164,17 @@ class AgentSessionRepository:
             db.execute(update(AgentSession).where(AgentSession.id == session_id,
                 AgentSession.lease_token == token).values(lease_token=None, lease_until=None))
             db.commit()
+
+    def guard_voice_request(self, db, request, now):
+        # Same lock order as VIP: user -> session. No lock is held during AI work.
+        if db.execute(update(User).where(User.id == request.user_id).values(id=request.user_id)).rowcount != 1:
+            raise HTTPException(401)
+        queued = db.scalar(select(VoiceRequest).where(VoiceRequest.agent_session_id == request.session_id,
+                                                     VoiceRequest.user_id == request.user_id))
+        if queued and (queued.status != "RUNNING" or queued.expires_at <= now):
+            self.conflict("VOICE_REQUEST_NOT_RUNNING")
+        if queued and request.raw_goal is not None and request.raw_goal != queued.raw_goal:
+            self.conflict("VOICE_GOAL_MISMATCH")
 
     def get(self, session_id, user_id):
         now = int(self.clock())

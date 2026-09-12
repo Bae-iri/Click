@@ -32,6 +32,8 @@ from app.services.agent_turn import AgentTurnService  # noqa: E402
 from app.api.v1.endpoints.history import build_router as build_history_router
 from app.api.v1.endpoints.account_actions import build_router as build_account_actions
 from app.services.account_actions import AccountActionService
+from app.services.voice_queue import VoiceQueueService
+from app.api.v1.endpoints.voice_queue import build_router as build_voice_queue_router
 from app.core.metrics import RequestMetrics
 from app.services.guidance import GuidanceService  # noqa: E402
 
@@ -59,6 +61,8 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
     guidance_service = GuidanceService(sessions, AgentClient(REPOSITORY_ROOT))
     turn_service = AgentTurnService(session_factory)
     app.state.turn_service = turn_service
+    voice_queue = VoiceQueueService(session_factory, turn_service.repository.idle_seconds)
+    app.state.voice_queue = voice_queue
     app.state.engine = engine
     app.state.session_factory = session_factory
     auth_service = AuthService(session_factory)
@@ -79,6 +83,7 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
         app.include_router(build_guidance_router(guidance_service, principal), prefix="/api/v1")
     app.include_router(build_agent_router(turn_service, principal), prefix="/api/v1")
     app.include_router(build_history_router(turn_service, principal), prefix="/api/v1")
+    app.include_router(build_voice_queue_router(voice_queue, principal), prefix="/api/v1")
     app.include_router(build_users_router(get_db, principal), prefix="/api/v1")
 
     @app.get("/health", tags=["system"])
