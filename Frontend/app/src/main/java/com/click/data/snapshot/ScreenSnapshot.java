@@ -51,6 +51,9 @@ public final class ScreenSnapshot {
             value.append('|').append(node.nodeId).append(':').append(node.text)
                     .append(':').append(node.contentDescription).append(':').append(node.className)
                     .append(':').append(java.util.Arrays.toString(node.bounds))
+                    .append(':').append(node.parentId).append(':').append(node.visibleToUser)
+                    .append(':').append(node.clickable).append(':').append(node.enabled)
+                    .append(':').append(node.scrollable).append(':').append(node.checkable)
                     .append(':').append(node.selected).append(':').append(node.progress);
         }
         return Integer.toHexString(value.toString().hashCode());

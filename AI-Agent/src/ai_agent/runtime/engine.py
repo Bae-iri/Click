@@ -561,6 +561,8 @@ def _effective_state_id(
 
 
 def _screen_bounds(request: AgentTurnRequest) -> Bounds | None:
+    if request.screen_bounds:
+        return request.screen_bounds
     if request.raw_goal and request.raw_goal.device_context.screen_bounds:
         return request.raw_goal.device_context.screen_bounds
     snapshot = request.vision_snapshot

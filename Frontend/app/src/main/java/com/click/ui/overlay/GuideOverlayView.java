@@ -15,6 +15,7 @@ import com.click.ui.common.ClickUi;
 public final class GuideOverlayView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
+    private final int[] screenOrigin = new int[2];
     private int[] bounds;
     private String actionType;
 
@@ -29,16 +30,22 @@ public final class GuideOverlayView extends View {
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         super.onDraw(canvas);
-        if (bounds == null || bounds.length != 4) return;
-        RectF target = new RectF(bounds[0], bounds[1], bounds[2], bounds[3]);
-        target.inset(-dp(8), -dp(8));
+        // Measure after attachment/layout, on every draw; system bars and window origins vary.
+        getLocationOnScreen(screenOrigin);
+        float[] local = GuideTargetGeometry.toLocal(bounds, screenOrigin[0], screenOrigin[1],
+                getWidth(), getHeight());
+        if (local == null) return;
+        RectF target = new RectF(local[0], local[1], local[2], local[3]);
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.argb(42, 255, 59, 77));
         canvas.drawRoundRect(target, dp(12), dp(12), paint);
         paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(dp(4));
+        float strokeWidth = Math.min(dp(4), Math.min(target.width(), target.height()));
+        paint.setStrokeWidth(strokeWidth);
         paint.setColor(ClickUi.RED);
-        canvas.drawRoundRect(target, dp(12), dp(12), paint);
+        RectF outline = new RectF(target);
+        outline.inset(strokeWidth / 2f, strokeWidth / 2f);
+        canvas.drawRoundRect(outline, dp(12), dp(12), paint);
 
         float startX = target.right + dp(34);
         float endX = target.right + dp(6);

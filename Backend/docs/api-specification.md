@@ -8,6 +8,8 @@
 
 현재 구현의 필드·타입·필수값은 [OpenAPI](openapi.json)가 기준이다. `python scripts/export_openapi.py`로 코드에서 재생성한다. 서버에서는 `/docs`와 `/openapi.json`으로 확인한다.
 
+Accessibility node의 선택 필드 `parent_id`(기본 `null`)와 `visible_to_user`(기본 `true`)를 runtime에 전달한다. 입력 `bounds_in_screen`과 응답 `target_bounds`는 화면 픽셀 좌표다. 후속 turn에서도 화면 크기를 전달하며, Overlay 로컬 변환은 FE가 수행한다. [클릭 영역 선택·좌표 계약](../../Frontend/docs/guide-target-geometry.md) 참조.
+
 ## 구현된 API
 
 | Method | Path | 성공 | 목적 |

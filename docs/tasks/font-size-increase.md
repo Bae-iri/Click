@@ -15,67 +15,28 @@
 | 자동 스크롤 여부 | 허용. 대상 메뉴 탐색 목적의 제한적 scroll만 가능 |
 | Graph 업데이트 방식 | runtime trace 기반 후보 생성 후 검증/승인 |
 
-## 2. Raw Goal / Typed Goal 입력
+## 2. FE Goal·Command 입력과 Graph 연결
 
-FE는 사용자의 raw 자연어를 Agent에 전달한다.
+Goal Typing과 Command Typing은 FE가 담당한다. 실제 발화 예시, 필수 slots, 분류·clarification,
+전체 요청 JSON은 [FE Goal·Command 계약](../fe-goal-command-contract.md)에서 관리한다.
+Agent(1)은 `start_task` 또는 `replace_task`의 확정 Goal을 받아 다음 매핑을 검증한다.
 
-```json
-{
-  "source_text": "글자 크기 키우고 싶어",
-  "locale": "ko-KR",
-  "device_context": {
-    "platform": "android",
-    "foreground_app": null
-  }
-}
-```
+| FE 입력 | 값 |
+| --- | --- |
+| `goal.goal_type` | `settings.font_size.increase` |
+| `goal.target_app` | `android_settings` |
+| `goal.slots` | `setting=font_size`, `direction=increase` |
+| Agent 선택 결과 | `task_id=MVP-01`, `task_type=settings_change` |
 
-Agent는 LLM을 기본 사용하지 않고, embedding 유사도와 keyword/synonym/rule 기반 slot extraction으로 아래 Typed Goal을 생성한다.
+Agent가 원문을 분류하거나 감소 목적을 확대 graph로 바꾸지 않는다. 후속 `observe`·`resume_task`는
+새 Goal 없이 저장된 Goal과 고정 graph를 사용한다. 새 typed 입력은 설계 계약이며 현재 v1 raw-goal
+코드 전환은 별도 작업이다.
 
-```json
-{
-  "goal_type": "settings.font_size.increase",
-  "target_app": "android_settings",
-  "task_type": "settings_change",
-  "slots": {
-    "setting": "font_size",
-    "direction": "increase"
-  },
-  "source_text": "글자 크기 키우고 싶어",
-  "confidence": 0.93
-}
-```
+## 3. 사용자 발화와 Goal 분류 참조
 
-필수 slot:
-
-- `setting`: `font_size`
-- `direction`: `increase`
-
-Goal Typing 기준:
-
-- `font_size` 후보 신호: "글자", "글씨", "글꼴", "폰트", "Font", "text"
-- `increase` 후보 신호: "크게", "키우", "확대", "잘 보이게", "더 크게"
-- `android_settings` 후보 신호: "휴대폰", "설정", "폰", 현재 OS가 Android
-- embedding 후보: 사용자 발화 embedding이 `settings.font_size.increase` 대표 발화군과 가장 가까움
-- confidence 산출: embedding 0.45, keyword/synonym 0.30, slot 0.20, app prior 0.05 기준으로 가중 합산
-- 확정 기준: `confidence >= 0.80`, top-1/top-2 score gap `>= 0.12`, 필수 slot이 모두 채워짐
-
-Clarification이 필요한 경우:
-
-- `goal_type` confidence가 낮은 경우
-- `setting` 또는 `direction` slot이 없는 경우
-- "화면 크게"처럼 글자 크기 확대인지 화면 확대인지 불명확한 경우
-- "화면을 확대해줘"처럼 `display_size.increase`와 혼동될 가능성이 높은 경우
-
-## 3. 사용자 발화 예시
-
-아래 발화는 Agent의 Goal Typing 모듈에서 `settings.font_size.increase`로 분류될 수 있다.
-
-- "글자가 너무 작아."
-- "글자 크기 키우고 싶어."
-- "휴대폰 글씨를 크게 보고 싶어."
-- "설정에서 글자 크기 어디서 바꿔?"
-- "폰트가 작아서 크게 하고 싶어."
+이 Task를 요청하는 대표 발화는 “글자 크기 키우고 싶어”다. “화면 크게”처럼 글자 크기와
+화면 배율이 모호하면 FE에서 먼저 확인한다. 발화 목록·canonical enum·필수값의 기준은
+[FE 계약의 실제 Goal 목록](../fe-goal-command-contract.md#3-실제-goal-type-목록)이다.
 
 ## 4. 완료 조건
 
@@ -385,7 +346,7 @@ flowchart TD
 
 | Trace | 목적 |
 | --- | --- |
-| `source_text`, Typed Goal, confidence | Goal Typing 개선 |
+| FE 정책상 허용된 입력·확정 Goal·분류 metadata | FE Goal/Command Typing 개선용 데이터 |
 | app package, OS version, 제조사 | 제조사/버전별 graph 분기 |
 | state sequence | 실제 이동 경로 학습 |
 | transition sequence | 성공/실패 transition 분석 |
@@ -407,7 +368,7 @@ flowchart TD
 | 특정 제조사에서만 경로가 다름 | device/app variant branch |
 | scroll 후에만 target이 발견됨 | `scroll_policy` 보강 |
 | top-1/top-2 후보가 자주 흔들림 | confidence threshold 또는 score weight 조정 |
-| "화면 크게" 발화가 자주 혼동됨 | Goal Typing clarification rule 추가 |
+| "화면 크게" 발화가 자주 혼동됨 | FE 입력 처리팀에 clarification 개선 데이터 전달 |
 
 ### 13.3 승인 정책
 
@@ -461,8 +422,8 @@ MVP-01에서 Graph Learner는 아래 순서로 Task Graph 업데이트 후보를
 
 | 위치 | 학습 대상 | 예시 | 모델 구현 필요성 |
 | --- | --- | --- | --- |
-| Goal Typing | 글자 크기 vs 화면 크기 구분 | "화면 크게 해줘" | 필요 |
-| Slot Extraction | `direction=increase` 추출 | "좀 더 잘 보이게" | 초기 rule, 이후 모델 가능 |
+| FE Goal Typing | 글자 크기 vs 화면 크기 구분 | "화면 크게 해줘" | 필요 |
+| FE Slot Extraction | `direction=increase` 추출 | "좀 더 잘 보이게" | 초기 rule, 이후 모델 가능 |
 | State Classification | 설정 홈/디스플레이/글자 메뉴 구분 | 제조사별 설정 화면 | 필요 |
 | UI Matching | 메뉴 label과 target node 매칭 | "표시 크기 및 텍스트" | 필요 |
 | Scroll Policy | target이 아래에 있는지 판단 | 디스플레이 메뉴 하단의 글자 항목 | 초기 rule, 이후 통계/모델 |
@@ -473,15 +434,15 @@ MVP-01에서 Graph Learner는 아래 순서로 Task Graph 업데이트 후보를
 
 | 컴포넌트 | 입력 | 출력 | MVP 구현 | 학습 데이터 |
 | --- | --- | --- | --- | --- |
-| Goal Embedding Retriever | raw 발화 | top-k `goal_type` | embedding index | 발화, 정답 goal, 완료 여부 |
-| Slot Rule Extractor | raw 발화 | `setting`, `direction` | dictionary/rule | clarification 결과 |
+| FE Goal Retriever | raw 발화 | top-k `goal_type` | embedding index | 발화, 정답 goal, 완료 여부 |
+| FE Slot Rule Extractor | raw 발화 | `setting`, `direction` | dictionary/rule | clarification 결과 |
 | State Classifier | normalized tree | `state_id` | rule + embedding | 화면 snapshot, 정답 state |
 | UI Target Ranker | transition + node list | target ranking | score fusion | 후보 node, 사용자가 누른 node, verifier 결과 |
 | Scroll Policy Estimator | state + scroll history | 방향/횟수 | rule + 통계 | scroll result, target 발견 여부 |
 | Transition Miner | before/after state + action | edge 후보 | sequence mining | user-corrected success trace |
 | Graph Validator | proposal + dataset | approve/reject signal | replay test | Accessibility Tree dataset |
 
-초기에는 Goal Embedding Retriever, State Classifier, UI Target Ranker가 가장 중요하다. Scroll Policy Estimator와 Transition Miner는 trace가 쌓인 뒤 정확도가 의미 있게 올라간다.
+Goal Retriever·Slot Extractor는 FE 입력 처리이며 Agent(1)은 State Classifier·UI Target Ranker부터 담당한다. Scroll Policy Estimator와 Transition Miner는 trace가 쌓인 뒤 정확도가 의미 있게 올라간다.
 
 ### 13.7 학습 데이터 라벨링 기준
 
@@ -497,7 +458,7 @@ MVP-01에서 Graph Learner는 아래 순서로 Task Graph 업데이트 후보를
 
 이 라벨을 기준으로 모델별 dataset을 만든다.
 
-- Goal dataset: `source_text -> goal_type, slots`
+- FE Goal dataset: `source_text -> goal_type, slots` (FE 분류 개선용)
 - State dataset: `normalized node summary -> state_id`
 - UI matching dataset: `(transition, candidate nodes) -> selected node`
 - Scroll dataset: `(state, viewport, history) -> direction, stop`

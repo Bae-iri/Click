@@ -14,6 +14,8 @@ class AccessibilityNode(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
     node_id: str
+    parent_id: str | None = Field(default=None, description="Parent node_id within this snapshot; null for a root or legacy flat payload")
+    visible_to_user: bool = Field(default=True, description="Android isVisibleToUser; hidden nodes are not guide targets")
     package_name: str | None = None
     class_name: str | None = None
     text: str | None = None
@@ -22,6 +24,7 @@ class AccessibilityNode(BaseModel):
     bounds_in_screen: tuple[int, int, int, int] = Field(
         default=(0, 0, 0, 0),
         validation_alias=AliasChoices("bounds_in_screen", "bounds"),
+        description="Screen pixel rectangle [left, top, right, bottom]; the client converts to overlay-local coordinates when drawing",
     )
     clickable: bool = False
     enabled: bool = True

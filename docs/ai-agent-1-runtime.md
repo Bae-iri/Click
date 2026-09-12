@@ -2,10 +2,11 @@
 
 ## 1. 문서 목적
 
-이 문서는 **AI-Agent(1)**의 목표 아키텍처와 런타임 흐름을 정의한다. AI-Agent(1)은 실제 사용자의 요구를 텍스트로 받고, Typed Goal로 변환하고, 현재 화면을 읽어 guide/action을 결정하며, 새 관측으로 결과를 검증하고 Re-plan하는 사용자용 에이전트다. 특정 Task 하나에 종속되지 않고, Android 설정 앱, 커머스 앱, 공공 서비스 앱 등 여러 절차형 Task에 공통으로 적용되는 Agent 파이프라인을 설명한다.
+이 문서는 **AI-Agent(1)**의 목표 아키텍처와 런타임 흐름을 정의한다. AI-Agent(1)은 FE가 확정한 **Goal Type과 Command Type**을 받아 **적절한 승인 Task Graph를 선택하는 단계부터** 시작한다. 이후 현재 화면을 읽어 guide/action을 결정하며, 새 관측으로 결과를 검증하고 Re-plan하는 사용자용 에이전트다. 특정 Task 하나에 종속되지 않고, Android 설정 앱, 커머스 앱, 공공 서비스 앱 등 여러 절차형 Task에 공통으로 적용되는 Agent 파이프라인을 설명한다.
 
 이 문서에서 `Agent`는 별도 표시가 없으면 AI-Agent(1)을 뜻한다. AI-Agent(2)는 수집된 runtime 데이터에 success/fail 등 결과 라벨을 붙이고, 내부 데이터셋과 Task Graph 추가·업데이트 후보를 만드는 별도 에이전트다.
 
+- [FE Goal Type·Command Type 정의와 전달 계약](./fe-goal-command-contract.md) — 자연어 분류, 실제 Goal 유형, slots, 요청 형식의 기준 문서
 - [두 에이전트의 전체 구조와 책임 경계](./ai-agent-architecture.md)
 - [AI-Agent(2): Runtime Data / Graph Proposal Agent](./ai-agent-2-graph-proposal.md)
 
@@ -15,15 +16,17 @@ Task별 State, Transition, UI 후보, 예외 처리는 별도 문서에서 관�
 
 이 문서는 “현재 코드가 전부 완성했다”는 의미가 아니라, 우리가 목표로 삼는 이상적인 AI Agent 구조를 기준으로 삼는다. 단, 현재 코드에 이미 들어온 런타임 단계는 별도로 표시해 앞으로의 구조에 흡수한다. 기능 확인 기준은 2026-09-12의 `a0d3609`이며, 파일 경로와 책임 경계는 이번 패키지 분리 작업을 반영했다. JSON은 명시적으로 현재 형식이라고 적은 경우를 제외하면 설계 예시이며, 실제 HTTP 계약은 `Backend/app/schemas/agent_turn.py`, runtime 타입은 `AI-Agent/src/ai_agent/runtime/types.py`를 기준으로 한다. 예시 confidence와 threshold는 운영 측정값 또는 확정 성능 목표가 아니다.
 
+**2026-09-12 책임 변경:** Goal Typing과 Command Typing은 FE 소유로 이관한다. 이 문서의 실행 설계는 이 결정을 따른다. 이번 변경은 문서 정리이며, 현재 Python engine의 `type_goal()` 호출과 `raw_goal` HTTP 계약은 아직 남아 있다. 실제 코드 전환 위치와 API 버전 전환은 [별도 계약의 구현 전환 항목](./fe-goal-command-contract.md#11-현재-코드와-구현-전환)을 따른다. 새 typed JSON이 현재 API에 이미 적용된 것으로 해석하지 않는다.
+
 ## 2. Agent 목표
 
 Agent는 사용자가 익숙하지 않은 모바일 앱에서 스스로 목적을 완료할 수 있도록 현재 화면을 이해하고 다음 행동을 단계별로 안내한다.
 
 MVP와 초기 제품의 기본 원칙은 Human-in-the-loop이다.
 
-- Agent는 FE가 음성 입력을 STT로 변환하거나 텍스트 입력에서 수집한 raw 자연어를 입력받는다.
-- Agent는 raw 자연어 의도를 분석해 `goal_type`, `target_app`, `task_type`, `slots`를 생성한다.
-- Agent는 Typed Goal에 맞는 승인된 Task Graph를 선택하거나 승인된 Task Template에 slots를 대입한다.
+- FE는 사용자 발화를 Goal Type·slots와 실행 제어용 Command Type으로 확정한다.
+- Agent는 전달받은 값의 형식, 등록 여부, 세션 상태를 검증한다.
+- Agent의 작업 판단은 해당 Goal에 맞는 승인 Task Graph 선택 또는 승인 Task Template의 slots 구체화부터 시작한다.
 - Agent는 현재 화면의 UI 요소를 분석한다.
 - Agent는 현재 화면이 Task Graph의 어느 State인지 판단한다.
 - Agent는 다음 State로 가기 위해 눌러야 할 UI 또는 조작해야 할 UI를 선택한다.
@@ -47,121 +50,43 @@ MVP와 초기 제품의 기본 원칙은 Human-in-the-loop이다.
 
 ## 3. 입력 구조
 
-FE는 음성 입력을 STT 모델로 raw 텍스트로 변환하거나 사용자의 텍스트 입력을 그대로 Agent에 전달한다. STT는 음성을 텍스트로 바꾸는 데까지만 담당하며 사용자 의도나 Task 유형을 판단하지 않는다.
+FE는 STT/텍스트 입력 이후 Goal Typing과 Command Typing을 수행하고, Backend를 통해 확정된 구조를 Agent에 전달한다. 의미가 모호하거나 필수 slot이 빠졌으면 FE에서 먼저 질문한다. Agent는 원문에서 의도를 다시 추론하거나 빠진 slot을 임의로 채우지 않는다.
 
-Agent는 raw 자연어를 내부 Goal Typing 파이프라인으로 정규화한 뒤 승인된 Task Graph를 선택하거나 승인된 Template를 slots로 구체화한다.
+Agent가 소비하는 정보는 다음과 같다. 필드·enum·완전한 JSON 예시는 [FE Goal·Command 전달 계약](./fe-goal-command-contract.md)에 한 곳에서 관리한다.
 
-FE 입력 예시:
+| 입력 | Agent에서의 용도 |
+| --- | --- |
+| `command_type` | 새 작업 시작, 일시정지, 재개, 취소, 교체, 관측·확인 응답 분기 |
+| `goal.goal_type` | 승인 graph의 정확한 lookup key |
+| `goal.target_app`, `goal.slots`, `goal.catalog_version` | graph 적합성·필수 parameter·catalog 호환성 검사 |
+| `request_id`, `session_id`, `expected_version`, `episode_id` | 멱등성, 소유권, 진행 중 작업 식별 |
+| `accessibility_tree` 또는 동의된 `vision_snapshot` | 현재 화면 판단, UI 선택, 이전 step 검증 |
+| `user_action_event`, `user_confirmation`, `confirmation_id` | 실제 사용자 행동과 현재 확인 대상 연결 |
 
-```json
-{
-  "request_id": "req_001",
-  "session_id": "session_001",
-  "source_text": "글자 크기 키우고 싶어",
-  "locale": "ko-KR",
-  "device_context": {
-    "platform": "android",
-    "foreground_app": null,
-    "app_package": null,
-    "manufacturer": "samsung",
-    "os_version": "15",
-    "screen_bounds": [0, 0, 1080, 2400]
-  }
-}
-```
+신규 시작과 목표 교체에서만 새 `goal`을 받는다. 재개·일시정지·취소·후속 관측은 저장된 goal과 고정 graph를 사용한다. FE의 원문 `source_text`는 선택적 설명 정보이며 graph 선택의 입력 근거가 아니다.
 
-Agent가 생성하는 Typed Goal 예시:
+입력 `command_type`은 사용자 실행 제어이고, 출력 `guide_command.command_type`은 `highlight`·`confirmation` 등 표시 방식이다. 두 enum을 공유하지 않는다. `resume_task`가 들어와도 관측·안전 검증을 생략하거나 예전 좌표를 바로 재출력하지 않는다.
 
-```json
-{
-  "goal_type": "settings.font_size.increase",
-  "target_app": "android_settings",
-  "task_type": "settings_change",
-  "slots": {
-    "setting": "font_size",
-    "direction": "increase"
-  },
-  "source_text": "글자 크기 키우고 싶어",
-  "confidence": 0.93,
-  "task_id": "MVP-01",
-  "typing_method": "embedding+keyword+slot_rule",
-  "is_supported": true,
-  "required_slots_filled": true,
-  "needs_clarification": false
-}
-```
-
-MVP에서는 Goal Typing에 LLM을 기본 사용하지 않는다. Embedding 유사도, keyword/synonym matching, 규칙 기반 slot extraction, app/task prior를 우선 사용한다. LLM은 오프라인 평가에서 자체 Goal Typing 정확도가 기준 이하로 낮거나, 운영 중 low-confidence 비율이 높게 관찰될 때 fallback으로 도입한다.
+현재 HTTP v1은 첫 turn의 `raw_goal`을 요구한다. 위 typed 입력은 구현 전환 후의 계약이며, 화면 관측·확인·인증의 현재 wire 형식은 [기존 FE/BE 연동 계약](./frontend-backend-contract.md)을 참고한다.
 
 ## 4. 핵심 설계 원칙
 
-### 4.1 Goal 처리 원칙
+### 4.1 전달된 Goal 검증과 승인 Task Graph 선택
 
-Goal은 raw 자연어에서 Agent가 생성한 typed 구조로 관리한다.
+Agent의 첫 업무는 **FE가 확정한 Goal에 실행 가능한 graph를 연결하는 것**이다. 발화 정규화, embedding 기반 Goal 검색, slot extraction, Goal confidence 계산은 [FE 입력 처리 문서](./fe-goal-command-contract.md)로 분리한다.
 
-주요 필드:
+1. Backend가 계약 버전, 인증·소유권·멱등성 및 세션 version을 검증한다.
+2. Command Router가 실행 제어 명령을 분기한다. 일시정지·취소는 graph 선택과 화면 추론 없이 처리하며, 재개·관측·확인 응답은 저장된 graph를 복원한다.
+3. 새 시작·교체에서는 `goal_type`을 catalog/registry의 canonical key로 조회한다. 가까운 다른 Goal로 대체하지 않는다.
+4. 등록된 Goal의 `target_app`과 slot 타입·허용값·필수값을 검사한다. FE confidence와 `is_supported` 주장으로 이 검사를 대체하지 않는다.
+5. 승인 상태, platform·OS·앱 버전, locale, FE 실행 capability 등 알려진 환경 조건으로 호환 graph 후보를 좁힌다. 현재 foreground app이 대상 앱과 다르다는 이유만으로 Goal을 바꾸지 않는다.
+6. 하나의 호환 graph를 선택한다. 여러 variant라면 registry의 명시적 우선순위를 적용하고, 우선순위까지 같은 모호한 경우에는 `GRAPH_SELECTION_AMBIGUOUS`로 정지한다.
+7. 선택된 `task_id`, graph version/hash, 승인 template parameter를 episode에 고정한다. `task_type`은 선택된 graph의 metadata에서 결정한다.
+8. 고정 graph의 시작·복구 경로를 기준으로 현재 화면을 관측하고 실행 루프를 시작한다.
 
-- `goal_type`: 사용자의 목적을 표현하는 표준 타입
-- `target_app`: 대상 앱 또는 앱 범주
-- `task_type`: 구매형, 설정 변경형, 행정 서류 발급형 등 Task 패턴
-- `slots`: 방향, 대상 설정, 상품, 문서 종류 등 Task별 파라미터
-- `confidence`: Goal typing 신뢰도
-- `task_id`: 선택된 Task Graph 또는 Task Template
-- `typing_method`: goal typing에 사용한 방식
+필수값 누락·slot 충돌은 `INVALID_GOAL_PAYLOAD`, 미등록 Goal은 `UNSUPPORTED_GOAL`, 호환 graph가 없으면 `NO_COMPATIBLE_GRAPH`로 FE에 돌려준다. 이는 제안 오류 코드이며 기존 API에 이미 구현된 값은 아니다. Agent가 source text를 다시 분류해서 오류를 숨기지 않는다. 미지원 수요는 정책상 허용된 event로 AI-Agent(2)에 전달한다.
 
-Goal confidence가 낮거나 필수 slot이 비어 있으면 Agent는 Task를 시작하기 전에 사용자 확인을 요청한다.
-
-Goal Typing은 아래 순서로 수행한다.
-
-1. 입력 정규화
-   - `source_text`의 공백, 구두점, 흔한 오타를 정리한다.
-   - 한국어/영어 혼용 표현을 canonical token으로 변환한다.
-   - 예: "폰트", "글씨", "글자" -> `font`; "키워", "크게", "확대" -> `increase`
-
-2. App hint 추출
-   - 사용자가 명시한 앱 이름, 현재 foreground app, OS 정보를 함께 본다.
-   - "설정에서", "휴대폰 글자"처럼 시스템 설정 의도가 강하면 `android_settings` 후보에 prior를 준다.
-   - 앱이 명확하지 않으면 `target_app`은 top candidate로 두되 confidence에 감점한다.
-
-3. 후보 Goal 검색
-   - Goal Catalog에는 각 `goal_type`별 대표 발화, 동의어, required slots, target app, task type이 등록되어 있다.
-   - `source_text` embedding과 Goal Catalog의 대표 발화/template embedding을 비교해 top-k 후보를 찾는다.
-   - 동일한 goal family 안에서는 slots까지 비교한다.
-
-4. 규칙 기반 보조 점수 계산
-   - keyword/synonym 일치 점수
-   - 부정/취소/반대 방향 표현 점수
-   - app hint 점수
-   - required slot 채움 점수
-   - 모호성 감점
-
-5. Slot extraction
-   - dictionary, regex, dependency keyword window를 사용해 slot을 추출한다.
-   - 예: "글자 크기 키우고 싶어" -> `setting=font_size`, `direction=increase`
-   - "화면 크게"처럼 `font_size`와 `display_size`가 모두 가능하면 ambiguous slot으로 표시한다.
-
-6. Score fusion
-   - 기본 confidence는 `embedding_score`, `keyword_score`, `slot_score`, `app_prior`를 가중 합산한다.
-   - 초기 가중치 예: embedding 0.45, keyword/synonym 0.30, slot 0.20, app prior 0.05
-   - top-1과 top-2의 score gap도 함께 기록한다.
-
-7. 결정 기준
-   - `confidence >= 0.80`, `score_gap >= 0.12`, required slots가 모두 채워짐: Typed Goal 확정
-   - `0.60 <= confidence < 0.80` 또는 `score_gap < 0.12`: 사용자에게 짧게 확인
-   - `confidence < 0.60`: 지원 Task 후보를 제시하거나 추가 설명 요청
-   - 위험도가 높은 task family는 threshold를 더 높게 둔다.
-
-8. 승인 Task Graph 선택 또는 Template 구체화
-   - 확정된 `goal_type`이 등록 Task와 1:1 매핑되면 호환되는 승인 Task Graph를 로드한다.
-   - 같은 승인 Task Template를 공유하는 경우 slots로 Graph를 parameterize한다.
-   - 구체화한 Graph에는 start states, done state, transition 목록, safety rule, required dataset reference가 포함된다.
-   - 지원 graph가 없으면 미지원 또는 추가 질문으로 응답하고, 신규 graph 수요는 trace를 통해 AI-Agent(2)에 전달한다.
-
-현재 코드 반영:
-
-- `AI-Agent/src/ai_agent/runtime/goal_typing.py`는 `MVP-01` 전용 rule-based goal typing을 구현한다.
-- 현재 runtime은 아직 catalog/embedding 기반 Goal Typer를 주 경로로 사용하지 않는다.
-- 장기 목표는 `goal_catalog/mvp_goals.json` 및 `goal_typing/*` 구조를 runtime의 canonical Goal Typing으로 연결하는 것이다.
+현재 구현에서 확인되는 매핑은 `settings.font_size.increase` → `MVP-01` 하나다. Python registry에는 두 key가 같은 graph를 가리킨다. 이는 두 종류의 Goal이 아니다. 버전이 있는 다중 variant registry와 typed 입력 검증은 추가 구현 대상이다.
 
 ### 4.2 UI 판단 원칙
 
@@ -183,15 +108,17 @@ UI 판단은 Accessibility Tree 기반의 keyword matching과 embedding matching
 현재 코드 반영:
 
 - `normalize_accessibility_tree()`는 label 병합, role 추론, semantic tag 생성, position hint, slider value 추출을 수행한다.
+- `parent_id`를 따라 이름 없는 클릭 영역에 자식 label을 연결하고 실제 조작 노드의 ID·bounds를 유지한다. 숨김 노드는 제외한다. [좌표 계약과 제한](../Frontend/docs/guide-target-geometry.md)을 따른다.
 - `classify_screen_state()`는 required keyword group, optional keyword, role hint, package, previous state continuity로 State를 고른다.
 - `match_next_ui()`는 keyword, similarity, semantic tag, role, actionable score를 합산한다.
 - 현재 matcher는 top-2 gap 기반 ambiguity 처리가 없으므로 이상 구조에는 반드시 추가해야 한다.
 
 ### 4.3 LLM/VLM 사용 범위
 
-LLM/VLM은 다음 상황에서 fallback으로만 사용한다.
+Agent(1)의 LLM/VLM은 화면 해석·UI matching을 보완하는 fallback으로만 사용한다. Goal/Command 분류의 모델 선택과 clarification은 FE 책임이며 별도 문서에서 정의한다.
 
-- Goal Type confidence가 낮아 사용자 의도 확인이 필요한 경우
+적용 상황:
+
 - Accessibility Tree에 label이 없거나 부정확한 경우
 - 아이콘 중심 UI라 keyword matching이 실패한 경우
 - 제조사/앱 버전 차이로 기존 Task Graph와 맞지 않는 경우
@@ -273,17 +200,21 @@ AI-Agent(2)가 지연되거나 중단되어도 AI-Agent(1)은 마지막으로 �
 
 ## 5. 사용자 작업 수행 루프
 
-한 번의 HTTP turn은 다음 안내 하나를 반환한다. 사용자의 조작을 기다린 뒤 **다음 turn의 새 화면으로 직전 안내를 검증**한다. 하나의 관측을 두 번 성공 처리하지 않는다.
+실행 turn은 다음 안내 하나를 반환하고, 일시정지·취소 turn은 UI target 없는 제어 응답을 반환한다. 사용자의 조작을 기다린 뒤 **다음 turn의 새 화면으로 직전 안내를 검증**한다. 하나의 관측을 두 번 성공 처리하지 않는다.
 
-`Text → Session/Request 검증 → Goal Typing → 승인 Graph 선택 → Observe → Normalize → Classify → 직전 Step Verify → 완료 확인 또는 Re-plan → Transition 선택 → UI Match → Safety → Guide/허용 Action → 새 관측`
+`FE Goal Type + Command Type → Session/Request 검증 → Command 분기 → 승인 Graph 선택/복원 → Observe → Normalize → Classify → 직전 Step Verify → 완료 확인 또는 Re-plan → Transition 선택 → UI Match → Safety → Guide/허용 Action → 새 관측`
 
 ```mermaid
 flowchart TD
-    A[사용자 Text / FE STT 결과] --> B[Backend 인증·세션·멱등성 검증]
-    B --> C[Goal Typing / 기존 Goal 복원]
-    C --> D{지원 Goal과 필수 Slots 확인}
-    D -->|불충분| E[추가 질문 / 미지원 안내]
+    A[FE 확정 Goal Type + Command Type] --> B[Backend 인증·세션·멱등성 검증]
+    B --> C{Command 분기}
+    C -->|일시정지·취소| CTRL[상태 저장·기존 Guide 무효화·제어 응답]
+    C -->|재개·관측·확인| RESTORE[기존 Goal·고정 Graph 복원]
+    C -->|시작·교체| D{등록 Goal·Slots·호환성 검증}
+    D -->|불충분| E[계약 오류 / 미지원 결과를 FE에 반환]
     D -->|충분| F[승인 Graph 선택·버전 고정]
+    RESTORE --> G
+    CTRL -.-> Y
     F --> G[현재 화면 관측]
     G --> H{Accessibility 충분}
     H -->|아니오| I{Vision 동의·마스킹·사용 가능}
@@ -316,7 +247,7 @@ flowchart TD
     Y -. 비동기 .-> Z[AI-Agent 2 입력]
 ```
 
-이 다이어그램의 승인 graph 버전 고정, 모든 경로의 영속 event 기록, 명시적인 observation/step 연결은 목표 계약이다. 현재는 Python graph registry, DB checkpoint 호환성 검사, 일부 경로의 메모리 trace가 구현되어 있다.
+이 다이어그램의 typed 입력·Command Router, 승인 graph 버전 고정, 모든 경로의 영속 event 기록, 명시적인 observation/step 연결은 목표 계약이다. 현재는 Python graph registry, DB checkpoint 호환성 검사, 일부 경로의 메모리 trace가 구현되어 있다.
 
 Vision을 matching 실패 후 다시 시도하더라도 동의·마스킹 경계를 동일하게 적용한다. 확인을 받은 경우에도 현재 transition, 화면 시각, target 유효성을 다시 검사하며, 거절은 추가 조작을 허용하지 않는다.
 
@@ -325,7 +256,8 @@ Vision을 matching 실패 후 다시 시도하더라도 동의·마스킹 경계
 | 계층 | 핵심 질문 | 담당 모듈 | 결과물 |
 | --- | --- | --- | --- |
 | Request-level | 같은 요청이 재시도인가? 세션이 유효한가? | Backend AgentTurnService, Session Store | Idempotent Response, Session State |
-| Goal-level | raw 자연어가 어떤 목적을 의미하는가? | Goal Typer, Goal Validator, Task Mapper | Typed Goal, Task ID, slots |
+| Command-level | 현재 작업을 시작·정지·재개·교체하는가? | Command Router, Session Store | 실행 제어 상태·응답 |
+| Graph-selection-level | FE가 확정한 Goal을 어떤 승인 graph로 실행할 수 있는가? | Typed Input Validator, Graph Selector | Task ID, Graph Reference, 검증된 slots |
 | Task-level | 목표를 위해 어떤 State를 거쳐야 하는가? | Task Graph, Graph Registry, State Manager | State, Transition, Graph Version |
 | Screen-level | 현재 화면은 어떤 State인가? | Accessibility Tree Parser, UI Normalizer, Screen State Classifier | Current State, State Confidence |
 | Verification-level | 직전 안내 이후 의도한 화면 전이가 일어났는가? | Verifier, Snapshot Fingerprint | SUCCESS, DONE, NO_CHANGE, WRONG_STATE, UNKNOWN |
@@ -347,10 +279,12 @@ Agent는 turn 단위로 호출되지만, 사용자의 task는 여러 turn에 걸
 역할:
 
 - `request_id` 중복 호출을 감지해 저장된 기본 응답을 재사용하고 personalization 동의를 다시 적용한다.
-- `session_id`를 기준으로 typed goal, task id, graph version, current state를 유지한다.
-- follow-up turn에서 `raw_goal`이 없어도 기존 session의 typed goal을 재사용한다.
-- 알 수 없는 session에서 raw goal 없이 들어온 follow-up은 contract violation으로 처리한다.
-- 사용자가 목표를 바꾸면 같은 session이라도 raw goal을 다시 typing한다.
+- `session_id`와 `episode_id`를 기준으로 FE 확정 goal, task id, graph reference, current state를 유지한다.
+- `observe`·`resume_task` 등 후속 명령은 새 goal 없이 저장된 goal과 graph를 복원한다.
+- 존재하지 않는 session·이전 episode를 가리키는 후속 명령은 거부한다.
+- `replace_task`는 새 goal의 검증·graph 선택이 성공한 경우에만 이전 episode를 교체한다.
+- `pause_task`는 재개 가능한 상태로 보존하고 `cancel_task`는 종료한다. 둘을 동일하게 처리하지 않는다.
+- 위 제어 상태와 typed 입력 규약은 목표 계약이며 현재 raw-goal runtime과 구분한다.
 
 현재 코드 반영:
 
@@ -360,48 +294,25 @@ Agent는 turn 단위로 호출되지만, 사용자의 task는 여러 turn에 걸
 - checkpoint에는 schema version과 graph 내용 hash가 저장된다. 불일치 시 `CHECKPOINT_INCOMPATIBLE`로 거부하며, 과거 graph artifact를 찾아 계속 실행하는 다중 버전 registry는 아직 연결되어 있지 않다.
 - 영속 checkpoint와 replay 가능한 전체 runtime trace 저장은 서로 다른 요구사항이다.
 
-### 7.2 Goal Typer / Goal Validator / Task Mapper
+### 7.2 Typed Input Validator / Command Router / Graph Selector
 
-FE에서 전달된 raw 자연어를 Typed Goal로 변환하고 Task Graph로 매핑한다.
+이 모듈은 FE가 전달한 enum과 parameter를 검증하고, 실행 명령에 맞게 승인 graph를 선택하거나 기존 실행 상태를 복원한다.
 
-역할:
+| 구성 요소 | 책임 | 결과 |
+| --- | --- | --- |
+| Typed Input Validator | 계약 버전, 등록 Goal, 대상 앱, slot schema·고정값 일치 확인 | 검증된 FE Goal 또는 구조화된 오류 |
+| Command Router | Command별 허용 세션 상태·episode 확인, 시작·정지·재개·교체 분기 | 실행 경로 또는 제어 응답 |
+| Graph Selector | Goal/app/환경/capability와 승인 registry의 정확한 매핑 | task ID, graph version/hash, parameter |
+| Session Restorer | 후속 명령의 고정 goal·graph 복원, 과거 확인·좌표 유효성 검사 | 현재 episode의 재관측 가능한 상태 |
 
-- raw 자연어 정규화
-- embedding 기반 Goal 후보 검색
-- keyword/synonym/rule 기반 점수 보정
-- slots 추출
-- `goal_type` 존재 여부 확인
-- 필수 slot 확인
-- Goal confidence 확인
-- 지원 가능한 Task인지 확인
-- Task ID 선택 또는 승인된 Task Template의 세션별 구체화
+대표 매핑은 `goal_type=settings.font_size.increase`, `target_app=android_settings`,
+`slots={setting: font_size, direction: increase}` → `task_id=MVP-01`이다.
+`task_id`·graph version·graph hash는 Agent/registry가 결정한다. FE가 실행 graph를 지정하거나
+`source_text`만 보내어 Agent 내부 Goal Typer를 호출하는 경로는 새 계약에 포함하지 않는다.
 
-예시:
+지원 유형·입력 필드·Command별 세부 규칙은 [FE Goal·Command 계약](./fe-goal-command-contract.md)이 기준이다. 이 모듈은 분류 점수를 계산하거나 모호한 자연어를 해결하지 않는다. 입력 오류의 필드 경로와 원인을 FE에 전달하면 FE가 사용자에게 확인 후 새 요청을 만든다.
 
-```json
-{
-  "source_text": "글자 크기 키우고 싶어",
-  "goal_type": "settings.font_size.increase",
-  "target_app": "android_settings",
-  "task_type": "settings_change",
-  "slots": {
-    "setting": "font_size",
-    "direction": "increase"
-  },
-  "task_id": "MVP-01",
-  "typing_method": "embedding+keyword+slot_rule",
-  "is_supported": true,
-  "required_slots_filled": true,
-  "needs_clarification": false,
-  "confidence": 0.91
-}
-```
-
-현재 코드의 한계:
-
-- 실제 runtime은 `MVP-01` 전용 keyword/slot rule을 사용한다.
-- Goal Catalog와 runtime Goal Typer가 아직 통합되어 있지 않다.
-- top-k 후보와 score gap을 외부 API에 노출하지 않는다.
+현재 코드에는 별도 Typed Input Validator/Command Router가 없고 `engine._resolve_typed_goal()`이 여전히 `runtime/goal_typing.py`를 호출한다. 이 호출 제거, typed DTO와 router 추가, Backend adapter·checkpoint·tests 전환이 필요하다. Goal Typing을 Agent(1)의 확장 과제로 계속 추가하지 않는다.
 
 ### 7.3 Task Graph / Graph Registry / State Manager
 
@@ -444,6 +355,8 @@ FE의 Android Accessibility Service가 수집·직렬화한 Screen Snapshot을 �
 - `content_description`
 - `resource_id`
 - `bounds_in_screen`
+- `parent_id` (같은 snapshot 안의 부모 ID, 기본 `null`)
+- `visible_to_user` (Android 표시 여부, 기존 payload의 기본값 `true`)
 - `clickable`
 - `enabled`
 - `selected`
@@ -469,6 +382,12 @@ FE가 원본 속성을 유지해 직렬화한 Accessibility Node를 Agent가 비
 - 비활성, 숨김, 중복 Node 제거
 - slider/range value 추출
 - Task별 synonym dictionary 적용
+
+현재 구현은 비활성 노드를 화면 판별용으로 유지하되 조작 대상에서는 제외한다.
+숨김 노드는 정규화 결과에서 제외하고, 양의 면적이 없는 bounds도 조작 대상으로 사용하지 않는다.
+이름 없는 클릭 부모는 적절한 비조작 자식의 label을 상속할 수 있지만,
+루트·스크롤 목록·입력란·화면의 절반 이상을 차지하는 부모에는 이 규칙을 적용하지 않는다.
+`target_bounds`는 해당 조작 노드의 화면 픽셀 좌표이며 Overlay 로컬 변환은 FE에서만 수행한다.
 
 예시:
 
@@ -755,7 +674,7 @@ Fallback 종류:
 
 | 유형 | 조건 | 처리 |
 | --- | --- | --- |
-| Clarification | goal이 모호함 | 사용자에게 짧게 확인 |
+| Typed Input Rejection | Goal enum·slot·catalog가 계약과 불일치 | 필드 오류를 FE에 전달; FE에서 질문·재분류 |
 | Fresh Observation | target이 viewport에 없음 또는 tree가 낡음 | FE에 새 Accessibility Tree 요청 |
 | Vision Consent | Accessibility signal이 부족하고 screenshot/OCR 필요 | 화면 이미지 분석 동의 요청 |
 | Vision Augmented Match | OCR/VLM element가 target 후보를 제공 | synthetic node로 기존 pipeline에 합류 |
@@ -776,7 +695,8 @@ Fallback 종류:
 | 상태 | 내용 | 유지·초기화 시점 |
 | --- | --- | --- |
 | Session identity | session ID, 사용자 소유권, session version | Backend 생성·검증·만료 |
-| Goal episode | episode ID, Typed Goal, 초기 완료 기준값 | 새 목표가 확정되면 생성 |
+| Goal episode | episode ID, FE가 확정한 goal, 초기 완료 기준값 | 시작·검증된 목표 교체 시 생성 |
+| Command control | 마지막 command ID/type, ACTIVE·PAUSED 등 실행 상태 | 유효한 제어 명령 접수 시 전이 |
 | Graph reference | task ID, graph version/hash, template parameters | episode 시작 시 고정 |
 | Environment | package, app version, OS, 제조사, locale, FE capability | 관측마다 변경 여부 확인 |
 | Current state | 관측된 state, confidence, evidence | 유효한 새 관측으로 갱신 |
@@ -786,7 +706,7 @@ Fallback 종류:
 | Retry / recovery | 시도 수, 제외 node, 대체 전이, 남은 예산 | 실패·state 변경·episode 종료 |
 | Terminal status | completed, cancelled, expired, failed 등 이유 | 종료 후 새 action 발행 중단 |
 
-세션은 여러 목표를 포함할 수 있으므로 `episode_id`를 따로 둔다. 사용자가 목표를 바꾸면 이전 episode의 종료 사유를 기록하고, 이전 pending transition·confirmation·실패 node·기준값을 새 목표에 재사용하지 않는다. 단순 clarification 응답은 같은 목표를 보완하는 것인지 먼저 구분한다.
+세션은 여러 목표를 포함할 수 있으므로 `episode_id`를 따로 둔다. 사용자가 목표를 바꾸면 이전 episode의 종료 사유를 기록하고, 이전 pending transition·confirmation·실패 node·기준값을 새 목표에 재사용하지 않는다. 실행 전 clarification은 FE가 완료한다. 실행 중 목표 변경은 `replace_task`로 명시하며, `respond_confirmation`은 현재 action 승인만 처리하고 goal을 변경하지 않는다.
 
 current state는 관측된 사실이고 expected state는 계획이다. 다음 state를 안내했다는 이유로 current state를 먼저 이동시키지 않는다. 사용자 취소·Backend 만료 시 pending guide를 무효화하고 Agent(2)가 확인할 종료 event를 남긴다.
 
@@ -801,8 +721,18 @@ handle_turn(request):
     validate_identity_ownership_and_request(request)
     return_saved_result_if_same_request(request)
     claim_session_version_and_restore_checkpoint()
-    resolve_goal_or_start_new_episode()
-    load_pinned_approved_graph()
+    validate_typed_command_and_dispatch()
+    if command is pause_task or cancel_task:
+        invalidate_pending_guides_and_confirmations()
+        persist_control_state_response_and_event()
+        return_control_response_without_screen_inference()
+    if command is start_task or replace_task:
+        validate_fe_goal_against_catalog_and_slot_schema()
+        select_compatible_approved_graph()
+        commit_new_episode_and_pin_graph()
+    else:
+        restore_fe_goal_and_pinned_graph()
+    # resume requires a fresh observation and never reuses old target coordinates.
     validate_observation_freshness_and_environment()
     normalize_and_classify_current_screen()
     if pending_step exists:
@@ -852,10 +782,10 @@ Re-plan은 최신 화면 재확인, 같은 transition의 다른 유효 target, �
 AI-Agent(1)은 데이터 label을 확정하지 않아도 AI-Agent(2)가 재평가할 수 있는 증거를 남겨야 한다.
 
 - guide/action, before/after observation, 검증 대상 step을 명시적으로 연결한다.
-- Goal·State·Match confidence와 검증 evidence를 서로 다른 필드로 기록한다.
+- FE가 제공한 분류 메타데이터, Agent의 Graph 선택 결과, State·Match confidence와 검증 evidence를 구분한다. FE 분류 점수를 Agent가 계산한 것으로 기록하지 않는다.
 - 선택 target뿐 아니라 privacy 정책상 허용된 후보 집합과 score breakdown을 보존한다.
 - 관측 state, 예상 state, runtime verification, terminal 이유를 분리한다.
-- clarification·미지원 goal·동의 거절·fallback·오류·취소·만료도 수집 경로에 포함한다.
+- FE에서 발생한 clarification event와 Agent의 입력 거절·미지원 graph·동의 거절·fallback·오류·일시정지·재개·취소·만료를 각 생산 주체와 함께 연결한다.
 - screenshot 원문을 기본 저장하지 않고, text·OCR·guide 등 민감 필드도 정책에 따라 제거한다.
 - Backend의 DB checkpoint 저장과 학습 event 저장을 별도로 모니터링한다.
 - event 전송 장애 시 실패와 재처리 위치를 남긴다.
@@ -866,53 +796,45 @@ AI-Agent(1)은 데이터 label을 확정하지 않아도 AI-Agent(2)가 재평�
 
 아래는 모듈 간 의미를 설명하는 설계 예시다. HTTP DTO와 runtime dataclass의 필드명을 혼용해 그대로 요청으로 보내지 않는다. 자동 scroll 예시는 향후 계약이며 현재 MVP-01의 기능이 아니다.
 
-### 8.1 Raw Goal Input
+### 8.1 FE Goal·Command Envelope
 
-```json
-{
-  "source_text": "글자 크기 키우고 싶어",
-  "locale": "ko-KR",
-  "device_context": {
-    "platform": "android",
-    "foreground_app": null
-  }
-}
-```
+입력 DTO의 단일 기준은 [FE Goal Type·Command Type 정의와 전달 계약](./fe-goal-command-contract.md)이다.
+`command_type`과 신규 시작/교체의 `goal`을 받으며 자연어 Goal Typing 입력을 정의하지 않는다.
+원문과 분류 후보·confidence는 필요 시 FE가 생산하는 선택적 메타데이터다.
 
 ### 8.2 Agent Turn Request
 
-```json
-{
-  "request_id": "req_001",
-  "session_id": "session_001",
-  "raw_goal": "글자 크기 키우고 싶어",
-  "accessibility_tree": {
-    "package_name": "com.android.settings",
-    "screen_width": 1080,
-    "screen_height": 2400,
-    "nodes": []
-  },
-  "vision_snapshot": null,
-  "user_confirmation": null,
-  "user_action_event": null
-}
-```
+신규 typed 요청의 공통 envelope와 명령별 JSON은 별도 계약에 정의한다. 기존 HTTP v1의
+`raw_goal`과 runtime의 `RawGoalInput`은 전환 전 구현에만 해당한다.
 
-### 8.3 Typed Goal
+실행을 진행하는 `start_task`, `replace_task`, `resume_task`, `observe`, `respond_confirmation`은
+새 관측을 함께 전달한다. `pause_task`, `cancel_task`는 화면 수집 실패 중에도 처리할 수 있어야 한다.
+이 구분은 새 schema의 조건부 검증 요구사항이며 현재 모든 요청에 관측을 요구하는 v1과 다르다.
+
+### 8.3 Graph Selection Result
+
+아래는 Agent 내부 선택 결과의 설계 예시다. `graph_version`과 `graph_hash`는 예시값이며
+현재 다중 버전 registry가 존재한다는 뜻은 아니다.
 
 ```json
 {
-  "goal_type": "settings.font_size.increase",
-  "target_app": "android_settings",
+  "episode_id": "episode_001",
+  "accepted_goal_type": "settings.font_size.increase",
+  "task_id": "MVP-01",
   "task_type": "settings_change",
-  "slots": {
+  "graph_version": "1.0.0",
+  "graph_hash": "example-artifact-hash",
+  "template_parameters": {
     "setting": "font_size",
     "direction": "increase"
   },
-  "confidence": 0.93,
-  "task_id": "MVP-01"
+  "selection_method": "approved_registry_exact_match"
 }
 ```
+
+`accepted_goal_type`은 FE 입력을 검증 후 보존한 값이며 Agent가 새로 분류한 결과가 아니다.
+FE는 응답의 task·graph 정보를 표시·추적에 사용할 수 있지만 이후 명령에서 이를 바꾸어
+다른 graph 실행을 강제하지 않는다.
 
 ### 8.4 Task Definition
 
@@ -1086,7 +1008,7 @@ AI-Agent(1)은 데이터 label을 확정하지 않아도 AI-Agent(2)가 재평�
 
 현재 trace에는 request/session 연결을 포함한 안정적인 식별자, `episode_id/step_id`, normalized candidate snapshot, 검증 대상 guide ID가 보존되지 않는다. `label_sample`도 진단 allowlist에서 제외된다. 이 진단 로그만으로 전체 UI ranking replay나 episode 재구성을 수행할 수 없다.
 
-또한 미지원·모호한 Goal은 `handle_turn()`의 조기 return으로 빠져 일반 trace 기록에 도달하지 않는다. API 검증 실패, timeout, 사용자 취소, 세션 만료도 engine의 정상 반환 trace만으로는 포착할 수 없다.
+전환 전 구현에서는 미지원·모호한 Goal이 `handle_turn()`의 조기 return으로 빠져 일반 trace 기록에 도달하지 않는다. 새 구조는 FE의 분류 event와 Agent의 입력 검증·graph 선택 거절을 별도로 연결해야 한다. API 검증 실패, timeout, 사용자 취소, 세션 만료도 engine의 정상 반환 trace만으로는 포착할 수 없다.
 
 전체 event 계약과 필수 필드는 [AI-Agent(2)의 입력 및 라벨 계약](./ai-agent-2-graph-proposal.md)에 정의한다. AI-Agent(1)은 사실과 실시간 판단을 기록하고, AI-Agent(2)가 버전이 있는 학습 라벨을 별도로 생성한다.
 
@@ -1095,7 +1017,7 @@ AI-Agent(1)은 데이터 label을 확정하지 않아도 AI-Agent(2)가 재평�
 | 순서 | 개발 항목 | 결과물 | 현재 코드 반영 |
 | --- | --- | --- | --- |
 | 1 | Request / Session / Idempotency | 안정적인 turn 처리 | Backend DB claim/checkpoint 구현, runtime 단독은 메모리 |
-| 2 | Goal Catalog / Goal Typing | raw 자연어 -> Typed Goal | MVP-01 rule 구현 |
+| 2 | Typed Input / Command Router / Graph Selector | FE Goal·Command 검증 → 승인 graph 선택·복원 | typed DTO/router 미구현, legacy Goal Typing 제거 필요 |
 | 3 | MVP Task 정의 | Task별 문서 | 구현 |
 | 4 | Task Graph 설계 | State / Transition | Python graph 구현 |
 | 5 | Graph Registry / Versioning 소비 | 승인 graph 선택, 세션 버전 고정, 호환성 | registry 일부, version 미흡 |
@@ -1120,8 +1042,8 @@ Task별 문서는 다음 항목을 포함한다.
 
 - Task ID와 사용자 목표
 - 연결되는 `goal_type`
-- raw 자연어 Goal Typing 기준
-- 사용자 발화 예시
+- FE catalog entry와 필수 slots·target app의 호환 조건
+- 사용자 발화·Goal 분류 기준은 별도 FE 계약으로 링크
 - 완료 조건
 - State 목록
 - Transition 목록
@@ -1139,7 +1061,7 @@ Task별 문서는 다음 항목을 포함한다.
 
 ## 11. AI-Agent(1) 구현 성숙도
 
-사용자 실행 능력은 화면 인식, 여러 turn의 상태 유지, 실제 결과 검증, 복구 품질로 평가한다. 현재는 MVP-01에 Goal Typing·State·UI matching·pending transition·verification·node 제외 재시도가 구현되어 있다.
+사용자 실행 능력은 화면 인식, 여러 turn의 상태 유지, 실제 결과 검증, 복구 품질로 평가한다. 현재는 MVP-01에 State·UI matching·pending transition·verification·node 제외 재시도가 구현되어 있다. FE typed 입력을 받는 경계는 아직 전환해야 한다.
 
 남은 실행 과제는 State/Match confidence 분리, 모호한 후보 처리, 완료 predicate 강화, 제조사·앱 버전 일반화, 승인 graph version 고정과 graph 수준의 대체 경로 선택이다. 자동 scroll은 현재 비활성이며 실제 지원 기능으로 계산하지 않는다.
 
@@ -1157,7 +1079,7 @@ Task별 문서는 다음 항목을 포함한다.
 
 1. 모듈 중복
 
-   `runtime/*`와 상위 `goal_typing/*`, `matching/*`, `task_graph/*`가 같은 개념을 중복 표현한다. 장기적으로 하나를 canonical path로 정해야 한다.
+   `runtime/*`와 상위 `matching/*`, `task_graph/*`의 실행 개념을 하나의 canonical path로 정리한다. 기존 `goal_typing/*`는 FE 분류 구현의 참고·이관 대상이며 Agent(1) 내부의 새 분류 경로로 통합하지 않는다.
 
 2. 실행 증거 연결
 
@@ -1179,7 +1101,7 @@ Task별 문서는 다음 항목을 포함한다.
 
 | 영역 | 피드백 |
 | --- | --- |
-| Goal Typing | 현재는 hard-coded rule이다. Goal Catalog와 통합해야 확장 가능하다. |
+| Typed 입력 / Graph 선택 | FE의 Goal Type·Command Type을 검증하는 경계로 전환하고 legacy Goal Typer 호출을 제거해야 한다. |
 | Task Graph | Python graph와 JSON graph가 함께 있으면 drift가 생긴다. source of truth를 정해야 한다. |
 | State Classification | state id만 반환한다. confidence와 evidence가 필요하다. |
 | UI Matching | top-2 ambiguity 처리가 없다. 후보가 비슷하면 확인해야 한다. |
@@ -1191,6 +1113,8 @@ Task별 문서는 다음 항목을 포함한다.
 | Personalization | 시작은 좋지만 guide wording layer와 결합해야 일관성이 생긴다. |
 
 ### 12.4 가장 먼저 고쳐야 할 P0
+
+최우선 경계 변경은 FE typed 입력 계약의 적용이다. Goal/Command enum과 slot schema, 명령별 세션 전이, adapter/checkpoint 전환을 함께 구현한다. Goal Typing 모델의 품질 개선은 FE 소유 문서에서 관리한다.
 
 1. `state_confidence`와 `match_confidence` 분리
 
@@ -1216,7 +1140,9 @@ Task별 문서는 다음 항목을 포함한다.
 
 MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡는다.
 
-- raw 자연어가 LLM 없이 적절한 Typed Goal과 Task로 매핑된다.
+- FE의 확정 Goal·Command로 올바른 승인 Task Graph를 선택하거나 기존 graph를 복원한다.
+- 원문 재분류 없이 미등록 Goal·누락/충돌 slots·지원되지 않는 Command를 구분해 거부한다.
+- 일시정지·재개·취소·목표 교체가 오래된 guide와 pending confirmation을 재사용하지 않는다.
 - Accessibility Tree 기반으로 현재 화면을 수집한다.
 - UI Normalizer가 화면 Node를 일관된 구조로 변환한다.
 - Screen State Classifier가 현재 State와 confidence를 반환한다.
@@ -1233,10 +1159,10 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 
 ## 14. 구현 파일과 책임 매핑
 
-| 현재 파일 | AI-Agent(1)의 책임 | 추가할 부분 |
+| 파일 / 컴포넌트 | AI-Agent(1)의 책임 | 추가할 부분 |
 | --- | --- | --- |
 | `AI-Agent/src/ai_agent/runtime/engine.py` | turn orchestration | 모든 종료 경로 event, 검증 대상 step 명시 |
-| `runtime/goal_typing.py` | raw text를 Typed Goal로 해석 | catalog 통합, top-k와 ambiguity |
+| 신규 typed validator / command router / graph selector | FE 입력 검증과 승인 graph 선택·복원 | 모듈 추가, DTO·session 상태 전환 |
 | `runtime/normalizer.py`, `classifier.py` | UI 정규화 및 State 판단 | evidence, confidence 분리 |
 | `runtime/matcher.py`, `similarity.py` | UI 후보 선택 | 후보별 점수, selector, top-2 gap |
 | `runtime/verification.py`, `state_manager.py` | 이전 관측과 결과 비교 | 완료 predicate, 지연 관측, action 귀속 |
@@ -1248,13 +1174,13 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 | `Backend/app/services/agent_turn.py` | DB checkpoint 복원·저장 및 응답 조정 | event outbox 또는 동등한 전달 보장 |
 | `Backend/app/repositories/agent_sessions.py` | DB session·turn claim·멱등성 | 학습 event와의 식별자 연계 |
 
-`runtime/*`를 현재 실행 경로의 기준으로 삼는다. 상위 `goal_typing/*`, `observation/*`, `matching/*`, `workflows/*`의 구조가 존재한다는 이유만으로 현재 제품에 연결된 기능으로 표시하지 않는다. AI-Agent(2) 코드는 `graph_proposal/`, 공통 진단과 관측 계약은 `telemetry/`로 이동했다. 사용자 실행 경로는 Agent(2)를 import하지 않는다. 기존 컴포넌트용 `replanning/state_manager.py`는 세션 내 상태만 관리하고 공통 `task_graph/`에는 graph 구조·registry만 둔다.
+`runtime/*`를 현재 실행 경로의 기준으로 삼는다. 상위 `observation/*`, `matching/*`, `workflows/*`의 구조가 존재한다는 이유만으로 현재 제품에 연결된 기능으로 표시하지 않는다. 기존 `runtime/goal_typing.py`와 `goal_typing/*`는 [FE 이관 목록](./fe-goal-command-contract.md#11-현재-코드와-구현-전환)에서 관리한다. AI-Agent(2) 코드는 `graph_proposal/`, 공통 진단과 관측 계약은 `telemetry/`로 이동했다. 사용자 실행 경로는 Agent(2)를 import하지 않는다. 기존 컴포넌트용 `replanning/state_manager.py`는 세션 내 상태만 관리하고 공통 `task_graph/`에는 graph 구조·registry만 둔다.
 
 ## 15. 대표 시나리오와 평가 기준
 
 ### 15.1 정상 작업과 복구
 
-글자 크기 확대의 첫 turn에서 Agent(1)은 목표를 해석하고 현재 설정 홈의 디스플레이 메뉴를 안내한다. 다음 turn에서 디스플레이 화면이 확인되면 직전 step을 검증하고 글자 크기 메뉴를 안내한다. 설정 변경 확인 후 사용자가 slider를 조작하면 기준값 대비 증가를 검증해 완료한다.
+글자 크기 확대의 첫 turn에서 Agent(1)은 FE의 `start_task`와 `settings.font_size.increase`를 받아 `MVP-01`을 선택하고 현재 설정 홈의 디스플레이 메뉴를 안내한다. 다음 turn에서 디스플레이 화면이 확인되면 직전 step을 검증하고 글자 크기 메뉴를 안내한다. 설정 변경 확인 후 사용자가 slider를 조작하면 기준값 대비 증가를 검증해 완료한다.
 
 메뉴 이름이 달라 target을 찾지 못하면 graph의 synonym·selector 후보를 검사하고 새 관측 또는 동의 기반 Vision을 요청한다. 다른 승인 경로가 있으면 Re-plan한다. 새 화면·우회 경로는 trace에 남기고, 여러 세션에 적용할 graph 변경은 Agent(2)가 처리한다.
 
@@ -1262,11 +1188,14 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 
 | 검증 시나리오 | 기대 결과 |
 | --- | --- |
-| raw text 첫 요청 | Typed Goal·task 선택 또는 추가 질문 |
-| raw goal 없는 유효 follow-up | 같은 목표와 graph reference 유지 |
+| 유효한 FE Goal + `start_task` | 승인 task 선택, episode·graph 고정 |
+| `observe` 후속 요청 | 저장된 FE goal과 graph reference 유지 |
+| `pause_task` / `resume_task` | 일시정지 저장; 재개 시 새 관측·좌표로 안내 |
+| `replace_task` | 새 입력·graph 검증 후 이전 episode 종료 및 새 episode 생성 |
+| Goal이 누락된 시작 / 후속 요청에 새 Goal 혼입 | 계약 오류; 원문 재분류 또는 묵시적 목표 교체 없음 |
 | 없는 session의 follow-up | 계약 오류 또는 재시작 안내 |
 | 중복 request 및 session 동시 요청 | 중복 실행 방지와 version 일관성 |
-| 모호한 목표·미지원 목표 | 잘못된 Task를 시작하지 않고 관련 event 기록 |
+| 미등록 Goal·slot 충돌·호환 graph 없음 | FE에 구분된 오류와 field 정보를 반환하고 관련 event 기록 |
 | 빈 tree·동의 없는 Vision | 무근거 target 없이 정보·동의 요청 |
 | State는 높고 Match는 낮은 신뢰도 | 두 값을 구분하고 matching fallback |
 | 사용자 조작 전 같은 화면 | 곧바로 반복 실패로 누적하지 않음 |
@@ -1279,6 +1208,6 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 
 ### 15.3 품질 지표
 
-Goal 정답률, State 정답률, Target 정확도, 검증된 task 완료율, false-DONE 비율, 잘못된 화면 안내, 반복 실패·replan·fallback 빈도, 사용자 취소, 응답 시간과 외부 호출 비용을 측정한다. 제조사·OS·앱 버전별 결과를 나눠 본다.
+FE 분류 정답률은 FE의 지표로 분리한다. Agent(1)은 Graph 선택 정확도, 입력 오류 검출률, Command 상태 전이 정확도, State 정답률, Target 정확도, 검증된 task 완료율, false-DONE 비율, 잘못된 화면 안내, 반복 실패·replan·fallback 빈도, 사용자 취소, 응답 시간과 외부 호출 비용을 측정한다. 제조사·OS·앱 버전별 결과를 나눠 본다.
 
 완료율은 관측 가능한 결과의 success/(success+fail)과 전체 접수 대비 확인된 완료 비율을 구분하며, unknown·cancelled·미지원의 분모 정책을 표시한다. 자동화 수준이나 LLM 사용량을 사용자 작업 품질의 대체 지표로 삼지 않는다. 라벨 정확도·graph proposal 품질은 Agent(2)의 지표로 별도 관리한다.

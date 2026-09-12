@@ -562,7 +562,7 @@ goal catalog만 먼저 배포해 실행 graph가 없는 task를 지원한다고 
 
 | Dataset | 입력 → 출력 | 정답 근거와 주의점 |
 | --- | --- | --- |
-| Goal Typing | 사용자 표현 → goal type, slots | clarification·검토 정답; task 성공만으로 의도 정답 추정 금지 |
+| FE Goal/Command Typing | FE 입력·context → goal type, slots, command type | FE clarification·검토 정답; FE 분류 개선용 데이터이며 Agent(1)의 분류 책임이 아님. task 성공만으로 의도 정답 추정 금지 |
 | State Classification | normalized screen + 환경 → state | 검토된 화면 의미; runtime classifier 출력은 weak label |
 | UI Target Ranking | transition + 전체 후보 → target relevance | 실제 올바른 target과 전후 결과 |
 | Transition Verification | before/action/after → predicate 결과 | 독립 evidence 기반 판정 |
