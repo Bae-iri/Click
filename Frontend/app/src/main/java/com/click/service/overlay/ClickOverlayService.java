@@ -27,6 +27,7 @@ import android.widget.Button;
 import androidx.annotation.Nullable;
 
 import com.click.data.remote.AgentActionEvents;
+import com.click.core.permission.PermissionStatus;
 import com.click.data.remote.AgentTurnContract;
 import com.click.data.remote.AgentTurnGateway;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
@@ -119,12 +120,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     public void onCreate() {
         super.onCreate();
         runningService = new WeakReference<>(this);
-        if (!Settings.canDrawOverlays(this)) {
+        WindowManager accessibilityWindows = ClickAccessibilityService.accessibilityWindowManager();
+        if (!PermissionStatus.isAccessibilityEnabled(this) || accessibilityWindows == null) {
             stopSelf();
             return;
         }
 
-        WindowManager accessibilityWindows = ClickAccessibilityService.accessibilityWindowManager();
         if (accessibilityWindows != null) {
             windowManager = accessibilityWindows;
             overlayWindowType = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY;

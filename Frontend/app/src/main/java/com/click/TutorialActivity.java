@@ -40,6 +40,7 @@ public final class TutorialActivity extends AppCompatActivity implements GalaxyT
     private boolean listening;
     private boolean errorPromptShown;
     private boolean speechStartedInAttempt;
+    private int recoverableRecognitionErrors;
     private long attemptWindowStartedAt;
     private static final long LISTENING_GRACE_MS = 8000L;
     private final ActivityResultLauncher<String> microphonePermission = registerForActivityResult(
@@ -168,7 +169,14 @@ public final class TutorialActivity extends AppCompatActivity implements GalaxyT
                 if (galaxyView.getStep() != GalaxyTutorialView.Step.VOICE_REQUEST) return;
                 long elapsed = attemptWindowStartedAt == 0L ? 0L
                         : SystemClock.elapsedRealtime() - attemptWindowStartedAt;
-                if (!speechStartedInAttempt && elapsed < LISTENING_GRACE_MS) {
+                boolean recoverable = error == SpeechRecognizer.ERROR_NO_MATCH
+                        || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                        || error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY;
+                if (recoverable && recoverableRecognitionErrors < 3) {
+                    recoverableRecognitionErrors++;
+                    speechHandler.postDelayed(TutorialActivity.this::startListening,
+                            error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ? 700L : 300L);
+                } else if (!speechStartedInAttempt && elapsed < LISTENING_GRACE_MS) {
                     speechHandler.postDelayed(TutorialActivity.this::startListening, 350L);
                 } else {
                     showSingleRecognitionError();
@@ -182,6 +190,7 @@ public final class TutorialActivity extends AppCompatActivity implements GalaxyT
 
     private void beginInitialListening() {
         if (galaxyView.getStep() != GalaxyTutorialView.Step.VOICE_REQUEST) return;
+        recoverableRecognitionErrors = 0;
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED) {
             startListening();
@@ -203,11 +212,13 @@ public final class TutorialActivity extends AppCompatActivity implements GalaxyT
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR");
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ko-KR");
         intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
-        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 5000L);
-        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1800L);
-        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1200L);
+        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 2500L);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2200L);
+        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1600L);
+        intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
         listening = true;
         speechRecognizer.startListening(intent);
     }
@@ -215,12 +226,13 @@ public final class TutorialActivity extends AppCompatActivity implements GalaxyT
     private void showSpeechResult(Bundle bundle, boolean isFinal) {
         ArrayList<String> matches = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
         if (matches == null || matches.isEmpty()) return;
-        String text = matches.get(0);
+        String text = bestRecognitionCandidate(bundle, matches);
         if (isFinal) listening = false;
         if (galaxyView.getStep() != GalaxyTutorialView.Step.VOICE_REQUEST) return;
         galaxyView.setVoiceTranscript(text);
         if (isFinal && galaxyView.getStep() == GalaxyTutorialView.Step.VOICE_REQUEST) {
             if (isFontSizeRequest(text)) {
+                recoverableRecognitionErrors = 0;
                 speechHandler.postDelayed(galaxyView::showRecognizedRequest, 450L);
             } else {
                 showSingleRecognitionError();
@@ -248,12 +260,30 @@ public final class TutorialActivity extends AppCompatActivity implements GalaxyT
     }
 
     private boolean isFontSizeRequest(String text) {
-        String normalized = text.toLowerCase(Locale.KOREAN).replace(" ", "");
+        String normalized = text.toLowerCase(Locale.KOREAN).replaceAll("[\\s,.!?]", "");
         boolean hasFont = normalized.contains("글자") || normalized.contains("글씨")
-                || normalized.contains("폰트") || normalized.contains("font");
+                || normalized.contains("글꼴") || normalized.contains("폰트")
+                || normalized.contains("텍스트") || normalized.contains("font");
         boolean hasIncrease = normalized.contains("크게") || normalized.contains("키워")
-                || normalized.contains("키우") || normalized.contains("확대");
+                || normalized.contains("키우") || normalized.contains("늘려")
+                || normalized.contains("확대") || normalized.contains("커지게");
         return hasFont && hasIncrease;
+    }
+
+    private String bestRecognitionCandidate(Bundle bundle, ArrayList<String> matches) {
+        float[] confidence = bundle.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES);
+        String best = matches.get(0);
+        float bestScore = Float.NEGATIVE_INFINITY;
+        for (int index = 0; index < matches.size(); index++) {
+            String candidate = matches.get(index);
+            float score = confidence != null && index < confidence.length ? confidence[index] : 0f;
+            if (isFontSizeRequest(candidate)) score += 2f;
+            if (score > bestScore) {
+                best = candidate;
+                bestScore = score;
+            }
+        }
+        return best;
     }
 
     private String messageFor(GalaxyTutorialView.Step step) {

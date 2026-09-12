@@ -22,6 +22,7 @@
         <activity android:name=".HomeActivity" android:exported="false" />
         <activity android:name=".MenuActivity" android:exported="false" />
         <activity android:name=".TutorialActivity" android:exported="false" />
+        <activity android:name=".AccessibilityPermissionTutorialActivity" android:exported="false" />
 
         <service
             android:name=".service.overlay.ClickOverlayService"
