@@ -6,6 +6,7 @@ import org.json.JSONObject;
 
 public final class AccessibilityNodeSnapshot {
     public final String nodeId;
+    public final int windowId;
     public final String parentId;
     public final boolean visibleToUser;
     public final String packageName;
@@ -38,9 +39,11 @@ public final class AccessibilityNodeSnapshot {
             boolean selected,
             boolean scrollable,
             boolean checkable,
-            Float progress
+            Float progress,
+            int windowId
     ) {
         this.nodeId = nodeId;
+        this.windowId = windowId;
         this.parentId = parentId;
         this.visibleToUser = visibleToUser;
         this.packageName = packageName;
@@ -61,6 +64,7 @@ public final class AccessibilityNodeSnapshot {
     JSONObject toJson() throws JSONException {
         JSONObject object = new JSONObject();
         object.put("node_id", nodeId);
+        object.put("window_id", windowId);
         object.put("parent_id", nullable(parentId));
         object.put("visible_to_user", visibleToUser);
         object.put("package_name", nullable(packageName));

@@ -37,6 +37,8 @@ class SafetyLevel(str, Enum):
 
 
 class VerificationStatus(str, Enum):
+    WAITING_FOR_ACTION = "WAITING_FOR_ACTION"
+    WAITING_FOR_OBSERVATION = "WAITING_FOR_OBSERVATION"
     SUCCESS = "SUCCESS"
     DONE = "DONE"
     NO_CHANGE = "NO_CHANGE"
@@ -118,6 +120,7 @@ class AccessibilityNode:
     extras: JsonDict = field(default_factory=dict)
     parent_id: str | None = None
     visible_to_user: bool = True
+    window_id: int | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -173,6 +176,7 @@ class NormalizedNode:
     position_hint: Literal["top", "middle", "bottom", "unknown"] = "unknown"
     value: float | None = None
     similarity_ref: str | None = None
+    window_id: int | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -203,9 +207,36 @@ class TaskState:
     package_candidates: tuple[str, ...] = ()
     role_hints: tuple[str, ...] = ()
     confidence_threshold: float = 0.75
+    verification_only: bool = False
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
+class TargetSelector:
+    synonym_keys: tuple[str, ...] = ()
+    package_candidates: tuple[str, ...] = ()
+    resource_ids: tuple[str, ...] = ()
+    context_keywords: tuple[str, ...] = ()
+    excluded_keywords: tuple[str, ...] = ()
+    allow_unlabelled_in_context: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimePolicy:
+    retry_limit: int = 2
+    settle_ms: int = 500
+    observation_timeout_ms: int = 5000
+    recovery_limit: int = 3
+    max_failed_attempts: int = 6
+
+    def __post_init__(self):
+        if any(value <= 0 for value in (self.retry_limit, self.settle_ms,
+                self.observation_timeout_ms, self.recovery_limit, self.max_failed_attempts)):
+            raise ValueError("Runtime policy limits must be positive")
+        if self.observation_timeout_ms < self.settle_ms:
+            raise ValueError("Observation timeout must allow the settling interval")
 
 
 @dataclass(frozen=True, slots=True)
@@ -222,6 +253,10 @@ class Transition:
     allow_scroll: bool = False
     requires_user_action: bool = True
     confirmation_message: str | None = None
+    selector: TargetSelector = field(default_factory=TargetSelector)
+    priority: int = 0
+    verification_predicate: str = "state_reached"
+    completes_task: bool = False
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -233,13 +268,14 @@ class TaskGraph:
     states: dict[str, TaskState]
     transitions: tuple[Transition, ...]
     synonyms: dict[str, tuple[str, ...]]
+    policy: RuntimePolicy = field(default_factory=RuntimePolicy)
 
     def transitions_from(self, state_id: str) -> tuple[Transition, ...]:
-        return tuple(
+        return tuple(sorted((
             transition
             for transition in self.transitions
             if transition.from_state == state_id
-        )
+        ), key=lambda transition: (transition.priority, transition.transition_id)))
 
     def state(self, state_id: str) -> TaskState:
         return self.states[state_id]
@@ -260,6 +296,8 @@ class MatchResult:
     confidence: float
     transition_id: str | None = None
     fallback_reason: str | None = None
+    target_key: str | None = None
+    score_gap: float | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -294,6 +332,10 @@ class VerificationResult:
     current_state_id: str
     expected_state_id: str | None = None
     message: str | None = None
+    attempt_id: str | None = None
+    count_attempt: bool = False
+    task_completed: bool = False
+    evidence: str | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -306,6 +348,7 @@ class UserActionEvent:
     target_node_id: str | None = None
     target_bounds: Bounds | None = None
     occurred_at_ms: int | None = None
+    event_id: str | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -323,6 +366,9 @@ class AgentTurnRequest:
     user_confirmation: Literal["accepted", "rejected"] | None = None
     user_action_event: UserActionEvent | None = None
     screen_bounds: Bounds | None = None
+    observation_id: str | None = None
+    captured_at_ms: int | None = None
+    active_window_id: int | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -333,6 +379,8 @@ class ScreenSnapshot:
     state_id: str
     fingerprint: str
     slider_values: dict[str, float] = field(default_factory=dict)
+    observation_id: str | None = None
+    captured_at_ms: int | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -344,6 +392,7 @@ class ReplanDecision:
     reason: str | None = None
     excluded_node_ids: tuple[str, ...] = ()
     prefer_current_state: bool = True
+    strategy: str = "continue"
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -363,6 +412,12 @@ class AgentSessionState:
     transition_attempts: dict[str, int] = field(default_factory=dict)
     last_snapshot: ScreenSnapshot | None = None
     last_user_action_event: UserActionEvent | None = None
+    pending_attempt: JsonDict | None = None
+    failed_target_keys: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    processed_event_keys: tuple[str, ...] = ()
+    recovery_count: int = 0
+    total_failed_attempts: int = 0
+    task_completed: bool = False
 
     def to_dict(self) -> JsonDict:
         return asdict(self)

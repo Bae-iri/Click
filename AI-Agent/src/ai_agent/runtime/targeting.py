@@ -1,0 +1,65 @@
+"""Graph-owned selectors shared by matching and result verification."""
+from hashlib import sha256
+
+from ai_agent.runtime.keywords import any_keyword_matches, normalize_text
+from ai_agent.runtime.types import ActionType, NormalizedNode, TaskGraph, Transition
+
+
+def target_key(node: NormalizedNode) -> str:
+    # Stable across tree-index and rectangle changes; never persist arbitrary UI text.
+    identity = (node.package_name or '', node.resource_id or '', node.role, normalize_text(node.label))
+    return sha256('\x1f'.join(identity).encode()).hexdigest()
+
+
+def selector_keywords(transition: Transition, graph: TaskGraph) -> tuple[str, ...]:
+    keys = transition.selector.synonym_keys
+    # Compatibility for older graphs without explicit references.
+    if not keys:
+        keys = tuple(key for key, words in graph.synonyms.items()
+                     if set(map(normalize_text, words)) & set(map(normalize_text, transition.target_keywords)))
+    return tuple(dict.fromkeys((*transition.target_keywords,
+        *(word for key in keys for word in graph.synonyms.get(key, ())))))
+
+
+def eligible_nodes(transition: Transition, nodes: tuple[NormalizedNode, ...], graph: TaskGraph):
+    state = graph.states[transition.from_state]
+    roles = {'menu_item': {'menu_item', 'button'}, 'slider': {'slider'},
+             'app_icon': {'app_icon'}, 'toggle': {'toggle'}, 'radio': {'radio'}}
+    allowed_roles = roles.get(transition.target_role, {transition.target_role})
+    packages = transition.selector.package_candidates or state.package_candidates
+    eligible = []
+    for node in nodes:
+        if not node.enabled or node.role not in allowed_roles:
+            continue
+        if packages and node.package_name not in packages:
+            continue
+        if transition.action_type in {ActionType.TAP, ActionType.DRAG} and not node.actionable:
+            continue
+        if transition.action_type == ActionType.DRAG and node.role != 'slider':
+            continue
+        if not node.bounds or node.bounds[2] <= node.bounds[0] or node.bounds[3] <= node.bounds[1]:
+            continue
+        if any_keyword_matches(node.label, transition.selector.excluded_keywords):
+            continue
+        eligible.append(node)
+    return tuple(eligible)
+
+
+def selector_evidence(node, transition, nodes, graph) -> tuple[float, str]:
+    """Return an ordinal evidence score, never a calibrated probability."""
+    selector = transition.selector
+    if node.resource_id and node.resource_id in selector.resource_ids:
+        return 1.0, 'resource_id'
+    keywords = selector_keywords(transition, graph)
+    if normalize_text(node.label) in {normalize_text(word) for word in keywords}:
+        return 0.9, 'exact_label'
+    if any_keyword_matches(node.label, keywords):
+        return 0.8, 'keyword'
+    if not node.label and selector.allow_unlabelled_in_context:
+        # A page title may name a single unlabelled control, never a named other setting.
+        context = ' '.join(n.label for n in nodes if n.package_name == node.package_name
+                           and n.role == 'text' and not n.actionable)
+        if any_keyword_matches(context, selector.context_keywords):
+            if len(eligible_nodes(transition, nodes, graph)) == 1:
+                return 0.8, 'unique_control_in_context'
+    return 0.0, 'none'

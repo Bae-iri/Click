@@ -60,6 +60,7 @@ class RuntimeAgentAdapter:
             accessibility_tree=tuple(
                 AccessibilityNode(
                     node_id=node.node_id,
+                    window_id=node.window_id,
                     parent_id=node.parent_id,
                     visible_to_user=node.visible_to_user,
                     package_name=node.package_name or package_name,
@@ -101,6 +102,10 @@ class RuntimeAgentAdapter:
                 screen_height=vision_snapshot.screen_height or screen_height,
                 captured_at_ms=vision_snapshot.captured_at_ms,
             ) if vision_snapshot else None,
+            active_window_id=tree.active_window_id if tree else None,
+            observation_id=tree.observation_id if tree else None,
+            captured_at_ms=(tree.captured_at_ms if tree.captured_at_ms is not None else
+                int(tree.captured_at.timestamp() * 1000) if tree.captured_at else None) if tree else None,
             user_confirmation=request.user_confirmation,
             user_action_event=self._action_event(request),
         )
@@ -115,13 +120,8 @@ class RuntimeAgentAdapter:
         graph = next((g for g in self.runtime.task_graphs.values()
                       if g.definition.task_id == result.task_id), None)
         step, total_steps = graph_progress(graph, result.current_state_id)
-        task_completed = bool(
-            result.verification_result
-            and result.verification_result.status.value in {"SUCCESS", "DONE"}
-            and total_steps > 0 and step == total_steps
-        )
-        if task_completed:
-            command_type = "done"
+        # Progress is presentation only; completion requires the runtime predicate.
+        task_completed = guide.command_type.value == "done"
         status = {
             "confirmation": "WAITING_CONFIRMATION",
             "done": "COMPLETED",
@@ -141,7 +141,7 @@ class RuntimeAgentAdapter:
             step=step,
             total_steps=total_steps,
             state_id=result.current_state_id,
-            state_confidence=result.match_result.confidence if result.match_result else 0.0,
+            state_confidence=result.debug.get("state_score", 0.0),
             task_status=status,
             guide_command=GuideCommandResponse(
                 guide_command_id=guide.guide_command_id,
@@ -158,12 +158,14 @@ class RuntimeAgentAdapter:
             ),
             metadata={
                 "runtime": "ai_agent.runtime",
+                "runtime_decision": result.debug.get("replan_decision"),
+                "score_semantics": "heuristic_scores_not_probabilities",
                 "typed_goal": result.typed_goal.to_dict() if result.typed_goal else None,
                 "verification": {
                     "result": verification,
                     "slider_value_increased": bool(
                         verification and verification.get("status") == "SUCCESS"
-                        and verification.get("message") == "Slider value increased in the requested direction."
+                        and verification.get("evidence") == "target_value_increased"
                     ),
                     "slider_values": slider_values,
                 },
@@ -184,4 +186,5 @@ class RuntimeAgentAdapter:
             target_node_id=event.target_node_id,
             target_bounds=event.target_bounds,
             occurred_at_ms=event.occurred_at_ms,
+            event_id=event.event_id,
         )

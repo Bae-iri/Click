@@ -87,6 +87,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean homeScanTowardNext = true;
     private String homeScanPreviousFingerprint;
     private String pendingActionType;
+    private long pendingActionOccurredAtMs;
+    private boolean forceNextObservation;
     private String lastGuideCommandId;
     private String lastTargetNodeId;
     private int[] lastTargetBounds;
@@ -107,7 +109,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (OverlayActions.ACTION_COLLAPSE.equals(intent.getAction()) && overlayView != null) {
                 overlayView.collapse();
             } else if (OverlayActions.ACTION_SNAPSHOT_UPDATED.equals(intent.getAction())) {
-                sendAgentTurn(null, false);
+                boolean force = forceNextObservation;
+                forceNextObservation = false;
+                sendAgentTurn(null, force);
             }
         }
     };
@@ -654,6 +658,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         homeScanTowardNext = true;
         homeScanPreviousFingerprint = null;
         pendingActionType = null;
+        forceNextObservation = false;
         lastGuideCommandId = null;
         lastTargetNodeId = null;
         lastTargetBounds = null;
@@ -684,6 +689,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     overlayView.setRecognizedSpeech("설정 앱을 찾기 위해 홈 화면을 이동하고 있어요…");
                 }
                 boolean swiped = ClickAccessibilityService.swipeHomePage(homeScanTowardNext);
+                pendingActionOccurredAtMs = System.currentTimeMillis();
                 pendingActionType = swiped
                         ? AgentActionEvents.SCROLL_COMPLETED : AgentActionEvents.SCROLL_FAILED;
                 if (swiped) return;
@@ -699,7 +705,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 .withSessionState(agentSessionVersion, confirmation == null ? null : agentConfirmationId);
         if (pendingActionType != null) {
             request.withActionEvent(AgentActionEvents.of(
-                    pendingActionType, lastGuideCommandId, lastTargetNodeId, lastTargetBounds));
+                    pendingActionType, lastGuideCommandId, lastTargetNodeId, lastTargetBounds, pendingActionOccurredAtMs));
         }
         if (attachVisionNextTurn) {
             request.withVisionSnapshot(AgentVisionSnapshot.fromScreen(snapshot, visionConsented));
@@ -805,6 +811,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         settingsOpenButton.setOnClickListener(view -> {
             hideSettingsOpenButton();
             // After a manual recovery the contract wants a fresh tree + manual_override.
+            pendingActionOccurredAtMs = System.currentTimeMillis();
             pendingActionType = AgentActionEvents.MANUAL_OVERRIDE;
             try {
                 startActivity(new Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
@@ -909,6 +916,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (!requiresConsent || visionConsented) {
             visionConsented = visionConsented || !requiresConsent;
             attachVisionNextTurn = true;
+            pendingActionOccurredAtMs = System.currentTimeMillis();
             pendingActionType = AgentActionEvents.OBSERVE_ONLY;
             speechHandler.postDelayed(() -> sendAgentTurn(null, true), 500L);
             return;
@@ -937,8 +945,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             // elements (no screenshot, so no consent needed).
             attachVisionNextTurn = true;
         }
+        pendingActionOccurredAtMs = System.currentTimeMillis();
         pendingActionType = AgentActionEvents.OBSERVE_ONLY;
-        speechHandler.postDelayed(() -> sendAgentTurn(null, true), 700L);
+        speechHandler.postDelayed(() -> {
+            forceNextObservation = true;
+            ClickAccessibilityService.requestFreshSnapshot();
+        }, 700L);
     }
 
     private void executeScroll(AgentTurnContract.GuideCommand command) {
@@ -947,6 +959,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 ? "down" : command.renderPolicy.optString("direction", "down");
         boolean forward = !"up".equalsIgnoreCase(direction) && !"backward".equalsIgnoreCase(direction);
         boolean performed = ClickAccessibilityService.performScroll(forward);
+        pendingActionOccurredAtMs = System.currentTimeMillis();
         pendingActionType = performed
                 ? AgentActionEvents.SCROLL_COMPLETED : AgentActionEvents.SCROLL_FAILED;
         speechHandler.postDelayed(() -> sendAgentTurn(null, true), performed ? 650L : 400L);
@@ -960,6 +973,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (accepted) {
                 visionConsented = true;
                 attachVisionNextTurn = true;
+                pendingActionOccurredAtMs = System.currentTimeMillis();
                 pendingActionType = AgentActionEvents.OBSERVE_ONLY;
                 sendAgentTurn(null, true);
             } else if (overlayView != null) {

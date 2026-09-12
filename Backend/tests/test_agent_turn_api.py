@@ -180,7 +180,7 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
             "request_id": "slider-4",
             "session_id": "slider-session",
             "expected_version": unchanged.json()["session_version"],
-            "accessibility_tree": slider_tree(4),
+            "accessibility_tree": {**slider_tree(4), "captured_at": "2026-08-30T10:00:01Z"},
             "user_action_event": {
                 "action_type": "drag_completed",
                 "guide_command_id": accepted.json()["guide_command"]["guide_command_id"],
@@ -273,6 +273,7 @@ def test_empty_accessibility_tree_returns_runtime_fallback_contract() -> None:
     assert body["metadata"]["debug"]["observation"]["accessibility_node_count"] == 0
     assert body["metadata"]["debug"]["fallback"]["type"] == "vision_fallback"
     assert body["guide_command"]["render_policy"] == {
+        "runtime_strategy": "reobserve", "attempt_id": None, "step_id": None,
         "avoid_covering_target": False,
         "preferred_position": "center",
         "vision_fallback": {

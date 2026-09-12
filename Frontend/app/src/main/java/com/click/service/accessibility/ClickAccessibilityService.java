@@ -72,6 +72,14 @@ public final class ClickAccessibilityService extends AccessibilityService {
         super.onDestroy();
     }
 
+    /** Collect a new observation; resending LatestScreenSnapshot is not a fresh read. */
+    public static void requestFreshSnapshot() {
+        ClickAccessibilityService service = connectedService.get();
+        if (service != null && service.mainHandler != null) {
+            service.mainHandler.post(service.captureRunnable);
+        }
+    }
+
     public static WindowManager accessibilityWindowManager() {
         ClickAccessibilityService service = connectedService.get();
         return service == null ? null : service.getSystemService(WindowManager.class);
