@@ -1,5 +1,7 @@
 # Safety Gate
 
+**Current backend implementation:** [AI-independent backend completion](backend-completion.md) supersedes historical planning below. Approval IDs, history/feedback, account recovery, consent withdrawal and operations tooling are now implemented; real AI/device/cloud verification remains outstanding.
+
 현재 graph의 safety_level과 runtime confirmation 처리를 재사용한다. `safety/safety_gate.py`는 전이의 등급을 반환하는 규칙 기반 코드이며, 전 서비스의 보안 검증이 완성됐다는 뜻은 아니다.
 
 | 행동 | 정책 | 앱·서버의 책임 |

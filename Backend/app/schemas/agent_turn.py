@@ -111,6 +111,7 @@ class AgentTurnRequest(BaseModel):
     accessibility_tree: AccessibilityTree | None = None
     vision_snapshot: VisionSnapshot | None = None
     user_confirmation: Literal["accepted", "rejected"] | None = None
+    confirmation_id: str | None = Field(default=None, min_length=36, max_length=36)
     user_action_event: "UserActionEventRequest | None" = None
 
     @model_validator(mode="after")

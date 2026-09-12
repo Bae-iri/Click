@@ -69,6 +69,7 @@ class GuideCommandResponse(BaseModel):
     guide_command_id: str
     command_type: Literal["highlight", "gesture_hint", "confirmation", "done", "blocked"]
     action_type: Literal["tap", "drag", "scroll", "observe_only"]
+    proposed_action: Literal["tap", "drag", "scroll"] | None = None
     message: str
     target_node_id: str | None = None
     target_label: str | None = None
@@ -100,4 +101,3 @@ class SessionResponse(BaseModel):
     step: int
     created_at: datetime
     updated_at: datetime
-

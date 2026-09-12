@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import sys
+import os
+import secrets
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
@@ -27,10 +29,14 @@ from app.database import Base, build_engine, build_session_factory, session_scop
 from app import models as _models  # noqa: E402,F401
 from app.repositories.sessions import InMemorySessionRepository  # noqa: E402
 from app.services.agent_turn import AgentTurnService  # noqa: E402
+from app.api.v1.endpoints.history import build_router as build_history_router
+from app.api.v1.endpoints.account_actions import build_router as build_account_actions
+from app.services.account_actions import AccountActionService
+from app.core.metrics import RequestMetrics
 from app.services.guidance import GuidanceService  # noqa: E402
 
 
-def create_app(database_url: str | None = None) -> FastAPI:
+def create_app(database_url: str | None = None, *, enable_legacy: bool = False) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         try:
@@ -42,7 +48,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
         title="Click Backend API",
         version="0.1.0",
         lifespan=lifespan,
-        responses={code: {"model": ErrorEnvelope} for code in (401, 403, 404, 409, 410, 413, 422, 429, 500, 503, 504)},
+        responses={code: {"model": ErrorEnvelope} for code in (400, 401, 403, 404, 409, 410, 413, 422, 429, 500, 502, 503, 504)},
         description="Android 설정 앱 위 오버레이 안내를 위한 MVP API",
     )
     engine = build_engine(database_url)
@@ -58,20 +64,35 @@ def create_app(database_url: str | None = None) -> FastAPI:
     auth_service = AuthService(session_factory)
     auth_router, principal = build_auth(auth_service)
     app.state.auth_service = auth_service
-    app.add_middleware(HttpBoundary)
+    actions = AccountActionService(session_factory)
+    app.state.account_actions = actions
+    metrics = RequestMetrics()
+    app.add_middleware(HttpBoundary, metrics=metrics)
     install_error_handlers(app)
 
     def get_db():
         yield from session_scope(session_factory)
 
     app.include_router(auth_router, prefix="/api/v1")
-    app.include_router(build_guidance_router(guidance_service, principal), prefix="/api/v1")
+    app.include_router(build_account_actions(actions, auth_service, principal), prefix="/api/v1")
+    if enable_legacy:
+        app.include_router(build_guidance_router(guidance_service, principal), prefix="/api/v1")
     app.include_router(build_agent_router(turn_service, principal), prefix="/api/v1")
+    app.include_router(build_history_router(turn_service, principal), prefix="/api/v1")
     app.include_router(build_users_router(get_db, principal), prefix="/api/v1")
 
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/ops/metrics", tags=["system"])
+    def operational_metrics(authorization: str | None = Header(None)):
+        token = os.getenv("OPS_TOKEN", "")
+        if len(token) < 32:
+            raise HTTPException(404)
+        if not secrets.compare_digest(authorization or "", "Bearer " + token):
+            raise HTTPException(401)
+        return metrics.snapshot()
 
     @app.get("/ready", tags=["system"], responses={503: {"description": "Database unavailable or schema missing"}})
     def readiness():
@@ -84,6 +105,10 @@ def create_app(database_url: str | None = None) -> FastAPI:
                     return JSONResponse(status_code=503, content={
                         "status": "not_ready", "database": "schema_missing",
                     })
+                for name, table in Base.metadata.tables.items():
+                    columns = {column["name"] for column in inspect(connection).get_columns(name)}
+                    if not set(table.columns.keys()).issubset(columns):
+                        return JSONResponse(status_code=503, content={"status": "not_ready", "database": "schema_missing"})
         except SQLAlchemyError:
             return JSONResponse(status_code=503, content={
                 "status": "not_ready", "database": "unavailable",

@@ -40,6 +40,7 @@ class PersonalizationService:
         return self._user_response(self.repository.get_user(user_id))
 
     def update_profile(self, user_id: str, request: UpdateProfileRequest) -> UIProfileResponse:
+        self.repository.lock_user(user_id)
         profile = self.repository.get_profile(user_id)
         for field, value in request.model_dump(exclude_none=True).items():
             setattr(profile, field, value)
@@ -52,6 +53,13 @@ class PersonalizationService:
         return ConsentResponse.model_validate(consent)
 
     def record_event(self, user_id: str, request: CreateUIEventRequest) -> UIEventResponse:
+        self.repository.lock_user(user_id)
+        if request.session_id:
+            from app.models.agent_session import AgentSession
+            from fastapi import HTTPException
+            row = self.repository.session.get(AgentSession, request.session_id)
+            if row is None or row.user_id != user_id:
+                raise HTTPException(403)
         consent = self.repository.latest_consent(user_id, "personalization")
         if consent is None or not consent.consented:
             raise ConsentRequiredError("Personalization consent is required before recording UI events.")

@@ -1,6 +1,6 @@
 # Click Backend
 
-**Latest development work:** [Week 4](docs/week4.md): privacy boundaries, graph progress, bounded AI execution and diagnostic/event retention.
+**최신 구현:** [AI 독립 백엔드 완료·인수 현황](docs/backend-completion.md). 승인·이력·피드백·계정 복구·운영 도구와 실제 AI/앱 연결 조건을 확인한다.
 
 3주 차에 신규 안내 세션을 DB로 옮겼다. [현재 세션 API 계약](docs/week3.md)에 따라 후속 turn에 expected_version을 보내야 한다. 레거시 `/sessions`는 메모리 호환 경로다.
 

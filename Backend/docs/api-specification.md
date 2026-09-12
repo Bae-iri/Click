@@ -1,5 +1,7 @@
 # API Specification
 
+**Current backend implementation:** [AI-independent backend completion](backend-completion.md) supersedes historical planning below. Approval IDs, history/feedback, account recovery, consent withdrawal and operations tooling are now implemented; real AI/device/cloud verification remains outstanding.
+
 **Current week 4 contract:** [Privacy, graph progress, event allowlist, 503/504](week4.md). This takes precedence over historical examples below.
 
 **3주 차:** [세션 계약](week3.md) 참조. `GET /api/v1/agent/sessions/{id}`와 `POST /api/v1/agent/sessions/{id}/cancel`을 구현했다. 신규 turn 응답에는 session_version이 있고 후속 요청의 expected_version은 필수다. 요청 ID·본문 hash·중립 응답은 이제 DB에 저장하며 같은 ID의 다른 본문은 409로 거절한다.

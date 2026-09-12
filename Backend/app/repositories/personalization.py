@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.personalization import Consent, UIEvent, User, UserUIProfile
@@ -34,6 +34,11 @@ class PersonalizationRepository:
     def get_profile(self, user_id: str) -> UserUIProfile:
         return self.get_user(user_id).profile
 
+    def lock_user(self, user_id):
+        changed = self.session.execute(update(User).where(User.id == user_id).values(id=user_id))
+        if changed.rowcount != 1:
+            raise UserNotFoundError(user_id)
+
     def save_profile(self, profile: UserUIProfile) -> UserUIProfile:
         self.session.add(profile)
         self.session.commit()
@@ -41,7 +46,12 @@ class PersonalizationRepository:
         return profile
 
     def record_consent(self, user_id: str, purpose: str, consented: bool, policy_version: str) -> Consent:
-        self.get_user(user_id)
+        self.lock_user(user_id)
+        if purpose == "personalization" and not consented:
+            self.session.execute(delete(UIEvent).where(UIEvent.user_id == user_id))
+            self.session.execute(update(UserUIProfile).where(UserUIProfile.user_id == user_id).values(
+                comprehension_level="unknown", explanation_depth="normal", prefers_step_by_step=True,
+                confidence_score=0.0, evidence_count=0))
         consent = Consent(
             user_id=user_id,
             purpose=purpose,

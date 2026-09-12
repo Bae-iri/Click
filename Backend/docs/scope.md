@@ -1,5 +1,7 @@
 # 기능 범위와 책임
 
+**Current backend implementation:** [AI-independent backend completion](backend-completion.md) supersedes historical planning below. Approval IDs, history/feedback, account recovery, consent withdrawal and operations tooling are now implemented; real AI/device/cloud verification remains outstanding.
+
 아래 표는 1주 차 조사 기준이다. **F11 인증·F02 본인 접근·F04 입력 제한·F05 메모리 세션 소유권은 2주 차에 구현**했으며 최신 완료·미완료 구분은 [2주 차 결과](week2.md)를 따른다.
 
 ## 제품 기준

@@ -1,5 +1,7 @@
 # 백엔드 개발 현황
 
+**Current backend implementation:** [AI-independent backend completion](backend-completion.md) supersedes historical planning below. Approval IDs, history/feedback, account recovery, consent withdrawal and operations tooling are now implemented; real AI/device/cloud verification remains outstanding.
+
 **최신: [4주 차 개인정보 처리 경계·AI 안정성](week4.md).** 아래 1~3주 차 설명에는 당시 기록이 포함된다.
 
 **최신: [3주 차 안내 세션 DB·복구·조회·취소·만료](week3.md).** 신규 turn 경로는 영속 저장을 사용하고 후속 요청에 expected_version이 필요하다. 아래 1·2주 차 문서는 당시 기록을 포함한다.

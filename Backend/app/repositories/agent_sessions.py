@@ -9,6 +9,8 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.models.agent_session import AgentCheckpoint, AgentSession, AgentTurn
 from app.schemas.agent_session import AgentSessionResponse
+from app.services.safety import save_confirmation
+from app.models.lifecycle import SafetyConfirmation
 
 ACTIVE = ("IN_PROGRESS", "WAITING_CONFIRMATION")
 
@@ -121,6 +123,10 @@ class AgentSessionRepository:
     def finish(self, request, claim, response, checkpoint, schema_version, graph_version):
         now = int(self.clock())
         with self.factory() as db:
+            if request.user_confirmation == "accepted":
+                approval = db.get(SafetyConfirmation, request.session_id)
+                if approval is None or approval.id != request.confirmation_id or approval.expires_at <= now:
+                    self.conflict("CONFIRMATION_INVALID")
             updated = db.execute(update(AgentSession).where(AgentSession.id == request.session_id,
                 AgentSession.user_id == request.user_id, AgentSession.version == claim["version"],
                 AgentSession.lease_token == claim["token"], AgentSession.lease_until > now,
@@ -145,6 +151,7 @@ class AgentSessionRepository:
                 db.delete(stored)
             turn = db.scalar(select(AgentTurn).where(AgentTurn.user_id == request.user_id,
                                                      AgentTurn.request_id == request.request_id))
+            save_confirmation(db, request, response, now)
             turn.response = response.model_dump(mode="json")
             db.commit()
 
@@ -181,6 +188,7 @@ class AgentSessionRepository:
             # Cancelled guides must never be replayed; clear payloads immediately.
             db.execute(update(AgentTurn).where(AgentTurn.session_id == session_id).values(response=None))
             db.execute(delete(AgentCheckpoint).where(AgentCheckpoint.session_id == session_id))
+            db.execute(delete(SafetyConfirmation).where(SafetyConfirmation.session_id == session_id))
             db.commit()
             db.refresh(row)
             return self.describe(db, row, now)

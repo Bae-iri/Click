@@ -32,6 +32,8 @@ jobs:
         working-directory: AI-Agent
       - run: python scripts/smoke_check.py
         working-directory: Backend
+      - run: python scripts/load_check.py
+        working-directory: Backend
       - run: python scripts/postgres_check.py
         working-directory: Backend
         env:

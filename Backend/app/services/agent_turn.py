@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from app.clients.checkpoint import SCHEMA_VERSION, capture, graph_version, restore, safe_response
 from app.clients.runtime_agent import RuntimeAgentAdapter
 from app.clients.turn_executor import execute
+from app.services.safety import validate_confirmation, validate_output
 from app.repositories.agent_sessions import AgentSessionRepository
 from app.repositories.personalization import PersonalizationRepository, UserNotFoundError
 from app.schemas.agent_turn import AgentTurnResponse
@@ -35,6 +36,7 @@ class AgentTurnService:
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
             return self.personalize(safe_response(AgentTurnResponse.model_validate(claim["cached"])), request.user_id)
         try:
+            approved = validate_confirmation(self.session_factory, request, int(self.repository.clock()))
             if claim["checkpoint"] is not None and (
                 claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] != graph_version()
             ):
@@ -43,6 +45,7 @@ class AgentTurnService:
             store = restore(claim["checkpoint"])
             engine = self.engine_factory(session_store=store)
             response = safe_response(execute(lambda: engine.handle_turn(request), self.timeout_seconds))
+            validate_output(request, response, approved)
             response.session_version = claim["version"] + 1
             checkpoint = capture(store, request.session_id)
             self.repository.finish(request, claim, response, checkpoint, SCHEMA_VERSION, graph_version())
@@ -56,6 +59,7 @@ class AgentTurnService:
         with self.session_factory() as db:
             repository = PersonalizationRepository(db)
             try:
+                repository.lock_user(user_id)
                 consent = repository.latest_consent(user_id, "personalization")
                 if consent is None or not consent.consented:
                     return response
