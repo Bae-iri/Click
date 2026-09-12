@@ -1,5 +1,7 @@
 # FE/BE Agent 연동 계약
 
+**Week 4 contract update:** [Backend week4](../Backend/docs/week4.md) takes precedence over older examples: graph-derived step/total_steps, reduced debug fields, no raw-image external processing, event metadata allowlist, and 503/504 retry handling. Use accessibility data or consented on-device OCR elements.
+
 ## 3주 차 세션 변경
 
 신규 turn 세션은 DB에 저장한다. 첫 turn 응답의 `session_version`을 보관하고 이후 요청에 `expected_version`으로 보낸다. 정확한 재전송은 이전 ID·본문·version을 그대로 유지한다. 409 응답은 `X-Conflict-Code`를 보고 처리 중 재시도와 오래된 화면 재수집을 구분한다. 조회 `GET /api/v1/agent/sessions/{id}`, 취소 `POST /api/v1/agent/sessions/{id}/cancel`이 추가됐다. 취소 이후 또는 최신 version보다 오래된 안내 응답은 적용하지 않는다.

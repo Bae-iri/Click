@@ -40,6 +40,7 @@ from ai_agent.fallback.llm_vlm_fallback import (
     vision_elements_to_accessibility_nodes,
 )
 from ai_agent.learning.trace_logger import TraceLogger
+from ai_agent.runtime.privacy import sanitize_request
 
 
 class ClickAgentEngine:
@@ -57,9 +58,13 @@ class ClickAgentEngine:
         self.similarity_scorer = similarity_scorer or default_similarity_scorer()
         self.vision_fallback = vision_fallback or LLMVLMFallback()
         self.trace_logger = trace_logger or TraceLogger()
-        self.traces = self.trace_logger.traces
+
+    @property
+    def traces(self):
+        return self.trace_logger.traces
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
+        request = sanitize_request(request)
         existing_session = self.session_store.get(request.session_id)
         validate_agent_turn_request(request, has_session=existing_session is not None)
 
@@ -436,9 +441,6 @@ def _observation_debug(
         "observed_packages": packages,
         "visible_roles": roles,
         "visible_tags": tags,
-        "label_sample": tuple(
-            node.label for node in normalized_nodes[:12] if node.label
-        ),
         "vision_status": vision_analysis.status if vision_analysis else "not_requested",
     })
     return raw_debug

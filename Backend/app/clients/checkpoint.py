@@ -2,6 +2,8 @@
 from dataclasses import asdict
 from hashlib import sha256
 import json
+from ai_agent.learning.trace_logger import diagnostic_payload
+from ai_agent.runtime.privacy import redact_text
 
 from ai_agent.runtime.session import InMemorySessionStore
 from ai_agent.runtime.tasks import TASK_GRAPHS
@@ -51,7 +53,8 @@ def safe_response(response):
 
     def clean(value):
         if isinstance(value, dict):
-            return {key: None if key == "target_label" else clean(item)
+            return {key: None if key == "target_label" else diagnostic_payload(item) if key == "debug"
+                    else redact_text(item) if key == "message" and isinstance(item, str) else clean(item)
                     for key, item in value.items() if key not in discarded}
         if isinstance(value, list):
             return [clean(item) for item in value]

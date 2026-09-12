@@ -6,6 +6,7 @@ from fastapi import HTTPException
 
 from app.clients.checkpoint import SCHEMA_VERSION, capture, graph_version, restore, safe_response
 from app.clients.runtime_agent import RuntimeAgentAdapter
+from app.clients.turn_executor import execute
 from app.repositories.agent_sessions import AgentSessionRepository
 from app.repositories.personalization import PersonalizationRepository, UserNotFoundError
 from app.schemas.agent_turn import AgentTurnResponse
@@ -18,6 +19,9 @@ class AgentTurnService:
         self.repository = AgentSessionRepository(session_factory,
             idle_seconds=int(os.getenv("AGENT_SESSION_IDLE_SECONDS", "1800")),
             lease_seconds=int(os.getenv("AGENT_TURN_LEASE_SECONDS", "60")))
+        self.timeout_seconds = float(os.getenv("AGENT_TURN_TIMEOUT_SECONDS", "20"))
+        if not 0 < self.timeout_seconds < self.repository.lease_seconds:
+            raise ValueError("Turn timeout must be positive and shorter than the lease")
 
     def handle_turn(self, request):
         canonical = json.dumps(request.model_dump(mode="json"), sort_keys=True,
@@ -29,7 +33,7 @@ class AgentTurnService:
                 claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] != graph_version()
             ):
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
-            return self.personalize(AgentTurnResponse.model_validate(claim["cached"]), request.user_id)
+            return self.personalize(safe_response(AgentTurnResponse.model_validate(claim["cached"])), request.user_id)
         try:
             if claim["checkpoint"] is not None and (
                 claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] != graph_version()
@@ -38,7 +42,7 @@ class AgentTurnService:
             # An isolated runtime per turn prevents cross-request state corruption.
             store = restore(claim["checkpoint"])
             engine = self.engine_factory(session_store=store)
-            response = safe_response(engine.handle_turn(request))
+            response = safe_response(execute(lambda: engine.handle_turn(request), self.timeout_seconds))
             response.session_version = claim["version"] + 1
             checkpoint = capture(store, request.session_id)
             self.repository.finish(request, claim, response, checkpoint, SCHEMA_VERSION, graph_version())

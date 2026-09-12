@@ -1,5 +1,7 @@
 # Click Backend
 
+**Latest development work:** [Week 4](docs/week4.md): privacy boundaries, graph progress, bounded AI execution and diagnostic/event retention.
+
 3주 차에 신규 안내 세션을 DB로 옮겼다. [현재 세션 API 계약](docs/week3.md)에 따라 후속 turn에 expected_version을 보내야 한다. 레거시 `/sessions`는 메모리 호환 경로다.
 
 ## 백엔드 본개발 시작

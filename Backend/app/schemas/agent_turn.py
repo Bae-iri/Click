@@ -88,9 +88,9 @@ class VisionElement(BaseModel):
 
 class VisionSnapshot(BaseModel):
     user_consented: bool = False
-    redaction_applied: bool = False
+    redaction_applied: bool = Field(default=False, description="Client hint only; does not authorize external image processing")
     provider: str | None = None
-    screenshot_base64: str | None = Field(default=None, max_length=8_000_000)
+    screenshot_base64: str | None = Field(default=None, max_length=8_000_000, description="Discarded: external image processing is disabled until server-side redaction is available; send on-device OCR elements")
     mime_type: str = "image/png"
     ocr_text: str | None = Field(default=None, max_length=10_000)
     elements: list[VisionElement] = Field(default_factory=list, max_length=2000)

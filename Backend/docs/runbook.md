@@ -1,5 +1,7 @@
 # 로컬 실행과 검증
 
+**Week 4:** set AGENT_TURN_TIMEOUT_SECONDS (default 20; shorter than lease). Run `python scripts/cleanup_ui_events.py --retention-seconds 86400` with DATABASE_URL for development event cleanup. No scheduler is installed. See [week4.md](week4.md).
+
 ## 설치
 
 PowerShell에서 Python 3.11 이상을 사용한다. 프로젝트 안의 가상환경을 권장한다.
