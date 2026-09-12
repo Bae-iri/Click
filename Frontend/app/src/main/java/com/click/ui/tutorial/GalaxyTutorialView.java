@@ -42,7 +42,7 @@ public final class GalaxyTutorialView extends View {
 
     public GalaxyTutorialView(Context context) {
         super(context);
-        setBackgroundColor(Color.rgb(238, 240, 245));
+        setBackgroundColor(Color.TRANSPARENT);
     }
 
     public void setListener(Listener listener) { this.listener = listener; }
@@ -71,12 +71,15 @@ public final class GalaxyTutorialView extends View {
         super.onDraw(canvas);
         // Leave breathing room around the simulated phone so its status bar and page title
         // are not clipped on short screens or devices using a large system font scale.
-        float availableHeight = (getHeight() - dp(32)) * .86f;
+        float availableHeight = (getHeight() - dp(24)) * .94f;
         float phoneWidth = Math.min(getWidth() - dp(8), availableHeight * 9f / 19.5f);
         float phoneHeight = Math.min(availableHeight, phoneWidth * 19.5f / 9f);
         float left = (getWidth() - phoneWidth) / 2f;
         float top = (getHeight() - phoneHeight) / 2f;
         phone.set(left, top, left + phoneWidth, top + phoneHeight);
+        paint.setColor(Color.rgb(238, 240, 245));
+        canvas.drawRoundRect(new RectF(phone.left - dp(14), phone.top - dp(12),
+                phone.right + dp(14), phone.bottom + dp(12)), dp(18), dp(18), paint);
         paint.setColor(Color.rgb(20, 22, 27));
         canvas.drawRoundRect(phone, dp(28), dp(28), paint);
         RectF screen = new RectF(phone.left + dp(7), phone.top + dp(7), phone.right - dp(7), phone.bottom - dp(7));

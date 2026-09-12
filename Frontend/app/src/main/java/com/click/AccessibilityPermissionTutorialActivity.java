@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.Gravity;
@@ -149,24 +150,31 @@ public final class AccessibilityPermissionTutorialActivity extends AppCompatActi
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             if (screenshot == null) screenshot = BitmapFactory.decodeResource(getResources(), SCREENSHOTS[step]);
+            int cropTop = Math.round(screenshot.getHeight() * .04f);
+            int cropBottom = Math.round(screenshot.getHeight() * .94f);
+            Rect source = new Rect(0, cropTop, screenshot.getWidth(), cropBottom);
+            float sourceHeight = cropBottom - cropTop;
             float scale = Math.min((float) getWidth() / screenshot.getWidth(),
-                    (float) getHeight() / screenshot.getHeight());
+                    (float) getHeight() / sourceHeight);
             float imageWidth = screenshot.getWidth() * scale;
-            float imageHeight = screenshot.getHeight() * scale;
+            float imageHeight = sourceHeight * scale;
             RectF image = new RectF((getWidth() - imageWidth) / 2f, (getHeight() - imageHeight) / 2f,
                     (getWidth() + imageWidth) / 2f, (getHeight() + imageHeight) / 2f);
-            canvas.drawBitmap(screenshot, null, image, paint);
+            canvas.drawBitmap(screenshot, source, image, paint);
             float[][] targets = {
-                    {.03f, .62f, .97f, .78f},
+                    {.12f, .695f, .96f, .775f},
                     {.03f, .12f, .97f, .23f},
                     {.70f, .13f, .95f, .22f},
                     {.70f, .84f, .94f, .94f},
                     {.69f, .22f, .95f, .31f}
             };
             float[] point = targets[step];
+            float normalizedTop = .04f;
+            float normalizedHeight = .90f;
             RectF target = new RectF(image.left + image.width() * point[0],
-                    image.top + image.height() * point[1], image.left + image.width() * point[2],
-                    image.top + image.height() * point[3]);
+                    image.top + image.height() * ((point[1] - normalizedTop) / normalizedHeight),
+                    image.left + image.width() * point[2],
+                    image.top + image.height() * ((point[3] - normalizedTop) / normalizedHeight));
             highlightAndArrow(canvas, target);
         }
 

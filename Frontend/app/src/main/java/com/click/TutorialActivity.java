@@ -62,7 +62,9 @@ public final class TutorialActivity extends AppCompatActivity implements GalaxyT
         instruction = ClickUi.body(this, messageFor(GalaxyTutorialView.Step.VOICE_REQUEST));
         instruction.setTextSize(20);
         instruction.setGravity(Gravity.CENTER);
-        page.addView(instruction, ClickUi.fullWidth(this, 76, 8));
+        instruction.setMinHeight(ClickUi.dp(this, 52));
+        instruction.setPadding(ClickUi.dp(this, 8), 0, ClickUi.dp(this, 8), ClickUi.dp(this, 8));
+        page.addView(instruction, ClickUi.wrap(ClickUi.dp(this, 8)));
 
         galaxyView = new GalaxyTutorialView(this);
         galaxyView.setListener(this);
