@@ -31,6 +31,7 @@ import com.click.BuildConfig;
 import com.click.core.permission.PermissionStatus;
 import com.click.data.remote.AgentTurnContract;
 import com.click.data.remote.AgentTurnGateway;
+import com.click.data.remote.ErrorDetails;
 import com.click.data.remote.VoiceQueueGateway;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
 import com.click.data.snapshot.AgentVisionSnapshot;
@@ -607,7 +608,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void showQueueError(Throwable error) {
         android.util.Log.e("ClickQueue", "Voice queue request failed", error);
-        String message = userMessageForAgentError(error);
+        String message = ErrorDetails.describe("음성 요청 대기열 처리", error);
         if (overlayView != null) overlayView.setRecognizedSpeech(message);
         speak(message);
     }
@@ -730,7 +731,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 turnInFlight = false;
                 failActiveQueueRequest("NETWORK_ERROR");
                 android.util.Log.e("ClickAgent", "Agent turn failed", error);
-                String userMessage = userMessageForAgentError(error);
+                String userMessage = ErrorDetails.describe("에이전트 요청 처리", error);
                 if (overlayView != null) overlayView.setRecognizedSpeech(userMessage);
                 speak(userMessage);
                 if (overlayView != null && overlayView.getMode() == ClickOverlayLayout.Mode.TEXT) {

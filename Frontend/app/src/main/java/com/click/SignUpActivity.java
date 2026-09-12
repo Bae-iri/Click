@@ -19,6 +19,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.click.data.local.LocalAccountStore;
 import com.click.data.remote.AuthGateway;
+import com.click.data.remote.ErrorDetails;
 import com.click.ui.common.ClickUi;
 
 public final class SignUpActivity extends AppCompatActivity {
@@ -97,9 +98,7 @@ public final class SignUpActivity extends AppCompatActivity {
 
                 @Override public void onFailure(Throwable error) {
                     complete.setEnabled(true);
-                    String message = error.getMessage() != null && error.getMessage().contains("409")
-                            ? "이미 가입된 이메일입니다."
-                            : "회원가입 서버에 연결하지 못했습니다: " + error.getMessage();
+                    String message = ErrorDetails.describe("회원가입", error);
                     Toast.makeText(SignUpActivity.this, message, Toast.LENGTH_LONG).show();
                 }
             });
