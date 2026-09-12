@@ -12,16 +12,27 @@ def normalize_accessibility_tree(
     screen_bounds: Bounds | None = None,
 ) -> tuple[NormalizedNode, ...]:
     normalized: list[NormalizedNode] = []
-    seen: set[tuple[str, Bounds | None, str]] = set()
-
+    seen: set[tuple] = set()
+    nodes_by_id = {node.node_id: node for node in nodes}
+    inherited_labels: dict[str, list[str]] = {}
     for node in nodes:
         label = _merge_label(node)
-        role = infer_role(node)
+        if not label or not node.visible_to_user or not node.enabled or _is_control(node):
+            continue
+        target = _label_target(node, nodes_by_id, screen_bounds)
+        if target is not None:
+            inherited_labels.setdefault(target.node_id, []).append(label)
+
+    for node in nodes:
+        if not node.visible_to_user:
+            continue
+        label = _merge_label(node) or " ".join(dict.fromkeys(inherited_labels.get(node.node_id, [])))
+        role = infer_role(node, label=label)
         if not label and not node.scrollable and role not in {"slider", "toggle", "radio"}:
             continue
 
         normalized_label = normalize_text(label)
-        actionable = node.enabled and (node.clickable or role in {"slider", "toggle", "radio"})
+        actionable = node.enabled and _is_control(node) and _has_area(node.bounds_in_screen)
         normalized_node = NormalizedNode(
             node_id=node.node_id,
             label=normalized_label,
@@ -44,6 +55,8 @@ def normalize_accessibility_tree(
             normalized_node.label,
             normalized_node.bounds,
             normalized_node.role,
+            normalized_node.actionable,
+            normalized_node.node_id if normalized_node.actionable else None,
         )
         if dedupe_key in seen:
             continue
@@ -53,11 +66,59 @@ def normalize_accessibility_tree(
     return tuple(normalized)
 
 
-def infer_role(node: AccessibilityNode) -> str:
+def _has_area(bounds: Bounds | None) -> bool:
+    return bounds is not None and bounds[0] < bounds[2] and bounds[1] < bounds[3]
+
+
+def _is_control(node: AccessibilityNode) -> bool:
+    return node.clickable or infer_role(node) in {"slider", "toggle", "radio"}
+
+
+def _label_target(
+    label_node: AccessibilityNode,
+    nodes_by_id: dict[str, AccessibilityNode],
+    screen_bounds: Bounds | None,
+) -> AccessibilityNode | None:
+    """Name the nearest unnamed control, preserving its real ID and screen bounds.
+
+    Never infer ancestry from an ID string or expand a text rectangle geometrically.
+    Stop at control/list/input boundaries rather than borrowing a sibling's label.
+    """
+    child_bounds = label_node.bounds_in_screen
+    if not _has_area(child_bounds):
+        return None
+    visited = {label_node.node_id}
+    parent_id = label_node.parent_id
+    while parent_id is not None and parent_id not in visited:
+        visited.add(parent_id)
+        parent = nodes_by_id.get(parent_id)
+        if parent is None or not parent.visible_to_user or not parent.enabled:
+            return None
+        bounds = parent.bounds_in_screen
+        if (parent.package_name != label_node.package_name or not _has_area(bounds)
+                or not (bounds[0] <= child_bounds[0] < child_bounds[2] <= bounds[2]
+                        and bounds[1] <= child_bounds[1] < child_bounds[3] <= bounds[3])):
+            return None
+        if parent.scrollable or infer_role(parent) in {"list", "text_input"}:
+            return None
+        if _is_control(parent):
+            # Root/page-sized containers are not a defensible target for one text label.
+            if parent.parent_id is None or _merge_label(parent):
+                return None
+            if _has_area(screen_bounds):
+                screen_area = (screen_bounds[2] - screen_bounds[0]) * (screen_bounds[3] - screen_bounds[1])
+                if (bounds[2] - bounds[0]) * (bounds[3] - bounds[1]) >= screen_area / 2:
+                    return None
+            return parent
+        parent_id = parent.parent_id
+    return None
+
+
+def infer_role(node: AccessibilityNode, *, label: str | None = None) -> str:
     class_name = (node.class_name or "").lower()
     package_name = (node.package_name or "").lower()
     resource_id = (node.resource_id or "").lower()
-    label = normalize_text(_merge_label(node))
+    label = normalize_text(_merge_label(node) if label is None else label)
 
     if _looks_like_launcher_app_icon(package_name, resource_id, label, node.clickable):
         return "app_icon"

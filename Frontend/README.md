@@ -2,9 +2,11 @@
 
 Click Android 앱 내부 화면과 다른 앱 위에서 동작하는 Agent Overlay를 구현하는 영역이다.
 
-Frontend는 사용자 음성·텍스트 입출력, Android Accessibility Tree 수집, Guide Command 렌더링과 저위험 자동 스크롤 실행을 담당한다. 사용자 의도 분석, Goal Typing, Task Graph 선택과 다음 행동 판단은 AI-Agent가 담당한다.
+Frontend는 사용자 음성·텍스트 입출력, Android Accessibility Tree 수집, Guide Command 렌더링과 저위험 자동 스크롤 실행을 담당한다. Goal Typing과 실행 제어용 Command Typing은 FE의 입력 해석 계층이 담당하고, AI-Agent(1)은 승인 Task Graph 선택과 다음 행동 판단부터 담당한다. 이는 갱신된 설계이며 현재 raw-goal DTO의 코드 전환은 남아 있다.
 
+- Goal·Command 유형과 전달 형식: [FE 입력 계약](../docs/fe-goal-command-contract.md)
 - 전체 설계: [Frontend 아키텍처](../docs/frontend-architecture.md)
+- UI 강조 좌표와 클릭 영역 처리: [Guide 좌표 계약·검증](docs/guide-target-geometry.md)
 - 연동 기준: [AI-Agent 아키텍처](../docs/ai-agent-architecture.md)
 
 ## 핵심 역할
@@ -63,7 +65,7 @@ android-project-setup
 
 | 흐름 | Frontend | AI-Agent |
 | --- | --- | --- |
-| Goal | 음성·텍스트 입력, STT, Raw Goal 전달 | Goal Typing, Typed Goal 생성, Task Graph 선택 |
+| Goal·Command | 음성·텍스트 입력, STT, Goal/slots·Command 확정 및 전달 | typed 입력 검증, 승인 Task Graph 선택·복원, 실행 제어 처리 |
 | 화면 관찰 | Accessibility Node 수집 및 직렬화 | Node 파싱·정규화, 화면 State 분류 |
 | 안내 | Overlay·Highlight·Text/TTS 렌더링 | Target과 Guide Command 결정 |
 | 탭 | 자동 실행하지 않고 사용자 직접 조작 유도 | 탭 대상과 안내 내용 결정 |

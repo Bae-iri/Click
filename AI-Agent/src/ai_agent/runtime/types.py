@@ -116,6 +116,8 @@ class AccessibilityNode:
     scrollable: bool = False
     checkable: bool = False
     extras: JsonDict = field(default_factory=dict)
+    parent_id: str | None = None
+    visible_to_user: bool = True
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -320,6 +322,7 @@ class AgentTurnRequest:
     previous_guide_command_id: str | None = None
     user_confirmation: Literal["accepted", "rejected"] | None = None
     user_action_event: UserActionEvent | None = None
+    screen_bounds: Bounds | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)

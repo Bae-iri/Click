@@ -28,6 +28,9 @@ public final class AgentVisionSnapshot {
             snapshot.put("captured_at_ms", System.currentTimeMillis());
             JSONArray elements = new JSONArray();
             for (AccessibilityNodeSnapshot node : screen.nodes) {
+                if (!node.visibleToUser || !node.enabled || node.bounds == null
+                        || node.bounds.length != 4 || node.bounds[0] >= node.bounds[2]
+                        || node.bounds[1] >= node.bounds[3]) continue;
                 String label = node.text != null ? node.text : node.contentDescription;
                 if (label == null || label.trim().isEmpty()) continue;
                 JSONObject element = new JSONObject();

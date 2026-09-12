@@ -4,21 +4,22 @@
 
 AI-Agent를 아래 두 역할로 분리한다.
 
-1. **AI-Agent(1): 사용자 작업 수행 Runtime Agent** — 실제 사용자의 요구를 text로 받고, Typed Goal로 변환하고, 현재 화면을 읽어 guide/action을 결정한다. 이후 관측으로 결과를 검증하고 필요하면 Re-plan한다.
+1. **AI-Agent(1): 사용자 작업 수행 Runtime Agent** — FE가 확정한 Goal Type·Command Type을 받아 승인 Task Graph를 선택하고, 현재 화면을 읽어 guide/action을 결정한다. 이후 관측으로 결과를 검증하고 필요하면 Re-plan한다.
 2. **AI-Agent(2): Runtime Data / Graph Proposal Agent** — 전체 runtime 데이터에 success/fail 등 결과 라벨을 붙이고, 내부 데이터셋을 생산하며, Task Graph 추가·업데이트 후보를 생성·검증한다.
 
 기존 `graph-proposal` 및 trace 기반 graph 개선은 AI-Agent(2)의 책임이다. AI-Agent(1)은 실행 trace를 생산하고 승인된 graph를 소비한다.
 
 | 문서 | 내용 |
 | --- | --- |
-| [AI-Agent(1) 상세 설계](./ai-agent-1-runtime.md) | 입력, Goal Typing, 화면 해석, Task Graph 선택, Guide/Action, Verification, Re-plan, 세션 및 trace |
+| [FE Goal·Command 계약](./fe-goal-command-contract.md) | FE 소유 분류, 실제 Goal 목록, slots, Command별 요청·제어 상태·구현 전환 |
+| [AI-Agent(1) 상세 설계](./ai-agent-1-runtime.md) | typed 입력 검증, Task Graph 선택·복원, 화면 해석, Guide/Action, Verification, Re-plan, 세션 및 trace |
 | [AI-Agent(2) 상세 설계](./ai-agent-2-graph-proposal.md) | 전체 runtime 수집, 결과 라벨링, 데이터셋, 신규·기존 graph 제안, 검증·승인·배포 |
 | [MVP-01: 글자 크기 확대](./tasks/font-size-increase.md) | Task별 State, Transition, 완료 조건과 개선 사례 |
 | [Frontend·Backend 계약](./frontend-backend-contract.md) | 사용자 입력, 화면 수집, guide와 행동 결과 전달 |
 
 이 문서는 두 에이전트의 관계를 설명하는 공통 진입점이다. 기존 전체 구조 문서의 실행 상세와 구현 평가를 AI-Agent(1)에 옮기고, learning/proposal 영역을 AI-Agent(2)로 분리·확장했다. 상세 설계의 기준 경로는 루트 `docs/`이며 `AI-Agent/docs/`에서는 이 문서들로 연결한다.
 
-코드 확인 기준은 **2026-09-12, `a0d3609` 커밋**이다. 기능의 구현 상태는 위 커밋을 기준으로 하고 파일 경로는 이번 패키지 분리 작업을 반영했다. 사용자 실행은 `runtime/`, 내부 개선은 `graph_proposal/`, 공통 진단·관측 계약은 `telemetry/`로 실제 분리했으며 HTTP API와 별도 실행 프로세스는 변경하지 않았다. 예시 schema, 저장소, job, artifact 및 배포 정책은 현재 구현과 구분해서 읽는다.
+코드 확인 기준은 **2026-09-12, `a0d3609` 커밋**이다. 기능의 구현 상태는 위 커밋을 기준으로 하고 파일 경로는 이번 패키지 분리 작업을 반영했다. 사용자 실행은 `runtime/`, 내부 개선은 `graph_proposal/`, 공통 진단·관측 계약은 `telemetry/`로 실제 분리했으며 HTTP API와 별도 실행 프로세스는 변경하지 않았다. 예시 schema, 저장소, job, artifact 및 배포 정책은 현재 구현과 구분해서 읽는다. **추가 회의 결정으로 Goal/Command 분류는 FE로 이관했다.** 이번 문서는 책임 경계를 반영하며 raw-goal v1과 engine 호출을 바꾸는 실제 코드 전환은 별도 작업이다.
 
 ## 2. 두 에이전트 비교
 
@@ -26,11 +27,11 @@ AI-Agent를 아래 두 역할로 분리한다.
 | --- | --- | --- |
 | 대상 | 실제 앱 사용자 | 내부 개발·데이터·운영 팀 |
 | 목표 | 지금 사용자의 목적 완료를 지원 | 운영 데이터를 개선에 사용할 수 있는 데이터·graph로 변환 |
-| 입력 | raw text, 현재 화면, 사용자 행동·확인, 세션 상태 | 전체 runtime event/trace, graph, 검토된 정답·fixture |
+| 입력 | FE 확정 Goal·Command, 현재 화면, 사용자 행동·확인, 세션 상태 | 전체 runtime event/trace, graph, 검토된 정답·fixture |
 | 실행 단위 | turn, step, 사용자 episode | 분석 job, dataset snapshot, proposal |
 | 실행 방식 | 사용자 응답 경로에서 동작 | 비동기·offline 분석, 필요 시 주기 실행 |
 | 핵심 루프 | Observe → Decide → Guide/Action → Verify → Re-plan | Reconstruct → Label → Analyze → Propose → Validate → Revise |
-| 주요 출력 | Typed Goal, 상태, guide/action, 온라인 verification, trace | 라벨, 데이터셋, graph diff, 신규 graph, 평가·release artifact |
+| 주요 출력 | 선택된 task/graph, 실행 제어 상태, guide/action, 온라인 verification, trace | 라벨, 데이터셋, graph diff, 신규 graph, 평가·release artifact |
 | Graph 접근 | 승인된 호환 version 읽기 | candidate 작성, 평가 후 승인·배포 경계에 전달 |
 | 변경의 범위 | 현재 세션의 경로·target 선택 | 이후 세션에 적용할 versioned graph |
 | 실패 시 처리 | 재관측, 질문, 복구, 재계획 또는 중단 | 재처리, 라벨 검토, 추가 데이터 요청, 후보 기각 |
@@ -42,7 +43,7 @@ AI-Agent를 아래 두 역할로 분리한다.
 
 ```mermaid
 flowchart LR
-    U[사용자 목표 Text] --> FE[Frontend]
+    U[사용자 목표 Text / 실행 제어] --> FE[Frontend / Goal·Command 분류]
     FE --> BE[Backend / 세션·API]
     BE --> A1[AI-Agent 1 / Runtime]
     A1 --> BE
@@ -67,10 +68,10 @@ Agent(2)의 분석이 완료될 때까지 사용자 guide 응답을 기다리지
 
 | 기능 | 책임 주체 | 경계 |
 | --- | --- | --- |
-| STT 및 raw text 전달 | FE | Goal 의미 판단은 Agent(1) |
+| STT·Goal Typing·Command Typing | FE | 모호성 확인 후 canonical Goal·slots·실행 제어 전달 |
 | 화면·사용자 행동 수집 | FE | 필요한 관측과 실제 발생한 행동 전달 |
 | 인증·소유권·멱등성·세션 저장 | Backend | Agent 호출 전후의 요청 정합성 |
-| Goal Typing·Graph 선택 | Agent(1) | 승인 template 구체화만 허용 |
+| typed 입력 검증·Command 분기·Graph 선택 | Agent(1) | FE 의도 재분류 없이 승인 graph 선택·복원·template 구체화 |
 | Normalize·Classify·Match | Agent(1) | 현재 화면 근거로 다음 target 결정 |
 | Safety·Guide·온라인 Verify·Re-plan | Agent(1), Backend/FE의 계약 집행 | 현재 사용자 작업에 대한 판단 |
 | Runtime event 생산 | Agent(1), Backend, FE | 사실과 온라인 판단을 기록 |
@@ -126,7 +127,7 @@ guide의 `action_type=tap`은 사용자가 해야 할 행동을 나타낼 수 �
 
 | 영역 | 확인된 현재 상태 | 다음 작업 |
 | --- | --- | --- |
-| Agent(1) 실행 | `ai_agent.runtime`에 MVP-01 Goal Typing·화면 판단·안내·검증·재시도 구현 | confidence·완료 근거·graph Re-plan 일반화 |
+| Agent(1) 실행 | `ai_agent.runtime`에 MVP-01 화면 판단·안내·검증·재시도 구현; legacy Goal Typing 잔존 | FE typed 계약 전환, confidence·완료 근거·graph Re-plan 일반화 |
 | Safety·실행 제한 | Backend confirmation·화면·출력 검증, turn deadline·동시 실행 상한 | runtime 공통 policy와 episode 복구 예산 |
 | 세션 영속성 | Backend DB turn claim·응답 저장·checkpoint 복원/저장 구현 | graph artifact version 고정과 연결 |
 | Graph 호환성 | Backend checkpoint의 graph hash와 현재 graph hash 비교 | 여러 승인 version을 읽는 loader |

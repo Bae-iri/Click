@@ -6,6 +6,8 @@ import org.json.JSONObject;
 
 public final class AccessibilityNodeSnapshot {
     public final String nodeId;
+    public final String parentId;
+    public final boolean visibleToUser;
     public final String packageName;
     public final String text;
     public final String contentDescription;
@@ -22,6 +24,8 @@ public final class AccessibilityNodeSnapshot {
 
     public AccessibilityNodeSnapshot(
             String nodeId,
+            String parentId,
+            boolean visibleToUser,
             String packageName,
             String text,
             String contentDescription,
@@ -37,6 +41,8 @@ public final class AccessibilityNodeSnapshot {
             Float progress
     ) {
         this.nodeId = nodeId;
+        this.parentId = parentId;
+        this.visibleToUser = visibleToUser;
         this.packageName = packageName;
         this.text = text;
         this.contentDescription = contentDescription;
@@ -55,6 +61,8 @@ public final class AccessibilityNodeSnapshot {
     JSONObject toJson() throws JSONException {
         JSONObject object = new JSONObject();
         object.put("node_id", nodeId);
+        object.put("parent_id", nullable(parentId));
+        object.put("visible_to_user", visibleToUser);
         object.put("package_name", nullable(packageName));
         object.put("text", nullable(text));
         object.put("content_description", nullable(contentDescription));

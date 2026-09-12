@@ -4423,6 +4423,24 @@
             "type": "string",
             "title": "Node Id"
           },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id",
+            "description": "Parent node_id within this snapshot; null for a root or legacy flat payload"
+          },
+          "visible_to_user": {
+            "type": "boolean",
+            "title": "Visible To User",
+            "description": "Android isVisibleToUser; hidden nodes are not guide targets",
+            "default": true
+          },
           "package_name": {
             "anyOf": [
               {
@@ -4497,6 +4515,7 @@
             "maxItems": 4,
             "minItems": 4,
             "title": "Bounds In Screen",
+            "description": "Screen pixel rectangle [left, top, right, bottom]; the client converts to overlay-local coordinates when drawing",
             "default": [
               0,
               0,
@@ -5282,7 +5301,8 @@
                 "type": "null"
               }
             ],
-            "title": "Target Bounds"
+            "title": "Target Bounds",
+            "description": "Target control rectangle in screen pixels [left, top, right, bottom]; not dp or overlay-local coordinates"
           },
           "safety_level": {
             "type": "string",

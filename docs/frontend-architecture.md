@@ -6,6 +6,7 @@
 
 AI Agent의 판단 파이프라인과 Task별 State/Transition은 별도 문서에서 관리한다.
 
+- FE Goal·Command 정의와 전달: [입력 계약](./fe-goal-command-contract.md)
 - Agent 구조: [AI Agent 전체 구조](./ai-agent-architecture.md)
 - Task 상세: [Android 설정 앱에서 글자 크기 확대](./tasks/font-size-increase.md)
 
@@ -22,7 +23,7 @@ AI Agent의 판단 파이프라인과 Task별 State/Transition은 별도 문서�
 
 MVP에서는 사용자가 직접 화면을 조작하는 Human-in-the-loop 방식을 기본으로 한다. 결제, 송금, 인증번호 입력 등 고위험 행동은 자동 수행하지 않는다.
 
-Frontend의 STT·TTS는 음성과 텍스트 사이의 형식 변환을 담당한다. 사용자 의도 분석, Goal Typing, Task Graph 선택은 AI-Agent가 담당한다.
+Frontend의 STT·TTS는 음성과 텍스트 사이의 형식 변환을 담당한다. 그 뒤 FE 입력 해석 계층이 Goal Type·slots와 실행 제어용 Command Type을 확정한다. AI-Agent(1)은 전달값을 검증하고 승인 Task Graph를 선택하는 단계부터 담당한다. 이 책임 변경은 설계에 반영했으며 현재 raw-goal API·DTO의 구현 전환은 남아 있다.
 
 ## 3. Information Architecture
 
@@ -132,21 +133,22 @@ flowchart TD
     A[사용자 목표 입력] --> B{마이크 상태}
     B -->|ON| C[STT 변환]
     B -->|OFF| D[텍스트 입력]
-    C --> E[Backend 경유 Raw Goal 전달]
+    C --> E[FE Goal·Command 분류 및 모호성 확인]
     D --> E
-    E --> F[AI-Agent Goal Typing]
-    F --> G[Accessibility Tree 수집 및 전달]
-    G --> H[Agent 판단 결과 수신]
-    H --> I{Safety 결과}
+    E --> G[Command·확정 Goal·필요한 화면을 Backend에 전달]
+    G --> F[Agent Command 분기·승인 Graph 선택 또는 복원]
+    F --> H[실행 안내 또는 제어 응답 수신]
+    H -->|제어 응답| CTRL[일시정지·취소 상태 반영]
+    H -->|실행 안내| I{Safety 결과}
     I -->|LOW RISK| J[하이라이트 및 단계 안내]
     I -->|CONFIRM REQUIRED| K[사용자 확인]
     I -->|BLOCKED| L[중단 및 경고]
-    K -->|확인| J
+    K -->|respond_confirmation| G
     J --> M[사용자 직접 조작 또는 저위험 자동 스크롤]
     M --> N[변경 화면 재수집]
     N --> O{Task 상태}
-    O -->|진행| H
-    O -->|재계획| G
+    O -->|진행: observe| G
+    O -->|재계획: observe| G
     O -->|완료| P[완료 및 종료 확인]
 ```
 
@@ -200,7 +202,7 @@ Frontend/
 ### 7.2 Data
 
 - Backend API 요청·응답 변환
-- Raw Goal, 화면 정보, 사용자 응답 전송
+- 확정 Goal·Command, 화면 정보, 사용자 응답 전송
 - 안내 결과와 Task 상태 수신
 - 네트워크 오류 및 재시도 처리
 
@@ -232,11 +234,19 @@ Frontend/
 ### 7.6 Speech Service
 
 - 마이크 세션 시작과 종료
-- STT 모델로 음성을 Raw 텍스트 Goal 또는 확인 응답으로 변환해 전달
+- STT 모델로 음성을 텍스트로 변환해 FE 입력 해석 계층으로 전달
 - AI-Agent가 생성한 안내 문장과 질문을 TTS 모델로 음성 변환 및 재생
 - 음성 명령에 의한 Agent 종료 처리
 - 녹음, 변환, 재생, 실패 상태를 UI에 노출
-- 사용자 의도 분석, Goal Typing과 Task Graph 선택은 수행하지 않음
+- Speech Service 자체는 형식 변환만 담당; Goal/Command 분류는 FE 입력 해석 계층, Task Graph 선택은 AI-Agent(1) 담당
+
+### 7.6.1 FE 입력 해석 계층
+
+- 새 작업·일시정지·재개·취소·교체·확인 응답을 Command Type으로 구분
+- 공유 catalog로 Goal Type·target app·필수 slots 확정
+- 모호한 목적·부정·명령 의미를 사용자에게 확인
+- FE 분류 metadata와 실제 서버 지원 가능 여부 구분
+- [FE Goal·Command 계약](./fe-goal-command-contract.md)의 enum·필드·JSON 예시로 직렬화
 
 ### 7.7 UI Features
 

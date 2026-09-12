@@ -73,7 +73,10 @@ class GuideCommandResponse(BaseModel):
     message: str
     target_node_id: str | None = None
     target_label: str | None = None
-    target_bounds: tuple[int, int, int, int] | None = None
+    target_bounds: tuple[int, int, int, int] | None = Field(
+        default=None,
+        description="Target control rectangle in screen pixels [left, top, right, bottom]; not dp or overlay-local coordinates",
+    )
     safety_level: Literal["LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"]
     requires_user_action: bool
     render_policy: dict[str, Any] = Field(default_factory=dict)

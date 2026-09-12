@@ -43,6 +43,8 @@ class RuntimeAgentAdapter:
         runtime_request = RuntimeRequest(
             request_id=request.request_id,
             session_id=request.session_id,
+            screen_bounds=(0, 0, screen_width, screen_height)
+            if screen_width and screen_height else None,
             raw_goal=RawGoalInput(
                 source_text=request.raw_goal,
                 locale="ko-KR",
@@ -58,6 +60,8 @@ class RuntimeAgentAdapter:
             accessibility_tree=tuple(
                 AccessibilityNode(
                     node_id=node.node_id,
+                    parent_id=node.parent_id,
+                    visible_to_user=node.visible_to_user,
                     package_name=node.package_name or package_name,
                     class_name=node.class_name,
                     text=node.text,

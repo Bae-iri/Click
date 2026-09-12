@@ -13,11 +13,11 @@ import java.util.List;
 final class AccessibilitySnapshotCollector {
     ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, int width, int height) {
         List<AccessibilityNodeSnapshot> nodes = new ArrayList<>();
-        visit(root, "node_0", packageName, width, height, nodes);
+        visit(root, "node_0", null, packageName, width, height, nodes);
         return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes);
     }
 
-    private void visit(AccessibilityNodeInfo node, String nodeId, String packageName,
+    private void visit(AccessibilityNodeInfo node, String nodeId, String parentId, String packageName,
                        int screenWidth, int screenHeight,
                        List<AccessibilityNodeSnapshot> output) {
         if (node == null) return;
@@ -26,15 +26,17 @@ final class AccessibilitySnapshotCollector {
         String className = string(node.getClassName());
         AccessibilityNodeInfo.RangeInfo range = node.getRangeInfo();
         Float progress = range == null ? null : range.getCurrent();
-        boolean intersectsScreen = bounds.right >= 0 && bounds.bottom >= 0
-                && bounds.left <= screenWidth && bounds.top <= screenHeight;
-        if (intersectsScreen && bounds.right >= bounds.left && bounds.bottom >= bounds.top) {
+        boolean intersectsScreen = bounds.right > 0 && bounds.bottom > 0
+                && bounds.left < screenWidth && bounds.top < screenHeight;
+        if (intersectsScreen && bounds.right > bounds.left && bounds.bottom > bounds.top) {
             int left = Math.max(0, Math.min(bounds.left, screenWidth));
             int top = Math.max(0, Math.min(bounds.top, screenHeight));
             int right = Math.max(left, Math.min(bounds.right, screenWidth));
             int bottom = Math.max(top, Math.min(bounds.bottom, screenHeight));
             output.add(new AccessibilityNodeSnapshot(
                     nodeId,
+                    parentId,
+                    node.isVisibleToUser(),
                     packageName,
                     string(node.getText()),
                     string(node.getContentDescription()),
@@ -51,7 +53,7 @@ final class AccessibilitySnapshotCollector {
             ));
         }
         for (int index = 0; index < node.getChildCount(); index++) {
-            visit(node.getChild(index), nodeId + "_" + index, packageName,
+            visit(node.getChild(index), nodeId + "_" + index, nodeId, packageName,
                     screenWidth, screenHeight, output);
         }
     }

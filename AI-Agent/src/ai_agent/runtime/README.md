@@ -1,11 +1,11 @@
 # AI-Agent(1): 사용자 Runtime
 
-Backend의 turn API가 사용하는 사용자 작업 실행 경로다. `ClickAgentEngine`이 raw text·현재 화면·사용자 행동을 받아 다음 guide를 반환하고, 후속 관측으로 직전 단계를 검증한다.
+Backend의 turn API가 사용하는 사용자 작업 실행 경로다. **새 책임 경계에서는 FE의 확정 Goal·Command를 받아 승인 Task Graph 선택부터 시작한다.** [FE 이관·typed 계약](../../../../docs/fe-goal-command-contract.md)은 설계이며 아직 코드에 적용되지 않았다. 아래는 전환 전 현재 구현이다. `ClickAgentEngine`이 raw text·현재 화면·사용자 행동을 받아 다음 guide를 반환하고, 후속 관측으로 직전 단계를 검증한다.
 
 | 파일 | 실행 책임 |
 | --- | --- |
 | `engine.py` | turn 조율 |
-| `goal_typing.py` | 사용자 의도 → Typed Goal |
+| `goal_typing.py` | legacy 사용자 의도 → Typed Goal; FE 이관 및 runtime 호출 제거 대상 |
 | `normalizer.py`, `classifier.py` | 화면 정규화·State 판단 |
 | `matcher.py`, `similarity.py` | 승인 Graph의 다음 UI target 선택 |
 | `guide.py`, `contracts.py` | Safety에 따른 안내·확인·허용 Action 계약 |
