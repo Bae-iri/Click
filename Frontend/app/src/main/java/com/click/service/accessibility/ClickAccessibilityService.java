@@ -112,6 +112,24 @@ public final class ClickAccessibilityService extends AccessibilityService {
         return dispatched;
     }
 
+    /** Executes a scroll on the current screen's scrollable container ({@code action_type: scroll},
+     * whose {@code execution_owner} is the frontend accessibility service). */
+    public static boolean performScroll(boolean forward) {
+        ClickAccessibilityService service = connectedService.get();
+        if (service == null) return false;
+        AccessibilityNodeInfo pager = findScrollableNode(service.getRootInActiveWindow());
+        if (pager == null) return false;
+        int action = forward
+                ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+                : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
+        boolean performed = pager.performAction(action);
+        Log.i(TAG, "Active window scroll forward=" + forward + " performed=" + performed);
+        if (performed && service.mainHandler != null) {
+            service.mainHandler.postDelayed(service.captureRunnable, 550L);
+        }
+        return performed;
+    }
+
     private static AccessibilityNodeInfo findScrollableNode(AccessibilityNodeInfo node) {
         if (node == null) return null;
         if (node.isScrollable()) return node;
