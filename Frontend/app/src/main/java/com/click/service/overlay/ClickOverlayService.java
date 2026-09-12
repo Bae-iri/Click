@@ -27,6 +27,7 @@ import android.widget.Button;
 import androidx.annotation.Nullable;
 
 import com.click.data.remote.AgentActionEvents;
+import com.click.BuildConfig;
 import com.click.core.permission.PermissionStatus;
 import com.click.data.remote.AgentTurnContract;
 import com.click.data.remote.AgentTurnGateway;
@@ -70,6 +71,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private TextToSpeech textToSpeech;
     private boolean ttsReady;
     private String pendingSpeech;
+    private String lastSpokenMessage;
     private boolean overTrashTarget;
     private AgentTurnGateway agentGateway;
     private String agentSessionId;
@@ -217,6 +219,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         } else {
             acceptingVoiceCommand = false;
             stopListening();
+            if (textToSpeech != null) textToSpeech.stop();
+            ttsSpeaking = false;
         }
         if (newMode == ClickOverlayLayout.Mode.COLLAPSED) {
             overlayView.post(this::snapToNearestEdge);
@@ -265,6 +269,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     @Override
     public void onTextSubmitted(String text) {
         Toast.makeText(this, "요청을 보내고 있습니다…", Toast.LENGTH_SHORT).show();
+        if (overlayView != null) overlayView.addUserMessage(text);
         enqueueNormalRequest(text);
     }
 
@@ -485,7 +490,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void handleRecognizedCommand(String text) {
         String command = text == null ? "" : text.trim();
         if (command.isEmpty()) return;
-        if (isInterruptCommand(command)) {
+        if (isRepeatRequest(command)) {
+            String repeated = lastSpokenMessage == null
+                    ? "아직 다시 말씀드릴 안내가 없어요." : lastSpokenMessage;
+            if (overlayView != null) overlayView.setRecognizedSpeech(repeated);
+            speak(repeated);
+        } else if (isInterruptCommand(command)) {
             voiceRequests.offerVip(command);
             processVipRequest();
         } else {
@@ -549,6 +559,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || normalized.contains("중단해")
                 || normalized.equals("스톱")
                 || normalized.equals("stop");
+    }
+
+    private boolean isRepeatRequest(String text) {
+        String normalized = text.toLowerCase(Locale.ROOT).replaceAll("[\\s,.!?]", "");
+        return normalized.equals("뭐") || normalized.equals("뭐라고")
+                || normalized.contains("다시말해") || normalized.contains("못들었어")
+                || normalized.contains("한번더말해");
     }
 
     private String showRecognitionText(Bundle bundle) {
@@ -758,9 +775,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
         if (overlayView != null && command.message != null && !command.message.isEmpty()) {
             overlayView.setRecognizedSpeech(command.message);
-            speak(command.message);
             if (overlayView.getMode() == ClickOverlayLayout.Mode.TEXT) {
-                Toast.makeText(this, command.message, Toast.LENGTH_LONG).show();
+                overlayView.addAssistantMessage(command.message);
+            } else {
+                speak(command.message);
             }
         }
         // BE-driven fallback / recovery policies are checked first: vision_fallback in
@@ -887,13 +905,17 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private String userMessageForAgentError(Throwable error) {
         if (error instanceof SocketTimeoutException) {
-            return "서버 응답 시간이 초과되었습니다. 네트워크 상태를 확인하고 다시 시도해주세요.";
+            return "서버 연결 또는 응답 대기 시간이 초과됐습니다. "
+                    + "API 주소(" + BuildConfig.CLICK_API_BASE_URL + ")에 연결 가능한지, "
+                    + "백엔드가 실행 중인지 확인해주세요. 연결 제한은 6초, 응답 제한은 15초입니다.";
         }
         if (error instanceof UnknownHostException) {
-            return "서버 주소를 찾지 못했습니다. 서버 주소 설정을 확인해주세요.";
+            return "서버 주소를 찾지 못했습니다: " + BuildConfig.CLICK_API_BASE_URL
+                    + ". 주소와 Wi-Fi/DNS 연결을 확인해주세요.";
         }
         if (error instanceof ConnectException) {
-            return "서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.";
+            return "서버가 연결을 거부했습니다: " + BuildConfig.CLICK_API_BASE_URL
+                    + ". 백엔드 실행 여부와 포트, 같은 네트워크인지 확인해주세요.";
         }
         if (error instanceof org.json.JSONException) {
             return "서버 응답 형식이 올바르지 않습니다. 백엔드 응답 규격을 확인해주세요.";
@@ -922,6 +944,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void speak(String message) {
         if (message == null || message.trim().isEmpty()) return;
+        lastSpokenMessage = message.trim();
+        if (overlayView != null && overlayView.getMode() == ClickOverlayLayout.Mode.TEXT) {
+            overlayView.addAssistantMessage(message);
+            return;
+        }
         if (!ttsReady || textToSpeech == null) {
             pendingSpeech = message;
             return;

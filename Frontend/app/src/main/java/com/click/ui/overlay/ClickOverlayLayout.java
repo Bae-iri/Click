@@ -11,6 +11,7 @@ import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.view.inputmethod.EditorInfo;
 
 import androidx.annotation.NonNull;
 
@@ -34,6 +35,7 @@ public final class ClickOverlayLayout extends ViewGroup {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final EditText goalInput;
+    private final ChatBubbleView chatBubbles;
     private Mode mode = Mode.COLLAPSED;
     private Mode lastExpandedMode = Mode.VOICE;
     private Callback callback;
@@ -62,7 +64,19 @@ public final class ClickOverlayLayout extends ViewGroup {
         goalInput.setVisibility(GONE);
         goalInput.setFocusableInTouchMode(true);
         goalInput.setOnTouchListener((view, event) -> handleInputTouch(event));
+        goalInput.setImeOptions(EditorInfo.IME_ACTION_SEND);
+        goalInput.setOnEditorActionListener((view, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEND) {
+                submitText();
+                return true;
+            }
+            return false;
+        });
         addView(goalInput);
+
+        chatBubbles = new ChatBubbleView(context);
+        chatBubbles.setVisibility(GONE);
+        addView(chatBubbles);
 
     }
 
@@ -74,16 +88,14 @@ public final class ClickOverlayLayout extends ViewGroup {
         invalidate();
     }
 
+    public void addUserMessage(String text) { chatBubbles.add(text, true); }
+
+    public void addAssistantMessage(String text) { chatBubbles.add(text, false); }
+
     public void collapse() {
         if (mode == Mode.COLLAPSED) return;
         hideKeyboard();
         changeMode(Mode.COLLAPSED);
-    }
-
-    @Override
-    public void onWindowFocusChanged(boolean hasWindowFocus) {
-        super.onWindowFocusChanged(hasWindowFocus);
-        if (!hasWindowFocus && mode == Mode.TEXT) post(this::collapse);
     }
 
     public int getWindowWidth(Mode targetMode, int screenWidth) {
@@ -93,7 +105,7 @@ public final class ClickOverlayLayout extends ViewGroup {
 
     public int getWindowHeight(Mode targetMode) {
         if (targetMode == Mode.COLLAPSED) return dp(64);
-        return dp(68);
+        return targetMode == Mode.TEXT ? dp(300) : dp(68);
     }
 
     public float getClickCenterX(Mode targetMode) {
@@ -103,6 +115,7 @@ public final class ClickOverlayLayout extends ViewGroup {
 
     public float getClickCenterY(Mode targetMode) {
         if (targetMode == Mode.COLLAPSED) return dp(32);
+        if (targetMode == Mode.TEXT) return getWindowHeight(targetMode) - dp(37);
         return dp(34);
     }
 
@@ -115,8 +128,12 @@ public final class ClickOverlayLayout extends ViewGroup {
             goalInput.measure(
                     MeasureSpec.makeMeasureSpec(Math.max(0, width - dp(176)), MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(dp(46), MeasureSpec.EXACTLY));
+            chatBubbles.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(Math.max(0, height - dp(74)), MeasureSpec.EXACTLY));
         } else {
             goalInput.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY));
+            chatBubbles.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY));
         }
     }
@@ -124,9 +141,13 @@ public final class ClickOverlayLayout extends ViewGroup {
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         if (mode == Mode.TEXT) {
-            int inputTop = (getHeight() - dp(46)) / 2;
+            chatBubbles.layout(0, 0, getWidth(), getHeight() - dp(74));
+            int inputTop = getHeight() - dp(60);
             goalInput.layout(dp(4), inputTop, getWidth() - dp(172), inputTop + dp(46));
-        } else goalInput.layout(0, 0, 0, 0);
+        } else {
+            goalInput.layout(0, 0, 0, 0);
+            chatBubbles.layout(0, 0, 0, 0);
+        }
     }
 
     @Override
@@ -169,11 +190,11 @@ public final class ClickOverlayLayout extends ViewGroup {
     }
 
     private void drawTextControls(Canvas canvas) {
-        float centerY = getHeight() / 2f;
+        float centerY = getHeight() - dp(37);
         paint.setColor(Color.argb(248, 255, 255, 255));
         paint.setShadowLayer(dp(7), 0, dp(3), Color.argb(50, 20, 28, 40));
         setLayerType(LAYER_TYPE_SOFTWARE, paint);
-        canvas.drawRoundRect(new RectF(dp(3), dp(6), getWidth() - dp(3), getHeight() - dp(6)), dp(28), dp(28), paint);
+        canvas.drawRoundRect(new RectF(dp(3), getHeight() - dp(68), getWidth() - dp(3), getHeight() - dp(6)), dp(28), dp(28), paint);
         paint.clearShadowLayer();
         drawSend(canvas, getWidth() - dp(146), centerY);
         drawClickIcon(canvas, getWidth() - dp(88), centerY, dp(29));
@@ -289,6 +310,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             else changeMode(Mode.COLLAPSED);
             return;
         }
+        if (y < getHeight() - dp(74)) return;
         if (x >= getWidth() - dp(170) && x < getWidth() - dp(122)) {
             submitText();
         } else if (x >= getWidth() - dp(118) && x < getWidth() - dp(58)) {
@@ -305,6 +327,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         if (newMode != Mode.COLLAPSED) lastExpandedMode = newMode;
         mode = newMode;
         goalInput.setVisibility(mode == Mode.TEXT ? VISIBLE : GONE);
+        chatBubbles.setVisibility(mode == Mode.TEXT ? VISIBLE : GONE);
         if (mode == Mode.TEXT) goalInput.clearFocus();
         setContentDescription(mode == Mode.COLLAPSED ? "Click 도우미 열기" : "Click 도우미 컨트롤");
         if (callback != null) callback.onModeChanged(oldMode, newMode);
@@ -317,6 +340,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         if (text.isEmpty()) return;
         hideKeyboard();
         if (callback != null) callback.onTextSubmitted(text);
+        goalInput.setText("");
     }
 
     private void hideKeyboard() {
