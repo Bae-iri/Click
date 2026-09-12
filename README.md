@@ -35,10 +35,12 @@ Click/
 │  ├─ tests/
 │  └─ docs/
 └─ AI-Agent/
-	 ├─ src/
-	 │  ├─ prompts/           # Agent prompt 및 모델 입력 템플릿
-	 │  └─ workflows/         # Goal → Observe → Decide → Guide → Verify → Re-plan
-	 └─ tests/
+   ├─ src/ai_agent/
+   │  ├─ runtime/           # AI-Agent(1): Goal → Observe → Guide → Verify → Re-plan
+   │  ├─ learning/          # AI-Agent(2)로 확장할 데이터·Graph Proposal 골격
+   │  └─ task_graph/        # Task Graph 구조와 Registry
+   ├─ task_graphs/          # Graph seed
+   └─ tests/
 ```
 
 ## Responsibilities
@@ -58,12 +60,24 @@ Click/
 - Safety Gate, 개인정보 마스킹, 완료 여부 및 실행 로그 관리
 - 데이터베이스와 외부 AI Agent 연동
 
-### AI-Agent
+### AI-Agent(1): 사용자 작업 수행
 
 - 사용자의 자연어 요청에서 최종 Goal 파악
 - 현재 화면에서 다음 행동 결정
 - 행동 안내 및 사용자 행동 이후 결과 검증
 - 예상하지 못한 화면이나 잘못된 행동 발생 시 Re-plan
+- 전체 실행 과정의 trace 생산 및 승인된 Task Graph 사용
+
+### AI-Agent(2): Runtime Data / Graph Proposal
+
+- 전체 runtime 데이터의 episode·step 재구성 및 success/fail 결과 라벨링
+- 성공·실패·사용자 우회 경로 분석과 내부 학습·평가 데이터셋 생성
+- 신규 Task Graph 추가 및 기존 State·Transition·selector 업데이트 후보 생성
+- 변경안 평가, 승인에 필요한 근거 제공, graph version 및 release 관리
+
+상세 설계: [전체 구조](docs/ai-agent-architecture.md) · [AI-Agent(1)](docs/ai-agent-1-runtime.md) · [AI-Agent(2)](docs/ai-agent-2-graph-proposal.md)
+
+위 두 역할은 목표 설계이며, 현재 `runtime/*`에 사용자 실행 흐름이 구현되어 있고 `learning/*`의 graph proposal 및 dataset 생성은 골격 단계다.
 
 ## MVP Scope
 
