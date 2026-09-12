@@ -17,6 +17,7 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.view.Gravity;
 import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
@@ -25,10 +26,14 @@ import android.widget.Button;
 
 import androidx.annotation.Nullable;
 
+import com.click.data.remote.AgentActionEvents;
 import com.click.data.remote.AgentTurnContract;
 import com.click.data.remote.AgentTurnGateway;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
+import com.click.data.snapshot.AgentVisionSnapshot;
 import com.click.data.snapshot.ScreenSnapshot;
+
+import org.json.JSONObject;
 import com.click.service.accessibility.LatestScreenSnapshot;
 import com.click.service.accessibility.ClickAccessibilityService;
 import com.click.ui.overlay.ClickOverlayLayout;
@@ -57,6 +62,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private Handler speechHandler;
     private boolean listening;
     private boolean acceptingVoiceCommand;
+    private boolean ttsSpeaking;
+    private boolean awaitingReplacement;
+    private int executionGeneration;
+    private final VoiceRequestQueue voiceRequests = new VoiceRequestQueue();
     private TextToSpeech textToSpeech;
     private boolean ttsReady;
     private String pendingSpeech;
@@ -70,6 +79,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int homeScanAttempts;
     private boolean homeScanTowardNext = true;
     private String homeScanPreviousFingerprint;
+    private String pendingActionType;
+    private String lastGuideCommandId;
+    private String lastTargetNodeId;
+    private int[] lastTargetBounds;
+    private boolean visionConsentRequested;
+    private boolean visionConsented;
+    private boolean attachVisionNextTurn;
+    private int freshObservationRetries;
+    private int scrollExecutions;
     private GuideOverlayView guideOverlayView;
     private WindowManager.LayoutParams guideOverlayParams;
     private ConfirmationOverlayView confirmationView;
@@ -131,6 +149,27 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (ttsReady) {
                 textToSpeech.setLanguage(Locale.KOREA);
                 textToSpeech.setSpeechRate(0.92f);
+                textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                    @Override public void onStart(String utteranceId) {
+                        ttsSpeaking = true;
+                        speechHandler.post(ClickOverlayService.this::stopListening);
+                    }
+
+                    @Override public void onDone(String utteranceId) {
+                        ttsSpeaking = false;
+                        speechHandler.postDelayed(ClickOverlayService.this::startListening, 250L);
+                    }
+
+                    @Override public void onError(String utteranceId) {
+                        ttsSpeaking = false;
+                        speechHandler.postDelayed(ClickOverlayService.this::startListening, 250L);
+                    }
+
+                    @Override public void onStop(String utteranceId, boolean interrupted) {
+                        ttsSpeaking = false;
+                        speechHandler.postDelayed(ClickOverlayService.this::startListening, 250L);
+                    }
+                });
                 if (pendingSpeech != null) {
                     speak(pendingSpeech);
                     pendingSpeech = null;
@@ -173,7 +212,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         windowManager.updateViewLayout(overlayView, windowParams);
         if (newMode == ClickOverlayLayout.Mode.VOICE) {
             acceptingVoiceCommand = true;
-            agentSessionId = null;
             startListening();
         } else {
             acceptingVoiceCommand = false;
@@ -226,7 +264,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     @Override
     public void onTextSubmitted(String text) {
         Toast.makeText(this, "요청을 보내고 있습니다…", Toast.LENGTH_SHORT).show();
-        beginAgentSession(text);
+        enqueueNormalRequest(text);
     }
 
     @Override
@@ -412,9 +450,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 listening = false;
                 String text = showRecognitionText(results);
                 if (text != null) {
-                    acceptingVoiceCommand = false;
-                    stopListening();
-                    beginAgentSession(text);
+                    handleRecognizedCommand(text);
                 } else if (acceptingVoiceCommand && overlayView != null
                         && overlayView.getMode() == ClickOverlayLayout.Mode.VOICE) {
                     overlayView.setRecognizedSpeech("다시 말씀해주세요.");
@@ -428,7 +464,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void startListening() {
         if (!acceptingVoiceCommand || speechRecognizer == null || listening || overlayView == null
-                || overlayView.getMode() != ClickOverlayLayout.Mode.VOICE) return;
+                || overlayView.getMode() != ClickOverlayLayout.Mode.VOICE || ttsSpeaking) return;
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             overlayView.setRecognizedSpeech("마이크 권한을 허용해주세요.");
             return;
@@ -441,9 +477,77 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void stopListening() {
-        if (speechHandler != null) speechHandler.removeCallbacksAndMessages(null);
         if (speechRecognizer != null && listening) speechRecognizer.cancel();
         listening = false;
+    }
+
+    private void handleRecognizedCommand(String text) {
+        String command = text == null ? "" : text.trim();
+        if (command.isEmpty()) return;
+        if (isInterruptCommand(command)) {
+            voiceRequests.offerVip(command);
+            processVipRequest();
+        } else {
+            enqueueNormalRequest(command);
+        }
+        speechHandler.postDelayed(this::startListening, 350L);
+    }
+
+    private void enqueueNormalRequest(String text) {
+        if (text == null || text.trim().isEmpty()) return;
+        if (awaitingReplacement) {
+            voiceRequests.clearNormal();
+            awaitingReplacement = false;
+        }
+        voiceRequests.offerNormal(text.trim());
+        startNextQueuedRequest();
+    }
+
+    private void processVipRequest() {
+        VoiceRequestQueue.Entry entry = voiceRequests.poll();
+        if (entry == null || entry.priority != VoiceRequestQueue.Priority.VIP) return;
+        abortActiveRequest();
+        awaitingReplacement = true;
+        if (overlayView != null) {
+            overlayView.setRecognizedSpeech("현재 작업을 멈췄어요. 새 요청을 말씀해주세요.");
+        }
+        speak("현재 작업을 멈췄어요. 새 요청을 말씀해주세요.");
+    }
+
+    private void abortActiveRequest() {
+        executionGeneration++;
+        agentSessionId = null;
+        initialGoal = null;
+        firstTurnSent = false;
+        turnInFlight = false;
+        pendingActionType = null;
+        speechHandler.removeCallbacksAndMessages(null);
+        if (textToSpeech != null) textToSpeech.stop();
+        hideGuideOverlay();
+        hideConfirmation();
+        hideSettingsOpenButton();
+    }
+
+    private void startNextQueuedRequest() {
+        if (agentSessionId != null || turnInFlight || awaitingReplacement) return;
+        VoiceRequestQueue.Entry next = voiceRequests.poll();
+        if (next == null) return;
+        if (next.priority == VoiceRequestQueue.Priority.VIP) {
+            processVipRequest();
+            return;
+        }
+        beginAgentSession(next.text);
+    }
+
+    private boolean isInterruptCommand(String text) {
+        String normalized = text.toLowerCase(Locale.ROOT).replaceAll("[\\s,.!?]", "");
+        return normalized.contains("잠깐기다려")
+                || normalized.contains("기다려봐")
+                || normalized.contains("멈춰봐")
+                || normalized.contains("멈춰")
+                || normalized.contains("중단해")
+                || normalized.equals("스톱")
+                || normalized.equals("stop");
     }
 
     private String showRecognitionText(Bundle bundle) {
@@ -458,6 +562,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void beginAgentSession(String goal) {
         if (goal == null || goal.trim().isEmpty()) return;
+        executionGeneration++;
         agentSessionId = UUID.randomUUID().toString();
         initialGoal = goal.trim();
         firstTurnSent = false;
@@ -465,6 +570,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         homeScanAttempts = 0;
         homeScanTowardNext = true;
         homeScanPreviousFingerprint = null;
+        pendingActionType = null;
+        lastGuideCommandId = null;
+        lastTargetNodeId = null;
+        lastTargetBounds = null;
+        visionConsentRequested = false;
+        visionConsented = false;
+        attachVisionNextTurn = false;
+        freshObservationRetries = 0;
+        scrollExecutions = 0;
         if (overlayView != null) overlayView.setRecognizedSpeech("화면을 확인하고 있어요…");
         sendAgentTurn(null, true);
     }
@@ -476,10 +590,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (overlayView != null) overlayView.setRecognizedSpeech("접근성 화면 정보를 기다리고 있어요…");
             return;
         }
-        if (textToSpeech != null) {
-            textToSpeech.stop();
-            textToSpeech.shutdown();
-        }
+        if (textToSpeech != null) textToSpeech.stop();
         if (!firstTurnSent && shouldScanHomeForSettings(snapshot)) {
             String fingerprint = snapshot.fingerprint();
             if (fingerprint.equals(homeScanPreviousFingerprint)) homeScanTowardNext = false;
@@ -489,7 +600,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if (overlayView != null) {
                     overlayView.setRecognizedSpeech("설정 앱을 찾기 위해 홈 화면을 이동하고 있어요…");
                 }
-                if (ClickAccessibilityService.swipeHomePage(homeScanTowardNext)) return;
+                boolean swiped = ClickAccessibilityService.swipeHomePage(homeScanTowardNext);
+                pendingActionType = swiped
+                        ? AgentActionEvents.SCROLL_COMPLETED : AgentActionEvents.SCROLL_FAILED;
+                if (swiped) return;
             }
             showSettingsOpenButton();
         } else if (hasSettingsTarget(snapshot)) {
@@ -499,10 +613,21 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (!force && firstTurnSent && confirmation == null && fingerprint.equals(lastSnapshotFingerprint)) return;
         AgentTurnContract.Request request = new AgentTurnContract.Request(
                 agentSessionId, firstTurnSent ? null : initialGoal, snapshot, confirmation);
+        if (pendingActionType != null) {
+            request.withActionEvent(AgentActionEvents.of(
+                    pendingActionType, lastGuideCommandId, lastTargetNodeId, lastTargetBounds));
+        }
+        if (attachVisionNextTurn) {
+            request.withVisionSnapshot(AgentVisionSnapshot.fromScreen(snapshot, visionConsented));
+        }
         turnInFlight = true;
         lastSnapshotFingerprint = fingerprint;
+        pendingActionType = null;
+        attachVisionNextTurn = false;
         agentGateway.send(request, new AgentTurnGateway.Callback() {
+            private final int requestGeneration = executionGeneration;
             @Override public void onSuccess(AgentTurnContract.Response response) {
+                if (requestGeneration != executionGeneration) return;
                 turnInFlight = false;
                 firstTurnSent = true;
                 renderGuide(response);
@@ -513,6 +638,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
 
             @Override public void onFailure(Throwable error) {
+                if (requestGeneration != executionGeneration) return;
                 turnInFlight = false;
                 android.util.Log.e("ClickAgent", "Agent turn failed", error);
                 String userMessage = userMessageForAgentError(error);
@@ -563,9 +689,21 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void showSettingsOpenButton() {
+        showRecoveryButton("설정 열기", Settings.ACTION_SETTINGS);
+    }
+
+    /** Renders the recovery button described by {@code render_policy.recovery_action}. */
+    private void showRecoveryButton(JSONObject recoveryAction) {
+        String intentAction = recoveryAction == null ? Settings.ACTION_SETTINGS
+                : recoveryAction.optString("android_intent_action", Settings.ACTION_SETTINGS);
+        showRecoveryButton("설정 열기", intentAction);
+    }
+
+    private void showRecoveryButton(String label, String intentAction) {
         if (windowManager == null || overlayView == null || settingsOpenButton != null) return;
+        final String action = intentAction == null ? Settings.ACTION_SETTINGS : intentAction;
         settingsOpenButton = new Button(this);
-        settingsOpenButton.setText("설정 열기");
+        settingsOpenButton.setText(label);
         settingsOpenButton.setTextSize(17f);
         settingsOpenButton.setTextColor(android.graphics.Color.WHITE);
         settingsOpenButton.setAllCaps(false);
@@ -576,9 +714,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         settingsOpenButton.setBackground(background);
         settingsOpenButton.setOnClickListener(view -> {
             hideSettingsOpenButton();
-            Intent settingsIntent = new Intent(Settings.ACTION_SETTINGS)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(settingsIntent);
+            // After a manual recovery the contract wants a fresh tree + manual_override.
+            pendingActionType = AgentActionEvents.MANUAL_OVERRIDE;
+            try {
+                startActivity(new Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (RuntimeException error) {
+                startActivity(new Intent(Settings.ACTION_SETTINGS)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            }
+            speechHandler.postDelayed(() -> sendAgentTurn(null, true), 1200L);
         });
 
         int width = dp(124);
@@ -605,7 +749,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void renderGuide(AgentTurnContract.Response response) {
+        response.logDebug("ClickAgent");
         AgentTurnContract.GuideCommand command = response.guideCommand;
+        lastGuideCommandId = command.guideCommandId;
+        lastTargetNodeId = command.targetNodeId;
+        lastTargetBounds = command.targetBounds;
+
         if (overlayView != null && command.message != null && !command.message.isEmpty()) {
             overlayView.setRecognizedSpeech(command.message);
             speak(command.message);
@@ -613,18 +762,126 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 Toast.makeText(this, command.message, Toast.LENGTH_LONG).show();
             }
         }
+        // BE-driven fallback / recovery policies are checked first: vision_fallback in
+        // particular rides on a command_type of "confirmation".
+        JSONObject recoveryAction = command.recoveryAction();
+        JSONObject visionFallback = command.visionFallback();
+        JSONObject fallbackAction = command.fallbackAction();
+        if (recoveryAction != null) {
+            hideConfirmation();
+            hideGuideOverlay();
+            showRecoveryButton(recoveryAction);
+            return;
+        }
+        if (visionFallback != null) {
+            hideConfirmation();
+            hideGuideOverlay();
+            handleVisionFallback(command, visionFallback);
+            return;
+        }
+        if (fallbackAction != null
+                && "request_fresh_observation".equals(fallbackAction.optString("type"))) {
+            hideConfirmation();
+            hideGuideOverlay();
+            handleFreshObservationRequest(command);
+            return;
+        }
+
         if ("confirmation".equals(command.commandType)) {
             hideGuideOverlay();
             showConfirmation(command.message);
             return;
         }
         hideConfirmation();
-        if ("done".equals(command.commandType) || "blocked".equals(command.commandType)) {
+        if ("done".equals(command.commandType) || "blocked".equals(command.commandType)
+                || "COMPLETED".equals(response.taskStatus) || "BLOCKED".equals(response.taskStatus)) {
             hideGuideOverlay();
-            if ("done".equals(command.commandType)) agentSessionId = null;
+            hideSettingsOpenButton();
+            agentSessionId = null;
+            startNextQueuedRequest();
             return;
         }
+
+        freshObservationRetries = 0;
+        hideSettingsOpenButton();
         showGuideOverlay(command.targetBounds, command.actionType);
+        if ("scroll".equals(command.actionType)) {
+            executeScroll(command);
+        } else {
+            scrollExecutions = 0;
+        }
+    }
+
+    private void handleVisionFallback(AgentTurnContract.GuideCommand command, JSONObject visionFallback) {
+        boolean requiresConsent = visionFallback.optBoolean("requires_user_consent", true);
+        if (!requiresConsent || visionConsented) {
+            visionConsented = visionConsented || !requiresConsent;
+            attachVisionNextTurn = true;
+            pendingActionType = AgentActionEvents.OBSERVE_ONLY;
+            speechHandler.postDelayed(() -> sendAgentTurn(null, true), 500L);
+            return;
+        }
+        if (visionConsentRequested) return;
+        visionConsentRequested = true;
+        String prompt = command.message == null || command.message.isEmpty()
+                ? "화면을 분석해 도움을 드리려면 현재 화면의 글자 정보를 확인해야 해요. 계속할까요?"
+                : command.message;
+        showVisionConsent(prompt);
+    }
+
+    private void handleFreshObservationRequest(AgentTurnContract.GuideCommand command) {
+        JSONObject expected = command.expectedNextObservation();
+        boolean visionIfMissing = expected != null
+                && expected.optBoolean("send_vision_snapshot_if_target_missing", false);
+        freshObservationRetries++;
+        if (freshObservationRetries > 4) {
+            if (overlayView != null) {
+                overlayView.setRecognizedSpeech("현재 화면에서 다음에 누를 항목을 찾지 못했어요.");
+            }
+            return;
+        }
+        if (freshObservationRetries >= 2 && visionIfMissing) {
+            // The accessibility tree alone keeps missing the target: attach derived vision
+            // elements (no screenshot, so no consent needed).
+            attachVisionNextTurn = true;
+        }
+        pendingActionType = AgentActionEvents.OBSERVE_ONLY;
+        speechHandler.postDelayed(() -> sendAgentTurn(null, true), 700L);
+    }
+
+    private void executeScroll(AgentTurnContract.GuideCommand command) {
+        if (++scrollExecutions > 4) return;
+        String direction = command.renderPolicy == null
+                ? "down" : command.renderPolicy.optString("direction", "down");
+        boolean forward = !"up".equalsIgnoreCase(direction) && !"backward".equalsIgnoreCase(direction);
+        boolean performed = ClickAccessibilityService.performScroll(forward);
+        pendingActionType = performed
+                ? AgentActionEvents.SCROLL_COMPLETED : AgentActionEvents.SCROLL_FAILED;
+        speechHandler.postDelayed(() -> sendAgentTurn(null, true), performed ? 650L : 400L);
+    }
+
+    private void showVisionConsent(String message) {
+        hideConfirmation();
+        if (windowManager == null) return;
+        confirmationView = new ConfirmationOverlayView(this, message, accepted -> {
+            hideConfirmation();
+            if (accepted) {
+                visionConsented = true;
+                attachVisionNextTurn = true;
+                pendingActionType = AgentActionEvents.OBSERVE_ONLY;
+                sendAgentTurn(null, true);
+            } else if (overlayView != null) {
+                overlayView.setRecognizedSpeech("화면 분석을 취소했어요.");
+                agentSessionId = null;
+            }
+        });
+        confirmationParams = new WindowManager.LayoutParams(
+                screenWidth() - dp(28), dp(176), overlayWindowType,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                PixelFormat.TRANSLUCENT);
+        confirmationParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+        confirmationParams.y = dp(28);
+        windowManager.addView(confirmationView, confirmationParams);
     }
 
     private String userMessageForAgentError(Throwable error) {
