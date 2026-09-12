@@ -1,0 +1,113 @@
+{
+  "R1_unrelated_slider_completion": {
+    "before": {
+      "state": "S2_DISPLAY_MENU",
+      "guide": "highlight",
+      "target": null,
+      "verification": null,
+      "attempts": {},
+      "excluded": []
+    },
+    "after": {
+      "state": "S5_FONT_SIZE_CHANGED",
+      "guide": "done",
+      "target": null,
+      "verification": "SUCCESS",
+      "attempts": {},
+      "excluded": []
+    },
+    "font_size_control_present": false,
+    "user_action_sent": false,
+    "adapter_task_status": "COMPLETED"
+  },
+  "R2_idle_observations_count_as_failures": {
+    "turns": [
+      {
+        "state": "S1_SETTINGS_HOME",
+        "guide": "highlight",
+        "target": "display-row",
+        "verification": null,
+        "attempts": {},
+        "excluded": []
+      },
+      {
+        "state": "S1_SETTINGS_HOME",
+        "guide": "highlight",
+        "target": "display-row",
+        "verification": "NO_CHANGE",
+        "attempts": {
+          "S1_TO_S2_DISPLAY_MENU": 1
+        },
+        "excluded": []
+      },
+      {
+        "state": "S1_SETTINGS_HOME",
+        "guide": "highlight",
+        "target": null,
+        "verification": "NO_CHANGE",
+        "attempts": {
+          "S1_TO_S2_DISPLAY_MENU": 2
+        },
+        "excluded": [
+          "display-row"
+        ]
+      }
+    ],
+    "user_actions_sent": 0
+  },
+  "R3_equal_candidates_depend_on_order": [
+    {
+      "target": "row-a",
+      "confidence": 1.0,
+      "fallback_reason": null
+    },
+    {
+      "target": "row-b",
+      "confidence": 1.0,
+      "fallback_reason": null
+    }
+  ],
+  "R4_unrelated_slider_matches_font_transition": {
+    "target": "brightness",
+    "confidence": 0.82,
+    "transition": "S4_TO_S5_INCREASE_FONT_SIZE"
+  },
+  "R5_trace_output": {
+    "guide": {
+      "command_type": "highlight"
+    },
+    "verification": {
+      "status": "SUCCESS"
+    },
+    "schema_version": "agent-runtime-trace.v1"
+  },
+  "R6_typed_contract_rejected": [
+    {
+      "field": "contract_version",
+      "error": "extra_forbidden"
+    },
+    {
+      "field": "command_type",
+      "error": "extra_forbidden"
+    },
+    {
+      "field": "goal",
+      "error": "extra_forbidden"
+    }
+  ],
+  "R8_missing_authorization_status": 401,
+  "R7_full_http_false_completion": [
+    {
+      "http_status": 200,
+      "task_status": "IN_PROGRESS",
+      "session_version": 1,
+      "command_type": "highlight"
+    },
+    {
+      "http_status": 200,
+      "task_status": "COMPLETED",
+      "session_version": 2,
+      "command_type": "done"
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 # Click Backend
 
+**Graph 책임 변경:** Backend가 FE 확정 요구에 맞는 Task Graph를 DB에서 선택·복원해 AI1에 전달한다. AI1은 전달된 graph에서 Guide/Action → Verify → Re-plan을 수행하고 AI2는 데이터 수집·평가 후 승인된 새 graph version을 DB에 반영한다. [선택·전달 계약](../docs/backend-task-graph-dispatch.md)은 목표 설계이며 아래 raw-goal API와 runtime 내부 typing/lookup은 전환 전 구현이다.
+
 **최신 구현:** [AI 독립 백엔드 완료·인수 현황](docs/backend-completion.md). 승인·이력·피드백·계정 복구·운영 도구와 실제 AI/앱 연결 조건을 확인한다.
 
 3주 차에 신규 안내 세션을 DB로 옮겼다. [현재 세션 API 계약](docs/week3.md)에 따라 후속 turn에 expected_version을 보내야 한다. 레거시 `/sessions`는 메모리 호환 경로다.

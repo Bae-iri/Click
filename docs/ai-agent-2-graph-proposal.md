@@ -2,11 +2,12 @@
 
 ## 1. 목적과 범위
 
-AI-Agent(2)는 **전체 runtime 데이터를 분석해 success/fail 결과 라벨과 내부 데이터셋을 만들고, Task Graph를 추가·업데이트하는 내부용 에이전트**다. 기존의 `graph-proposal`을 이 에이전트의 책임으로 분리한다.
+AI-Agent(2)는 **전체 runtime 데이터를 분석해 success/fail 결과 라벨과 내부 데이터셋을 만들고, Task Graph를 추가·업데이트하는 내부용 에이전트**다. 기존의 `graph-proposal`을 이 에이전트의 책임으로 분리한다. Task Graph는 DB에 저장하며 AI2의 승인된 새 버전을 DB에 반영한다. Backend가 사용자 요구에 맞게 선택해 AI1에 전달하고 AI1은 전달 graph를 실행한다.
 
 사용자는 개발·데이터·운영 팀이다. 입력은 실제 사용자의 새 요청이 아니라 AI-Agent(1), Frontend, Backend가 남긴 실행 기록이다. 출력은 화면 조작 명령이 아니라 근거를 추적할 수 있는 라벨, 데이터셋, graph 변경안, 평가 보고서, 승인 가능한 graph artifact다.
 
 - [전체 구조와 두 에이전트의 경계](./ai-agent-architecture.md)
+- [Backend DB Graph 선택·전달 계약](./backend-task-graph-dispatch.md)
 - [AI-Agent(1): 사용자 작업 수행 Runtime Agent](./ai-agent-1-runtime.md)
 - [MVP-01: 글자 크기 확대](./tasks/font-size-increase.md)
 
@@ -33,7 +34,8 @@ AI-Agent(2)는 **전체 runtime 데이터를 분석해 success/fail 결과 라�
 
 | 작업 | 실제 담당 |
 | --- | --- |
-| 실사용자 자연어를 받아 현재 작업을 시작 | AI-Agent(1) |
+| 실사용자 자연어를 Goal/Command로 확정 | FE |
+| 사용자 요구에 맞는 DB graph 선택·실행 전달 | Backend |
 | 현재 화면에서 다음 UI target을 결정 | AI-Agent(1) |
 | 사용자에게 guide/confirmation/action command를 반환 | AI-Agent(1) → Backend → FE |
 | 지금 진행 중인 세션을 Re-plan | AI-Agent(1) |
@@ -55,7 +57,7 @@ AI-Agent(2)가 graph를 업데이트한다는 말은 `candidate 생성 → 검�
 | Graph Update Proposal | 기존 graph 변경 검토 | base version, patch, scope, evidence |
 | New Task Graph Proposal | 지원 Task 확장 검토 | goal schema, graph, 완료 조건, fixture |
 | Offline Evaluation Report | baseline/candidate 비교 | 조건, 표본, metric, 회귀, 판정 |
-| Graph Release Candidate | AI-Agent(1)이 읽을 새 graph | artifact hash, version, 호환성, 평가·승인 참조 |
+| Graph Release Candidate | DB에 게시해 Backend가 선택·전달할 새 graph | artifact hash, version, 호환성, 평가·승인 참조 |
 | Data Collection Request | 증거 부족 해소 | 필요한 환경·화면·행동·확인 질문 |
 
 모델 가중치 재학습은 후속 확장이다. 초기 목표인 라벨링, graph 개선, dataset 생산은 규칙과 통계 기반으로 먼저 완성할 수 있다.
@@ -85,7 +87,9 @@ flowchart TD
     P -->|통과| R[승인 정책 / 내부 검토]
     R --> S[Versioned Artifact / Release Manifest]
     S --> T[배포·단계적 적용·모니터링]
-    T --> U[AI-Agent 1의 새 세션]
+    T --> DB[(승인 Task Graph DB)]
+    DB --> SELECT[Backend: 새 실행에 맞는 Graph 선택·전달]
+    SELECT --> U[AI-Agent 1의 새 실행]
     U --> A
     I --> V[Training / Evaluation Dataset]
 ```
@@ -580,7 +584,7 @@ graph ID가 새로 생기므로 `base_graph_version=null`일 수 있다. 대신 
 7. 기존 goal catalog와의 혼동도 평가한다.
 8. 신규 Task 범위와 안전성을 사람이 검토한다.
 9. graph와 goal catalog, required capability, task 문서를 하나의 호환 release로 게시한다.
-10. AI-Agent(1)은 새 세션에서 지원 조건이 맞을 때만 새 graph를 선택한다.
+10. Backend가 새 episode에서 지원 조건에 맞는 DB graph를 선택·고정해 AI-Agent(1)에 전달한다. AI1은 전달된 graph를 실행한다.
 
 goal catalog만 먼저 배포해 실행 graph가 없는 task를 지원한다고 답하지 않는다. 새 graph를 rollback하면 해당 catalog entry도 호환되는 상태로 되돌린다.
 
@@ -805,12 +809,12 @@ Graph schema version, graph 내용 version, runtime contract, content hash를 �
 
 ### 13.4 배포·버전 고정·Rollback
 
-1. approved artifact와 평가·승인 참조를 release storage에 게시한다.
-2. loader가 hash, schema, 지원 환경, capability를 검증한다.
-3. 제한된 새 세션에만 candidate를 할당한다.
+1. AI2 release workflow가 승인된 graph의 새 불변 version과 평가·승인 참조를 DB에 게시한다.
+2. Backend의 repository/loader가 hash, schema, 지원 환경, capability를 검증한다.
+3. Backend selector가 제한된 새 episode에만 새 version을 선택·고정하고 graph 본문·목표·실행 상태를 AI1에 전달한다.
 4. step/task 결과, false DONE, fallback, unknown, 중단, subgroup 회귀를 관찰한다.
 5. 기준 통과 시 단계적으로 적용 범위를 늘린다.
-6. 문제 발생 시 새 세션의 할당을 이전 호환 release로 되돌린다.
+6. 문제 발생 시 DB의 활성 release 정책을 이전 호환 version으로 되돌리고 Backend가 이후 새 episode에 적용한다.
 
 진행 중인 세션은 시작 시 고정한 graph version을 계속 사용한다. 심각한 안전 문제가 발견된 버전은 revoke하여 관련 세션을 안전하게 중단·재시작할 수 있어야 한다. pending transition이 있는 세션에 새 graph를 조용히 갈아 끼우지 않는다.
 
@@ -832,10 +836,10 @@ Graph schema version, graph 내용 version, runtime contract, content hash를 �
 | `dataset_manifests`, `dataset_samples` | dataset version/sample ID | split, 원천, label lineage |
 | `graph_proposals` (구현됨) | proposal ID | patch, base hash, evidence |
 | `evaluation_reports` (구현됨) | eval ID | proposal 참조, decision, regression |
-| `graph_releases` | task/version/hash | artifact, 호환성, 승인, rollout |
+| 실행 Task Graph DB / `graph_releases` (설계) | graph ID/task/version/hash | 선언적 graph 본문, Goal 연결, 호환성·선택 우선순위·승인·활성 release |
 | `pipeline_jobs` | job ID | 입력 snapshot, 단계, cursor, 재시도 |
 
-메타데이터와 작은 record는 DB, 큰 snapshot·dataset·artifact는 접근 통제된 object/file storage를 고려할 수 있다. 제품 선정은 후속 구현에서 정하되 artifact와 metadata의 참조 정합성은 보장한다.
+실행 graph 본문과 선택 metadata는 DB를 기준으로 관리한다. 큰 원천 snapshot·dataset·평가 첨부 자료는 접근 통제된 object/file storage를 고려할 수 있다. 제품 선정은 후속 구현에서 정하되 artifact와 metadata의 참조 정합성은 보장한다.
 
 ### 14.2 Job 입력과 출력
 
@@ -946,7 +950,7 @@ AI-Agent(2)는 `AI-Agent/src/ai_agent/graph_proposal/`에 독립 패키지로 �
 
 사용자용 producer인 `TraceLogger`는 Agent(2)에 두지 않는다. 공통 `telemetry/trace_logger.py`로 이동하고 Agent(1)과 Backend는 이 경로에서 import한다. 관측 요약 계약 `RuntimeTrace`는 `telemetry/schemas.py`에 정의한다. 진단 dict와 이 dataclass는 서로 다른 형식이므로 현재 진단 로그만으로 자동 변환·라벨링할 수 없다.
 
-공통 `task_graph/`는 graph 구조와 registry를 제공한다. 사용자 실패 state를 관리하는 기존 `StateManager`는 `replanning/state_manager.py`, graph 승격·rollback은 Agent(2)의 `releases/versioning.py`에 둔다. graph 조회·세션 상태·배포 역할을 분리한다.
+공통 `task_graph/`는 현재 graph 구조와 registry를 제공한다. 새 설계의 사용자별 실행 graph 선택은 Backend의 DB repository/selector이며 AI1은 전달된 graph만 소비한다. 사용자 실패 state를 관리하는 기존 `StateManager`는 `replanning/state_manager.py`, graph 승격·rollback은 Agent(2)의 `releases/versioning.py`에 둔다. graph 조회·세션 상태·배포 역할을 분리한다.
 
 ```text
 AI-Agent/src/ai_agent/

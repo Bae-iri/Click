@@ -1,5 +1,7 @@
 # System Architecture
 
+**2026-09-12 책임 변경:** FE가 Goal/Command를 확정하고 Backend가 DB의 Task Graph를 선택·고정·복원해 AI1에 전달한다. AI1은 전달 graph의 Guide/Action·Verification·Re-plan을 수행한다. [Backend → AI1 내부 계약](../../docs/backend-task-graph-dispatch.md)이 전환 목표이며, 아래 raw-goal 경로는 전환 전 현재/과거 구현 설명이다.
+
 **Current backend implementation:** [AI-independent backend completion](backend-completion.md) supersedes historical planning below. Approval IDs, history/feedback, account recovery, consent withdrawal and operations tooling are now implemented; real AI/device/cloud verification remains outstanding.
 
 **Week 4:** isolated runtime execution is bounded to four concurrent tasks per process; the request commits only timely results. Input/privacy boundaries and provider fallback are described in [week4.md](week4.md).

@@ -4,22 +4,23 @@
 
 AI-Agent를 아래 두 역할로 분리한다.
 
-1. **AI-Agent(1): 사용자 작업 수행 Runtime Agent** — FE가 확정한 Goal Type·Command Type을 받아 승인 Task Graph를 선택하고, 현재 화면을 읽어 guide/action을 결정한다. 이후 관측으로 결과를 검증하고 필요하면 Re-plan한다.
+1. **AI-Agent(1): 사용자 작업 수행 Runtime Agent** — Backend가 DB에서 선택·복원해 전달한 Task Graph와 확정 목표를 받아 실행하며, 현재 화면을 읽어 guide/action을 결정한다. 이후 관측으로 결과를 검증하고 필요하면 Re-plan한다.
 2. **AI-Agent(2): Runtime Data / Graph Proposal Agent** — 전체 runtime 데이터에 success/fail 등 결과 라벨을 붙이고, 내부 데이터셋을 생산하며, Task Graph 추가·업데이트 후보를 생성·검증한다.
 
-기존 `graph-proposal` 및 trace 기반 graph 개선은 AI-Agent(2)의 책임이다. AI-Agent(1)은 실행 trace를 생산하고 승인된 graph를 소비한다.
+FE는 Goal/Command를 확정하고, Backend는 DB의 graph를 선택·전달한다. 기존 `graph-proposal` 및 trace 기반 graph 개선과 승인된 새 버전의 DB 반영 workflow는 AI-Agent(2)의 책임이다. AI-Agent(1)은 실행 trace를 생산하고 승인된 graph를 소비한다.
 
 | 문서 | 내용 |
 | --- | --- |
 | [FE Goal·Command 계약](./fe-goal-command-contract.md) | FE 소유 분류, 실제 Goal 목록, slots, Command별 요청·제어 상태·구현 전환 |
-| [AI-Agent(1) 상세 설계](./ai-agent-1-runtime.md) | typed 입력 검증, Task Graph 선택·복원, 화면 해석, Guide/Action, Verification, Re-plan, 세션 및 trace |
+| [Backend Graph 선택·전달](./backend-task-graph-dispatch.md) | DB 조회·선택·버전 고정·복원, AI1 내부 실행 입력 |
+| [AI-Agent(1) 상세 설계](./ai-agent-1-runtime.md) | 전달 graph·목표·실행 상태 검증, 화면 해석, Guide/Action, Verification, Re-plan, 세션 및 trace |
 | [AI-Agent(2) 상세 설계](./ai-agent-2-graph-proposal.md) | 전체 runtime 수집, 결과 라벨링, 데이터셋, 신규·기존 graph 제안, 검증·승인·배포 |
 | [MVP-01: 글자 크기 확대](./tasks/font-size-increase.md) | Task별 State, Transition, 완료 조건과 개선 사례 |
 | [Frontend·Backend 계약](./frontend-backend-contract.md) | 사용자 입력, 화면 수집, guide와 행동 결과 전달 |
 
 이 문서는 두 에이전트의 관계를 설명하는 공통 진입점이다. 기존 전체 구조 문서의 실행 상세와 구현 평가를 AI-Agent(1)에 옮기고, learning/proposal 영역을 AI-Agent(2)로 분리·확장했다. 상세 설계의 기준 경로는 루트 `docs/`이며 `AI-Agent/docs/`에서는 이 문서들로 연결한다.
 
-코드 확인 기준은 **2026-09-12, `a0d3609` 커밋**이다. 기능의 구현 상태는 위 커밋을 기준으로 하고 파일 경로는 이번 패키지 분리 작업을 반영했다. 사용자 실행은 `runtime/`, 내부 개선은 `graph_proposal/`, 공통 진단·관측 계약은 `telemetry/`로 실제 분리했으며 HTTP API와 별도 실행 프로세스는 변경하지 않았다. 예시 schema, 저장소, job, artifact 및 배포 정책은 현재 구현과 구분해서 읽는다. **추가 회의 결정으로 Goal/Command 분류는 FE로 이관했다.** 이번 문서는 책임 경계를 반영하며 raw-goal v1과 engine 호출을 바꾸는 실제 코드 전환은 별도 작업이다.
+코드 확인 기준은 **2026-09-12, `a0d3609` 커밋**이다. 기능의 구현 상태는 위 커밋을 기준으로 하고 파일 경로는 이번 패키지 분리 작업을 반영했다. 사용자 실행은 `runtime/`, 내부 개선은 `graph_proposal/`, 공통 진단·관측 계약은 `telemetry/`로 실제 분리했으며 HTTP API와 별도 실행 프로세스는 변경하지 않았다. 예시 schema, 저장소, job, artifact 및 배포 정책은 현재 구현과 구분해서 읽는다. **추가 회의 결정으로 Goal/Command 분류는 FE, DB Task Graph 선택·복원과 명령 제어는 Backend로 이관했다. AI1은 전달된 graph를 실행한다.** 이번 문서는 책임 경계를 반영하며 raw-goal v1과 engine 호출을 바꾸는 실제 코드 전환은 별도 작업이다.
 
 ## 2. 두 에이전트 비교
 
@@ -27,12 +28,12 @@ AI-Agent를 아래 두 역할로 분리한다.
 | --- | --- | --- |
 | 대상 | 실제 앱 사용자 | 내부 개발·데이터·운영 팀 |
 | 목표 | 지금 사용자의 목적 완료를 지원 | 운영 데이터를 개선에 사용할 수 있는 데이터·graph로 변환 |
-| 입력 | FE 확정 Goal·Command, 현재 화면, 사용자 행동·확인, 세션 상태 | 전체 runtime event/trace, graph, 검토된 정답·fixture |
+| 입력 | Backend가 전달한 graph·확정 목표·명령·화면·행동·실행 상태 | 전체 runtime event/trace, graph, 검토된 정답·fixture |
 | 실행 단위 | turn, step, 사용자 episode | 분석 job, dataset snapshot, proposal |
 | 실행 방식 | 사용자 응답 경로에서 동작 | 비동기·offline 분석, 필요 시 주기 실행 |
 | 핵심 루프 | Observe → Decide → Guide/Action → Verify → Re-plan | Reconstruct → Label → Analyze → Propose → Validate → Revise |
-| 주요 출력 | 선택된 task/graph, 실행 제어 상태, guide/action, 온라인 verification, trace | 라벨, 데이터셋, graph diff, 신규 graph, 평가·release artifact |
-| Graph 접근 | 승인된 호환 version 읽기 | candidate 작성, 평가 후 승인·배포 경계에 전달 |
+| 주요 출력 | 고정 graph 내 실행 상태, guide/action, 온라인 verification, 복구 요청, trace | 라벨, 데이터셋, graph diff, 신규 graph, 평가·release artifact |
+| Graph 접근 | Backend가 전달한 고정 version 읽기; DB 선택·수정 없음 | candidate 작성, 평가 후 승인·배포 경계에 전달 |
 | 변경의 범위 | 현재 세션의 경로·target 선택 | 이후 세션에 적용할 versioned graph |
 | 실패 시 처리 | 재관측, 질문, 복구, 재계획 또는 중단 | 재처리, 라벨 검토, 추가 데이터 요청, 후보 기각 |
 | 품질 평가 | 실제 목표 완료, false DONE, 잘못된 안내, 복구·응답 품질 | 라벨 정확도·coverage, 재현성, graph 개선·회귀, 데이터 품질 |
@@ -44,7 +45,7 @@ AI-Agent를 아래 두 역할로 분리한다.
 ```mermaid
 flowchart LR
     U[사용자 목표 Text / 실행 제어] --> FE[Frontend / Goal·Command 분류]
-    FE --> BE[Backend / 세션·API]
+    FE --> BE[Backend / 세션·API·DB Graph 선택]
     BE --> A1[AI-Agent 1 / Runtime]
     A1 --> BE
     BE --> FE
@@ -58,11 +59,11 @@ flowchart LR
     A2 --> DATA[내부 Dataset·분석 보고서]
     A2 --> CAND[신규·변경 Graph Candidate]
     CAND --> EV[평가·검토·승인]
-    EV --> REG[Versioned Graph Release]
-    REG -->|새 세션에서 선택·고정| A1
+    EV --> REG[(DB / Versioned Task Graph)]
+    REG -->|Backend가 새 실행의 Graph 선택·고정| BE
 ```
 
-Agent(2)의 분석이 완료될 때까지 사용자 guide 응답을 기다리지 않는다. Agent(2) 장애 시 Agent(1)은 마지막으로 승인된 호환 graph를 사용한다. trace 전달 실패는 별도 장애로 기록하고 복구한다.
+Agent(2)의 분석이 완료될 때까지 사용자 guide 응답을 기다리지 않는다. Agent(2) 장애 시 Backend는 사용 가능한 승인 graph를 전달하고 Agent(1)은 고정 graph 실행을 이어간다. trace 전달 실패는 별도 장애로 기록하고 복구한다.
 
 ## 4. 책임 경계
 
@@ -71,7 +72,8 @@ Agent(2)의 분석이 완료될 때까지 사용자 guide 응답을 기다리지
 | STT·Goal Typing·Command Typing | FE | 모호성 확인 후 canonical Goal·slots·실행 제어 전달 |
 | 화면·사용자 행동 수집 | FE | 필요한 관측과 실제 발생한 행동 전달 |
 | 인증·소유권·멱등성·세션 저장 | Backend | Agent 호출 전후의 요청 정합성 |
-| typed 입력 검증·Command 분기·Graph 선택 | Agent(1) | FE 의도 재분류 없이 승인 graph 선택·복원·template 구체화 |
+| typed 입력 검증·Command 분기·DB Graph 선택 | Backend | FE 의도 재분류 없이 승인 graph 선택·복원·parameter 확정 |
+| 전달 Graph·목표·실행 상태 검증 | Agent(1) | 본문/reference/goal/checkpoint 정합성 확인; Graph 재선택 없음 |
 | Normalize·Classify·Match | Agent(1) | 현재 화면 근거로 다음 target 결정 |
 | Safety·Guide·온라인 Verify·Re-plan | Agent(1), Backend/FE의 계약 집행 | 현재 사용자 작업에 대한 판단 |
 | Runtime event 생산 | Agent(1), Backend, FE | 사실과 온라인 판단을 기록 |
@@ -93,13 +95,13 @@ runtime `SUCCESS` 또는 `DONE`은 라벨의 입력 신호다. 정답으로 자�
 
 ### 5.2 Re-plan과 Graph Update
 
-Re-plan은 현재 승인 graph의 다른 transition, 다른 target, 재관측 또는 복구를 선택하는 것이다. 실패 이력은 현재 세션 상태에 반영한다.
+Re-plan은 Backend가 전달한 graph의 다른 transition, 다른 target, 재관측 또는 복구를 선택하는 것이다. 실패 이력은 현재 세션 상태에 반영한다. graph 내 해결이 불가능하면 AI1은 사유를 Backend에 반환해 재선택/재시작 또는 지원 불가 처리를 요청하며, 직접 DB를 조회하거나 graph를 수정하지 않는다.
 
 Graph Update는 여러 실행에서 모은 증거로 graph 정의 자체를 바꾸는 것이다. candidate를 검증·승인하고 version을 올린 뒤 이후 세션에 적용한다. 실행 중인 세션에 새 graph를 조용히 주입하지 않는다.
 
 ### 5.3 Graph 선택·구체화와 신규 Graph 생성
 
-Agent(1)은 등록된 Goal에 맞는 승인 graph를 고르거나 승인된 template에 slots를 대입한다. 미지원 목표에 대해 검증되지 않은 새 graph를 만들어 사용자에게 실행시키지 않는다.
+Backend는 DB에서 등록된 Goal에 맞는 승인 graph를 고르고 승인 template의 parameters를 확정한다. Agent(1)은 그 결과를 받아 실행한다. 미지원 목표에 대해 검증되지 않은 새 graph를 만들어 사용자에게 실행시키지 않는다.
 
 Agent(2)는 미지원 목표 수요와 시범 수행·실행 데이터를 분석해 신규 Task Graph를 제안한다. 시작 화면, 실제 edge, 완료 predicate, 안전 정책, 평가 fixture, Goal Catalog 연결을 갖춰야 새 지원 Task로 등록한다.
 
@@ -116,7 +118,8 @@ guide의 `action_type=tap`은 사용자가 해야 할 행동을 나타낼 수 �
 | Runtime Event | Agent(1)/FE/BE → Agent(2) | episode·step·guide·observation 연결, 전체 종료 경로, 개인정보 최소화 |
 | Outcome Label | Agent(2) → dataset/evaluation | success/fail의 판정 단위, unknown 처리, evidence, revision |
 | Graph Proposal | Agent(2) → validator/reviewer | base hash, 적용 범위, patch, 근거, 반례 |
-| Graph Artifact | 승인·release 경계 → Agent(1) | 불변 version/hash, schema·runtime·환경 호환성 |
+| Graph Artifact | AI2 승인·release 경계 → DB → Backend | 불변 version/hash, schema·runtime·환경 호환성 |
+| Runtime Graph Input | Backend → Agent(1) | 선택 본문·reference·goal·실행 상태·현재 관측 |
 | Release Feedback | runtime/운영 → Agent(2) | graph version별 결과, subgroup 회귀, rollback 사유 |
 
 공통 ID와 schema version은 먼저 합의해야 한다. 현재 한 turn trace에는 직전 guide의 verification과 이번 turn의 새 guide가 함께 있으므로, field가 같은 record에 있다는 이유로 같은 step으로 연결하면 안 된다.
@@ -127,7 +130,7 @@ guide의 `action_type=tap`은 사용자가 해야 할 행동을 나타낼 수 �
 
 | 영역 | 확인된 현재 상태 | 다음 작업 |
 | --- | --- | --- |
-| Agent(1) 실행 | `ai_agent.runtime`에 MVP-01 화면 판단·안내·검증·재시도 구현; legacy Goal Typing 잔존 | FE typed 계약 전환, confidence·완료 근거·graph Re-plan 일반화 |
+| Agent(1) 실행 | `ai_agent.runtime`에 MVP-01 화면 판단·안내·검증·재시도 구현; legacy Goal Typing 잔존 | Backend DB graph 주입 계약 전환, confidence·완료 근거·graph 내부 Re-plan 강화 |
 | Safety·실행 제한 | Backend confirmation·화면·출력 검증, turn deadline·동시 실행 상한 | runtime 공통 policy와 episode 복구 예산 |
 | 세션 영속성 | Backend DB turn claim·응답 저장·checkpoint 복원/저장 구현 | graph artifact version 고정과 연결 |
 | Graph 호환성 | Backend checkpoint의 graph hash와 현재 graph hash 비교 | 여러 승인 version을 읽는 loader |
@@ -168,4 +171,4 @@ ai_agent.graph_proposal                   # Agent(2)
 | `L4` | 감독형 실행 Agent | low-risk scroll 등 일부 실행을 policy 하에 수행 |
 | `L5` | 범용 모바일 Agent | 여러 앱/목표를 동적으로 계획하고 안정적으로 수행 |
 
-Agent(1)의 단기 목표는 여러 turn의 관측·검증·복구를 안정화하는 L2다. 제품의 L3 개선 루프는 Agent(1)이 기록한 증거를 Agent(2)가 라벨링·평가하고 승인 graph로 돌려주는 구조다. Agent(2)의 모델·graph 학습 구현은 Agent(1)의 실행 코드에 추가하지 않는다.
+Agent(1)의 단기 목표는 여러 turn의 관측·검증·복구를 안정화하는 L2다. 제품의 L3 개선 루프는 Agent(1)이 기록한 증거를 Agent(2)가 라벨링·평가하고 승인된 새 graph를 DB에 게시하면 Backend가 선택해 AI1에 전달하는 구조다. Agent(2)의 모델·graph 학습 구현은 Agent(1)의 실행 코드에 추가하지 않는다.
