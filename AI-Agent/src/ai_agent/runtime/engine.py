@@ -39,7 +39,7 @@ from ai_agent.fallback.llm_vlm_fallback import (
     VisionFallbackAnalysis,
     vision_elements_to_accessibility_nodes,
 )
-from ai_agent.learning.trace_logger import TraceLogger
+from ai_agent.telemetry.trace_logger import TraceLogger
 from ai_agent.runtime.privacy import sanitize_request
 
 

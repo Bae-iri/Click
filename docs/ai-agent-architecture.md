@@ -18,7 +18,7 @@ AI-Agent를 아래 두 역할로 분리한다.
 
 이 문서는 두 에이전트의 관계를 설명하는 공통 진입점이다. 기존 전체 구조 문서의 실행 상세와 구현 평가를 AI-Agent(1)에 옮기고, learning/proposal 영역을 AI-Agent(2)로 분리·확장했다. 상세 설계의 기준 경로는 루트 `docs/`이며 `AI-Agent/docs/`에서는 이 문서들로 연결한다.
 
-코드 확인 기준은 **2026-09-12, `a0d3609` 커밋**이다. 이번 변경은 문서의 책임 분리이며 코드 패키지, API, 프로세스를 실제로 두 개로 분리한 작업은 아니다. 예시 schema, 저장소, job, artifact 및 배포 정책은 현재 구현과 구분해서 읽는다.
+코드 확인 기준은 **2026-09-12, `a0d3609` 커밋**이다. 기능의 구현 상태는 위 커밋을 기준으로 하고 파일 경로는 이번 패키지 분리 작업을 반영했다. 사용자 실행은 `runtime/`, 내부 개선은 `graph_proposal/`, 공통 진단·관측 계약은 `telemetry/`로 실제 분리했으며 HTTP API와 별도 실행 프로세스는 변경하지 않았다. 예시 schema, 저장소, job, artifact 및 배포 정책은 현재 구현과 구분해서 읽는다.
 
 ## 2. 두 에이전트 비교
 
@@ -131,7 +131,40 @@ guide의 `action_type=tap`은 사용자가 해야 할 행동을 나타낼 수 �
 | 세션 영속성 | Backend DB turn claim·응답 저장·checkpoint 복원/저장 구현 | graph artifact version 고정과 연결 |
 | Graph 호환성 | Backend checkpoint의 graph hash와 현재 graph hash 비교 | 여러 승인 version을 읽는 loader |
 | Trace | enum·수치 allowlist와 개수·TTL 제한을 갖춘 메모리 진단 | 식별자·증거 및 모든 종료 경로를 포함한 별도 영속 event |
-| Agent(2) | `learning/*`에 구조 존재, learner는 빈 proposal, validator는 `NEEDS_DATA` 반환 | 재구성 → 결과 라벨링 → dataset → proposal → 평가 |
+| Agent(2) | `graph_proposal/*`로 모듈 이동, learner는 빈 proposal, validator는 `NEEDS_DATA` 반환 | 재구성 → 결과 라벨링 → dataset → proposal → 평가 |
 | Graph release | version manager는 문자열을 반환하는 골격 | 승인 artifact·registry·배포·rollback 연결 |
 
 공통 선행 과제는 replay 가능한 event와 graph version 계약이다. Agent(1)은 완료 검증과 trace 품질을 강화하고, Agent(2)는 라벨링과 첫 graph 변경안의 근거·평가부터 완성한다. 모델 가중치 학습은 이 기반 이후의 확장으로 둔다.
+
+## 8. 실제 코드 의존성과 공통 경계
+
+```text
+사용자 API → ai_agent.runtime             # Agent(1)
+                   ↓
+         ai_agent.telemetry               # 진단 producer·관측 요약
+
+ai_agent.graph_proposal                   # Agent(2)
+        ↓               ↓
+     telemetry       task_graph           # 공통 계약·graph 구조
+```
+
+`runtime`과 Backend의 사용자 응답 경로는 `graph_proposal`을 import하지 않는다. `graph_proposal`은 사용자 runtime·Guide·Backend 세션을 직접 호출하지 않는다. `telemetry`와 공통 `task_graph`는 에이전트를 실행하지 않는다.
+
+`GraphUpdateProposal`은 `graph_proposal/schemas.py`, 관측 요약인 `RuntimeTrace`는 `telemetry/schemas.py`에 한 번만 정의한다. 기존 공통 `schemas.py`에서 두 타입을 제거했다. graph 승격·rollback은 Agent(2)의 `releases/versioning.py`, 기존 사용자 StateManager는 `replanning/state_manager.py`로 이동했다.
+
+원천 데이터는 `data/runtime/`, 공통 fixture는 `data/fixtures/`, 파생 label·dataset·proposal·평가는 `data/graph_proposal/`로 구분한다. 자동 저장·라벨링·배포는 아직 구현하지 않았다. [파일별 책임과 이동 경로](../AI-Agent/README.md)를 기준으로 개발한다.
+
+## 9. 제품 전체 성숙도 용어
+
+기존 문서의 내부 용어를 제품 전체에서만 사용한다. 외부 표준이나 측정 점수가 아니며 Agent(1)과 Agent(2)의 책임을 합쳐서 한 에이전트의 기능으로 표시하지 않는다.
+
+| Level | 정의 | 대표 능력 |
+| --- | --- | --- |
+| `L0` | 정적 매뉴얼 | 화면을 보지 않고 절차만 설명 |
+| `L1` | 화면 기반 안내 | 현재 화면에서 target UI를 찾아 highlight |
+| `L2` | 상태 기반 Task Agent | session, state graph, verification, retry를 통해 여러 step 안내 |
+| `L3` | 데이터 기반 개선 루프가 연결된 제품 | AI-Agent(2)가 graph 후보를 검증하고 AI-Agent(1)이 승인 graph를 소비 |
+| `L4` | 감독형 실행 Agent | low-risk scroll 등 일부 실행을 policy 하에 수행 |
+| `L5` | 범용 모바일 Agent | 여러 앱/목표를 동적으로 계획하고 안정적으로 수행 |
+
+Agent(1)의 단기 목표는 여러 turn의 관측·검증·복구를 안정화하는 L2다. 제품의 L3 개선 루프는 Agent(1)이 기록한 증거를 Agent(2)가 라벨링·평가하고 승인 graph로 돌려주는 구조다. Agent(2)의 모델·graph 학습 구현은 Agent(1)의 실행 코드에 추가하지 않는다.

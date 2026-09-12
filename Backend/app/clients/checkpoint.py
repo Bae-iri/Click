@@ -2,7 +2,7 @@
 from dataclasses import asdict
 from hashlib import sha256
 import json
-from ai_agent.learning.trace_logger import diagnostic_payload
+from ai_agent.telemetry.trace_logger import diagnostic_payload
 from ai_agent.runtime.privacy import redact_text
 
 from ai_agent.runtime.session import InMemorySessionStore

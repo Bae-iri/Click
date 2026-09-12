@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .graph import TaskGraph
+from ai_agent.task_graph.graph import TaskGraph
 
 
 class StateManager:

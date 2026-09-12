@@ -10,7 +10,7 @@ AI-Agent(2)는 **전체 runtime 데이터를 분석해 success/fail 결과 라�
 - [AI-Agent(1): 사용자 작업 수행 Runtime Agent](./ai-agent-1-runtime.md)
 - [MVP-01: 글자 크기 확대](./tasks/font-size-increase.md)
 
-이 문서는 2026-09-12의 `a0d3609` 커밋에서 확인한 구현과 새 목표 설계를 구분한다. 아래 pipeline, event 계약, 저장 테이블, job 및 승인 상태는 **구현할 설계**다. 현재 `GraphLearner.generate_proposals()`는 빈 목록을 반환한다. 코드 파일이 있다는 이유로 라벨링·학습·배포가 완성된 것으로 보지 않는다.
+이 문서는 2026-09-12의 `a0d3609`에서 확인한 기능 상태와 새 목표 설계를 구분하며, 파일 경로는 이번 `graph_proposal/` 패키지 분리를 반영한다. 아래 pipeline, event 계약, 저장 테이블, job 및 승인 상태는 **구현할 설계**다. 현재 `GraphLearner.generate_proposals()`는 빈 목록을 반환한다. 코드 파일이 있다는 이유로 라벨링·학습·배포가 완성된 것으로 보지 않는다.
 
 예시 ID, 버전, confidence, 표본 수, metric은 이해를 돕기 위한 가상 값이며 실측 결과나 확정된 운영 기준이 아니다. 새 API endpoint, scheduler 제품, queue 제품, 보존 기간은 이 문서로 확정하지 않는다.
 
@@ -897,41 +897,54 @@ Backend의 turn 저장과 event 전달 사이의 누락을 줄이기 위해 tran
 
 동의 거절은 `not_applicable` 또는 사용자 종료 상황에 따른 `cancelled`로 기록하고 `confirmation_rejected` 등 명확한 사유를 남긴다. selector 실패 negative로 쓰지 않고, 동의 없이 수집할 수 있는 대안 데이터만 사용한다.
 
-## 17. 현재 코드와 변경 대상
+## 17. 현재 코드와 역할별 파일 구조
 
-| 현재 파일 | 현재 동작 | AI-Agent(2)로 확장할 내용 |
+AI-Agent(2)는 `AI-Agent/src/ai_agent/graph_proposal/`에 독립 패키지로 구획했다. 기존 `learning/`을 제거하고 후보·dataset·평가·모델·release 모듈을 실제로 이동했다. 각 모듈의 기존 동작은 유지하며 자동 라벨링·학습을 새로 구현한 것으로 표시하지 않는다.
+
+| 현재 파일 (`src/ai_agent/` 기준) | 현재 동작 | 확장할 내용 |
 | --- | --- | --- |
-| `AI-Agent/src/ai_agent/learning/trace_logger.py` | allowlist 기반 메모리 진단, 개수·TTL 제한 | 개인정보 경계를 유지하는 별도 학습 event/store 계약 |
-| `learning/graph_learner.py` | `generate_proposals()`가 `[]` 반환 | labeled episode 기반 mining·proposal 생성 |
-| `learning/graph_validator.py` | 항상 `NEEDS_DATA` 반환 | schema·safety·replay·regression 평가 |
-| `learning/dataset_builder.py` | 빈 samples 목록을 가진 구조 반환 | evidence·label·split 기반 sample 생성 |
-| `learning/model_trainer.py` | candidate metadata 반환 | 실제 학습은 후속 범위, 현재 학습 완료 아님 |
-| `learning/model_registry.py` | 메모리 dict register/get | artifact·dataset lineage·호환성 관리 |
-| `task_graph/versioning.py` | task/version 문자열 반환 | 실제 promotion·rollback workflow |
-| `task_graph/registry.py` | `(task_id, version)` 메모리 조회 | artifact loader와 runtime 연결 |
-| `AI-Agent/src/ai_agent/schemas.py` | 요약 RuntimeTrace/GraphUpdateProposal dataclass | step/task label, event·evidence·revision 계약 |
-| `AI-Agent/src/ai_agent/runtime/engine.py` | 정상 runtime 경로에서 trace 기록 | 조기 return 포함 전체 경로·step 귀속 |
+| `graph_proposal/schemas.py` | 기존 `GraphUpdateProposal` 정의 | evidence·revision·승인 계약 확장 |
+| `graph_proposal/ingestion/__init__.py` | 수집 책임만 구획, 미구현 | 영속 event·schema·privacy 검사 |
+| `graph_proposal/reconstruction/__init__.py` | 재구성 책임만 구획, 미구현 | episode·step·attempt 연결 |
+| `graph_proposal/labeling/__init__.py` | 라벨링 책임만 구획, 미구현 | step/task outcome·근거·revision |
+| `graph_proposal/analysis/__init__.py` | 분석 책임만 구획, 미구현 | failure cluster·성공 경로 mining |
+| `graph_proposal/proposals/graph_learner.py` | `generate_proposals()`가 `[]` 반환 | labeled episode 기반 후보 생성 |
+| `graph_proposal/evaluation/graph_validator.py` | 항상 `NEEDS_DATA` 반환 | schema·safety·replay·regression 평가 |
+| `graph_proposal/datasets/dataset_builder.py` | 빈 samples 목록을 가진 구조 반환 | evidence·label·split 기반 sample 생성 |
+| `graph_proposal/models/model_trainer.py` | candidate metadata 반환 | 실제 학습은 후속 범위 |
+| `graph_proposal/models/model_registry.py` | 메모리 dict register/get | artifact·dataset lineage·호환성 |
+| `graph_proposal/releases/versioning.py` | task/version 문자열 반환 | 실제 promotion·rollback workflow |
+| `graph_proposal/workflows/__init__.py` | offline job 책임만 구획, 미구현 | 단계별 orchestration·retry·checkpoint |
 
-목표 구조 예시:
+사용자용 producer인 `TraceLogger`는 Agent(2)에 두지 않는다. 공통 `telemetry/trace_logger.py`로 이동하고 Agent(1)과 Backend는 이 경로에서 import한다. 관측 요약 계약 `RuntimeTrace`는 `telemetry/schemas.py`에 정의한다. 진단 dict와 이 dataclass는 서로 다른 형식이므로 현재 진단 로그만으로 자동 변환·라벨링할 수 없다.
+
+공통 `task_graph/`는 graph 구조와 registry를 제공한다. 사용자 실패 state를 관리하는 기존 `StateManager`는 `replanning/state_manager.py`, graph 승격·rollback은 Agent(2)의 `releases/versioning.py`에 둔다. graph 조회·세션 상태·배포 역할을 분리한다.
 
 ```text
 AI-Agent/src/ai_agent/
   runtime/                    # AI-Agent(1)의 실행 경로
-  telemetry/                  # 공통 event schema·producer, 신규 제안
-  graph_proposal/             # AI-Agent(2), 신규 제안
-    ingestion/                # schema·중복·privacy 검사
-    reconstruction/           # episode·step·attempt 연결
-    labeling/                 # outcome predicate·review·revision
-    analysis/                 # cohort·failure cluster·path mining
-    proposals/                # 기존 graph patch·신규 graph
-    datasets/                 # sample·split·manifest
-    evaluation/               # static·replay·regression
-    releases/                 # 승인·artifact·rollout metadata
-    workflows/                # job orchestration·retry·checkpoint
-  task_graph/                 # 공통 선언적 graph schema·loader
+  telemetry/                  # 공통 진단 producer·관측 요약 계약
+    trace_logger.py
+    schemas.py
+  graph_proposal/             # AI-Agent(2) 전용 패키지
+    schemas.py
+    ingestion/
+    reconstruction/
+    labeling/
+    analysis/
+    proposals/
+    datasets/
+    evaluation/
+    models/
+    releases/
+    workflows/
+  task_graph/                 # 공통 선언적 graph 구조·registry
+  replanning/                 # 기존 Agent(1) 컴포넌트와 StateManager
 ```
 
-위 디렉터리는 이 문서 변경으로 생성하거나 소스 코드를 이동한 상태가 아니다. 먼저 기존 `learning/*` 인터페이스를 유지하며 기능별로 이전하고, 실행 경로가 두 군데로 갈라지지 않게 한다.
+`graph_proposal`은 `runtime`, 사용자 Goal/UI/Guide 모듈, Backend를 import하지 않는다. 사용자 실행 경로도 `graph_proposal`을 import하지 않는다. import 경계와 두 패키지의 독립 로딩은 `AI-Agent/tests/test_agent_boundaries.py`로 검사한다. 이전 `learning.*` 경로로의 재export를 유지하지 않으므로 신규 구현은 위 경로를 사용한다.
+
+산출물 경로도 `AI-Agent/data/graph_proposal/`로 옮겼다. 원천 runtime과 공통 fixture는 각각 `data/runtime/`, `data/fixtures/`에 둔다. 실제 파일 목록과 역할은 [Agent(2) 패키지 README](../AI-Agent/src/ai_agent/graph_proposal/README.md), [데이터 README](../AI-Agent/data/README.md)를 참고한다.
 
 ## 18. 구현 순서와 인수 기준
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ai_agent.schemas import RuntimeTrace
+from ai_agent.telemetry.schemas import RuntimeTrace
 
 
 class TrainingDatasetBuilder:

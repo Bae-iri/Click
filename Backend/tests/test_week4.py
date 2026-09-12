@@ -20,7 +20,7 @@ from tests.test_agent_sessions import payload, post, session
 from ai_agent.runtime.privacy import sanitize_request
 from ai_agent.runtime.types import (AccessibilityNode, AgentTurnRequest, RawGoalInput,
     DeviceContext, VisionSnapshot, VisionElement)
-from ai_agent.learning.trace_logger import TraceLogger
+from ai_agent.telemetry.trace_logger import TraceLogger
 from ai_agent.fallback.llm_vlm_fallback import LLMVLMFallback
 from ai_agent.runtime.similarity import GeminiSimilarityScorer
 from ai_agent.runtime.budget import deadline

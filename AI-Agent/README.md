@@ -1,55 +1,82 @@
 # AI-Agent(1) / AI-Agent(2)
 
-모바일 앱에서 사용자 작업을 돕는 AI-Agent(1)과 runtime 데이터로 내부 데이터셋·Task Graph를 만드는 AI-Agent(2)를 관리하는 영역이다.
+사용자 작업 실행과 내부 데이터·Task Graph 개선을 패키지와 데이터 폴더로 분리한다.
+
+| 역할 | 코드 | 책임 |
+| --- | --- | --- |
+| AI-Agent(1) | [`src/ai_agent/runtime/`](src/ai_agent/runtime/README.md) | Text → Typed Goal → 화면 해석 → Guide/Action → Verify → Re-plan |
+| AI-Agent(2) | [`src/ai_agent/graph_proposal/`](src/ai_agent/graph_proposal/README.md) | runtime 재구성·라벨링·dataset·graph 후보·평가·release |
+| 공통 관측 계약·진단 | [`src/ai_agent/telemetry/`](src/ai_agent/telemetry/README.md) | trace 생산·개인정보 필터·관측 요약 계약 |
+| 공통 Graph 자산 | `task_graph/`, `task_graphs/`, `goal_catalog/` | graph 구조·조회·승인된 입력 자산 |
+
+## 파일 구조
+
+```text
+AI-Agent/
+  goal_catalog/                    # Goal 후보 검색 catalog
+  task_graphs/                     # 기존 승인 Graph seed
+  data/
+    runtime/traces/                # 원천 event 영속화 예정 위치
+    fixtures/accessibility_trees/   # 공통 replay fixture
+    graph_proposal/                # Agent(2) episode·label·proposal·dataset·평가
+  src/ai_agent/
+    runtime/                       # Agent(1)의 현재 turn 실행 경로
+    graph_proposal/                # Agent(2) 전용 패키지
+      ingestion/                   # event 수집 경계
+      reconstruction/              # episode·step 재구성 경계
+      labeling/                    # 결과 라벨링 경계
+      analysis/                    # 실패·성공 경로 분석 경계
+      proposals/graph_learner.py
+      datasets/dataset_builder.py
+      evaluation/graph_validator.py
+      models/model_trainer.py
+      models/model_registry.py
+      releases/versioning.py
+      workflows/                   # offline job orchestration 경계
+      schemas.py                   # GraphUpdateProposal
+    telemetry/
+      trace_logger.py              # 공통 진단 producer·filter
+      schemas.py                   # RuntimeTrace 관측 요약
+    task_graph/                    # 공통 graph 구조·registry
+    schemas.py                     # 기존 Agent(1) 컴포넌트·공통 Graph 계약
+    goal_typing/                   # Agent(1) 기존 Goal 처리 컴포넌트
+    observation/                   # Agent(1) 기존 화면 처리 컴포넌트
+    matching/                      # Agent(1) 기존 UI matching 컴포넌트
+    safety/                        # Agent(1) 기존 Safety 컴포넌트
+    guide/                         # Agent(1) 기존 Guide 컴포넌트
+    execution/                     # Agent(1) 제한된 실행 경계
+    verification/                  # Agent(1) 온라인 결과 검증
+    replanning/                    # Agent(1) 세션 내 재계획·기존 StateManager
+    fallback/                      # Agent(1) 동의 기반 관측 fallback
+    workflows/                     # 기존 사용자 runtime loop 골격
+  tests/
+    test_agent_boundaries.py        # 두 Agent의 의존성 분리 검증
+```
+
+`runtime/*`는 현재 Backend turn API가 사용하는 실행 경로다. 상위 Goal/UI 컴포넌트는 기존 guidance adapter와 골격 코드에서 사용하므로 경로를 유지한다. 이 중복 실행 모델의 통합은 Agent(2) 분리와 별도 작업이다.
+
+## 이번 구조 분리에서 바뀐 점
+
+- `learning/*`의 graph 후보·dataset·평가·모델 모듈을 `graph_proposal/`로 이동했다.
+- graph 승격·rollback은 `graph_proposal/releases/versioning.py`로 이동했다.
+- 기존 사용자 세션용 StateManager는 `replanning/state_manager.py`로 이동해 공통 graph 영역에서 분리했다.
+- `TraceLogger`와 `diagnostic_payload`는 `telemetry/`로 이동하고 runtime·Backend·테스트의 import를 갱신했다.
+- `GraphUpdateProposal`은 `graph_proposal/schemas.py`, `RuntimeTrace`는 `telemetry/schemas.py`에만 정의한다.
+- 기존 `learning` 패키지와 `task_graph/versioning.py`의 호환용 재export를 남기지 않았다. 내부 호출자는 새 경로를 사용한다.
+- [데이터 폴더](data/README.md)는 원천 runtime, 공통 fixture, Agent(2) 파생 산출물로 나눴다.
+
+## 역할 경계와 구현 상태
+
+Agent(1)은 Agent(2)를 import하거나 호출하지 않는다. Agent(2)는 사용자 runtime·Guide·Backend 세션을 직접 실행하지 않고 공통 관측·Graph 계약을 통해 입력을 받는다. 공통 패키지는 어느 쪽 에이전트도 import하지 않는다.
+
+실제 모듈 이동과 import 분리는 완료했지만, graph learner·dataset builder·validator·model trainer·release manager의 기존 골격을 구현 완료로 바꾸지는 않았다. `ingestion`, `reconstruction`, `labeling`, `analysis`, `workflows`는 역할을 명시한 신규 패키지이며 실행 구현은 다음 단계다. 별도 서버·프로세스도 추가하지 않았다.
+
+온라인 verification은 다음 사용자 안내를 위한 판단이고, Agent(2)의 label은 학습·평가 데이터 판정이다. 둘을 자동으로 동일시하지 않는다. graph proposal은 현재 세션에 직접 적용하지 않고 검증·승인된 version으로만 배포한다.
+
+기존 자동 tap 금지, MVP-01 scroll 비활성, 개인정보 필터·진단 TTL·개수 제한을 유지한다. `TraceLogger`는 메모리 진단용이며 아직 영속 학습 event를 생성하지 않는다.
 
 ## 상세 설계 문서
 
 - [전체 구조와 책임 경계](../docs/ai-agent-architecture.md)
-- [AI-Agent(1): 사용자 작업 수행 Runtime Agent](../docs/ai-agent-1-runtime.md)
-- [AI-Agent(2): Runtime Data / Graph Proposal Agent](../docs/ai-agent-2-graph-proposal.md)
-
-AI-Agent(1)은 text → Typed Goal → 화면 관찰 → guide/action → 결과 검증 → Re-plan을 담당한다. AI-Agent(2)는 전체 runtime 수집·재구성 → success/fail 라벨링 → dataset 생성 → Task Graph 추가·업데이트 후보 → 평가·승인·버전 관리를 담당한다.
-
-문서 분리는 책임과 계약의 분리다. 현재 실행 경로는 `src/ai_agent/runtime/`이며 `learning/*`의 주요 기능은 아직 골격이다. 별도 프로세스나 새 패키지로 코드를 이동한 상태는 아니다.
-
-## 구조
-
-```text
-AI-Agent/
-  goal_catalog/              # raw 자연어 -> Typed Goal 후보 검색용 catalog
-  task_graphs/               # 승인된 versioned Task Graph seed
-  data/
-    accessibility_trees/     # offline replay/eval용 Accessibility Tree sample
-    traces/                  # runtime trace 저장 위치
-    proposals/               # Graph Update Proposal 저장 위치
-    evaluations/             # Offline Evaluation Report 저장 위치
-    training_samples/        # 모델별 학습 sample
-    model_artifacts/         # 모델 artifact metadata
-  src/ai_agent/
-    runtime/                 # 현재 AI-Agent(1) 실행 경로: goal, observe, guide, verify, replan
-    goal_typing/             # Goal Typing, slot extraction
-    task_graph/              # Graph registry, state manager, versioning
-    observation/             # Accessibility parsing, UI normalization, state classify
-    matching/                # UI target matching/ranking
-    safety/                  # Safety Gate
-    guide/                   # Guide Command 생성
-    execution/               # 허용된 scroll execution 연동
-    verification/            # State transition verification
-    replanning/              # Re-plan policy
-    learning/                # AI-Agent(2)로 확장할 영역; trace producer는 공통 경계로 분리 예정
-    fallback/                # LLM/VLM fallback boundary
-    workflows/               # 상위 orchestration 골격, 현재 runtime과 구분
-```
-
-## 원칙
-
-- FE는 raw 자연어와 화면 context를 전달한다.
-- Agent는 LLM 없이 embedding/rule 기반으로 Typed Goal을 생성한다.
-- Agent는 Guide Command를 만들고, FE가 Overlay를 렌더링한다.
-- 자동 tap은 금지한다.
-- scroll은 target 탐색 목적의 LOW_RISK action으로만 제한적으로 허용한다.
-- Task Graph는 runtime에서 즉시 자기 수정하지 않고, trace 기반 proposal 검증 후 version update한다.
-- AI-Agent(1)의 실시간 verification과 AI-Agent(2)의 데이터 라벨은 별도로 관리한다.
-- step 실패와 최종 task 성공은 동시에 가능하며, 관측이 부족한 결과는 unknown으로 남긴다.
-- AI-Agent(2)는 신규 graph, state/transition, selector 등 변경안을 만들고 승인된 artifact만 AI-Agent(1)이 사용한다.
-- 현재 MVP-01은 자동 scroll이 비활성이다. Backend의 DB checkpoint와 전체 runtime trace 영속 저장은 별개다.
+- [AI-Agent(1) 상세 설계](../docs/ai-agent-1-runtime.md)
+- [AI-Agent(2) 상세 설계](../docs/ai-agent-2-graph-proposal.md)

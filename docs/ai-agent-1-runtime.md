@@ -13,7 +13,7 @@ Task별 State, Transition, UI 후보, 예외 처리는 별도 문서에서 관�
 
 - Task 상세 문서: [Android 설정 앱에서 글자 크기 확대](./tasks/font-size-increase.md)
 
-이 문서는 “현재 코드가 전부 완성했다”는 의미가 아니라, 우리가 목표로 삼는 이상적인 AI Agent 구조를 기준으로 삼는다. 단, 현재 코드에 이미 들어온 런타임 단계는 별도로 표시해 앞으로의 구조에 흡수한다. 코드 확인 기준은 2026-09-12의 `a0d3609` 커밋이다. JSON은 명시적으로 현재 형식이라고 적은 경우를 제외하면 설계 예시이며, 실제 HTTP 계약은 `Backend/app/schemas/agent_turn.py`, runtime 타입은 `AI-Agent/src/ai_agent/runtime/types.py`를 기준으로 한다. 예시 confidence와 threshold는 운영 측정값 또는 확정 성능 목표가 아니다.
+이 문서는 “현재 코드가 전부 완성했다”는 의미가 아니라, 우리가 목표로 삼는 이상적인 AI Agent 구조를 기준으로 삼는다. 단, 현재 코드에 이미 들어온 런타임 단계는 별도로 표시해 앞으로의 구조에 흡수한다. 기능 확인 기준은 2026-09-12의 `a0d3609`이며, 파일 경로와 책임 경계는 이번 패키지 분리 작업을 반영했다. JSON은 명시적으로 현재 형식이라고 적은 경우를 제외하면 설계 예시이며, 실제 HTTP 계약은 `Backend/app/schemas/agent_turn.py`, runtime 타입은 `AI-Agent/src/ai_agent/runtime/types.py`를 기준으로 한다. 예시 confidence와 threshold는 운영 측정값 또는 확정 성능 목표가 아니다.
 
 ## 2. Agent 목표
 
@@ -1137,52 +1137,13 @@ Task별 문서는 다음 항목을 포함한다.
 - 필요한 Accessibility Tree dataset
 - 제조사/OS/app version별 known variant
 
-## 11. AI Agent 레벨 평가
+## 11. AI-Agent(1) 구현 성숙도
 
-### 11.1 레벨 정의
+사용자 실행 능력은 화면 인식, 여러 turn의 상태 유지, 실제 결과 검증, 복구 품질로 평가한다. 현재는 MVP-01에 Goal Typing·State·UI matching·pending transition·verification·node 제외 재시도가 구현되어 있다.
 
-다음은 기존 문서에서 사용한 제품 전체의 내부 성숙도 용어이며 외부 표준이나 측정 점수가 아니다. 분리 이후 graph 학습 능력은 AI-Agent(2)에 귀속하므로 AI-Agent(1)의 단일 성숙도 점수로 두 역할을 평가하지 않는다.
+남은 실행 과제는 State/Match confidence 분리, 모호한 후보 처리, 완료 predicate 강화, 제조사·앱 버전 일반화, 승인 graph version 고정과 graph 수준의 대체 경로 선택이다. 자동 scroll은 현재 비활성이며 실제 지원 기능으로 계산하지 않는다.
 
-| Level | 정의 | 대표 능력 |
-| --- | --- | --- |
-| `L0` | 정적 매뉴얼 | 화면을 보지 않고 절차만 설명 |
-| `L1` | 화면 기반 안내 | 현재 화면에서 target UI를 찾아 highlight |
-| `L2` | 상태 기반 Task Agent | session, state graph, verification, retry를 통해 여러 step 안내 |
-| `L3` | 데이터 기반 개선 루프가 연결된 제품 | AI-Agent(2)가 graph 후보를 검증하고 AI-Agent(1)이 승인 graph를 소비 |
-| `L4` | 감독형 실행 Agent | low-risk scroll 등 일부 실행을 policy 하에 수행 |
-| `L5` | 범용 모바일 Agent | 여러 앱/목표를 동적으로 계획하고 안정적으로 수행 |
-
-### 11.2 현재 코드 기준 평가
-
-현재 AI-Agent(1)에는 `L2`의 핵심 구성 요소가 있으나 일반화와 검증 근거를 보강해야 한다. 정량 평가 데이터 없이 소수점 수준의 레벨을 성능 점수처럼 확정하지 않는다.
-
-근거:
-
-- 화면을 읽고 target UI를 찾으므로 L1은 넘었다.
-- session state, pending transition, verification, retry exclusion이 있으므로 L2 요소가 있다.
-- 하지만 Task가 `MVP-01` 하나에 고정되어 있고, graph-level replanning은 약하다.
-- AI-Agent(2) 영역의 trace learning과 graph proposal은 placeholder다. 이 항목은 AI-Agent(1)의 실행 책임에 포함하지 않는다.
-- 자동 실행은 없고, scroll도 현재 contract에서는 제외되어 있다.
-- 따라서 “범용 AI Agent”라기보다 “AI-assisted stateful guide agent”라고 부르는 편이 정확하다.
-
-### 11.3 목표 레벨
-
-단기 목표는 `L2` 완성이다.
-
-- 여러 turn 동안 안정적으로 같은 task를 이어간다.
-- state confidence와 match confidence를 분리한다.
-- verification과 replan이 실제 사용자 행동을 잘 반영한다.
-- manufacturer/app version variation을 dataset replay로 견딘다.
-- fallback이 사용자에게 과도한 부담을 주지 않는다.
-
-중기에는 AI-Agent(2)와 연결해 제품 전체의 `L3` 개선 루프를 완성한다. 아래 학습·승인·배포는 AI-Agent(2) 및 내부 배포 경계가 담당한다.
-
-- 운영 trace를 persistent하게 수집한다.
-- 반복 실패, user-corrected path, unknown state를 graph proposal로 전환한다.
-- offline replay와 human review를 거쳐 graph version을 올린다.
-- selector/synonym/transition priority가 데이터로 개선된다.
-
-`L4` 이상은 지금 목표로 잡기 이르다. 자동 tap, 자동 submit, 민감 정보 입력은 제품 신뢰와 정책이 충분히 쌓인 뒤에도 매우 제한적으로만 검토해야 한다.
+학습·graph 개선 능력을 Agent(1)의 완료 기준에 포함하지 않는다. 제품 전체의 기존 L0~L5 용어와 Agent(2)의 개선 루프는 [전체 구조 문서](./ai-agent-architecture.md)에서 관리한다.
 
 ## 12. 객관적/비판적 피드백
 
@@ -1190,7 +1151,7 @@ Task별 문서는 다음 항목을 포함한다.
 
 현재 이상 구조의 큰 방향은 좋다. Accessibility-first, Human-in-the-loop, Task Graph, Verification, Trace Learning은 모바일 조작 지원 Agent에 맞는 안전한 접근이다.
 
-하지만 문서와 코드 사이의 간극을 관리해야 한다. 문서는 L3 이상까지 상상하고 있고, 코드는 L2 초입이다. 이 차이를 숨기면 안 된다. 대신 “목표 구조”와 “현재 코드 반영 상태”를 계속 나란히 관리해야 한다.
+사용자 실행에서 필요한 목표 구조와 현재 구현을 구분한다. Agent(1)의 검증·복구와 공통 관측 계약을 먼저 안정화하고, graph 데이터 분석과 개선 로직은 Agent(2) 문서·패키지에서 관리한다.
 
 ### 12.2 불필요하거나 줄여야 할 것
 
@@ -1198,9 +1159,9 @@ Task별 문서는 다음 항목을 포함한다.
 
    `runtime/*`와 상위 `goal_typing/*`, `matching/*`, `task_graph/*`가 같은 개념을 중복 표현한다. 장기적으로 하나를 canonical path로 정해야 한다.
 
-2. AI-Agent(2)의 선행 데이터 기반
+2. 실행 증거 연결
 
-   AI-Agent(2)는 이번 분리의 독립 개발 대상이다. 내부 구현 순서는 trace persistence와 결과 라벨링, replay evaluator, graph proposal 순으로 두고, 모델 재학습은 별도 후속 범위로 둔다.
+   Agent(1)은 guide·action·before/after observation·검증 대상 step을 연결해 기록해야 한다. 현재 진단 요약만으로는 이를 재현할 수 없으므로 공통 event 계약을 보강해야 한다.
 
 3. Scroll을 현재 기능처럼 말하는 것
 
@@ -1282,12 +1243,12 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 | `runtime/replanner.py` | 실패 이력과 node 제외 | 대체 transition, 재시도·복구 예산 |
 | `runtime/guide.py`, `contracts.py` | guide와 허용 action 계약 | 독립 Safety Gate, 실행 capability 확인 |
 | `runtime/session.py` | turn 중 세션 상태 | 승인 artifact version과 episode 연결 |
-| `learning/trace_logger.py` | 현재 runtime에서 호출하는 trace producer | 공통 telemetry 경계로 분리할 후보 |
+| `telemetry/trace_logger.py` | 공통 진단 producer를 사용 | 필터를 유지하며 별도 영속 event 연결 |
 | `Backend/app/clients/runtime_agent.py` | HTTP/runtime 변환, graph 경로 기반 progress | State/Match confidence 분리 |
 | `Backend/app/services/agent_turn.py` | DB checkpoint 복원·저장 및 응답 조정 | event outbox 또는 동등한 전달 보장 |
 | `Backend/app/repositories/agent_sessions.py` | DB session·turn claim·멱등성 | 학습 event와의 식별자 연계 |
 
-`runtime/*`를 현재 실행 경로의 기준으로 삼는다. 상위 `goal_typing/*`, `observation/*`, `matching/*`, `workflows/*`의 구조가 존재한다는 이유만으로 현재 제품에 연결된 기능으로 표시하지 않는다. 이번 변경은 문서 책임 분리이며 실제 Python 패키지 이동은 후속 구현에서 진행한다.
+`runtime/*`를 현재 실행 경로의 기준으로 삼는다. 상위 `goal_typing/*`, `observation/*`, `matching/*`, `workflows/*`의 구조가 존재한다는 이유만으로 현재 제품에 연결된 기능으로 표시하지 않는다. AI-Agent(2) 코드는 `graph_proposal/`, 공통 진단과 관측 계약은 `telemetry/`로 이동했다. 사용자 실행 경로는 Agent(2)를 import하지 않는다. 기존 컴포넌트용 `replanning/state_manager.py`는 세션 내 상태만 관리하고 공통 `task_graph/`에는 graph 구조·registry만 둔다.
 
 ## 15. 대표 시나리오와 평가 기준
 

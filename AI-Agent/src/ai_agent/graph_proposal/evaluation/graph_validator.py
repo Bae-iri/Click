@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ai_agent.schemas import GraphUpdateProposal
+from ai_agent.graph_proposal.schemas import GraphUpdateProposal
 
 
 class GraphValidator:

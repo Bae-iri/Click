@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ai_agent.task_graph.state_manager import StateManager
+from .state_manager import StateManager
 
 
 class Replanner:
