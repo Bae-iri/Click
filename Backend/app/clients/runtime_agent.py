@@ -142,6 +142,7 @@ class RuntimeAgentAdapter:
             guide_command=GuideCommandResponse(
                 guide_command_id=guide.guide_command_id,
                 command_type=command_type,
+                proposed_action=result.match_result.action_type.value if command_type == "confirmation" and result.match_result and result.match_result.action_type.value in {"tap", "drag", "scroll"} else None,
                 action_type="observe_only" if task_completed else guide.action_type.value,
                 message=guide.message,
                 target_node_id=guide.target_node_id,

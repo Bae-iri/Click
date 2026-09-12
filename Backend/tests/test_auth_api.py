@@ -11,7 +11,7 @@ from tests.helpers import register
 
 
 def test_registration_login_rotation_logout_and_hash_storage():
-    app = create_app()
+    app = create_app(enable_legacy=True)
     with TestClient(app) as client:
         tokens = register(client, "Person@Example.com")
         assert client.get("/api/v1/users/me").json()["id"] == tokens["user_id"]
@@ -39,7 +39,7 @@ def test_registration_login_rotation_logout_and_hash_storage():
 
 
 def test_missing_tampered_expired_tokens_and_duplicate_registration():
-    app = create_app()
+    app = create_app(enable_legacy=True)
     with TestClient(app) as client:
         assert client.get("/api/v1/users/me").status_code == 401
         tokens = register(client, "same@example.com")
@@ -56,7 +56,7 @@ def test_missing_tampered_expired_tokens_and_duplicate_registration():
 
 
 def test_every_user_route_rejects_another_owner_and_delete_revokes_tokens():
-    app = create_app()
+    app = create_app(enable_legacy=True)
     with TestClient(app) as client:
         first = register(client)
         second = register(client)
@@ -73,7 +73,7 @@ def test_every_user_route_rejects_another_owner_and_delete_revokes_tokens():
 
 
 def test_password_change_revokes_all_logins():
-    with TestClient(create_app()) as client:
+    with TestClient(create_app(enable_legacy=True)) as client:
         tokens = register(client, "password@example.com")
         other = client.post("/api/v1/auth/login", json={"email": "password@example.com", "password": "test-password-1234"}).json()
         assert client.post("/api/v1/auth/password", json={"current_password": "wrong", "new_password": "new-password-1234"}).status_code == 401
@@ -98,7 +98,7 @@ def test_agent_and_legacy_sessions_require_and_enforce_ownership():
     from pathlib import Path
     import json
     payload = json.loads((Path(__file__).parents[1] / "examples/agent-turn.json").read_text(encoding="utf-8"))
-    with TestClient(create_app()) as client:
+    with TestClient(create_app(enable_legacy=True)) as client:
         assert client.post("/api/v1/agent/turn", json=payload).status_code == 401
         assert client.post("/api/v1/sessions", json={"goal": "increase font size"}).status_code == 401
         first = register(client)
@@ -111,7 +111,7 @@ def test_agent_and_legacy_sessions_require_and_enforce_ownership():
 
 
 def test_rate_limit():
-    with TestClient(create_app()) as client:
+    with TestClient(create_app(enable_legacy=True)) as client:
         for _ in range(20):
             assert client.post("/api/v1/auth/login", json={"email": "nobody@example.com", "password": "wrong-password-123"}).status_code == 401
         response = client.post("/api/v1/auth/login", json={"email": "nobody@example.com", "password": "wrong-password-123"})

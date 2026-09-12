@@ -5,7 +5,7 @@ from tests.helpers import authenticated_client as TestClient
 from app.main import create_app
 
 
-client = TestClient(create_app())
+client = TestClient(create_app(enable_legacy=True))
 
 
 def node(

@@ -1,5 +1,19 @@
 # 첫 주 산출물 검증 기록
 
+## AI 독립 백엔드 추가 검증 (2026-09-12)
+
+- Backend 전체 **91 passed**, 기존 httpx deprecation warning 1건. AI-Agent 전체 **27 passed**.
+- AI를 호출하지 않는 계약 테스트 19개: 승인 소비·정확한 재전송, 승인 누락/다른 ID/화면/목표/대상/만료/취소 거절, 잘못된 좌표 미저장, 본인 이력·페이지·피드백·삭제.
+- 이메일 인증·일회용 토큰·만료·목적 분리, 비밀번호 복구 후 access/refresh 폐기, 동시 재설정 1회 성공, 메일 실패 토큰 무효화 검증. 실제 메일은 발송하지 않음.
+- 동의 철회 시 이벤트 삭제·프로필 초기화·추가 이벤트 차단, 사용자 탈퇴 시 승인·피드백 CASCADE, 운영 지표 별도 인증 검증.
+- SQLite 백업 → 별도 파일 복구 → 데이터 확인, 기존 대상 덮어쓰기 거절 검증.
+- 최종 로컬 fake AI 부하: 동시 4개·총 40개 요청, **40개 모두 HTTP 200**, 실행 1.331초, p95 283.84ms, 최대 1191.54ms. 일회성 로컬 측정이며 운영 SLA나 실제 AI 성능 보장이 아님.
+- 새 migration `20260912_04` 포함 SQLite upgrade/downgrade/upgrade 및 Alembic check 통과. 실제 서버 HTTP 인증·안내·프로세스 재시작·재전송·재개·취소 검증 통과.
+- 기본 서버에서 레거시 API 제외, 기존 호환 테스트는 명시적으로 enable_legacy=True로 수행. OpenAPI는 현재 기본 서버 기준 23개 path. 코드·스크립트 구문 검사와 git diff --check 통과.
+- 실제 PostgreSQL 검증 스크립트에도 이력·피드백·승인·이메일 인증을 추가했다. 현재 PC에 Docker/psql/pg_dump/pg_restore가 없어 실제 실행하지 않았다. PostgreSQL 백업·복구 명령도 미실행이다.
+
+인수 범위 및 연결해야 할 외부 환경은 [backend-completion.md](backend-completion.md)에 기록했다.
+
 ## 4주 차 추가 검증 (2026-09-12)
 
 - Backend 전체: **72 passed**, 기존 httpx deprecation warning 1건.

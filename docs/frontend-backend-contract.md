@@ -1,5 +1,7 @@
 # FE/BE Agent 연동 계약
 
+**Current contract:** [Backend completion](../Backend/docs/backend-completion.md): accepted confirmations require confirmation_id, expected_version and an unchanged fresh observation; raw_goal is omitted. Legacy /api/v1/sessions is disabled by default. History, feedback, account verification/recovery and consent APIs are ready for app integration.
+
 **Week 4 contract update:** [Backend week4](../Backend/docs/week4.md) takes precedence over older examples: graph-derived step/total_steps, reduced debug fields, no raw-image external processing, event metadata allowlist, and 503/504 retry handling. Use accessibility data or consented on-device OCR elements.
 
 ## 3주 차 세션 변경

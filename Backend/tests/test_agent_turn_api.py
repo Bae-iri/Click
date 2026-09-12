@@ -157,6 +157,7 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
             "expected_version": first.json()["session_version"],
             "accessibility_tree": slider_tree(3),
             "user_confirmation": "accepted",
+            "confirmation_id": first.json()["metadata"]["confirmation"]["id"],
         },
     )
     assert accepted.json()["guide_command"]["action_type"] == "drag"

@@ -77,6 +77,22 @@ def check_http():
                 release.set()
             assert running.result(timeout=10).status_code == 409
         assert client.get(session_path).json()["status"] == "CANCELLED"
+        assert client.put(session_path + "/feedback", json={"rating": 5, "reason_code": "helpful"}).status_code == 200
+        assert client.get(session_path + "/feedback").json()["rating"] == 5
+        assert client.get("/api/v1/agent/sessions").json()["items"]
+        from tests.test_backend_completion import ContractAgent, Delivery
+        restarted_app.state.turn_service.engine_factory = ContractAgent
+        proposed = {**request, "session_id": "pg-approval", "request_id": "pg-approval-first"}
+        confirmation = client.post("/api/v1/agent/turn", json=proposed)
+        assert confirmation.status_code == 200
+        accepted = {**proposed, "request_id": "pg-approval-accept", "expected_version": 1,
+            "user_confirmation": "accepted", "confirmation_id": confirmation.json()["metadata"]["confirmation"]["id"]}
+        accepted.pop("raw_goal")
+        assert client.post("/api/v1/agent/turn", json=accepted).status_code == 200
+        restarted_app.state.account_actions.delivery = Delivery()
+        assert client.post("/api/v1/auth/email/request").status_code == 202
+        token = restarted_app.state.account_actions.delivery.messages[-1][2]
+        assert client.post("/api/v1/auth/email/verify", json={"token": token}).status_code == 204
         assert client.delete("/api/v1/users/" + second["user_id"]).status_code == 204
         assert client.get("/api/v1/users/me").status_code == 401
 

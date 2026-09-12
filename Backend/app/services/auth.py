@@ -77,6 +77,10 @@ class AuthService:
             valid = verify_password(request.password.get_secret_value(), account.password_hash if account else self._dummy)
             if not account or not valid:
                 raise HTTPException(401)
+            locked = db.execute(update(Account).where(Account.user_id == account.user_id,
+                Account.password_hash == account.password_hash).values(password_hash=account.password_hash))
+            if locked.rowcount != 1:
+                raise HTTPException(401)
             tokens = self.tokens(account.user_id)
             self.add_session(db, tokens)
             db.commit()
@@ -123,6 +127,9 @@ class AuthService:
             account = db.scalar(select(Account).where(Account.user_id == principal.user_id).with_for_update())
             if not account or not verify_password(request.current_password.get_secret_value(), account.password_hash):
                 raise HTTPException(401)
-            account.password_hash = hash_password(request.new_password.get_secret_value())
+            changed = db.execute(update(Account).where(Account.user_id == account.user_id,
+                Account.password_hash == account.password_hash).values(password_hash=hash_password(request.new_password.get_secret_value())))
+            if changed.rowcount != 1:
+                raise HTTPException(401)
             db.execute(delete(AuthSession).where(AuthSession.user_id == principal.user_id))
             db.commit()

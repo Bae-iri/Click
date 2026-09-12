@@ -1,5 +1,7 @@
 # 개발 작업표
 
+**Current backend implementation:** [AI-independent backend completion](backend-completion.md) supersedes historical planning below. Approval IDs, history/feedback, account recovery, consent withdrawal and operations tooling are now implemented; real AI/device/cloud verification remains outstanding.
+
 **4주 차 업데이트:** B11~B15 구현·로컬 검증 결과는 [week4.md](week4.md)에 기록했다. 원본 이미지 외부 전송은 서버 마스킹 기능이 준비될 때까지 차단한다. 신규 지원 작업 추가와 실제 기기 검증은 후속 작업이다.
 
 3주 차 업데이트: B06~B10 신규 turn 경로 구현·SQLite 검증 완료. 실제 PostgreSQL·기기 통합은 환경 준비 뒤 검증한다. [상세 결과](week3.md) 참조.

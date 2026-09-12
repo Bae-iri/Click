@@ -1,5 +1,7 @@
 # 로컬 실행과 검증
 
+**Current backend implementation:** [AI-independent backend completion](backend-completion.md) supersedes historical planning below. Approval IDs, history/feedback, account recovery, consent withdrawal and operations tooling are now implemented; real AI/device/cloud verification remains outstanding.
+
 **Week 4:** set AGENT_TURN_TIMEOUT_SECONDS (default 20; shorter than lease). Run `python scripts/cleanup_ui_events.py --retention-seconds 86400` with DATABASE_URL for development event cleanup. No scheduler is installed. See [week4.md](week4.md).
 
 ## 설치

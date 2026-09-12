@@ -32,11 +32,11 @@ def error_response(status, code, message, trace_id, headers=None):
 def install_error_handlers(app):
     @app.exception_handler(HTTPException)
     async def http_error(request, exc):
-        codes = {401: "UNAUTHENTICATED", 403: "FORBIDDEN", 404: "NOT_FOUND",
+        codes = {400: "INVALID_ACTION_TOKEN", 401: "UNAUTHENTICATED", 403: "FORBIDDEN", 404: "NOT_FOUND",
                  409: "CONFLICT", 410: "SESSION_EXPIRED", 413: "PAYLOAD_TOO_LARGE", 422: "INVALID_REQUEST", 429: "RATE_LIMITED",
-                 503: "SERVICE_UNAVAILABLE", 504: "AGENT_TIMEOUT"}
+                 502: "INVALID_AGENT_RESPONSE", 503: "SERVICE_UNAVAILABLE", 504: "AGENT_TIMEOUT"}
         # Exception details may contain provider payloads or database identifiers.
-        messages = {401: "Authentication required.", 403: "Access denied.",
+        messages = {400: "Invalid or expired action token.", 502: "Agent returned an invalid guide.", 401: "Authentication required.", 403: "Access denied.",
                     404: "Resource not found.", 409: "Request conflicts with existing data.", 410: "Session expired. Start a new session.",
                     413: "Request body too large.", 422: "Invalid request.",
                     429: "Too many requests. Try again later.",
@@ -51,8 +51,9 @@ def install_error_handlers(app):
 
 
 class HttpBoundary:
-    def __init__(self, app, max_body_bytes=1_048_576):
+    def __init__(self, app, max_body_bytes=1_048_576, metrics=None):
         self.app = app
+        self.metrics = metrics
         self.max_body_bytes = max_body_bytes
 
     async def __call__(self, scope, receive, send):
@@ -114,5 +115,7 @@ class HttpBoundary:
                 raise
             await reject(500, "INTERNAL_ERROR", "Internal server error.")
         finally:
+            if self.metrics:
+                self.metrics.record(status, int((monotonic() - started) * 1000))
             logger.info("request trace_id=%s status=%s duration_ms=%d", trace_id, status,
                         int((monotonic() - started) * 1000))

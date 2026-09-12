@@ -108,8 +108,9 @@ def test_terminal_completion_survives_restart_and_blocks_new_turns(tmp_path):
     with TestClient(create_app(url)) as client:
         auth = register(client)
         first = {**payload(), "accessibility_tree": slider_tree(3)}
-        assert post(client, first).json()["task_status"] == "WAITING_CONFIRMATION"
-        assert post(client, {**follow(1), "accessibility_tree": slider_tree(3), "user_confirmation": "accepted"}).status_code == 200
+        initial = post(client, first).json()
+        assert initial["task_status"] == "WAITING_CONFIRMATION"
+        assert post(client, {**follow(1), "accessibility_tree": slider_tree(3), "user_confirmation": "accepted", "confirmation_id": initial["metadata"]["confirmation"]["id"]}).status_code == 200
     with TestClient(create_app(url)) as client:
         client.headers["Authorization"] = "Bearer " + auth["access_token"]
         unchanged = post(client, {**follow(2, "r3"), "accessibility_tree": slider_tree(3)})

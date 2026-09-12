@@ -58,6 +58,12 @@ def build_router(session_dependency: Callable, principal: Callable) -> APIRouter
         except UserNotFoundError as error:
             raise HTTPException(status_code=404, detail="User not found.") from error
 
+    @router.get("/{user_id}/consents", response_model=list[ConsentResponse], dependencies=[Depends(owner)])
+    def current_consents(user_id: str, svc=Depends(service)):
+        results = [svc.repository.latest_consent(user_id, purpose) for purpose in
+                   ("personalization", "conversation_storage", "model_training")]
+        return [ConsentResponse.model_validate(row) for row in results if row is not None]
+
     @router.post("/{user_id}/events", response_model=UIEventResponse, status_code=201, dependencies=[Depends(owner)])
     def record_event(
         user_id: str, request: CreateUIEventRequest, svc=Depends(service)
