@@ -19,17 +19,16 @@
 
 Goal Typing과 Command Typing은 FE가 담당한다. 실제 발화 예시, 필수 slots, 분류·clarification,
 전체 요청 JSON은 [FE Goal·Command 계약](../fe-goal-command-contract.md)에서 관리한다.
-Agent(1)은 `start_task` 또는 `replace_task`의 확정 Goal을 받아 다음 매핑을 검증한다.
+Backend는 `start_task` 또는 `replace_task`의 확정 Goal로 DB에서 다음 매핑에 맞는 graph를 선택한다. AI1은 graph 본문·reference·목표·실행 상태를 받아 이 Task의 안내·검증·Re-plan을 수행한다.
 
 | FE 입력 | 값 |
 | --- | --- |
 | `goal.goal_type` | `settings.font_size.increase` |
 | `goal.target_app` | `android_settings` |
 | `goal.slots` | `setting=font_size`, `direction=increase` |
-| Agent 선택 결과 | `task_id=MVP-01`, `task_type=settings_change` |
+| Backend DB 선택 결과 | `task_id=MVP-01`, `task_type=settings_change` |
 
-Agent가 원문을 분류하거나 감소 목적을 확대 graph로 바꾸지 않는다. 후속 `observe`·`resume_task`는
-새 Goal 없이 저장된 Goal과 고정 graph를 사용한다. 새 typed 입력은 설계 계약이며 현재 v1 raw-goal
+AI1은 원문을 분류하거나 graph를 선택·수정하지 않는다. 감소 목적을 확대 graph로 바꾸지 않는다. 후속 `observe`·`resume_task`에서는 Backend가 저장된 Goal과 고정 graph·실행 상태를 복원해 AI1에 전달한다. graph에 없는 경로가 필요하면 AI1은 Backend에 재선택/지원 불가 처리를 요청한다. [Graph 전달 계약](../backend-task-graph-dispatch.md)을 따른다. 새 typed 입력은 설계 계약이며 현재 v1 raw-goal
 코드 전환은 별도 작업이다.
 
 ## 3. 사용자 발화와 Goal 분류 참조

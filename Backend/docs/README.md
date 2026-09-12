@@ -1,5 +1,7 @@
 # 백엔드 개발 현황
 
+최신 책임 경계: [Backend DB Task Graph 선택·AI1 전달](../../docs/backend-task-graph-dispatch.md). FE는 Goal/Command 분류, Backend는 graph 선택·세션 제어, AI1은 전달 graph 실행, AI2는 실행 데이터 기반 graph 업데이트를 맡는다.
+
 **Current backend implementation:** [AI-independent backend completion](backend-completion.md) supersedes historical planning below. Approval IDs, history/feedback, account recovery, consent withdrawal and operations tooling are now implemented; real AI/device/cloud verification remains outstanding.
 
 **최신: [4주 차 개인정보 처리 경계·AI 안정성](week4.md).** 아래 1~3주 차 설명에는 당시 기록이 포함된다.

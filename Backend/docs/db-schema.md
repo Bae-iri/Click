@@ -1,5 +1,7 @@
 # DB Schema
 
+**Task Graph 저장 설계:** 실행 가능한 graph 본문·Goal 연결·불변 version/hash·승인/활성 상태·환경·선택 우선순위는 DB가 기준이다. Backend가 조회·선택해 AI1에 전달하고 AI2의 평가·승인된 업데이트는 새 DB version으로 게시한다. 아래 세션/개인화 테이블과 graph 후보 저장은 실행 graph 선택 파이프라인과 별개다. [Graph 저장·전달 계약](../../docs/backend-task-graph-dispatch.md#6-db-저장ai2-업데이트버전-관리)을 따른다. 이 문서 변경은 graph 테이블 migration을 추가하지 않는다.
+
 **Current backend implementation:** [AI-independent backend completion](backend-completion.md) supersedes historical planning below. Approval IDs, history/feedback, account recovery, consent withdrawal and operations tooling are now implemented; real AI/device/cloud verification remains outstanding.
 
 **3주 차 갱신:** migration `20260911_03`에 agent_sessions·agent_turns·agent_checkpoints를 구현했다. 아래 영속화 설계안의 실제 필드·lease·시간 정책은 [3주 차 계약](week3.md)이 기준이다. safety_confirmations와 task_feedback은 아직 미구현이다.
