@@ -36,7 +36,19 @@ graph_proposal/
 - trace 생산·진단 필터는 `ai_agent.telemetry`의 책임이다. Agent(2)가 producer의 개인정보 필터를 우회하거나 직접 사용자 화면을 수집하지 않는다.
 - production graph 변경은 candidate 생성·평가·승인 뒤 별도 release로 처리한다. 현재 세션의 graph 객체를 수정하지 않는다.
 
-데이터 출력의 기준 경로는 `AI-Agent/data/graph_proposal/`다. 공통 입력은 `data/runtime/`의 향후 event 데이터와 `data/fixtures/`의 검토된 fixture다. 아직 어떤 모듈도 이 폴더에 자동 저장하지 않는다.
+데이터 출력의 기준 경로는 `AI-Agent/data/graph_proposal/`다. 공통 입력은 `data/runtime/`의 향후 event 데이터와 `data/fixtures/`의 검토된 fixture다. 현재는 아래 명령을 실행할 때만 label 파일을 저장한다.
+
+## MVP-01 라벨링 시작하기
+
+`data/fixtures/mvp01_episodes.jsonl`은 실제 사용자 기록이 아닌 **합성 예시 20건**이다. 한 줄에 episode 하나를 기록한다. `steps`의 `action_observed`, 전후 `observation_id`, 예상·관측 state가 모두 있어야 단계 success/fail을 판정한다. 최종 작업은 `completion_evidence.source=accessibility_range`와 서로 다른 전후 관측 ID, `before_font_scale`/`after_font_scale` 수치가 있을 때만 success/fail로 판정한다. 정보가 모자라면 unknown이다. 중간 단계 실패 후 최종 작업 성공도 가능하다.
+
+```powershell
+cd Click/AI-Agent
+$env:PYTHONPATH = "src"
+python -m ai_agent.graph_proposal.labeling.mvp01 data/fixtures/mvp01_episodes.jsonl data/graph_proposal/labels/mvp01_labels.jsonl
+```
+
+출력은 라벨, 근거 관측 ID, 이유, 정책 버전을 담은 JSONL이다. 이는 규칙 기반 **weak label**이며 사람 검토를 거친 정답 데이터가 아니다. 현재 `TraceLogger`의 진단 기록은 episode/step 연결 ID와 완료 근거가 없어 이 입력 형식으로 바로 변환할 수 없다. 실제 기록 연동 전에 팀과 영속 event 계약 및 개인정보 사용 범위를 확정해야 한다.
 
 ## 다음 구현 순서
 
