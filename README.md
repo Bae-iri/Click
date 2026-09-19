@@ -36,7 +36,7 @@ Click/
 │  └─ docs/
 └─ AI-Agent/
    ├─ src/ai_agent/
-   │  ├─ runtime/           # AI-Agent(1): Goal → Observe → Guide → Verify → Re-plan
+   │  ├─ runtime/           # AI-Agent(1): 전달 Graph → Observe → Guide → Verify → Re-plan
    │  ├─ graph_proposal/    # AI-Agent(2): 데이터·Graph 후보·평가·release
    │  ├─ telemetry/         # 공통 관측 계약·진단 producer
    │  └─ task_graph/        # Task Graph 구조와 Registry
@@ -48,7 +48,7 @@ Click/
 
 ### Frontend
 
-- 사용자 입력(음성 또는 텍스트)과 안내 UI
+- 사용자 입력(음성 또는 텍스트), Goal Type·slots·Command Type 확정과 안내 UI
 - Android Accessibility Tree 수집
 - 화면 위 UI 요소 하이라이트 및 단계별 안내 표시
 - 사용자 행동 후 변경된 화면 정보 전송
@@ -57,16 +57,17 @@ Click/
 
 - 사용자 요청과 현재 화면 정보를 받아 Task 실행 세션 관리
 - API 요청·응답 검증 및 Task 상태 관리
+- DB에서 사용자 요구에 맞는 승인 Task Graph 선택·버전 고정·복원 및 AI1 전달
 - 화면 정보와 Agent 판단 결과의 전달 조율
 - Safety Gate, 개인정보 마스킹, 완료 여부 및 실행 로그 관리
 - 데이터베이스와 외부 AI Agent 연동
 
 ### AI-Agent(1): 사용자 작업 수행
 
-- 사용자의 자연어 요청에서 최종 Goal 파악
+- Backend가 선택한 Task Graph 본문·reference·확정 목표·실행 상태 수신 및 정합성 검사
 - 현재 화면에서 다음 행동 결정
 - 행동 안내 및 사용자 행동 이후 결과 검증
-- 예상하지 못한 화면이나 잘못된 행동 발생 시 Re-plan
+- 전달된 graph 안에서 Re-plan; graph 밖 복구는 Backend에 재선택/지원 불가 처리 요청
 - 전체 실행 과정의 trace 생산 및 승인된 Task Graph 사용
 
 ### AI-Agent(2): Runtime Data / Graph Proposal
@@ -74,9 +75,9 @@ Click/
 - 전체 runtime 데이터의 episode·step 재구성 및 success/fail 결과 라벨링
 - 성공·실패·사용자 우회 경로 분석과 내부 학습·평가 데이터셋 생성
 - 신규 Task Graph 추가 및 기존 State·Transition·selector 업데이트 후보 생성
-- 변경안 평가, 승인에 필요한 근거 제공, graph version 및 release 관리
+- 변경안 평가, 승인에 필요한 근거 제공, 승인된 새 graph version의 DB 반영 및 release 관리
 
-상세 설계: [전체 구조](docs/ai-agent-architecture.md) · [AI-Agent(1)](docs/ai-agent-1-runtime.md) · [AI-Agent(2)](docs/ai-agent-2-graph-proposal.md)
+상세 설계: [전체 구조](docs/ai-agent-architecture.md) · [Backend Graph 전달](docs/backend-task-graph-dispatch.md) · [AI-Agent(1)](docs/ai-agent-1-runtime.md) · [AI-Agent(2)](docs/ai-agent-2-graph-proposal.md)
 
 두 역할은 `runtime/*`와 `graph_proposal/*`로 분리했고, 공통 trace는 `telemetry/*`에서 관리한다. 사용자 실행 흐름은 구현되어 있으며 Agent(2)의 라벨링·graph proposal·dataset 생성은 아직 구현할 골격이다. [실제 파일 구조와 경계](AI-Agent/README.md)를 참고한다.
 
@@ -84,10 +85,12 @@ Click/
 
 지원 앱은 쿠팡, Android 설정 앱, 정부24이며 대표 Task는 상품 구매, 설정 변경, 행정 서류 발급입니다.
 
-기본 처리 흐름은 다음과 같습니다.
+아래는 합의한 설계 흐름입니다. 현재 raw-goal API와 engine 내부 typing/lookup은 DB 선택·주입 방식으로 전환해야 합니다.
 
 ```text
-사용자 Goal 입력
+사용자 요구 → FE Goal·Command 확정
+	→ Backend DB Task Graph 선택·복원
+	→ AI1에 Graph·목표·실행 상태 전달
 	→ 현재 화면 관찰
 	→ 다음 UI 요소 결정
 	→ Safety Gate 확인

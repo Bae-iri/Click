@@ -2,18 +2,19 @@
 
 ## 1. 결정과 적용 범위
 
-**Goal Typing과 Command Typing은 FE가 담당한다. AI-Agent(1)은 FE가 확정한 구조를 받아 적절한 승인 Task Graph를 선택하는 단계부터 담당한다.** 사용자가 말한 `comment type`은 **Command Type**, 즉 새 요청·중단·재개 등의 실행 제어 명령을 뜻한다.
+**Goal Typing과 Command Typing은 FE가 담당한다. Backend가 확정 요구에 맞는 Task Graph를 DB에서 선택·전달하고, AI-Agent(1)은 그 graph에 따른 Guide/Action·Verification·Re-plan을 담당한다.** 사용자가 말한 `comment type`은 **Command Type**, 즉 새 요청·중단·재개 등의 실행 제어 명령을 뜻한다.
 
 이 문서는 다음 내용을 한 곳에서 관리한다.
 
 - FE가 분류해야 하는 Goal·Command의 의미와 실제 등록 유형
 - Goal별 필수 slots, 허용값, 전달할 필드와 전달하지 않을 필드
-- FE → Backend → Agent 요청 형식과 명령별 예시
+- FE → Backend 요청 형식과 명령별 예시; Backend → AI1 graph 실행 입력은 별도 계약
 - 모호한 발화·미지원 Goal·실행 중 목표 변경 처리
 - 기존 Goal Typing 내용을 FE 책임으로 옮기는 방법
 
 이 문서의 typed 계약 이름은 **`agent-fe-contract.v0.2` 설계안**이다. 역할 분담은 확정한 결정이며, 명령 enum·DTO·오류 코드·세션 전이는 그 결정을 구현하기 위한 구체적인 제안이다. **현재 HTTP v1에 구현되어 있는 계약은 아니다.** 기존 `POST /api/v1/agent/turn`은 여전히 첫 요청의 `raw_goal`을 요구하고, 새 필드를 그대로 보내면 거절될 수 있다. 새 endpoint나 배포를 이번 문서 수정으로 생성하지 않는다.
 
+- Backend 선택·실행 전달: [Task Graph 내부 계약](backend-task-graph-dispatch.md)
 - Agent 실행 설계: [AI-Agent(1)](ai-agent-1-runtime.md)
 - 현재 HTTP 계약: [FE/BE 연동](frontend-backend-contract.md), [OpenAPI](../Backend/docs/openapi.json)
 - 내부 데이터·graph 후보 생산: [AI-Agent(2)](ai-agent-2-graph-proposal.md)
@@ -26,13 +27,13 @@
 | 입력 Command Type | 현재 작업을 어떻게 제어할 것인가? | FE | `start_task`, `pause_task`, `resume_task` |
 | Slots | 그 목적에 필요한 구체적인 값은 무엇인가? | FE | `setting=font_size`, `direction=increase` |
 | Target App | 목적을 수행할 논리적 앱은 무엇인가? | FE, catalog 기준 | `android_settings` |
-| Task Type | 선택된 graph가 어떤 실행 패턴인가? | Agent/승인 graph metadata | `settings_change` |
-| Task ID | 어떤 승인 graph/template를 실행할 것인가? | Agent(1) | `MVP-01` |
-| Graph Reference | 어떤 버전의 승인 실행 정의인가? | Agent(1)/registry | task ID + version + hash |
+| Task Type | 선택된 graph가 어떤 실행 패턴인가? | Backend/DB graph metadata | `settings_change` |
+| Task ID | 어떤 승인 graph/template를 실행할 것인가? | Backend | `MVP-01` |
+| Graph Reference | 어떤 버전의 승인 실행 정의인가? | Backend/DB | task ID + version + hash |
 | 출력 Guide Command Type | FE가 안내를 어떻게 표시할 것인가? | Agent(1) | `highlight`, `confirmation`, `done` |
 | Guide Action Type | 사용자가 다음에 할 UI 행동은 무엇인가? | Agent(1) | `tap`, `drag`, `observe_only` |
 
-입력 `command_type`과 출력 `guide_command.command_type`은 이름의 끝이 같아도 다른 enum이다. 예를 들어 `start_task`를 받으면 Agent가 graph와 화면을 판단한 후 `highlight`를 반환할 수 있다. FE가 Goal을 확정했다는 사실은 위험한 action에 대한 사용자 승인과도 다르다.
+입력 `command_type`과 출력 `guide_command.command_type`은 이름의 끝이 같아도 다른 enum이다. 예를 들어 `start_task`를 받으면 Backend가 graph를 선택하고 AI1이 전달 graph와 화면을 판단해 `highlight`를 반환할 수 있다. FE가 Goal을 확정했다는 사실은 위험한 action에 대한 사용자 승인과도 다르다.
 
 ### 2.1 FE의 책임
 
@@ -47,9 +48,9 @@ STT 자체가 Goal을 분류한다는 뜻은 아니다. FE가 소유하는 **입
 
 ### 2.2 Backend와 AI-Agent(1)의 책임
 
-- Backend: 계약 버전, 인증·소유권, 요청 멱등성, 세션 version, DTO 조건부 검증, 응답·상태 저장.
-- Agent(1): FE 입력의 등록 여부와 slots 일치 확인, 승인 graph 선택·복원, 화면 판단, 안내, Safety, Verification, Re-plan.
-- Agent(1)이 입력을 검증한다는 것은 자연어를 재분류한다는 뜻이 아니다. 잘못된 입력은 필드와 원인을 FE에 반환한다.
+- Backend: 계약·Goal/slots·Command 검증, 인증·소유권·멱등성·세션 version, DB graph 선택·고정·복원·parameter 확정, AI1 입력 조립, 응답·상태 저장.
+- Agent(1): 전달된 graph·goal·실행 상태의 정합성 검사, 화면 판단, 안내, Safety, Verification, graph 내부 Re-plan.
+- AI1은 자연어 재분류나 graph 검색을 하지 않는다. 전달 graph 부적합/복구 불가를 Backend에 반환하면 Backend가 재선택·재시작 또는 지원 불가를 처리한다.
 - Goal Typing dataset을 AI-Agent(2)가 생산한다면 FE 분류 품질을 위한 데이터다. Agent(1)이 Goal 분류기를 운영한다는 의미가 아니다.
 
 ## 3. 실제 Goal Type 목록
@@ -64,7 +65,7 @@ STT 자체가 Goal을 분류한다는 뜻은 아니다. FE가 소유하는 **입
 | 의미 | Android 설정에서 현재보다 글자 크기를 크게 변경 |
 | `target_app` | `android_settings` |
 | graph의 `task_type` | `settings_change` |
-| Agent가 선택할 `task_id` | `MVP-01` |
+| Backend가 선택해 전달할 `task_id` | `MVP-01` |
 | 필수 `slots.setting` | 문자열 `font_size` |
 | 필수 `slots.direction` | 문자열 `increase` |
 | 현재 graph 동작 | 설정·디스플레이·글자 크기 화면 안내 → 확인 → 사용자 직접 조절 → 새 관측으로 증가 검증 |
@@ -109,7 +110,7 @@ Registry의 `MVP-01`과 `settings.font_size.increase`는 같은 graph를 참조�
 - canonical Goal Type은 소문자 dotted string으로 통일한다. 예: `<domain>.<target>.<intent>`.
 - 표현만 다른 발화는 같은 Goal Type에 매핑한다. 표시용 한국어 이름을 wire enum으로 사용하지 않는다.
 - `unknown`, `ambiguous`, 빈 문자열은 실행 가능한 Goal Type이 아니다. FE 내부 분류 결과로만 사용한다.
-- catalog version과 graph version은 별개다. FE는 자신이 사용한 catalog version을 보내고, Agent는 호환되는 graph version을 선택한다.
+- catalog version과 graph version은 별개다. FE는 자신이 사용한 catalog version을 보내고, Backend는 DB에서 호환되는 graph version을 선택해 AI1에 전달한다.
 - 새 catalog를 썼다는 이유로 서버에 없는 Goal을 실행할 수 없다. 지원 목록은 승인 registry와 맞춰 배포하며 캐시는 version 단위로 교체한다.
 
 ## 4. 입력 Command Type
@@ -118,7 +119,7 @@ Registry의 `MVP-01`과 `settings.font_size.increase`는 같은 graph를 참조�
 
 | `command_type` | 의미 | 새 `goal` | 현재 `episode_id` | 화면 관측 | 핵심 처리 |
 | --- | --- | --- | --- | --- | --- |
-| `start_task` | 새 작업 시작 | 필수 | 생략 | 필수 | 새 session/episode 생성, 승인 graph 선택 |
+| `start_task` | 새 작업 시작 | 필수 | 생략 | 필수 | Backend가 새 session/episode 생성, DB graph 선택 |
 | `pause_task` | 나중에 이어갈 수 있게 일시정지 | 금지 | 필수 | 선택 | 상태 보존, 이전 guide·확인 무효화 |
 | `resume_task` | 일시정지한 작업 재개 | 금지 | 필수 | 필수 | 같은 goal·graph 복원 후 현재 화면 재판단 |
 | `cancel_task` | 현재 작업 취소·종료 | 금지 | 필수 | 선택 | 종료 기록, 후속 실행 금지 |
@@ -156,7 +157,7 @@ Registry의 `MVP-01`과 `settings.font_size.increase`는 같은 graph를 참조�
 
 | 현재 상태 | 허용 명령 | 결과 |
 | --- | --- | --- |
-| 신규 session | `start_task` | graph 선택 후 `ACTIVE`, 필요 시 `WAITING_CONFIRMATION` |
+| 신규 session | `start_task` | Backend graph 선택 후 `ACTIVE`, 필요 시 `WAITING_CONFIRMATION` |
 | `ACTIVE` | `observe`, `pause_task`, `cancel_task`, `replace_task` | 관측 진행 / `PAUSED` / `CANCELLED` / 새 episode |
 | `WAITING_CONFIRMATION` | `respond_confirmation`, `observe`, `pause_task`, `cancel_task`, `replace_task` | 확인·화면 재검증 또는 명시적 상태 전이 |
 | `PAUSED` | `resume_task`, `cancel_task`, `replace_task` | 재관측 후 실행 / 종료 / 새 episode |
@@ -166,9 +167,11 @@ Registry의 `MVP-01`과 `settings.font_size.increase`는 같은 graph를 참조�
 
 재개 시 이전 위치를 그대로 그리거나, 이미 폐기된 확인을 자동 승인하지 않는다. 새 화면을 분류하고 같은 고정 graph에서 다시 UI를 선택한다. 새 graph가 배포됐더라도 실행 중 episode의 graph를 조용히 바꾸지 않는다.
 
-## 5. FE → Agent 데이터 형식
+## 5. FE → Backend 데이터 형식
 
 ### 5.1 공통 envelope
+
+아래는 FE가 Backend에 보내는 typed DTO다. Backend는 이 입력에 DB에서 선택한 graph 본문·reference·복원 상태를 더해 AI1의 내부 실행 입력을 만든다. [Backend → AI1 계약](./backend-task-graph-dispatch.md)을 따른다.
 
 새 typed DTO는 아래 필드만 허용하는 것을 기준으로 한다. enum의 대소문자를 임의로 바꾸거나 camelCase alias를 혼용하지 않는다.
 
@@ -279,7 +282,7 @@ FE가 `task_id`, `task_type`, `graph_version`, `graph_hash`, `is_supported`, `re
 }
 ```
 
-`resolved_by`의 제안 값은 `classifier`·`user_confirmed`·`explicit_ui`다. `goal_confidence`·`command_confidence`는 선택적인 0~1 수치이고 측정하지 않으면 생략한다. 예시 수치는 실제 성능 측정값이 아니다. Agent의 Graph 선택·State confidence·UI match confidence와 분리한다.
+`resolved_by`의 제안 값은 `classifier`·`user_confirmed`·`explicit_ui`다. `goal_confidence`·`command_confidence`는 선택적인 0~1 수치이고 측정하지 않으면 생략한다. 예시 수치는 실제 성능 측정값이 아니다. Backend의 Graph 선택 결과, AI1의 State confidence·UI match confidence와 분리한다.
 
 미확정 후보 목록이나 `needs_clarification=true`인 Goal을 실행 명령에 넣지 않는다. FE 내부에서 질문을 끝낸 뒤 확정 값만 보내며, runtime이 낮은 FE score를 근거로 원문을 재분류하지 않는다. 원문·후보는 필요 목적과 개인정보 정책 없이 로그나 AI-Agent(2) 데이터에 자동 저장하지 않는다.
 
@@ -316,7 +319,7 @@ FE가 `task_id`, `task_type`, `graph_version`, `graph_hash`, `is_supported`, `re
 }
 ```
 
-Agent는 Goal을 분류하지 않고 등록값·slots를 검증해 `MVP-01`을 선택한다. 이후 전달된 화면을 판단해 디스플레이 메뉴 안내를 만든다.
+Backend는 등록값·slots를 검증해 DB의 `MVP-01` graph를 선택·전달한다. AI1은 전달 graph와 화면을 판단해 디스플레이 메뉴 안내를 만든다. 원문을 재분류하지 않는다.
 
 ### 6.2 후속 관측
 
@@ -472,7 +475,7 @@ FE는 즉시 TTS·좌표 안내·예약된 허용 action을 멈추고 서버 응
 | `episode_id` | 현재 episode; 목표 교체 성공 시 변경 |
 | `response_type` | 제안 enum `guidance` / `control` |
 | `command_result` | 접수한 입력 Command와 그 처리 결과 |
-| `accepted_goal_type`, `task_id`, `graph_reference` | Agent가 실제 선택·고정한 Goal/graph 정보 |
+| `accepted_goal_type`, `task_id`, `graph_reference` | Backend가 실제 검증·선택·고정한 Goal/graph 정보 |
 | `task_status` | 현재 실행 상태 |
 | `guide_command` | `guidance`일 때만; 표시 방식·행동·좌표·Safety |
 | `message` | 제어 응답의 사용자 안내 문구 |
@@ -551,7 +554,7 @@ MVP는 keyword/synonym, slot rule, app/context 신호로 시작할 수 있다. e
 
 ## 9. Catalog와 Graph 연결 관리
 
-FE catalog는 사용자가 고를 수 있는 목적과 slot schema를 설명하고, Agent registry는 그 목적을 실제로 수행할 승인 graph를 설명한다. 같은 release에서 호환성을 검증한다.
+FE catalog는 사용자가 고를 수 있는 목적과 slot schema를 설명하고, Backend의 DB graph registry는 그 목적을 수행할 승인 graph와 선택 조건을 관리한다. 같은 release에서 호환성을 검증한다.
 
 새 Goal 등록 시 필요한 항목:
 
@@ -582,13 +585,13 @@ FE catalog는 사용자가 고를 수 있는 목적과 slot schema를 설명하�
 | --- | --- | --- |
 | `AI-Agent/src/ai_agent/runtime/goal_typing.py` | MVP-01 keyword/slot 기반 `type_goal()` | FE 분류 구현의 참고·이관 대상; Agent(1) 호출 경로에서 제거 |
 | `AI-Agent/src/ai_agent/goal_typing/*` | 기존 catalog·normalizer·retriever·slot extractor·typer | FE 소유 입력 처리 참고; Agent(1) 확장 모듈로 유지하지 않음 |
-| `AI-Agent/goal_catalog/mvp_goals.json` | 한 개 Goal과 대표 발화·필수 slot 이름 | FE와 Agent가 버전·제약을 공유하는 catalog 자산 |
-| `runtime/engine.py` | `_resolve_typed_goal()`로 분류 후 graph 선택 | typed Goal 검증·Command Router·Graph Selector로 시작 |
-| `runtime/types.py`, `contracts.py`, `validation.py` | `RawGoalInput`, `TypedGoal`, 첫 turn raw Goal 요구 | FE Goal DTO·입력 Command enum·조건부 validation |
-| `runtime/tasks/__init__.py` | 한 graph의 task/goal key lookup | 승인·환경·버전 호환성을 확인하는 선택 경계 |
+| `AI-Agent/goal_catalog/mvp_goals.json` | 한 개 Goal과 대표 발화·필수 slot 이름 | FE와 Backend가 버전·제약을 공유하는 catalog 자산 |
+| `runtime/engine.py` | `_resolve_typed_goal()`로 분류 후 graph 선택 | Backend가 전달한 graph·goal·실행 상태 검증으로 시작 |
+| `runtime/types.py`, `contracts.py`, `validation.py` | `RawGoalInput`, `TypedGoal`, 첫 turn raw Goal 요구 | Backend → AI1 graph 실행 DTO·명령·상태 정합성 검사 |
+| `runtime/tasks/__init__.py` | 한 graph의 task/goal key lookup | DB seed/fixture로 관리; 선택은 Backend DB repository/selector로 이관 |
 | `Backend/app/schemas/agent_turn.py` | raw Goal과 매 요청 관측을 요구하는 v1 | typed 계약 DTO, pause/cancel의 관측 선택 규칙 |
-| `Backend/app/clients/runtime_agent.py` | HTTP raw text → `RawGoalInput` | FE Goal/Command/환경의 의미를 바꾸지 않고 전달 |
-| Backend 세션·checkpoint·확인 저장 | 현재 version·소유권·취소·확인 바인딩 | PAUSED·episode·교체 원자성·제어 응답 추가 |
+| `Backend/app/clients/runtime_agent.py` | HTTP raw text → `RawGoalInput` | Backend가 선택한 graph 본문·reference·goal·복원 상태를 주입 |
+| Backend 세션·checkpoint·확인 저장 | 현재 version·소유권·취소·확인 바인딩 | DB graph 고정·복원, PAUSED·episode·교체 원자성·제어 응답 추가 |
 | FE `AgentTurnContract.java`·`AgentTurnGateway.java` | raw Goal 요청 직렬화 | typed DTO, 계약 버전, 제어·안내 응답 분리 |
 | FE `VoiceRequestQueue.java`·Overlay Service | 로컬 VIP/NORMAL 큐와 interrupt | 확정 Command 생성, pause/cancel 구분, 응답 상태 동기화 |
 
@@ -596,7 +599,7 @@ FE catalog는 사용자가 고를 수 있는 목적과 slot schema를 설명하�
 
 1. FE·Backend가 v0.2 field/enum·오류·catalog schema를 확정하고 계약 fixture를 공유한다.
 2. FE가 현재 한 개 Goal부터 분류·slot 검증·Command 구분을 구현한다.
-3. Backend typed schema와 adapter, Agent 입력 validator/router/graph selector를 함께 추가한다. raw Goal을 합성해 기존 `type_goal()`을 호출하는 우회 방식은 사용하지 않는다.
+3. Backend typed schema·Command Router·DB graph repository/selector·adapter와 AI1의 graph 입력 validator를 함께 추가한다. raw Goal을 합성해 기존 `type_goal()`을 호출하는 우회 방식은 사용하지 않는다.
 4. pause/resume/cancel/replace의 상태·episode·확인 무효화·멱등성과 checkpoint version 전환을 구현한다.
 5. raw-goal v1과 typed v0.2의 endpoint/version 협상을 명시한다. 구버전은 지원 기간을 정하고 신규 경로에 legacy typing fallback을 넣지 않는다.
 6. FE DTO, Backend OpenAPI, runtime 계약, 예제·tests를 같은 변경으로 맞춘다.
@@ -610,7 +613,7 @@ FE catalog는 사용자가 고를 수 있는 목적과 slot schema를 설명하�
 
 | 검증 항목 | 기대 결과 |
 | --- | --- |
-| 현재 등록 Goal + 정확한 slots | Agent가 원문 없이 `MVP-01` 선택 |
+| 현재 등록 Goal + 정확한 slots | Backend가 원문 없이 DB의 `MVP-01` 선택·전달, AI1 실행 |
 | 같은 canonical Goal, 다른 선택적 source text | Graph 선택 결과 동일; source text 재분류 없음 |
 | `settings.font_size.increase` + `direction=decrease` | slot 충돌 거절; 자동 수정 없음 |
 | `goal_type=unknown`, 미등록 감소·밝기 Goal | 실행하지 않음 |
@@ -626,4 +629,4 @@ FE catalog는 사용자가 고를 수 있는 목적과 slot schema를 설명하�
 | Goal 확인 답변을 action 승인으로 사용 | 허용하지 않음 |
 | 종료된 session에 resume | 새 실행 없음 |
 
-FE 품질은 Goal/Command 분류 정확도, slot 정확도, 부정·모호성·제어 오분류, clarification율과 지연으로 평가한다. Agent(1) 품질은 typed 입력 오류 검출, Graph 선택, 상태 전이·화면 판단·안내·검증·Re-plan으로 평가한다. Task 성공만으로 FE 분류가 정답이었다고 자동 라벨링하지 않는다.
+FE 품질은 Goal/Command 분류 정확도, slot 정확도, 부정·모호성·제어 오분류, clarification율과 지연으로 평가한다. Backend 품질은 typed 계약·Graph 선택·세션 제어로 평가한다. Agent(1) 품질은 전달 graph 정합성 검사·화면 판단·안내·검증·graph 내부 Re-plan으로 평가한다. Task 성공만으로 FE 분류가 정답이었다고 자동 라벨링하지 않는다.

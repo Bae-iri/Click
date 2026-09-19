@@ -1,12 +1,15 @@
 # AI-Agent(1): 사용자 작업 수행 Runtime Agent
 
+> 2026-09-12 신뢰성 수정 반영: 실제 동작과 전송 필드·제한은 [검증·UI 선택·Re-plan 실행 정책](./ai-agent-1-runtime-policy.md)을 함께 본다. FE typed 입력과 Backend DB graph 주입의 전체 전환은 별도 작업이다.
+
 ## 1. 문서 목적
 
-이 문서는 **AI-Agent(1)**의 목표 아키텍처와 런타임 흐름을 정의한다. AI-Agent(1)은 FE가 확정한 **Goal Type과 Command Type**을 받아 **적절한 승인 Task Graph를 선택하는 단계부터** 시작한다. 이후 현재 화면을 읽어 guide/action을 결정하며, 새 관측으로 결과를 검증하고 Re-plan하는 사용자용 에이전트다. 특정 Task 하나에 종속되지 않고, Android 설정 앱, 커머스 앱, 공공 서비스 앱 등 여러 절차형 Task에 공통으로 적용되는 Agent 파이프라인을 설명한다.
+이 문서는 **AI-Agent(1)**의 목표 아키텍처와 런타임 흐름을 정의한다. AI-Agent(1)은 **Backend가 DB에서 선택해 전달한 Task Graph와 확정된 목표·실행 상태를 받아 실행하는 단계부터** 시작한다. Goal/Command 분류는 FE, graph 조회·선택·버전 고정·복원은 Backend 책임이다. 이후 현재 화면을 읽어 guide/action을 결정하며, 새 관측으로 결과를 검증하고 Re-plan하는 사용자용 에이전트다. 특정 Task 하나에 종속되지 않고, Android 설정 앱, 커머스 앱, 공공 서비스 앱 등 여러 절차형 Task에 공통으로 적용되는 Agent 파이프라인을 설명한다.
 
 이 문서에서 `Agent`는 별도 표시가 없으면 AI-Agent(1)을 뜻한다. AI-Agent(2)는 수집된 runtime 데이터에 success/fail 등 결과 라벨을 붙이고, 내부 데이터셋과 Task Graph 추가·업데이트 후보를 만드는 별도 에이전트다.
 
 - [FE Goal Type·Command Type 정의와 전달 계약](./fe-goal-command-contract.md) — 자연어 분류, 실제 Goal 유형, slots, 요청 형식의 기준 문서
+- [Backend Task Graph 선택·실행 전달 계약](./backend-task-graph-dispatch.md) — DB 조회·선택과 AI1 실행 입력의 기준
 - [두 에이전트의 전체 구조와 책임 경계](./ai-agent-architecture.md)
 - [AI-Agent(2): Runtime Data / Graph Proposal Agent](./ai-agent-2-graph-proposal.md)
 
@@ -16,7 +19,7 @@ Task별 State, Transition, UI 후보, 예외 처리는 별도 문서에서 관�
 
 이 문서는 “현재 코드가 전부 완성했다”는 의미가 아니라, 우리가 목표로 삼는 이상적인 AI Agent 구조를 기준으로 삼는다. 단, 현재 코드에 이미 들어온 런타임 단계는 별도로 표시해 앞으로의 구조에 흡수한다. 기능 확인 기준은 2026-09-12의 `a0d3609`이며, 파일 경로와 책임 경계는 이번 패키지 분리 작업을 반영했다. JSON은 명시적으로 현재 형식이라고 적은 경우를 제외하면 설계 예시이며, 실제 HTTP 계약은 `Backend/app/schemas/agent_turn.py`, runtime 타입은 `AI-Agent/src/ai_agent/runtime/types.py`를 기준으로 한다. 예시 confidence와 threshold는 운영 측정값 또는 확정 성능 목표가 아니다.
 
-**2026-09-12 책임 변경:** Goal Typing과 Command Typing은 FE 소유로 이관한다. 이 문서의 실행 설계는 이 결정을 따른다. 이번 변경은 문서 정리이며, 현재 Python engine의 `type_goal()` 호출과 `raw_goal` HTTP 계약은 아직 남아 있다. 실제 코드 전환 위치와 API 버전 전환은 [별도 계약의 구현 전환 항목](./fe-goal-command-contract.md#11-현재-코드와-구현-전환)을 따른다. 새 typed JSON이 현재 API에 이미 적용된 것으로 해석하지 않는다.
+**2026-09-12 최종 책임 변경:** Goal Typing과 Command Typing은 FE, DB Task Graph 선택·복원과 Command Router는 Backend 소유로 둔다. AI1은 전달된 graph를 실행하며 graph 정의를 수정하지 않는다. 이 문서의 실행 설계는 이 결정을 따른다. 이번 변경은 문서 정리이며, 현재 Python engine의 `type_goal()`·graph lookup과 `raw_goal` HTTP 계약은 아직 남아 있다. DB graph 선택·주입으로 전환하는 코드는 별도 구현 대상이다. 실제 코드 전환 위치와 API 버전 전환은 [별도 계약의 구현 전환 항목](./fe-goal-command-contract.md#11-현재-코드와-구현-전환)을 따른다. 새 typed JSON이 현재 API에 이미 적용된 것으로 해석하지 않는다.
 
 ## 2. Agent 목표
 
@@ -25,8 +28,8 @@ Agent는 사용자가 익숙하지 않은 모바일 앱에서 스스로 목적�
 MVP와 초기 제품의 기본 원칙은 Human-in-the-loop이다.
 
 - FE는 사용자 발화를 Goal Type·slots와 실행 제어용 Command Type으로 확정한다.
-- Agent는 전달받은 값의 형식, 등록 여부, 세션 상태를 검증한다.
-- Agent의 작업 판단은 해당 Goal에 맞는 승인 Task Graph 선택 또는 승인 Task Template의 slots 구체화부터 시작한다.
+- Backend는 FE 입력과 세션·명령을 검증하고 DB에서 호환 graph를 선택해 버전과 parameters를 고정한다.
+- Agent는 Backend가 전달한 graph 본문·reference·목표·실행 상태의 정합성을 검사한 뒤 현재 화면의 실행 판단을 시작한다.
 - Agent는 현재 화면의 UI 요소를 분석한다.
 - Agent는 현재 화면이 Task Graph의 어느 State인지 판단한다.
 - Agent는 다음 State로 가기 위해 눌러야 할 UI 또는 조작해야 할 UI를 선택한다.
@@ -50,43 +53,42 @@ MVP와 초기 제품의 기본 원칙은 Human-in-the-loop이다.
 
 ## 3. 입력 구조
 
-FE는 STT/텍스트 입력 이후 Goal Typing과 Command Typing을 수행하고, Backend를 통해 확정된 구조를 Agent에 전달한다. 의미가 모호하거나 필수 slot이 빠졌으면 FE에서 먼저 질문한다. Agent는 원문에서 의도를 다시 추론하거나 빠진 slot을 임의로 채우지 않는다.
+FE는 Goal Type·slots와 Command Type을 Backend에 전달한다. 모호한 목적은 FE에서 질문한다. Backend는 입력·명령·세션을 검증하고 DB에서 실행할 graph를 선택하거나 고정된 graph를 복원해 AI1에 전달한다.
 
-Agent가 소비하는 정보는 다음과 같다. 필드·enum·완전한 JSON 예시는 [FE Goal·Command 전달 계약](./fe-goal-command-contract.md)에 한 곳에서 관리한다.
+FE → Backend 계약은 [FE Goal·Command 계약](./fe-goal-command-contract.md), Backend → AI1 내부 계약은 [Graph 전달 계약](./backend-task-graph-dispatch.md)이 기준이다. AI1은 FE의 원문을 재분류하거나 DB에서 graph를 다시 선택하지 않는다.
 
-| 입력 | Agent에서의 용도 |
+| AI1 입력 | 용도 |
 | --- | --- |
-| `command_type` | 새 작업 시작, 일시정지, 재개, 취소, 교체, 관측·확인 응답 분기 |
-| `goal.goal_type` | 승인 graph의 정확한 lookup key |
-| `goal.target_app`, `goal.slots`, `goal.catalog_version` | graph 적합성·필수 parameter·catalog 호환성 검사 |
-| `request_id`, `session_id`, `expected_version`, `episode_id` | 멱등성, 소유권, 진행 중 작업 식별 |
-| `accessibility_tree` 또는 동의된 `vision_snapshot` | 현재 화면 판단, UI 선택, 이전 step 검증 |
-| `user_action_event`, `user_confirmation`, `confirmation_id` | 실제 사용자 행동과 현재 확인 대상 연결 |
+| `task_graph`, `graph_ref` | Backend가 선택한 완전한 선언적 graph 본문, task/graph ID·version·hash·schema |
+| `goal`, `resolved_parameters` | FE 확정·Backend 검증 목표와 parameter; 후속 실행도 Backend가 복원해 전달 |
+| `command_type` | Backend가 검증한 실행 명령; pause/cancel은 Backend 제어 경로에서 처리 |
+| `request_id`, `session_id`, `episode_id`, `session_version` | 실행 식별, 고정 graph·checkpoint 일치 확인 |
+| `execution_state` | 직전 state·pending step·관측 기준·실패 이력 |
+| `observation`, `device_context`, `capabilities` | 최신 tree/동의된 Vision, 좌표·환경, 허용 행동 |
+| `user_action_event`, `confirmation_context` | 실제 행동과 Backend가 검증한 승인 범위 |
 
-신규 시작과 목표 교체에서만 새 `goal`을 받는다. 재개·일시정지·취소·후속 관측은 저장된 goal과 고정 graph를 사용한다. FE의 원문 `source_text`는 선택적 설명 정보이며 graph 선택의 입력 근거가 아니다.
+새 graph 선택은 시작·교체 또는 명시적 재선택에만 발생한다. 후속 관측·재개는 같은 graph를 복원한다. FE 후속 요청에 goal이 없다는 것과 AI1 실행 입력에 목표가 없다는 것은 다르다. Backend가 필요한 입력을 완성한다.
 
-입력 `command_type`은 사용자 실행 제어이고, 출력 `guide_command.command_type`은 `highlight`·`confirmation` 등 표시 방식이다. 두 enum을 공유하지 않는다. `resume_task`가 들어와도 관측·안전 검증을 생략하거나 예전 좌표를 바로 재출력하지 않는다.
-
-현재 HTTP v1은 첫 turn의 `raw_goal`을 요구한다. 위 typed 입력은 구현 전환 후의 계약이며, 화면 관측·확인·인증의 현재 wire 형식은 [기존 FE/BE 연동 계약](./frontend-backend-contract.md)을 참고한다.
+입력 `command_type`과 출력 `guide_command.command_type`은 별도 enum이다. 재개 시에도 새 화면을 확인하고 옛 좌표를 재사용하지 않는다. 현재 HTTP v1은 첫 turn의 `raw_goal`을 요구하며 위 graph 주입 DTO는 전환 후 설계다.
 
 ## 4. 핵심 설계 원칙
 
-### 4.1 전달된 Goal 검증과 승인 Task Graph 선택
+### 4.1 Backend가 선택한 Task Graph 수신과 검증
 
-Agent의 첫 업무는 **FE가 확정한 Goal에 실행 가능한 graph를 연결하는 것**이다. 발화 정규화, embedding 기반 Goal 검색, slot extraction, Goal confidence 계산은 [FE 입력 처리 문서](./fe-goal-command-contract.md)로 분리한다.
+**DB graph의 선택자는 Backend이고, AI1은 선택된 graph의 실행자다.** Backend의 canonical Goal 검증, 환경·capability 필터, 승인·활성 상태·우선순위, template parameter 확정, version 고정은 [선택 계약](./backend-task-graph-dispatch.md#3-backend의-graph-선택-기준)에 둔다.
 
-1. Backend가 계약 버전, 인증·소유권·멱등성 및 세션 version을 검증한다.
-2. Command Router가 실행 제어 명령을 분기한다. 일시정지·취소는 graph 선택과 화면 추론 없이 처리하며, 재개·관측·확인 응답은 저장된 graph를 복원한다.
-3. 새 시작·교체에서는 `goal_type`을 catalog/registry의 canonical key로 조회한다. 가까운 다른 Goal로 대체하지 않는다.
-4. 등록된 Goal의 `target_app`과 slot 타입·허용값·필수값을 검사한다. FE confidence와 `is_supported` 주장으로 이 검사를 대체하지 않는다.
-5. 승인 상태, platform·OS·앱 버전, locale, FE 실행 capability 등 알려진 환경 조건으로 호환 graph 후보를 좁힌다. 현재 foreground app이 대상 앱과 다르다는 이유만으로 Goal을 바꾸지 않는다.
-6. 하나의 호환 graph를 선택한다. 여러 variant라면 registry의 명시적 우선순위를 적용하고, 우선순위까지 같은 모호한 경우에는 `GRAPH_SELECTION_AMBIGUOUS`로 정지한다.
-7. 선택된 `task_id`, graph version/hash, 승인 template parameter를 episode에 고정한다. `task_type`은 선택된 graph의 metadata에서 결정한다.
-8. 고정 graph의 시작·복구 경로를 기준으로 현재 화면을 관측하고 실행 루프를 시작한다.
+AI1의 첫 단계는 다음과 같다.
 
-필수값 누락·slot 충돌은 `INVALID_GOAL_PAYLOAD`, 미등록 Goal은 `UNSUPPORTED_GOAL`, 호환 graph가 없으면 `NO_COMPATIBLE_GRAPH`로 FE에 돌려준다. 이는 제안 오류 코드이며 기존 API에 이미 구현된 값은 아니다. Agent가 source text를 다시 분류해서 오류를 숨기지 않는다. 미지원 수요는 정책상 허용된 event로 AI-Agent(2)에 전달한다.
+1. Backend가 전달한 내부 계약 version과 graph schema를 검사한다.
+2. `task_graph` 본문과 `graph_ref`의 ID/version/hash가 일치하는지 확인한다.
+3. 확정 goal·parameters가 전달된 graph의 허용 조건과 일치하는지 확인한다. 자연어 재해석·slot 추측은 하지 않는다.
+4. 후속 실행의 checkpoint가 같은 episode·graph를 가리키는지 검사하고 실행 상태를 복원한다.
+5. 현재 관측으로 state와 target을 판단하고 Guide/Action → Verify → Re-plan 루프를 수행한다.
+6. graph가 부적합하거나 필요한 경로가 없으면 원인을 Backend에 반환한다. graph 내 복구와 Backend 재선택 요청을 구분한다.
 
-현재 구현에서 확인되는 매핑은 `settings.font_size.increase` → `MVP-01` 하나다. Python registry에는 두 key가 같은 graph를 가리킨다. 이는 두 종류의 Goal이 아니다. 버전이 있는 다중 variant registry와 typed 입력 검증은 추가 구현 대상이다.
+AI1은 승인 registry를 검색하거나 다른 Goal의 graph로 교체하지 않는다. 입력이 잘못되면 구조화된 오류를 반환한다. 미등록 Goal·호환 graph 없음·선택 모호성은 Backend 선택 단계에서 처리한다.
+
+현재 코드의 `settings.font_size.increase` → `MVP-01` Python lookup은 전환 전 구현이다. DB가 선택한 graph를 주입하는 방식으로 바꾸며 기존 정의는 seed·fixture로 사용할 수 있다.
 
 ### 4.2 UI 판단 원칙
 
@@ -150,7 +152,7 @@ Fallback 연결 규칙:
 - `accessibility_tree.nodes`가 빈 경우는 관측 실패로 보고, vision snapshot이 없으면 정보 부족 fallback command로 응답한다.
 - `render_policy.recovery_action`은 FE가 사용자 활성화 기반으로 설정 앱 열기 또는 앱스 화면 이동을 제공해야 하는 경우 사용한다.
 - `render_policy.fallback_action.type=request_fresh_observation`은 현재 viewport에서 target을 찾지 못했으니 fresh tree와 필요 시 vision snapshot을 다시 보내라는 의미다.
-- 같은 logical state로 분류되더라도 화면 fingerprint가 바뀌었으면 `NO_CHANGE`가 아니라 `UNKNOWN`으로 기록해 스와이프, 앱스 화면 이동, 수동 이동을 단순 실패로 오판하지 않는다.
+- 같은 화면이나 fingerprint 변화만으로 실패를 만들지 않는다. 행동 귀속·관측 순서·안정화 조건에 따라 `WAITING_FOR_ACTION`, `WAITING_FOR_OBSERVATION`, `UNKNOWN`을 구분한다.
 - 현재 runtime trace는 허용된 진단 상태·수치만 보존한다. training/evaluation에 필요한 observation·action·verification 연결과 snapshot은 별도의 개인정보 정책을 갖춘 event 저장 계약으로 추가해야 한다.
 
 비판적 기준:
@@ -182,10 +184,11 @@ MVP에서는 자동 tap을 제공하지 않는다. Agent는 사용자가 눌러�
 
 ### 4.5 AI-Agent(2)와의 책임 경계
 
-AI-Agent(1)은 승인된 graph를 읽어 현재 사용자 세션의 경로를 선택한다. 이미 승인된 template에 slots를 대입하는 것은 허용되지만, 미등록 목표에 대해 새 graph를 즉석 생성해 실행하지 않는다.
+Backend가 DB에서 graph를 선택하고 승인 template의 parameter를 확정한다. AI-Agent(1)은 전달받은 graph 안에서 현재 세션의 경로·target을 선택한다. 미등록 목표나 graph에 없는 경로를 즉석 생성해 실행하지 않는다.
 
 | 작업 | 담당 |
 | --- | --- |
+| DB graph 조회·선택·버전 고정·복원 | Backend |
 | 현재 화면 판단, 다음 guide/action 결정 | AI-Agent(1) |
 | 직전 행동 결과 검증 및 세션 내부 Re-plan | AI-Agent(1) |
 | 관측·후보·안내·행동·검증·중단·오류 trace 생산 | AI-Agent(1), FE, Backend |
@@ -196,26 +199,27 @@ AI-Agent(1)은 승인된 graph를 읽어 현재 사용자 세션의 경로를 �
 
 AI-Agent(1)의 Re-plan은 **현재 세션의 선택을 바꾸는 작업**이다. AI-Agent(2)의 Graph Update는 **이후 세션들이 사용할 versioned graph를 바꾸는 작업**이다. Re-plan이 발생했다는 사실 자체는 task 실패 라벨이 아니다.
 
-AI-Agent(2)가 지연되거나 중단되어도 AI-Agent(1)은 마지막으로 승인된 호환 graph로 동작해야 한다. 단, trace 저장 실패는 기록하고 재처리할 수 있어야 하며, 데이터 유실을 수집 성공으로 보고하지 않는다.
+AI-Agent(2)가 지연되거나 중단되어도 Backend는 사용 가능한 승인 graph를 전달하고 AI-Agent(1)은 고정된 graph로 동작해야 한다. 단, trace 저장 실패는 기록하고 재처리할 수 있어야 하며, 데이터 유실을 수집 성공으로 보고하지 않는다.
 
 ## 5. 사용자 작업 수행 루프
 
-실행 turn은 다음 안내 하나를 반환하고, 일시정지·취소 turn은 UI target 없는 제어 응답을 반환한다. 사용자의 조작을 기다린 뒤 **다음 turn의 새 화면으로 직전 안내를 검증**한다. 하나의 관측을 두 번 성공 처리하지 않는다.
+AI1 실행 turn은 다음 안내 하나를 반환하고, Backend의 일시정지·취소 turn은 AI1 화면 추론 없이 UI target 없는 제어 응답을 반환한다. 사용자의 조작을 기다린 뒤 **다음 turn의 새 화면으로 직전 안내를 검증**한다. 하나의 관측을 두 번 성공 처리하지 않는다.
 
-`FE Goal Type + Command Type → Session/Request 검증 → Command 분기 → 승인 Graph 선택/복원 → Observe → Normalize → Classify → 직전 Step Verify → 완료 확인 또는 Re-plan → Transition 선택 → UI Match → Safety → Guide/허용 Action → 새 관측`
+`FE Goal Type + Command Type → Backend 세션/명령 검증 → DB Graph 선택/복원 → graph 본문·목표·실행 상태 전달 → AI1 입력 정합성 검사 → Observe → Normalize → Classify → 직전 Step Verify → 완료 확인 또는 Re-plan → Transition 선택 → UI Match → Safety → Guide/허용 Action → 새 관측`
 
 ```mermaid
 flowchart TD
     A[FE 확정 Goal Type + Command Type] --> B[Backend 인증·세션·멱등성 검증]
-    B --> C{Command 분기}
+    B --> C{Backend Command 분기}
     C -->|일시정지·취소| CTRL[상태 저장·기존 Guide 무효화·제어 응답]
-    C -->|재개·관측·확인| RESTORE[기존 Goal·고정 Graph 복원]
-    C -->|시작·교체| D{등록 Goal·Slots·호환성 검증}
+    C -->|재개·관측·확인| RESTORE[Backend: 기존 Goal·DB 고정 Graph 복원]
+    C -->|시작·교체| D{Backend: 등록 Goal·Slots·호환성 검증}
     D -->|불충분| E[계약 오류 / 미지원 결과를 FE에 반환]
-    D -->|충분| F[승인 Graph 선택·버전 고정]
-    RESTORE --> G
+    D -->|충분| F[Backend: DB Graph 선택·버전 고정]
+    RESTORE --> INPUT
     CTRL -.-> Y
-    F --> G[현재 화면 관측]
+    F --> INPUT[AI1: 전달 Graph·목표·실행 상태 정합성 검사]
+    INPUT --> G[현재 화면 관측]
     G --> H{Accessibility 충분}
     H -->|아니오| I{Vision 동의·마스킹·사용 가능}
     I -->|아니오| J[동의 요청 / 새 관측 / 중단]
@@ -247,7 +251,7 @@ flowchart TD
     Y -. 비동기 .-> Z[AI-Agent 2 입력]
 ```
 
-이 다이어그램의 typed 입력·Command Router, 승인 graph 버전 고정, 모든 경로의 영속 event 기록, 명시적인 observation/step 연결은 목표 계약이다. 현재는 Python graph registry, DB checkpoint 호환성 검사, 일부 경로의 메모리 trace가 구현되어 있다.
+이 다이어그램의 Backend typed 입력·Command Router·DB graph 선택/전달, 승인 graph 버전 고정, 모든 경로의 영속 event 기록, 명시적인 observation/step 연결은 목표 계약이다. 현재는 Python graph registry, DB checkpoint 호환성 검사, 일부 경로의 메모리 trace가 구현되어 있다.
 
 Vision을 matching 실패 후 다시 시도하더라도 동의·마스킹 경계를 동일하게 적용한다. 확인을 받은 경우에도 현재 transition, 화면 시각, target 유효성을 다시 검사하며, 거절은 추가 조작을 허용하지 않는다.
 
@@ -256,9 +260,9 @@ Vision을 matching 실패 후 다시 시도하더라도 동의·마스킹 경계
 | 계층 | 핵심 질문 | 담당 모듈 | 결과물 |
 | --- | --- | --- | --- |
 | Request-level | 같은 요청이 재시도인가? 세션이 유효한가? | Backend AgentTurnService, Session Store | Idempotent Response, Session State |
-| Command-level | 현재 작업을 시작·정지·재개·교체하는가? | Command Router, Session Store | 실행 제어 상태·응답 |
-| Graph-selection-level | FE가 확정한 Goal을 어떤 승인 graph로 실행할 수 있는가? | Typed Input Validator, Graph Selector | Task ID, Graph Reference, 검증된 slots |
-| Task-level | 목표를 위해 어떤 State를 거쳐야 하는가? | Task Graph, Graph Registry, State Manager | State, Transition, Graph Version |
+| Command-level | 현재 작업을 시작·정지·재개·교체하는가? | Backend Command Router, Session Store | 실행 제어 상태·응답 |
+| Graph-selection-level | FE가 확정한 Goal을 어떤 승인 graph로 실행할 수 있는가? | Backend Typed Input Validator, DB Graph Selector | Task ID, Graph Reference, 검증된 slots |
+| Task-level | 목표를 위해 어떤 State를 거쳐야 하는가? | AI1 전달 Task Graph, State Manager | State, Transition, Graph Version |
 | Screen-level | 현재 화면은 어떤 State인가? | Accessibility Tree Parser, UI Normalizer, Screen State Classifier | Current State, State Confidence |
 | Verification-level | 직전 안내 이후 의도한 화면 전이가 일어났는가? | Verifier, Snapshot Fingerprint | SUCCESS, DONE, NO_CHANGE, WRONG_STATE, UNKNOWN |
 | Replanning-level | 실패한 target/transition을 어떻게 처리할 것인가? | Replanner, Attempt Tracker | Excluded Nodes, Alternate Transition |
@@ -276,7 +280,7 @@ Vision을 matching 실패 후 다시 시도하더라도 동의·마스킹 경계
 
 Agent는 turn 단위로 호출되지만, 사용자의 task는 여러 turn에 걸쳐 진행된다. 따라서 request와 session을 분리해야 한다.
 
-역할:
+Backend의 요청·제어 책임이며 AI1은 복원된 실행 입력을 소비한다.
 
 - `request_id` 중복 호출을 감지해 저장된 기본 응답을 재사용하고 personalization 동의를 다시 적용한다.
 - `session_id`와 `episode_id`를 기준으로 FE 확정 goal, task id, graph reference, current state를 유지한다.
@@ -294,35 +298,29 @@ Agent는 turn 단위로 호출되지만, 사용자의 task는 여러 turn에 걸
 - checkpoint에는 schema version과 graph 내용 hash가 저장된다. 불일치 시 `CHECKPOINT_INCOMPATIBLE`로 거부하며, 과거 graph artifact를 찾아 계속 실행하는 다중 버전 registry는 아직 연결되어 있지 않다.
 - 영속 checkpoint와 replay 가능한 전체 runtime trace 저장은 서로 다른 요구사항이다.
 
-### 7.2 Typed Input Validator / Command Router / Graph Selector
+### 7.2 Runtime Input Validator / Graph Receiver
 
-이 모듈은 FE가 전달한 enum과 parameter를 검증하고, 실행 명령에 맞게 승인 graph를 선택하거나 기존 실행 상태를 복원한다.
+Backend가 선택한 graph와 확정된 목표·실행 상태를 받아 실행 가능한지 검사한다. DB 검색, Goal Typing, Command Router는 AI1 모듈에 두지 않는다.
 
 | 구성 요소 | 책임 | 결과 |
 | --- | --- | --- |
-| Typed Input Validator | 계약 버전, 등록 Goal, 대상 앱, slot schema·고정값 일치 확인 | 검증된 FE Goal 또는 구조화된 오류 |
-| Command Router | Command별 허용 세션 상태·episode 확인, 시작·정지·재개·교체 분기 | 실행 경로 또는 제어 응답 |
-| Graph Selector | Goal/app/환경/capability와 승인 registry의 정확한 매핑 | task ID, graph version/hash, parameter |
-| Session Restorer | 후속 명령의 고정 goal·graph 복원, 과거 확인·좌표 유효성 검사 | 현재 episode의 재관측 가능한 상태 |
+| Runtime Input Validator | 내부 DTO·graph schema, 목표/parameter·실행 상태 정합성 검사 | 실행 입력 또는 오류 |
+| Graph Receiver | 전달 본문과 ID/version/hash 검사, 지원 action 확인 | 읽기 전용 graph 객체 |
+| Execution State Restorer | Backend 제공 checkpoint와 graph/episode 결합 검사 | 새 관측으로 이어갈 runtime 상태 |
 
-대표 매핑은 `goal_type=settings.font_size.increase`, `target_app=android_settings`,
-`slots={setting: font_size, direction: increase}` → `task_id=MVP-01`이다.
-`task_id`·graph version·graph hash는 Agent/registry가 결정한다. FE가 실행 graph를 지정하거나
-`source_text`만 보내어 Agent 내부 Goal Typer를 호출하는 경로는 새 계약에 포함하지 않는다.
+`task_id`, graph ID/version/hash, 선택 사유, template parameters는 Backend가 결정해 전달한다. AI1은 이 값을 보존하고 graph 내 transition과 실제 UI target만 선택한다. [내부 전달 계약](./backend-task-graph-dispatch.md#4-backend--ai1-실행-입력)을 따른다.
 
-지원 유형·입력 필드·Command별 세부 규칙은 [FE Goal·Command 계약](./fe-goal-command-contract.md)이 기준이다. 이 모듈은 분류 점수를 계산하거나 모호한 자연어를 해결하지 않는다. 입력 오류의 필드 경로와 원인을 FE에 전달하면 FE가 사용자에게 확인 후 새 요청을 만든다.
+현재 `engine._resolve_typed_goal()`과 `_task_graph_for()`는 전환 전 동작이다. 이를 graph 주입 DTO·수신 검증으로 바꾸고 Backend adapter/checkpoint/progress를 함께 전환해야 한다. Goal Typing과 graph 선택기를 AI1 확장 항목에 다시 추가하지 않는다.
 
-현재 코드에는 별도 Typed Input Validator/Command Router가 없고 `engine._resolve_typed_goal()`이 여전히 `runtime/goal_typing.py`를 호출한다. 이 호출 제거, typed DTO와 router 추가, Backend adapter·checkpoint·tests 전환이 필요하다. Goal Typing을 Agent(1)의 확장 과제로 계속 추가하지 않는다.
+### 7.3 전달 Task Graph / State Manager
 
-### 7.3 Task Graph / Graph Registry / State Manager
-
-Task별로 정의된 State와 Transition을 관리한다.
+Backend가 전달한 graph의 State와 Transition을 읽고 현재 세션의 실행 상태를 관리한다. DB의 원본 graph 정의는 변경하지 않는다.
 
 역할:
 
 - 현재 Task의 시작 State와 완료 State 관리
 - 현재 State에서 가능한 다음 Transition 조회
-- graph version 고정
+- Backend가 고정해 전달한 graph version 보존
 - 실패한 Transition 기록
 - failed target node 제외
 - 대체 경로 탐색
@@ -339,9 +337,9 @@ Task Graph는 전체 구조 문서에 직접 상세 정의하지 않고 Task별 
 
 개선 필요:
 
-- Python graph와 JSON graph 중 하나를 source of truth로 정해야 한다.
+- DB의 승인된 불변 graph를 source of truth로 삼고 Python/JSON 정의는 seed·fixture로 관리한다.
 - graph version은 runtime object에 명시되어야 한다. engine의 trace 입력에는 `mvp-01.v1` 상수가 있지만 실제 진단 저장에서는 제외된다. Backend checkpoint의 graph hash와 함께 영속 event/artifact version으로 연결해야 한다.
-- session 시작 시 graph version을 고정해야 한다.
+- Backend가 episode 시작 시 고정한 graph version을 AI1 checkpoint와 일치시켜야 한다.
 
 ### 7.4 Accessibility Tree Parser
 
@@ -440,8 +438,9 @@ FE가 원본 속성을 유지해 직렬화한 Accessibility Node를 Agent가 비
 
 현재 코드 반영:
 
-- `classify_screen_state()`는 state id만 반환한다.
-- Backend response의 `state_confidence`는 실제 state confidence가 아니라 match confidence를 사용하고 있다.
+- `classify_screen_state()`는 state ID를 반환하면서 evidence 출력에 classifier 점수를 제공한다.
+- Backend `state_confidence`는 classifier 점수, `match_result.confidence`는 UI 선택 점수다. 둘 다 보정된 성공 확률은 아니다.
+- `verification_only` state는 화면 분류로 도달하지 않는다.
 
 개선 필요:
 
@@ -451,113 +450,47 @@ FE가 원본 속성을 유지해 직렬화한 Accessibility Node를 Agent가 비
 
 ### 7.7 Verification
 
-사용자 행동 이후 새 화면을 관찰해 목표 State로 이동했는지 확인한다. Verification은 Guide 이후에만 동작하는 별도 단계가 아니라, 매 turn 초반에 pending transition을 보고 수행되는 핵심 runtime 단계다.
+직전 pending attempt의 guide·action·target과 새 관측을 연결한 뒤 전이 predicate를 평가한다. Vision 보조 관측도 먼저 확정하며, verifier가 본 화면과 matcher가 본 화면이 달라지는 순서를 피한다.
 
-결과:
-
-| 결과 | 조건 | 다음 처리 |
+| 결과 | 조건 | 처리 |
 | --- | --- | --- |
-| `SUCCESS` | 예상 State로 이동 또는 값 변화 성공 | 다음 Transition 진행 |
-| `DONE` | 완료 State 도달 | 완료 안내 |
-| `NO_CHANGE` | 화면 fingerprint가 변하지 않음 | 재안내 또는 target 제외 |
-| `WRONG_STATE` | 예상과 다른 State | Re-plan |
-| `UNKNOWN` | 화면은 바뀌었지만 State 판별 실패 | fallback 또는 재계획 |
+| `WAITING_FOR_ACTION` | 해당 guide에 귀속된 행동 없음 | 유효한 guide 유지, 실패 누적 안 함 |
+| `WAITING_FOR_OBSERVATION` | 행동은 있으나 관측이 오래됐거나 안정화 전 | 최신 관측 요청 |
+| `UNKNOWN` | 대상 값·상태 등 검증 근거 부족 | 제한된 재관측, 실패 누적 안 함 |
+| `NO_CHANGE` | 행동 후 안정된 두 관측에서 원래 state 유지·조건 미충족 | 실제 attempt 한 번 실패 |
+| `WRONG_STATE` | 행동 후 안정된 관측에서 다른 알려진 state 확인 | 실제 attempt 한 번 실패 |
+| `SUCCESS` | 선언된 predicate 충족 | 다음 step 또는 검증된 완료 |
 
-현재 코드 반영:
+안정화 기준은 서로 다른 post-action 관측 두 개, 500ms 이상 간격, 동일 fingerprint다. 값 변경은 안내 당시의 target·window·기준값을 유지해 비교한다. 같은 label의 후보를 유일하게 특정하지 못하면 완료를 보류한다. `S5_FONT_SIZE_CHANGED`는 글자 크기 target의 증가 predicate로만 도달한다. 밝기 증가나 terminal transition 정의 자체는 완료 근거가 아니다.
 
-- pending transition의 `to_state`와 현재 state를 비교한다.
-- 이전 snapshot과 현재 snapshot의 fingerprint가 같으면 `NO_CHANGE`로 본다.
-- 같은 logical state라도 fingerprint가 달라지면 `UNKNOWN`으로 본다.
-- slider value가 증가하면 `S5_FONT_SIZE_CHANGED` 성공으로 본다.
-
-비판적 기준:
-
-- Verification은 state classifier에 강하게 의존하므로 classifier confidence와 evidence가 필요하다.
-- 값 변경 task는 가능하면 OS/system setting signal로도 검증해야 한다.
-- slider node id가 바뀌거나 이미 최대값인 경우를 별도로 처리해야 한다.
-- 현재 `verify_transition()`은 pending transition의 목적지가 done state이면 실제 현재 state와 비교하기 전에 `DONE`을 반환하는 분기가 있다. 목표 설계에서는 완료 predicate의 관측 근거 없이 terminal transition 정의만으로 완료를 선언하지 않아야 한다.
-- runtime의 `SUCCESS`/`DONE`은 온라인 판단 결과다. AI-Agent(2)의 정답 라벨로 그대로 복사하지 않으며, 후속 관측과 검증 근거로 재평가한다.
+수동 이동으로 예상 화면을 확인한 경우 `observed_progress`로 이어가되, 직전 action 실행 성공으로 집계하지 않는다. 실제 완료는 predicate와 `completes_task=True`가 함께 필요하다. Backend는 화면 progress로 완료를 덮어쓰지 않는다. 온라인 검증 결과를 AI2 정답 라벨로 복사하지 않는다.
 
 ### 7.8 Re-plan
 
-예상과 다른 화면이 나타났을 때 새로운 경로를 계산한다.
+Re-plan은 현재 실행의 선택을 바꾼다. graph에 없는 경로를 생성하거나 DB graph를 수정하지 않는다.
 
-전략:
+| strategy | 실행 |
+| --- | --- |
+| `continue` | 현재 graph의 다음 단계 |
+| `wait_for_action` | 현재 유효 guide 유지 |
+| `reobserve` | 최신 관측·동의된 fallback |
+| `retry_target` | 실패 확인 후 새 attempt 발급 |
+| `alternate_transition` | graph가 허용한 다른 target/전이 |
+| `backend_reselection` | 중단과 graph 재선택 필요 사유 반환 |
 
-- 현재 State 재분류
-- 직전 실패 Node 제외
-- 대체 Transition 탐색
-- 검색 기능 사용 가능 여부 확인
-- 허용된 scroll 범위 안에서 추가 탐색 가능 여부 확인
-- 반복 실패 시 LLM/VLM fallback
-- 사용자의 추가 설명 요청
+실패 카운터는 transition과 의미 target의 조합에 귀속한다. 기본 2회 실패 후 제외한다. bounds·tree index 변화나 target 없는 guide 반환만으로 제외를 해제하지 않는다. 새로운 실행/graph 재시작에서 초기화한다. 연속 관측 복구 기본 3회, 실제 실패 전체 6회로 제한하며 `RuntimePolicy`에서 설정한다. 정상 미조작 대기는 예산을 소비하지 않는다.
 
-현재 코드 반영:
-
-- `NO_CHANGE`, `WRONG_STATE`, `UNKNOWN`이면 replan decision을 만든다.
-- 같은 transition이 `RETRY_LIMIT_BEFORE_EXCLUSION = 2` 이상 실패하면 마지막 target node를 제외한다.
-- 이후 matcher가 같은 transition의 다른 node를 선택할 수 있다.
-
-비판적 기준:
-
-- 현재 구현은 “진짜 graph-level replanning”이라기보다 retry exclusion이다.
-- 이상적인 Re-plan은 alternate transition ranking, recovery action, user-corrected path capture를 포함해야 한다.
+경로는 명시된 `Transition.priority` 순으로 검토한다. MVP Display 경로는 10, Accessibility 경로는 20이다. UI match score와 경로 우선순위를 구분한다. Backend는 재선택 요청을 `BLOCKED`와 handoff 사유로 보존하며, DB 자동 재선택 연결은 별도 구현 사항이다.
 
 ### 7.9 UI Matching
 
-현재 State에서 다음 Transition을 수행하기 위한 Target Node를 선택한다.
+visible/enabled·유효 bounds·앱/window·action-compatible role을 먼저 확인하고, graph selector와 제외 목록을 적용한다. drag에는 slider만 허용한다. 후보를 못 찾았는데 먼저 변경 승인을 받지 않는다.
 
-1차 판단:
+`Transition.selector`는 graph 동의어 참조, package, resource ID, 화면 문맥, 제외 keyword, 이름 없는 control 허용 조건을 명시한다. matcher와 verifier가 같은 selector를 사용한다. resource ID 정확 일치 1.0, 이름/동의어 정확 일치 0.9, keyword 또는 유일한 control의 명시된 문맥 0.8을 사용한다. 일반 UI similarity는 최대 0.79이며 slider의 의미 조건을 우회하지 않는다.
 
-- keyword matching
-- synonym matching
-- resourceId matching
-- role matching
-- enabled/actionable check
+채택 기준은 0.7, top-2 격차 하한은 0.05다. 동점/작은 격차면 `ambiguous_target`으로 선택을 보류한다. 입력 node 순서로 승자를 정하지 않는다. 이름 없는 slider는 명시된 글자 크기 문맥에서 유일할 때만 허용하고, 밝기 등 이름이 있는 다른 설정은 제외한다. slider role만으로 0.82를 주던 규칙은 제거했다.
 
-2차 판단:
-
-- normalized label embedding similarity
-- 현재 State와 후보 Node의 semantic similarity
-- Task goal과 후보 Node의 semantic similarity
-- bounds/position pattern
-- top-1/top-2 score gap
-
-fallback 조건:
-
-- 후보가 없음
-- 후보가 여러 개이고 score 차이가 작음
-- 최고 후보 confidence가 threshold 미만
-- 후보 Node가 실제로 clickable/actionable하지 않음
-
-예시 출력:
-
-```json
-{
-  "state_id": "S1_SETTINGS_HOME",
-  "next_state_id": "S2_DISPLAY_MENU",
-  "action_type": "tap",
-  "target_node_id": "node_12",
-  "target_label": "디스플레이",
-  "target_bounds": [24, 320, 1056, 408],
-  "match_method": "keyword+embedding+role",
-  "confidence": 0.91,
-  "transition_id": "S1_TO_S2_DISPLAY_MENU",
-  "fallback_reason": null
-}
-```
-
-현재 코드 반영:
-
-- keyword match, similarity score, semantic tag, role, actionable score를 합산한다.
-- 현재 match threshold는 `0.7`이다.
-- Gemini API key가 없으면 similarity는 keyword-only Jaccard fallback이다.
-
-개선 필요:
-
-- top-k 후보와 score breakdown을 response/debug에 남겨야 한다.
-- top-2 gap이 낮으면 바로 안내하지 말고 사용자 확인 또는 후보 선택을 해야 한다.
-- resourceId selector를 transition spec에 명시적으로 포함해야 한다.
+점수·격차는 초기 휴리스틱이며 실측 확률이 아니다. 기기별 평가를 통한 보정, 상세 후보 evidence, occlusion/hit-test는 후속 보완이다. 구체적 계약·사례는 [실행 정책](./ai-agent-1-runtime-policy.md)을 따른다.
 
 ### 7.10 Safety Gate
 
@@ -714,25 +647,33 @@ current state는 관측된 사실이고 expected state는 계획이다. 다음 s
 
 ### 7.15 Turn 처리와 정합성
 
-목표 알고리즘은 다음과 같다. 실제 Python 구현을 그대로 옮긴 코드는 아니다.
+목표 알고리즘은 Backend 조율과 AI1 실행을 구분한다. 실제 Python 구현을 그대로 옮긴 코드는 아니다.
 
 ```text
-handle_turn(request):
-    validate_identity_ownership_and_request(request)
-    return_saved_result_if_same_request(request)
+backend_handle_turn(fe_request):
+    validate_identity_ownership_and_typed_request()
+    return_saved_result_if_same_request()
     claim_session_version_and_restore_checkpoint()
-    validate_typed_command_and_dispatch()
     if command is pause_task or cancel_task:
         invalidate_pending_guides_and_confirmations()
         persist_control_state_response_and_event()
         return_control_response_without_screen_inference()
     if command is start_task or replace_task:
         validate_fe_goal_against_catalog_and_slot_schema()
-        select_compatible_approved_graph()
-        commit_new_episode_and_pin_graph()
+        select_and_validate_compatible_graph_from_db()
+        prepare_episode_with_fixed_graph_and_parameters()
     else:
-        restore_fe_goal_and_pinned_graph()
-    # resume requires a fresh observation and never reuses old target coordinates.
+        restore_goal_pinned_db_graph_and_execution_state()
+    runtime_input = assemble_graph_body_reference_goal_state_observation()
+    result = ai1_execute_turn(runtime_input)
+    handle_graph_reselection_request_if_present(result)
+    validate_output_and_confirmation_binding(result)
+    commit_episode_checkpoint_response_and_event_atomically(result)
+    return_response_to_fe(result)
+
+ai1_execute_turn(runtime_input):
+    validate_graph_schema_hash_goal_and_checkpoint_consistency()
+    restore_supplied_execution_state()
     validate_observation_freshness_and_environment()
     normalize_and_classify_current_screen()
     if pending_step exists:
@@ -740,15 +681,18 @@ handle_turn(request):
         verify_pending_step_without_assuming_success()
         update_attempt_outcome_once()
     if goal_completion_predicate_is_satisfied():
-        close_episode_and_build_done_command()
+        build_done_command_with_evidence()
     else:
-        decide_retry_recovery_or_alternate_transition()
+        decide_retry_recovery_or_transition_within_supplied_graph()
+        if supplied_graph_cannot_support_recovery:
+            return_reselection_reason_to_backend()
         rank_current_screen_targets()
         apply_safety_confirmation_and_capability_policy()
         issue_one_guide_or_allowed_action()
-    persist_checkpoint_response_and_event_delivery_record()
-    return_current_response()
+    return_guide_verification_execution_state_and_events()
 ```
+
+신규/교체 episode 준비는 기존 실행을 즉시 덮어쓰는 단계가 아니다. 선택·입력 검증과 출력 검증을 통과한 결과를 Backend가 원자적으로 저장한다. 재선택은 기존 guide를 무효화하는 명시적 재시작 정책을 따르고, AI1 호출 안에서 DB 검색으로 이어가지 않는다.
 
 중복 요청은 이미 수행한 판단이나 허용된 action을 다시 실행하지 않는다. 동일 request ID의 payload가 다르면 충돌이며, 재전송과 새로운 follow-up을 구분한다. 동일 세션의 동시 요청은 session version/lease로 직렬화하거나 충돌 처리한다.
 
@@ -769,23 +713,23 @@ FE에 전달한 command는 guide ID와 TTL을 가진다. 화면 전환, 새 guid
 | 초기부터 목표를 만족 | already-satisfied 의미 명시 | 불필요한 조작 없이 완료 가능 |
 | 더 증가 요청이나 이미 최대값 | 증가 성공을 선언하지 않음 | 제약 설명·대안 질문 |
 
-값 변경은 Task별 기준이 필요하다. `increase`는 episode 시작 기준값과의 비교, 특정 값 설정은 목표값·허용 오차·단위 일치, 메뉴 이동은 목적 화면과 핵심 요소 확인을 사용한다. 설정 반영에 지연이 있으면 제한된 관측 대기 정책을 둔다.
+값 변경은 Task별 기준이 필요하다. 현재 `increase`는 승인된 안내 시점의 target 기준값과의 비교, 특정 값 설정은 목표값·허용 오차·단위 일치, 메뉴 이동은 목적 화면과 핵심 요소 확인을 사용한다. 설정 반영에 지연이 있으면 제한된 관측 대기 정책을 둔다.
 
 Re-plan은 최신 화면 재확인, 같은 transition의 다른 유효 target, 승인된 대체 transition, 복구 action, 동의된 fallback, 사용자 추가 설명 또는 중단을 선택한다. graph에 없는 위험 action을 임의 생성하지 않는다.
 
 시도 횟수는 guide 생성 횟수와 구분한다. action이 확인되지 않은 observe-only 요청까지 실패로 누적하지 않는다. 실패 node 제외는 해당 state·관측 context에 한정하고 새 화면에서 ID가 재사용되었을 때 영구 제외하지 않는다.
 
-현재 구현은 같은 transition의 반복 실패 후 node 제외가 중심이다. 이후 step별 retry, episode 전체 step 수, fallback 호출, scroll 횟수, 경과 시간의 상한을 정책으로 관리한다. 현재는 `runtime/budget.py`와 Backend `turn_executor.py`가 turn deadline과 동시 실행 상한을 적용한다. episode 전체의 retry·복구 예산은 추가할 정책이며, 예산 소진 시 이유와 가능한 복구 방법을 안내하고 종료한다.
+현재 runtime은 target별 확인된 실패, 연속 관측 복구, 실행 전체 실제 실패 예산을 관리한다. `runtime/budget.py`와 Backend `turn_executor.py`의 turn deadline·동시 실행 상한도 유지한다. 모든 종류의 episode 비용·전체 실행 시간·scroll 예산 통합은 후속 보완이다. 예산 소진은 완료가 아니라 Backend handoff와 중단이다.
 
 ### 7.17 Trace 생산 계약
 
 AI-Agent(1)은 데이터 label을 확정하지 않아도 AI-Agent(2)가 재평가할 수 있는 증거를 남겨야 한다.
 
 - guide/action, before/after observation, 검증 대상 step을 명시적으로 연결한다.
-- FE가 제공한 분류 메타데이터, Agent의 Graph 선택 결과, State·Match confidence와 검증 evidence를 구분한다. FE 분류 점수를 Agent가 계산한 것으로 기록하지 않는다.
+- FE가 제공한 분류 메타데이터, Backend의 Graph 선택 결과, State·Match confidence와 검증 evidence를 구분한다. FE 분류 점수를 Agent가 계산한 것으로 기록하지 않는다.
 - 선택 target뿐 아니라 privacy 정책상 허용된 후보 집합과 score breakdown을 보존한다.
 - 관측 state, 예상 state, runtime verification, terminal 이유를 분리한다.
-- FE에서 발생한 clarification event와 Agent의 입력 거절·미지원 graph·동의 거절·fallback·오류·일시정지·재개·취소·만료를 각 생산 주체와 함께 연결한다.
+- FE에서 발생한 clarification event와 Backend의 Goal/graph 선택 거절, AI1의 전달 입력 거절·동의 거절·fallback·오류·일시정지·재개·취소·만료를 각 생산 주체와 함께 연결한다.
 - screenshot 원문을 기본 저장하지 않고, text·OCR·guide 등 민감 필드도 정책에 따라 제거한다.
 - Backend의 DB checkpoint 저장과 학습 event 저장을 별도로 모니터링한다.
 - event 전송 장애 시 실패와 재처리 위치를 남긴다.
@@ -796,25 +740,19 @@ AI-Agent(1)은 데이터 label을 확정하지 않아도 AI-Agent(2)가 재평�
 
 아래는 모듈 간 의미를 설명하는 설계 예시다. HTTP DTO와 runtime dataclass의 필드명을 혼용해 그대로 요청으로 보내지 않는다. 자동 scroll 예시는 향후 계약이며 현재 MVP-01의 기능이 아니다.
 
-### 8.1 FE Goal·Command Envelope
+### 8.1 FE → Backend와 Backend → AI1의 구분
 
-입력 DTO의 단일 기준은 [FE Goal Type·Command Type 정의와 전달 계약](./fe-goal-command-contract.md)이다.
-`command_type`과 신규 시작/교체의 `goal`을 받으며 자연어 Goal Typing 입력을 정의하지 않는다.
-원문과 분류 후보·confidence는 필요 시 FE가 생산하는 선택적 메타데이터다.
+FE의 typed 요청은 [FE Goal·Command 계약](./fe-goal-command-contract.md), AI1이 소비할 graph 포함 실행 입력은 [Backend 전달 계약](./backend-task-graph-dispatch.md#4-backend--ai1-실행-입력)에 정의한다. 원문과 분류 confidence는 FE 메타데이터이며 AI1이 다시 계산하지 않는다.
 
 ### 8.2 Agent Turn Request
 
-신규 typed 요청의 공통 envelope와 명령별 JSON은 별도 계약에 정의한다. 기존 HTTP v1의
-`raw_goal`과 runtime의 `RawGoalInput`은 전환 전 구현에만 해당한다.
+Backend는 `task_graph`, `graph_ref`, 확정 goal·parameters, 실행 명령·상태, 새 관측을 조립한다. 첫 실행과 재개·후속 관측 모두 AI1이 실행할 graph를 사용할 수 있어야 한다. pause/cancel은 Backend에서 pending guide를 무효화하고 제어 응답으로 처리한다.
 
-실행을 진행하는 `start_task`, `replace_task`, `resume_task`, `observe`, `respond_confirmation`은
-새 관측을 함께 전달한다. `pause_task`, `cancel_task`는 화면 수집 실패 중에도 처리할 수 있어야 한다.
-이 구분은 새 schema의 조건부 검증 요구사항이며 현재 모든 요청에 관측을 요구하는 v1과 다르다.
+현재 HTTP v1의 `raw_goal` 및 runtime `RawGoalInput`은 전환 전 계약이다. 신규 DTO의 전체 필드와 본문 전달 방식은 별도 내부 계약이 기준이며 이 문서의 예시를 현재 HTTP API에 보내지 않는다.
 
-### 8.3 Graph Selection Result
+### 8.3 Backend Graph Selection Metadata
 
-아래는 Agent 내부 선택 결과의 설계 예시다. `graph_version`과 `graph_hash`는 예시값이며
-현재 다중 버전 registry가 존재한다는 뜻은 아니다.
+아래는 **Backend가 생산하는 선택 metadata만**의 설계 예시다. 완전한 실행 입력에는 이 reference에 해당하는 `task_graph` 본문과 확정 goal·관측·실행 상태를 함께 전달해야 한다. ID만 넘겨 AI1에 검색을 맡기는 예시가 아니다.
 
 ```json
 {
@@ -822,19 +760,20 @@ AI-Agent(1)은 데이터 label을 확정하지 않아도 AI-Agent(2)가 재평�
   "accepted_goal_type": "settings.font_size.increase",
   "task_id": "MVP-01",
   "task_type": "settings_change",
+  "graph_id": "graph_mvp01_android_settings",
   "graph_version": "1.0.0",
   "graph_hash": "example-artifact-hash",
-  "template_parameters": {
+  "graph_schema_version": "task-graph.v1",
+  "resolved_parameters": {
     "setting": "font_size",
     "direction": "increase"
   },
-  "selection_method": "approved_registry_exact_match"
+  "selected_by": "backend",
+  "selection_method": "approved_db_exact_match"
 }
 ```
 
-`accepted_goal_type`은 FE 입력을 검증 후 보존한 값이며 Agent가 새로 분류한 결과가 아니다.
-FE는 응답의 task·graph 정보를 표시·추적에 사용할 수 있지만 이후 명령에서 이를 바꾸어
-다른 graph 실행을 강제하지 않는다.
+ID/version/hash는 예시값이다. FE는 응답의 graph 정보를 표시·추적에 사용할 수 있지만 이후 명령에서 임의 변경해 다른 graph 실행을 강제하지 않는다. AI1은 Backend가 검증한 goal과 선택 reference를 실행 결과·trace에 보존한다.
 
 ### 8.4 Task Definition
 
@@ -1008,7 +947,7 @@ FE는 응답의 task·graph 정보를 표시·추적에 사용할 수 있지만 
 
 현재 trace에는 request/session 연결을 포함한 안정적인 식별자, `episode_id/step_id`, normalized candidate snapshot, 검증 대상 guide ID가 보존되지 않는다. `label_sample`도 진단 allowlist에서 제외된다. 이 진단 로그만으로 전체 UI ranking replay나 episode 재구성을 수행할 수 없다.
 
-전환 전 구현에서는 미지원·모호한 Goal이 `handle_turn()`의 조기 return으로 빠져 일반 trace 기록에 도달하지 않는다. 새 구조는 FE의 분류 event와 Agent의 입력 검증·graph 선택 거절을 별도로 연결해야 한다. API 검증 실패, timeout, 사용자 취소, 세션 만료도 engine의 정상 반환 trace만으로는 포착할 수 없다.
+전환 전 구현에서는 미지원·모호한 Goal이 `handle_turn()`의 조기 return으로 빠져 일반 trace 기록에 도달하지 않는다. 새 구조는 FE의 분류 event와 Backend의 입력 검증·graph 선택 거절과 AI1의 실행 입력 거절을 별도로 연결해야 한다. API 검증 실패, timeout, 사용자 취소, 세션 만료도 engine의 정상 반환 trace만으로는 포착할 수 없다.
 
 전체 event 계약과 필수 필드는 [AI-Agent(2)의 입력 및 라벨 계약](./ai-agent-2-graph-proposal.md)에 정의한다. AI-Agent(1)은 사실과 실시간 판단을 기록하고, AI-Agent(2)가 버전이 있는 학습 라벨을 별도로 생성한다.
 
@@ -1017,10 +956,10 @@ FE는 응답의 task·graph 정보를 표시·추적에 사용할 수 있지만 
 | 순서 | 개발 항목 | 결과물 | 현재 코드 반영 |
 | --- | --- | --- | --- |
 | 1 | Request / Session / Idempotency | 안정적인 turn 처리 | Backend DB claim/checkpoint 구현, runtime 단독은 메모리 |
-| 2 | Typed Input / Command Router / Graph Selector | FE Goal·Command 검증 → 승인 graph 선택·복원 | typed DTO/router 미구현, legacy Goal Typing 제거 필요 |
+| 2 | AI1 Runtime Input Validator / Graph Receiver | Backend가 전달한 graph·목표·상태 검증 | graph 주입 DTO 미구현, legacy typing/lookup 제거 필요 |
 | 3 | MVP Task 정의 | Task별 문서 | 구현 |
 | 4 | Task Graph 설계 | State / Transition | Python graph 구현 |
-| 5 | Graph Registry / Versioning 소비 | 승인 graph 선택, 세션 버전 고정, 호환성 | registry 일부, version 미흡 |
+| 5 | Backend DB graph 전달 연동 | Backend 선택 version 보존, checkpoint 정합성 | Python registry에서 DB 선택·주입으로 전환 필요 |
 | 6 | Accessibility Tree 분석 | 실제 UI dataset | 입력 contract 구현 |
 | 7 | UI Normalizer | 정규화된 Node | 구현 |
 | 8 | Screen State Classifier | 현재 화면 판별 | rule 구현, confidence 미흡 |
@@ -1034,7 +973,7 @@ FE는 응답의 task·graph 정보를 표시·추적에 사용할 수 있지만 
 | 16 | LLM/VLM fallback | 실패 케이스 보완 | vision fallback 일부 구현 |
 | 17 | Trace Logger | task 실행 이력 저장 | allowlist·TTL·개수 제한 진단 로그, 영속 학습 event 미구현 |
 
-데이터 라벨링, dataset 생성, Graph Learner/Validator, graph release 및 model training은 AI-Agent(2)의 개발 항목이다. 두 에이전트를 나누기 위해 먼저 저장소나 배포 서비스를 물리적으로 두 개 만들 필요는 없다.
+DB graph 조회·선택·복원 및 Command Router는 Backend 개발 항목이다. 데이터 라벨링, dataset 생성, Graph Learner/Validator, graph release 및 model training은 AI-Agent(2)의 개발 항목이다. 두 에이전트를 나누기 위해 먼저 저장소나 배포 서비스를 물리적으로 두 개 만들 필요는 없다.
 
 ## 10. Task 문서 작성 규칙
 
@@ -1091,7 +1030,7 @@ Task별 문서는 다음 항목을 포함한다.
 
 4. LLM/VLM 과신
 
-   Vision fallback은 보조 수단이다. Accessibility Tree 품질과 graph selector가 약한 상태에서 VLM으로 덮으면 디버깅이 어려워진다.
+   Vision fallback은 보조 수단이다. Accessibility Tree 품질과 graph 내부 UI selector가 약한 상태에서 VLM으로 덮으면 디버깅이 어려워진다.
 
 5. Safety를 Guide에 묶어두는 것
 
@@ -1101,12 +1040,12 @@ Task별 문서는 다음 항목을 포함한다.
 
 | 영역 | 피드백 |
 | --- | --- |
-| Typed 입력 / Graph 선택 | FE의 Goal Type·Command Type을 검증하는 경계로 전환하고 legacy Goal Typer 호출을 제거해야 한다. |
-| Task Graph | Python graph와 JSON graph가 함께 있으면 drift가 생긴다. source of truth를 정해야 한다. |
-| State Classification | state id만 반환한다. confidence와 evidence가 필요하다. |
-| UI Matching | top-2 ambiguity 처리가 없다. 후보가 비슷하면 확인해야 한다. |
-| Verification | slider value 증가만으로 완료 판단하는 것은 약하다. system setting 또는 value boundary 처리가 필요하다. |
-| Replan | 현재는 node exclusion이다. alternate transition ranking이 필요하다. |
+| 실행 입력 / Graph 수신 | Backend가 선택한 graph를 주입받는 경계로 전환하고 AI1의 legacy Goal Typer·graph lookup을 제거해야 한다. |
+| Task Graph | DB 승인 artifact를 source of truth로 두고 Python/JSON seed와의 동기화·버전을 관리해야 한다. |
+| State Classification | classifier 점수와 match 점수를 분리했다. 상세 state evidence와 정확도 보정이 필요하다. |
+| UI Matching | 역할·앱/window 필터, graph selector·동의어, top-2 선택 보류를 반영했다. 기기별 실측 평가가 필요하다. |
+| Verification | 실제 행동과 동일 target의 증가 predicate를 연결했다. OS 설정값·최대값·단위 처리가 남는다. |
+| Replan | 명시된 전이 priority·실패 제외 유지·복구 예산·Backend handoff를 반영했다. 자동 DB 재선택 연동이 남는다. |
 | Vision Fallback | 동의된 OCR/element는 활용하며 원본 screenshot 외부 호출은 차단한다. 이미지 fallback 활성화에는 서버 redaction과 graph context가 필요하다. |
 | Trace | in-memory라 학습 자산이 되기 어렵다. persistent trace store가 필요하다. |
 | Backend | DB 기반 session·turn·checkpoint는 구현되어 있다. graph artifact 버전 고정과 영속 학습 trace 연계는 추가해야 한다. |
@@ -1114,7 +1053,7 @@ Task별 문서는 다음 항목을 포함한다.
 
 ### 12.4 가장 먼저 고쳐야 할 P0
 
-최우선 경계 변경은 FE typed 입력 계약의 적용이다. Goal/Command enum과 slot schema, 명령별 세션 전이, adapter/checkpoint 전환을 함께 구현한다. Goal Typing 모델의 품질 개선은 FE 소유 문서에서 관리한다.
+최우선 경계 변경은 FE typed 계약과 Backend DB graph 선택·전달의 연결이다. Backend가 명령별 세션 전이와 graph 선택을 맡고 AI1은 전달된 graph를 실행하도록 adapter/checkpoint를 함께 전환한다. Goal Typing 모델의 품질 개선은 FE 소유 문서에서 관리한다.
 
 1. `state_confidence`와 `match_confidence` 분리
 
@@ -1124,9 +1063,9 @@ Task별 문서는 다음 항목을 포함한다.
 
    `ai_agent.runtime`을 임시 MVP runtime으로 둘 것인지, 상위 모듈들을 canonical architecture로 삼고 runtime을 흡수할 것인지 정해야 한다.
 
-3. Task Graph source of truth 결정
+3. DB Task Graph source of truth 연결
 
-   Python dataclass graph와 JSON graph 중 하나를 중심으로 삼아야 한다.
+   승인 graph 본문·version은 DB를 기준으로 Backend가 전달하고, AI1의 로컬 정의는 seed·fixture로 한정한다.
 
 4. DB checkpoint와 영속 trace의 분리
 
@@ -1140,8 +1079,8 @@ Task별 문서는 다음 항목을 포함한다.
 
 MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡는다.
 
-- FE의 확정 Goal·Command로 올바른 승인 Task Graph를 선택하거나 기존 graph를 복원한다.
-- 원문 재분류 없이 미등록 Goal·누락/충돌 slots·지원되지 않는 Command를 구분해 거부한다.
+- Backend가 DB에서 선택·복원한 graph와 확정 목표를 AI1이 받아 실행한다.
+- Backend는 미등록 Goal·잘못된 slots/Command를 거부하고 AI1은 전달 graph·goal·checkpoint 불일치를 거부한다. 원문 재분류는 하지 않는다.
 - 일시정지·재개·취소·목표 교체가 오래된 guide와 pending confirmation을 재사용하지 않는다.
 - Accessibility Tree 기반으로 현재 화면을 수집한다.
 - UI Normalizer가 화면 Node를 일관된 구조로 변환한다.
@@ -1154,7 +1093,7 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 - scroll 활성화 시 계약·FE 실행·검증을 함께 갖추고 허용된 target 탐색에만 사용한다. 현재 MVP-01은 비활성 상태를 유지한다.
 - Verification이 State 전이를 확인하고, 실패 시 Re-plan한다.
 - runtime trace를 persistent하게 저장한다.
-- AI-Agent(2)가 생산한 승인 graph artifact를 검증하고 세션 시작 시 버전을 고정한다.
+- AI-Agent(2)가 게시한 DB graph를 Backend가 선택·고정하고 AI1은 전달받은 version을 검증·보존한다.
 - AI-Agent(2)의 처리 실패가 현재 guide 응답 경로를 막지 않는다.
 
 ## 14. 구현 파일과 책임 매핑
@@ -1162,16 +1101,16 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 | 파일 / 컴포넌트 | AI-Agent(1)의 책임 | 추가할 부분 |
 | --- | --- | --- |
 | `AI-Agent/src/ai_agent/runtime/engine.py` | turn orchestration | 모든 종료 경로 event, 검증 대상 step 명시 |
-| 신규 typed validator / command router / graph selector | FE 입력 검증과 승인 graph 선택·복원 | 모듈 추가, DTO·session 상태 전환 |
+| 신규 runtime input validator / graph receiver | Backend 전달 입력 검증·graph 실행 | graph 주입 DTO, Goal Typing/lookup 제거 |
 | `runtime/normalizer.py`, `classifier.py` | UI 정규화 및 State 판단 | evidence, confidence 분리 |
-| `runtime/matcher.py`, `similarity.py` | UI 후보 선택 | 후보별 점수, selector, top-2 gap |
-| `runtime/verification.py`, `state_manager.py` | 이전 관측과 결과 비교 | 완료 predicate, 지연 관측, action 귀속 |
-| `runtime/replanner.py` | 실패 이력과 node 제외 | 대체 transition, 재시도·복구 예산 |
+| `runtime/matcher.py`, `targeting.py`, `similarity.py` | hard filter·공통 selector·top-2 gap | 후보 상세 evidence·평가 보정 |
+| `runtime/verification.py`, `state_manager.py` | 행동 귀속·관측 순서·target predicate·실패 집계 | OS 값 검증·최대값 안내 |
+| `runtime/replanner.py` | 구체적 복구 전략·예산·Backend 반환 | DB 재선택 흐름 연결 |
 | `runtime/guide.py`, `contracts.py` | guide와 허용 action 계약 | 독립 Safety Gate, 실행 capability 확인 |
 | `runtime/session.py` | turn 중 세션 상태 | 승인 artifact version과 episode 연결 |
 | `telemetry/trace_logger.py` | 공통 진단 producer를 사용 | 필터를 유지하며 별도 영속 event 연결 |
-| `Backend/app/clients/runtime_agent.py` | HTTP/runtime 변환, graph 경로 기반 progress | State/Match confidence 분리 |
-| `Backend/app/services/agent_turn.py` | DB checkpoint 복원·저장 및 응답 조정 | event outbox 또는 동등한 전달 보장 |
+| `Backend/app/clients/runtime_agent.py` (연동) | 선택 graph·목표·상태의 runtime 입력 조립 | 주입 graph 기반 progress, State/Match confidence 분리 |
+| `Backend/app/services/agent_turn.py` (연동) | Command 분기, DB graph 선택·복원, checkpoint·응답 저장 | DB selector 연계, 영속 event 전달 |
 | `Backend/app/repositories/agent_sessions.py` | DB session·turn claim·멱등성 | 학습 event와의 식별자 연계 |
 
 `runtime/*`를 현재 실행 경로의 기준으로 삼는다. 상위 `observation/*`, `matching/*`, `workflows/*`의 구조가 존재한다는 이유만으로 현재 제품에 연결된 기능으로 표시하지 않는다. 기존 `runtime/goal_typing.py`와 `goal_typing/*`는 [FE 이관 목록](./fe-goal-command-contract.md#11-현재-코드와-구현-전환)에서 관리한다. AI-Agent(2) 코드는 `graph_proposal/`, 공통 진단과 관측 계약은 `telemetry/`로 이동했다. 사용자 실행 경로는 Agent(2)를 import하지 않는다. 기존 컴포넌트용 `replanning/state_manager.py`는 세션 내 상태만 관리하고 공통 `task_graph/`에는 graph 구조·registry만 둔다.
@@ -1180,7 +1119,7 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 
 ### 15.1 정상 작업과 복구
 
-글자 크기 확대의 첫 turn에서 Agent(1)은 FE의 `start_task`와 `settings.font_size.increase`를 받아 `MVP-01`을 선택하고 현재 설정 홈의 디스플레이 메뉴를 안내한다. 다음 turn에서 디스플레이 화면이 확인되면 직전 step을 검증하고 글자 크기 메뉴를 안내한다. 설정 변경 확인 후 사용자가 slider를 조작하면 기준값 대비 증가를 검증해 완료한다.
+목표 계약에서 글자 크기 확대의 첫 turn은 Backend가 `start_task`와 `settings.font_size.increase`에 맞춰 선택한 `MVP-01`을 AI1에 전달하고, AI1이 현재 설정 홈의 디스플레이 메뉴를 안내한다. 다음 turn에서 디스플레이 화면이 확인되면 직전 step을 검증하고 글자 크기 메뉴를 안내한다. 설정 변경 확인 후 사용자가 slider를 조작하면 기준값 대비 증가를 검증해 완료한다.
 
 메뉴 이름이 달라 target을 찾지 못하면 graph의 synonym·selector 후보를 검사하고 새 관측 또는 동의 기반 Vision을 요청한다. 다른 승인 경로가 있으면 Re-plan한다. 새 화면·우회 경로는 trace에 남기고, 여러 세션에 적용할 graph 변경은 Agent(2)가 처리한다.
 
@@ -1188,14 +1127,16 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 
 | 검증 시나리오 | 기대 결과 |
 | --- | --- |
-| 유효한 FE Goal + `start_task` | 승인 task 선택, episode·graph 고정 |
-| `observe` 후속 요청 | 저장된 FE goal과 graph reference 유지 |
+| 유효한 FE Goal + `start_task` (Backend 연동) | Backend가 DB graph 선택·episode 고정 후 AI1에 본문 전달 |
+| `observe` 후속 요청 (Backend 연동) | Backend가 goal·고정 graph·상태 복원, AI1은 새 화면으로 실행 |
 | `pause_task` / `resume_task` | 일시정지 저장; 재개 시 새 관측·좌표로 안내 |
 | `replace_task` | 새 입력·graph 검증 후 이전 episode 종료 및 새 episode 생성 |
 | Goal이 누락된 시작 / 후속 요청에 새 Goal 혼입 | 계약 오류; 원문 재분류 또는 묵시적 목표 교체 없음 |
 | 없는 session의 follow-up | 계약 오류 또는 재시작 안내 |
 | 중복 request 및 session 동시 요청 | 중복 실행 방지와 version 일관성 |
-| 미등록 Goal·slot 충돌·호환 graph 없음 | FE에 구분된 오류와 field 정보를 반환하고 관련 event 기록 |
+| 미등록 Goal·slot 충돌·호환 graph 없음 (Backend) | AI1 호출 전 거절, FE 오류·선택 event 기록 |
+| 전달 graph/schema/hash/goal 불일치 (AI1) | 실행 거절, 임의 재선택 없이 Backend에 오류 반환 |
+| 전달 graph 내부 복구 불가 (AI1) | 사유·관측 근거와 함께 Backend 재선택/지원 불가 요청 |
 | 빈 tree·동의 없는 Vision | 무근거 target 없이 정보·동의 요청 |
 | State는 높고 Match는 낮은 신뢰도 | 두 값을 구분하고 matching fallback |
 | 사용자 조작 전 같은 화면 | 곧바로 반복 실패로 누적하지 않음 |
@@ -1208,6 +1149,6 @@ MVP 성공 기준은 이상 구조 전체가 아니라 `L2` 완성에 맞춰 잡
 
 ### 15.3 품질 지표
 
-FE 분류 정답률은 FE의 지표로 분리한다. Agent(1)은 Graph 선택 정확도, 입력 오류 검출률, Command 상태 전이 정확도, State 정답률, Target 정확도, 검증된 task 완료율, false-DONE 비율, 잘못된 화면 안내, 반복 실패·replan·fallback 빈도, 사용자 취소, 응답 시간과 외부 호출 비용을 측정한다. 제조사·OS·앱 버전별 결과를 나눠 본다.
+FE 분류 정답률은 FE, Graph 선택 정확도·Command 상태 전이·세션 복원은 Backend의 지표다. Agent(1)은 전달 입력 오류 검출률, State 정답률, Target 정확도, 검증된 task 완료율, false-DONE 비율, 잘못된 화면 안내, 반복 실패·replan·fallback 빈도, 사용자 취소, 응답 시간과 외부 호출 비용을 측정한다. 제조사·OS·앱 버전별 결과를 나눠 본다.
 
 완료율은 관측 가능한 결과의 success/(success+fail)과 전체 접수 대비 확인된 완료 비율을 구분하며, unknown·cancelled·미지원의 분모 정책을 표시한다. 자동화 수준이나 LLM 사용량을 사용자 작업 품질의 대체 지표로 삼지 않는다. 라벨 정확도·graph proposal 품질은 Agent(2)의 지표로 별도 관리한다.

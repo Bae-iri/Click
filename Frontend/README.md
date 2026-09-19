@@ -2,8 +2,9 @@
 
 Click Android 앱 내부 화면과 다른 앱 위에서 동작하는 Agent Overlay를 구현하는 영역이다.
 
-Frontend는 사용자 음성·텍스트 입출력, Android Accessibility Tree 수집, Guide Command 렌더링과 저위험 자동 스크롤 실행을 담당한다. Goal Typing과 실행 제어용 Command Typing은 FE의 입력 해석 계층이 담당하고, AI-Agent(1)은 승인 Task Graph 선택과 다음 행동 판단부터 담당한다. 이는 갱신된 설계이며 현재 raw-goal DTO의 코드 전환은 남아 있다.
+Frontend는 사용자 음성·텍스트 입출력, Android Accessibility Tree 수집, Guide Command 렌더링과 저위험 자동 스크롤 실행을 담당한다. Goal Typing과 실행 제어용 Command Typing은 FE의 입력 해석 계층이 담당하고, Backend는 DB의 승인 Task Graph를 선택·전달하고 AI-Agent(1)은 전달된 graph에 따른 다음 행동·검증·Re-plan을 담당한다. 이는 갱신된 설계이며 현재 raw-goal DTO의 코드 전환은 남아 있다.
 
+- 관측·행동 ID와 AI1 검증 연동/남은 tap·drag 수집 작업: [AI1 실행 정책](../docs/ai-agent-1-runtime-policy.md#7-fe-전달-형식과-적용-경계)
 - Goal·Command 유형과 전달 형식: [FE 입력 계약](../docs/fe-goal-command-contract.md)
 - 전체 설계: [Frontend 아키텍처](../docs/frontend-architecture.md)
 - UI 강조 좌표와 클릭 영역 처리: [Guide 좌표 계약·검증](docs/guide-target-geometry.md)
@@ -63,14 +64,16 @@ android-project-setup
 
 ## 역할 경계
 
-| 흐름 | Frontend | AI-Agent |
-| --- | --- | --- |
-| Goal·Command | 음성·텍스트 입력, STT, Goal/slots·Command 확정 및 전달 | typed 입력 검증, 승인 Task Graph 선택·복원, 실행 제어 처리 |
-| 화면 관찰 | Accessibility Node 수집 및 직렬화 | Node 파싱·정규화, 화면 State 분류 |
-| 안내 | Overlay·Highlight·Text/TTS 렌더링 | Target과 Guide Command 결정 |
-| 탭 | 자동 실행하지 않고 사용자 직접 조작 유도 | 탭 대상과 안내 내용 결정 |
-| 스크롤 | 허용된 Scroll Command를 실행하고 결과 반환 | Safety 판정, 방향·횟수·중단 조건 결정 |
-| 검증 | 변경 화면 재수집 | State 전이와 완료 여부 검증 |
+| 흐름 | Frontend | Backend | AI-Agent(1) |
+| --- | --- | --- | --- |
+| Goal·Command | STT, Goal/slots·Command 확정 | typed 계약·명령·세션 검증 | 전달된 실행 명령 소비 |
+| Task Graph | 목표·환경 전달 | DB 조회·선택·버전 고정·복원·본문 전달 | 전달 graph·goal·실행 상태 정합성 검사 |
+| 화면 관찰 | 원본 Node 수집·직렬화 | 관측 검증·전달 | 정규화·State 분류 |
+| 안내 | 최신 화면에 Overlay·Text/TTS | 승인·출력 계약 강제 | Target·Guide 결정 |
+| 탭·스크롤 | 직접 조작 유도, 허용된 scroll 실행·결과 전달 | 실행 capability·승인 계약 집행 | 전달 graph 내부 허용 행동 선택 |
+| 검증·복구 | 새 관측·행동 이벤트 | 결과 저장, graph 재선택 요청 처리 | 결과 검증·graph 내부 Re-plan |
+
+선택·실행 계약은 [Backend Task Graph 전달](../docs/backend-task-graph-dispatch.md)을 따른다. 새 typed DTO 및 DB graph 주입은 설계이며 현재 raw-goal 코드 전환은 남아 있다.
 
 ## 브랜치 작업 규칙
 

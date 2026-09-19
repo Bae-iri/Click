@@ -2,11 +2,12 @@
 
 ## 1. 목적과 범위
 
-AI-Agent(2)는 **전체 runtime 데이터를 분석해 success/fail 결과 라벨과 내부 데이터셋을 만들고, Task Graph를 추가·업데이트하는 내부용 에이전트**다. 기존의 `graph-proposal`을 이 에이전트의 책임으로 분리한다.
+AI-Agent(2)는 **전체 runtime 데이터를 분석해 success/fail 결과 라벨과 내부 데이터셋을 만들고, Task Graph를 추가·업데이트하는 내부용 에이전트**다. 기존의 `graph-proposal`을 이 에이전트의 책임으로 분리한다. Task Graph는 DB에 저장하며 AI2의 승인된 새 버전을 DB에 반영한다. Backend가 사용자 요구에 맞게 선택해 AI1에 전달하고 AI1은 전달 graph를 실행한다.
 
 사용자는 개발·데이터·운영 팀이다. 입력은 실제 사용자의 새 요청이 아니라 AI-Agent(1), Frontend, Backend가 남긴 실행 기록이다. 출력은 화면 조작 명령이 아니라 근거를 추적할 수 있는 라벨, 데이터셋, graph 변경안, 평가 보고서, 승인 가능한 graph artifact다.
 
 - [전체 구조와 두 에이전트의 경계](./ai-agent-architecture.md)
+- [Backend DB Graph 선택·전달 계약](./backend-task-graph-dispatch.md)
 - [AI-Agent(1): 사용자 작업 수행 Runtime Agent](./ai-agent-1-runtime.md)
 - [MVP-01: 글자 크기 확대](./tasks/font-size-increase.md)
 
@@ -33,7 +34,8 @@ AI-Agent(2)는 **전체 runtime 데이터를 분석해 success/fail 결과 라�
 
 | 작업 | 실제 담당 |
 | --- | --- |
-| 실사용자 자연어를 받아 현재 작업을 시작 | AI-Agent(1) |
+| 실사용자 자연어를 Goal/Command로 확정 | FE |
+| 사용자 요구에 맞는 DB graph 선택·실행 전달 | Backend |
 | 현재 화면에서 다음 UI target을 결정 | AI-Agent(1) |
 | 사용자에게 guide/confirmation/action command를 반환 | AI-Agent(1) → Backend → FE |
 | 지금 진행 중인 세션을 Re-plan | AI-Agent(1) |
@@ -55,7 +57,7 @@ AI-Agent(2)가 graph를 업데이트한다는 말은 `candidate 생성 → 검�
 | Graph Update Proposal | 기존 graph 변경 검토 | base version, patch, scope, evidence |
 | New Task Graph Proposal | 지원 Task 확장 검토 | goal schema, graph, 완료 조건, fixture |
 | Offline Evaluation Report | baseline/candidate 비교 | 조건, 표본, metric, 회귀, 판정 |
-| Graph Release Candidate | AI-Agent(1)이 읽을 새 graph | artifact hash, version, 호환성, 평가·승인 참조 |
+| Graph Release Candidate | DB에 게시해 Backend가 선택·전달할 새 graph | artifact hash, version, 호환성, 평가·승인 참조 |
 | Data Collection Request | 증거 부족 해소 | 필요한 환경·화면·행동·확인 질문 |
 
 모델 가중치 재학습은 후속 확장이다. 초기 목표인 라벨링, graph 개선, dataset 생산은 규칙과 통계 기반으로 먼저 완성할 수 있다.
@@ -85,7 +87,9 @@ flowchart TD
     P -->|통과| R[승인 정책 / 내부 검토]
     R --> S[Versioned Artifact / Release Manifest]
     S --> T[배포·단계적 적용·모니터링]
-    T --> U[AI-Agent 1의 새 세션]
+    T --> DB[(승인 Task Graph DB)]
+    DB --> SELECT[Backend: 새 실행에 맞는 Graph 선택·전달]
+    SELECT --> U[AI-Agent 1의 새 실행]
     U --> A
     I --> V[Training / Evaluation Dataset]
 ```
@@ -396,17 +400,34 @@ clustering 특징은 package, 화면 제목, 정규화 label set, role 분포, r
 
 기존 state와 목적·완료 의미가 같고 표시명만 다르면 synonym 또는 variant 후보가 적합하다. 새로운 사용자 조작이나 새로운 검증 predicate가 필요한 화면이면 새 state를 검토한다.
 
+여기서 synonym은 **화면에 표시된 UI label의 동의어**다. 같은 기능을 가리키는 “글자 크기”와 “폰트 크기”는 동의어 후보가 될 수 있지만, 단어가 비슷한 “글자 크기”와 “화면 크기”는 조작 대상과 결과가 다르므로 합치지 않는다. 실제 반영하려면 UI의 목적, role, resource ID, 상위 영역, 앞뒤 화면 문맥과 조작 결과로 기능의 동일성을 확인하고, 혼동하기 쉬운 다른 UI를 반례로 평가한다.
+
 예를 들어 제목 유사도, node-set Jaccard, package 일치, role 분포, 전이 문맥을 가중 결합할 수 있다. 가중치는 평가로 정하며 단일 cluster score를 새 state의 증거로 확정하지 않는다.
 
 ### 8.4 실패가 곧 Graph 변경은 아니다
 
 - network timeout이 반복되면 운영 장애 보고서를 만든다.
-- Goal Typing이 다른 task를 선택했다면 catalog 또는 goal classifier 개선 데이터를 만든다.
 - 완료 verifier가 잘못된 DONE을 내면 verifier 개선 대상으로 보낸다.
 - 화면 수집이 비어 있으면 FE 관측 경로를 점검한다.
 - graph selector가 유효한 화면을 놓친 경우에 selector 후보를 만든다.
 
 분석 결과가 `no_graph_change_needed`여도 유효한 산출물이다. 제안 개수 자체를 성공 지표로 두지 않는다.
+
+### 8.5 관측 패턴에 따른 변경 범위 결정
+
+AI-Agent(2)는 성공률과 함께 **화면 UI의 의미·구조, 실제 실행 경로, 환경 차이, 완료 조건**을 분석해 변경 범위를 결정한다. 기존 graph 안에서 표현할 수 있는 차이는 해당 graph의 최소 변경으로 처리한다.
+
+| 발견한 패턴 | 확인할 근거 | 변경 방향 |
+| --- | --- | --- |
+| UI 표시명은 다르지만 기능과 조작 결과가 같음 | 같은 UI 목적·role·화면 문맥, 연결된 조작 결과, 혼동 UI 반례 | 기존 graph에 UI 동의어 추가 (`add_synonym`) |
+| 비슷한 이름의 UI를 혼동하거나 잘못 선택함 | 실제 정답 target과 오선택 target, resource ID·상위 영역 등의 구별 근거 | selector 개선 (`update_selector`) |
+| 같은 작업에서 새로운 중간 화면이 등장함 | 화면 의미, 진입·이탈 관측, 기존 state와의 차이 | state 추가 또는 화면 식별 조건 보강 (`add_state`, `update_state_signature`) |
+| 같은 목표에 도달하는 다른 경로가 확인됨 | 각 edge의 before/action/after 연결과 최종 완료 근거 | transition·대체 경로 추가 (`add_transition`) |
+| 제조사·OS·앱 버전별로 UI나 경로가 다름 | 환경 metadata와 해당 환경의 재현 사례 | 환경별 variant 추가 (`add_environment_variant`) |
+| 기존 graph로 표현하기 어려운 새로운 목적·완료 조건이 필요함 | 확정된 목표·필수 slots, 기존 graph/template의 한계, 새 경로와 완료 근거 | 신규 Task Graph 검토; 실제 등록은 10장의 조건 적용 |
+| 실패 원인이 통신·화면 수집·완료 검증 오류임 | 오류 기록, 누락·오래된 관측, 판정과 실제 결과의 불일치 | 해당 구성요소 개선; graph 변경 필요성은 별도 판단 |
+
+UI 단어 유사성은 변경 후보를 찾는 신호다. 같은 기능과 결과라는 근거가 있어야 동의어로 반영한다. 최종 task가 성공했어도 중간 행동·화면이 누락되면 그 부분을 새 transition의 근거로 사용하지 않는다.
 
 ## 9. 기존 Task Graph 업데이트
 
@@ -425,7 +446,7 @@ clustering 특징은 package, 화면 제목, 정규화 label set, role 분포, r
 | `update_scroll_policy` | 탐색 방향·횟수·중단 조건 | 실행 capability와 실제 scroll 결과 |
 | `update_completion_predicate` | 완료 판단 수정 | 독립 검증 근거, false-DONE 회귀 평가 |
 
-Goal 대표 발화·slot rule, matching weight, model 변경은 graph patch와 같은 proposal 안에 숨기지 않는다. 별도 artifact 유형 또는 명시적 dependency로 분리해 무엇이 결과를 바꿨는지 추적한다.
+matching weight, model 변경은 graph patch와 같은 proposal 안에 숨기지 않는다. 별도 artifact 유형 또는 명시적 dependency로 분리해 무엇이 결과를 바꿨는지 추적한다.
 
 ### 9.2 후보 생성 절차
 
@@ -448,6 +469,8 @@ proposal draft는 검증 전에 만들 수 있다. production 적용 가능한 �
 안전 제한은 가중 점수에서 상쇄할 항목이 아니라 필수 통과 조건이다. 성공률이 높아도 자동 tap을 허용하거나 confirmation을 제거하는 patch는 통과시키지 않는다.
 
 표본 수가 작으면 성공률만 제시하지 않고 `success_count/eligible_attempt_count`와 독립 세션 수를 표시한다. 후보를 발견한 데이터에서 측정한 개선율을 holdout 평가 결과로 쓰지 않는다.
+
+발생 횟수, UI 유사도, 성공률의 고정 임계값은 아직 정하지 않았다. 실제 baseline과 검토된 평가 사례를 확보한 뒤 변경 유형·지원 환경별 기준을 정하고 버전 관리한다. 빈도나 유사도 점수가 높아도 기능의 동일성, 실제 경로, 완료 근거를 대신할 수 없다.
 
 ### 9.4 Proposal 예시
 
@@ -507,13 +530,22 @@ proposal draft는 검증 전에 만들 수 있다. production 적용 가능한 �
 
 ### 10.1 신규 Graph가 필요한 경우
 
-기존 Task의 다른 경로라면 transition/variant를 추가한다. 사용자의 최종 목적, 필수 slots, 완료 predicate가 달라 기존 task로 표현하기 어렵다면 신규 graph를 검토한다.
+신규 graph는 **후보로 제안하는 시점**과 **실제 지원 Task로 등록하는 시점**을 구분한다. 기존 Task의 다른 경로라면 state/transition/variant를 확장한다. 확정된 최종 목적, 필수 slots, 완료 predicate가 달라 기존 graph 또는 승인 template로 표현하기 어렵다면 신규 graph 후보를 검토한다.
 
-입력 후보는 미지원 요청 cluster, 팀이 제공한 시범 수행 trace, 명시적으로 관측된 사용자 수동 완료 기록이다. 미지원 요청 text만으로는 UI 경로가 증명되지 않으므로 이 단계의 결과는 graph 실행이 아니라 데이터 수집 요청일 수 있다.
+입력 후보는 FE가 전달한 미지원 목표 정보의 반복 패턴, 팀이 정의한 작업과 시범 수행 trace, 명시적으로 관측된 사용자 수동 완료 기록이다. 미지원 목표의 수요만으로는 UI 경로가 증명되지 않으므로 이 단계의 결과는 데이터 수집 요청일 수 있다.
+
+실제 신규 Task Graph 등록에는 다음 조건을 모두 충족해야 한다.
+
+1. **신규 작업의 필요성:** 기존 graph의 state·transition·variant 확장이나 승인 template의 slots 구체화로 처리하기 어려운 목표이며 지원 범위가 명확하다.
+2. **실행 경로 근거:** 지원할 경로의 화면과 각 행동에 대한 before/action/after 연결이 있고 재현할 수 있다. 관측되지 않은 edge를 추정해 실행 경로에 넣지 않는다.
+3. **검증 가능한 완료 조건:** 최종 목적 달성을 확인할 predicate, 필요한 관측값, 실패·중단 조건이 정의되어 있다.
+4. **독립 평가와 검토:** 후보 생성에 사용하지 않은 정상·실패·예외·취소·복구 사례로 평가하고, 유사한 다른 작업과의 혼동 및 안전 정책 준수를 확인한 뒤 사람의 검토를 통과한다.
+
+필요한 근거가 부족하면 `NEEDS_DATA`로 남기고 부족한 화면·행동·환경의 자료를 요청한다. 위 조건을 충족한 graph만 10.4의 절차에 따라 등록·배포한다.
 
 ### 10.2 필요한 데이터
 
-- raw intent의 허용된 표현과 정답 goal/slots.
+- FE가 전달한 구조화된 목표·slots 또는 팀이 확정한 작업 명세.
 - 대상 앱 package, 지원 환경, 전제 조건.
 - 실제 시작 화면과 주요 경유 화면의 마스킹된 snapshot.
 - 각 edge의 before/action/after 연결.
@@ -543,7 +575,7 @@ graph ID가 새로 생기므로 `base_graph_version=null`일 수 있다. 대신 
 
 ### 10.4 생성·검증·등록 절차
 
-1. goal cluster가 기존 task의 표현 차이인지 확인한다.
+1. 확정된 목표·필수 slots·완료 조건을 기존 graph/template으로 처리할 수 있는지 확인한다.
 2. 지원할 목표와 완료 predicate를 정리한다.
 3. 관측 경로에서 state와 edge를 추출하고 ID를 부여한다.
 4. selector, action, safety, expected outcome을 명시한다.
@@ -552,7 +584,7 @@ graph ID가 새로 생기므로 `base_graph_version=null`일 수 있다. 대신 
 7. 기존 goal catalog와의 혼동도 평가한다.
 8. 신규 Task 범위와 안전성을 사람이 검토한다.
 9. graph와 goal catalog, required capability, task 문서를 하나의 호환 release로 게시한다.
-10. AI-Agent(1)은 새 세션에서 지원 조건이 맞을 때만 새 graph를 선택한다.
+10. Backend가 새 episode에서 지원 조건에 맞는 DB graph를 선택·고정해 AI-Agent(1)에 전달한다. AI1은 전달된 graph를 실행한다.
 
 goal catalog만 먼저 배포해 실행 graph가 없는 task를 지원한다고 답하지 않는다. 새 graph를 rollback하면 해당 catalog entry도 호환되는 상태로 되돌린다.
 
@@ -777,12 +809,12 @@ Graph schema version, graph 내용 version, runtime contract, content hash를 �
 
 ### 13.4 배포·버전 고정·Rollback
 
-1. approved artifact와 평가·승인 참조를 release storage에 게시한다.
-2. loader가 hash, schema, 지원 환경, capability를 검증한다.
-3. 제한된 새 세션에만 candidate를 할당한다.
+1. AI2 release workflow가 승인된 graph의 새 불변 version과 평가·승인 참조를 DB에 게시한다.
+2. Backend의 repository/loader가 hash, schema, 지원 환경, capability를 검증한다.
+3. Backend selector가 제한된 새 episode에만 새 version을 선택·고정하고 graph 본문·목표·실행 상태를 AI1에 전달한다.
 4. step/task 결과, false DONE, fallback, unknown, 중단, subgroup 회귀를 관찰한다.
 5. 기준 통과 시 단계적으로 적용 범위를 늘린다.
-6. 문제 발생 시 새 세션의 할당을 이전 호환 release로 되돌린다.
+6. 문제 발생 시 DB의 활성 release 정책을 이전 호환 version으로 되돌리고 Backend가 이후 새 episode에 적용한다.
 
 진행 중인 세션은 시작 시 고정한 graph version을 계속 사용한다. 심각한 안전 문제가 발견된 버전은 revoke하여 관련 세션을 안전하게 중단·재시작할 수 있어야 한다. pending transition이 있는 세션에 새 graph를 조용히 갈아 끼우지 않는다.
 
@@ -804,10 +836,10 @@ Graph schema version, graph 내용 version, runtime contract, content hash를 �
 | `dataset_manifests`, `dataset_samples` | dataset version/sample ID | split, 원천, label lineage |
 | `graph_proposals` (구현됨) | proposal ID | patch, base hash, evidence |
 | `evaluation_reports` (구현됨) | eval ID | proposal 참조, decision, regression |
-| `graph_releases` | task/version/hash | artifact, 호환성, 승인, rollout |
+| 실행 Task Graph DB / `graph_releases` (설계) | graph ID/task/version/hash | 선언적 graph 본문, Goal 연결, 호환성·선택 우선순위·승인·활성 release |
 | `pipeline_jobs` | job ID | 입력 snapshot, 단계, cursor, 재시도 |
 
-메타데이터와 작은 record는 DB, 큰 snapshot·dataset·artifact는 접근 통제된 object/file storage를 고려할 수 있다. 제품 선정은 후속 구현에서 정하되 artifact와 metadata의 참조 정합성은 보장한다.
+실행 graph 본문과 선택 metadata는 DB를 기준으로 관리한다. 큰 원천 snapshot·dataset·평가 첨부 자료는 접근 통제된 object/file storage를 고려할 수 있다. 제품 선정은 후속 구현에서 정하되 artifact와 metadata의 참조 정합성은 보장한다.
 
 ### 14.2 Job 입력과 출력
 
@@ -918,7 +950,7 @@ AI-Agent(2)는 `AI-Agent/src/ai_agent/graph_proposal/`에 독립 패키지로 �
 
 사용자용 producer인 `TraceLogger`는 Agent(2)에 두지 않는다. 공통 `telemetry/trace_logger.py`로 이동하고 Agent(1)과 Backend는 이 경로에서 import한다. 관측 요약 계약 `RuntimeTrace`는 `telemetry/schemas.py`에 정의한다. 진단 dict와 이 dataclass는 서로 다른 형식이므로 현재 진단 로그만으로 자동 변환·라벨링할 수 없다.
 
-공통 `task_graph/`는 graph 구조와 registry를 제공한다. 사용자 실패 state를 관리하는 기존 `StateManager`는 `replanning/state_manager.py`, graph 승격·rollback은 Agent(2)의 `releases/versioning.py`에 둔다. graph 조회·세션 상태·배포 역할을 분리한다.
+공통 `task_graph/`는 현재 graph 구조와 registry를 제공한다. 새 설계의 사용자별 실행 graph 선택은 Backend의 DB repository/selector이며 AI1은 전달된 graph만 소비한다. 사용자 실패 state를 관리하는 기존 `StateManager`는 `replanning/state_manager.py`, graph 승격·rollback은 Agent(2)의 `releases/versioning.py`에 둔다. graph 조회·세션 상태·배포 역할을 분리한다.
 
 ```text
 AI-Agent/src/ai_agent/
@@ -976,6 +1008,10 @@ AI-Agent/src/ai_agent/
 | 같은 event/request 재전송 | 통계·dataset·proposal 중복 없음 |
 | 늦은 결과 도착 | 새 label revision, 영향받은 산출물 추적 |
 | 같은 session에서 goal 변경 | episode 분리 |
+| UI 표시명은 다르지만 같은 기능·결과가 확인됨 | UI 동의어 후보로 평가; 신규 Task Graph를 만들지 않음 |
+| 단어가 비슷하지만 다른 UI 기능·결과임 | 동의어로 합치지 않음; selector 구별 근거와 반례 평가 |
+| 같은 목표의 새로운 경로가 완전히 관측됨 | 기존 graph의 state/transition/variant 확장으로 평가 |
+| 신규 목표 수요는 있으나 실행 경로나 완료 근거가 부족함 | `NEEDS_DATA`와 추가 수집 요청; 지원 Task로 등록하지 않음 |
 | 특정 제조사에서만 개선 | 해당 scope로 제한, 다른 cohort 회귀 검사 |
 | snapshot replay에서 새 action 선택 | 실제 전이 성공률을 만들어내지 않음 |
 | base graph가 평가 후 변경 | stale proposal 거부, 재평가 |

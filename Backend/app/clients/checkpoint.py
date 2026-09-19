@@ -9,7 +9,7 @@ from ai_agent.runtime.session import InMemorySessionStore
 from ai_agent.runtime.tasks import TASK_GRAPHS
 from ai_agent.runtime.types import ScreenSnapshot, TypedGoal
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 def graph_version():
@@ -23,6 +23,8 @@ def restore(payload):
         state = dict(payload)
         state["typed_goal"] = TypedGoal(**state["typed_goal"])
         state["failed_node_ids"] = tuple(state["failed_node_ids"])
+        state["processed_event_keys"] = tuple(state.get("processed_event_keys", ()))
+        state["failed_target_keys"] = {key: tuple(value) for key, value in state.get("failed_target_keys", {}).items()}
         if state["last_snapshot"]:
             state["last_snapshot"] = ScreenSnapshot(**state["last_snapshot"])
         store.start(**state)

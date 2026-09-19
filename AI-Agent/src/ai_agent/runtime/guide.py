@@ -19,6 +19,7 @@ def build_guide_command(
     match_result: MatchResult,
     graph: TaskGraph,
     user_confirmation: str | None = None,
+    task_completed: bool = False,
 ) -> GuideCommand:
     transition = _transition_by_id(graph, match_result.transition_id)
 
@@ -28,20 +29,15 @@ def build_guide_command(
     if user_confirmation == "rejected":
         return _blocked_command(session_id, transition, "요청을 중단했어요.")
 
-    if transition and transition.safety_level == SafetyLevel.CONFIRM_REQUIRED:
-        if user_confirmation != "accepted":
-            return GuideCommand(
-                guide_command_id=f"guide_{session_id}_{transition.transition_id}_confirm",
-                command_type=CommandType.CONFIRMATION,
-                action_type=ActionType.OBSERVE_ONLY,
-                target_node_id=match_result.target_node_id,
-                target_label=match_result.target_label,
-                target_bounds=match_result.target_bounds,
-                message=transition.confirmation_message
-                or "이 설정이 변경될 수 있어요. 계속할까요?",
-                safety_level=SafetyLevel.CONFIRM_REQUIRED,
-                requires_user_action=True,
-            )
+    if task_completed:
+        return GuideCommand(
+            guide_command_id=f"guide_{session_id}_done",
+            command_type=CommandType.DONE,
+            action_type=ActionType.OBSERVE_ONLY,
+            message=transition.guide_message if transition else "요청한 변경을 확인했어요.",
+            safety_level=SafetyLevel.LOW_RISK,
+            requires_user_action=False,
+        )
 
     if match_result.fallback_reason:
         if match_result.transition_id == "S0_TO_S1_OPEN_SETTINGS":
@@ -95,15 +91,26 @@ def build_guide_command(
             },
         )
 
+    if transition and transition.safety_level == SafetyLevel.CONFIRM_REQUIRED:
+        if user_confirmation != "accepted":
+            return GuideCommand(
+                guide_command_id=f"guide_{session_id}_{transition.transition_id}_confirm",
+                command_type=CommandType.CONFIRMATION,
+                action_type=ActionType.OBSERVE_ONLY,
+                target_node_id=match_result.target_node_id,
+                target_label=match_result.target_label,
+                target_bounds=match_result.target_bounds,
+                message=transition.confirmation_message
+                or "이 설정이 변경될 수 있어요. 계속할까요?",
+                safety_level=SafetyLevel.CONFIRM_REQUIRED,
+                requires_user_action=True,
+            )
+
     if transition and transition.to_state == graph.definition.done_state:
-        return GuideCommand(
-            guide_command_id=f"guide_{session_id}_{transition.transition_id}_done",
-            command_type=CommandType.DONE,
-            action_type=ActionType.OBSERVE_ONLY,
-            message=transition.guide_message,
-            safety_level=transition.safety_level,
-            requires_user_action=False,
-        )
+        return GuideCommand(guide_command_id=f"guide_{session_id}_unverified",
+            command_type=CommandType.BLOCKED, action_type=ActionType.OBSERVE_ONLY,
+            message="작업 완료를 확인할 근거가 부족해요.", safety_level=SafetyLevel.BLOCKED,
+            requires_user_action=False)
 
     message = transition.guide_message if transition else "다음 항목을 눌러주세요."
     safety_level = transition.safety_level if transition else SafetyLevel.LOW_RISK

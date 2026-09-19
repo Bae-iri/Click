@@ -1,156 +1,52 @@
-"""UI target matching for the current task state."""
-
-from __future__ import annotations
-
-from ai_agent.runtime.keywords import any_keyword_matches
-from ai_agent.runtime.types import ActionType, MatchResult, NormalizedNode, TaskGraph, Transition
-from ai_agent.runtime.similarity import SimilarityScorer
-
+"""Select within an explicitly prioritized graph edge; abstain on ambiguity."""
+from ai_agent.runtime.types import ActionType, MatchResult
+from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, selector_keywords, target_key
 
 MATCH_THRESHOLD = 0.7
+AMBIGUITY_MARGIN = 0.05
 
 
-def match_next_ui(
-    state_id: str,
-    nodes: tuple[NormalizedNode, ...],
-    graph: TaskGraph,
-    *,
-    excluded_node_ids: tuple[str, ...] = (),
-    similarity_scorer: SimilarityScorer | None = None,
-) -> MatchResult:
+def match_next_ui(state_id, nodes, graph, *, excluded_node_ids=(),
+                  excluded_target_keys=None, similarity_scorer=None):
     transitions = graph.transitions_from(state_id)
     if not transitions:
-        return MatchResult(
-            state_id=state_id,
-            next_state_id=state_id,
-            action_type=ActionType.OBSERVE_ONLY,
-            target_node_id=None,
-            target_label=None,
-            target_bounds=None,
-            match_method="none",
-            confidence=0.0,
-            fallback_reason="No transition is available from current state.",
-        )
-
+        return MatchResult(state_id, state_id, ActionType.OBSERVE_ONLY, None, None, None,
+                           'none', 0.0, fallback_reason='no_transition')
+    fallback_reason = 'target_not_found'
     for transition in transitions:
         if transition.target_role is None:
-            return MatchResult(
-                state_id=state_id,
-                next_state_id=transition.to_state,
-                action_type=transition.action_type,
-                target_node_id=None,
-                target_label=None,
-                target_bounds=None,
-                match_method="observe_only",
-                confidence=1.0,
-                transition_id=transition.transition_id,
-            )
-
-        candidate = _best_candidate(transition, nodes, excluded_node_ids, similarity_scorer)
-        if candidate and candidate[1] >= MATCH_THRESHOLD:
-            node, confidence, method = candidate
-            return MatchResult(
-                state_id=state_id,
-                next_state_id=transition.to_state,
-                action_type=transition.action_type,
-                target_node_id=node.node_id,
-                target_label=node.label,
-                target_bounds=node.bounds,
-                match_method=method,
-                confidence=confidence,
-                transition_id=transition.transition_id,
-            )
-
-    fallback_transition = transitions[0]
-    scroll_node = next((node for node in nodes if node.scrollable), None)
-    if fallback_transition.allow_scroll and scroll_node:
-        return MatchResult(
-            state_id=state_id, next_state_id=state_id, action_type=ActionType.SCROLL,
-            target_node_id=scroll_node.node_id, target_label=scroll_node.label,
-            target_bounds=scroll_node.bounds, match_method="scroll_fallback", confidence=0.6,
-            transition_id=fallback_transition.transition_id,
-        )
-    return MatchResult(
-        state_id=state_id,
-        next_state_id=fallback_transition.to_state,
-        action_type=fallback_transition.action_type,
-        target_node_id=None,
-        target_label=None,
-        target_bounds=None,
-        match_method="keyword",
-        confidence=0.0,
-        transition_id=fallback_transition.transition_id,
-        fallback_reason="No matching target node found in current viewport.",
-    )
-
-
-def _best_candidate(
-    transition: Transition,
-    nodes: tuple[NormalizedNode, ...],
-    excluded_node_ids: tuple[str, ...],
-    similarity_scorer: SimilarityScorer | None,
-) -> tuple[NormalizedNode, float, str] | None:
-    best: tuple[NormalizedNode, float, str] | None = None
-    excluded = set(excluded_node_ids)
-
-    for node in nodes:
-        if node.node_id in excluded:
+            return MatchResult(state_id, transition.to_state, transition.action_type,
+                               None, None, None, 'observe_only', 1.0,
+                               transition_id=transition.transition_id)
+        excluded_keys = (excluded_target_keys or {}).get(transition.transition_id, ())
+        candidates = []
+        for node in eligible_nodes(transition, nodes, graph):
+            if node.node_id in excluded_node_ids or target_key(node) in excluded_keys:
+                continue
+            score, method = selector_evidence(node, transition, nodes, graph)
+            # Similarity can recover labels after all role/package/geometry constraints.
+            # An unrelated named slider must never be rescued by language similarity.
+            if score == 0 and node.label and node.role != 'slider' and similarity_scorer:
+                similarity = max((similarity_scorer.score(node.label, keyword)
+                                  for keyword in selector_keywords(transition, graph)), default=0)
+                score, method = min(0.79, max(0.0, similarity) * 0.79), 'similarity'
+            candidates.append((score, node, method))
+        candidates.sort(key=lambda candidate: (-candidate[0], candidate[1].node_id))
+        if not candidates or candidates[0][0] < MATCH_THRESHOLD:
             continue
-        if transition.action_type in {ActionType.TAP, ActionType.DRAG} and not node.actionable:
-            continue
-        if transition.target_role == "app_icon" and node.role != "app_icon":
-            continue
-        confidence = 0.0
-        methods: list[str] = []
-
-        if any_keyword_matches(node.label, transition.target_keywords):
-            confidence += 0.72
-            methods.append("keyword")
-
-        if similarity_scorer:
-            semantic_score = max(
-                (similarity_scorer.score(node.label, keyword) for keyword in transition.target_keywords),
-                default=0.0,
-            )
-            confidence += semantic_score * 0.25
-            if semantic_score:
-                methods.append("similarity")
-
-        if set(node.semantic_tags).intersection(_semantic_targets(transition)):
-            confidence += 0.12
-            methods.append("semantic_tag")
-
-        if transition.target_role and node.role == transition.target_role:
-            confidence += 0.08
-            methods.append("role")
-        elif transition.target_role == "menu_item" and node.actionable:
-            confidence += 0.04
-            methods.append("actionable")
-
-        if node.actionable:
-            confidence += 0.08
-
-        if transition.target_role == "slider" and node.role == "slider":
-            confidence = max(confidence, 0.82)
-            methods.append("slider_role")
-
-        confidence = min(1.0, confidence)
-        method = "+".join(dict.fromkeys(methods)) if methods else "none"
-        if best is None or confidence > best[1]:
-            best = (node, confidence, method)
-
-    return best
-
-
-def _semantic_targets(transition: Transition) -> set[str]:
-    targets: set[str] = set()
-    joined_keywords = " ".join(transition.target_keywords)
-    if any_keyword_matches(joined_keywords, ("디스플레이", "화면", "display")):
-        targets.add("display")
-    if any_keyword_matches(joined_keywords, ("접근성", "시인성", "accessibility")):
-        targets.add("accessibility")
-    if any_keyword_matches(joined_keywords, ("글자 크기", "글자", "font size")):
-        targets.add("font_size")
-    if any_keyword_matches(joined_keywords, ("크게", "확대", "오른쪽")):
-        targets.add("increase")
-    return targets
+        score, node, method = candidates[0]
+        gap = score - candidates[1][0] if len(candidates) > 1 else None
+        if gap is not None and gap < AMBIGUITY_MARGIN:
+            # Do not silently bypass an ambiguous preferred edge with another path.
+            return MatchResult(state_id, transition.to_state, ActionType.OBSERVE_ONLY,
+                               None, None, None, 'ambiguous', score,
+                               transition_id=transition.transition_id,
+                               fallback_reason='ambiguous_target', score_gap=gap)
+        return MatchResult(state_id, transition.to_state, transition.action_type,
+                           node.node_id, node.label, node.bounds, method, score,
+                           transition_id=transition.transition_id, target_key=target_key(node),
+                           score_gap=gap)
+    transition = transitions[0]
+    return MatchResult(state_id, transition.to_state, transition.action_type,
+                       None, None, None, 'none', 0.0,
+                       transition_id=transition.transition_id, fallback_reason=fallback_reason)

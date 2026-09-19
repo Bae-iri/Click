@@ -14,7 +14,7 @@ final class AccessibilitySnapshotCollector {
     ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, int width, int height) {
         List<AccessibilityNodeSnapshot> nodes = new ArrayList<>();
         visit(root, "node_0", null, packageName, width, height, nodes);
-        return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes);
+        return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId());
     }
 
     private void visit(AccessibilityNodeInfo node, String nodeId, String parentId, String packageName,
@@ -37,7 +37,7 @@ final class AccessibilitySnapshotCollector {
                     nodeId,
                     parentId,
                     node.isVisibleToUser(),
-                    packageName,
+                    string(node.getPackageName()) == null ? packageName : string(node.getPackageName()),
                     string(node.getText()),
                     string(node.getContentDescription()),
                     node.getViewIdResourceName(),
@@ -49,7 +49,8 @@ final class AccessibilitySnapshotCollector {
                     node.isSelected(),
                     node.isScrollable(),
                     node.isCheckable(),
-                    progress
+                    progress,
+                    node.getWindowId()
             ));
         }
         for (int index = 0; index < node.getChildCount(); index++) {

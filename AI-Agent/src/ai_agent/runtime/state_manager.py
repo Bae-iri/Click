@@ -1,81 +1,31 @@
-"""State tracking helpers for L3-style multi-turn task execution."""
-
-from __future__ import annotations
+"""Bounded attempt accounting; observation changes alone never count as failures."""
 from hashlib import sha256
-
-from ai_agent.runtime.types import (
-    AgentSessionState,
-    NormalizedNode,
-    ScreenSnapshot,
-    UserActionEvent,
-    VerificationResult,
-    VerificationStatus,
-)
-
+from ai_agent.runtime.types import ScreenSnapshot, VerificationStatus
 
 RETRY_LIMIT_BEFORE_EXCLUSION = 2
 
 
-def build_screen_snapshot(
-    state_id: str,
-    nodes: tuple[NormalizedNode, ...],
-) -> ScreenSnapshot:
-    stable_parts = sorted(
-        "|".join(
-            (
-                node.node_id,
-                node.label,
-                node.role,
-                str(node.bounds),
-                str(node.selected),
-                str(node.value),
-            )
-        )
-        for node in nodes
-    )
-    slider_values = {
-        node.node_id: node.value
-        for node in nodes
-        if node.role == "slider" and node.value is not None
-    }
-    return ScreenSnapshot(
-        state_id=state_id,
-        fingerprint=sha256("\n".join(stable_parts).encode("utf-8")).hexdigest(),
-        slider_values=slider_values,
-    )
+def build_screen_snapshot(state_id, nodes, *, observation_id=None, captured_at_ms=None):
+    parts = sorted('|'.join((node.node_id, node.label, node.role, str(node.bounds),
+                            str(node.selected), str(node.value))) for node in nodes)
+    return ScreenSnapshot(state_id, sha256('\n'.join(parts).encode()).hexdigest(),
+                          {n.node_id: n.value for n in nodes if n.role == 'slider' and n.value is not None},
+                          observation_id=observation_id, captured_at_ms=captured_at_ms)
 
 
-def register_attempt_outcome(
-    session: AgentSessionState | None,
-    *,
-    pending_transition_id: str | None,
-    verification_result: VerificationResult | None,
-) -> tuple[dict[str, int], tuple[str, ...]]:
+def register_attempt_outcome(session, *, pending_transition_id, verification_result, retry_limit=2):
     if session is None:
         return {}, ()
-
     attempts = dict(session.transition_attempts)
     failed_nodes = set(session.failed_node_ids)
     if not pending_transition_id or not verification_result:
-        return attempts, tuple(failed_nodes)
-
-    if verification_result.status in {
-        VerificationStatus.NO_CHANGE,
-        VerificationStatus.WRONG_STATE,
-        VerificationStatus.UNKNOWN,
-    }:
-        attempts[pending_transition_id] = attempts.get(pending_transition_id, 0) + 1
-        if attempts[pending_transition_id] >= RETRY_LIMIT_BEFORE_EXCLUSION:
-            if session.last_target_node_id:
-                failed_nodes.add(session.last_target_node_id)
-    elif verification_result.status in {
-        VerificationStatus.SUCCESS,
-        VerificationStatus.DONE,
-    }:
-        attempts.pop(pending_transition_id, None)
-
+        return attempts, tuple(sorted(failed_nodes))
+    if verification_result.count_attempt and verification_result.status in {
+            VerificationStatus.NO_CHANGE, VerificationStatus.WRONG_STATE}:
+        attempt = session.pending_attempt or {}
+        # The counter is scoped to a transition AND semantic target, not just an edge.
+        key = pending_transition_id + ':' + attempt.get('target_key', '')
+        attempts[key] = attempts.get(key, 0) + 1
+        if attempts[key] >= retry_limit and session.last_target_node_id:
+            failed_nodes.add(session.last_target_node_id)
     return attempts, tuple(sorted(failed_nodes))
-
-
-def should_treat_as_manual_override(event: UserActionEvent | None) -> bool:
-    return bool(event and event.action_type.value == "manual_override")
