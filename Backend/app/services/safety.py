@@ -10,7 +10,8 @@ def screen_hash(request):
     tree = request.accessibility_tree.model_dump(mode="json") if request.accessibility_tree else None
     vision = request.vision_snapshot.model_dump(mode="json") if request.vision_snapshot else None
     if tree:
-        tree.pop("captured_at", None)
+        for key in ("captured_at", "captured_at_ms", "observation_id"):
+            tree.pop(key, None)
     if vision:
         vision.pop("captured_at_ms", None)
     return sha256(json.dumps([tree, vision], sort_keys=True).encode()).hexdigest()
@@ -33,10 +34,10 @@ def validate_confirmation(factory, request, now):
         if (row is None or row.id != request.confirmation_id or row.version != request.expected_version
                 or row.expires_at <= now or row.screen_hash != screen_hash(request) or request.raw_goal):
             conflict()
-        return dict(row.command)
+        return {**row.command, "approval_expires_at": row.expires_at}
 
 
-def validate_output(request, response, approved):
+def validate_output(request, response, approved, *, checkpoint=None, now=0):
     guide = response.guide_command
     if request.user_confirmation == "rejected":
         response.task_status = "BLOCKED"
@@ -55,7 +56,15 @@ def validate_output(request, response, approved):
     if guide.safety_level == "BLOCKED" and guide.command_type != "blocked":
         raise HTTPException(502)
     if guide.safety_level == "CONFIRM_REQUIRED" and guide.command_type not in ("confirmation", "blocked") and not approved:
-        raise HTTPException(502)
+        # Re-show only the exact operation already authorized and persisted by BE.
+        pending = (checkpoint or {}).get("pending_attempt") or {}
+        authorization = pending.get("authorization") or {}
+        expected = {"guide_command_id": guide.guide_command_id, "action_type": guide.action_type,
+                    "target_node_id": guide.target_node_id, "target_bounds": list(guide.target_bounds or ()),
+                    "task_id": response.task_id, "state_id": response.state_id}
+        if (authorization.get("expires_at", 0) <= now
+                or any(authorization.get(key) != value for key, value in expected.items())):
+            raise HTTPException(502)
     bounds = guide.target_bounds
     tree, vision = request.accessibility_tree, request.vision_snapshot
     width = tree.screen_width if tree else vision.screen_width

@@ -4,7 +4,7 @@
 
 | 역할 | 코드 | 책임 |
 | --- | --- | --- |
-| AI-Agent(1) | [`src/ai_agent/runtime/`](src/ai_agent/runtime/README.md) | FE Goal·Command 수신 → 승인 Task Graph 선택·복원 → 화면 해석 → Guide/Action → Verify → Re-plan |
+| AI-Agent(1) | [`src/ai_agent/runtime/`](src/ai_agent/runtime/README.md) | Backend 선택 Graph·목표·상태 수신 → 정합성 검사 → 화면 해석 → Guide/Action → Verify → Re-plan |
 | AI-Agent(2) | [`src/ai_agent/graph_proposal/`](src/ai_agent/graph_proposal/README.md) | runtime 재구성·라벨링·dataset·graph 후보·평가·release |
 | 공통 관측 계약·진단 | [`src/ai_agent/telemetry/`](src/ai_agent/telemetry/README.md) | trace 생산·개인정보 필터·관측 요약 계약 |
 | 공통 Graph 자산 | `task_graph/`, `task_graphs/`, `goal_catalog/` | graph 구조·조회·승인된 입력 자산 |
@@ -13,7 +13,7 @@
 
 ```text
 AI-Agent/
-  goal_catalog/                    # FE 분류·Agent 지원 매핑의 공유 catalog 자산
+  goal_catalog/                    # FE 분류·Backend 지원 매핑의 공유 catalog 자산
   task_graphs/                     # 기존 승인 Graph seed
   data/
     runtime/traces/                # 원천 event 영속화 예정 위치
@@ -53,7 +53,7 @@ AI-Agent/
     test_agent_boundaries.py        # 두 Agent의 의존성 분리 검증
 ```
 
-`runtime/*`는 현재 Backend turn API가 사용하는 실행 경로다. 상위 Goal/UI 컴포넌트는 기존 guidance adapter와 골격 코드에서 사용하므로 경로를 유지한다. 이 중복 실행 모델의 통합은 Agent(2) 분리와 별도 작업이다. Goal/Command 분류는 FE 책임으로 변경했으며, 위 표는 전환 후 책임이다. 현재 engine의 raw Goal Typing 호출과 HTTP v1 계약은 아직 남아 있다.
+`runtime/*`는 현재 Backend turn API가 사용하는 실행 경로다. 상위 Goal/UI 컴포넌트는 기존 guidance adapter와 골격 코드에서 사용하므로 경로를 유지한다. 이 중복 실행 모델의 통합은 Agent(2) 분리와 별도 작업이다. Goal/Command 분류는 FE, DB graph 조회·선택·복원은 Backend 책임으로 변경했으며, 위 표는 전환 후 책임이다. 현재 engine의 raw Goal Typing·graph lookup과 HTTP v1 계약은 아직 남아 있다. Backend가 선택한 graph 본문·reference를 AI1에 주입하는 전환이 필요하다.
 
 ## 이번 구조 분리에서 바뀐 점
 
@@ -78,6 +78,7 @@ Agent(1)은 Agent(2)를 import하거나 호출하지 않는다. Agent(2)는 사�
 ## 상세 설계 문서
 
 - [전체 구조와 책임 경계](../docs/ai-agent-architecture.md)
+- [Backend DB Graph 선택·실행 전달](../docs/backend-task-graph-dispatch.md)
 - [FE Goal·Command 정의와 전달 형식](../docs/fe-goal-command-contract.md)
 - [AI-Agent(1) 상세 설계](../docs/ai-agent-1-runtime.md)
 - [AI-Agent(2) 상세 설계](../docs/ai-agent-2-graph-proposal.md)

@@ -1,6 +1,6 @@
 # AI-Agent(2): Graph Proposal 패키지
 
-전체 runtime 데이터를 재구성·라벨링하고 내부 데이터셋과 Task Graph 추가·업데이트 후보를 만드는 영역이다. 사용자 요청 처리, 화면 안내, 온라인 결과 검증, 세션 Re-plan은 `ai_agent.runtime`의 책임이다.
+전체 runtime 데이터를 재구성·라벨링하고 내부 데이터셋과 Task Graph 추가·업데이트 후보를 만드는 영역이다. AI2는 승인된 graph의 새 version을 DB에 반영하는 workflow를 맡고, Backend는 사용자 요구에 맞는 DB graph를 선택·전달한다. 전달 graph의 화면 판단·안내·온라인 검증·세션 내부 Re-plan은 `ai_agent.runtime`의 책임이다.
 
 ## 파일 구조와 담당 작업
 

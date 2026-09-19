@@ -21,15 +21,21 @@ public final class AgentActionEvents {
 
     public static JSONObject of(String actionType, String guideCommandId,
                                 String targetNodeId, int[] targetBounds) {
+        return of(actionType, guideCommandId, targetNodeId, targetBounds, System.currentTimeMillis());
+    }
+
+    public static JSONObject of(String actionType, String guideCommandId,
+                                String targetNodeId, int[] targetBounds, long occurredAtMs) {
         try {
             JSONObject event = new JSONObject();
+            event.put("event_id", java.util.UUID.randomUUID().toString());
             event.put("action_type", actionType);
             if (guideCommandId != null) event.put("guide_command_id", guideCommandId);
             if (targetNodeId != null) event.put("target_node_id", targetNodeId);
             if (targetBounds != null && targetBounds.length == 4) {
                 event.put("target_bounds", new JSONArray(targetBounds));
             }
-            event.put("occurred_at_ms", System.currentTimeMillis());
+            event.put("occurred_at_ms", occurredAtMs);
             return event;
         } catch (JSONException error) {
             throw new IllegalStateException("user_action_event JSON 생성 실패", error);

@@ -14,6 +14,7 @@ class AccessibilityNode(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="allow")
 
     node_id: str
+    window_id: int | None = None
     parent_id: str | None = Field(default=None, description="Parent node_id within this snapshot; null for a root or legacy flat payload")
     visible_to_user: bool = Field(default=True, description="Android isVisibleToUser; hidden nodes are not guide targets")
     package_name: str | None = None
@@ -47,7 +48,10 @@ class AccessibilityTree(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     package_name: str | None = None
+    active_window_id: int | None = None
     captured_at: datetime | None = None
+    observation_id: str | None = Field(default=None, min_length=1, max_length=200)
+    captured_at_ms: int | None = Field(default=None, ge=0)
     screen_width: int = Field(default=1, gt=0)
     screen_height: int = Field(default=1, gt=0)
     nodes: list[AccessibilityNode] = Field(max_length=2000)
@@ -125,6 +129,7 @@ class AgentTurnRequest(BaseModel):
 
 
 class UserActionEventRequest(BaseModel):
+    event_id: str | None = Field(default=None, min_length=1, max_length=200)
     action_type: Literal[
         "tap_completed",
         "drag_completed",
@@ -137,7 +142,7 @@ class UserActionEventRequest(BaseModel):
     guide_command_id: str | None = None
     target_node_id: str | None = None
     target_bounds: tuple[int, int, int, int] | None = None
-    occurred_at_ms: int | None = None
+    occurred_at_ms: int | None = Field(default=None, ge=0)
 
 
 class AgentTurnResponse(BaseModel):

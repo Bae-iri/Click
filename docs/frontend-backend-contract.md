@@ -1,6 +1,6 @@
 # FE/BE Agent 연동 계약
 
-**책임 변경에 따른 새 설계:** FE가 Goal Type·Command Type을 확정하고 Agent(1)은 승인 Task Graph 선택부터 수행한다. [FE Goal·Command 전달 계약](./fe-goal-command-contract.md)에 실제 Goal 목록·slots·명령별 typed JSON과 전환 항목을 분리했다. **아래 본문은 아직 동작하는 raw-goal HTTP v1 계약**이며 새 typed 필드를 수용하도록 구현한 상태가 아니다.
+**책임 변경에 따른 새 설계:** FE가 Goal Type·Command Type을 확정하고 Backend가 DB에서 Task Graph를 선택·전달하며 Agent(1)은 전달 graph를 실행한다. 내부 입력은 [Backend Graph 전달 계약](./backend-task-graph-dispatch.md)에 둔다. [FE Goal·Command 전달 계약](./fe-goal-command-contract.md)에 실제 Goal 목록·slots·명령별 typed JSON과 전환 항목을 분리했다. **아래 본문은 아직 동작하는 raw-goal HTTP v1 계약**이며 새 typed 필드를 수용하도록 구현한 상태가 아니다.
 
 **Current contract:** [Backend completion](../Backend/docs/backend-completion.md): accepted confirmations require confirmation_id, expected_version and an unchanged fresh observation; raw_goal is omitted. Legacy /api/v1/sessions is disabled by default. History, feedback, account verification/recovery and consent APIs are ready for app integration.
 

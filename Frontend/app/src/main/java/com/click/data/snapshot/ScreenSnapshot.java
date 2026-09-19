@@ -9,7 +9,9 @@ import java.util.List;
 
 public final class ScreenSnapshot {
     public final String packageName;
+    public final Integer activeWindowId;
     public final String capturedAt;
+    public final String observationId = java.util.UUID.randomUUID().toString();
     public final int screenWidth;
     public final int screenHeight;
     public final List<AccessibilityNodeSnapshot> nodes;
@@ -21,6 +23,12 @@ public final class ScreenSnapshot {
             int screenHeight,
             List<AccessibilityNodeSnapshot> nodes
     ) {
+        this(packageName, capturedAt, screenWidth, screenHeight, nodes, null);
+    }
+
+    public ScreenSnapshot(String packageName, String capturedAt, int screenWidth, int screenHeight,
+                          List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId) {
+        this.activeWindowId = activeWindowId;
         this.packageName = packageName;
         this.capturedAt = capturedAt;
         this.screenWidth = screenWidth;
@@ -32,7 +40,9 @@ public final class ScreenSnapshot {
         try {
             JSONObject object = new JSONObject();
             object.put("package_name", packageName);
+            if (activeWindowId != null) object.put("active_window_id", activeWindowId);
             object.put("captured_at", capturedAt);
+            object.put("observation_id", observationId);
             object.put("screen_width", screenWidth);
             object.put("screen_height", screenHeight);
             JSONArray nodeArray = new JSONArray();
@@ -46,7 +56,7 @@ public final class ScreenSnapshot {
 
     public String fingerprint() {
         StringBuilder value = new StringBuilder(packageName).append('|').append(screenWidth)
-                .append('x').append(screenHeight);
+                .append('x').append(screenHeight).append('|').append(activeWindowId);
         for (AccessibilityNodeSnapshot node : nodes) {
             value.append('|').append(node.nodeId).append(':').append(node.text)
                     .append(':').append(node.contentDescription).append(':').append(node.className)

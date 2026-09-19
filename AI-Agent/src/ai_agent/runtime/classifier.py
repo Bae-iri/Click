@@ -12,6 +12,7 @@ def classify_screen_state(
     *,
     device_context: DeviceContext | None = None,
     previous_state_id: str | None = None,
+    evidence: dict | None = None,
 ) -> str:
     best_state_id = "S0_UNKNOWN"
     best_score = 0.0
@@ -21,7 +22,7 @@ def classify_screen_state(
     roles = {node.role for node in nodes}
 
     for state in graph.states.values():
-        if state.state_id in {"S0_UNKNOWN", graph.definition.done_state}:
+        if state.verification_only or state.state_id in {"S0_UNKNOWN", graph.definition.done_state}:
             continue
 
         if state.package_candidates and packages:
@@ -49,6 +50,8 @@ def classify_screen_state(
             best_state_id = state.state_id
             best_score = score
 
+    if evidence is not None:
+        evidence.update(state_score=best_score, state_id=best_state_id)
     return best_state_id
 
 

@@ -30,6 +30,7 @@ class SessionStore(Protocol):
         transition_attempts: dict[str, int] | None = None,
         last_snapshot: ScreenSnapshot | None = None,
         last_user_action_event: UserActionEvent | None = None,
+        **runtime_state,
     ) -> AgentSessionState:
         ...
 
@@ -66,6 +67,7 @@ class InMemorySessionStore(SessionStore):
         transition_attempts: dict[str, int] | None = None,
         last_snapshot: ScreenSnapshot | None = None,
         last_user_action_event: UserActionEvent | None = None,
+        **runtime_state,
     ) -> AgentSessionState:
         state = AgentSessionState(
             session_id=session_id,
@@ -80,6 +82,7 @@ class InMemorySessionStore(SessionStore):
             transition_attempts=transition_attempts or {},
             last_snapshot=last_snapshot,
             last_user_action_event=last_user_action_event,
+            **runtime_state,
         )
         self._sessions[session_id] = state
         return state

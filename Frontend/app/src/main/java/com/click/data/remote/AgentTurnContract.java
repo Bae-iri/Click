@@ -21,6 +21,8 @@ public final class AgentTurnContract {
         public final String rawGoal;
         public final ScreenSnapshot accessibilityTree;
         public final String userConfirmation;
+        public Integer expectedVersion;
+        public String confirmationId;
         /** Optional {@code user_action_event} payload, see {@link AgentActionEvents}. */
         public JSONObject userActionEvent;
         /** Optional {@code vision_snapshot} fallback payload. */
@@ -44,6 +46,12 @@ public final class AgentTurnContract {
             return this;
         }
 
+        public Request withSessionState(int version, String confirmationId) {
+            this.expectedVersion = version;
+            this.confirmationId = confirmationId;
+            return this;
+        }
+
         public String toJson() throws JSONException {
             JSONObject object = new JSONObject();
             object.put("request_id", requestId);
@@ -51,6 +59,8 @@ public final class AgentTurnContract {
             if (rawGoal != null) object.put("raw_goal", rawGoal);
             object.put("accessibility_tree", new JSONObject(accessibilityTree.toJson()));
             if (userConfirmation != null) object.put("user_confirmation", userConfirmation);
+            if (expectedVersion != null) object.put("expected_version", expectedVersion);
+            if (confirmationId != null) object.put("confirmation_id", confirmationId);
             if (userActionEvent != null) object.put("user_action_event", userActionEvent);
             if (visionSnapshot != null) object.put("vision_snapshot", visionSnapshot);
             return object.toString();
@@ -115,6 +125,7 @@ public final class AgentTurnContract {
     public static final class Response {
         public final String requestId;
         public final String sessionId;
+        public final int sessionVersion;
         public final String taskStatus;
         public final GuideCommand guideCommand;
         public final JSONObject metadata;
@@ -123,6 +134,7 @@ public final class AgentTurnContract {
             JSONObject object = new JSONObject(json);
             requestId = object.getString("request_id");
             sessionId = object.getString("session_id");
+            sessionVersion = object.optInt("session_version", 0);
             taskStatus = object.getString("task_status");
             guideCommand = new GuideCommand(object.getJSONObject("guide_command"));
             metadata = object.optJSONObject("metadata");

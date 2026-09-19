@@ -23,7 +23,7 @@ AI Agent의 판단 파이프라인과 Task별 State/Transition은 별도 문서�
 
 MVP에서는 사용자가 직접 화면을 조작하는 Human-in-the-loop 방식을 기본으로 한다. 결제, 송금, 인증번호 입력 등 고위험 행동은 자동 수행하지 않는다.
 
-Frontend의 STT·TTS는 음성과 텍스트 사이의 형식 변환을 담당한다. 그 뒤 FE 입력 해석 계층이 Goal Type·slots와 실행 제어용 Command Type을 확정한다. AI-Agent(1)은 전달값을 검증하고 승인 Task Graph를 선택하는 단계부터 담당한다. 이 책임 변경은 설계에 반영했으며 현재 raw-goal API·DTO의 구현 전환은 남아 있다.
+Frontend의 STT·TTS는 음성과 텍스트 사이의 형식 변환을 담당한다. 그 뒤 FE 입력 해석 계층이 Goal Type·slots와 실행 제어용 Command Type을 확정한다. Backend는 전달값을 검증하고 DB에서 Task Graph를 선택·복원해 AI-Agent(1)에 전달한다. AI1은 전달된 graph로 화면 판단·안내·검증·Re-plan을 수행한다. 이 책임 변경은 설계에 반영했으며 현재 raw-goal API·DTO의 구현 전환은 남아 있다.
 
 ## 3. Information Architecture
 
@@ -136,8 +136,10 @@ flowchart TD
     C --> E[FE Goal·Command 분류 및 모호성 확인]
     D --> E
     E --> G[Command·확정 Goal·필요한 화면을 Backend에 전달]
-    G --> F[Agent Command 분기·승인 Graph 선택 또는 복원]
-    F --> H[실행 안내 또는 제어 응답 수신]
+    G --> F[Backend Command 분기·DB Graph 선택 또는 복원]
+    F --> A1[AI1: 전달 Graph 실행·화면 판단·Guide/Verify/Re-plan]
+    A1 --> H[실행 안내 또는 제어 응답 수신]
+    F -->|일시정지·취소| H
     H -->|제어 응답| CTRL[일시정지·취소 상태 반영]
     H -->|실행 안내| I{Safety 결과}
     I -->|LOW RISK| J[하이라이트 및 단계 안내]
@@ -238,7 +240,7 @@ Frontend/
 - AI-Agent가 생성한 안내 문장과 질문을 TTS 모델로 음성 변환 및 재생
 - 음성 명령에 의한 Agent 종료 처리
 - 녹음, 변환, 재생, 실패 상태를 UI에 노출
-- Speech Service 자체는 형식 변환만 담당; Goal/Command 분류는 FE 입력 해석 계층, Task Graph 선택은 AI-Agent(1) 담당
+- Speech Service 자체는 형식 변환만 담당; Goal/Command 분류는 FE 입력 해석 계층, DB Task Graph 선택·전달은 Backend, graph 실행은 AI-Agent(1) 담당
 
 ### 7.6.1 FE 입력 해석 계층
 

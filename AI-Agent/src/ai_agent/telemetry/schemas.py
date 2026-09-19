@@ -10,7 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-RuntimeVerificationStatus = Literal["SUCCESS", "DONE", "NO_CHANGE", "WRONG_STATE", "UNKNOWN"]
+RuntimeVerificationStatus = Literal["SUCCESS", "DONE", "NO_CHANGE", "WRONG_STATE", "UNKNOWN",
+                                    "WAITING_FOR_ACTION", "WAITING_FOR_OBSERVATION"]
 
 
 @dataclass(frozen=True)
