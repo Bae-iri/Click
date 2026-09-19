@@ -32,7 +32,8 @@ def validate_confirmation(factory, request, now):
     with factory() as db:
         row = db.get(SafetyConfirmation, request.session_id)
         if (row is None or row.id != request.confirmation_id or row.version != request.expected_version
-                or row.expires_at <= now or row.screen_hash != screen_hash(request) or request.raw_goal):
+                or row.expires_at <= now or row.screen_hash != screen_hash(request)
+                or getattr(request, "raw_goal", None)):
             conflict()
         return {**row.command, "approval_expires_at": row.expires_at}
 

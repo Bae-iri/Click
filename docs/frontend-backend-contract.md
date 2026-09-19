@@ -1,6 +1,6 @@
 # FE/BE Agent 연동 계약
 
-**책임 변경에 따른 새 설계:** FE가 Goal Type·Command Type을 확정하고 Backend가 DB에서 Task Graph를 선택·전달하며 Agent(1)은 전달 graph를 실행한다. 내부 입력은 [Backend Graph 전달 계약](./backend-task-graph-dispatch.md)에 둔다. [FE Goal·Command 전달 계약](./fe-goal-command-contract.md)에 실제 Goal 목록·slots·명령별 typed JSON과 전환 항목을 분리했다. **아래 본문은 아직 동작하는 raw-goal HTTP v1 계약**이며 새 typed 필드를 수용하도록 구현한 상태가 아니다.
+**현재 신규 계약:** FE가 Goal Type·Command Type을 확정하고 Backend가 DB에서 Task Graph를 선택·전달하며 Agent(1)은 전달 graph를 실행한다. 공개 endpoint는 `POST /api/v1/agent/commands`이고 상세 형식은 [FE Goal·Command 전달 계약](./fe-goal-command-contract.md)을 따른다. 아래 `/agent/turn` 본문은 전환 기간에만 유지하는 legacy 계약이다.
 
 **Current contract:** [Backend completion](../Backend/docs/backend-completion.md): accepted confirmations require confirmation_id, expected_version and an unchanged fresh observation; raw_goal is omitted. Legacy /api/v1/sessions is disabled by default. History, feedback, account verification/recovery and consent APIs are ready for app integration.
 
@@ -18,7 +18,7 @@
 `/api/v1/auth/register` 또는 `/login`으로 받은 토큰을 사용한다. 현재 Android Gateway에는 아직 헤더 연동이 없어 수정 전에는 401이 반환된다.
 토큰 갱신·로그아웃·공통 오류 규약은 [서버 인증 계약](../Backend/docs/week2.md)을 따른다. 아래 turn 본문 규격은 유지하며 user_id는 서버가 인증 사용자로 제한한다.
 
-신규 FE 연동은 `POST /api/v1/agent/turn`만 사용한다. 기존
+legacy FE 연동은 `POST /api/v1/agent/turn`을 사용한다. 신규 FE는 `/api/v1/agent/commands`를 사용한다. 기존
 `/api/v1/sessions` 계열은 이전 버전 호환을 위해 남겨 두었으며 신규 코드에서는
 사용하지 않는다.
 

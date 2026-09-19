@@ -56,18 +56,29 @@ class AgentSessionRepository:
                 row = db.get(AgentSession, request.session_id)
                 if row is not None and row.user_id != request.user_id:
                     raise HTTPException(403)
+                command_type = getattr(request, "command_type", None)
+                episode_id = getattr(request, "episode_id", None)
+                if row is not None and episode_id is not None and row.episode_id != episode_id:
+                    self.conflict("EPISODE_MISMATCH")
                 previous = db.scalar(select(AgentTurn).where(AgentTurn.user_id == request.user_id,
                                                             AgentTurn.request_id == request.request_id))
                 if previous and (previous.session_id != request.session_id or previous.request_hash != request_hash):
                     self.conflict("REQUEST_ID_REUSED")
                 if row is None:
-                    if request.raw_goal is None:
+                    raw_goal = getattr(request, "raw_goal", None)
+                    goal = getattr(request, "goal", None)
+                    if raw_goal is None and goal is None:
                         raise HTTPException(404)
                     if request.expected_version not in (None, 0):
                         self.conflict("STALE_VERSION")
                     row = AgentSession(id=request.session_id, user_id=request.user_id,
                         status="IN_PROGRESS", version=0, created_at=now, updated_at=now,
-                        expires_at=now + self.idle_seconds)
+                        expires_at=now + self.idle_seconds,
+                        episode_id=str(uuid4()) if goal else None,
+                        accepted_goal_type=goal.goal_type if goal else None,
+                        goal=goal.model_dump(mode="json") if goal else None,
+                        device_context=(request.device_context.model_dump(mode="json")
+                            if getattr(request, "device_context", None) else None))
                     db.add(row)
                     db.flush()
                 self.expire(db, row, now)
@@ -82,6 +93,8 @@ class AgentSessionRepository:
                     return {"cached": deepcopy(previous.response),
                         "schema_version": saved.schema_version if saved else None,
                         "graph_version": saved.graph_version if saved else None}
+                if command_type == "start_task" and row.version > 0:
+                    self.conflict("ACTIVE_TASK_EXISTS" if row.status in ACTIVE else "SESSION_TERMINATED")
                 if row.status not in ACTIVE:
                     self.conflict("SESSION_CLOSED")
                 if (row.version > 0 and request.expected_version != row.version) or (
@@ -157,6 +170,14 @@ class AgentSessionRepository:
                                                      AgentTurn.request_id == request.request_id))
             save_confirmation(db, request, response, now)
             turn.response = response.model_dump(mode="json")
+            row = db.get(AgentSession, request.session_id)
+            db.commit()
+
+    def pin_graph(self, session_id, user_id, reference):
+        with self.factory() as db:
+            row = self.owned(db, session_id, user_id)
+            row.graph_version = reference["version"]
+            row.graph_hash = reference["sha256"]
             db.commit()
 
     def release(self, session_id, token):
@@ -173,7 +194,8 @@ class AgentSessionRepository:
                                                      VoiceRequest.user_id == request.user_id))
         if queued and (queued.status != "RUNNING" or queued.expires_at <= now):
             self.conflict("VOICE_REQUEST_NOT_RUNNING")
-        if queued and request.raw_goal is not None and request.raw_goal != queued.raw_goal:
+        raw_goal = getattr(request, "raw_goal", None)
+        if queued and raw_goal is not None and raw_goal != queued.raw_goal:
             self.conflict("VOICE_GOAL_MISMATCH")
 
     def get(self, session_id, user_id):
@@ -207,6 +229,113 @@ class AgentSessionRepository:
             db.commit()
             db.refresh(row)
             return self.describe(db, row, now)
+
+    def typed_details(self, session_id, user_id):
+        with self.factory() as db:
+            row = self.owned(db, session_id, user_id)
+            return {
+                "episode_id": row.episode_id,
+                "goal_type": row.accepted_goal_type,
+                "goal": deepcopy(row.goal),
+                "device_context": deepcopy(row.device_context),
+                "status": row.status,
+                "version": row.version,
+                "task_id": row.task_id or "MVP-01",
+                "graph_version": row.graph_version or "1.0.0",
+                "graph_hash": row.graph_hash,
+            }
+
+    def has_request(self, user_id, request_id):
+        with self.factory() as db:
+            return db.scalar(select(AgentTurn.id).where(AgentTurn.user_id == user_id,
+                AgentTurn.request_id == request_id)) is not None
+
+    def apply_typed_control(self, request, graph_hash, request_hash):
+        now = int(self.clock())
+        with self.factory() as db:
+            row = self.owned(db, request.session_id, request.user_id)
+            previous = db.scalar(select(AgentTurn).where(AgentTurn.user_id == request.user_id,
+                AgentTurn.request_id == request.request_id))
+            if previous and (previous.session_id != request.session_id
+                    or previous.request_hash != request_hash):
+                self.conflict("REQUEST_ID_REUSED")
+            if previous and previous.response and "_control" in previous.response:
+                return deepcopy(previous.response["_control"])
+            self.expire(db, row, now)
+            if row.episode_id != request.episode_id:
+                self.conflict("EPISODE_MISMATCH")
+            if row.version != request.expected_version:
+                self.conflict("STALE_VERSION")
+            command = request.command_type
+            if command == "pause_task":
+                if row.status == "PAUSED":
+                    changed = False
+                elif row.status in ACTIVE:
+                    row.status = "PAUSED"
+                    changed = True
+                else:
+                    self.conflict("COMMAND_NOT_ALLOWED")
+            elif command == "resume_task":
+                if row.status != "PAUSED":
+                    self.conflict("COMMAND_NOT_ALLOWED")
+                row.status = "IN_PROGRESS"
+                changed = True
+            elif command == "cancel_task":
+                if row.status == "CANCELLED":
+                    changed = False
+                elif row.status in ACTIVE or row.status == "PAUSED":
+                    row.status = "CANCELLED"
+                    changed = True
+                else:
+                    self.conflict("SESSION_TERMINATED")
+            else:
+                raise ValueError("Not a control command")
+            if changed:
+                row.version += 1
+                row.updated_at = now
+            row.lease_token = row.lease_until = None
+            db.execute(delete(SafetyConfirmation).where(SafetyConfirmation.session_id == row.id))
+            if command in {"pause_task", "cancel_task"}:
+                row.last_guide_command_id = None
+            if command == "cancel_task":
+                db.execute(delete(AgentCheckpoint).where(AgentCheckpoint.session_id == row.id))
+                db.execute(update(AgentTurn).where(AgentTurn.session_id == row.id).values(response=None))
+            result = {
+                "episode_id": row.episode_id,
+                "goal_type": row.accepted_goal_type,
+                "status": row.status,
+                "version": row.version,
+                "task_id": row.task_id or "MVP-01",
+                "graph_version": row.graph_version or "1.0.0",
+                "graph_hash": row.graph_hash or graph_hash,
+                "changed": changed,
+            }
+            db.add(AgentTurn(session_id=row.id, user_id=request.user_id,
+                request_id=request.request_id, request_hash=request_hash,
+                version=row.version, response={"_control": result}, created_at=now))
+            db.commit()
+            return result
+
+    def prepare_replace(self, request):
+        now = int(self.clock())
+        with self.factory() as db:
+            row = self.owned(db, request.session_id, request.user_id)
+            self.expire(db, row, now)
+            if row.episode_id != request.episode_id:
+                self.conflict("EPISODE_MISMATCH")
+            if row.version != request.expected_version or row.status not in ACTIVE + ("PAUSED",):
+                self.conflict("COMMAND_NOT_ALLOWED")
+            new_episode = str(uuid4())
+            row.episode_id = new_episode
+            row.accepted_goal_type = request.goal.goal_type
+            row.goal = request.goal.model_dump(mode="json")
+            row.device_context = request.device_context.model_dump(mode="json")
+            row.status = "IN_PROGRESS"
+            row.task_id = row.state_id = row.last_guide_command_id = None
+            db.execute(delete(AgentCheckpoint).where(AgentCheckpoint.session_id == row.id))
+            db.execute(delete(SafetyConfirmation).where(SafetyConfirmation.session_id == row.id))
+            db.commit()
+            return new_episode
 
     @staticmethod
     def describe(db, row, now):

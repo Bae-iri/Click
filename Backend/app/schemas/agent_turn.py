@@ -157,3 +157,112 @@ class AgentTurnResponse(BaseModel):
     task_status: Literal["IN_PROGRESS", "WAITING_CONFIRMATION", "COMPLETED", "BLOCKED"]
     guide_command: GuideCommandResponse
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class TypedGoalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    catalog_version: Literal["1.0.0"]
+    goal_type: Literal["settings.font_size.increase"]
+    target_app: Literal["android_settings"]
+    slots: dict[str, str]
+
+    @field_validator("slots")
+    @classmethod
+    def validate_slots(cls, value: dict[str, str]) -> dict[str, str]:
+        if value != {"setting": "font_size", "direction": "increase"}:
+            raise ValueError("slots must be setting=font_size and direction=increase")
+        return value
+
+
+class DeviceCapabilities(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    accessibility_tree: bool = True
+    guide_overlay: bool = True
+    automatic_scroll: bool = False
+
+
+class DeviceContextRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    platform: Literal["android"]
+    locale: str = Field(min_length=2, max_length=35)
+    manufacturer: str | None = Field(default=None, max_length=100)
+    os_version: str | None = Field(default=None, max_length=100)
+    foreground_package: str | None = Field(default=None, max_length=300)
+    app_version: str | None = Field(default=None, max_length=100)
+    capabilities: DeviceCapabilities = Field(default_factory=DeviceCapabilities)
+
+
+class ClassificationMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    resolved_by: str | None = Field(default=None, max_length=50)
+    method: str | None = Field(default=None, max_length=100)
+    goal_confidence: float | None = Field(default=None, ge=0, le=1)
+
+
+class AgentCommandRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    contract_version: Literal["agent-fe-contract.v0.2"]
+    request_id: str = Field(min_length=1, max_length=200)
+    session_id: str = Field(min_length=1, max_length=200)
+    expected_version: int = Field(ge=0)
+    episode_id: str | None = Field(default=None, min_length=1, max_length=200)
+    command_type: Literal["start_task", "pause_task", "resume_task", "cancel_task", "replace_task", "observe", "respond_confirmation"]
+    goal: TypedGoalRequest | None = None
+    device_context: DeviceContextRequest | None = None
+    accessibility_tree: AccessibilityTree | None = None
+    vision_snapshot: VisionSnapshot | None = None
+    user_action_event: UserActionEventRequest | None = None
+    user_confirmation: Literal["accepted", "rejected"] | None = None
+    confirmation_id: str | None = Field(default=None, min_length=36, max_length=36)
+    source_text: str | None = Field(default=None, max_length=500)
+    classification: ClassificationMetadata | None = None
+    user_id: str | None = Field(default=None, exclude=True)
+
+    @model_validator(mode="after")
+    def validate_command_shape(self) -> "AgentCommandRequest":
+        starts = self.command_type in {"start_task", "replace_task"}
+        if starts != (self.goal is not None):
+            raise ValueError("goal is required only for start_task and replace_task")
+        if starts and self.device_context is None:
+            raise ValueError("device_context is required for start_task and replace_task")
+        if self.command_type == "start_task" and self.episode_id is not None:
+            raise ValueError("episode_id must be omitted for start_task")
+        if self.command_type != "start_task" and self.episode_id is None:
+            raise ValueError("episode_id is required after start_task")
+        needs_screen = self.command_type in {"start_task", "replace_task", "resume_task", "observe", "respond_confirmation"}
+        if needs_screen and self.accessibility_tree is None and self.vision_snapshot is None:
+            raise ValueError("a screen observation is required for this command")
+        if self.command_type == "respond_confirmation":
+            if self.user_confirmation is None or self.confirmation_id is None:
+                raise ValueError("confirmation response and confirmation_id are required")
+        elif self.user_confirmation is not None or self.confirmation_id is not None:
+            raise ValueError("confirmation fields are only valid for respond_confirmation")
+        return self
+
+
+class CommandResult(BaseModel):
+    command_type: str
+    status: Literal["applied", "unchanged"]
+
+
+class GraphReference(BaseModel):
+    task_id: str
+    version: str
+    sha256: str
+
+
+class AgentCommandResponse(BaseModel):
+    contract_version: Literal["agent-fe-contract.v0.2"] = "agent-fe-contract.v0.2"
+    request_id: str
+    session_id: str
+    session_version: int
+    episode_id: str
+    response_type: Literal["guidance", "control"]
+    command_result: CommandResult
+    accepted_goal_type: str
+    task_id: str
+    graph_reference: GraphReference
+    task_status: str
+    guide_command: GuideCommandResponse | None = None
+    message: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)

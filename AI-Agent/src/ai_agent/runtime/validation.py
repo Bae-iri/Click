@@ -25,8 +25,22 @@ def validate_agent_turn_request(
     if not request.session_id:
         raise ContractViolationError("session_id is required.")
     phase = determine_turn_phase(request, has_session)
-    if phase == TurnPhase.FIRST_TURN and request.raw_goal is None:
-        raise ContractViolationError("raw_goal is required on the first turn.")
+    if phase == TurnPhase.FIRST_TURN and request.raw_goal is None and request.typed_goal is None:
+        raise ContractViolationError("typed_goal is required on a typed first turn.")
+
+    if request.raw_goal is not None and request.typed_goal is not None:
+        raise ContractViolationError("raw_goal and typed_goal are mutually exclusive.")
+
+    if request.typed_goal is not None:
+        goal = request.typed_goal
+        if goal.goal_type != "settings.font_size.increase":
+            raise ContractViolationError("Unsupported typed goal.")
+        if goal.target_app != "android_settings":
+            raise ContractViolationError("typed_goal.target_app must be android_settings.")
+        if goal.slots != {"setting": "font_size", "direction": "increase"}:
+            raise ContractViolationError("typed_goal.slots do not match the approved graph.")
+        if request.device_context is None or request.device_context.platform != "android":
+            raise ContractViolationError("device_context.platform must be android.")
 
     if request.raw_goal is not None:
         if not request.raw_goal.source_text.strip():

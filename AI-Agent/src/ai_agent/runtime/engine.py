@@ -139,7 +139,7 @@ class ClickAgentEngine:
         current_state_id = classify_screen_state(
             normalized_nodes,
             graph,
-            device_context=request.raw_goal.device_context if request.raw_goal else None,
+            device_context=_device_context(request),
             previous_state_id=previous_state_id,
         )
         # Finish observation acquisition before verification/accounting, including vision.
@@ -155,7 +155,7 @@ class ClickAgentEngine:
                 normalized_nodes = retry_nodes
         state_evidence = {}
         current_state_id = classify_screen_state(normalized_nodes, graph,
-            device_context=request.raw_goal.device_context if request.raw_goal else None,
+            device_context=_device_context(request),
             previous_state_id=previous_state_id, evidence=state_evidence)
         current_snapshot = build_screen_snapshot(current_state_id, normalized_nodes,
             observation_id=request.observation_id or request.request_id,
@@ -374,6 +374,8 @@ class ClickAgentEngine:
         request: AgentTurnRequest,
         existing_typed_goal: TypedGoal | None,
     ) -> TypedGoal:
+        if request.typed_goal:
+            return request.typed_goal
         if request.raw_goal:
             return type_goal(request.raw_goal)
         if existing_typed_goal:
@@ -421,7 +423,7 @@ class ClickAgentEngine:
         current_state_id = classify_screen_state(
             normalized_nodes,
             graph,
-            device_context=request.raw_goal.device_context if request.raw_goal else None,
+            device_context=_device_context(request),
             previous_state_id=previous_state_id,
         )
         match_result = match_next_ui(
@@ -445,9 +447,8 @@ def _raw_observation_debug(request: AgentTurnRequest) -> JsonDict:
         "vision_element_count": len(vision_snapshot.elements) if vision_snapshot else 0,
         "vision_has_screenshot": bool(vision_snapshot and vision_snapshot.screenshot_base64),
         "vision_has_ocr_text": bool(vision_snapshot and vision_snapshot.ocr_text),
-        "foreground_app": request.raw_goal.device_context.foreground_app
-        if request.raw_goal
-        else None,
+        "foreground_app": _device_context(request).foreground_app
+        if _device_context(request) else None,
         "app_package": _vision_package_name(request),
     }
 
@@ -613,6 +614,8 @@ def _screen_bounds(request: AgentTurnRequest) -> Bounds | None:
         return request.screen_bounds
     if request.raw_goal and request.raw_goal.device_context.screen_bounds:
         return request.raw_goal.device_context.screen_bounds
+    if request.device_context and request.device_context.screen_bounds:
+        return request.device_context.screen_bounds
     snapshot = request.vision_snapshot
     if snapshot and snapshot.screen_width and snapshot.screen_height:
         return (0, 0, snapshot.screen_width, snapshot.screen_height)
@@ -624,8 +627,16 @@ def _vision_package_name(request: AgentTurnRequest) -> str | None:
         return request.vision_snapshot.package_name
     if request.raw_goal:
         return request.raw_goal.device_context.app_package
+    if request.device_context:
+        return request.device_context.app_package
     first_node = next((node for node in request.accessibility_tree if node.package_name), None)
     return first_node.package_name if first_node else None
+
+
+def _device_context(request: AgentTurnRequest):
+    return request.device_context or (
+        request.raw_goal.device_context if request.raw_goal else None
+    )
 
 
 def _append_vision_nodes(

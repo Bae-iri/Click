@@ -12,7 +12,7 @@
 - 모호한 발화·미지원 Goal·실행 중 목표 변경 처리
 - 기존 Goal Typing 내용을 FE 책임으로 옮기는 방법
 
-이 문서의 typed 계약 이름은 **`agent-fe-contract.v0.2` 설계안**이다. 역할 분담은 확정한 결정이며, 명령 enum·DTO·오류 코드·세션 전이는 그 결정을 구현하기 위한 구체적인 제안이다. **현재 HTTP v1에 구현되어 있는 계약은 아니다.** 기존 `POST /api/v1/agent/turn`은 여전히 첫 요청의 `raw_goal`을 요구하고, 새 필드를 그대로 보내면 거절될 수 있다. 새 endpoint나 배포를 이번 문서 수정으로 생성하지 않는다.
+typed 계약 이름은 **`agent-fe-contract.v0.2`**다. `POST /api/v1/agent/commands`에 구현되어 있으며, 기존 `POST /api/v1/agent/turn`은 전환 기간의 legacy 계약으로 유지한다. 신규 FE 경로는 `raw_goal`을 보내지 않는다.
 
 - Backend 선택·실행 전달: [Task Graph 내부 계약](backend-task-graph-dispatch.md)
 - Agent 실행 설계: [AI-Agent(1)](ai-agent-1-runtime.md)
@@ -579,20 +579,20 @@ FE catalog는 사용자가 고를 수 있는 목적과 slot schema를 설명하�
 
 ## 11. 현재 코드와 구현 전환
 
-**이번 작업은 Markdown 분리·역할 정의다. 아래 runtime/API 변경은 아직 수행하지 않았다.**
+**2026-09-19 기준 v0.2 전환 구현이 연결되었다.** 신규 FE는 typed command endpoint를 사용하고, legacy raw-goal endpoint는 기존 클라이언트 호환을 위해 분리 유지한다.
 
 | 현재 위치 | 현재 동작 | 전환 후 책임 |
 | --- | --- | --- |
 | `AI-Agent/src/ai_agent/runtime/goal_typing.py` | MVP-01 keyword/slot 기반 `type_goal()` | FE 분류 구현의 참고·이관 대상; Agent(1) 호출 경로에서 제거 |
 | `AI-Agent/src/ai_agent/goal_typing/*` | 기존 catalog·normalizer·retriever·slot extractor·typer | FE 소유 입력 처리 참고; Agent(1) 확장 모듈로 유지하지 않음 |
 | `AI-Agent/goal_catalog/mvp_goals.json` | 한 개 Goal과 대표 발화·필수 slot 이름 | FE와 Backend가 버전·제약을 공유하는 catalog 자산 |
-| `runtime/engine.py` | `_resolve_typed_goal()`로 분류 후 graph 선택 | Backend가 전달한 graph·goal·실행 상태 검증으로 시작 |
+| `runtime/engine.py` | legacy 요청만 `type_goal()` 사용 | typed 경로는 Backend가 전달한 goal·선택 graph로 시작 |
 | `runtime/types.py`, `contracts.py`, `validation.py` | `RawGoalInput`, `TypedGoal`, 첫 turn raw Goal 요구 | Backend → AI1 graph 실행 DTO·명령·상태 정합성 검사 |
 | `runtime/tasks/__init__.py` | 한 graph의 task/goal key lookup | DB seed/fixture로 관리; 선택은 Backend DB repository/selector로 이관 |
-| `Backend/app/schemas/agent_turn.py` | raw Goal과 매 요청 관측을 요구하는 v1 | typed 계약 DTO, pause/cancel의 관측 선택 규칙 |
+| `Backend/app/schemas/agent_turn.py` | legacy v1 DTO와 typed v0.2 DTO 병행 | typed DTO가 명령별 goal·관측 규칙 검증 |
 | `Backend/app/clients/runtime_agent.py` | HTTP raw text → `RawGoalInput` | Backend가 선택한 graph 본문·reference·goal·복원 상태를 주입 |
 | Backend 세션·checkpoint·확인 저장 | 현재 version·소유권·취소·확인 바인딩 | DB graph 고정·복원, PAUSED·episode·교체 원자성·제어 응답 추가 |
-| FE `AgentTurnContract.java`·`AgentTurnGateway.java` | raw Goal 요청 직렬화 | typed DTO, 계약 버전, 제어·안내 응답 분리 |
+| FE `AgentTurnContract.java`·`AgentTurnGateway.java` | v0.2 typed Goal·Command 직렬화 | `/agent/commands`의 제어·안내 응답 처리 |
 | FE `VoiceRequestQueue.java`·Overlay Service | 로컬 VIP/NORMAL 큐와 interrupt | 확정 Command 생성, pause/cancel 구분, 응답 상태 동기화 |
 
 권장 전환 순서:
@@ -607,7 +607,7 @@ FE catalog는 사용자가 고를 수 있는 목적과 slot schema를 설명하�
 
 기존 checkpoint를 이어갈 경우 저장된 Typed Goal의 canonical 값과 graph 호환성을 검증해 새 Goal DTO로 명시적으로 변환한다. 필요한 값이 없거나 graph 호환성을 보장할 수 없으면 새 session 시작을 안내한다. 원문을 다시 typing해 과거 사용자의 목표를 복원했다고 간주하지 않는다.
 
-현재 제품 API를 호출하려면 v1 계약을 사용해야 한다. typed 요청 예시는 전환 구현·통합 검증 이후에 전송한다.
+신규 제품 경로는 `/api/v1/agent/commands`를 사용한다. `/api/v1/agent/turn`은 legacy 호환 경로이며 신규 FE에서 사용하지 않는다.
 
 ## 12. 인수 기준
 

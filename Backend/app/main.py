@@ -60,6 +60,7 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
     sessions = InMemorySessionRepository()
     guidance_service = GuidanceService(sessions, AgentClient(REPOSITORY_ROOT))
     turn_service = AgentTurnService(session_factory)
+    turn_service.graphs.seed_mvp()
     app.state.turn_service = turn_service
     voice_queue = VoiceQueueService(session_factory, turn_service.repository.idle_seconds)
     app.state.voice_queue = voice_queue

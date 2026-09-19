@@ -360,6 +360,8 @@ class AgentTurnRequest:
     session_id: str
     raw_goal: RawGoalInput | None
     accessibility_tree: tuple[AccessibilityNode, ...]
+    typed_goal: TypedGoal | None = None
+    device_context: DeviceContext | None = None
     vision_snapshot: VisionSnapshot | None = None
     previous_state_id: str | None = None
     previous_guide_command_id: str | None = None
