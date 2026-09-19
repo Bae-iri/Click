@@ -1,6 +1,7 @@
 package com.click.data.remote;
 
 import android.util.Log;
+import android.os.Build;
 
 import com.click.data.snapshot.ScreenSnapshot;
 
@@ -11,7 +12,8 @@ import org.json.JSONObject;
 import java.util.UUID;
 
 public final class AgentTurnContract {
-    public static final String PATH = "/api/v1/agent/turn";
+    public static final String PATH = "/api/v1/agent/commands";
+    public static final String CONTRACT_VERSION = "agent-fe-contract.v0.2";
 
     private AgentTurnContract() {}
 
@@ -21,7 +23,9 @@ public final class AgentTurnContract {
         public final String rawGoal;
         public final ScreenSnapshot accessibilityTree;
         public final String userConfirmation;
+        private String explicitCommandType;
         public Integer expectedVersion;
+        public String episodeId;
         public String confirmationId;
         /** Optional {@code user_action_event} payload, see {@link AgentActionEvents}. */
         public JSONObject userActionEvent;
@@ -46,18 +50,62 @@ public final class AgentTurnContract {
             return this;
         }
 
-        public Request withSessionState(int version, String confirmationId) {
+        public static Request control(String sessionId, int version, String episodeId,
+                                      String commandType, ScreenSnapshot tree) {
+            Request request = new Request(sessionId, null, tree, null);
+            request.explicitCommandType = commandType;
+            request.expectedVersion = version;
+            request.episodeId = episodeId;
+            return request;
+        }
+
+        public static Request replace(String sessionId, int version, String episodeId,
+                                      String sourceText, ScreenSnapshot tree) {
+            Request request = new Request(sessionId, sourceText, tree, null);
+            request.explicitCommandType = "replace_task";
+            request.expectedVersion = version;
+            request.episodeId = episodeId;
+            return request;
+        }
+
+        public Request withSessionState(int version, String episodeId, String confirmationId) {
             this.expectedVersion = version;
+            this.episodeId = episodeId;
             this.confirmationId = confirmationId;
             return this;
         }
 
         public String toJson() throws JSONException {
             JSONObject object = new JSONObject();
+            object.put("contract_version", CONTRACT_VERSION);
             object.put("request_id", requestId);
             object.put("session_id", sessionId);
-            if (rawGoal != null) object.put("raw_goal", rawGoal);
-            object.put("accessibility_tree", new JSONObject(accessibilityTree.toJson()));
+            object.put("expected_version", expectedVersion == null ? 0 : expectedVersion);
+            String commandType = explicitCommandType != null ? explicitCommandType : rawGoal != null ? "start_task"
+                    : userConfirmation != null ? "respond_confirmation" : "observe";
+            object.put("command_type", commandType);
+            if (episodeId != null) object.put("episode_id", episodeId);
+            if (rawGoal != null) {
+                object.put("source_text", rawGoal);
+                object.put("goal", new JSONObject()
+                        .put("catalog_version", "1.0.0")
+                        .put("goal_type", "settings.font_size.increase")
+                        .put("target_app", "android_settings")
+                        .put("slots", new JSONObject().put("setting", "font_size").put("direction", "increase")));
+                object.put("device_context", new JSONObject()
+                        .put("platform", "android")
+                        .put("manufacturer", Build.MANUFACTURER)
+                        .put("os_version", Build.VERSION.RELEASE)
+                        .put("locale", java.util.Locale.getDefault().toLanguageTag())
+                        .put("foreground_package", accessibilityTree.packageName)
+                        .put("capabilities", new JSONObject()
+                                .put("accessibility_tree", true)
+                                .put("guide_overlay", true)
+                                .put("automatic_scroll", false)));
+            }
+            if (accessibilityTree != null) {
+                object.put("accessibility_tree", new JSONObject(accessibilityTree.toJson()));
+            }
             if (userConfirmation != null) object.put("user_confirmation", userConfirmation);
             if (expectedVersion != null) object.put("expected_version", expectedVersion);
             if (confirmationId != null) object.put("confirmation_id", confirmationId);
@@ -126,6 +174,7 @@ public final class AgentTurnContract {
         public final String requestId;
         public final String sessionId;
         public final int sessionVersion;
+        public final String episodeId;
         public final String taskStatus;
         public final GuideCommand guideCommand;
         public final JSONObject metadata;
@@ -135,8 +184,10 @@ public final class AgentTurnContract {
             requestId = object.getString("request_id");
             sessionId = object.getString("session_id");
             sessionVersion = object.optInt("session_version", 0);
+            episodeId = object.optString("episode_id", null);
             taskStatus = object.getString("task_status");
-            guideCommand = new GuideCommand(object.getJSONObject("guide_command"));
+            JSONObject guide = object.optJSONObject("guide_command");
+            guideCommand = guide == null ? null : new GuideCommand(guide);
             metadata = object.optJSONObject("metadata");
         }
 

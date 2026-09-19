@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 
 from app.clients.agent import UnsupportedGoalError
 from app.repositories.sessions import SessionNotFoundError
-from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
+from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse, AgentCommandRequest, AgentCommandResponse
 from app.services.agent_turn import AgentTurnService
 from app.schemas.agent_session import AgentSessionResponse, CancelSessionRequest
 
@@ -22,6 +22,16 @@ def build_router(service: AgentTurnService, principal) -> APIRouter:
                 status_code=404,
                 detail="Unknown session_id; raw_goal is required on the first turn.",
             ) from error
+        except (UnsupportedGoalError, ValueError) as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @router.post("/commands", response_model=AgentCommandResponse)
+    def handle_command(request: AgentCommandRequest, user=Depends(principal)) -> AgentCommandResponse:
+        request = request.model_copy(update={"user_id": user.user_id})
+        try:
+            return service.handle_command(request)
+        except SessionNotFoundError as error:
+            raise HTTPException(status_code=404, detail="SESSION_NOT_FOUND") from error
         except (UnsupportedGoalError, ValueError) as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
 

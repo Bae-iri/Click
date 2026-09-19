@@ -73,7 +73,7 @@ android-project-setup
 | 탭·스크롤 | 직접 조작 유도, 허용된 scroll 실행·결과 전달 | 실행 capability·승인 계약 집행 | 전달 graph 내부 허용 행동 선택 |
 | 검증·복구 | 새 관측·행동 이벤트 | 결과 저장, graph 재선택 요청 처리 | 결과 검증·graph 내부 Re-plan |
 
-선택·실행 계약은 [Backend Task Graph 전달](../docs/backend-task-graph-dispatch.md)을 따른다. 새 typed DTO 및 DB graph 주입은 설계이며 현재 raw-goal 코드 전환은 남아 있다.
+선택·실행 계약은 [Backend Task Graph 전달](../docs/backend-task-graph-dispatch.md)을 따른다. FE는 `agent-fe-contract.v0.2` typed DTO를 `/api/v1/agent/commands`로 보내며 Backend가 선택한 DB graph를 runtime에 주입한다.
 
 ## 브랜치 작업 규칙
 

@@ -13,7 +13,7 @@
 
 FE 분류 계약은 [FE Goal·Command 계약](./fe-goal-command-contract.md), runtime 실행은 [AI-Agent(1)](./ai-agent-1-runtime.md), graph 개선은 [AI-Agent(2)](./ai-agent-2-graph-proposal.md)가 기준이다. 이 문서는 **Backend → AI1의 내부 실행 경계**를 정의한다. FE의 typed 요청을 그대로 AI1 입력으로 사용하는 계약과 구분한다.
 
-역할과 DB 저장은 확정한 설계 전제다. 필드명·오류 코드·내부 DTO는 아래의 구현 제안이다. 이번 문서 변경으로 API·DB migration·runtime 코드를 구현한 것은 아니다. 저장소의 현재 `runtime/tasks`는 Python seed/registry이며 engine 내부에 Goal Typing과 graph lookup이 남아 있다. DB 선택 결과를 주입하는 경로로 전환해야 한다.
+역할과 DB 저장은 확정한 설계 전제다. 2026-09-19 기준 승인 graph release 테이블·selector·episode reference 고정과 typed runtime 주입 경로가 구현됐다. `runtime/tasks`는 MVP seed/fixture와 legacy 경로에 남아 있으며, 신규 typed 경로의 선택 기준은 DB release다.
 
 ## 2. 선택·실행·업데이트 흐름
 

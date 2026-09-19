@@ -7,6 +7,7 @@ from ai_agent.runtime import (
     ContractViolationError,
     DeviceContext,
     RawGoalInput,
+    TypedGoal,
     UserActionEvent,
     UserActionType,
     VisionElement as RuntimeVisionElement,
@@ -22,10 +23,15 @@ from ai_agent.runtime.progress import graph_progress
 class RuntimeAgentAdapter:
     """Translate the HTTP contract to the single ai_agent L3 runtime."""
 
-    def __init__(self, session_store=None) -> None:
-        self.runtime = ClickAgentEngine(session_store=session_store)
+    def __init__(self, session_store=None, task_graph=None) -> None:
+        graphs = None if task_graph is None else {
+            task_graph.definition.task_id: task_graph,
+            task_graph.definition.goal_type: task_graph,
+        }
+        self.runtime = ClickAgentEngine(session_store=session_store, task_graphs=graphs)
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
+        raw_goal = getattr(request, "raw_goal", None)
         tree = request.accessibility_tree
         vision_snapshot = request.vision_snapshot
         package_name = (
@@ -40,13 +46,15 @@ class RuntimeAgentAdapter:
             (tree.screen_height if tree else None)
             or (vision_snapshot.screen_height if vision_snapshot else None)
         )
+        typed = getattr(request, "goal", None)
+        device = getattr(request, "device_context", None)
         runtime_request = RuntimeRequest(
             request_id=request.request_id,
             session_id=request.session_id,
             screen_bounds=(0, 0, screen_width, screen_height)
             if screen_width and screen_height else None,
             raw_goal=RawGoalInput(
-                source_text=request.raw_goal,
+                source_text=raw_goal,
                 locale="ko-KR",
                 device_context=DeviceContext(
                     platform="android",
@@ -56,7 +64,28 @@ class RuntimeAgentAdapter:
                     if screen_width and screen_height
                     else None,
                 ),
-            ) if request.raw_goal else None,
+            ) if raw_goal else None,
+            typed_goal=TypedGoal(
+                goal_type=typed.goal_type,
+                target_app=typed.target_app,
+                task_type="settings_change",
+                slots=dict(typed.slots),
+                source_text="",
+                confidence=1.0,
+                task_id="MVP-01",
+                typing_method="fe_typed_contract",
+                is_supported=True,
+                required_slots_filled=True,
+            ) if typed else None,
+            device_context=DeviceContext(
+                platform=device.platform,
+                foreground_app=device.foreground_package,
+                app_package=device.foreground_package,
+                manufacturer=device.manufacturer,
+                os_version=device.os_version,
+                screen_bounds=(0, 0, screen_width, screen_height)
+                if screen_width and screen_height else None,
+            ) if device else None,
             accessibility_tree=tuple(
                 AccessibilityNode(
                     node_id=node.node_id,

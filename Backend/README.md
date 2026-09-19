@@ -25,7 +25,7 @@ python -m pip install -e ".[test]"
 신규 Android FE 연동 계약은
 [`docs/frontend-backend-contract.md`](../docs/frontend-backend-contract.md)를 따른다.
 
-`POST /api/v1/agent/turn`은 단일 L3 런타임인 `ai_agent.runtime`을 사용한다.
+신규 `POST /api/v1/agent/commands`는 FE typed Goal·Command와 DB에서 선택한 승인 graph를 단일 L3 런타임인 `ai_agent.runtime`에 전달한다. `POST /api/v1/agent/turn`은 legacy 호환 경로다.
 이전 `click_agent` 패키지는 제거되었으며 Goal Typing, 상태 검증, re-plan,
 행동 이벤트, trace, scroll 안내가 같은 런타임에서 처리된다. `GEMINI_API_KEY`가
 없거나 호출이 실패하면 로컬 keyword scorer로 자동 복귀한다.
@@ -63,7 +63,7 @@ are defined.
 
 ## Agent turn API
 
-FE should use `POST /api/v1/agent/turn` for the turn-based integration.
+FE should use `POST /api/v1/agent/commands` for new integrations. `/agent/turn` remains for legacy clients during migration.
 
 First turn:
 

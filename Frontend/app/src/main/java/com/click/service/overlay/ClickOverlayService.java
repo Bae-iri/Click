@@ -36,6 +36,7 @@ import com.click.data.remote.VoiceQueueGateway;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
 import com.click.data.snapshot.AgentVisionSnapshot;
 import com.click.data.snapshot.ScreenSnapshot;
+import com.click.domain.goal.GoalCommandInterpreter;
 
 import org.json.JSONObject;
 import com.click.service.accessibility.LatestScreenSnapshot;
@@ -78,10 +79,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private AgentTurnGateway agentGateway;
     private String agentSessionId;
     private int agentSessionVersion;
+    private String agentEpisodeId;
     private String agentConfirmationId;
     private String initialGoal;
     private boolean firstTurnSent;
     private boolean turnInFlight;
+    private boolean agentPaused;
     private String lastSnapshotFingerprint;
     private int homeScanAttempts;
     private boolean homeScanTowardNext = true;
@@ -501,7 +504,20 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void handleRecognizedCommand(String text) {
         String command = text == null ? "" : text.trim();
         if (command.isEmpty()) return;
-        if (isRepeatRequest(command)) {
+        GoalCommandInterpreter.Result control = GoalCommandInterpreter.interpret(
+                command, agentSessionId != null, agentPaused, agentConfirmationId != null);
+        if (control.kind == GoalCommandInterpreter.Kind.PAUSE_TASK) {
+            sendAgentControl("pause_task");
+        } else if (control.kind == GoalCommandInterpreter.Kind.RESUME_TASK) {
+            sendAgentControl("resume_task");
+        } else if (control.kind == GoalCommandInterpreter.Kind.CANCEL_TASK) {
+            sendAgentControl("cancel_task");
+        } else if (control.kind == GoalCommandInterpreter.Kind.REPLACE_TASK) {
+            sendAgentReplacement(command);
+        } else if (control.kind == GoalCommandInterpreter.Kind.NEEDS_CLARIFICATION) {
+            if (overlayView != null) overlayView.setRecognizedSpeech(control.message);
+            speak(control.message);
+        } else if (isRepeatRequest(command)) {
             String repeated = lastSpokenMessage == null
                     ? "아직 다시 말씀드릴 안내가 없어요." : lastSpokenMessage;
             if (overlayView != null) overlayView.setRecognizedSpeech(repeated);
@@ -516,6 +532,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void enqueueNormalRequest(String text) {
         if (text == null || text.trim().isEmpty() || queueGateway == null) return;
+        GoalCommandInterpreter.Result interpreted = GoalCommandInterpreter.interpret(
+                text, agentSessionId != null, false, agentConfirmationId != null);
+        if (!interpreted.canStart()) {
+            String message = interpreted.message == null ? "요청을 처리할 수 없어요." : interpreted.message;
+            if (overlayView != null) overlayView.setRecognizedSpeech(message);
+            speak(message);
+            return;
+        }
         queueGateway.enqueue(text.trim(), new VoiceQueueGateway.Callback() {
             @Override public void onSuccess(VoiceQueueGateway.Response response) {
                 awaitingReplacement = response.awaitingReplacement;
@@ -550,9 +574,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         executionGeneration++;
         agentSessionId = null;
         agentSessionVersion = 0;
+        agentEpisodeId = null;
+        agentPaused = false;
         agentConfirmationId = null;
         initialGoal = null;
         firstTurnSent = false;
+        agentPaused = false;
         turnInFlight = false;
         pendingActionType = null;
         speechHandler.removeCallbacksAndMessages(null);
@@ -672,7 +699,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void sendAgentTurn(String confirmation, boolean force) {
-        if (agentSessionId == null || turnInFlight || agentGateway == null) return;
+        if (agentSessionId == null || agentPaused || turnInFlight || agentGateway == null) return;
         ScreenSnapshot snapshot = LatestScreenSnapshot.get();
         if (snapshot == null) {
             if (overlayView != null) overlayView.setRecognizedSpeech("접근성 화면 정보를 기다리고 있어요…");
@@ -702,7 +729,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (!force && firstTurnSent && confirmation == null && fingerprint.equals(lastSnapshotFingerprint)) return;
         AgentTurnContract.Request request = new AgentTurnContract.Request(
                 agentSessionId, firstTurnSent ? null : initialGoal, snapshot, confirmation)
-                .withSessionState(agentSessionVersion, confirmation == null ? null : agentConfirmationId);
+                .withSessionState(agentSessionVersion, agentEpisodeId,
+                        confirmation == null ? null : agentConfirmationId);
         if (pendingActionType != null) {
             request.withActionEvent(AgentActionEvents.of(
                     pendingActionType, lastGuideCommandId, lastTargetNodeId, lastTargetBounds, pendingActionOccurredAtMs));
@@ -721,6 +749,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 turnInFlight = false;
                 firstTurnSent = true;
                 agentSessionVersion = response.sessionVersion;
+                agentEpisodeId = response.episodeId;
                 JSONObject confirmationState = response.metadata == null
                         ? null : response.metadata.optJSONObject("confirmation");
                 agentConfirmationId = confirmationState == null
@@ -754,6 +783,65 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return false;
         }
         return !hasSettingsTarget(snapshot);
+    }
+
+    private void sendAgentControl(String commandType) {
+        if (agentSessionId == null || agentEpisodeId == null || turnInFlight || agentGateway == null) return;
+        ScreenSnapshot snapshot = LatestScreenSnapshot.get();
+        if ("resume_task".equals(commandType) && snapshot == null) {
+            if (overlayView != null) overlayView.setRecognizedSpeech("현재 화면 정보를 기다리고 있어요.");
+            return;
+        }
+        AgentTurnContract.Request request = AgentTurnContract.Request.control(
+                agentSessionId, agentSessionVersion, agentEpisodeId, commandType,
+                "resume_task".equals(commandType) ? snapshot : null);
+        turnInFlight = true;
+        agentGateway.send(request, new AgentTurnGateway.Callback() {
+            @Override public void onSuccess(AgentTurnContract.Response response) {
+                turnInFlight = false;
+                agentSessionVersion = response.sessionVersion;
+                agentEpisodeId = response.episodeId;
+                agentPaused = "PAUSED".equals(response.taskStatus);
+                String message = "pause_task".equals(commandType) ? "작업을 잠시 멈췄어요."
+                        : "cancel_task".equals(commandType) ? "작업을 취소했어요."
+                        : "작업을 다시 시작했어요.";
+                if (overlayView != null) overlayView.setRecognizedSpeech(message);
+                speak(message);
+                if ("cancel_task".equals(commandType)) {
+                    abortActiveRequest();
+                    finishActiveQueueRequest("USER_ABORTED");
+                }
+                else if ("resume_task".equals(commandType)) sendAgentTurn(null, true);
+            }
+
+            @Override public void onFailure(Throwable error) {
+                turnInFlight = false;
+                showQueueError(error);
+            }
+        });
+    }
+
+    private void sendAgentReplacement(String sourceText) {
+        ScreenSnapshot snapshot = LatestScreenSnapshot.get();
+        if (agentSessionId == null || agentEpisodeId == null || snapshot == null
+                || turnInFlight || agentGateway == null) return;
+        AgentTurnContract.Request request = AgentTurnContract.Request.replace(
+                agentSessionId, agentSessionVersion, agentEpisodeId, sourceText, snapshot);
+        turnInFlight = true;
+        agentGateway.send(request, new AgentTurnGateway.Callback() {
+            @Override public void onSuccess(AgentTurnContract.Response response) {
+                turnInFlight = false;
+                agentSessionVersion = response.sessionVersion;
+                agentEpisodeId = response.episodeId;
+                initialGoal = sourceText;
+                agentConfirmationId = null;
+                renderGuide(response);
+            }
+            @Override public void onFailure(Throwable error) {
+                turnInFlight = false;
+                showQueueError(error);
+            }
+        });
     }
 
     private boolean hasSettingsTarget(ScreenSnapshot snapshot) {

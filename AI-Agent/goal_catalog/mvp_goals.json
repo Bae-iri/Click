@@ -5,6 +5,15 @@
       "goal_type": "settings.font_size.increase",
       "target_app": "android_settings",
       "task_type": "settings_change",
+      "slot_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["setting", "direction"],
+        "properties": {
+          "setting": {"type": "string", "const": "font_size"},
+          "direction": {"type": "string", "const": "increase"}
+        }
+      },
       "required_slots": ["setting", "direction"],
       "utterances": [
         "글자가 너무 작아",
