@@ -95,6 +95,20 @@ public final class AuthGateway {
         return new HttpResult(status, response, conflict);
     }
 
+    static HttpResult get(String path, String bearer) throws IOException {
+        HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
+        connection.setRequestMethod("GET");
+        connection.setConnectTimeout(6000);
+        connection.setReadTimeout(15000);
+        if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
+        int status = connection.getResponseCode();
+        InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
+        String response = read(stream);
+        String conflict = connection.getHeaderField("X-Conflict-Code");
+        connection.disconnect();
+        return new HttpResult(status, response, conflict);
+    }
+
     static ApiException apiError(String path, HttpResult result) {
         return new ApiException("POST", path, result);
     }

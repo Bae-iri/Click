@@ -53,6 +53,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
             return;
         }
         if (packageName == null || packageName.toString().equals(getPackageName())) return;
+        if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            ClickOverlayService.onGuidedViewClicked(packageName.toString(), event.getEventTime());
+            return;
+        }
         if (mainHandler == null) mainHandler = new Handler(getMainLooper());
         mainHandler.removeCallbacks(captureRunnable);
         mainHandler.postDelayed(captureRunnable, SNAPSHOT_DEBOUNCE_MS);

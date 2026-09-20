@@ -12,6 +12,7 @@ import android.graphics.PixelFormat;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
@@ -33,6 +34,7 @@ import com.click.data.remote.AgentTurnContract;
 import com.click.data.remote.AgentTurnGateway;
 import com.click.data.remote.ErrorDetails;
 import com.click.data.remote.VoiceQueueGateway;
+import com.click.data.remote.PersonalizationEventGateway;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
 import com.click.data.snapshot.AgentVisionSnapshot;
 import com.click.data.snapshot.ScreenSnapshot;
@@ -82,6 +84,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private String lastSpokenMessage;
     private boolean overTrashTarget;
     private AgentTurnGateway agentGateway;
+    private PersonalizationEventGateway personalizationEvents;
+    private final GuideStepTimer guideStepTimer = new GuideStepTimer();
     private GoalCatalogClassifier goalClassifier;
     private GoalCatalogClassifier.Match activeGoalMatch;
     private String agentSessionId;
@@ -199,6 +203,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
         });
         agentGateway = new AgentTurnGateway(this);
+        personalizationEvents = new PersonalizationEventGateway(this);
         queueGateway = new VoiceQueueGateway(this);
         goalClassifier = loadGoalCatalog();
         cloudSpeechRecognizer = new CloudSpeechRecognizer(this);
@@ -313,6 +318,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (cloudSpeechRecognizer != null) cloudSpeechRecognizer.close();
         listening = false;
         if (agentGateway != null) agentGateway.close();
+        if (personalizationEvents != null) personalizationEvents.close();
         if (queueGateway != null) queueGateway.close();
         unregisterReceiver(collapseReceiver);
         hideGuideOverlay();
@@ -333,6 +339,18 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         ClickOverlayService service = runningService.get();
         if (service != null && service.overlayView != null) {
             service.overlayView.post(service.overlayView::collapse);
+        }
+    }
+
+    /** Only the first tap in the guided app is measured; it is not a success label. */
+    public static void onGuidedViewClicked(String packageName, long eventUptimeMs) {
+        ClickOverlayService service = runningService.get();
+        if (service == null || service.agentPaused || service.agentSessionId == null) return;
+        GuideStepTimer.Observation observation = service.guideStepTimer.firstTap(
+                packageName, eventUptimeMs);
+        if (observation != null && service.personalizationEvents != null) {
+            service.personalizationEvents.recordFirstTap(observation.sessionId,
+                    observation.stateId, observation.step, observation.durationMs);
         }
     }
 
@@ -742,6 +760,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return;
         }
         executionGeneration++;
+        guideStepTimer.clear();
         agentSessionId = sessionId;
         agentSessionVersion = 0;
         agentConfirmationId = null;
@@ -1056,6 +1075,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         background.setCornerRadius(dp(22));
         settingsOpenButton.setBackground(background);
         settingsOpenButton.setOnClickListener(view -> {
+            ScreenSnapshot current = LatestScreenSnapshot.get();
+            if (current != null) onGuidedViewClicked(current.packageName, SystemClock.uptimeMillis());
             hideSettingsOpenButton();
             // After a manual recovery the contract wants a fresh tree + manual_override.
             pendingActionOccurredAtMs = System.currentTimeMillis();
@@ -1098,6 +1119,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         lastGuideCommandId = command.guideCommandId;
         lastTargetNodeId = command.targetNodeId;
         lastTargetBounds = command.targetBounds;
+        ScreenSnapshot displayedSnapshot = LatestScreenSnapshot.get();
+        if (command.requiresUserAction && "tap".equals(command.actionType)
+                && displayedSnapshot != null && displayedSnapshot.fingerprint().equals(lastSnapshotFingerprint)) {
+            guideStepTimer.start(agentSessionId, response.stateId, response.step,
+                    displayedSnapshot.packageName,
+                    SystemClock.uptimeMillis());
+        } else {
+            guideStepTimer.clear();
+        }
 
         if (overlayView != null && command.message != null && !command.message.isEmpty()) {
             overlayView.setRecognizedSpeech(command.message);
