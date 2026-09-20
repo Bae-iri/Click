@@ -228,3 +228,6 @@ Frontend/_wrapper/
 # Local backend database (including SQLite journal files)
 Backend/click-dev.db
 Backend/click-dev.db-*
+
+# Downloaded AndroidControl data and derived model outputs
+AI-Agent/data/android_control/
