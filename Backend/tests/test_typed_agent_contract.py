@@ -31,6 +31,19 @@ def test_typed_start_uses_goal_without_raw_goal():
     assert isinstance(body["step"], int)
 
 
+def test_typed_font_size_decrease_selects_mvp_02():
+    client = authenticated_client(create_app())
+    payload = start_payload()
+    payload.update(request_id="decrease-start", session_id="decrease-session")
+    payload["goal"]["goal_type"] = "settings.font_size.decrease"
+    payload["goal"]["slots"]["direction"] = "decrease"
+    payload["goal"]["catalog_version"] = "1.1.0"
+    response = client.post("/api/v1/agent/commands", json=payload)
+    assert response.status_code == 200, response.text
+    assert response.json()["task_id"] == "MVP-02"
+    assert response.json()["accepted_goal_type"] == "settings.font_size.decrease"
+
+
 def test_slot_conflict_is_rejected_not_corrected():
     client = authenticated_client(create_app())
     payload = start_payload()

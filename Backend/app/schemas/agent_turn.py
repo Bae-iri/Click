@@ -161,17 +161,26 @@ class AgentTurnResponse(BaseModel):
 
 class TypedGoalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    catalog_version: Literal["1.0.0"]
-    goal_type: Literal["settings.font_size.increase"]
+    catalog_version: Literal["1.0.0", "1.1.0", "2.0.0"]
+    goal_type: Literal["settings.font_size.increase", "settings.font_size.decrease"]
     target_app: Literal["android_settings"]
     slots: dict[str, str]
 
     @field_validator("slots")
     @classmethod
     def validate_slots(cls, value: dict[str, str]) -> dict[str, str]:
-        if value != {"setting": "font_size", "direction": "increase"}:
-            raise ValueError("slots must be setting=font_size and direction=increase")
+        if value.get("setting") != "font_size" or value.get("direction") not in {"increase", "decrease"} or len(value) != 2:
+            raise ValueError("slots must contain a supported font_size direction")
         return value
+
+    @model_validator(mode="after")
+    def direction_matches_goal(self) -> "TypedGoalRequest":
+        expected = "decrease" if self.goal_type.endswith(".decrease") else "increase"
+        if self.slots.get("direction") != expected:
+            raise ValueError("goal_type and slots.direction must match")
+        if expected == "decrease" and self.catalog_version == "1.0.0":
+            raise ValueError("font-size decrease requires catalog version 1.1.0 or newer")
+        return self
 
 
 class DeviceCapabilities(BaseModel):

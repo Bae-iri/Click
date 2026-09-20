@@ -57,7 +57,7 @@ STT 자체가 Goal을 분류한다는 뜻은 아니다. FE가 소유하는 **입
 
 ### 3.1 현재 코드에 등록된 유형
 
-2026-09-12 저장소 기준으로 아래 **한 가지**가 등록되어 있다. catalog version은 `1.0.0`이다. 이 목록은 graph 등록 상태를 말하며, 새 typed HTTP 입력이나 모든 Android 기기의 동작이 구현·검증됐다는 뜻은 아니다.
+2026-09-20 저장소 기준 catalog version은 `2.0.0`이다. 자연어 분류용 Goal은 총 82개(설정 48, 쿠팡 34)이고, 실행 graph까지 승인된 Goal은 글자 크기 확대·축소 두 가지다. Backend는 전환 기간 동안 기존 확대 Goal의 `1.0.0`, 확대·축소의 `1.1.0` 요청도 허용한다.
 
 | 필드 | 실제 값 |
 | --- | --- |
@@ -71,13 +71,24 @@ STT 자체가 Goal을 분류한다는 뜻은 아니다. FE가 소유하는 **입
 | 현재 graph 동작 | 설정·디스플레이·글자 크기 화면 안내 → 확인 → 사용자 직접 조절 → 새 관측으로 증가 검증 |
 | 현재 제한 | 자동 tap 없음, 현재 MVP graph의 자동 scroll 비활성, 제조사별 실기기 검증 필요 |
 
+| 필드 | 실제 값 |
+| --- | --- |
+| `goal_type` | `settings.font_size.decrease` |
+| 의미 | Android 설정에서 현재보다 글자 크기를 작게 변경 |
+| `target_app` | `android_settings` |
+| graph의 `task_type` | `settings_change` |
+| Backend가 선택해 전달할 `task_id` | `MVP-02` |
+| 필수 slots | `setting=font_size`, `direction=decrease` |
+| 현재 graph 동작 | 같은 글자 크기 화면 안내 → 확인 → 왼쪽 조절 → 감소 검증 |
+
 근거 파일:
 
 - [실제 Goal Catalog](../AI-Agent/goal_catalog/mvp_goals.json)
-- [Task 정의·필수 slots·전이](../AI-Agent/src/ai_agent/runtime/tasks/mvp_01_font_size_increase.py)
+- [확대 Task 정의](../AI-Agent/src/ai_agent/runtime/tasks/mvp_01_font_size_increase.py)
+- [축소 Task 정의](../AI-Agent/src/ai_agent/runtime/tasks/mvp_02_font_size_decrease.py)
 - [현재 Graph Registry](../AI-Agent/src/ai_agent/runtime/tasks/__init__.py)
 
-Registry의 `MVP-01`과 `settings.font_size.increase`는 같은 graph를 참조하는 두 lookup key다. `MVP-01`을 별도 Goal Type으로 보내지 않는다.
+Registry는 `MVP-01`/확대 Goal과 `MVP-02`/축소 Goal을 각각 같은 graph release의 lookup key로 연결한다. Task ID를 Goal Type으로 보내지 않는다.
 
 ### 3.2 발화와 slots 해석
 
@@ -86,24 +97,28 @@ Registry의 `MVP-01`과 `settings.font_size.increase`는 같은 graph를 참조�
 | “글자 크기 키우고 싶어” | `settings.font_size.increase`, `setting=font_size`, `direction=increase` |
 | “휴대폰 글씨를 크게 보고 싶어” | 같은 Goal·slots |
 | “폰트가 작아서 크게 하고 싶어” | 같은 Goal·slots |
+| “글자 크기 줄여줘” | `settings.font_size.decrease`, `setting=font_size`, `direction=decrease` |
+| “폰트가 너무 커서 작게 하고 싶어” | 같은 감소 Goal·slots |
 | “글자가 너무 작아” | catalog의 대표 발화이며 확대 의도가 충분한 context인지 FE에서 판단 |
 | “화면 크게 해줘” | 글자 크기와 화면 전체 확대를 구분해 질문한 뒤 확정 |
 | “글자 크기는 키우지 마” | 확대 Goal로 시작하지 않음; 부정 또는 기존 요청 취소 의도 확인 |
-| “글자 크기를 줄여줘” | 확대 Goal로 바꾸지 않음; 감소 graph가 등록되지 않았다면 미지원 안내 |
+| “글자 크기를 줄여줘” | 감소 Goal로 확정; 확대 graph로 보내지 않음 |
 
-입력 slots는 이미 확정된 enum 값이다. `"크게"`, `"larger"`, `"오른쪽"` 같은 발화·UI 표현은 FE에서 `increase`로 정규화한다. Agent가 문자열을 번역하거나 방향을 추측하지 않는다.
+입력 slots는 이미 확정된 enum 값이다. 확대 표현은 `increase`, 축소 표현은 `decrease`로 FE에서 정규화한다. Agent가 문자열을 번역하거나 방향을 추측하지 않는다.
 
-### 3.3 확장 후보 — 현재 전송 가능한 지원 목록이 아님
+### 3.3 설정·쿠팡 확장 catalog와 실행 상태
 
-유형 확장 시 이름과 형식의 기준을 보여주기 위한 예시다. 아래 값은 현재 catalog·graph에 추가하지 않았다.
+분류기는 공백·문장부호·대소문자를 정규화한 뒤 각 Goal의 `keyword_groups`마다 하나 이상의 표현이 일치해야 해당 Goal로 확정한다. 같은 점수의 여러 Goal이 남으면 질문하며, 원문을 임의의 가까운 Goal로 보내지 않는다.
 
-| 후보 Goal Type | 후보 slots | 현재 상태 |
-| --- | --- | --- |
-| `settings.font_size.decrease` | `setting=font_size`, `direction=decrease` | 미등록 |
-| `settings.display_size.increase` | `setting=display_size`, `direction=increase` | 미등록 |
-| `settings.brightness.set` | `setting=brightness`, `value`, `unit` | 미등록; 값 범위·단위·완료 predicate도 정의 필요 |
+| 범위 | 개수 | 대표 Goal Type | 대표 키워드 그룹 | 실행 상태 |
+| --- | ---: | --- | --- | --- |
+| 글자 크기 | 2 | `settings.font_size.increase`, `.decrease` | `글자/글씨/폰트` + `키워/줄여/너무 작/너무 커` | `MVP-01`, `MVP-02` 승인 |
+| 기타 Android 설정 | 46 | `settings.wifi.enable`, `settings.brightness.decrease`, `settings.app_permissions.manage` | 대상(`와이파이/밝기/권한`) + 동작(`켜/낮춰/관리`) | `catalog_only` |
+| 쿠팡 탐색·장바구니 | 12 | `coupang.product.search`, `coupang.cart.add`, `coupang.search.sort` | 대상(`상품/장바구니/정렬`) + 동작(`검색/담아/적용`) | `catalog_only` |
+| 쿠팡 주문·배송·후기 | 13 | `coupang.order.track`, `coupang.order.return`, `coupang.review.write` | 대상(`배송/반품/리뷰`) + 동작(`조회/신청/작성`) | `catalog_only` |
+| 쿠팡 계정·혜택·지원 | 9 | `coupang.address.change`, `coupang.coupon.apply`, `coupang.customer_service.open` | 대상(`배송지/쿠폰/고객센터`) + 동작(`변경/적용/연결`) | `catalog_only` |
 
-지원되지 않는 감소·밝기·화면 확대 목적에 글자 크기 확대 graph를 대신 쓰지 않는다. 새 Goal은 catalog entry, slot schema, 호환되는 승인 graph, Safety·완료 조건·검증 fixture가 함께 준비됐을 때 지원 목록에 추가한다.
+전체 Goal·키워드 표의 단일 원본은 [Goal Catalog](../AI-Agent/goal_catalog/mvp_goals.json)다. `catalog_only`는 문장을 canonical Goal과 slots로 추출할 수 있다는 뜻이지 실행을 허용한다는 뜻이 아니다. 새 Goal은 호환되는 승인 graph, Safety·완료 조건·검증 fixture가 준비된 뒤에만 `execution_status=approved`로 바꾼다. 특히 주문·결제·반품·교환 등은 `risk_level=high`이며 분류만으로 자동 실행하지 않는다.
 
 ### 3.4 이름·버전 규칙
 
@@ -199,7 +214,7 @@ Registry의 `MVP-01`과 `settings.font_size.increase`는 같은 graph를 참조�
 
 | 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| `catalog_version` | string | 예 | FE가 사용한 catalog version. 현재 등록 목록 `1.0.0` |
+| `catalog_version` | string | 예 | FE가 사용한 catalog version. 현재 등록 목록 `2.0.0` |
 | `goal_type` | canonical string | 예 | 공유 catalog에 등록된 정확한 값 |
 | `target_app` | canonical string | 예 | 현재 Goal은 `android_settings` |
 | `slots` | object | 예 | Goal별 schema를 만족하는 이름·타입·값 |
@@ -208,7 +223,7 @@ MVP의 완전한 Goal object:
 
 ```json
 {
-  "catalog_version": "1.0.0",
+  "catalog_version": "2.0.0",
   "goal_type": "settings.font_size.increase",
   "target_app": "android_settings",
   "slots": {
@@ -230,7 +245,7 @@ FE가 `task_id`, `task_type`, `graph_version`, `graph_hash`, `is_supported`, `re
   "additionalProperties": false,
   "required": ["catalog_version", "goal_type", "target_app", "slots"],
   "properties": {
-    "catalog_version": {"const": "1.0.0"},
+    "catalog_version": {"const": "2.0.0"},
     "goal_type": {"const": "settings.font_size.increase"},
     "target_app": {"const": "android_settings"},
     "slots": {
@@ -300,7 +315,7 @@ FE가 `task_id`, `task_type`, `graph_version`, `graph_hash`, `is_supported`, `re
   "expected_version": 0,
   "command_type": "start_task",
   "goal": {
-    "catalog_version": "1.0.0",
+    "catalog_version": "2.0.0",
     "goal_type": "settings.font_size.increase",
     "target_app": "android_settings",
     "slots": {"setting": "font_size", "direction": "increase"}
@@ -419,7 +434,7 @@ FE는 즉시 TTS·좌표 안내·예약된 허용 action을 멈추고 서버 응
   "episode_id": "episode-001",
   "command_type": "replace_task",
   "goal": {
-    "catalog_version": "1.0.0",
+    "catalog_version": "2.0.0",
     "goal_type": "settings.font_size.increase",
     "target_app": "android_settings",
     "slots": {"setting": "font_size", "direction": "increase"}

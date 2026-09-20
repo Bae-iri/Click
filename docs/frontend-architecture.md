@@ -115,8 +115,10 @@ Click App
 ### 4.3 Task 종료
 
 1. Agent가 완료 상태를 전달한다.
-2. Frontend가 완료 메시지와 "Click을 종료할까요?" 질문을 출력한다.
+2. 마지막 대기 작업까지 완료되면 Frontend가 완료 메시지와 "Click을 종료할까요?" 질문을 출력한다.
 3. 사용자의 응답에 따라 Agent를 종료하거나 대기 상태로 유지한다.
+
+음성 `"클릭 종료"`, `"꺼져"`는 실행 중 요청과 대기 큐를 모두 취소한 뒤 Overlay Service를 종료한다. 일시정지 상태에서 새 작업을 말하면 기존 실행 요청과 과거 대기 요청을 제거하고 새 요청만 시작한다.
 
 ### 4.4 자동 조작 범위
 
@@ -236,7 +238,10 @@ Frontend/
 ### 7.6 Speech Service
 
 - 마이크 세션 시작과 종료
-- STT 모델로 음성을 텍스트로 변환해 FE 입력 해석 계층으로 전달
+- 16 kHz mono PCM WAV로 한 발화를 녹음하고 Backend의 `POST /api/v1/speech/transcriptions`에 전달
+- Backend가 서버 환경변수의 OpenAI 키로 `gpt-transcribe`를 호출하며 Android 앱에는 API 키를 넣지 않음
+- 서버 키 누락, 네트워크·provider 오류, 무응답이면 Android `SpeechRecognizer`로 한 번 더 수신하는 fallback 적용
+- 녹음 원문은 Backend DB나 로그에 저장하지 않으며 한 요청의 변환 후 폐기
 - AI-Agent가 생성한 안내 문장과 질문을 TTS 모델로 음성 변환 및 재생
 - 음성 명령에 의한 Agent 종료 처리
 - 녹음, 변환, 재생, 실패 상태를 UI에 노출
@@ -245,7 +250,8 @@ Frontend/
 ### 7.6.1 FE 입력 해석 계층
 
 - 새 작업·일시정지·재개·취소·교체·확인 응답을 Command Type으로 구분
-- 공유 catalog로 Goal Type·target app·필수 slots 확정
+- 공유 `mvp_goals.json` catalog의 모든 keyword group이 일치할 때 Goal Type·target app·slots 확정
+- 동점이면 임의 선택하지 않고 clarification, graph 미승인 항목이면 분류 결과만 안내하고 실행 차단
 - 모호한 목적·부정·명령 의미를 사용자에게 확인
 - FE 분류 metadata와 실제 서버 지원 가능 여부 구분
 - [FE Goal·Command 계약](./fe-goal-command-contract.md)의 enum·필드·JSON 예시로 직렬화

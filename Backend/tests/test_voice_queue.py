@@ -80,6 +80,28 @@ def test_vip_priority_stops_session_then_waits_for_replacement():
         assert claim(client).json()["running"]["id"] == new["request"]["id"]
 
 
+def test_immediate_interrupt_clears_paused_running_and_waiting_requests():
+    app = create_app()
+    with TestClient(app) as client:
+        register(client)
+        enqueue(client, "A")
+        running = claim(client).json()["running"]
+        enqueue(client, "B")
+        enqueue(client, "C")
+        with app.state.session_factory() as db:
+            session = db.get(AgentSession, running["agent_session_id"])
+            session.status = "PAUSED"
+            db.commit()
+        stopped = interrupt(client, immediate=True).json()
+        assert stopped["running"] is None
+        assert stopped["queued"] == []
+        assert stopped["awaiting_replacement"]
+        assert client.get("/api/v1/agent/sessions/" + running["agent_session_id"]).json()["status"] == "CANCELLED"
+        replacement = enqueue(client, "D").json()
+        assert not replacement["awaiting_replacement"]
+        assert [item["raw_goal"] for item in replacement["queued"]] == ["D"]
+
+
 @pytest.mark.parametrize("immediate", [False, True])
 def test_interrupt_retry_never_cancels_a_new_request(immediate):
     with TestClient(create_app()) as client:

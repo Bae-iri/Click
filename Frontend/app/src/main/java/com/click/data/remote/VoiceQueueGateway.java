@@ -67,9 +67,13 @@ public final class VoiceQueueGateway {
     }
 
     public String interrupt(String rawGoal, Callback callback) {
+        return interrupt(rawGoal, false, callback);
+    }
+
+    public String interrupt(String rawGoal, boolean clearQueued, Callback callback) {
         String id = UUID.randomUUID().toString();
         JSONObject body = new JSONObject();
-        try { body.put("id", id).put("raw_goal", rawGoal).put("clear_queued", false); }
+        try { body.put("id", id).put("raw_goal", rawGoal).put("clear_queued", clearQueued); }
         catch (Exception error) { callback.onFailure(error); return id; }
         post("/api/v1/voice-requests/interrupt-and-clear", body, callback);
         return id;

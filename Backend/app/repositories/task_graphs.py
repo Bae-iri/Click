@@ -25,17 +25,18 @@ class TaskGraphRepository:
         self.factory = factory
 
     def seed_mvp(self):
-        graph = TASK_GRAPHS["MVP-01"]
-        body, digest = canonical_graph(graph)
         with self.factory() as db:
-            row = db.get(ApprovedTaskGraph, "MVP-01:1.0.0")
-            if row is None:
-                db.add(ApprovedTaskGraph(id="MVP-01:1.0.0", graph_id="MVP-01",
-                    task_id="MVP-01", goal_type=graph.definition.goal_type,
-                    target_app=graph.definition.target_app, graph_version="1.0.0",
-                    graph_hash=digest, schema_version="runtime-task-graph.v1", body=body,
-                    active=True, approved=True, priority=100))
-                db.commit()
+            for task_id in ("MVP-01", "MVP-02"):
+                graph = TASK_GRAPHS[task_id]
+                body, digest = canonical_graph(graph)
+                row = db.get(ApprovedTaskGraph, f"{task_id}:1.0.0")
+                if row is None:
+                    db.add(ApprovedTaskGraph(id=f"{task_id}:1.0.0", graph_id=task_id,
+                        task_id=task_id, goal_type=graph.definition.goal_type,
+                        target_app=graph.definition.target_app, graph_version="1.0.0",
+                        graph_hash=digest, schema_version="runtime-task-graph.v1", body=body,
+                        active=True, approved=True, priority=100))
+            db.commit()
 
     def select(self, goal):
         with self.factory() as db:
