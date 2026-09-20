@@ -72,7 +72,7 @@ class RuntimeAgentAdapter:
                 slots=dict(typed.slots),
                 source_text="",
                 confidence=1.0,
-                task_id="MVP-01",
+                task_id="MVP-02" if typed.goal_type.endswith(".decrease") else "MVP-01",
                 typing_method="fe_typed_contract",
                 is_supported=True,
                 required_slots_filled=True,

@@ -13,7 +13,7 @@ from app.models.agent_session import AgentSession, AgentTurn, AgentCheckpoint
 from app.models.lifecycle import SafetyConfirmation
 from app.schemas.voice_queue import VoiceQueueResponse, VoiceRequestResponse
 
-ACTIVE_SESSION = ("IN_PROGRESS", "WAITING_CONFIRMATION")
+ACTIVE_SESSION = ("IN_PROGRESS", "WAITING_CONFIRMATION", "PAUSED")
 TERMINAL = ("COMPLETED", "CANCELLED", "FAILED")
 
 

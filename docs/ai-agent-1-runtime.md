@@ -88,7 +88,7 @@ AI1의 첫 단계는 다음과 같다.
 
 AI1은 승인 registry를 검색하거나 다른 Goal의 graph로 교체하지 않는다. 입력이 잘못되면 구조화된 오류를 반환한다. 미등록 Goal·호환 graph 없음·선택 모호성은 Backend 선택 단계에서 처리한다.
 
-현재 코드의 `settings.font_size.increase` → `MVP-01` Python lookup은 전환 전 구현이다. DB가 선택한 graph를 주입하는 방식으로 바꾸며 기존 정의는 seed·fixture로 사용할 수 있다.
+현재 Python 정의의 `MVP-01` 확대와 `MVP-02` 축소 graph는 DB release의 seed·fixture다. typed 실행에서는 Backend가 Goal 방향과 일치하는 승인 graph를 선택해 AI1에 주입한다.
 
 ### 4.2 UI 판단 원칙
 

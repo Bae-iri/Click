@@ -1,30 +1,120 @@
 {
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "matching": {
+    "strategy": "all_keyword_groups",
+    "normalization": "lowercase_remove_space_and_punctuation",
+    "tie_policy": "ask_for_clarification"
+  },
   "goals": [
     {
       "goal_type": "settings.font_size.increase",
+      "display_name": "글자 크기 키우기",
       "target_app": "android_settings",
       "task_type": "settings_change",
-      "slot_schema": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["setting", "direction"],
-        "properties": {
-          "setting": {"type": "string", "const": "font_size"},
-          "direction": {"type": "string", "const": "increase"}
-        }
-      },
-      "required_slots": ["setting", "direction"],
-      "utterances": [
-        "글자가 너무 작아",
-        "글자 크기 키우고 싶어",
-        "휴대폰 글씨를 크게 보고 싶어",
-        "폰트가 작아서 크게 하고 싶어"
+      "execution_status": "approved",
+      "graph_id": "MVP-01",
+      "slots": {"setting": "font_size", "direction": "increase"},
+      "keyword_groups": [
+        ["글자", "글씨", "글꼴", "폰트", "font size", "text size"],
+        ["키워", "크게", "확대", "늘려", "너무 작", "작아서"]
       ],
-      "synonyms": {
-        "font_size": ["글자 크기", "글꼴 크기", "폰트 크기", "Font size", "text size"],
-        "increase": ["크게", "확대", "키우기", "오른쪽", "큰 글자"]
-      }
-    }
+      "utterances": ["글자가 너무 작아", "글자 크기 키워줘", "휴대폰 글씨를 크게 보고 싶어"]
+    },
+    {
+      "goal_type": "settings.font_size.decrease",
+      "display_name": "글자 크기 줄이기",
+      "target_app": "android_settings",
+      "task_type": "settings_change",
+      "execution_status": "approved",
+      "graph_id": "MVP-02",
+      "slots": {"setting": "font_size", "direction": "decrease"},
+      "keyword_groups": [
+        ["글자", "글씨", "글꼴", "폰트", "font size", "text size"],
+        ["줄여", "작게", "축소", "낮춰", "너무 커", "커서"]
+      ],
+      "utterances": ["글자가 너무 커", "글자 크기 줄여줘", "휴대폰 글씨를 작게 보고 싶어"]
+    },
+
+    {"goal_type":"settings.wifi.enable","display_name":"와이파이 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"wifi","state":"on"},"keyword_groups":[["와이파이","wifi"],["켜","활성화","연결 가능"]]},
+    {"goal_type":"settings.wifi.disable","display_name":"와이파이 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"wifi","state":"off"},"keyword_groups":[["와이파이","wifi"],["꺼","비활성화","해제"]]},
+    {"goal_type":"settings.wifi.connect","display_name":"와이파이 연결","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"wifi","action":"connect"},"keyword_groups":[["와이파이","wifi","무선인터넷"],["연결","잡아","네트워크 선택"]]},
+    {"goal_type":"settings.bluetooth.enable","display_name":"블루투스 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"bluetooth","state":"on"},"keyword_groups":[["블루투스","bluetooth"],["켜","활성화"]]},
+    {"goal_type":"settings.bluetooth.disable","display_name":"블루투스 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"bluetooth","state":"off"},"keyword_groups":[["블루투스","bluetooth"],["꺼","비활성화","해제"]]},
+    {"goal_type":"settings.bluetooth.connect","display_name":"블루투스 기기 연결","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"bluetooth","action":"connect"},"keyword_groups":[["블루투스","bluetooth","이어폰","헤드셋"],["연결","페어링","등록"]]},
+    {"goal_type":"settings.mobile_data.enable","display_name":"모바일 데이터 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"mobile_data","state":"on"},"keyword_groups":[["모바일데이터","데이터","셀룰러"],["켜","활성화"]]},
+    {"goal_type":"settings.mobile_data.disable","display_name":"모바일 데이터 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"mobile_data","state":"off"},"keyword_groups":[["모바일데이터","데이터","셀룰러"],["꺼","비활성화"]]},
+    {"goal_type":"settings.airplane_mode.enable","display_name":"비행기 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"airplane_mode","state":"on"},"keyword_groups":[["비행기모드","에어플레인모드"],["켜","활성화"]]},
+    {"goal_type":"settings.airplane_mode.disable","display_name":"비행기 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"airplane_mode","state":"off"},"keyword_groups":[["비행기모드","에어플레인모드"],["꺼","비활성화"]]},
+    {"goal_type":"settings.hotspot.enable","display_name":"모바일 핫스팟 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"hotspot","state":"on"},"keyword_groups":[["핫스팟","테더링"],["켜","활성화","공유"]]},
+    {"goal_type":"settings.hotspot.disable","display_name":"모바일 핫스팟 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"hotspot","state":"off"},"keyword_groups":[["핫스팟","테더링"],["꺼","비활성화"]]},
+    {"goal_type":"settings.brightness.increase","display_name":"화면 밝기 높이기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"brightness","direction":"increase"},"keyword_groups":[["밝기","화면빛"],["높여","밝게","키워","올려","어두워"]]},
+    {"goal_type":"settings.brightness.decrease","display_name":"화면 밝기 낮추기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"brightness","direction":"decrease"},"keyword_groups":[["밝기","화면빛"],["낮춰","어둡게","줄여","눈부셔"]]},
+    {"goal_type":"settings.dark_mode.enable","display_name":"다크 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"dark_mode","state":"on"},"keyword_groups":[["다크모드","어두운테마","야간모드"],["켜","적용","바꿔"]]},
+    {"goal_type":"settings.dark_mode.disable","display_name":"다크 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"dark_mode","state":"off"},"keyword_groups":[["다크모드","어두운테마","야간모드"],["꺼","해제","밝은테마"]]},
+    {"goal_type":"settings.screen_timeout.set","display_name":"화면 자동 꺼짐 시간 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"screen_timeout","action":"set"},"keyword_groups":[["화면자동꺼짐","화면꺼짐시간","스크린타임아웃"],["변경","바꿔","늘려","줄여","설정"]]},
+    {"goal_type":"settings.display_size.increase","display_name":"화면 요소 크게 하기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"display_size","direction":"increase"},"keyword_groups":[["화면크기","화면요소","아이콘크기","디스플레이크기"],["키워","크게","확대","늘려"]]},
+    {"goal_type":"settings.display_size.decrease","display_name":"화면 요소 작게 하기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"display_size","direction":"decrease"},"keyword_groups":[["화면크기","화면요소","아이콘크기","디스플레이크기"],["줄여","작게","축소"]]},
+    {"goal_type":"settings.volume.increase","display_name":"소리 크기 높이기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"volume","direction":"increase"},"keyword_groups":[["소리","볼륨","음량"],["키워","크게","높여","올려","잘안들려"]]},
+    {"goal_type":"settings.volume.decrease","display_name":"소리 크기 낮추기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"volume","direction":"decrease"},"keyword_groups":[["소리","볼륨","음량"],["줄여","작게","낮춰","시끄러워"]]},
+    {"goal_type":"settings.mute.enable","display_name":"무음 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"mute","state":"on"},"keyword_groups":[["무음","소리안나게","조용히"],["켜","설정","바꿔"]]},
+    {"goal_type":"settings.mute.disable","display_name":"무음 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"mute","state":"off"},"keyword_groups":[["무음","소리안나게"],["꺼","해제","소리나게"]]},
+    {"goal_type":"settings.ringtone.change","display_name":"벨소리 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"ringtone","action":"change"},"keyword_groups":[["벨소리","전화소리","링톤"],["바꿔","변경","선택"]]},
+    {"goal_type":"settings.vibrate.enable","display_name":"진동 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"vibrate","state":"on"},"keyword_groups":[["진동","바이브레이션"],["켜","설정","바꿔"]]},
+    {"goal_type":"settings.vibrate.disable","display_name":"진동 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"vibrate","state":"off"},"keyword_groups":[["진동","바이브레이션"],["꺼","해제"]]},
+    {"goal_type":"settings.notifications.enable","display_name":"앱 알림 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"notifications","state":"on"},"keyword_groups":[["알림","푸시"],["켜","허용","받게"]]},
+    {"goal_type":"settings.notifications.disable","display_name":"앱 알림 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"notifications","state":"off"},"keyword_groups":[["알림","푸시"],["꺼","차단","안받게"]]},
+    {"goal_type":"settings.location.enable","display_name":"위치 서비스 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"location","state":"on"},"keyword_groups":[["위치","gps"],["켜","허용","활성화"]]},
+    {"goal_type":"settings.location.disable","display_name":"위치 서비스 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"location","state":"off"},"keyword_groups":[["위치","gps"],["꺼","차단","비활성화"]]},
+    {"goal_type":"settings.power_saving.enable","display_name":"절전 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"power_saving","state":"on"},"keyword_groups":[["절전","배터리절약","저전력"],["켜","활성화","설정"]]},
+    {"goal_type":"settings.power_saving.disable","display_name":"절전 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"power_saving","state":"off"},"keyword_groups":[["절전","배터리절약","저전력"],["꺼","해제","비활성화"]]},
+    {"goal_type":"settings.screen_lock.change","display_name":"화면 잠금 방식 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"screen_lock","action":"change"},"keyword_groups":[["화면잠금","잠금방식","비밀번호","핀번호","패턴"],["바꿔","변경","설정"]]},
+    {"goal_type":"settings.biometric.setup","display_name":"생체 인식 등록","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"biometric","action":"setup"},"keyword_groups":[["지문","얼굴인식","생체인식"],["등록","추가","설정"]]},
+    {"goal_type":"settings.apps.uninstall","display_name":"앱 삭제","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"apps","action":"uninstall"},"keyword_groups":[["앱","어플","애플리케이션"],["삭제","지워","제거"]]},
+    {"goal_type":"settings.app_permissions.manage","display_name":"앱 권한 관리","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"app_permissions","action":"manage"},"keyword_groups":[["앱권한","어플권한","권한"],["관리","허용","차단","바꿔"]]},
+    {"goal_type":"settings.storage.cleanup","display_name":"저장 공간 정리","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"storage","action":"cleanup"},"keyword_groups":[["저장공간","스토리지","용량"],["정리","비워","확보","부족"]]},
+    {"goal_type":"settings.talkback.enable","display_name":"TalkBack 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"talkback","state":"on"},"keyword_groups":[["톡백","talkback","화면읽기"],["켜","활성화"]]},
+    {"goal_type":"settings.talkback.disable","display_name":"TalkBack 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"talkback","state":"off"},"keyword_groups":[["톡백","talkback","화면읽기"],["꺼","비활성화"]]},
+    {"goal_type":"settings.magnification.enable","display_name":"화면 확대 기능 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"magnification","state":"on"},"keyword_groups":[["화면확대","돋보기","확대기능"],["켜","활성화","설정"]]},
+    {"goal_type":"settings.magnification.disable","display_name":"화면 확대 기능 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"magnification","state":"off"},"keyword_groups":[["화면확대","돋보기","확대기능"],["꺼","비활성화","해제"]]},
+    {"goal_type":"settings.language.change","display_name":"기기 언어 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"language","action":"change"},"keyword_groups":[["기기언어","휴대폰언어","시스템언어"],["바꿔","변경","설정"]]},
+    {"goal_type":"settings.date_time.automatic.enable","display_name":"날짜와 시간 자동 설정 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"automatic_date_time","state":"on"},"keyword_groups":[["날짜시간","자동시간","시간자동"],["켜","활성화","자동으로"]]},
+    {"goal_type":"settings.date_time.automatic.disable","display_name":"날짜와 시간 자동 설정 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"automatic_date_time","state":"off"},"keyword_groups":[["날짜시간","자동시간","시간자동"],["꺼","비활성화","수동으로"]]},
+    {"goal_type":"settings.keyboard.change","display_name":"기본 키보드 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"keyboard","action":"change"},"keyword_groups":[["키보드","입력기","자판"],["바꿔","변경","선택"]]},
+    {"goal_type":"settings.default_apps.change","display_name":"기본 앱 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"default_apps","action":"change"},"keyword_groups":[["기본앱","기본어플","디폴트앱"],["바꿔","변경","선택"]]},
+
+    {"goal_type":"coupang.product.search","display_name":"쿠팡 상품 검색","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"search"},"keyword_groups":[["쿠팡","상품","제품","물건"],["검색","찾아","찾아줘"]]},
+    {"goal_type":"coupang.product.details","display_name":"쿠팡 상품 상세 보기","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"view_details"},"keyword_groups":[["상품","제품"],["상세","자세히","정보","설명"]]},
+    {"goal_type":"coupang.cart.add","display_name":"쿠팡 장바구니 담기","target_app":"coupang","task_type":"commerce_cart","execution_status":"catalog_only","slots":{"action":"add"},"keyword_groups":[["장바구니","카트"],["담아","추가","넣어"]]},
+    {"goal_type":"coupang.cart.view","display_name":"쿠팡 장바구니 보기","target_app":"coupang","task_type":"commerce_cart","execution_status":"catalog_only","slots":{"action":"view"},"keyword_groups":[["장바구니","카트"],["보여","열어","확인","목록"]]},
+    {"goal_type":"coupang.cart.remove","display_name":"쿠팡 장바구니 상품 삭제","target_app":"coupang","task_type":"commerce_cart","execution_status":"catalog_only","slots":{"action":"remove"},"keyword_groups":[["장바구니","카트"],["빼","삭제","지워","제거"]]},
+    {"goal_type":"coupang.order.checkout","display_name":"쿠팡 주문·결제 진행","target_app":"coupang","task_type":"commerce_transaction","execution_status":"catalog_only","risk_level":"high","slots":{"action":"checkout"},"keyword_groups":[["주문","결제","구매"],["진행","해줘","할래"]]},
+    {"goal_type":"coupang.order.list","display_name":"쿠팡 주문 목록 보기","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"list"},"keyword_groups":[["주문목록","주문내역","구매내역"],["보여","열어","확인"]]},
+    {"goal_type":"coupang.order.track","display_name":"쿠팡 배송 조회","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"track"},"keyword_groups":[["배송","택배"],["조회","어디","언제와","추적","상태"]]},
+    {"goal_type":"coupang.order.cancel","display_name":"쿠팡 주문 취소","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","risk_level":"high","slots":{"action":"cancel"},"keyword_groups":[["주문","구매"],["취소","철회"]]},
+    {"goal_type":"coupang.order.return","display_name":"쿠팡 반품 신청","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","risk_level":"high","slots":{"action":"return"},"keyword_groups":[["반품","돌려보내"],["신청","접수","하고싶어"]]},
+    {"goal_type":"coupang.order.exchange","display_name":"쿠팡 교환 신청","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","risk_level":"high","slots":{"action":"exchange"},"keyword_groups":[["교환","바꿔받"],["신청","접수","하고싶어"]]},
+    {"goal_type":"coupang.review.write","display_name":"쿠팡 상품평 작성","target_app":"coupang","task_type":"commerce_review","execution_status":"catalog_only","slots":{"action":"write"},"keyword_groups":[["상품평","리뷰","후기"],["작성","써","남겨"]]},
+    {"goal_type":"coupang.review.view","display_name":"쿠팡 상품평 보기","target_app":"coupang","task_type":"commerce_review","execution_status":"catalog_only","slots":{"action":"view"},"keyword_groups":[["상품평","리뷰","후기"],["보여","읽어","확인"]]},
+    {"goal_type":"coupang.wishlist.add","display_name":"쿠팡 찜 추가","target_app":"coupang","task_type":"commerce_wishlist","execution_status":"catalog_only","slots":{"action":"add"},"keyword_groups":[["찜","위시리스트"],["추가","담아","저장"]]},
+    {"goal_type":"coupang.wishlist.remove","display_name":"쿠팡 찜 삭제","target_app":"coupang","task_type":"commerce_wishlist","execution_status":"catalog_only","slots":{"action":"remove"},"keyword_groups":[["찜","위시리스트"],["삭제","빼","해제"]]},
+    {"goal_type":"coupang.wishlist.view","display_name":"쿠팡 찜 목록 보기","target_app":"coupang","task_type":"commerce_wishlist","execution_status":"catalog_only","slots":{"action":"view"},"keyword_groups":[["찜목록","찜한상품","위시리스트"],["보여","열어","확인"]]},
+    {"goal_type":"coupang.address.add","display_name":"쿠팡 배송지 추가","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","slots":{"action":"add"},"keyword_groups":[["배송지","주소"],["추가","등록","새로"]]},
+    {"goal_type":"coupang.address.change","display_name":"쿠팡 배송지 변경","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","slots":{"action":"change"},"keyword_groups":[["배송지","주소"],["변경","바꿔","수정"]]},
+    {"goal_type":"coupang.payment_method.add","display_name":"쿠팡 결제수단 추가","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","risk_level":"high","slots":{"action":"add"},"keyword_groups":[["결제수단","카드","계좌"],["추가","등록"]]},
+    {"goal_type":"coupang.payment_method.change","display_name":"쿠팡 결제수단 변경","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","risk_level":"high","slots":{"action":"change"},"keyword_groups":[["결제수단","결제카드","결제계좌"],["변경","바꿔","수정"]]},
+    {"goal_type":"coupang.coupon.view","display_name":"쿠팡 쿠폰함 보기","target_app":"coupang","task_type":"commerce_promotion","execution_status":"catalog_only","slots":{"action":"view"},"keyword_groups":[["쿠폰","할인쿠폰"],["보여","쿠폰함","확인"]]},
+    {"goal_type":"coupang.coupon.apply","display_name":"쿠팡 쿠폰 적용","target_app":"coupang","task_type":"commerce_promotion","execution_status":"catalog_only","slots":{"action":"apply"},"keyword_groups":[["쿠폰","할인쿠폰"],["적용","사용","써줘"]]},
+    {"goal_type":"coupang.rocket_delivery.filter","display_name":"로켓배송 상품만 보기","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"filter","filter":"rocket_delivery"},"keyword_groups":[["로켓배송","로켓와우"],["필터","상품만","모아","보여"]]},
+    {"goal_type":"coupang.category.browse","display_name":"쿠팡 카테고리 둘러보기","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"browse_category"},"keyword_groups":[["카테고리","상품분류"],["열어","보여","둘러"]]},
+    {"goal_type":"coupang.seller.info","display_name":"쿠팡 판매자 정보 보기","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"seller_info"},"keyword_groups":[["판매자","셀러"],["정보","상세","누구"]]},
+    {"goal_type":"coupang.customer_service.open","display_name":"쿠팡 고객센터 열기","target_app":"coupang","task_type":"commerce_support","execution_status":"catalog_only","slots":{"action":"open"},"keyword_groups":[["고객센터","상담원","문의"],["열어","연결","채팅","전화"]]},
+    {"goal_type":"coupang.rocket_wow.manage","display_name":"로켓와우 멤버십 관리","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","risk_level":"high","slots":{"action":"manage"},"keyword_groups":[["로켓와우","와우멤버십","쿠팡멤버십"],["관리","가입","해지","확인"]]},
+    {"goal_type":"coupang.order.reorder","display_name":"쿠팡 재구매","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","risk_level":"high","slots":{"action":"reorder"},"keyword_groups":[["재구매","다시구매","전에산거"],["주문","사줘","구매"]]},
+    {"goal_type":"coupang.receipt.view","display_name":"쿠팡 영수증 보기","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"view_receipt"},"keyword_groups":[["영수증","거래명세서","결제내역"],["보여","발급","확인"]]},
+    {"goal_type":"coupang.search.filter","display_name":"쿠팡 검색 필터 설정","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"filter"},"keyword_groups":[["검색필터","필터","조건"],["설정","적용","걸어"]]},
+    {"goal_type":"coupang.search.sort","display_name":"쿠팡 검색 결과 정렬","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"sort"},"keyword_groups":[["정렬","낮은가격순","높은가격순","판매량순","최신순"],["바꿔","적용","보여"]]},
+    {"goal_type":"coupang.delivery_date.check","display_name":"쿠팡 도착 예정일 확인","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"check_delivery_date"},"keyword_groups":[["도착예정","도착날짜","배송예정"],["언제","확인","알려"]]},
+    {"goal_type":"coupang.order.gift","display_name":"쿠팡 선물하기","target_app":"coupang","task_type":"commerce_transaction","execution_status":"catalog_only","risk_level":"high","slots":{"action":"gift"},"keyword_groups":[["선물","선물하기"],["보내","주문","구매"]]},
+    {"goal_type":"coupang.cash_receipt.manage","display_name":"쿠팡 현금영수증 관리","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","slots":{"action":"manage"},"keyword_groups":[["현금영수증"],["등록","발급","변경","관리"]]}
   ]
 }
