@@ -48,6 +48,14 @@ python -m alembic upgrade head
 python -m uvicorn app.main:app --reload
 ```
 
+음성 입력은 `OPENAI_API_KEY`가 설정되면 인증된 `POST /api/v1/speech/transcriptions`에서
+`gpt-transcribe`로 처리한다. 키는 Backend 환경에만 두며 Android 앱에 포함하지 않는다.
+키가 없거나 provider 호출이 실패하면 Android Overlay가 기기 `SpeechRecognizer`로 다시 듣는다.
+
+```powershell
+$env:OPENAI_API_KEY="replace-with-server-secret"
+```
+
 Personalization flow:
 
 1. `POST /api/v1/users` creates a pseudonymous user and UI profile.

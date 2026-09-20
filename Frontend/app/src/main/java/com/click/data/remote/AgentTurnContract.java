@@ -4,6 +4,7 @@ import android.util.Log;
 import android.os.Build;
 
 import com.click.data.snapshot.ScreenSnapshot;
+import com.click.domain.goal.GoalCatalogClassifier;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -23,6 +24,7 @@ public final class AgentTurnContract {
         public final String rawGoal;
         public final ScreenSnapshot accessibilityTree;
         public final String userConfirmation;
+        public final GoalCatalogClassifier.Match typedGoal;
         private String explicitCommandType;
         public Integer expectedVersion;
         public String episodeId;
@@ -33,11 +35,17 @@ public final class AgentTurnContract {
         public JSONObject visionSnapshot;
 
         public Request(String sessionId, String rawGoal, ScreenSnapshot tree, String confirmation) {
+            this(sessionId, rawGoal, tree, confirmation, null);
+        }
+
+        public Request(String sessionId, String rawGoal, ScreenSnapshot tree, String confirmation,
+                       GoalCatalogClassifier.Match typedGoal) {
             this.requestId = UUID.randomUUID().toString();
             this.sessionId = sessionId;
             this.rawGoal = rawGoal;
             this.accessibilityTree = tree;
             this.userConfirmation = confirmation;
+            this.typedGoal = typedGoal;
         }
 
         public Request withActionEvent(JSONObject event) {
@@ -61,7 +69,13 @@ public final class AgentTurnContract {
 
         public static Request replace(String sessionId, int version, String episodeId,
                                       String sourceText, ScreenSnapshot tree) {
-            Request request = new Request(sessionId, sourceText, tree, null);
+            return replace(sessionId, version, episodeId, sourceText, tree, null);
+        }
+
+        public static Request replace(String sessionId, int version, String episodeId,
+                                      String sourceText, ScreenSnapshot tree,
+                                      GoalCatalogClassifier.Match typedGoal) {
+            Request request = new Request(sessionId, sourceText, tree, null, typedGoal);
             request.explicitCommandType = "replace_task";
             request.expectedVersion = version;
             request.episodeId = episodeId;
@@ -87,11 +101,22 @@ public final class AgentTurnContract {
             if (episodeId != null) object.put("episode_id", episodeId);
             if (rawGoal != null) {
                 object.put("source_text", rawGoal);
-                object.put("goal", new JSONObject()
-                        .put("catalog_version", "1.0.0")
-                        .put("goal_type", "settings.font_size.increase")
-                        .put("target_app", "android_settings")
-                        .put("slots", new JSONObject().put("setting", "font_size").put("direction", "increase")));
+                if (typedGoal != null) {
+                    object.put("goal", typedGoal.toTypedGoalJson());
+                } else {
+                    // Compatibility for callers not yet wired to the shared catalog.
+                    String normalizedGoal = rawGoal.toLowerCase(java.util.Locale.ROOT)
+                            .replaceAll("[\\s,.!?]", "");
+                    boolean decrease = normalizedGoal.contains("줄여") || normalizedGoal.contains("작게")
+                            || normalizedGoal.contains("낮춰") || normalizedGoal.contains("축소")
+                            || normalizedGoal.contains("너무커") || normalizedGoal.contains("커서");
+                    String direction = decrease ? "decrease" : "increase";
+                    object.put("goal", new JSONObject()
+                            .put("catalog_version", "2.0.0")
+                            .put("goal_type", "settings.font_size." + direction)
+                            .put("target_app", "android_settings")
+                            .put("slots", new JSONObject().put("setting", "font_size").put("direction", direction)));
+                }
                 object.put("device_context", new JSONObject()
                         .put("platform", "android")
                         .put("manufacturer", Build.MANUFACTURER)
