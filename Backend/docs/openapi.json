@@ -6404,6 +6404,28 @@
             "type": "string",
             "title": "Task Status"
           },
+          "state_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State Id"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          },
           "guide_command": {
             "anyOf": [
               {
@@ -6893,6 +6915,7 @@
               "guide_step_failed",
               "help_opened",
               "guide_repeated",
+              "guide_action_observed",
               "user_confused",
               "explanation_changed",
               "task_completed"
@@ -7659,7 +7682,8 @@
             "enum": [
               "1.0.0",
               "1.1.0",
-              "2.0.0"
+              "2.0.0",
+              "2.1.0"
             ],
             "title": "Catalog Version"
           },

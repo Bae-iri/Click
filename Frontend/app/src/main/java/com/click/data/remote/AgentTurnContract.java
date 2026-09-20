@@ -112,7 +112,7 @@ public final class AgentTurnContract {
                             || normalizedGoal.contains("너무커") || normalizedGoal.contains("커서");
                     String direction = decrease ? "decrease" : "increase";
                     object.put("goal", new JSONObject()
-                            .put("catalog_version", "2.0.0")
+                            .put("catalog_version", "2.1.0")
                             .put("goal_type", "settings.font_size." + direction)
                             .put("target_app", "android_settings")
                             .put("slots", new JSONObject().put("setting", "font_size").put("direction", direction)));

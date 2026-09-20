@@ -161,7 +161,7 @@ class AgentTurnResponse(BaseModel):
 
 class TypedGoalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    catalog_version: Literal["1.0.0", "1.1.0", "2.0.0"]
+    catalog_version: Literal["1.0.0", "1.1.0", "2.0.0", "2.1.0"]
     goal_type: Literal["settings.font_size.increase", "settings.font_size.decrease"]
     target_app: Literal["android_settings"]
     slots: dict[str, str]

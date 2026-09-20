@@ -89,6 +89,7 @@ def test_openai_multipart_uses_gpt_transcribe_and_keyword_array(monkeypatch):
 
     assert captured["url"] == "https://api.openai.com/v1/audio/transcriptions"
     assert captured["data"]["model"] == "gpt-transcribe"
-    assert captured["data"]["language"] == "ko"
+    assert captured["data"]["languages[]"] == ["ko"]
+    assert "language" not in captured["data"]
     assert "쿠팡" in captured["data"]["keywords[]"]
     assert captured["files"]["file"] == ("click-command.wav", wav_payload(), "audio/wav")
