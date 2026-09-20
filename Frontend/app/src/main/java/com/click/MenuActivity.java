@@ -20,6 +20,7 @@ import com.click.core.permission.PermissionStatus;
 import com.click.data.local.LocalAccountStore;
 import com.click.service.overlay.ClickOverlayService;
 import com.click.data.local.AuthTokenStore;
+import com.click.data.remote.PersonalizationEventGateway;
 import com.click.ui.common.ClickUi;
 
 public final class MenuActivity extends AppCompatActivity {
@@ -30,6 +31,10 @@ public final class MenuActivity extends AppCompatActivity {
     private static final String[] GENDERS = {"성별을 선택해주세요", "남성", "여성"};
     private TextView permissionStatus;
     private TextView profile;
+    private TextView timingConsentStatus;
+    private android.widget.Button timingConsentButton;
+    private PersonalizationEventGateway personalizationEvents;
+    private boolean timingConsented;
     private LocalAccountStore account;
 
     @Override
@@ -37,6 +42,7 @@ public final class MenuActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         LinearLayout page = ClickUi.page(this);
         account = new LocalAccountStore(this);
+        personalizationEvents = new PersonalizationEventGateway(this);
         page.addView(ClickUi.title(this, "메뉴"), ClickUi.wrap(ClickUi.dp(this, 8)));
 
         LinearLayout profileHeader = new LinearLayout(this);
@@ -60,6 +66,12 @@ public final class MenuActivity extends AppCompatActivity {
         permissionStatus = ClickUi.body(this, "");
         permissionStatus.setTextSize(18);
         page.addView(permissionStatus, ClickUi.wrap(ClickUi.dp(this, 24)));
+
+        timingConsentStatus = ClickUi.body(this, "단계별 안내 시간 기록 상태를 확인하고 있어요…");
+        page.addView(timingConsentStatus, ClickUi.wrap(ClickUi.dp(this, 14)));
+        timingConsentButton = ClickUi.secondaryButton(this, "단계별 안내 시간 기록 설정");
+        timingConsentButton.setOnClickListener(view -> showTimingConsentDialog());
+        page.addView(timingConsentButton, ClickUi.fullWidth(this, 60, 8));
 
         android.widget.Button tutorial = ClickUi.primaryButton(this, "글자 크기 튜토리얼");
         tutorial.setOnClickListener(view -> startActivity(new Intent(this, TutorialActivity.class)));
@@ -155,6 +167,52 @@ public final class MenuActivity extends AppCompatActivity {
                 + "   오버레이 " + mark(overlay) + "   마이크 " + mark(microphone));
         permissionStatus.setTextColor(accessibility && overlay && microphone
                 ? Color.rgb(55, 142, 72) : Color.rgb(170, 83, 45));
+        refreshTimingConsent();
+    }
+
+    private void refreshTimingConsent() {
+        personalizationEvents.readConsent(new PersonalizationEventGateway.ConsentCallback() {
+            @Override public void onResult(boolean consented) {
+                timingConsented = consented;
+                timingConsentStatus.setText(consented
+                        ? "단계별 안내 시간 기록: 동의함" : "단계별 안내 시간 기록: 동의하지 않음");
+            }
+            @Override public void onFailure() {
+                timingConsentStatus.setText("단계별 안내 시간 기록 상태를 확인하지 못했어요.");
+            }
+        });
+    }
+
+    private void showTimingConsentDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(timingConsented ? "기록 동의를 철회할까요?" : "단계별 안내 시간 기록에 동의할까요?")
+                .setMessage(timingConsented
+                        ? "동의를 철회하면 저장된 개인화 행동 기록이 삭제되고 새 기록도 중단됩니다."
+                        : "안내가 표시된 뒤 첫 탭까지 걸린 시간, 단계 번호, 화면 상태 ID를 계정과 연결해 저장합니다. "
+                        + "어디서 안내가 더 필요한지 분석하는 데 사용하며 화면 글자나 비밀번호는 이 기록에 저장하지 않습니다. "
+                        + "언제든 이 메뉴에서 동의를 철회할 수 있습니다.")
+                .setNegativeButton("취소", null)
+                .setPositiveButton(timingConsented ? "동의 철회" : "동의", (dialog, which) -> {
+                    timingConsentButton.setEnabled(false);
+                    personalizationEvents.setConsent(!timingConsented,
+                            new PersonalizationEventGateway.ConsentCallback() {
+                        @Override public void onResult(boolean consented) {
+                            timingConsentButton.setEnabled(true);
+                            timingConsented = consented;
+                            refreshTimingConsent();
+                        }
+                        @Override public void onFailure() {
+                            timingConsentButton.setEnabled(true);
+                            timingConsentStatus.setText("변경하지 못했어요. 다시 시도해 주세요.");
+                        }
+                    });
+                }).show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (personalizationEvents != null) personalizationEvents.close();
+        super.onDestroy();
     }
 
     private String mark(boolean enabled) { return enabled ? "허용" : "필요"; }

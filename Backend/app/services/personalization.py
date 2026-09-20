@@ -19,6 +19,9 @@ EVENT_WEIGHTS = {
     "guide_step_failed": -1.5,
     "help_opened": -1.0,
     "guide_repeated": -1.5,
+    # A slower tap can reflect reading, accessibility needs, or interruption.
+    # Preserve the duration as evidence without treating it as low comprehension.
+    "guide_action_observed": 0.0,
     "user_confused": -2.0,
     "explanation_changed": 0.0,
 }
@@ -72,11 +75,12 @@ class PersonalizationService:
             request.metadata,
         )
         profile = self.repository.get_profile(user_id)
-        profile.confidence_score = max(
-            -10.0,
-            min(10.0, profile.confidence_score + EVENT_WEIGHTS[request.event_type]),
-        )
-        profile.evidence_count += 1
+        if request.event_type != "guide_action_observed":
+            profile.confidence_score = max(
+                -10.0,
+                min(10.0, profile.confidence_score + EVENT_WEIGHTS[request.event_type]),
+            )
+            profile.evidence_count += 1
         if request.event_type == "explanation_changed":
             requested_depth = request.metadata.get("explanation_depth")
             if requested_depth in {"concise", "normal", "detailed"}:

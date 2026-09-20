@@ -176,6 +176,8 @@ public final class AgentTurnContract {
         public final int sessionVersion;
         public final String episodeId;
         public final String taskStatus;
+        public final String stateId;
+        public final int step;
         public final GuideCommand guideCommand;
         public final JSONObject metadata;
 
@@ -186,6 +188,8 @@ public final class AgentTurnContract {
             sessionVersion = object.optInt("session_version", 0);
             episodeId = object.optString("episode_id", null);
             taskStatus = object.getString("task_status");
+            stateId = object.optString("state_id", null);
+            step = object.optInt("step", 0);
             JSONObject guide = object.optJSONObject("guide_command");
             guideCommand = guide == null ? null : new GuideCommand(guide);
             metadata = object.optJSONObject("metadata");

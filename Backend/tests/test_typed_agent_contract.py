@@ -27,6 +27,8 @@ def test_typed_start_uses_goal_without_raw_goal():
     assert body["task_id"] == "MVP-01"
     assert body["episode_id"]
     assert body["graph_reference"]["sha256"]
+    assert body["state_id"] in {"S1_SETTINGS_HOME", "S2_DISPLAY_MENU"}
+    assert isinstance(body["step"], int)
 
 
 def test_slot_conflict_is_rejected_not_corrected():

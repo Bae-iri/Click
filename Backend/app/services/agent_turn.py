@@ -129,7 +129,8 @@ class AgentTurnService:
             accepted_goal_type=details["goal_type"], task_id=response.task_id,
             graph_reference=GraphReference(task_id=response.task_id,
                 version=details["graph_version"], sha256=details["graph_hash"] or graph_hash),
-            task_status=response.task_status, guide_command=response.guide_command,
+            task_status=response.task_status, state_id=response.state_id,
+            step=response.step, guide_command=response.guide_command,
             metadata=response.metadata,
         )
 
