@@ -272,6 +272,8 @@ class AgentCommandResponse(BaseModel):
     task_id: str
     graph_reference: GraphReference
     task_status: str
+    state_id: str | None = None
+    step: int | None = None
     guide_command: GuideCommandResponse | None = None
     message: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)

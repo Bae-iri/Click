@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.main import create_app
+from app.models.personalization import UIEvent
 
 
 def create_user(client: TestClient) -> str:
@@ -46,6 +48,34 @@ def test_ui_events_require_consent_and_update_profile() -> None:
         assert response.status_code == 201
     assert response.json()["profile"]["comprehension_level"] == "beginner"
     assert response.json()["profile"]["confidence_score"] == -6
+
+
+def test_guide_tap_duration_requires_consent_and_does_not_score_comprehension() -> None:
+    app = create_app()
+    client = TestClient(app)
+    user_id = create_user(client)
+    event_url = f"/api/v1/users/{user_id}/events"
+    event = {"event_type": "guide_action_observed", "screen_name": "S1_SETTINGS_HOME",
+             "metadata": {"step": 1, "duration_ms": 4200}}
+    assert client.post(event_url, json=event).status_code == 403
+    assert client.post(f"/api/v1/users/{user_id}/consents", json={
+        "purpose": "personalization", "consented": True, "policy_version": "v1"}).status_code == 201
+    result = client.post(event_url, json=event)
+    assert result.status_code == 201
+    assert result.json()["profile"]["confidence_score"] == 0
+    assert result.json()["profile"]["comprehension_level"] == "unknown"
+    assert result.json()["profile"]["evidence_count"] == 0
+    with app.state.session_factory() as db:
+        saved = db.scalars(select(UIEvent).where(UIEvent.user_id == user_id)).one()
+        assert saved.screen_name == "S1_SETTINGS_HOME"
+        assert saved.event_metadata == {"step": 1, "duration_ms": 4200}
+    assert client.post(event_url, json={**event, "metadata": {"duration_ms": 86_400_001}}).status_code == 422
+    for _ in range(2):
+        assert client.post(event_url, json=event).json()["profile"]["comprehension_level"] == "unknown"
+    assert client.post(f"/api/v1/users/{user_id}/consents", json={
+        "purpose": "personalization", "consented": False, "policy_version": "v1"}).status_code == 201
+    with app.state.session_factory() as db:
+        assert db.scalars(select(UIEvent).where(UIEvent.user_id == user_id)).all() == []
 
 
 def test_profile_personalizes_agent_message_only_after_consent() -> None:

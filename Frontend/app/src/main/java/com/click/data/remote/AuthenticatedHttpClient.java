@@ -20,4 +20,18 @@ final class AuthenticatedHttpClient {
         if (result.status < 200 || result.status >= 300) throw AuthGateway.apiError(path, result);
         return result;
     }
+
+    HttpResult get(String path) throws Exception {
+        if (tokens.accessToken() == null || (tokens.accessExpired() && !AuthGateway.refresh(tokens))) {
+            throw new java.io.IOException("AUTH_REQUIRED");
+        }
+        HttpResult result = AuthGateway.get(path, tokens.accessToken());
+        if (result.status == 401 && AuthGateway.refresh(tokens)) {
+            result = AuthGateway.get(path, tokens.accessToken());
+        }
+        if (result.status < 200 || result.status >= 300) {
+            throw new ApiException("GET", path, result);
+        }
+        return result;
+    }
 }
