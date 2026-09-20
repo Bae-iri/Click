@@ -64,6 +64,7 @@ class CreateUIEventRequest(BaseModel):
         "guide_step_failed",
         "help_opened",
         "guide_repeated",
+        "guide_action_observed",
         "user_confused",
         "explanation_changed",
         "task_completed",
