@@ -16,6 +16,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://click:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/click
       GEMINI_API_KEY: ""
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
