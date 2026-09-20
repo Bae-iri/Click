@@ -57,7 +57,7 @@ STT 자체가 Goal을 분류한다는 뜻은 아니다. FE가 소유하는 **입
 
 ### 3.1 현재 코드에 등록된 유형
 
-2026-09-20 저장소 기준 catalog version은 `2.0.0`이다. 자연어 분류용 Goal은 총 82개(설정 48, 쿠팡 34)이고, 실행 graph까지 승인된 Goal은 글자 크기 확대·축소 두 가지다. Backend는 전환 기간 동안 기존 확대 Goal의 `1.0.0`, 확대·축소의 `1.1.0` 요청도 허용한다.
+2026-09-20 저장소 기준 catalog version은 `2.1.0`이다. 자연어 분류용 Goal은 총 160개(설정 89, 쿠팡 71)이고, 실행 graph까지 승인된 Goal은 글자 크기 확대·축소 두 가지다. Backend는 전환 기간 동안 기존 `1.0.0`, `1.1.0`, `2.0.0` 요청도 허용한다.
 
 | 필드 | 실제 값 |
 | --- | --- |
@@ -84,6 +84,7 @@ STT 자체가 Goal을 분류한다는 뜻은 아니다. FE가 소유하는 **입
 근거 파일:
 
 - [실제 Goal Catalog](../AI-Agent/goal_catalog/mvp_goals.json)
+- [Goal Type·키워드 전체 표](goal-type-keyword-catalog.md)
 - [확대 Task 정의](../AI-Agent/src/ai_agent/runtime/tasks/mvp_01_font_size_increase.py)
 - [축소 Task 정의](../AI-Agent/src/ai_agent/runtime/tasks/mvp_02_font_size_decrease.py)
 - [현재 Graph Registry](../AI-Agent/src/ai_agent/runtime/tasks/__init__.py)
@@ -113,10 +114,10 @@ Registry는 `MVP-01`/확대 Goal과 `MVP-02`/축소 Goal을 각각 같은 graph 
 | 범위 | 개수 | 대표 Goal Type | 대표 키워드 그룹 | 실행 상태 |
 | --- | ---: | --- | --- | --- |
 | 글자 크기 | 2 | `settings.font_size.increase`, `.decrease` | `글자/글씨/폰트` + `키워/줄여/너무 작/너무 커` | `MVP-01`, `MVP-02` 승인 |
-| 기타 Android 설정 | 46 | `settings.wifi.enable`, `settings.brightness.decrease`, `settings.app_permissions.manage` | 대상(`와이파이/밝기/권한`) + 동작(`켜/낮춰/관리`) | `catalog_only` |
-| 쿠팡 탐색·장바구니 | 12 | `coupang.product.search`, `coupang.cart.add`, `coupang.search.sort` | 대상(`상품/장바구니/정렬`) + 동작(`검색/담아/적용`) | `catalog_only` |
-| 쿠팡 주문·배송·후기 | 13 | `coupang.order.track`, `coupang.order.return`, `coupang.review.write` | 대상(`배송/반품/리뷰`) + 동작(`조회/신청/작성`) | `catalog_only` |
-| 쿠팡 계정·혜택·지원 | 9 | `coupang.address.change`, `coupang.coupon.apply`, `coupang.customer_service.open` | 대상(`배송지/쿠폰/고객센터`) + 동작(`변경/적용/연결`) | `catalog_only` |
+| 기타 Android 설정 | 87 | `settings.wifi.enable`, `settings.nfc.enable`, `settings.app_cache.clear` | 대상(`와이파이/NFC/앱 캐시`) + 동작(`켜/공유/삭제`) | `catalog_only` |
+| 쿠팡 탐색·장바구니·찜 | 27 | `coupang.product.search`, `coupang.cart.quantity.increase`, `coupang.search.sort` | 대상(`상품/장바구니/정렬`) + 동작(`검색/수량 변경/적용`) | `catalog_only` |
+| 쿠팡 주문·배송·후기·거래 | 23 | `coupang.order.track`, `coupang.order.refund_status`, `coupang.review.edit` | 대상(`배송/환불/리뷰`) + 동작(`조회/확인/수정`) | `catalog_only` |
+| 쿠팡 계정·혜택·지원 | 21 | `coupang.address.change`, `coupang.coupay.balance.view`, `coupang.customer_service.open` | 대상(`배송지/쿠페이/고객센터`) + 동작(`변경/확인/연결`) | `catalog_only` |
 
 전체 Goal·키워드 표의 단일 원본은 [Goal Catalog](../AI-Agent/goal_catalog/mvp_goals.json)다. `catalog_only`는 문장을 canonical Goal과 slots로 추출할 수 있다는 뜻이지 실행을 허용한다는 뜻이 아니다. 새 Goal은 호환되는 승인 graph, Safety·완료 조건·검증 fixture가 준비된 뒤에만 `execution_status=approved`로 바꾼다. 특히 주문·결제·반품·교환 등은 `risk_level=high`이며 분류만으로 자동 실행하지 않는다.
 
@@ -214,7 +215,7 @@ Registry는 `MVP-01`/확대 Goal과 `MVP-02`/축소 Goal을 각각 같은 graph 
 
 | 필드 | 타입 | 필수 | 규칙 |
 | --- | --- | --- | --- |
-| `catalog_version` | string | 예 | FE가 사용한 catalog version. 현재 등록 목록 `2.0.0` |
+| `catalog_version` | string | 예 | FE가 사용한 catalog version. 현재 등록 목록 `2.1.0` |
 | `goal_type` | canonical string | 예 | 공유 catalog에 등록된 정확한 값 |
 | `target_app` | canonical string | 예 | 현재 Goal은 `android_settings` |
 | `slots` | object | 예 | Goal별 schema를 만족하는 이름·타입·값 |
@@ -223,7 +224,7 @@ MVP의 완전한 Goal object:
 
 ```json
 {
-  "catalog_version": "2.0.0",
+  "catalog_version": "2.1.0",
   "goal_type": "settings.font_size.increase",
   "target_app": "android_settings",
   "slots": {
@@ -245,7 +246,7 @@ FE가 `task_id`, `task_type`, `graph_version`, `graph_hash`, `is_supported`, `re
   "additionalProperties": false,
   "required": ["catalog_version", "goal_type", "target_app", "slots"],
   "properties": {
-    "catalog_version": {"const": "2.0.0"},
+    "catalog_version": {"const": "2.1.0"},
     "goal_type": {"const": "settings.font_size.increase"},
     "target_app": {"const": "android_settings"},
     "slots": {
@@ -315,7 +316,7 @@ FE가 `task_id`, `task_type`, `graph_version`, `graph_hash`, `is_supported`, `re
   "expected_version": 0,
   "command_type": "start_task",
   "goal": {
-    "catalog_version": "2.0.0",
+    "catalog_version": "2.1.0",
     "goal_type": "settings.font_size.increase",
     "target_app": "android_settings",
     "slots": {"setting": "font_size", "direction": "increase"}
@@ -434,7 +435,7 @@ FE는 즉시 TTS·좌표 안내·예약된 허용 action을 멈추고 서버 응
   "episode_id": "episode-001",
   "command_type": "replace_task",
   "goal": {
-    "catalog_version": "2.0.0",
+    "catalog_version": "2.1.0",
     "goal_type": "settings.font_size.increase",
     "target_app": "android_settings",
     "slots": {"setting": "font_size", "direction": "increase"}

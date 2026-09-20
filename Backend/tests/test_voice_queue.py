@@ -200,6 +200,42 @@ def test_parallel_enqueues_and_claims_are_serialized(tmp_path):
             assert db.scalar(select(func.count()).select_from(VoiceRequest).where(VoiceRequest.status == "RUNNING")) == 1
 
 
+def test_parallel_users_have_independent_queues_and_interrupts(tmp_path):
+    url = "sqlite+pysqlite:///" + (tmp_path / "multi-user.db").as_posix()
+    app = create_app(url)
+    with TestClient(app) as first, TestClient(create_app(url)) as second:
+        first_user = register(first, "first-queue@example.com")["user_id"]
+        second_user = register(second, "second-queue@example.com")["user_id"]
+        first_a = enqueue(first, "first A").json()["request"]
+        enqueue(first, "first B")
+        second_a = enqueue(second, "second A").json()["request"]
+        enqueue(second, "second B")
+
+        barrier = Barrier(2)
+        def parallel_claim(client):
+            barrier.wait(timeout=5)
+            return claim(client).json()
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first_claim, second_claim = list(pool.map(parallel_claim, (first, second)))
+
+        assert first_claim["running"]["id"] == first_a["id"]
+        assert second_claim["running"]["id"] == second_a["id"]
+        assert first_claim["running"]["sequence"] == 1
+        assert second_claim["running"]["sequence"] == 1
+
+        stopped = interrupt(first, immediate=True).json()
+        assert stopped["running"] is None and stopped["queued"] == []
+        untouched = second.get(BASE).json()
+        assert untouched["running"]["id"] == second_a["id"]
+        assert [row["raw_goal"] for row in untouched["queued"]] == ["second B"]
+
+        with app.state.session_factory() as db:
+            assert db.scalar(select(func.count()).select_from(VoiceRequest).where(
+                VoiceRequest.user_id == first_user, VoiceRequest.status == "RUNNING")) == 0
+            assert db.scalar(select(func.count()).select_from(VoiceRequest).where(
+                VoiceRequest.user_id == second_user, VoiceRequest.status == "RUNNING")) == 1
+
+
 def test_interrupt_fences_late_ai_result(tmp_path):
     entered, release = Event(), Event()
     class Slow(DoneAgent):

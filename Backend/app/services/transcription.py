@@ -34,7 +34,10 @@ class TranscriptionService:
     KEYWORDS = (
         "Click", "클릭", "쿠팡", "와이파이", "블루투스", "비행기 모드", "핫스팟",
         "글자 크기", "화면 밝기", "다크 모드", "접근성", "TalkBack", "장바구니",
-        "로켓배송", "로켓와우", "배송 조회", "주문 취소", "반품", "교환", "상품평",
+        "NFC", "방해 금지", "자동 회전", "블루라이트", "데이터 절약", "데이터 로밍",
+        "VPN", "배터리 잔량", "실시간 자막", "소프트웨어 업데이트",
+        "로켓배송", "로켓프레시", "로켓와우", "쿠페이", "정기배송", "재입고 알림",
+        "배송 조회", "주문 취소", "환불", "반품", "교환", "상품평", "현금영수증",
     )
 
     def __init__(self, sender: Callable[..., httpx.Response] | None = None):
@@ -83,9 +86,11 @@ class TranscriptionService:
                      mime_type: str, language: str) -> httpx.Response:
         form = {
             "model": self.MODEL,
-            "language": language,
             "prompt": "한국어 스마트폰 설정 및 쿠팡 사용 요청입니다.",
             "keywords[]": list(self.KEYWORDS),
+            # gpt-transcribe uses plural language hints; singular `language`
+            # belongs to the older transcription contract and must not be mixed in.
+            "languages[]": [language],
         }
         with httpx.Client(timeout=httpx.Timeout(20.0, connect=5.0)) as client:
             return client.post(

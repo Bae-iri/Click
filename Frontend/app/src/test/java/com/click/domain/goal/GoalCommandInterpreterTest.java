@@ -40,9 +40,46 @@ public class GoalCommandInterpreterTest {
                 GoalCommandInterpreter.interpret("꺼져", true, false, false).kind);
     }
 
+    @Test public void businessCancellationIsNotMistakenForQueueCancellation() throws Exception {
+        GoalCatalogClassifier catalog = loadCatalog();
+        GoalCommandInterpreter.Result orderCancel = GoalCommandInterpreter.interpret(
+                "쿠팡에서 한 주문 취소해줘", true, false, false, catalog, "com.coupang.mobile");
+        assertEquals(GoalCommandInterpreter.Kind.CATALOGUED_UNAVAILABLE, orderCancel.kind);
+        assertEquals("coupang.order.cancel", orderCancel.goal.goalType);
+
+        GoalCommandInterpreter.Result queueCancel = GoalCommandInterpreter.interpret(
+                "이 작업 취소해줘", true, false, false, catalog, "com.coupang.mobile");
+        assertEquals(GoalCommandInterpreter.Kind.CANCEL_TASK, queueCancel.kind);
+    }
+
+    @Test public void pauseResumeAndNegativeCommandsRespectCurrentState() throws Exception {
+        GoalCatalogClassifier catalog = loadCatalog();
+        assertEquals(GoalCommandInterpreter.Kind.PAUSE_TASK,
+                GoalCommandInterpreter.interpret("일시 정지해", true, false, false,
+                        catalog, "com.android.settings").kind);
+        assertEquals(GoalCommandInterpreter.Kind.PAUSE_TASK,
+                GoalCommandInterpreter.interpret("잠깐 기다려 봐", true, false, false,
+                        catalog, "com.android.settings").kind);
+        assertEquals(GoalCommandInterpreter.Kind.RESUME_TASK,
+                GoalCommandInterpreter.interpret("이어서 계속해", true, true, false,
+                        catalog, "com.android.settings").kind);
+        assertEquals(GoalCommandInterpreter.Kind.NEEDS_CLARIFICATION,
+                GoalCommandInterpreter.interpret("스톱", true, false, false,
+                        catalog, "com.android.settings").kind);
+        assertEquals(GoalCommandInterpreter.Kind.UNSUPPORTED,
+                GoalCommandInterpreter.interpret("글자 크기 크게 하지 마", false, false, false,
+                        catalog, "com.android.settings").kind);
+        assertEquals(GoalCommandInterpreter.Kind.UNSUPPORTED,
+                GoalCommandInterpreter.interpret("글자 크기 크게 안 해 줘", false, false, false,
+                        catalog, "com.android.settings").kind);
+        assertEquals(GoalCommandInterpreter.Kind.UNSUPPORTED,
+                GoalCommandInterpreter.interpret("와이파이가 꺼지지 않게 해줘", false, false, false,
+                        catalog, "com.android.settings").kind);
+    }
+
     @Test public void classifiesApprovedAndCatalogOnlyGoalsFromSharedCatalog() throws Exception {
         GoalCatalogClassifier catalog = loadCatalog();
-        assertEquals(82, catalog.size());
+        assertEquals(160, catalog.size());
 
         GoalCommandInterpreter.Result font = GoalCommandInterpreter.interpret(
                 "글씨가 너무 커서 좀 작게 해 줘", false, false, false, catalog, "com.android.settings");

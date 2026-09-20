@@ -536,8 +536,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void startDeviceSpeechFallback() {
-        if (!acceptingVoiceCommand || speechRecognizer == null || overlayView == null
+        if (!acceptingVoiceCommand || overlayView == null
                 || overlayView.getMode() != ClickOverlayLayout.Mode.VOICE || ttsSpeaking) return;
+        if (speechRecognizer == null) {
+            listening = false;
+            overlayView.setRecognizedSpeech(
+                    "클라우드와 기기 음성 인식을 모두 사용할 수 없어요. 연결 상태를 확인한 뒤 다시 눌러주세요.");
+            return;
+        }
         overlayView.setRecognizedSpeech("기기 음성 인식으로 다시 듣고 있어요…");
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);

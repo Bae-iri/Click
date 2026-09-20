@@ -41,17 +41,13 @@ public final class GoalCommandInterpreter {
             return result(Kind.CONFIRM_ACCEPTED, null);
         if (confirmationOpen && (text.equals("아니") || text.equals("아니오") || text.equals("싫어")))
             return result(Kind.CONFIRM_REJECTED, null);
-        if (text.contains("취소") || text.contains("안할래"))
-            return result(hasActiveTask ? Kind.CANCEL_TASK : Kind.UNSUPPORTED, "진행 중인 작업이 없어요.");
-        if (text.contains("이어서") || text.contains("계속해"))
-            return result(paused ? Kind.RESUME_TASK : Kind.UNSUPPORTED, "일시정지한 작업이 없어요.");
-        if (text.contains("잠깐기다려") || text.contains("일단멈춰"))
-            return result(hasActiveTask ? Kind.PAUSE_TASK : Kind.UNSUPPORTED, "진행 중인 작업이 없어요.");
-        if (text.equals("그만") || text.contains("멈춰") || text.equals("중단해"))
-            return result(Kind.NEEDS_CLARIFICATION, "잠시 멈출까요, 작업을 취소할까요?");
-        if (text.contains("하지마") || text.contains("말아") || text.contains("키우지마"))
+        if (text.contains("하지마") || text.contains("하지말") || text.contains("지마")
+                || text.contains("지말") || text.contains("지않") || text.contains("안해")
+                || text.contains("말아") || text.contains("키우지마"))
             return result(Kind.UNSUPPORTED, "요청한 변경을 실행하지 않을게요.");
 
+        // Resolve concrete business goals before generic controls. For example,
+        // "쿠팡 주문 취소" is a commerce goal, while "이 작업 취소" is a queue control.
         if (catalog != null) {
             GoalCatalogClassifier.Classification classification = catalog.classify(source, foregroundPackage);
             if (classification.ambiguous) {
@@ -68,6 +64,16 @@ public final class GoalCommandInterpreter {
             }
         }
 
+        if (isCancelControl(text))
+            return result(hasActiveTask ? Kind.CANCEL_TASK : Kind.UNSUPPORTED, "진행 중인 작업이 없어요.");
+        if (isResumeControl(text))
+            return result(paused ? Kind.RESUME_TASK : Kind.UNSUPPORTED, "일시정지한 작업이 없어요.");
+        if (isPauseControl(text))
+            return result(hasActiveTask ? Kind.PAUSE_TASK : Kind.UNSUPPORTED, "진행 중인 작업이 없어요.");
+        if (text.equals("그만") || text.contains("멈춰") || text.equals("중단해")
+                || text.equals("스톱") || text.equals("stop"))
+            return result(Kind.NEEDS_CLARIFICATION, "잠시 멈출까요, 작업을 취소할까요?");
+
         // Legacy fallback keeps behavior stable if the catalog asset cannot be loaded.
         boolean font = text.contains("글자") || text.contains("글씨") || text.contains("폰트")
                 || text.contains("fontsize") || text.contains("textsize");
@@ -82,6 +88,24 @@ public final class GoalCommandInterpreter {
             return new Result(kind, null, null);
         }
         return result(Kind.UNSUPPORTED, "지원하는 설정이나 쿠팡 기능을 구체적으로 말씀해주세요.");
+    }
+
+    private static boolean isCancelControl(String text) {
+        return text.equals("취소") || text.equals("취소해") || text.equals("취소해줘")
+                || text.equals("취소할래") || text.equals("안할래") || text.equals("이거안할래")
+                || text.equals("그만할래") || text.equals("그거취소")
+                || text.contains("작업취소");
+    }
+
+    private static boolean isResumeControl(String text) {
+        return text.contains("이어서") || text.contains("계속해") || text.equals("재개")
+                || text.equals("재개해") || text.equals("다시시작") || text.equals("다시시작해");
+    }
+
+    private static boolean isPauseControl(String text) {
+        return text.contains("잠깐기다려") || text.contains("기다려봐") || text.contains("일단멈춰")
+                || text.equals("일시정지") || text.equals("일시정지해")
+                || text.equals("잠깐만") || text.equals("잠시멈춰");
     }
 
     private static Result result(Kind kind, String message) { return new Result(kind, message, null); }

@@ -142,7 +142,8 @@ public final class GoalCatalogClassifier {
         for (String utterance : rule.utterances) {
             if (text.equals(normalize(utterance))) score += 1_000;
         }
-        if (foregroundMatches(rule.targetApp, foregroundPackage)) score += 25;
+        // Foreground is a tie-breaker, not authority to override more specific words.
+        if (foregroundMatches(rule.targetApp, foregroundPackage)) score += 1;
         return score;
     }
 

@@ -1,0 +1,180 @@
+# Goal Type·키워드 전체 표
+
+> 이 문서는 `AI-Agent/goal_catalog/mvp_goals.json`에서 자동 생성한다. 직접 수정하지 말고 JSON 수정 후 `cd AI-Agent && python scripts/export_goal_catalog_markdown.py`를 실행한다.
+
+- Catalog version: `2.1.0`
+- 전체 Goal: **160개** (Android 설정 89개, 쿠팡 71개)
+- 실행 승인: **2개**, 분류 전용: **158개**
+- `키워드 그룹`의 각 괄호에서는 하나 이상, 괄호와 괄호 사이는 모두 충족해야 분류 후보가 된다.
+- `catalog_only`는 Goal 추출만 가능하다는 뜻이다. 승인 Task Graph가 없으므로 실제 작업은 시작하지 않는다.
+- 이전 v2.0은 82개였고, 현재 v2.1은 보편 설정·쿠팡 기능을 추가한 160개다.
+
+## Android 설정
+
+| # | Goal Type | 표시 이름 | 키워드 그룹 | 실행 상태 | 위험도 |
+| ---: | --- | --- | --- | --- | --- |
+| 1 | `settings.font_size.increase` | 글자 크기 키우기 | (글자 / 글씨 / 글꼴 / 폰트 / font size / text size) + (키워 / 크게 / 확대 / 늘려 / 너무 작 / 작아서 / bigger / larger / increase) | approved (`MVP-01`) | normal |
+| 2 | `settings.font_size.decrease` | 글자 크기 줄이기 | (글자 / 글씨 / 글꼴 / 폰트 / font size / text size) + (줄여 / 작게 / 축소 / 낮춰 / 너무 커 / 커서 / smaller / decrease) | approved (`MVP-02`) | normal |
+| 3 | `settings.wifi.enable` | 와이파이 켜기 | (와이파이 / wifi) + (켜 / 활성화 / 사용하게) | catalog_only | normal |
+| 4 | `settings.wifi.disable` | 와이파이 끄기 | (와이파이 / wifi) + (꺼 / 비활성화 / 해제) | catalog_only | normal |
+| 5 | `settings.wifi.connect` | 와이파이 연결 | (와이파이 / wifi / 무선인터넷) + (연결 / 잡아 / 네트워크 선택) | catalog_only | normal |
+| 6 | `settings.bluetooth.enable` | 블루투스 켜기 | (블루투스 / bluetooth) + (켜 / 활성화) | catalog_only | normal |
+| 7 | `settings.bluetooth.disable` | 블루투스 끄기 | (블루투스 / bluetooth) + (꺼 / 비활성화 / 해제) | catalog_only | normal |
+| 8 | `settings.bluetooth.connect` | 블루투스 기기 연결 | (블루투스 / bluetooth / 이어폰 / 헤드셋) + (연결 / 페어링 / 등록) | catalog_only | normal |
+| 9 | `settings.mobile_data.enable` | 모바일 데이터 켜기 | (모바일데이터 / 데이터 / 셀룰러) + (켜 / 활성화) | catalog_only | normal |
+| 10 | `settings.mobile_data.disable` | 모바일 데이터 끄기 | (모바일데이터 / 데이터 / 셀룰러) + (꺼 / 비활성화) | catalog_only | normal |
+| 11 | `settings.airplane_mode.enable` | 비행기 모드 켜기 | (비행기모드 / 에어플레인모드) + (켜 / 활성화) | catalog_only | normal |
+| 12 | `settings.airplane_mode.disable` | 비행기 모드 끄기 | (비행기모드 / 에어플레인모드) + (꺼 / 비활성화) | catalog_only | normal |
+| 13 | `settings.hotspot.enable` | 모바일 핫스팟 켜기 | (핫스팟 / 테더링) + (켜 / 활성화 / 공유) | catalog_only | normal |
+| 14 | `settings.hotspot.disable` | 모바일 핫스팟 끄기 | (핫스팟 / 테더링) + (꺼 / 비활성화) | catalog_only | normal |
+| 15 | `settings.brightness.increase` | 화면 밝기 높이기 | (밝기 / 화면빛) + (높여 / 밝게 / 키워 / 올려 / 어두워) | catalog_only | normal |
+| 16 | `settings.brightness.decrease` | 화면 밝기 낮추기 | (밝기 / 화면빛) + (낮춰 / 어둡게 / 줄여 / 눈부셔) | catalog_only | normal |
+| 17 | `settings.dark_mode.enable` | 다크 모드 켜기 | (다크모드 / 어두운테마 / 야간모드) + (켜 / 적용 / 바꿔) | catalog_only | normal |
+| 18 | `settings.dark_mode.disable` | 다크 모드 끄기 | (다크모드 / 어두운테마 / 야간모드) + (꺼 / 해제 / 밝은테마) | catalog_only | normal |
+| 19 | `settings.screen_timeout.set` | 화면 자동 꺼짐 시간 변경 | (화면자동꺼짐 / 화면꺼짐시간 / 스크린타임아웃) + (변경 / 바꿔 / 늘려 / 줄여 / 설정) | catalog_only | normal |
+| 20 | `settings.display_size.increase` | 화면 요소 크게 하기 | (화면크기 / 화면요소 / 아이콘크기 / 디스플레이크기) + (키워 / 크게 / 확대 / 늘려) | catalog_only | normal |
+| 21 | `settings.display_size.decrease` | 화면 요소 작게 하기 | (화면크기 / 화면요소 / 아이콘크기 / 디스플레이크기) + (줄여 / 작게 / 축소) | catalog_only | normal |
+| 22 | `settings.volume.increase` | 소리 크기 높이기 | (소리 / 볼륨 / 음량) + (키워 / 크게 / 높여 / 올려 / 잘안들려) | catalog_only | normal |
+| 23 | `settings.volume.decrease` | 소리 크기 낮추기 | (소리 / 볼륨 / 음량) + (줄여 / 작게 / 낮춰 / 시끄러워) | catalog_only | normal |
+| 24 | `settings.mute.enable` | 무음 모드 켜기 | (무음 / 소리안나게 / 조용히) + (켜 / 설정 / 바꿔) | catalog_only | normal |
+| 25 | `settings.mute.disable` | 무음 모드 끄기 | (무음 / 소리안나게) + (꺼 / 해제 / 소리나게) | catalog_only | normal |
+| 26 | `settings.ringtone.change` | 벨소리 변경 | (벨소리 / 전화소리 / 링톤) + (바꿔 / 변경 / 선택) | catalog_only | normal |
+| 27 | `settings.vibrate.enable` | 진동 모드 켜기 | (진동 / 바이브레이션) + (켜 / 설정 / 바꿔) | catalog_only | normal |
+| 28 | `settings.vibrate.disable` | 진동 모드 끄기 | (진동 / 바이브레이션) + (꺼 / 해제) | catalog_only | normal |
+| 29 | `settings.notifications.enable` | 앱 알림 켜기 | (알림 / 푸시) + (켜 / 허용 / 받게) | catalog_only | normal |
+| 30 | `settings.notifications.disable` | 앱 알림 끄기 | (알림 / 푸시) + (꺼 / 차단 / 안받게) | catalog_only | normal |
+| 31 | `settings.location.enable` | 위치 서비스 켜기 | (위치 / gps) + (켜 / 허용 / 활성화) | catalog_only | normal |
+| 32 | `settings.location.disable` | 위치 서비스 끄기 | (위치 / gps) + (꺼 / 차단 / 비활성화) | catalog_only | normal |
+| 33 | `settings.power_saving.enable` | 절전 모드 켜기 | (절전 / 배터리절약 / 저전력) + (켜 / 활성화 / 설정) | catalog_only | normal |
+| 34 | `settings.power_saving.disable` | 절전 모드 끄기 | (절전 / 배터리절약 / 저전력) + (꺼 / 해제 / 비활성화) | catalog_only | normal |
+| 35 | `settings.screen_lock.change` | 화면 잠금 방식 변경 | (화면잠금 / 잠금방식 / 비밀번호 / 핀번호 / 패턴) + (바꿔 / 변경 / 설정) | catalog_only | normal |
+| 36 | `settings.biometric.setup` | 생체 인식 등록 | (지문 / 얼굴인식 / 생체인식) + (등록 / 추가 / 설정) | catalog_only | normal |
+| 37 | `settings.apps.uninstall` | 앱 삭제 | (앱 / 어플 / 애플리케이션) + (삭제 / 지워 / 제거) | catalog_only | normal |
+| 38 | `settings.app_permissions.manage` | 앱 권한 관리 | (앱권한 / 어플권한 / 권한) + (관리 / 허용 / 차단 / 바꿔) | catalog_only | normal |
+| 39 | `settings.storage.cleanup` | 저장 공간 정리 | (저장공간 / 스토리지 / 용량) + (정리 / 비워 / 확보 / 부족) | catalog_only | normal |
+| 40 | `settings.talkback.enable` | TalkBack 켜기 | (톡백 / talkback / 화면읽기) + (켜 / 활성화) | catalog_only | normal |
+| 41 | `settings.talkback.disable` | TalkBack 끄기 | (톡백 / talkback / 화면읽기) + (꺼 / 비활성화) | catalog_only | normal |
+| 42 | `settings.magnification.enable` | 화면 확대 기능 켜기 | (화면확대 / 돋보기 / 확대기능) + (켜 / 활성화 / 설정) | catalog_only | normal |
+| 43 | `settings.magnification.disable` | 화면 확대 기능 끄기 | (화면확대 / 돋보기 / 확대기능) + (꺼 / 비활성화 / 해제) | catalog_only | normal |
+| 44 | `settings.language.change` | 기기 언어 변경 | (기기언어 / 휴대폰언어 / 시스템언어) + (바꿔 / 변경 / 설정) | catalog_only | normal |
+| 45 | `settings.date_time.automatic.enable` | 날짜와 시간 자동 설정 켜기 | (날짜시간 / 자동시간 / 시간자동) + (켜 / 활성화 / 자동으로) | catalog_only | normal |
+| 46 | `settings.date_time.automatic.disable` | 날짜와 시간 자동 설정 끄기 | (날짜시간 / 자동시간 / 시간자동) + (꺼 / 비활성화 / 수동으로) | catalog_only | normal |
+| 47 | `settings.keyboard.change` | 기본 키보드 변경 | (키보드 / 입력기 / 자판) + (바꿔 / 변경 / 선택) | catalog_only | normal |
+| 48 | `settings.default_apps.change` | 기본 앱 변경 | (기본앱 / 기본어플 / 디폴트앱) + (바꿔 / 변경 / 선택) | catalog_only | normal |
+| 49 | `settings.wifi.share` | 와이파이 공유 | (와이파이 / wifi / 무선인터넷) + (qr로공유 / 큐알로공유 / 공유해 / 공유 / 큐알 / qr / 비밀번호 보여) | catalog_only | normal |
+| 50 | `settings.wifi.saved_networks.view` | 저장된 와이파이 보기 | (저장된와이파이 / 저장된네트워크 / 와이파이목록) + (보여 / 열어 / 확인) | catalog_only | normal |
+| 51 | `settings.nfc.enable` | NFC 켜기 | (nfc / 엔에프씨) + (켜 / 활성화 / 사용) | catalog_only | normal |
+| 52 | `settings.nfc.disable` | NFC 끄기 | (nfc / 엔에프씨) + (꺼 / 비활성화 / 해제) | catalog_only | normal |
+| 53 | `settings.do_not_disturb.enable` | 방해 금지 모드 켜기 | (방해금지 / 집중모드 / dnd) + (켜 / 활성화 / 설정) | catalog_only | normal |
+| 54 | `settings.do_not_disturb.disable` | 방해 금지 모드 끄기 | (방해금지 / 집중모드 / dnd) + (꺼 / 비활성화 / 해제) | catalog_only | normal |
+| 55 | `settings.auto_rotate.enable` | 화면 자동 회전 켜기 | (자동회전 / 화면회전) + (켜 / 활성화 / 허용 / 잠금해제) | catalog_only | normal |
+| 56 | `settings.auto_rotate.disable` | 화면 자동 회전 끄기 | (자동회전 / 화면회전) + (꺼 / 비활성화 / 잠가) | catalog_only | normal |
+| 57 | `settings.eye_comfort.enable` | 편안하게 화면 보기 켜기 | (블루라이트 / 편안하게화면보기 / 눈보호모드) + (켜 / 활성화 / 설정) | catalog_only | normal |
+| 58 | `settings.eye_comfort.disable` | 편안하게 화면 보기 끄기 | (블루라이트 / 편안하게화면보기 / 눈보호모드) + (꺼 / 비활성화 / 해제) | catalog_only | normal |
+| 59 | `settings.adaptive_brightness.enable` | 자동 밝기 켜기 | (자동밝기 / 밝기자동조절 / 적응형밝기) + (켜 / 활성화 / 설정) | catalog_only | normal |
+| 60 | `settings.adaptive_brightness.disable` | 자동 밝기 끄기 | (자동밝기 / 밝기자동조절 / 적응형밝기) + (꺼 / 비활성화 / 해제) | catalog_only | normal |
+| 61 | `settings.data_saver.enable` | 데이터 절약 모드 켜기 | (데이터절약 / 데이터세이버 / 데이터아끼기) + (켜 / 활성화 / 설정) | catalog_only | normal |
+| 62 | `settings.data_saver.disable` | 데이터 절약 모드 끄기 | (데이터절약 / 데이터세이버 / 데이터아끼기) + (꺼 / 비활성화 / 해제) | catalog_only | normal |
+| 63 | `settings.data_roaming.enable` | 데이터 로밍 켜기 | (데이터로밍 / 해외로밍 / 로밍데이터) + (켜 / 활성화 / 허용) | catalog_only | high |
+| 64 | `settings.data_roaming.disable` | 데이터 로밍 끄기 | (데이터로밍 / 해외로밍 / 로밍데이터) + (꺼 / 비활성화 / 차단) | catalog_only | normal |
+| 65 | `settings.vpn.connect` | VPN 연결 | (vpn / 브이피엔) + (연결 / 켜 / 접속) | catalog_only | normal |
+| 66 | `settings.vpn.disconnect` | VPN 연결 해제 | (vpn / 브이피엔) + (연결해제 / 접속해제 / 해제 / 꺼 / 끊어) | catalog_only | normal |
+| 67 | `settings.private_dns.change` | 프라이빗 DNS 변경 | (프라이빗dns / 개인dns / 비공개dns) + (바꿔 / 변경 / 설정) | catalog_only | normal |
+| 68 | `settings.sim.manage` | SIM 관리 | (sim / 심카드 / 유심 / esim) + (관리 / 변경 / 설정 / 전환) | catalog_only | high |
+| 69 | `settings.hotspot.password.change` | 핫스팟 비밀번호 변경 | (핫스팟비밀번호 / 테더링비밀번호) + (바꿔 / 변경 / 설정) | catalog_only | normal |
+| 70 | `settings.wallpaper.change` | 배경 화면 변경 | (배경화면 / 월페이퍼 / 잠금화면사진) + (바꿔 / 변경 / 설정) | catalog_only | normal |
+| 71 | `settings.notification_sound.change` | 알림 소리 변경 | (알림소리 / 알림음 / 문자소리) + (바꿔 / 변경 / 선택) | catalog_only | normal |
+| 72 | `settings.battery_percentage.enable` | 배터리 잔량 표시 켜기 | (배터리퍼센트 / 배터리잔량표시 / 배터리숫자) + (켜 / 보이게 / 나오게) | catalog_only | normal |
+| 73 | `settings.battery_percentage.disable` | 배터리 잔량 표시 끄기 | (배터리퍼센트 / 배터리잔량표시 / 배터리숫자) + (꺼 / 숨겨 / 안보이게) | catalog_only | normal |
+| 74 | `settings.battery_status.view` | 배터리 사용량 보기 | (배터리사용량 / 배터리상태 / 배터리소모) + (보여 / 확인 / 열어) | catalog_only | normal |
+| 75 | `settings.app_cache.clear` | 앱 캐시 삭제 | (앱캐시 / 어플캐시 / 캐시데이터) + (삭제 / 지워 / 비워) | catalog_only | normal |
+| 76 | `settings.app_data.clear` | 앱 데이터 삭제 | (앱데이터 / 어플데이터 / 애플리케이션데이터) + (삭제 / 지워 / 초기화) | catalog_only | high |
+| 77 | `settings.notification_history.view` | 알림 기록 보기 | (알림기록 / 알림내역 / 지난알림) + (보여 / 확인 / 열어) | catalog_only | normal |
+| 78 | `settings.lockscreen_notifications.manage` | 잠금 화면 알림 관리 | (잠금화면알림 / 락스크린알림) + (관리 / 숨겨 / 표시 / 바꿔) | catalog_only | normal |
+| 79 | `settings.color_inversion.enable` | 색상 반전 켜기 | (색상반전 / 색반전 / 화면색반전) + (켜 / 활성화 / 설정) | catalog_only | normal |
+| 80 | `settings.color_inversion.disable` | 색상 반전 끄기 | (색상반전 / 색반전 / 화면색반전) + (꺼 / 비활성화 / 해제) | catalog_only | normal |
+| 81 | `settings.captions.enable` | 실시간 자막 켜기 | (실시간자막 / 라이브캡션 / 자막기능) + (켜 / 활성화 / 설정) | catalog_only | normal |
+| 82 | `settings.captions.disable` | 실시간 자막 끄기 | (실시간자막 / 라이브캡션 / 자막기능) + (꺼 / 비활성화 / 해제) | catalog_only | normal |
+| 83 | `settings.mono_audio.enable` | 모노 오디오 켜기 | (모노오디오 / 단일오디오 / 한쪽이어폰소리) + (켜 / 활성화 / 설정) | catalog_only | normal |
+| 84 | `settings.mono_audio.disable` | 모노 오디오 끄기 | (모노오디오 / 단일오디오 / 한쪽이어폰소리) + (꺼 / 비활성화 / 해제) | catalog_only | normal |
+| 85 | `settings.backup.enable` | 기기 백업 켜기 | (기기백업 / 자동백업 / 구글백업) + (켜 / 활성화 / 설정) | catalog_only | normal |
+| 86 | `settings.backup.disable` | 기기 백업 끄기 | (기기백업 / 자동백업 / 구글백업) + (꺼 / 비활성화 / 중지) | catalog_only | high |
+| 87 | `settings.software_update.check` | 소프트웨어 업데이트 확인 | (소프트웨어업데이트 / 시스템업데이트 / 업데이트) + (확인 / 검사 / 찾아) | catalog_only | normal |
+| 88 | `settings.factory_reset` | 기기 초기화 | (공장초기화 / 기기초기화 / 휴대폰초기화) + (진행 / 해줘 / 시작) | catalog_only | high |
+| 89 | `settings.device_name.change` | 기기 이름 변경 | (기기이름 / 휴대폰이름 / 디바이스이름) + (바꿔 / 변경 / 설정) | catalog_only | normal |
+
+## 쿠팡
+
+| # | Goal Type | 표시 이름 | 키워드 그룹 | 실행 상태 | 위험도 |
+| ---: | --- | --- | --- | --- | --- |
+| 90 | `coupang.product.search` | 쿠팡 상품 검색 | (쿠팡 / 상품 / 제품 / 물건) + (검색 / 찾아 / 찾아줘) | catalog_only | normal |
+| 91 | `coupang.product.details` | 쿠팡 상품 상세 보기 | (상품 / 제품) + (상세 / 자세히 / 정보 / 설명) | catalog_only | normal |
+| 92 | `coupang.cart.add` | 쿠팡 장바구니 담기 | (장바구니 / 카트) + (담아 / 추가 / 넣어) | catalog_only | normal |
+| 93 | `coupang.cart.view` | 쿠팡 장바구니 보기 | (장바구니 / 카트) + (보여 / 열어 / 확인 / 목록) | catalog_only | normal |
+| 94 | `coupang.cart.remove` | 쿠팡 장바구니 상품 삭제 | (장바구니 / 카트) + (빼 / 삭제 / 지워 / 제거) | catalog_only | normal |
+| 95 | `coupang.order.checkout` | 쿠팡 주문·결제 진행 | (주문진행 / 결제진행 / 구매진행 / 주문해줘 / 결제해줘 / 구매해줘 / 주문할래 / 결제할래 / 구매할래) | catalog_only | high |
+| 96 | `coupang.order.list` | 쿠팡 주문 목록 보기 | (주문목록 / 주문내역 / 구매내역) + (보여 / 열어 / 확인) | catalog_only | normal |
+| 97 | `coupang.order.track` | 쿠팡 배송 조회 | (배송 / 택배) + (조회 / 어디 / 언제와 / 추적 / 상태) | catalog_only | normal |
+| 98 | `coupang.order.cancel` | 쿠팡 주문 취소 | (주문 / 구매 / 결제) + (취소 / 철회) | catalog_only | high |
+| 99 | `coupang.order.return` | 쿠팡 반품 신청 | (반품 / 돌려보내) + (신청 / 접수 / 하고싶어) | catalog_only | high |
+| 100 | `coupang.order.exchange` | 쿠팡 교환 신청 | (교환 / 바꿔받) + (신청 / 접수 / 하고싶어) | catalog_only | high |
+| 101 | `coupang.review.write` | 쿠팡 상품평 작성 | (상품평 / 리뷰 / 후기) + (작성 / 써 / 남겨) | catalog_only | normal |
+| 102 | `coupang.review.view` | 쿠팡 상품평 보기 | (상품평 / 리뷰 / 후기) + (보여 / 읽어 / 확인) | catalog_only | normal |
+| 103 | `coupang.wishlist.add` | 쿠팡 찜 추가 | (찜 / 위시리스트) + (추가 / 담아 / 저장) | catalog_only | normal |
+| 104 | `coupang.wishlist.remove` | 쿠팡 찜 삭제 | (찜 / 위시리스트) + (삭제 / 빼 / 해제) | catalog_only | normal |
+| 105 | `coupang.wishlist.view` | 쿠팡 찜 목록 보기 | (찜목록 / 찜한상품 / 위시리스트) + (보여 / 열어 / 확인) | catalog_only | normal |
+| 106 | `coupang.address.add` | 쿠팡 배송지 추가 | (배송지 / 주소) + (추가 / 등록 / 새로) | catalog_only | normal |
+| 107 | `coupang.address.change` | 쿠팡 배송지 변경 | (배송지 / 주소) + (변경 / 바꿔 / 수정) | catalog_only | normal |
+| 108 | `coupang.payment_method.add` | 쿠팡 결제수단 추가 | (결제수단 / 카드 / 계좌) + (추가 / 등록) | catalog_only | high |
+| 109 | `coupang.payment_method.change` | 쿠팡 결제수단 변경 | (결제수단 / 결제카드 / 결제계좌) + (변경 / 바꿔 / 수정) | catalog_only | high |
+| 110 | `coupang.coupon.view` | 쿠팡 쿠폰함 보기 | (쿠폰 / 할인쿠폰) + (보여 / 쿠폰함 / 확인) | catalog_only | normal |
+| 111 | `coupang.coupon.apply` | 쿠팡 쿠폰 적용 | (쿠폰 / 할인쿠폰) + (적용 / 사용 / 써줘) | catalog_only | normal |
+| 112 | `coupang.rocket_delivery.filter` | 로켓배송 상품만 보기 | (로켓배송 / 로켓와우) + (필터 / 상품만 / 모아 / 보여) | catalog_only | normal |
+| 113 | `coupang.category.browse` | 쿠팡 카테고리 둘러보기 | (카테고리 / 상품분류) + (열어 / 보여 / 둘러) | catalog_only | normal |
+| 114 | `coupang.seller.info` | 쿠팡 판매자 정보 보기 | (판매자 / 셀러) + (정보 / 상세 / 누구) | catalog_only | normal |
+| 115 | `coupang.customer_service.open` | 쿠팡 고객센터 열기 | (고객센터 / 상담원 / 문의) + (열어 / 연결 / 채팅 / 전화) | catalog_only | normal |
+| 116 | `coupang.rocket_wow.manage` | 로켓와우 멤버십 관리 | (로켓와우 / 와우멤버십 / 쿠팡멤버십) + (관리 / 가입 / 해지 / 확인) | catalog_only | high |
+| 117 | `coupang.order.reorder` | 쿠팡 재구매 | (재구매 / 다시구매 / 전에산거) + (주문 / 사줘 / 구매) | catalog_only | high |
+| 118 | `coupang.receipt.view` | 쿠팡 영수증 보기 | (영수증 / 거래명세서 / 결제내역) + (보여 / 발급 / 확인) | catalog_only | normal |
+| 119 | `coupang.search.filter` | 쿠팡 검색 필터 설정 | (검색필터 / 필터 / 조건) + (설정 / 적용 / 걸어) | catalog_only | normal |
+| 120 | `coupang.search.sort` | 쿠팡 검색 결과 정렬 | (정렬 / 낮은가격순 / 높은가격순 / 판매량순 / 최신순) + (바꿔 / 적용 / 보여) | catalog_only | normal |
+| 121 | `coupang.delivery_date.check` | 쿠팡 도착 예정일 확인 | (도착예정 / 도착날짜 / 배송예정) + (언제 / 확인 / 알려) | catalog_only | normal |
+| 122 | `coupang.order.gift` | 쿠팡 선물하기 | (선물 / 선물하기) + (보내 / 주문 / 구매) | catalog_only | high |
+| 123 | `coupang.cash_receipt.manage` | 쿠팡 현금영수증 관리 | (현금영수증) + (등록 / 발급 / 변경 / 관리) | catalog_only | normal |
+| 124 | `coupang.product.price.check` | 쿠팡 상품 가격 확인 | (상품가격 / 제품가격 / 판매가격 / 가격) + (얼마 / 확인 / 알려) | catalog_only | normal |
+| 125 | `coupang.product.stock.check` | 쿠팡 상품 재고 확인 | (재고 / 품절 / 남은수량) + (확인 / 있어 / 남았 / 알려) | catalog_only | normal |
+| 126 | `coupang.product.compare` | 쿠팡 상품 비교 | (상품비교 / 제품비교 / 두상품) + (비교 / 차이 / 대조) | catalog_only | normal |
+| 127 | `coupang.product.share` | 쿠팡 상품 공유 | (상품링크 / 제품링크 / 이상품) + (공유 / 보내 / 링크복사) | catalog_only | normal |
+| 128 | `coupang.product.option.select` | 쿠팡 상품 옵션 선택 | (상품옵션 / 제품옵션 / 옵션선택) + (선택 / 바꿔 / 골라) | catalog_only | normal |
+| 129 | `coupang.product.restock_notification` | 쿠팡 재입고 알림 신청 | (재입고알림 / 입고알림 / 재고알림) + (신청 / 켜 / 등록) | catalog_only | normal |
+| 130 | `coupang.product.inquiry.write` | 쿠팡 상품 문의 작성 | (상품문의 / 제품문의 / 판매자문의) + (작성 / 질문 / 남겨) | catalog_only | normal |
+| 131 | `coupang.product.inquiry.view` | 쿠팡 상품 문의 보기 | (상품문의 / 제품문의 / 판매자문의) + (보여 / 확인 / 읽어) | catalog_only | normal |
+| 132 | `coupang.cart.quantity.increase` | 쿠팡 장바구니 수량 늘리기 | (장바구니수량 / 카트수량) + (늘려 / 추가 / 많이) | catalog_only | normal |
+| 133 | `coupang.cart.quantity.decrease` | 쿠팡 장바구니 수량 줄이기 | (장바구니수량 / 카트수량) + (줄여 / 빼 / 적게) | catalog_only | normal |
+| 134 | `coupang.cart.select` | 쿠팡 장바구니 상품 선택 | (장바구니상품 / 카트상품) + (선택 / 체크 / 골라) | catalog_only | normal |
+| 135 | `coupang.cart.unselect` | 쿠팡 장바구니 상품 선택 해제 | (장바구니상품 / 카트상품) + (선택해제 / 체크해제 / 빼줘) | catalog_only | normal |
+| 136 | `coupang.order.details` | 쿠팡 주문 상세 보기 | (주문상세 / 주문정보 / 구매상세) + (보여 / 확인 / 열어) | catalog_only | normal |
+| 137 | `coupang.order.address.change` | 쿠팡 주문 배송지 변경 | (주문배송지 / 주문주소 / 받는주소) + (변경 / 바꿔 / 수정) | catalog_only | high |
+| 138 | `coupang.delivery.instructions.change` | 쿠팡 배송 요청사항 변경 | (배송요청사항 / 배송메모 / 문앞메모) + (변경 / 바꿔 / 수정) | catalog_only | normal |
+| 139 | `coupang.order.cancel_status` | 쿠팡 취소 처리 상태 확인 | (취소상태 / 취소처리 / 주문취소결과) + (확인 / 어떻게 / 언제) | catalog_only | normal |
+| 140 | `coupang.order.refund_status` | 쿠팡 환불 상태 확인 | (환불상태 / 환불처리 / 환불금) + (확인 / 언제 / 들어와) | catalog_only | normal |
+| 141 | `coupang.order.return_status` | 쿠팡 반품 상태 확인 | (반품상태 / 반품처리 / 반품진행) + (확인 / 어떻게 / 언제) | catalog_only | normal |
+| 142 | `coupang.order.exchange_status` | 쿠팡 교환 상태 확인 | (교환상태 / 교환처리 / 교환진행) + (확인 / 어떻게 / 언제) | catalog_only | normal |
+| 143 | `coupang.order.return_pickup.track` | 쿠팡 반품 수거 조회 | (반품수거 / 회수기사 / 반품기사) + (조회 / 언제와 / 추적 / 확인) | catalog_only | normal |
+| 144 | `coupang.review.edit` | 쿠팡 상품평 수정 | (상품평 / 리뷰 / 후기) + (수정 / 고쳐 / 바꿔) | catalog_only | normal |
+| 145 | `coupang.review.delete` | 쿠팡 상품평 삭제 | (상품평 / 리뷰 / 후기) + (삭제 / 지워 / 제거) | catalog_only | high |
+| 146 | `coupang.review.helpful` | 쿠팡 상품평 도움돼요 표시 | (상품평 / 리뷰 / 후기) + (도움돼요 / 추천 / 유용해) | catalog_only | normal |
+| 147 | `coupang.address.remove` | 쿠팡 배송지 삭제 | (배송지 / 등록주소) + (삭제 / 지워 / 제거) | catalog_only | high |
+| 148 | `coupang.payment_method.remove` | 쿠팡 결제수단 삭제 | (결제수단 / 결제카드 / 결제계좌) + (삭제 / 지워 / 제거) | catalog_only | high |
+| 149 | `coupang.coupon.download` | 쿠팡 쿠폰 받기 | (쿠폰 / 할인쿠폰) + (받아 / 다운로드 / 발급) | catalog_only | normal |
+| 150 | `coupang.search.recent.view` | 쿠팡 최근 검색어 보기 | (최근검색 / 검색기록 / 검색내역) + (보여 / 확인 / 열어) | catalog_only | normal |
+| 151 | `coupang.search.recent.clear` | 쿠팡 최근 검색어 삭제 | (최근검색 / 검색기록 / 검색내역) + (삭제 / 지워 / 비워) | catalog_only | high |
+| 152 | `coupang.account.login` | 쿠팡 로그인 | (쿠팡로그인 / 계정로그인) + (해줘 / 접속 / 들어가) | catalog_only | normal |
+| 153 | `coupang.account.logout` | 쿠팡 로그아웃 | (쿠팡로그아웃 / 계정로그아웃) + (해줘 / 나가 / 종료) | catalog_only | high |
+| 154 | `coupang.profile.change` | 쿠팡 회원 정보 변경 | (회원정보 / 프로필정보 / 내정보) + (변경 / 바꿔 / 수정) | catalog_only | normal |
+| 155 | `coupang.rocket_wow.benefits` | 쿠팡 와우 혜택 보기 | (와우혜택 / 로켓와우혜택 / 멤버십혜택) + (보여 / 확인 / 뭐야) | catalog_only | normal |
+| 156 | `coupang.recurring_delivery.manage` | 쿠팡 정기배송 관리 | (정기배송 / 정기구매 / 정기배달) + (관리 / 변경 / 해지 / 신청) | catalog_only | high |
+| 157 | `coupang.rocket_fresh.filter` | 로켓프레시 상품만 보기 | (로켓프레시 / 신선식품) + (상품만 / 모아 / 보여 / 필터) | catalog_only | normal |
+| 158 | `coupang.coupay.balance.view` | 쿠페이 머니 잔액 보기 | (쿠페이 / 쿠페이머니) + (잔액 / 얼마 / 확인) | catalog_only | normal |
+| 159 | `coupang.coupay.money.add` | 쿠페이 머니 충전 | (쿠페이 / 쿠페이머니) + (충전 / 넣어 / 추가) | catalog_only | high |
+| 160 | `coupang.points.view` | 쿠팡 캐시·포인트 보기 | (쿠팡캐시 / 쿠팡포인트 / 적립금) + (잔액 / 얼마 / 확인 / 보여) | catalog_only | normal |
