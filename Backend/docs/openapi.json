@@ -7697,7 +7697,9 @@
               "settings.wifi.connect",
               "settings.bluetooth.enable",
               "settings.bluetooth.disable",
-              "settings.bluetooth.connect"
+              "settings.bluetooth.connect",
+              "settings.mobile_data.enable",
+              "settings.mobile_data.disable"
             ],
             "title": "Goal Type"
           },
