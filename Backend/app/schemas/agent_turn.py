@@ -173,7 +173,9 @@ class TypedGoalRequest(BaseModel):
                        "settings.screen_timeout.set",
                        "settings.display_size.increase", "settings.display_size.decrease",
                        "settings.volume.increase", "settings.volume.decrease",
-                       "settings.mute.enable", "settings.mute.disable"]
+                       "settings.mute.enable", "settings.mute.disable",
+                       "settings.ringtone.change",
+                       "settings.vibrate.enable", "settings.vibrate.disable"]
     target_app: Literal["android_settings"]
     slots: dict[str, str]
 
@@ -206,6 +208,9 @@ class TypedGoalRequest(BaseModel):
             "settings.volume.decrease": {"setting": "volume", "direction": "decrease"},
             "settings.mute.enable": {"setting": "mute", "state": "on"},
             "settings.mute.disable": {"setting": "mute", "state": "off"},
+            "settings.ringtone.change": {"setting": "ringtone", "action": "change"},
+            "settings.vibrate.enable": {"setting": "vibrate", "state": "on"},
+            "settings.vibrate.disable": {"setting": "vibrate", "state": "off"},
         }
         if self.slots != expected_slots[self.goal_type]:
             raise ValueError("goal_type and slots must match")
@@ -225,6 +230,8 @@ class TypedGoalRequest(BaseModel):
             raise ValueError("Screen timeout and display size goals require catalog version 2.0.0 or newer")
         if self.goal_type.startswith(("settings.volume.", "settings.mute.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
             raise ValueError("Volume and mute goals require catalog version 2.0.0 or newer")
+        if self.goal_type.startswith(("settings.ringtone.", "settings.vibrate.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+            raise ValueError("Ringtone and vibrate goals require catalog version 2.0.0 or newer")
         return self
 
 
