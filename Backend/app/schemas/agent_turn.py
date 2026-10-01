@@ -167,7 +167,9 @@ class TypedGoalRequest(BaseModel):
                        "settings.bluetooth.enable", "settings.bluetooth.disable", "settings.bluetooth.connect",
                        "settings.mobile_data.enable", "settings.mobile_data.disable",
                        "settings.airplane_mode.enable", "settings.airplane_mode.disable",
-                       "settings.hotspot.enable", "settings.hotspot.disable"]
+                       "settings.hotspot.enable", "settings.hotspot.disable",
+                       "settings.brightness.increase", "settings.brightness.decrease",
+                       "settings.dark_mode.enable", "settings.dark_mode.disable"]
     target_app: Literal["android_settings"]
     slots: dict[str, str]
 
@@ -189,6 +191,10 @@ class TypedGoalRequest(BaseModel):
             "settings.airplane_mode.disable": {"setting": "airplane_mode", "state": "off"},
             "settings.hotspot.enable": {"setting": "hotspot", "state": "on"},
             "settings.hotspot.disable": {"setting": "hotspot", "state": "off"},
+            "settings.brightness.increase": {"setting": "brightness", "direction": "increase"},
+            "settings.brightness.decrease": {"setting": "brightness", "direction": "decrease"},
+            "settings.dark_mode.enable": {"setting": "dark_mode", "state": "on"},
+            "settings.dark_mode.disable": {"setting": "dark_mode", "state": "off"},
         }
         if self.slots != expected_slots[self.goal_type]:
             raise ValueError("goal_type and slots must match")
@@ -202,6 +208,8 @@ class TypedGoalRequest(BaseModel):
             raise ValueError("Mobile data goals require catalog version 2.0.0 or newer")
         if self.goal_type.startswith(("settings.airplane_mode.", "settings.hotspot.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
             raise ValueError("Airplane mode and hotspot goals require catalog version 2.0.0 or newer")
+        if self.goal_type.startswith(("settings.brightness.", "settings.dark_mode.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+            raise ValueError("Brightness and dark mode goals require catalog version 2.0.0 or newer")
         return self
 
 

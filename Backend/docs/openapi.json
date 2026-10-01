@@ -7703,7 +7703,11 @@
               "settings.airplane_mode.enable",
               "settings.airplane_mode.disable",
               "settings.hotspot.enable",
-              "settings.hotspot.disable"
+              "settings.hotspot.disable",
+              "settings.brightness.increase",
+              "settings.brightness.decrease",
+              "settings.dark_mode.enable",
+              "settings.dark_mode.disable"
             ],
             "title": "Goal Type"
           },
