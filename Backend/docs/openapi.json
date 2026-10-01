@@ -7710,7 +7710,11 @@
               "settings.dark_mode.disable",
               "settings.screen_timeout.set",
               "settings.display_size.increase",
-              "settings.display_size.decrease"
+              "settings.display_size.decrease",
+              "settings.volume.increase",
+              "settings.volume.decrease",
+              "settings.mute.enable",
+              "settings.mute.disable"
             ],
             "title": "Goal Type"
           },
