@@ -163,12 +163,13 @@ class TypedGoalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     catalog_version: Literal["1.0.0", "1.1.0", "2.0.0", "2.1.0"]
     goal_type: Literal["settings.font_size.increase", "settings.font_size.decrease",
-                       "settings.wifi.enable", "settings.wifi.disable", "settings.wifi.connect"]
+                       "settings.wifi.enable", "settings.wifi.disable", "settings.wifi.connect",
+                       "settings.bluetooth.enable", "settings.bluetooth.disable", "settings.bluetooth.connect"]
     target_app: Literal["android_settings"]
     slots: dict[str, str]
 
     @model_validator(mode="after")
-    def direction_matches_goal(self) -> "TypedGoalRequest":
+    def slots_match_goal(self) -> "TypedGoalRequest":
         # Request validation must work before an execution graph is available.
         expected_slots = {
             "settings.font_size.increase": {"setting": "font_size", "direction": "increase"},
@@ -176,6 +177,9 @@ class TypedGoalRequest(BaseModel):
             "settings.wifi.enable": {"setting": "wifi", "state": "on"},
             "settings.wifi.disable": {"setting": "wifi", "state": "off"},
             "settings.wifi.connect": {"setting": "wifi", "action": "connect"},
+            "settings.bluetooth.enable": {"setting": "bluetooth", "state": "on"},
+            "settings.bluetooth.disable": {"setting": "bluetooth", "state": "off"},
+            "settings.bluetooth.connect": {"setting": "bluetooth", "action": "connect"},
         }
         if self.slots != expected_slots[self.goal_type]:
             raise ValueError("goal_type and slots must match")
@@ -183,6 +187,8 @@ class TypedGoalRequest(BaseModel):
             raise ValueError("font-size decrease requires catalog version 1.1.0 or newer")
         if self.goal_type.startswith("settings.wifi.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
             raise ValueError("Wi-Fi goals require catalog version 2.0.0 or newer")
+        if self.goal_type.startswith("settings.bluetooth.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
+            raise ValueError("Bluetooth goals require catalog version 2.0.0 or newer")
         return self
 
 
