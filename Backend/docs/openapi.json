@@ -7699,7 +7699,11 @@
               "settings.bluetooth.disable",
               "settings.bluetooth.connect",
               "settings.mobile_data.enable",
-              "settings.mobile_data.disable"
+              "settings.mobile_data.disable",
+              "settings.airplane_mode.enable",
+              "settings.airplane_mode.disable",
+              "settings.hotspot.enable",
+              "settings.hotspot.disable"
             ],
             "title": "Goal Type"
           },
