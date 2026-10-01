@@ -68,11 +68,11 @@ class RuntimeAgentAdapter:
             typed_goal=TypedGoal(
                 goal_type=typed.goal_type,
                 target_app=typed.target_app,
-                task_type="settings_change",
+                task_type=self.runtime.task_graphs[typed.goal_type].definition.task_type,
                 slots=dict(typed.slots),
                 source_text="",
                 confidence=1.0,
-                task_id="MVP-02" if typed.goal_type.endswith(".decrease") else "MVP-01",
+                task_id=self.runtime.task_graphs[typed.goal_type].definition.task_id,
                 typing_method="fe_typed_contract",
                 is_supported=True,
                 required_slots_filled=True,
