@@ -7691,7 +7691,10 @@
             "type": "string",
             "enum": [
               "settings.font_size.increase",
-              "settings.font_size.decrease"
+              "settings.font_size.decrease",
+              "settings.wifi.enable",
+              "settings.wifi.disable",
+              "settings.wifi.connect"
             ],
             "title": "Goal Type"
           },
