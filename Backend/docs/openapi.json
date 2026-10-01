@@ -7717,7 +7717,11 @@
               "settings.mute.disable",
               "settings.ringtone.change",
               "settings.vibrate.enable",
-              "settings.vibrate.disable"
+              "settings.vibrate.disable",
+              "settings.notifications.enable",
+              "settings.notifications.disable",
+              "settings.location.enable",
+              "settings.location.disable"
             ],
             "title": "Goal Type"
           },
