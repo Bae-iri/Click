@@ -26,8 +26,8 @@ class TaskGraphRepository:
 
     def seed_mvp(self):
         with self.factory() as db:
-            for task_id in ("MVP-01", "MVP-02"):
-                graph = TASK_GRAPHS[task_id]
+            graphs = {graph.definition.task_id: graph for graph in TASK_GRAPHS.values()}
+            for task_id, graph in graphs.items():
                 body, digest = canonical_graph(graph)
                 row = db.get(ApprovedTaskGraph, f"{task_id}:1.0.0")
                 if row is None:

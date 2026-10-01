@@ -162,24 +162,27 @@ class AgentTurnResponse(BaseModel):
 class TypedGoalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     catalog_version: Literal["1.0.0", "1.1.0", "2.0.0", "2.1.0"]
-    goal_type: Literal["settings.font_size.increase", "settings.font_size.decrease"]
+    goal_type: Literal["settings.font_size.increase", "settings.font_size.decrease",
+                       "settings.wifi.enable", "settings.wifi.disable", "settings.wifi.connect"]
     target_app: Literal["android_settings"]
     slots: dict[str, str]
 
-    @field_validator("slots")
-    @classmethod
-    def validate_slots(cls, value: dict[str, str]) -> dict[str, str]:
-        if value.get("setting") != "font_size" or value.get("direction") not in {"increase", "decrease"} or len(value) != 2:
-            raise ValueError("slots must contain a supported font_size direction")
-        return value
-
     @model_validator(mode="after")
     def direction_matches_goal(self) -> "TypedGoalRequest":
-        expected = "decrease" if self.goal_type.endswith(".decrease") else "increase"
-        if self.slots.get("direction") != expected:
-            raise ValueError("goal_type and slots.direction must match")
-        if expected == "decrease" and self.catalog_version == "1.0.0":
+        # Request validation must work before an execution graph is available.
+        expected_slots = {
+            "settings.font_size.increase": {"setting": "font_size", "direction": "increase"},
+            "settings.font_size.decrease": {"setting": "font_size", "direction": "decrease"},
+            "settings.wifi.enable": {"setting": "wifi", "state": "on"},
+            "settings.wifi.disable": {"setting": "wifi", "state": "off"},
+            "settings.wifi.connect": {"setting": "wifi", "action": "connect"},
+        }
+        if self.slots != expected_slots[self.goal_type]:
+            raise ValueError("goal_type and slots must match")
+        if self.goal_type == "settings.font_size.decrease" and self.catalog_version == "1.0.0":
             raise ValueError("font-size decrease requires catalog version 1.1.0 or newer")
+        if self.goal_type.startswith("settings.wifi.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
+            raise ValueError("Wi-Fi goals require catalog version 2.0.0 or newer")
         return self
 
 
