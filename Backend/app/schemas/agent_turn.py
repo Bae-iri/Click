@@ -165,7 +165,9 @@ class TypedGoalRequest(BaseModel):
     goal_type: Literal["settings.font_size.increase", "settings.font_size.decrease",
                        "settings.wifi.enable", "settings.wifi.disable", "settings.wifi.connect",
                        "settings.bluetooth.enable", "settings.bluetooth.disable", "settings.bluetooth.connect",
-                       "settings.mobile_data.enable", "settings.mobile_data.disable"]
+                       "settings.mobile_data.enable", "settings.mobile_data.disable",
+                       "settings.airplane_mode.enable", "settings.airplane_mode.disable",
+                       "settings.hotspot.enable", "settings.hotspot.disable"]
     target_app: Literal["android_settings"]
     slots: dict[str, str]
 
@@ -183,6 +185,10 @@ class TypedGoalRequest(BaseModel):
             "settings.bluetooth.connect": {"setting": "bluetooth", "action": "connect"},
             "settings.mobile_data.enable": {"setting": "mobile_data", "state": "on"},
             "settings.mobile_data.disable": {"setting": "mobile_data", "state": "off"},
+            "settings.airplane_mode.enable": {"setting": "airplane_mode", "state": "on"},
+            "settings.airplane_mode.disable": {"setting": "airplane_mode", "state": "off"},
+            "settings.hotspot.enable": {"setting": "hotspot", "state": "on"},
+            "settings.hotspot.disable": {"setting": "hotspot", "state": "off"},
         }
         if self.slots != expected_slots[self.goal_type]:
             raise ValueError("goal_type and slots must match")
@@ -194,6 +200,8 @@ class TypedGoalRequest(BaseModel):
             raise ValueError("Bluetooth goals require catalog version 2.0.0 or newer")
         if self.goal_type.startswith("settings.mobile_data.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
             raise ValueError("Mobile data goals require catalog version 2.0.0 or newer")
+        if self.goal_type.startswith(("settings.airplane_mode.", "settings.hotspot.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+            raise ValueError("Airplane mode and hotspot goals require catalog version 2.0.0 or newer")
         return self
 
 
