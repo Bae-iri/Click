@@ -7714,7 +7714,10 @@
               "settings.volume.increase",
               "settings.volume.decrease",
               "settings.mute.enable",
-              "settings.mute.disable"
+              "settings.mute.disable",
+              "settings.ringtone.change",
+              "settings.vibrate.enable",
+              "settings.vibrate.disable"
             ],
             "title": "Goal Type"
           },
