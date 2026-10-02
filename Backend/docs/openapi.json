@@ -7721,7 +7721,13 @@
               "settings.notifications.enable",
               "settings.notifications.disable",
               "settings.location.enable",
-              "settings.location.disable"
+              "settings.location.disable",
+              "settings.power_saving.enable",
+              "settings.power_saving.disable",
+              "settings.screen_lock.change",
+              "settings.biometric.setup",
+              "settings.apps.uninstall",
+              "settings.app_permissions.manage"
             ],
             "title": "Goal Type"
           },
