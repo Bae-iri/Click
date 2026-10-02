@@ -177,7 +177,11 @@ class TypedGoalRequest(BaseModel):
                        "settings.ringtone.change",
                        "settings.vibrate.enable", "settings.vibrate.disable",
                        "settings.notifications.enable", "settings.notifications.disable",
-                       "settings.location.enable", "settings.location.disable"]
+                       "settings.location.enable", "settings.location.disable",
+                       "settings.power_saving.enable", "settings.power_saving.disable",
+                       "settings.screen_lock.change",
+                       "settings.biometric.setup", "settings.apps.uninstall",
+                       "settings.app_permissions.manage"]
     target_app: Literal["android_settings"]
     slots: dict[str, str]
 
@@ -217,6 +221,12 @@ class TypedGoalRequest(BaseModel):
             "settings.notifications.disable": {"setting": "notifications", "state": "off"},
             "settings.location.enable": {"setting": "location", "state": "on"},
             "settings.location.disable": {"setting": "location", "state": "off"},
+            "settings.power_saving.enable": {"setting": "power_saving", "state": "on"},
+            "settings.power_saving.disable": {"setting": "power_saving", "state": "off"},
+            "settings.screen_lock.change": {"setting": "screen_lock", "action": "change"},
+            "settings.biometric.setup": {"setting": "biometric", "action": "setup"},
+            "settings.apps.uninstall": {"setting": "apps", "action": "uninstall"},
+            "settings.app_permissions.manage": {"setting": "app_permissions", "action": "manage"},
         }
         if self.slots != expected_slots[self.goal_type]:
             raise ValueError("goal_type and slots must match")
@@ -240,6 +250,10 @@ class TypedGoalRequest(BaseModel):
             raise ValueError("Ringtone and vibrate goals require catalog version 2.0.0 or newer")
         if self.goal_type.startswith(("settings.notifications.", "settings.location.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
             raise ValueError("Notifications and location goals require catalog version 2.0.0 or newer")
+        if self.goal_type.startswith(("settings.power_saving.", "settings.screen_lock.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+            raise ValueError("Power saving and screen lock goals require catalog version 2.0.0 or newer")
+        if self.goal_type.startswith(("settings.biometric.", "settings.apps.", "settings.app_permissions.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+            raise ValueError("Biometric and app management goals require catalog version 2.0.0 or newer")
         return self
 
 
