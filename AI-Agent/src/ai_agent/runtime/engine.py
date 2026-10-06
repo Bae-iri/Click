@@ -9,6 +9,11 @@ import json
 
 from ai_agent.runtime.classifier import classify_screen_state
 from ai_agent.runtime.goal_typing import type_goal
+from ai_agent.runtime.graph_selector import (
+    AmbiguousGraphError,
+    NoCompatibleGraphError,
+    select_task_graph,
+)
 from ai_agent.runtime.guide import (
     build_guide_command,
     clarification_command,
@@ -105,7 +110,35 @@ class ClickAgentEngine:
                 },
             )
 
-        graph = self._task_graph_for(typed_goal)
+        try:
+            graph, graph_selection = self._task_graph_for(typed_goal)
+        except (NoCompatibleGraphError, AmbiguousGraphError) as error:
+            guide_command = GuideCommand(
+                guide_command_id="guide_" + uuid4().hex,
+                command_type=CommandType.BLOCKED,
+                action_type=ActionType.OBSERVE_ONLY,
+                message=("요청은 이해했지만 아직 자동 실행은 지원하지 않아요. "
+                         "해당 설정이나 앱 화면까지 직접 열어주세요."),
+                safety_level=SafetyLevel.BLOCKED,
+                requires_user_action=False,
+                render_policy={"fallback_action": {
+                    "type": "unsupported_automation",
+                    "reason": str(error),
+                }},
+            )
+            return AgentTurnResponse(
+                request_id=request.request_id,
+                session_id=request.session_id,
+                task_id=None,
+                typed_goal=typed_goal,
+                current_state_id="S0_UNASSIGNED",
+                guide_command=guide_command,
+                debug={
+                    "contract": "no_approved_compatible_graph",
+                    "selector_error": str(error),
+                    "candidate_count": len(self.task_graphs),
+                },
+            )
         previous_state_id = (
             existing_session.current_state_id
             if existing_session
@@ -332,6 +365,7 @@ class ClickAgentEngine:
                 "fallback": fallback_debug,
                 "agent_chain": agent_chain_debug,
                 "replan_decision": replan_decision.to_dict(),
+                "graph_selection": graph_selection,
                 "failed_node_ids": failed_node_ids,
                 "transition_attempts": transition_attempts,
                 "vision_fallback": vision_analysis.to_dict()
@@ -384,14 +418,25 @@ class ClickAgentEngine:
             "Follow-up turn requires an existing session or a new raw_goal."
         )
 
-    def _task_graph_for(self, typed_goal: TypedGoal) -> TaskGraph:
-        task_key = typed_goal.task_id or typed_goal.goal_type
-        try:
-            return self.task_graphs[task_key]
-        except KeyError as exc:
-            raise ContractViolationError(
-                f"No task graph registered for {task_key}."
-            ) from exc
+    def _task_graph_for(self, typed_goal: TypedGoal) -> tuple[TaskGraph, JsonDict]:
+        if typed_goal.task_id:
+            try:
+                graph = self.task_graphs[typed_goal.task_id]
+            except KeyError as exc:
+                raise NoCompatibleGraphError("PINNED_GRAPH_UNAVAILABLE") from exc
+            return graph, {
+                "selector_version": "pinned-graph.v1",
+                "score": 100,
+                "reason_codes": ["pinned_task_id"],
+                "consumed_slots": [],
+            }
+        selection = select_task_graph(typed_goal, tuple(self.task_graphs.values()))
+        return selection.graph, {
+            "selector_version": selection.selector_version,
+            "score": selection.score,
+            "reason_codes": list(selection.reason_codes),
+            "consumed_slots": list(selection.consumed_slots),
+        }
 
     def _retry_with_vision_nodes(
         self,

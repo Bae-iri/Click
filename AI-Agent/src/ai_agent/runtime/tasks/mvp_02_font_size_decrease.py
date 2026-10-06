@@ -11,8 +11,8 @@ GOAL_TYPE = "settings.font_size.decrease"
 MVP_02_TASK_DEFINITION = replace(
     MVP_01_TASK_DEFINITION,
     task_id=TASK_ID,
-    goal_type=GOAL_TYPE,
     name="Android 설정 앱에서 글자 크기 축소",
+    capability=replace(MVP_01_TASK_DEFINITION.capability, operations=("decrease",)),
     required_slots={"setting": "font_size", "direction": "decrease"},
 )
 

@@ -14,7 +14,7 @@ import java.util.UUID;
 
 public final class AgentTurnContract {
     public static final String PATH = "/api/v1/agent/commands";
-    public static final String CONTRACT_VERSION = "agent-fe-contract.v0.2";
+    public static final String CONTRACT_VERSION = "agent-fe-contract.v0.3";
 
     private AgentTurnContract() {}
 
@@ -103,19 +103,9 @@ public final class AgentTurnContract {
                 object.put("source_text", rawGoal);
                 if (typedGoal != null) {
                     object.put("goal", typedGoal.toTypedGoalJson());
+                    object.put("classification", typedGoal.toClassificationJson());
                 } else {
-                    // Compatibility for callers not yet wired to the shared catalog.
-                    String normalizedGoal = rawGoal.toLowerCase(java.util.Locale.ROOT)
-                            .replaceAll("[\\s,.!?]", "");
-                    boolean decrease = normalizedGoal.contains("줄여") || normalizedGoal.contains("작게")
-                            || normalizedGoal.contains("낮춰") || normalizedGoal.contains("축소")
-                            || normalizedGoal.contains("너무커") || normalizedGoal.contains("커서");
-                    String direction = decrease ? "decrease" : "increase";
-                    object.put("goal", new JSONObject()
-                            .put("catalog_version", "2.1.0")
-                            .put("goal_type", "settings.font_size." + direction)
-                            .put("target_app", "android_settings")
-                            .put("slots", new JSONObject().put("setting", "font_size").put("direction", direction)));
+                    throw new JSONException("A classified goal_type_id is required for a new task");
                 }
                 object.put("device_context", new JSONObject()
                         .put("platform", "android")

@@ -183,12 +183,25 @@ class NormalizedNode:
 
 
 @dataclass(frozen=True, slots=True)
+class GraphCapability:
+    """Semantic operations a graph can perform without naming Goal Type IDs."""
+
+    domain: str
+    entity: str
+    operations: tuple[str, ...]
+    slot_schema_version: str = "1.0.0"
+
+    def to_dict(self) -> JsonDict:
+        return asdict(self)
+
+
+@dataclass(frozen=True, slots=True)
 class TaskDefinition:
     task_id: str
-    goal_type: str
     name: str
     target_app: str
     task_type: str
+    capability: GraphCapability
     start_states: tuple[str, ...]
     done_state: str
     required_slots: dict[str, str]

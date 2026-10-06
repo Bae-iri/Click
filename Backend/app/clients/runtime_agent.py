@@ -18,15 +18,15 @@ from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
 from app.schemas.guidance import GuideCommandResponse
 from app.repositories.sessions import SessionNotFoundError
 from ai_agent.runtime.progress import graph_progress
+from ai_agent.goal_catalog import active_goal
 
 
 class RuntimeAgentAdapter:
     """Translate the HTTP contract to the single ai_agent L3 runtime."""
 
-    def __init__(self, session_store=None, task_graph=None) -> None:
-        graphs = None if task_graph is None else {
-            task_graph.definition.task_id: task_graph,
-            task_graph.definition.goal_type: task_graph,
+    def __init__(self, session_store=None, task_graphs=None) -> None:
+        graphs = None if task_graphs is None else {
+            graph.definition.task_id: graph for graph in task_graphs
         }
         self.runtime = ClickAgentEngine(session_store=session_store, task_graphs=graphs)
 
@@ -47,6 +47,7 @@ class RuntimeAgentAdapter:
             or (vision_snapshot.screen_height if vision_snapshot else None)
         )
         typed = getattr(request, "goal", None)
+        catalog_goal = active_goal(typed.goal_type_id) if typed else None
         device = getattr(request, "device_context", None)
         runtime_request = RuntimeRequest(
             request_id=request.request_id,
@@ -66,13 +67,14 @@ class RuntimeAgentAdapter:
                 ),
             ) if raw_goal else None,
             typed_goal=TypedGoal(
-                goal_type=typed.goal_type,
-                target_app=typed.target_app,
-                task_type=self.runtime.task_graphs[typed.goal_type].definition.task_type,
+                goal_type=typed.goal_type_id,
+                target_app=catalog_goal["target_app"],
+                task_type=catalog_goal["task_type"],
                 slots=dict(typed.slots),
-                source_text="",
-                confidence=1.0,
-                task_id=self.runtime.task_graphs[typed.goal_type].definition.task_id,
+                source_text=getattr(request, "source_text", None) or "",
+                confidence=(request.classification.confidence
+                    if getattr(request, "classification", None) else 1.0),
+                task_id=None,
                 typing_method="fe_typed_contract",
                 is_supported=True,
                 required_slots_filled=True,
@@ -141,7 +143,7 @@ class RuntimeAgentAdapter:
         try:
             result = self.runtime.handle_turn(runtime_request)
         except ContractViolationError as error:
-            if request.raw_goal is None:
+            if request.raw_goal is None and typed is None:
                 raise SessionNotFoundError(request.session_id) from error
             raise ValueError(str(error)) from error
         guide = result.guide_command
@@ -166,7 +168,7 @@ class RuntimeAgentAdapter:
         return AgentTurnResponse(
             request_id=result.request_id,
             session_id=result.session_id,
-            task_id=result.task_id or "unknown",
+            task_id=result.task_id,
             step=step,
             total_steps=total_steps,
             state_id=result.current_state_id,

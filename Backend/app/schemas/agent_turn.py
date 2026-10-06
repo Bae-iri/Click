@@ -149,7 +149,7 @@ class AgentTurnResponse(BaseModel):
     request_id: str
     session_id: str
     session_version: int = 0
-    task_id: str
+    task_id: str | None
     step: int
     total_steps: int
     state_id: str
@@ -161,99 +161,32 @@ class AgentTurnResponse(BaseModel):
 
 class TypedGoalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    catalog_version: Literal["1.0.0", "1.1.0", "2.0.0", "2.1.0"]
-    goal_type: Literal["settings.font_size.increase", "settings.font_size.decrease",
-                       "settings.wifi.enable", "settings.wifi.disable", "settings.wifi.connect",
-                       "settings.bluetooth.enable", "settings.bluetooth.disable", "settings.bluetooth.connect",
-                       "settings.mobile_data.enable", "settings.mobile_data.disable",
-                       "settings.airplane_mode.enable", "settings.airplane_mode.disable",
-                       "settings.hotspot.enable", "settings.hotspot.disable",
-                       "settings.brightness.increase", "settings.brightness.decrease",
-                       "settings.dark_mode.enable", "settings.dark_mode.disable",
-                       "settings.screen_timeout.set",
-                       "settings.display_size.increase", "settings.display_size.decrease",
-                       "settings.volume.increase", "settings.volume.decrease",
-                       "settings.mute.enable", "settings.mute.disable",
-                       "settings.ringtone.change",
-                       "settings.vibrate.enable", "settings.vibrate.disable",
-                       "settings.notifications.enable", "settings.notifications.disable",
-                       "settings.location.enable", "settings.location.disable",
-                       "settings.power_saving.enable", "settings.power_saving.disable",
-                       "settings.screen_lock.change",
-                       "settings.biometric.setup", "settings.apps.uninstall",
-                       "settings.app_permissions.manage"]
-    target_app: Literal["android_settings"]
-    slots: dict[str, str]
+    catalog_version: Literal["3.0.0"]
+    goal_type_id: str = Field(min_length=3, max_length=200)
+    slots: dict[str, str | int | bool | None]
 
     @model_validator(mode="after")
-    def slots_match_goal(self) -> "TypedGoalRequest":
-        # Request validation must work before an execution graph is available.
-        expected_slots = {
-            "settings.font_size.increase": {"setting": "font_size", "direction": "increase"},
-            "settings.font_size.decrease": {"setting": "font_size", "direction": "decrease"},
-            "settings.wifi.enable": {"setting": "wifi", "state": "on"},
-            "settings.wifi.disable": {"setting": "wifi", "state": "off"},
-            "settings.wifi.connect": {"setting": "wifi", "action": "connect"},
-            "settings.bluetooth.enable": {"setting": "bluetooth", "state": "on"},
-            "settings.bluetooth.disable": {"setting": "bluetooth", "state": "off"},
-            "settings.bluetooth.connect": {"setting": "bluetooth", "action": "connect"},
-            "settings.mobile_data.enable": {"setting": "mobile_data", "state": "on"},
-            "settings.mobile_data.disable": {"setting": "mobile_data", "state": "off"},
-            "settings.airplane_mode.enable": {"setting": "airplane_mode", "state": "on"},
-            "settings.airplane_mode.disable": {"setting": "airplane_mode", "state": "off"},
-            "settings.hotspot.enable": {"setting": "hotspot", "state": "on"},
-            "settings.hotspot.disable": {"setting": "hotspot", "state": "off"},
-            "settings.brightness.increase": {"setting": "brightness", "direction": "increase"},
-            "settings.brightness.decrease": {"setting": "brightness", "direction": "decrease"},
-            "settings.dark_mode.enable": {"setting": "dark_mode", "state": "on"},
-            "settings.dark_mode.disable": {"setting": "dark_mode", "state": "off"},
-            "settings.screen_timeout.set": {"setting": "screen_timeout", "action": "set"},
-            "settings.display_size.increase": {"setting": "display_size", "direction": "increase"},
-            "settings.display_size.decrease": {"setting": "display_size", "direction": "decrease"},
-            "settings.volume.increase": {"setting": "volume", "direction": "increase"},
-            "settings.volume.decrease": {"setting": "volume", "direction": "decrease"},
-            "settings.mute.enable": {"setting": "mute", "state": "on"},
-            "settings.mute.disable": {"setting": "mute", "state": "off"},
-            "settings.ringtone.change": {"setting": "ringtone", "action": "change"},
-            "settings.vibrate.enable": {"setting": "vibrate", "state": "on"},
-            "settings.vibrate.disable": {"setting": "vibrate", "state": "off"},
-            "settings.notifications.enable": {"setting": "notifications", "state": "on"},
-            "settings.notifications.disable": {"setting": "notifications", "state": "off"},
-            "settings.location.enable": {"setting": "location", "state": "on"},
-            "settings.location.disable": {"setting": "location", "state": "off"},
-            "settings.power_saving.enable": {"setting": "power_saving", "state": "on"},
-            "settings.power_saving.disable": {"setting": "power_saving", "state": "off"},
-            "settings.screen_lock.change": {"setting": "screen_lock", "action": "change"},
-            "settings.biometric.setup": {"setting": "biometric", "action": "setup"},
-            "settings.apps.uninstall": {"setting": "apps", "action": "uninstall"},
-            "settings.app_permissions.manage": {"setting": "app_permissions", "action": "manage"},
-        }
-        if self.slots != expected_slots[self.goal_type]:
-            raise ValueError("goal_type and slots must match")
-        if self.goal_type == "settings.font_size.decrease" and self.catalog_version == "1.0.0":
-            raise ValueError("font-size decrease requires catalog version 1.1.0 or newer")
-        if self.goal_type.startswith("settings.wifi.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
-            raise ValueError("Wi-Fi goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith("settings.bluetooth.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
-            raise ValueError("Bluetooth goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith("settings.mobile_data.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
-            raise ValueError("Mobile data goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.airplane_mode.", "settings.hotspot.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
-            raise ValueError("Airplane mode and hotspot goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.brightness.", "settings.dark_mode.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
-            raise ValueError("Brightness and dark mode goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.screen_timeout.", "settings.display_size.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
-            raise ValueError("Screen timeout and display size goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.volume.", "settings.mute.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
-            raise ValueError("Volume and mute goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.ringtone.", "settings.vibrate.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
-            raise ValueError("Ringtone and vibrate goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.notifications.", "settings.location.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
-            raise ValueError("Notifications and location goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.power_saving.", "settings.screen_lock.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
-            raise ValueError("Power saving and screen lock goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.biometric.", "settings.apps.", "settings.app_permissions.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
-            raise ValueError("Biometric and app management goals require catalog version 2.0.0 or newer")
+    def validate_catalog_goal(self) -> "TypedGoalRequest":
+        from ai_agent.goal_catalog import active_goal, load_goal_catalog
+
+        catalog = load_goal_catalog()
+        if self.catalog_version != catalog["version"]:
+            raise ValueError("catalog_version is not current")
+        goal = active_goal(self.goal_type_id)
+        if goal is None:
+            raise ValueError("unknown or inactive goal_type_id")
+        defaults = goal.get("slots", {})
+        if any(self.slots.get(key) != value for key, value in defaults.items()):
+            raise ValueError("slots do not match catalog defaults")
+        schema = goal.get("slot_schema", {})
+        allowed = {*defaults, *schema.get("required", ()), *schema.get("optional", ())}
+        if schema.get("additional_properties") is False and set(self.slots) - allowed:
+            raise ValueError("slots contain fields outside the goal slot schema")
+        forbidden_fragments = ("password", "passcode", "pin", "card_number", "cvv", "secret")
+        if any(any(fragment in key.lower() for fragment in forbidden_fragments) for key in self.slots):
+            raise ValueError("secret values are forbidden in goal slots")
+        if any(isinstance(value, str) and len(value) > 300 for value in self.slots.values()):
+            raise ValueError("slot values must be 300 characters or fewer")
         return self
 
 
@@ -277,14 +210,18 @@ class DeviceContextRequest(BaseModel):
 
 class ClassificationMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    resolved_by: str | None = Field(default=None, max_length=50)
-    method: str | None = Field(default=None, max_length=100)
-    goal_confidence: float | None = Field(default=None, ge=0, le=1)
+    classification_status: Literal["matched", "ambiguous", "unsupported"]
+    method: str = Field(max_length=100)
+    confidence: float = Field(ge=0, le=1)
+    matched_keyword_groups: list[dict[str, str | int]] = Field(default_factory=list, max_length=10)
+    alternatives: list[dict[str, str | int | float]] = Field(default_factory=list, max_length=5)
+    missing_slots: list[str] = Field(default_factory=list, max_length=20)
+    multi_intent: bool = False
 
 
 class AgentCommandRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    contract_version: Literal["agent-fe-contract.v0.2"]
+    contract_version: Literal["agent-fe-contract.v0.3"]
     request_id: str = Field(min_length=1, max_length=200)
     session_id: str = Field(min_length=1, max_length=200)
     expected_version: int = Field(ge=0)
@@ -308,6 +245,9 @@ class AgentCommandRequest(BaseModel):
             raise ValueError("goal is required only for start_task and replace_task")
         if starts and self.device_context is None:
             raise ValueError("device_context is required for start_task and replace_task")
+        if starts and (self.classification is None
+                or self.classification.classification_status != "matched"):
+            raise ValueError("a matched classification is required for start_task and replace_task")
         if self.command_type == "start_task" and self.episode_id is not None:
             raise ValueError("episode_id must be omitted for start_task")
         if self.command_type != "start_task" and self.episode_id is None:
@@ -335,16 +275,16 @@ class GraphReference(BaseModel):
 
 
 class AgentCommandResponse(BaseModel):
-    contract_version: Literal["agent-fe-contract.v0.2"] = "agent-fe-contract.v0.2"
+    contract_version: Literal["agent-fe-contract.v0.3"] = "agent-fe-contract.v0.3"
     request_id: str
     session_id: str
     session_version: int
     episode_id: str
     response_type: Literal["guidance", "control"]
     command_result: CommandResult
-    accepted_goal_type: str
-    task_id: str
-    graph_reference: GraphReference
+    accepted_goal_type_id: str
+    task_id: str | None
+    graph_reference: GraphReference | None
     task_status: str
     state_id: str | None = None
     step: int | None = None

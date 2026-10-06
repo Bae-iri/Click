@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ai_agent.runtime.types import (
     ActionType,
+    GraphCapability,
     SafetyLevel,
     TaskDefinition,
     TargetSelector,
@@ -19,10 +20,14 @@ GOAL_TYPE = "settings.font_size.increase"
 
 MVP_01_TASK_DEFINITION = TaskDefinition(
     task_id=TASK_ID,
-    goal_type=GOAL_TYPE,
     name="Android 설정 앱에서 글자 크기 확대",
     target_app="android_settings",
     task_type="settings_change",
+    capability=GraphCapability(
+        domain="settings",
+        entity="font_size",
+        operations=("increase",),
+    ),
     start_states=("S0_UNKNOWN", "S1_SETTINGS_HOME"),
     done_state="S_DONE",
     required_slots={"setting": "font_size", "direction": "increase"},

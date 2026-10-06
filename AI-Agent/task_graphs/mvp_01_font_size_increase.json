@@ -1,10 +1,10 @@
 {
   "task": {
     "task_id": "MVP-01",
-    "goal_type": "settings.font_size.increase",
     "name": "Android 설정 앱에서 글자 크기 확대",
     "target_app": "android_settings",
     "task_type": "settings_change",
+    "capability": {"domain": "settings", "entity": "font_size", "operations": ["increase"], "slot_schema_version": "1.0.0"},
     "start_states": ["S0_UNKNOWN", "S1_SETTINGS_HOME"],
     "done_state": "S_DONE",
     "graph_version": "1.0.0"

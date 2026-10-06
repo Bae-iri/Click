@@ -1,198 +1,2014 @@
 {
-  "version": "2.1.0",
-  "matching": {
-    "strategy": "all_keyword_groups",
-    "normalization": "lowercase_remove_space_and_punctuation",
-    "tie_policy": "ask_for_clarification"
-  },
-  "goals": [
-    {
-      "goal_type": "settings.font_size.increase",
-      "display_name": "글자 크기 키우기",
-      "target_app": "android_settings",
-      "task_type": "settings_change",
-      "execution_status": "approved",
-      "graph_id": "MVP-01",
-      "slots": {"setting": "font_size", "direction": "increase"},
-      "keyword_groups": [
-        ["글자", "글씨", "글꼴", "폰트", "font size", "text size"],
-        ["키워", "크게", "확대", "늘려", "너무 작", "작아서", "bigger", "larger", "increase"]
-      ],
-      "utterances": ["글자가 너무 작아", "글자 크기 키워줘", "휴대폰 글씨를 크게 보고 싶어"]
-    },
-    {
-      "goal_type": "settings.font_size.decrease",
-      "display_name": "글자 크기 줄이기",
-      "target_app": "android_settings",
-      "task_type": "settings_change",
-      "execution_status": "approved",
-      "graph_id": "MVP-02",
-      "slots": {"setting": "font_size", "direction": "decrease"},
-      "keyword_groups": [
-        ["글자", "글씨", "글꼴", "폰트", "font size", "text size"],
-        ["줄여", "작게", "축소", "낮춰", "너무 커", "커서", "smaller", "decrease"]
-      ],
-      "utterances": ["글자가 너무 커", "글자 크기 줄여줘", "휴대폰 글씨를 작게 보고 싶어"]
-    },
-
-    {"goal_type":"settings.wifi.enable","display_name":"와이파이 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"wifi","state":"on"},"keyword_groups":[["와이파이","wifi"],["켜","활성화","사용하게"]]},
-    {"goal_type":"settings.wifi.disable","display_name":"와이파이 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"wifi","state":"off"},"keyword_groups":[["와이파이","wifi"],["꺼","비활성화","해제"]]},
-    {"goal_type":"settings.wifi.connect","display_name":"와이파이 연결","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"wifi","action":"connect"},"keyword_groups":[["와이파이","wifi","무선인터넷"],["연결","잡아","네트워크 선택"]]},
-    {"goal_type":"settings.bluetooth.enable","display_name":"블루투스 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"bluetooth","state":"on"},"keyword_groups":[["블루투스","bluetooth"],["켜","활성화"]]},
-    {"goal_type":"settings.bluetooth.disable","display_name":"블루투스 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"bluetooth","state":"off"},"keyword_groups":[["블루투스","bluetooth"],["꺼","비활성화","해제"]]},
-    {"goal_type":"settings.bluetooth.connect","display_name":"블루투스 기기 연결","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"bluetooth","action":"connect"},"keyword_groups":[["블루투스","bluetooth","이어폰","헤드셋"],["연결","페어링","등록"]]},
-    {"goal_type":"settings.mobile_data.enable","display_name":"모바일 데이터 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"mobile_data","state":"on"},"keyword_groups":[["모바일데이터","데이터","셀룰러"],["켜","활성화"]]},
-    {"goal_type":"settings.mobile_data.disable","display_name":"모바일 데이터 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"mobile_data","state":"off"},"keyword_groups":[["모바일데이터","데이터","셀룰러"],["꺼","비활성화"]]},
-    {"goal_type":"settings.airplane_mode.enable","display_name":"비행기 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"airplane_mode","state":"on"},"keyword_groups":[["비행기모드","에어플레인모드"],["켜","활성화"]]},
-    {"goal_type":"settings.airplane_mode.disable","display_name":"비행기 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"airplane_mode","state":"off"},"keyword_groups":[["비행기모드","에어플레인모드"],["꺼","비활성화"]]},
-    {"goal_type":"settings.hotspot.enable","display_name":"모바일 핫스팟 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"hotspot","state":"on"},"keyword_groups":[["핫스팟","테더링"],["켜","활성화","공유"]]},
-    {"goal_type":"settings.hotspot.disable","display_name":"모바일 핫스팟 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"hotspot","state":"off"},"keyword_groups":[["핫스팟","테더링"],["꺼","비활성화"]]},
-    {"goal_type":"settings.brightness.increase","display_name":"화면 밝기 높이기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"brightness","direction":"increase"},"keyword_groups":[["밝기","화면빛"],["높여","밝게","키워","올려","어두워"]]},
-    {"goal_type":"settings.brightness.decrease","display_name":"화면 밝기 낮추기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"brightness","direction":"decrease"},"keyword_groups":[["밝기","화면빛"],["낮춰","어둡게","줄여","눈부셔"]]},
-    {"goal_type":"settings.dark_mode.enable","display_name":"다크 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"dark_mode","state":"on"},"keyword_groups":[["다크모드","어두운테마","야간모드"],["켜","적용","바꿔"]]},
-    {"goal_type":"settings.dark_mode.disable","display_name":"다크 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"dark_mode","state":"off"},"keyword_groups":[["다크모드","어두운테마","야간모드"],["꺼","해제","밝은테마"]]},
-    {"goal_type":"settings.screen_timeout.set","display_name":"화면 자동 꺼짐 시간 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"screen_timeout","action":"set"},"keyword_groups":[["화면자동꺼짐","화면꺼짐시간","스크린타임아웃"],["변경","바꿔","늘려","줄여","설정"]]},
-    {"goal_type":"settings.display_size.increase","display_name":"화면 요소 크게 하기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"display_size","direction":"increase"},"keyword_groups":[["화면크기","화면요소","아이콘크기","디스플레이크기"],["키워","크게","확대","늘려"]]},
-    {"goal_type":"settings.display_size.decrease","display_name":"화면 요소 작게 하기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"display_size","direction":"decrease"},"keyword_groups":[["화면크기","화면요소","아이콘크기","디스플레이크기"],["줄여","작게","축소"]]},
-    {"goal_type":"settings.volume.increase","display_name":"소리 크기 높이기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"volume","direction":"increase"},"keyword_groups":[["소리","볼륨","음량"],["키워","크게","높여","올려","잘안들려"]]},
-    {"goal_type":"settings.volume.decrease","display_name":"소리 크기 낮추기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"volume","direction":"decrease"},"keyword_groups":[["소리","볼륨","음량"],["줄여","작게","낮춰","시끄러워"]]},
-    {"goal_type":"settings.mute.enable","display_name":"무음 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"mute","state":"on"},"keyword_groups":[["무음","소리안나게","조용히"],["켜","설정","바꿔"]]},
-    {"goal_type":"settings.mute.disable","display_name":"무음 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"mute","state":"off"},"keyword_groups":[["무음","소리안나게"],["꺼","해제","소리나게"]]},
-    {"goal_type":"settings.ringtone.change","display_name":"벨소리 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"ringtone","action":"change"},"keyword_groups":[["벨소리","전화소리","링톤"],["바꿔","변경","선택"]]},
-    {"goal_type":"settings.vibrate.enable","display_name":"진동 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"vibrate","state":"on"},"keyword_groups":[["진동","바이브레이션"],["켜","설정","바꿔"]]},
-    {"goal_type":"settings.vibrate.disable","display_name":"진동 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"vibrate","state":"off"},"keyword_groups":[["진동","바이브레이션"],["꺼","해제"]]},
-    {"goal_type":"settings.notifications.enable","display_name":"앱 알림 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"notifications","state":"on"},"keyword_groups":[["알림","푸시"],["켜","허용","받게"]]},
-    {"goal_type":"settings.notifications.disable","display_name":"앱 알림 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"notifications","state":"off"},"keyword_groups":[["알림","푸시"],["꺼","차단","안받게"]]},
-    {"goal_type":"settings.location.enable","display_name":"위치 서비스 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"location","state":"on"},"keyword_groups":[["위치","gps"],["켜","허용","활성화"]]},
-    {"goal_type":"settings.location.disable","display_name":"위치 서비스 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"location","state":"off"},"keyword_groups":[["위치","gps"],["꺼","차단","비활성화"]]},
-    {"goal_type":"settings.power_saving.enable","display_name":"절전 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"power_saving","state":"on"},"keyword_groups":[["절전","배터리절약","저전력"],["켜","활성화","설정"]]},
-    {"goal_type":"settings.power_saving.disable","display_name":"절전 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"power_saving","state":"off"},"keyword_groups":[["절전","배터리절약","저전력"],["꺼","해제","비활성화"]]},
-    {"goal_type":"settings.screen_lock.change","display_name":"화면 잠금 방식 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"screen_lock","action":"change"},"keyword_groups":[["화면잠금","잠금방식","비밀번호","핀번호","패턴"],["바꿔","변경","설정"]]},
-    {"goal_type":"settings.biometric.setup","display_name":"생체 인식 등록","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"biometric","action":"setup"},"keyword_groups":[["지문","얼굴인식","생체인식"],["등록","추가","설정"]]},
-    {"goal_type":"settings.apps.uninstall","display_name":"앱 삭제","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"apps","action":"uninstall"},"keyword_groups":[["앱","어플","애플리케이션"],["삭제","지워","제거"]]},
-    {"goal_type":"settings.app_permissions.manage","display_name":"앱 권한 관리","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"app_permissions","action":"manage"},"keyword_groups":[["앱권한","어플권한","권한"],["관리","허용","차단","바꿔"]]},
-    {"goal_type":"settings.storage.cleanup","display_name":"저장 공간 정리","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"storage","action":"cleanup"},"keyword_groups":[["저장공간","스토리지","용량"],["정리","비워","확보","부족"]]},
-    {"goal_type":"settings.talkback.enable","display_name":"TalkBack 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"talkback","state":"on"},"keyword_groups":[["톡백","talkback","화면읽기"],["켜","활성화"]]},
-    {"goal_type":"settings.talkback.disable","display_name":"TalkBack 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"talkback","state":"off"},"keyword_groups":[["톡백","talkback","화면읽기"],["꺼","비활성화"]]},
-    {"goal_type":"settings.magnification.enable","display_name":"화면 확대 기능 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"magnification","state":"on"},"keyword_groups":[["화면확대","돋보기","확대기능"],["켜","활성화","설정"]]},
-    {"goal_type":"settings.magnification.disable","display_name":"화면 확대 기능 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"magnification","state":"off"},"keyword_groups":[["화면확대","돋보기","확대기능"],["꺼","비활성화","해제"]]},
-    {"goal_type":"settings.language.change","display_name":"기기 언어 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"language","action":"change"},"keyword_groups":[["기기언어","휴대폰언어","시스템언어"],["바꿔","변경","설정"]]},
-    {"goal_type":"settings.date_time.automatic.enable","display_name":"날짜와 시간 자동 설정 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"automatic_date_time","state":"on"},"keyword_groups":[["날짜시간","자동시간","시간자동"],["켜","활성화","자동으로"]]},
-    {"goal_type":"settings.date_time.automatic.disable","display_name":"날짜와 시간 자동 설정 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"automatic_date_time","state":"off"},"keyword_groups":[["날짜시간","자동시간","시간자동"],["꺼","비활성화","수동으로"]]},
-    {"goal_type":"settings.keyboard.change","display_name":"기본 키보드 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"keyboard","action":"change"},"keyword_groups":[["키보드","입력기","자판"],["바꿔","변경","선택"]]},
-    {"goal_type":"settings.default_apps.change","display_name":"기본 앱 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"default_apps","action":"change"},"keyword_groups":[["기본앱","기본어플","디폴트앱"],["바꿔","변경","선택"]]},
-    {"goal_type":"settings.wifi.share","display_name":"와이파이 공유","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"wifi","action":"share"},"keyword_groups":[["와이파이","wifi","무선인터넷"],["qr로공유","큐알로공유","공유해","공유","큐알","qr","비밀번호 보여"]]},
-    {"goal_type":"settings.wifi.saved_networks.view","display_name":"저장된 와이파이 보기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"wifi_saved_networks","action":"view"},"keyword_groups":[["저장된와이파이","저장된네트워크","와이파이목록"],["보여","열어","확인"]]},
-    {"goal_type":"settings.nfc.enable","display_name":"NFC 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"nfc","state":"on"},"keyword_groups":[["nfc","엔에프씨"],["켜","활성화","사용"]]},
-    {"goal_type":"settings.nfc.disable","display_name":"NFC 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"nfc","state":"off"},"keyword_groups":[["nfc","엔에프씨"],["꺼","비활성화","해제"]]},
-    {"goal_type":"settings.do_not_disturb.enable","display_name":"방해 금지 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"do_not_disturb","state":"on"},"keyword_groups":[["방해금지","집중모드","dnd"],["켜","활성화","설정"]]},
-    {"goal_type":"settings.do_not_disturb.disable","display_name":"방해 금지 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"do_not_disturb","state":"off"},"keyword_groups":[["방해금지","집중모드","dnd"],["꺼","비활성화","해제"]]},
-    {"goal_type":"settings.auto_rotate.enable","display_name":"화면 자동 회전 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"auto_rotate","state":"on"},"keyword_groups":[["자동회전","화면회전"],["켜","활성화","허용","잠금해제"]]},
-    {"goal_type":"settings.auto_rotate.disable","display_name":"화면 자동 회전 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"auto_rotate","state":"off"},"keyword_groups":[["자동회전","화면회전"],["꺼","비활성화","잠가"]]},
-    {"goal_type":"settings.eye_comfort.enable","display_name":"편안하게 화면 보기 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"eye_comfort","state":"on"},"keyword_groups":[["블루라이트","편안하게화면보기","눈보호모드"],["켜","활성화","설정"]]},
-    {"goal_type":"settings.eye_comfort.disable","display_name":"편안하게 화면 보기 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"eye_comfort","state":"off"},"keyword_groups":[["블루라이트","편안하게화면보기","눈보호모드"],["꺼","비활성화","해제"]]},
-    {"goal_type":"settings.adaptive_brightness.enable","display_name":"자동 밝기 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"adaptive_brightness","state":"on"},"keyword_groups":[["자동밝기","밝기자동조절","적응형밝기"],["켜","활성화","설정"]]},
-    {"goal_type":"settings.adaptive_brightness.disable","display_name":"자동 밝기 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"adaptive_brightness","state":"off"},"keyword_groups":[["자동밝기","밝기자동조절","적응형밝기"],["꺼","비활성화","해제"]]},
-    {"goal_type":"settings.data_saver.enable","display_name":"데이터 절약 모드 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"data_saver","state":"on"},"keyword_groups":[["데이터절약","데이터세이버","데이터아끼기"],["켜","활성화","설정"]]},
-    {"goal_type":"settings.data_saver.disable","display_name":"데이터 절약 모드 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"data_saver","state":"off"},"keyword_groups":[["데이터절약","데이터세이버","데이터아끼기"],["꺼","비활성화","해제"]]},
-    {"goal_type":"settings.data_roaming.enable","display_name":"데이터 로밍 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","risk_level":"high","slots":{"setting":"data_roaming","state":"on"},"keyword_groups":[["데이터로밍","해외로밍","로밍데이터"],["켜","활성화","허용"]]},
-    {"goal_type":"settings.data_roaming.disable","display_name":"데이터 로밍 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"data_roaming","state":"off"},"keyword_groups":[["데이터로밍","해외로밍","로밍데이터"],["꺼","비활성화","차단"]]},
-    {"goal_type":"settings.vpn.connect","display_name":"VPN 연결","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"vpn","action":"connect"},"keyword_groups":[["vpn","브이피엔"],["연결","켜","접속"]]},
-    {"goal_type":"settings.vpn.disconnect","display_name":"VPN 연결 해제","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"vpn","action":"disconnect"},"keyword_groups":[["vpn","브이피엔"],["연결해제","접속해제","해제","꺼","끊어"]]},
-    {"goal_type":"settings.private_dns.change","display_name":"프라이빗 DNS 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"private_dns","action":"change"},"keyword_groups":[["프라이빗dns","개인dns","비공개dns"],["바꿔","변경","설정"]]},
-    {"goal_type":"settings.sim.manage","display_name":"SIM 관리","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","risk_level":"high","slots":{"setting":"sim","action":"manage"},"keyword_groups":[["sim","심카드","유심","esim"],["관리","변경","설정","전환"]]},
-    {"goal_type":"settings.hotspot.password.change","display_name":"핫스팟 비밀번호 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"hotspot_password","action":"change"},"keyword_groups":[["핫스팟비밀번호","테더링비밀번호"],["바꿔","변경","설정"]]},
-    {"goal_type":"settings.wallpaper.change","display_name":"배경 화면 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"wallpaper","action":"change"},"keyword_groups":[["배경화면","월페이퍼","잠금화면사진"],["바꿔","변경","설정"]]},
-    {"goal_type":"settings.notification_sound.change","display_name":"알림 소리 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"notification_sound","action":"change"},"keyword_groups":[["알림소리","알림음","문자소리"],["바꿔","변경","선택"]]},
-    {"goal_type":"settings.battery_percentage.enable","display_name":"배터리 잔량 표시 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"battery_percentage","state":"on"},"keyword_groups":[["배터리퍼센트","배터리잔량표시","배터리숫자"],["켜","보이게","나오게"]]},
-    {"goal_type":"settings.battery_percentage.disable","display_name":"배터리 잔량 표시 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"battery_percentage","state":"off"},"keyword_groups":[["배터리퍼센트","배터리잔량표시","배터리숫자"],["꺼","숨겨","안보이게"]]},
-    {"goal_type":"settings.battery_status.view","display_name":"배터리 사용량 보기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"battery_status","action":"view"},"keyword_groups":[["배터리사용량","배터리상태","배터리소모"],["보여","확인","열어"]]},
-    {"goal_type":"settings.app_cache.clear","display_name":"앱 캐시 삭제","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"app_cache","action":"clear"},"keyword_groups":[["앱캐시","어플캐시","캐시데이터"],["삭제","지워","비워"]]},
-    {"goal_type":"settings.app_data.clear","display_name":"앱 데이터 삭제","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","risk_level":"high","slots":{"setting":"app_data","action":"clear"},"keyword_groups":[["앱데이터","어플데이터","애플리케이션데이터"],["삭제","지워","초기화"]]},
-    {"goal_type":"settings.notification_history.view","display_name":"알림 기록 보기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"notification_history","action":"view"},"keyword_groups":[["알림기록","알림내역","지난알림"],["보여","확인","열어"]]},
-    {"goal_type":"settings.lockscreen_notifications.manage","display_name":"잠금 화면 알림 관리","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"lockscreen_notifications","action":"manage"},"keyword_groups":[["잠금화면알림","락스크린알림"],["관리","숨겨","표시","바꿔"]]},
-    {"goal_type":"settings.color_inversion.enable","display_name":"색상 반전 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"color_inversion","state":"on"},"keyword_groups":[["색상반전","색반전","화면색반전"],["켜","활성화","설정"]]},
-    {"goal_type":"settings.color_inversion.disable","display_name":"색상 반전 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"color_inversion","state":"off"},"keyword_groups":[["색상반전","색반전","화면색반전"],["꺼","비활성화","해제"]]},
-    {"goal_type":"settings.captions.enable","display_name":"실시간 자막 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"captions","state":"on"},"keyword_groups":[["실시간자막","라이브캡션","자막기능"],["켜","활성화","설정"]]},
-    {"goal_type":"settings.captions.disable","display_name":"실시간 자막 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"captions","state":"off"},"keyword_groups":[["실시간자막","라이브캡션","자막기능"],["꺼","비활성화","해제"]]},
-    {"goal_type":"settings.mono_audio.enable","display_name":"모노 오디오 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"mono_audio","state":"on"},"keyword_groups":[["모노오디오","단일오디오","한쪽이어폰소리"],["켜","활성화","설정"]]},
-    {"goal_type":"settings.mono_audio.disable","display_name":"모노 오디오 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"mono_audio","state":"off"},"keyword_groups":[["모노오디오","단일오디오","한쪽이어폰소리"],["꺼","비활성화","해제"]]},
-    {"goal_type":"settings.backup.enable","display_name":"기기 백업 켜기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"backup","state":"on"},"keyword_groups":[["기기백업","자동백업","구글백업"],["켜","활성화","설정"]]},
-    {"goal_type":"settings.backup.disable","display_name":"기기 백업 끄기","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","risk_level":"high","slots":{"setting":"backup","state":"off"},"keyword_groups":[["기기백업","자동백업","구글백업"],["꺼","비활성화","중지"]]},
-    {"goal_type":"settings.software_update.check","display_name":"소프트웨어 업데이트 확인","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"software_update","action":"check"},"keyword_groups":[["소프트웨어업데이트","시스템업데이트","업데이트"],["확인","검사","찾아"]]},
-    {"goal_type":"settings.factory_reset","display_name":"기기 초기화","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","risk_level":"high","slots":{"setting":"factory_reset","action":"reset"},"keyword_groups":[["공장초기화","기기초기화","휴대폰초기화"],["진행","해줘","시작"]]},
-    {"goal_type":"settings.device_name.change","display_name":"기기 이름 변경","target_app":"android_settings","task_type":"settings_change","execution_status":"catalog_only","slots":{"setting":"device_name","action":"change"},"keyword_groups":[["기기이름","휴대폰이름","디바이스이름"],["바꿔","변경","설정"]]},
-
-    {"goal_type":"coupang.product.search","display_name":"쿠팡 상품 검색","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"search"},"keyword_groups":[["쿠팡","상품","제품","물건"],["검색","찾아","찾아줘"]]},
-    {"goal_type":"coupang.product.details","display_name":"쿠팡 상품 상세 보기","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"view_details"},"keyword_groups":[["상품","제품"],["상세","자세히","정보","설명"]]},
-    {"goal_type":"coupang.cart.add","display_name":"쿠팡 장바구니 담기","target_app":"coupang","task_type":"commerce_cart","execution_status":"catalog_only","slots":{"action":"add"},"keyword_groups":[["장바구니","카트"],["담아","추가","넣어"]]},
-    {"goal_type":"coupang.cart.view","display_name":"쿠팡 장바구니 보기","target_app":"coupang","task_type":"commerce_cart","execution_status":"catalog_only","slots":{"action":"view"},"keyword_groups":[["장바구니","카트"],["보여","열어","확인","목록"]]},
-    {"goal_type":"coupang.cart.remove","display_name":"쿠팡 장바구니 상품 삭제","target_app":"coupang","task_type":"commerce_cart","execution_status":"catalog_only","slots":{"action":"remove"},"keyword_groups":[["장바구니","카트"],["빼","삭제","지워","제거"]]},
-    {"goal_type":"coupang.order.checkout","display_name":"쿠팡 주문·결제 진행","target_app":"coupang","task_type":"commerce_transaction","execution_status":"catalog_only","risk_level":"high","slots":{"action":"checkout"},"keyword_groups":[["주문진행","결제진행","구매진행","주문해줘","결제해줘","구매해줘","주문할래","결제할래","구매할래"]]},
-    {"goal_type":"coupang.order.list","display_name":"쿠팡 주문 목록 보기","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"list"},"keyword_groups":[["주문목록","주문내역","구매내역"],["보여","열어","확인"]]},
-    {"goal_type":"coupang.order.track","display_name":"쿠팡 배송 조회","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"track"},"keyword_groups":[["배송","택배"],["조회","어디","언제와","추적","상태"]]},
-    {"goal_type":"coupang.order.cancel","display_name":"쿠팡 주문 취소","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","risk_level":"high","slots":{"action":"cancel"},"keyword_groups":[["주문","구매","결제"],["취소","철회"]]},
-    {"goal_type":"coupang.order.return","display_name":"쿠팡 반품 신청","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","risk_level":"high","slots":{"action":"return"},"keyword_groups":[["반품","돌려보내"],["신청","접수","하고싶어"]]},
-    {"goal_type":"coupang.order.exchange","display_name":"쿠팡 교환 신청","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","risk_level":"high","slots":{"action":"exchange"},"keyword_groups":[["교환","바꿔받"],["신청","접수","하고싶어"]]},
-    {"goal_type":"coupang.review.write","display_name":"쿠팡 상품평 작성","target_app":"coupang","task_type":"commerce_review","execution_status":"catalog_only","slots":{"action":"write"},"keyword_groups":[["상품평","리뷰","후기"],["작성","써","남겨"]]},
-    {"goal_type":"coupang.review.view","display_name":"쿠팡 상품평 보기","target_app":"coupang","task_type":"commerce_review","execution_status":"catalog_only","slots":{"action":"view"},"keyword_groups":[["상품평","리뷰","후기"],["보여","읽어","확인"]]},
-    {"goal_type":"coupang.wishlist.add","display_name":"쿠팡 찜 추가","target_app":"coupang","task_type":"commerce_wishlist","execution_status":"catalog_only","slots":{"action":"add"},"keyword_groups":[["찜","위시리스트"],["추가","담아","저장"]]},
-    {"goal_type":"coupang.wishlist.remove","display_name":"쿠팡 찜 삭제","target_app":"coupang","task_type":"commerce_wishlist","execution_status":"catalog_only","slots":{"action":"remove"},"keyword_groups":[["찜","위시리스트"],["삭제","빼","해제"]]},
-    {"goal_type":"coupang.wishlist.view","display_name":"쿠팡 찜 목록 보기","target_app":"coupang","task_type":"commerce_wishlist","execution_status":"catalog_only","slots":{"action":"view"},"keyword_groups":[["찜목록","찜한상품","위시리스트"],["보여","열어","확인"]]},
-    {"goal_type":"coupang.address.add","display_name":"쿠팡 배송지 추가","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","slots":{"action":"add"},"keyword_groups":[["배송지","주소"],["추가","등록","새로"]]},
-    {"goal_type":"coupang.address.change","display_name":"쿠팡 배송지 변경","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","slots":{"action":"change"},"keyword_groups":[["배송지","주소"],["변경","바꿔","수정"]]},
-    {"goal_type":"coupang.payment_method.add","display_name":"쿠팡 결제수단 추가","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","risk_level":"high","slots":{"action":"add"},"keyword_groups":[["결제수단","카드","계좌"],["추가","등록"]]},
-    {"goal_type":"coupang.payment_method.change","display_name":"쿠팡 결제수단 변경","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","risk_level":"high","slots":{"action":"change"},"keyword_groups":[["결제수단","결제카드","결제계좌"],["변경","바꿔","수정"]]},
-    {"goal_type":"coupang.coupon.view","display_name":"쿠팡 쿠폰함 보기","target_app":"coupang","task_type":"commerce_promotion","execution_status":"catalog_only","slots":{"action":"view"},"keyword_groups":[["쿠폰","할인쿠폰"],["보여","쿠폰함","확인"]]},
-    {"goal_type":"coupang.coupon.apply","display_name":"쿠팡 쿠폰 적용","target_app":"coupang","task_type":"commerce_promotion","execution_status":"catalog_only","slots":{"action":"apply"},"keyword_groups":[["쿠폰","할인쿠폰"],["적용","사용","써줘"]]},
-    {"goal_type":"coupang.rocket_delivery.filter","display_name":"로켓배송 상품만 보기","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"filter","filter":"rocket_delivery"},"keyword_groups":[["로켓배송","로켓와우"],["필터","상품만","모아","보여"]]},
-    {"goal_type":"coupang.category.browse","display_name":"쿠팡 카테고리 둘러보기","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"browse_category"},"keyword_groups":[["카테고리","상품분류"],["열어","보여","둘러"]]},
-    {"goal_type":"coupang.seller.info","display_name":"쿠팡 판매자 정보 보기","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"seller_info"},"keyword_groups":[["판매자","셀러"],["정보","상세","누구"]]},
-    {"goal_type":"coupang.customer_service.open","display_name":"쿠팡 고객센터 열기","target_app":"coupang","task_type":"commerce_support","execution_status":"catalog_only","slots":{"action":"open"},"keyword_groups":[["고객센터","상담원","문의"],["열어","연결","채팅","전화"]]},
-    {"goal_type":"coupang.rocket_wow.manage","display_name":"로켓와우 멤버십 관리","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","risk_level":"high","slots":{"action":"manage"},"keyword_groups":[["로켓와우","와우멤버십","쿠팡멤버십"],["관리","가입","해지","확인"]]},
-    {"goal_type":"coupang.order.reorder","display_name":"쿠팡 재구매","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","risk_level":"high","slots":{"action":"reorder"},"keyword_groups":[["재구매","다시구매","전에산거"],["주문","사줘","구매"]]},
-    {"goal_type":"coupang.receipt.view","display_name":"쿠팡 영수증 보기","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"view_receipt"},"keyword_groups":[["영수증","거래명세서","결제내역"],["보여","발급","확인"]]},
-    {"goal_type":"coupang.search.filter","display_name":"쿠팡 검색 필터 설정","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"filter"},"keyword_groups":[["검색필터","필터","조건"],["설정","적용","걸어"]]},
-    {"goal_type":"coupang.search.sort","display_name":"쿠팡 검색 결과 정렬","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"sort"},"keyword_groups":[["정렬","낮은가격순","높은가격순","판매량순","최신순"],["바꿔","적용","보여"]]},
-    {"goal_type":"coupang.delivery_date.check","display_name":"쿠팡 도착 예정일 확인","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"check_delivery_date"},"keyword_groups":[["도착예정","도착날짜","배송예정"],["언제","확인","알려"]]},
-    {"goal_type":"coupang.order.gift","display_name":"쿠팡 선물하기","target_app":"coupang","task_type":"commerce_transaction","execution_status":"catalog_only","risk_level":"high","slots":{"action":"gift"},"keyword_groups":[["선물","선물하기"],["보내","주문","구매"]]},
-    {"goal_type":"coupang.cash_receipt.manage","display_name":"쿠팡 현금영수증 관리","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","slots":{"action":"manage"},"keyword_groups":[["현금영수증"],["등록","발급","변경","관리"]]},
-    {"goal_type":"coupang.product.price.check","display_name":"쿠팡 상품 가격 확인","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"check_price"},"keyword_groups":[["상품가격","제품가격","판매가격","가격"],["얼마","확인","알려"]]},
-    {"goal_type":"coupang.product.stock.check","display_name":"쿠팡 상품 재고 확인","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"check_stock"},"keyword_groups":[["재고","품절","남은수량"],["확인","있어","남았","알려"]]},
-    {"goal_type":"coupang.product.compare","display_name":"쿠팡 상품 비교","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"compare"},"keyword_groups":[["상품비교","제품비교","두상품"],["비교","차이","대조"]]},
-    {"goal_type":"coupang.product.share","display_name":"쿠팡 상품 공유","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"share"},"keyword_groups":[["상품링크","제품링크","이상품"],["공유","보내","링크복사"]]},
-    {"goal_type":"coupang.product.option.select","display_name":"쿠팡 상품 옵션 선택","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"select_option"},"keyword_groups":[["상품옵션","제품옵션","옵션선택"],["선택","바꿔","골라"]]},
-    {"goal_type":"coupang.product.restock_notification","display_name":"쿠팡 재입고 알림 신청","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"notify_restock"},"keyword_groups":[["재입고알림","입고알림","재고알림"],["신청","켜","등록"]]},
-    {"goal_type":"coupang.product.inquiry.write","display_name":"쿠팡 상품 문의 작성","target_app":"coupang","task_type":"commerce_support","execution_status":"catalog_only","slots":{"action":"write_inquiry"},"keyword_groups":[["상품문의","제품문의","판매자문의"],["작성","질문","남겨"]]},
-    {"goal_type":"coupang.product.inquiry.view","display_name":"쿠팡 상품 문의 보기","target_app":"coupang","task_type":"commerce_support","execution_status":"catalog_only","slots":{"action":"view_inquiry"},"keyword_groups":[["상품문의","제품문의","판매자문의"],["보여","확인","읽어"]]},
-    {"goal_type":"coupang.cart.quantity.increase","display_name":"쿠팡 장바구니 수량 늘리기","target_app":"coupang","task_type":"commerce_cart","execution_status":"catalog_only","slots":{"action":"increase_quantity"},"keyword_groups":[["장바구니수량","카트수량"],["늘려","추가","많이"]]},
-    {"goal_type":"coupang.cart.quantity.decrease","display_name":"쿠팡 장바구니 수량 줄이기","target_app":"coupang","task_type":"commerce_cart","execution_status":"catalog_only","slots":{"action":"decrease_quantity"},"keyword_groups":[["장바구니수량","카트수량"],["줄여","빼","적게"]]},
-    {"goal_type":"coupang.cart.select","display_name":"쿠팡 장바구니 상품 선택","target_app":"coupang","task_type":"commerce_cart","execution_status":"catalog_only","slots":{"action":"select"},"keyword_groups":[["장바구니상품","카트상품"],["선택","체크","골라"]]},
-    {"goal_type":"coupang.cart.unselect","display_name":"쿠팡 장바구니 상품 선택 해제","target_app":"coupang","task_type":"commerce_cart","execution_status":"catalog_only","slots":{"action":"unselect"},"keyword_groups":[["장바구니상품","카트상품"],["선택해제","체크해제","빼줘"]]},
-    {"goal_type":"coupang.order.details","display_name":"쿠팡 주문 상세 보기","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"view_details"},"keyword_groups":[["주문상세","주문정보","구매상세"],["보여","확인","열어"]]},
-    {"goal_type":"coupang.order.address.change","display_name":"쿠팡 주문 배송지 변경","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","risk_level":"high","slots":{"action":"change_order_address"},"keyword_groups":[["주문배송지","주문주소","받는주소"],["변경","바꿔","수정"]]},
-    {"goal_type":"coupang.delivery.instructions.change","display_name":"쿠팡 배송 요청사항 변경","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"change_delivery_instructions"},"keyword_groups":[["배송요청사항","배송메모","문앞메모"],["변경","바꿔","수정"]]},
-    {"goal_type":"coupang.order.cancel_status","display_name":"쿠팡 취소 처리 상태 확인","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"check_cancel_status"},"keyword_groups":[["취소상태","취소처리","주문취소결과"],["확인","어떻게","언제"]]},
-    {"goal_type":"coupang.order.refund_status","display_name":"쿠팡 환불 상태 확인","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"check_refund_status"},"keyword_groups":[["환불상태","환불처리","환불금"],["확인","언제","들어와"]]},
-    {"goal_type":"coupang.order.return_status","display_name":"쿠팡 반품 상태 확인","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"check_return_status"},"keyword_groups":[["반품상태","반품처리","반품진행"],["확인","어떻게","언제"]]},
-    {"goal_type":"coupang.order.exchange_status","display_name":"쿠팡 교환 상태 확인","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"check_exchange_status"},"keyword_groups":[["교환상태","교환처리","교환진행"],["확인","어떻게","언제"]]},
-    {"goal_type":"coupang.order.return_pickup.track","display_name":"쿠팡 반품 수거 조회","target_app":"coupang","task_type":"commerce_order","execution_status":"catalog_only","slots":{"action":"track_return_pickup"},"keyword_groups":[["반품수거","회수기사","반품기사"],["조회","언제와","추적","확인"]]},
-    {"goal_type":"coupang.review.edit","display_name":"쿠팡 상품평 수정","target_app":"coupang","task_type":"commerce_review","execution_status":"catalog_only","slots":{"action":"edit"},"keyword_groups":[["상품평","리뷰","후기"],["수정","고쳐","바꿔"]]},
-    {"goal_type":"coupang.review.delete","display_name":"쿠팡 상품평 삭제","target_app":"coupang","task_type":"commerce_review","execution_status":"catalog_only","risk_level":"high","slots":{"action":"delete"},"keyword_groups":[["상품평","리뷰","후기"],["삭제","지워","제거"]]},
-    {"goal_type":"coupang.review.helpful","display_name":"쿠팡 상품평 도움돼요 표시","target_app":"coupang","task_type":"commerce_review","execution_status":"catalog_only","slots":{"action":"mark_helpful"},"keyword_groups":[["상품평","리뷰","후기"],["도움돼요","추천","유용해"]]},
-    {"goal_type":"coupang.address.remove","display_name":"쿠팡 배송지 삭제","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","risk_level":"high","slots":{"action":"remove"},"keyword_groups":[["배송지","등록주소"],["삭제","지워","제거"]]},
-    {"goal_type":"coupang.payment_method.remove","display_name":"쿠팡 결제수단 삭제","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","risk_level":"high","slots":{"action":"remove"},"keyword_groups":[["결제수단","결제카드","결제계좌"],["삭제","지워","제거"]]},
-    {"goal_type":"coupang.coupon.download","display_name":"쿠팡 쿠폰 받기","target_app":"coupang","task_type":"commerce_promotion","execution_status":"catalog_only","slots":{"action":"download"},"keyword_groups":[["쿠폰","할인쿠폰"],["받아","다운로드","발급"]]},
-    {"goal_type":"coupang.search.recent.view","display_name":"쿠팡 최근 검색어 보기","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"view_recent_searches"},"keyword_groups":[["최근검색","검색기록","검색내역"],["보여","확인","열어"]]},
-    {"goal_type":"coupang.search.recent.clear","display_name":"쿠팡 최근 검색어 삭제","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","risk_level":"high","slots":{"action":"clear_recent_searches"},"keyword_groups":[["최근검색","검색기록","검색내역"],["삭제","지워","비워"]]},
-    {"goal_type":"coupang.account.login","display_name":"쿠팡 로그인","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","slots":{"action":"login"},"keyword_groups":[["쿠팡로그인","계정로그인"],["해줘","접속","들어가"]]},
-    {"goal_type":"coupang.account.logout","display_name":"쿠팡 로그아웃","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","risk_level":"high","slots":{"action":"logout"},"keyword_groups":[["쿠팡로그아웃","계정로그아웃"],["해줘","나가","종료"]]},
-    {"goal_type":"coupang.profile.change","display_name":"쿠팡 회원 정보 변경","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","slots":{"action":"change_profile"},"keyword_groups":[["회원정보","프로필정보","내정보"],["변경","바꿔","수정"]]},
-    {"goal_type":"coupang.rocket_wow.benefits","display_name":"쿠팡 와우 혜택 보기","target_app":"coupang","task_type":"commerce_promotion","execution_status":"catalog_only","slots":{"action":"view_benefits"},"keyword_groups":[["와우혜택","로켓와우혜택","멤버십혜택"],["보여","확인","뭐야"]]},
-    {"goal_type":"coupang.recurring_delivery.manage","display_name":"쿠팡 정기배송 관리","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","risk_level":"high","slots":{"action":"manage_recurring_delivery"},"keyword_groups":[["정기배송","정기구매","정기배달"],["관리","변경","해지","신청"]]},
-    {"goal_type":"coupang.rocket_fresh.filter","display_name":"로켓프레시 상품만 보기","target_app":"coupang","task_type":"commerce_browse","execution_status":"catalog_only","slots":{"action":"filter","filter":"rocket_fresh"},"keyword_groups":[["로켓프레시","신선식품"],["상품만","모아","보여","필터"]]},
-    {"goal_type":"coupang.coupay.balance.view","display_name":"쿠페이 머니 잔액 보기","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","slots":{"action":"view_balance"},"keyword_groups":[["쿠페이","쿠페이머니"],["잔액","얼마","확인"]]},
-    {"goal_type":"coupang.coupay.money.add","display_name":"쿠페이 머니 충전","target_app":"coupang","task_type":"commerce_transaction","execution_status":"catalog_only","risk_level":"high","slots":{"action":"add_money"},"keyword_groups":[["쿠페이","쿠페이머니"],["충전","넣어","추가"]]},
-    {"goal_type":"coupang.points.view","display_name":"쿠팡 캐시·포인트 보기","target_app":"coupang","task_type":"commerce_account","execution_status":"catalog_only","slots":{"action":"view_points"},"keyword_groups":[["쿠팡캐시","쿠팡포인트","적립금"],["잔액","얼마","확인","보여"]]}
-  ]
+    "version":  "3.0.0",
+    "matching":  {
+                     "strategy":  "all_keyword_groups",
+                     "normalization":  "lowercase_remove_space_and_punctuation",
+                     "tie_policy":  "ask_for_clarification",
+                     "multi_intent_policy":  "split_safe_goals_confirm_risky_goals"
+                 },
+    "goals":  [
+                  {
+                      "goal_type_id":  "settings.font_size.increase",
+                      "display_name":  "글자 크기 키우기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "font_size",
+                                    "direction":  "increase"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "글자",
+                                                 "글씨",
+                                                 "글꼴",
+                                                 "폰트",
+                                                 "font size",
+                                                 "text size"
+                                             ],
+                                             [
+                                                 "키워",
+                                                 "크게",
+                                                 "확대",
+                                                 "늘려",
+                                                 "너무 작",
+                                                 "작아서",
+                                                 "bigger",
+                                                 "larger",
+                                                 "increase"
+                                             ]
+                                         ],
+                      "utterances":  [
+                                         "글자가 너무 작아",
+                                         "글자 크기 키워줘",
+                                         "휴대폰 글씨를 크게 보고 싶어"
+                                     ]
+                  },
+                  {
+                      "goal_type_id":  "settings.font_size.decrease",
+                      "display_name":  "글자 크기 줄이기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "font_size",
+                                    "direction":  "decrease"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "글자",
+                                                 "글씨",
+                                                 "글꼴",
+                                                 "폰트",
+                                                 "font size",
+                                                 "text size"
+                                             ],
+                                             [
+                                                 "줄여",
+                                                 "작게",
+                                                 "축소",
+                                                 "낮춰",
+                                                 "너무 커",
+                                                 "커서",
+                                                 "smaller",
+                                                 "decrease"
+                                             ]
+                                         ],
+                      "utterances":  [
+                                         "글자가 너무 커",
+                                         "글자 크기 줄여줘",
+                                         "휴대폰 글씨를 작게 보고 싶어"
+                                     ]
+                  },
+                  {
+                      "goal_type_id":  "settings.wifi.enable",
+                      "display_name":  "와이파이 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "wifi",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "와이파이",
+                                                 "wifi"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "활성화",
+                                                 "사용하게"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.wifi.disable",
+                      "display_name":  "와이파이 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "wifi",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "와이파이",
+                                                 "wifi"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "비활성화",
+                                                 "해제"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.wifi.connect",
+                      "display_name":  "와이파이 연결",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "wifi",
+                                    "action":  "connect"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "와이파이",
+                                                 "wifi",
+                                                 "무선인터넷"
+                                             ],
+                                             [
+                                                 "연결",
+                                                 "잡아",
+                                                 "네트워크 선택"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.bluetooth.enable",
+                      "display_name":  "블루투스 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "bluetooth",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "블루투스",
+                                                 "bluetooth"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "활성화"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.bluetooth.disable",
+                      "display_name":  "블루투스 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "bluetooth",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "블루투스",
+                                                 "bluetooth"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "비활성화",
+                                                 "해제"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.bluetooth.connect",
+                      "display_name":  "블루투스 기기 연결",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "bluetooth",
+                                    "action":  "connect"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "블루투스",
+                                                 "bluetooth",
+                                                 "이어폰",
+                                                 "헤드셋"
+                                             ],
+                                             [
+                                                 "연결",
+                                                 "페어링",
+                                                 "등록"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.mobile_data.enable",
+                      "display_name":  "모바일 데이터 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "mobile_data",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "모바일데이터",
+                                                 "데이터",
+                                                 "셀룰러"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "활성화"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.mobile_data.disable",
+                      "display_name":  "모바일 데이터 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "mobile_data",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "모바일데이터",
+                                                 "데이터",
+                                                 "셀룰러"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "비활성화"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.airplane_mode.enable",
+                      "display_name":  "비행기 모드 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "airplane_mode",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "비행기모드",
+                                                 "에어플레인모드"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "활성화"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.airplane_mode.disable",
+                      "display_name":  "비행기 모드 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "airplane_mode",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "비행기모드",
+                                                 "에어플레인모드"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "비활성화"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.hotspot.enable",
+                      "display_name":  "모바일 핫스팟 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "hotspot",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "핫스팟",
+                                                 "테더링"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "활성화",
+                                                 "공유"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.hotspot.disable",
+                      "display_name":  "모바일 핫스팟 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "hotspot",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "핫스팟",
+                                                 "테더링"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "비활성화"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.brightness.increase",
+                      "display_name":  "화면 밝기 높이기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "brightness",
+                                    "direction":  "increase"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "밝기",
+                                                 "화면빛"
+                                             ],
+                                             [
+                                                 "높여",
+                                                 "밝게",
+                                                 "키워",
+                                                 "올려",
+                                                 "어두워"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.brightness.decrease",
+                      "display_name":  "화면 밝기 낮추기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "brightness",
+                                    "direction":  "decrease"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "밝기",
+                                                 "화면빛"
+                                             ],
+                                             [
+                                                 "낮춰",
+                                                 "어둡게",
+                                                 "줄여",
+                                                 "눈부셔"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.dark_mode.enable",
+                      "display_name":  "다크 모드 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "dark_mode",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "다크모드",
+                                                 "어두운테마",
+                                                 "야간모드"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "적용",
+                                                 "바꿔"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.dark_mode.disable",
+                      "display_name":  "다크 모드 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "dark_mode",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "다크모드",
+                                                 "어두운테마",
+                                                 "야간모드"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "해제",
+                                                 "밝은테마"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.screen_timeout.set",
+                      "display_name":  "화면 자동 꺼짐 시간 변경",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "screen_timeout",
+                                    "action":  "set"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "화면자동꺼짐",
+                                                 "화면꺼짐시간",
+                                                 "스크린타임아웃"
+                                             ],
+                                             [
+                                                 "변경",
+                                                 "바꿔",
+                                                 "늘려",
+                                                 "줄여",
+                                                 "설정"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.display_size.increase",
+                      "display_name":  "화면 요소 크게 하기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "display_size",
+                                    "direction":  "increase"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "화면크기",
+                                                 "화면요소",
+                                                 "아이콘크기",
+                                                 "디스플레이크기"
+                                             ],
+                                             [
+                                                 "키워",
+                                                 "크게",
+                                                 "확대",
+                                                 "늘려"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.display_size.decrease",
+                      "display_name":  "화면 요소 작게 하기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "display_size",
+                                    "direction":  "decrease"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "화면크기",
+                                                 "화면요소",
+                                                 "아이콘크기",
+                                                 "디스플레이크기"
+                                             ],
+                                             [
+                                                 "줄여",
+                                                 "작게",
+                                                 "축소"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.volume.increase",
+                      "display_name":  "소리 크기 높이기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "volume",
+                                    "direction":  "increase"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "소리",
+                                                 "볼륨",
+                                                 "음량"
+                                             ],
+                                             [
+                                                 "키워",
+                                                 "크게",
+                                                 "높여",
+                                                 "올려",
+                                                 "잘안들려"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.volume.decrease",
+                      "display_name":  "소리 크기 낮추기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "volume",
+                                    "direction":  "decrease"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "소리",
+                                                 "볼륨",
+                                                 "음량"
+                                             ],
+                                             [
+                                                 "줄여",
+                                                 "작게",
+                                                 "낮춰",
+                                                 "시끄러워"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.mute.enable",
+                      "display_name":  "무음 모드 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "mute",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "무음",
+                                                 "소리안나게",
+                                                 "조용히"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "설정",
+                                                 "바꿔"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.mute.disable",
+                      "display_name":  "무음 모드 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "mute",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "무음",
+                                                 "소리안나게"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "해제",
+                                                 "소리나게"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.ringtone.change",
+                      "display_name":  "벨소리 변경",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "ringtone",
+                                    "action":  "change"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "벨소리",
+                                                 "전화소리",
+                                                 "링톤"
+                                             ],
+                                             [
+                                                 "바꿔",
+                                                 "변경",
+                                                 "선택"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.vibrate.enable",
+                      "display_name":  "진동 모드 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "vibrate",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "진동",
+                                                 "바이브레이션"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "설정",
+                                                 "바꿔"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.vibrate.disable",
+                      "display_name":  "진동 모드 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "vibrate",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "진동",
+                                                 "바이브레이션"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "해제"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.notifications.enable",
+                      "display_name":  "앱 알림 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "notifications",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "알림",
+                                                 "푸시"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "허용",
+                                                 "받게"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.notifications.disable",
+                      "display_name":  "앱 알림 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "notifications",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "알림",
+                                                 "푸시"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "차단",
+                                                 "안받게"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.location.enable",
+                      "display_name":  "위치 서비스 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "location",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "위치",
+                                                 "gps"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "허용",
+                                                 "활성화"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.location.disable",
+                      "display_name":  "위치 서비스 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "location",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "위치",
+                                                 "gps"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "차단",
+                                                 "비활성화"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.power_saving.enable",
+                      "display_name":  "절전 모드 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "power_saving",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "절전",
+                                                 "배터리절약",
+                                                 "저전력"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "활성화",
+                                                 "설정"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.power_saving.disable",
+                      "display_name":  "절전 모드 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "power_saving",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "절전",
+                                                 "배터리절약",
+                                                 "저전력"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "해제",
+                                                 "비활성화"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.screen_lock.change",
+                      "display_name":  "화면 잠금 방식 변경",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "screen_lock",
+                                    "action":  "change"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "화면잠금",
+                                                 "잠금방식",
+                                                 "비밀번호",
+                                                 "핀번호",
+                                                 "패턴"
+                                             ],
+                                             [
+                                                 "바꿔",
+                                                 "변경",
+                                                 "설정"
+                                             ]
+                                         ],
+                      "interaction_hint":  "confirm_at_commit"
+                  },
+                  {
+                      "goal_type_id":  "settings.biometric.setup",
+                      "display_name":  "생체 인식 등록",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "biometric",
+                                    "action":  "setup"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "지문",
+                                                 "얼굴인식",
+                                                 "생체인식"
+                                             ],
+                                             [
+                                                 "등록",
+                                                 "추가",
+                                                 "설정"
+                                             ]
+                                         ],
+                      "interaction_hint":  "confirm_at_commit"
+                  },
+                  {
+                      "goal_type_id":  "settings.apps.uninstall",
+                      "display_name":  "앱 삭제",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "apps",
+                                    "action":  "uninstall"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "앱",
+                                                 "어플",
+                                                 "애플리케이션"
+                                             ],
+                                             [
+                                                 "삭제",
+                                                 "지워",
+                                                 "제거"
+                                             ]
+                                         ],
+                      "interaction_hint":  "confirm_at_commit"
+                  },
+                  {
+                      "goal_type_id":  "settings.app_permissions.manage",
+                      "display_name":  "앱 권한 관리",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "app_permissions",
+                                    "action":  "manage"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "앱권한",
+                                                 "어플권한",
+                                                 "권한"
+                                             ],
+                                             [
+                                                 "관리",
+                                                 "허용",
+                                                 "차단",
+                                                 "바꿔"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.storage.cleanup",
+                      "display_name":  "저장 공간 정리",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "storage",
+                                    "action":  "cleanup"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "저장공간",
+                                                 "스토리지",
+                                                 "용량"
+                                             ],
+                                             [
+                                                 "정리",
+                                                 "비워",
+                                                 "확보",
+                                                 "부족"
+                                             ]
+                                         ],
+                      "interaction_hint":  "confirm_at_commit"
+                  },
+                  {
+                      "goal_type_id":  "settings.talkback.enable",
+                      "display_name":  "TalkBack 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "talkback",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "톡백",
+                                                 "talkback",
+                                                 "화면읽기"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "활성화"
+                                             ]
+                                         ],
+                      "interaction_hint":  "confirm_at_commit"
+                  },
+                  {
+                      "goal_type_id":  "settings.talkback.disable",
+                      "display_name":  "TalkBack 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "talkback",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "톡백",
+                                                 "talkback",
+                                                 "화면읽기"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "비활성화"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.magnification.enable",
+                      "display_name":  "화면 확대 기능 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "magnification",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "화면확대",
+                                                 "돋보기",
+                                                 "확대기능"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "활성화",
+                                                 "설정"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.magnification.disable",
+                      "display_name":  "화면 확대 기능 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "magnification",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "화면확대",
+                                                 "돋보기",
+                                                 "확대기능"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "비활성화",
+                                                 "해제"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.wifi.share",
+                      "display_name":  "와이파이 공유",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "wifi",
+                                    "action":  "share"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "와이파이",
+                                                 "wifi",
+                                                 "무선인터넷"
+                                             ],
+                                             [
+                                                 "qr로공유",
+                                                 "큐알로공유",
+                                                 "공유해",
+                                                 "공유",
+                                                 "큐알",
+                                                 "qr",
+                                                 "비밀번호 보여"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.auto_rotate.enable",
+                      "display_name":  "화면 자동 회전 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "auto_rotate",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "자동회전",
+                                                 "화면회전"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "활성화",
+                                                 "허용",
+                                                 "잠금해제"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.auto_rotate.disable",
+                      "display_name":  "화면 자동 회전 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "auto_rotate",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "자동회전",
+                                                 "화면회전"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "비활성화",
+                                                 "잠가"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.eye_comfort.enable",
+                      "display_name":  "편안하게 화면 보기 켜기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "eye_comfort",
+                                    "state":  "on"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "블루라이트",
+                                                 "편안하게화면보기",
+                                                 "눈보호모드"
+                                             ],
+                                             [
+                                                 "켜",
+                                                 "활성화",
+                                                 "설정"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "settings.eye_comfort.disable",
+                      "display_name":  "편안하게 화면 보기 끄기",
+                      "target_app":  "android_settings",
+                      "task_type":  "settings_change",
+                      "status":  "active",
+                      "slots":  {
+                                    "setting":  "eye_comfort",
+                                    "state":  "off"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "블루라이트",
+                                                 "편안하게화면보기",
+                                                 "눈보호모드"
+                                             ],
+                                             [
+                                                 "꺼",
+                                                 "비활성화",
+                                                 "해제"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.product.search",
+                      "display_name":  "쿠팡 상품 검색",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_browse",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "search"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "쿠팡",
+                                                 "상품",
+                                                 "제품",
+                                                 "물건"
+                                             ],
+                                             [
+                                                 "검색",
+                                                 "찾아",
+                                                 "찾아줘"
+                                             ]
+                                         ],
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "product_query"
+                                                       ],
+                                          "optional":  [
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.product.details",
+                      "display_name":  "쿠팡 상품 상세 보기",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_browse",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "view_details"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "상품",
+                                                 "제품"
+                                             ],
+                                             [
+                                                 "상세",
+                                                 "자세히",
+                                                 "정보",
+                                                 "설명"
+                                             ]
+                                         ],
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "selected_product_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.product.price.check",
+                      "display_name":  "쿠팡 상품 가격 확인",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_browse",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "check_price"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "상품가격",
+                                                 "제품가격",
+                                                 "판매가격",
+                                                 "가격"
+                                             ],
+                                             [
+                                                 "얼마",
+                                                 "확인",
+                                                 "알려"
+                                             ]
+                                         ],
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "selected_product_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "product_query",
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.product.stock.check",
+                      "display_name":  "쿠팡 상품 재고 확인",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_browse",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "check_stock"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "재고",
+                                                 "품절",
+                                                 "남은수량"
+                                             ],
+                                             [
+                                                 "확인",
+                                                 "있어",
+                                                 "남았",
+                                                 "알려"
+                                             ]
+                                         ],
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "selected_product_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "product_query",
+                                                           "option_name",
+                                                           "option_value",
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.product.option.select",
+                      "display_name":  "쿠팡 상품 옵션 선택",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_browse",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "select_option"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "상품옵션",
+                                                 "제품옵션",
+                                                 "옵션선택"
+                                             ],
+                                             [
+                                                 "선택",
+                                                 "바꿔",
+                                                 "골라"
+                                             ]
+                                         ],
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "selected_product_ref",
+                                                           "option_value"
+                                                       ],
+                                          "optional":  [
+                                                           "option_name",
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.search.filter",
+                      "display_name":  "쿠팡 검색 필터 설정",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_browse",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "filter"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "검색필터",
+                                                 "필터",
+                                                 "조건"
+                                             ],
+                                             [
+                                                 "설정",
+                                                 "적용",
+                                                 "걸어"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.search.sort",
+                      "display_name":  "쿠팡 검색 결과 정렬",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_browse",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "sort"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "정렬",
+                                                 "낮은가격순",
+                                                 "높은가격순",
+                                                 "판매량순",
+                                                 "최신순"
+                                             ],
+                                             [
+                                                 "바꿔",
+                                                 "적용",
+                                                 "보여"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.rocket_delivery.filter",
+                      "display_name":  "로켓배송 상품만 보기",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_browse",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "filter",
+                                    "filter":  "rocket_delivery"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "로켓배송",
+                                                 "로켓와우"
+                                             ],
+                                             [
+                                                 "필터",
+                                                 "상품만",
+                                                 "모아",
+                                                 "보여"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.delivery_date.check",
+                      "display_name":  "쿠팡 도착 예정일 확인",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_browse",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "check_delivery_date"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "도착예정",
+                                                 "도착날짜",
+                                                 "배송예정"
+                                             ],
+                                             [
+                                                 "언제",
+                                                 "확인",
+                                                 "알려"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.review.view",
+                      "display_name":  "쿠팡 상품평 보기",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_review",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "view"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "상품평",
+                                                 "리뷰",
+                                                 "후기"
+                                             ],
+                                             [
+                                                 "보여",
+                                                 "읽어",
+                                                 "확인"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.cart.add",
+                      "display_name":  "쿠팡 장바구니 담기",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_cart",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "add"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "장바구니",
+                                                 "카트"
+                                             ],
+                                             [
+                                                 "담아",
+                                                 "추가",
+                                                 "넣어"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.cart.view",
+                      "display_name":  "쿠팡 장바구니 보기",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_cart",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "view"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "장바구니",
+                                                 "카트"
+                                             ],
+                                             [
+                                                 "보여",
+                                                 "열어",
+                                                 "확인",
+                                                 "목록"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.cart.remove",
+                      "display_name":  "쿠팡 장바구니 상품 삭제",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_cart",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "remove"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "장바구니",
+                                                 "카트"
+                                             ],
+                                             [
+                                                 "빼",
+                                                 "삭제",
+                                                 "지워",
+                                                 "제거"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.cart.quantity.increase",
+                      "display_name":  "쿠팡 장바구니 수량 늘리기",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_cart",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "increase_quantity"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "장바구니수량",
+                                                 "카트수량"
+                                             ],
+                                             [
+                                                 "늘려",
+                                                 "추가",
+                                                 "많이"
+                                             ]
+                                         ],
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "selected_product_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "quantity",
+                                                           "delta",
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.cart.quantity.decrease",
+                      "display_name":  "쿠팡 장바구니 수량 줄이기",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_cart",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "decrease_quantity"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "장바구니수량",
+                                                 "카트수량"
+                                             ],
+                                             [
+                                                 "줄여",
+                                                 "빼",
+                                                 "적게"
+                                             ]
+                                         ],
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "selected_product_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "quantity",
+                                                           "delta",
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.wishlist.add",
+                      "display_name":  "쿠팡 찜 추가",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_wishlist",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "add"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "찜",
+                                                 "위시리스트"
+                                             ],
+                                             [
+                                                 "추가",
+                                                 "담아",
+                                                 "저장"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.wishlist.view",
+                      "display_name":  "쿠팡 찜 목록 보기",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_wishlist",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "view"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "찜목록",
+                                                 "찜한상품",
+                                                 "위시리스트"
+                                             ],
+                                             [
+                                                 "보여",
+                                                 "열어",
+                                                 "확인"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.wishlist.remove",
+                      "display_name":  "쿠팡 찜 삭제",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_wishlist",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "remove"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "찜",
+                                                 "위시리스트"
+                                             ],
+                                             [
+                                                 "삭제",
+                                                 "빼",
+                                                 "해제"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.order.checkout",
+                      "display_name":  "쿠팡 주문·결제 진행",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_transaction",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "checkout"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "주문진행",
+                                                 "결제진행",
+                                                 "구매진행",
+                                                 "주문해줘",
+                                                 "결제해줘",
+                                                 "구매해줘",
+                                                 "주문할래",
+                                                 "결제할래",
+                                                 "구매할래"
+                                             ]
+                                         ],
+                      "safety_hint":  "high",
+                      "interaction_hint":  "confirm_at_commit"
+                  },
+                  {
+                      "goal_type_id":  "coupang.order.list",
+                      "display_name":  "쿠팡 주문 목록 보기",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_order",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "list"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "주문목록",
+                                                 "주문내역",
+                                                 "구매내역"
+                                             ],
+                                             [
+                                                 "보여",
+                                                 "열어",
+                                                 "확인"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.order.details",
+                      "display_name":  "쿠팡 주문 상세 보기",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_order",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "view_details"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "주문상세",
+                                                 "주문정보",
+                                                 "구매상세"
+                                             ],
+                                             [
+                                                 "보여",
+                                                 "확인",
+                                                 "열어"
+                                             ]
+                                         ],
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "order_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.order.track",
+                      "display_name":  "쿠팡 배송 조회",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_order",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "track"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "배송",
+                                                 "택배"
+                                             ],
+                                             [
+                                                 "조회",
+                                                 "어디",
+                                                 "언제와",
+                                                 "추적",
+                                                 "상태"
+                                             ]
+                                         ],
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "order_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.order.cancel",
+                      "display_name":  "쿠팡 주문 취소",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_order",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "cancel"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "주문",
+                                                 "구매",
+                                                 "결제"
+                                             ],
+                                             [
+                                                 "취소",
+                                                 "철회"
+                                             ]
+                                         ],
+                      "safety_hint":  "high",
+                      "interaction_hint":  "confirm_at_commit",
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "order_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.order.return",
+                      "display_name":  "쿠팡 반품 신청",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_order",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "return"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "반품",
+                                                 "돌려보내"
+                                             ],
+                                             [
+                                                 "신청",
+                                                 "접수",
+                                                 "하고싶어"
+                                             ]
+                                         ],
+                      "safety_hint":  "high",
+                      "interaction_hint":  "confirm_at_commit",
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "order_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.order.exchange",
+                      "display_name":  "쿠팡 교환 신청",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_order",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "exchange"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "교환",
+                                                 "바꿔받"
+                                             ],
+                                             [
+                                                 "신청",
+                                                 "접수",
+                                                 "하고싶어"
+                                             ]
+                                         ],
+                      "safety_hint":  "high",
+                      "interaction_hint":  "confirm_at_commit",
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "order_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "option_name",
+                                                           "option_value",
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.order.refund_status",
+                      "display_name":  "쿠팡 환불 상태 확인",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_order",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "check_refund_status"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "환불상태",
+                                                 "환불처리",
+                                                 "환불금"
+                                             ],
+                                             [
+                                                 "확인",
+                                                 "언제",
+                                                 "들어와"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.order.address.change",
+                      "display_name":  "쿠팡 주문 배송지 변경",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_order",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "change_order_address"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "주문배송지",
+                                                 "주문주소",
+                                                 "받는주소"
+                                             ],
+                                             [
+                                                 "변경",
+                                                 "바꿔",
+                                                 "수정"
+                                             ]
+                                         ],
+                      "safety_hint":  "high",
+                      "interaction_hint":  "confirm_at_commit",
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "order_ref",
+                                                           "address_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.delivery.instructions.change",
+                      "display_name":  "쿠팡 배송 요청사항 변경",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_order",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "change_delivery_instructions"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "배송요청사항",
+                                                 "배송메모",
+                                                 "문앞메모"
+                                             ],
+                                             [
+                                                 "변경",
+                                                 "바꿔",
+                                                 "수정"
+                                             ]
+                                         ],
+                      "interaction_hint":  "confirm_at_commit",
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "order_ref",
+                                                           "delivery_instruction"
+                                                       ],
+                                          "optional":  [
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.address.change",
+                      "display_name":  "쿠팡 배송지 변경",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_account",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "change"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "배송지",
+                                                 "주소"
+                                             ],
+                                             [
+                                                 "변경",
+                                                 "바꿔",
+                                                 "수정"
+                                             ]
+                                         ],
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "address_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.payment_method.change",
+                      "display_name":  "쿠팡 결제수단 변경",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_account",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "change"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "결제수단",
+                                                 "결제카드",
+                                                 "결제계좌"
+                                             ],
+                                             [
+                                                 "변경",
+                                                 "바꿔",
+                                                 "수정"
+                                             ]
+                                         ],
+                      "safety_hint":  "high",
+                      "interaction_hint":  "confirm_at_commit",
+                      "slot_schema":  {
+                                          "required":  [
+                                                           "payment_method_ref"
+                                                       ],
+                                          "optional":  [
+                                                           "screen_context"
+                                                       ],
+                                          "additional_properties":  false
+                                      }
+                  },
+                  {
+                      "goal_type_id":  "coupang.coupon.apply",
+                      "display_name":  "쿠팡 쿠폰 적용",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_promotion",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "apply"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "쿠폰",
+                                                 "할인쿠폰"
+                                             ],
+                                             [
+                                                 "적용",
+                                                 "사용",
+                                                 "써줘"
+                                             ]
+                                         ]
+                  },
+                  {
+                      "goal_type_id":  "coupang.customer_service.open",
+                      "display_name":  "쿠팡 고객센터 열기",
+                      "target_app":  "coupang",
+                      "task_type":  "commerce_support",
+                      "status":  "active",
+                      "slots":  {
+                                    "action":  "open"
+                                },
+                      "keyword_groups":  [
+                                             [
+                                                 "고객센터",
+                                                 "상담원",
+                                                 "문의"
+                                             ],
+                                             [
+                                                 "열어",
+                                                 "연결",
+                                                 "채팅",
+                                                 "전화"
+                                             ]
+                                         ]
+                  }
+              ]
 }

@@ -18,7 +18,7 @@ public final class GoalCommandInterpreter {
 
         public boolean canStart() {
             return (kind == Kind.START_TASK || kind == Kind.REPLACE_TASK)
-                    && goal != null && goal.isExecutable();
+                    && goal != null;
         }
     }
 
@@ -55,10 +55,6 @@ public final class GoalCommandInterpreter {
             }
             if (classification.matched()) {
                 GoalCatalogClassifier.Match match = classification.match;
-                if (!match.isExecutable()) {
-                    return new Result(Kind.CATALOGUED_UNAVAILABLE,
-                            match.displayName + " 요청으로 분류했어요. 이 작업의 실행 안내는 아직 승인되지 않았어요.", match);
-                }
                 Kind kind = hasActiveTask && text.contains("대신") ? Kind.REPLACE_TASK : Kind.START_TASK;
                 return new Result(kind, null, match);
             }

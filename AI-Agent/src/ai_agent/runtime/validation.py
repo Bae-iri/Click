@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ai_agent.runtime.types import AgentTurnRequest, TurnPhase
+from ai_agent.goal_catalog import active_goal
 
 
 class ContractViolationError(ValueError):
@@ -33,16 +34,14 @@ def validate_agent_turn_request(
 
     if request.typed_goal is not None:
         goal = request.typed_goal
-        supported = {
-            "settings.font_size.increase": "increase",
-            "settings.font_size.decrease": "decrease",
-        }
-        if goal.goal_type not in supported:
-            raise ContractViolationError("Unsupported typed goal.")
-        if goal.target_app != "android_settings":
-            raise ContractViolationError("typed_goal.target_app must be android_settings.")
-        if goal.slots != {"setting": "font_size", "direction": supported[goal.goal_type]}:
-            raise ContractViolationError("typed_goal.slots do not match the approved graph.")
+        catalog_goal = active_goal(goal.goal_type)
+        if catalog_goal is None:
+            raise ContractViolationError("Unknown or inactive goal_type_id.")
+        if goal.target_app != catalog_goal["target_app"]:
+            raise ContractViolationError("typed_goal.target_app does not match the catalog.")
+        expected_slots = catalog_goal.get("slots", {})
+        if any(goal.slots.get(key) != value for key, value in expected_slots.items()):
+            raise ContractViolationError("typed_goal.slots do not match the catalog defaults.")
         if request.device_context is None or request.device_context.platform != "android":
             raise ContractViolationError("device_context.platform must be android.")
 

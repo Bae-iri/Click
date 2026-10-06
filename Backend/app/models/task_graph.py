@@ -10,7 +10,6 @@ class ApprovedTaskGraph(Base):
     id: Mapped[str] = mapped_column(String(200), primary_key=True)
     graph_id: Mapped[str] = mapped_column(String(100))
     task_id: Mapped[str] = mapped_column(String(100), index=True)
-    goal_type: Mapped[str] = mapped_column(String(200), index=True)
     target_app: Mapped[str] = mapped_column(String(100))
     graph_version: Mapped[str] = mapped_column(String(64))
     graph_hash: Mapped[str] = mapped_column(String(64))
