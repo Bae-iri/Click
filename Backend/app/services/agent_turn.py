@@ -31,27 +31,38 @@ class AgentTurnService:
         selected_graph = None
         selected_reference = None
         if getattr(request, "command_type", None) in {"start_task", "replace_task"}:
-            selected_graph, selected_reference = self.graphs.select(request.goal)
+            if self.repository.has_request(request.user_id, request.request_id, request.session_id):
+                details = self.repository.typed_details(request.session_id, request.user_id)
+                selected_graph, selected_reference = (self.graphs.select_pinned(details)
+                    if details["graph_hash"] else self.graphs.select(request.goal))
+            else:
+                selected_graph, selected_reference = self.graphs.select(request.goal)
         elif getattr(request, "command_type", None) in {"observe", "respond_confirmation"}:
             details = self.repository.typed_details(request.session_id, request.user_id)
             goal = type("StoredGoal", (), details["goal"])()
-            selected_graph, reference = self.graphs.select(goal)
-            if details["graph_hash"] and details["graph_hash"] != reference["sha256"]:
+            selected_graph, selected_reference = (self.graphs.select_pinned(details)
+                if details["graph_hash"] else self.graphs.select(goal))
+            if details["graph_hash"] and details["graph_hash"] != selected_reference["sha256"]:
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
+        checkpoint_graph_version = graph_version(selected_graph)
+        compatible_versions = {checkpoint_graph_version}
+        # Existing font sessions used the whole bundled registry hash before DB loading.
+        if selected_graph and selected_graph.definition.task_id in {"MVP-01", "MVP-02"}:
+            compatible_versions.add(graph_version())
         canonical = json.dumps(request.model_dump(mode="json"), sort_keys=True,
                                separators=(",", ":"), ensure_ascii=False)
         digest = sha256(canonical.encode()).hexdigest()
         claim = self.repository.claim(request, digest)
         if "cached" in claim:
             if claim["graph_version"] is not None and (
-                claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] != graph_version()
+                claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] not in compatible_versions
             ):
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
             return self.personalize(safe_response(AgentTurnResponse.model_validate(claim["cached"])), request.user_id)
         try:
             approved = validate_confirmation(self.session_factory, request, int(self.repository.clock()))
             if claim["checkpoint"] is not None and (
-                claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] != graph_version()
+                claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] not in compatible_versions
             ):
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
             # An isolated runtime per turn prevents cross-request state corruption.
@@ -66,7 +77,7 @@ class AgentTurnService:
             validate_output(request, response, approved, checkpoint=claim["checkpoint"],
                             now=int(self.repository.clock()))
             response.session_version = claim["version"] + 1
-            checkpoint = capture(store, request.session_id)
+            checkpoint = capture(store, request.session_id, selected_graph)
             if approved and checkpoint and checkpoint.get("pending_attempt"):
                 guide = response.guide_command
                 checkpoint["pending_attempt"]["authorization"] = {
@@ -75,9 +86,8 @@ class AgentTurnService:
                     "target_node_id": guide.target_node_id, "target_bounds": list(guide.target_bounds or ()),
                     "task_id": response.task_id, "state_id": response.state_id,
                 }
-            self.repository.finish(request, claim, response, checkpoint, SCHEMA_VERSION, graph_version())
-            if selected_reference is not None:
-                self.repository.pin_graph(request.session_id, request.user_id, selected_reference)
+            self.repository.finish(request, claim, response, checkpoint, SCHEMA_VERSION,
+                checkpoint_graph_version, graph_reference=selected_reference)
         except Exception:
             self.repository.release(request.session_id, claim["token"])
             raise
@@ -88,6 +98,8 @@ class AgentTurnService:
         command = request.command_type
         graph_hash = graph_version()
         if command in {"pause_task", "resume_task", "cancel_task"}:
+            pinned = self.repository.typed_details(request.session_id, request.user_id)
+            graph_hash = pinned["graph_hash"] or graph_hash
             canonical = json.dumps(request.model_dump(mode="json"), sort_keys=True,
                 separators=(",", ":"), ensure_ascii=False)
             details = self.repository.apply_typed_control(request, graph_hash,

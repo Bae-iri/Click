@@ -1,0 +1,16 @@
+[
+  {
+    "artifact": "MVP-01.json",
+    "version": "1.0.0",
+    "approved": true,
+    "priority": 100,
+    "status": "existing_runtime"
+  },
+  {
+    "artifact": "MVP-02.json",
+    "version": "1.0.0",
+    "approved": true,
+    "priority": 100,
+    "status": "existing_runtime"
+  }
+]

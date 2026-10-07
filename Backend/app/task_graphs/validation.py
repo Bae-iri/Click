@@ -1,0 +1,69 @@
+"""Decode versioned JSON graphs into AI1 contracts and validate their topology."""
+from dataclasses import fields
+
+from pydantic import TypeAdapter
+
+from ai_agent.runtime.types import (
+    TaskGraph, TaskDefinition, TaskState, Transition, TargetSelector, RuntimePolicy,
+    ActionType, SafetyLevel,
+)
+
+ADAPTER = TypeAdapter(TaskGraph)
+PREDICATES = {"state_reached", "target_value_increased", "target_value_decreased"}
+
+
+def _fields(body, contract):
+    if not isinstance(body, dict) or body.keys() - {field.name for field in fields(contract)}:
+        raise ValueError("Unexpected graph fields")
+
+
+def load_graph(body, *, executable=True):
+    _fields(body, TaskGraph)
+    _fields(body.get("definition"), TaskDefinition)
+    if not isinstance(body.get("states"), dict) or not isinstance(body.get("transitions"), list):
+        raise ValueError("Invalid graph collections")
+    for state in body["states"].values():
+        _fields(state, TaskState)
+    for transition in body["transitions"]:
+        _fields(transition, Transition)
+        _fields(transition.get("selector", {}), TargetSelector)
+    _fields(body.get("policy", {}), RuntimePolicy)
+    graph = ADAPTER.validate_python(body)
+    definition = graph.definition
+    if not definition.task_id or not definition.goal_type:
+        raise ValueError("Missing graph identity")
+    if definition.done_state not in graph.states or not definition.start_states:
+        raise ValueError("Missing terminal or start state")
+    if any(key != state.state_id for key, state in graph.states.items()):
+        raise ValueError("State ID mismatch")
+    if any(not 0 <= state.confidence_threshold <= 1 for state in graph.states.values()):
+        raise ValueError("Invalid state confidence threshold")
+    if any(state not in graph.states for state in definition.start_states):
+        raise ValueError("Unknown start state")
+    ids = [transition.transition_id for transition in graph.transitions]
+    if len(ids) != len(set(ids)):
+        raise ValueError("Duplicate transition ID")
+    for transition in graph.transitions:
+        if not transition.transition_id:
+            raise ValueError("Missing transition ID")
+        if transition.from_state not in graph.states or transition.to_state not in graph.states:
+            raise ValueError("Dangling transition")
+        if transition.from_state == definition.done_state:
+            raise ValueError("Terminal state has outgoing transitions")
+        if executable and transition.verification_predicate not in PREDICATES:
+            raise ValueError("Unsupported completion predicate")
+        if transition.safety_level == SafetyLevel.CONFIRM_REQUIRED and not transition.confirmation_message:
+            raise ValueError("Missing confirmation message")
+        if transition.completes_task and transition.action_type != ActionType.OBSERVE_ONLY:
+            if transition.safety_level != SafetyLevel.CONFIRM_REQUIRED:
+                raise ValueError("Setting mutation requires confirmation")
+        if transition.requires_user_action and not transition.target_keywords:
+            raise ValueError("Action has no target keywords")
+    reachable = set(definition.start_states)
+    for _ in graph.states:
+        reachable.update(t.to_state for t in graph.transitions if t.from_state in reachable)
+    if definition.done_state not in reachable:
+        raise ValueError("Unreachable terminal state")
+    if executable and not any(t.completes_task for t in graph.transitions):
+        raise ValueError("Graph has no verified completion")
+    return graph
