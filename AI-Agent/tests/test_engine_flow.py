@@ -391,12 +391,14 @@ class EngineFlowTests(unittest.TestCase):
                             element_id="title",
                             text="설정",
                             bounds_in_screen=(24, 40, 1056, 96),
+                            confidence=0.96,
                             actionable=False,
                         ),
                         VisionElement(
                             element_id="display",
                             text="디스플레이",
                             bounds_in_screen=(24, 240, 1056, 320),
+                            confidence=0.94,
                         ),
                     ),
                 ),
@@ -405,7 +407,8 @@ class EngineFlowTests(unittest.TestCase):
 
         self.assertEqual(response.current_state_id, "S1_SETTINGS_HOME")
         self.assertEqual(response.guide_command.target_node_id, "vision:display")
-        self.assertEqual(response.guide_command.message, "디스플레이를 눌러주세요.")
+        self.assertIn("화면 글자로 찾은", response.guide_command.message)
+        self.assertTrue(response.guide_command.render_policy["vision_derived"])
         self.assertEqual(response.debug["vision_fallback"]["status"], "used")
         self.assertEqual(response.debug["observation"]["synthetic_vision_node_count"], 2)
         self.assertEqual(response.debug["fallback"]["type"], "vision_augmented_match")
@@ -442,6 +445,7 @@ class EngineFlowTests(unittest.TestCase):
                             element_id="display",
                             text="디스플레이",
                             bounds_in_screen=(24, 240, 1056, 320),
+                            confidence=0.94,
                         ),
                     ),
                 ),
@@ -479,7 +483,7 @@ class EngineFlowTests(unittest.TestCase):
         )
         self.assertEqual(response.debug["fallback"]["type"], "vision_fallback")
 
-    def test_empty_tree_without_vision_returns_information_blocked_fallback(self) -> None:
+    def test_empty_tree_without_vision_requests_consented_ocr_fallback(self) -> None:
         engine = ClickAgentEngine()
 
         response = engine.handle_turn(
@@ -492,10 +496,19 @@ class EngineFlowTests(unittest.TestCase):
         )
 
         self.assertEqual(response.current_state_id, "S0_UNKNOWN")
-        self.assertEqual(response.guide_command.command_type, CommandType.BLOCKED)
+        self.assertEqual(response.guide_command.command_type, CommandType.CONFIRMATION)
         self.assertEqual(response.debug["observation"]["accessibility_node_count"], 0)
         self.assertEqual(response.debug["fallback"]["type"], "vision_fallback")
         self.assertEqual(response.debug["vision_fallback"]["status"], "not_requested")
+        self.assertTrue(
+            response.guide_command.render_policy["vision_fallback"][
+                "requires_user_consent"
+            ]
+        )
+        self.assertIn(
+            "manual_instruction",
+            response.guide_command.render_policy["vision_fallback"],
+        )
 
 
 def _raw_goal(

@@ -20,6 +20,7 @@ METRICS = {"count_attempt", "task_completed", "state_score", "score_gap", "recov
            "normalized_node_count", "actionable_node_count", "synthetic_vision_node_count",
            "accessibility_tree_present", "vision_snapshot_present", "vision_has_screenshot",
            "vision_has_ocr_text", "requires_user_action", "session_stateful", "matched_from_vision"}
+METRICS.add("vision_processing_time_ms")
 
 
 def diagnostic_payload(value, depth=0):

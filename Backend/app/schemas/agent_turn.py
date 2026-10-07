@@ -70,7 +70,7 @@ class AccessibilityTree(BaseModel):
 
 class VisionElement(BaseModel):
     element_id: str
-    text: str = Field(min_length=1, max_length=500)
+    text: str = Field(min_length=1, max_length=200)
     bounds_in_screen: tuple[int, int, int, int] | None = Field(
         default=None,
         validation_alias=AliasChoices("bounds_in_screen", "bounds"),
@@ -94,17 +94,33 @@ class VisionElement(BaseModel):
 
 
 class VisionSnapshot(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     user_consented: bool = False
     redaction_applied: bool = Field(default=False, description="Client hint only; does not authorize external image processing")
     provider: str | None = None
     screenshot_base64: str | None = Field(default=None, max_length=8_000_000, description="Discarded: external image processing is disabled until server-side redaction is available; send on-device OCR elements")
     mime_type: str = "image/png"
     ocr_text: str | None = Field(default=None, max_length=10_000)
-    elements: list[VisionElement] = Field(default_factory=list, max_length=2000)
+    elements: list[VisionElement] = Field(default_factory=list, max_length=200)
     package_name: str | None = None
     screen_width: int | None = Field(default=None, gt=0)
     screen_height: int | None = Field(default=None, gt=0)
     captured_at_ms: int | None = None
+    processing_time_ms: int | None = Field(default=None, ge=0, le=60_000)
+
+    @model_validator(mode="after")
+    def enforce_on_device_ocr_boundary(self) -> "VisionSnapshot":
+        if self.screenshot_base64 is not None:
+            raise ValueError("raw screenshots must not be sent; send on-device OCR elements")
+        if self.elements or self.ocr_text:
+            if not self.user_consented:
+                raise ValueError("vision OCR requires user consent")
+            if not self.redaction_applied:
+                raise ValueError("vision OCR requires client redaction")
+            if self.provider != "frontend_ocr":
+                raise ValueError("only frontend_ocr vision payloads are accepted")
+        return self
 
 
 class AgentTurnRequest(BaseModel):
