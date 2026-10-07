@@ -27,6 +27,7 @@ class LLMVLMFallback:
     """Analyze a consented vision snapshot without leaking raw images into traces."""
 
     provider = "vision-fallback"
+    min_element_confidence = 0.65
 
     def analyze(
         self,
@@ -46,20 +47,42 @@ class LLMVLMFallback:
                 reason="external_vlm_processing",
                 provider=snapshot.provider or self.provider,
             )
-        if snapshot.elements or snapshot.ocr_text:
+        if snapshot.screenshot_base64:
+            return VisionFallbackAnalysis(
+                status="not_configured",
+                reason="raw_screenshot_ingress_forbidden",
+                provider="local",
+            )
+        if snapshot.provider != "frontend_ocr":
+            return VisionFallbackAnalysis(
+                status="not_configured",
+                reason="unsupported_vision_provider",
+                provider=snapshot.provider or self.provider,
+            )
+        if not snapshot.redaction_applied:
+            return VisionFallbackAnalysis(
+                status="not_configured",
+                reason="redaction_not_attested",
+                provider=snapshot.provider,
+            )
+        usable_elements = tuple(
+            element for element in snapshot.elements
+            if element.text.strip()
+            and element.bounds_in_screen is not None
+            and element.confidence is not None
+            and element.confidence >= self.min_element_confidence
+        )
+        if usable_elements:
             return VisionFallbackAnalysis(
                 status="used",
                 reason=reason,
-                provider=snapshot.provider or "frontend_vision_payload",
-                elements=snapshot.elements,
-                ocr_text=snapshot.ocr_text,
+                provider=snapshot.provider,
+                elements=usable_elements,
             )
-        if snapshot.screenshot_base64:
-            return self._analyze_with_gemini(snapshot, reason=reason)
         return VisionFallbackAnalysis(
-            status="not_configured",
-            reason="vision_snapshot_has_no_elements_or_image",
-            provider=snapshot.provider or self.provider,
+            status="no_signal",
+            reason="vision_snapshot_has_no_usable_elements",
+            provider=snapshot.provider,
         )
 
     def _analyze_with_gemini(

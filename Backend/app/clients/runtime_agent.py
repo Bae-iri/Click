@@ -132,6 +132,7 @@ class RuntimeAgentAdapter:
                 screen_width=vision_snapshot.screen_width or screen_width,
                 screen_height=vision_snapshot.screen_height or screen_height,
                 captured_at_ms=vision_snapshot.captured_at_ms,
+                processing_time_ms=vision_snapshot.processing_time_ms,
             ) if vision_snapshot else None,
             active_window_id=tree.active_window_id if tree else None,
             observation_id=tree.observation_id if tree else None,
@@ -181,7 +182,11 @@ class RuntimeAgentAdapter:
             guide_command=GuideCommandResponse(
                 guide_command_id=guide.guide_command_id,
                 command_type=command_type,
-                proposed_action=result.match_result.action_type.value if command_type == "confirmation" and result.match_result and result.match_result.action_type.value in {"tap", "drag", "scroll"} else None,
+                proposed_action=(result.match_result.action_type.value
+                    if command_type == "confirmation" and result.match_result
+                    and guide.target_node_id is not None and guide.target_bounds is not None
+                    and result.match_result.action_type.value in {"tap", "drag", "scroll"}
+                    else None),
                 action_type="observe_only" if task_completed else guide.action_type.value,
                 message=guide.message,
                 target_node_id=guide.target_node_id,

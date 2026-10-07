@@ -6,8 +6,14 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.List;
+
 /** One consented OCR observation. Never serializes screenshots or arbitrary screen text. */
 public final class AgentVisionSnapshot {
+    public static final String PROVIDER = "frontend_ocr";
+    private static final int MAX_ELEMENTS = 200;
+    private static final int MAX_TEXT_LENGTH = 200;
+
     private AgentVisionSnapshot() {}
 
     public static JSONObject fromOcr(ScreenSnapshot screen, Text result, long capturedAtMs) {
@@ -15,7 +21,7 @@ public final class AgentVisionSnapshot {
             JSONObject snapshot = new JSONObject();
             snapshot.put("user_consented", true);
             snapshot.put("redaction_applied", true);
-            snapshot.put("provider", "mlkit_on_device_ocr");
+            snapshot.put("provider", PROVIDER);
             snapshot.put("observation_id", screen.observationId);
             snapshot.put("active_window_id", screen.activeWindowId);
             snapshot.put("package_name", screen.packageName);
@@ -30,12 +36,57 @@ public final class AgentVisionSnapshot {
                     if (label == null || bounds == null || bounds.isEmpty()
                             || bounds.left < 0 || bounds.top < 0
                             || bounds.right > screen.screenWidth || bounds.bottom > screen.screenHeight) continue;
+                    Float confidence = line.getConfidence();
+                    if (confidence == null || confidence < VisionElementMapper.MIN_CONFIDENCE) continue;
                     elements.put(new JSONObject().put("element_id", "ocr_" + elements.length())
                             .put("text", label).put("role", "menu_item")
                             .put("actionable", !label.equals("설정") && !label.equals("settings"))
+                            .put("confidence", confidence)
                             .put("bounds_in_screen", new JSONArray(new int[]{
                                     bounds.left, bounds.top, bounds.right, bounds.bottom})));
                 }
+            }
+            snapshot.put("elements", elements);
+            return snapshot;
+        } catch (JSONException error) {
+            throw new IllegalStateException("vision_snapshot JSON 생성 실패", error);
+        }
+    }
+
+    public static JSONObject fromOcr(
+            ScreenSnapshot screen,
+            boolean userConsented,
+            List<VisionOcrElement> recognized,
+            long capturedAtMs,
+            long processingTimeMs
+    ) {
+        if (!userConsented) throw new IllegalArgumentException("Vision OCR requires user consent");
+        try {
+            JSONObject snapshot = new JSONObject();
+            snapshot.put("user_consented", true);
+            snapshot.put("redaction_applied", true);
+            snapshot.put("provider", PROVIDER);
+            snapshot.put("observation_id", screen.observationId);
+            snapshot.put("active_window_id", screen.activeWindowId);
+            snapshot.put("package_name", screen.packageName);
+            snapshot.put("screen_width", screen.screenWidth);
+            snapshot.put("screen_height", screen.screenHeight);
+            snapshot.put("captured_at_ms", capturedAtMs);
+            snapshot.put("processing_time_ms", Math.max(0L, processingTimeMs));
+            JSONArray elements = new JSONArray();
+            for (VisionOcrElement item : recognized) {
+                if (elements.length() >= MAX_ELEMENTS) break;
+                if (!item.isValid(screen.screenWidth, screen.screenHeight)) continue;
+                String text = item.text.length() <= MAX_TEXT_LENGTH
+                        ? item.text : item.text.substring(0, MAX_TEXT_LENGTH);
+                JSONObject element = new JSONObject();
+                element.put("element_id", item.elementId);
+                element.put("text", text);
+                element.put("bounds_in_screen", new JSONArray(item.bounds));
+                if (item.role != null) element.put("role", item.role);
+                element.put("confidence", item.confidence);
+                element.put("actionable", item.actionable);
+                elements.put(element);
             }
             snapshot.put("elements", elements);
             return snapshot;

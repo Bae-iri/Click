@@ -211,17 +211,20 @@ def test_vision_snapshot_can_be_sent_without_accessibility_tree() -> None:
                 "package_name": "com.android.settings",
                 "screen_width": 1080,
                 "screen_height": 2400,
+                "processing_time_ms": 123,
                 "elements": [
                     {
                         "element_id": "title",
                         "text": "Settings",
                         "bounds_in_screen": [24, 40, 1056, 96],
+                        "confidence": 0.96,
                         "actionable": False,
                     },
                     {
                         "element_id": "display",
                         "text": "Display",
                         "bounds_in_screen": [24, 320, 1056, 408],
+                        "confidence": 0.94,
                     },
                 ],
             },
@@ -233,6 +236,7 @@ def test_vision_snapshot_can_be_sent_without_accessibility_tree() -> None:
     assert body["state_id"] == "S1_SETTINGS_HOME"
     assert body["guide_command"]["target_node_id"] == "vision:display"
     assert body["metadata"]["debug"]["vision_fallback"]["status"] == "used"
+    assert body["metadata"]["debug"]["observation"]["vision_processing_time_ms"] == 123
 
 
 @pytest.mark.parametrize("action_type", ["scroll_completed", "scroll_failed"])
@@ -272,20 +276,35 @@ def test_empty_accessibility_tree_returns_runtime_fallback_contract() -> None:
     body = response.json()
     assert body["metadata"]["debug"]["observation"]["accessibility_node_count"] == 0
     assert body["metadata"]["debug"]["fallback"]["type"] == "vision_fallback"
-    assert body["guide_command"]["render_policy"] == {
-        "runtime_strategy": "reobserve", "attempt_id": None, "step_id": None,
-        "avoid_covering_target": False,
-        "preferred_position": "center",
-        "vision_fallback": {
-            "requires_user_consent": False,
-            "accepted_payloads": [
-                "vision_snapshot.elements",
-                "vision_snapshot.ocr_text",
-                "vision_snapshot.screenshot_base64",
-            ],
-            "send_fresh_accessibility_tree": True,
+    policy = body["guide_command"]["render_policy"]
+    assert policy["runtime_strategy"] == "reobserve"
+    assert policy["avoid_covering_target"] is False
+    vision = policy["vision_fallback"]
+    assert vision["requires_user_consent"] is True
+    assert vision["accepted_payloads"] == ["vision_snapshot.elements"]
+    assert vision["provider"] == "frontend_ocr"
+    assert vision["raw_image_egress"] is False
+    assert vision["send_fresh_accessibility_tree"] is True
+    assert vision["manual_instruction"]
+
+
+def test_raw_screenshot_vision_payload_is_rejected_at_http_boundary() -> None:
+    client = TestClient(create_app())
+    response = client.post(
+        "/api/v1/agent/turn",
+        json={
+            "request_id": "raw-image-request",
+            "session_id": "raw-image-session",
+            "raw_goal": "increase font size",
+            "vision_snapshot": {
+                "user_consented": True,
+                "redaction_applied": True,
+                "provider": "frontend_ocr",
+                "screenshot_base64": "RAW_IMAGE_BYTES",
+            },
         },
-    }
+    )
+    assert response.status_code == 422
 
 
 def test_screen_observation_is_still_required() -> None:

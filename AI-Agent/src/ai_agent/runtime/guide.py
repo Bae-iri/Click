@@ -112,8 +112,22 @@ def build_guide_command(
             message="작업 완료를 확인할 근거가 부족해요.", safety_level=SafetyLevel.BLOCKED,
             requires_user_action=False)
 
+    vision_derived = match_result.match_method.startswith("vision_")
     message = transition.guide_message if transition else "다음 항목을 눌러주세요."
+    if vision_derived:
+        label = match_result.target_label or "표시한 항목"
+        message = (
+            f"화면 글자로 찾은 '{label}'을 표시했어요. 맞으면 눌러주세요. "
+            "표시가 다르면 누르지 말고 다시 찾아달라고 말씀해 주세요."
+        )
     safety_level = transition.safety_level if transition else SafetyLevel.LOW_RISK
+    render_policy = {
+        "avoid_covering_target": True,
+        "preferred_position": "below_target",
+    }
+    if vision_derived:
+        render_policy["vision_derived"] = True
+        render_policy["requires_visual_confirmation"] = True
     return GuideCommand(
         guide_command_id=f"guide_{session_id}_{match_result.transition_id or match_result.state_id}",
         command_type=CommandType.HIGHLIGHT,
@@ -124,6 +138,7 @@ def build_guide_command(
         message=message,
         safety_level=safety_level,
         requires_user_action=transition.requires_user_action if transition else True,
+        render_policy=render_policy,
     )
 
 
@@ -148,6 +163,7 @@ def vision_fallback_command(
     message: str,
     command_type: CommandType = CommandType.CONFIRMATION,
     safety_level: SafetyLevel = SafetyLevel.CONFIRM_REQUIRED,
+    manual_instruction: str | None = None,
 ) -> GuideCommand:
     return GuideCommand(
         guide_command_id=f"guide_{session_id}_vision_fallback",
@@ -160,13 +176,15 @@ def vision_fallback_command(
             "avoid_covering_target": False,
             "preferred_position": "center",
             "vision_fallback": {
-                "requires_user_consent": command_type == CommandType.CONFIRMATION,
+                "requires_user_consent": True,
                 "accepted_payloads": [
                     "vision_snapshot.elements",
-                    "vision_snapshot.ocr_text",
-                    "vision_snapshot.screenshot_base64",
                 ],
+                "provider": "frontend_ocr",
+                "raw_image_egress": False,
                 "send_fresh_accessibility_tree": True,
+                "manual_instruction": manual_instruction
+                or "화면 분석 없이 계속하려면 다음 화면으로 직접 이동하거나 다른 요청을 말씀해 주세요.",
             },
         },
     )

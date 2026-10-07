@@ -220,8 +220,11 @@ class ClickAgentEngine:
         guide_command = build_guide_command(session_id=request.session_id, match_result=match_result,
             graph=graph, user_confirmation=confirmation, task_completed=task_completed)
         if match_result.fallback_reason and vision_analysis and not awaiting_observation:
+            transition = next((item for item in graph.transitions
+                               if item.transition_id == match_result.transition_id), None)
             vision_command = _command_for_vision_analysis(request.session_id, vision_analysis,
-                tree_was_empty=not request.accessibility_tree)
+                tree_was_empty=not request.accessibility_tree,
+                manual_instruction=transition.guide_message if transition else None)
             if vision_command:
                 guide_command = vision_command
         if awaiting_observation:
@@ -447,6 +450,9 @@ def _raw_observation_debug(request: AgentTurnRequest) -> JsonDict:
         "vision_element_count": len(vision_snapshot.elements) if vision_snapshot else 0,
         "vision_has_screenshot": bool(vision_snapshot and vision_snapshot.screenshot_base64),
         "vision_has_ocr_text": bool(vision_snapshot and vision_snapshot.ocr_text),
+        "vision_processing_time_ms": (
+            vision_snapshot.processing_time_ms if vision_snapshot else None
+        ),
         "foreground_app": _device_context(request).foreground_app
         if _device_context(request) else None,
         "app_package": _vision_package_name(request),
@@ -659,11 +665,13 @@ def _command_for_vision_analysis(
     analysis: VisionFallbackAnalysis,
     *,
     tree_was_empty: bool,
+    manual_instruction: str | None = None,
 ) -> GuideCommand | None:
     if analysis.status == "consent_required":
         return vision_fallback_command(
             session_id=session_id,
             message="화면 정보를 읽지 못했어요. 화면 이미지 분석을 허용하면 다음 안내를 이어갈게요.",
+            manual_instruction=manual_instruction,
         )
     if tree_was_empty and analysis.status in {
         "not_requested",
@@ -674,7 +682,6 @@ def _command_for_vision_analysis(
         return vision_fallback_command(
             session_id=session_id,
             message="화면 정보를 읽지 못했어요. 접근성 정보나 동의된 화면 분석 정보가 필요해요.",
-            command_type=CommandType.BLOCKED,
-            safety_level=SafetyLevel.BLOCKED,
+            manual_instruction=manual_instruction,
         )
     return None
