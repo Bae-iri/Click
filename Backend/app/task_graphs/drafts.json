@@ -1,0 +1,1759 @@
+[
+  {
+    "task_id": "SET-wifi-enable",
+    "goal_type": "settings.wifi.enable",
+    "name": "와이파이 켜기",
+    "slots": {
+      "setting": "wifi",
+      "state": "on"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "와이파이",
+      "wifi"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-wifi-disable",
+    "goal_type": "settings.wifi.disable",
+    "name": "와이파이 끄기",
+    "slots": {
+      "setting": "wifi",
+      "state": "off"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "와이파이",
+      "wifi"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-wifi-connect",
+    "goal_type": "settings.wifi.connect",
+    "name": "와이파이 연결",
+    "slots": {
+      "setting": "wifi",
+      "action": "connect"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "와이파이",
+      "wifi",
+      "무선인터넷"
+    ],
+    "completion_predicate": "verified_wifi_connect",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-bluetooth-enable",
+    "goal_type": "settings.bluetooth.enable",
+    "name": "블루투스 켜기",
+    "slots": {
+      "setting": "bluetooth",
+      "state": "on"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "블루투스",
+      "bluetooth"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-bluetooth-disable",
+    "goal_type": "settings.bluetooth.disable",
+    "name": "블루투스 끄기",
+    "slots": {
+      "setting": "bluetooth",
+      "state": "off"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "블루투스",
+      "bluetooth"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-bluetooth-connect",
+    "goal_type": "settings.bluetooth.connect",
+    "name": "블루투스 기기 연결",
+    "slots": {
+      "setting": "bluetooth",
+      "action": "connect"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "블루투스",
+      "bluetooth",
+      "이어폰",
+      "헤드셋"
+    ],
+    "completion_predicate": "verified_bluetooth_connect",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-mobile_data-enable",
+    "goal_type": "settings.mobile_data.enable",
+    "name": "모바일 데이터 켜기",
+    "slots": {
+      "setting": "mobile_data",
+      "state": "on"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "모바일데이터",
+      "데이터",
+      "셀룰러"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-mobile_data-disable",
+    "goal_type": "settings.mobile_data.disable",
+    "name": "모바일 데이터 끄기",
+    "slots": {
+      "setting": "mobile_data",
+      "state": "off"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "모바일데이터",
+      "데이터",
+      "셀룰러"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-airplane_mode-enable",
+    "goal_type": "settings.airplane_mode.enable",
+    "name": "비행기 모드 켜기",
+    "slots": {
+      "setting": "airplane_mode",
+      "state": "on"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "비행기모드",
+      "에어플레인모드"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-airplane_mode-disable",
+    "goal_type": "settings.airplane_mode.disable",
+    "name": "비행기 모드 끄기",
+    "slots": {
+      "setting": "airplane_mode",
+      "state": "off"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "비행기모드",
+      "에어플레인모드"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-hotspot-enable",
+    "goal_type": "settings.hotspot.enable",
+    "name": "모바일 핫스팟 켜기",
+    "slots": {
+      "setting": "hotspot",
+      "state": "on"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "핫스팟",
+      "테더링"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-hotspot-disable",
+    "goal_type": "settings.hotspot.disable",
+    "name": "모바일 핫스팟 끄기",
+    "slots": {
+      "setting": "hotspot",
+      "state": "off"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "핫스팟",
+      "테더링"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-brightness-increase",
+    "goal_type": "settings.brightness.increase",
+    "name": "화면 밝기 높이기",
+    "slots": {
+      "setting": "brightness",
+      "direction": "increase"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "밝기",
+      "화면빛"
+    ],
+    "completion_predicate": "target_value_increased",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-brightness-decrease",
+    "goal_type": "settings.brightness.decrease",
+    "name": "화면 밝기 낮추기",
+    "slots": {
+      "setting": "brightness",
+      "direction": "decrease"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "밝기",
+      "화면빛"
+    ],
+    "completion_predicate": "target_value_decreased",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-dark_mode-enable",
+    "goal_type": "settings.dark_mode.enable",
+    "name": "다크 모드 켜기",
+    "slots": {
+      "setting": "dark_mode",
+      "state": "on"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "다크모드",
+      "어두운테마",
+      "야간모드"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-dark_mode-disable",
+    "goal_type": "settings.dark_mode.disable",
+    "name": "다크 모드 끄기",
+    "slots": {
+      "setting": "dark_mode",
+      "state": "off"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "다크모드",
+      "어두운테마",
+      "야간모드"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-screen_timeout-set",
+    "goal_type": "settings.screen_timeout.set",
+    "name": "화면 자동 꺼짐 시간 변경",
+    "slots": {
+      "setting": "screen_timeout",
+      "action": "set"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "화면자동꺼짐",
+      "화면꺼짐시간",
+      "스크린타임아웃"
+    ],
+    "completion_predicate": "verified_screen_timeout_set",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-display_size-increase",
+    "goal_type": "settings.display_size.increase",
+    "name": "화면 요소 크게 하기",
+    "slots": {
+      "setting": "display_size",
+      "direction": "increase"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "화면크기",
+      "화면요소",
+      "아이콘크기",
+      "디스플레이크기"
+    ],
+    "completion_predicate": "target_value_increased",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-display_size-decrease",
+    "goal_type": "settings.display_size.decrease",
+    "name": "화면 요소 작게 하기",
+    "slots": {
+      "setting": "display_size",
+      "direction": "decrease"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "화면크기",
+      "화면요소",
+      "아이콘크기",
+      "디스플레이크기"
+    ],
+    "completion_predicate": "target_value_decreased",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-volume-increase",
+    "goal_type": "settings.volume.increase",
+    "name": "소리 크기 높이기",
+    "slots": {
+      "setting": "volume",
+      "direction": "increase"
+    },
+    "category_labels": [
+      "Sound & vibration"
+    ],
+    "control_labels": [
+      "소리",
+      "볼륨",
+      "음량"
+    ],
+    "completion_predicate": "target_value_increased",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-volume-decrease",
+    "goal_type": "settings.volume.decrease",
+    "name": "소리 크기 낮추기",
+    "slots": {
+      "setting": "volume",
+      "direction": "decrease"
+    },
+    "category_labels": [
+      "Sound & vibration"
+    ],
+    "control_labels": [
+      "소리",
+      "볼륨",
+      "음량"
+    ],
+    "completion_predicate": "target_value_decreased",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-mute-enable",
+    "goal_type": "settings.mute.enable",
+    "name": "무음 모드 켜기",
+    "slots": {
+      "setting": "mute",
+      "state": "on"
+    },
+    "category_labels": [
+      "Sound & vibration"
+    ],
+    "control_labels": [
+      "무음",
+      "소리안나게",
+      "조용히"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-mute-disable",
+    "goal_type": "settings.mute.disable",
+    "name": "무음 모드 끄기",
+    "slots": {
+      "setting": "mute",
+      "state": "off"
+    },
+    "category_labels": [
+      "Sound & vibration"
+    ],
+    "control_labels": [
+      "무음",
+      "소리안나게"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-ringtone-change",
+    "goal_type": "settings.ringtone.change",
+    "name": "벨소리 변경",
+    "slots": {
+      "setting": "ringtone",
+      "action": "change"
+    },
+    "category_labels": [
+      "Sound & vibration"
+    ],
+    "control_labels": [
+      "벨소리",
+      "전화소리",
+      "링톤"
+    ],
+    "completion_predicate": "verified_ringtone_change",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-vibrate-enable",
+    "goal_type": "settings.vibrate.enable",
+    "name": "진동 모드 켜기",
+    "slots": {
+      "setting": "vibrate",
+      "state": "on"
+    },
+    "category_labels": [
+      "Sound & vibration"
+    ],
+    "control_labels": [
+      "진동",
+      "바이브레이션"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-vibrate-disable",
+    "goal_type": "settings.vibrate.disable",
+    "name": "진동 모드 끄기",
+    "slots": {
+      "setting": "vibrate",
+      "state": "off"
+    },
+    "category_labels": [
+      "Sound & vibration"
+    ],
+    "control_labels": [
+      "진동",
+      "바이브레이션"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-notifications-enable",
+    "goal_type": "settings.notifications.enable",
+    "name": "앱 알림 켜기",
+    "slots": {
+      "setting": "notifications",
+      "state": "on"
+    },
+    "category_labels": [
+      "Notifications"
+    ],
+    "control_labels": [
+      "알림",
+      "푸시"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-notifications-disable",
+    "goal_type": "settings.notifications.disable",
+    "name": "앱 알림 끄기",
+    "slots": {
+      "setting": "notifications",
+      "state": "off"
+    },
+    "category_labels": [
+      "Notifications"
+    ],
+    "control_labels": [
+      "알림",
+      "푸시"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-location-enable",
+    "goal_type": "settings.location.enable",
+    "name": "위치 서비스 켜기",
+    "slots": {
+      "setting": "location",
+      "state": "on"
+    },
+    "category_labels": [
+      "Location"
+    ],
+    "control_labels": [
+      "위치",
+      "gps"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-location-disable",
+    "goal_type": "settings.location.disable",
+    "name": "위치 서비스 끄기",
+    "slots": {
+      "setting": "location",
+      "state": "off"
+    },
+    "category_labels": [
+      "Location"
+    ],
+    "control_labels": [
+      "위치",
+      "gps"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-power_saving-enable",
+    "goal_type": "settings.power_saving.enable",
+    "name": "절전 모드 켜기",
+    "slots": {
+      "setting": "power_saving",
+      "state": "on"
+    },
+    "category_labels": [
+      "Battery"
+    ],
+    "control_labels": [
+      "절전",
+      "배터리절약",
+      "저전력"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-power_saving-disable",
+    "goal_type": "settings.power_saving.disable",
+    "name": "절전 모드 끄기",
+    "slots": {
+      "setting": "power_saving",
+      "state": "off"
+    },
+    "category_labels": [
+      "Battery"
+    ],
+    "control_labels": [
+      "절전",
+      "배터리절약",
+      "저전력"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-screen_lock-change",
+    "goal_type": "settings.screen_lock.change",
+    "name": "화면 잠금 방식 변경",
+    "slots": {
+      "setting": "screen_lock",
+      "action": "change"
+    },
+    "category_labels": [
+      "Security",
+      "Security & privacy"
+    ],
+    "control_labels": [
+      "화면잠금",
+      "잠금방식",
+      "비밀번호",
+      "핀번호",
+      "패턴"
+    ],
+    "completion_predicate": "verified_screen_lock_change",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-biometric-setup",
+    "goal_type": "settings.biometric.setup",
+    "name": "생체 인식 등록",
+    "slots": {
+      "setting": "biometric",
+      "action": "setup"
+    },
+    "category_labels": [
+      "Security",
+      "Security & privacy"
+    ],
+    "control_labels": [
+      "지문",
+      "얼굴인식",
+      "생체인식"
+    ],
+    "completion_predicate": "verified_biometric_setup",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-apps-uninstall",
+    "goal_type": "settings.apps.uninstall",
+    "name": "앱 삭제",
+    "slots": {
+      "setting": "apps",
+      "action": "uninstall"
+    },
+    "category_labels": [
+      "Apps"
+    ],
+    "control_labels": [
+      "앱",
+      "어플",
+      "애플리케이션"
+    ],
+    "completion_predicate": "verified_apps_uninstall",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-app_permissions-manage",
+    "goal_type": "settings.app_permissions.manage",
+    "name": "앱 권한 관리",
+    "slots": {
+      "setting": "app_permissions",
+      "action": "manage"
+    },
+    "category_labels": [
+      "Apps"
+    ],
+    "control_labels": [
+      "앱권한",
+      "어플권한",
+      "권한"
+    ],
+    "completion_predicate": "verified_app_permissions_manage",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-storage-cleanup",
+    "goal_type": "settings.storage.cleanup",
+    "name": "저장 공간 정리",
+    "slots": {
+      "setting": "storage",
+      "action": "cleanup"
+    },
+    "category_labels": [
+      "Storage"
+    ],
+    "control_labels": [
+      "저장공간",
+      "스토리지",
+      "용량"
+    ],
+    "completion_predicate": "verified_storage_cleanup",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-talkback-enable",
+    "goal_type": "settings.talkback.enable",
+    "name": "TalkBack 켜기",
+    "slots": {
+      "setting": "talkback",
+      "state": "on"
+    },
+    "category_labels": [
+      "Accessibility"
+    ],
+    "control_labels": [
+      "톡백",
+      "talkback",
+      "화면읽기"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-talkback-disable",
+    "goal_type": "settings.talkback.disable",
+    "name": "TalkBack 끄기",
+    "slots": {
+      "setting": "talkback",
+      "state": "off"
+    },
+    "category_labels": [
+      "Accessibility"
+    ],
+    "control_labels": [
+      "톡백",
+      "talkback",
+      "화면읽기"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-magnification-enable",
+    "goal_type": "settings.magnification.enable",
+    "name": "화면 확대 기능 켜기",
+    "slots": {
+      "setting": "magnification",
+      "state": "on"
+    },
+    "category_labels": [
+      "Accessibility"
+    ],
+    "control_labels": [
+      "화면확대",
+      "돋보기",
+      "확대기능"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-magnification-disable",
+    "goal_type": "settings.magnification.disable",
+    "name": "화면 확대 기능 끄기",
+    "slots": {
+      "setting": "magnification",
+      "state": "off"
+    },
+    "category_labels": [
+      "Accessibility"
+    ],
+    "control_labels": [
+      "화면확대",
+      "돋보기",
+      "확대기능"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-language-change",
+    "goal_type": "settings.language.change",
+    "name": "기기 언어 변경",
+    "slots": {
+      "setting": "language",
+      "action": "change"
+    },
+    "category_labels": [
+      "System",
+      "General management"
+    ],
+    "control_labels": [
+      "기기언어",
+      "휴대폰언어",
+      "시스템언어"
+    ],
+    "completion_predicate": "verified_language_change",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-date_time-automatic-enable",
+    "goal_type": "settings.date_time.automatic.enable",
+    "name": "날짜와 시간 자동 설정 켜기",
+    "slots": {
+      "setting": "automatic_date_time",
+      "state": "on"
+    },
+    "category_labels": [
+      "System",
+      "General management"
+    ],
+    "control_labels": [
+      "날짜시간",
+      "자동시간",
+      "시간자동"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-date_time-automatic-disable",
+    "goal_type": "settings.date_time.automatic.disable",
+    "name": "날짜와 시간 자동 설정 끄기",
+    "slots": {
+      "setting": "automatic_date_time",
+      "state": "off"
+    },
+    "category_labels": [
+      "System",
+      "General management"
+    ],
+    "control_labels": [
+      "날짜시간",
+      "자동시간",
+      "시간자동"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-keyboard-change",
+    "goal_type": "settings.keyboard.change",
+    "name": "기본 키보드 변경",
+    "slots": {
+      "setting": "keyboard",
+      "action": "change"
+    },
+    "category_labels": [
+      "System",
+      "General management"
+    ],
+    "control_labels": [
+      "키보드",
+      "입력기",
+      "자판"
+    ],
+    "completion_predicate": "verified_keyboard_change",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-default_apps-change",
+    "goal_type": "settings.default_apps.change",
+    "name": "기본 앱 변경",
+    "slots": {
+      "setting": "default_apps",
+      "action": "change"
+    },
+    "category_labels": [
+      "Apps"
+    ],
+    "control_labels": [
+      "기본앱",
+      "기본어플",
+      "디폴트앱"
+    ],
+    "completion_predicate": "verified_default_apps_change",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-wifi-share",
+    "goal_type": "settings.wifi.share",
+    "name": "와이파이 공유",
+    "slots": {
+      "setting": "wifi",
+      "action": "share"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "와이파이",
+      "wifi",
+      "무선인터넷"
+    ],
+    "completion_predicate": "verified_wifi_share",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-wifi-saved_networks-view",
+    "goal_type": "settings.wifi.saved_networks.view",
+    "name": "저장된 와이파이 보기",
+    "slots": {
+      "setting": "wifi_saved_networks",
+      "action": "view"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "저장된와이파이",
+      "저장된네트워크",
+      "와이파이목록"
+    ],
+    "completion_predicate": "verified_wifi_saved_networks_view",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-nfc-enable",
+    "goal_type": "settings.nfc.enable",
+    "name": "NFC 켜기",
+    "slots": {
+      "setting": "nfc",
+      "state": "on"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "nfc",
+      "엔에프씨"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-nfc-disable",
+    "goal_type": "settings.nfc.disable",
+    "name": "NFC 끄기",
+    "slots": {
+      "setting": "nfc",
+      "state": "off"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "nfc",
+      "엔에프씨"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-do_not_disturb-enable",
+    "goal_type": "settings.do_not_disturb.enable",
+    "name": "방해 금지 모드 켜기",
+    "slots": {
+      "setting": "do_not_disturb",
+      "state": "on"
+    },
+    "category_labels": [
+      "Notifications"
+    ],
+    "control_labels": [
+      "방해금지",
+      "집중모드",
+      "dnd"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-do_not_disturb-disable",
+    "goal_type": "settings.do_not_disturb.disable",
+    "name": "방해 금지 모드 끄기",
+    "slots": {
+      "setting": "do_not_disturb",
+      "state": "off"
+    },
+    "category_labels": [
+      "Notifications"
+    ],
+    "control_labels": [
+      "방해금지",
+      "집중모드",
+      "dnd"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-auto_rotate-enable",
+    "goal_type": "settings.auto_rotate.enable",
+    "name": "화면 자동 회전 켜기",
+    "slots": {
+      "setting": "auto_rotate",
+      "state": "on"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "자동회전",
+      "화면회전"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-auto_rotate-disable",
+    "goal_type": "settings.auto_rotate.disable",
+    "name": "화면 자동 회전 끄기",
+    "slots": {
+      "setting": "auto_rotate",
+      "state": "off"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "자동회전",
+      "화면회전"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-eye_comfort-enable",
+    "goal_type": "settings.eye_comfort.enable",
+    "name": "편안하게 화면 보기 켜기",
+    "slots": {
+      "setting": "eye_comfort",
+      "state": "on"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "블루라이트",
+      "편안하게화면보기",
+      "눈보호모드"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-eye_comfort-disable",
+    "goal_type": "settings.eye_comfort.disable",
+    "name": "편안하게 화면 보기 끄기",
+    "slots": {
+      "setting": "eye_comfort",
+      "state": "off"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "블루라이트",
+      "편안하게화면보기",
+      "눈보호모드"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-adaptive_brightness-enable",
+    "goal_type": "settings.adaptive_brightness.enable",
+    "name": "자동 밝기 켜기",
+    "slots": {
+      "setting": "adaptive_brightness",
+      "state": "on"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "자동밝기",
+      "밝기자동조절",
+      "적응형밝기"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-adaptive_brightness-disable",
+    "goal_type": "settings.adaptive_brightness.disable",
+    "name": "자동 밝기 끄기",
+    "slots": {
+      "setting": "adaptive_brightness",
+      "state": "off"
+    },
+    "category_labels": [
+      "Display"
+    ],
+    "control_labels": [
+      "자동밝기",
+      "밝기자동조절",
+      "적응형밝기"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-data_saver-enable",
+    "goal_type": "settings.data_saver.enable",
+    "name": "데이터 절약 모드 켜기",
+    "slots": {
+      "setting": "data_saver",
+      "state": "on"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "데이터절약",
+      "데이터세이버",
+      "데이터아끼기"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-data_saver-disable",
+    "goal_type": "settings.data_saver.disable",
+    "name": "데이터 절약 모드 끄기",
+    "slots": {
+      "setting": "data_saver",
+      "state": "off"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "데이터절약",
+      "데이터세이버",
+      "데이터아끼기"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-data_roaming-enable",
+    "goal_type": "settings.data_roaming.enable",
+    "name": "데이터 로밍 켜기",
+    "slots": {
+      "setting": "data_roaming",
+      "state": "on"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "데이터로밍",
+      "해외로밍",
+      "로밍데이터"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "high",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-data_roaming-disable",
+    "goal_type": "settings.data_roaming.disable",
+    "name": "데이터 로밍 끄기",
+    "slots": {
+      "setting": "data_roaming",
+      "state": "off"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "데이터로밍",
+      "해외로밍",
+      "로밍데이터"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-vpn-connect",
+    "goal_type": "settings.vpn.connect",
+    "name": "VPN 연결",
+    "slots": {
+      "setting": "vpn",
+      "action": "connect"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "vpn",
+      "브이피엔"
+    ],
+    "completion_predicate": "verified_vpn_connect",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-vpn-disconnect",
+    "goal_type": "settings.vpn.disconnect",
+    "name": "VPN 연결 해제",
+    "slots": {
+      "setting": "vpn",
+      "action": "disconnect"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "vpn",
+      "브이피엔"
+    ],
+    "completion_predicate": "verified_vpn_disconnect",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-private_dns-change",
+    "goal_type": "settings.private_dns.change",
+    "name": "프라이빗 DNS 변경",
+    "slots": {
+      "setting": "private_dns",
+      "action": "change"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "프라이빗dns",
+      "개인dns",
+      "비공개dns"
+    ],
+    "completion_predicate": "verified_private_dns_change",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-sim-manage",
+    "goal_type": "settings.sim.manage",
+    "name": "SIM 관리",
+    "slots": {
+      "setting": "sim",
+      "action": "manage"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "sim",
+      "심카드",
+      "유심",
+      "esim"
+    ],
+    "completion_predicate": "verified_sim_manage",
+    "risk_level": "high",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-hotspot-password-change",
+    "goal_type": "settings.hotspot.password.change",
+    "name": "핫스팟 비밀번호 변경",
+    "slots": {
+      "setting": "hotspot_password",
+      "action": "change"
+    },
+    "category_labels": [
+      "Connections",
+      "Network & internet"
+    ],
+    "control_labels": [
+      "핫스팟비밀번호",
+      "테더링비밀번호"
+    ],
+    "completion_predicate": "verified_hotspot_password_change",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-wallpaper-change",
+    "goal_type": "settings.wallpaper.change",
+    "name": "배경 화면 변경",
+    "slots": {
+      "setting": "wallpaper",
+      "action": "change"
+    },
+    "category_labels": [
+      "Wallpaper & style",
+      "Wallpaper"
+    ],
+    "control_labels": [
+      "배경화면",
+      "월페이퍼",
+      "잠금화면사진"
+    ],
+    "completion_predicate": "verified_wallpaper_change",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-notification_sound-change",
+    "goal_type": "settings.notification_sound.change",
+    "name": "알림 소리 변경",
+    "slots": {
+      "setting": "notification_sound",
+      "action": "change"
+    },
+    "category_labels": [
+      "Sound & vibration"
+    ],
+    "control_labels": [
+      "알림소리",
+      "알림음",
+      "문자소리"
+    ],
+    "completion_predicate": "verified_notification_sound_change",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-battery_percentage-enable",
+    "goal_type": "settings.battery_percentage.enable",
+    "name": "배터리 잔량 표시 켜기",
+    "slots": {
+      "setting": "battery_percentage",
+      "state": "on"
+    },
+    "category_labels": [
+      "Battery"
+    ],
+    "control_labels": [
+      "배터리퍼센트",
+      "배터리잔량표시",
+      "배터리숫자"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-battery_percentage-disable",
+    "goal_type": "settings.battery_percentage.disable",
+    "name": "배터리 잔량 표시 끄기",
+    "slots": {
+      "setting": "battery_percentage",
+      "state": "off"
+    },
+    "category_labels": [
+      "Battery"
+    ],
+    "control_labels": [
+      "배터리퍼센트",
+      "배터리잔량표시",
+      "배터리숫자"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-battery_status-view",
+    "goal_type": "settings.battery_status.view",
+    "name": "배터리 사용량 보기",
+    "slots": {
+      "setting": "battery_status",
+      "action": "view"
+    },
+    "category_labels": [
+      "Battery"
+    ],
+    "control_labels": [
+      "배터리사용량",
+      "배터리상태",
+      "배터리소모"
+    ],
+    "completion_predicate": "verified_battery_status_view",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-app_cache-clear",
+    "goal_type": "settings.app_cache.clear",
+    "name": "앱 캐시 삭제",
+    "slots": {
+      "setting": "app_cache",
+      "action": "clear"
+    },
+    "category_labels": [
+      "Apps"
+    ],
+    "control_labels": [
+      "앱캐시",
+      "어플캐시",
+      "캐시데이터"
+    ],
+    "completion_predicate": "verified_app_cache_clear",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-app_data-clear",
+    "goal_type": "settings.app_data.clear",
+    "name": "앱 데이터 삭제",
+    "slots": {
+      "setting": "app_data",
+      "action": "clear"
+    },
+    "category_labels": [
+      "Apps"
+    ],
+    "control_labels": [
+      "앱데이터",
+      "어플데이터",
+      "애플리케이션데이터"
+    ],
+    "completion_predicate": "verified_app_data_clear",
+    "risk_level": "high",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-notification_history-view",
+    "goal_type": "settings.notification_history.view",
+    "name": "알림 기록 보기",
+    "slots": {
+      "setting": "notification_history",
+      "action": "view"
+    },
+    "category_labels": [
+      "Notifications"
+    ],
+    "control_labels": [
+      "알림기록",
+      "알림내역",
+      "지난알림"
+    ],
+    "completion_predicate": "verified_notification_history_view",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-lockscreen_notifications-manage",
+    "goal_type": "settings.lockscreen_notifications.manage",
+    "name": "잠금 화면 알림 관리",
+    "slots": {
+      "setting": "lockscreen_notifications",
+      "action": "manage"
+    },
+    "category_labels": [
+      "Notifications"
+    ],
+    "control_labels": [
+      "잠금화면알림",
+      "락스크린알림"
+    ],
+    "completion_predicate": "verified_lockscreen_notifications_manage",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-color_inversion-enable",
+    "goal_type": "settings.color_inversion.enable",
+    "name": "색상 반전 켜기",
+    "slots": {
+      "setting": "color_inversion",
+      "state": "on"
+    },
+    "category_labels": [
+      "Accessibility"
+    ],
+    "control_labels": [
+      "색상반전",
+      "색반전",
+      "화면색반전"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-color_inversion-disable",
+    "goal_type": "settings.color_inversion.disable",
+    "name": "색상 반전 끄기",
+    "slots": {
+      "setting": "color_inversion",
+      "state": "off"
+    },
+    "category_labels": [
+      "Accessibility"
+    ],
+    "control_labels": [
+      "색상반전",
+      "색반전",
+      "화면색반전"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-captions-enable",
+    "goal_type": "settings.captions.enable",
+    "name": "실시간 자막 켜기",
+    "slots": {
+      "setting": "captions",
+      "state": "on"
+    },
+    "category_labels": [
+      "Accessibility"
+    ],
+    "control_labels": [
+      "실시간자막",
+      "라이브캡션",
+      "자막기능"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-captions-disable",
+    "goal_type": "settings.captions.disable",
+    "name": "실시간 자막 끄기",
+    "slots": {
+      "setting": "captions",
+      "state": "off"
+    },
+    "category_labels": [
+      "Accessibility"
+    ],
+    "control_labels": [
+      "실시간자막",
+      "라이브캡션",
+      "자막기능"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-mono_audio-enable",
+    "goal_type": "settings.mono_audio.enable",
+    "name": "모노 오디오 켜기",
+    "slots": {
+      "setting": "mono_audio",
+      "state": "on"
+    },
+    "category_labels": [
+      "Accessibility"
+    ],
+    "control_labels": [
+      "모노오디오",
+      "단일오디오",
+      "한쪽이어폰소리"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-mono_audio-disable",
+    "goal_type": "settings.mono_audio.disable",
+    "name": "모노 오디오 끄기",
+    "slots": {
+      "setting": "mono_audio",
+      "state": "off"
+    },
+    "category_labels": [
+      "Accessibility"
+    ],
+    "control_labels": [
+      "모노오디오",
+      "단일오디오",
+      "한쪽이어폰소리"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-backup-enable",
+    "goal_type": "settings.backup.enable",
+    "name": "기기 백업 켜기",
+    "slots": {
+      "setting": "backup",
+      "state": "on"
+    },
+    "category_labels": [
+      "System",
+      "General management"
+    ],
+    "control_labels": [
+      "기기백업",
+      "자동백업",
+      "구글백업"
+    ],
+    "completion_predicate": "target_checked_on",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-backup-disable",
+    "goal_type": "settings.backup.disable",
+    "name": "기기 백업 끄기",
+    "slots": {
+      "setting": "backup",
+      "state": "off"
+    },
+    "category_labels": [
+      "System",
+      "General management"
+    ],
+    "control_labels": [
+      "기기백업",
+      "자동백업",
+      "구글백업"
+    ],
+    "completion_predicate": "target_checked_off",
+    "risk_level": "high",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-software_update-check",
+    "goal_type": "settings.software_update.check",
+    "name": "소프트웨어 업데이트 확인",
+    "slots": {
+      "setting": "software_update",
+      "action": "check"
+    },
+    "category_labels": [
+      "Software update",
+      "System"
+    ],
+    "control_labels": [
+      "소프트웨어업데이트",
+      "시스템업데이트",
+      "업데이트"
+    ],
+    "completion_predicate": "verified_software_update_check",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-factory_reset",
+    "goal_type": "settings.factory_reset",
+    "name": "기기 초기화",
+    "slots": {
+      "setting": "factory_reset",
+      "action": "reset"
+    },
+    "category_labels": [
+      "System",
+      "General management"
+    ],
+    "control_labels": [
+      "공장초기화",
+      "기기초기화",
+      "휴대폰초기화"
+    ],
+    "completion_predicate": "verified_factory_reset",
+    "risk_level": "high",
+    "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-device_name-change",
+    "goal_type": "settings.device_name.change",
+    "name": "기기 이름 변경",
+    "slots": {
+      "setting": "device_name",
+      "action": "change"
+    },
+    "category_labels": [
+      "About phone"
+    ],
+    "control_labels": [
+      "기기이름",
+      "휴대폰이름",
+      "디바이스이름"
+    ],
+    "completion_predicate": "verified_device_name_change",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
+  }
+]
