@@ -181,7 +181,7 @@ class TypedGoalRequest(BaseModel):
                        "settings.power_saving.enable", "settings.power_saving.disable",
                        "settings.screen_lock.change",
                        "settings.biometric.setup", "settings.apps.uninstall",
-                       "settings.app_permissions.manage"]
+                       "settings.app_permissions.manage", "settings.storage.cleanup"]
     target_app: Literal["android_settings"]
     slots: dict[str, str]
 
@@ -227,6 +227,7 @@ class TypedGoalRequest(BaseModel):
             "settings.biometric.setup": {"setting": "biometric", "action": "setup"},
             "settings.apps.uninstall": {"setting": "apps", "action": "uninstall"},
             "settings.app_permissions.manage": {"setting": "app_permissions", "action": "manage"},
+            "settings.storage.cleanup": {"setting": "storage", "action": "cleanup"},
         }
         if self.slots != expected_slots[self.goal_type]:
             raise ValueError("goal_type and slots must match")
@@ -254,6 +255,8 @@ class TypedGoalRequest(BaseModel):
             raise ValueError("Power saving and screen lock goals require catalog version 2.0.0 or newer")
         if self.goal_type.startswith(("settings.biometric.", "settings.apps.", "settings.app_permissions.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
             raise ValueError("Biometric and app management goals require catalog version 2.0.0 or newer")
+        if self.goal_type == "settings.storage.cleanup" and self.catalog_version not in {"2.0.0", "2.1.0"}:
+            raise ValueError("Storage cleanup requires catalog version 2.0.0 or newer")
         return self
 
 
