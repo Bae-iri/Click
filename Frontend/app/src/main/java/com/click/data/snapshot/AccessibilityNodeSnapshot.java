@@ -22,6 +22,8 @@ public final class AccessibilityNodeSnapshot {
     public final boolean scrollable;
     public final boolean checkable;
     public final Float progress;
+    /** True for password/editable secret fields. Never serialize their labels. */
+    public final boolean sensitive;
 
     public AccessibilityNodeSnapshot(
             String nodeId,
@@ -40,7 +42,8 @@ public final class AccessibilityNodeSnapshot {
             boolean scrollable,
             boolean checkable,
             Float progress,
-            int windowId
+            int windowId,
+            boolean sensitive
     ) {
         this.nodeId = nodeId;
         this.windowId = windowId;
@@ -59,6 +62,7 @@ public final class AccessibilityNodeSnapshot {
         this.scrollable = scrollable;
         this.checkable = checkable;
         this.progress = progress;
+        this.sensitive = sensitive;
     }
 
     JSONObject toJson() throws JSONException {
@@ -68,8 +72,8 @@ public final class AccessibilityNodeSnapshot {
         object.put("parent_id", nullable(parentId));
         object.put("visible_to_user", visibleToUser);
         object.put("package_name", nullable(packageName));
-        object.put("text", nullable(text));
-        object.put("content_description", nullable(contentDescription));
+        object.put("text", nullable(sensitive ? null : text));
+        object.put("content_description", nullable(sensitive ? null : contentDescription));
         object.put("resource_id", nullable(resourceId));
         object.put("class_name", nullable(className));
         object.put("role", nullable(role));
@@ -81,6 +85,7 @@ public final class AccessibilityNodeSnapshot {
         object.put("checkable", checkable);
         JSONObject extras = new JSONObject();
         if (progress != null) extras.put("progress", progress);
+        if (sensitive) extras.put("is_password", true);
         object.put("extras", extras);
         return object;
     }

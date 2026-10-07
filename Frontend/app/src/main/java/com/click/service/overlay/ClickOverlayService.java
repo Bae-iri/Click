@@ -20,6 +20,7 @@ import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.view.Gravity;
+import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.Toast;
@@ -36,7 +37,6 @@ import com.click.data.remote.ErrorDetails;
 import com.click.data.remote.VoiceQueueGateway;
 import com.click.data.remote.PersonalizationEventGateway;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
-import com.click.data.snapshot.AgentVisionSnapshot;
 import com.click.data.snapshot.ScreenSnapshot;
 import com.click.domain.goal.GoalCatalogClassifier;
 import com.click.domain.goal.GoalCommandInterpreter;
@@ -109,7 +109,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int[] lastTargetBounds;
     private boolean visionConsentRequested;
     private boolean visionConsented;
+    private String visionManualInstruction;
     private boolean attachVisionNextTurn;
+    private boolean visionCaptureInFlight;
+    private JSONObject pendingVisionSnapshot;
     private int freshObservationRetries;
     private int scrollExecutions;
     private GuideOverlayView guideOverlayView;
@@ -784,7 +787,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         lastTargetBounds = null;
         visionConsentRequested = false;
         visionConsented = false;
+        visionManualInstruction = null;
         attachVisionNextTurn = false;
+        visionCaptureInFlight = false;
+        pendingVisionSnapshot = null;
         freshObservationRetries = 0;
         scrollExecutions = 0;
         if (overlayView != null) overlayView.setRecognizedSpeech("화면을 확인하고 있어요…");
@@ -829,13 +835,18 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             request.withActionEvent(AgentActionEvents.of(
                     pendingActionType, lastGuideCommandId, lastTargetNodeId, lastTargetBounds, pendingActionOccurredAtMs));
         }
-        if (attachVisionNextTurn) {
-            request.withVisionSnapshot(AgentVisionSnapshot.fromScreen(snapshot, visionConsented));
+        if (attachVisionNextTurn && pendingVisionSnapshot == null) {
+            requestVisionSnapshot(snapshot);
+            return;
+        }
+        if (pendingVisionSnapshot != null) {
+            request.withVisionSnapshot(pendingVisionSnapshot);
         }
         turnInFlight = true;
         lastSnapshotFingerprint = fingerprint;
         pendingActionType = null;
         attachVisionNextTurn = false;
+        pendingVisionSnapshot = null;
         agentGateway.send(request, new AgentTurnGateway.Callback() {
             private final int requestGeneration = executionGeneration;
             @Override public void onSuccess(AgentTurnContract.Response response) {
@@ -1135,7 +1146,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             guideStepTimer.clear();
         }
 
-        if (overlayView != null && command.message != null && !command.message.isEmpty()) {
+        JSONObject recoveryAction = command.recoveryAction();
+        JSONObject visionFallback = command.visionFallback();
+        JSONObject fallbackAction = command.fallbackAction();
+        // Vision consent has its own explicit announcement. Reading the server's generic
+        // fallback text first would make TalkBack/TTS repeat or interrupt the choice.
+        if (visionFallback == null && overlayView != null
+                && command.message != null && !command.message.isEmpty()) {
             overlayView.setRecognizedSpeech(command.message);
             if (overlayView.getMode() == ClickOverlayLayout.Mode.TEXT) {
                 overlayView.addAssistantMessage(command.message);
@@ -1145,9 +1162,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         // BE-driven fallback / recovery policies are checked first: vision_fallback in
         // particular rides on a command_type of "confirmation".
-        JSONObject recoveryAction = command.recoveryAction();
-        JSONObject visionFallback = command.visionFallback();
-        JSONObject fallbackAction = command.fallbackAction();
         if (recoveryAction != null) {
             hideConfirmation();
             hideGuideOverlay();
@@ -1194,21 +1208,75 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
     }
 
+    private void requestVisionSnapshot(ScreenSnapshot screen) {
+        if (visionCaptureInFlight) return;
+        visionCaptureInFlight = true;
+        final int captureGeneration = executionGeneration;
+        if (overlayView != null) overlayView.setRecognizedSpeech("화면 이미지를 휴대폰 안에서 읽고 있어요.");
+        speak("화면을 분석하고 있어요. 잠시만 기다려 주세요.");
+        hideGuideOverlay();
+        hideConfirmation();
+        if (overlayView != null) overlayView.setVisibility(View.INVISIBLE);
+        // Let SurfaceFlinger commit the hidden overlay before taking the screenshot.
+        speechHandler.postDelayed(() -> ClickAccessibilityService.requestVisionSnapshot(screen, visionConsented,
+                new ClickAccessibilityService.VisionCaptureCallback() {
+                    @Override public void onSuccess(JSONObject snapshot) {
+                        if (overlayView != null) overlayView.setVisibility(View.VISIBLE);
+                        if (captureGeneration != executionGeneration) return;
+                        visionCaptureInFlight = false;
+                        pendingVisionSnapshot = snapshot;
+                        sendAgentTurn(null, true);
+                    }
+
+                    @Override public void onFailure(String reason, Throwable error) {
+                        if (overlayView != null) overlayView.setVisibility(View.VISIBLE);
+                        if (captureGeneration != executionGeneration) return;
+                        visionCaptureInFlight = false;
+                        attachVisionNextTurn = false;
+                        pendingVisionSnapshot = null;
+                        String message;
+                        if (reason.startsWith("sensitive_")) {
+                            message = "비밀번호나 결제 정보가 포함될 수 있는 화면에서는 화면 분석을 사용하지 않아요.";
+                        } else if ("password_or_secret_input".equals(reason)) {
+                            message = "비밀번호 입력 화면에서는 화면 분석을 사용하지 않아요.";
+                        } else if ("screenshot_api_unsupported_media_projection_not_enabled".equals(reason)) {
+                            message = "이 Android 버전에서는 안전한 화면 분석을 지원하지 않아요.";
+                        } else if ("ocr_no_signal".equals(reason)) {
+                            message = "화면에서 읽을 수 있는 글자를 찾지 못했어요.";
+                        } else if ("stale_screen_observation".equals(reason)) {
+                            message = "화면이 바뀌었어요. 새 화면을 다시 확인할게요.";
+                            if (overlayView != null) overlayView.setRecognizedSpeech(message);
+                            speak(message);
+                            forceNextObservation = true;
+                            ClickAccessibilityService.requestFreshSnapshot();
+                            return;
+                        } else {
+                            message = "화면 분석을 완료하지 못했어요.";
+                        }
+                        android.util.Log.w("ClickVision", "Vision fallback stopped: " + reason);
+                        showManualVisionAlternative(message);
+                    }
+                }), 120L);
+    }
+
     private void handleVisionFallback(AgentTurnContract.GuideCommand command, JSONObject visionFallback) {
-        boolean requiresConsent = visionFallback.optBoolean("requires_user_consent", true);
-        if (!requiresConsent || visionConsented) {
-            visionConsented = visionConsented || !requiresConsent;
+        visionManualInstruction = visionFallback.optString("manual_instruction",
+                "화면 분석 없이 계속하려면 다음 화면으로 직접 이동하거나 다른 요청을 말씀해 주세요.");
+        if (visionConsented) {
             attachVisionNextTurn = true;
             pendingActionOccurredAtMs = System.currentTimeMillis();
             pendingActionType = AgentActionEvents.OBSERVE_ONLY;
-            speechHandler.postDelayed(() -> sendAgentTurn(null, true), 500L);
+            speechHandler.postDelayed(() -> sendAgentTurn(null, true), 250L);
             return;
         }
-        if (visionConsentRequested) return;
+        if (visionConsentRequested) {
+            showManualVisionAlternative("화면 분석을 사용하지 않고 계속할게요.");
+            return;
+        }
         visionConsentRequested = true;
-        String prompt = command.message == null || command.message.isEmpty()
-                ? "화면을 분석해 도움을 드리려면 현재 화면의 글자 정보를 확인해야 해요. 계속할까요?"
-                : command.message;
+        String prompt = "다음 버튼을 찾지 못했어요. 이 요청을 진행하는 동안 필요할 때 "
+                + "화면 이미지는 휴대폰 안에서만 읽고 바로 버려요. 인식한 글자와 위치만 "
+                + "Click 서버로 보내 다음 버튼을 찾을까요?";
         showVisionConsent(prompt);
     }
 
@@ -1221,11 +1289,19 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (overlayView != null) {
                 overlayView.setRecognizedSpeech("현재 화면에서 다음에 누를 항목을 찾지 못했어요.");
             }
+            showManualVisionAlternative("여러 번 확인했지만 다음 버튼을 찾지 못했어요.");
             return;
         }
         if (freshObservationRetries >= 2 && visionIfMissing) {
-            // The accessibility tree alone keeps missing the target: attach derived vision
-            // elements (no screenshot, so no consent needed).
+            if (!visionConsented) {
+                if (!visionConsentRequested) {
+                    visionConsentRequested = true;
+                    showVisionConsent("다음 버튼을 찾지 못했어요. 이 요청을 진행하는 동안 필요할 때 "
+                            + "화면 이미지는 휴대폰 안에서만 읽고 바로 버려요. 인식한 글자와 위치만 "
+                            + "Click 서버로 보내 다음 버튼을 찾을까요?");
+                }
+                return;
+            }
             attachVisionNextTurn = true;
         }
         pendingActionOccurredAtMs = System.currentTimeMillis();
@@ -1251,7 +1327,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void showVisionConsent(String message) {
         hideConfirmation();
         if (windowManager == null) return;
-        confirmationView = new ConfirmationOverlayView(this, message, accepted -> {
+        confirmationView = new ConfirmationOverlayView(this, message,
+                "화면 분석 없이 계속", "화면 분석 허용", accepted -> {
             hideConfirmation();
             if (accepted) {
                 visionConsented = true;
@@ -1259,18 +1336,34 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 pendingActionOccurredAtMs = System.currentTimeMillis();
                 pendingActionType = AgentActionEvents.OBSERVE_ONLY;
                 sendAgentTurn(null, true);
-            } else if (overlayView != null) {
-                overlayView.setRecognizedSpeech("화면 분석을 취소했어요.");
-                agentSessionId = null;
+            } else {
+                showManualVisionAlternative("화면 분석 없이 계속할게요.");
             }
         });
         confirmationParams = new WindowManager.LayoutParams(
-                screenWidth() - dp(28), dp(176), overlayWindowType,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                screenWidth() - dp(28), WindowManager.LayoutParams.WRAP_CONTENT, overlayWindowType,
+                0,
                 PixelFormat.TRANSLUCENT);
         confirmationParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
         confirmationParams.y = dp(28);
         windowManager.addView(confirmationView, confirmationParams);
+        confirmationView.requestFocus();
+        confirmationView.announceForAccessibility(message);
+    }
+
+    private void showManualVisionAlternative(String reason) {
+        String instruction = visionManualInstruction == null || visionManualInstruction.isEmpty()
+                ? "화면을 직접 이동하거나 다른 요청을 말씀해 주세요."
+                : visionManualInstruction;
+        String message = reason + " " + instruction;
+        if (overlayView != null) {
+            overlayView.setVisibility(View.VISIBLE);
+            overlayView.setRecognizedSpeech(message);
+            if (overlayView.getMode() == ClickOverlayLayout.Mode.TEXT) {
+                overlayView.addAssistantMessage(message);
+            }
+        }
+        speak(message);
     }
 
     private String userMessageForAgentError(Throwable error) {
@@ -1373,12 +1466,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             sendAgentTurn(accepted ? "accepted" : "rejected", true);
         });
         confirmationParams = new WindowManager.LayoutParams(
-                screenWidth() - dp(28), dp(176), overlayWindowType,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                screenWidth() - dp(28), WindowManager.LayoutParams.WRAP_CONTENT, overlayWindowType,
+                0,
                 PixelFormat.TRANSLUCENT);
         confirmationParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
         confirmationParams.y = dp(28);
         windowManager.addView(confirmationView, confirmationParams);
+        confirmationView.requestFocus();
+        confirmationView.announceForAccessibility(message);
     }
 
     private void hideConfirmation() {

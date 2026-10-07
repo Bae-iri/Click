@@ -50,7 +50,8 @@ final class AccessibilitySnapshotCollector {
                     node.isScrollable(),
                     node.isCheckable(),
                     progress,
-                    node.getWindowId()
+                    node.getWindowId(),
+                    node.isPassword()
             ));
         }
         for (int index = 0; index < node.getChildCount(); index++) {

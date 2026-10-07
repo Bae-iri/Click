@@ -152,6 +152,7 @@ class VisionSnapshot:
     screen_width: int | None = None
     screen_height: int | None = None
     captured_at_ms: int | None = None
+    processing_time_ms: int | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -177,6 +178,7 @@ class NormalizedNode:
     value: float | None = None
     similarity_ref: str | None = None
     window_id: int | None = None
+    source_confidence: float | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)

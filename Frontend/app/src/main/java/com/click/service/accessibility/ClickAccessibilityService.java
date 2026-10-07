@@ -2,28 +2,42 @@ package com.click.service.accessibility;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.hardware.HardwareBuffer;
 import android.graphics.Path;
+import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
+import android.view.Display;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.click.data.snapshot.ScreenSnapshot;
+import com.click.data.snapshot.AgentVisionSnapshot;
+import com.click.data.snapshot.VisionSafetyPolicy;
 import com.click.TutorialActivity;
 import com.click.data.local.AccessibilityOnboardingState;
 import com.click.service.overlay.OverlayActions;
 import com.click.service.overlay.ClickOverlayService;
 
 import java.lang.ref.WeakReference;
+import org.json.JSONObject;
 
 public final class ClickAccessibilityService extends AccessibilityService {
     private static final String TAG = "ClickSnapshot";
     private static final long SNAPSHOT_DEBOUNCE_MS = 300L;
     private final AccessibilitySnapshotCollector collector = new AccessibilitySnapshotCollector();
+    private final VisionOcrEngine visionOcrEngine = new VisionOcrEngine();
     private final Runnable captureRunnable = this::captureCurrentScreen;
     private Handler mainHandler;
+    private boolean visionCaptureInFlight;
     private static WeakReference<ClickAccessibilityService> connectedService = new WeakReference<>(null);
+
+    public interface VisionCaptureCallback {
+        void onSuccess(JSONObject snapshot);
+        void onFailure(String reason, Throwable error);
+    }
 
     @Override
     protected void onServiceConnected() {
@@ -73,6 +87,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
             connectedService.clear();
             ClickOverlayService.onAccessibilityOverlayLost();
         }
+        visionOcrEngine.close();
         super.onDestroy();
     }
 
@@ -87,6 +102,105 @@ public final class ClickAccessibilityService extends AccessibilityService {
     public static WindowManager accessibilityWindowManager() {
         ClickAccessibilityService service = connectedService.get();
         return service == null ? null : service.getSystemService(WindowManager.class);
+    }
+
+    /** Capture and OCR the current screen locally. No bitmap or encoded image leaves this method. */
+    public static void requestVisionSnapshot(
+            ScreenSnapshot context,
+            boolean userConsented,
+            VisionCaptureCallback callback
+    ) {
+        ClickAccessibilityService service = connectedService.get();
+        if (service == null) {
+            callback.onFailure("accessibility_service_unavailable", null);
+            return;
+        }
+        service.captureVisionSnapshot(context, userConsented, callback);
+    }
+
+    private void captureVisionSnapshot(
+            ScreenSnapshot context,
+            boolean userConsented,
+            VisionCaptureCallback callback
+    ) {
+        if (!userConsented) {
+            callback.onFailure("user_consent_required", null);
+            return;
+        }
+        VisionSafetyPolicy.Decision safety = VisionSafetyPolicy.assess(context);
+        if (!safety.allowed) {
+            callback.onFailure(safety.reason, null);
+            return;
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            // MediaProjection needs an Activity-scoped, recurring system consent and would broaden
+            // capture scope. We fail closed instead of silently introducing that permission path.
+            callback.onFailure("screenshot_api_unsupported_media_projection_not_enabled", null);
+            return;
+        }
+        if (visionCaptureInFlight) {
+            callback.onFailure("vision_capture_in_flight", null);
+            return;
+        }
+        visionCaptureInFlight = true;
+        final long capturedAtMs = System.currentTimeMillis();
+        takeScreenshot(Display.DEFAULT_DISPLAY, getMainExecutor(), new TakeScreenshotCallback() {
+            @Override public void onSuccess(ScreenshotResult result) {
+                HardwareBuffer buffer = result.getHardwareBuffer();
+                Bitmap hardwareBitmap = null;
+                Bitmap bitmap = null;
+                try {
+                    hardwareBitmap = Bitmap.wrapHardwareBuffer(buffer, result.getColorSpace());
+                    if (hardwareBitmap == null) throw new IllegalStateException("HardwareBuffer conversion failed");
+                    bitmap = hardwareBitmap.copy(Bitmap.Config.ARGB_8888, true);
+                    if (bitmap == null) throw new IllegalStateException("Bitmap copy failed");
+                } catch (Throwable error) {
+                    visionCaptureInFlight = false;
+                    callback.onFailure("screenshot_decode_failed", error);
+                    return;
+                } finally {
+                    if (hardwareBitmap != null) hardwareBitmap.recycle();
+                    buffer.close();
+                }
+                ScreenSnapshot latest = LatestScreenSnapshot.get();
+                if (latest == null || !latest.observationId.equals(context.observationId)
+                        || !latest.packageName.equals(context.packageName)) {
+                    bitmap.recycle();
+                    visionCaptureInFlight = false;
+                    callback.onFailure("stale_screen_observation", null);
+                    return;
+                }
+                Bitmap transientBitmap = bitmap;
+                visionOcrEngine.recognize(transientBitmap, context, new VisionOcrEngine.Callback() {
+                    @Override public void onSuccess(
+                            java.util.List<com.click.data.snapshot.VisionOcrElement> elements,
+                            long processingTimeMs
+                    ) {
+                        transientBitmap.recycle();
+                        visionCaptureInFlight = false;
+                        if (elements.isEmpty()) {
+                            callback.onFailure("ocr_no_signal", null);
+                            return;
+                        }
+                        Log.i("ClickVision", "provider=frontend_ocr element_count="
+                                + elements.size() + " processing_time_ms=" + processingTimeMs);
+                        callback.onSuccess(AgentVisionSnapshot.fromOcr(context, true, elements,
+                                capturedAtMs, processingTimeMs));
+                    }
+
+                    @Override public void onFailure(String reason, Throwable error) {
+                        transientBitmap.recycle();
+                        visionCaptureInFlight = false;
+                        callback.onFailure(reason, error);
+                    }
+                });
+            }
+
+            @Override public void onFailure(int errorCode) {
+                visionCaptureInFlight = false;
+                callback.onFailure("screenshot_failed_" + errorCode, null);
+            }
+        });
     }
 
     public static boolean swipeHomePage(boolean towardNextPage) {
@@ -177,17 +291,13 @@ public final class ClickAccessibilityService extends AccessibilityService {
         ScreenSnapshot snapshot = collector.collect(root, packageName, width, height);
         LatestScreenSnapshot.set(snapshot);
         sendBroadcast(new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED).setPackage(getPackageName()));
-        logSnapshot(snapshot.toJson());
+        logSnapshotSummary(snapshot);
     }
 
-    private void logSnapshot(String json) {
-        int chunkSize = 3000;
-        int total = Math.max(1, (json.length() + chunkSize - 1) / chunkSize);
-        for (int index = 0; index < total; index++) {
-            int start = index * chunkSize;
-            int end = Math.min(json.length(), start + chunkSize);
-            Log.i(TAG, "snapshot " + (index + 1) + "/" + total + " " + json.substring(start, end));
-        }
+    private void logSnapshotSummary(ScreenSnapshot snapshot) {
+        Log.i(TAG, "snapshot package=" + snapshot.packageName
+                + " node_count=" + snapshot.nodes.size()
+                + " size=" + snapshot.screenWidth + "x" + snapshot.screenHeight);
     }
 
     private boolean isSettingsPackage(String packageName) {
