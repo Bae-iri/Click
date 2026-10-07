@@ -6,13 +6,18 @@ from ai_agent.telemetry.trace_logger import diagnostic_payload
 from ai_agent.runtime.privacy import redact_text
 
 from ai_agent.runtime.session import InMemorySessionStore
-from ai_agent.runtime.tasks import TASK_GRAPHS
+from app.task_graphs import approved_graphs
 from ai_agent.runtime.types import ScreenSnapshot, TypedGoal
 
 SCHEMA_VERSION = 2
+TASK_GRAPHS = approved_graphs()
 
 
-def graph_version():
+def graph_version(task_graph=None):
+    if task_graph is not None:
+        encoded = json.dumps(task_graph.to_dict(), sort_keys=True,
+            ensure_ascii=False, separators=(",", ":"))
+        return sha256(encoded.encode("utf-8")).hexdigest()
     content = {key: graph.to_dict() for key, graph in TASK_GRAPHS.items()}
     return sha256(json.dumps(content, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
@@ -31,18 +36,20 @@ def restore(payload):
     return store
 
 
-def capture(store, session_id):
+def capture(store, session_id, task_graph=None):
     state = store.get(session_id)
     if state is None:
         return None
     payload = asdict(state)
     payload["typed_goal"]["source_text"] = ""
     # Current supported task slots are constrained by the selected graph.
-    graph = TASK_GRAPHS.get(state.task_id)
+    graph = task_graph or TASK_GRAPHS.get(state.task_id)
     if graph is None:
         graph = next((g for g in TASK_GRAPHS.values() if g.definition.task_id == state.task_id), None)
     if graph is None:
         raise ValueError("Unknown checkpoint task")
+    if graph.definition.task_id != state.task_id:
+        raise ValueError("Checkpoint graph task mismatch")
     payload["typed_goal"]["slots"] = dict(graph.definition.required_slots)
     payload["last_user_action_event"] = None
     return payload

@@ -136,7 +136,8 @@ class AgentSessionRepository:
                     raise HTTPException(409, headers={"X-Conflict-Code": "TURN_IN_PROGRESS"}) from error
                 raise
 
-    def finish(self, request, claim, response, checkpoint, schema_version, graph_version):
+    def finish(self, request, claim, response, checkpoint, schema_version, graph_version,
+               graph_reference=None):
         now = int(self.clock())
         with self.factory() as db:
             self.guard_voice_request(db, request, now)
@@ -171,6 +172,9 @@ class AgentSessionRepository:
             save_confirmation(db, request, response, now)
             turn.response = response.model_dump(mode="json")
             row = db.get(AgentSession, request.session_id)
+            if graph_reference is not None:
+                row.graph_version = graph_reference["version"]
+                row.graph_hash = graph_reference["sha256"]
             db.commit()
 
     def pin_graph(self, session_id, user_id, reference):
@@ -245,10 +249,13 @@ class AgentSessionRepository:
                 "graph_hash": row.graph_hash,
             }
 
-    def has_request(self, user_id, request_id):
+    def has_request(self, user_id, request_id, session_id=None):
         with self.factory() as db:
-            return db.scalar(select(AgentTurn.id).where(AgentTurn.user_id == user_id,
-                AgentTurn.request_id == request_id)) is not None
+            query = select(AgentTurn.id).where(AgentTurn.user_id == user_id,
+                AgentTurn.request_id == request_id)
+            if session_id is not None:
+                query = query.where(AgentTurn.session_id == session_id)
+            return db.scalar(query) is not None
 
     def apply_typed_control(self, request, graph_hash, request_hash):
         now = int(self.clock())
