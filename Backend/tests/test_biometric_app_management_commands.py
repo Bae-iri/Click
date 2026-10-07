@@ -1,4 +1,4 @@
-"""Biometric and app management backend contracts; execution belongs to Agent 1."""
+"""App management and storage backend contracts; execution belongs to Agent 1."""
 from dataclasses import replace
 from unittest.mock import Mock
 
@@ -16,7 +16,7 @@ from tests.test_typed_agent_contract import start_payload
 
 
 CASES = [
-    ("settings.biometric.setup", {"setting": "biometric", "action": "setup"}),
+    ("settings.storage.cleanup", {"setting": "storage", "action": "cleanup"}),
     ("settings.apps.uninstall", {"setting": "apps", "action": "uninstall"}),
     ("settings.app_permissions.manage", {"setting": "app_permissions", "action": "manage"}),
 ]
@@ -75,7 +75,7 @@ def test_registered_graph_is_deduplicated_selected_and_forwarded(monkeypatch, go
 
 
 @pytest.mark.parametrize("goal_type,slots", CASES)
-@pytest.mark.parametrize("invalid_kind", ["missing_setting", "missing_action", "wrong_setting", "wrong_action", "password", "pin", "biometric_data", "package_name", "permission"])
+@pytest.mark.parametrize("invalid_kind", ["missing_setting", "missing_action", "wrong_setting", "wrong_action", "password", "pin", "biometric_data", "package_name", "permission", "file_path", "delete_all", "clear_data"])
 def test_invalid_slots_rejected_at_http_boundary(goal_type, slots, invalid_kind):
     app = create_app()
     client = authenticated_client(app)
