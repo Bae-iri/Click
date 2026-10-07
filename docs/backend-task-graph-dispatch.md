@@ -53,7 +53,7 @@ AI1의 완료 응답은 실제 목표 완료 근거를 확인한 결과다. 다�
 6. 선택한 `task_id`, `graph_id`, version/hash, 검증된 goal과 parameters를 episode에 고정한다. 선택 근거는 Backend 이벤트로 남긴다.
 7. graph 본문과 현재 실행 상태를 AI1에 전달한다. FE가 보낸 임의 graph ID를 신뢰하거나 AI1에게 검색을 위임하지 않는다.
 
-현재 매핑은 확대 Goal + `direction=increase` → `MVP-01`, 축소 Goal + `direction=decrease` → `MVP-02`다. 실제 graph variant와 version은 DB가 관리하는 reference로 결정한다. FE catalog version과 graph version, 세션의 낙관적 잠금 version은 서로 다르다.
+현재 실행 매핑은 확대 Goal + `direction=increase` → `MVP-01`, 축소 Goal + `direction=decrease` → `MVP-02`다. 그래프 정의는 Backend의 `app/task_graphs/`에서 관리하고, DB 본문을 역직렬화해 AI1에 주입한다. 나머지 Android 설정 87개 Goal의 초안은 비승인·비활성 상태로 등록한다. 실제 graph variant와 version은 DB가 관리하는 reference로 결정한다. FE catalog version과 graph version, 세션의 낙관적 잠금 version은 서로 다르다. [현재 구현과 초안 검증 절차](./backend-owned-task-graphs.md)를 참고한다.
 
 `resume_task`/`observe`/`respond_confirmation`은 FE 요청에 새 goal이 없어도 Backend가 저장된 목표·graph·checkpoint를 복원해 AI1 입력을 완성한다. 재개에는 새 관측을 요구하며 이전 좌표를 그대로 재출력하지 않는다. `replace_task`는 새 선택과 검증이 성공했을 때만 기존 episode를 교체한다.
 
