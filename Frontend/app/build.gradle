@@ -3,7 +3,7 @@ plugins {
 }
 
 def clickApiBaseUrl = providers.gradleProperty("CLICK_API_BASE_URL")
-        .getOrElse("http://172.20.40.33:8000")
+        .getOrElse("https://click-db.onrender.com")
 
 android {
     namespace "com.click"

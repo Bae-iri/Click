@@ -34,12 +34,16 @@ cd Frontend
 
 현재 실패·완료 이벤트의 Android 자동 수집은 연결되지 않았다. 완료 시 연속 어려움 초기화는 API 테스트로 검증되어 있으며 실기기 자동 회복 검증은 후속 연동이 필요하다.
 
-## USB 없이 공용 서버 사용
+## 프론트 담당자 휴대폰에서 공용 서버 사용
+
+공용 Backend API 주소는 https://click-db.onrender.com 이다. 앱 기본 주소도 이 서버로 설정되어 있어 프론트 담당자의 PC나 휴대폰은 백엔드 개발 PC에 USB로 연결할 필요가 없다. PostgreSQL 연결 문자열은 앱에 넣지 않는다.
+
+프론트 담당자는 최신 develop을 가져와 Frontend를 Android Studio에서 열고 본인 휴대폰에 새 앱을 빌드·설치한다. 기존 Gradle 속성에 CLICK_API_BASE_URL이 설정돼 있다면 해당 값이 기본 주소보다 우선하므로 삭제하거나 공용 주소로 변경한다.
 
 Render 설정은 자동 배포가 꺼져 있으므로 Git push 후 서버를 별도로 배포해야 한다. 현재 커밋으로 배포하고 migration 20261007_09까지 적용한 뒤 HTTPS 서버의 /ready를 확인한다. APK는 다음처럼 실제 서버 주소를 지정해 다시 빌드·설치한다.
 
 ```powershell
-.\gradlew.bat :app:assembleDebug -PCLICK_API_BASE_URL=https://YOUR-API-HOST
+.\gradlew.bat :app:assembleDebug -PCLICK_API_BASE_URL=https://click-db.onrender.com
 ```
 
 기존 APK의 서버 주소는 Git push로 바뀌지 않는다. 공용 서버 주소와 실제 배포 완료는 별도 확인해야 한다.
