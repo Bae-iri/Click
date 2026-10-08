@@ -51,7 +51,7 @@ class PersonalizationRepository:
             self.session.execute(delete(UIEvent).where(UIEvent.user_id == user_id))
             self.session.execute(update(UserUIProfile).where(UserUIProfile.user_id == user_id).values(
                 comprehension_level="unknown", explanation_depth="normal", prefers_step_by_step=True,
-                confidence_score=0.0, evidence_count=0))
+                confidence_score=0.0, evidence_count=0, state_difficulties={}))
         consent = Consent(
             user_id=user_id,
             purpose=purpose,

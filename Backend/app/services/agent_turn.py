@@ -163,9 +163,16 @@ class AgentTurnService:
                 "prefers_step_by_step": profile.prefers_step_by_step,
                 "confidence_score": profile.confidence_score,
             }
+            from ai_agent.user_modeling import guidance_context
+            difficulty = guidance_context(profile.state_difficulties, response.state_id)
+            context["current_state_difficulty"] = difficulty
             response.metadata["ui_profile"] = context
             message = response.guide_command.message
-            if context["comprehension_level"] == "beginner" or context["explanation_depth"] == "detailed":
+            if difficulty["needs_extra_guidance"] and response.guide_command.requires_user_action:
+                response.guide_command.message = (
+                    f"천천히 한 단계씩 진행할게요. {message} "
+                    "안내한 항목의 이름과 위치를 먼저 확인한 뒤 진행해 주세요.")
+            elif context["comprehension_level"] == "beginner" or context["explanation_depth"] == "detailed":
                 response.guide_command.message = f"천천히 한 단계씩 진행할게요. {message}"
             elif context["explanation_depth"] == "concise":
                 response.guide_command.message = message.split(".", 1)[0].strip() + ("." if "." in message else "")

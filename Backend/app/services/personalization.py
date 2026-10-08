@@ -75,6 +75,9 @@ class PersonalizationService:
             request.metadata,
         )
         profile = self.repository.get_profile(user_id)
+        from ai_agent.user_modeling import update_difficulties
+        profile.state_difficulties = update_difficulties(
+            profile.state_difficulties, request.event_type, request.screen_name)
         if request.event_type != "guide_action_observed":
             profile.confidence_score = max(
                 -10.0,

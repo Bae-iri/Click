@@ -85,6 +85,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean overTrashTarget;
     private AgentTurnGateway agentGateway;
     private PersonalizationEventGateway personalizationEvents;
+    private String personalizationStateId;
     private final GuideStepTimer guideStepTimer = new GuideStepTimer();
     private GoalCatalogClassifier goalClassifier;
     private GoalCatalogClassifier.Match activeGoalMatch;
@@ -589,6 +590,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (overlayView != null) overlayView.setRecognizedSpeech(control.message);
             speak(control.message);
         } else if (isRepeatRequest(command)) {
+            if (personalizationEvents != null && lastSpokenMessage != null) {
+                personalizationEvents.recordGuideRepeated(agentSessionId, personalizationStateId);
+            }
             String repeated = lastSpokenMessage == null
                     ? "아직 다시 말씀드릴 안내가 없어요." : lastSpokenMessage;
             if (overlayView != null) overlayView.setRecognizedSpeech(repeated);
@@ -768,6 +772,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         executionGeneration++;
         guideStepTimer.clear();
         agentSessionId = sessionId;
+        personalizationStateId = null;
         agentSessionVersion = 0;
         agentConfirmationId = null;
         initialGoal = goal.trim();
@@ -1121,6 +1126,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void renderGuide(AgentTurnContract.Response response) {
         response.logDebug("ClickAgent");
+        personalizationStateId = response.guideCommand.requiresUserAction ? response.stateId : null;
         AgentTurnContract.GuideCommand command = response.guideCommand;
         lastGuideCommandId = command.guideCommandId;
         lastTargetNodeId = command.targetNodeId;

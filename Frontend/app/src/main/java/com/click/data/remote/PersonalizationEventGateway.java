@@ -55,6 +55,26 @@ public final class PersonalizationEventGateway {
         });
     }
 
+    public void recordGuideRepeated(String sessionId, String stateId) {
+        if (sessionId == null || stateId == null) return;
+        executor.execute(() -> {
+            try {
+                String userId = tokens.userId();
+                if (userId == null || userId.isEmpty()) return;
+                String base = userBase(userId);
+                if (!hasConsent(base)) return;
+                JSONObject body = new JSONObject()
+                        .put("session_id", sessionId)
+                        .put("screen_name", stateId)
+                        .put("event_type", "guide_repeated")
+                        .put("metadata", new JSONObject());
+                http.post(base + "/events", body.toString());
+            } catch (Exception error) {
+                Log.w("ClickPersonalization", "Guide repeat event was not saved");
+            }
+        });
+    }
+
     public void readConsent(ConsentCallback callback) {
         executor.execute(() -> {
             try {
@@ -76,7 +96,7 @@ public final class PersonalizationEventGateway {
                 JSONObject body = new JSONObject()
                         .put("purpose", "personalization")
                         .put("consented", consented)
-                        .put("policy_version", "step-timing.v1");
+                        .put("policy_version", "personalization.v2");
                 http.post(userBase(userId) + "/consents", body.toString());
                 main.post(() -> callback.onResult(consented));
             } catch (Exception error) {

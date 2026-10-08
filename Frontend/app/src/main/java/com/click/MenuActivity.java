@@ -67,9 +67,9 @@ public final class MenuActivity extends AppCompatActivity {
         permissionStatus.setTextSize(18);
         page.addView(permissionStatus, ClickUi.wrap(ClickUi.dp(this, 24)));
 
-        timingConsentStatus = ClickUi.body(this, "단계별 안내 시간 기록 상태를 확인하고 있어요…");
+        timingConsentStatus = ClickUi.body(this, "맞춤 안내 기록 상태를 확인하고 있어요…");
         page.addView(timingConsentStatus, ClickUi.wrap(ClickUi.dp(this, 14)));
-        timingConsentButton = ClickUi.secondaryButton(this, "단계별 안내 시간 기록 설정");
+        timingConsentButton = ClickUi.secondaryButton(this, "맞춤 안내 기록 설정");
         timingConsentButton.setOnClickListener(view -> showTimingConsentDialog());
         page.addView(timingConsentButton, ClickUi.fullWidth(this, 60, 8));
 
@@ -175,21 +175,21 @@ public final class MenuActivity extends AppCompatActivity {
             @Override public void onResult(boolean consented) {
                 timingConsented = consented;
                 timingConsentStatus.setText(consented
-                        ? "단계별 안내 시간 기록: 동의함" : "단계별 안내 시간 기록: 동의하지 않음");
+                        ? "맞춤 안내 기록: 동의함" : "맞춤 안내 기록: 동의하지 않음");
             }
             @Override public void onFailure() {
-                timingConsentStatus.setText("단계별 안내 시간 기록 상태를 확인하지 못했어요.");
+                timingConsentStatus.setText("맞춤 안내 기록 상태를 확인하지 못했어요.");
             }
         });
     }
 
     private void showTimingConsentDialog() {
         new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle(timingConsented ? "기록 동의를 철회할까요?" : "단계별 안내 시간 기록에 동의할까요?")
+                .setTitle(timingConsented ? "기록 동의를 철회할까요?" : "맞춤 안내 기록에 동의할까요?")
                 .setMessage(timingConsented
-                        ? "동의를 철회하면 저장된 개인화 행동 기록이 삭제되고 새 기록도 중단됩니다."
-                        : "안내가 표시된 뒤 첫 탭까지 걸린 시간, 단계 번호, 화면 상태 ID를 계정과 연결해 저장합니다. "
-                        + "어디서 안내가 더 필요한지 분석하는 데 사용하며 화면 글자나 비밀번호는 이 기록에 저장하지 않습니다. "
+                        ? "동의를 철회하면 저장된 개인화 행동 기록과 분석 이력이 삭제되고 맞춤 안내가 중단됩니다."
+                        : "안내가 표시된 뒤 첫 탭까지 걸린 시간, 단계 번호, 화면 상태 ID와 다시 말해줘 요청을 계정과 연결해 저장합니다. "
+                        + "어디서 안내가 더 필요한지 분석하고 설명을 조정하는 데 사용하며 화면 글자나 비밀번호는 이 기록에 저장하지 않습니다. "
                         + "언제든 이 메뉴에서 동의를 철회할 수 있습니다.")
                 .setNegativeButton("취소", null)
                 .setPositiveButton(timingConsented ? "동의 철회" : "동의", (dialog, which) -> {

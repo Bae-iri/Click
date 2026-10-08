@@ -5,6 +5,46 @@ from app.main import create_app
 from app.models.personalization import UIEvent
 
 
+def test_state_difficulties_recovery_isolation_and_revocation():
+    from ai_agent.user_modeling import guidance_context
+    client = TestClient(create_app())
+    user_id = create_user(client)
+    base = f"/api/v1/users/{user_id}"
+    client.post(base + "/consents", json={"purpose": "personalization",
+        "consented": True, "policy_version": "v1"})
+    for _ in range(2):
+        result = client.post(base + "/events", json={"event_type": "guide_repeated",
+            "screen_name": "S1_SETTINGS_HOME"})
+        assert result.status_code == 201
+    evidence = result.json()["profile"]["state_difficulties"]
+    assert guidance_context(evidence, "S1_SETTINGS_HOME")["needs_extra_guidance"]
+    assert not guidance_context(evidence, "S2_DISPLAY_SETTINGS")["needs_extra_guidance"]
+    payload = {"request_id": "difficulty-1", "session_id": "difficulty-session",
+        "user_id": user_id, "raw_goal": "increase font size",
+        "accessibility_tree": {"package_name": "com.android.settings",
+            "screen_width": 1080, "screen_height": 2400,
+            "nodes": [{"node_id": "title", "text": "Settings", "package_name": "com.android.settings"},
+                {"node_id": "display", "text": "Display", "clickable": True,
+                 "package_name": "com.android.settings", "class_name": "android.widget.TextView",
+                 "bounds_in_screen": [24, 320, 1056, 408]}]}}
+    guided = client.post("/api/v1/agent/turn", json=payload)
+    assert guided.status_code == 200
+    assert guided.json()["metadata"]["ui_profile"]["current_state_difficulty"]["needs_extra_guidance"]
+    assert "이름과 위치" in guided.json()["guide_command"]["message"]
+    recovered = client.post(base + "/events", json={"event_type": "guide_step_completed",
+        "screen_name": "S1_SETTINGS_HOME"}).json()["profile"]["state_difficulties"]
+    assert recovered["S1_SETTINGS_HOME"]["completion_count"] == 1
+    assert not guidance_context(recovered, "S1_SETTINGS_HOME")["needs_extra_guidance"]
+    client.post(base + "/consents", json={"purpose": "personalization",
+        "consented": False, "policy_version": "v1"})
+    assert client.get(base).json()["profile"]["state_difficulties"] == {}
+    retry = client.post("/api/v1/agent/turn", json=payload)
+    assert retry.status_code == 200
+    assert "ui_profile" not in retry.json()["metadata"]
+    other = create_user(client)
+    assert client.get(f"/api/v1/users/{other}").json()["profile"]["state_difficulties"] == {}
+
+
 def create_user(client: TestClient) -> str:
     from tests.helpers import register
     return register(client)["user_id"]
