@@ -19,6 +19,7 @@ class UIProfileResponse(BaseModel):
     prefers_step_by_step: bool
     confidence_score: float
     evidence_count: int
+    state_difficulties: dict[str, dict[str, Any]] = Field(default_factory=dict)
     updated_at: datetime
 
 

@@ -40,6 +40,7 @@ class UserUIProfile(Base):
     prefers_step_by_step: Mapped[bool] = mapped_column(Boolean, default=True)
     confidence_score: Mapped[float] = mapped_column(Float, default=0.0)
     evidence_count: Mapped[int] = mapped_column(Integer, default=0)
+    state_difficulties: Mapped[dict] = mapped_column(JSONType, default=dict)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
