@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/onboarding_screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipChildren="true"
+    android:clipToPadding="true"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:background="@color/onboarding_surface"
+        android:elevation="1dp"
+        android:outlineProvider="none">
+
+        <LinearLayout
+            android:id="@+id/onboarding_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="18dp"
+            android:importantForAccessibility="yes"
+            android:orientation="horizontal">
+            <View android:id="@+id/onboarding_step_one"
+                android:layout_width="46dp" android:layout_height="6dp"
+                android:background="@drawable/onboarding_progress_active"
+                android:importantForAccessibility="no" />
+            <View android:id="@+id/onboarding_step_two"
+                android:layout_width="46dp" android:layout_height="6dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/onboarding_progress_inactive"
+                android:importantForAccessibility="no" />
+            <View android:id="@+id/onboarding_step_three"
+                android:layout_width="46dp" android:layout_height="6dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/onboarding_progress_inactive"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/onboarding_back"
+            style="@style/OnboardingQuietButton"
+            android:layout_width="wrap_content" android:layout_height="48dp"
+            android:layout_gravity="bottom|start"
+            android:drawableStart="@drawable/onboarding_back"
+            android:drawablePadding="4dp"
+            android:text="@string/onboarding_previous"
+            android:visibility="gone" />
+        <Button
+            android:id="@+id/onboarding_skip"
+            style="@style/OnboardingQuietButton"
+            android:layout_width="wrap_content" android:layout_height="48dp"
+            android:layout_gravity="bottom|end"
+            android:text="@string/onboarding_skip" />
+    </FrameLayout>
+
+    <ScrollView
+        android:id="@+id/onboarding_scroll"
+        android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:overScrollMode="ifContentScrolls"
+        android:scrollbars="vertical">
+        <LinearLayout
+            android:id="@+id/onboarding_body"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:clipChildren="false" android:clipToPadding="false"
+            android:orientation="vertical"
+            android:paddingTop="16dp" android:paddingBottom="16dp">
+            <TextView
+                android:id="@+id/onboarding_title"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:fontFamily="@font/pretendard_bold"
+                android:gravity="center"
+                android:includeFontPadding="false" android:letterSpacing="-0.02"
+                android:text="@string/onboarding_title"
+                android:textColor="@color/onboarding_text_primary" android:textSize="30sp" />
+            <TextView
+                android:id="@+id/onboarding_description"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:breakStrategy="balanced"
+                android:fontFamily="@font/pretendard_medium" android:gravity="center"
+                android:includeFontPadding="false" android:letterSpacing="-0.01"
+                android:text="@string/onboarding_description"
+                android:textColor="@color/onboarding_text_secondary" android:textSize="19sp" />
+            <TextView
+                android:id="@+id/onboarding_quote"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:breakStrategy="balanced"
+                android:fontFamily="@font/pretendard_medium" android:gravity="center"
+                android:includeFontPadding="false"
+                android:paddingHorizontal="16dp" android:paddingTop="20dp" android:paddingBottom="28dp"
+                android:text="@string/onboarding_task_quote"
+                android:textColor="@color/onboarding_text_secondary" android:textSize="18sp"
+                android:visibility="gone" />
+
+            <!-- Measure the full scene before distributing extra height so large text can scroll. -->
+            <FrameLayout
+                android:id="@+id/onboarding_art"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_weight="1" android:layout_marginTop="24dp"
+                android:clipChildren="false" android:clipToPadding="false"
+                tools:ignore="InefficientWeight">
+                <com.click.designpreview.OnboardingIllustrationLayout
+                    android:id="@+id/onboarding_welcome_scene"
+                    android:layout_width="match_parent" android:layout_height="match_parent">
+                    <ImageView android:id="@+id/onboarding_blob"
+                        android:layout_width="330dp" android:layout_height="300dp"
+                        android:importantForAccessibility="no" android:rotation="-8"
+                        android:scaleType="fitXY" android:src="@drawable/onboarding_blob" />
+                    <ImageView android:id="@+id/onboarding_character"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:importantForAccessibility="no" android:scaleType="fitCenter"
+                        android:src="@drawable/welcome" />
+                    <TextView android:id="@+id/onboarding_bubble"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:fontFamily="@font/pretendard_semibold" android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:paddingHorizontal="18dp" android:paddingTop="16dp" android:paddingBottom="25dp"
+                        android:text="@string/onboarding_bubble"
+                        android:textColor="@color/onboarding_bubble_text" android:textSize="17sp" />
+                </com.click.designpreview.OnboardingIllustrationLayout>
+
+                <com.click.designpreview.OnboardingFeatureLayout
+                    android:id="@+id/onboarding_feature_scene"
+                    android:layout_width="match_parent" android:layout_height="match_parent"
+                    android:visibility="gone">
+                    <com.click.designpreview.OnboardingArtworkView
+                        android:id="@+id/onboarding_phone"
+                        android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:importantForAccessibility="no" />
+                    <TextView android:id="@+id/onboarding_feature_bubble"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:fontFamily="@font/pretendard_semibold" android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:paddingHorizontal="24dp" android:paddingTop="18dp" android:paddingBottom="29dp"
+                        android:text="@string/onboarding_question_bubble"
+                        android:textColor="@color/onboarding_bubble_text" android:textSize="21sp" />
+                </com.click.designpreview.OnboardingFeatureLayout>
+
+                <LinearLayout
+                    android:id="@+id/onboarding_ready_scene"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center_horizontal" android:orientation="vertical"
+                    android:visibility="gone">
+                    <com.click.designpreview.OnboardingArtworkView
+                        android:id="@+id/onboarding_ready_logo"
+                        android:layout_width="match_parent" android:layout_height="210dp"
+                        android:importantForAccessibility="no" />
+                    <LinearLayout
+                        android:id="@+id/onboarding_checklist"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="-12dp"
+                        android:background="@drawable/onboarding_feature_card"
+                        android:orientation="vertical" android:padding="22dp">
+                        <TextView style="@style/OnboardingFeatureLabel"
+                            android:id="@+id/onboarding_check_explain"
+                            android:text="@string/onboarding_feature_explain" />
+                        <TextView style="@style/OnboardingFeatureLabel"
+                            android:id="@+id/onboarding_check_find"
+                            android:text="@string/onboarding_feature_find" />
+                        <TextView style="@style/OnboardingFeatureLabel"
+                            android:id="@+id/onboarding_check_prevent"
+                            android:text="@string/onboarding_feature_prevent" />
+                    </LinearLayout>
+                </LinearLayout>
+            </FrameLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/onboarding_footer_row"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@color/onboarding_surface"
+        android:orientation="vertical"
+        android:clipChildren="false" android:clipToPadding="false"
+        android:paddingTop="16dp" android:paddingBottom="20dp">
+            <com.click.designpreview.OnboardingStartButton
+                android:id="@+id/onboarding_start"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:clickable="true" android:focusable="true"
+                android:gravity="center" android:importantForAccessibility="yes"
+                android:minWidth="136dp" android:minHeight="66dp"
+                android:orientation="horizontal"
+                android:paddingHorizontal="24dp" android:paddingVertical="16dp">
+                <TextView android:id="@+id/onboarding_start_label"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:fontFamily="@font/pretendard_semibold" android:importantForAccessibility="no"
+                    android:includeFontPadding="false" android:text="@string/onboarding_start"
+                    android:textColor="@color/onboarding_surface" android:textSize="22sp" />
+                <ImageView android:id="@+id/onboarding_start_arrow"
+                    android:layout_width="26dp" android:layout_height="26dp"
+                    android:layout_marginStart="10dp" android:importantForAccessibility="no"
+                    android:src="@drawable/onboarding_arrow" />
+            </com.click.designpreview.OnboardingStartButton>
+            <Button
+                android:id="@+id/guide_entry"
+                style="@style/OnboardingQuietButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:minHeight="48dp"
+                android:text="@string/onboarding_login"
+                android:textColor="@color/guide_blue"
+                android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>

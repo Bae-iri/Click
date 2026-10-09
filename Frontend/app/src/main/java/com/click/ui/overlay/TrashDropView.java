@@ -31,12 +31,18 @@ public final class TrashDropView extends View {
         float cx = getWidth() / 2f;
         float cy = getHeight() / 2f;
         float radius = dp(active ? 43 : 39);
-        paint.setColor(active ? Color.rgb(255, 59, 77) : Color.argb(235, 49, 54, 64));
-        paint.setShadowLayer(dp(10), 0, dp(4), Color.argb(90, 20, 24, 32));
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(active ? 0xFFFFEEF0 : Color.WHITE);
+        paint.setShadowLayer(dp(10), 0, dp(4), 0x493478F6);
         canvas.drawCircle(cx, cy, radius, paint);
         paint.clearShadowLayer();
 
-        paint.setColor(Color.WHITE);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(dp(active ? 4 : 3));
+        paint.setColor(active ? 0xFFFF5265 : 0xFF3478F6);
+        canvas.drawCircle(cx, cy, radius - paint.getStrokeWidth() / 2f, paint);
+
+        paint.setColor(active ? 0xFFFF5265 : 0xFF2469EA);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(dp(3));
         paint.setStrokeCap(Paint.Cap.ROUND);

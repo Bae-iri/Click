@@ -104,6 +104,16 @@ public final class GoalCatalogClassifier {
 
     public int size() { return rules.size(); }
 
+    /** Exact lookup for an explicitly selected card; keyword matching is intentionally skipped. */
+    public Match executableGoal(String goalType) {
+        for (Rule rule : rules) {
+            if (rule.goalType.equals(goalType) && "approved".equals(rule.executionStatus)) {
+                return new Match(version, rule, 0);
+            }
+        }
+        return null;
+    }
+
     public Classification classify(String source, String foregroundPackage) {
         String text = normalize(source);
         if (text.isEmpty()) return new Classification(null, false);
@@ -170,7 +180,7 @@ public final class GoalCatalogClassifier {
         return result;
     }
 
-    static String normalize(String source) {
+    public static String normalize(String source) {
         return source == null ? "" : source.toLowerCase(Locale.ROOT)
                 .replaceAll("[^0-9a-z가-힣]", "");
     }

@@ -59,11 +59,15 @@ public final class VoiceQueueGateway {
 
     public String enqueue(String rawGoal, Callback callback) {
         String id = UUID.randomUUID().toString();
+        enqueue(id, rawGoal, callback);
+        return id;
+    }
+
+    public void enqueue(String id, String rawGoal, Callback callback) {
         JSONObject body = new JSONObject();
         try { body.put("id", id).put("raw_goal", rawGoal).put("priority", "NORMAL"); }
-        catch (Exception error) { callback.onFailure(error); return id; }
+        catch (Exception error) { callback.onFailure(error); return; }
         post("/api/v1/voice-requests/enqueue", body, callback);
-        return id;
     }
 
     public String interrupt(String rawGoal, Callback callback) {

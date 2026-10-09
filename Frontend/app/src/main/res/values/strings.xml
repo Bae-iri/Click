@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Click</string>
+    <string name="start_click_question">click을 시작할까요?</string>
+    <string name="start_click_question_accessibility">click을 시작할까요? 마이크로 질문할 수 있어요. 예: 글자 크기를 크게 해줘</string>
+    <string name="overlay_tutorial_progress">%1$d / 3</string>
+    <string name="overlay_tutorial_confirmed_title">확인이 완료됐어요!</string>
+    <string name="overlay_tutorial_confirmed_description">확인한 요청으로 안내를 시작할 수 있어요.</string>
+    <string name="overlay_tutorial_retry_description">실제 안내에서는 앱 이름이나 변경할 범위를 수정할 수 있어요. 지금은 예시 내용을 확인해 보세요.</string>
+    <string name="overlay_tutorial_start">Click 시작하기</string>
     <string name="app_ready">Click Frontend 준비 완료</string>
     <string name="overlay_demo_title">Click Overlay</string>
     <string name="overlay_demo_description">다른 앱 위에 표시되는 Click 아이콘을 실행합니다.\n아이콘을 눌러 음성·텍스트 모드를 전환해보세요.</string>
