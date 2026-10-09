@@ -62,7 +62,7 @@ Normalizer는 조작 불가능한 자식의 label을 가장 가까운 적절한 
 Backend는 후속 turn에도 현재 화면 크기를 runtime에 전달하므로,
 첫 요청에만 있는 `raw_goal` 없이도 화면 면적 제한이 유지된다.
 숨겨진 노드는 매칭에서 제외하고, 비활성·면적 없는 노드는 조작 대상으로 선택하지 않는다.
-Frontend의 tree 기반 vision payload에서도 숨겨진·비활성·면적 없는 노드를 제외한다.
+Frontend의 Vision fallback은 tree 재포장을 제거하고 매 분석 동의 후 기기 내 OCR을 수행한다. 실제 OCR bounds만 전달하며 화면 밖·면적 없는 결과는 제외한다. [마스킹·실패 대응 및 동의 계약](../../docs/ai-agent-vision-fallback.md)을 따른다.
 
 Snapshot fingerprint에는 부모 관계, 표시 여부, 클릭·활성·스크롤·체크 가능 여부도 반영한다.
 AI-Agent(2)의 데이터 분석·graph proposal 동작은 이 변경의 대상이 아니다.

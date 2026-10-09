@@ -37,7 +37,7 @@ public final class GuideOverlayView extends View {
         if (local == null) return;
         RectF target = new RectF(local[0], local[1], local[2], local[3]);
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Color.argb(42, 255, 59, 77));
+        paint.setColor(Color.argb(42, 52, 120, 246));
         canvas.drawRoundRect(target, dp(12), dp(12), paint);
         paint.setStyle(Paint.Style.STROKE);
         float strokeWidth = Math.min(dp(4), Math.min(target.width(), target.height()));

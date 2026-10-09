@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="click_tutorial_progress">%1$d/%2$d</string>
+    <string name="tutorial_click_hint">여기를 눌러보세요</string>
+    <string name="tutorial_ready_title">이제 click을 사용할 수\n있게 되었어요!</string>
+    <string name="tutorial_ready_description">click 사용법을 알아볼까요?</string>
+    <string name="tutorial_ready_start">시작하기</string>
+    <item name="tutorial_ready_title" type="id" />
+    <item name="tutorial_ready_start" type="id" />
+    <item name="tutorial_next" type="id" />
+    <item name="tutorial_back" type="id" />
+    <item name="tutorial_title" type="id" />
+    <item name="tutorial_phone_stage" type="id" />
+    <item name="tutorial_floating_host" type="id" />
+    <item name="tutorial_floating_control" type="id" />
+    <item name="tutorial_restore" type="id" />
+</resources>

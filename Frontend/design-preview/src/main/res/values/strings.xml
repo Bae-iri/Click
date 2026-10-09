@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Click</string>
+    <string name="splash_logo_description">클릭</string>
+    <string name="splash_tagline">어려운 앱 사용,\n이제 클릭 한 번으로</string>
+    <string name="splash_signature">항상, 당신 곁에</string>
+    <string name="click_wordmark" translatable="false">click</string>
+</resources>

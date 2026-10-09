@@ -7,6 +7,7 @@ import android.view.Gravity;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.ScrollView;
 
 import com.click.ui.common.ClickUi;
 
@@ -27,8 +28,12 @@ public final class ConfirmationOverlayView extends LinearLayout {
         text.setText(message);
         text.setTextSize(18);
         text.setTextColor(ClickUi.TEXT);
+        text.setTypeface(getResources().getFont(
+                com.click.designpreview.R.font.pretendard_semibold));
         text.setGravity(Gravity.CENTER);
-        addView(text, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
+        ScrollView disclosure = new ScrollView(context);
+        disclosure.addView(text, new ScrollView.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        addView(disclosure, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
 
         LinearLayout actions = new LinearLayout(context);
         Button reject = ClickUi.secondaryButton(context, "아니요");

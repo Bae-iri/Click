@@ -3,234 +3,523 @@ package com.click;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RectF;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.InputType;
+import android.view.Gravity;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.click.core.permission.PermissionStatus;
-import com.click.data.local.LocalAccountStore;
-import com.click.service.overlay.ClickOverlayService;
 import com.click.data.local.AuthTokenStore;
+import com.click.data.local.LocalAccountStore;
 import com.click.data.remote.PersonalizationEventGateway;
-import com.click.ui.common.ClickUi;
+import com.click.service.overlay.ClickOverlayService;
 
+/** Account and settings menu using the same soft-blue visual system as the Click home screen. */
 public final class MenuActivity extends AppCompatActivity {
+    private static final int BLUE = 0xFF3478F6;
+    private static final int INK = 0xFF101A36;
+    private static final int SECONDARY = 0xFF7182A4;
+    private static final int BORDER = 0xFFE5EDF8;
+    private static final int DANGER = 0xFFE94467;
     private static final String[] JOBS = {
             "직업을 선택해주세요", "IT/소프트웨어", "제조업", "서비스업", "사무/관리",
             "자영업", "교육/연구", "의료/보건", "공무원", "주부", "학생", "무직", "기타"
     };
     private static final String[] GENDERS = {"성별을 선택해주세요", "남성", "여성"};
-    private TextView permissionStatus;
-    private TextView profile;
-    private TextView timingConsentStatus;
-    private android.widget.Button timingConsentButton;
+
+    private Typeface medium;
+    private Typeface semibold;
+    private Typeface bold;
+    private TextView profileName;
+    private LocalAccountStore account;
     private PersonalizationEventGateway personalizationEvents;
     private boolean timingConsented;
-    private LocalAccountStore account;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        LinearLayout page = ClickUi.page(this);
+    @Override protected void onCreate(Bundle state) {
+        super.onCreate(state);
+        configureWindow();
+        medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
+        semibold = getResources().getFont(com.click.designpreview.R.font.pretendard_semibold);
+        bold = getResources().getFont(com.click.designpreview.R.font.pretendard_bold);
         account = new LocalAccountStore(this);
         personalizationEvents = new PersonalizationEventGateway(this);
-        page.addView(ClickUi.title(this, "메뉴"), ClickUi.wrap(ClickUi.dp(this, 8)));
 
-        LinearLayout profileHeader = new LinearLayout(this);
-        profileHeader.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        TextView profileTitle = ClickUi.body(this, "내 정보");
-        profileTitle.setTextSize(22);
-        profileTitle.setTextColor(ClickUi.TEXT);
-        profileHeader.addView(profileTitle, new LinearLayout.LayoutParams(0, ClickUi.dp(this, 56), 1f));
-        android.widget.Button edit = ClickUi.secondaryButton(this, "수정하기");
-        edit.setOnClickListener(view -> showEditProfile());
-        profileHeader.addView(edit, new LinearLayout.LayoutParams(ClickUi.dp(this, 120), ClickUi.dp(this, 52)));
-        page.addView(profileHeader, ClickUi.fullWidth(this, 56, 26));
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.WHITE);
+        root.addView(new MenuBackgroundView(), new FrameLayout.LayoutParams(-1, -1));
 
-        profile = ClickUi.body(this, "");
-        profile.setPadding(ClickUi.dp(this, 18), ClickUi.dp(this, 16),
-                ClickUi.dp(this, 18), ClickUi.dp(this, 16));
-        profile.setBackgroundColor(Color.WHITE);
-        page.addView(profile, ClickUi.wrap(ClickUi.dp(this, 6)));
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.setClipToPadding(false);
+        scroll.setVerticalScrollBarEnabled(false);
+        LinearLayout page = vertical();
+        int horizontal = dp(22);
+        page.setPadding(horizontal, dp(14), horizontal, dp(34));
+        scroll.addView(page, new ScrollView.LayoutParams(-1, -2));
+        root.addView(scroll, new FrameLayout.LayoutParams(
+                Math.min(getResources().getDisplayMetrics().widthPixels, dp(520)), -1,
+                Gravity.CENTER_HORIZONTAL));
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            page.setPadding(horizontal, dp(14) + insets.getSystemWindowInsetTop(), horizontal,
+                    dp(34) + insets.getSystemWindowInsetBottom());
+            return insets;
+        });
+
+        page.addView(header(), new LinearLayout.LayoutParams(-1, dp(58)));
+        add(page, profileHeader(), 20);
+
+        LinearLayout settings = group();
+        addRow(settings, MenuIconView.Kind.SHIELD, "권한 상태 확인", false,
+                view -> showPermissionStatus());
+        divider(settings);
+        addRow(settings, MenuIconView.Kind.SLIDERS, "맞춤 안내 기록 설정", false,
+                view -> showTimingConsentDialog());
+        add(page, settings, 22);
+
+        LinearLayout tutorial = group();
+        addRow(tutorial, MenuIconView.Kind.BOOK, "튜토리얼", false,
+                view -> startActivity(new Intent(this, TutorialActivity.class)));
+        add(page, tutorial, 14);
+
+        LinearLayout policies = group();
+        addRow(policies, MenuIconView.Kind.DOCUMENT, "서비스 이용약관", false,
+                view -> showPolicy("서비스 이용약관"));
+        divider(policies);
+        addRow(policies, MenuIconView.Kind.SHIELD, "개인정보 처리방침", false,
+                view -> showPolicy("개인정보 처리방침"));
+        add(page, policies, 14);
+
+        LinearLayout accountActions = group();
+        addRow(accountActions, MenuIconView.Kind.LOGOUT, "로그아웃", false,
+                view -> confirmLogout());
+        divider(accountActions);
+        addRow(accountActions, MenuIconView.Kind.TRASH, "회원탈퇴", true,
+                view -> confirmDelete());
+        add(page, accountActions, 14);
+
+        setContentView(root);
+        root.requestApplyInsets();
         refreshProfile();
+    }
 
-        permissionStatus = ClickUi.body(this, "");
-        permissionStatus.setTextSize(18);
-        page.addView(permissionStatus, ClickUi.wrap(ClickUi.dp(this, 24)));
+    private View header() {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = text("메뉴", 31, INK, bold);
+        title.setLetterSpacing(-.025f);
+        if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
+        row.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
 
-        timingConsentStatus = ClickUi.body(this, "맞춤 안내 기록 상태를 확인하고 있어요…");
-        page.addView(timingConsentStatus, ClickUi.wrap(ClickUi.dp(this, 14)));
-        timingConsentButton = ClickUi.secondaryButton(this, "맞춤 안내 기록 설정");
-        timingConsentButton.setOnClickListener(view -> showTimingConsentDialog());
-        page.addView(timingConsentButton, ClickUi.fullWidth(this, 60, 8));
+        TextView close = text("×", 38, INK, medium);
+        close.setGravity(Gravity.CENTER);
+        close.setContentDescription("메뉴 닫기");
+        close.setClickable(true);
+        close.setFocusable(true);
+        close.setBackground(ripple(Color.TRANSPARENT, 25));
+        close.setOnClickListener(view -> closeMenu());
+        row.addView(close, new LinearLayout.LayoutParams(dp(50), dp(50)));
+        return row;
+    }
 
-        android.widget.Button tutorial = ClickUi.primaryButton(this, "글자 크기 튜토리얼");
-        tutorial.setOnClickListener(view -> startActivity(new Intent(this, TutorialActivity.class)));
-        page.addView(tutorial, ClickUi.fullWidth(this, 64, 24));
+    private View profileHeader() {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(2), dp(6), dp(2), dp(6));
 
-        android.widget.Button logout = ClickUi.secondaryButton(this, "로그아웃");
-        logout.setOnClickListener(view -> new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("로그아웃할까요?")
-                .setNegativeButton("취소", null)
-                .setPositiveButton("로그아웃", (dialog, which) -> returnToLogin())
-                .show());
-        page.addView(logout, ClickUi.fullWidth(this, 60, 18));
+        MenuIconView avatar = new MenuIconView(MenuIconView.Kind.USER, false);
+        row.addView(avatar, new LinearLayout.LayoutParams(dp(74), dp(74)));
 
-        android.widget.Button delete = ClickUi.secondaryButton(this, "회원탈퇴");
-        delete.setTextColor(Color.rgb(196, 54, 65));
-        delete.setOnClickListener(view -> new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("회원탈퇴를 진행할까요?")
-                .setMessage("저장된 회원 정보가 삭제되며 되돌릴 수 없습니다.")
-                .setNegativeButton("취소", null)
-                .setPositiveButton("탈퇴", (dialog, which) -> {
-                    stopService(new Intent(this, ClickOverlayService.class));
-                    account.deleteAccount();
-                    returnToLogin();
-                }).show());
-        page.addView(delete, ClickUi.fullWidth(this, 60, 10));
+        LinearLayout copy = vertical();
+        profileName = text("", 21, INK, semibold);
+        copy.addView(profileName, new LinearLayout.LayoutParams(-1, -2));
+        TextView welcome = text("Click과 함께해요.", 15, SECONDARY, medium);
+        LinearLayout.LayoutParams welcomeParams = new LinearLayout.LayoutParams(-1, -2);
+        welcomeParams.topMargin = dp(6);
+        copy.addView(welcome, welcomeParams);
+        LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);
+        copyParams.setMarginStart(dp(16));
+        row.addView(copy, copyParams);
 
-        android.widget.Button home = ClickUi.secondaryButton(this, "←  홈으로");
-        home.setOnClickListener(view -> closeMenu());
-        page.addView(home, ClickUi.fullWidth(this, 60, 18));
-        setContentView(ClickUi.scrollPage(this, page));
+        TextView edit = text("수정하기", 15, BLUE, semibold);
+        edit.setGravity(Gravity.CENTER);
+        edit.setMinWidth(dp(94));
+        edit.setMinHeight(dp(48));
+        edit.setPadding(dp(16), dp(11), dp(16), dp(11));
+        edit.setBackground(ripple(0xFFEAF3FF, 22));
+        edit.setClickable(true);
+        edit.setFocusable(true);
+        edit.setOnClickListener(view -> showEditProfile());
+        row.addView(edit, new LinearLayout.LayoutParams(-2, -2));
+        return row;
+    }
+
+    private LinearLayout group() {
+        LinearLayout group = vertical();
+        GradientDrawable card = new GradientDrawable();
+        card.setColor(0xF9FFFFFF);
+        card.setCornerRadius(dp(24));
+        card.setStroke(dp(1), BORDER);
+        group.setBackground(card);
+        group.setElevation(dp(2));
+        group.setPadding(dp(8), dp(5), dp(8), dp(5));
+        return group;
+    }
+
+    private void addRow(LinearLayout group, MenuIconView.Kind kind, String label, boolean danger,
+                        View.OnClickListener listener) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(8), dp(7), dp(8), dp(7));
+        row.setMinimumHeight(dp(72));
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setContentDescription(label);
+        row.setBackground(ripple(Color.TRANSPARENT, 18));
+        row.setOnClickListener(listener);
+        row.addView(new MenuIconView(kind, danger), new LinearLayout.LayoutParams(dp(54), dp(54)));
+
+        TextView title = text(label, 18, danger ? DANGER : INK, semibold);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(0, -2, 1);
+        titleParams.setMarginStart(dp(15));
+        row.addView(title, titleParams);
+        TextView arrow = text("›", 32, 0xFF7890B8, medium);
+        arrow.setGravity(Gravity.CENTER);
+        arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.addView(arrow, new LinearLayout.LayoutParams(dp(34), dp(42)));
+        group.addView(row, new LinearLayout.LayoutParams(-1, -2));
+    }
+
+    private void divider(LinearLayout group) {
+        View line = new View(this);
+        line.setBackgroundColor(0xFFE9EFF8);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(1));
+        params.setMarginStart(dp(70));
+        params.setMarginEnd(dp(12));
+        group.addView(line, params);
+    }
+
+    private void showPermissionStatus() {
+        boolean accessibility = PermissionStatus.isAccessibilityEnabled(this);
+        boolean overlay = Settings.canDrawOverlays(this);
+        boolean microphone = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED;
+        new AlertDialog.Builder(this)
+                .setTitle("권한 상태")
+                .setMessage("접근성  " + mark(accessibility)
+                        + "\n다른 앱 위 표시  " + mark(overlay)
+                        + "\n마이크  " + mark(microphone))
+                .setNegativeButton("닫기", null)
+                .setPositiveButton(accessibility ? "확인" : "접근성 안내 보기", (dialog, which) -> {
+                    if (!accessibility) startActivity(new Intent(this,
+                            com.click.designpreview.AccessibilityHelpActivity.class));
+                }).show();
     }
 
     private void showEditProfile() {
-        LinearLayout form = new LinearLayout(this);
-        form.setOrientation(LinearLayout.VERTICAL);
-        form.setPadding(ClickUi.dp(this, 24), ClickUi.dp(this, 8), ClickUi.dp(this, 24), 0);
-        EditText email = ClickUi.input(this, "이메일", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        LinearLayout form = vertical();
+        form.setPadding(dp(24), dp(8), dp(24), 0);
+        EditText name = input("이름", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
+        name.setText(account.name());
+        EditText email = input("이메일", InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
         email.setText(account.email());
-        EditText age = ClickUi.input(this, "나이", InputType.TYPE_CLASS_NUMBER);
+        EditText age = input("나이 (선택)", InputType.TYPE_CLASS_NUMBER);
         age.setText(account.age());
         Spinner job = spinner(JOBS, account.job());
         Spinner gender = spinner(GENDERS, account.gender());
-        form.addView(email, new LinearLayout.LayoutParams(-1, ClickUi.dp(this, 58)));
-        form.addView(age, new LinearLayout.LayoutParams(-1, ClickUi.dp(this, 58)));
-        form.addView(job, new LinearLayout.LayoutParams(-1, ClickUi.dp(this, 58)));
-        form.addView(gender, new LinearLayout.LayoutParams(-1, ClickUi.dp(this, 58)));
+        form.addView(name, fieldParams(0));
+        form.addView(email, fieldParams(10));
+        form.addView(age, fieldParams(10));
+        form.addView(job, fieldParams(10));
+        form.addView(gender, fieldParams(10));
 
-        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(this)
+        AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("내 정보 수정")
                 .setView(form)
                 .setNegativeButton("취소", null)
                 .setPositiveButton("저장", null)
                 .create();
-        dialog.setOnShowListener(ignored -> dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE)
                 .setOnClickListener(view -> {
+                    String nameValue = name.getText().toString().trim();
                     String emailValue = email.getText().toString().trim();
-                    String ageValue = age.getText().toString().trim();
-                    if (emailValue.isEmpty() || ageValue.isEmpty()
-                            || job.getSelectedItemPosition() == 0 || gender.getSelectedItemPosition() == 0) {
-                        android.widget.Toast.makeText(this, "모든 정보를 입력해주세요.", android.widget.Toast.LENGTH_SHORT).show();
+                    if (nameValue.isEmpty() || emailValue.isEmpty()) {
+                        Toast.makeText(this, "이름과 이메일을 입력해 주세요.", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    account.saveProfile(emailValue, ageValue,
-                            job.getSelectedItem().toString(), gender.getSelectedItem().toString());
+                    account.saveProfile(nameValue, emailValue, age.getText().toString().trim(),
+                            job.getSelectedItemPosition() == 0 ? "" : job.getSelectedItem().toString(),
+                            gender.getSelectedItemPosition() == 0 ? "" : gender.getSelectedItem().toString());
                     refreshProfile();
                     dialog.dismiss();
                 }));
         dialog.show();
     }
 
+    private EditText input(String hint, int type) {
+        EditText input = new EditText(this);
+        input.setHint(hint);
+        input.setInputType(type);
+        input.setTextSize(17);
+        input.setTextColor(INK);
+        input.setHintTextColor(SECONDARY);
+        input.setTypeface(medium);
+        input.setSingleLine(true);
+        input.setPadding(dp(16), 0, dp(16), 0);
+        input.setBackground(fieldBackground());
+        return input;
+    }
+
+    private LinearLayout.LayoutParams fieldParams(int top) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(58));
+        params.topMargin = dp(top);
+        return params;
+    }
+
     private Spinner spinner(String[] values, String selected) {
         Spinner spinner = new Spinner(this);
+        spinner.setBackground(fieldBackground());
         spinner.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, values));
-        for (int i = 0; i < values.length; i++) {
-            if (values[i].equals(selected)) spinner.setSelection(i);
+        for (int index = 0; index < values.length; index++) {
+            if (values[index].equals(selected)) spinner.setSelection(index);
         }
         return spinner;
     }
 
-    private void refreshProfile() {
-        profile.setText("이메일  " + account.email() + "\n나이  " + account.age()
-                + "\n직업  " + account.job() + "\n성별  " + account.gender());
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        boolean accessibility = PermissionStatus.isAccessibilityEnabled(this);
-        boolean overlay = Settings.canDrawOverlays(this);
-        boolean microphone = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                == PackageManager.PERMISSION_GRANTED;
-        permissionStatus.setText("권한 상태\n접근성 " + mark(accessibility)
-                + "   오버레이 " + mark(overlay) + "   마이크 " + mark(microphone));
-        permissionStatus.setTextColor(accessibility && overlay && microphone
-                ? Color.rgb(55, 142, 72) : Color.rgb(170, 83, 45));
-        refreshTimingConsent();
-    }
-
-    private void refreshTimingConsent() {
-        personalizationEvents.readConsent(new PersonalizationEventGateway.ConsentCallback() {
-            @Override public void onResult(boolean consented) {
-                timingConsented = consented;
-                timingConsentStatus.setText(consented
-                        ? "맞춤 안내 기록: 동의함" : "맞춤 안내 기록: 동의하지 않음");
-            }
-            @Override public void onFailure() {
-                timingConsentStatus.setText("맞춤 안내 기록 상태를 확인하지 못했어요.");
-            }
-        });
-    }
-
     private void showTimingConsentDialog() {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
+        new AlertDialog.Builder(this)
                 .setTitle(timingConsented ? "기록 동의를 철회할까요?" : "맞춤 안내 기록에 동의할까요?")
                 .setMessage(timingConsented
                         ? "동의를 철회하면 저장된 개인화 행동 기록과 분석 이력이 삭제되고 맞춤 안내가 중단됩니다."
-                        : "안내가 표시된 뒤 첫 탭까지 걸린 시간, 단계 번호, 화면 상태 ID와 다시 말해줘 요청을 계정과 연결해 저장합니다. "
-                        + "어디서 안내가 더 필요한지 분석하고 설명을 조정하는 데 사용하며 화면 글자나 비밀번호는 이 기록에 저장하지 않습니다. "
-                        + "언제든 이 메뉴에서 동의를 철회할 수 있습니다.")
+                        : "안내가 표시된 뒤 첫 탭까지 걸린 시간과 단계 진행 정보를 저장해 더 쉬운 안내를 만드는 데 사용해요. 화면 글자나 비밀번호는 저장하지 않아요.")
                 .setNegativeButton("취소", null)
-                .setPositiveButton(timingConsented ? "동의 철회" : "동의", (dialog, which) -> {
-                    timingConsentButton.setEnabled(false);
-                    personalizationEvents.setConsent(!timingConsented,
-                            new PersonalizationEventGateway.ConsentCallback() {
-                        @Override public void onResult(boolean consented) {
-                            timingConsentButton.setEnabled(true);
-                            timingConsented = consented;
-                            refreshTimingConsent();
-                        }
-                        @Override public void onFailure() {
-                            timingConsentButton.setEnabled(true);
-                            timingConsentStatus.setText("변경하지 못했어요. 다시 시도해 주세요.");
-                        }
-                    });
+                .setPositiveButton(timingConsented ? "동의 철회" : "동의", (dialog, which) ->
+                        personalizationEvents.setConsent(!timingConsented,
+                                new PersonalizationEventGateway.ConsentCallback() {
+                                    @Override public void onResult(boolean consented) {
+                                        timingConsented = consented;
+                                        Toast.makeText(MenuActivity.this,
+                                                consented ? "맞춤 안내 기록에 동의했어요." : "기록 동의를 철회했어요.",
+                                                Toast.LENGTH_SHORT).show();
+                                    }
+                                    @Override public void onFailure() {
+                                        Toast.makeText(MenuActivity.this, "변경하지 못했어요. 다시 시도해 주세요.",
+                                                Toast.LENGTH_SHORT).show();
+                                    }
+                                })).show();
+    }
+
+    private void showPolicy(String title) {
+        new AlertDialog.Builder(this).setTitle(title)
+                .setMessage("정식 정책 문서를 준비하고 있어요.")
+                .setPositiveButton("확인", null).show();
+    }
+
+    private void confirmLogout() {
+        new AlertDialog.Builder(this).setTitle("로그아웃할까요?")
+                .setNegativeButton("취소", null)
+                .setPositiveButton("로그아웃", (dialog, which) -> returnToLogin()).show();
+    }
+
+    private void confirmDelete() {
+        new AlertDialog.Builder(this).setTitle("회원탈퇴를 진행할까요?")
+                .setMessage("저장된 회원 정보가 삭제되며 되돌릴 수 없습니다.")
+                .setNegativeButton("취소", null)
+                .setPositiveButton("탈퇴", (dialog, which) -> {
+                    stopService(new Intent(this, ClickOverlayService.class));
+                    account.deleteAccount();
+                    returnToLogin();
                 }).show();
     }
 
-    @Override
-    protected void onDestroy() {
+    private void refreshProfile() {
+        String name = account.name().trim();
+        if (name.isEmpty()) name = "사용자";
+        profileName.setText(name + "님");
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        refreshProfile();
+        personalizationEvents.readConsent(new PersonalizationEventGateway.ConsentCallback() {
+            @Override public void onResult(boolean consented) { timingConsented = consented; }
+            @Override public void onFailure() { }
+        });
+    }
+
+    @Override protected void onDestroy() {
         if (personalizationEvents != null) personalizationEvents.close();
         super.onDestroy();
     }
 
-    private String mark(boolean enabled) { return enabled ? "허용" : "필요"; }
+    private String mark(boolean enabled) { return enabled ? "허용됨" : "허용 필요"; }
 
     private void closeMenu() {
         finish();
         overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
     }
 
-    @Override
-    public void onBackPressed() {
-        closeMenu();
-    }
+    @Override public void onBackPressed() { closeMenu(); }
 
     private void returnToLogin() {
         new AuthTokenStore(this).clear();
         startActivity(new Intent(this, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
         finish();
+    }
+
+    private TextView text(String value, int size, int color, Typeface typeface) {
+        TextView text = new TextView(this);
+        text.setText(value);
+        text.setTextSize(size);
+        text.setTextColor(color);
+        text.setTypeface(typeface);
+        text.setIncludeFontPadding(false);
+        return text;
+    }
+
+    private LinearLayout vertical() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        return layout;
+    }
+
+    private void add(LinearLayout parent, View child, int top) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.topMargin = dp(top);
+        parent.addView(child, params);
+    }
+
+    private RippleDrawable ripple(int color, int radius) {
+        GradientDrawable fill = new GradientDrawable();
+        fill.setColor(color);
+        fill.setCornerRadius(dp(radius));
+        GradientDrawable mask = new GradientDrawable();
+        mask.setColor(Color.WHITE);
+        mask.setCornerRadius(dp(radius));
+        return new RippleDrawable(ColorStateList.valueOf(0x1A3478F6), fill, mask);
+    }
+
+    private GradientDrawable fieldBackground() {
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(0xFFF8FAFD);
+        background.setCornerRadius(dp(16));
+        background.setStroke(dp(1), 0xFFD9E2F2);
+        return background;
+    }
+
+    private void configureWindow() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) getWindow().setDecorFitsSystemWindows(false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.WHITE);
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                        | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+    }
+
+    private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
+
+    private final class MenuBackgroundView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        MenuBackgroundView() { super(MenuActivity.this); }
+        @Override protected void onDraw(Canvas canvas) {
+            float w = getWidth();
+            float h = getHeight();
+            paint.setColor(0x2B74A9FF);
+            canvas.drawCircle(w * .98f, h * .05f, w * .27f, paint);
+            paint.setColor(0x1B74A9FF);
+            canvas.drawCircle(w * .88f, h * .13f, w * .21f, paint);
+            paint.setColor(0x1574A9FF);
+            canvas.drawCircle(w * .05f, h * .98f, w * .30f, paint);
+        }
+    }
+
+    private final class MenuIconView extends View {
+        enum Kind { USER, SHIELD, SLIDERS, BOOK, DOCUMENT, LOGOUT, TRASH }
+        private final Kind kind;
+        private final boolean danger;
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path path = new Path();
+        MenuIconView(Kind kind, boolean danger) {
+            super(MenuActivity.this);
+            this.kind = kind;
+            this.danger = danger;
+            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
+        @Override protected void onDraw(Canvas canvas) {
+            float w = getWidth(), h = getHeight(), cx = w / 2f, cy = h / 2f;
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(danger ? 0xFFFFEAF0 : 0xFFEAF3FF);
+            canvas.drawCircle(cx, cy, Math.min(w, h) * .48f, paint);
+            paint.setColor(danger ? DANGER : BLUE);
+            paint.setStrokeWidth(dp(2));
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setStrokeJoin(Paint.Join.ROUND);
+            if (kind == Kind.USER) {
+                paint.setColor(0xFF74A7FF);
+                canvas.drawCircle(cx, cy - dp(8), dp(9), paint);
+                RectF body = new RectF(cx - dp(15), cy + dp(3), cx + dp(15), cy + dp(20));
+                canvas.drawRoundRect(body, dp(10), dp(10), paint);
+            } else if (kind == Kind.SHIELD) {
+                path.reset(); path.moveTo(cx, cy - dp(16)); path.lineTo(cx + dp(14), cy - dp(10));
+                path.lineTo(cx + dp(12), cy + dp(9)); path.quadTo(cx, cy + dp(19), cx, cy + dp(19));
+                path.quadTo(cx - dp(12), cy + dp(9), cx - dp(12), cy + dp(9));
+                path.lineTo(cx - dp(14), cy - dp(10)); path.close(); canvas.drawPath(path, paint);
+                paint.setColor(Color.WHITE); paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(2));
+                canvas.drawLine(cx - dp(5), cy + dp(1), cx - dp(1), cy + dp(5), paint);
+                canvas.drawLine(cx - dp(1), cy + dp(5), cx + dp(7), cy - dp(4), paint);
+            } else if (kind == Kind.SLIDERS) {
+                paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(2));
+                for (int i = -1; i <= 1; i++) {
+                    float y = cy + i * dp(10); canvas.drawLine(cx - dp(15), y, cx + dp(15), y, paint);
+                    float knob = cx + (i == -1 ? dp(7) : i == 0 ? -dp(6) : dp(3));
+                    paint.setStyle(Paint.Style.FILL); canvas.drawCircle(knob, y, dp(4), paint);
+                    paint.setStyle(Paint.Style.STROKE);
+                }
+            } else if (kind == Kind.BOOK) {
+                RectF left = new RectF(cx - dp(15), cy - dp(14), cx - dp(1), cy + dp(15));
+                RectF right = new RectF(cx + dp(1), cy - dp(14), cx + dp(15), cy + dp(15));
+                canvas.drawRoundRect(left, dp(3), dp(3), paint); canvas.drawRoundRect(right, dp(3), dp(3), paint);
+            } else if (kind == Kind.DOCUMENT) {
+                canvas.drawRoundRect(new RectF(cx - dp(12), cy - dp(16), cx + dp(12), cy + dp(16)), dp(4), dp(4), paint);
+                paint.setColor(Color.WHITE); paint.setStrokeWidth(dp(2));
+                for (int i = -1; i <= 1; i++) canvas.drawLine(cx - dp(6), cy + i * dp(7), cx + dp(6), cy + i * dp(7), paint);
+            } else if (kind == Kind.LOGOUT) {
+                paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(3));
+                canvas.drawRoundRect(new RectF(cx - dp(14), cy - dp(15), cx + dp(2), cy + dp(15)), dp(3), dp(3), paint);
+                canvas.drawLine(cx - dp(1), cy, cx + dp(16), cy, paint);
+                canvas.drawLine(cx + dp(16), cy, cx + dp(10), cy - dp(6), paint);
+                canvas.drawLine(cx + dp(16), cy, cx + dp(10), cy + dp(6), paint);
+            } else {
+                canvas.drawRoundRect(new RectF(cx - dp(10), cy - dp(10), cx + dp(10), cy + dp(15)), dp(3), dp(3), paint);
+                canvas.drawRoundRect(new RectF(cx - dp(14), cy - dp(16), cx + dp(14), cy - dp(10)), dp(3), dp(3), paint);
+                paint.setColor(danger ? 0xFFFFEAF0 : 0xFFEAF3FF); paint.setStrokeWidth(dp(2));
+                canvas.drawLine(cx - dp(4), cy - dp(5), cx - dp(4), cy + dp(9), paint);
+                canvas.drawLine(cx + dp(4), cy - dp(5), cx + dp(4), cy + dp(9), paint);
+            }
+            paint.setStyle(Paint.Style.FILL);
+        }
     }
 }
