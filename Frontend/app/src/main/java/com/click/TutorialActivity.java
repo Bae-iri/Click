@@ -1,343 +1,396 @@
 package com.click;
 
-import android.Manifest;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.SystemClock;
-import android.speech.RecognitionListener;
-import android.speech.RecognizerIntent;
-import android.speech.SpeechRecognizer;
-import android.speech.tts.TextToSpeech;
-import android.speech.tts.UtteranceProgressListener;
 import android.view.Gravity;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
-
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import com.click.designpreview.PermissionPhoneView;
 import com.click.ui.common.ClickUi;
-import com.click.ui.tutorial.GalaxyTutorialView;
-
+import com.click.ui.overlay.ClickOverlayLayout;
+import com.click.ui.tutorial.TutorialArtworkView;
+import com.click.ui.tutorial.TutorialFloatingHost;
 import java.util.ArrayList;
-import java.util.Locale;
 
-public final class TutorialActivity extends AppCompatActivity implements GalaxyTutorialView.Listener {
+/** A feature tour on the same phone backdrop as the accessibility guide, using the real controls. */
+public final class TutorialActivity extends AppCompatActivity implements TutorialFloatingHost.Listener {
     public static final String EXTRA_FROM_SIGN_UP = "from_sign_up";
-    private GalaxyTutorialView galaxyView;
-    private TextView instruction;
-    private Button exitButton;
-    private SpeechRecognizer speechRecognizer;
-    private TextToSpeech textToSpeech;
-    private final Handler speechHandler = new Handler(android.os.Looper.getMainLooper());
-    private boolean listening;
-    private boolean errorPromptShown;
-    private boolean speechStartedInAttempt;
-    private int recoverableRecognitionErrors;
-    private long attemptWindowStartedAt;
-    private static final long LISTENING_GRACE_MS = 8000L;
-    private final ActivityResultLauncher<String> microphonePermission = registerForActivityResult(
-            new ActivityResultContracts.RequestPermission(), granted -> {
-                if (granted) {
-                    attemptWindowStartedAt = SystemClock.elapsedRealtime();
-                    startListening();
-                }
-                else Toast.makeText(this, "튜토리얼 음성 연습을 위해 마이크 권한이 필요합니다.", Toast.LENGTH_LONG).show();
-            });
+    private static final int OPEN = 0, WRITE = 1, REPLY = 2, VOICE = 3, STOP = 4, MOVE = 5, STEP_COUNT = 6;
+    private static final String PRACTICE_REPLY = "잘 입력하셨어요! 이렇게 click과 글로 대화할 수 있어요.";
+    private final ArrayList<String> messages = new ArrayList<>();
+    private TutorialFloatingHost floating;
+    private LinearLayout toolbar, progress, footer;
+    private TextView title, description, counter, feedback;
+    private ImageView grandmother;
+    private Button action, restore;
+    private int step;
+    private boolean voiceTried, stopTried, restoring, keyboardVisible;
+    private String moveFeedback = "";
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        LinearLayout page = ClickUi.page(this);
-        page.setPadding(ClickUi.dp(this, 10), ClickUi.dp(this, 14), ClickUi.dp(this, 10), ClickUi.dp(this, 10));
-        page.addView(ClickUi.title(this, "Galaxy 글자 크기 튜토리얼"));
+        if (savedInstanceState != null) {
+            step = Math.max(OPEN, Math.min(MOVE, savedInstanceState.getInt("feature_step", OPEN)));
+            voiceTried = savedInstanceState.getBoolean("voice_tried");
+            stopTried = savedInstanceState.getBoolean("stop_tried");
+            moveFeedback = savedInstanceState.getString("move_feedback", "");
+            ArrayList<String> savedMessages = savedInstanceState.getStringArrayList("practice_messages");
+            if (savedMessages != null) messages.addAll(savedMessages);
+        }
+        if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.WHITE);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
 
-        instruction = ClickUi.body(this, messageFor(GalaxyTutorialView.Step.VOICE_REQUEST));
-        instruction.setTextSize(20);
-        instruction.setGravity(Gravity.CENTER);
-        instruction.setMinHeight(ClickUi.dp(this, 52));
-        instruction.setPadding(ClickUi.dp(this, 8), 0, ClickUi.dp(this, 8), ClickUi.dp(this, 8));
-        page.addView(instruction, ClickUi.wrap(ClickUi.dp(this, 8)));
+        FrameLayout root = new FrameLayout(this);
+        root.addView(new TutorialArtworkView(this, TutorialArtworkView.Kind.BACKGROUND), new FrameLayout.LayoutParams(-1, -1));
+        LinearLayout column = vertical();
+        root.addView(column, new FrameLayout.LayoutParams(Math.min(getResources().getDisplayMetrics().widthPixels, dp(480)), -1, Gravity.CENTER_HORIZONTAL));
+        toolbar = toolbar();
+        column.addView(toolbar, new LinearLayout.LayoutParams(-1, dp(50)));
+        progress = new LinearLayout(this);
+        progress.setGravity(Gravity.CENTER);
+        progress.setPadding(dp(5), dp(6), dp(5), dp(9));
+        for (int i = 0; i < STEP_COUNT; i++) {
+            View bar = new View(this);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(4), 1);
+            params.setMargins(dp(3), 0, dp(3), 0);
+            progress.addView(bar, params);
+        }
+        column.addView(progress, new LinearLayout.LayoutParams(-1, dp(24)));
+        column.addView(coach(), new LinearLayout.LayoutParams(-1, -2));
 
-        galaxyView = new GalaxyTutorialView(this);
-        galaxyView.setListener(this);
-        LinearLayout.LayoutParams galaxyParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f);
-        galaxyParams.topMargin = ClickUi.dp(this, 6);
-        page.addView(galaxyView, galaxyParams);
+        FrameLayout stage = new FrameLayout(this);
+        stage.setId(R.id.tutorial_phone_stage);
+        LinearLayout.LayoutParams stageParams = new LinearLayout.LayoutParams(-1, 0, 1);
+        stageParams.setMargins(0, dp(12), 0, dp(10));
+        column.addView(stage, stageParams);
+        PermissionPhoneView phone = new PermissionPhoneView(this, true, false);
+        phone.fillAvailableHeight();
+        phone.setAlpha(.55f);
+        FrameLayout.LayoutParams phoneParams = new FrameLayout.LayoutParams(-1, -1);
+        phoneParams.setMargins(dp(5), 0, dp(5), 0);
+        stage.addView(phone, phoneParams);
 
-        LinearLayout navigation = new LinearLayout(this);
-        navigation.setOrientation(LinearLayout.HORIZONTAL);
-        Button previous = ClickUi.secondaryButton(this, "← 이전 단계");
-        exitButton = ClickUi.secondaryButton(this, "튜토리얼 종료");
-        previous.setOnClickListener(view -> {
-            galaxyView.goBackOneStep();
+        restore = ClickUi.secondaryButton(this, "click 버튼 다시 보기");
+        restore.setId(R.id.tutorial_restore);
+        restore.setVisibility(View.GONE);
+        FrameLayout.LayoutParams restoreParams = new FrameLayout.LayoutParams(-1, dp(58), Gravity.BOTTOM);
+        restoreParams.setMargins(dp(30), 0, dp(30), dp(28));
+        stage.addView(restore, restoreParams);
+        floating = new TutorialFloatingHost(this, this);
+        floating.setId(R.id.tutorial_floating_host);
+        floating.getControl().setId(R.id.tutorial_floating_control);
+        FrameLayout.LayoutParams floatingParams = new FrameLayout.LayoutParams(-1, -1);
+        floatingParams.setMargins(dp(14), dp(34), dp(14), dp(16));
+        stage.addView(floating, floatingParams);
+        restore.setOnClickListener(view -> {
+            floating.showAgain(); restore.setVisibility(View.GONE);
+            moveFeedback = "버튼을 다시 꺼냈어요. 편하게 연습해 보세요.";
+            updateCopy();
         });
-        exitButton.setOnClickListener(view -> {
-            if (galaxyView.getStep() == GalaxyTutorialView.Step.CONFIRM) {
-                galaxyView.finishTutorial();
-                speak("튜토리얼을 마쳤어요. 언제든 홈 화면에서 다시 연습할 수 있어요.");
-                exitToHome();
-                return;
+
+        footer = vertical();
+        footer.setPadding(0, 0, 0, dp(8));
+        feedback = text("", 13, ClickUi.SUBTEXT, false);
+        feedback.setGravity(Gravity.CENTER);
+        feedback.setPadding(dp(4), dp(4), dp(4), dp(8));
+        footer.addView(feedback, new LinearLayout.LayoutParams(-1, -2));
+        action = ClickUi.primaryButton(this, "");
+        action.setId(R.id.tutorial_next);
+        action.setTextSize(18);
+        action.setOnClickListener(view -> advance());
+        footer.addView(action, new LinearLayout.LayoutParams(-1, -2));
+        column.addView(footer, new LinearLayout.LayoutParams(-1, -2));
+        setContentView(root);
+        ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
+            Insets system = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets ime = insets.getInsets(WindowInsetsCompat.Type.ime());
+            column.setPadding(dp(18) + system.left, system.top, dp(18) + system.right, Math.max(system.bottom, ime.bottom));
+            boolean visible = insets.isVisible(WindowInsetsCompat.Type.ime());
+            if (keyboardVisible != visible) {
+                keyboardVisible = visible;
+                toolbar.setVisibility(visible ? View.GONE : View.VISIBLE);
+                progress.setVisibility(visible ? View.GONE : View.VISIBLE);
+                grandmother.setVisibility(visible ? View.GONE : View.VISIBLE);
+                description.setVisibility(visible ? View.GONE : View.VISIBLE);
+                footer.setVisibility(visible ? View.GONE : View.VISIBLE);
+                title.setTextSize(visible ? 19 : 24);
+                updateCopy();
             }
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("튜토리얼을 종료할까요?")
-                    .setMessage("홈 화면에서 언제든 다시 시작할 수 있어요.")
-                    .setNegativeButton("계속하기", null)
-                    .setPositiveButton("종료", (dialog, which) -> exitToHome())
-                    .show();
+            return insets;
         });
-        navigation.addView(previous, new LinearLayout.LayoutParams(0, ClickUi.dp(this, 54), 1f));
-        LinearLayout.LayoutParams exitParams = new LinearLayout.LayoutParams(0, ClickUi.dp(this, 54), 1f);
-        exitParams.leftMargin = ClickUi.dp(this, 8);
-        navigation.addView(exitButton, exitParams);
-        page.addView(navigation, ClickUi.fullWidth(this, 54, 10));
-        setContentView(page);
-
-        textToSpeech = new TextToSpeech(this, status -> {
-            if (status == TextToSpeech.SUCCESS) {
-                textToSpeech.setLanguage(Locale.KOREAN);
-                textToSpeech.setSpeechRate(.88f);
-                textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
-                    @Override public void onStart(String utteranceId) {}
-                    @Override public void onError(String utteranceId) {
-                        if ("voice_prompt".equals(utteranceId) || "voice_retry".equals(utteranceId)) {
-                            speechHandler.post(TutorialActivity.this::beginInitialListening);
-                        }
-                    }
-                    @Override public void onDone(String utteranceId) {
-                        if ("voice_prompt".equals(utteranceId) || "voice_retry".equals(utteranceId)) {
-                            speechHandler.post(() -> {
-                                attemptWindowStartedAt = SystemClock.elapsedRealtime();
-                                beginInitialListening();
-                            });
-                        }
-                    }
-                });
-                speakThenListen(messageFor(GalaxyTutorialView.Step.VOICE_REQUEST), "voice_prompt");
-            }
+        ViewCompat.requestApplyInsets(root);
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() { previous(); }
         });
-        prepareSpeechRecognizer();
-        galaxyView.postDelayed(() -> {
-            if (!listening && attemptWindowStartedAt == 0L) beginInitialListening();
-        }, 3500L);
-    }
-
-    @Override
-    public void onMicrophoneRequested() {
-        errorPromptShown = false;
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                == PackageManager.PERMISSION_GRANTED) startListening();
-        else microphonePermission.launch(Manifest.permission.RECORD_AUDIO);
-    }
-
-    @Override
-    public void onStepChanged(GalaxyTutorialView.Step step) {
-        if (step != GalaxyTutorialView.Step.VOICE_REQUEST) stopTutorialListening();
-        instruction.setText(messageFor(step));
-        exitButton.setText(step == GalaxyTutorialView.Step.CONFIRM ? "예, 종료할게요" : "튜토리얼 종료");
-        exitButton.setTextColor(step == GalaxyTutorialView.Step.CONFIRM ? android.graphics.Color.WHITE : ClickUi.TEXT);
-        exitButton.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                step == GalaxyTutorialView.Step.CONFIRM ? ClickUi.RED : ClickUi.SECONDARY_RED));
-        if (step != GalaxyTutorialView.Step.VOICE_REQUEST) speak(messageFor(step));
-    }
-
-    @Override
-    public void onSliderCompleted() {
-        // The persistent exit button becomes the single confirmation action.
-    }
-
-    private void prepareSpeechRecognizer() {
-        if (!SpeechRecognizer.isRecognitionAvailable(this)) return;
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
-        speechRecognizer.setRecognitionListener(new RecognitionListener() {
-            @Override public void onReadyForSpeech(Bundle params) {
-                if (galaxyView.getStep() != GalaxyTutorialView.Step.VOICE_REQUEST) return;
-                listening = true;
-            }
-            @Override public void onBeginningOfSpeech() { speechStartedInAttempt = true; }
-            @Override public void onRmsChanged(float rmsdB) {}
-            @Override public void onBufferReceived(byte[] buffer) {}
-            @Override public void onEndOfSpeech() { listening = false; }
-            @Override public void onError(int error) {
-                listening = false;
-                if (galaxyView.getStep() != GalaxyTutorialView.Step.VOICE_REQUEST) return;
-                long elapsed = attemptWindowStartedAt == 0L ? 0L
-                        : SystemClock.elapsedRealtime() - attemptWindowStartedAt;
-                boolean recoverable = error == SpeechRecognizer.ERROR_NO_MATCH
-                        || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
-                        || error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY;
-                if (recoverable && recoverableRecognitionErrors < 3) {
-                    recoverableRecognitionErrors++;
-                    speechHandler.postDelayed(TutorialActivity.this::startListening,
-                            error == SpeechRecognizer.ERROR_RECOGNIZER_BUSY ? 700L : 300L);
-                } else if (!speechStartedInAttempt && elapsed < LISTENING_GRACE_MS) {
-                    speechHandler.postDelayed(TutorialActivity.this::startListening, 350L);
-                } else {
-                    showSingleRecognitionError();
-                }
-            }
-            @Override public void onResults(Bundle results) { showSpeechResult(results, true); }
-            @Override public void onPartialResults(Bundle partialResults) { showSpeechResult(partialResults, false); }
-            @Override public void onEvent(int eventType, Bundle params) {}
-        });
-    }
-
-    private void beginInitialListening() {
-        if (galaxyView.getStep() != GalaxyTutorialView.Step.VOICE_REQUEST) return;
-        recoverableRecognitionErrors = 0;
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                == PackageManager.PERMISSION_GRANTED) {
-            startListening();
-        } else {
-            microphonePermission.launch(Manifest.permission.RECORD_AUDIO);
+        restoring = true;
+        if (savedInstanceState != null) {
+            for (String message : messages) addConversation(message);
+            floating.getControl().setDraftText(savedInstanceState.getString("draft", ""));
+            String mode = savedInstanceState.getString("floating_mode", "COLLAPSED");
+            try { showMode(ClickOverlayLayout.Mode.valueOf(mode)); }
+            catch (IllegalArgumentException ignored) { showMode(ClickOverlayLayout.Mode.COLLAPSED); }
+            boolean hidden = savedInstanceState.getBoolean("floating_hidden");
+            floating.restoreHidden(hidden);
+            restore.setVisibility(hidden ? View.VISIBLE : View.GONE);
         }
+        restoring = false;
+        if (step == STOP) showStopPractice();
+        updateCopy();
     }
 
-    private void startListening() {
-        speechHandler.removeCallbacksAndMessages(null);
-        if (speechRecognizer == null) {
-            Toast.makeText(this, "이 기기에서는 음성 인식을 사용할 수 없습니다.", Toast.LENGTH_LONG).show();
-            return;
+    private LinearLayout toolbar() {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        ImageButton back = new ImageButton(this);
+        back.setId(R.id.tutorial_back);
+        back.setContentDescription("이전 설명");
+        back.setImageResource(com.click.designpreview.R.drawable.onboarding_back);
+        back.setPadding(dp(14), dp(14), dp(14), dp(14));
+        back.setBackgroundColor(Color.TRANSPARENT);
+        back.setOnClickListener(view -> previous());
+        row.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        TextView label = text("click 사용 방법", 16, ClickUi.BLUE, true);
+        row.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
+        counter = text("", 14, ClickUi.SUBTEXT, false);
+        row.addView(counter, new LinearLayout.LayoutParams(-2, -2));
+        Button skip = new Button(this);
+        skip.setText("나중에"); skip.setAllCaps(false); skip.setTextColor(ClickUi.SUBTEXT);
+        skip.setTextSize(14); skip.setBackgroundColor(Color.TRANSPARENT);
+        skip.setOnClickListener(view -> finishToHome());
+        row.addView(skip, new LinearLayout.LayoutParams(dp(72), dp(48)));
+        return row;
+    }
+
+    private View coach() {
+        LinearLayout coach = new LinearLayout(this);
+        coach.setGravity(Gravity.CENTER_VERTICAL);
+        coach.setPadding(dp(3), dp(8), dp(3), dp(10));
+        grandmother = new ImageView(this);
+        grandmother.setImageResource(com.click.designpreview.R.drawable.welcome);
+        grandmother.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        grandmother.setContentDescription("click 사용법을 안내하는 할머니");
+        coach.addView(grandmother, new LinearLayout.LayoutParams(dp(65), dp(86)));
+        LinearLayout copy = vertical();
+        LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);
+        copyParams.setMarginStart(dp(12));
+        coach.addView(copy, copyParams);
+        title = text("", 24, ClickUi.TEXT, true);
+        title.setId(R.id.tutorial_title);
+        title.setLetterSpacing(-.025f);
+        if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
+        copy.addView(title, new LinearLayout.LayoutParams(-1, -2));
+        description = text("", 15, ClickUi.SUBTEXT, false);
+        LinearLayout.LayoutParams descriptionParams = new LinearLayout.LayoutParams(-1, -2);
+        descriptionParams.topMargin = dp(9);
+        copy.addView(description, descriptionParams);
+        return coach;
+    }
+
+    @Override public void onModeChanged(ClickOverlayLayout.Mode mode) {
+        if (restoring || title == null || action == null) return;
+        if (step == STOP || step == MOVE) { updateCopy(); return; }
+        if (mode == ClickOverlayLayout.Mode.MENU && step == OPEN) step = WRITE;
+        if (mode == ClickOverlayLayout.Mode.TEXT) step = messages.isEmpty() ? WRITE : REPLY;
+        if (mode == ClickOverlayLayout.Mode.VOICE) {
+            step = VOICE;
+            floating.getControl().setRecognizedSpeech("마이크 버튼을 눌러보세요.\n연습 중에는 녹음하지 않아요.");
         }
-        if (galaxyView.getStep() != GalaxyTutorialView.Step.VOICE_REQUEST || listening) return;
-        errorPromptShown = false;
-        speechStartedInAttempt = false;
-        if (attemptWindowStartedAt == 0L) attemptWindowStartedAt = SystemClock.elapsedRealtime();
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR");
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "ko-KR");
-        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-        intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
-        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 2500L);
-        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2200L);
-        intent.putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1600L);
-        intent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, getPackageName());
-        listening = true;
-        speechRecognizer.startListening(intent);
+        updateCopy();
     }
 
-    private void showSpeechResult(Bundle bundle, boolean isFinal) {
-        ArrayList<String> matches = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-        if (matches == null || matches.isEmpty()) return;
-        String text = bestRecognitionCandidate(bundle, matches);
-        if (isFinal) listening = false;
-        if (galaxyView.getStep() != GalaxyTutorialView.Step.VOICE_REQUEST) return;
-        galaxyView.setVoiceTranscript(text);
-        if (isFinal && galaxyView.getStep() == GalaxyTutorialView.Step.VOICE_REQUEST) {
-            if (isFontSizeRequest(text)) {
-                recoverableRecognitionErrors = 0;
-                speechHandler.postDelayed(galaxyView::showRecognizedRequest, 450L);
-            } else {
-                showSingleRecognitionError();
-            }
-        }
+    @Override public void onMicrophoneClicked() {
+        boolean active = !floating.getControl().isVoiceInputActive();
+        floating.getControl().setVoiceInputActive(active);
+        if (active) voiceTried = true;
+        floating.getControl().setRecognizedSpeech(active
+                ? "이때만 음성을 입력해요.\n다시 누르면 입력을 취소해요."
+                : "마이크를 껐어요.\n다시 누르기 전에는 듣지 않아요.");
+        updateCopy();
     }
 
-    private void showSingleRecognitionError() {
-        if (galaxyView.getStep() != GalaxyTutorialView.Step.VOICE_REQUEST) return;
-        if (!errorPromptShown) {
-            errorPromptShown = true;
-            if (speechRecognizer != null) speechRecognizer.cancel();
-            listening = false;
-            attemptWindowStartedAt = 0L;
-            speakThenListen("잘 듣지 못했어요. 다시 한 번 말씀해주세요.", "voice_retry");
-        }
+    @Override public void onStopRequested() {
+        if (step != STOP) return;
+        stopTried = true;
+        floating.getControl().setRequestStatus("요청을 멈췄어요", false);
+        floating.getControl().setRecognizedSpeech("작업을 중지했어요.\n새 입력은 마이크를 눌러 시작해요.");
+        updateCopy();
     }
 
-    private void stopTutorialListening() {
-        speechHandler.removeCallbacksAndMessages(null);
-        listening = false;
-        attemptWindowStartedAt = 0L;
-        speechStartedInAttempt = false;
-        if (speechRecognizer != null) speechRecognizer.cancel();
+    private void showStopPractice() {
+        floating.getControl().setVoiceInputActive(false);
+        floating.getControl().setRequestStatus(stopTried ? "요청을 멈췄어요" : "사용자 요청을 처리하고 있어요", !stopTried);
+        floating.getControl().setRecognizedSpeech(stopTried
+                ? "작업을 중지했어요.\n새 입력은 마이크를 눌러 시작해요."
+                : "처리 중에도 ‘요청 중지’를 누르면\n작업을 멈출 수 있어요.");
     }
 
-    private boolean isFontSizeRequest(String text) {
-        String normalized = text.toLowerCase(Locale.KOREAN).replaceAll("[\\s,.!?]", "");
-        boolean hasFont = normalized.contains("글자") || normalized.contains("글씨")
-                || normalized.contains("글꼴") || normalized.contains("폰트")
-                || normalized.contains("텍스트") || normalized.contains("font");
-        boolean hasIncrease = normalized.contains("크게") || normalized.contains("키워")
-                || normalized.contains("키우") || normalized.contains("늘려")
-                || normalized.contains("확대") || normalized.contains("커지게");
-        return hasFont && hasIncrease;
+    @Override public void onTextSubmitted(String value) {
+        messages.add(value);
+        while (messages.size() > 3) messages.remove(0);
+        addConversation(value);
+        step = REPLY;
+        updateCopy();
+        title.announceForAccessibility("글로 질문했어요. 대화창에서 입력한 내용을 확인해 보세요.");
     }
 
-    private String bestRecognitionCandidate(Bundle bundle, ArrayList<String> matches) {
-        float[] confidence = bundle.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES);
-        String best = matches.get(0);
-        float bestScore = Float.NEGATIVE_INFINITY;
-        for (int index = 0; index < matches.size(); index++) {
-            String candidate = matches.get(index);
-            float score = confidence != null && index < confidence.length ? confidence[index] : 0f;
-            if (isFontSizeRequest(candidate)) score += 2f;
-            if (score > bestScore) {
-                best = candidate;
-                bestScore = score;
-            }
-        }
-        return best;
+    private void addConversation(String value) {
+        floating.getControl().addUserMessage(value);
+        floating.getControl().addAssistantMessage(PRACTICE_REPLY);
     }
 
-    private String messageFor(GalaxyTutorialView.Step step) {
+    @Override public void onHidden() {
+        restore.setVisibility(View.VISIBLE);
+        moveFeedback = "버튼을 숨겼어요. 아래에서 다시 꺼낼 수 있어요.";
+        if (step < MOVE) step = MOVE;
+        updateCopy();
+    }
+
+    @Override public void onMoved() {
+        moveFeedback = "잘했어요! 버튼을 편한 곳으로 옮겼어요.";
+        updateCopy();
+    }
+
+    private void updateCopy() {
+        counter.setText(getString(R.string.click_tutorial_progress, step + 1, STEP_COUNT));
+        progress.setContentDescription("click 기능 설명 " + (step + 1) + "단계, 전체 " + STEP_COUNT + "단계");
+        for (int i = 0; i < STEP_COUNT; i++) progress.getChildAt(i).setBackground(ClickUi.rounded(i == step ? ClickUi.BLUE : ClickUi.BORDER, dp(3)));
+        String heading, detail, button;
+        boolean enabled = false;
+        ClickOverlayLayout.Mode mode = floating.getControl().getMode();
+        floating.setClickHighlighted(step == OPEN);
         switch (step) {
-            case VOICE_REQUEST: return "“글자 크기를 키워줘”라고\n말해보세요.";
-            case SETTINGS: return "좋아요. 설정 앱이 보이는 화면으로 이동했어요.\n화살표가 가리키는 설정을 눌러주세요.";
-            case SETTINGS_SCROLL: return "‘일반’ 메뉴가 보이도록\n설정 화면을 아래로 이동할게요.";
-            case GENERAL: return "좋아요. 이제 ‘일반’ 버튼을 눌러주세요.";
-            case GENERAL_SCROLL: return "‘삼성 키보드 설정’이 보이도록\n일반 화면을 아래로 이동할게요.";
-            case KEYBOARD: return "‘삼성 키보드 설정’을 눌러주세요.";
-            case KEYBOARD_SCROLL: return "‘글자 크기’가 보이도록\n삼성 키보드 화면을 아래로 이동할게요.";
-            case FONT_SIZE: return "‘글자 크기’를 눌러주세요.";
-            case SLIDER: return "표시된 부분을 오른쪽으로 움직이면\n글자 크기가 커져요.";
-            case CONFIRM: return "글자 크기 요청을 완료한 것 같아요.\nClick AI를 종료할까요?";
-            case DONE: return "튜토리얼을 완료했어요.";
-            default: return "";
+            case OPEN:
+                heading = "화면 위 click 버튼을\n눌러보세요";
+                detail = "어떤 화면을 보고 있어도\n이 버튼으로 도움을 요청해요.";
+                button = "휴대폰 위 click 버튼을 눌러보세요";
+                break;
+            case WRITE:
+                boolean input = mode == ClickOverlayLayout.Mode.TEXT;
+                heading = input ? "질문을 적고\n↑ 버튼을 눌러보세요" : "‘글로 입력’을\n눌러보세요";
+                detail = input ? "아래 입력칸을 누르면 키보드가 열려요.\n궁금한 내용을 직접 적어보세요." : "말하기 어려울 땐 글로 물어봐요.\n펼쳐진 메뉴에서 선택해 보세요.";
+                button = "입력창에서 질문을 보내보세요";
+                break;
+            case REPLY:
+                heading = "입력한 내용이\n대화창에 나타나요";
+                detail = "이렇게 click과 글로 대화해요.\n입력칸에서 이어서 물어볼 수 있어요.";
+                button = "말로 입력하는 방법도 보기  →";
+                enabled = true;
+                break;
+            case VOICE:
+                heading = mode == ClickOverlayLayout.Mode.VOICE ? "마이크 버튼을 눌러야\n음성을 입력해요" : "‘말로 시작’을\n눌러보세요";
+                detail = mode == ClickOverlayLayout.Mode.VOICE ? "입력 전에는 Click도 말하지 않아요.\n말을 마치면 마이크가 꺼져요." : "입력창을 열어도 녹음하지 않아요.\n마이크 버튼을 눌렀을 때만 들어요.";
+                button = voiceTried ? "요청을 멈추는 방법 보기  →" : "마이크 버튼을 직접 눌러보세요";
+                enabled = voiceTried;
+                break;
+            case STOP:
+                heading = stopTried ? "원할 때 바로\n멈출 수 있어요" : "처리 중에 멈추려면\n‘요청 중지’를 눌러요";
+                detail = stopTried ? "중지한 요청은 다시 진행하지 않아요.\n새로운 요청을 입력할 수 있어요." : "‘사용자 요청을 처리하고 있어요’가\n보일 때도 중지할 수 있어요.";
+                button = stopTried ? "접기 · 이동 · 숨기기 알아보기  →" : "‘요청 중지’를 직접 눌러보세요";
+                enabled = stopTried;
+                break;
+            default:
+                heading = "편한 곳으로 옮기고\n필요할 때 숨겨요";
+                detail = "누른 채 움직이면 이동, 꾹 누르면 숨겨요.\n열린 창은 ‘접기’를 눌러 작게 만들어요.";
+                button = "튜토리얼 마치기  →";
+                enabled = true;
+                break;
+        }
+        if (mode == ClickOverlayLayout.Mode.COLLAPSED && step > OPEN && step < MOVE) {
+            heading = "click 버튼을 다시 누르면\n메뉴가 열려요";
+            detail = "‘접기’는 창을 작게 만드는 기능이에요.\n버튼을 눌러 다시 이어서 해보세요.";
+        }
+        title.setText(keyboardVisible ? "질문을 적고 ↑를 눌러주세요" : heading);
+        description.setText(detail);
+        action.setText(button);
+        action.setEnabled(enabled);
+        action.setAlpha(enabled ? 1f : .52f);
+        feedback.setText(step == MOVE && !moveFeedback.isEmpty() ? moveFeedback : "기능을 익히는 연습 화면이에요. 실제 요청은 보내지 않아요.");
+    }
+
+    private void advance() {
+        if (step == REPLY) {
+            step = VOICE; voiceTried = false;
+            if (floating.getControl().getMode() != ClickOverlayLayout.Mode.TEXT) showMode(ClickOverlayLayout.Mode.MENU);
+        } else if (step == VOICE && voiceTried) {
+            step = STOP; stopTried = false;
+            showMode(ClickOverlayLayout.Mode.VOICE);
+            showStopPractice();
+        } else if (step == STOP && stopTried) {
+            step = MOVE;
+            floating.getControl().setRequestStatus(null, false);
+            showMode(ClickOverlayLayout.Mode.COLLAPSED);
+        } else if (step == MOVE) { finishToHome(); return; }
+        updateCopy();
+    }
+
+    private void previous() {
+        if (step == OPEN) { finishToHome(); return; }
+        restoring = true;
+        floating.getControl().setRequestStatus(null, false);
+        step--;
+        if (step == REPLY && messages.isEmpty()) step = WRITE;
+        floating.showAgain();
+        restore.setVisibility(View.GONE);
+        if (step == OPEN) showMode(ClickOverlayLayout.Mode.COLLAPSED);
+        else if (step == WRITE) showMode(ClickOverlayLayout.Mode.MENU);
+        else if (step == REPLY) showMode(ClickOverlayLayout.Mode.TEXT);
+        else if (step == STOP) { showMode(ClickOverlayLayout.Mode.VOICE); showStopPractice(); }
+        else showMode(ClickOverlayLayout.Mode.MENU);
+        restoring = false;
+        updateCopy();
+    }
+
+    private void showMode(ClickOverlayLayout.Mode mode) {
+        switch (mode) {
+            case TEXT: floating.getControl().openText(); break;
+            case MENU: floating.getControl().openMenu(); break;
+            case VOICE:
+                floating.getControl().setRecognizedSpeech("마이크 버튼을 눌러보세요.\n연습 중에는 녹음하지 않아요.");
+                floating.getControl().openVoice(); break;
+            default: floating.getControl().collapse(); break;
         }
     }
 
-    private void speak(String text) {
-        if (textToSpeech != null) textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "click_tutorial");
-    }
-
-    private void speakThenListen(String text, String utteranceId) {
-        speechHandler.removeCallbacksAndMessages(null);
-        if (textToSpeech == null) {
-            beginInitialListening();
-            return;
-        }
-        textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, utteranceId);
-        speechHandler.postDelayed(() -> {
-            if (galaxyView.getStep() == GalaxyTutorialView.Step.VOICE_REQUEST && !listening) {
-                attemptWindowStartedAt = SystemClock.elapsedRealtime();
-                beginInitialListening();
-            }
-        }, 4500L);
-    }
-
-    private void exitToHome() {
-        startActivity(new Intent(this, HomeActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+    private void finishToHome() {
+        startActivity(new Intent(this, HomeActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
         finish();
     }
-
-    @Override
-    protected void onDestroy() {
-        speechHandler.removeCallbacksAndMessages(null);
-        if (speechRecognizer != null) speechRecognizer.destroy();
-        if (textToSpeech != null) {
-            textToSpeech.stop();
-            textToSpeech.shutdown();
-        }
-        super.onDestroy();
+    @Override protected void onSaveInstanceState(@NonNull Bundle state) {
+        state.putInt("feature_step", step);
+        state.putBoolean("voice_tried", voiceTried);
+        state.putBoolean("stop_tried", stopTried);
+        state.putString("move_feedback", moveFeedback);
+        state.putStringArrayList("practice_messages", new ArrayList<>(messages));
+        state.putString("draft", floating.getControl().getDraftText());
+        state.putString("floating_mode", floating.getControl().getMode().name());
+        state.putBoolean("floating_hidden", floating.isHidden());
+        super.onSaveInstanceState(state);
     }
+    private TextView text(String value, int size, int color, boolean strong) {
+        TextView text = new TextView(this);
+        text.setText(value); text.setTextSize(size); text.setTextColor(color);
+        text.setTypeface(getResources().getFont(strong ? com.click.designpreview.R.font.pretendard_bold : com.click.designpreview.R.font.pretendard_medium));
+        text.setIncludeFontPadding(false); text.setLineSpacing(dp(3), 1.08f);
+        return text;
+    }
+    private LinearLayout vertical() { LinearLayout view = new LinearLayout(this); view.setOrientation(LinearLayout.VERTICAL); return view; }
+    private int dp(int value) { return ClickUi.dp(this, value); }
 }

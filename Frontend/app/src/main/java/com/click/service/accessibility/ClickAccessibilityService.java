@@ -3,14 +3,16 @@ package com.click.service.accessibility;
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
 import android.graphics.Path;
+import android.graphics.Rect;
 import android.os.Handler;
 import android.util.Log;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.accessibility.AccessibilityWindowInfo;
 
 import com.click.data.snapshot.ScreenSnapshot;
-import com.click.TutorialActivity;
+import com.click.TutorialReadyActivity;
 import com.click.data.local.AccessibilityOnboardingState;
 import com.click.service.overlay.OverlayActions;
 import com.click.service.overlay.ClickOverlayService;
@@ -23,6 +25,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
     private final AccessibilitySnapshotCollector collector = new AccessibilitySnapshotCollector();
     private final Runnable captureRunnable = this::captureCurrentScreen;
     private Handler mainHandler;
+    private String lastForegroundPackage;
+    private Integer lastForegroundWindow;
+    private boolean touchInteraction;
+    private AccessibilityNodeInfo draggedSource;
     private static WeakReference<ClickAccessibilityService> connectedService = new WeakReference<>(null);
 
     @Override
@@ -35,8 +41,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         AccessibilityOnboardingState onboarding = new AccessibilityOnboardingState(this);
         if (onboarding.isPending()) {
             onboarding.markTutorialLaunched();
-            Intent tutorial = new Intent(this, TutorialActivity.class)
-                    .putExtra(TutorialActivity.EXTRA_FROM_SIGN_UP, true)
+            Intent tutorial = new Intent(this, TutorialReadyActivity.class)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(tutorial);
         }
@@ -45,6 +50,27 @@ public final class ClickAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+                || event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            // Keyboard events can come from Click itself or have no package name.
+            ClickOverlayService.onKeyboardWindowChanged();
+        }
+        if (event.getEventType() == AccessibilityEvent.TYPE_TOUCH_INTERACTION_START) {
+            touchInteraction = true;
+            if (draggedSource != null) draggedSource.recycle();
+            draggedSource = null;
+            return;
+        }
+        if (event.getEventType() == AccessibilityEvent.TYPE_TOUCH_INTERACTION_END) {
+            if (touchInteraction && draggedSource != null) {
+                emitAction(draggedSource, "drag_completed", event.getEventTime());
+                draggedSource.recycle();
+                draggedSource = null;
+            }
+            touchInteraction = false;
+            requestFreshSnapshot();
+            return;
+        }
         CharSequence packageName = event.getPackageName();
         if (isSystemNavigationEvent(event, packageName == null ? "" : packageName.toString())) {
             ClickOverlayService.collapseIfRunning();
@@ -55,7 +81,23 @@ public final class ClickAccessibilityService extends AccessibilityService {
         if (packageName == null || packageName.toString().equals(getPackageName())) return;
         if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED) {
             ClickOverlayService.onGuidedViewClicked(packageName.toString(), event.getEventTime());
-            return;
+            AccessibilityNodeInfo source = event.getSource();
+            if (source != null) {
+                emitAction(source, "tap_completed", event.getEventTime());
+                source.recycle();
+            }
+        }
+        if (touchInteraction && (event.getEventType() == AccessibilityEvent.TYPE_VIEW_SCROLLED
+                || event.getEventType() == AccessibilityEvent.TYPE_VIEW_SELECTED)) {
+            AccessibilityNodeInfo source = event.getSource();
+            if (source != null && source.getRangeInfo() != null) {
+                if (draggedSource != null) draggedSource.recycle();
+                draggedSource = source;
+            } else if (source != null) source.recycle();
+        }
+        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            lastForegroundPackage = packageName.toString();
+            lastForegroundWindow = event.getWindowId();
         }
         if (mainHandler == null) mainHandler = new Handler(getMainLooper());
         mainHandler.removeCallbacks(captureRunnable);
@@ -84,9 +126,45 @@ public final class ClickAccessibilityService extends AccessibilityService {
         }
     }
 
+    public static ScreenSnapshot freshSnapshot() {
+        ClickAccessibilityService service = connectedService.get();
+        ScreenSnapshot fresh = service == null ? null : service.readCurrentScreen();
+        if (fresh != null) LatestScreenSnapshot.set(fresh);
+        return fresh;
+    }
+
+    public static void captureVision(ScreenSnapshot expected, OnDeviceVision.Callback callback) {
+        ClickAccessibilityService service = connectedService.get();
+        ScreenSnapshot fresh = service == null ? null : service.readCurrentScreen();
+        if (fresh == null || !fresh.fingerprint().equals(expected.fingerprint())) {
+            callback.onFailure("screen_changed", "화면이 바뀌었어요. 새 화면에서 다시 허용해 주세요.");
+            return;
+        }
+        OnDeviceVision.capture(service, fresh, callback);
+    }
+
     public static WindowManager accessibilityWindowManager() {
         ClickAccessibilityService service = connectedService.get();
         return service == null ? null : service.getSystemService(WindowManager.class);
+    }
+
+    /** Only window geometry is read; keyboard text and keys are never collected here. */
+    public static Rect keyboardBounds() {
+        ClickAccessibilityService service = connectedService.get();
+        if (service == null) return null;
+        Rect bounds = new Rect();
+        for (AccessibilityWindowInfo window : service.getWindows()) {
+            try {
+                if (window.getType() == AccessibilityWindowInfo.TYPE_INPUT_METHOD) {
+                    Rect keyboard = new Rect();
+                    window.getBoundsInScreen(keyboard);
+                    bounds.union(keyboard);
+                }
+            } finally {
+                window.recycle();
+            }
+        }
+        return bounds.isEmpty() ? null : bounds;
     }
 
     public static boolean swipeHomePage(boolean towardNextPage) {
@@ -163,10 +241,17 @@ public final class ClickAccessibilityService extends AccessibilityService {
     }
 
     private void captureCurrentScreen() {
+        ScreenSnapshot snapshot = readCurrentScreen();
+        if (snapshot == null) return;
+        LatestScreenSnapshot.set(snapshot);
+        sendBroadcast(new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED).setPackage(getPackageName()));
+    }
+
+    private ScreenSnapshot readCurrentScreen() {
         AccessibilityNodeInfo root = getRootInActiveWindow();
-        if (root == null || root.getPackageName() == null) return;
-        String packageName = root.getPackageName().toString();
-        if (packageName.equals(getPackageName())) return;
+        String packageName = root == null || root.getPackageName() == null
+                ? lastForegroundPackage : root.getPackageName().toString();
+        if (packageName == null || packageName.equals(getPackageName())) return null;
         WindowManager windowManager = getSystemService(WindowManager.class);
         int width = getResources().getDisplayMetrics().widthPixels;
         int height = getResources().getDisplayMetrics().heightPixels;
@@ -174,20 +259,41 @@ public final class ClickAccessibilityService extends AccessibilityService {
             width = windowManager.getCurrentWindowMetrics().getBounds().width();
             height = windowManager.getCurrentWindowMetrics().getBounds().height();
         }
-        ScreenSnapshot snapshot = collector.collect(root, packageName, width, height);
-        LatestScreenSnapshot.set(snapshot);
-        sendBroadcast(new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED).setPackage(getPackageName()));
-        logSnapshot(snapshot.toJson());
+        if (root == null) return new ScreenSnapshot(packageName, java.time.Instant.now().toString(),
+                width, height, java.util.Collections.emptyList(), lastForegroundWindow);
+        Float appliedScale = null;
+        try {
+            float scale = android.provider.Settings.System.getFloat(getContentResolver(),
+                    android.provider.Settings.System.FONT_SCALE);
+            if (Float.isFinite(scale) && scale > 0) appliedScale = scale;
+        } catch (android.provider.Settings.SettingNotFoundException | SecurityException ignored) {
+            // Missing/read-denied means unverifiable, never assume a default scale.
+        }
+        return collector.collect(root, packageName, width, height, appliedScale);
     }
 
-    private void logSnapshot(String json) {
-        int chunkSize = 3000;
-        int total = Math.max(1, (json.length() + chunkSize - 1) / chunkSize);
-        for (int index = 0; index < total; index++) {
-            int start = index * chunkSize;
-            int end = Math.min(json.length(), start + chunkSize);
-            Log.i(TAG, "snapshot " + (index + 1) + "/" + total + " " + json.substring(start, end));
+    private void emitAction(AccessibilityNodeInfo source, String action, long eventUptime) {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        String nodeId = findNodeId(root, source, "node_0");
+        if (root != null) root.recycle();
+        if (nodeId == null || source.getPackageName() == null) return;
+        android.graphics.Rect rect = new android.graphics.Rect();
+        source.getBoundsInScreen(rect);
+        long wallTime = System.currentTimeMillis() - (android.os.SystemClock.uptimeMillis() - eventUptime);
+        ClickOverlayService.onGuidedAction(action, source.getPackageName().toString(), source.getWindowId(),
+                nodeId, source.getViewIdResourceName(), new int[]{rect.left, rect.top, rect.right, rect.bottom}, wallTime);
+    }
+
+    private static String findNodeId(AccessibilityNodeInfo node, AccessibilityNodeInfo target, String id) {
+        if (node == null) return null;
+        if (node.equals(target)) return id;
+        for (int index = 0; index < node.getChildCount(); index++) {
+            AccessibilityNodeInfo child = node.getChild(index);
+            String found = findNodeId(child, target, id + "_" + index);
+            if (child != null) child.recycle();
+            if (found != null) return found;
         }
+        return null;
     }
 
     private boolean isSettingsPackage(String packageName) {

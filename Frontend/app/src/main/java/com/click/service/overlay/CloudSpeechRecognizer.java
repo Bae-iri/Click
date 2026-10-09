@@ -17,6 +17,7 @@ import java.util.concurrent.Executors;
 /** Records one short utterance as PCM WAV, then asks the backend for gpt-transcribe. */
 final class CloudSpeechRecognizer {
     interface Callback {
+        void onRecordingFinished();
         void onSuccess(String text);
         void onFailure(Throwable error);
     }
@@ -57,6 +58,7 @@ final class CloudSpeechRecognizer {
     }
 
     private void capture(int token, Callback callback) {
+        if (token != generation) return;
         int minimum = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO,
                 AudioFormat.ENCODING_PCM_16BIT);
         if (minimum <= 0) {
@@ -72,6 +74,7 @@ final class CloudSpeechRecognizer {
                 throw new IOException("AUDIO_RECORDER_UNAVAILABLE");
             }
             activeRecorder = recorder;
+            if (token != generation) return;
             recorder.startRecording();
             ByteArrayOutputStream pcm = new ByteArrayOutputStream(SAMPLE_RATE * 2 * 8);
             byte[] buffer = new byte[bufferSize];
@@ -94,6 +97,14 @@ final class CloudSpeechRecognizer {
                 if (now - startedAt >= MAX_RECORDING_MS) break;
             }
             if (token != generation) return;
+            // Release the microphone before the network transcription begins.
+            recorder.stop();
+            recorder.release();
+            if (activeRecorder == recorder) activeRecorder = null;
+            recorder = null;
+            main.post(() -> {
+                if (token == generation) callback.onRecordingFinished();
+            });
             byte[] wav = toWav(pcm.toByteArray());
             gateway.transcribe(wav, new TranscriptionGateway.Callback() {
                 @Override public void onSuccess(String text) {

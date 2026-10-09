@@ -6,57 +6,60 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.view.View;
 
+/** Draws the Click cursor mark inside the shared white floating control. */
 public final class ClickIconRenderer {
-    private static final int CLICK_RED = Color.rgb(255, 59, 77);
+    private static final int CLICK_BLUE = 0xFF3478F6;
+    private static final int BORDER_BLUE = 0xFFD8E6FF;
     private static final float CURSOR_BASE_ANGLE = -121f;
 
     private ClickIconRenderer() {}
 
-    public static void draw(
-            View owner,
-            Canvas canvas,
-            Paint paint,
-            Path path,
-            float cx,
-            float cy,
-            float radius,
-            float cursorDirectionDegrees,
-            boolean rotateCursor
-    ) {
-        paint.setColor(CLICK_RED);
+    public static void draw(View owner, Canvas canvas, Paint paint, Path path,
+                            float cx, float cy, float radius,
+                            float cursorDirectionDegrees, boolean rotateCursor) {
+        // Changing the layer paint during every draw schedules another frame indefinitely.
+        if (owner.getLayerType() != View.LAYER_TYPE_SOFTWARE) {
+            owner.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        }
         paint.setStyle(Paint.Style.FILL);
-        paint.setShadowLayer(dp(owner, 6), 0, dp(owner, 3), Color.argb(65, 30, 35, 50));
-        owner.setLayerType(View.LAYER_TYPE_SOFTWARE, paint);
-        canvas.drawCircle(cx, cy - radius * 0.06f, radius, paint);
-
-        path.reset();
-        path.moveTo(cx - radius * 0.56f, cy + radius * 0.62f);
-        path.lineTo(cx - radius * 0.76f, cy + radius * 1.02f);
-        path.lineTo(cx - radius * 0.18f, cy + radius * 0.78f);
-        path.close();
-        canvas.drawPath(path, paint);
+        paint.setColor(Color.WHITE);
+        paint.setShadowLayer(dp(owner, 7), 0, dp(owner, 3), 0x453478F6);
+        canvas.drawCircle(cx, cy, radius, paint);
         paint.clearShadowLayer();
+
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(Math.max(dp(owner, 1), radius * .045f));
+        paint.setColor(BORDER_BLUE);
+        canvas.drawCircle(cx, cy, radius - paint.getStrokeWidth() / 2f, paint);
 
         canvas.save();
         if (rotateCursor) canvas.rotate(cursorDirectionDegrees - CURSOR_BASE_ANGLE, cx, cy);
-        paint.setColor(Color.WHITE);
+        float scale = radius * 1.48f / 108f;
+        canvas.translate(cx - 54f * scale, cy - 54f * scale);
+        canvas.scale(scale, scale);
+
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(CLICK_BLUE);
         path.reset();
-        path.moveTo(cx - radius * 0.30f, cy - radius * 0.50f);
-        path.lineTo(cx + radius * 0.42f, cy - radius * 0.02f);
-        path.lineTo(cx + radius * 0.08f, cy + radius * 0.08f);
-        path.lineTo(cx + radius * 0.30f, cy + radius * 0.50f);
-        path.lineTo(cx + radius * 0.06f, cy + radius * 0.62f);
-        path.lineTo(cx - radius * 0.14f, cy + radius * 0.18f);
-        path.lineTo(cx - radius * 0.42f, cy + radius * 0.42f);
+        path.moveTo(45, 37);
+        path.cubicTo(40, 34, 36, 38, 38, 43);
+        path.lineTo(48, 82);
+        path.cubicTo(50, 88, 56, 89, 60, 83);
+        path.lineTo(68, 67);
+        path.lineTo(85, 62);
+        path.cubicTo(92, 60, 93, 54, 86, 50);
         path.close();
         canvas.drawPath(path, paint);
 
-        paint.setStrokeWidth(dp(owner, 2));
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(7);
         paint.setStrokeCap(Paint.Cap.ROUND);
-        canvas.drawLine(cx + radius * .25f, cy - radius * .63f, cx + radius * .36f, cy - radius * .88f, paint);
-        canvas.drawLine(cx + radius * .47f, cy - radius * .48f, cx + radius * .68f, cy - radius * .65f, paint);
-        canvas.drawLine(cx + radius * .55f, cy - radius * .20f, cx + radius * .80f, cy - radius * .22f, paint);
+        paint.setStrokeJoin(Paint.Join.ROUND);
+        canvas.drawLine(32, 26, 26, 19, paint);
+        canvas.drawLine(49, 22, 51, 13, paint);
+        canvas.drawLine(26, 42, 18, 42, paint);
         canvas.restore();
+        paint.setStyle(Paint.Style.FILL);
     }
 
     private static float dp(View owner, int value) {

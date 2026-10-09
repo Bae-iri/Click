@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Click" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/click_red</item>
-        <item name="colorSecondary">@color/click_green</item>
-        <item name="android:fontFamily">sans</item>
+        <item name="colorPrimary">#3478F6</item>
+        <item name="colorSecondary">#2469EA</item>
+        <item name="android:fontFamily">@font/pretendard_medium</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/white</item>
     </style>
 </resources>

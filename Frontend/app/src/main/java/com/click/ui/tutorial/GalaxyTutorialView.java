@@ -175,7 +175,7 @@ public final class GalaxyTutorialView extends View {
         float clickX = controls.right - dp(88);
         float micX = controls.right - dp(30);
         drawClickOverlayIcon(canvas, clickX, centerY, dp(29), 0f, false);
-        drawGreenMicrophone(canvas, micX, centerY);
+        drawMicrophone(canvas, micX, centerY);
         target.set(micX - dp(27), centerY - dp(27), micX + dp(27), centerY + dp(27));
 
         RectF bubble = new RectF(controls.left + dp(4), centerY - dp(23), controls.right - dp(122), centerY + dp(23));
@@ -188,8 +188,8 @@ public final class GalaxyTutorialView extends View {
         canvas.drawText(shown, bubble.left + dp(6), bubble.centerY() + dp(4), paint);
     }
 
-    private void drawGreenMicrophone(Canvas canvas, float cx, float cy) {
-        paint.setColor(0xff8fd14f);
+    private void drawMicrophone(Canvas canvas, float cx, float cy) {
+        paint.setColor(0xff3478f6);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(dp(3));
         paint.setStrokeCap(Paint.Cap.ROUND);
@@ -408,10 +408,10 @@ public final class GalaxyTutorialView extends View {
     }
 
     private void drawPointer(Canvas canvas) {
-        paint.setColor(0x35ffd84d);
+        paint.setColor(0x293478F6);
         paint.setStyle(Paint.Style.FILL);
         canvas.drawRoundRect(target, dp(12), dp(12), paint);
-        paint.setColor(0xffffc928);
+        paint.setColor(0xFF3478F6);
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(dp(3));
         canvas.drawRoundRect(target, dp(12), dp(12), paint);
