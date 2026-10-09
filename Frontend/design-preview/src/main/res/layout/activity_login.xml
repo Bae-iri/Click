@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/login_screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipChildren="true"
+    android:clipToPadding="true"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:background="@color/onboarding_surface"
+        android:elevation="1dp"
+        android:outlineProvider="none">
+
+        <Button
+            android:id="@+id/login_back"
+            style="@style/OnboardingQuietButton"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|start"
+            android:drawableStart="@drawable/onboarding_back"
+            android:drawablePadding="4dp"
+            android:text="@string/onboarding_previous" />
+    </FrameLayout>
+
+    <ScrollView
+        android:id="@+id/login_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:overScrollMode="ifContentScrolls"
+        android:scrollbars="vertical">
+
+        <LinearLayout
+            android:id="@+id/login_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:orientation="vertical"
+            android:paddingTop="30dp"
+            android:paddingBottom="20dp">
+
+            <TextView
+                android:id="@+id/login_title"
+                style="@style/SignupTitle"
+                android:text="@string/login_title" />
+
+            <TextView
+                android:id="@+id/login_description"
+                style="@style/SignupDescription"
+                android:layout_marginTop="18dp"
+                android:text="@string/login_description" />
+
+            <TextView
+                style="@style/SignupFieldLabel"
+                android:layout_marginTop="34dp"
+                android:labelFor="@id/login_email"
+                android:text="@string/signup_email_label" />
+
+            <EditText
+                android:id="@+id/login_email"
+                style="@style/SignupInput"
+                android:autofillHints="emailAddress"
+                android:hint="@string/signup_email_hint"
+                android:imeOptions="actionNext"
+                android:importantForAutofill="yes"
+                android:inputType="textEmailAddress" />
+
+            <TextView
+                android:id="@+id/login_email_error"
+                style="@style/SignupError"
+                android:visibility="gone" />
+
+            <TextView
+                style="@style/SignupFieldLabel"
+                android:layout_marginTop="22dp"
+                android:labelFor="@id/login_password"
+                android:text="@string/signup_password_label" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:background="@drawable/signup_input_background">
+
+                <EditText
+                    android:id="@+id/login_password"
+                    style="@style/SignupInputInsideButton"
+                    android:autofillHints="password"
+                    android:hint="@string/signup_password_hint"
+                    android:imeOptions="actionDone"
+                    android:importantForAutofill="yes"
+                    android:inputType="textPassword" />
+
+                <ImageButton
+                    android:id="@+id/login_password_toggle"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center_vertical|end"
+                    android:layout_marginEnd="8dp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/signup_show_password"
+                    android:padding="12dp"
+                    android:src="@drawable/signup_visibility_on"
+                    android:tint="@color/onboarding_skip" />
+            </FrameLayout>
+
+            <TextView
+                style="@style/SignupHelper"
+                android:text="@string/login_password_helper" />
+
+            <TextView
+                android:id="@+id/login_password_error"
+                style="@style/SignupError"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/login_api_error"
+                style="@style/SignupError"
+                android:accessibilityLiveRegion="polite"
+                android:gravity="center"
+                android:paddingVertical="8dp"
+                android:visibility="gone" />
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/onboarding_surface"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="vertical"
+        android:paddingTop="16dp"
+        android:paddingBottom="12dp">
+
+        <com.click.designpreview.OnboardingStartButton
+            android:id="@+id/login_action"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:importantForAccessibility="yes"
+            android:minHeight="66dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="16dp">
+
+            <TextView
+                android:id="@+id/login_action_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/pretendard_semibold"
+                android:importantForAccessibility="no"
+                android:includeFontPadding="false"
+                android:text="@string/login_action"
+                android:textColor="@color/onboarding_surface"
+                android:textSize="22sp" />
+
+            <ImageView
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="10dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/onboarding_arrow" />
+        </com.click.designpreview.OnboardingStartButton>
+
+        <Button
+            android:id="@+id/login_signup"
+            style="@style/OnboardingQuietButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:minHeight="48dp"
+            android:text="@string/login_signup" />
+    </LinearLayout>
+</LinearLayout>

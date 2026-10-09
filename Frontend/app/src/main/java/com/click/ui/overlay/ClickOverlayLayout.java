@@ -1,340 +1,459 @@
 package com.click.ui.overlay;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.RectF;
+import android.graphics.drawable.RippleDrawable;
 import android.text.InputType;
+import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.view.inputmethod.EditorInfo;
-
-import androidx.annotation.NonNull;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
 import com.click.R;
+import com.click.ui.common.ClickUi;
 
+/** One floating control shared by the home screen and the system overlay. */
 public final class ClickOverlayLayout extends ViewGroup {
-    public enum Mode { COLLAPSED, VOICE, TEXT }
+    public enum Mode { COLLAPSED, MENU, VOICE, TEXT }
 
     public interface Callback {
         void onModeChanged(Mode oldMode, Mode newMode);
         void onDragStarted();
         void onDragBy(float deltaX, float deltaY);
         void onDragEnded();
+        default void onDragCancelled() {}
         void onTextSubmitted(String text);
         void onCloseRequested();
+        default void onMicrophoneClicked() {}
+        default void onStopRequested() {}
     }
 
-    private static final int CLICK_RED = Color.rgb(255, 59, 77);
-    private static final int MIC_ON_GREEN = Color.rgb(143, 209, 79);
-    private static final int MIC_OFF_RED = Color.rgb(225, 62, 70);
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final EditText goalInput;
     private final ChatBubbleView chatBubbles;
+    private LinearLayout panel;
+    private TextView transcript;
+    private LinearLayout textEntry;
+    private TextView voiceSwitch;
+    private ImageView microphone;
+    private TextView microphoneLabel, requestLabel, stopRequest;
+    private LinearLayout requestRow;
+    private boolean voiceInputActive, requestStoppable;
+    private String requestStatus;
     private Mode mode = Mode.COLLAPSED;
-    private Mode lastExpandedMode = Mode.VOICE;
     private Callback callback;
-    private float downRawX;
-    private float downRawY;
-    private float lastRawX;
-    private float lastRawY;
-    private boolean dragging;
-    private String recognizedSpeech = "듣고 있어요…";
+    private float downRawX, downRawY, lastRawX, lastRawY;
+    private boolean holding, dragging, holdConsumed;
+    private final int dragSlop;
+    private String recognizedSpeech = "인식한 말이 여기에 표시돼요.";
+    private final Runnable hideAfterHold = () -> {
+        if (holding && !dragging) performLongClick();
+    };
 
     public ClickOverlayLayout(Context context) {
         super(context);
         setWillNotDraw(false);
-        setClipToPadding(false);
-        setContentDescription("Click 도우미 열기");
-
+        setClipChildren(false);
+        setClickable(true);
+        setLongClickable(true);
+        setFocusable(true);
+        dragSlop = Math.max(ViewConfiguration.get(context).getScaledTouchSlop(), dp(12));
         goalInput = new EditText(context);
+        goalInput.setTextSize(18);
+        goalInput.setTextColor(ClickUi.TEXT);
+        goalInput.setHintTextColor(ClickUi.SUBTEXT);
+        goalInput.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
+        goalInput.setHint("무엇이 궁금하세요?");
+        goalInput.setContentDescription("도움이 필요한 내용 입력");
         goalInput.setSingleLine(true);
-        goalInput.setTextSize(14);
-        goalInput.setTextColor(Color.rgb(33, 41, 54));
-        goalInput.setHintTextColor(Color.rgb(138, 145, 158));
-        goalInput.setHint(R.string.text_goal_hint);
         goalInput.setInputType(InputType.TYPE_CLASS_TEXT);
-        goalInput.setPadding(dp(14), 0, dp(8), 0);
-        goalInput.setBackgroundColor(Color.TRANSPARENT);
-        goalInput.setVisibility(GONE);
-        goalInput.setFocusableInTouchMode(true);
-        goalInput.setOnTouchListener((view, event) -> handleInputTouch(event));
         goalInput.setImeOptions(EditorInfo.IME_ACTION_SEND);
+        goalInput.setPadding(dp(14), 0, dp(10), 0);
+        goalInput.setBackground(ClickUi.outlined(Color.WHITE, ClickUi.BORDER, dp(16), dp(1)));
         goalInput.setOnEditorActionListener((view, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_SEND) {
-                submitText();
-                return true;
-            }
-            return false;
+            if (actionId != EditorInfo.IME_ACTION_SEND) return false;
+            submitText();
+            return true;
         });
-        addView(goalInput);
-
         chatBubbles = new ChatBubbleView(context);
-        chatBubbles.setVisibility(GONE);
-        addView(chatBubbles);
-
+        updateDescription();
     }
 
     public void setCallback(Callback callback) { this.callback = callback; }
     public Mode getMode() { return mode; }
-
+    public void openMenu() { changeMode(Mode.MENU); }
+    public void openText() { changeMode(Mode.TEXT); }
+    public void openVoice() { changeMode(Mode.VOICE); }
+    public void collapse() { changeMode(Mode.COLLAPSED); }
+    public String getDraftText() { return goalInput.getText().toString(); }
+    public void setDraftText(String text) { goalInput.setText(text); }
+    public void setConversationPlaceholder(String text) { chatBubbles.setPlaceholder(text); }
     public void setRecognizedSpeech(String text) {
-        recognizedSpeech = text == null || text.trim().isEmpty() ? "듣고 있어요…" : text.trim();
-        invalidate();
+        recognizedSpeech = text == null || text.trim().isEmpty() ? "인식한 말이 여기에 표시돼요." : text.trim();
+        if (transcript != null) transcript.setText(recognizedSpeech);
     }
-
     public void addUserMessage(String text) { chatBubbles.add(text, true); }
-
     public void addAssistantMessage(String text) { chatBubbles.add(text, false); }
-
-    public void collapse() {
-        if (mode == Mode.COLLAPSED) return;
-        hideKeyboard();
-        changeMode(Mode.COLLAPSED);
+    public boolean isVoiceInputActive() { return voiceInputActive; }
+    public void setVoiceInputActive(boolean active) {
+        voiceInputActive = active;
+        if (microphone != null) {
+            microphone.setContentDescription(active ? "음성 입력 취소" : "마이크 켜기");
+            microphone.setBackground(ClickUi.rounded(active ? 0xFFFFE5E5 : Color.WHITE, dp(28)));
+            microphoneLabel.setText(active ? "입력 취소" : "마이크 켜기");
+        }
     }
-
-    public int getWindowWidth(Mode targetMode, int screenWidth) {
-        if (targetMode == Mode.COLLAPSED) return dp(64);
-        return Math.min(screenWidth - dp(72), dp(320));
-    }
-
-    public int getWindowHeight(Mode targetMode) {
-        if (targetMode == Mode.COLLAPSED) return dp(64);
-        return targetMode == Mode.TEXT ? dp(300) : dp(68);
-    }
-
-    public float getClickCenterX(Mode targetMode) {
-        if (targetMode == Mode.COLLAPSED) return dp(32);
-        return getWindowWidth(targetMode, getResources().getDisplayMetrics().widthPixels) - dp(88);
-    }
-
-    public float getClickCenterY(Mode targetMode) {
-        if (targetMode == Mode.COLLAPSED) return dp(32);
-        if (targetMode == Mode.TEXT) return getWindowHeight(targetMode) - dp(37);
-        return dp(34);
-    }
-
-    @Override
-    protected void onMeasure(int widthSpec, int heightSpec) {
-        int width = MeasureSpec.getSize(widthSpec);
-        int height = MeasureSpec.getSize(heightSpec);
-        setMeasuredDimension(width, height);
-        if (mode == Mode.TEXT) {
-            goalInput.measure(
-                    MeasureSpec.makeMeasureSpec(Math.max(0, width - dp(176)), MeasureSpec.EXACTLY),
-                    MeasureSpec.makeMeasureSpec(dp(46), MeasureSpec.EXACTLY));
-            chatBubbles.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
-                    MeasureSpec.makeMeasureSpec(Math.max(0, height - dp(74)), MeasureSpec.EXACTLY));
-        } else {
-            goalInput.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY),
-                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY));
-            chatBubbles.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY),
-                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY));
+    public void setRequestStatus(String status, boolean canStop) {
+        requestStatus = status;
+        requestStoppable = canStop;
+        if (requestRow != null) {
+            requestRow.setVisibility(status == null ? GONE : VISIBLE);
+            requestLabel.setText(status);
+            stopRequest.setVisibility(canStop ? VISIBLE : GONE);
         }
     }
 
-    @Override
-    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        if (mode == Mode.TEXT) {
-            chatBubbles.layout(0, 0, getWidth(), getHeight() - dp(74));
-            int inputTop = getHeight() - dp(60);
-            goalInput.layout(dp(4), inputTop, getWidth() - dp(172), inputTop + dp(46));
-        } else {
-            goalInput.layout(0, 0, 0, 0);
-            chatBubbles.layout(0, 0, 0, 0);
-        }
+    public int getWindowWidth(Mode target, int screenWidth) {
+        return target == Mode.COLLAPSED ? dp(64) : Math.min(screenWidth - dp(24), dp(344));
+    }
+    public int getWindowHeight(Mode target) {
+        if (target == Mode.COLLAPSED) return dp(64);
+        int base = target == Mode.TEXT ? 428 : target == Mode.VOICE ? 420 : 340;
+        float scale = Math.max(1f, getResources().getConfiguration().fontScale);
+        return Math.min(Math.round(dp(base) * scale),
+                getResources().getDisplayMetrics().heightPixels - dp(96));
+    }
+    public float getClickCenterX(Mode target) {
+        return getClickCenterX(target, getWindowWidth(target, getResources().getDisplayMetrics().widthPixels));
+    }
+    public float getClickCenterX(Mode target, int width) {
+        return target == Mode.COLLAPSED ? dp(32) : width - dp(40);
+    }
+    public float getClickCenterY(Mode target) {
+        return target == Mode.COLLAPSED ? dp(32) : dp(16) + headerHeight() / 2f;
     }
 
-    @Override
-    protected void onDraw(@NonNull Canvas canvas) {
-        super.onDraw(canvas);
-        if (mode == Mode.COLLAPSED) drawClickIcon(canvas, getWidth() / 2f, getHeight() / 2f, dp(29));
-        else if (mode == Mode.VOICE) drawVoiceControls(canvas);
-        else drawTextControls(canvas);
+    private int headerHeight() {
+        return dp(Math.max(48, Math.round(28 * getResources().getConfiguration().fontScale)));
     }
 
-    private void drawVoiceControls(Canvas canvas) {
-        float centerY = getHeight() / 2f;
-        paint.setColor(Color.argb(245, 255, 255, 255));
-        paint.setShadowLayer(dp(7), 0, dp(3), Color.argb(50, 20, 28, 40));
-        setLayerType(LAYER_TYPE_SOFTWARE, paint);
-        canvas.drawRoundRect(new RectF(dp(3), dp(6), getWidth() - dp(3), getHeight() - dp(6)), dp(28), dp(28), paint);
-        paint.clearShadowLayer();
-        drawListeningChip(canvas, centerY);
-        drawClickIcon(canvas, getWidth() - dp(88), centerY, dp(29));
-        drawMic(canvas, getWidth() - dp(30), centerY, MIC_ON_GREEN);
-    }
-
-    private void drawListeningChip(Canvas canvas, float centerY) {
-        RectF bubble = new RectF(dp(4), centerY - dp(23), getWidth() - dp(122), centerY + dp(23));
-        paint.setColor(Color.rgb(245, 247, 250));
-        canvas.drawRoundRect(bubble, dp(18), dp(18), paint);
-        paint.setColor(Color.rgb(38, 44, 55));
-        paint.setTextSize(dp(12));
-        float available = bubble.width() - dp(24);
-        int firstLength = paint.breakText(recognizedSpeech, true, available, null);
-        String first = recognizedSpeech.substring(0, firstLength);
-        String second = recognizedSpeech.substring(firstLength);
-        if (paint.measureText(second) > available) {
-            int secondLength = Math.max(0, paint.breakText(second, true, available - paint.measureText("…"), null));
-            second = second.substring(0, secondLength) + "…";
-        }
-        float firstY = second.isEmpty() ? centerY + dp(4) : centerY - dp(4);
-        canvas.drawText(first, bubble.left + dp(12), firstY, paint);
-        if (!second.isEmpty()) canvas.drawText(second, bubble.left + dp(12), centerY + dp(12), paint);
-    }
-
-    private void drawTextControls(Canvas canvas) {
-        float centerY = getHeight() - dp(37);
-        paint.setColor(Color.argb(248, 255, 255, 255));
-        paint.setShadowLayer(dp(7), 0, dp(3), Color.argb(50, 20, 28, 40));
-        setLayerType(LAYER_TYPE_SOFTWARE, paint);
-        canvas.drawRoundRect(new RectF(dp(3), getHeight() - dp(68), getWidth() - dp(3), getHeight() - dp(6)), dp(28), dp(28), paint);
-        paint.clearShadowLayer();
-        drawSend(canvas, getWidth() - dp(146), centerY);
-        drawClickIcon(canvas, getWidth() - dp(88), centerY, dp(29));
-        drawMicOff(canvas, getWidth() - dp(30), centerY);
-    }
-
-    private void drawSend(Canvas canvas, float cx, float cy) {
-        paint.setColor(Color.rgb(80, 92, 112));
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(dp(2));
-        canvas.drawCircle(cx, cy, dp(19), paint);
-        paint.setStrokeJoin(Paint.Join.ROUND);
-        path.reset();
-        path.moveTo(cx - dp(7), cy - dp(6));
-        path.lineTo(cx + dp(8), cy);
-        path.lineTo(cx - dp(7), cy + dp(6));
-        path.close();
-        canvas.drawPath(path, paint);
-        canvas.drawLine(cx - dp(6), cy, cx + dp(6), cy, paint);
-        paint.setStyle(Paint.Style.FILL);
-    }
-
-    private void drawClickIcon(Canvas canvas, float cx, float cy, float radius) {
-        ClickIconRenderer.draw(this, canvas, paint, path, cx, cy, radius, 0f, false);
-    }
-
-    private void drawMic(Canvas canvas, float cx, float cy, int color) {
-        paint.setColor(color);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(dp(3));
-        paint.setStrokeCap(Paint.Cap.ROUND);
-        canvas.drawRoundRect(new RectF(cx - dp(7), cy - dp(14), cx + dp(7), cy + dp(7)), dp(7), dp(7), paint);
-        canvas.drawArc(new RectF(cx - dp(13), cy - dp(4), cx + dp(13), cy + dp(13)), 0, 180, false, paint);
-        canvas.drawLine(cx, cy + dp(13), cx, cy + dp(20), paint);
-        canvas.drawLine(cx - dp(7), cy + dp(20), cx + dp(7), cy + dp(20), paint);
-        paint.setStyle(Paint.Style.FILL);
-    }
-
-    private void drawMicOff(Canvas canvas, float cx, float cy) {
-        drawMic(canvas, cx, cy, MIC_OFF_RED);
-        paint.setColor(MIC_OFF_RED);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(dp(3));
-        canvas.drawLine(cx - dp(14), cy - dp(17), cx + dp(14), cy + dp(19), paint);
-        paint.setStyle(Paint.Style.FILL);
-    }
-
-    private void drawTrash(Canvas canvas, float cx, float cy, int color) {
-        paint.setColor(color);
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(dp(3));
-        paint.setStrokeCap(Paint.Cap.ROUND);
-        canvas.drawRoundRect(new RectF(cx - dp(9), cy - dp(9), cx + dp(9), cy + dp(14)), dp(2), dp(2), paint);
-        canvas.drawLine(cx - dp(13), cy - dp(14), cx + dp(13), cy - dp(14), paint);
-        canvas.drawLine(cx - dp(4), cy - dp(19), cx + dp(4), cy - dp(19), paint);
-        canvas.drawLine(cx - dp(4), cy - dp(5), cx - dp(4), cy + dp(9), paint);
-        canvas.drawLine(cx + dp(4), cy - dp(5), cx + dp(4), cy + dp(9), paint);
-        paint.setStyle(Paint.Style.FILL);
-    }
-
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        return handleDragOrTap(event, false);
-    }
-
-    private boolean handleInputTouch(MotionEvent event) {
-        boolean handled = handleDragOrTap(event, true);
-        if (event.getActionMasked() == MotionEvent.ACTION_UP && !dragging) {
-            goalInput.requestFocus();
-            InputMethodManager keyboard = getContext().getSystemService(InputMethodManager.class);
-            keyboard.showSoftInput(goalInput, InputMethodManager.SHOW_IMPLICIT);
-        }
-        return handled;
-    }
-
-    private boolean handleDragOrTap(MotionEvent event, boolean fromInput) {
-        float rawX = event.getRawX();
-        float rawY = event.getRawY();
-        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-            downRawX = lastRawX = rawX;
-            downRawY = lastRawY = rawY;
-            dragging = false;
-            return true;
-        }
-        if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
-            if (Math.hypot(rawX - downRawX, rawY - downRawY) > dp(5)) {
-                if (!dragging && callback != null) callback.onDragStarted();
-                dragging = true;
-            }
-            if (dragging && callback != null) callback.onDragBy(rawX - lastRawX, rawY - lastRawY);
-            lastRawX = rawX;
-            lastRawY = rawY;
-            return true;
-        }
-        if (event.getActionMasked() == MotionEvent.ACTION_UP) {
-            if (dragging) {
-                if (callback != null) callback.onDragEnded();
-            } else if (!fromInput) handleTap(event.getX(), event.getY());
-            return true;
-        }
-        if (event.getActionMasked() == MotionEvent.ACTION_CANCEL && dragging && callback != null) callback.onDragEnded();
-        return true;
-    }
-
-    private void handleTap(float x, float y) {
-        if (mode == Mode.COLLAPSED) {
-            changeMode(lastExpandedMode);
-            return;
-        }
-        if (mode == Mode.VOICE) {
-            if (y < getHeight() - dp(78)) return;
-            if (x > getWidth() - dp(76)) changeMode(Mode.TEXT);
-            else changeMode(Mode.COLLAPSED);
-            return;
-        }
-        if (y < getHeight() - dp(74)) return;
-        if (x >= getWidth() - dp(170) && x < getWidth() - dp(122)) {
-            submitText();
-        } else if (x >= getWidth() - dp(118) && x < getWidth() - dp(58)) {
-            hideKeyboard();
-            changeMode(Mode.COLLAPSED);
-        } else if (x >= getWidth() - dp(58)) {
-            hideKeyboard();
-            changeMode(Mode.VOICE);
-        }
-    }
-
-    private void changeMode(Mode newMode) {
-        Mode oldMode = mode;
-        if (newMode != Mode.COLLAPSED) lastExpandedMode = newMode;
-        mode = newMode;
-        goalInput.setVisibility(mode == Mode.TEXT ? VISIBLE : GONE);
-        chatBubbles.setVisibility(mode == Mode.TEXT ? VISIBLE : GONE);
-        if (mode == Mode.TEXT) goalInput.clearFocus();
-        setContentDescription(mode == Mode.COLLAPSED ? "Click 도우미 열기" : "Click 도우미 컨트롤");
-        if (callback != null) callback.onModeChanged(oldMode, newMode);
+    private void changeMode(Mode next) {
+        if (mode == next) return;
+        Mode old = mode;
+        if (old == Mode.TEXT) hideKeyboard();
+        mode = next;
+        renderPanel();
+        updateDescription();
+        if (callback != null) callback.onModeChanged(old, next);
         requestLayout();
         invalidate();
     }
 
+    private void renderPanel() {
+        detach(goalInput);
+        detach(chatBubbles);
+        removeAllViews();
+        transcript = null;
+        textEntry = null;
+        voiceSwitch = null;
+        microphone = null;
+        microphoneLabel = requestLabel = stopRequest = null;
+        requestRow = null;
+        if (mode == Mode.COLLAPSED) return;
+        panel = new LinearLayout(getContext());
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(20), dp(16), dp(20), dp(20));
+        panel.setBackground(ClickUi.outlined(Color.WHITE, ClickUi.BORDER, dp(28), dp(1)));
+        addView(panel);
+
+        LinearLayout header = new LinearLayout(getContext());
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = label("click", 22, ClickUi.TEXT, true);
+        if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
+        header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView fold = action("접기", false, this::collapse);
+        fold.setTextSize(15);
+        fold.setContentDescription("Click 메뉴 접기");
+        fold.setPadding(0, 0, 0, 0);
+        fold.setBackground(new RippleDrawable(ColorStateList.valueOf(0x183478F6),
+                ClickUi.rounded(Color.TRANSPARENT, dp(16)), ClickUi.rounded(Color.WHITE, dp(16))));
+        int foldWidth = dp(Math.max(48, Math.round(34 * getResources().getConfiguration().fontScale)));
+        header.addView(fold, new LinearLayout.LayoutParams(foldWidth, -1));
+        View handle = new View(getContext());
+        handle.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        header.addView(handle, new LinearLayout.LayoutParams(dp(64), -1));
+        panel.addView(header, new LinearLayout.LayoutParams(-1, headerHeight()));
+
+        requestRow = new LinearLayout(getContext());
+        requestRow.setGravity(Gravity.CENTER_VERTICAL);
+        requestLabel = label("", 15, ClickUi.SUBTEXT, false);
+        requestLabel.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
+        requestRow.addView(requestLabel, new LinearLayout.LayoutParams(0, -2, 1));
+        stopRequest = action("요청 중지", false, () -> { if (callback != null) callback.onStopRequested(); });
+        stopRequest.setId(R.id.overlay_stop_request);
+        stopRequest.setTextSize(15);
+        requestRow.addView(stopRequest, new LinearLayout.LayoutParams(-2, -2));
+        panel.addView(requestRow, spaced(8));
+        setRequestStatus(requestStatus, requestStoppable);
+
+        if (mode == Mode.MENU) {
+            LinearLayout choices = new LinearLayout(getContext());
+            choices.setOrientation(LinearLayout.VERTICAL);
+            choices.addView(feature("말로 시작", true, () -> changeMode(Mode.VOICE)), spaced(0));
+            choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(12));
+            addScrollableBody(choices, 18);
+        } else if (mode == Mode.VOICE) {
+            LinearLayout listening = new LinearLayout(getContext());
+            listening.setOrientation(LinearLayout.VERTICAL);
+            listening.setGravity(Gravity.CENTER);
+            listening.setPadding(dp(18), dp(20), dp(18), dp(20));
+            listening.setBackground(ClickUi.rounded(ClickUi.PALE_BLUE, dp(22)));
+            ImageView mic = new ImageView(getContext());
+            microphone = mic;
+            mic.setId(R.id.overlay_microphone);
+            mic.setImageResource(R.drawable.ic_overlay_microphone);
+            mic.setPadding(dp(12), dp(12), dp(12), dp(12));
+            mic.setFocusable(true);
+            mic.setOnClickListener(view -> { if (callback != null) callback.onMicrophoneClicked(); });
+            listening.addView(mic, new LinearLayout.LayoutParams(dp(60), dp(60)));
+            microphoneLabel = label("", 15, ClickUi.BLUE_DARK, true);
+            microphoneLabel.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            listening.addView(microphoneLabel, spaced(6));
+            microphoneLabel.setGravity(Gravity.CENTER);
+            microphoneLabel.setOnClickListener(view -> mic.performClick());
+            setVoiceInputActive(voiceInputActive);
+            TextView microphoneHelp = label("마이크 버튼을 누른 뒤 말씀해 주세요.\n인식한 말이 아래에 표시돼요.", 16, ClickUi.SUBTEXT, false);
+            microphoneHelp.setGravity(Gravity.CENTER);
+            listening.addView(microphoneHelp, spaced(12));
+            transcript = label(recognizedSpeech, 18, ClickUi.TEXT, false);
+            transcript.setGravity(Gravity.CENTER);
+            transcript.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
+            listening.addView(transcript, spaced(16));
+            addScrollableBody(listening, 18);
+            LinearLayout actions = new LinearLayout(getContext());
+            actions.setGravity(Gravity.CENTER_VERTICAL);
+            TextView write = action("글로 입력", true, () -> changeMode(Mode.TEXT));
+            TextView stop = action("메뉴로", false, () -> changeMode(Mode.MENU));
+            stop.setContentDescription("음성 입력을 닫고 메뉴로 돌아가기");
+            actions.addView(write, new LinearLayout.LayoutParams(0, -1, 1));
+            LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(0, -1, 1);
+            stopParams.leftMargin = dp(10);
+            actions.addView(stop, stopParams);
+            panel.addView(actions, spaced(16));
+        } else {
+            chatBubbles.setBackground(ClickUi.rounded(ClickUi.PALE_BLUE, dp(20)));
+            LinearLayout.LayoutParams chatParams = new LinearLayout.LayoutParams(-1, 0, 1);
+            chatParams.setMargins(0, dp(18), 0, dp(16));
+            panel.addView(chatBubbles, chatParams);
+            LinearLayout entry = new LinearLayout(getContext());
+            textEntry = entry;
+            entry.setGravity(Gravity.CENTER_VERTICAL);
+            entry.addView(goalInput, new LinearLayout.LayoutParams(0, dp(54), 1));
+            TextView send = action("↑", true, this::submitText);
+            send.setContentDescription("입력한 요청 보내기");
+            send.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 26);
+            send.setPadding(0, 0, 0, 0);
+            LinearLayout.LayoutParams sendParams = new LinearLayout.LayoutParams(dp(52), dp(54));
+            sendParams.leftMargin = dp(8);
+            entry.addView(send, sendParams);
+            panel.addView(entry, new LinearLayout.LayoutParams(-1, -2));
+            TextView voice = action("말로 시작", false, () -> changeMode(Mode.VOICE));
+            voiceSwitch = voice;
+            voice.setContentDescription("음성으로 입력하기");
+            panel.addView(voice, buttonParams());
+        }
+    }
+
+    private void addScrollableBody(View content, int margin) {
+        ScrollView scroll = new ScrollView(getContext());
+        scroll.setFillViewport(true);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.addView(content, new ScrollView.LayoutParams(-1, -2));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, 0, 1);
+        params.topMargin = dp(margin);
+        panel.addView(scroll, params);
+    }
+
+    private TextView action(String title, boolean filled, Runnable onClick) {
+        TextView button = label(title, 17, filled ? Color.WHITE : ClickUi.BLUE_DARK, true);
+        button.setGravity(Gravity.CENTER);
+        button.setMinHeight(dp(48));
+        button.setPadding(dp(12), dp(12), dp(12), dp(12));
+        button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x203478F6),
+                ClickUi.rounded(filled ? ClickUi.BLUE : ClickUi.PALE_BLUE, dp(16)),
+                ClickUi.rounded(Color.WHITE, dp(16))));
+        button.setFocusable(true);
+        button.setOnClickListener(view -> onClick.run());
+        return button;
+    }
+
+    private View feature(String title, boolean microphone, Runnable action) {
+        LinearLayout row = new LinearLayout(getContext());
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(16), dp(16), dp(16), dp(16));
+        row.setMinimumHeight(dp(76));
+        row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x223478F6),
+                ClickUi.rounded(microphone ? 0xFFEAF2FF : 0xFFF6F8FC, dp(20)),
+                ClickUi.rounded(Color.WHITE, dp(20))));
+        ImageView icon = new ImageView(getContext());
+        icon.setImageResource(microphone ? R.drawable.ic_overlay_microphone : R.drawable.ic_overlay_edit);
+        icon.setImageTintList(ColorStateList.valueOf(microphone ? Color.WHITE : ClickUi.BLUE));
+        icon.setPadding(dp(10), dp(10), dp(10), dp(10));
+        icon.setBackground(ClickUi.rounded(microphone ? ClickUi.BLUE : 0xFFE6EFFF, dp(15)));
+        icon.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.addView(icon, new LinearLayout.LayoutParams(dp(44), dp(44)));
+        TextView copy = label(title, 19, ClickUi.TEXT, true);
+        copy.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);
+        copyParams.leftMargin = dp(16);
+        row.addView(copy, copyParams);
+        TextView arrow = label("›", 26, ClickUi.SUBTEXT, false);
+        arrow.setGravity(Gravity.CENTER);
+        arrow.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.addView(arrow, new LinearLayout.LayoutParams(dp(20), dp(32)));
+        row.setContentDescription(microphone ? "말로 시작. 마이크로 요청하기" : "글로 입력. 키보드로 요청하기");
+        row.setFocusable(true);
+        row.setOnClickListener(v -> action.run());
+        return row;
+    }
+
+    private TextView label(String value, int size, int color, boolean bold) {
+        TextView text = new TextView(getContext());
+        text.setText(value);
+        text.setTextSize(size);
+        text.setTextColor(color);
+        text.setIncludeFontPadding(false);
+        text.setTypeface(getResources().getFont(bold
+                ? com.click.designpreview.R.font.pretendard_semibold
+                : com.click.designpreview.R.font.pretendard_medium));
+        text.setLineSpacing(dp(2), 1.1f);
+        return text;
+    }
+    private LinearLayout.LayoutParams spaced(int top) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.topMargin = dp(top);
+        return params;
+    }
+    private LinearLayout.LayoutParams buttonParams() {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.topMargin = dp(10);
+        return params;
+    }
+    private void detach(View child) {
+        if (child.getParent() instanceof ViewGroup) ((ViewGroup) child.getParent()).removeView(child);
+    }
+    @Override protected void onMeasure(int widthSpec, int heightSpec) {
+        int width = MeasureSpec.getSize(widthSpec), height = MeasureSpec.getSize(heightSpec);
+        setMeasuredDimension(width, height);
+        if (mode != Mode.COLLAPSED && panel != null) {
+            if (mode == Mode.TEXT && textEntry != null) {
+                boolean compact = height < dp(300) * Math.max(1f, getResources().getConfiguration().fontScale);
+                chatBubbles.setVisibility(compact ? GONE : VISIBLE);
+                voiceSwitch.setVisibility(compact ? GONE : VISIBLE);
+                LinearLayout.LayoutParams entryParams = (LinearLayout.LayoutParams) textEntry.getLayoutParams();
+                entryParams.topMargin = compact ? dp(12) : 0;
+            }
+            panel.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
+        }
+    }
+    @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
+        if (mode != Mode.COLLAPSED && panel != null) panel.layout(0, 0, getWidth(), getHeight());
+    }
+    @Override protected void dispatchDraw(Canvas canvas) {
+        super.dispatchDraw(canvas);
+        float x = mode == Mode.COLLAPSED ? getWidth() / 2f : getWidth() - dp(40);
+        ClickIconRenderer.draw(this, canvas, paint, path, x, getClickCenterY(mode),
+                dp(mode == Mode.COLLAPSED ? 28 : 23), 0f, false);
+    }
+    @Override public boolean onInterceptTouchEvent(MotionEvent event) {
+        return event.getActionMasked() == MotionEvent.ACTION_DOWN && hitsHandle(event);
+    }
+    private boolean hitsHandle(MotionEvent event) {
+        float cx = mode == Mode.COLLAPSED ? getWidth() / 2f : getWidth() - dp(40);
+        return Math.hypot(event.getX() - cx, event.getY() - getClickCenterY(mode)) <= dp(32);
+    }
+    @SuppressLint("ClickableViewAccessibility")
+    @Override public boolean onTouchEvent(MotionEvent event) {
+        float rawX = event.getRawX(), rawY = event.getRawY();
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                if (!hitsHandle(event)) return false;
+                downRawX = lastRawX = rawX;
+                downRawY = lastRawY = rawY;
+                holding = true;
+                dragging = holdConsumed = false;
+                postDelayed(hideAfterHold, ViewConfiguration.getLongPressTimeout());
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                if (!holding || holdConsumed) return true;
+                if (!dragging && Math.hypot(rawX - downRawX, rawY - downRawY) > dragSlop) {
+                    removeCallbacks(hideAfterHold);
+                    dragging = true;
+                    if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                    if (callback != null) callback.onDragStarted();
+                }
+                if (dragging && callback != null) callback.onDragBy(rawX - lastRawX, rawY - lastRawY);
+                lastRawX = rawX;
+                lastRawY = rawY;
+                return true;
+            case MotionEvent.ACTION_UP:
+                removeCallbacks(hideAfterHold);
+                holding = false;
+                if (holdConsumed) return true;
+                if (dragging) {
+                    dragging = false;
+                    if (callback != null) {
+                        callback.onDragBy(rawX - lastRawX, rawY - lastRawY);
+                        callback.onDragEnded();
+                    }
+                } else performClick();
+                return true;
+            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_POINTER_DOWN:
+                removeCallbacks(hideAfterHold);
+                holding = false;
+                holdConsumed = true;
+                if (dragging && callback != null) callback.onDragCancelled();
+                dragging = false;
+                return true;
+            default: return holding;
+        }
+    }
+    @Override public boolean performClick() {
+        super.performClick();
+        changeMode(mode == Mode.COLLAPSED ? Mode.MENU : Mode.COLLAPSED);
+        return true;
+    }
+    @Override public boolean performLongClick() {
+        removeCallbacks(hideAfterHold);
+        holding = false;
+        holdConsumed = true;
+        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+        hideKeyboard();
+        if (callback != null) callback.onCloseRequested();
+        return true;
+    }
+    private void updateDescription() {
+        setContentDescription(mode == Mode.COLLAPSED
+                ? "Click 기능 열기. 꾹 누르면 숨기고, 드래그하면 이동합니다."
+                : "Click 메뉴 접기. 꾹 누르면 숨기고, 드래그하면 이동합니다.");
+    }
     private void submitText() {
         String text = goalInput.getText().toString().trim();
         if (text.isEmpty()) return;
@@ -342,14 +461,15 @@ public final class ClickOverlayLayout extends ViewGroup {
         if (callback != null) callback.onTextSubmitted(text);
         goalInput.setText("");
     }
-
     private void hideKeyboard() {
         InputMethodManager keyboard = getContext().getSystemService(InputMethodManager.class);
-        keyboard.hideSoftInputFromWindow(goalInput.getWindowToken(), 0);
+        if (keyboard != null) keyboard.hideSoftInputFromWindow(goalInput.getWindowToken(), 0);
         goalInput.clearFocus();
     }
-
-    private int dp(int value) {
-        return Math.round(value * getResources().getDisplayMetrics().density);
+    @Override protected void onDetachedFromWindow() {
+        removeCallbacks(hideAfterHold);
+        holding = dragging = false;
+        super.onDetachedFromWindow();
     }
+    private int dp(int value) { return ClickUi.dp(getContext(), value); }
 }

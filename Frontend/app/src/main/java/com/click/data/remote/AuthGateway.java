@@ -26,22 +26,44 @@ public final class AuthGateway {
         void onFailure(Throwable error);
     }
 
+    public interface RegistrationRulesCallback {
+        void onSuccess(int minimumPasswordLength, int maximumPasswordLength);
+        void onFailure(Throwable error);
+    }
+
     private final AuthTokenStore tokens;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
 
     public AuthGateway(Context context) { tokens = new AuthTokenStore(context.getApplicationContext()); }
 
-    public void register(String email, String password, String ageGroup, String occupation, Callback callback) {
-        JSONObject body = new JSONObject();
-        try {
-            body.put("email", email).put("password", password).put("age_group", ageGroup);
-            if (occupation != null) body.put("occupation_category", occupation);
-        } catch (Exception error) {
-            callback.onFailure(error);
-            return;
-        }
-        authenticate("/api/v1/auth/register", body, callback);
+    public void register(String name, String email, String password, String ageGroup, String occupation, Callback callback) {
+        executor.execute(() -> {
+            try {
+                RegistrationContract contract = registrationContract();
+                JSONObject body = contract.request(name, email, password, ageGroup, occupation);
+                completeAuthentication("/api/v1/auth/register", body, callback);
+            } catch (Exception error) {
+                main.post(() -> callback.onFailure(error));
+            }
+        });
+    }
+
+    public void loadRegistrationRules(RegistrationRulesCallback callback) {
+        executor.execute(() -> {
+            try {
+                RegistrationContract contract = registrationContract();
+                main.post(() -> callback.onSuccess(contract.minimumPasswordLength, contract.maximumPasswordLength));
+            } catch (Exception error) {
+                main.post(() -> callback.onFailure(error));
+            }
+        });
+    }
+
+    private static RegistrationContract registrationContract() throws Exception {
+        HttpResult result = get("/openapi.json", null);
+        if (result.status < 200 || result.status >= 300) throw new ApiException("GET", "/openapi.json", result);
+        return RegistrationContract.fromOpenApi(new JSONObject(result.body));
     }
 
     public void login(String email, String password, Callback callback) {
@@ -54,14 +76,18 @@ public final class AuthGateway {
     private void authenticate(String path, JSONObject body, Callback callback) {
         executor.execute(() -> {
             try {
-                HttpResult result = post(path, body.toString(), null);
-                if (result.status < 200 || result.status >= 300) throw apiError(path, result);
-                tokens.save(new JSONObject(result.body));
-                main.post(callback::onSuccess);
+                completeAuthentication(path, body, callback);
             } catch (Throwable error) {
                 main.post(() -> callback.onFailure(error));
             }
         });
+    }
+
+    private void completeAuthentication(String path, JSONObject body, Callback callback) throws Exception {
+        HttpResult result = post(path, body.toString(), null);
+        if (result.status < 200 || result.status >= 300) throw apiError(path, result);
+        tokens.save(new JSONObject(result.body));
+        main.post(callback::onSuccess);
     }
 
     static synchronized boolean refresh(AuthTokenStore tokens) throws Exception {

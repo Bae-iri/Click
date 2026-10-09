@@ -4,24 +4,28 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
     <application
+        android:name=".ClickApplication"
+        android:icon="@drawable/ic_click_cursor"
         android:allowBackup="true"
         android:usesCleartextTraffic="true"
         android:label="Click"
         android:supportsRtl="true"
         android:theme="@style/Theme.Click">
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <activity android:name=".MainActivity" android:exported="false" />
         <activity android:name=".SignUpActivity" android:exported="false" />
-        <activity android:name=".HomeActivity" android:exported="false" />
+        <activity android:name=".HomeActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name=".MenuActivity" android:exported="false" />
+        <activity android:name=".TutorialReadyActivity" android:exported="false" />
         <activity android:name=".TutorialActivity" android:exported="false" />
+        <activity android:name=".OverlayTutorialActivity" android:exported="false" />
         <activity android:name=".AccessibilityPermissionTutorialActivity" android:exported="false" />
 
         <service

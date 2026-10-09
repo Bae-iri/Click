@@ -1,0 +1,4 @@
+<resources>
+    <item name="overlay_microphone" type="id" />
+    <item name="overlay_stop_request" type="id" />
+</resources>
