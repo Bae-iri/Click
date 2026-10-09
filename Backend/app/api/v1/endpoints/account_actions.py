@@ -16,7 +16,7 @@ class ActionToken(BaseModel):
 
 
 class ResetPassword(ActionToken):
-    new_password: SecretStr = Field(min_length=12, max_length=128)
+    new_password: SecretStr = Field(min_length=8, max_length=128)
 
 
 def build_router(service, auth, principal):

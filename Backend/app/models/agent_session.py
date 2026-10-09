@@ -22,6 +22,7 @@ class AgentSession(Base):
     device_context: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
     graph_version: Mapped[str | None] = mapped_column(String(64))
     graph_hash: Mapped[str | None] = mapped_column(String(64))
+    result_response: Mapped[str | None] = mapped_column(String(10))
     created_at: Mapped[int] = mapped_column(BigInteger)
     updated_at: Mapped[int] = mapped_column(BigInteger)
     expires_at: Mapped[int] = mapped_column(BigInteger, index=True)

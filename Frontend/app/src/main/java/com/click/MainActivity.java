@@ -51,8 +51,8 @@ public class MainActivity extends AppCompatActivity {
                 email.requestFocus();
                 return;
             }
-            if (passwordValue.length() < 12) {
-                password.setError("비밀번호를 12글자 이상으로 입력해주세요.");
+            if (passwordValue.length() < 8) {
+                password.setError("비밀번호를 8글자 이상으로 입력해주세요.");
                 password.requestFocus();
                 return;
             }

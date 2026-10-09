@@ -1,5 +1,7 @@
 # FE Goal Type·Command Type 정의와 전달 계약
 
+2026-10-09 추가: 아래 v0.2 계약을 유지하면서, 백엔드 입력 해석을 사용할 수 있는 opt-in v0.3 계약을 구현했다. `resolve_goal`, `respond_result`, `adjust_task`의 요청·응답과 FE 구현 순서는 [v0.3 FE 인계 계약](agent-command-v03-fe-handoff.md)을 따른다. v0.3에서 Backend는 자연어 목표 후보를 제공하고 FE가 사용자 확인을 받은 뒤 start_task를 보낸다. Agent(1)의 화면 실행 루프와 목표 해석 계층은 별개다.
+
 ## 1. 결정과 적용 범위
 
 **Goal Typing과 Command Typing은 FE가 담당한다. Backend가 확정 요구에 맞는 Task Graph를 DB에서 선택·전달하고, AI-Agent(1)은 그 graph에 따른 Guide/Action·Verification·Re-plan을 담당한다.** 사용자가 말한 `comment type`은 **Command Type**, 즉 새 요청·중단·재개 등의 실행 제어 명령을 뜻한다.

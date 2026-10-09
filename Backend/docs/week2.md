@@ -56,7 +56,7 @@
 
 ## Android 연동 순서
 
-1. 가입 화면에서 register 호출 후 user_id·토큰을 수신한다. 기존 비밀번호 6자 검사를 서버 기준 12자로 맞춘다.
+1. 가입 화면에서 register 호출 후 user_id·토큰을 수신한다. 비밀번호 길이 검사를 서버 기준 최소 8자로 맞춘다.
 2. access token은 메모리 중심으로, refresh token은 Android 보안 저장소를 활용해 저장한다. LocalAccountStore의 평문 SharedPreferences에 비밀번호·토큰을 추가하지 않는다.
 3. 모든 보호 API에 Bearer 헤더를 넣는다. 앱 실행 시 저장된 로컬 프로필만으로 로그인 완료 처리하지 않는다.
 4. 401이면 refresh를 앱 내 단일 요청으로 직렬화하고 새 토큰 쌍을 함께 저장한다. 회전 실패·만료면 재로그인한다.

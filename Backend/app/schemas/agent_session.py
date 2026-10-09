@@ -20,3 +20,4 @@ class AgentSessionResponse(BaseModel):
     processing: bool
     requires_fresh_observation: bool
     requires_goal: bool
+    result_response: Literal["accepted", "rejected"] | None = None
