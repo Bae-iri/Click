@@ -8,7 +8,7 @@ from app.schemas.personalization import AgeGroup
 class Credentials(BaseModel):
     model_config = ConfigDict(extra="forbid")
     email: str = Field(min_length=3, max_length=254)
-    password: SecretStr = Field(min_length=12, max_length=128)
+    password: SecretStr = Field(min_length=8, max_length=128)
 
     @field_validator("email")
     @classmethod
@@ -41,4 +41,4 @@ class TokenResponse(BaseModel):
 class ChangePasswordRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     current_password: SecretStr = Field(min_length=1, max_length=128)
-    new_password: SecretStr = Field(min_length=12, max_length=128)
+    new_password: SecretStr = Field(min_length=8, max_length=128)

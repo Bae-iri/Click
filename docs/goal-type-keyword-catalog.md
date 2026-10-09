@@ -13,7 +13,7 @@
 
 | # | Goal Type | 표시 이름 | 키워드 그룹 | 실행 상태 | 위험도 |
 | ---: | --- | --- | --- | --- | --- |
-| 1 | `settings.font_size.increase` | 글자 크기 키우기 | (글자 / 글씨 / 글꼴 / 폰트 / font size / text size) + (키워 / 크게 / 확대 / 늘려 / 너무 작 / 작아서 / bigger / larger / increase) | approved (`MVP-01`) | normal |
+| 1 | `settings.font_size.increase` | 글자 크기 키우기 | (글자 / 글씨 / 글꼴 / 폰트 / font size / text size) + (키워 / 키우 / 크게 / 확대 / 늘려 / 너무 작 / 작아서 / bigger / larger / increase) | approved (`MVP-01`) | normal |
 | 2 | `settings.font_size.decrease` | 글자 크기 줄이기 | (글자 / 글씨 / 글꼴 / 폰트 / font size / text size) + (줄여 / 작게 / 축소 / 낮춰 / 너무 커 / 커서 / smaller / decrease) | approved (`MVP-02`) | normal |
 | 3 | `settings.wifi.enable` | 와이파이 켜기 | (와이파이 / wifi) + (켜 / 활성화 / 사용하게) | catalog_only | normal |
 | 4 | `settings.wifi.disable` | 와이파이 끄기 | (와이파이 / wifi) + (꺼 / 비활성화 / 해제) | catalog_only | normal |

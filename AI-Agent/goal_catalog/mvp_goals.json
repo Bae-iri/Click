@@ -16,7 +16,7 @@
       "slots": {"setting": "font_size", "direction": "increase"},
       "keyword_groups": [
         ["글자", "글씨", "글꼴", "폰트", "font size", "text size"],
-        ["키워", "크게", "확대", "늘려", "너무 작", "작아서", "bigger", "larger", "increase"]
+        ["키워", "키우", "크게", "확대", "늘려", "너무 작", "작아서", "bigger", "larger", "increase"]
       ],
       "utterances": ["글자가 너무 작아", "글자 크기 키워줘", "휴대폰 글씨를 크게 보고 싶어"]
     },

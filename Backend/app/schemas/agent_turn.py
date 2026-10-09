@@ -440,12 +440,12 @@ class ClassificationMetadata(BaseModel):
 
 class AgentCommandRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    contract_version: Literal["agent-fe-contract.v0.2"]
+    contract_version: Literal["agent-fe-contract.v0.2", "agent-fe-contract.v0.3"]
     request_id: str = Field(min_length=1, max_length=200)
     session_id: str = Field(min_length=1, max_length=200)
     expected_version: int = Field(ge=0)
     episode_id: str | None = Field(default=None, min_length=1, max_length=200)
-    command_type: Literal["start_task", "pause_task", "resume_task", "cancel_task", "replace_task", "observe", "respond_confirmation"]
+    command_type: Literal["start_task", "pause_task", "resume_task", "cancel_task", "replace_task", "observe", "respond_confirmation", "resolve_goal", "respond_result", "adjust_task"]
     goal: TypedGoalRequest | None = None
     device_context: DeviceContextRequest | None = None
     accessibility_tree: AccessibilityTree | None = None
@@ -455,20 +455,28 @@ class AgentCommandRequest(BaseModel):
     confirmation_id: str | None = Field(default=None, min_length=36, max_length=36)
     source_text: str | None = Field(default=None, max_length=500)
     classification: ClassificationMetadata | None = None
+    result_response: Literal["accepted", "rejected"] | None = Field(default=None, exclude=True)
     user_id: str | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def validate_command_shape(self) -> "AgentCommandRequest":
-        starts = self.command_type in {"start_task", "replace_task"}
+        if self.command_type in {"resolve_goal", "respond_result", "adjust_task"} and self.contract_version != "agent-fe-contract.v0.3":
+            raise ValueError("new commands require agent-fe-contract.v0.3")
+        if (self.command_type == "respond_result") != (self.result_response is not None):
+            raise ValueError("result_response is required only for respond_result")
+        if self.command_type == "resolve_goal":
+            if not self.source_text or not self.source_text.strip() or self.device_context is None:
+                raise ValueError("source_text and device_context are required for resolve_goal")
+        starts = self.command_type in {"start_task", "replace_task", "adjust_task"}
         if starts != (self.goal is not None):
-            raise ValueError("goal is required only for start_task and replace_task")
+            raise ValueError("goal is required only for start_task, replace_task and adjust_task")
         if starts and self.device_context is None:
             raise ValueError("device_context is required for start_task and replace_task")
-        if self.command_type == "start_task" and self.episode_id is not None:
-            raise ValueError("episode_id must be omitted for start_task")
-        if self.command_type != "start_task" and self.episode_id is None:
+        if self.command_type in {"start_task", "resolve_goal"} and self.episode_id is not None:
+            raise ValueError("episode_id must be omitted before starting a task")
+        if self.command_type not in {"start_task", "resolve_goal"} and self.episode_id is None:
             raise ValueError("episode_id is required after start_task")
-        needs_screen = self.command_type in {"start_task", "replace_task", "resume_task", "observe", "respond_confirmation"}
+        needs_screen = self.command_type in {"start_task", "replace_task", "adjust_task", "resume_task", "observe", "respond_confirmation"}
         if needs_screen and self.accessibility_tree is None and self.vision_snapshot is None:
             raise ValueError("a screen observation is required for this command")
         if self.command_type == "respond_confirmation":
@@ -491,7 +499,7 @@ class GraphReference(BaseModel):
 
 
 class AgentCommandResponse(BaseModel):
-    contract_version: Literal["agent-fe-contract.v0.2"] = "agent-fe-contract.v0.2"
+    contract_version: Literal["agent-fe-contract.v0.2", "agent-fe-contract.v0.3"] = "agent-fe-contract.v0.2"
     request_id: str
     session_id: str
     session_version: int
@@ -507,3 +515,15 @@ class AgentCommandResponse(BaseModel):
     guide_command: GuideCommandResponse | None = None
     message: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentGoalResolutionResponse(BaseModel):
+    contract_version: Literal["agent-fe-contract.v0.3"] = "agent-fe-contract.v0.3"
+    request_id: str
+    session_id: str
+    session_version: int
+    response_type: Literal["goal_resolution"] = "goal_resolution"
+    resolution_status: Literal["confirmation_required", "needs_clarification", "unsupported"]
+    goal: TypedGoalRequest | None = None
+    display_name: str | None = None
+    message: str

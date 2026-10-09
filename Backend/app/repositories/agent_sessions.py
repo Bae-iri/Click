@@ -103,6 +103,14 @@ class AgentSessionRepository:
                     self.conflict("STALE_VERSION")
                 if previous and previous.version != row.version + 1:
                     self.conflict("STALE_VERSION")
+                # Queue claim creates an empty version-0 session before FE confirms
+                # its goal. Initialize that session just like a direct typed start.
+                if command_type == "start_task" and row.version == 0 and row.episode_id is None:
+                    row.episode_id = str(uuid4())
+                    row.accepted_goal_type = request.goal.goal_type
+                    row.goal = request.goal.model_dump(mode="json")
+                    row.device_context = request.device_context.model_dump(mode="json")
+                    db.flush()
                 token = str(uuid4())
                 version = row.version
                 changed = db.execute(update(AgentSession).where(AgentSession.id == row.id,
@@ -257,6 +265,61 @@ class AgentSessionRepository:
                 query = query.where(AgentTurn.session_id == session_id)
             return db.scalar(query) is not None
 
+    def resolution_version(self, request):
+        now = int(self.clock())
+        with self.factory() as db:
+            self.guard_voice_request(db, request, now)
+            row = self.owned(db, request.session_id, request.user_id)
+            self.expire(db, row, now)
+            if row.version != request.expected_version:
+                self.conflict("STALE_VERSION")
+            if row.version != 0 or row.episode_id is not None or row.status != "IN_PROGRESS":
+                self.conflict("COMMAND_NOT_ALLOWED")
+            return row.version
+
+    def acknowledge_result(self, request):
+        canonical = request.model_dump(mode="json")
+        canonical["result_response"] = request.result_response
+        import json
+        from hashlib import sha256
+        digest = sha256(json.dumps(canonical, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+        now = int(self.clock())
+        with self.factory() as db:
+            # Use the same user-first lock order as queue operations.
+            if db.execute(update(User).where(User.id == request.user_id).values(id=request.user_id)).rowcount != 1:
+                raise HTTPException(401)
+            row = self.owned(db, request.session_id, request.user_id)
+            previous = db.scalar(select(AgentTurn).where(AgentTurn.user_id == request.user_id,
+                AgentTurn.request_id == request.request_id))
+            if previous:
+                if previous.session_id != row.id or previous.request_hash != digest:
+                    self.conflict("REQUEST_ID_REUSED")
+                if previous.version != row.version:
+                    self.conflict("STALE_REPLAY")
+                if previous.response and "_result" in previous.response:
+                    return deepcopy(previous.response["_result"])
+                self.conflict("COMMAND_NOT_ALLOWED")
+            if row.episode_id != request.episode_id:
+                self.conflict("EPISODE_MISMATCH")
+            if row.version != request.expected_version:
+                self.conflict("STALE_VERSION")
+            if row.status != "COMPLETED" or not row.graph_hash or row.result_response is not None:
+                self.conflict("COMMAND_NOT_ALLOWED")
+            changed = db.execute(update(AgentSession).where(AgentSession.id == row.id,
+                AgentSession.version == request.expected_version, AgentSession.status == "COMPLETED",
+                AgentSession.result_response.is_(None)).values(result_response=request.result_response,
+                version=row.version + 1, updated_at=now))
+            if changed.rowcount != 1:
+                self.conflict("STALE_VERSION")
+            db.refresh(row)
+            result = dict(episode_id=row.episode_id, goal_type=row.accepted_goal_type,
+                status=row.status, version=row.version, task_id=row.task_id,
+                graph_version=row.graph_version, graph_hash=row.graph_hash)
+            db.add(AgentTurn(session_id=row.id, user_id=request.user_id, request_id=request.request_id,
+                request_hash=digest, version=row.version, response={"_result": result}, created_at=now))
+            db.commit()
+            return result
+
     def apply_typed_control(self, request, graph_hash, request_hash):
         now = int(self.clock())
         with self.factory() as db:
@@ -326,12 +389,15 @@ class AgentSessionRepository:
     def prepare_replace(self, request):
         now = int(self.clock())
         with self.factory() as db:
+            self.guard_voice_request(db, request, now)
             row = self.owned(db, request.session_id, request.user_id)
             self.expire(db, row, now)
             if row.episode_id != request.episode_id:
                 self.conflict("EPISODE_MISMATCH")
             if row.version != request.expected_version or row.status not in ACTIVE + ("PAUSED",):
                 self.conflict("COMMAND_NOT_ALLOWED")
+            if row.lease_token and row.lease_until and row.lease_until > now:
+                self.conflict("TURN_IN_PROGRESS")
             new_episode = str(uuid4())
             row.episode_id = new_episode
             row.accepted_goal_type = request.goal.goal_type
@@ -339,6 +405,8 @@ class AgentSessionRepository:
             row.device_context = request.device_context.model_dump(mode="json")
             row.status = "IN_PROGRESS"
             row.task_id = row.state_id = row.last_guide_command_id = None
+            row.graph_hash = row.graph_version = None
+            row.result_response = None
             db.execute(delete(AgentCheckpoint).where(AgentCheckpoint.session_id == row.id))
             db.execute(delete(SafetyConfirmation).where(SafetyConfirmation.session_id == row.id))
             db.commit()
@@ -351,7 +419,8 @@ class AgentSessionRepository:
             created_at=row.created_at, updated_at=row.updated_at, expires_at=row.expires_at,
             processing=bool(row.lease_token and row.lease_until and row.lease_until > now),
             requires_fresh_observation=row.status in ACTIVE,
-            requires_goal=row.status in ACTIVE and db.get(AgentCheckpoint, row.id) is None)
+            requires_goal=row.status in ACTIVE and db.get(AgentCheckpoint, row.id) is None,
+            result_response=row.result_response)
 
     def cleanup(self, retention_seconds=86400):
         if retention_seconds < 0:

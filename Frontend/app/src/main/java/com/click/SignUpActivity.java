@@ -36,7 +36,7 @@ public final class SignUpActivity extends AppCompatActivity {
         EditText age = ClickUi.input(this, "나이", InputType.TYPE_CLASS_NUMBER);
         EditText password = ClickUi.input(this, "예) click12345678", ClickUi.passwordType());
         EditText passwordConfirm = ClickUi.input(this, "비밀번호를 다시 입력해주세요", ClickUi.passwordType());
-        TextView passwordGuide = ClickUi.body(this, "비밀번호를 12글자 이상으로 입력해주세요.");
+        TextView passwordGuide = ClickUi.body(this, "비밀번호를 8글자 이상으로 입력해주세요.");
         passwordGuide.setTextSize(13);
         Spinner job = new Spinner(this);
         String[] jobs = {
@@ -71,8 +71,8 @@ public final class SignUpActivity extends AppCompatActivity {
                 email.requestFocus();
                 return;
             }
-            if (passwordValue.length() < 12) {
-                password.setError("비밀번호를 12글자 이상으로 입력해주세요.");
+            if (passwordValue.length() < 8) {
+                password.setError("비밀번호를 8글자 이상으로 입력해주세요.");
                 password.requestFocus();
                 return;
             }

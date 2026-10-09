@@ -27,7 +27,7 @@ class AgentTurnService:
         if not 0 < self.timeout_seconds < self.repository.lease_seconds:
             raise ValueError("Turn timeout must be positive and shorter than the lease")
 
-    def handle_turn(self, request):
+    def handle_turn(self, request, *, command_context=None):
         selected_graph = None
         selected_reference = None
         if getattr(request, "command_type", None) in {"start_task", "replace_task"}:
@@ -51,6 +51,8 @@ class AgentTurnService:
             compatible_versions.add(graph_version())
         canonical = json.dumps(request.model_dump(mode="json"), sort_keys=True,
                                separators=(",", ":"), ensure_ascii=False)
+        if command_context is not None:
+            canonical += "|" + command_context
         digest = sha256(canonical.encode()).hexdigest()
         claim = self.repository.claim(request, digest)
         if "cached" in claim:
@@ -96,6 +98,26 @@ class AgentTurnService:
 
     def handle_command(self, request):
         command = request.command_type
+        if command == "resolve_goal":
+            from app.services.goal_resolution import GoalResolutionService
+            version = self.repository.resolution_version(request)
+            return GoalResolutionService(self.graphs).resolve(request, version)
+        if command == "respond_result":
+            details = self.repository.acknowledge_result(request)
+            return AgentCommandResponse(contract_version=request.contract_version,
+                request_id=request.request_id, session_id=request.session_id,
+                session_version=details["version"], episode_id=details["episode_id"], response_type="control",
+                command_result=CommandResult(command_type=command, status="applied"),
+                accepted_goal_type=details["goal_type"], task_id=details["task_id"],
+                graph_reference=GraphReference(task_id=details["task_id"],
+                    version=details["graph_version"], sha256=details["graph_hash"]),
+                task_status=details["status"], message="결과를 확인했어요." if request.result_response == "accepted"
+                    else "추가 조절을 원하시면 새 요청을 입력해 주세요.",
+                metadata={"result_response": request.result_response})
+        if command == "adjust_task":
+            current = self.repository.typed_details(request.session_id, request.user_id)
+            if not current["goal_type"] or current["goal_type"].rsplit(".", 1)[0] != request.goal.goal_type.rsplit(".", 1)[0]:
+                raise ValueError("adjust_task must keep the same setting; use replace_task for another goal")
         graph_hash = graph_version()
         if command in {"pause_task", "resume_task", "cancel_task"}:
             pinned = self.repository.typed_details(request.session_id, request.user_id)
@@ -110,6 +132,7 @@ class AgentTurnService:
                 "cancel_task": "작업을 취소했어요.",
             }
             return AgentCommandResponse(
+                contract_version=request.contract_version,
                 request_id=request.request_id, session_id=request.session_id,
                 session_version=details["version"], episode_id=details["episode_id"],
                 response_type="control",
@@ -120,7 +143,9 @@ class AgentTurnService:
                     version=details["graph_version"], sha256=details["graph_hash"]),
                 task_status=details["status"], message=messages[command],
             )
-        if command == "replace_task":
+        if command in {"replace_task", "adjust_task"}:
+            # Validate the new graph before altering the current episode.
+            self.graphs.select(request.goal)
             current = self.repository.typed_details(request.session_id, request.user_id)
             # Exact replace retries address the newly-created episode; the stored
             # AgentTurn hash still fences reuse with a different request body.
@@ -131,9 +156,10 @@ class AgentTurnService:
             else:
                 new_episode = self.repository.prepare_replace(request)
             request = request.model_copy(update={"episode_id": new_episode, "command_type": "observe"})
-        response = self.handle_turn(request)
+        response = self.handle_turn(request, command_context="adjust_task" if command == "adjust_task" else None)
         details = self.repository.typed_details(request.session_id, request.user_id)
         return AgentCommandResponse(
+            contract_version=request.contract_version,
             request_id=request.request_id, session_id=request.session_id,
             session_version=response.session_version,
             episode_id=details["episode_id"], response_type="guidance",

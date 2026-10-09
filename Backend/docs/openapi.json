@@ -95,7 +95,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -105,7 +105,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -256,7 +256,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -266,7 +266,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -417,7 +417,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -427,7 +427,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -561,7 +561,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -571,7 +571,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -720,7 +720,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -730,7 +730,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -884,7 +884,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -894,7 +894,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -1038,7 +1038,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -1048,7 +1048,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -1187,7 +1187,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -1197,7 +1197,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -1346,7 +1346,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -1356,7 +1356,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -1495,7 +1495,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -1505,7 +1505,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -1661,7 +1661,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -1671,7 +1671,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -1761,7 +1761,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AgentCommandResponse"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AgentCommandResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentGoalResolutionResponse"
+                    }
+                  ],
+                  "title": "Response Handle Command Api V1 Agent Commands Post"
                 }
               }
             }
@@ -1827,7 +1835,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -1837,7 +1845,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -2006,7 +2014,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -2016,7 +2024,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -2164,7 +2172,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -2174,7 +2182,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -2341,7 +2349,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -2351,7 +2359,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -2528,7 +2536,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -2538,7 +2546,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -2705,7 +2713,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -2715,7 +2723,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -2870,7 +2878,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -2880,7 +2888,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -3024,7 +3032,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -3034,7 +3042,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -3180,7 +3188,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -3190,7 +3198,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -3346,7 +3354,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -3356,7 +3364,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -3502,7 +3510,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -3512,7 +3520,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -3682,7 +3690,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -3692,7 +3700,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -3850,7 +3858,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -3860,7 +3868,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -4028,7 +4036,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -4038,7 +4046,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -4182,7 +4190,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -4192,7 +4200,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -4338,7 +4346,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -4348,7 +4356,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -4517,7 +4525,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -4527,7 +4535,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -4675,7 +4683,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -4685,7 +4693,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -4852,7 +4860,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -4862,7 +4870,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -5029,7 +5037,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -5039,7 +5047,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -5198,7 +5206,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -5208,7 +5216,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -5375,7 +5383,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -5385,7 +5393,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -5523,7 +5531,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -5533,7 +5541,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -5697,7 +5705,7 @@
                 }
               }
             },
-            "description": "Request Entity Too Large"
+            "description": "Content Too Large"
           },
           "422": {
             "content": {
@@ -5707,7 +5715,7 @@
                 }
               }
             },
-            "description": "Unprocessable Entity"
+            "description": "Unprocessable Content"
           },
           "429": {
             "content": {
@@ -5839,7 +5847,7 @@
             }
           },
           "413": {
-            "description": "Request Entity Too Large",
+            "description": "Content Too Large",
             "content": {
               "application/json": {
                 "schema": {
@@ -5849,7 +5857,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity",
+            "description": "Unprocessable Content",
             "content": {
               "application/json": {
                 "schema": {
@@ -6185,7 +6193,10 @@
         "properties": {
           "contract_version": {
             "type": "string",
-            "const": "agent-fe-contract.v0.2",
+            "enum": [
+              "agent-fe-contract.v0.2",
+              "agent-fe-contract.v0.3"
+            ],
             "title": "Contract Version"
           },
           "request_id": {
@@ -6227,7 +6238,10 @@
               "cancel_task",
               "replace_task",
               "observe",
-              "respond_confirmation"
+              "respond_confirmation",
+              "resolve_goal",
+              "respond_result",
+              "adjust_task"
             ],
             "title": "Command Type"
           },
@@ -6331,6 +6345,21 @@
               }
             ]
           },
+          "result_response": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "accepted",
+                  "rejected"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Response"
+          },
           "user_id": {
             "anyOf": [
               {
@@ -6358,7 +6387,10 @@
         "properties": {
           "contract_version": {
             "type": "string",
-            "const": "agent-fe-contract.v0.2",
+            "enum": [
+              "agent-fe-contract.v0.2",
+              "agent-fe-contract.v0.3"
+            ],
             "title": "Contract Version",
             "default": "agent-fe-contract.v0.2"
           },
@@ -6468,6 +6500,77 @@
         ],
         "title": "AgentCommandResponse"
       },
+      "AgentGoalResolutionResponse": {
+        "properties": {
+          "contract_version": {
+            "type": "string",
+            "const": "agent-fe-contract.v0.3",
+            "title": "Contract Version",
+            "default": "agent-fe-contract.v0.3"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "session_version": {
+            "type": "integer",
+            "title": "Session Version"
+          },
+          "response_type": {
+            "type": "string",
+            "const": "goal_resolution",
+            "title": "Response Type",
+            "default": "goal_resolution"
+          },
+          "resolution_status": {
+            "type": "string",
+            "enum": [
+              "confirmation_required",
+              "needs_clarification",
+              "unsupported"
+            ],
+            "title": "Resolution Status"
+          },
+          "goal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TypedGoalRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "session_id",
+          "session_version",
+          "resolution_status",
+          "message"
+        ],
+        "title": "AgentGoalResolutionResponse"
+      },
       "AgentSessionResponse": {
         "properties": {
           "session_id": {
@@ -6546,6 +6649,21 @@
           "requires_goal": {
             "type": "boolean",
             "title": "Requires Goal"
+          },
+          "result_response": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "accepted",
+                  "rejected"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Response"
           }
         },
         "type": "object",
@@ -6780,7 +6898,7 @@
           "new_password": {
             "type": "string",
             "maxLength": 128,
-            "minLength": 12,
+            "minLength": 8,
             "format": "password",
             "title": "New Password",
             "writeOnly": true
@@ -6959,7 +7077,7 @@
           "password": {
             "type": "string",
             "maxLength": 128,
-            "minLength": 12,
+            "minLength": 8,
             "format": "password",
             "title": "Password",
             "writeOnly": true
@@ -7508,7 +7626,7 @@
           "password": {
             "type": "string",
             "maxLength": 128,
-            "minLength": 12,
+            "minLength": 8,
             "format": "password",
             "title": "Password",
             "writeOnly": true
@@ -7562,7 +7680,7 @@
           "new_password": {
             "type": "string",
             "maxLength": 128,
-            "minLength": 12,
+            "minLength": 8,
             "format": "password",
             "title": "New Password",
             "writeOnly": true
@@ -7727,7 +7845,58 @@
               "settings.screen_lock.change",
               "settings.biometric.setup",
               "settings.apps.uninstall",
-              "settings.app_permissions.manage"
+              "settings.app_permissions.manage",
+              "settings.storage.cleanup",
+              "settings.talkback.enable",
+              "settings.talkback.disable",
+              "settings.magnification.enable",
+              "settings.magnification.disable",
+              "settings.language.change",
+              "settings.date_time.automatic.enable",
+              "settings.date_time.automatic.disable",
+              "settings.keyboard.change",
+              "settings.default_apps.change",
+              "settings.wifi.share",
+              "settings.wifi.saved_networks.view",
+              "settings.nfc.enable",
+              "settings.nfc.disable",
+              "settings.do_not_disturb.enable",
+              "settings.do_not_disturb.disable",
+              "settings.auto_rotate.enable",
+              "settings.auto_rotate.disable",
+              "settings.eye_comfort.enable",
+              "settings.eye_comfort.disable",
+              "settings.adaptive_brightness.enable",
+              "settings.adaptive_brightness.disable",
+              "settings.data_saver.enable",
+              "settings.data_saver.disable",
+              "settings.data_roaming.enable",
+              "settings.data_roaming.disable",
+              "settings.vpn.connect",
+              "settings.vpn.disconnect",
+              "settings.private_dns.change",
+              "settings.sim.manage",
+              "settings.hotspot.password.change",
+              "settings.wallpaper.change",
+              "settings.notification_sound.change",
+              "settings.battery_percentage.enable",
+              "settings.battery_percentage.disable",
+              "settings.battery_status.view",
+              "settings.app_cache.clear",
+              "settings.app_data.clear",
+              "settings.notification_history.view",
+              "settings.lockscreen_notifications.manage",
+              "settings.color_inversion.enable",
+              "settings.color_inversion.disable",
+              "settings.captions.enable",
+              "settings.captions.disable",
+              "settings.mono_audio.enable",
+              "settings.mono_audio.disable",
+              "settings.backup.enable",
+              "settings.backup.disable",
+              "settings.software_update.check",
+              "settings.factory_reset",
+              "settings.device_name.change"
             ],
             "title": "Goal Type"
           },
@@ -7813,6 +7982,14 @@
           "evidence_count": {
             "type": "integer",
             "title": "Evidence Count"
+          },
+          "state_difficulties": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "object",
+            "title": "State Difficulties"
           },
           "updated_at": {
             "type": "string",
