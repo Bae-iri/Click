@@ -18,6 +18,7 @@ from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
 from app.schemas.guidance import GuideCommandResponse
 from app.repositories.sessions import SessionNotFoundError
 from ai_agent.runtime.progress import graph_progress
+from ai_agent.telemetry.execution_events import produce
 
 
 class RuntimeAgentAdapter:
@@ -31,6 +32,7 @@ class RuntimeAgentAdapter:
         self.runtime = ClickAgentEngine(session_store=session_store, task_graphs=graphs)
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
+        previous = self.runtime.session_store.get(request.session_id)
         raw_goal = getattr(request, "raw_goal", None)
         tree = request.accessibility_tree
         vision_snapshot = request.vision_snapshot
@@ -158,6 +160,10 @@ class RuntimeAgentAdapter:
         }.get(command_type, "IN_PROGRESS")
         step, total_steps = graph_progress(graph, result.current_state_id, status == "COMPLETED")
         runtime_session = self.runtime.session_store.get(request.session_id)
+        target = next((node for node in tree.nodes if result.match_result and node.node_id == result.match_result.target_node_id), None) if tree else None
+        name = (target.class_name or "").lower() if target else ""
+        role = "slider" if "seekbar" in name else "button" if "button" in name else "menu_item" if target and target.clickable else "other"
+        self.execution_event = produce(result, previous, runtime_session, role)
         slider_values = (
             runtime_session.last_snapshot.slider_values
             if runtime_session and runtime_session.last_snapshot else {}

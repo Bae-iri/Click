@@ -47,6 +47,10 @@ class PersonalizationRepository:
 
     def record_consent(self, user_id: str, purpose: str, consented: bool, policy_version: str) -> Consent:
         self.lock_user(user_id)
+        if purpose == "model_training" and not consented:
+            from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
+            self.session.execute(delete(RuntimeEventConsumption).where(RuntimeEventConsumption.event_id.in_(
+                select(RuntimeEvent.id).where(RuntimeEvent.user_id == user_id))))
         if purpose == "personalization" and not consented:
             self.session.execute(delete(UIEvent).where(UIEvent.user_id == user_id))
             self.session.execute(update(UserUIProfile).where(UserUIProfile.user_id == user_id).values(
