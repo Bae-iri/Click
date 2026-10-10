@@ -102,8 +102,21 @@ class AgentTurnService:
                     "target_node_id": guide.target_node_id, "target_bounds": list(guide.target_bounds or ()),
                     "task_id": response.task_id, "state_id": response.state_id,
                 }
+            recovery_plan = None
+            execution_event = getattr(engine, "execution_event", None)
+            if execution_event and selected_reference:
+                execution_event = {**execution_event, "graph_hash": selected_reference["sha256"]}
+            if selected_graph and checkpoint:
+                from app.services.runtime_recovery import prepare
+                recovery_plan = prepare(claim["recovery"], checkpoint, selected_graph,
+                    selected_reference, response, self.graphs)
+                if recovery_plan.get("checkpoint"):
+                    checkpoint = recovery_plan["checkpoint"]
+                    selected_reference = recovery_plan["graph_reference"]
+                    checkpoint_graph_version = selected_reference["sha256"]
             self.repository.finish(request, claim, response, checkpoint, SCHEMA_VERSION,
-                checkpoint_graph_version, graph_reference=selected_reference)
+                checkpoint_graph_version, graph_reference=selected_reference, recovery_plan=recovery_plan,
+                execution_event=execution_event)
         except Exception:
             self.repository.release(request.session_id, claim["token"])
             raise

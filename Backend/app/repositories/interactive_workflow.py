@@ -77,6 +77,7 @@ def apply(repository, request, graph_reference=None):
             row.graph_version = graph_reference["version"]
             row.status = "IN_PROGRESS"
             row.result_response = None
+            row.recovery = None
             flow = {"version": "interactive.v1"}
         row.workflow = flow
         row.version += 1
@@ -91,5 +92,9 @@ def apply(repository, request, graph_reference=None):
                       graph_version=row.graph_version, graph_hash=row.graph_hash, workflow=flow)
         db.add(AgentTurn(session_id=row.id, user_id=request.user_id, request_id=request.request_id,
                          request_hash=digest, version=row.version, response={"_workflow": result}, created_at=now))
+        from app.repositories.runtime_events import append
+        append(db, row, request.request_id, {"command_type": request.command_type,
+            "user_result": request.user_result, "adjustment_reason": request.adjustment_reason,
+            "status": row.status}, kind="control", now=now)
         db.commit()
         return result

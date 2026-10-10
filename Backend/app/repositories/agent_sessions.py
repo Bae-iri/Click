@@ -58,8 +58,6 @@ class AgentSessionRepository:
                     raise HTTPException(403)
                 command_type = getattr(request, "command_type", None)
                 episode_id = getattr(request, "episode_id", None)
-                if row is not None and episode_id is not None and row.episode_id != episode_id:
-                    self.conflict("EPISODE_MISMATCH")
                 previous = db.scalar(select(AgentTurn).where(AgentTurn.user_id == request.user_id,
                                                             AgentTurn.request_id == request.request_id))
                 if previous and (previous.session_id != request.session_id or previous.request_hash != request_hash):
@@ -93,6 +91,8 @@ class AgentSessionRepository:
                     return {"cached": deepcopy(previous.response),
                         "schema_version": saved.schema_version if saved else None,
                         "graph_version": saved.graph_version if saved else None}
+                if episode_id is not None and row.episode_id != episode_id:
+                    self.conflict("EPISODE_MISMATCH")
                 if command_type == "start_task" and row.version > 0:
                     self.conflict("ACTIVE_TASK_EXISTS" if row.status in ACTIVE else "SESSION_TERMINATED")
                 if row.status in {"WAITING_RESULT", "WAITING_ADJUSTMENT"}:
@@ -131,6 +131,7 @@ class AgentSessionRepository:
                     db.add(previous)
                 checkpoint = db.get(AgentCheckpoint, row.id)
                 result = {"token": token, "version": version,
+                    "episode_id": row.episode_id, "recovery": deepcopy(row.recovery or {}),
                     "workflow": deepcopy(row.workflow or {}),
                     "checkpoint": deepcopy(checkpoint.state) if checkpoint else None,
                     "schema_version": checkpoint.schema_version if checkpoint else None,
@@ -150,7 +151,7 @@ class AgentSessionRepository:
                 raise
 
     def finish(self, request, claim, response, checkpoint, schema_version, graph_version,
-               graph_reference=None):
+               graph_reference=None, recovery_plan=None, execution_event=None):
         now = int(self.clock())
         with self.factory() as db:
             self.guard_voice_request(db, request, now)
@@ -182,14 +183,27 @@ class AgentSessionRepository:
                 db.delete(stored)
             turn = db.scalar(select(AgentTurn).where(AgentTurn.user_id == request.user_id,
                                                      AgentTurn.request_id == request.request_id))
-            save_confirmation(db, request, response, now)
+            if recovery_plan and recovery_plan.get("episode_id"):
+                db.execute(delete(SafetyConfirmation).where(SafetyConfirmation.session_id == request.session_id))
+            else:
+                save_confirmation(db, request, response, now)
             turn.response = response.model_dump(mode="json")
             row = db.get(AgentSession, request.session_id)
+            if recovery_plan:
+                row.recovery = recovery_plan["recovery"]
+                if recovery_plan.get("episode_id"):
+                    row.episode_id = recovery_plan["episode_id"]
+                    row.last_guide_command_id = None
             if response.task_status == "WAITING_RESULT":
                 row.workflow = {**(row.workflow or {}), "result_prompt": response.metadata["result_prompt"]}
             if graph_reference is not None:
                 row.graph_version = graph_reference["version"]
                 row.graph_hash = graph_reference["sha256"]
+            from app.repositories.runtime_events import append
+            append(db, row, request.request_id, {"runtime": execution_event or {},
+                "reselection": response.metadata.get("reselection")}, now=now,
+                episode_id=claim["episode_id"], graph_hash=(execution_event or {}).get("graph_hash"),
+                kind="reselection" if response.metadata.get("reselection") else "turn")
             db.commit()
 
     def pin_graph(self, session_id, user_id, reference):
@@ -325,6 +339,9 @@ class AgentSessionRepository:
                 graph_version=row.graph_version, graph_hash=row.graph_hash)
             db.add(AgentTurn(session_id=row.id, user_id=request.user_id, request_id=request.request_id,
                 request_hash=digest, version=row.version, response={"_result": result}, created_at=now))
+            from app.repositories.runtime_events import append
+            append(db, row, request.request_id, {"command_type": "respond_result",
+                "result_response": request.result_response, "status": row.status}, kind="control", now=now)
             db.commit()
             return result
 
@@ -396,6 +413,9 @@ class AgentSessionRepository:
             db.add(AgentTurn(session_id=row.id, user_id=request.user_id,
                 request_id=request.request_id, request_hash=request_hash,
                 version=row.version, response={"_control": result}, created_at=now))
+            if changed:
+                from app.repositories.runtime_events import append
+                append(db, row, request.request_id, {"command_type": command, "status": row.status}, kind="control", now=now)
             db.commit()
             return result
 
@@ -420,6 +440,7 @@ class AgentSessionRepository:
             row.task_id = row.state_id = row.last_guide_command_id = None
             row.graph_hash = row.graph_version = None
             row.result_response = None
+            row.recovery = None
             if row.workflow:
                 row.workflow = {"version": row.workflow["version"]}
             db.execute(delete(AgentCheckpoint).where(AgentCheckpoint.session_id == row.id))
