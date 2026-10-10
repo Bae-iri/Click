@@ -37,8 +37,11 @@ public final class AgentTurnGateway {
     }
 
     private AgentTurnContract.Response execute(AgentTurnContract.Request request) throws Exception {
-        if (!loadContract().supports(request.commandType()))
+        AgentServerContract server = loadContract();
+        if (!server.supports(request.commandType()))
             throw new java.io.IOException("현재 서버에서 이 작업 단계를 지원하지 않아요.");
+        request.contractVersion = server.contractVersion;
+        request.interactiveWorkflow = server.interactiveWorkflow;
         HttpResult result = http.post(AgentTurnContract.PATH, request.toJson());
         return new AgentTurnContract.Response(result.body);
     }
@@ -74,6 +77,10 @@ public final class AgentTurnGateway {
                 org.json.JSONObject metadata = new org.json.JSONObject().put("task_outcome", outcome);
                 if (outcome != null && "WAITING_RESULT".equals(state.optString("status")))
                     metadata.put("result_prompt", outcome.optJSONObject("prompt"));
+                if (state.optJSONObject("result_prompt") != null)
+                    metadata.put("result_prompt", state.getJSONObject("result_prompt"));
+                if (state.optJSONObject("follow_up") != null)
+                    metadata.put("follow_up", state.getJSONObject("follow_up"));
                 AgentTurnContract.Response response = new AgentTurnContract.Response(new org.json.JSONObject()
                         .put("request_id", java.util.UUID.randomUUID().toString())
                         .put("session_id", sessionId).put("session_version", state.getInt("version"))

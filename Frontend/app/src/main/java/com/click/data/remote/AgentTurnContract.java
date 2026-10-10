@@ -14,7 +14,7 @@ import java.util.UUID;
 
 public final class AgentTurnContract {
     public static final String PATH = "/api/v1/agent/commands";
-    public static final String CONTRACT_VERSION = "agent-fe-contract.v0.2";
+    public static final String CONTRACT_VERSION = "agent-fe-contract.v0.3";
 
     private AgentTurnContract() {}
 
@@ -35,6 +35,8 @@ public final class AgentTurnContract {
         public String resultPromptId;
         public String userResult;
         public String adjustmentReason;
+        public String contractVersion = CONTRACT_VERSION;
+        public boolean interactiveWorkflow = true;
         /** Optional {@code user_action_event} payload, see {@link AgentActionEvents}. */
         public JSONObject userActionEvent;
         /** Optional {@code vision_snapshot} fallback payload. */
@@ -111,13 +113,15 @@ public final class AgentTurnContract {
 
         public String toJson() throws JSONException {
             JSONObject object = new JSONObject();
-            object.put("contract_version", CONTRACT_VERSION);
+            object.put("contract_version", contractVersion);
             object.put("request_id", requestId);
             object.put("session_id", sessionId);
             object.put("expected_version", expectedVersion == null ? 0 : expectedVersion);
             String commandType = explicitCommandType != null ? explicitCommandType : rawGoal != null ? "start_task"
                     : userConfirmation != null ? "respond_confirmation" : "observe";
             object.put("command_type", commandType);
+            if ("start_task".equals(commandType) && interactiveWorkflow && CONTRACT_VERSION.equals(contractVersion))
+                object.put("workflow_version", "interactive.v1");
             if (episodeId != null) object.put("episode_id", episodeId);
             if (rawGoal != null) {
                 object.put("source_text", rawGoal);
@@ -146,8 +150,11 @@ public final class AgentTurnContract {
             if (userActionEvent != null) object.put("user_action_event", userActionEvent);
             if (visionSnapshot != null) object.put("vision_snapshot", visionSnapshot);
             if (visionFailureCode != null) object.put("vision_failure", visionFailureCode);
-            if (goalResolutionId != null) object.put("goal_resolution_id", goalResolutionId);
-            if (clarificationChoice != null) object.put("clarification_choice", clarificationChoice);
+            if ("resolve_goal".equals(commandType)) {
+                object.put("device_context", new JSONObject().put("platform", "android")
+                        .put("locale", java.util.Locale.getDefault().toLanguageTag()));
+                if (clarificationChoice != null) object.put("source_text", rawGoal + " " + clarificationChoice);
+            }
             if (resultPromptId != null) object.put("result_prompt_id", resultPromptId);
             if (userResult != null) object.put("user_result", userResult);
             if (adjustmentReason != null) object.put("adjustment_reason", adjustmentReason);

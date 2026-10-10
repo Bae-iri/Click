@@ -10,10 +10,14 @@ import java.util.Set;
 public final class AgentServerContract {
     private final Set<String> commands;
     private final Set<String> goals;
+    public final String contractVersion;
+    public final boolean interactiveWorkflow;
 
-    private AgentServerContract(Set<String> commands, Set<String> goals) {
+    private AgentServerContract(Set<String> commands, Set<String> goals, String version, boolean interactive) {
         this.commands = commands;
         this.goals = goals;
+        this.contractVersion = version;
+        this.interactiveWorkflow = interactive;
     }
 
     public boolean supports(String command) { return commands.contains(command); }
@@ -25,9 +29,11 @@ public final class AgentServerContract {
                 .getJSONObject("application/json").getJSONObject("schema");
         JSONObject properties = resolve(document, request).getJSONObject("properties");
         JSONObject version = properties.getJSONObject("contract_version");
-        if (!AgentTurnContract.CONTRACT_VERSION.equals(version.optString("const"))
-                && !strings(version.optJSONArray("enum")).contains(AgentTurnContract.CONTRACT_VERSION))
-            throw new JSONException("Unsupported agent contract version");
+        Set<String> versions = strings(version.optJSONArray("enum"));
+        if (version.has("const")) versions.add(version.getString("const"));
+        String selected = versions.contains(AgentTurnContract.CONTRACT_VERSION) ? AgentTurnContract.CONTRACT_VERSION
+                : versions.contains("agent-fe-contract.v0.2") ? "agent-fe-contract.v0.2" : null;
+        if (selected == null) throw new JSONException("Unsupported agent contract version");
         Set<String> commands = strings(properties.getJSONObject("command_type").getJSONArray("enum"));
         if (!commands.contains("start_task") || !commands.contains("cancel_task"))
             throw new JSONException("Agent start/cancel capabilities are missing");
@@ -41,7 +47,8 @@ public final class AgentServerContract {
         }
         Set<String> goals = strings(resolve(document, goal).getJSONObject("properties")
                 .getJSONObject("goal_type").getJSONArray("enum"));
-        return new AgentServerContract(commands, goals);
+        return new AgentServerContract(commands, goals, selected,
+                AgentTurnContract.CONTRACT_VERSION.equals(selected) && properties.has("workflow_version"));
     }
 
     private static JSONObject resolve(JSONObject document, JSONObject schema) throws JSONException {

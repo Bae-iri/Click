@@ -13,6 +13,7 @@ from app.repositories.personalization import PersonalizationRepository, UserNotF
 from app.schemas.agent_turn import AgentTurnResponse
 from app.schemas.agent_turn import AgentCommandResponse, CommandResult, GraphReference
 from app.repositories.task_graphs import TaskGraphRepository
+from uuid import uuid4
 
 
 class AgentTurnService:
@@ -75,10 +76,23 @@ class AgentTurnService:
                 store.update(request.session_id, pending_attempt=None, pending_transition_id=None)
             engine = self.engine_factory(session_store=store, task_graph=selected_graph) \
                 if selected_graph is not None else self.engine_factory(session_store=store)
-            response = safe_response(execute(lambda: engine.handle_turn(request), self.timeout_seconds))
+            runtime_request = request
+            if claim["checkpoint"] is None and getattr(request, "goal", None) is None and selected_graph:
+                from app.schemas.agent_turn import TypedGoalRequest, DeviceContextRequest
+                context = dict(details["device_context"])
+                if request.accessibility_tree and request.accessibility_tree.package_name:
+                    context["foreground_package"] = request.accessibility_tree.package_name
+                runtime_request = request.model_copy(update={"goal": TypedGoalRequest(**details["goal"]),
+                    "device_context": DeviceContextRequest(**context)})
+            response = safe_response(execute(lambda: engine.handle_turn(runtime_request), self.timeout_seconds))
             validate_output(request, response, approved, checkpoint=claim["checkpoint"],
                             now=int(self.repository.clock()))
             response.session_version = claim["version"] + 1
+            workflow = claim["workflow"]
+            if workflow.get("version") == "interactive.v1" and response.task_status == "COMPLETED":
+                response.task_status = "WAITING_RESULT"
+                response.metadata["result_prompt"] = {"id": str(uuid4()),
+                    "message": "원하는 결과가 되었나요?", "expires_at": int(self.repository.clock()) + 120}
             checkpoint = capture(store, request.session_id, selected_graph)
             if approved and checkpoint and checkpoint.get("pending_attempt"):
                 guide = response.guide_command
@@ -98,10 +112,35 @@ class AgentTurnService:
 
     def handle_command(self, request):
         command = request.command_type
+        if request.user_result is not None or request.adjustment_reason is not None:
+            from app.repositories.interactive_workflow import apply
+            from app.schemas.agent_turn import TypedGoalRequest
+            reference = None
+            if request.adjustment_reason in {"too_small", "too_large"} and not self.repository.has_request(request.user_id, request.request_id):
+                direction = "increase" if request.adjustment_reason == "too_small" else "decrease"
+                goal = TypedGoalRequest(catalog_version="2.1.0", goal_type="settings.font_size." + direction,
+                    target_app="android_settings", slots={"setting": "font_size", "direction": direction})
+                _, reference = self.graphs.select(goal)
+            result = apply(self.repository, request, reference)
+            flow = result["workflow"]
+            return AgentCommandResponse(contract_version=request.contract_version, request_id=request.request_id,
+                session_id=request.session_id, session_version=result["version"], episode_id=result["episode_id"],
+                response_type="control", command_result=CommandResult(command_type=command, status="applied"),
+                accepted_goal_type=result["goal_type"], task_id=result["task_id"],
+                graph_reference=GraphReference(task_id=result["task_id"], version=result["graph_version"],
+                    sha256=result["graph_hash"]), task_status=result["status"],
+                message="결과를 확인했어요." if result["status"] == "COMPLETED" else
+                    "현재 화면에서 다시 안내할게요." if result["status"] == "IN_PROGRESS" else
+                    (flow.get("follow_up") or {}).get("message", "요청을 종료했어요."),
+                metadata={key: flow[key] for key in ("user_result", "follow_up", "result_prompt") if key in flow})
         if command == "resolve_goal":
             from app.services.goal_resolution import GoalResolutionService
             version = self.repository.resolution_version(request)
-            return GoalResolutionService(self.graphs).resolve(request, version)
+            response = GoalResolutionService(self.graphs).resolve(request, version)
+            candidates = [{"goal": response.goal.model_dump(mode="json"), "label": response.display_name}] if response.goal else []
+            response.metadata["goal_selection"] = {"id": request.request_id,
+                "message": response.message, "candidates": candidates}
+            return response
         if command == "respond_result":
             details = self.repository.acknowledge_result(request)
             return AgentCommandResponse(contract_version=request.contract_version,
@@ -142,6 +181,8 @@ class AgentTurnService:
                 graph_reference=GraphReference(task_id=details["task_id"],
                     version=details["graph_version"], sha256=details["graph_hash"]),
                 task_status=details["status"], message=messages[command],
+                metadata={key: value for key, value in details.get("workflow", {}).items()
+                    if key in {"result_prompt", "follow_up"}},
             )
         if command in {"replace_task", "adjust_task"}:
             # Validate the new graph before altering the current episode.

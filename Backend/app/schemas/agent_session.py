@@ -9,7 +9,7 @@ class CancelSessionRequest(BaseModel):
 
 class AgentSessionResponse(BaseModel):
     session_id: str
-    status: Literal["IN_PROGRESS", "WAITING_CONFIRMATION", "COMPLETED", "BLOCKED", "CANCELLED", "EXPIRED"]
+    status: Literal["IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "WAITING_ADJUSTMENT", "PAUSED", "COMPLETED", "BLOCKED", "CANCELLED", "EXPIRED"]
     version: int
     task_id: str | None
     state_id: str | None
@@ -21,3 +21,5 @@ class AgentSessionResponse(BaseModel):
     requires_fresh_observation: bool
     requires_goal: bool
     result_response: Literal["accepted", "rejected"] | None = None
+    result_prompt: dict | None = None
+    follow_up: dict | None = None
