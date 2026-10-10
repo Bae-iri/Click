@@ -6360,6 +6360,81 @@
             ],
             "title": "Result Response"
           },
+          "user_result": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "satisfied",
+                  "needs_help",
+                  "stopped",
+                  "no_response"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Result"
+          },
+          "result_prompt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Prompt Id"
+          },
+          "adjustment_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "too_small",
+                  "too_large",
+                  "other",
+                  "unsure"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustment Reason"
+          },
+          "workflow_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "interactive.v1"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Version"
+          },
+          "vision_failure": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "capture_failed",
+                  "masking_failed",
+                  "ocr_failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vision Failure"
+          },
           "user_id": {
             "anyOf": [
               {
@@ -6559,6 +6634,17 @@
           "message": {
             "type": "string",
             "title": "Message"
+          },
+          "task_status": {
+            "type": "string",
+            "const": "IN_PROGRESS",
+            "title": "Task Status",
+            "default": "IN_PROGRESS"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata"
           }
         },
         "type": "object",
@@ -6582,6 +6668,9 @@
             "enum": [
               "IN_PROGRESS",
               "WAITING_CONFIRMATION",
+              "WAITING_RESULT",
+              "WAITING_ADJUSTMENT",
+              "PAUSED",
               "COMPLETED",
               "BLOCKED",
               "CANCELLED",
@@ -6664,6 +6753,30 @@
               }
             ],
             "title": "Result Response"
+          },
+          "result_prompt": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Prompt"
+          },
+          "follow_up": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up"
           }
         },
         "type": "object",
@@ -6842,6 +6955,7 @@
             "enum": [
               "IN_PROGRESS",
               "WAITING_CONFIRMATION",
+              "WAITING_RESULT",
               "COMPLETED",
               "BLOCKED"
             ],

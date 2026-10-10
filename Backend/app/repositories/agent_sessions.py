@@ -14,7 +14,7 @@ from app.models.lifecycle import SafetyConfirmation
 from app.models.voice_queue import VoiceRequest
 from app.models.personalization import User
 
-ACTIVE = ("IN_PROGRESS", "WAITING_CONFIRMATION")
+ACTIVE = ("IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "WAITING_ADJUSTMENT")
 
 
 class AgentSessionRepository:
@@ -95,6 +95,8 @@ class AgentSessionRepository:
                         "graph_version": saved.graph_version if saved else None}
                 if command_type == "start_task" and row.version > 0:
                     self.conflict("ACTIVE_TASK_EXISTS" if row.status in ACTIVE else "SESSION_TERMINATED")
+                if row.status in {"WAITING_RESULT", "WAITING_ADJUSTMENT"}:
+                    self.conflict("COMMAND_NOT_ALLOWED")
                 if row.status not in ACTIVE:
                     self.conflict("SESSION_CLOSED")
                 if (row.version > 0 and request.expected_version != row.version) or (
@@ -112,6 +114,8 @@ class AgentSessionRepository:
                     row.device_context = request.device_context.model_dump(mode="json")
                     db.flush()
                 token = str(uuid4())
+                if command_type == "start_task" and getattr(request, "workflow_version", None):
+                    row.workflow = {"version": request.workflow_version}
                 version = row.version
                 changed = db.execute(update(AgentSession).where(AgentSession.id == row.id,
                     AgentSession.version == version, AgentSession.status.in_(ACTIVE),
@@ -127,6 +131,7 @@ class AgentSessionRepository:
                     db.add(previous)
                 checkpoint = db.get(AgentCheckpoint, row.id)
                 result = {"token": token, "version": version,
+                    "workflow": deepcopy(row.workflow or {}),
                     "checkpoint": deepcopy(checkpoint.state) if checkpoint else None,
                     "schema_version": checkpoint.schema_version if checkpoint else None,
                     "graph_version": checkpoint.graph_version if checkpoint else None}
@@ -180,6 +185,8 @@ class AgentSessionRepository:
             save_confirmation(db, request, response, now)
             turn.response = response.model_dump(mode="json")
             row = db.get(AgentSession, request.session_id)
+            if response.task_status == "WAITING_RESULT":
+                row.workflow = {**(row.workflow or {}), "result_prompt": response.metadata["result_prompt"]}
             if graph_reference is not None:
                 row.graph_version = graph_reference["version"]
                 row.graph_hash = graph_reference["sha256"]
@@ -249,6 +256,7 @@ class AgentSessionRepository:
                 "episode_id": row.episode_id,
                 "goal_type": row.accepted_goal_type,
                 "goal": deepcopy(row.goal),
+                "workflow": deepcopy(row.workflow or {}),
                 "device_context": deepcopy(row.device_context),
                 "status": row.status,
                 "version": row.version,
@@ -341,6 +349,8 @@ class AgentSessionRepository:
                 if row.status == "PAUSED":
                     changed = False
                 elif row.status in ACTIVE:
+                    if row.workflow:
+                        row.workflow = {**row.workflow, "paused_status": row.status}
                     row.status = "PAUSED"
                     changed = True
                 else:
@@ -348,7 +358,9 @@ class AgentSessionRepository:
             elif command == "resume_task":
                 if row.status != "PAUSED":
                     self.conflict("COMMAND_NOT_ALLOWED")
-                row.status = "IN_PROGRESS"
+                row.status = (row.workflow or {}).get("paused_status", "IN_PROGRESS")
+                if row.workflow:
+                    row.workflow = {key: value for key, value in row.workflow.items() if key != "paused_status"}
                 changed = True
             elif command == "cancel_task":
                 if row.status == "CANCELLED":
@@ -379,6 +391,7 @@ class AgentSessionRepository:
                 "graph_version": row.graph_version or "1.0.0",
                 "graph_hash": row.graph_hash or graph_hash,
                 "changed": changed,
+                "workflow": deepcopy(row.workflow or {}),
             }
             db.add(AgentTurn(session_id=row.id, user_id=request.user_id,
                 request_id=request.request_id, request_hash=request_hash,
@@ -407,6 +420,8 @@ class AgentSessionRepository:
             row.task_id = row.state_id = row.last_guide_command_id = None
             row.graph_hash = row.graph_version = None
             row.result_response = None
+            if row.workflow:
+                row.workflow = {"version": row.workflow["version"]}
             db.execute(delete(AgentCheckpoint).where(AgentCheckpoint.session_id == row.id))
             db.execute(delete(SafetyConfirmation).where(SafetyConfirmation.session_id == row.id))
             db.commit()
@@ -418,9 +433,11 @@ class AgentSessionRepository:
             task_id=row.task_id, state_id=row.state_id, last_guide_command_id=row.last_guide_command_id,
             created_at=row.created_at, updated_at=row.updated_at, expires_at=row.expires_at,
             processing=bool(row.lease_token and row.lease_until and row.lease_until > now),
-            requires_fresh_observation=row.status in ACTIVE,
-            requires_goal=row.status in ACTIVE and db.get(AgentCheckpoint, row.id) is None,
-            result_response=row.result_response)
+            requires_fresh_observation=row.status in {"IN_PROGRESS", "WAITING_CONFIRMATION"},
+            requires_goal=row.status in {"IN_PROGRESS", "WAITING_CONFIRMATION"} and db.get(AgentCheckpoint, row.id) is None,
+            result_response=row.result_response,
+            result_prompt=(row.workflow or {}).get("result_prompt") if row.status == "WAITING_RESULT" else None,
+            follow_up=(row.workflow or {}).get("follow_up") if row.status == "WAITING_ADJUSTMENT" else None)
 
     def cleanup(self, retention_seconds=86400):
         if retention_seconds < 0:

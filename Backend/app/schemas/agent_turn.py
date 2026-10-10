@@ -154,7 +154,7 @@ class AgentTurnResponse(BaseModel):
     total_steps: int
     state_id: str
     state_confidence: float
-    task_status: Literal["IN_PROGRESS", "WAITING_CONFIRMATION", "COMPLETED", "BLOCKED"]
+    task_status: Literal["IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "COMPLETED", "BLOCKED"]
     guide_command: GuideCommandResponse
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -456,18 +456,32 @@ class AgentCommandRequest(BaseModel):
     source_text: str | None = Field(default=None, max_length=500)
     classification: ClassificationMetadata | None = None
     result_response: Literal["accepted", "rejected"] | None = Field(default=None, exclude=True)
+    user_result: Literal["satisfied", "needs_help", "stopped", "no_response"] | None = None
+    result_prompt_id: str | None = Field(default=None, min_length=1, max_length=200)
+    adjustment_reason: Literal["too_small", "too_large", "other", "unsure"] | None = None
+    workflow_version: Literal["interactive.v1"] | None = None
+    vision_failure: Literal["capture_failed", "masking_failed", "ocr_failed"] | None = Field(default=None, exclude=True)
     user_id: str | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def validate_command_shape(self) -> "AgentCommandRequest":
         if self.command_type in {"resolve_goal", "respond_result", "adjust_task"} and self.contract_version != "agent-fe-contract.v0.3":
             raise ValueError("new commands require agent-fe-contract.v0.3")
-        if (self.command_type == "respond_result") != (self.result_response is not None):
+        if (self.command_type == "respond_result") != (self.result_response is not None or self.user_result is not None):
             raise ValueError("result_response is required only for respond_result")
+        if self.result_response is not None and self.user_result is not None:
+            raise ValueError("result_response and user_result cannot be combined")
+        if (self.user_result is not None) != (self.result_prompt_id is not None):
+            raise ValueError("user_result requires result_prompt_id")
+        if self.workflow_version and self.contract_version != "agent-fe-contract.v0.3":
+            raise ValueError("interactive workflow requires v0.3")
+        if self.adjustment_reason is not None and self.command_type != "adjust_task":
+            raise ValueError("adjustment_reason is only valid for adjust_task")
         if self.command_type == "resolve_goal":
             if not self.source_text or not self.source_text.strip() or self.device_context is None:
                 raise ValueError("source_text and device_context are required for resolve_goal")
-        starts = self.command_type in {"start_task", "replace_task", "adjust_task"}
+        adjustment = self.command_type == "adjust_task" and self.adjustment_reason is not None
+        starts = self.command_type in {"start_task", "replace_task", "adjust_task"} and not adjustment
         if starts != (self.goal is not None):
             raise ValueError("goal is required only for start_task, replace_task and adjust_task")
         if starts and self.device_context is None:
@@ -476,7 +490,7 @@ class AgentCommandRequest(BaseModel):
             raise ValueError("episode_id must be omitted before starting a task")
         if self.command_type not in {"start_task", "resolve_goal"} and self.episode_id is None:
             raise ValueError("episode_id is required after start_task")
-        needs_screen = self.command_type in {"start_task", "replace_task", "adjust_task", "resume_task", "observe", "respond_confirmation"}
+        needs_screen = self.command_type in {"start_task", "replace_task", "adjust_task", "resume_task", "observe", "respond_confirmation"} and not adjustment
         if needs_screen and self.accessibility_tree is None and self.vision_snapshot is None:
             raise ValueError("a screen observation is required for this command")
         if self.command_type == "respond_confirmation":
@@ -527,3 +541,5 @@ class AgentGoalResolutionResponse(BaseModel):
     goal: TypedGoalRequest | None = None
     display_name: str | None = None
     message: str
+    task_status: Literal["IN_PROGRESS"] = "IN_PROGRESS"
+    metadata: dict[str, Any] = Field(default_factory=dict)

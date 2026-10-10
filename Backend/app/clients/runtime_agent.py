@@ -141,7 +141,7 @@ class RuntimeAgentAdapter:
         try:
             result = self.runtime.handle_turn(runtime_request)
         except ContractViolationError as error:
-            if request.raw_goal is None:
+            if getattr(request, "raw_goal", None) is None and getattr(request, "goal", None) is None:
                 raise SessionNotFoundError(request.session_id) from error
             raise ValueError(str(error)) from error
         guide = result.guide_command
