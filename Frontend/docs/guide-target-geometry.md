@@ -1,5 +1,7 @@
 # Guide 좌표와 클릭 영역
 
+2026-10-10 재검증: geometry·행동 연결 JVM 10개는 통과했지만, 부분 문자열 target 오선택 4건과 FE의 오래된 응답 표시 경로·축소 방향 문구 문제가 확인됐다. 좌표 수정만으로 전체 하이라이트가 해결됐다고 표시하지 않는다. [상세 보고서](../../docs/reviews/2026-10-10-ui-highlight-revalidation.md), [품질·정답 기준](../../docs/ai-quality-evaluation.md). 아래 2026-09-12 결과는 당시의 역사적 기록이다.
+
 ## 좌표 계약
 
 `AccessibilityNodeInfo.getBoundsInScreen()`으로 수집한 `bounds_in_screen`과
@@ -62,7 +64,7 @@ Normalizer는 조작 불가능한 자식의 label을 가장 가까운 적절한 
 Backend는 후속 turn에도 현재 화면 크기를 runtime에 전달하므로,
 첫 요청에만 있는 `raw_goal` 없이도 화면 면적 제한이 유지된다.
 숨겨진 노드는 매칭에서 제외하고, 비활성·면적 없는 노드는 조작 대상으로 선택하지 않는다.
-Frontend의 tree 기반 vision payload에서도 숨겨진·비활성·면적 없는 노드를 제외한다.
+Frontend의 Vision fallback은 tree 재포장을 제거하고 매 분석 동의 후 기기 내 OCR을 수행한다. 실제 OCR bounds만 전달하며 화면 밖·면적 없는 결과는 제외한다. [마스킹·실패 대응 및 동의 계약](../../docs/ai-agent-vision-fallback.md)을 따른다.
 
 Snapshot fingerprint에는 부모 관계, 표시 여부, 클릭·활성·스크롤·체크 가능 여부도 반영한다.
 AI-Agent(2)의 데이터 분석·graph proposal 동작은 이 변경의 대상이 아니다.

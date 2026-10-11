@@ -11,19 +11,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class AccessibilitySnapshotCollector {
-    ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, int width, int height) {
+    ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, int width, int height, Float fontScale) {
         List<AccessibilityNodeSnapshot> nodes = new ArrayList<>();
-        visit(root, "node_0", null, packageName, width, height, nodes);
-        return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId());
+        boolean[] maskReady = {true};
+        visit(root, "node_0", null, packageName, width, height, nodes, maskReady);
+        return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId(), maskReady[0], fontScale);
     }
 
     private void visit(AccessibilityNodeInfo node, String nodeId, String parentId, String packageName,
                        int screenWidth, int screenHeight,
-                       List<AccessibilityNodeSnapshot> output) {
+                       List<AccessibilityNodeSnapshot> output, boolean[] maskReady) {
         if (node == null) return;
         Rect bounds = new Rect();
         node.getBoundsInScreen(bounds);
         String className = string(node.getClassName());
+        if (node.isVisibleToUser() && (node.isPassword() || node.isEditable()
+                || "text_field".equals(inferRole(className, node))) && bounds.isEmpty()) maskReady[0] = false;
         AccessibilityNodeInfo.RangeInfo range = node.getRangeInfo();
         Float progress = range == null ? null : range.getCurrent();
         boolean intersectsScreen = bounds.right > 0 && bounds.bottom > 0
@@ -50,12 +53,14 @@ final class AccessibilitySnapshotCollector {
                     node.isScrollable(),
                     node.isCheckable(),
                     progress,
-                    node.getWindowId()
+                    node.getWindowId(),
+                    node.isPassword() || node.isEditable() || "text_field".equals(inferRole(className, node)),
+                    range == null ? null : range.getMin(), range == null ? null : range.getMax()
             ));
         }
         for (int index = 0; index < node.getChildCount(); index++) {
             visit(node.getChild(index), nodeId + "_" + index, nodeId, packageName,
-                    screenWidth, screenHeight, output);
+                    screenWidth, screenHeight, output, maskReady);
         }
     }
 

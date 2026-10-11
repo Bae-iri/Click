@@ -29,6 +29,7 @@ def restore(payload):
         state["typed_goal"] = TypedGoal(**state["typed_goal"])
         state["failed_node_ids"] = tuple(state["failed_node_ids"])
         state["processed_event_keys"] = tuple(state.get("processed_event_keys", ()))
+        state["state_candidates"] = tuple(state.get("state_candidates", ()))
         state["failed_target_keys"] = {key: tuple(value) for key, value in state.get("failed_target_keys", {}).items()}
         if state["last_snapshot"]:
             state["last_snapshot"] = ScreenSnapshot(**state["last_snapshot"])
@@ -62,7 +63,7 @@ def safe_response(response):
 
     def clean(value):
         if isinstance(value, dict):
-            return {key: None if key == "target_label" else diagnostic_payload(item) if key == "debug"
+            return {key: item if key in {"task_outcome", "technical_outcome", "result_prompt", "checklist"} else None if key == "target_label" else diagnostic_payload(item) if key == "debug"
                     else redact_text(item) if key == "message" and isinstance(item, str) else clean(item)
                     for key, item in value.items() if key not in discarded}
         if isinstance(value, list):

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.click.designpreview.SplashLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/splash_screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/splash_waves"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:importantForAccessibility="no"
+        android:scaleType="fitXY"
+        android:src="@drawable/splash_waves" />
+
+    <com.click.designpreview.SpacedLogoView
+        android:id="@+id/splash_logo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:contentDescription="@string/splash_logo_description" />
+
+    <TextView
+        android:id="@+id/splash_tagline"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:lineSpacingExtra="6dp"
+        android:text="@string/splash_tagline"
+        android:textColor="@color/click_ink"
+        android:textSize="20sp" />
+
+    <LinearLayout
+        android:id="@+id/splash_signature"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:rotation="-7">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/gaegu_regular"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:text="@string/splash_signature"
+            android:textColor="@color/click_signature"
+            android:textSize="23sp" />
+
+        <FrameLayout
+            android:layout_width="162.5dp"
+            android:layout_height="65dp"
+            android:layout_marginTop="6dp"
+            android:contentDescription="@string/click_wordmark"
+            android:importantForAccessibility="yes">
+
+            <ImageView
+                android:layout_width="150dp"
+                android:layout_height="50dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter"
+                android:src="@drawable/click"
+                android:tint="@color/click_signature_accent" />
+
+            <ImageView
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_gravity="top|left"
+                android:layout_marginLeft="3.75dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/click_signature_rays" />
+        </FrameLayout>
+    </LinearLayout>
+</com.click.designpreview.SplashLayout>

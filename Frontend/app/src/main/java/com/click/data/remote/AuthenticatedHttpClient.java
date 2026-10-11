@@ -10,12 +10,16 @@ final class AuthenticatedHttpClient {
     AuthenticatedHttpClient(Context context) { tokens = new AuthTokenStore(context.getApplicationContext()); }
 
     HttpResult post(String path, String body) throws Exception {
+        return post(path, body, 15000);
+    }
+
+    HttpResult post(String path, String body, int readTimeout) throws Exception {
         if (tokens.accessToken() == null || (tokens.accessExpired() && !AuthGateway.refresh(tokens))) {
             throw new java.io.IOException("AUTH_REQUIRED");
         }
-        HttpResult result = AuthGateway.post(path, body, tokens.accessToken());
+        HttpResult result = AuthGateway.post(path, body, tokens.accessToken(), readTimeout);
         if (result.status == 401 && AuthGateway.refresh(tokens)) {
-            result = AuthGateway.post(path, body, tokens.accessToken());
+            result = AuthGateway.post(path, body, tokens.accessToken(), readTimeout);
         }
         if (result.status < 200 || result.status >= 300) throw AuthGateway.apiError(path, result);
         return result;

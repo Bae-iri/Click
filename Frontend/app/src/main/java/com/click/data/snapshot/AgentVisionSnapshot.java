@@ -1,48 +1,41 @@
 package com.click.data.snapshot;
 
+import android.graphics.Rect;
+import com.google.mlkit.vision.text.Text;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/**
- * Builds a {@code vision_snapshot} payload from an on-device accessibility capture.
- *
- * <p>Only derived UI elements are sent (never a raw screenshot), which is the path the
- * FE/BE contract prefers ("가능하면 FE에서 먼저 마스킹 또는 온디바이스 OCR을 수행하고,
- * elements만 전달한다"). Because no image leaves the device, {@code redaction_applied}
- * is always {@code true} and image-analysis consent is not strictly required, but the
- * caller still passes through {@code userConsented} so the BE can see it.
- */
+/** One consented OCR observation. Never serializes screenshots or arbitrary screen text. */
 public final class AgentVisionSnapshot {
     private AgentVisionSnapshot() {}
 
-    public static JSONObject fromScreen(ScreenSnapshot screen, boolean userConsented) {
+    public static JSONObject fromOcr(ScreenSnapshot screen, Text result, long capturedAtMs) {
         try {
             JSONObject snapshot = new JSONObject();
-            snapshot.put("user_consented", userConsented);
+            snapshot.put("user_consented", true);
             snapshot.put("redaction_applied", true);
-            snapshot.put("provider", "frontend_tree");
+            snapshot.put("provider", "mlkit_on_device_ocr");
+            snapshot.put("observation_id", screen.observationId);
+            snapshot.put("active_window_id", screen.activeWindowId);
             snapshot.put("package_name", screen.packageName);
             snapshot.put("screen_width", screen.screenWidth);
             snapshot.put("screen_height", screen.screenHeight);
-            snapshot.put("captured_at_ms", System.currentTimeMillis());
+            snapshot.put("captured_at_ms", capturedAtMs);
             JSONArray elements = new JSONArray();
-            for (AccessibilityNodeSnapshot node : screen.nodes) {
-                if (!node.visibleToUser || !node.enabled || node.bounds == null
-                        || node.bounds.length != 4 || node.bounds[0] >= node.bounds[2]
-                        || node.bounds[1] >= node.bounds[3]) continue;
-                String label = node.text != null ? node.text : node.contentDescription;
-                if (label == null || label.trim().isEmpty()) continue;
-                JSONObject element = new JSONObject();
-                element.put("element_id", node.nodeId);
-                element.put("text", label);
-                if (node.bounds != null && node.bounds.length == 4) {
-                    element.put("bounds_in_screen", new JSONArray(node.bounds));
+            for (Text.TextBlock block : result.getTextBlocks()) {
+                for (Text.Line line : block.getLines()) {
+                    String label = VisionPrivacy.exportLabel(line.getText());
+                    Rect bounds = line.getBoundingBox();
+                    if (label == null || bounds == null || bounds.isEmpty()
+                            || bounds.left < 0 || bounds.top < 0
+                            || bounds.right > screen.screenWidth || bounds.bottom > screen.screenHeight) continue;
+                    elements.put(new JSONObject().put("element_id", "ocr_" + elements.length())
+                            .put("text", label).put("role", "menu_item")
+                            .put("actionable", !label.equals("설정") && !label.equals("settings"))
+                            .put("bounds_in_screen", new JSONArray(new int[]{
+                                    bounds.left, bounds.top, bounds.right, bounds.bottom})));
                 }
-                if (node.role != null) element.put("role", node.role);
-                element.put("confidence", 1.0);
-                element.put("actionable", node.clickable || node.scrollable || node.checkable);
-                elements.put(element);
             }
             snapshot.put("elements", elements);
             return snapshot;

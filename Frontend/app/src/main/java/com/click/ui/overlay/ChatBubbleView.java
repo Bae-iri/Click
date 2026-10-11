@@ -1,85 +1,63 @@
 package com.click.ui.overlay;
 
 import android.content.Context;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.RectF;
-import android.view.View;
+import android.view.Gravity;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
-import androidx.annotation.NonNull;
+import com.click.ui.common.ClickUi;
 
-import java.util.ArrayList;
-import java.util.List;
-
-/** Transparent DM-style transcript: only individual message bubbles are painted. */
-final class ChatBubbleView extends View {
+/** Readable, scrollable messages that also respect the user's system font size. */
+final class ChatBubbleView extends ScrollView {
     private static final int MAX_MESSAGES = 6;
-    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final List<Message> messages = new ArrayList<>();
+    private final LinearLayout messages;
+    private final TextView placeholder;
 
     ChatBubbleView(Context context) {
         super(context);
-        setBackgroundColor(Color.TRANSPARENT);
+        setFillViewport(true);
+        setClipToPadding(false);
+        setPadding(dp(16), dp(16), dp(16), dp(16));
+        messages = new LinearLayout(context);
+        messages.setOrientation(LinearLayout.VERTICAL);
+        addView(messages, new LayoutParams(-1, -2));
+        placeholder = text("예: 글자 크기를 키워줘");
+        placeholder.setTextColor(ClickUi.SUBTEXT);
+        placeholder.setGravity(Gravity.CENTER);
+        messages.addView(placeholder, new LinearLayout.LayoutParams(-1, -1));
     }
 
-    void add(String text, boolean user) {
-        if (text == null || text.trim().isEmpty()) return;
-        messages.add(new Message(text.trim(), user));
-        while (messages.size() > MAX_MESSAGES) messages.remove(0);
-        invalidate();
+    void add(String value, boolean user) {
+        if (value == null || value.trim().isEmpty()) return;
+        messages.removeView(placeholder);
+        TextView bubble = text(value.trim());
+        bubble.setTextColor(user ? Color.WHITE : ClickUi.TEXT);
+        bubble.setPadding(dp(14), dp(12), dp(14), dp(12));
+        bubble.setBackground(ClickUi.rounded(user ? ClickUi.BLUE : Color.WHITE, dp(18)));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
+        params.gravity = user ? Gravity.END : Gravity.START;
+        params.topMargin = dp(8);
+        if (user) params.leftMargin = dp(24);
+        else params.rightMargin = dp(24);
+        messages.addView(bubble, params);
+        while (messages.getChildCount() > MAX_MESSAGES) messages.removeViewAt(0);
+        post(() -> fullScroll(FOCUS_DOWN));
     }
 
-    @Override
-    protected void onDraw(@NonNull Canvas canvas) {
-        super.onDraw(canvas);
-        float y = getHeight() - dp(8);
-        for (int index = messages.size() - 1; index >= 0 && y > 0; index--) {
-            Message message = messages.get(index);
-            paint.setTextSize(dp(13));
-            paint.setTypeface(android.graphics.Typeface.DEFAULT);
-            float maxTextWidth = getWidth() * .68f;
-            List<String> lines = wrap(message.text, maxTextWidth);
-            if (lines.size() > 3) lines = lines.subList(0, 3);
-            float widest = 0f;
-            for (String line : lines) widest = Math.max(widest, paint.measureText(line));
-            float bubbleWidth = widest + dp(24);
-            float bubbleHeight = lines.size() * dp(19) + dp(16);
-            float left = message.user ? getWidth() - bubbleWidth - dp(8) : dp(8);
-            RectF bubble = new RectF(left, y - bubbleHeight, left + bubbleWidth, y);
-            paint.setColor(message.user ? Color.rgb(255, 59, 77) : Color.rgb(239, 241, 245));
-            canvas.drawRoundRect(bubble, dp(17), dp(17), paint);
-            paint.setColor(message.user ? Color.WHITE : Color.rgb(35, 40, 48));
-            for (int line = 0; line < lines.size(); line++) {
-                canvas.drawText(lines.get(line), bubble.left + dp(12),
-                        bubble.top + dp(20) + line * dp(19), paint);
-            }
-            y = bubble.top - dp(7);
-        }
+    void setPlaceholder(String value) {
+        placeholder.setText(value);
     }
 
-    private List<String> wrap(String text, float maxWidth) {
-        List<String> lines = new ArrayList<>();
-        String remaining = text;
-        while (!remaining.isEmpty()) {
-            int count = Math.max(1, paint.breakText(remaining, true, maxWidth, null));
-            lines.add(remaining.substring(0, count));
-            remaining = remaining.substring(count);
-        }
-        return lines;
+    private TextView text(String value) {
+        TextView text = new TextView(getContext());
+        text.setText(value);
+        text.setTextSize(17);
+        text.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
+        text.setLineSpacing(dp(4), 1.1f);
+        return text;
     }
 
-    private float dp(int value) {
-        return value * getResources().getDisplayMetrics().density;
-    }
-
-    private static final class Message {
-        final String text;
-        final boolean user;
-
-        Message(String text, boolean user) {
-            this.text = text;
-            this.user = user;
-        }
-    }
+    private int dp(int value) { return ClickUi.dp(getContext(), value); }
 }

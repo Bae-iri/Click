@@ -12,13 +12,22 @@ public final class LocalAccountStore {
     }
 
     public void saveProfile(String email, String age, String job, String gender) {
+        saveProfile(name(), email, age, job, gender);
+    }
+
+    public void saveProfile(String name, String email, String age, String job, String gender) {
         preferences.edit()
+                .putString("name", name == null ? "" : name)
                 .putString("email", email)
                 .putString("age", age)
                 .putString("job", job)
                 .putString("gender", gender)
                 .putBoolean("signed_up", true)
                 .apply();
+    }
+
+    public String name() {
+        return preferences.getString("name", "");
     }
 
     public String email() {

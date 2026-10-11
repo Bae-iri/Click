@@ -22,6 +22,9 @@ public final class AccessibilityNodeSnapshot {
     public final boolean scrollable;
     public final boolean checkable;
     public final Float progress;
+    public final Float rangeMin;
+    public final Float rangeMax;
+    public final boolean sensitiveInput;
 
     public AccessibilityNodeSnapshot(
             String nodeId,
@@ -42,23 +45,46 @@ public final class AccessibilityNodeSnapshot {
             Float progress,
             int windowId
     ) {
+        this(nodeId, parentId, visibleToUser, packageName, text, contentDescription, resourceId,
+                className, role, bounds, clickable, enabled, selected, scrollable, checkable,
+                progress, windowId, false);
+    }
+
+    public AccessibilityNodeSnapshot(String nodeId, String parentId, boolean visibleToUser,
+            String packageName, String text, String contentDescription, String resourceId,
+            String className, String role, int[] bounds, boolean clickable, boolean enabled,
+            boolean selected, boolean scrollable, boolean checkable, Float progress,
+            int windowId, boolean sensitiveInput) {
+        this(nodeId, parentId, visibleToUser, packageName, text, contentDescription, resourceId,
+                className, role, bounds, clickable, enabled, selected, scrollable, checkable,
+                progress, windowId, sensitiveInput, null, null);
+    }
+
+    public AccessibilityNodeSnapshot(String nodeId, String parentId, boolean visibleToUser,
+            String packageName, String text, String contentDescription, String resourceId,
+            String className, String role, int[] bounds, boolean clickable, boolean enabled,
+            boolean selected, boolean scrollable, boolean checkable, Float progress,
+            int windowId, boolean sensitiveInput, Float rangeMin, Float rangeMax) {
+        this.rangeMin = sensitiveInput ? null : rangeMin;
+        this.rangeMax = sensitiveInput ? null : rangeMax;
+        this.sensitiveInput = sensitiveInput;
         this.nodeId = nodeId;
         this.windowId = windowId;
         this.parentId = parentId;
         this.visibleToUser = visibleToUser;
         this.packageName = packageName;
-        this.text = text;
-        this.contentDescription = contentDescription;
+        this.text = sensitiveInput ? null : text;
+        this.contentDescription = sensitiveInput ? null : contentDescription;
         this.resourceId = resourceId;
         this.className = className;
         this.role = role;
         this.bounds = bounds;
-        this.clickable = clickable;
-        this.enabled = enabled;
+        this.clickable = !sensitiveInput && clickable;
+        this.enabled = !sensitiveInput && enabled;
         this.selected = selected;
         this.scrollable = scrollable;
         this.checkable = checkable;
-        this.progress = progress;
+        this.progress = sensitiveInput ? null : progress;
     }
 
     JSONObject toJson() throws JSONException {
@@ -80,7 +106,10 @@ public final class AccessibilityNodeSnapshot {
         object.put("scrollable", scrollable);
         object.put("checkable", checkable);
         JSONObject extras = new JSONObject();
+        if (sensitiveInput) extras.put("editable", true);
         if (progress != null) extras.put("progress", progress);
+        if (rangeMin != null) extras.put("min", rangeMin);
+        if (rangeMax != null) extras.put("max", rangeMax);
         object.put("extras", extras);
         return object;
     }

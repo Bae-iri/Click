@@ -63,13 +63,13 @@ Accessibility node의 선택 필드 `parent_id`(기본 `null`)와 `visible_to_us
 
 응답은 `request_id`, `session_id`, `task_id`, `step`, `total_steps`, `state_id`, `state_confidence`, `task_status`, `guide_command`, `metadata`를 포함한다. guide의 좌표는 기기 화면의 physical pixel이다. 구체적인 응답은 [샘플 요청](../examples/agent-turn.json)을 서버로 보내 확인한다.
 
-- 첫 turn: `raw_goal`과 tree 또는 vision 필요. 기존 세션의 후속 turn: raw_goal 생략, 같은 session ID, 새 request ID.
+- 첫 turn: `raw_goal`과 tree 필요. tree가 없으면 `nodes: []`와 화면 문맥으로 Vision 동의를 요청한다. 기존 세션의 후속 turn: raw_goal 생략, 같은 session ID, 새 request ID.
 - 네트워크 재전송: 원래 ID와 동일 본문 유지. DB 본문 해시로 동일 ID·다른 본문을 거절하며, 더 최신 turn이 처리된 뒤 과거 안내는 재전송하지 않는다.
 - 확인 응답: `user_confirmation: "accepted"` 또는 `"rejected"`와 새 화면 전송.
 - 행동 보고: `user_action_event`에 `action_type`과 관련 guide ID를 전달. 이것만으로 성공을 확정하지 않는다.
 - `guide_command.command_type`: highlight / gesture_hint / confirmation / done / blocked.
 - `guide_command.action_type`: tap / drag / scroll / observe_only. tap·drag는 안내이며 자동 조작 허가가 아니다.
-- 전체 FE 처리 규칙과 vision 예시는 [기존 계약](../../docs/frontend-backend-contract.md) 참조.
+- 전체 FE 처리 규칙은 [기존 계약](../../docs/frontend-backend-contract.md), Vision의 요청별 동의와 마스킹 실패 처리는 [Vision 계약](../../docs/ai-agent-vision-fallback.md) 참조.
 
 ## 개인화 예시
 

@@ -1,6 +1,6 @@
 # AI-Agent(1) 검증·UI 선택·Re-plan 실행 정책
 
-2026-09-12 코드 반영 기준. 설계상 역할 분리는 [AI1 runtime](./ai-agent-1-runtime.md), [Backend graph 전달](./backend-task-graph-dispatch.md)을 따른다. 이 문서는 기존 runtime의 신뢰성 수정 범위와 실제 동작을 설명한다. FE Goal/Command 분류와 Backend DB graph 선택·주입의 전체 전환까지 구현했다는 의미는 아니다.
+2026-10-10 코드 재확인 기준. 최초 신뢰성 수정은 2026-09-12이며 아래 당시 시험 기록은 역사적 결과로 보존한다. 현재 DB graph 본문 decode·version 고정, FE 행동 수집·FONT_SCALE 검증이 구현되어 있으나 Backend 충돌과 [UI 오선택 재현](./reviews/2026-10-10-ui-highlight-revalidation.md)이 남아 있다. [품질·gold 기준](./ai-quality-evaluation.md)이 인수 기준이다. 코드 존재와 실기기 통과를 구분한다.
 
 ## 1. 실행 순서와 소유권
 
@@ -13,7 +13,7 @@
 7. 대기·재관측·재시도·대체 transition·Backend 반환 중 하나를 결정한다.
 8. Safety 확인 후 guide와 pending attempt를 저장한다.
 
-AI1은 DB graph를 수정하거나 새 경로를 생성하지 않는다. graph 내부에서 진행할 수 없으면 `backend_handoff.type=task_graph_reselection_required`와 사유를 반환한다. 현재 Backend는 이를 `BLOCKED`와 metadata로 보존한다. 자동 DB 재선택·새 실행 시작은 별도 Backend 연결 작업이다. AI2의 라벨링·graph 업데이트 책임은 바뀌지 않는다.
+AI1은 DB graph를 수정하거나 새 경로를 생성하지 않는다. 진행할 수 없으면 `backend_handoff.type=task_graph_reselection_required`와 사유를 반환한다. 2026-10-11 수정: 복구는 `highlight / observe_only`와 `render_policy.recovery`로 전달하고 episode를 유지한다. adapter는 복구 및 legacy graph handoff의 정책을 보존하며 결과 확인으로 변환하지 않는다. 실제 안전 차단은 `BLOCKED`, 검증된 완료와 조절 한도는 결과 확인으로 구분한다. 자동 DB graph 교체는 수행하지 않으며 handoff에는 재확인·직접 이동·중단 선택을 제공한다.
 
 ## 2. 행동과 관측의 연결
 
@@ -48,7 +48,7 @@ Backend checkpoint schema는 `2`다. pending attempt·처리한 event hash·실�
 
 글자 확대 graph의 predicate는 `target_value_increased`다. verifier도 matcher와 같은 selector·의미 식별자·window를 사용한다. 후보가 유일하고 기준값과 현재값이 있으며, 귀속된 drag 이후 값이 증가해야 성공한다. 밝기·음량·화면 크기 slider나 재사용된 node ID의 다른 control은 근거가 될 수 없다. `S5_FONT_SIZE_CHANGED`는 `verification_only=True`이며 제목만 보고 분류하지 않는다.
 
-Backend는 progress가 마지막 단계라는 이유로 완료를 덮어쓰지 않는다. runtime의 검증된 `done` guide를 사용한다. 이미 최대값인 경우와 값이 읽히지 않는 경우에는 증가 성공을 선언하지 않는다. OS 설정값 확인, 단위·최대값에 따른 별도 안내는 후속 보완이다.
+Backend는 진행도가 마지막이라는 이유로 완료를 덮어쓰지 않는다. 현재 verifier는 귀속된 행동 이후 동일 slider 값과 Android `FONT_SCALE`의 목표 방향 변화를 함께 요구한다. 기준값·설정값이 없으면 UNKNOWN이며 기술 결과는 UNVERIFIABLE로 남긴다. 최대/최소에서는 같은 방향 조작을 중단한다. 기술 결과와 사용자 만족은 별도 축으로 저장하는 코드가 있고, adapter는 완료/조절 한도와 복구/안전 차단을 구분하며, 결과 확인도 최종 task 성공과 구분한다. [결과 흐름](./goal-progress-result-flow.md).
 
 ## 4. UI 선택
 
@@ -71,7 +71,7 @@ Backend는 progress가 마지막 단계라는 이유로 완료를 덮어쓰지 �
 | --- | --- |
 | selector의 resource ID 정확 일치 | 1.0 |
 | 이름 또는 graph 동의어 정확 일치 | 0.9 |
-| 이름에 selector keyword 포함 | 0.8 |
+| 완전한 단어/구 단위 selector 일치. 짧은 일반 별칭은 제목 정확 일치만 허용 | 0.8 |
 | 이름 없는 유일한 control + 명시된 화면 문맥 | 0.8 |
 | hard filter를 통과한 일반 UI의 language similarity | 최대 0.79 |
 
@@ -96,9 +96,11 @@ slider라는 이유만으로 0.82를 주던 규칙은 제거했다. 이름 없�
 
 실패 집계 키는 `transition_id + target_key`다. target key는 package·resource ID·role·정규화된 이름을 해시한 값이다. tree index와 bounds가 바뀌어도 같은 의미의 target 제외는 유지한다. 동일 의미의 복수 control을 구별할 근거가 없으면 보수적으로 함께 제외한다. 다른 transition의 동일 node ID까지 전역 제외하지 않는다.
 
-기본 정책은 target별 실제 실패 2회 후 제외, 연속 관측 복구 3회 또는 실행 전체 실제 실패 6회 후 Backend 반환이다. `RuntimePolicy`로 graph별 설정한다. 행동이 없는 정상 대기는 실패·복구 예산을 소비하지 않는다. target이 없는 guide를 한 번 반환했다고 제외를 해제하지 않는다. 새 실행 또는 명시적 graph 재시작에서만 초기화한다. 같은 graph 실행 중 임의 해제는 없다.
+기본 정책은 target별 실제 실패 2회 후 제외다. 복구 모듈 `runtime/recovery.py`는 충분히 간격을 둔 새 관측 최대 3회 또는 5초 이후 사용자 확인을 기다린다. 중복/안정화 중 관측은 이 예산을 소비하지 않고 실제 실패와도 분리된다. 실제 실패 6회 또는 제외된 대상 외 경로 소진은 Backend handoff로 전달하되 작업을 실패로 종료하지 않는다. `RuntimePolicy`로 graph별 설정한다. 행동이 없는 정상 대기는 실패·복구 예산을 소비하지 않는다. target이 없는 guide를 한 번 반환했다고 제외를 해제하지 않는다. 새 실행 또는 명시적 graph 재시작에서만 초기화한다. 같은 graph 실행 중 임의 해제는 없다.
 
 ## 6. 승인과 로그
+
+Vision은 1회 분석마다 별도 동의 ID를 발급·검증한다. FE 캡처 전 확인, 마스킹 실패 중단, BE 요청별 binding은 [Vision fallback 정책](./ai-agent-vision-fallback.md)을 따른다. Vision 허용은 아래 설정 변경 승인과 독립적이다.
 
 위험한 변경은 유효한 target을 고른 뒤 승인을 요청한다. target을 못 찾았는데 먼저 변경 승인을 받지 않는다. 승인된 같은 조작 안내를 다시 표시할 때 Backend가 checkpoint의 guide·target·action·state·bounds·승인 만료를 확인한다. target이 바뀌면 재승인이 필요하고, 새 관측 ID/수집 시각만 달라진 것은 화면 변경으로 취급하지 않는다.
 
@@ -129,9 +131,19 @@ slider라는 이유만으로 0.82를 주던 규칙은 제거했다. 이름 없�
 
 위 예시는 공통 전송 필드 설명용이다. 실제 검증에는 target을 포함한 새 nodes가 필요하다. node에는 `window_id`를 전달한다. Frontend snapshot에 관측 ID와 window ID를 추가하고 event factory에 event ID를 추가했다. 기존 scroll/manual/observe 이벤트의 시각은 요청 전송 시점 대신 기록 시점에 보관하며, 재관측 요청은 저장된 snapshot 재전송 대신 실제 수집을 요청한다.
 
-**남은 FE 연결:** 현재 Android 앱은 일반 사용자 tap/drag를 현재 guide에 귀속해 `tap_completed`/`drag_completed`로 자동 수집하는 경로가 완성돼 있지 않다. 화면이 바뀌었다는 이유로 이 event를 만들어서는 안 된다. 실제 source control과 행동 발생을 확인하는 수집 또는 명시적인 사용자 수행 확인을 연결해야 한다. 연결 전 AI1은 수동 화면 이동을 따라갈 수 있지만, 증거 없는 설정 변경 완료를 선언하지 않는다. Android 접근성 event는 source와 유형에 따라 의미가 달라지므로 기기별 동작 검증이 필요하다. [Android AccessibilityService 문서](https://developer.android.com/guide/topics/ui/accessibility/views/service), [사용자 동작 event 설명](https://developer.android.com/guide/topics/ui/accessibility/views/custom-views).
+**현재 FE 연결과 남은 검증:** `ClickAccessibilityService`가 실제 접근성 tap/drag를 수집하고 `GuidedActionTracker`가 session/episode/guide/target에 귀속한다. `FONT_SCALE` 수집도 코드에 있다. 화면 변화만으로 행동을 만들지 않으며 node ID·resource·window·bounds·시각 일치가 필요하다. 실제 OEM 이벤트·RangeInfo·화면 재배치에서의 행동 누락/오귀속은 실기기 검증 대상이다. 연결 코드가 있다는 사실과 실기기 end-to-end 완료를 구분한다. [2026-10-10 재검증](./reviews/2026-10-10-ui-highlight-revalidation.md).
 
-## 8. 회귀 검증
+## 8. 2026-10-11 구조 기반 판단·복구 계약
+
+화면 제목, 메뉴 제목, 설명, 컨트롤을 정규화 시 구분한다. classifier는 상위 상태 후보와 제목 근거를 보존하고 모호하거나 제목이 충돌하면 보류한다. 이전 위치의 연속성보다 현재 제목을 우선하여 단계 건너뛰기·수동 이동을 처리한다. 일시적인 UNKNOWN은 관측된 진행 경로를 지우지 않는다. `화면`을 `배경화면`에 매칭하지 않으며 부모 행의 실제 좌표를 유지한다.
+
+`render_policy.recovery`와 `metadata.recovery`는 `schema_version=ai1-recovery.v1`, `decision`, `reason_code`, `next_action`, `waiting_for`, `recoverable`, `attempts`, `retry_after_ms`, `options`를 포함한다. `reason_code`는 화면 밖 대상, 화면/대상 모호성, 관측 부족·오래됨, 조작 결과 미확인, 행동 이벤트 누락, 경로 소진 등을 구분한다. 자유 텍스트 원인을 저장하지 않는다.
+
+FE는 `waiting_for=user`이면 목표를 유지하면서 화면 다시 확인·직접 이동·중지를 제공한다. 직접 이동은 창 접기이며 자동 조작을 실행하지 않는다. 다시 확인은 새 관측과 `manual_override`를 보내 관측 재시도 예산만 초기화하고 실패 대상·실제 조작 실패 기록을 유지한다. 화면 밖 대상은 읽을 수 있는 scrollable 목록이 있고 대상 이름도 보이지 않을 때만 수동 탐색으로 처리한다. 제목만 있고 컨트롤이 없거나 동점인 경우에는 좌표를 만들지 않는다.
+
+`recovery_state`와 `state_candidates`는 checkpoint에 함께 저장한다. 구 checkpoint의 새 필드는 기본값으로 복원한다. 진단은 허용된 원인 enum과 hash 처리한 후보 ID를 남긴다. 선택적으로 `ReplayRecorder`를 주입하여 구조·허용 UI 어휘만 남긴 관측을 내보낼 수 있다. 저장/업로드는 기본 비활성이고 캡처 결과를 정답으로 자동 채택하지 않는다. [재현 실행법과 한계](../AI-Agent/data/evaluation/runtime_recovery/README.md).
+
+## 9. 회귀 검증
 
 - `AI-Agent/tests/test_runtime_reliability.py`: 미조작 반복·1px 이동, 행동 중복/다른 guide, 관측 순서, 실패 제외 유지·node ID 변경, 경로 priority, 동점, role/package/window, graph 동의어, resource selector, false-DONE와 실제 완료.
 - `Backend/tests/test_runtime_evidence.py`: HTTP 변환·checkpoint 복원·중복 행동·false-DONE 차단·새 관측과 승인 유지.
@@ -139,7 +151,7 @@ slider라는 이유만으로 0.82를 주던 규칙은 제거했다. 이름 없�
 
 `docs/reviews/evidence/agent_review_repros.py`는 수정 전 결함을 재현한 역사적 증거다. 수정 후 통과해야 하는 회귀 테스트로 사용하지 않는다. 계정 삭제 동시성 테스트의 기존 409 기대는 수정 전 커밋에서도 401을 반환했다. 현행 owner 인증 검사에 맞춰 401과 session/checkpoint/turn 삭제를 검증한다.
 
-### 이번 수정 검증 결과
+### 2026-09-12 당시 수정 검증 결과 (역사적 기록)
 
 - AI-Agent 전체: **79 passed**.
 - Backend 전체: **109 passed**. 기존 Starlette TestClient 경고 1건.

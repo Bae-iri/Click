@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Click.DesignPreview" parent="Base.Theme.Click.DesignPreview">
+        <item name="android:windowSplashScreenBackground">@color/design_canvas_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_click_cursor</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/design_canvas_background</item>
+    </style>
+</resources>

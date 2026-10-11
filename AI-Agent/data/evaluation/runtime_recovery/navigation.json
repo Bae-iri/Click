@@ -1,0 +1,5353 @@
+[
+  {
+    "schema_version": "ai1-recovery-replay.v1",
+    "name": "launcher_home_descriptions_display_control",
+    "source": "synthetic_regression",
+    "task_id": "MVP-01",
+    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "expect_recovery": false,
+    "turns": [
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "settings-icon",
+              "package_name": "com.sec.android.app.launcher",
+              "class_name": null,
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                100,
+                200,
+                260
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o1",
+          "captured_at_ms": 1000
+        },
+        "expected": {
+          "target_node_id": "settings-icon",
+          "terminal": false,
+          "done": false,
+          "state_id": "S0_UNKNOWN"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "밝기, 글자 크기, 다크 모드",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면 및 스타일",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면, 색상 팔레트",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                700,
+                1080,
+                900
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                720,
+                1000,
+                780
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면 구성",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                800,
+                1000,
+                870
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o2",
+          "captured_at_ms": 2000
+        },
+        "expected": {
+          "target_node_id": "display",
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "brightness",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "brightness-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "밝기",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "brightness",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "brightness-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "brightness",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "font",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "font-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "글자 크기와 스타일",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "font",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "font-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "글꼴, 글자 크기",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "font",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o3",
+          "captured_at_ms": 3000
+        },
+        "expected": {
+          "target_node_id": "font",
+          "terminal": false,
+          "done": false,
+          "state_id": "S2_DISPLAY_MENU"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "글자 크기",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                40,
+                1056,
+                96
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "small",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "작게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                420,
+                160,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "large",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "크게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                920,
+                420,
+                1056,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "font-slider",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.SeekBar",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                160,
+                430,
+                920,
+                480
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {
+                "progress": 2
+              },
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o4",
+          "captured_at_ms": 4000
+        },
+        "expected": {
+          "target_node_id": "font-slider",
+          "terminal": false,
+          "done": false,
+          "state_id": "S4_FONT_SIZE_CONTROL"
+        }
+      }
+    ]
+  },
+  {
+    "schema_version": "ai1-recovery-replay.v1",
+    "name": "offscreen_wait_and_resume",
+    "source": "synthetic_regression",
+    "task_id": "MVP-01",
+    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "expect_recovery": true,
+    "turns": [
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "연결",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "블루투스",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o1",
+          "captured_at_ms": 1000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "연결",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "블루투스",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o2",
+          "captured_at_ms": 2000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "연결",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "블루투스",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o3",
+          "captured_at_ms": 3000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "연결",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "블루투스",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o4",
+          "captured_at_ms": 4000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "연결",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "블루투스",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o5",
+          "captured_at_ms": 5000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "연결",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "connections-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "블루투스",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "connections",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o6",
+          "captured_at_ms": 6000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "밝기, 글자 크기, 다크 모드",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면 및 스타일",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면, 색상 팔레트",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                700,
+                1080,
+                900
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                720,
+                1000,
+                780
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면 구성",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                800,
+                1000,
+                870
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o7",
+          "captured_at_ms": 7000
+        },
+        "expected": {
+          "target_node_id": "display",
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      }
+    ]
+  },
+  {
+    "schema_version": "ai1-recovery-replay.v1",
+    "name": "ambiguous_wait_and_resume",
+    "source": "synthetic_regression",
+    "task_id": "MVP-01",
+    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "expect_recovery": true,
+    "turns": [
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "a",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "a",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "b",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "b",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o1",
+          "captured_at_ms": 1000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "a",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "a",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "b",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "b",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o2",
+          "captured_at_ms": 2000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "a",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "a",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "b",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "b",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o3",
+          "captured_at_ms": 3000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "a",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "a-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "a",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "b",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "b-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "b",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o4",
+          "captured_at_ms": 4000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "밝기, 글자 크기, 다크 모드",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면 및 스타일",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면, 색상 팔레트",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                700,
+                1080,
+                900
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                720,
+                1000,
+                780
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면 구성",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                800,
+                1000,
+                870
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o5",
+          "captured_at_ms": 5000
+        },
+        "expected": {
+          "target_node_id": "display",
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      }
+    ]
+  },
+  {
+    "schema_version": "ai1-recovery-replay.v1",
+    "name": "popup_then_relocalize",
+    "source": "synthetic_regression",
+    "task_id": "MVP-01",
+    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "expect_recovery": true,
+    "turns": [
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "확인",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "밝기, 글자 크기, 다크 모드",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o1",
+          "captured_at_ms": 1000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S0_UNKNOWN"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "밝기, 글자 크기, 다크 모드",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면 및 스타일",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면, 색상 팔레트",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                700,
+                1080,
+                900
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                720,
+                1000,
+                780
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면 구성",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                800,
+                1000,
+                870
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o2",
+          "captured_at_ms": 2000
+        },
+        "expected": {
+          "target_node_id": "display",
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      }
+    ]
+  },
+  {
+    "schema_version": "ai1-recovery-replay.v1",
+    "name": "stale_then_fresh",
+    "source": "synthetic_regression",
+    "task_id": "MVP-01",
+    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "expect_recovery": true,
+    "turns": [
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "밝기, 글자 크기, 다크 모드",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면 및 스타일",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면, 색상 팔레트",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                700,
+                1080,
+                900
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                720,
+                1000,
+                780
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면 구성",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                800,
+                1000,
+                870
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o1",
+          "captured_at_ms": 1000
+        },
+        "expected": {
+          "target_node_id": "display",
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "밝기, 글자 크기, 다크 모드",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면 및 스타일",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면, 색상 팔레트",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                700,
+                1080,
+                900
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                720,
+                1000,
+                780
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면 구성",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                800,
+                1000,
+                870
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o1",
+          "captured_at_ms": 1000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "root",
+              "package_name": "com.android.settings",
+              "class_name": null,
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                0,
+                1080,
+                2400
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "설정",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                80,
+                1000,
+                180
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "list",
+              "package_name": "com.android.settings",
+              "class_name": "androidx.recyclerview.widget.RecyclerView",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                240,
+                1080,
+                2200
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": true,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "root",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                260,
+                1080,
+                460
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "디스플레이",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                280,
+                1000,
+                340
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "display-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "밝기, 글자 크기, 다크 모드",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                360,
+                1000,
+                430
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "display",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                480,
+                1080,
+                680
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면 및 스타일",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                500,
+                1000,
+                560
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "wallpaper-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "배경화면, 색상 팔레트",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                580,
+                1000,
+                650
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "wallpaper",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.LinearLayout",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                0,
+                700,
+                1080,
+                900
+              ],
+              "clickable": true,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "list",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                720,
+                1000,
+                780
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "home-screen-summary",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "홈 화면 구성",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                40,
+                800,
+                1000,
+                870
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": "home-screen",
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o3",
+          "captured_at_ms": 3000
+        },
+        "expected": {
+          "target_node_id": "display",
+          "terminal": false,
+          "done": false,
+          "state_id": "S1_SETTINGS_HOME"
+        }
+      }
+    ]
+  },
+  {
+    "schema_version": "ai1-recovery-replay.v1",
+    "name": "missing_action_event_never_completes",
+    "source": "synthetic_regression",
+    "task_id": "MVP-01",
+    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "expect_recovery": false,
+    "turns": [
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "글자 크기",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                40,
+                1056,
+                96
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "small",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "작게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                420,
+                160,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "large",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "크게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                920,
+                420,
+                1056,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "font-slider",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.SeekBar",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                160,
+                430,
+                920,
+                480
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {
+                "progress": 2
+              },
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o1",
+          "captured_at_ms": 1000
+        },
+        "expected": {
+          "target_node_id": "font-slider",
+          "terminal": false,
+          "done": false
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "글자 크기",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                40,
+                1056,
+                96
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "small",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "작게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                420,
+                160,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "large",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "크게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                920,
+                420,
+                1056,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "font-slider",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.SeekBar",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                160,
+                430,
+                920,
+                480
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {
+                "progress": 2
+              },
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o2",
+          "captured_at_ms": 2000
+        },
+        "expected": {
+          "target_node_id": "font-slider",
+          "terminal": false,
+          "done": false
+        },
+        "confirmation": "accepted"
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "글자 크기",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                40,
+                1056,
+                96
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "small",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "작게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                420,
+                160,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "large",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "크게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                920,
+                420,
+                1056,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "font-slider",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.SeekBar",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                160,
+                430,
+                920,
+                480
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {
+                "progress": 3
+              },
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o3",
+          "captured_at_ms": 3000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "글자 크기",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                40,
+                1056,
+                96
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "small",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "작게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                420,
+                160,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "large",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "크게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                920,
+                420,
+                1056,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "font-slider",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.SeekBar",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                160,
+                430,
+                920,
+                480
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {
+                "progress": 3
+              },
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o4",
+          "captured_at_ms": 4000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": false,
+          "done": false
+        }
+      }
+    ]
+  },
+  {
+    "schema_version": "ai1-recovery-replay.v1",
+    "name": "verified_change_completes",
+    "source": "synthetic_regression",
+    "task_id": "MVP-01",
+    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "expect_recovery": false,
+    "turns": [
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "글자 크기",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                40,
+                1056,
+                96
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "small",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "작게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                420,
+                160,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "large",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "크게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                920,
+                420,
+                1056,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "font-slider",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.SeekBar",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                160,
+                430,
+                920,
+                480
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {
+                "progress": 2
+              },
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o1",
+          "captured_at_ms": 1000
+        },
+        "expected": {
+          "target_node_id": "font-slider",
+          "terminal": false,
+          "done": false
+        },
+        "applied_settings": {
+          "source": "android.provider.Settings.System.FONT_SCALE",
+          "font_scale": 1.0
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "글자 크기",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                40,
+                1056,
+                96
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "small",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "작게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                420,
+                160,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "large",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "크게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                920,
+                420,
+                1056,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "font-slider",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.SeekBar",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                160,
+                430,
+                920,
+                480
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {
+                "progress": 2
+              },
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o2",
+          "captured_at_ms": 2000
+        },
+        "expected": {
+          "target_node_id": "font-slider",
+          "terminal": false,
+          "done": false
+        },
+        "confirmation": "accepted",
+        "applied_settings": {
+          "source": "android.provider.Settings.System.FONT_SCALE",
+          "font_scale": 1.0
+        }
+      },
+      {
+        "observation": {
+          "nodes": [
+            {
+              "node_id": "title",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "글자 크기",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                40,
+                1056,
+                96
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "small",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "작게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                24,
+                420,
+                160,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "large",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.TextView",
+              "text": "크게",
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                920,
+                420,
+                1056,
+                500
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {},
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            },
+            {
+              "node_id": "font-slider",
+              "package_name": "com.android.settings",
+              "class_name": "android.widget.SeekBar",
+              "text": null,
+              "content_description": null,
+              "resource_id": null,
+              "bounds_in_screen": [
+                160,
+                430,
+                920,
+                480
+              ],
+              "clickable": false,
+              "enabled": true,
+              "selected": false,
+              "scrollable": false,
+              "checkable": false,
+              "extras": {
+                "progress": 3
+              },
+              "parent_id": null,
+              "visible_to_user": true,
+              "window_id": null
+            }
+          ],
+          "screen_bounds": [
+            0,
+            0,
+            1080,
+            2400
+          ],
+          "observation_id": "o3",
+          "captured_at_ms": 3000
+        },
+        "expected": {
+          "target_node_id": null,
+          "terminal": true,
+          "done": true
+        },
+        "applied_settings": {
+          "source": "android.provider.Settings.System.FONT_SCALE",
+          "font_scale": 1.15
+        },
+        "action": {
+          "type": "drag_completed",
+          "guide_turn": 1,
+          "occurred_at_ms": 2500,
+          "event_id": "verified-drag"
+        }
+      }
+    ]
+  }
+]

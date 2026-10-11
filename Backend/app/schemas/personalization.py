@@ -24,12 +24,14 @@ class UIProfileResponse(BaseModel):
 
 
 class CreateUserRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=50)
     age_group: AgeGroup = "unknown"
     occupation_category: str | None = Field(default=None, max_length=50)
 
 
 class UserResponse(BaseModel):
     id: str
+    name: str | None
     age_group: str | None
     occupation_category: str | None
     created_at: datetime

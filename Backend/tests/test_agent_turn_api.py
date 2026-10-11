@@ -140,7 +140,8 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
             "request_id": "slider-1",
             "session_id": "slider-session",
             "raw_goal": "increase font size",
-            "accessibility_tree": slider_tree(3),
+            "accessibility_tree": {**slider_tree(3), "observation_id": "before-1", "captured_at_ms": 1000,
+                "applied_settings": {"source": "android.provider.Settings.System.FONT_SCALE", "font_scale": 1.0}},
         },
     )
     assert first.status_code == 200
@@ -155,7 +156,8 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
             "request_id": "slider-2",
             "session_id": "slider-session",
             "expected_version": first.json()["session_version"],
-            "accessibility_tree": slider_tree(3),
+            "accessibility_tree": {**slider_tree(3), "observation_id": "before-2", "captured_at_ms": 1100,
+                "applied_settings": {"source": "android.provider.Settings.System.FONT_SCALE", "font_scale": 1.0}},
             "user_confirmation": "accepted",
             "confirmation_id": first.json()["metadata"]["confirmation"]["id"],
         },
@@ -169,7 +171,8 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
             "request_id": "slider-3",
             "session_id": "slider-session",
             "expected_version": accepted.json()["session_version"],
-            "accessibility_tree": slider_tree(3),
+            "accessibility_tree": {**slider_tree(3), "observation_id": "before-3", "captured_at_ms": 1150,
+                "applied_settings": {"source": "android.provider.Settings.System.FONT_SCALE", "font_scale": 1.0}},
         },
     )
     assert unchanged.json()["task_status"] != "COMPLETED"
@@ -180,9 +183,10 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
             "request_id": "slider-4",
             "session_id": "slider-session",
             "expected_version": unchanged.json()["session_version"],
-            "accessibility_tree": {**slider_tree(4), "captured_at": "2026-08-30T10:00:01Z"},
+            "accessibility_tree": {**slider_tree(4), "captured_at": "2026-08-30T10:00:01Z", "captured_at_ms": 1800, "observation_id": "after",
+                "applied_settings": {"source": "android.provider.Settings.System.FONT_SCALE", "font_scale": 1.15}},
             "user_action_event": {
-                "action_type": "drag_completed",
+                "action_type": "drag_completed", "event_id": "drag-1", "occurred_at_ms": 1200,
                 "guide_command_id": accepted.json()["guide_command"]["guide_command_id"],
                 "target_node_id": "font-slider",
                 "target_bounds": [160, 430, 920, 480],
@@ -190,13 +194,13 @@ def test_slider_progress_must_increase_before_task_completes() -> None:
         },
     )
     assert completed.status_code == 200
-    assert completed.json()["task_status"] == "COMPLETED"
+    assert completed.json()["task_status"] == "WAITING_RESULT"
     assert completed.json()["metadata"]["verification"]["slider_value_increased"] is True
     assert completed.json()["metadata"]["runtime"] == "ai_agent.runtime"
     assert completed.json()["metadata"]["trace_count"] >= 1
 
 
-def test_vision_snapshot_can_be_sent_without_accessibility_tree() -> None:
+def test_unsolicited_vision_snapshot_requires_server_challenge() -> None:
     client = TestClient(create_app())
     response = client.post(
         "/api/v1/agent/turn",
@@ -228,11 +232,8 @@ def test_vision_snapshot_can_be_sent_without_accessibility_tree() -> None:
         },
     )
 
-    assert response.status_code == 200
-    body = response.json()
-    assert body["state_id"] == "S1_SETTINGS_HOME"
-    assert body["guide_command"]["target_node_id"] == "vision:display"
-    assert body["metadata"]["debug"]["vision_fallback"]["status"] == "used"
+    assert response.status_code == 409
+    assert response.headers["X-Conflict-Code"] == "CONFIRMATION_INVALID"
 
 
 @pytest.mark.parametrize("action_type", ["scroll_completed", "scroll_failed"])
@@ -273,15 +274,21 @@ def test_empty_accessibility_tree_returns_runtime_fallback_contract() -> None:
     assert body["metadata"]["debug"]["observation"]["accessibility_node_count"] == 0
     assert body["metadata"]["debug"]["fallback"]["type"] == "vision_fallback"
     assert body["guide_command"]["render_policy"] == {
+        "recovery": {"schema_version": "ai1-recovery.v1", "decision": "recover",
+            "reason_code": "OBSERVATION_INSUFFICIENT", "next_action": "vision_analysis",
+            "waiting_for": "consent", "recoverable": True, "attempts": 0,
+            "retry_after_ms": 0, "options": []},
         "runtime_strategy": "reobserve", "attempt_id": None, "step_id": None,
         "avoid_covering_target": False,
         "preferred_position": "center",
         "vision_fallback": {
-            "requires_user_consent": False,
+            "requires_user_consent": True,
+            "consent_scope": "single_analysis",
+            "processing": "on_device_ocr",
+            "raw_screenshot_allowed": False,
             "accepted_payloads": [
                 "vision_snapshot.elements",
                 "vision_snapshot.ocr_text",
-                "vision_snapshot.screenshot_base64",
             ],
             "send_fresh_accessibility_tree": True,
         },

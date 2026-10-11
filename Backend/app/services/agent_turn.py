@@ -13,6 +13,9 @@ from app.repositories.personalization import PersonalizationRepository, UserNotF
 from app.schemas.agent_turn import AgentTurnResponse
 from app.schemas.agent_turn import AgentCommandResponse, CommandResult, GraphReference
 from app.repositories.task_graphs import TaskGraphRepository
+from app.services.goal_resolution import GoalResolutionService
+from app.services.goal_preparation import GoalPreparationService
+from app.services.task_outcome import follow_up
 
 
 class AgentTurnService:
@@ -24,10 +27,12 @@ class AgentTurnService:
             lease_seconds=int(os.getenv("AGENT_TURN_LEASE_SECONDS", "60")))
         self.timeout_seconds = float(os.getenv("AGENT_TURN_TIMEOUT_SECONDS", "20"))
         self.graphs = TaskGraphRepository(session_factory)
+        self.goal_resolution = GoalResolutionService(self.graphs)
+        self.goal_preparation = GoalPreparationService(session_factory, self.graphs, self.repository)
         if not 0 < self.timeout_seconds < self.repository.lease_seconds:
             raise ValueError("Turn timeout must be positive and shorter than the lease")
 
-    def handle_turn(self, request, *, command_context=None):
+    def handle_turn(self, request, *, command_context=None, prepared_reference=None):
         selected_graph = None
         selected_reference = None
         if getattr(request, "command_type", None) in {"start_task", "replace_task"}:
@@ -44,6 +49,8 @@ class AgentTurnService:
                 if details["graph_hash"] else self.graphs.select(goal))
             if details["graph_hash"] and details["graph_hash"] != selected_reference["sha256"]:
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
+        if prepared_reference is not None and selected_reference != prepared_reference:
+            self.repository.conflict("PREPARED_GRAPH_CHANGED")
         checkpoint_graph_version = graph_version(selected_graph)
         compatible_versions = {checkpoint_graph_version}
         # Existing font sessions used the whole bundled registry hash before DB loading.
@@ -62,6 +69,13 @@ class AgentTurnService:
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
             return self.personalize(safe_response(AgentTurnResponse.model_validate(claim["cached"])), request.user_id)
         try:
+            if getattr(request, "command_type", None):
+                details = self.repository.typed_details(request.session_id, request.user_id)
+                request = request.model_copy(update={"episode_id": details["episode_id"]})
+                if request.goal is None and not claim["checkpoint"]:
+                    from app.schemas.agent_turn import TypedGoalRequest, DeviceContextRequest
+                    request = request.model_copy(update={"goal": TypedGoalRequest.model_validate(details["goal"]),
+                        "device_context": DeviceContextRequest.model_validate(details["device_context"])})
             approved = validate_confirmation(self.session_factory, request, int(self.repository.clock()))
             if claim["checkpoint"] is not None and (
                 claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] not in compatible_versions
@@ -75,12 +89,15 @@ class AgentTurnService:
                 store.update(request.session_id, pending_attempt=None, pending_transition_id=None)
             engine = self.engine_factory(session_store=store, task_graph=selected_graph) \
                 if selected_graph is not None else self.engine_factory(session_store=store)
+            # Only the trusted adapter receives BE-validated per-request vision consent.
+            if isinstance(engine, RuntimeAgentAdapter):
+                engine.vision_consent_request_id = request.request_id if approved and approved.get("purpose") == "vision" else None
             response = safe_response(execute(lambda: engine.handle_turn(request), self.timeout_seconds))
             validate_output(request, response, approved, checkpoint=claim["checkpoint"],
                             now=int(self.repository.clock()))
             response.session_version = claim["version"] + 1
             checkpoint = capture(store, request.session_id, selected_graph)
-            if approved and checkpoint and checkpoint.get("pending_attempt"):
+            if approved and approved.get("purpose") != "vision" and checkpoint and checkpoint.get("pending_attempt"):
                 guide = response.guide_command
                 checkpoint["pending_attempt"]["authorization"] = {
                     "expires_at": approved["approval_expires_at"],
@@ -98,10 +115,42 @@ class AgentTurnService:
 
     def handle_command(self, request):
         command = request.command_type
+        prepared_reference = None
+        if command == "resolve_goal" and request.preparation_version:
+            return self.goal_preparation.resolve(request)
+        if command == "cancel_goal":
+            return self.goal_preparation.cancel(request)
+        if command == "start_task" and (request.preparation_version or request.goal_resolution_id
+                or self.goal_preparation.requires_preparation(request)):
+            if not request.goal_resolution_id:
+                raise HTTPException(422, detail="GOAL_PREPARATION_REQUIRED")
+            prepared_reference = self.goal_preparation.accept(request)
+        if command in {"respond_result", "adjust_task", "request_result"} and (
+                request.user_result or request.adjustment_reason or command == "request_result"):
+            goal = reference = None
+            if command == "adjust_task" and request.adjustment_reason in {"too_small", "too_large"}:
+                from app.schemas.agent_turn import TypedGoalRequest
+                direction = "increase" if request.adjustment_reason == "too_small" else "decrease"
+                goal = TypedGoalRequest(catalog_version="2.1.0", goal_type="settings.font_size." + direction,
+                    target_app="android_settings", slots={"setting": "font_size", "direction": direction})
+                _, reference = self.graphs.select(goal)
+            digest = sha256(json.dumps(request.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
+            details = self.repository.outcome_command(request, digest, goal=goal, reference=reference)
+            outcome = details["task_outcome"]
+            return AgentCommandResponse(contract_version=request.contract_version, request_id=request.request_id,
+                session_id=request.session_id, session_version=details["version"], episode_id=details["episode_id"],
+                response_type="result", command_result=CommandResult(command_type=command, status="applied"),
+                task_status=details["status"], accepted_goal_type=details["goal_type"], task_id=details["task_id"],
+                message=details["message"], metadata={"task_outcome": outcome,
+                    "result_prompt": outcome.get("prompt") if outcome and details["status"] == "WAITING_RESULT" else None,
+                    "follow_up": details["follow_up"], "checklist": outcome.get("checklist", []) if outcome else []})
         if command == "resolve_goal":
             from app.services.goal_resolution import GoalResolutionService
             version = self.repository.resolution_version(request)
-            return GoalResolutionService(self.graphs).resolve(request, version)
+            response = self.goal_resolution.resolve(request, version)
+            response.metadata["goal_selection"] = {"id": request.request_id, "message": response.message,
+                "candidates": [{"goal": response.goal.model_dump(mode="json"), "label": response.display_name}] if response.goal else []}
+            return response
         if command == "respond_result":
             details = self.repository.acknowledge_result(request)
             return AgentCommandResponse(contract_version=request.contract_version,
@@ -142,6 +191,10 @@ class AgentTurnService:
                 graph_reference=GraphReference(task_id=details["task_id"],
                     version=details["graph_version"], sha256=details["graph_hash"]),
                 task_status=details["status"], message=messages[command],
+                metadata={"task_outcome": details.get("task_outcome"),
+                    "result_prompt": (details.get("task_outcome") or {}).get("prompt") if details["status"] == "WAITING_RESULT" else None,
+                    "follow_up": follow_up(details["task_outcome"])
+                        if details["status"] == "WAITING_ADJUSTMENT" else None},
             )
         if command in {"replace_task", "adjust_task"}:
             # Validate the new graph before altering the current episode.
@@ -156,7 +209,8 @@ class AgentTurnService:
             else:
                 new_episode = self.repository.prepare_replace(request)
             request = request.model_copy(update={"episode_id": new_episode, "command_type": "observe"})
-        response = self.handle_turn(request, command_context="adjust_task" if command == "adjust_task" else None)
+        response = self.handle_turn(request, command_context="adjust_task" if command == "adjust_task" else None,
+            prepared_reference=prepared_reference)
         details = self.repository.typed_details(request.session_id, request.user_id)
         return AgentCommandResponse(
             contract_version=request.contract_version,
@@ -173,6 +227,8 @@ class AgentTurnService:
         )
 
     def personalize(self, response, user_id):
+        if response.task_status == "WAITING_RESULT":
+            return response
         with self.session_factory() as db:
             repository = PersonalizationRepository(db)
             try:

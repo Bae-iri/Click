@@ -12,8 +12,9 @@ from app.models.voice_queue import VoiceQueueState, VoiceRequest
 from app.models.agent_session import AgentSession, AgentTurn, AgentCheckpoint
 from app.models.lifecycle import SafetyConfirmation
 from app.schemas.voice_queue import VoiceQueueResponse, VoiceRequestResponse
+from app.services.task_outcome import make_outcome, answer_outcome
 
-ACTIVE_SESSION = ("IN_PROGRESS", "WAITING_CONFIRMATION", "PAUSED")
+ACTIVE_SESSION = ("IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "WAITING_ADJUSTMENT", "PAUSED")
 TERMINAL = ("COMPLETED", "CANCELLED", "FAILED")
 
 
@@ -67,8 +68,13 @@ class VoiceQueueService:
     def cancel_session(db, session_id, now):
         if session_id is None:
             return
+        row = db.get(AgentSession, session_id)
+        outcome = row.task_outcome if row else None
+        expired = row and row.status in {"WAITING_RESULT", "WAITING_ADJUSTMENT"} and row.expires_at <= now
+        answer = "no_response" if expired else "stopped"
         db.execute(update(AgentSession).where(AgentSession.id == session_id, AgentSession.status.in_(ACTIVE_SESSION)).values(
-            status="CANCELLED", version=AgentSession.version + 1, updated_at=now, lease_token=None, lease_until=None))
+            status="EXPIRED" if expired else "CANCELLED", version=AgentSession.version + 1, updated_at=now,
+            task_outcome=answer_outcome(outcome or make_outcome({}, now), answer, now), lease_token=None, lease_until=None))
         db.execute(update(AgentTurn).where(AgentTurn.session_id == session_id).values(response=None))
         db.execute(delete(AgentCheckpoint).where(AgentCheckpoint.session_id == session_id))
         db.execute(delete(SafetyConfirmation).where(SafetyConfirmation.session_id == session_id))

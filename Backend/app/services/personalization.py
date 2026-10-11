@@ -36,7 +36,7 @@ class PersonalizationService:
         self.repository = repository
 
     def create_user(self, request: CreateUserRequest) -> UserResponse:
-        user = self.repository.create_user(request.age_group, request.occupation_category)
+        user = self.repository.create_user(request.age_group, request.occupation_category, request.name)
         return self._user_response(user)
 
     def get_user(self, user_id: str) -> UserResponse:
@@ -110,6 +110,7 @@ class PersonalizationService:
     def _user_response(user) -> UserResponse:
         return UserResponse(
             id=user.id,
+            name=user.name,
             age_group=user.age_group,
             occupation_category=user.occupation_category,
             created_at=user.created_at,

@@ -15,6 +15,8 @@ public final class ScreenSnapshot {
     public final int screenWidth;
     public final int screenHeight;
     public final List<AccessibilityNodeSnapshot> nodes;
+    public final boolean privacyMaskingReady;
+    public final Float appliedFontScale;
 
     public ScreenSnapshot(
             String packageName,
@@ -28,6 +30,19 @@ public final class ScreenSnapshot {
 
     public ScreenSnapshot(String packageName, String capturedAt, int screenWidth, int screenHeight,
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId) {
+        this(packageName, capturedAt, screenWidth, screenHeight, nodes, activeWindowId, true);
+    }
+
+    public ScreenSnapshot(String packageName, String capturedAt, int screenWidth, int screenHeight,
+                          List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady) {
+        this(packageName, capturedAt, screenWidth, screenHeight, nodes, activeWindowId, privacyMaskingReady, null);
+    }
+
+    public ScreenSnapshot(String packageName, String capturedAt, int screenWidth, int screenHeight,
+                          List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
+                          Float appliedFontScale) {
+        this.appliedFontScale = appliedFontScale;
+        this.privacyMaskingReady = privacyMaskingReady;
         this.activeWindowId = activeWindowId;
         this.packageName = packageName;
         this.capturedAt = capturedAt;
@@ -43,6 +58,12 @@ public final class ScreenSnapshot {
             if (activeWindowId != null) object.put("active_window_id", activeWindowId);
             object.put("captured_at", capturedAt);
             object.put("observation_id", observationId);
+            object.put("captured_at_ms", java.time.Instant.parse(capturedAt).toEpochMilli());
+            if (appliedFontScale != null && Float.isFinite(appliedFontScale) && appliedFontScale > 0) {
+                object.put("applied_settings", new JSONObject()
+                        .put("source", "android.provider.Settings.System.FONT_SCALE")
+                        .put("font_scale", appliedFontScale));
+            }
             object.put("screen_width", screenWidth);
             object.put("screen_height", screenHeight);
             JSONArray nodeArray = new JSONArray();
@@ -57,6 +78,7 @@ public final class ScreenSnapshot {
     public String fingerprint() {
         StringBuilder value = new StringBuilder(packageName).append('|').append(screenWidth)
                 .append('x').append(screenHeight).append('|').append(activeWindowId);
+        value.append('|').append(privacyMaskingReady).append('|').append(appliedFontScale);
         for (AccessibilityNodeSnapshot node : nodes) {
             value.append('|').append(node.nodeId).append(':').append(node.text)
                     .append(':').append(node.contentDescription).append(':').append(node.className)

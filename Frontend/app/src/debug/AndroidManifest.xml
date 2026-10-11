@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Debug-only entry points used for visual QA of the post-permission flow. -->
+    <application>
+        <activity
+            android:name=".TutorialActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+        <activity
+            android:name=".OverlayTutorialActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+        <activity
+            android:name=".HomeActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+    </application>
+</manifest>

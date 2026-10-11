@@ -2,7 +2,9 @@
 
 ## 확정한 책임과 목표 흐름
 
-FE는 Goal Type·slots·Command Type을 확정한다. **Backend가 DB에서 요구에 맞는 Task Graph를 선택·고정·복원하고, AI1은 전달받은 graph를 실행한다.** AI2는 runtime 데이터를 수집·재평가해 graph를 업데이트하고 승인된 새 version을 DB에 게시한다.
+FE는 Goal Type·slots·Command Type을 확정한다. **Backend가 DB에서 요구에 맞는 Task Graph를 선택·고정·복원하고, AI1은 전달받은 graph를 실행한다.** AI2는 실제 실행 데이터를 수집·재평가해 graph 후보와 검수 자료를 만들고 독립 평가·승인을 거친 새 version을 DB에 게시한다.
+
+정답과 개발 순서는 [Task Graph 데이터 계획](../../docs/task-graph-data-plan.md)을 따른다. ColorBench·MobiFlow는 경로·규칙의 보조 참고이며 Backend 후보 graph 선택의 정답표가 아니다. 선택 평가에는 확정 goal·환경·catalog snapshot·정책별 허용 graph 집합/미지원/모호성 정답을 사용한다.
 
 상세 기준은 [Backend Graph 선택·전달 계약](../../docs/backend-task-graph-dispatch.md), [FE 계약](../../docs/fe-goal-command-contract.md), [AI1](../../docs/ai-agent-1-runtime.md), [AI2](../../docs/ai-agent-2-graph-proposal.md)다.
 
@@ -34,15 +36,15 @@ pause/cancel은 Backend가 화면 추론 없이 상태와 pending guide를 처�
 
 ## 현재 코드와 전환 항목
 
-현재 `RuntimeAgentAdapter`는 HTTP의 `raw_goal`을 runtime 타입으로 바꾸고 engine이 Goal Typing과 Python graph lookup을 수행한다. 이후 정규화·분류, 직전 transition 검증·재시도 판단, matching·fallback, guide 생성으로 진행한다. Backend는 DB 세션/checkpoint, 승인·출력 검증, 동의된 개인화를 적용한다. 위 DB graph 선택·주입 계약은 아직 이 호출 경로로 전환되지 않았다.
+2026-10-10 코드 확인: typed 시작/후속 요청은 DB selector가 schema/hash/목표 metadata를 검증하고 본문을 decode한 graph를 `RuntimeAgentAdapter`에 주입한다. episode의 version/hash는 `select_pinned()`로 복원한다. legacy raw-goal typing/lookup, 전체 환경 호환 검증, 임의 slot 보존은 남아 있다. 현재 Backend 충돌 4개로 통합 검증은 차단되어 있다. [품질·gold 기준](../../docs/ai-quality-evaluation.md)을 따른다.
 
 Week 4의 graph 기반 progress, 실행 시간/동시성 제한, catalog 기반 embedding 외부 전송, 입력 redaction·진단 allowlist는 [week4.md](week4.md)가 기준이다. 현재 AI2의 graph learner·dataset builder·validator는 골격이며 후보/평가 저장 테이블이 있다는 사실과 자동 graph 개선 구현을 구분한다.
 
 다음 연결 작업:
 
-1. Backend typed schema와 Command Router, DB graph repository/selector를 추가한다.
-2. `RuntimeAgentAdapter`가 선택 graph 본문·reference·확정 목표·상태를 주입하게 바꾼다.
+1. 기존 typed schema·Command Router·selector에 환경·catalog·정책별 선택 fixture와 실제 근거를 연결한다.
+2. 구현된 DB 본문 loader·고정 version·adapter 주입을 충돌 정리 후 통합 재검증하고 사용자 parameter 보존을 보완한다.
 3. AI1의 Goal Typing·registry 선택 호출을 제거하고 전달 입력 검증·graph 실행으로 시작한다.
 4. checkpoint와 progress가 고정된 전달 graph·검증된 parameters를 사용하게 맞춘다.
 5. FE DTO·OpenAPI·다중 turn 계약 fixture를 함께 전환한다.
-6. 실행 이벤트를 AI2가 재구성하고 승인된 새 DB graph version을 Backend가 선택하는 흐름을 검증한다.
+6. 실행 이벤트를 AI2가 재구성하고 독립 제품 gold로 평가한 새 DB graph version을 Backend가 선택하는 흐름을 검증한다. 공개 참고·weak label·candidate의 승인 상태를 제품 artifact와 혼용하지 않는다.

@@ -13,6 +13,30 @@ from ai_agent.runtime.types import (
 )
 
 
+def recovery_command(session_id, plan):
+    messages = {
+        "TARGET_NOT_VISIBLE": f"{plan.target_label or '다음'} 항목이 현재 화면에 보이지 않아요. 안내 창을 접고 목록을 위로 밀어 아래 항목을 살펴보세요. 화면이 바뀌면 이어서 안내할게요.",
+        "STATE_AMBIGUOUS": "현재 화면을 정확히 구분하지 못했어요. 화면 제목을 확인하거나 이전 화면으로 돌아간 뒤 다시 확인해 주세요.",
+        "STATE_UNKNOWN": "현재 화면을 작업 경로와 연결하지 못했어요. 팝업이 있다면 닫거나 설정 화면으로 이동한 뒤 다시 확인해 주세요.",
+        "TARGET_AMBIGUOUS": "비슷한 항목이 여러 개라 누를 곳을 확정하지 못했어요. 직접 원하는 메뉴로 이동하거나 화면을 다시 확인해 주세요.",
+        "ACTION_EVENT_MISSING": "값이 바뀌었지만 안내한 조작인지 확인하지 못했어요. 추가로 조작하지 말고 현재 화면을 다시 확인해 주세요.",
+        "ACTION_RESULT_UNOBSERVABLE": "조작 결과를 아직 확인하지 못했어요. 추가로 조작하지 말고 화면을 다시 확인해 주세요.",
+        "VISION_UNAVAILABLE": "화면 분석으로도 다음 항목을 확인하지 못했어요. 직접 메뉴로 이동하거나 화면을 다시 확인해 주세요.",
+        "ACTION_BUDGET_EXHAUSTED": "여러 번 시도했지만 진행을 확인하지 못했어요. 현재 위치와 작업 경로를 다시 확인해야 해요.",
+        "GRAPH_PATH_UNAVAILABLE": "현재 화면에서 이어갈 작업 경로가 없어요. 이전 화면으로 돌아가거나 화면을 다시 확인해 주세요.",
+    }
+    message = messages.get(plan.reason_code, "다음 항목을 확인하지 못했어요. 직접 메뉴로 이동하거나 화면을 다시 확인해 주세요.")
+    policy = {"avoid_covering_target": False, "recovery": plan.to_dict()}
+    if plan.next_action == "reobserve":
+        message = "화면이 바뀌었는지 다시 확인하고 있어요. 잠시 기다려 주세요."
+        policy["fallback_action"] = {"type": "request_fresh_observation", "reason_code": plan.reason_code}
+    if plan.decision == "handoff":
+        policy["backend_handoff"] = {"type": "task_graph_reselection_required", "reason_code": plan.reason_code}
+    return GuideCommand(guide_command_id=f"guide_{session_id}_recovery", command_type=CommandType.HIGHLIGHT,
+        action_type=ActionType.OBSERVE_ONLY, message=message, safety_level=SafetyLevel.LOW_RISK,
+        requires_user_action=False, render_policy=policy)
+
+
 def build_guide_command(
     *,
     session_id: str,
@@ -161,11 +185,13 @@ def vision_fallback_command(
             "preferred_position": "center",
             "vision_fallback": {
                 "requires_user_consent": command_type == CommandType.CONFIRMATION,
+                "consent_scope": "single_analysis",
+                "processing": "on_device_ocr",
                 "accepted_payloads": [
                     "vision_snapshot.elements",
                     "vision_snapshot.ocr_text",
-                    "vision_snapshot.screenshot_base64",
                 ],
+                "raw_screenshot_allowed": False,
                 "send_fresh_accessibility_tree": True,
             },
         },
