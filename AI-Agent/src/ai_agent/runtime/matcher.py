@@ -32,6 +32,9 @@ def match_next_ui(state_id, nodes, graph, *, excluded_node_ids=(),
                 similarity = max((similarity_scorer.score(node.label, keyword)
                                   for keyword in selector_keywords(transition, graph)), default=0)
                 score, method = min(0.79, max(0.0, similarity) * 0.79), 'similarity'
+            if node.source_confidence is not None:
+                score = min(score, node.source_confidence)
+                method = 'vision_' + method
             candidates.append((score, node, method))
         candidates.sort(key=lambda candidate: (-candidate[0], candidate[1].node_id))
         if not candidates or candidates[0][0] < MATCH_THRESHOLD:

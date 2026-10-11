@@ -41,9 +41,9 @@ def accepted(payload, body):
             "package_name": tree["package_name"], "screen_width": 1080, "screen_height": 2400,
             "observation_id": tree["observation_id"], "active_window_id": 42,
             "captured_at_ms": tree["captured_at_ms"],
-            "elements": [{"element_id": "display", "text": "디스플레이", "role": "menu_item",
+            "elements": [{"element_id": "display", "text": "디스플레이", "confidence": 0.95, "role": "menu_item",
                 "bounds_in_screen": [20, 100, 900, 200], "actionable": True},
-                {"element_id": "title", "text": "설정", "actionable": False,
+                {"element_id": "title", "text": "설정", "confidence": 0.95, "actionable": False,
                  "bounds_in_screen": [20, 10, 500, 70]}],
         },
     }
@@ -91,8 +91,9 @@ def test_invalid_vision_is_rejected_before_runtime(field, value, monkeypatch):
     request["vision_snapshot"][field] = value
     monkeypatch.setattr(RuntimeAgentAdapter, "handle_turn", lambda *a: pytest.fail("must not invoke runtime"))
     response = client.post(PATH, json=request)
-    assert response.status_code == 409, response.text
-    assert response.headers["X-Conflict-Code"] == "CONFIRMATION_INVALID"
+    assert response.status_code == (422 if field == "screenshot_base64" else 409), response.text
+    if field != "screenshot_base64":
+        assert response.headers["X-Conflict-Code"] == "CONFIRMATION_INVALID"
 
 
 @pytest.mark.parametrize("mutation", ["changed_screen", "expired", "different_owner", "missing_id", "missing_payload", "bounds"])
@@ -136,9 +137,9 @@ def test_vision_consent_does_not_approve_setting_change():
     payload, body = challenge(client)
     request = accepted(payload, body)
     request["vision_snapshot"]["elements"] = [
-        {"element_id": "title", "text": "글자 크기", "actionable": False,
+        {"element_id": "title", "text": "글자 크기", "confidence": 0.95, "actionable": False,
          "bounds_in_screen": [20, 20, 500, 90]},
-        {"element_id": "slider", "text": "글자 크기", "role": "slider",
+        {"element_id": "slider", "text": "글자 크기", "confidence": 0.95, "role": "slider",
          "bounds_in_screen": [100, 430, 900, 480]}]
     response = client.post(PATH, json=request)
     assert response.status_code == 200, response.text
@@ -154,10 +155,12 @@ def test_no_signal_does_not_recapture_automatically():
     request["vision_snapshot"]["elements"] = []
     response = client.post(PATH, json=request)
     assert response.status_code == 200, response.text
-    assert response.json()["task_status"] == "WAITING_RESULT"
-    assert response.json()["guide_command"]["command_type"] == "result_confirmation"
-    assert not response.json()["guide_command"]["render_policy"]
-    assert response.json()["metadata"]["task_outcome"]["technical"]["status"] == "UNVERIFIABLE"
+    assert response.json()["task_status"] == "IN_PROGRESS"
+    assert response.json()["guide_command"]["command_type"] == "highlight"
+    policy = response.json()["guide_command"]["render_policy"]
+    assert policy["recovery"]["waiting_for"] == "user"
+    assert "vision_fallback" not in policy
+    assert "result_prompt" not in response.json()["metadata"]
     assert "confirmation" not in response.json()["metadata"]
 
 
@@ -200,10 +203,12 @@ def test_backend_does_not_trust_client_redaction_flag():
         elements=[{"element_id": private, "text": private, "bounds_in_screen": [20, 100, 900, 200]}])
     response = client.post(PATH, json=request)
     assert response.status_code == 200, response.text
-    assert response.json()["task_status"] == "WAITING_RESULT"
-    assert response.json()["guide_command"]["command_type"] == "result_confirmation"
-    assert not response.json()["guide_command"]["render_policy"]
-    assert response.json()["metadata"]["task_outcome"]["technical"]["status"] == "UNVERIFIABLE"
+    assert response.json()["task_status"] == "IN_PROGRESS"
+    assert response.json()["guide_command"]["command_type"] == "highlight"
+    policy = response.json()["guide_command"]["render_policy"]
+    assert policy["recovery"]["waiting_for"] == "user"
+    assert "vision_fallback" not in policy
+    assert "result_prompt" not in response.json()["metadata"]
     assert private not in response.text
     assert response.json()["metadata"]["debug"]["vision_fallback"]["status"] == "no_signal"
 
@@ -215,10 +220,9 @@ def test_missing_masking_signal_blocks_consumes_consent_and_never_returns_target
     request["vision_snapshot"]["redaction_applied"] = False
     response = client.post(PATH, json=request)
     assert response.status_code == 200, response.text
-    assert response.json()["task_status"] == "WAITING_RESULT"
-    assert response.json()["guide_command"]["command_type"] == "result_confirmation"
-    assert not response.json()["guide_command"]["render_policy"]
-    assert response.json()["metadata"]["task_outcome"]["technical"]["status"] == "UNVERIFIABLE"
+    assert response.json()["task_status"] == "BLOCKED"
+    assert response.json()["guide_command"]["command_type"] == "blocked"
+    assert "result_prompt" not in response.json()["metadata"]
     assert response.json()["guide_command"]["target_node_id"] is None
     assert response.json()["metadata"]["debug"]["vision_fallback"]["status"] == "masking_failed"
     assert "confirmation" not in response.json()["metadata"]
@@ -235,10 +239,9 @@ def test_masking_exception_never_leaks_error_or_persists_vision(monkeypatch):
     monkeypatch.setattr("ai_agent.runtime.privacy.allowed_vision_label", broken)
     response = client.post(PATH, json=request)
     assert response.status_code == 200, response.text
-    assert response.json()["task_status"] == "WAITING_RESULT"
-    assert response.json()["guide_command"]["command_type"] == "result_confirmation"
-    assert not response.json()["guide_command"]["render_policy"]
-    assert response.json()["metadata"]["task_outcome"]["technical"]["status"] == "UNVERIFIABLE"
+    assert response.json()["task_status"] == "BLOCKED"
+    assert response.json()["guide_command"]["command_type"] == "blocked"
+    assert "result_prompt" not in response.json()["metadata"]
     with app.state.session_factory() as db:
         stored = str([turn.response for turn in db.scalars(select(AgentTurn))])
         checkpoint = str(db.scalar(select(AgentCheckpoint)).state)

@@ -16,6 +16,7 @@ from app.repositories.task_graphs import TaskGraphRepository
 from app.services.goal_resolution import GoalResolutionService
 from app.services.goal_preparation import GoalPreparationService
 from app.services.task_outcome import follow_up
+from uuid import uuid4
 
 
 class AgentTurnService:
@@ -96,6 +97,11 @@ class AgentTurnService:
             validate_output(request, response, approved, checkpoint=claim["checkpoint"],
                             now=int(self.repository.clock()))
             response.session_version = claim["version"] + 1
+            workflow = claim["workflow"]
+            if workflow.get("version") == "interactive.v1" and response.task_status == "COMPLETED":
+                response.task_status = "WAITING_RESULT"
+                response.metadata["result_prompt"] = {"id": str(uuid4()),
+                    "message": "원하는 결과가 되었나요?", "expires_at": int(self.repository.clock()) + 120}
             checkpoint = capture(store, request.session_id, selected_graph)
             if approved and approved.get("purpose") != "vision" and checkpoint and checkpoint.get("pending_attempt"):
                 guide = response.guide_command
@@ -105,8 +111,21 @@ class AgentTurnService:
                     "target_node_id": guide.target_node_id, "target_bounds": list(guide.target_bounds or ()),
                     "task_id": response.task_id, "state_id": response.state_id,
                 }
+            recovery_plan = None
+            execution_event = getattr(engine, "execution_event", None)
+            if execution_event and selected_reference:
+                execution_event = {**execution_event, "graph_hash": selected_reference["sha256"]}
+            if selected_graph and checkpoint:
+                from app.services.runtime_recovery import prepare
+                recovery_plan = prepare(claim["recovery"], checkpoint, selected_graph,
+                    selected_reference, response, self.graphs)
+                if recovery_plan.get("checkpoint"):
+                    checkpoint = recovery_plan["checkpoint"]
+                    selected_reference = recovery_plan["graph_reference"]
+                    checkpoint_graph_version = selected_reference["sha256"]
             self.repository.finish(request, claim, response, checkpoint, SCHEMA_VERSION,
-                checkpoint_graph_version, graph_reference=selected_reference)
+                checkpoint_graph_version, graph_reference=selected_reference, recovery_plan=recovery_plan,
+                execution_event=execution_event)
         except Exception:
             self.repository.release(request.session_id, claim["token"])
             raise
@@ -115,6 +134,29 @@ class AgentTurnService:
 
     def handle_command(self, request):
         command = request.command_type
+        legacy = self.repository.typed_details(request.session_id, request.user_id) if (
+            request.user_result is not None or request.adjustment_reason is not None) else None
+        if legacy and legacy.get("task_outcome") is None and legacy.get("workflow", {}).get("version") == "interactive.v1":
+            from app.repositories.interactive_workflow import apply
+            from app.schemas.agent_turn import TypedGoalRequest
+            reference = None
+            if request.adjustment_reason in {"too_small", "too_large"} and not self.repository.has_request(request.user_id, request.request_id):
+                direction = "increase" if request.adjustment_reason == "too_small" else "decrease"
+                goal = TypedGoalRequest(catalog_version="2.1.0", goal_type="settings.font_size." + direction,
+                    target_app="android_settings", slots={"setting": "font_size", "direction": direction})
+                _, reference = self.graphs.select(goal)
+            result = apply(self.repository, request, reference)
+            flow = result["workflow"]
+            return AgentCommandResponse(contract_version=request.contract_version, request_id=request.request_id,
+                session_id=request.session_id, session_version=result["version"], episode_id=result["episode_id"],
+                response_type="control", command_result=CommandResult(command_type=command, status="applied"),
+                accepted_goal_type=result["goal_type"], task_id=result["task_id"],
+                graph_reference=GraphReference(task_id=result["task_id"], version=result["graph_version"],
+                    sha256=result["graph_hash"]), task_status=result["status"],
+                message="결과를 확인했어요." if result["status"] == "COMPLETED" else
+                    "현재 화면에서 다시 안내할게요." if result["status"] == "IN_PROGRESS" else
+                    (flow.get("follow_up") or {}).get("message", "요청을 종료했어요."),
+                metadata={key: flow[key] for key in ("user_result", "follow_up", "result_prompt") if key in flow})
         prepared_reference = None
         if command == "resolve_goal" and request.preparation_version:
             return self.goal_preparation.resolve(request)

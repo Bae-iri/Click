@@ -84,7 +84,7 @@ class AccessibilityTree(BaseModel):
 
 class VisionElement(BaseModel):
     element_id: str
-    text: str = Field(min_length=1, max_length=500)
+    text: str = Field(min_length=1, max_length=200)
     bounds_in_screen: tuple[int, int, int, int] | None = Field(
         default=None,
         validation_alias=AliasChoices("bounds_in_screen", "bounds"),
@@ -116,13 +116,20 @@ class VisionSnapshot(BaseModel):
     screenshot_base64: str | None = Field(default=None, max_length=8_000_000, description="Rejected for vision use; raw image egress is disabled. Send on-device OCR elements after per-use confirmation.")
     mime_type: str = "image/png"
     ocr_text: str | None = Field(default=None, max_length=10_000)
-    elements: list[VisionElement] = Field(default_factory=list, max_length=2000)
+    elements: list[VisionElement] = Field(default_factory=list, max_length=200)
     package_name: str | None = None
     screen_width: int | None = Field(default=None, gt=0)
     screen_height: int | None = Field(default=None, gt=0)
     captured_at_ms: int | None = None
     observation_id: str | None = Field(default=None, min_length=1, max_length=200)
     active_window_id: int | None = None
+    processing_time_ms: int | None = Field(default=None, ge=0, le=60_000)
+
+    @model_validator(mode="after")
+    def reject_raw_screenshots(self) -> "VisionSnapshot":
+        if self.screenshot_base64 is not None:
+            raise ValueError("raw screenshots must not be sent; send on-device OCR elements")
+        return self
 
 
 class AgentTurnRequest(BaseModel):
@@ -492,6 +499,11 @@ class AgentCommandRequest(BaseModel):
     source_text: str | None = Field(default=None, max_length=500)
     classification: ClassificationMetadata | None = None
     result_response: Literal["accepted", "rejected"] | None = Field(default=None, exclude=True)
+    user_result: Literal["satisfied", "needs_help", "stopped", "no_response"] | None = None
+    result_prompt_id: str | None = Field(default=None, min_length=1, max_length=200)
+    adjustment_reason: Literal["too_small", "too_large", "other", "unsure"] | None = None
+    workflow_version: Literal["interactive.v1"] | None = None
+    vision_failure: Literal["capture_failed", "masking_failed", "ocr_failed"] | None = Field(default=None, exclude=True)
     user_id: str | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
@@ -604,3 +616,5 @@ class AgentGoalResolutionResponse(BaseModel):
     task_status: Literal["IN_PROGRESS"] = "IN_PROGRESS"
     metadata: dict[str, Any] = Field(default_factory=dict)
     message: str
+    task_status: Literal["IN_PROGRESS"] = "IN_PROGRESS"
+    metadata: dict[str, Any] = Field(default_factory=dict)

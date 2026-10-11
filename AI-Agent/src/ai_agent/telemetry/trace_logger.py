@@ -20,7 +20,7 @@ ENUMS = {
     "reason_code": {"NONE", "TARGET_NOT_VISIBLE", "STATE_IDENTIFIED", "STATE_AMBIGUOUS", "STATE_UNKNOWN", "TARGET_AMBIGUOUS",
         "TARGET_NOT_FOUND", "OBSERVATION_INSUFFICIENT", "OBSERVATION_STALE", "WAITING_FOR_SETTLE",
         "ACTION_EVENT_MISSING", "ACTION_RESULT_UNOBSERVABLE", "VISION_UNAVAILABLE",
-        "ACTION_BUDGET_EXHAUSTED", "GRAPH_PATH_UNAVAILABLE", "APP_NOT_OPEN"},
+        "ACTION_BUDGET_EXHAUSTED", "GRAPH_PATH_UNAVAILABLE", "GRAPH_RESELECTED", "APP_NOT_OPEN"},
     "next_action": {"none", "reobserve", "manual_navigation", "user_assistance", "reselect_graph", "vision_analysis", "open_settings"},
     "waiting_for": {"none", "user", "consent", "observation"},
 }
@@ -28,6 +28,7 @@ METRICS = {"count_attempt", "task_completed", "state_score", "score_gap", "recov
            "normalized_node_count", "actionable_node_count", "synthetic_vision_node_count",
            "score", "title_match", "ambiguous", "title_conflict", "attempts", "retry_after_ms", "recoverable", "accessibility_tree_present", "vision_snapshot_present", "vision_has_screenshot",
            "vision_has_ocr_text", "requires_user_action", "session_stateful", "matched_from_vision"}
+METRICS.add("vision_processing_time_ms")
 
 
 def diagnostic_payload(value, depth=0):
