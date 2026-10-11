@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="guide_blue">#3478F6</color>
+    <string name="guide_step_number">%1$d</string>
+    <string name="guide_name">접근성 안내</string>
+    <string name="guide_open">접근성 설정 안내</string>
+    <string name="guide_progress">%1$d / 5</string>
+    <string name="guide_progress_description">접근성 안내, 5단계 중 %1$d단계</string>
+    <string name="guide_intro">어려운 스마트폰 사용,\n이제 클릭 한 번으로</string>
+    <string name="guide_reason_title">앱을 더 편리하게\n사용하기 위해</string>
+    <string name="guide_reason_accent">접근성 권한이 필요해요</string>
+    <string name="guide_reason_description">click은 접근성 기능을 사용해\n화면의 정보를 이해하고,\n필요할 때 도움을 드려요.</string>
+    <string name="guide_features_title">어떤 도움을\n드릴 수 있나요?</string>
+    <string name="guide_features_description">이런 기능을 사용할 수 있어요.</string>
+    <string name="guide_find_title">화면의 버튼을 찾아드려요</string>
+    <string name="guide_find_description">“다음 버튼이 어디 있나요?”</string>
+    <string name="guide_read_title">화면의 글자를 읽어드려요</string>
+    <string name="guide_read_description">“이 화면에 뭐라고 적혀 있나요?”</string>
+    <string name="guide_alert_title">확인이 필요한 순간에\n알려드려요</string>
+    <string name="guide_alert_description">“결제 버튼이에요. 한 번 더 확인해요.”</string>
+    <string name="guide_control_title">권한은 직접 선택할 수 있어요</string>
+    <string name="guide_control_description">원하지 않으면 설정에서 끌 수 있어요.</string>
+    <string name="guide_settings_title">삼성 휴대폰에서\n이렇게 설정해 주세요</string>
+    <string name="guide_step_one">접근성 설정을 열어주세요</string>
+    <string name="guide_step_one_description">아래 버튼을 눌러 바로 이동할 수 있어요.</string>
+    <string name="guide_settings_destination">이 버튼을 누르면\n‘설정 > 접근성’으로 바로 이동해요.</string>
+    <string name="guide_accessibility_shortcut">접근성 설정 열기</string>
+    <string name="guide_step_two">접근성을 선택해 주세요</string>
+    <string name="guide_step_two_description">직접 찾으실 때는 설정 앱에서\n‘접근성’을 눌러주세요.</string>
+    <string name="guide_allow_title">접근성을\n허용해 주세요</string>
+    <string name="guide_step_three">click 화면 안내를 선택하고\n허용해 주세요</string>
+    <string name="guide_step_three_description">설치된 앱 → click 화면 안내 → 허용하기\n순서로 눌러주세요.</string>
+    <string name="guide_ready">설정이 완료되면\n더 편리하게 사용할 수 있어요!</string>
+    <string name="guide_device_note">휴대폰에 따라 메뉴 이름이 다를 수 있어요.</string>
+    <string name="guide_later">나중에 설정하기</string>
+    <string name="guide_settings_now">지금 설정하기</string>
+    <string name="guide_settings_unavailable">설정 앱을 열 수 없어요. 휴대폰의 설정에서 접근성을 찾아주세요.</string>
+    <string name="guide_settings">설정</string>
+    <string name="guide_accessibility">접근성</string>
+    <string name="guide_general">일반</string>
+    <string name="guide_update">소프트웨어 업데이트</string>
+    <string name="guide_battery">배터리 및 디바이스 케어</string>
+    <string name="guide_apps">애플리케이션</string>
+    <string name="guide_installed_apps">설치된 앱</string>
+    <string name="guide_recommended">추천 기능</string>
+    <string name="guide_click" translatable="false">click 화면 안내</string>
+    <string name="guide_open_settings_description">설정 > 접근성으로 바로 이동</string>
+    <item name="guide_screen" type="id" />
+    <item name="guide_scroll" type="id" />
+    <item name="guide_action" type="id" />
+    <item name="guide_later_action" type="id" />
+    <item name="guide_back" type="id" />
+    <item name="guide_step_counter" type="id" />
+    <item name="guide_entry" type="id" />
+    <item name="guide_settings_shortcut" type="id" />
+</resources>

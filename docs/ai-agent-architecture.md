@@ -1,16 +1,19 @@
 # AI-Agent 전체 구조: 사용자 Runtime과 Graph Proposal 분리
 
+Vision fallback의 매 사용 동의, FE·BE 필드, 개인정보 마스킹 및 실패 대응은 [실행 계약](./ai-agent-vision-fallback.md)을 따른다.
+
 ## 1. 회의 결정과 문서 안내
 
 AI-Agent를 아래 두 역할로 분리한다.
 
 1. **AI-Agent(1): 사용자 작업 수행 Runtime Agent** — Backend가 DB에서 선택·복원해 전달한 Task Graph와 확정 목표를 받아 실행하며, 현재 화면을 읽어 guide/action을 결정한다. 이후 관측으로 결과를 검증하고 필요하면 Re-plan한다.
-2. **AI-Agent(2): Runtime Data / Graph Proposal Agent** — 전체 runtime 데이터에 success/fail 등 결과 라벨을 붙이고, 내부 데이터셋을 생산하며, Task Graph 추가·업데이트 후보를 생성·검증한다.
+2. **AI-Agent(2): Runtime Data / Graph Proposal Agent** — 실제 실행 데이터를 수집·재구성해 근거가 있는 라벨과 내부 데이터셋을 만들고, Task Graph 추가·업데이트 후보를 생성·검증한다. 자동 라벨과 후보는 독립 검수를 거친 제품 정답과 구분한다.
 
 FE는 Goal/Command를 확정하고, Backend는 DB의 graph를 선택·전달한다. 기존 `graph-proposal` 및 trace 기반 graph 개선과 승인된 새 버전의 DB 반영 workflow는 AI-Agent(2)의 책임이다. AI-Agent(1)은 실행 trace를 생산하고 승인된 graph를 소비한다.
 
 | 문서 | 내용 |
 | --- | --- |
+| [Task Graph 정답 데이터·개발 계획](./task-graph-data-plan.md) | 공개 참고 자료의 채택 범위, 제품 gold 구축, 선택·경로·완료 평가, 단계별 산출물 |
 | [FE Goal·Command 계약](./fe-goal-command-contract.md) | FE 소유 분류, 실제 Goal 목록, slots, Command별 요청·제어 상태·구현 전환 |
 | [Backend Graph 선택·전달](./backend-task-graph-dispatch.md) | DB 조회·선택·버전 고정·복원, AI1 내부 실행 입력 |
 | [AI-Agent(1) 상세 설계](./ai-agent-1-runtime.md) | 전달 graph·목표·실행 상태 검증, 화면 해석, Guide/Action, Verification, Re-plan, 세션 및 trace |
@@ -20,7 +23,7 @@ FE는 Goal/Command를 확정하고, Backend는 DB의 graph를 선택·전달한�
 
 이 문서는 두 에이전트의 관계를 설명하는 공통 진입점이다. 기존 전체 구조 문서의 실행 상세와 구현 평가를 AI-Agent(1)에 옮기고, learning/proposal 영역을 AI-Agent(2)로 분리·확장했다. 상세 설계의 기준 경로는 루트 `docs/`이며 `AI-Agent/docs/`에서는 이 문서들로 연결한다.
 
-코드 확인 기준은 **2026-09-12, `a0d3609` 커밋**이다. 기능의 구현 상태는 위 커밋을 기준으로 하고 파일 경로는 이번 패키지 분리 작업을 반영했다. 사용자 실행은 `runtime/`, 내부 개선은 `graph_proposal/`, 공통 진단·관측 계약은 `telemetry/`로 실제 분리했으며 HTTP API와 별도 실행 프로세스는 변경하지 않았다. 예시 schema, 저장소, job, artifact 및 배포 정책은 현재 구현과 구분해서 읽는다. **추가 회의 결정으로 Goal/Command 분류는 FE, DB Task Graph 선택·복원과 명령 제어는 Backend로 이관했다. AI1은 전달된 graph를 실행한다.** 이번 문서는 책임 경계를 반영하며 raw-goal v1과 engine 호출을 바꾸는 실제 코드 전환은 별도 작업이다.
+초기 설계 평가는 2026-09-12 기준이며 **현재 구현 상태는 2026-10-10 코드·테스트로 갱신**했다. Backend의 DB 본문 loader·고정 version 복원, AI1 확대/축소·완료 predicate·동점 보류, FE 행동 수집이 코드에 있다. 영속 학습 event·독립 제품 gold·AI2 자동 proposal/평가/release와 legacy 정리는 남아 있다. 현재 Backend 충돌과 실제 UI 오선택 재현이 있으므로 전체 제품 완료로 읽지 않는다. [재검증 근거](./reviews/2026-10-10-ui-highlight-revalidation.md), [품질·gold 기준](./ai-quality-evaluation.md), [STT 선정](./stt-model-selection.md)이 최신 판단 기준이다.
 
 ## 2. 두 에이전트 비교
 
@@ -56,9 +59,14 @@ flowchart LR
     BE -. 요청·종료·오류 Event .-> STORE
     A1 -. 판단·안내·검증 Event .-> STORE
     STORE --> A2[AI-Agent 2 / Label·Analyze·Propose]
-    A2 --> DATA[내부 Dataset·분석 보고서]
+    REF[검수한 공개 참고 자료 / ColorBench·MobiFlow] --> A2
+    A2 --> DATA[출처·라벨 등급을 구분한 Dataset·분석]
+    STORE --> REVIEW[실제 결과 확인·독립 검수]
+    DATA --> REVIEW
+    REVIEW --> GOLD[우리 환경의 정답 / 분리된 holdout]
     A2 --> CAND[신규·변경 Graph Candidate]
     CAND --> EV[평가·검토·승인]
+    GOLD --> EV
     EV --> REG[(DB / Versioned Task Graph)]
     REG -->|Backend가 새 실행의 Graph 선택·고정| BE
 ```
@@ -79,6 +87,8 @@ Agent(2)의 분석이 완료될 때까지 사용자 guide 응답을 기다리지
 | Runtime event 생산 | Agent(1), Backend, FE | 사실과 온라인 판단을 기록 |
 | Event 영속 저장·전달 기반 | Backend / 데이터 저장 경계 | Agent(2)의 입력 내구성 |
 | Episode 재구성·success/fail 라벨링 | Agent(2) | step/task 구분, evidence·label version 관리 |
+| 공개 자료 반입·변환 | Agent(2) | 출처·revision·hash·적용 범위·수정/제외 이력 유지 |
+| 제품용 gold 확정 | 독립 검수 경계, Agent(2)의 검수 workflow | 실제 대상 환경의 근거 확인; 자동 라벨·candidate의 자기 승인 없음 |
 | Task Graph 신규 추가·업데이트 | Agent(2) | 근거를 갖춘 candidate 생성 |
 | Dataset·offline 평가 | Agent(2) | 학습/평가 분리, 회귀와 한계 기록 |
 | 운영 graph 승인·게시·rollback | 내부 승인·배포 경계, Agent(2)의 release workflow | 검증·권한·호환성 정책 집행 |
@@ -111,12 +121,21 @@ guide의 `action_type=tap`은 사용자가 해야 할 행동을 나타낼 수 �
 
 제한적 scroll은 목표 설계에 포함하되 FE capability, API 계약, graph 허용 조건, Safety Gate, 결과 검증이 모두 준비되어야 한다. graph proposal만으로 실행 권한을 넓히지 않는다.
 
+### 5.5 공개 참고 자료·제품 정답·Graph 후보
+
+ColorBench는 검수한 화면 전이·경로·복구 실험의 보조 기준, MobiAgent의 MobiFlow는 의존관계·분기·완료 규칙 설계의 참고 자료다. 두 자료를 그대로 우리 graph 선택 정답이나 실제 설정 변경 완료 판정기로 사용하지 않는다. 확인 근거와 미검증 범위는 [적합성 감사](./reviews/2026-09-20-task-graph-gold-fitness-audit.md)에 있다.
+
+우리 gold는 목표·기기/앱 환경·후보 graph·실행 결과를 실제 근거로 검수해 만든다. 선택용 정답, graph 내부 경로 정답, 실행·완료 정답을 따로 구성한다. AI2의 자동 라벨은 weak label이고 graph 출력은 candidate다. `label_status=final`이나 운영 graph의 `approved` 표시만으로 데이터가 gold가 되지 않는다.
+
+AI2는 graph 파일을 모으는 역할에 한정하지 않는다. 실제 실행과 통제된 시연을 수집·재구성하고, 데이터 부족을 드러내며, 검수 자료·graph 변경안·회귀 평가를 생산한다. 공개 자료를 도입해도 이 역할은 유지한다.
+
 ## 6. 두 에이전트가 공유하는 계약
 
 | 계약 | 생산 → 소비 | 핵심 조건 |
 | --- | --- | --- |
 | Runtime Event | Agent(1)/FE/BE → Agent(2) | episode·step·guide·observation 연결, 전체 종료 경로, 개인정보 최소화 |
 | Outcome Label | Agent(2) → dataset/evaluation | success/fail의 판정 단위, unknown 처리, evidence, revision |
+| Dataset / Gold Manifest | Agent(2)·검수 경계 → 평가 | 원본/파생·합성/실측·weak/gold 구분, 독립 근거, 환경·catalog·정책 version, split |
 | Graph Proposal | Agent(2) → validator/reviewer | base hash, 적용 범위, patch, 근거, 반례 |
 | Graph Artifact | AI2 승인·release 경계 → DB → Backend | 불변 version/hash, schema·runtime·환경 호환성 |
 | Runtime Graph Input | Backend → Agent(1) | 선택 본문·reference·goal·실행 상태·현재 관측 |
@@ -130,15 +149,16 @@ guide의 `action_type=tap`은 사용자가 해야 할 행동을 나타낼 수 �
 
 | 영역 | 확인된 현재 상태 | 다음 작업 |
 | --- | --- | --- |
-| Agent(1) 실행 | `ai_agent.runtime`에 MVP-01 화면 판단·안내·검증·재시도 구현; legacy Goal Typing 잔존 | Backend DB graph 주입 계약 전환, confidence·완료 근거·graph 내부 Re-plan 강화 |
+| Agent(1) 실행 | MVP-01/02·DB 선택 graph 주입·검증·복구 구현; UI 부분 문자열 오선택 및 legacy 경로 잔존 | 주입 계약 완성, 실제 행동·결과 수집과 제품 gold 기반 검증 |
 | Safety·실행 제한 | Backend confirmation·화면·출력 검증, turn deadline·동시 실행 상한 | runtime 공통 policy와 episode 복구 예산 |
-| 세션 영속성 | Backend DB turn claim·응답 저장·checkpoint 복원/저장 구현 | graph artifact version 고정과 연결 |
-| Graph 호환성 | Backend checkpoint의 graph hash와 현재 graph hash 비교 | 여러 승인 version을 읽는 loader |
-| Trace | enum·수치 allowlist와 개수·TTL 제한을 갖춘 메모리 진단 | 식별자·증거 및 모든 종료 경로를 포함한 별도 영속 event |
-| Agent(2) | `graph_proposal/*`로 모듈 이동, learner는 빈 proposal, validator는 `NEEDS_DATA` 반환 | 재구성 → 결과 라벨링 → dataset → proposal → 평가 |
+| 세션 영속성 | DB claim·응답·checkpoint·episode graph version 고정 코드 존재 | 충돌 해소, 결과 상태 계약과 parameter 보존 재검증 |
+| Graph 선택·호환성 | DB 본문 decode·hash 검사·고정 version 복원 구현 | 전체 환경 조건·선택 gold 평가 |
+| Trace | v2 correlation hash·enum·수치 allowlist, 제한된 메모리 진단 | 증거·순서·종료 사건을 보존하는 별도 영속 event |
+| Agent(2) | MVP-01 합성 fixture용 weak labeler 구현; learner·dataset builder는 빈 결과, validator는 `NEEDS_DATA` | 실제 증거 수집 → 독립 검수 gold → baseline → 후보·회귀 평가 |
+| 외부 참고·제품 gold | 공개 자료 구조·함수 수준 감사 완료; 제품 gold 수집·검수는 미완료 | ColorBench subset/MobiFlow rule 참고 실험과 자체 gold 구축을 별도 진행 |
 | Graph release | version manager는 문자열을 반환하는 골격 | 승인 artifact·registry·배포·rollback 연결 |
 
-공통 선행 과제는 replay 가능한 event와 graph version 계약이다. Agent(1)은 완료 검증과 trace 품질을 강화하고, Agent(2)는 라벨링과 첫 graph 변경안의 근거·평가부터 완성한다. 모델 가중치 학습은 이 기반 이후의 확장으로 둔다.
+공통 선행 과제는 평가 계약과 replay 가능한 실제 증거다. [데이터 계획 P0~P2](./task-graph-data-plan.md#6-개발-순서와-완료-조건)에 따라 선택·경로·완료 gold와 baseline을 먼저 만든 뒤 첫 graph 개선과 회귀 평가로 진행한다. 공개 참고 실험 R1은 수집과 병행하고 모델 가중치 학습은 이 기반 이후로 둔다.
 
 ## 8. 실제 코드 의존성과 공통 경계
 

@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/signup_screen"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:clipChildren="true"
+    android:clipToPadding="true"
+    android:orientation="vertical"
+    android:paddingHorizontal="20dp">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:background="@color/onboarding_surface"
+        android:elevation="1dp"
+        android:outlineProvider="none">
+
+        <LinearLayout
+            android:id="@+id/signup_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="18dp"
+            android:importantForAccessibility="yes"
+            android:orientation="horizontal">
+            <View
+                android:id="@+id/signup_step_one"
+                android:layout_width="64dp"
+                android:layout_height="6dp"
+                android:background="@drawable/onboarding_progress_active"
+                android:importantForAccessibility="no" />
+            <View
+                android:id="@+id/signup_step_two"
+                android:layout_width="64dp"
+                android:layout_height="6dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/onboarding_progress_inactive"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/signup_back"
+            style="@style/OnboardingQuietButton"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_gravity="bottom|start"
+            android:drawableStart="@drawable/onboarding_back"
+            android:drawablePadding="4dp"
+            android:text="@string/onboarding_previous" />
+    </FrameLayout>
+
+    <ScrollView
+        android:id="@+id/signup_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:overScrollMode="ifContentScrolls"
+        android:scrollbars="vertical">
+
+        <LinearLayout
+            android:id="@+id/signup_body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:orientation="vertical"
+            android:paddingTop="30dp"
+            android:paddingBottom="20dp">
+
+            <LinearLayout
+                android:id="@+id/signup_account_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/signup_account_title"
+                    style="@style/SignupTitle"
+                    android:text="@string/signup_account_title" />
+                <TextView
+                    android:id="@+id/signup_account_description"
+                    style="@style/SignupDescription"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/signup_account_description" />
+
+                <TextView
+                    android:id="@+id/signup_email_label"
+                    style="@style/SignupFieldLabel"
+                    android:layout_marginTop="34dp"
+                    android:labelFor="@id/signup_email"
+                    android:text="@string/signup_email_label" />
+                <EditText
+                    android:id="@+id/signup_email"
+                    style="@style/SignupInput"
+                    android:autofillHints="emailAddress"
+                    android:hint="@string/signup_email_hint"
+                    android:imeOptions="actionNext"
+                    android:importantForAutofill="yes"
+                    android:inputType="textEmailAddress" />
+                <TextView
+                    android:id="@+id/signup_email_error"
+                    style="@style/SignupError"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/signup_password_label"
+                    style="@style/SignupFieldLabel"
+                    android:layout_marginTop="22dp"
+                    android:labelFor="@id/signup_password"
+                    android:text="@string/signup_password_label" />
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:background="@drawable/signup_input_background">
+                    <EditText
+                        android:id="@+id/signup_password"
+                        style="@style/SignupInputInsideButton"
+                        android:autofillHints="password"
+                        android:hint="@string/signup_password_hint"
+                        android:imeOptions="actionNext"
+                        android:importantForAutofill="yes"
+                        android:inputType="textPassword" />
+                    <ImageButton
+                        android:id="@+id/signup_password_toggle"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_gravity="center_vertical|end"
+                        android:layout_marginEnd="8dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/signup_show_password"
+                        android:padding="12dp"
+                        android:src="@drawable/signup_visibility_on"
+                        android:tint="@color/onboarding_skip" />
+                </FrameLayout>
+                <TextView
+                    android:id="@+id/signup_password_hint_text"
+                    style="@style/SignupHelper"
+                    android:text="@string/signup_password_helper" />
+                <TextView
+                    android:id="@+id/signup_password_error"
+                    style="@style/SignupError"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/signup_password_confirm_label"
+                    style="@style/SignupFieldLabel"
+                    android:layout_marginTop="22dp"
+                    android:labelFor="@id/signup_password_confirm"
+                    android:text="@string/signup_password_confirm_label" />
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:background="@drawable/signup_input_background">
+                    <EditText
+                        android:id="@+id/signup_password_confirm"
+                        style="@style/SignupInputInsideButton"
+                        android:autofillHints="password"
+                        android:hint="@string/signup_password_confirm_hint"
+                        android:imeOptions="actionDone"
+                        android:importantForAutofill="yes"
+                        android:inputType="textPassword" />
+                    <ImageButton
+                        android:id="@+id/signup_password_confirm_toggle"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_gravity="center_vertical|end"
+                        android:layout_marginEnd="8dp"
+                        android:background="?android:attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/signup_show_password"
+                        android:padding="12dp"
+                        android:src="@drawable/signup_visibility_on"
+                        android:tint="@color/onboarding_skip" />
+                </FrameLayout>
+                <TextView
+                    android:id="@+id/signup_password_confirm_error"
+                    style="@style/SignupError"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/signup_profile_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/signup_profile_title"
+                    style="@style/SignupTitle"
+                    android:text="@string/signup_profile_title" />
+                <TextView
+                    android:id="@+id/signup_profile_description"
+                    style="@style/SignupDescription"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/signup_profile_description" />
+
+                <TextView
+                    android:id="@+id/signup_name_label"
+                    style="@style/SignupFieldLabel"
+                    android:layout_marginTop="34dp"
+                    android:labelFor="@id/signup_name"
+                    android:text="@string/signup_name_label" />
+                <EditText
+                    android:id="@+id/signup_name"
+                    style="@style/SignupInput"
+                    android:autofillHints="personName"
+                    android:hint="@string/signup_name_hint"
+                    android:imeOptions="actionNext"
+                    android:importantForAutofill="yes"
+                    android:inputType="textPersonName"
+                    android:maxLength="50" />
+                <TextView
+                    android:id="@+id/signup_name_error"
+                    style="@style/SignupError"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/signup_age_label"
+                    style="@style/SignupFieldLabel"
+                    android:layout_marginTop="22dp"
+                    android:labelFor="@id/signup_age"
+                    android:text="@string/signup_age_label" />
+                <EditText
+                    android:id="@+id/signup_age"
+                    style="@style/SignupInput"
+                    android:hint="@string/signup_age_hint"
+                    android:imeOptions="actionNext"
+                    android:inputType="number"
+                    android:maxLength="3" />
+                <TextView
+                    android:id="@+id/signup_age_error"
+                    style="@style/SignupError"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/signup_occupation_label"
+                    style="@style/SignupFieldLabel"
+                    android:layout_marginTop="22dp"
+                    android:labelFor="@id/signup_occupation"
+                    android:text="@string/signup_occupation_label" />
+                <TextView
+                    android:id="@+id/signup_occupation"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:background="@drawable/signup_input_background"
+                    android:contentDescription="@string/signup_occupation_label"
+                    android:textSize="19sp" android:textColor="@color/onboarding_text_primary"
+                    android:fontFamily="@font/pretendard_medium"
+                    android:gravity="center_vertical" android:paddingHorizontal="18dp"
+                    android:clickable="true" android:focusable="true" />
+
+                <TextView
+                    android:id="@+id/signup_profile_helper"
+                    style="@style/SignupInfo"
+                    android:layout_marginTop="26dp"
+                    android:text="@string/signup_profile_helper" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/onboarding_surface"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:paddingTop="16dp"
+        android:paddingBottom="20dp">
+        <com.click.designpreview.OnboardingStartButton
+            android:id="@+id/signup_action"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:importantForAccessibility="yes"
+            android:minHeight="66dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="16dp">
+            <TextView
+                android:id="@+id/signup_action_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/pretendard_semibold"
+                android:importantForAccessibility="no"
+                android:includeFontPadding="false"
+                android:text="@string/signup_next"
+                android:textColor="@color/onboarding_surface"
+                android:textSize="22sp" />
+            <ImageView
+                android:id="@+id/signup_action_arrow"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="10dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/onboarding_arrow" />
+        </com.click.designpreview.OnboardingStartButton>
+    </FrameLayout>
+</LinearLayout>

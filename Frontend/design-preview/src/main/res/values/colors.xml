@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="design_canvas_background">#FCFDFF</color>
+    <color name="click_ink">#0B1020</color>
+    <color name="click_blue">#3478F6</color>
+    <color name="click_signature">#6E8BCC</color>
+    <color name="click_signature_accent">#527AC8</color>
+    <color name="splash_wave_base">#E5EEFF</color>
+</resources>

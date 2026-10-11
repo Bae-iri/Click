@@ -1,6 +1,10 @@
 # AI-Agent(2): Graph Proposal 패키지
 
+2026-10-10: [실제 품질·정답 데이터 기준](../../../../docs/ai-quality-evaluation.md)에서 독립 검수·holdout·승격 조건을 정의했다. `outcomes.py`는 기술 결과와 사용자 응답을 분리 집계하는 오프라인 함수이며 영속 수집·자동 학습 pipeline은 아니다.
+
 전체 runtime 데이터를 재구성·라벨링하고 내부 데이터셋과 Task Graph 추가·업데이트 후보를 만드는 영역이다. AI2는 승인된 graph의 새 version을 DB에 반영하는 workflow를 맡고, Backend는 사용자 요구에 맞는 DB graph를 선택·전달한다. 전달 graph의 화면 판단·안내·온라인 검증·세션 내부 Re-plan은 `ai_agent.runtime`의 책임이다.
+
+ColorBench는 검수한 경로·복구 평가 보조, MobiAgent의 MobiFlow는 의존관계·완료 규칙의 설계 참고로 사용한다. AI2는 실제 실행·통제 시연을 수집해 제품 정답의 검수 자료를 만들고 graph를 제안한다. 자동 라벨·공개 reference·candidate를 제품 gold와 구분한다. [정답 데이터·개발 계획](../../../../docs/task-graph-data-plan.md)이 채택 범위와 구현 순서의 기준이다.
 
 ## 파일 구조와 담당 작업
 
@@ -25,7 +29,7 @@ graph_proposal/
   workflows/                     # offline job orchestration 경계
 ```
 
-`proposals`, `datasets`, `evaluation`, `models`, `releases`에는 기존 모듈을 옮겼다. 새로 구획한 `ingestion`, `reconstruction`, `labeling`, `analysis`, `workflows`는 책임을 명시한 패키지이며 아직 실행 구현이 없다. 현재 learner는 빈 후보, validator는 `NEEDS_DATA`, dataset builder는 빈 sample 구조를 반환한다. 파일 분리는 자동 라벨링·학습·배포 구현 완료를 뜻하지 않는다.
+`proposals`, `datasets`, `evaluation`, `models`, `releases`에는 기존 모듈을 옮겼다. `ingestion`, `reconstruction`, `analysis`, `workflows`의 실제 수집·분석 pipeline은 미구현이다. `labeling/mvp01.py`에는 아래 합성 fixture용 weak labeler가 있다. learner는 빈 후보, validator는 `NEEDS_DATA`, dataset builder는 빈 sample 구조를 반환한다. 파일 분리는 제품 gold·graph 학습·배포 구현 완료를 뜻하지 않는다.
 
 ## 의존성 경계
 
@@ -48,14 +52,17 @@ $env:PYTHONPATH = "src"
 python -m ai_agent.graph_proposal.labeling.mvp01 data/fixtures/mvp01_episodes.jsonl data/graph_proposal/labels/mvp01_labels.jsonl
 ```
 
-출력은 라벨, 근거 관측 ID, 이유, 정책 버전을 담은 JSONL이다. 이는 규칙 기반 **weak label**이며 사람 검토를 거친 정답 데이터가 아니다. 현재 `TraceLogger`의 진단 기록은 episode/step 연결 ID와 완료 근거가 없어 이 입력 형식으로 바로 변환할 수 없다. 실제 기록 연동 전에 팀과 영속 event 계약 및 개인정보 사용 범위를 확정해야 한다.
+출력은 라벨, 근거 관측 ID, 이유, 정책 버전을 담은 JSONL이다. 이는 규칙 기반 **weak label**이며 `label_status=final`이어도 제품 gold가 아니다. 현재 `TraceLogger`의 진단 기록은 제한된 correlation hash만 보관하고 라벨러에 필요한 실제 episode/step·완료 증거를 제공하지 않으므로 이 입력 형식으로 바로 변환할 수 없다. 실제 기록 연동에는 영속 event 계약이 필요하며 기존 개인정보·사용 목적 범위를 따른다.
 
 ## 다음 구현 순서
 
-1. 영속 event 수집과 개인정보·사용 목적 계약.
-2. episode/step/guide/observation 연결 및 누락 검출.
-3. 온라인 verification과 별개인 결과 label·근거·revision 생성.
-4. label 기반 dataset과 graph 후보 생성.
-5. 독립 fixture로 평가한 뒤 승인·release workflow 연결.
+1. P0: 선택·경로·완료 정답 단위와 source/review/split manifest를 정의한다.
+2. P1: 실제 기기 시연·event 수집, episode/step/guide/observation 연결과 누락 검출을 구현한다.
+3. P2: weak label을 독립 근거로 검수해 제품 gold·holdout을 만들고 현재 선택기·verifier baseline을 기록한다.
+4. R1 병행: ColorBench subset·MobiFlow rule을 검수하고 적용 범위가 제한된 참고 실험을 만든다.
+5. P3: 실제 실패에서 graph 후보를 생성하고 정적 검사·실행 근거·독립 holdout 회귀로 평가한다.
+6. P4/P5: 승인·release·Backend 선택·AI1 소비를 연결한 뒤 신규 task/환경으로 확장한다.
+
+공개 benchmark 통과만으로 제품 적용 `PASS`를 반환하지 않는다. 원천 증거가 부족하면 `NEEDS_DATA`, 파싱·평가 도구 오류는 `ERROR`로 구분하는 validator를 구현한다. 실제 수집과 제품 gold 구축은 현재 미완료다.
 
 상세 라벨·proposal·평가·release 설계는 [AI-Agent(2) 설계 문서](../../../../docs/ai-agent-2-graph-proposal.md)에 둔다.

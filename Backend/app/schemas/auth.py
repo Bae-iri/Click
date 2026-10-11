@@ -20,8 +20,19 @@ class Credentials(BaseModel):
 
 
 class RegisterRequest(Credentials):
+    name: str | None = Field(default=None, min_length=1, max_length=50)
     age_group: AgeGroup = "unknown"
     occupation_category: str | None = Field(default=None, max_length=50)
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value):
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("Name must not be blank")
+        return value
 
 
 class RefreshRequest(BaseModel):

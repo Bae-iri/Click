@@ -21,8 +21,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class AuthGateway {
+    // One cache per app/server, shared by screen loading and the later registration request.
+    private static final RegistrationRulesLoader REGISTRATION_RULES = new RegistrationRulesLoader(
+            () -> get("/openapi.json", null, 30000), android.os.SystemClock::elapsedRealtime);
+
     public interface Callback {
         void onSuccess();
+        void onFailure(Throwable error);
+    }
+
+    public interface RegistrationRulesCallback {
+        void onSuccess(int minimumPasswordLength, int maximumPasswordLength);
         void onFailure(Throwable error);
     }
 
@@ -32,16 +41,31 @@ public final class AuthGateway {
 
     public AuthGateway(Context context) { tokens = new AuthTokenStore(context.getApplicationContext()); }
 
-    public void register(String email, String password, String ageGroup, String occupation, Callback callback) {
-        JSONObject body = new JSONObject();
-        try {
-            body.put("email", email).put("password", password).put("age_group", ageGroup);
-            if (occupation != null) body.put("occupation_category", occupation);
-        } catch (Exception error) {
-            callback.onFailure(error);
-            return;
-        }
-        authenticate("/api/v1/auth/register", body, callback);
+    public void register(String name, String email, String password, String ageGroup, String occupation, Callback callback) {
+        executor.execute(() -> {
+            try {
+                RegistrationContract contract = registrationContract();
+                JSONObject body = contract.request(name, email, password, ageGroup, occupation);
+                completeAuthentication("/api/v1/auth/register", body, callback);
+            } catch (Exception error) {
+                main.post(() -> callback.onFailure(error));
+            }
+        });
+    }
+
+    public void loadRegistrationRules(RegistrationRulesCallback callback) {
+        executor.execute(() -> {
+            try {
+                RegistrationContract contract = registrationContract();
+                main.post(() -> callback.onSuccess(contract.minimumPasswordLength, contract.maximumPasswordLength));
+            } catch (Exception error) {
+                main.post(() -> callback.onFailure(error));
+            }
+        });
+    }
+
+    private static RegistrationContract registrationContract() throws Exception {
+        return REGISTRATION_RULES.load();
     }
 
     public void login(String email, String password, Callback callback) {
@@ -54,14 +78,18 @@ public final class AuthGateway {
     private void authenticate(String path, JSONObject body, Callback callback) {
         executor.execute(() -> {
             try {
-                HttpResult result = post(path, body.toString(), null);
-                if (result.status < 200 || result.status >= 300) throw apiError(path, result);
-                tokens.save(new JSONObject(result.body));
-                main.post(callback::onSuccess);
+                completeAuthentication(path, body, callback);
             } catch (Throwable error) {
                 main.post(() -> callback.onFailure(error));
             }
         });
+    }
+
+    private void completeAuthentication(String path, JSONObject body, Callback callback) throws Exception {
+        HttpResult result = post(path, body.toString(), null);
+        if (result.status < 200 || result.status >= 300) throw apiError(path, result);
+        tokens.save(new JSONObject(result.body));
+        main.post(callback::onSuccess);
     }
 
     static synchronized boolean refresh(AuthTokenStore tokens) throws Exception {
@@ -77,10 +105,14 @@ public final class AuthGateway {
     }
 
     static HttpResult post(String path, String body, String bearer) throws IOException {
+        return post(path, body, bearer, 15000);
+    }
+
+    static HttpResult post(String path, String body, String bearer, int readTimeout) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
         connection.setRequestMethod("POST");
         connection.setConnectTimeout(6000);
-        connection.setReadTimeout(15000);
+        connection.setReadTimeout(readTimeout);
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
         if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
@@ -96,17 +128,24 @@ public final class AuthGateway {
     }
 
     static HttpResult get(String path, String bearer) throws IOException {
+        return get(path, bearer, 15000);
+    }
+
+    private static HttpResult get(String path, String bearer, int readTimeout) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(6000);
-        connection.setReadTimeout(15000);
-        if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
-        int status = connection.getResponseCode();
-        InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
-        String response = read(stream);
-        String conflict = connection.getHeaderField("X-Conflict-Code");
-        connection.disconnect();
-        return new HttpResult(status, response, conflict);
+        try {
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(6000);
+            connection.setReadTimeout(readTimeout);
+            if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
+            int status = connection.getResponseCode();
+            InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
+            String response = read(stream);
+            String conflict = connection.getHeaderField("X-Conflict-Code");
+            return new HttpResult(status, response, conflict);
+        } finally {
+            connection.disconnect();
+        }
     }
 
     static ApiException apiError(String path, HttpResult result) {

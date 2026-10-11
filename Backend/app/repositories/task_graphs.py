@@ -123,3 +123,8 @@ class TaskGraphRepository:
                 raise AmbiguousGraphError("GRAPH_SELECTION_AMBIGUOUS")
             row = rows[0]
             return self._decode(row)
+
+    def select_for_inputs(self, goal, values):
+        from app.services.goal_inputs import GoalInputRequirements
+        GoalInputRequirements().validate_selection(goal, values)
+        return self.select(goal)

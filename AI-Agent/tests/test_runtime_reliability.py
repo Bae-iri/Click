@@ -17,14 +17,16 @@ class Turns:
                                        similarity_scorer=KeywordFallbackSimilarityScorer())
         self.index = 0
 
-    def send(self, tree=None, *, at=None, event=None, observation=None, confirmation=None):
+    def send(self, tree=None, *, at=None, event=None, observation=None, confirmation=None, applied_scale=None):
         self.index += 1
         return self.engine.handle_turn(AgentTurnRequest(
             request_id=f'r{self.index}', session_id='s',
             raw_goal=_raw_goal('글자 크기 키워줘') if self.index == 1 else None,
             accessibility_tree=tree if tree is not None else _settings_home_tree(),
             captured_at_ms=at, observation_id=observation or f'o{self.index}',
-            user_action_event=event, user_confirmation=confirmation))
+            user_action_event=event, user_confirmation=confirmation,
+            applied_settings={"source": "android.provider.Settings.System.FONT_SCALE", "font_scale": applied_scale}
+                if applied_scale is not None else {}))
 
     def event(self, response, *, at=None, event_id=None, action=UserActionType.TAP_COMPLETED):
         return UserActionEvent(action, response.guide_command.guide_command_id,
@@ -87,9 +89,14 @@ def test_failed_target_stays_excluded_after_no_target_and_node_id_change():
     following = turns.send(moved, at=3000)
     assert following.guide_command.target_node_id is None
     assert turns.session.failed_target_keys == keys
-    exhausted = turns.send(moved, at=4000)
+    turns.send(moved, at=4000)
+    exhausted = turns.send(moved, at=4600)
     assert exhausted.debug['replan_decision']['strategy'] == 'backend_reselection'
-    assert exhausted.guide_command.command_type == CommandType.BLOCKED
+    assert exhausted.guide_command.command_type == CommandType.HIGHLIGHT
+    assert exhausted.guide_command.render_policy['recovery']['decision'] == 'handoff'
+    following = turns.send(moved, at=6000)
+    assert following.guide_command.render_policy == exhausted.guide_command.render_policy
+    assert turns.session.recovery_count == graph.policy.recovery_limit
 
 
 def test_exclusion_uses_alternate_graph_edge_and_explicit_priority():
@@ -185,16 +192,16 @@ def test_pre_action_value_change_cannot_be_claimed_by_later_action():
 
 def test_success_uses_original_baseline_and_survives_waiting_observation():
     turns = Turns()
-    turns.send(_font_size_control_tree(slider_value=2), at=1000)
-    accepted = turns.send(_font_size_control_tree(slider_value=2), at=1100, confirmation='accepted')
-    waiting = turns.send(_font_size_control_tree(slider_value=2), at=1250,
+    turns.send(_font_size_control_tree(slider_value=2), at=1000, applied_scale=1.0)
+    accepted = turns.send(_font_size_control_tree(slider_value=2), at=1100, confirmation='accepted', applied_scale=1.0)
+    waiting = turns.send(_font_size_control_tree(slider_value=2), at=1250, applied_scale=1.0,
         event=turns.event(accepted, at=1200, action=UserActionType.DRAG_COMPLETED))
     assert waiting.verification_result.status == Status.WAITING_FOR_OBSERVATION
-    done = turns.send(_font_size_control_tree(slider_value=3), at=1800)
+    done = turns.send(_font_size_control_tree(slider_value=3), at=1800, applied_scale=1.15)
     assert done.verification_result.evidence == 'target_value_increased'
     assert done.guide_command.command_type == CommandType.DONE
     assert turns.session.task_completed
-    assert turns.send(_font_size_control_tree(slider_value=3), at=2000).guide_command.command_type == CommandType.DONE
+    assert turns.send(_font_size_control_tree(slider_value=3), at=2000, applied_scale=1.15).guide_command.command_type == CommandType.DONE
 
 
 def test_active_window_filters_background_targets():

@@ -1,5 +1,9 @@
 # Click Backend
 
+**입력 분류 LLM:** 기존 `resolve_goal`에 자체 서버 연결, 전송 전 개인정보 패턴 마스킹, 승인 후보·응답 검증이 적용되어 있다. 추론 서버가 없으면 기존 질문 흐름을 사용한다. [서버 설정과 연결 점검](inference/README.md#입력-분류-llm만-연결하기)을 참고한다.
+
+Vision 요청은 분석마다 발급된 동의 ID가 필요하다. `user_consented=true`만으로 허용하지 않는다. [FE/BE handshake와 개인정보 실패 정책](../docs/ai-agent-vision-fallback.md)을 따른다.
+
 **Graph 책임 변경:** Backend가 FE 확정 요구에 맞는 Task Graph를 DB에서 선택·복원해 AI1에 전달한다. AI1은 전달된 graph에서 Guide/Action → Verify → Re-plan을 수행하고 AI2는 데이터 수집·평가 후 승인된 새 graph version을 DB에 반영한다. [선택·전달 계약](../docs/backend-task-graph-dispatch.md)은 목표 설계이며 아래 raw-goal API와 runtime 내부 typing/lookup은 전환 전 구현이다.
 
 **최신 구현:** [AI 독립 백엔드 완료·인수 현황](docs/backend-completion.md). 승인·이력·피드백·계정 복구·운영 도구와 실제 AI/앱 연결 조건을 확인한다.

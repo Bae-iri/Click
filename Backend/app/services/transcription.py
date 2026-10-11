@@ -1,17 +1,11 @@
 from __future__ import annotations
 
-import base64
-import binascii
-import os
 from collections.abc import Callable
-
 import httpx
 
+from app.clients.self_hosted import InferenceEndpoint
 from app.schemas.transcription import TranscriptionRequest
-
-
-class InvalidAudio(ValueError):
-    pass
+from app.services.audio_validation import InvalidAudio, decode_pcm_wav
 
 
 class TranscriptionUnavailable(RuntimeError):
@@ -27,75 +21,34 @@ class InvalidTranscriptionResponse(RuntimeError):
 
 
 class TranscriptionService:
-    """Keeps the OpenAI credential server-side and never persists uploaded audio."""
+    """Sends short Korean audio only to the configured, operator-owned Qwen worker."""
 
-    MODEL = "gpt-transcribe"
-    MAX_AUDIO_BYTES = 650_000
-    KEYWORDS = (
-        "Click", "클릭", "쿠팡", "와이파이", "블루투스", "비행기 모드", "핫스팟",
-        "글자 크기", "화면 밝기", "다크 모드", "접근성", "TalkBack", "장바구니",
-        "NFC", "방해 금지", "자동 회전", "블루라이트", "데이터 절약", "데이터 로밍",
-        "VPN", "배터리 잔량", "실시간 자막", "소프트웨어 업데이트",
-        "로켓배송", "로켓프레시", "로켓와우", "쿠페이", "정기배송", "재입고 알림",
-        "배송 조회", "주문 취소", "환불", "반품", "교환", "상품평", "현금영수증",
-    )
+    MODEL = "Qwen/Qwen3-ASR-1.7B"
 
     def __init__(self, sender: Callable[..., httpx.Response] | None = None):
-        self._sender = sender or self._send_openai
+        self._sender = sender
 
     def transcribe(self, request: TranscriptionRequest) -> str:
+        decode_pcm_wav(request.audio_base64, request.mime_type)
         try:
-            audio = base64.b64decode(request.audio_base64, validate=True)
-        except (binascii.Error, ValueError) as error:
-            raise InvalidAudio("audio_base64 is invalid") from error
-        if not audio or len(audio) > self.MAX_AUDIO_BYTES:
-            raise InvalidAudio("audio payload is empty or too large")
-        if request.mime_type in {"audio/wav", "audio/x-wav"} and not audio.startswith(b"RIFF"):
-            raise InvalidAudio("WAV payload has no RIFF header")
-
-        api_key = os.getenv("OPENAI_API_KEY", "")
-        if not api_key:
-            raise TranscriptionUnavailable("OPENAI_API_KEY is not configured")
-        extension = {
-            "audio/wav": "wav", "audio/x-wav": "wav", "audio/mpeg": "mp3",
-            "audio/mp4": "mp4", "audio/m4a": "m4a", "audio/webm": "webm", "audio/ogg": "ogg",
-        }[request.mime_type]
+            endpoint = InferenceEndpoint.from_env("SELF_HOSTED_STT")
+        except ValueError as error:
+            raise TranscriptionUnavailable("Self-hosted STT is not configured") from error
         try:
-            response = self._sender(
-                api_key=api_key,
-                audio=audio,
-                filename=f"click-command.{extension}",
-                mime_type=request.mime_type,
-                language=request.language,
-            )
+            sender = self._sender or endpoint.post
+            response = sender(request.model_dump(), timeout=30.0)
         except httpx.TimeoutException as error:
-            raise TranscriptionTimedOut("OpenAI transcription timed out") from error
+            raise TranscriptionTimedOut("Self-hosted STT timed out") from error
         except httpx.HTTPError as error:
-            raise TranscriptionUnavailable("OpenAI transcription is unavailable") from error
+            raise TranscriptionUnavailable("Self-hosted STT is unavailable") from error
         if response.status_code < 200 or response.status_code >= 300:
-            raise TranscriptionUnavailable("OpenAI transcription returned an error")
+            raise TranscriptionUnavailable("Self-hosted STT returned an error")
         try:
-            text = response.json()["text"].strip()
-        except (ValueError, KeyError, AttributeError) as error:
-            raise InvalidTranscriptionResponse("OpenAI transcription response is invalid") from error
-        if not text:
-            raise InvalidTranscriptionResponse("OpenAI transcription response is empty")
-        return text
-
-    def _send_openai(self, *, api_key: str, audio: bytes, filename: str,
-                     mime_type: str, language: str) -> httpx.Response:
-        form = {
-            "model": self.MODEL,
-            "prompt": "한국어 스마트폰 설정 및 쿠팡 사용 요청입니다.",
-            "keywords[]": list(self.KEYWORDS),
-            # gpt-transcribe uses plural language hints; singular `language`
-            # belongs to the older transcription contract and must not be mixed in.
-            "languages[]": [language],
-        }
-        with httpx.Client(timeout=httpx.Timeout(20.0, connect=5.0)) as client:
-            return client.post(
-                "https://api.openai.com/v1/audio/transcriptions",
-                headers={"Authorization": f"Bearer {api_key}"},
-                data=form,
-                files={"file": (filename, audio, mime_type)},
-            )
+            body = response.json()
+            text = body["text"]
+            if (not isinstance(text, str) or not text.strip() or len(text) > 4000
+                    or body.get("model") != self.MODEL or body.get("provider") != "self_hosted"):
+                raise ValueError("Unexpected STT result")
+        except (ValueError, KeyError, TypeError, AttributeError) as error:
+            raise InvalidTranscriptionResponse("Self-hosted STT response is invalid") from error
+        return text.strip()

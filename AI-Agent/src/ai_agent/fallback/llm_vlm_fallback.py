@@ -15,6 +15,7 @@ class VisionFallbackAnalysis:
     provider: str
     elements: tuple[VisionElement, ...] = ()
     ocr_text: str | None = None
+    active_window_id: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -40,12 +41,15 @@ class LLMVLMFallback:
                 reason=reason,
                 provider=self.provider,
             )
-        if not snapshot.user_consented:
+        if not snapshot.user_consented or not snapshot.consent_request_id:
             return VisionFallbackAnalysis(
                 status="consent_required",
-                reason="external_vlm_processing",
+                reason="per_use_vision_consent",
                 provider=snapshot.provider or self.provider,
             )
+        if snapshot.privacy_status != "verified":
+            return VisionFallbackAnalysis(status="masking_failed",
+                reason="privacy_validation_failed", provider="local")
         if snapshot.elements or snapshot.ocr_text:
             return VisionFallbackAnalysis(
                 status="used",
@@ -53,11 +57,12 @@ class LLMVLMFallback:
                 provider=snapshot.provider or "frontend_vision_payload",
                 elements=snapshot.elements,
                 ocr_text=snapshot.ocr_text,
+                active_window_id=snapshot.active_window_id,
             )
         if snapshot.screenshot_base64:
             return self._analyze_with_gemini(snapshot, reason=reason)
         return VisionFallbackAnalysis(
-            status="not_configured",
+            status="no_signal",
             reason="vision_snapshot_has_no_elements_or_image",
             provider=snapshot.provider or self.provider,
         )
@@ -83,6 +88,7 @@ def vision_elements_to_accessibility_nodes(
         nodes.append(
             AccessibilityNode(
                 node_id=f"vision:{element.element_id or index}",
+                window_id=analysis.active_window_id,
                 package_name=package_name,
                 class_name=_class_name_for_role(element.role),
                 text=element.text,
@@ -99,6 +105,7 @@ def vision_elements_to_accessibility_nodes(
         nodes.append(
             AccessibilityNode(
                 node_id="vision:ocr_text",
+                window_id=analysis.active_window_id,
                 package_name=package_name,
                 class_name="android.widget.TextView",
                 text=analysis.ocr_text,

@@ -1,5 +1,49 @@
 """Estimate progress using shortest graph paths, including branches and cycles."""
 from math import inf
+from collections import deque
+
+
+def observed_path(previous, current, graph):
+    path = list(previous)
+    if current == "S0_UNKNOWN" and path:
+        return tuple(path)
+    if current not in graph.states or graph.states[current].verification_only or current == graph.definition.done_state:
+        return tuple(path)
+    if current in path:
+        return tuple(path[:path.index(current) + 1])
+    return tuple([*path, current])
+
+
+def checklist(graph, session, match):
+    """Observed screen arrivals plus the current graph route; instructions never tick rows."""
+    if not session:
+        return []
+    rows = [{"id": "observed:" + state, "label": graph.states[state].name + " 확인",
+             "status": "completed", "evidence": "screen_observed"}
+            for state in session.observed_path[1:] if state != "S0_UNKNOWN"]
+    verified = session.technical_outcome.get("transition_id") if session.task_completed else None
+    first = next((t for t in graph.transitions if t.transition_id == (verified or match.transition_id)), None)
+    if first is None:
+        return rows
+    queue = deque([(first.to_state, [first])])
+    seen = {first.from_state}
+    route = [first]
+    while queue:
+        state, path = queue.popleft()
+        if state == graph.definition.done_state:
+            route = path
+            break
+        if state in seen:
+            continue
+        seen.add(state)
+        for edge in graph.transitions_from(state):
+            queue.append((edge.to_state, [*path, edge]))
+    for index, edge in enumerate(route):
+        done = session.task_completed and (edge.transition_id == verified or not edge.requires_user_action)
+        rows.append({"id": edge.transition_id, "label": edge.action_name,
+                     "status": "completed" if done else "current" if index == 0 else "pending",
+                     "evidence": "setting_change_verified" if done else None})
+    return rows
 
 
 def graph_progress(graph, state_id, completed=False):

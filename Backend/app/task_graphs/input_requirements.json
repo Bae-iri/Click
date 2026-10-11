@@ -1,0 +1,87 @@
+{
+  "version": "goal-inputs.v1",
+  "families": [
+    {
+      "id": "font_size",
+      "goal_prefix": "settings.font_size.",
+      "keywords": [
+        "글자",
+        "글씨",
+        "폰트",
+        "문자"
+      ],
+      "fields": [
+        {
+          "id": "scope",
+          "label": "적용 범위",
+          "kind": "choice",
+          "question": "어디의 글자 크기를 바꿀까요?",
+          "choices": [
+            {
+              "value": "system",
+              "label": "휴대폰 설정에서 기본 글자 크기 변경",
+              "aliases": [
+                "설정",
+                "휴대폰 설정",
+                "기본 글자",
+                "휴대폰 전체"
+              ]
+            },
+            {
+              "value": "app",
+              "label": "특정 앱 안에서만 변경",
+              "aliases": [
+                "특정 앱",
+                "앱 안에서만"
+              ]
+            }
+          ]
+        },
+        {
+          "id": "app_name",
+          "label": "앱 이름",
+          "kind": "text",
+          "required_when": {
+            "scope": "app"
+          },
+          "question": "어느 앱의 글자 크기를 바꿀까요?",
+          "placeholder": "예: 카카오톡",
+          "max_length": 80
+        },
+        {
+          "id": "direction",
+          "label": "변경 방향",
+          "kind": "choice",
+          "goal_slot": "direction",
+          "question": "글자 크기를 어떻게 바꿀까요?",
+          "choices": [
+            {
+              "value": "increase",
+              "label": "더 크게",
+              "aliases": [
+                "크게",
+                "더 크게"
+              ]
+            },
+            {
+              "value": "decrease",
+              "label": "더 작게",
+              "aliases": [
+                "작게",
+                "더 작게"
+              ]
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {
+            "scope": "system"
+          },
+          "target_app": "android_settings"
+        }
+      ]
+    }
+  ]
+}

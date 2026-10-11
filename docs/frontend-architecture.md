@@ -237,15 +237,11 @@ Frontend/
 
 ### 7.6 Speech Service
 
-- 마이크 세션 시작과 종료
-- 16 kHz mono PCM WAV로 한 발화를 녹음하고 Backend의 `POST /api/v1/speech/transcriptions`에 전달
-- Backend가 서버 환경변수의 OpenAI 키로 `gpt-transcribe`를 호출하며 Android 앱에는 API 키를 넣지 않음
-- 서버 키 누락, 네트워크·provider 오류, 무응답이면 Android `SpeechRecognizer`로 한 번 더 수신하는 fallback 적용
-- 녹음 원문은 Backend DB나 로그에 저장하지 않으며 한 요청의 변환 후 폐기
-- AI-Agent가 생성한 안내 문장과 질문을 TTS 모델로 음성 변환 및 재생
-- 음성 명령에 의한 Agent 종료 처리
-- 녹음, 변환, 재생, 실패 상태를 UI에 노출
-- Speech Service 자체는 형식 변환만 담당; Goal/Command 분류는 FE 입력 해석 계층, DB Task Graph 선택·전달은 Backend, graph 실행은 AI-Agent(1) 담당
+2026-10-10 코드 기준: 메인 오버레이는 16 kHz mono PCM WAV를 Backend `/api/v1/speech/transcriptions`로 전송하고 Backend가 외부 `gpt-transcribe`를 호출한다. 튜토리얼은 일반 Android `SpeechRecognizer` 우선, 일부 오류 뒤 다음 명시적 입력에서 서버 STT를 사용한다. 둘 다 로컬 전용 처리로 보장하지 않는다.
+
+새 개인정보 기준은 원음의 기기/우리 서버 처리까지 허용한다. 따라서 외부 API와 일반 시스템 STT를 검증된 온디바이스 또는 자체 서버 모델로 전환해야 한다. [STT 후보·개인정보 조건](./stt-model-selection.md), [한국어 gold·평가 기준](./ai-quality-evaluation.md)을 따른다. 후보 선정과 서비스 교체 완료를 구분한다.
+
+마이크는 명시적 입력에서만 시작하고 취소·종료·화면 이탈을 처리한다. 원음뿐 아니라 전사문·로그·네트워크 대기 요청도 개인정보 경계에 포함한다. TTS 재생과 STT 결과를 Goal/Command 확정으로 자동 간주하지 않는다. Goal/Command 확인은 FE 입력 해석 계층, graph 선택·복원은 Backend, 전달 graph 실행은 AI1 책임이다.
 
 ### 7.6.1 FE 입력 해석 계층
 

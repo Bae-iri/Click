@@ -13,8 +13,9 @@ from app.services.safety import save_confirmation
 from app.models.lifecycle import SafetyConfirmation
 from app.models.voice_queue import VoiceRequest
 from app.models.personalization import User
+from app.services.task_outcome import make_outcome, answer_outcome, follow_up
 
-ACTIVE = ("IN_PROGRESS", "WAITING_CONFIRMATION")
+ACTIVE = ("IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "WAITING_ADJUSTMENT")
 
 
 class AgentSessionRepository:
@@ -41,10 +42,13 @@ class AgentSessionRepository:
 
     def expire(self, db, row, now):
         if row.status in ACTIVE and row.expires_at <= now:
+            outcome = deepcopy(row.task_outcome)
+            if outcome and outcome.get("user", {}).get("status") is None:
+                outcome = answer_outcome(outcome, "no_response", now)
             db.execute(update(AgentSession).where(AgentSession.id == row.id,
                 AgentSession.status.in_(ACTIVE), AgentSession.expires_at <= now).values(
                 status="EXPIRED", version=AgentSession.version + 1, lease_token=None,
-                lease_until=None, updated_at=now))
+                lease_until=None, updated_at=now, task_outcome=outcome))
             db.commit()
             db.refresh(row)
 
@@ -74,13 +78,18 @@ class AgentSessionRepository:
                     row = AgentSession(id=request.session_id, user_id=request.user_id,
                         status="IN_PROGRESS", version=0, created_at=now, updated_at=now,
                         expires_at=now + self.idle_seconds,
-                        episode_id=str(uuid4()) if goal else None,
+                        episode_id=str(uuid4()),
                         accepted_goal_type=goal.goal_type if goal else None,
                         goal=goal.model_dump(mode="json") if goal else None,
                         device_context=(request.device_context.model_dump(mode="json")
                             if getattr(request, "device_context", None) else None))
                     db.add(row)
                     db.flush()
+                if row.version == 0 and getattr(request, "goal", None) and row.goal is None:
+                    row.episode_id = str(uuid4())
+                    row.accepted_goal_type = request.goal.goal_type
+                    row.goal = request.goal.model_dump(mode="json")
+                    row.device_context = request.device_context.model_dump(mode="json")
                 self.expire(db, row, now)
                 if row.status == "EXPIRED":
                     raise HTTPException(410)
@@ -97,6 +106,8 @@ class AgentSessionRepository:
                     self.conflict("ACTIVE_TASK_EXISTS" if row.status in ACTIVE else "SESSION_TERMINATED")
                 if row.status not in ACTIVE:
                     self.conflict("SESSION_CLOSED")
+                if row.status in {"WAITING_RESULT", "WAITING_ADJUSTMENT"}:
+                    self.conflict("RESULT_RESPONSE_REQUIRED")
                 if (row.version > 0 and request.expected_version != row.version) or (
                     row.version == 0 and request.expected_version not in (None, 0)
                 ):
@@ -149,6 +160,17 @@ class AgentSessionRepository:
         now = int(self.clock())
         with self.factory() as db:
             self.guard_voice_request(db, request, now)
+            row = self.owned(db, request.session_id, request.user_id)
+            response.episode_id = row.episode_id
+            technical = response.metadata.get("technical_outcome") or {"status": "UNVERIFIABLE", "reason": "insufficient_evidence"}
+            outcome = {"technical": deepcopy(technical), "user": {"status": None, "confirmed_at": None},
+                       "final": None, "checklist": response.metadata.get("checklist", [])}
+            if response.task_status == "WAITING_RESULT":
+                direction = ((row.goal or {}).get("slots") or {}).get("direction", "increase")
+                outcome = make_outcome(technical, now, direction, previous=outcome)
+                response.guide_command.message = outcome["prompt"]["message"]
+                response.metadata["result_prompt"] = outcome["prompt"]
+            response.metadata["task_outcome"] = outcome
             if request.user_confirmation == "accepted":
                 approval = db.get(SafetyConfirmation, request.session_id)
                 if approval is None or approval.id != request.confirmation_id or approval.expires_at <= now:
@@ -160,7 +182,8 @@ class AgentSessionRepository:
                     version=claim["version"] + 1, status=response.task_status,
                     task_id=response.task_id, state_id=response.state_id,
                     last_guide_command_id=response.guide_command.guide_command_id,
-                    updated_at=now, expires_at=now + self.idle_seconds,
+                    updated_at=now, expires_at=outcome.get("prompt", {}).get("expires_at", now + self.idle_seconds),
+                    task_outcome=outcome,
                     lease_token=None, lease_until=None))
             if updated.rowcount != 1:
                 self.conflict("TURN_SUPERSEDED")
@@ -231,7 +254,8 @@ class AgentSessionRepository:
             changed = db.execute(update(AgentSession).where(AgentSession.id == session_id,
                 AgentSession.version == expected_version, AgentSession.status.in_(ACTIVE),
                 AgentSession.expires_at > now).values(status="CANCELLED", version=expected_version + 1,
-                    updated_at=now, lease_token=None, lease_until=None))
+                    updated_at=now, lease_token=None, lease_until=None,
+                    task_outcome=answer_outcome(row.task_outcome or make_outcome({}, now), "stopped", now)))
             if changed.rowcount != 1:
                 self.conflict("STALE_VERSION")
             # Cancelled guides must never be replayed; clear payloads immediately.
@@ -255,6 +279,7 @@ class AgentSessionRepository:
                 "task_id": row.task_id or "MVP-01",
                 "graph_version": row.graph_version or "1.0.0",
                 "graph_hash": row.graph_hash,
+                "task_outcome": deepcopy(row.task_outcome),
             }
 
     def has_request(self, user_id, request_id, session_id=None):
@@ -330,6 +355,8 @@ class AgentSessionRepository:
                     or previous.request_hash != request_hash):
                 self.conflict("REQUEST_ID_REUSED")
             if previous and previous.response and "_control" in previous.response:
+                if previous.version != row.version or row.episode_id != request.episode_id:
+                    self.conflict("STALE_REPLAY")
                 return deepcopy(previous.response["_control"])
             self.expire(db, row, now)
             if row.episode_id != request.episode_id:
@@ -341,6 +368,7 @@ class AgentSessionRepository:
                 if row.status == "PAUSED":
                     changed = False
                 elif row.status in ACTIVE:
+                    row.paused_from = row.status
                     row.status = "PAUSED"
                     changed = True
                 else:
@@ -348,13 +376,24 @@ class AgentSessionRepository:
             elif command == "resume_task":
                 if row.status != "PAUSED":
                     self.conflict("COMMAND_NOT_ALLOWED")
-                row.status = "IN_PROGRESS"
+                row.status = row.paused_from or "IN_PROGRESS"
+                if row.task_outcome and row.status == "WAITING_RESULT":
+                    outcome = deepcopy(row.task_outcome)
+                    outcome["prompt"]["expires_at"] = now + 180
+                    row.task_outcome = outcome
+                row.expires_at = now + (180 if row.status == "WAITING_RESULT" else self.idle_seconds)
+                checkpoint = db.get(AgentCheckpoint, row.id)
+                if checkpoint:
+                    state = deepcopy(checkpoint.state)
+                    state.update(pending_attempt=None, pending_transition_id=None, pending_confirmation_transition_id=None)
+                    checkpoint.state = state
                 changed = True
             elif command == "cancel_task":
                 if row.status == "CANCELLED":
                     changed = False
                 elif row.status in ACTIVE or row.status == "PAUSED":
                     row.status = "CANCELLED"
+                    row.task_outcome = answer_outcome(row.task_outcome or make_outcome({}, now), "stopped", now)
                     changed = True
                 else:
                     self.conflict("SESSION_TERMINATED")
@@ -379,6 +418,7 @@ class AgentSessionRepository:
                 "graph_version": row.graph_version or "1.0.0",
                 "graph_hash": row.graph_hash or graph_hash,
                 "changed": changed,
+                "task_outcome": deepcopy(row.task_outcome),
             }
             db.add(AgentTurn(session_id=row.id, user_id=request.user_id,
                 request_id=request.request_id, request_hash=request_hash,
@@ -412,14 +452,99 @@ class AgentSessionRepository:
             db.commit()
             return new_episode
 
+    def outcome_command(self, request, request_hash, *, goal=None, reference=None):
+        """One versioned transaction records user answers without altering technical evidence."""
+        now = int(self.clock())
+        with self.factory() as db:
+            row = self.owned(db, request.session_id, request.user_id)
+            previous = db.scalar(select(AgentTurn).where(AgentTurn.user_id == request.user_id,
+                AgentTurn.request_id == request.request_id))
+            if previous:
+                if previous.request_hash != request_hash or previous.session_id != row.id:
+                    self.conflict("REQUEST_ID_REUSED")
+                if previous.version != row.version or not previous.response:
+                    self.conflict("STALE_REPLAY")
+                return deepcopy(previous.response["_outcome"])
+            if not (request.command_type == "respond_result" and request.user_result == "no_response"
+                    and row.status == "WAITING_RESULT"):
+                self.expire(db, row, now)
+            if row.episode_id != request.episode_id:
+                self.conflict("EPISODE_MISMATCH")
+            if row.version != request.expected_version:
+                self.conflict("STALE_VERSION")
+            if row.status not in ACTIVE:
+                self.conflict("SESSION_CLOSED")
+            outcome = deepcopy(row.task_outcome) or make_outcome({}, now)
+            status, episode = row.status, row.episode_id
+            history = list(row.outcome_history or [])
+            message = None
+            if request.command_type == "request_result":
+                if row.status not in {"IN_PROGRESS", "WAITING_CONFIRMATION"}:
+                    self.conflict("COMMAND_NOT_ALLOWED")
+                outcome = make_outcome(outcome["technical"], now,
+                    row.goal["slots"]["direction"] if row.goal else "increase", previous=outcome)
+                status = "WAITING_RESULT"
+            elif request.command_type == "respond_result":
+                prompt = outcome.get("prompt") or {}
+                if row.status != "WAITING_RESULT" or request.result_prompt_id != prompt.get("id"):
+                    self.conflict("RESULT_PROMPT_MISMATCH")
+                if request.user_result == "no_response" and now < prompt["expires_at"]:
+                    self.conflict("RESULT_TIMEOUT_NOT_REACHED")
+                outcome = answer_outcome(outcome, request.user_result, now)
+                status = {"satisfied": "COMPLETED", "needs_help": "WAITING_ADJUSTMENT",
+                          "stopped": "CANCELLED", "no_response": "EXPIRED"}[request.user_result]
+                message = {"satisfied": "원하는 결과를 얻었다고 기록했어요.",
+                           "needs_help": follow_up(outcome)["message"],
+                           "stopped": "작업을 중단했어요.", "no_response": "답변 없이 대기를 종료했어요."}[request.user_result]
+            elif request.command_type == "adjust_task":
+                if row.status != "WAITING_ADJUSTMENT":
+                    self.conflict("COMMAND_NOT_ALLOWED")
+                reason = request.adjustment_reason
+                if reason in {"other", "unsure"}:
+                    message = "현재는 글자 크기만 조절할 수 있어요. 글자가 작은지 큰지 확인하거나 그만할 수 있어요. 굵기·밝기·화면 전체 확대는 아직 지원하지 않아요."
+                else:
+                    direction = goal.slots["direction"]
+                    if outcome["technical"].get("limit_direction") == direction:
+                        self.conflict("SETTING_LIMIT_REACHED")
+                    history.append({"episode_id": row.episode_id, "goal_type": row.accepted_goal_type,
+                                    "outcome": outcome})
+                    outcome = None
+                    episode, status = str(uuid4()), "IN_PROGRESS"
+                    message = "새 화면에서 조절 가능한 범위를 확인할게요."
+            values = dict(status=status, version=row.version + 1, episode_id=episode,
+                updated_at=now, expires_at=(outcome.get("prompt", {}).get("expires_at", now + self.idle_seconds)
+                    if status == "WAITING_RESULT" and outcome else now + self.idle_seconds),
+                task_outcome=outcome, outcome_history=history, lease_token=None, lease_until=None,
+                last_guide_command_id=None)
+            if episode != row.episode_id:
+                values.update(goal=goal.model_dump(mode="json"), accepted_goal_type=goal.goal_type,
+                    task_id=reference["task_id"], graph_version=reference["version"], graph_hash=reference["sha256"],
+                    state_id=None)
+                db.execute(delete(AgentCheckpoint).where(AgentCheckpoint.session_id == row.id))
+            changed = db.execute(update(AgentSession).where(AgentSession.id == row.id,
+                AgentSession.version == row.version, AgentSession.status == row.status).values(**values))
+            if changed.rowcount != 1:
+                self.conflict("TURN_SUPERSEDED")
+            db.execute(delete(SafetyConfirmation).where(SafetyConfirmation.session_id == row.id))
+            result = {"episode_id": episode, "status": status, "version": values["version"],
+                "goal_type": goal.goal_type if goal and episode != request.episode_id else row.accepted_goal_type,
+                "task_id": values.get("task_id", row.task_id), "task_outcome": outcome, "message": message,
+                "follow_up": follow_up(outcome) if status == "WAITING_ADJUSTMENT" else None}
+            db.add(AgentTurn(session_id=row.id, user_id=request.user_id, request_id=request.request_id,
+                request_hash=request_hash, version=values["version"], response={"_outcome": result}, created_at=now))
+            db.commit()
+            return result
+
     @staticmethod
     def describe(db, row, now):
         return AgentSessionResponse(session_id=row.id, status=row.status, version=row.version,
+            episode_id=row.episode_id,
+            task_outcome=row.task_outcome, outcome_history=row.outcome_history or [],
             task_id=row.task_id, state_id=row.state_id, last_guide_command_id=row.last_guide_command_id,
             created_at=row.created_at, updated_at=row.updated_at, expires_at=row.expires_at,
             processing=bool(row.lease_token and row.lease_until and row.lease_until > now),
-            requires_fresh_observation=row.status in ACTIVE,
-            requires_goal=row.status in ACTIVE and db.get(AgentCheckpoint, row.id) is None,
+            requires_fresh_observation=row.status in {"IN_PROGRESS", "WAITING_CONFIRMATION"},
+            requires_goal=row.status in {"IN_PROGRESS", "WAITING_CONFIRMATION"} and db.get(AgentCheckpoint, row.id) is None,
             result_response=row.result_response)
 
     def cleanup(self, retention_seconds=86400):
@@ -427,9 +552,13 @@ class AgentSessionRepository:
             raise ValueError("Retention must not be negative")
         now = int(self.clock())
         with self.factory() as db:
-            expired = db.execute(update(AgentSession).where(AgentSession.status.in_(ACTIVE),
-                AgentSession.expires_at <= now).values(status="EXPIRED", version=AgentSession.version + 1,
-                    lease_token=None, lease_until=None, updated_at=now)).rowcount
+            rows = list(db.scalars(select(AgentSession).where(AgentSession.status.in_(ACTIVE),
+                AgentSession.expires_at <= now)))
+            for row in rows:
+                self.expire(db, row, now)
+            expired = len(rows)
+            from app.models.agent_session import AgentGoalResolution
+            db.execute(delete(AgentGoalResolution).where(AgentGoalResolution.expires_at <= now - retention_seconds))
             removed = db.execute(delete(AgentSession).where(AgentSession.status.not_in(ACTIVE),
                 AgentSession.updated_at <= now - retention_seconds)).rowcount
             db.commit()

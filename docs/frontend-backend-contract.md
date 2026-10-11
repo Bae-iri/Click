@@ -26,7 +26,7 @@ legacy FE 연동은 `POST /api/v1/agent/turn`을 사용한다. 신규 FE는 `/ap
 
 첫 요청은 FE가 생성한 `request_id`, `session_id`, 사용자의 `raw_goal`과 현재
 화면 관찰 정보를 함께 보낸다. 기본 관찰 정보는 Accessibility Tree이고, Tree를
-받지 못하는 화면에서는 사용자 동의를 받은 `vision_snapshot`을 대신 보낼 수 있다.
+받지 못하는 화면에서는 빈 tree로 일회성 Vision 동의를 요청한다. 사용자 허용 뒤 새 AX 문맥과 `vision_snapshot`을 함께 보낸다.
 
 ```json
 {
@@ -92,54 +92,11 @@ legacy FE 연동은 `POST /api/v1/agent/turn`을 사용한다. 신규 FE는 `/ap
 
 ## Vision fallback
 
-Vision fallback은 Accessibility Tree를 대체하는 기본 경로가 아니라 예외 경로다.
-FE는 Tree가 비었거나 target node를 찾지 못하는 화면에서만 사용한다.
+AX가 부족하거나 target을 찾지 못하면 매 분석 1회의 사용자 확인을 받는다. 최초에는 이미지 없이 빈 AX와 package/window/화면 크기를 보내고, BE가 `purpose=vision`인 일회성 동의 ID를 발급한다. 허용한 뒤에만 기기 내 캡처·OCR을 수행하고 `respond_confirmation`에 동의 ID, session/episode/version, 새 AX와 `vision_snapshot`을 함께 보낸다. `user_consented=true`만으로는 승인되지 않는다.
 
-요청에는 `accessibility_tree` 또는 `vision_snapshot` 중 하나가 반드시 있어야 한다.
-`accessibility_tree.nodes`가 빈 배열이면 “접근성 정보를 못 받음”으로 해석하고,
-Agent는 에러 대신 fallback command를 반환한다.
-`vision_snapshot`을 보낼 때 원본 스크린샷을 외부 VLM으로 처리하려면 먼저 사용자
-동의를 받아 `user_consented: true`를 보내야 한다. 가능하면 FE에서 먼저 마스킹 또는
-온디바이스 OCR을 수행하고, `elements`만 전달한다.
+FE는 입력 필드를 마스킹하고 허용된 설정 메뉴 텍스트와 실제 bounds만 보낸다. BE도 재검사하며 원본 screenshot은 거절한다. 마스킹 실패 시 데이터 없이 `rejected` + `vision_failure=masking_failed`를 보내고 안내를 중단한다. 재분석에는 새로운 사용자 확인이 필요하다.
 
-```json
-{
-  "request_id": "req-vision-001",
-  "session_id": "session-001",
-  "raw_goal": "글자 크기를 키우고 싶어",
-  "vision_snapshot": {
-    "user_consented": true,
-    "redaction_applied": true,
-    "provider": "frontend_ocr",
-    "package_name": "com.android.settings",
-    "screen_width": 1080,
-    "screen_height": 2400,
-    "elements": [
-      {
-        "element_id": "display",
-        "text": "디스플레이",
-        "bounds_in_screen": [24, 320, 1056, 408],
-        "role": "menu_item",
-        "confidence": 0.92,
-        "actionable": true
-      }
-    ]
-  }
-}
-```
-
-`vision_snapshot.elements`는 Agent 내부에서 `vision:{element_id}` 형태의 synthetic
-node로 변환된다. 응답의 `metadata.debug.vision_fallback.status`에서 사용 여부를
-확인한다.
-
-허용 status:
-
-- `not_requested`: vision fallback을 요청하지 않음
-- `consent_required`: 화면 이미지 분석 동의가 필요함
-- `used`: vision element/OCR을 기존 Agent 흐름에 사용함
-- `not_configured`: vision provider 또는 입력 정보가 부족함
-- `provider_error`: 외부 VLM 호출 실패
-- `no_signal`: vision provider가 유효한 UI signal을 반환하지 못함
+필드 정의, 요청/응답 예시, 개인정보 마스킹 및 실패 대응은 [Vision fallback 실행 계약](./ai-agent-vision-fallback.md)을 따른다. `metadata.debug.vision_fallback.status`는 `not_requested`, `consent_required`, `used`, `not_configured`, `provider_error`, `no_signal`, `masking_failed` 중 해당 상태를 전달한다.
 
 ## Confirmation
 

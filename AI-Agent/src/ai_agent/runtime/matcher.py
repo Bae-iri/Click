@@ -1,6 +1,7 @@
 """Select within an explicitly prioritized graph edge; abstain on ambiguity."""
 from ai_agent.runtime.types import ActionType, MatchResult
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, selector_keywords, target_key
+from ai_agent.runtime.keywords import any_keyword_matches
 
 MATCH_THRESHOLD = 0.7
 AMBIGUITY_MARGIN = 0.05
@@ -26,7 +27,8 @@ def match_next_ui(state_id, nodes, graph, *, excluded_node_ids=(),
             score, method = selector_evidence(node, transition, nodes, graph)
             # Similarity can recover labels after all role/package/geometry constraints.
             # An unrelated named slider must never be rescued by language similarity.
-            if score == 0 and node.label and node.role != 'slider' and similarity_scorer:
+            if (score == 0 and node.label and node.role != 'slider' and similarity_scorer
+                    and not any_keyword_matches(node.label, selector_keywords(transition, graph))):
                 similarity = max((similarity_scorer.score(node.label, keyword)
                                   for keyword in selector_keywords(transition, graph)), default=0)
                 score, method = min(0.79, max(0.0, similarity) * 0.79), 'similarity'

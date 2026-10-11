@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Base.Theme.Click.DesignPreview" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/design_canvas_background</item>
+        <item name="android:statusBarColor">@color/design_canvas_background</item>
+        <item name="android:navigationBarColor">@color/splash_wave_base</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:fontFamily">sans</item>
+    </style>
+    <style name="Theme.Click.DesignPreview" parent="Base.Theme.Click.DesignPreview" />
+</resources>

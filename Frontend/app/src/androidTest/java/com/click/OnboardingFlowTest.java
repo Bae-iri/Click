@@ -1,0 +1,318 @@
+package com.click;
+
+import android.app.Activity;
+import android.app.Instrumentation;
+import android.graphics.Bitmap;
+import android.graphics.Rect;
+import android.os.SystemClock;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.inspector.WindowInspector;
+import android.widget.EditText;
+import android.widget.TextView;
+import androidx.test.core.app.ActivityScenario;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.filters.SdkSuppress;
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
+import androidx.test.runner.lifecycle.Stage;
+import com.click.designpreview.OnboardingActivity;
+import com.click.designpreview.LoginActivity;
+import com.click.designpreview.PermissionGuideActivity;
+import com.click.designpreview.AccessibilityHelpActivity;
+import com.click.designpreview.SignupActivity;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.lang.reflect.Method;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import static org.junit.Assert.*;
+
+@RunWith(AndroidJUnit4.class)
+@SdkSuppress(minSdkVersion = 29)
+public class OnboardingFlowTest {
+    private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+
+    @Test public void threePagesEndWithSignupAndLogin() throws Exception {
+        try (ActivityScenario<OnboardingActivity> s = ActivityScenario.launch(OnboardingActivity.class)) {
+            tap("건너뛰기");
+            shown("회원가입하기"); shown("이미 가입하셨나요? 로그인하기");
+            screenshot("onboarding-third");
+            tap("이미 가입하셨나요? 로그인하기"); shown("다시 만나 반가워요");
+        }
+    }
+    @Test public void emailReviewPrecedesProfileAndOccupationIsSelectable() throws Exception {
+        try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
+            awaitSignupRules(s);
+            s.onActivity(a -> {
+                ((EditText)a.findViewById(com.click.designpreview.R.id.signup_email)).setText("review@example.com");
+                EditText password = a.findViewById(com.click.designpreview.R.id.signup_password);
+                password.setText("sample-pass13");
+                ((EditText)a.findViewById(com.click.designpreview.R.id.signup_password_confirm)).setText("sample-pass13");
+                a.findViewById(com.click.designpreview.R.id.signup_password_toggle).performClick();
+                a.findViewById(com.click.designpreview.R.id.signup_password_toggle).performClick();
+                assertEquals("sample-pass13", password.getText().toString());
+                a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
+            });
+            shown("이메일을 한 번 더 확인해 주세요"); screenshot("email-review");
+            clickView("수정할게요");
+            s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_action).performClick());
+            clickView("네, 이 이메일이 맞아요"); shown("안내를 조금 더\n원활히 도와드릴게요");
+            shown("이름");
+            s.onActivity(a -> ((EditText) a.findViewById(
+                    com.click.designpreview.R.id.signup_name)).setText("김클릭"));
+            screenshot("signup-profile-name");
+            s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_occupation).performClick());
+            tap("서비스업"); screenshot("occupation"); tap("선택 완료");
+            s.onActivity(a -> assertTrue(((TextView)a.findViewById(com.click.designpreview.R.id.signup_occupation))
+                    .getText().toString().contains("서비스업")));
+        }
+    }
+    @Test public void accessibilityRequirementLinksToInAppGuide() throws Exception {
+        instrumentation.getUiAutomation().executeShellCommand(
+                "settings delete secure enabled_accessibility_services").close();
+        instrumentation.getUiAutomation().executeShellCommand(
+                "settings put secure accessibility_enabled 0").close();
+        // Secure-setting changes restart the accessibility manager asynchronously.
+        SystemClock.sleep(1500);
+        try (ActivityScenario<AccessibilityHelpActivity> s = ActivityScenario.launch(
+                AccessibilityHelpActivity.class)) {
+            shown("아직은 보고 계신 화면을\n확인할 수 없어요");
+            shown("그래서 지금은 Click이 도와드릴 수 없어요.\n접근성 설정에서 Click을 허용해 주시면\n바로 도와드릴 수 있어요!");
+            shown("접근성 설정하러 가기"); shown("지금은 앱 닫기"); screenshot("accessibility-later");
+            s.onActivity(a -> {
+                assertFalse("테스트 시작 시 Click 접근성 서비스는 꺼져 있어야 합니다.",
+                        com.click.designpreview.ClickHost.from(a).accessibilityEnabled());
+                assertTrue(a.findViewById(
+                        com.click.designpreview.R.id.accessibility_help_action).performClick());
+            });
+            SystemClock.sleep(500);
+            final Activity[] opened = {null};
+            final StringBuilder resumed = new StringBuilder();
+            instrumentation.runOnMainSync(() -> {
+                for (Activity activity : ActivityLifecycleMonitorRegistry.getInstance()
+                        .getActivitiesInStage(Stage.RESUMED)) {
+                    if (resumed.length() > 0) resumed.append(", ");
+                    resumed.append(activity.getClass().getName());
+                    if (activity instanceof PermissionGuideActivity) opened[0] = activity;
+                }
+            });
+            Activity guide = opened[0];
+            assertNotNull("앱 안의 접근성 설정 안내 화면이 열려야 합니다. 현재 화면: " + resumed, guide);
+            instrumentation.runOnMainSync(guide::finish);
+        }
+    }
+    @Test public void occupationSheetUsesCardsAndCompletesSelection() throws Exception {
+        try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
+            s.onActivity(a -> {
+                try {
+                    Method showPage = SignupActivity.class.getDeclaredMethod(
+                            "showPage", int.class, boolean.class);
+                    showPage.setAccessible(true);
+                    showPage.invoke(a, 1, false);
+                } catch (Exception error) {
+                    throw new AssertionError(error);
+                }
+                a.findViewById(com.click.designpreview.R.id.signup_occupation).performClick();
+            });
+            shown("어떤 일을 하고 계신가요?");
+            shown("지금 나에게 가장 가까운 항목을 골라 주세요.\n선택하지 않고 넘어가셔도 괜찮아요.");
+            clickView("서비스업"); screenshot("occupation"); clickView("선택 완료");
+            s.onActivity(a -> assertTrue(((TextView) a.findViewById(
+                    com.click.designpreview.R.id.signup_occupation)).getText().toString()
+                    .contains("서비스업")));
+        }
+    }
+    @Test public void loginMatchesSignupAndValidatesInline() throws Exception {
+        try (ActivityScenario<LoginActivity> s = ActivityScenario.launch(LoginActivity.class)) {
+            shown("다시 만나 반가워요");
+            shown("가입할 때 사용한\n이메일과 비밀번호를 입력해 주세요.");
+            shown("로그인하기"); shown("처음 오셨나요? 회원가입하기");
+            screenshot("login");
+            s.onActivity(a -> {
+                ((EditText) a.findViewById(com.click.designpreview.R.id.login_email))
+                        .setText("not-an-email");
+                ((EditText) a.findViewById(com.click.designpreview.R.id.login_password))
+                        .setText("short");
+                a.findViewById(com.click.designpreview.R.id.login_action).performClick();
+            });
+            shown("올바른 이메일 주소를 입력해 주세요.");
+            shown("가입할 때 설정한 비밀번호를 입력해 주세요.");
+            s.onActivity(a -> {
+                ((EditText) a.findViewById(com.click.designpreview.R.id.login_email))
+                        .setText("review@example.com");
+                ((EditText) a.findViewById(com.click.designpreview.R.id.login_password)).setText("");
+                a.findViewById(com.click.designpreview.R.id.login_action).performClick();
+            });
+            shown("비밀번호를 입력해 주세요.");
+        }
+    }
+
+    @Test public void signupPasswordHintAndValidationUseLoadedServerMinimum() throws Exception {
+        try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
+            awaitSignupRules(s);
+            final int[] minimum = {0};
+            s.onActivity(a -> {
+                EditText password = a.findViewById(com.click.designpreview.R.id.signup_password);
+                minimum[0] = Integer.parseInt(password.getHint().toString().split("글자")[0]);
+                ((EditText) a.findViewById(com.click.designpreview.R.id.signup_email))
+                        .setText("review@example.com");
+                String shortPassword = new String(new char[minimum[0] - 1]).replace('\0', 'a');
+                password.setText(shortPassword);
+                ((EditText) a.findViewById(com.click.designpreview.R.id.signup_password_confirm))
+                        .setText(shortPassword);
+                a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
+            });
+            shown("비밀번호를 " + minimum[0] + "글자 이상 입력해 주세요.");
+            screenshot("signup-password-minimum");
+            s.onActivity(a -> {
+                String validPassword = new String(new char[minimum[0]]).replace('\0', 'a');
+                ((EditText) a.findViewById(com.click.designpreview.R.id.signup_password))
+                        .setText(validPassword);
+                ((EditText) a.findViewById(com.click.designpreview.R.id.signup_password_confirm))
+                        .setText(validPassword);
+                a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
+            });
+            shown("이메일을 한 번 더 확인해 주세요");
+            clickView("수정할게요");
+        }
+    }
+
+    private void awaitSignupRules(ActivityScenario<SignupActivity> scenario) {
+        final boolean[] ready = {false};
+        long deadline = SystemClock.elapsedRealtime() + 25000;
+        while (SystemClock.elapsedRealtime() < deadline) {
+            scenario.onActivity(a -> ready[0] = "다음".contentEquals(((TextView) a.findViewById(
+                    com.click.designpreview.R.id.signup_action_label)).getText())
+                    && a.findViewById(com.click.designpreview.R.id.signup_action).isEnabled());
+            if (ready[0]) return;
+            SystemClock.sleep(100);
+        }
+        fail("회원가입 기준을 불러오지 못했습니다.");
+    }
+    @Test public void homeMatchesVoiceFirstReference() throws Exception {
+        try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
+            shown("무엇을\n도와드릴까요?");
+            shown("click을 시작할까요?");
+            shown("예) 글자 크기를 크게 해줘");
+            shown("자주 묻는 도움");
+            shown("사진 보내는 방법 · 준비 중");
+            screenshot("home-current");
+        }
+    }
+    @Test public void menuMatchesProfileCardReference() throws Exception {
+        try (ActivityScenario<MenuActivity> s = ActivityScenario.launch(MenuActivity.class)) {
+            shown("메뉴");
+            shown("Click과 함께해요.");
+            shown("권한 상태 확인");
+            shown("맞춤 안내 기록 설정");
+            shown("튜토리얼");
+            shown("서비스 이용약관");
+            shown("개인정보 처리방침");
+            shown("로그아웃");
+            shown("회원탈퇴");
+            screenshot("menu-current");
+        }
+    }
+    @Test public void fourthGuidePageOpensAccessibilitySettingsDirectly() throws Exception {
+        Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(
+                new android.content.IntentFilter(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS),
+                new Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true);
+        try (ActivityScenario<PermissionGuideActivity> s = ActivityScenario.launch(PermissionGuideActivity.class)) {
+            s.onActivity(a -> {
+                for (int i = 0; i < 3; i++) {
+                    a.findViewById(com.click.designpreview.R.id.guide_action).performClick();
+                }
+            });
+            shown("이 버튼을 누르면\n‘설정 > 접근성’으로 바로 이동해요.");
+            screenshot("permission-settings-destination");
+            s.onActivity(a -> a.findViewById(
+                    com.click.designpreview.R.id.guide_settings_shortcut).performClick());
+            assertEquals("접근성 설정 Intent를 열어야 합니다.", 1, monitor.getHits());
+        } finally {
+            instrumentation.removeMonitor(monitor);
+        }
+    }
+    @Test public void postAccessibilityScreensShareClickBrand() throws Exception {
+        instrumentation.getUiAutomation().executeShellCommand(
+                "settings put secure enabled_accessibility_services com.click/com.click.service.accessibility.ClickAccessibilityService").close();
+        instrumentation.getUiAutomation().executeShellCommand(
+                "settings put secure accessibility_enabled 1").close();
+        SystemClock.sleep(500);
+        try (ActivityScenario<AccessibilityHelpActivity> s = ActivityScenario.launch(
+                AccessibilityHelpActivity.class)) {
+            shown("접근성 설정이\n완료됐어요");
+            shown("Click 시작하기");
+            screenshot("accessibility-complete");
+        }
+        try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
+            shown("무엇을\n도와드릴까요?");
+            shown("click을 시작할까요?");
+            shown("자주 묻는 도움");
+            screenshot("home");
+        }
+        try (ActivityScenario<MenuActivity> s = ActivityScenario.launch(MenuActivity.class)) {
+            shown("메뉴");
+            shown("Click과 함께해요.");
+            shown("권한 상태 확인");
+            shown("맞춤 안내 기록 설정");
+            shown("튜토리얼");
+            shown("로그아웃");
+            screenshot("menu");
+        }
+        try (ActivityScenario<OverlayTutorialActivity> s = ActivityScenario.launch(
+                OverlayTutorialActivity.class)) {
+            shown("화면 위에\nClick이 떠 있어요");
+            screenshot("overlay-tutorial");
+        }
+    }
+    private TextView shown(String text) {
+        instrumentation.waitForIdleSync();
+        final TextView[] result = {null};
+        for (int attempt = 0; attempt < 20; attempt++) {
+            instrumentation.runOnMainSync(() -> {
+                for (View root : WindowInspector.getGlobalWindowViews()) {
+                    TextView candidate = find(root, text); if (candidate != null && candidate.isShown()) result[0] = candidate;
+                }
+            });
+            if (result[0] != null) return result[0];
+            SystemClock.sleep(100);
+        }
+        fail("Visible text missing: " + text); return null;
+    }
+    private void tap(String text) {
+        TextView view = shown(text); Rect bounds = new Rect();
+        instrumentation.runOnMainSync(() -> {
+            assertTrue(view.getGlobalVisibleRect(bounds));
+            int[] location = new int[2]; view.getLocationOnScreen(location);
+            bounds.set(location[0], location[1], location[0] + view.getWidth(), location[1] + view.getHeight());
+        });
+        long time = SystemClock.uptimeMillis();
+        MotionEvent down = MotionEvent.obtain(time, time, MotionEvent.ACTION_DOWN, bounds.centerX(), bounds.centerY(), 0);
+        MotionEvent up = MotionEvent.obtain(time, time + 50, MotionEvent.ACTION_UP, bounds.centerX(), bounds.centerY(), 0);
+        assertTrue(instrumentation.getUiAutomation().injectInputEvent(down, true));
+        assertTrue(instrumentation.getUiAutomation().injectInputEvent(up, true)); down.recycle(); up.recycle();
+        instrumentation.waitForIdleSync(); SystemClock.sleep(250);
+    }
+    private void clickView(String text) {
+        TextView view = shown(text);
+        instrumentation.runOnMainSync(view::performClick);
+        instrumentation.waitForIdleSync(); SystemClock.sleep(250);
+    }
+    private TextView find(View root, String text) {
+        if (root instanceof TextView && text.contentEquals(((TextView)root).getText()) && root.isShown()) return (TextView)root;
+        if (root instanceof ViewGroup) for (int i=0; i<((ViewGroup)root).getChildCount(); i++) {
+            TextView v = find(((ViewGroup)root).getChildAt(i), text); if (v != null) return v;
+        }
+        return null;
+    }
+    private void screenshot(String name) throws Exception {
+        instrumentation.waitForIdleSync(); SystemClock.sleep(300);
+        Bitmap image = instrumentation.getUiAutomation().takeScreenshot(); assertNotNull(image);
+        try (FileOutputStream out = new FileOutputStream(new File(instrumentation.getTargetContext().getCacheDir(), name + ".png"))) {
+            image.compress(Bitmap.CompressFormat.PNG, 100, out);
+        }
+        image.recycle();
+    }
+}

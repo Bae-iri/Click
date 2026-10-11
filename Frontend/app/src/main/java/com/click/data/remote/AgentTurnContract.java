@@ -14,7 +14,7 @@ import java.util.UUID;
 
 public final class AgentTurnContract {
     public static final String PATH = "/api/v1/agent/commands";
-    public static final String CONTRACT_VERSION = "agent-fe-contract.v0.2";
+    public static final String CONTRACT_VERSION = "agent-fe-contract.v0.3";
 
     private AgentTurnContract() {}
 
@@ -29,10 +29,23 @@ public final class AgentTurnContract {
         public Integer expectedVersion;
         public String episodeId;
         public String confirmationId;
+        public JSONObject acceptedGoal;
+        public String goalResolutionId;
+        public String preparationVersion;
+        public JSONObject clarificationAnswer;
+        public boolean preparationReset;
+        public String clarificationChoice;
+        public String resultPromptId;
+        public String userResult;
+        public String adjustmentReason;
+        public String contractVersion = CONTRACT_VERSION;
+        public boolean interactiveWorkflow = true;
         /** Optional {@code user_action_event} payload, see {@link AgentActionEvents}. */
         public JSONObject userActionEvent;
         /** Optional {@code vision_snapshot} fallback payload. */
         public JSONObject visionSnapshot;
+        /** Failure code only, with rejected consent; never include OCR/images on failure. */
+        public String visionFailureCode;
 
         public Request(String sessionId, String rawGoal, ScreenSnapshot tree, String confirmation) {
             this(sessionId, rawGoal, tree, confirmation, null);
@@ -56,6 +69,13 @@ public final class AgentTurnContract {
         public Request withVisionSnapshot(JSONObject snapshot) {
             this.visionSnapshot = snapshot;
             return this;
+        }
+
+        public static Request resolve(String sessionId, String text, String clarification) {
+            Request request = new Request(sessionId, text, null, null);
+            request.explicitCommandType = "resolve_goal";
+            request.clarificationChoice = clarification;
+            return request;
         }
 
         public static Request control(String sessionId, int version, String episodeId,
@@ -89,44 +109,40 @@ public final class AgentTurnContract {
             return this;
         }
 
+        public String commandType() {
+            return explicitCommandType != null ? explicitCommandType : rawGoal != null ? "start_task"
+                    : userConfirmation != null ? "respond_confirmation" : "observe";
+        }
+
         public String toJson() throws JSONException {
             JSONObject object = new JSONObject();
-            object.put("contract_version", CONTRACT_VERSION);
+            object.put("contract_version", contractVersion);
             object.put("request_id", requestId);
             object.put("session_id", sessionId);
             object.put("expected_version", expectedVersion == null ? 0 : expectedVersion);
             String commandType = explicitCommandType != null ? explicitCommandType : rawGoal != null ? "start_task"
                     : userConfirmation != null ? "respond_confirmation" : "observe";
             object.put("command_type", commandType);
+            if ("start_task".equals(commandType) && interactiveWorkflow && CONTRACT_VERSION.equals(contractVersion))
+                object.put("workflow_version", "interactive.v1");
             if (episodeId != null) object.put("episode_id", episodeId);
             if (rawGoal != null) {
                 object.put("source_text", rawGoal);
-                if (typedGoal != null) {
-                    object.put("goal", typedGoal.toTypedGoalJson());
-                } else {
-                    // Compatibility for callers not yet wired to the shared catalog.
-                    String normalizedGoal = rawGoal.toLowerCase(java.util.Locale.ROOT)
-                            .replaceAll("[\\s,.!?]", "");
-                    boolean decrease = normalizedGoal.contains("줄여") || normalizedGoal.contains("작게")
-                            || normalizedGoal.contains("낮춰") || normalizedGoal.contains("축소")
-                            || normalizedGoal.contains("너무커") || normalizedGoal.contains("커서");
-                    String direction = decrease ? "decrease" : "increase";
-                    object.put("goal", new JSONObject()
-                            .put("catalog_version", "2.1.0")
-                            .put("goal_type", "settings.font_size." + direction)
-                            .put("target_app", "android_settings")
-                            .put("slots", new JSONObject().put("setting", "font_size").put("direction", direction)));
-                }
+                if ("start_task".equals(commandType) || "replace_task".equals(commandType)) {
+                if (acceptedGoal != null) object.put("goal", acceptedGoal);
+                else if (typedGoal != null) object.put("goal", typedGoal.toTypedGoalJson());
+                else throw new JSONException("A backend-resolved goal is required");
                 object.put("device_context", new JSONObject()
                         .put("platform", "android")
                         .put("manufacturer", Build.MANUFACTURER)
                         .put("os_version", Build.VERSION.RELEASE)
                         .put("locale", java.util.Locale.getDefault().toLanguageTag())
-                        .put("foreground_package", accessibilityTree.packageName)
+                        .put("foreground_package", accessibilityTree == null ? JSONObject.NULL : accessibilityTree.packageName)
                         .put("capabilities", new JSONObject()
                                 .put("accessibility_tree", true)
                                 .put("guide_overlay", true)
                                 .put("automatic_scroll", false)));
+                }
             }
             if (accessibilityTree != null) {
                 object.put("accessibility_tree", new JSONObject(accessibilityTree.toJson()));
@@ -136,6 +152,21 @@ public final class AgentTurnContract {
             if (confirmationId != null) object.put("confirmation_id", confirmationId);
             if (userActionEvent != null) object.put("user_action_event", userActionEvent);
             if (visionSnapshot != null) object.put("vision_snapshot", visionSnapshot);
+            if (visionFailureCode != null) object.put("vision_failure", visionFailureCode);
+            if ("resolve_goal".equals(commandType)) {
+                object.put("device_context", new JSONObject().put("platform", "android")
+                        .put("locale", java.util.Locale.getDefault().toLanguageTag()));
+                if (clarificationChoice != null) object.put("source_text", rawGoal + " " + clarificationChoice);
+            }
+            if (preparationVersion != null) {
+                object.put("preparation_version", preparationVersion);
+                if (goalResolutionId != null) object.put("goal_resolution_id", goalResolutionId);
+                if (clarificationAnswer != null) object.put("clarification_answer", clarificationAnswer);
+                if (preparationReset) object.put("preparation_reset", true);
+            }
+            if (resultPromptId != null) object.put("result_prompt_id", resultPromptId);
+            if (userResult != null) object.put("user_result", userResult);
+            if (adjustmentReason != null) object.put("adjustment_reason", adjustmentReason);
             return object.toString();
         }
     }
@@ -173,7 +204,7 @@ public final class AgentTurnContract {
             return renderPolicy == null ? null : renderPolicy.optJSONObject("fallback_action");
         }
 
-        /** Present when the Agent asks for a vision snapshot (needs consent for raw screenshots). */
+        /** Per-analysis consent is required for every OCR/vision capture, before collection. */
         public JSONObject visionFallback() {
             return renderPolicy == null ? null : renderPolicy.optJSONObject("vision_fallback");
         }
@@ -201,7 +232,12 @@ public final class AgentTurnContract {
         public final int sessionVersion;
         public final String episodeId;
         public final String taskStatus;
+        public final String responseType;
+        public final String message;
         public final String stateId;
+        public final String resolutionStatus;
+        public final JSONObject resolvedGoal;
+        public final JSONObject preparation;
         public final int step;
         public final GuideCommand guideCommand;
         public final JSONObject metadata;
@@ -211,7 +247,12 @@ public final class AgentTurnContract {
             requestId = object.getString("request_id");
             sessionId = object.getString("session_id");
             sessionVersion = object.optInt("session_version", 0);
-            episodeId = object.optString("episode_id", null);
+            episodeId = optNullableString(object, "episode_id");
+            responseType = object.optString("response_type", "guidance");
+            message = optNullableString(object, "message");
+            resolutionStatus = optNullableString(object, "resolution_status");
+            resolvedGoal = object.optJSONObject("goal");
+            preparation = object.optJSONObject("preparation");
             taskStatus = object.getString("task_status");
             stateId = object.optString("state_id", null);
             step = object.optInt("step", 0);
