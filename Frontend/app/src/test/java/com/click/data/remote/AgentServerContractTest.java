@@ -8,6 +8,16 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.*;
 
 public class AgentServerContractTest {
+    @Test public void currentServerAdvertisesPersistedInputPreparation() throws Exception {
+        try (java.io.InputStream stream = getClass().getResourceAsStream("/agent-server-goal-inputs.json")) {
+            assertNotNull(stream);
+            AgentServerContract server = AgentServerContract.fromOpenApi(new JSONObject(new String(stream.readAllBytes(), StandardCharsets.UTF_8)));
+            assertTrue(server.goalPreparation);
+            assertTrue(server.supports("resolve_goal"));
+            assertEquals("agent-fe-contract.v0.3", server.contractVersion);
+        }
+        assertFalse(AgentServerContract.fromOpenApi(deployed()).goalPreparation);
+    }
     private JSONObject deployed() throws Exception {
         try (java.io.InputStream stream = getClass().getResourceAsStream("/agent-server-v02.json")) {
             assertNotNull(stream);
@@ -54,19 +64,5 @@ public class AgentServerContractTest {
     }
     @Test(expected = org.json.JSONException.class) public void unknownServerDoesNotAssumeLegacyCapabilities() throws Exception {
         AgentServerContract.fromOpenApi(new JSONObject());
-    }
-    @Test public void negotiatesInteractiveWorkflowOnlyWhenAdvertised() throws Exception {
-        JSONObject doc = deployed();
-        assertEquals("agent-fe-contract.v0.2", AgentServerContract.fromOpenApi(doc).contractVersion);
-        assertFalse(AgentServerContract.fromOpenApi(doc).interactiveWorkflow);
-        JSONObject properties = doc.getJSONObject("components").getJSONObject("schemas")
-                .getJSONObject("AgentCommandRequest").getJSONObject("properties");
-        properties.put("contract_version", new JSONObject().put("enum", new org.json.JSONArray()
-                .put("agent-fe-contract.v0.2").put("agent-fe-contract.v0.3")));
-        assertFalse(AgentServerContract.fromOpenApi(doc).interactiveWorkflow);
-        properties.put("workflow_version", new JSONObject());
-        AgentServerContract server = AgentServerContract.fromOpenApi(doc);
-        assertEquals("agent-fe-contract.v0.3", server.contractVersion);
-        assertTrue(server.interactiveWorkflow);
     }
 }

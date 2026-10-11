@@ -3,10 +3,11 @@ from collections.abc import Mapping
 from time import monotonic
 import math
 import re
+from hashlib import sha256
 
 CONTAINERS = {"observation", "agent_chain", "goal_typing", "vision_fallback",
-              "verification", "match", "guide", "fallback", "debug", "result", "correlation", "replan_decision"}
-VISION = {"used", "not_requested", "not_configured", "provider_error", "no_signal", "consent_required"}
+              "verification", "match", "guide", "fallback", "debug", "result", "correlation", "replan_decision", "recovery", "state_classification"}
+VISION = {"used", "not_requested", "not_configured", "provider_error", "no_signal", "consent_required", "masking_failed"}
 ENUMS = {
     "strategy": {"continue", "wait_for_action", "reobserve", "retry_target", "alternate_transition", "backend_reselection"},
     "status": VISION | {"SUCCESS", "DONE", "NO_CHANGE", "WRONG_STATE", "UNKNOWN", "WAITING_FOR_ACTION", "WAITING_FOR_OBSERVATION"},
@@ -15,10 +16,17 @@ ENUMS = {
     "action_type": {"tap", "drag", "scroll", "observe_only"},
     "safety_level": {"LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"},
     "type": {"none", "settings_app_recovery", "vision_fallback", "vision_augmented_match", "target_match_fallback", "replan"},
+    "decision": {"continue", "recover", "wait", "handoff"},
+    "reason_code": {"NONE", "TARGET_NOT_VISIBLE", "STATE_IDENTIFIED", "STATE_AMBIGUOUS", "STATE_UNKNOWN", "TARGET_AMBIGUOUS",
+        "TARGET_NOT_FOUND", "OBSERVATION_INSUFFICIENT", "OBSERVATION_STALE", "WAITING_FOR_SETTLE",
+        "ACTION_EVENT_MISSING", "ACTION_RESULT_UNOBSERVABLE", "VISION_UNAVAILABLE",
+        "ACTION_BUDGET_EXHAUSTED", "GRAPH_PATH_UNAVAILABLE", "GRAPH_RESELECTED", "APP_NOT_OPEN"},
+    "next_action": {"none", "reobserve", "manual_navigation", "user_assistance", "reselect_graph", "vision_analysis", "open_settings"},
+    "waiting_for": {"none", "user", "consent", "observation"},
 }
 METRICS = {"count_attempt", "task_completed", "state_score", "score_gap", "recovery_count", "confidence", "element_count", "accessibility_node_count", "vision_element_count",
            "normalized_node_count", "actionable_node_count", "synthetic_vision_node_count",
-           "accessibility_tree_present", "vision_snapshot_present", "vision_has_screenshot",
+           "score", "title_match", "ambiguous", "title_conflict", "attempts", "retry_after_ms", "recoverable", "accessibility_tree_present", "vision_snapshot_present", "vision_has_screenshot",
            "vision_has_ocr_text", "requires_user_action", "session_stateful", "matched_from_vision"}
 METRICS.add("vision_processing_time_ms")
 
@@ -27,6 +35,15 @@ def diagnostic_payload(value, depth=0):
     if not isinstance(value, Mapping) or depth > 5:
         return {}
     output = {}
+    if isinstance(value.get("candidates"), (list, tuple)):
+        output["candidates"] = []
+        for candidate in value["candidates"][:3]:
+            if isinstance(candidate, Mapping) and (isinstance(candidate.get("state_id"), str)
+                    or (isinstance(candidate.get("state_hash"), str) and re.fullmatch(r"[0-9a-f]{64}", candidate["state_hash"]))):
+                item = diagnostic_payload(candidate, depth + 1)
+                item["state_hash"] = (sha256(candidate["state_id"].encode()).hexdigest()
+                    if isinstance(candidate.get("state_id"), str) else candidate["state_hash"])
+                output["candidates"].append(item)
     for key in {"session_hash", "request_hash", "graph_hash", "observation_hash", "guide_hash", "attempt_hash", "action_hash"} & value.keys():
         if isinstance(value[key], str) and re.fullmatch(r"[0-9a-f]{64}", value[key]):
             output[key] = value[key]

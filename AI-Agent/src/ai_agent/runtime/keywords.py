@@ -40,3 +40,13 @@ def keyword_matches(haystack: str, keyword: str) -> bool:
 
 def any_keyword_matches(haystack: str, keywords: tuple[str, ...]) -> bool:
     return any(keyword_matches(haystack, keyword) for keyword in keywords)
+
+
+def phrase_matches(haystack: str, keyword: str) -> bool:
+    """Match complete normalized words: 화면 must not match 배경화면."""
+    phrase = normalize_text(keyword)
+    return bool(phrase and re.search(r"(?<!\w)" + re.escape(phrase) + r"(?!\w)", normalize_text(haystack)))
+
+
+def any_phrase_matches(haystack: str, keywords: tuple[str, ...]) -> bool:
+    return any(phrase_matches(haystack, keyword) for keyword in keywords)

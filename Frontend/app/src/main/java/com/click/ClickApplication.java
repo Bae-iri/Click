@@ -29,6 +29,8 @@ public final class ClickApplication extends Application implements ClickHost {
             }
             @Override public void onFailure(Throwable error) {
                 gateway.close();
+                Log.w("ClickAuth", "Registration rules failed: " + (error instanceof ApiException
+                        ? "HTTP " + ((ApiException) error).status : error.getClass().getSimpleName()));
                 if (!activity.isDestroyed()) callback.failed();
             }
         });

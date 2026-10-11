@@ -18,8 +18,15 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 
-final class OnboardingDrawables {
+public final class OnboardingDrawables {
     private OnboardingDrawables() { }
+
+    /** Shared with the hands-on tutorial so both checklists use the same mark. */
+    public static Drawable checklistMark(Resources resources, boolean checked) {
+        Check mark = new Check(resources);
+        mark.setProgress(checked ? 1f : 0f);
+        return mark;
+    }
 
     static Drawable startButton(Resources resources) {
         GradientDrawable mask = new GradientDrawable();

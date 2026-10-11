@@ -13,6 +13,9 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.click.HomeActivity;
+import com.click.R;
+import com.click.domain.goal.RequirementReview;
+import android.widget.TextView;
 import com.click.data.remote.VoiceQueueGateway;
 import com.click.service.accessibility.ClickAccessibilityService;
 import com.click.service.overlay.ClickOverlayService;
@@ -38,10 +41,12 @@ public class FloatingTaskFlowTest {
         String key = Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES;
         String original = Settings.Secure.getString(app.getContentResolver(), key);
         int enabled = Settings.Secure.getInt(app.getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 0);
+        String originalKeyboard = Settings.Secure.getString(app.getContentResolver(), "show_ime_with_hard_keyboard");
         String component = "com.click/com.click.service.accessibility.ClickAccessibilityService";
         Intent serviceIntent = new Intent(app, ClickOverlayService.class);
         automation.adoptShellPermissionIdentity("android.permission.WRITE_SECURE_SETTINGS");
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            Settings.Secure.putInt(app.getContentResolver(), "show_ime_with_hard_keyboard", 1);
             FloatingClickHost[] homeControl = {null};
             scenario.onActivity(activity -> homeControl[0] = findHomeControl(activity.getWindow().getDecorView()));
             assertNotNull(homeControl[0]);
@@ -66,6 +71,8 @@ public class FloatingTaskFlowTest {
                 assertNull("Opening Click must not restore a queued request", field(service(), "agentSessionId"));
                 assertFalse((Boolean) field(service(), "turnInFlight"));
                 boolean ready = (Boolean) field(service(), "ttsReady");
+                boolean unavailable = (Boolean) field(service(), "ttsUnavailable");
+                setField(service(), "ttsUnavailable", false);
                 setField(service(), "ttsReady", false);
                 assertFalse((Boolean) field(service(), "voiceReplyEnabled"));
                 invokeString(service(), "speak", "이전 요청의 늦은 안내");
@@ -85,11 +92,27 @@ public class FloatingTaskFlowTest {
                 assertFalse((Boolean) field(service(), "voiceReplyEnabled"));
                 assertNull("Changing input mode clears pending speech", field(service(), "pendingSpeech"));
                 setField(service(), "ttsReady", ready);
+                setField(service(), "ttsUnavailable", unavailable);
                 invoke(service(), "ensureTaskFlow");
                 TaskFlowOverlayView guide = guide();
                 guide.waiting("현재 화면을 확인하고 있어요…");
                 assertEquals(ClickOverlayLayout.Mode.COLLAPSED, input.getMode());
                 assertEquals(View.VISIBLE, guide.getVisibility());
+                assertEquals("Expanded guidance owns the only visible surface", View.GONE, input.getVisibility());
+                guide.findViewById(R.id.task_flow_collapse).performClick();
+                assertEquals(View.GONE, guide.getVisibility());
+                assertEquals(View.VISIBLE, input.getVisibility());
+                invoke(service(), "ensureTaskFlow");
+                guide.progress("글자를 크게 보기", null, "다음 항목을 눌러주세요.");
+                assertEquals("A late guide must stay collapsed", View.GONE, guide.getVisibility());
+                input.performClick();
+                assertEquals(View.VISIBLE, guide.getVisibility());
+                assertEquals(View.GONE, input.getVisibility());
+                guide.findViewById(R.id.task_flow_input).performClick();
+                assertEquals(ClickOverlayLayout.Mode.VOICE, input.getMode());
+                assertFalse("Opening input does not record", input.isVoiceInputActive());
+                assertEquals(View.GONE, guide.getVisibility());
+                assertEquals(View.VISIBLE, input.getVisibility());
 
                 input.openMenu();
                 assertEquals(View.GONE, guide.getVisibility());
@@ -109,6 +132,7 @@ public class FloatingTaskFlowTest {
                 control().openText();
                 assertEquals(View.GONE, guide().getVisibility());
                 service().onTextSubmitted("글자를 크게 해줘");
+                assertTrue("Submitted text also enables spoken guidance", (Boolean) field(service(), "voiceReplyEnabled"));
                 assertEquals(ClickOverlayLayout.Mode.COLLAPSED, control().getMode());
                 assertEquals(View.VISIBLE, guide().getVisibility());
             });
@@ -120,10 +144,38 @@ public class FloatingTaskFlowTest {
                 control().collapse();
                 assertNull("A finished guide must not reappear", guide());
             });
+            instrumentation.runOnMainSync(() -> {
+                RequirementReview review = new RequirementReview("글자 크기를 키워줘");
+                setField(service(), "requirementReview", review);
+                invoke(service(), "ensureTaskFlow");
+                guide().requirements(review, false);
+                try {
+                    Method place = ClickOverlayService.class.getDeclaredMethod("placeTaskFlow", int[].class, boolean.class);
+                    place.setAccessible(true); place.invoke(service(), null, true);
+                } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+                findText(guide(), "내용 수정").performClick();
+            });
+            await(() -> ClickAccessibilityService.keyboardBounds() != null);
+            await(() -> {
+                int[] location = new int[2]; guide().getLocationOnScreen(location);
+                android.graphics.Rect keyboard = ClickAccessibilityService.keyboardBounds();
+                if (keyboard == null) return false;
+                int screenHeight = app.getResources().getDisplayMetrics().heightPixels;
+                int margin = Math.round(64 * app.getResources().getDisplayMetrics().density);
+                return !FloatingPanelPosition.isDockedKeyboard(screenHeight, keyboard.top, keyboard.bottom, margin)
+                        ? guide().getHeight() > Math.round(160 * app.getResources().getDisplayMetrics().density)
+                        : location[1] + guide().getHeight() <= keyboard.top;
+            });
+            screenshot("floating-request-editor-above-keyboard");
+            instrumentation.runOnMainSync(() -> {
+                android.view.inputmethod.InputMethodManager keyboard = app.getSystemService(android.view.inputmethod.InputMethodManager.class);
+                keyboard.hideSoftInputFromWindow(guide().getWindowToken(), 0);
+            });
             app.stopService(serviceIntent);
             await(() -> service() == null && homeControl[0].isShown());
         } finally {
             app.stopService(serviceIntent);
+            Settings.Secure.putString(app.getContentResolver(), "show_ime_with_hard_keyboard", originalKeyboard);
             Settings.Secure.putString(app.getContentResolver(), key, original);
             Settings.Secure.putInt(app.getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, enabled);
             automation.dropShellPermissionIdentity();
@@ -141,6 +193,13 @@ public class FloatingTaskFlowTest {
         if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
             FloatingClickHost found = findHomeControl(((ViewGroup) view).getChildAt(i));
             if (found != null) return found;
+        }
+        return null;
+    }
+    private TextView findText(View root, String text) {
+        if (root instanceof TextView && text.contentEquals(((TextView) root).getText())) return (TextView) root;
+        if (root instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) root).getChildCount(); i++) {
+            TextView found = findText(((ViewGroup) root).getChildAt(i), text); if (found != null) return found;
         }
         return null;
     }
@@ -169,6 +228,7 @@ public class FloatingTaskFlowTest {
             if (ready.get()) return;
             SystemClock.sleep(100);
         } while (SystemClock.uptimeMillis() < deadline);
+        try { screenshot("floating-timeout"); } catch (Exception ignored) {}
         fail("Overlay did not become ready.");
     }
     private void screenshot(String name) throws Exception {

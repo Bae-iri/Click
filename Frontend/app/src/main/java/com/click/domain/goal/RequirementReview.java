@@ -20,19 +20,51 @@ public final class RequirementReview {
     private boolean confirmed;
 
     public RequirementReview(String request) {
+        this(request, isFontRequest(request));
+    }
+    private RequirementReview(String request, boolean fontRequest) {
         this.request = request;
-        font = isFontRequest(request);
+        font = fontRequest;
         update(request);
+    }
+    public static RequirementReview forResolvedGoal(String request, JSONObject goal, String label) {
+        return forResolvedGoal(request, goal, label, null);
+    }
+    public static RequirementReview forResolvedGoal(String request, JSONObject goal, String label, RequirementReview previous) {
+        if (!goal.optString("goal_type").startsWith("settings.font_size.")) return forGoal(request, goal, label);
+        RequirementReview review = previous != null && previous.isFont() && request.equals(previous.request)
+                ? previous : new RequirementReview(request, true);
+        // The model may suggest a direction; scope remains a separate user requirement.
+        // Named apps and missing scope must never silently become a system-wide change.
+        JSONObject slots = goal.optJSONObject("slots");
+        String direction = slots == null ? "" : slots.optString("direction");
+        if (review.direction == null && !review.blocked && ("increase".equals(direction) || "decrease".equals(direction)))
+            review.direction = direction;
+        return review;
     }
     public static boolean isFontRequest(String text) {
         String n = GoalCatalogClassifier.normalize(text);
         return n.contains("글자") || n.contains("글씨") || n.contains("폰트");
     }
+    /** Settings context can prefill the scope, but never confirms or overrides an app request. */
+    public static RequirementReview forContext(String request, String packageName) {
+        RequirementReview review = new RequirementReview(request);
+        if (("com.android.settings".equals(packageName) || "com.samsung.android.settings".equals(packageName))
+                && review.needsTarget() && !review.appOnly() && namedApp(request) == null
+                && !review.blocked) review.choose("phone");
+        return review;
+    }
     public static RequirementReview forGoal(String request, JSONObject goal, String label) {
         RequirementReview review = new RequirementReview(request);
+        if (review.isFont() && "android_settings".equals(goal.optString("target_app"))
+                && !review.blocked && namedApp(request) == null && !review.appOnly()) {
+            review.choose("phone");
+            JSONObject slots = goal.optJSONObject("slots");
+            if (review.needsDirection() && slots != null) review.choose(slots.optString("direction"));
+        }
         review.otherGoal = goal;
         review.otherLabel = label;
-        review.target = "android_settings".equals(goal.optString("target_app")) ? "휴대폰 설정"
+        if (!review.isFont()) review.target = "android_settings".equals(goal.optString("target_app")) ? "휴대폰 설정"
                 : "coupang".equals(goal.optString("target_app")) ? "쿠팡" : goal.optString("target_app");
         return review;
     }
@@ -53,7 +85,8 @@ public final class RequirementReview {
         String app = namedApp(answer);
         boolean phone = n.contains("휴대폰전체") || n.contains("핸드폰전체") || n.contains("스마트폰전체")
                 || n.contains("시스템전체") || n.contains("모든앱") || n.contains("기본글자") || n.contains("휴대폰설정")
-                || n.contains("핸드폰설정") || n.contains("시스템글자");
+                || n.contains("핸드폰설정") || n.contains("시스템글자")
+                || app == null && (n.equals("설정") || n.contains("설정에서") || n.contains("설정앱"));
         if (app == null && !phone && appOnly() && target == null && !isFontRequest(answer)
                 && !up && !down && !negative && !n.matches(".*(앱|모르|맞아|네|아니|시작|변경).*") && answer.length() < 40)
             app = answer.trim();
@@ -122,10 +155,18 @@ public final class RequirementReview {
     public boolean confirmed() { return confirmed; }
     public String prompt(boolean executable) {
         if (blocked) return "변경을 원하시는지 다시 알려주세요. 아직 시작하지 않았어요.";
-        if (needsTarget()) return appOnly() ? "어느 앱의 글자를 바꿀까요? 앱 이름을 알려주세요." : "어디의 글자를 바꿀까요?";
-        if (needsDirection()) return "글자를 더 크게 할까요, 더 작게 할까요?";
+        if (needsTarget()) {
+            String question = appOnly()
+                    ? "어느 앱의 글자를 바꿀까요? 앱 이름을 알려주세요. 휴대폰 전체 글자를 바꾸려면 휴대폰 기본 글자를 눌러주세요."
+                    : "어디의 글자를 바꿀까요? 휴대폰 기본 글자, 특정 앱 안에서만 중에서 선택해 주세요.";
+            if (needsDirection()) question += " 글자 크기는 더 크게, 더 작게 중에서 선택해 주세요.";
+            return question;
+        }
+        if (needsDirection()) return "글자 크기를 어떻게 바꿀까요? 더 크게, 더 작게 중에서 선택해 주세요.";
         if (font && !isPhone()) return target + "의 글자 변경 안내는 아직 지원하지 않아요. 내용을 수정하거나 요청을 중지해 주세요.";
         if (!executable) return "이 요청의 실행 안내는 아직 지원하지 않아요. 내용을 수정할 수 있어요.";
-        return font ? "이 내용이 맞나요? 휴대폰 기본 글자 설정을 따르는 화면에 적용되며, 앱에 따라 적용되지 않을 수 있어요." : "대상과 변경 내용이 요청하신 내용과 맞는지 확인해 주세요.";
+        return font ? "휴대폰 기본 글자를 " + ("increase".equals(direction) ? "더 크게" : "더 작게")
+                + " 바꾸려는 거죠? 앱에 따라 적용되지 않을 수 있어요. 맞으면 이 내용으로 시작을 눌러주세요."
+                : summary() + ". 원하신 내용이 맞으면 이 내용으로 시작을 눌러주세요.";
     }
 }

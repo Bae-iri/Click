@@ -21,6 +21,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class AuthGateway {
+    // One cache per app/server, shared by screen loading and the later registration request.
+    private static final RegistrationRulesLoader REGISTRATION_RULES = new RegistrationRulesLoader(
+            () -> get("/openapi.json", null, 30000), android.os.SystemClock::elapsedRealtime);
+
     public interface Callback {
         void onSuccess();
         void onFailure(Throwable error);
@@ -61,9 +65,7 @@ public final class AuthGateway {
     }
 
     private static RegistrationContract registrationContract() throws Exception {
-        HttpResult result = get("/openapi.json", null);
-        if (result.status < 200 || result.status >= 300) throw new ApiException("GET", "/openapi.json", result);
-        return RegistrationContract.fromOpenApi(new JSONObject(result.body));
+        return REGISTRATION_RULES.load();
     }
 
     public void login(String email, String password, Callback callback) {
@@ -103,10 +105,14 @@ public final class AuthGateway {
     }
 
     static HttpResult post(String path, String body, String bearer) throws IOException {
+        return post(path, body, bearer, 15000);
+    }
+
+    static HttpResult post(String path, String body, String bearer, int readTimeout) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
         connection.setRequestMethod("POST");
         connection.setConnectTimeout(6000);
-        connection.setReadTimeout(15000);
+        connection.setReadTimeout(readTimeout);
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
         if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
@@ -122,17 +128,24 @@ public final class AuthGateway {
     }
 
     static HttpResult get(String path, String bearer) throws IOException {
+        return get(path, bearer, 15000);
+    }
+
+    private static HttpResult get(String path, String bearer, int readTimeout) throws IOException {
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(6000);
-        connection.setReadTimeout(15000);
-        if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
-        int status = connection.getResponseCode();
-        InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
-        String response = read(stream);
-        String conflict = connection.getHeaderField("X-Conflict-Code");
-        connection.disconnect();
-        return new HttpResult(status, response, conflict);
+        try {
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(6000);
+            connection.setReadTimeout(readTimeout);
+            if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
+            int status = connection.getResponseCode();
+            InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
+            String response = read(stream);
+            String conflict = connection.getHeaderField("X-Conflict-Code");
+            return new HttpResult(status, response, conflict);
+        } finally {
+            connection.disconnect();
+        }
     }
 
     static ApiException apiError(String path, HttpResult result) {

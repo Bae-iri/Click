@@ -14,19 +14,13 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Records one short utterance as PCM WAV, then asks the backend for gpt-transcribe. */
-final class CloudSpeechRecognizer {
-    interface Callback {
-        void onRecordingFinished();
-        void onSuccess(String text);
-        void onFailure(Throwable error);
-    }
-
+/** Records short PCM WAV in memory and sends it to our backend/private Qwen STT. */
+public final class CloudSpeechRecognizer implements SpeechInput {
     private static final int SAMPLE_RATE = 16_000;
-    private static final int SPEECH_RMS_THRESHOLD = 600;
-    private static final long INITIAL_SILENCE_MS = 4_500L;
-    private static final long END_SILENCE_MS = 1_100L;
-    private static final long MAX_RECORDING_MS = 8_000L;
+    private static final int SPEECH_RMS_THRESHOLD = 300;
+    private static final long INITIAL_SILENCE_MS = 8_000L;
+    private static final long END_SILENCE_MS = 1_800L;
+    private static final long MAX_RECORDING_MS = 16_000L;
 
     private final ExecutorService recorderExecutor = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -34,24 +28,25 @@ final class CloudSpeechRecognizer {
     private volatile AudioRecord activeRecorder;
     private volatile int generation;
 
-    CloudSpeechRecognizer(Context context) {
+    public CloudSpeechRecognizer(Context context) {
         gateway = new TranscriptionGateway(context.getApplicationContext());
     }
 
-    void start(Callback callback) {
+    public void start(Callback callback) {
         int token = ++generation;
         recorderExecutor.execute(() -> capture(token, callback));
     }
 
-    void cancel() {
+    public void cancel() {
         generation++;
+        gateway.cancel();
         AudioRecord recorder = activeRecorder;
         if (recorder != null) {
             try { recorder.stop(); } catch (RuntimeException ignored) { }
         }
     }
 
-    void close() {
+    public void close() {
         cancel();
         gateway.close();
         recorderExecutor.shutdownNow();
@@ -76,6 +71,7 @@ final class CloudSpeechRecognizer {
             activeRecorder = recorder;
             if (token != generation) return;
             recorder.startRecording();
+            main.post(() -> { if (token == generation) callback.onReady(); });
             ByteArrayOutputStream pcm = new ByteArrayOutputStream(SAMPLE_RATE * 2 * 8);
             byte[] buffer = new byte[bufferSize];
             long startedAt = System.currentTimeMillis();

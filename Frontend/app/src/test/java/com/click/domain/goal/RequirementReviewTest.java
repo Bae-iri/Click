@@ -22,7 +22,7 @@ public class RequirementReviewTest {
                 + "\",\"target_app\":\"android_settings\",\"execution_status\":\"approved\",\"slots\":{\"direction\":\""
                 + direction + "\"},\"keyword_groups\":[[\"글자\"],[\"" + keyword + "\"]]}";
     }
-    @Test public void vagueRequestAndQuickCardNeedScopeEvenInSettings() throws Exception {
+    @Test public void vagueRequestWithoutContextNeedsScope() throws Exception {
         RequirementReview review = new RequirementReview("글자 크기 키워줘");
         assertTrue(review.needsTarget()); assertFalse(review.needsDirection());
         assertNull(review.confirm(catalog, server)); assertFalse(review.confirmed());
@@ -32,6 +32,37 @@ public class RequirementReviewTest {
         assertNotNull(review.proposedGoal(catalog, server)); assertFalse(review.confirmed());
         assertEquals("settings.font_size.increase", review.confirm(catalog, server).getString("goal_type"));
         assertTrue(review.confirmed());
+    }
+    @Test public void settingsContextPrefillsScopeButStillNeedsConfirmation() throws Exception {
+        RequirementReview review = RequirementReview.forContext("글자 크기 키워줘", "com.android.settings");
+        assertTrue(review.isPhone()); assertFalse(review.needsTarget()); assertFalse(review.confirmed());
+        assertNotNull(review.confirm(catalog, server));
+        assertTrue(new RequirementReview("설정에서 글자 크기 키워줘").isPhone());
+    }
+    @Test public void explicitCardRetainsItsSelectedScopeAndDirection() throws Exception {
+        JSONObject goal = catalog.executableGoal("settings.font_size.increase").toTypedGoalJson();
+        RequirementReview review = RequirementReview.forGoal("글자 크기를 크게 해줘", goal, "글자를 크게");
+        assertFalse(review.needsTarget()); assertFalse(review.needsDirection()); assertFalse(review.confirmed());
+        assertNotNull(review.confirm(catalog, server));
+        review.update("카카오톡에서만");
+        assertFalse(review.isPhone()); assertFalse(review.confirmed()); assertNull(review.confirm(catalog, server));
+    }
+    @Test public void serverResolutionPreservesScopeForTheSameRequestOnly() throws Exception {
+        JSONObject goal = catalog.executableGoal("settings.font_size.increase").toTypedGoalJson();
+        String request = "글자 크기를 크게 해줘";
+        RequirementReview prior = RequirementReview.forGoal(request, goal, "글자를 크게");
+        RequirementReview resolved = RequirementReview.forResolvedGoal(request, goal, "글자를 크게", prior);
+        assertTrue(resolved.isPhone()); assertFalse(resolved.confirmed());
+        assertNotNull(resolved.proposedGoal(catalog, server));
+        RequirementReview changed = RequirementReview.forResolvedGoal("카카오톡 글자를 크게", goal, "글자를 크게", prior);
+        assertFalse(changed.isPhone()); assertNull(changed.proposedGoal(catalog, server));
+        assertTrue(RequirementReview.forResolvedGoal(request, goal, "글자를 크게").needsTarget());
+    }
+    @Test public void settingsContextDoesNotOverwriteExplicitAppOrConflictingScope() throws Exception {
+        for (String request : new String[]{"카카오톡 글자를 크게", "특정 앱 글자를 크게", "휴대폰 전체랑 카카오톡 글자를 크게"}) {
+            RequirementReview review = RequirementReview.forContext(request, "com.android.settings");
+            assertFalse(review.isPhone()); assertNull(review.confirm(catalog, server));
+        }
     }
     @Test public void namedAppAndAppWideScopeCannotExecuteSystemGoal() throws Exception {
         RequirementReview review = new RequirementReview("카카오톡 전체 글자를 크게 해줘");

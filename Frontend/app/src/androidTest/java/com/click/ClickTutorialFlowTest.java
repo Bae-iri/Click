@@ -16,6 +16,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.click.designpreview.PermissionPhoneView;
 import com.click.ui.overlay.ClickOverlayLayout;
+import com.click.service.overlay.SpeechInput;
+import com.click.ui.overlay.TrashDropView;
 import com.click.ui.tutorial.TutorialFloatingHost;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -29,10 +31,21 @@ public class ClickTutorialFlowTest {
 
     @Test public void actualFloatingMenuKeyboardConversationVoiceAndHome() throws Exception {
         try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
+            scenario.onActivity(a -> {
+                assertNotNull(findText(a.getWindow().getDecorView(), "click 튜토리얼을\n시작해볼게요!"));
+                assertChecklist(a, false);
+                assertFalse(control(a).isShown());
+            });
+            screenshot("click-tutorial-checklist-start");
+            scenario.recreate();
+            tapId(scenario, R.id.tutorial_next);
             scenario.onActivity(a -> assertNotNull(findType(a.getWindow().getDecorView(), PermissionPhoneView.class)));
             screenshot("click-feature-1");
             tapId(scenario, R.id.tutorial_floating_control);
             assertMode(scenario, ClickOverlayLayout.Mode.MENU);
+            assertHighlightOn(scenario, "글로 입력", 0);
+            scenario.onActivity(a -> control(a).setTranslationY(control(a).getTranslationY() - 18 * a.getResources().getDisplayMetrics().density));
+            assertHighlightOn(scenario, "글로 입력", 0);
             screenshot("click-feature-2");
             tapText(scenario, "글로 입력");
             assertMode(scenario, ClickOverlayLayout.Mode.TEXT);
@@ -54,10 +67,12 @@ public class ClickTutorialFlowTest {
                 assertEquals("Send must remain fully visible above keyboard", send.getHeight(), visible.height());
                 ((EditText) input[0]).setText("이 화면은 어떻게 사용해요?");
             });
+            assertHighlightOn(scenario, "↑", 0);
             screenshot("click-feature-keyboard");
             tapText(scenario, "↑");
             scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "이 화면은 어떻게 사용해요?")));
             screenshot("click-feature-4");
+            tapText(scenario, "이 내용으로 시작");
             tapId(scenario, R.id.tutorial_next);
             tapText(scenario, "말로 시작");
             assertMode(scenario, ClickOverlayLayout.Mode.VOICE);
@@ -65,10 +80,27 @@ public class ClickTutorialFlowTest {
                 assertFalse(control(a).isVoiceInputActive());
                 assertFalse(a.findViewById(R.id.tutorial_next).isEnabled());
             });
+            assertHighlightOn(scenario, null, R.id.overlay_microphone);
+            screenshot("click-feature-microphone-highlight");
+            FakeSpeech speech = new FakeSpeech();
+            instrumentation.getUiAutomation().grantRuntimePermission("com.click", android.Manifest.permission.RECORD_AUDIO);
+            scenario.onActivity(a -> {
+                try {
+                    java.lang.reflect.Field field = TutorialActivity.class.getDeclaredField("speech"); field.setAccessible(true);
+                    ((SpeechInput) field.get(a)).close(); field.set(a, speech);
+                } catch (Exception e) { throw new AssertionError(e); }
+            });
             tapId(scenario, R.id.overlay_microphone);
-            scenario.onActivity(a -> assertTrue(control(a).isVoiceInputActive()));
+            scenario.onActivity(a -> { assertTrue(control(a).isVoiceInputActive()); assertNotNull(speech.callback); });
             tapId(scenario, R.id.overlay_microphone);
-            scenario.onActivity(a -> assertFalse(control(a).isVoiceInputActive()));
+            scenario.onActivity(a -> { assertFalse(control(a).isVoiceInputActive()); assertFalse(a.findViewById(R.id.tutorial_next).isEnabled()); });
+            tapId(scenario, R.id.overlay_microphone);
+            scenario.onActivity(a -> {
+                speech.callback.onPartialText("휴대폰 글자");
+                assertNotNull(findText(a.getWindow().getDecorView(), "휴대폰 글자"));
+                speech.callback.onRecordingFinished(); speech.callback.onSuccess("휴대폰 글자 크기 키워줘");
+            });
+            scenario.onActivity(a -> { assertFalse(control(a).isVoiceInputActive()); assertTrue(a.findViewById(R.id.tutorial_next).isEnabled()); });
             screenshot("click-feature-5");
             tapId(scenario, R.id.tutorial_next);
             scenario.recreate();
@@ -77,20 +109,53 @@ public class ClickTutorialFlowTest {
                 assertFalse(a.findViewById(R.id.tutorial_next).isEnabled());
                 assertFalse(control(a).isVoiceInputActive());
             });
+            assertHighlightOn(scenario, null, R.id.overlay_stop_request);
             screenshot("click-feature-stop");
             tapId(scenario, R.id.overlay_stop_request);
             scenario.recreate();
             scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "요청을 멈췄어요")));
             tapId(scenario, R.id.tutorial_next);
+            assertMode(scenario, ClickOverlayLayout.Mode.MENU);
+            scenario.onActivity(a -> assertFalse(a.findViewById(R.id.tutorial_next).isEnabled()));
+            assertHighlightOn(scenario, null, R.id.overlay_collapse);
+            screenshot("click-feature-fold-highlight");
+            tapId(scenario, R.id.overlay_collapse);
+            tapId(scenario, R.id.tutorial_next);
             assertMode(scenario, ClickOverlayLayout.Mode.COLLAPSED);
-            screenshot("click-feature-6");
-            scenario.onActivity(a -> control(a).performLongClick());
             scenario.onActivity(a -> {
-                assertTrue(((TutorialFloatingHost) a.findViewById(R.id.tutorial_floating_host)).isHidden());
-                assertEquals(View.VISIBLE, a.findViewById(R.id.tutorial_restore).getVisibility());
+                TutorialFloatingHost host = a.findViewById(R.id.tutorial_floating_host);
+                host.onDragStarted(); host.onDragBy(-50, -40); host.onDragEnded();
+                assertTrue(a.findViewById(R.id.tutorial_next).isEnabled());
+            });
+            tapId(scenario, R.id.tutorial_next);
+            screenshot("click-feature-6");
+            scenario.onActivity(a -> {
+                control(a).performLongClick();
+                TutorialFloatingHost host = a.findViewById(R.id.tutorial_floating_host);
+                assertFalse(host.isHidden());
+                TrashDropView trash = findType(host, TrashDropView.class);
+                assertEquals(View.VISIBLE, trash.getVisibility());
+            });
+            screenshot("click-feature-trash");
+            scenario.onActivity(a -> {
+                TutorialFloatingHost host = a.findViewById(R.id.tutorial_floating_host);
+                TrashDropView trash = findType(host, TrashDropView.class);
+                host.onDragBy(trash.getX() + trash.getWidth() / 2f - control(a).getX() - control(a).getWidth() / 2f,
+                        trash.getY() + trash.getHeight() / 2f - control(a).getY() - control(a).getHeight() / 2f);
+                host.onDragEnded();
+                assertTrue(host.isHidden()); assertFalse(a.findViewById(R.id.tutorial_next).isEnabled());
             });
             tapId(scenario, R.id.tutorial_restore);
             scenario.onActivity(a -> assertFalse(((TutorialFloatingHost) a.findViewById(R.id.tutorial_floating_host)).isHidden()));
+            tapId(scenario, R.id.tutorial_next);
+            scenario.onActivity(a -> {
+                assertNotNull(findText(a.getWindow().getDecorView(), "이제 준비됐어요!"));
+                assertChecklist(a, true);
+                assertFalse(control(a).isShown());
+            });
+            scenario.recreate();
+            scenario.onActivity(a -> assertChecklist(a, true));
+            screenshot("click-tutorial-checklist-complete");
             Instrumentation.ActivityMonitor home = instrumentation.addMonitor(HomeActivity.class.getName(), null, false);
             try {
                 tapId(scenario, R.id.tutorial_next);
@@ -101,24 +166,50 @@ public class ClickTutorialFlowTest {
 
     @Test public void realInputDraftAndConversationSurviveRecreation() {
         try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
+            tapId(scenario, R.id.tutorial_next);
             tapId(scenario, R.id.tutorial_floating_control);
             tapText(scenario, "글로 입력");
+            scenario.onActivity(a -> {
+                EditText input = findType(a.getWindow().getDecorView(), EditText.class);
+                assertEquals("글자 크기 키워줘", input.getHint().toString());
+                assertEquals("", input.getText().toString());
+            });
             tapText(scenario, "↑");
             scenario.onActivity(a -> assertFalse("Empty input must not complete the practice", a.findViewById(R.id.tutorial_next).isEnabled()));
-            scenario.onActivity(a -> control(a).setDraftText("아직 보내지 않은 질문"));
+            scenario.onActivity(a -> control(a).setDraftText("글자 크기 키워줘"));
             scenario.recreate();
             assertMode(scenario, ClickOverlayLayout.Mode.TEXT);
-            scenario.onActivity(a -> assertEquals("아직 보내지 않은 질문", control(a).getDraftText()));
+            scenario.onActivity(a -> assertEquals("글자 크기 키워줘", control(a).getDraftText()));
             tapText(scenario, "↑");
+            tapText(scenario, "휴대폰 기본 글자");
             scenario.recreate();
             scenario.onActivity(a -> {
+                assertNotNull("Chosen scope must survive recreation", findText(a.getWindow().getDecorView(), "이 내용으로 시작"));
                 assertEquals("", control(a).getDraftText());
-                assertNotNull(findText(a.getWindow().getDecorView(), "아직 보내지 않은 질문"));
-                assertTrue(a.findViewById(R.id.tutorial_next).isEnabled());
+                assertNotNull(findText(a.getWindow().getDecorView(), "글자 크기 키워줘"));
+                assertFalse(a.findViewById(R.id.tutorial_next).isEnabled());
             });
             tapId(scenario, R.id.tutorial_back);
             assertMode(scenario, ClickOverlayLayout.Mode.MENU);
         }
+    }
+
+    private void assertChecklist(TutorialActivity activity, boolean completed) {
+        String[] labels = {"click 버튼 열기", "글로 입력하고 요청 확인하기", "마이크로 말하기", "진행 중인 요청 멈추기", "창 접고 버튼 옮기기", "버튼 숨기고 다시 꺼내기"};
+        for (String label : labels) {
+            TextView text = findText(activity.getWindow().getDecorView(), label);
+            assertNotNull(label, text);
+            assertEquals(label + (completed ? ", 완료" : ", 연습 전"),
+                    text.getContentDescription().toString());
+        }
+    }
+
+    // Deterministic STT callback checks; live microphone quality is verified separately.
+    private static final class FakeSpeech implements SpeechInput {
+        Callback callback;
+        public void start(Callback callback) { this.callback = callback; callback.onReady(); }
+        public void cancel() { callback = null; }
+        public void close() { cancel(); }
     }
 
     private ClickOverlayLayout control(TutorialActivity a) { return a.findViewById(R.id.tutorial_floating_control); }
@@ -167,6 +258,34 @@ public class ClickTutorialFlowTest {
         }
         return null;
     }
+    private void assertHighlightOn(ActivityScenario<TutorialActivity> scenario, String label, int id) {
+        instrumentation.waitForIdleSync(); SystemClock.sleep(150);
+        int[] position = new int[2]; int[] size = new int[2]; float[] density = new float[1];
+        scenario.onActivity(a -> {
+            View target = id == 0 ? findText(a.getWindow().getDecorView(), label) : a.findViewById(id);
+            assertNotNull(target);
+            while (!target.isClickable() && target.getParent() instanceof View) target = (View) target.getParent();
+            target.getLocationOnScreen(position); size[0] = target.getWidth(); size[1] = target.getHeight();
+            density[0] = a.getResources().getDisplayMetrics().density;
+        });
+        Bitmap bitmap = instrumentation.getUiAutomation().takeScreenshot();
+        int x = position[0] + Math.round(2 * density[0]);
+        int y = position[1] + size[1] / 2;
+        int pixel = bitmap.getPixel(x, y);
+        int topPixel = bitmap.getPixel(position[0] + size[0] / 2, position[1] + Math.round(2 * density[0]));
+        bitmap.recycle();
+        assertTrue("Highlight left edge must follow the visible target " + label + " at " + x + "," + y
+                + ", actual pixel=" + Integer.toHexString(pixel), isHighlightBlue(pixel));
+        assertTrue("Highlight top edge must move with the target " + label
+                + ", actual pixel=" + Integer.toHexString(topPixel), isHighlightBlue(topPixel));
+    }
+    private boolean isHighlightBlue(int pixel) {
+        // The gentle pulse keeps at least 185/255 opacity over the white contrast outline.
+        return android.graphics.Color.red(pixel) >= 45 && android.graphics.Color.red(pixel) < 125
+                && android.graphics.Color.green(pixel) >= 110 && android.graphics.Color.green(pixel) < 180
+                && android.graphics.Color.blue(pixel) > 230;
+    }
+
     private void screenshot(String name) throws Exception {
         instrumentation.waitForIdleSync(); SystemClock.sleep(350);
         Bitmap bitmap = instrumentation.getUiAutomation().takeScreenshot(); assertNotNull(bitmap);

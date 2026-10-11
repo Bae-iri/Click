@@ -72,20 +72,29 @@ Click/
 
 ### AI-Agent(2): Runtime Data / Graph Proposal
 
-- 전체 runtime 데이터의 episode·step 재구성 및 success/fail 결과 라벨링
+- 실제 runtime 데이터·통제된 기기 시연의 수집, episode·step 재구성 및 근거 기반 라벨링
 - 성공·실패·사용자 우회 경로 분석과 내부 학습·평가 데이터셋 생성
+- 공개 참고 자료의 출처·변환·적용 범위 관리와 우리 환경의 정답 데이터 검수 workflow
 - 신규 Task Graph 추가 및 기존 State·Transition·selector 업데이트 후보 생성
 - 변경안 평가, 승인에 필요한 근거 제공, 승인된 새 graph version의 DB 반영 및 release 관리
 
 상세 설계: [전체 구조](docs/ai-agent-architecture.md) · [Backend Graph 전달](docs/backend-task-graph-dispatch.md) · [AI-Agent(1)](docs/ai-agent-1-runtime.md) · [AI-Agent(2)](docs/ai-agent-2-graph-proposal.md)
 
-두 역할은 `runtime/*`와 `graph_proposal/*`로 분리했고, 공통 trace는 `telemetry/*`에서 관리한다. 사용자 실행 흐름은 구현되어 있으며 Agent(2)의 라벨링·graph proposal·dataset 생성은 아직 구현할 골격이다. [실제 파일 구조와 경계](AI-Agent/README.md)를 참고한다.
+2026-10-10 기준: [STT 개인정보·한국어 후보 선정](docs/stt-model-selection.md), [UI 하이라이트 재검증](docs/reviews/2026-10-10-ui-highlight-revalidation.md), [실제 품질·정답 데이터 기준 v1](docs/ai-quality-evaluation.md). UI 오선택은 재현되었고 제품 gold·실기기 평가는 미완료다. 문서의 구현 상태와 목표 설계를 구분한다.
+
+두 역할은 `runtime/*`와 `graph_proposal/*`로 분리했고, 공통 trace는 `telemetry/*`에서 관리한다. MVP-01 runtime과 합성 fixture용 weak labeler가 있으며, Agent(2)의 영속 실제 데이터 수집·제품 gold·graph proposal·dataset 생성·release는 후속 구현이다. [실제 파일 구조와 경계](AI-Agent/README.md)를 참고한다.
+
+## 정답 데이터와 개발 순서
+
+**ColorBench는 검수한 경로·복구 평가의 보조 자료, MobiAgent의 MobiFlow는 의존관계·분기·완료 규칙의 설계 참고로 사용한다.** 우리 graph 선택과 실제 작업 완료의 정답은 대상 기기·앱의 실행 증거와 독립 검수로 만든다. AI2의 자동 라벨·graph 후보를 곧바로 제품 정답이나 승인 graph로 사용하지 않는다.
+
+개발은 평가 계약 → 실제 증거 수집 → 제품 정답·baseline → graph 후보·회귀 평가 → 승인·배포 순서로 진행한다. 공개 참고 실험은 수집과 병행한다. 담당 역할·산출물·완료 조건은 [Task Graph 정답 데이터·개발 계획](docs/task-graph-data-plan.md), 근거는 [재재검증 보고서](docs/reviews/2026-09-20-task-graph-gold-fitness-audit.md)에 있다.
 
 ## MVP Scope
 
-지원 앱은 쿠팡, Android 설정 앱, 정부24이며 대표 Task는 상품 구매, 설정 변경, 행정 서류 발급입니다.
+목표 지원 범위는 쿠팡, Android 설정 앱, 정부24이며 대표 Task는 상품 구매, 설정 변경, 행정 서류 발급입니다. 현재 runtime registry에는 Android 글자 크기 확대 `MVP-01`이 등록되어 있습니다. 다른 앱·작업의 graph와 실기기 정답 데이터는 별도로 구축·검증해야 합니다.
 
-아래는 합의한 설계 흐름입니다. 현재 raw-goal API와 engine 내부 typing/lookup은 DB 선택·주입 방식으로 전환해야 합니다.
+아래는 합의한 설계 흐름입니다. Backend typed graph 선택·주입 일부가 연결되어 있으며, 범용 DB graph loader와 legacy raw-goal 경로 정리는 후속 작업입니다.
 
 ```text
 사용자 요구 → FE Goal·Command 확정

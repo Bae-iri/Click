@@ -1,14 +1,12 @@
 package com.click.designpreview;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.RadioButton;
 import android.widget.Toast;
-import android.content.res.ColorStateList;
 import android.graphics.drawable.GradientDrawable;
 import android.content.Context;
 import android.content.Intent;
@@ -167,14 +165,7 @@ public final class SignupActivity extends Activity {
         if (page == 0) {
             if (!validateAccount()) return;
             String address = email.getText().toString().trim();
-            new AlertDialog.Builder(this)
-                    .setTitle("이메일을 한 번 더 확인해 주세요")
-                    .setMessage(address + "\n\n휴대폰을 바꾸거나 다시 로그인할 때 사용할 이메일이에요. Click 계정 안내를 받을 수 있도록, 자주 사용하는 주소인지 확인해 주세요.")
-                    .setNegativeButton("수정할게요", (dialog, which) -> email.requestFocus())
-                    .setPositiveButton("네, 이 이메일이 맞아요", (dialog, which) -> {
-                        confirmedEmail = address;
-                        showPage(1, true);
-                    }).show();
+            showEmailConfirmation(address);
             return;
         }
         if (!validateAccount() || !email.getText().toString().trim().equals(confirmedEmail)) {
@@ -201,6 +192,38 @@ public final class SignupActivity extends Activity {
                         showExistingAccount(address);
                     } else Toast.makeText(this, message, Toast.LENGTH_LONG).show();
                 });
+    }
+
+    private void showEmailConfirmation(String address) {
+        InputMethodManager keyboard = getSystemService(InputMethodManager.class);
+        if (keyboard != null) keyboard.hideSoftInputFromWindow(email.getWindowToken(), 0);
+        Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(24), dp(24), dp(24), dp(20));
+        GradientDrawable background = new GradientDrawable(); background.setColor(Color.WHITE);
+        background.setCornerRadius(dp(24)); card.setBackground(background);
+        TextView title = AccountUi.text(this, "이메일을 확인해 주세요", 24);
+        title.setTypeface(getResources().getFont(R.font.pretendard_bold));
+        AccountUi.add(this, card, title, 0);
+        TextView description = AccountUi.text(this, "다시 로그인할 때 사용할 주소예요.\n자주 사용하는 이메일인지 확인해 주세요.", 16);
+        description.setTextColor(0xFF647594); AccountUi.add(this, card, description, 12);
+        TextView value = AccountUi.text(this, address, 18);
+        value.setPadding(dp(16), dp(16), dp(16), dp(16));
+        GradientDrawable callout = new GradientDrawable(); callout.setColor(0xFFF1F6FF); callout.setCornerRadius(dp(14));
+        value.setBackground(callout); AccountUi.add(this, card, value, 20);
+        Button confirm = AccountUi.button(this, "이 이메일로 계속", true);
+        confirm.setOnClickListener(v -> { dialog.dismiss(); confirmedEmail = address; showPage(1, true); });
+        AccountUi.add(this, card, confirm, 24);
+        Button edit = AccountUi.button(this, "이메일 수정", false);
+        edit.setOnClickListener(v -> { dialog.dismiss(); email.requestFocus();
+            if (keyboard != null) keyboard.showSoftInput(email, InputMethodManager.SHOW_IMPLICIT); });
+        AccountUi.add(this, card, edit, 8);
+        ScrollView scroll = new ScrollView(this); scroll.addView(card);
+        dialog.setContentView(scroll);
+        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        dialog.show();
+        dialog.getWindow().setLayout(Math.min(getResources().getDisplayMetrics().widthPixels - dp(40), dp(400)), -2);
     }
 
     private void showExistingAccount(String address) {
@@ -235,7 +258,7 @@ public final class SignupActivity extends Activity {
         handleParams.gravity = Gravity.CENTER_HORIZONTAL; handleParams.bottomMargin = dp(22);
         sheet.addView(handle, handleParams);
 
-        TextView title = AccountUi.text(this, getString(R.string.signup_occupation_title), 25);
+        TextView title = AccountUi.text(this, getString(R.string.signup_occupation_title), 23);
         title.setTypeface(getResources().getFont(R.font.pretendard_semibold));
         title.setIncludeFontPadding(false);
         title.setLetterSpacing(-.025f);
@@ -244,7 +267,7 @@ public final class SignupActivity extends Activity {
         AccountUi.add(this, sheet, title, 0);
 
         TextView description = AccountUi.text(this,
-                getString(R.string.signup_occupation_description), 17);
+                "현재 가장 가까운 항목 하나를 선택해 주세요.\n선택하지 않고 넘어가도 괜찮아요.", 15);
         description.setTypeface(getResources().getFont(R.font.pretendard_medium));
         description.setIncludeFontPadding(false);
         description.setLetterSpacing(-.012f);
@@ -262,18 +285,16 @@ public final class SignupActivity extends Activity {
         String[] values = getResources().getStringArray(R.array.signup_occupations);
         for (int i = 0; i < values.length; i++) {
             RadioButton option = new RadioButton(this); option.setId(View.generateViewId()); option.setTag(i);
-            option.setText(values[i]); option.setTextSize(19); option.setTextColor(AccountUi.INK);
+            option.setText(values[i]); option.setTextSize(17); option.setTextColor(AccountUi.INK);
             option.setTypeface(getResources().getFont(R.font.pretendard_medium));
             option.setIncludeFontPadding(false);
             option.setLetterSpacing(-.01f);
-            option.setButtonTintList(new ColorStateList(new int[][]{
-                    new int[]{android.R.attr.state_checked},
-                    new int[]{-android.R.attr.state_checked}},
-                    new int[]{AccountUi.BLUE, 0xFF8FA1BC}));
-            // Keep the selection circle away from the sheet edge and give the label breathing room.
-            option.setPadding(dp(24), dp(13), dp(18), dp(13)); option.setMinHeight(dp(64));
+            option.setButtonDrawable(new android.graphics.drawable.InsetDrawable(
+                    new AccountSelectionMark(getResources().getDisplayMetrics().density), dp(12), 0, dp(12), 0));
+            option.setGravity(Gravity.CENTER_VERTICAL);
+            option.setPadding(0, dp(10), dp(14), dp(10)); option.setMinHeight(dp(56));
             RadioGroup.LayoutParams params = new RadioGroup.LayoutParams(-1, -2);
-            params.topMargin = dp(9); params.leftMargin = dp(2); params.rightMargin = dp(2);
+            params.topMargin = dp(6);
             choices.addView(option, params);
             option.setOnCheckedChangeListener((button, checked) -> {
                 GradientDrawable card = new GradientDrawable(); card.setCornerRadius(dp(16));

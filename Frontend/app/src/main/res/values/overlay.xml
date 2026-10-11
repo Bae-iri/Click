@@ -1,4 +1,7 @@
 <resources>
     <item name="overlay_microphone" type="id" />
     <item name="overlay_stop_request" type="id" />
+    <item name="overlay_collapse" type="id" />
+    <item name="task_flow_collapse" type="id" />
+    <item name="task_flow_input" type="id" />
 </resources>

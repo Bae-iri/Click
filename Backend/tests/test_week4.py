@@ -110,6 +110,8 @@ def test_unverified_images_never_call_network(monkeypatch, consent):
     monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
     monkeypatch.setattr("urllib.request.urlopen", forbidden)
     result = LLMVLMFallback().analyze(VisionSnapshot(user_consented=consent,
+        consent_request_id="verified-request" if consent else None,
+        privacy_status="verified" if consent else "unverified",
         redaction_applied=True, screenshot_base64="RAW"), reason="test")
     assert result.status == ("not_configured" if consent else "consent_required")
 

@@ -1,6 +1,10 @@
 # Task: Android 설정 앱에서 글자 크기 확대
 
+2026-10-10: 이 파일은 기존 설계의 보조 사본이다. 현재 실행 정책·완료 근거·미해결 UI 문제는 [루트 Task 문서](../../../docs/tasks/font-size-increase.md), [UI 재검증](../../../docs/reviews/2026-10-10-ui-highlight-revalidation.md), [품질·gold 기준](../../../docs/ai-quality-evaluation.md)을 따른다.
+
 상세 설계의 기준은 [루트 Task 문서](../../../docs/tasks/font-size-increase.md)다. FE는 Goal/Command, Backend는 DB graph 선택·전달, AI1은 전달 graph 실행을 맡는다. 아래 UI·scroll 예시는 목표 설계이며 현재 MVP의 자동 scroll은 비활성이다.
+
+2026-09-20 이후 완료 근거·자체 gold 수집 기준은 [루트 문서의 완료 조건](../../../docs/tasks/font-size-increase.md#4-완료-조건)과 [정답 데이터 계획](../../../docs/task-graph-data-plan.md)을 따른다. ColorBench·MobiFlow와 아래 예시를 실기기 정답으로 간주하지 않는다.
 
 ## 1. Task 정의
 

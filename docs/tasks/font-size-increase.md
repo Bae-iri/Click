@@ -1,5 +1,9 @@
 # Task: Android 설정 앱에서 글자 크기 확대
 
+2026-10-10 현재 완료 판정은 귀속된 행동·새 관측·동일 slider 값과 `FONT_SCALE`의 목표 방향 변화를 요구한다. 화면 도착이나 안내만으로 완료하지 않는다. `화면` 부분 문자열로 다른 메뉴를 선택하는 결함은 [재검증](../reviews/2026-10-10-ui-highlight-revalidation.md)에서 미해결로 확인했다. [제품 gold·인수 기준](../ai-quality-evaluation.md)이 평가 기준이다.
+
+2026-09-20 정답 데이터·수집 순서는 [Task Graph 데이터 계획](../task-graph-data-plan.md)을 따른다. 이 문서의 graph 설계와 현재 코드 seed가 실기기 검수 gold를 의미하지 않는다. 실행 가능한 기능과 제한은 [AI1 실행 정책](../ai-agent-1-runtime-policy.md)이 기준이다.
+
 ## 1. Task 정의
 
 | 항목 | 내용 |
@@ -12,7 +16,7 @@
 | Task 유형 | 설정 변경형 |
 | Agent 역할 | 설정 앱에서 글자 크기 조절 화면까지 안내하고, 사용자가 직접 글자 크기를 확대하도록 돕는다 |
 | 자동 클릭 여부 | 없음 |
-| 자동 스크롤 여부 | 허용. 대상 메뉴 탐색 목적의 제한적 scroll만 가능 |
+| 자동 스크롤 여부 | 현재 MVP-01 비활성. 아래 제한적 scroll 경로는 후속 설계 |
 | Graph 업데이트 방식 | runtime trace 기반 후보 생성 후 검증/승인 |
 
 ## 2. FE Goal·Command 입력과 Graph 연결
@@ -28,8 +32,7 @@ Backend는 `start_task` 또는 `replace_task`의 확정 Goal로 DB에서 다음 
 | `goal.slots` | `setting=font_size`, `direction=increase` |
 | Backend DB 선택 결과 | `task_id=MVP-01`, `task_type=settings_change` |
 
-AI1은 원문을 분류하거나 graph를 선택·수정하지 않는다. 감소 목적을 확대 graph로 바꾸지 않는다. 후속 `observe`·`resume_task`에서는 Backend가 저장된 Goal과 고정 graph·실행 상태를 복원해 AI1에 전달한다. graph에 없는 경로가 필요하면 AI1은 Backend에 재선택/지원 불가 처리를 요청한다. [Graph 전달 계약](../backend-task-graph-dispatch.md)을 따른다. 새 typed 입력은 설계 계약이며 현재 v1 raw-goal
-코드 전환은 별도 작업이다.
+AI1은 원문을 분류하거나 graph를 선택·수정하지 않는다. 감소 목적을 확대 graph로 바꾸지 않는다. 후속 `observe`·`resume_task`에서는 Backend가 저장된 Goal과 고정 graph·실행 상태를 복원해 AI1에 전달하는 것이 목표 계약이다. graph에 없는 경로가 필요하면 AI1은 Backend에 재선택/지원 불가 처리를 요청한다. [Graph 전달 계약](../backend-task-graph-dispatch.md)을 따른다. 현재 typed 선택·주입 일부는 연결되어 있으며 범용 version loader와 legacy raw-goal 경로 정리는 후속 작업이다.
 
 ## 3. 사용자 발화와 Goal 분류 참조
 
@@ -39,12 +42,14 @@ AI1은 원문을 분류하거나 graph를 선택·수정하지 않는다. 감소
 
 ## 4. 완료 조건
 
-Agent는 다음 조건을 만족하면 Task를 완료로 판단한다.
+Agent의 완료 판정에는 다음 근거가 필요하다. 화면 방문과 실제 설정 변경을 구분한다.
 
 - 현재 화면이 글자 크기 조절 화면이거나 글자 크기 설정 변경 후 상태이다.
-- 사용자가 원하는 방향이 확대였고, 슬라이더 또는 옵션 값이 이전보다 큰 방향으로 이동했다.
-- 변경 후 화면을 재관찰했을 때 글자 크기 관련 설정 화면이 유지된다.
-- 사용자에게 완료 안내를 제공한다.
+- 확정 목표가 확대이며, 안내한 원래 글자 크기 target의 실제 행동과 전후 관측이 연결된다.
+- 같은 의미의 control/window에서 기준값과 변경값을 확인하고 변경값이 증가했다.
+- 변경 후 관측이 행동 전 화면의 재사용이 아니며 새 결과를 확인할 수 있다.
+
+기준값·행동 귀속·새 결과가 없으면 대기 또는 판단 불가로 처리한다. 완료 안내는 검증 이후의 출력이며 완료 근거에 포함하지 않는다. 제품 gold는 이 verifier 출력과 별도로 실제 값과 증거를 검수해 만든다.
 
 완료 안내 예시:
 
@@ -337,7 +342,7 @@ flowchart TD
 
 ## 13. Task Graph 학습 / 업데이트
 
-이 Task Graph는 사람이 처음 seed를 만들고, AI-Agent(1)이 실행 trace를 생산하며, AI-Agent(2)가 전체 runtime 결과를 라벨링해 업데이트 후보를 생성한다. 사용자가 매번 markdown을 직접 고치는 구조로 두지 않는다.
+이 Task Graph는 사람이 처음 seed를 만들고, AI-Agent(1)이 실행 trace를 생산하며, AI-Agent(2)가 실제 실행·시연을 수집·재구성·라벨링해 업데이트 후보를 생성한다. 공개 참고 자료도 활용하되 우리 대상 환경의 독립 gold로 검증한다. 사용자가 매번 markdown을 직접 고치는 구조로 두지 않는다.
 
 이 절은 Task별 개선 사례다. 공통 라벨링·평가·승인 정책은 [AI-Agent(2) 상세 설계](../ai-agent-2-graph-proposal.md)를 기준으로 한다. 아래 `Graph Learner`는 AI-Agent(2)의 후보 생성 모듈을 뜻하며, 현재 자동 개선 기능은 구현할 목표다.
 
@@ -433,31 +438,32 @@ MVP-01에서 Graph Learner는 아래 순서로 Task Graph 업데이트 후보를
 
 | 컴포넌트 | 입력 | 출력 | MVP 구현 | 학습 데이터 |
 | --- | --- | --- | --- | --- |
-| FE Goal Retriever | raw 발화 | top-k `goal_type` | embedding index | 발화, 정답 goal, 완료 여부 |
+| FE Goal Retriever | raw 발화 | top-k `goal_type` | embedding index | 발화와 확인·검수된 goal; 완료 여부만으로 의도 정답 추정 금지 |
 | FE Slot Rule Extractor | raw 발화 | `setting`, `direction` | dictionary/rule | clarification 결과 |
 | State Classifier | normalized tree | `state_id` | rule + embedding | 화면 snapshot, 정답 state |
-| UI Target Ranker | transition + node list | target ranking | score fusion | 후보 node, 사용자가 누른 node, verifier 결과 |
+| UI Target Ranker | transition + node list | target ranking | score fusion | 후보 node와 독립 검수한 유효 target 집합·실제 결과 |
 | Scroll Policy Estimator | state + scroll history | 방향/횟수 | rule + 통계 | scroll result, target 발견 여부 |
 | Transition Miner | before/after state + action | edge 후보 | sequence mining | user-corrected success trace |
-| Graph Validator | proposal + dataset | approve/reject signal | replay test | Accessibility Tree dataset |
+| Graph Validator | proposal + 독립 평가 dataset | PASS/FAIL/NEEDS_DATA/ERROR | 구현할 목표; 현재 골격은 NEEDS_DATA | 실제 전이·완료 gold와 분리된 holdout |
 
-Goal Retriever·Slot Extractor는 FE 입력 처리이며 Agent(1)은 State Classifier·UI Target Ranker부터 담당한다. Scroll Policy Estimator와 Transition Miner는 trace가 쌓인 뒤 정확도가 의미 있게 올라간다.
+Goal Retriever·Slot Extractor는 FE 입력 처리이며 Agent(1)은 State Classifier·UI Target Ranker부터 담당한다. trace를 수집한 뒤 독립 평가로 Scroll Policy Estimator·Transition Miner의 효과를 확인한다. 데이터량 증가만으로 정확도 향상을 가정하지 않는다.
 
 ### 13.7 학습 데이터 라벨링 기준
 
-| 결과 | 라벨 |
+| 관측 신호 | 라벨 후보와 필요한 근거 |
 | --- | --- |
-| verifier가 `DONE` 반환 | positive path |
-| 사용자가 Agent 안내와 다른 node를 눌러 완료 | user-corrected positive |
-| target 후보를 눌렀지만 `NO_CHANGE` | negative target |
-| 예상과 다른 State로 이동 | wrong transition |
-| scroll 후 target 발견 | scroll success |
-| scroll 끝까지 target 없음 | scroll failure |
-| 사용자가 clarification에 답함 | goal/slot label |
+| verifier가 완료 반환 | success 후보. 실제 글자 크기 증가의 독립 근거 없으면 gold 아님 |
+| 사용자가 다른 node로 우회 후 완료 | 최종 결과 검수 후 task success. 실제 관측한 경로만 positive edge |
+| target 후보 조작 후 `NO_CHANGE` | 실제 시도와 충분한 새 관측으로 미변화를 확인한 경우 fail 후보; 증거 부족은 unknown |
+| 예상과 다른 State로 이동 | planned step과 실제 복구 결과 분리. 다른 유효 경로를 일괄 negative 처리하지 않음 |
+| 허용된 scroll 후 target 발견 | 관측된 탐색 결과만 라벨링; 미실행 방향 결과는 미판정 |
+| scroll 후 target 없음 | 현재 관측 범위와 탐색 결과 표시; 관측 부족을 실패로 확정하지 않음 |
+| 사용자가 clarification에 답함 | FE goal/slot 정답 후보. task 완료 정답과 구분 |
 
-이 라벨을 기준으로 모델별 dataset을 만든다.
+자동 생성한 라벨은 weak label로 표시한다. 실제 환경·근거·독립 검수·revision을 갖춘 subset을 제품 gold로 확정하고 개발/holdout을 분리한다. `final` 라벨, runtime 완료, 공개 milestone 일치만으로 gold를 만들지 않는다. 판정 단위별 데이터셋을 구성한다.
 
 - FE Goal dataset: `source_text -> goal_type, slots` (FE 분류 개선용)
+- Backend 선택 dataset: `goal, 환경, catalog, 정책 -> 허용 graph 집합 / 미지원 / 모호성 / 추가 확인`
 - State dataset: `normalized node summary -> state_id`
 - UI matching dataset: `(transition, candidate nodes) -> selected node`
 - Scroll dataset: `(state, viewport, history) -> direction, stop`
@@ -545,9 +551,17 @@ Graph Update Proposal 예시:
 | 예외 팝업 화면 | Re-plan/fallback 검증 |
 | 사용자 우회 성공 trace | graph update proposal 검증 |
 
+### 14.1 공개 참고 자료와 자체 정답의 범위
+
+ColorBench의 검수한 경로와 MobiFlow의 유효한 의존관계 rule은 설계·연구의 보조 자료다. 해당 공개 화면·rule을 삼성/한국어 설정의 정답 경로나 글자 크기 증가 결과로 재명명하지 않는다. 공개 자료의 결함·미검증 범위는 [재재검증 보고서](../reviews/2026-09-20-task-graph-gold-fitness-audit.md)에 있다.
+
+이 Task의 제품 gold에는 실제 대상 단말의 환경·원래 target·전후 관측·실제 행동·값 변화와 독립 검수 revision을 연결한다. 선택 fixture는 확대와 감소·밝기·화면 배율 혼동, 미지원 환경, 모호한 요청을 포함한다. 완료 fixture는 증가·무변화·반대 방향·다른 slider·미조작·stale 관측·값 누락·최대값·취소를 포함한다. 성공·실패 경로를 개발/holdout으로 분리하고 없는 action 결과는 확정하지 않는다.
+
+기존 `mvp01_episodes.jsonl` 20건은 합성 회귀 사례다. 실제 단말에서 수집·독립 검수한 정답으로 집계하지 않는다. AI2는 위 실제 증거로 후보를 만들고 별도 holdout으로 회귀 검증한 후 승인된 새 graph version을 제안한다.
+
 ## 15. 성공 기준
 
-- raw 자연어가 LLM 없이 `settings.font_size.increase` Typed Goal과 `MVP-01`로 매핑된다.
+- FE가 목표·slots를 확정하고 Backend가 검수된 선택 사례에 맞는 승인 graph를 전달한다. 감소·다른 설정·모호성을 확대 목표와 구분한다.
 - Accessibility Tree로 현재 설정 화면을 수집한다.
 - UI Normalizer가 label, role, bounds를 안정적으로 정규화한다.
 - Screen State Classifier가 `S1`부터 `S4`까지 판별한다.
@@ -556,7 +570,7 @@ Graph Update Proposal 예시:
 - Agent가 Guide Command를 생성하고 FE가 하이라이트와 짧은 문장 Overlay를 렌더링한다.
 - 자동 tap은 수행하지 않는다.
 - target이 viewport 밖에 있으면 허용된 범위에서 scroll 탐색 후 재관찰한다.
-- Verification이 글자 크기 확대 결과를 확인한다.
+- Verification이 글자 크기 확대 결과를 확인하며, 그 정확도를 실제 대상 환경의 독립 gold로 평가한다.
 - 실패 시 Re-plan이 scroll, 검색 또는 접근성 대체 경로를 제시한다.
 - 실행 trace를 기반으로 Task Graph 업데이트 후보를 생성한다.
 - 승인된 업데이트만 graph version을 올려 배포한다.

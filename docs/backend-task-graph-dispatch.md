@@ -1,5 +1,7 @@
 # Backend Task Graph 선택과 AI-Agent(1) 실행 전달 계약
 
+현재 확인 상태와 정답·승격 기준: [2026-10-10 UI 재검증](./reviews/2026-10-10-ui-highlight-revalidation.md), [실제 품질·gold 기준](./ai-quality-evaluation.md).
+
 ## 1. 확정한 책임 경계
 
 **Task Graph는 DB에 저장한다. Backend가 FE의 확정된 사용자 요구에 맞는 graph를 판단·선택해 AI-Agent(1)에 전달한다. AI-Agent(1)은 전달받은 graph에 따라 화면을 판단하고 Guide/Action → Verification → Re-plan을 수행한다.**
@@ -13,7 +15,9 @@
 
 FE 분류 계약은 [FE Goal·Command 계약](./fe-goal-command-contract.md), runtime 실행은 [AI-Agent(1)](./ai-agent-1-runtime.md), graph 개선은 [AI-Agent(2)](./ai-agent-2-graph-proposal.md)가 기준이다. 이 문서는 **Backend → AI1의 내부 실행 경계**를 정의한다. FE의 typed 요청을 그대로 AI1 입력으로 사용하는 계약과 구분한다.
 
-역할과 DB 저장은 확정한 설계 전제다. 2026-09-19 기준 승인 graph release 테이블·selector·episode reference 고정과 typed runtime 주입 경로가 구현됐다. `runtime/tasks`는 MVP seed/fixture와 legacy 경로에 남아 있으며, 신규 typed 경로의 선택 기준은 DB release다.
+2026-10-10 코드 확인: `TaskGraphRepository._decode()`는 DB 본문의 schema/hash/목표 metadata를 검증하고 `load_graph(row.body)`로 실행 객체를 만든다. `select_pinned()`는 episode에 저장된 version/hash를 복원한다. adapter 주입과 DB-only graph/version 테스트 코드가 있다. 전체 환경 호환성 필터, AI1 legacy 경로 정리, 임의 parameter 보존은 남은 작업이다. 현재 Backend 충돌 4개로 이 작업 트리의 HTTP 통합 테스트는 재실행할 수 없으며, 코드 존재를 현재 통합 검증 통과와 구분한다.
+
+정답 데이터의 종류와 단계별 구현 순서는 [Task Graph 정답 데이터·개발 계획](./task-graph-data-plan.md)을 따른다. ColorBench·MobiFlow를 우리 DB graph 선택의 정답표로 사용하지 않는다.
 
 ## 2. 선택·실행·업데이트 흐름
 
@@ -57,6 +61,14 @@ AI1의 완료 응답은 실제 목표 완료 근거를 확인한 결과다. 다�
 
 `resume_task`/`observe`/`respond_confirmation`은 FE 요청에 새 goal이 없어도 Backend가 저장된 목표·graph·checkpoint를 복원해 AI1 입력을 완성한다. 재개에는 새 관측을 요구하며 이전 좌표를 그대로 재출력하지 않는다. `replace_task`는 새 선택과 검증이 성공했을 때만 기존 episode를 교체한다.
 
+### 3.1 Graph 선택 평가 데이터
+
+선택 fixture에는 확정 goal·slots, 환경, catalog snapshot·후보 graph version/hash, 선택 정책 version, 호환 graph 집합과 정책상 허용 선택 집합을 기록한다. 여러 유효 후보가 있으면 허용 집합을 보존하며, 현재 정책상 최상위 우선순위 동점은 `ambiguous`로 평가한다. 미지원·필수 정보 부족·미승인·비호환·잘못된 목표 방향도 포함한다.
+
+AI2는 실제 대상 환경의 근거와 독립 검수 이력이 있는 fixture를 공급하고 Backend는 그 정답과 선택 결과를 비교한다. ColorBench의 공유 화면 graph 경로와 MobiFlow의 작업 DAG는 이 후보 간 선택 정답을 대신하지 않는다. 합성 복수 graph 테스트와 실제 제품 선택 결과를 별도 집계한다.
+
+현재 goal/app·승인/활성·우선순위 필터를 baseline으로 기록한다. 이후 환경 호환성·선행조건·목표 도달성 검사를 추가할 때 같은 검수된 사례와 분리된 holdout으로 비교한다. 새 알고리즘의 효과를 공개 데이터 존재만으로 가정하지 않는다.
+
 ## 4. Backend → AI1 실행 입력
 
 기본 전달 방식은 **완전한 선언적 graph 본문을 함께 주입**하는 것이다. 같은 프로세스라면 타입이 있는 객체로 전달할 수 있으며 별도 HTTP 서버가 필수는 아니다. ID만 전달해 AI1이 DB를 검색하게 하지 않는다.
@@ -99,6 +111,8 @@ DB는 실행 가능한 graph 내용과 선택 metadata의 기준 저장소다. �
 
 AI2는 `실행 데이터 수집 → episode 재구성 → 근거 기반 success/fail/unknown 등 라벨 → 변경 후보 → 독립 평가 → 승인 정책 → 새 graph 버전 DB 반영`을 담당한다. 운영 중 graph 행의 내용을 덮어쓰기보다 새 불변 버전을 게시하고 활성 선택 대상을 갱신한다. Backend가 이후 새 실행에 반영한다.
 
+공개 reference, 파생 graph, weak label, 제품용 gold, 운영 artifact의 상태를 구분한다. 공개 benchmark 통과나 AI2 후보 생성만으로 `approved`를 부여하지 않는다. release/evaluation 참조에 적용 환경·제품 gold version·독립 holdout 결과를 연결한다. 이 metadata 확장은 구현할 계약이다.
+
 진행 중 episode는 고정한 버전을 계속 사용한다. rollback은 새 선택의 대상 버전을 돌리는 작업이며, 위험 버전의 기존 세션은 별도 revoke/중단 정책으로 다룬다. AI2는 사용자 세션 상태나 guide를 직접 변경하지 않는다. 원천 화면·행동은 FE, 요청·선택·제어는 Backend, 판단·안내·검증은 AI1이 생산하고 AI2가 이 이벤트를 수집한다.
 
 최근 추가된 `graph_proposals`·`evaluation_reports` 저장 모델은 AI2의 후보/평가 저장이며, 실행 graph의 DB 선택·주입이 연결됐다는 뜻은 아니다. [AI2 저장 구조](./ai-agent-2-graph-proposal.md#14-저장-구조와-job-운영)를 함께 본다.
@@ -121,5 +135,7 @@ AI2는 `실행 데이터 수집 → episode 재구성 → 근거 기반 success/
 | graph 밖 경로 필요 | AI1이 이유를 Backend에 반환, 재선택/재시작 또는 지원 불가 |
 | AI2가 새 version 게시 | 새 episode만 Backend 선택 정책에 따라 반영, 기존 episode는 고정 version 유지 |
 | AI2 분석 중단 | Backend가 사용 가능한 승인 graph로 AI1 실행 지속 |
+| 공개 graph·AI2 candidate만 있고 제품 검증 없음 | 승인 artifact로 선택하지 않음, 데이터 부족 상태 유지 |
+| 검수한 동일 Goal에 허용 graph가 여러 개 | 호환 집합·선택 정책에 따라 허용 결과 또는 모호성 반환 |
 
 평가 지표도 소유권에 맞춘다. FE는 Goal/Command 분류, Backend는 graph 선택 정확도·호환성·세션 제어·DB 조회, AI1은 state/target/검증 정확도·false DONE·복구 품질, AI2는 라벨·graph 변경의 개선과 회귀를 측정한다.

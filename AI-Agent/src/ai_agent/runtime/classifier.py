@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ai_agent.runtime.keywords import any_keyword_matches
+from ai_agent.runtime.keywords import any_keyword_matches, any_phrase_matches
 from ai_agent.runtime.types import DeviceContext, NormalizedNode, TaskGraph, TaskState
 
 
@@ -14,27 +14,22 @@ def classify_screen_state(
     previous_state_id: str | None = None,
     evidence: dict | None = None,
 ) -> str:
-    best_state_id = "S0_UNKNOWN"
-    best_score = 0.0
-
-    screen_text = " ".join(node.label for node in nodes)
-    packages = {node.package_name for node in nodes if node.package_name}
-    roles = {node.role for node in nodes}
+    candidates = []
+    titles = _screen_titles(nodes)
 
     for state in graph.states.values():
         if state.verification_only or state.state_id in {"S0_UNKNOWN", graph.definition.done_state}:
             continue
 
-        if state.package_candidates and packages:
-            package_match = bool(packages.intersection(state.package_candidates))
-            if not package_match:
-                continue
-        else:
-            package_match = bool(
-                device_context
-                and device_context.app_package in state.package_candidates
-            )
-
+        relevant = tuple(node for node in nodes if not state.package_candidates
+                         or node.package_name in state.package_candidates)
+        packages = {node.package_name for node in relevant if node.package_name}
+        package_match = bool(packages) or bool(device_context
+            and device_context.app_package in state.package_candidates)
+        if state.package_candidates and not relevant:
+            continue
+        screen_text = " ".join(node.label for node in relevant)
+        roles = {node.role for node in relevant}
         required_groups = _required_groups(state)
         if required_groups and not _all_required_groups_match(screen_text, required_groups):
             continue
@@ -46,13 +41,48 @@ def classify_screen_state(
         continuity_score = _continuity_score(graph, previous_state_id, state.state_id)
         score = required_score + optional_score + role_score + package_score + continuity_score
 
-        if score >= state.confidence_threshold and score > best_score:
-            best_state_id = state.state_id
-            best_score = score
+        title_match = bool(required_groups and any(
+            title in relevant and all(any_phrase_matches(title.label, group) for group in required_groups)
+            for title in titles))
+        if score >= state.confidence_threshold:
+            candidates.append({"state_id": state.state_id, "score": round(min(score, 1.0), 4),
+                               "title_match": title_match})
 
+    # A page title outranks words in row descriptions, even after a skipped step.
+    candidates.sort(key=lambda item: (-int(item["title_match"]), -item["score"], item["state_id"]))
+    ambiguous = bool(len(candidates) > 1
+        and candidates[0]["title_match"] == candidates[1]["title_match"]
+        and candidates[0]["score"] - candidates[1]["score"] < 0.025)
+    relevant_titles = [title for title in titles if any(
+        title.package_name in state.package_candidates for state in graph.states.values())]
+    title_conflict = bool(relevant_titles and candidates and not any(item["title_match"] for item in candidates))
+    chosen = candidates[0] if candidates and not ambiguous and not title_conflict else None
+    state_id = chosen["state_id"] if chosen else "S0_UNKNOWN"
     if evidence is not None:
-        evidence.update(state_score=best_score, state_id=best_state_id)
-    return best_state_id
+        evidence.update(state_score=chosen["score"] if chosen else 0.0, state_id=state_id,
+                        candidates=candidates[:3], ambiguous=ambiguous, title_conflict=title_conflict,
+                        reason_code="STATE_AMBIGUOUS" if ambiguous else "STATE_IDENTIFIED" if chosen else "STATE_UNKNOWN")
+    return state_id
+
+
+def _screen_titles(nodes):
+    """Top standalone text per app/window; list labels and summaries aren't titles."""
+    titles = {}
+    for node in nodes:
+        if (not node.label or node.role != "text" or not node.enabled or not node.bounds
+                or node.structure_role in {"control_label", "description"}):
+            continue
+        left, top, right, bottom = node.bounds
+        if any(other.node_id != node.node_id and other.bounds
+               and other.package_name == node.package_name and other.window_id == node.window_id
+               and (other.actionable or other.scrollable)
+               and other.bounds[0] <= left and other.bounds[1] <= top
+               and other.bounds[2] >= right and other.bounds[3] >= bottom for other in nodes):
+            continue
+        key = (node.package_name, node.window_id)
+        if key not in titles or (top, left, node.node_id) < (titles[key].bounds[1], titles[key].bounds[0], titles[key].node_id):
+            titles[key] = node
+    return tuple(titles.values())
 
 
 def _required_groups(state: TaskState) -> tuple[tuple[str, ...], ...]:

@@ -15,8 +15,9 @@ class PersonalizationRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def create_user(self, age_group: str, occupation_category: str | None) -> User:
-        user = User(age_group=age_group, occupation_category=occupation_category)
+    def create_user(self, age_group: str, occupation_category: str | None,
+                    name: str | None = None) -> User:
+        user = User(name=name, age_group=age_group, occupation_category=occupation_category)
         user.profile = UserUIProfile()
         self.session.add(user)
         self.session.commit()

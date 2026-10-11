@@ -142,6 +142,9 @@ class VisionElement:
 @dataclass(frozen=True, slots=True)
 class VisionSnapshot:
     user_consented: bool = False
+    # Trusted BE-only binding. Never deserialize this field from an FE payload.
+    consent_request_id: str | None = None
+    privacy_status: str = "unverified"
     redaction_applied: bool = False
     provider: str | None = None
     screenshot_base64: str | None = None
@@ -152,6 +155,8 @@ class VisionSnapshot:
     screen_width: int | None = None
     screen_height: int | None = None
     captured_at_ms: int | None = None
+    observation_id: str | None = None
+    active_window_id: int | None = None
     processing_time_ms: int | None = None
 
     def to_dict(self) -> JsonDict:
@@ -178,6 +183,10 @@ class NormalizedNode:
     value: float | None = None
     similarity_ref: str | None = None
     window_id: int | None = None
+    range_min: float | None = None
+    range_max: float | None = None
+    label_parts: tuple[str, ...] = ()
+    structure_role: str = "unknown"
     source_confidence: float | None = None
 
     def to_dict(self) -> JsonDict:
@@ -351,6 +360,8 @@ class UserActionEvent:
     target_bounds: Bounds | None = None
     occurred_at_ms: int | None = None
     event_id: str | None = None
+    session_id: str | None = None
+    episode_id: str | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -373,6 +384,8 @@ class AgentTurnRequest:
     observation_id: str | None = None
     captured_at_ms: int | None = None
     active_window_id: int | None = None
+    episode_id: str | None = None
+    applied_settings: JsonDict = field(default_factory=dict)
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -385,6 +398,7 @@ class ScreenSnapshot:
     slider_values: dict[str, float] = field(default_factory=dict)
     observation_id: str | None = None
     captured_at_ms: int | None = None
+    applied_settings: JsonDict = field(default_factory=dict)
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -422,6 +436,11 @@ class AgentSessionState:
     recovery_count: int = 0
     total_failed_attempts: int = 0
     task_completed: bool = False
+    observed_path: tuple[str, ...] = ()
+    technical_outcome: JsonDict = field(default_factory=dict)
+    progress_steps: tuple[JsonDict, ...] = ()
+    recovery_state: JsonDict = field(default_factory=dict)
+    state_candidates: tuple[JsonDict, ...] = ()
 
     def to_dict(self) -> JsonDict:
         return asdict(self)

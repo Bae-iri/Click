@@ -5,15 +5,27 @@ import re
 
 from app.schemas.agent_turn import AgentGoalResolutionResponse, TypedGoalRequest
 from app.repositories.task_graphs import NoCompatibleGraphError, AmbiguousGraphError
+from app.services.goal_llm import LocalGoalLlm
 
 
 def normalize(value):
     return re.sub(r"[^0-9a-z가-힣]", "", value.lower())
 
 
+def font_goal(direction):
+    """Canonical typed goal for existing help cards; this does not authorize execution."""
+    if direction not in {"increase", "decrease"}:
+        raise ValueError("Invalid font-size direction")
+    catalog = json.loads((Path(__file__).parents[1] / "task_graphs/goal_catalog.json").read_text())
+    entry = next(g for g in catalog["goals"] if g["goal_type"] == "settings.font_size." + direction)
+    return TypedGoalRequest(catalog_version=catalog["version"], goal_type=entry["goal_type"],
+        target_app=entry["target_app"], slots=entry["slots"])
+
+
 class GoalResolutionService:
-    def __init__(self, graphs):
+    def __init__(self, graphs, llm=None):
         self.graphs = graphs
+        self.llm = llm if llm is not None else LocalGoalLlm()
         self.catalog = json.loads((Path(__file__).parents[1] / "task_graphs" / "goal_catalog.json").read_text(encoding="utf-8"))
 
     def resolve(self, request, version):
@@ -37,10 +49,28 @@ class GoalResolutionService:
                 score += 1
             scored.append((score, goal))
         if not scored:
-            return AgentGoalResolutionResponse(**base, resolution_status="needs_clarification",
-                message="대상과 원하는 변경을 구체적으로 말씀해 주세요.")
-        top = max(score for score, _ in scored)
-        matches = [goal for score, goal in scored if score == top]
+            # Only genuine keyword misses reach the LLM. Negation, tied matches and
+            # known but unsupported goals keep their deterministic outcomes.
+            eligible = []
+            for goal in self.catalog["goals"]:
+                if goal.get("execution_status") != "approved":
+                    continue
+                try:
+                    self.graphs.select(TypedGoalRequest(catalog_version=self.catalog["version"],
+                        goal_type=goal["goal_type"], target_app=goal["target_app"], slots=goal["slots"]))
+                except (ValueError, NoCompatibleGraphError, AmbiguousGraphError):
+                    continue
+                eligible.append(goal)
+            selected = self.llm.select(request.source_text, [
+                {key: goal[key] for key in ("goal_type", "display_name", "target_app", "slots")}
+                for goal in eligible])
+            matches = [goal for goal in eligible if goal["goal_type"] == selected]
+            if not matches:
+                return AgentGoalResolutionResponse(**base, resolution_status="needs_clarification",
+                    message="대상과 원하는 변경을 구체적으로 말씀해 주세요.")
+        else:
+            top = max(score for score, _ in scored)
+            matches = [goal for score, goal in scored if score == top]
         if len(matches) != 1:
             return AgentGoalResolutionResponse(**base, resolution_status="needs_clarification",
                 message="여러 목표로 해석할 수 있어요. 대상과 방향을 확인해 주세요.")

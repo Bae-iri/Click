@@ -31,6 +31,9 @@ public final class AgentTurnContract {
         public String confirmationId;
         public JSONObject acceptedGoal;
         public String goalResolutionId;
+        public String preparationVersion;
+        public JSONObject clarificationAnswer;
+        public boolean preparationReset;
         public String clarificationChoice;
         public String resultPromptId;
         public String userResult;
@@ -155,6 +158,12 @@ public final class AgentTurnContract {
                         .put("locale", java.util.Locale.getDefault().toLanguageTag()));
                 if (clarificationChoice != null) object.put("source_text", rawGoal + " " + clarificationChoice);
             }
+            if (preparationVersion != null) {
+                object.put("preparation_version", preparationVersion);
+                if (goalResolutionId != null) object.put("goal_resolution_id", goalResolutionId);
+                if (clarificationAnswer != null) object.put("clarification_answer", clarificationAnswer);
+                if (preparationReset) object.put("preparation_reset", true);
+            }
             if (resultPromptId != null) object.put("result_prompt_id", resultPromptId);
             if (userResult != null) object.put("user_result", userResult);
             if (adjustmentReason != null) object.put("adjustment_reason", adjustmentReason);
@@ -226,6 +235,9 @@ public final class AgentTurnContract {
         public final String responseType;
         public final String message;
         public final String stateId;
+        public final String resolutionStatus;
+        public final JSONObject resolvedGoal;
+        public final JSONObject preparation;
         public final int step;
         public final GuideCommand guideCommand;
         public final JSONObject metadata;
@@ -238,6 +250,9 @@ public final class AgentTurnContract {
             episodeId = optNullableString(object, "episode_id");
             responseType = object.optString("response_type", "guidance");
             message = optNullableString(object, "message");
+            resolutionStatus = optNullableString(object, "resolution_status");
+            resolvedGoal = object.optJSONObject("goal");
+            preparation = object.optJSONObject("preparation");
             taskStatus = object.getString("task_status");
             stateId = object.optString("state_id", null);
             step = object.optInt("step", 0);

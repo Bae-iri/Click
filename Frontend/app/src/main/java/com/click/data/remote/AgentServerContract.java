@@ -12,12 +12,14 @@ public final class AgentServerContract {
     private final Set<String> goals;
     public final String contractVersion;
     public final boolean interactiveWorkflow;
+    public final boolean goalPreparation;
 
-    private AgentServerContract(Set<String> commands, Set<String> goals, String version, boolean interactive) {
+    private AgentServerContract(Set<String> commands, Set<String> goals, String version, boolean interactive, boolean preparation) {
         this.commands = commands;
         this.goals = goals;
         this.contractVersion = version;
         this.interactiveWorkflow = interactive;
+        this.goalPreparation = preparation;
     }
 
     public boolean supports(String command) { return commands.contains(command); }
@@ -48,7 +50,10 @@ public final class AgentServerContract {
         Set<String> goals = strings(resolve(document, goal).getJSONObject("properties")
                 .getJSONObject("goal_type").getJSONArray("enum"));
         return new AgentServerContract(commands, goals, selected,
-                AgentTurnContract.CONTRACT_VERSION.equals(selected) && properties.has("workflow_version"));
+                AgentTurnContract.CONTRACT_VERSION.equals(selected) && properties.has("workflow_version"),
+                AgentTurnContract.CONTRACT_VERSION.equals(selected) && commands.contains("resolve_goal")
+                        && properties.has("preparation_version") && properties.has("clarification_answer")
+                        && properties.has("goal_resolution_id"));
     }
 
     private static JSONObject resolve(JSONObject document, JSONObject schema) throws JSONException {
