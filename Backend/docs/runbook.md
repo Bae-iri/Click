@@ -35,6 +35,20 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload --no-access
 
 ## 확인
 
+경로 재선택·실행 이벤트 저장 배포에는 `20261010_12` migration이 필요하다.
+AI2 별도 소비 명령과 7일 보존 purge는 [운영 계약](../../docs/runtime-recovery-events.md)을 따른다.
+
+배포 서버의 Backend → DB graph → AI1 → 안내 응답 및 후속 checkpoint 복원은
+아래 명령으로 확인할 수 있다. 합성 설정 화면에서 디스플레이 메뉴의 대상과 좌표를
+확인하며, 임시 테스트 계정을 생성한 뒤 삭제한다. 실행에는 Python 표준 라이브러리만 필요하다.
+
+```powershell
+python scripts/check_agent_connection.py https://click-db.onrender.com
+```
+
+이 검사는 서버 연동을 확인한다. 실제 Android의 화면 수집·오버레이·사용자 동작 검증은
+기기에서 별도로 확인해야 한다.
+
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/health
 Invoke-RestMethod http://127.0.0.1:8000/ready

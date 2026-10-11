@@ -12,9 +12,9 @@ def request():
         vision_snapshot=VisionSnapshot(user_consented=True, consent_request_id="one", redaction_applied=True,
             active_window_id=42, package_name="com.android.settings",
             elements=(VisionElement(element_id="display", text="디스플레이",
-                bounds_in_screen=(20, 100, 900, 200)),
+                bounds_in_screen=(20, 100, 900, 200), confidence=0.95),
                 VisionElement(element_id="title", text="설정", actionable=False,
-                    bounds_in_screen=(20, 10, 500, 70)))))
+                    bounds_in_screen=(20, 10, 500, 70), confidence=0.95))))
 
 
 def test_trusted_consent_is_bound_to_one_request_not_session():

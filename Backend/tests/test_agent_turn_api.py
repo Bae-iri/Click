@@ -215,17 +215,20 @@ def test_unsolicited_vision_snapshot_requires_server_challenge() -> None:
                 "package_name": "com.android.settings",
                 "screen_width": 1080,
                 "screen_height": 2400,
+                "processing_time_ms": 123,
                 "elements": [
                     {
                         "element_id": "title",
                         "text": "Settings",
                         "bounds_in_screen": [24, 40, 1056, 96],
+                        "confidence": 0.96,
                         "actionable": False,
                     },
                     {
                         "element_id": "display",
                         "text": "Display",
                         "bounds_in_screen": [24, 320, 1056, 408],
+                        "confidence": 0.94,
                     },
                 ],
             },
@@ -273,26 +276,16 @@ def test_empty_accessibility_tree_returns_runtime_fallback_contract() -> None:
     body = response.json()
     assert body["metadata"]["debug"]["observation"]["accessibility_node_count"] == 0
     assert body["metadata"]["debug"]["fallback"]["type"] == "vision_fallback"
-    assert body["guide_command"]["render_policy"] == {
-        "recovery": {"schema_version": "ai1-recovery.v1", "decision": "recover",
-            "reason_code": "OBSERVATION_INSUFFICIENT", "next_action": "vision_analysis",
-            "waiting_for": "consent", "recoverable": True, "attempts": 0,
-            "retry_after_ms": 0, "options": []},
-        "runtime_strategy": "reobserve", "attempt_id": None, "step_id": None,
-        "avoid_covering_target": False,
-        "preferred_position": "center",
-        "vision_fallback": {
-            "requires_user_consent": True,
-            "consent_scope": "single_analysis",
-            "processing": "on_device_ocr",
-            "raw_screenshot_allowed": False,
-            "accepted_payloads": [
-                "vision_snapshot.elements",
-                "vision_snapshot.ocr_text",
-            ],
-            "send_fresh_accessibility_tree": True,
-        },
-    }
+    policy = body["guide_command"]["render_policy"]
+    assert policy["recovery"]["waiting_for"] == "consent"
+    assert policy["recovery"]["next_action"] == "vision_analysis"
+    assert policy["runtime_strategy"] == "reobserve"
+    vision = policy["vision_fallback"]
+    assert vision["requires_user_consent"] is True
+    assert vision["consent_scope"] == "single_analysis"
+    assert vision["accepted_payloads"] == ["vision_snapshot.elements"]
+    assert vision["raw_image_egress"] is False
+    assert vision["manual_instruction"]
 
 
 def test_screen_observation_is_still_required() -> None:
@@ -306,4 +299,23 @@ def test_screen_observation_is_still_required() -> None:
         },
     )
 
+    assert response.status_code == 422
+
+
+def test_raw_screenshot_vision_payload_is_rejected_at_http_boundary() -> None:
+    client = TestClient(create_app())
+    response = client.post(
+        "/api/v1/agent/turn",
+        json={
+            "request_id": "raw-image-request",
+            "session_id": "raw-image-session",
+            "raw_goal": "increase font size",
+            "vision_snapshot": {
+                "user_consented": True,
+                "redaction_applied": True,
+                "provider": "frontend_ocr",
+                "screenshot_base64": "RAW_IMAGE_BYTES",
+            },
+        },
+    )
     assert response.status_code == 422

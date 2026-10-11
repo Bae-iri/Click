@@ -6327,7 +6327,8 @@
             "anyOf": [
               {
                 "type": "string",
-                "maxLength": 200
+                "maxLength": 200,
+                "minLength": 1
               },
               {
                 "type": "null"
@@ -6414,11 +6415,9 @@
               {
                 "type": "string",
                 "enum": [
-                  "masking_failed",
                   "capture_failed",
-                  "ocr_failed",
-                  "screen_changed",
-                  "unsupported"
+                  "masking_failed",
+                  "ocr_failed"
                 ]
               },
               {
@@ -6887,6 +6886,30 @@
               }
             ],
             "title": "Result Response"
+          },
+          "result_prompt": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Prompt"
+          },
+          "follow_up": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up"
           }
         },
         "type": "object",
@@ -8732,7 +8755,7 @@
           },
           "text": {
             "type": "string",
-            "maxLength": 500,
+            "maxLength": 200,
             "minLength": 1,
             "title": "Text"
           },
@@ -8859,7 +8882,7 @@
               "$ref": "#/components/schemas/VisionElement"
             },
             "type": "array",
-            "maxItems": 2000,
+            "maxItems": 200,
             "title": "Elements"
           },
           "package_name": {
@@ -8931,6 +8954,19 @@
               }
             ],
             "title": "Active Window Id"
+          },
+          "processing_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 60000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Time Ms"
           }
         },
         "additionalProperties": false,

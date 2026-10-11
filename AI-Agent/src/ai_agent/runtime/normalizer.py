@@ -65,6 +65,7 @@ def normalize_accessibility_tree(
                 [min(inherited_titles[node.node_id])[-1]] if node.node_id in inherited_titles else []
             ))),
             structure_role=_structure_role(node, nodes_by_id),
+            source_confidence=extract_confidence(node),
         )
         dedupe_key = (
             normalized_node.label,
@@ -247,6 +248,14 @@ def extract_numeric_value(node: AccessibilityNode) -> float | None:
         except (TypeError, ValueError):
             continue
     return None
+
+
+def extract_confidence(node: AccessibilityNode) -> float | None:
+    raw_value = node.extras.get("vision_confidence")
+    if type(raw_value) not in (int, float):
+        return None
+    value = float(raw_value)
+    return value if 0.0 <= value <= 1.0 else None
 
 
 def _merge_label(node: AccessibilityNode) -> str:

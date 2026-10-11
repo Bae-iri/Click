@@ -62,8 +62,6 @@ class AgentSessionRepository:
                     raise HTTPException(403)
                 command_type = getattr(request, "command_type", None)
                 episode_id = getattr(request, "episode_id", None)
-                if row is not None and episode_id is not None and row.episode_id != episode_id:
-                    self.conflict("EPISODE_MISMATCH")
                 previous = db.scalar(select(AgentTurn).where(AgentTurn.user_id == request.user_id,
                                                             AgentTurn.request_id == request.request_id))
                 if previous and (previous.session_id != request.session_id or previous.request_hash != request_hash):
@@ -102,8 +100,12 @@ class AgentSessionRepository:
                     return {"cached": deepcopy(previous.response),
                         "schema_version": saved.schema_version if saved else None,
                         "graph_version": saved.graph_version if saved else None}
+                if episode_id is not None and row.episode_id != episode_id:
+                    self.conflict("EPISODE_MISMATCH")
                 if command_type == "start_task" and row.version > 0:
                     self.conflict("ACTIVE_TASK_EXISTS" if row.status in ACTIVE else "SESSION_TERMINATED")
+                if row.status in {"WAITING_RESULT", "WAITING_ADJUSTMENT"}:
+                    self.conflict("COMMAND_NOT_ALLOWED")
                 if row.status not in ACTIVE:
                     self.conflict("SESSION_CLOSED")
                 if row.status in {"WAITING_RESULT", "WAITING_ADJUSTMENT"}:
@@ -123,6 +125,8 @@ class AgentSessionRepository:
                     row.device_context = request.device_context.model_dump(mode="json")
                     db.flush()
                 token = str(uuid4())
+                if command_type == "start_task" and getattr(request, "workflow_version", None):
+                    row.workflow = {"version": request.workflow_version}
                 version = row.version
                 changed = db.execute(update(AgentSession).where(AgentSession.id == row.id,
                     AgentSession.version == version, AgentSession.status.in_(ACTIVE),
@@ -138,6 +142,8 @@ class AgentSessionRepository:
                     db.add(previous)
                 checkpoint = db.get(AgentCheckpoint, row.id)
                 result = {"token": token, "version": version,
+                    "episode_id": row.episode_id, "recovery": deepcopy(row.recovery or {}),
+                    "workflow": deepcopy(row.workflow or {}),
                     "checkpoint": deepcopy(checkpoint.state) if checkpoint else None,
                     "schema_version": checkpoint.schema_version if checkpoint else None,
                     "graph_version": checkpoint.graph_version if checkpoint else None}
@@ -156,12 +162,12 @@ class AgentSessionRepository:
                 raise
 
     def finish(self, request, claim, response, checkpoint, schema_version, graph_version,
-               graph_reference=None):
+               graph_reference=None, recovery_plan=None, execution_event=None):
         now = int(self.clock())
         with self.factory() as db:
             self.guard_voice_request(db, request, now)
             row = self.owned(db, request.session_id, request.user_id)
-            response.episode_id = row.episode_id
+            response.episode_id = (recovery_plan or {}).get("episode_id", row.episode_id)
             technical = response.metadata.get("technical_outcome") or {"status": "UNVERIFIABLE", "reason": "insufficient_evidence"}
             outcome = {"technical": deepcopy(technical), "user": {"status": None, "confirmed_at": None},
                        "final": None, "checklist": response.metadata.get("checklist", [])}
@@ -200,12 +206,27 @@ class AgentSessionRepository:
                 db.delete(stored)
             turn = db.scalar(select(AgentTurn).where(AgentTurn.user_id == request.user_id,
                                                      AgentTurn.request_id == request.request_id))
-            save_confirmation(db, request, response, now)
+            if recovery_plan and recovery_plan.get("episode_id"):
+                db.execute(delete(SafetyConfirmation).where(SafetyConfirmation.session_id == request.session_id))
+            else:
+                save_confirmation(db, request, response, now)
             turn.response = response.model_dump(mode="json")
             row = db.get(AgentSession, request.session_id)
+            if recovery_plan:
+                row.recovery = recovery_plan["recovery"]
+                if recovery_plan.get("episode_id"):
+                    row.episode_id = recovery_plan["episode_id"]
+                    row.last_guide_command_id = None
+            if response.task_status == "WAITING_RESULT":
+                row.workflow = {**(row.workflow or {}), "result_prompt": response.metadata["result_prompt"]}
             if graph_reference is not None:
                 row.graph_version = graph_reference["version"]
                 row.graph_hash = graph_reference["sha256"]
+            from app.repositories.runtime_events import append
+            append(db, row, request.request_id, {"runtime": execution_event or {},
+                "reselection": response.metadata.get("reselection")}, now=now,
+                episode_id=claim["episode_id"], graph_hash=(execution_event or {}).get("graph_hash"),
+                kind="reselection" if response.metadata.get("reselection") else "turn")
             db.commit()
 
     def pin_graph(self, session_id, user_id, reference):
@@ -273,6 +294,7 @@ class AgentSessionRepository:
                 "episode_id": row.episode_id,
                 "goal_type": row.accepted_goal_type,
                 "goal": deepcopy(row.goal),
+                "workflow": deepcopy(row.workflow or {}),
                 "device_context": deepcopy(row.device_context),
                 "status": row.status,
                 "version": row.version,
@@ -342,6 +364,9 @@ class AgentSessionRepository:
                 graph_version=row.graph_version, graph_hash=row.graph_hash)
             db.add(AgentTurn(session_id=row.id, user_id=request.user_id, request_id=request.request_id,
                 request_hash=digest, version=row.version, response={"_result": result}, created_at=now))
+            from app.repositories.runtime_events import append
+            append(db, row, request.request_id, {"command_type": "respond_result",
+                "result_response": request.result_response, "status": row.status}, kind="control", now=now)
             db.commit()
             return result
 
@@ -369,6 +394,8 @@ class AgentSessionRepository:
                     changed = False
                 elif row.status in ACTIVE:
                     row.paused_from = row.status
+                    if row.workflow:
+                        row.workflow = {**row.workflow, "paused_status": row.status}
                     row.status = "PAUSED"
                     changed = True
                 else:
@@ -376,7 +403,7 @@ class AgentSessionRepository:
             elif command == "resume_task":
                 if row.status != "PAUSED":
                     self.conflict("COMMAND_NOT_ALLOWED")
-                row.status = row.paused_from or "IN_PROGRESS"
+                row.status = row.paused_from or (row.workflow or {}).get("paused_status", "IN_PROGRESS")
                 if row.task_outcome and row.status == "WAITING_RESULT":
                     outcome = deepcopy(row.task_outcome)
                     outcome["prompt"]["expires_at"] = now + 180
@@ -387,6 +414,8 @@ class AgentSessionRepository:
                     state = deepcopy(checkpoint.state)
                     state.update(pending_attempt=None, pending_transition_id=None, pending_confirmation_transition_id=None)
                     checkpoint.state = state
+                if row.workflow:
+                    row.workflow = {key: value for key, value in row.workflow.items() if key != "paused_status"}
                 changed = True
             elif command == "cancel_task":
                 if row.status == "CANCELLED":
@@ -419,10 +448,14 @@ class AgentSessionRepository:
                 "graph_hash": row.graph_hash or graph_hash,
                 "changed": changed,
                 "task_outcome": deepcopy(row.task_outcome),
+                "workflow": deepcopy(row.workflow or {}),
             }
             db.add(AgentTurn(session_id=row.id, user_id=request.user_id,
                 request_id=request.request_id, request_hash=request_hash,
                 version=row.version, response={"_control": result}, created_at=now))
+            if changed:
+                from app.repositories.runtime_events import append
+                append(db, row, request.request_id, {"command_type": command, "status": row.status}, kind="control", now=now)
             db.commit()
             return result
 
@@ -447,6 +480,9 @@ class AgentSessionRepository:
             row.task_id = row.state_id = row.last_guide_command_id = None
             row.graph_hash = row.graph_version = None
             row.result_response = None
+            row.recovery = None
+            if row.workflow:
+                row.workflow = {"version": row.workflow["version"]}
             db.execute(delete(AgentCheckpoint).where(AgentCheckpoint.session_id == row.id))
             db.execute(delete(SafetyConfirmation).where(SafetyConfirmation.session_id == row.id))
             db.commit()
@@ -519,7 +555,7 @@ class AgentSessionRepository:
             if episode != row.episode_id:
                 values.update(goal=goal.model_dump(mode="json"), accepted_goal_type=goal.goal_type,
                     task_id=reference["task_id"], graph_version=reference["version"], graph_hash=reference["sha256"],
-                    state_id=None)
+                    state_id=None, workflow=None, recovery=None)
                 db.execute(delete(AgentCheckpoint).where(AgentCheckpoint.session_id == row.id))
             changed = db.execute(update(AgentSession).where(AgentSession.id == row.id,
                 AgentSession.version == row.version, AgentSession.status == row.status).values(**values))
@@ -532,6 +568,10 @@ class AgentSessionRepository:
                 "follow_up": follow_up(outcome) if status == "WAITING_ADJUSTMENT" else None}
             db.add(AgentTurn(session_id=row.id, user_id=request.user_id, request_id=request.request_id,
                 request_hash=request_hash, version=values["version"], response={"_outcome": result}, created_at=now))
+            from app.repositories.runtime_events import append
+            append(db, row, request.request_id, {"command_type": request.command_type,
+                "user_result": request.user_result, "adjustment_reason": request.adjustment_reason,
+                "status": status}, kind="control", now=now)
             db.commit()
             return result
 
@@ -545,7 +585,11 @@ class AgentSessionRepository:
             processing=bool(row.lease_token and row.lease_until and row.lease_until > now),
             requires_fresh_observation=row.status in {"IN_PROGRESS", "WAITING_CONFIRMATION"},
             requires_goal=row.status in {"IN_PROGRESS", "WAITING_CONFIRMATION"} and db.get(AgentCheckpoint, row.id) is None,
-            result_response=row.result_response)
+            result_response=row.result_response,
+            result_prompt=((row.task_outcome or {}).get("prompt") or (row.workflow or {}).get("result_prompt"))
+                if row.status == "WAITING_RESULT" else None,
+            follow_up=(follow_up(row.task_outcome) if row.task_outcome else (row.workflow or {}).get("follow_up"))
+                if row.status == "WAITING_ADJUSTMENT" else None)
 
     def cleanup(self, retention_seconds=86400):
         if retention_seconds < 0:

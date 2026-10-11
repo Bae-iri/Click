@@ -25,6 +25,8 @@ public final class AccessibilityNodeSnapshot {
     public final Float rangeMin;
     public final Float rangeMax;
     public final boolean sensitiveInput;
+    /** Alias used by the vision safety pipeline. */
+    public final boolean sensitive;
 
     public AccessibilityNodeSnapshot(
             String nodeId,
@@ -68,6 +70,7 @@ public final class AccessibilityNodeSnapshot {
         this.rangeMin = sensitiveInput ? null : rangeMin;
         this.rangeMax = sensitiveInput ? null : rangeMax;
         this.sensitiveInput = sensitiveInput;
+        this.sensitive = sensitiveInput;
         this.nodeId = nodeId;
         this.windowId = windowId;
         this.parentId = parentId;
@@ -107,6 +110,7 @@ public final class AccessibilityNodeSnapshot {
         object.put("checkable", checkable);
         JSONObject extras = new JSONObject();
         if (sensitiveInput) extras.put("editable", true);
+        if (sensitive) extras.put("is_password", true);
         if (progress != null) extras.put("progress", progress);
         if (rangeMin != null) extras.put("min", rangeMin);
         if (rangeMax != null) extras.put("max", rangeMax);

@@ -157,6 +157,7 @@ class VisionSnapshot:
     captured_at_ms: int | None = None
     observation_id: str | None = None
     active_window_id: int | None = None
+    processing_time_ms: int | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -186,6 +187,7 @@ class NormalizedNode:
     range_max: float | None = None
     label_parts: tuple[str, ...] = ()
     structure_role: str = "unknown"
+    source_confidence: float | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)

@@ -1,6 +1,34 @@
 # FE 구현 계약: agent-fe-contract.v0.3
 
-2026-10-09 백엔드 구현. 현재 저장소 FE는 v0.2이며 아래 흐름으로 업데이트해야 한다. 세 명령 모두 로그인 토큰을 붙여 `POST /api/v1/agent/commands`로 보낸다. 기존 v0.2 명령은 계속 지원한다. 이 문서는 다른 PC의 FE 구현과 맞췄다는 의미가 아니라, BE가 먼저 정의한 계약이다.
+2026-10-10 FE 요청·결과 확인 흐름 통합. 모든 명령은 로그인 토큰을 붙여 `POST /api/v1/agent/commands`로 보낸다. 기존 v0.2 명령과 아래의 기존 v0.3 accepted/rejected 계약은 계속 지원한다. 실제 기기·운영 서버 적용 검증은 별도로 필요하다.
+
+## 새 앱의 결과 확인 흐름
+
+FE는 OpenAPI에서 v0.3와 `workflow_version`을 확인한 경우에만 `start_task`에
+`workflow_version: "interactive.v1"`을 보낸다. 이 옵션이 없는 기존 클라이언트는 기존 완료 흐름을 유지한다.
+새 옵션 없이 시작한 작업에 새 결과 응답을 보내면 409로 거절한다.
+
+- runtime의 실제 완료 검증 뒤에만 `WAITING_RESULT`와 `metadata.result_prompt`를 반환한다.
+  `blocked`·관측 부족·안전 차단·Backend 경로 재선택 요청은 이 흐름에 포함되지 않는다.
+- prompt에는 `id`, `message`, `expires_at`(UTC epoch seconds, 120초)이 있다.
+  `respond_result`는 `user_result`와 `result_prompt_id`를 보내고 `result_response`와 혼용하지 않는다.
+  기존 session/episode/expected_version 및 request_id 재시도 규칙을 적용한다.
+- `satisfied` → COMPLETED, `stopped` → CANCELLED, 만료 후 `no_response` → EXPIRED.
+  만료 전 no_response나 만료 후 satisfied/needs_help/stopped는 409다.
+- 글자 크기의 `needs_help` → WAITING_ADJUSTMENT. `metadata.follow_up.choices`의
+  `{id, label}`을 표시하고 `adjust_task`에 `adjustment_reason: too_small | too_large`를 보낸다.
+  Backend가 저장된 목표에서 increase/decrease를 만들고 승인 graph를 검증한 뒤 새 episode를 생성한다.
+  이 명령에는 화면이나 임의 goal을 넣지 않는다. 응답 후 최신 화면을 observe로 전달한다.
+- `other`/`unsure`는 자동으로 설정을 변경하지 않고 추가 확인을 유지한다.
+  자동 추가 조절을 지원하지 않는 설정의 needs_help는 현재 요청을 CANCELLED로 닫고 새 요청을 받는다.
+- 새 episode는 이전 checkpoint·안내·위험 action 승인을 재사용하지 않는다.
+  새 화면을 관측하고 새 승인을 받은 후 조작한다.
+- GET `/agent/sessions/{id}`의 `result_prompt`/`follow_up`으로 대기 상태를 복원한다.
+  pause/resume도 결과·조절 대기 상태를 보존하며 queue는 이 상태를 실행 중으로 취급한다.
+
+배포 전에 Alembic `20261010_11` 적용이 필요하다. 신규 `agent_sessions.workflow` JSON에는
+결과 prompt, 사용자 답변 코드와 조절 상태만 저장하며 화면 원문을 저장하지 않는다.
+이 변경은 자동 graph 재선택이나 전체 실행 이벤트 저장 기능을 추가하지 않는다.
 
 ## 공통 규칙
 

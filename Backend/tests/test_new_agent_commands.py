@@ -9,6 +9,7 @@ from app.models.agent_session import AgentSession
 from tests.helpers import register
 from tests.test_typed_agent_contract import start_payload
 from tests.test_agent_turn_api import slider_tree
+from tests.test_task_outcomes import screen
 
 
 VERSION = "agent-fe-contract.v0.3"
@@ -83,7 +84,7 @@ def test_result_acknowledgement_requires_completed_episode_and_is_persisted(outc
     with TestClient(app) as client:
         register(client)
         start = start_payload()
-        start["accessibility_tree"] = slider_tree(3)
+        start["accessibility_tree"] = screen(3, 1000, 1.0)
         started = client.post("/api/v1/agent/commands", json=start).json()
         request = dict(contract_version=VERSION, command_type="respond_result", request_id="result-1",
             session_id=started["session_id"], expected_version=started["session_version"],
@@ -92,15 +93,22 @@ def test_result_acknowledgement_requires_completed_episode_and_is_persisted(outc
         confirm = dict(contract_version=VERSION, command_type="respond_confirmation", request_id="confirm-1",
             session_id=started["session_id"], expected_version=started["session_version"],
             episode_id=started["episode_id"], user_confirmation="accepted",
-            confirmation_id=started["metadata"]["confirmation"]["id"], accessibility_tree=slider_tree(3))
+            confirmation_id=started["metadata"]["confirmation"]["id"], accessibility_tree=screen(3, 1100, 1.0))
         confirmed = client.post("/api/v1/agent/commands", json=confirm)
         assert confirmed.status_code == 200, confirmed.text
         observe = dict(contract_version=VERSION, command_type="observe", request_id="complete-1",
             session_id=started["session_id"], expected_version=confirmed.json()["session_version"],
-            episode_id=started["episode_id"], accessibility_tree={**slider_tree(4), "captured_at": "2026-10-09T10:00:01Z"},
-            user_action_event={"event_id": "drag-1", "action_type": "drag_completed",
+            episode_id=started["episode_id"], accessibility_tree=screen(4, 1800, 1.15),
+            user_action_event={"session_id": started["session_id"], "episode_id": started["episode_id"], "event_id": "drag-1", "action_type": "drag_completed", "occurred_at_ms": 1200,
                 "guide_command_id": confirmed.json()["guide_command"]["guide_command_id"], "target_node_id": "font-slider"})
         completed = client.post("/api/v1/agent/commands", json=observe)
+        assert completed.status_code == 200, completed.text
+        assert completed.json()["task_status"] == "WAITING_RESULT"
+        user_answer = dict(contract_version=VERSION, command_type="respond_result", request_id="user-answer",
+            session_id=started["session_id"], expected_version=completed.json()["session_version"],
+            episode_id=started["episode_id"], user_result="satisfied",
+            result_prompt_id=completed.json()["metadata"]["result_prompt"]["id"])
+        completed = client.post("/api/v1/agent/commands", json=user_answer)
         assert completed.status_code == 200, completed.text
         assert completed.json()["task_status"] == "COMPLETED"
         request["expected_version"] = completed.json()["session_version"]

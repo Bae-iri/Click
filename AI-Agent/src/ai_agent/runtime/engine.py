@@ -282,8 +282,11 @@ class ClickAgentEngine:
         guide_command = build_guide_command(session_id=request.session_id, match_result=match_result,
             graph=graph, user_confirmation=confirmation, task_completed=task_completed)
         if match_result.fallback_reason and vision_analysis and not awaiting_observation:
+            transition = next((item for item in graph.transitions
+                               if item.transition_id == match_result.transition_id), None)
             vision_command = _command_for_vision_analysis(request.session_id, vision_analysis,
-                tree_was_empty=not request.accessibility_tree)
+                tree_was_empty=not request.accessibility_tree,
+                manual_instruction=transition.guide_message if transition else None)
             if vision_command:
                 guide_command = vision_command
         if awaiting_observation:
@@ -572,6 +575,9 @@ def _raw_observation_debug(request: AgentTurnRequest) -> JsonDict:
         "vision_element_count": len(vision_snapshot.elements) if vision_snapshot else 0,
         "vision_has_screenshot": bool(vision_snapshot and vision_snapshot.screenshot_base64),
         "vision_has_ocr_text": bool(vision_snapshot and vision_snapshot.ocr_text),
+        "vision_processing_time_ms": (
+            vision_snapshot.processing_time_ms if vision_snapshot else None
+        ),
         "foreground_app": _device_context(request).foreground_app
         if _device_context(request) else None,
         "app_package": _vision_package_name(request),
@@ -784,6 +790,7 @@ def _command_for_vision_analysis(
     analysis: VisionFallbackAnalysis,
     *,
     tree_was_empty: bool,
+    manual_instruction: str | None = None,
 ) -> GuideCommand | None:
     if analysis.status == "masking_failed":
         return vision_fallback_command(session_id=session_id,
@@ -793,6 +800,7 @@ def _command_for_vision_analysis(
         return vision_fallback_command(
             session_id=session_id,
             message="접근성 정보로 안내할 항목을 찾지 못했어요. 현재 화면을 한 번 캡처해 기기에서 글자를 읽고, 글자와 위치를 서버에 보내도 될까요? 원본 이미지는 전송하지 않아요.",
+            manual_instruction=manual_instruction,
         )
     # Missing analysis is an observation failure handled by recovery.py.
     # Only privacy/safety failures above may terminate the analysis flow.

@@ -110,11 +110,12 @@ class TaskGraphRepository:
                 raise NoCompatibleGraphError("NO_COMPATIBLE_GRAPH")
             return self._decode(row)
 
-    def select(self, goal):
+    def select(self, goal, *, excluded_hashes=()):
         with self.factory() as db:
             rows = list(db.scalars(select(ApprovedTaskGraph).where(
                 ApprovedTaskGraph.goal_type == goal.goal_type,
                 ApprovedTaskGraph.target_app == goal.target_app,
+                ApprovedTaskGraph.graph_hash.not_in(tuple(excluded_hashes)),
                 ApprovedTaskGraph.active.is_(True), ApprovedTaskGraph.approved.is_(True)
             ).order_by(ApprovedTaskGraph.priority.desc())))
             if not rows:

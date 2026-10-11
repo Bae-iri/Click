@@ -10,3 +10,4 @@ from app.models.graph_proposal import GraphProposal, EvaluationReport
 __all__ = ["Account", "AuthSession", "AgentSession", "AgentCheckpoint", "AgentTurn",
            "Consent", "UIEvent", "User", "UserUIProfile"]
 from app.models.task_graph import ApprovedTaskGraph  # noqa: F401
+from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption  # noqa: F401

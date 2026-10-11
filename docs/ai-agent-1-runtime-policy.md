@@ -13,7 +13,7 @@
 7. 대기·재관측·재시도·대체 transition·Backend 반환 중 하나를 결정한다.
 8. Safety 확인 후 guide와 pending attempt를 저장한다.
 
-AI1은 DB graph를 수정하거나 새 경로를 생성하지 않는다. 진행할 수 없으면 `backend_handoff.type=task_graph_reselection_required`와 사유를 반환한다. 2026-10-11 수정: 복구는 `highlight / observe_only`와 `render_policy.recovery`로 전달하고 episode를 유지한다. adapter는 복구 및 legacy graph handoff의 정책을 보존하며 결과 확인으로 변환하지 않는다. 실제 안전 차단은 `BLOCKED`, 검증된 완료와 조절 한도는 결과 확인으로 구분한다. 자동 DB graph 교체는 수행하지 않으며 handoff에는 재확인·직접 이동·중단 선택을 제공한다.
+AI1은 DB graph를 수정하거나 새 경로를 생성하지 않는다. 진행할 수 없으면 `backend_handoff.type=task_graph_reselection_required`와 사유를 반환한다. 2026-10-11 수정: 복구는 `highlight / observe_only`와 `render_policy.recovery`로 전달하고 episode를 유지한다. adapter는 복구 및 legacy graph handoff의 정책을 보존하며 결과 확인으로 변환하지 않는다. 실제 안전 차단은 `BLOCKED`, 검증된 완료와 조절 한도는 결과 확인으로 구분한다. Backend는 승인된 호환 graph가 있고 재선택 예산이 남으면 새 episode로 재시작한다. 목표·누적 실패와 공통 전이의 제외 기록은 유지하고, 이전 조작 승인과 관측 복구 상태는 초기화한다. 대안이 없거나 예산이 소진되면 작업을 종료하지 않고 재확인·직접 이동·중단 선택을 제공한다.
 
 ## 2. 행동과 관측의 연결
 

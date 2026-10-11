@@ -18,6 +18,7 @@ from app.schemas.agent_turn import AgentTurnRequest, AgentTurnResponse
 from app.schemas.guidance import GuideCommandResponse
 from app.repositories.sessions import SessionNotFoundError
 from ai_agent.runtime.progress import graph_progress
+from ai_agent.telemetry.execution_events import produce
 
 
 class RuntimeAgentAdapter:
@@ -32,6 +33,7 @@ class RuntimeAgentAdapter:
         self.runtime = ClickAgentEngine(session_store=session_store, task_graphs=graphs)
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
+        previous = self.runtime.session_store.get(request.session_id)
         raw_goal = getattr(request, "raw_goal", None)
         tree = request.accessibility_tree
         vision_snapshot = request.vision_snapshot
@@ -134,6 +136,7 @@ class RuntimeAgentAdapter:
                 captured_at_ms=vision_snapshot.captured_at_ms,
                 observation_id=vision_snapshot.observation_id,
                 active_window_id=vision_snapshot.active_window_id,
+                processing_time_ms=vision_snapshot.processing_time_ms,
             ) if vision_snapshot else None,
             active_window_id=tree.active_window_id if tree else None,
             observation_id=tree.observation_id if tree else None,
@@ -147,7 +150,7 @@ class RuntimeAgentAdapter:
         try:
             result = self.runtime.handle_turn(runtime_request)
         except ContractViolationError as error:
-            if getattr(request, "raw_goal", None) is None:
+            if getattr(request, "raw_goal", None) is None and getattr(request, "goal", None) is None:
                 raise SessionNotFoundError(request.session_id) from error
             raise ValueError(str(error)) from error
         guide = result.guide_command
@@ -178,6 +181,10 @@ class RuntimeAgentAdapter:
             command_type == "done" or (command_type == "blocked" and technical.get("reason") in {"limit_reached", "unverified_change_at_limit"}))
         if result_check:
             status = "WAITING_RESULT"
+        target = next((node for node in tree.nodes if result.match_result and node.node_id == result.match_result.target_node_id), None) if tree else None
+        name = (target.class_name or "").lower() if target else ""
+        role = "slider" if "seekbar" in name else "button" if "button" in name else "menu_item" if target and target.clickable else "other"
+        self.execution_event = produce(result, previous, runtime_session, role)
         slider_values = (
             runtime_session.last_snapshot.slider_values
             if runtime_session and runtime_session.last_snapshot else {}
@@ -195,7 +202,7 @@ class RuntimeAgentAdapter:
             guide_command=GuideCommandResponse(
                 guide_command_id=guide.guide_command_id,
                 command_type="result_confirmation" if result_check else command_type,
-                proposed_action=result.match_result.action_type.value if command_type == "confirmation" and "vision_fallback" not in guide.render_policy and result.match_result and result.match_result.action_type.value in {"tap", "drag", "scroll"} else None,
+                proposed_action=result.match_result.action_type.value if command_type == "confirmation" and "vision_fallback" not in guide.render_policy and result.match_result and guide.target_node_id is not None and guide.target_bounds is not None and result.match_result.action_type.value in {"tap", "drag", "scroll"} else None,
                 action_type="observe_only" if result_check or legacy_handoff else guide.action_type.value,
                 message=guide.message,
                 target_node_id=None if legacy_handoff else guide.target_node_id,

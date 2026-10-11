@@ -24,3 +24,5 @@ class AgentSessionResponse(BaseModel):
     requires_fresh_observation: bool
     requires_goal: bool
     result_response: Literal["accepted", "rejected"] | None = None
+    result_prompt: dict | None = None
+    follow_up: dict | None = None
