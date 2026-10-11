@@ -8,9 +8,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from statistics import mean
 from time import perf_counter
+
+PROJECT = Path(__file__).resolve().parents[1]
+SRC = PROJECT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 from ai_agent.runtime.engine import ClickAgentEngine
 from ai_agent.runtime.types import (

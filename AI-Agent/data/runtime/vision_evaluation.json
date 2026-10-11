@@ -5,7 +5,7 @@
   "target_detection_success_rate": 1,
   "coordinate_accuracy_rate": 1,
   "accessibility_only_success_rate": 0,
-  "mean_ai1_runtime_latency_ms": 5.447,
+  "mean_ai1_runtime_latency_ms": 4.819,
   "pixel_to_text_accuracy": null,
   "pixel_to_text_accuracy_note": "Run VisionOcrInstrumentedTest on an Android 11+ device; host fixtures start after OCR.",
   "cases": [
@@ -14,28 +14,28 @@
       "vision_target_found": true,
       "vision_bounds_correct": true,
       "accessibility_only_target_found": false,
-      "runtime_latency_ms": 8.852
+      "runtime_latency_ms": 6.983
     },
     {
       "case": "dark_1080p_default",
       "vision_target_found": true,
       "vision_bounds_correct": true,
       "accessibility_only_target_found": false,
-      "runtime_latency_ms": 4.276
+      "runtime_latency_ms": 4.147
     },
     {
       "case": "light_720p_large_font",
       "vision_target_found": true,
       "vision_bounds_correct": true,
       "accessibility_only_target_found": false,
-      "runtime_latency_ms": 4.328
+      "runtime_latency_ms": 4.127
     },
     {
       "case": "dark_1440p_small_font",
       "vision_target_found": true,
       "vision_bounds_correct": true,
       "accessibility_only_target_found": false,
-      "runtime_latency_ms": 4.333
+      "runtime_latency_ms": 4.02
     }
   ]
 }
