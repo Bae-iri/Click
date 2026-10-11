@@ -25,6 +25,7 @@ class RuntimeAgentAdapter:
     """Translate the HTTP contract to the single ai_agent L3 runtime."""
 
     def __init__(self, session_store=None, task_graph=None) -> None:
+        self.vision_consent_request_id = None
         graphs = None if task_graph is None else {
             task_graph.definition.task_id: task_graph,
             task_graph.definition.goal_type: task_graph,
@@ -75,7 +76,7 @@ class RuntimeAgentAdapter:
                 source_text="",
                 confidence=1.0,
                 task_id=self.runtime.task_graphs[typed.goal_type].definition.task_id,
-                typing_method="fe_typed_contract",
+                typing_method="backend_accepted_goal",
                 is_supported=True,
                 required_slots_filled=True,
             ) if typed else None,
@@ -112,6 +113,7 @@ class RuntimeAgentAdapter:
             ) if tree else (),
             vision_snapshot=RuntimeVisionSnapshot(
                 user_consented=vision_snapshot.user_consented,
+                consent_request_id=self.vision_consent_request_id,
                 redaction_applied=vision_snapshot.redaction_applied,
                 provider=vision_snapshot.provider,
                 screenshot_base64=vision_snapshot.screenshot_base64,
@@ -132,14 +134,18 @@ class RuntimeAgentAdapter:
                 screen_width=vision_snapshot.screen_width or screen_width,
                 screen_height=vision_snapshot.screen_height or screen_height,
                 captured_at_ms=vision_snapshot.captured_at_ms,
+                observation_id=vision_snapshot.observation_id,
+                active_window_id=vision_snapshot.active_window_id,
                 processing_time_ms=vision_snapshot.processing_time_ms,
             ) if vision_snapshot else None,
             active_window_id=tree.active_window_id if tree else None,
             observation_id=tree.observation_id if tree else None,
             captured_at_ms=(tree.captured_at_ms if tree.captured_at_ms is not None else
                 int(tree.captured_at.timestamp() * 1000) if tree.captured_at else None) if tree else None,
-            user_confirmation=request.user_confirmation,
+            user_confirmation=None if self.vision_consent_request_id else request.user_confirmation,
             user_action_event=self._action_event(request),
+            episode_id=getattr(request, "episode_id", None),
+            applied_settings=tree.applied_settings.model_dump() if tree and tree.applied_settings else {},
         )
         try:
             result = self.runtime.handle_turn(runtime_request)
@@ -151,7 +157,6 @@ class RuntimeAgentAdapter:
         command_type = guide.command_type.value
         graph = next((g for g in self.runtime.task_graphs.values()
                       if g.definition.task_id == result.task_id), None)
-        step, total_steps = graph_progress(graph, result.current_state_id)
         # Progress is presentation only; completion requires the runtime predicate.
         task_completed = guide.command_type.value == "done"
         status = {
@@ -159,8 +164,23 @@ class RuntimeAgentAdapter:
             "done": "COMPLETED",
             "blocked": "BLOCKED",
         }.get(command_type, "IN_PROGRESS")
-        step, total_steps = graph_progress(graph, result.current_state_id, status == "COMPLETED")
         runtime_session = self.runtime.session_store.get(request.session_id)
+        progress_state = result.current_state_id
+        if progress_state == "S0_UNKNOWN" and runtime_session and runtime_session.observed_path:
+            progress_state = runtime_session.observed_path[-1]
+        step, total_steps = graph_progress(graph, progress_state, status == "COMPLETED")
+        technical = dict(runtime_session.technical_outcome) if runtime_session else {}
+        recovery = guide.render_policy.get("recovery")
+        recovering = bool((recovery and recovery.get("recoverable")) or guide.render_policy.get("backend_handoff"))
+        # Recoverable navigation failures keep the episode alive and preserve their instructions.
+        legacy_handoff = recovering and command_type == "blocked"
+        if legacy_handoff:
+            command_type = "highlight"
+            status = "IN_PROGRESS"
+        result_check = runtime_session is not None and not recovering and (
+            command_type == "done" or (command_type == "blocked" and technical.get("reason") in {"limit_reached", "unverified_change_at_limit"}))
+        if result_check:
+            status = "WAITING_RESULT"
         target = next((node for node in tree.nodes if result.match_result and node.node_id == result.match_result.target_node_id), None) if tree else None
         name = (target.class_name or "").lower() if target else ""
         role = "slider" if "seekbar" in name else "button" if "button" in name else "menu_item" if target and target.clickable else "other"
@@ -181,24 +201,24 @@ class RuntimeAgentAdapter:
             task_status=status,
             guide_command=GuideCommandResponse(
                 guide_command_id=guide.guide_command_id,
-                command_type=command_type,
-                proposed_action=(result.match_result.action_type.value
-                    if command_type == "confirmation" and result.match_result
-                    and guide.target_node_id is not None and guide.target_bounds is not None
-                    and result.match_result.action_type.value in {"tap", "drag", "scroll"}
-                    else None),
-                action_type="observe_only" if task_completed else guide.action_type.value,
+                command_type="result_confirmation" if result_check else command_type,
+                proposed_action=result.match_result.action_type.value if command_type == "confirmation" and "vision_fallback" not in guide.render_policy and result.match_result and guide.target_node_id is not None and guide.target_bounds is not None and result.match_result.action_type.value in {"tap", "drag", "scroll"} else None,
+                action_type="observe_only" if result_check or legacy_handoff else guide.action_type.value,
                 message=guide.message,
-                target_node_id=guide.target_node_id,
-                target_label=guide.target_label,
-                target_bounds=guide.target_bounds,
-                safety_level=guide.safety_level.value,
-                requires_user_action=False if task_completed else guide.requires_user_action,
-                render_policy=dict(guide.render_policy),
+                target_node_id=None if legacy_handoff else guide.target_node_id,
+                target_label=None if legacy_handoff else guide.target_label,
+                target_bounds=None if legacy_handoff else guide.target_bounds,
+                safety_level="LOW_RISK" if result_check or legacy_handoff else guide.safety_level.value,
+                requires_user_action=False if result_check or legacy_handoff else guide.requires_user_action,
+                render_policy={} if result_check else dict(guide.render_policy),
             ),
             metadata={
+                "technical_outcome": technical,
+                "checklist": result.debug.get("checklist", []),
+                "goal_label": "글자를 작게 보기" if result.typed_goal and result.typed_goal.slots.get("direction") == "decrease" else "글자를 크게 보기",
                 "runtime": "ai_agent.runtime",
                 "runtime_decision": result.debug.get("replan_decision"),
+                "recovery": recovery,
                 "score_semantics": "heuristic_scores_not_probabilities",
                 "typed_goal": result.typed_goal.to_dict() if result.typed_goal else None,
                 "verification": {
@@ -227,4 +247,6 @@ class RuntimeAgentAdapter:
             target_bounds=event.target_bounds,
             occurred_at_ms=event.occurred_at_ms,
             event_id=event.event_id,
+            session_id=event.session_id,
+            episode_id=event.episode_id,
         )

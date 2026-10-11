@@ -9,7 +9,10 @@ class CancelSessionRequest(BaseModel):
 
 class AgentSessionResponse(BaseModel):
     session_id: str
+    episode_id: str | None = None
     status: Literal["IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "WAITING_ADJUSTMENT", "PAUSED", "COMPLETED", "BLOCKED", "CANCELLED", "EXPIRED"]
+    task_outcome: dict | None = None
+    outcome_history: list[dict] = Field(default_factory=list)
     version: int
     task_id: str | None
     state_id: str | None

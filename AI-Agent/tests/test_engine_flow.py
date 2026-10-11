@@ -248,6 +248,7 @@ class EngineFlowTests(unittest.TestCase):
             ),
         )
 
+
         first_response = engine.handle_turn(
             AgentTurnRequest(
                 request_id="req-generic-fallback-1",
@@ -261,15 +262,9 @@ class EngineFlowTests(unittest.TestCase):
         self.assertEqual(first_response.current_state_id, "S1_SETTINGS_HOME")
         self.assertIsNone(first_response.guide_command.target_node_id)
         self.assertFalse(first_response.guide_command.requires_user_action)
-        self.assertEqual(
-            first_response.guide_command.render_policy["fallback_action"]["type"],
-            "request_fresh_observation",
-        )
-        self.assertTrue(
-            first_response.debug["fallback"]["expected_next_observation"][
-                "send_vision_snapshot_if_target_missing"
-            ]
-        )
+        self.assertEqual(first_response.guide_command.command_type, CommandType.HIGHLIGHT)
+        self.assertEqual(first_response.guide_command.render_policy["recovery"]["next_action"],
+                         "manual_navigation")
         self.assertIsNone(session.pending_transition_id)
 
         second_response = engine.handle_turn(
@@ -287,7 +282,7 @@ class EngineFlowTests(unittest.TestCase):
         engine = ClickAgentEngine()
         first_response = engine.handle_turn(
             AgentTurnRequest(
-                request_id="req-same-state-change-1",
+                request_id="req-same-state-change-1", captured_at_ms=1000, observation_id="same-1",
                 session_id="session-same-state-change",
                 raw_goal=_raw_goal("글자 크기 키워줘"),
                 accessibility_tree=_settings_home_tree(),
@@ -296,7 +291,7 @@ class EngineFlowTests(unittest.TestCase):
 
         response = engine.handle_turn(
             AgentTurnRequest(
-                request_id="req-same-state-change-2",
+                request_id="req-same-state-change-2", captured_at_ms=1400, observation_id="same-2",
                 session_id="session-same-state-change",
                 raw_goal=None,
                 accessibility_tree=(
@@ -305,7 +300,7 @@ class EngineFlowTests(unittest.TestCase):
                     _node("wallpaper", "배경화면", bounds=(24, 340, 1056, 420)),
                 ),
                 user_action_event=UserActionEvent(
-                    action_type=UserActionType.TAP_COMPLETED,
+                    action_type=UserActionType.TAP_COMPLETED, occurred_at_ms=1200, event_id="tap-same",
                     guide_command_id=first_response.guide_command.guide_command_id,
                     target_node_id="display",
                 ),
@@ -329,7 +324,8 @@ class EngineFlowTests(unittest.TestCase):
         engine = ClickAgentEngine()
         engine.handle_turn(
             AgentTurnRequest(
-                request_id="req-1",
+                request_id="req-1", captured_at_ms=1000, observation_id="slider-1",
+                applied_settings={"source": "android.provider.Settings.System.FONT_SCALE", "font_scale": 1.0},
                 session_id="session-1",
                 raw_goal=_raw_goal("글자 크기 키우고 싶어"),
                 accessibility_tree=_font_size_control_tree(slider_value=2),
@@ -337,7 +333,8 @@ class EngineFlowTests(unittest.TestCase):
         )
         accepted = engine.handle_turn(
             AgentTurnRequest(
-                request_id="req-2",
+                request_id="req-2", captured_at_ms=1100, observation_id="slider-2",
+                applied_settings={"source": "android.provider.Settings.System.FONT_SCALE", "font_scale": 1.0},
                 session_id="session-1",
                 raw_goal=None,
                 accessibility_tree=_font_size_control_tree(slider_value=2),
@@ -347,12 +344,13 @@ class EngineFlowTests(unittest.TestCase):
 
         response = engine.handle_turn(
             AgentTurnRequest(
-                request_id="req-3",
+                request_id="req-3", captured_at_ms=1800, observation_id="slider-3",
+                applied_settings={"source": "android.provider.Settings.System.FONT_SCALE", "font_scale": 1.15},
                 session_id="session-1",
                 raw_goal=None,
                 accessibility_tree=_font_size_control_tree(slider_value=3),
                 user_action_event=UserActionEvent(
-                    action_type=UserActionType.DRAG_COMPLETED,
+                    action_type=UserActionType.DRAG_COMPLETED, occurred_at_ms=1200, event_id="drag-1",
                     guide_command_id=accepted.guide_command.guide_command_id,
                     target_node_id="font-slider",
                 ),
@@ -381,6 +379,7 @@ class EngineFlowTests(unittest.TestCase):
                 accessibility_tree=(),
                 vision_snapshot=VisionSnapshot(
                     user_consented=True,
+                    consent_request_id="req-vision-1",
                     redaction_applied=True,
                     provider="frontend_ocr",
                     package_name=SETTINGS_PACKAGE,
@@ -406,7 +405,7 @@ class EngineFlowTests(unittest.TestCase):
         )
 
         self.assertEqual(response.current_state_id, "S1_SETTINGS_HOME")
-        self.assertEqual(response.guide_command.target_node_id, "vision:display")
+        self.assertEqual(response.guide_command.target_node_id, "vision:ocr_1")
         self.assertIn("화면 글자로 찾은", response.guide_command.message)
         self.assertTrue(response.guide_command.render_policy["vision_derived"])
         self.assertEqual(response.debug["vision_fallback"]["status"], "used")
@@ -437,6 +436,7 @@ class EngineFlowTests(unittest.TestCase):
                 ),
                 vision_snapshot=VisionSnapshot(
                     user_consented=True,
+                    consent_request_id="req-vision-augment",
                     redaction_applied=True,
                     provider="frontend_ocr",
                     package_name=SETTINGS_PACKAGE,
@@ -453,7 +453,7 @@ class EngineFlowTests(unittest.TestCase):
         )
 
         self.assertEqual(response.current_state_id, "S1_SETTINGS_HOME")
-        self.assertEqual(response.guide_command.target_node_id, "vision:display")
+        self.assertEqual(response.guide_command.target_node_id, "vision:ocr_0")
         self.assertEqual(response.debug["vision_fallback"]["status"], "used")
 
     def test_vision_snapshot_requires_consent_when_tree_is_empty(self) -> None:
@@ -474,7 +474,7 @@ class EngineFlowTests(unittest.TestCase):
 
         self.assertEqual(response.current_state_id, "S0_UNKNOWN")
         self.assertEqual(response.guide_command.command_type, CommandType.CONFIRMATION)
-        self.assertIn("화면 이미지 분석", response.guide_command.message)
+        self.assertIn("현재 화면을 한 번 캡처", response.guide_command.message)
         self.assertEqual(response.debug["vision_fallback"]["status"], "consent_required")
         self.assertTrue(
             response.guide_command.render_policy["vision_fallback"][
@@ -483,7 +483,7 @@ class EngineFlowTests(unittest.TestCase):
         )
         self.assertEqual(response.debug["fallback"]["type"], "vision_fallback")
 
-    def test_empty_tree_without_vision_requests_consented_ocr_fallback(self) -> None:
+    def test_empty_tree_without_vision_requests_per_use_consent(self) -> None:
         engine = ClickAgentEngine()
 
         response = engine.handle_turn(

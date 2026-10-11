@@ -22,8 +22,11 @@ import com.click.ui.tutorial.TutorialArtworkView;
 
 /** Welcomes the user after accessibility is enabled, before starting the hands-on tour. */
 public final class TutorialReadyActivity extends AppCompatActivity {
+    private com.click.designpreview.TutorialNarrator narrator;
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        narrator = new com.click.designpreview.TutorialNarrator(this);
+        narrator.speak("준비됐어요. 시작하기를 눌러 click 버튼과 마이크를 직접 사용해 보세요.");
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.WHITE);
@@ -103,6 +106,9 @@ public final class TutorialReadyActivity extends AppCompatActivity {
             }
         });
     }
+
+    @Override protected void onStop() { narrator.stop(); super.onStop(); }
+    @Override protected void onDestroy() { narrator.close(); super.onDestroy(); }
 
     private LinearLayout vertical() {
         LinearLayout view = new LinearLayout(this);

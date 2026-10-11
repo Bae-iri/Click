@@ -4,6 +4,11 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class FloatingPanelPositionTest {
+    @Test public void transparentImeToolbarDoesNotConsumeTheWholeScreen() {
+        assertFalse(FloatingPanelPosition.isDockedKeyboard(2201, 157, 2400, 168));
+        assertFalse(FloatingPanelPosition.isDockedKeyboard(2201, 700, 1200, 168));
+        assertTrue(FloatingPanelPosition.isDockedKeyboard(2201, 1400, 2400, 168));
+    }
     @Test public void keyboardMovesBottomPanelUpAndDismissalRestoresRestingPosition() {
         FloatingPanelPosition shown = FloatingPanelPosition.fit(500, 384, 24, 600);
         assertEquals(216, shown.y);

@@ -5,12 +5,13 @@ from ai_agent.runtime.types import ScreenSnapshot, VerificationStatus
 RETRY_LIMIT_BEFORE_EXCLUSION = 2
 
 
-def build_screen_snapshot(state_id, nodes, *, observation_id=None, captured_at_ms=None):
+def build_screen_snapshot(state_id, nodes, *, observation_id=None, captured_at_ms=None, applied_settings=None):
     parts = sorted('|'.join((node.node_id, node.label, node.role, str(node.bounds),
                             str(node.selected), str(node.value))) for node in nodes)
     return ScreenSnapshot(state_id, sha256('\n'.join(parts).encode()).hexdigest(),
                           {n.node_id: n.value for n in nodes if n.role == 'slider' and n.value is not None},
-                          observation_id=observation_id, captured_at_ms=captured_at_ms)
+                          observation_id=observation_id, captured_at_ms=captured_at_ms,
+                          applied_settings=applied_settings or {})
 
 
 def register_attempt_outcome(session, *, pending_transition_id, verification_result, retry_limit=2):

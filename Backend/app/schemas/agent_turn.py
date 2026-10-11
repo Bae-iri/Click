@@ -7,6 +7,13 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.guidance import GuideCommandResponse
 
+VisionFailureCode = Literal["masking_failed", "capture_failed", "ocr_failed", "screen_changed", "unsupported"]
+
+
+def validate_vision_failure(request):
+    if request.vision_failure is not None and (request.user_confirmation != "rejected" or request.vision_snapshot is not None):
+        raise ValueError("vision_failure requires rejected confirmation and no vision payload")
+
 
 class AccessibilityNode(BaseModel):
     """Android AccessibilityNode payload accepted at the BE/Agent boundary."""
@@ -44,6 +51,12 @@ class AccessibilityNode(BaseModel):
         return value
 
 
+class AppliedSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source: Literal["android.provider.Settings.System.FONT_SCALE"]
+    font_scale: float = Field(gt=0, le=10, allow_inf_nan=False)
+
+
 class AccessibilityTree(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -52,6 +65,7 @@ class AccessibilityTree(BaseModel):
     captured_at: datetime | None = None
     observation_id: str | None = Field(default=None, min_length=1, max_length=200)
     captured_at_ms: int | None = Field(default=None, ge=0)
+    applied_settings: AppliedSettings | None = None
     screen_width: int = Field(default=1, gt=0)
     screen_height: int = Field(default=1, gt=0)
     nodes: list[AccessibilityNode] = Field(max_length=2000)
@@ -99,7 +113,7 @@ class VisionSnapshot(BaseModel):
     user_consented: bool = False
     redaction_applied: bool = Field(default=False, description="Client hint only; does not authorize external image processing")
     provider: str | None = None
-    screenshot_base64: str | None = Field(default=None, max_length=8_000_000, description="Discarded: external image processing is disabled until server-side redaction is available; send on-device OCR elements")
+    screenshot_base64: str | None = Field(default=None, max_length=8_000_000, description="Rejected for vision use; raw image egress is disabled. Send on-device OCR elements after per-use confirmation.")
     mime_type: str = "image/png"
     ocr_text: str | None = Field(default=None, max_length=10_000)
     elements: list[VisionElement] = Field(default_factory=list, max_length=200)
@@ -107,19 +121,14 @@ class VisionSnapshot(BaseModel):
     screen_width: int | None = Field(default=None, gt=0)
     screen_height: int | None = Field(default=None, gt=0)
     captured_at_ms: int | None = None
+    observation_id: str | None = Field(default=None, min_length=1, max_length=200)
+    active_window_id: int | None = None
     processing_time_ms: int | None = Field(default=None, ge=0, le=60_000)
 
     @model_validator(mode="after")
-    def enforce_on_device_ocr_boundary(self) -> "VisionSnapshot":
+    def reject_raw_screenshots(self) -> "VisionSnapshot":
         if self.screenshot_base64 is not None:
             raise ValueError("raw screenshots must not be sent; send on-device OCR elements")
-        if self.elements or self.ocr_text:
-            if not self.user_consented:
-                raise ValueError("vision OCR requires user consent")
-            if not self.redaction_applied:
-                raise ValueError("vision OCR requires client redaction")
-            if self.provider != "frontend_ocr":
-                raise ValueError("only frontend_ocr vision payloads are accepted")
         return self
 
 
@@ -133,18 +142,22 @@ class AgentTurnRequest(BaseModel):
     raw_goal: str | None = Field(default=None, min_length=1, max_length=500)
     accessibility_tree: AccessibilityTree | None = None
     vision_snapshot: VisionSnapshot | None = None
+    vision_failure: VisionFailureCode | None = None
     user_confirmation: Literal["accepted", "rejected"] | None = None
     confirmation_id: str | None = Field(default=None, min_length=36, max_length=36)
     user_action_event: "UserActionEventRequest | None" = None
 
     @model_validator(mode="after")
     def require_screen_observation(self) -> "AgentTurnRequest":
+        validate_vision_failure(self)
         if self.accessibility_tree is None and self.vision_snapshot is None:
             raise ValueError("accessibility_tree or vision_snapshot is required")
         return self
 
 
 class UserActionEventRequest(BaseModel):
+    session_id: str | None = None
+    episode_id: str | None = None
     event_id: str | None = Field(default=None, min_length=1, max_length=200)
     action_type: Literal[
         "tap_completed",
@@ -164,6 +177,7 @@ class UserActionEventRequest(BaseModel):
 class AgentTurnResponse(BaseModel):
     request_id: str
     session_id: str
+    episode_id: str | None = None
     session_version: int = 0
     task_id: str
     step: int
@@ -454,6 +468,9 @@ class ClassificationMetadata(BaseModel):
     goal_confidence: float | None = Field(default=None, ge=0, le=1)
 
 
+from app.schemas.goal_preparation import ClarificationAnswer, GoalPreparation
+
+
 class AgentCommandRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     contract_version: Literal["agent-fe-contract.v0.2", "agent-fe-contract.v0.3"]
@@ -461,11 +478,21 @@ class AgentCommandRequest(BaseModel):
     session_id: str = Field(min_length=1, max_length=200)
     expected_version: int = Field(ge=0)
     episode_id: str | None = Field(default=None, min_length=1, max_length=200)
-    command_type: Literal["start_task", "pause_task", "resume_task", "cancel_task", "replace_task", "observe", "respond_confirmation", "resolve_goal", "respond_result", "adjust_task"]
+    command_type: Literal["resolve_goal", "cancel_goal", "start_task", "pause_task", "resume_task", "cancel_task", "replace_task", "observe", "respond_confirmation", "respond_result", "adjust_task", "request_result"]
+    goal_resolution_id: str | None = Field(default=None, max_length=200)
+    clarification_choice: Literal["unsure", "different"] | None = None
+    preparation_version: Literal["goal-inputs.v1"] | None = None
+    preparation_reset: bool = False
+    clarification_answer: ClarificationAnswer | None = None
+    workflow_version: Literal["interactive.v1"] | None = None
+    result_prompt_id: str | None = Field(default=None, max_length=200)
+    user_result: Literal["satisfied", "needs_help", "stopped", "no_response"] | None = None
+    adjustment_reason: Literal["too_small", "too_large", "other", "unsure"] | None = None
     goal: TypedGoalRequest | None = None
     device_context: DeviceContextRequest | None = None
     accessibility_tree: AccessibilityTree | None = None
     vision_snapshot: VisionSnapshot | None = None
+    vision_failure: VisionFailureCode | None = None
     user_action_event: UserActionEventRequest | None = None
     user_confirmation: Literal["accepted", "rejected"] | None = None
     confirmation_id: str | None = Field(default=None, min_length=36, max_length=36)
@@ -481,39 +508,68 @@ class AgentCommandRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_command_shape(self) -> "AgentCommandRequest":
-        if self.command_type in {"resolve_goal", "respond_result", "adjust_task"} and self.contract_version != "agent-fe-contract.v0.3":
-            raise ValueError("new commands require agent-fe-contract.v0.3")
-        if (self.command_type == "respond_result") != (self.result_response is not None or self.user_result is not None):
-            raise ValueError("result_response is required only for respond_result")
-        if self.result_response is not None and self.user_result is not None:
-            raise ValueError("result_response and user_result cannot be combined")
-        if (self.user_result is not None) != (self.result_prompt_id is not None):
-            raise ValueError("user_result requires result_prompt_id")
-        if self.workflow_version and self.contract_version != "agent-fe-contract.v0.3":
-            raise ValueError("interactive workflow requires v0.3")
-        if self.adjustment_reason is not None and self.command_type != "adjust_task":
-            raise ValueError("adjustment_reason is only valid for adjust_task")
-        if self.command_type == "resolve_goal":
-            if not self.source_text or not self.source_text.strip() or self.device_context is None:
-                raise ValueError("source_text and device_context are required for resolve_goal")
-        adjustment = self.command_type == "adjust_task" and self.adjustment_reason is not None
-        starts = self.command_type in {"start_task", "replace_task", "adjust_task"} and not adjustment
+        validate_vision_failure(self)
+        if self.command_type in {"resolve_goal", "cancel_goal"} \
+                and self.contract_version != "agent-fe-contract.v0.3":
+            raise ValueError("This command requires v0.3")
+        if self.preparation_version and self.contract_version != "agent-fe-contract.v0.3":
+            raise ValueError("goal input preparation requires v0.3")
+        if self.preparation_version and self.command_type not in {"resolve_goal", "start_task", "cancel_goal"}:
+            raise ValueError("preparation is only used before task execution")
+        if (self.clarification_answer is not None or self.preparation_reset) and (
+                self.command_type != "resolve_goal" or not self.preparation_version):
+            raise ValueError("clarification fields require prepared resolve_goal")
+        if self.clarification_answer and (not self.goal_resolution_id or self.preparation_reset):
+            raise ValueError("answer must reference its current resolution")
+        if self.command_type in {"resolve_goal", "cancel_goal"}:
+            if self.goal is not None or self.episode_id is not None or self.expected_version != 0:
+                raise ValueError("Goal resolution precedes task execution")
+            if self.command_type == "resolve_goal" and (not self.source_text or not self.source_text.strip()):
+                raise ValueError("source_text is required")
+            if self.command_type == "resolve_goal" and self.device_context is None:
+                if self.contract_version == "agent-fe-contract.v0.3":
+                    raise ValueError("device_context is required")
+                self.device_context = DeviceContextRequest(platform="android", locale="ko-KR")
+            if self.command_type == "cancel_goal" and not self.goal_resolution_id:
+                raise ValueError("goal_resolution_id is required")
+            if any((self.user_result, self.result_prompt_id, self.result_response, self.adjustment_reason,
+                    self.workflow_version, self.user_confirmation, self.confirmation_id, self.accessibility_tree,
+                    self.vision_snapshot, self.vision_failure, self.user_action_event)):
+                raise ValueError("Execution fields are not allowed during goal preparation")
+            return self
+        if self.clarification_choice:
+            raise ValueError("clarification_choice requires resolve_goal")
+        if self.preparation_version and self.command_type == "start_task" and not self.goal_resolution_id:
+            raise ValueError("Prepared start requires goal_resolution_id")
+        if self.workflow_version and (self.command_type != "start_task" or self.contract_version != "agent-fe-contract.v0.3"):
+            raise ValueError("interactive workflow requires a v0.3 start")
+        if self.command_type == "respond_result":
+            if bool(self.user_result) == bool(self.result_response):
+                raise ValueError("Exactly one result answer is required")
+            if self.user_result and not self.result_prompt_id:
+                raise ValueError("Result answer must reference its prompt")
+        elif self.user_result or self.result_prompt_id or self.result_response:
+            raise ValueError("Result fields require respond_result")
+        if self.adjustment_reason and self.command_type != "adjust_task":
+            raise ValueError("adjustment_reason requires adjust_task")
+        starts = self.command_type in {"start_task", "replace_task"} or (
+            self.command_type == "adjust_task" and self.adjustment_reason is None)
         if starts != (self.goal is not None):
-            raise ValueError("goal is required only for start_task, replace_task and adjust_task")
+            raise ValueError("goal is required for starting or replacing a task")
         if starts and self.device_context is None:
-            raise ValueError("device_context is required for start_task and replace_task")
-        if self.command_type in {"start_task", "resolve_goal"} and self.episode_id is not None:
-            raise ValueError("episode_id must be omitted before starting a task")
-        if self.command_type not in {"start_task", "resolve_goal"} and self.episode_id is None:
+            raise ValueError("device_context is required")
+        if self.command_type == "start_task" and self.episode_id is not None:
+            raise ValueError("episode_id must be omitted before starting")
+        if self.command_type != "start_task" and self.episode_id is None:
             raise ValueError("episode_id is required after start_task")
-        needs_screen = self.command_type in {"start_task", "replace_task", "adjust_task", "resume_task", "observe", "respond_confirmation"} and not adjustment
+        needs_screen = starts or self.command_type in {"resume_task", "observe", "respond_confirmation"}
         if needs_screen and self.accessibility_tree is None and self.vision_snapshot is None:
-            raise ValueError("a screen observation is required for this command")
+            raise ValueError("a screen observation is required")
         if self.command_type == "respond_confirmation":
             if self.user_confirmation is None or self.confirmation_id is None:
                 raise ValueError("confirmation response and confirmation_id are required")
         elif self.user_confirmation is not None or self.confirmation_id is not None:
-            raise ValueError("confirmation fields are only valid for respond_confirmation")
+            raise ValueError("confirmation fields require respond_confirmation")
         return self
 
 
@@ -533,12 +589,12 @@ class AgentCommandResponse(BaseModel):
     request_id: str
     session_id: str
     session_version: int
-    episode_id: str
-    response_type: Literal["guidance", "control"]
+    episode_id: str | None = None
+    response_type: Literal["guidance", "control", "goal_selection", "result"]
     command_result: CommandResult
-    accepted_goal_type: str
-    task_id: str
-    graph_reference: GraphReference
+    accepted_goal_type: str | None = None
+    task_id: str | None = None
+    graph_reference: GraphReference | None = None
     task_status: str
     state_id: str | None = None
     step: int | None = None
@@ -556,6 +612,9 @@ class AgentGoalResolutionResponse(BaseModel):
     resolution_status: Literal["confirmation_required", "needs_clarification", "unsupported"]
     goal: TypedGoalRequest | None = None
     display_name: str | None = None
+    preparation: GoalPreparation | None = None
+    task_status: Literal["IN_PROGRESS"] = "IN_PROGRESS"
+    metadata: dict[str, Any] = Field(default_factory=dict)
     message: str
     task_status: Literal["IN_PROGRESS"] = "IN_PROGRESS"
     metadata: dict[str, Any] = Field(default_factory=dict)

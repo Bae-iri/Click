@@ -1,5 +1,8 @@
 # 마스킹 / 개인정보 파이프라인
 
+**2026-09-20 Vision 구현:** [현재 동의·마스킹·실패 대응 계약](../../docs/ai-agent-vision-fallback.md)이 이 문서의 과거 Vision 계획보다 우선한다. 캡처마다 사용자 확인 후 기기 내 OCR을 수행하고 FE/BE 메뉴 허용 목록을 적용한다. 마스킹 실패 시 결과를 폐기하고 `masking_failed`로 중단한다. 원본 이미지 외부 전송은 차단한다. 아래 포괄적 개인정보/보존 정책 초안과 현재 구현 범위를 구분한다.
+
+
 **Current backend implementation:** [AI-independent backend completion](backend-completion.md) supersedes historical planning below. Approval IDs, history/feedback, account recovery, consent withdrawal and operations tooling are now implemented; real AI/device/cloud verification remains outstanding.
 
 **Week 4 implemented:** input-field removal, known-pattern text redaction, catalog-only external text, disabled raw-image egress, trace/event allowlists and cleanup. See [current limits](week4.md). This does not claim universal PII detection or completed consent/deletion integration.

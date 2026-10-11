@@ -1,0 +1,21 @@
+{
+  "source": "Existing third-party AndroidControl parsed mirror; independently reread metadata and existing per-episode package index",
+  "metadata_sha256": "3e7ea693b20739599a01c7555c9574ef64332a2c0644ca9badf64145ea437fab",
+  "package_index_sha256": "3dda6f372f402a6ab341a394a2f857165f858d777f8160d10a727815087f43c7",
+  "official_splits_sha256": "aa0943b0b4eb354796f3daf4a6e36836918c71254db2d4060b45ae98213ad2b6",
+  "episodes": 15283,
+  "unique_ids": 15283,
+  "matches_official_split_ids": true,
+  "package_episode_counts": {
+    "com.coupang.mobile": 0,
+    "kr.go.minwon.m": 0,
+    "com.android.settings": 169
+  },
+  "font_keyword_episodes": 67,
+  "font_and_settings_episode_ids": [],
+  "limits": [
+    "AX zip package extraction was not rerun in this check; see previous full coverage evidence",
+    "Goal strings are transformed/truncated in this mirror",
+    "Keyword nonmatches do not prove universal absence"
+  ]
+}

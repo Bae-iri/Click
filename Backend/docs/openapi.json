@@ -6143,6 +6143,16 @@
             ],
             "title": "Captured At Ms"
           },
+          "applied_settings": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AppliedSettings"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "screen_width": {
             "type": "integer",
             "exclusiveMinimum": 0.0,
@@ -6232,6 +6242,8 @@
           "command_type": {
             "type": "string",
             "enum": [
+              "resolve_goal",
+              "cancel_goal",
               "start_task",
               "pause_task",
               "resume_task",
@@ -6239,11 +6251,124 @@
               "replace_task",
               "observe",
               "respond_confirmation",
-              "resolve_goal",
               "respond_result",
-              "adjust_task"
+              "adjust_task",
+              "request_result"
             ],
             "title": "Command Type"
+          },
+          "goal_resolution_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Resolution Id"
+          },
+          "clarification_choice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "unsure",
+                  "different"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clarification Choice"
+          },
+          "preparation_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "goal-inputs.v1"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preparation Version"
+          },
+          "preparation_reset": {
+            "type": "boolean",
+            "title": "Preparation Reset",
+            "default": false
+          },
+          "clarification_answer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClarificationAnswer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "workflow_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "interactive.v1"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Version"
+          },
+          "result_prompt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Prompt Id"
+          },
+          "user_result": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "satisfied",
+                  "needs_help",
+                  "stopped",
+                  "no_response"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Result"
+          },
+          "adjustment_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "too_small",
+                  "too_large",
+                  "other",
+                  "unsure"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjustment Reason"
           },
           "goal": {
             "anyOf": [
@@ -6284,6 +6409,22 @@
                 "type": "null"
               }
             ]
+          },
+          "vision_failure": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "capture_failed",
+                  "masking_failed",
+                  "ocr_failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vision Failure"
           },
           "user_action_event": {
             "anyOf": [
@@ -6360,81 +6501,6 @@
             ],
             "title": "Result Response"
           },
-          "user_result": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "satisfied",
-                  "needs_help",
-                  "stopped",
-                  "no_response"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "User Result"
-          },
-          "result_prompt_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Result Prompt Id"
-          },
-          "adjustment_reason": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "too_small",
-                  "too_large",
-                  "other",
-                  "unsure"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Adjustment Reason"
-          },
-          "workflow_version": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "interactive.v1"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workflow Version"
-          },
-          "vision_failure": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "capture_failed",
-                  "masking_failed",
-                  "ocr_failed"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Vision Failure"
-          },
           "user_id": {
             "anyOf": [
               {
@@ -6482,14 +6548,23 @@
             "title": "Session Version"
           },
           "episode_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Episode Id"
           },
           "response_type": {
             "type": "string",
             "enum": [
               "guidance",
-              "control"
+              "control",
+              "goal_selection",
+              "result"
             ],
             "title": "Response Type"
           },
@@ -6497,15 +6572,36 @@
             "$ref": "#/components/schemas/CommandResult"
           },
           "accepted_goal_type": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Accepted Goal Type"
           },
           "task_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Task Id"
           },
           "graph_reference": {
-            "$ref": "#/components/schemas/GraphReference"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "task_status": {
             "type": "string",
@@ -6565,12 +6661,8 @@
           "request_id",
           "session_id",
           "session_version",
-          "episode_id",
           "response_type",
           "command_result",
-          "accepted_goal_type",
-          "task_id",
-          "graph_reference",
           "task_status"
         ],
         "title": "AgentCommandResponse"
@@ -6631,9 +6723,15 @@
             ],
             "title": "Display Name"
           },
-          "message": {
-            "type": "string",
-            "title": "Message"
+          "preparation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GoalPreparation"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "task_status": {
             "type": "string",
@@ -6645,6 +6743,10 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Metadata"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
           }
         },
         "type": "object",
@@ -6663,6 +6765,17 @@
             "type": "string",
             "title": "Session Id"
           },
+          "episode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episode Id"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -6677,6 +6790,26 @@
               "EXPIRED"
             ],
             "title": "Status"
+          },
+          "task_outcome": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Outcome"
+          },
+          "outcome_history": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Outcome History"
           },
           "version": {
             "type": "integer",
@@ -6868,6 +7001,24 @@
               }
             ]
           },
+          "vision_failure": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "masking_failed",
+                  "capture_failed",
+                  "ocr_failed",
+                  "screen_changed",
+                  "unsupported"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vision Failure"
+          },
           "user_confirmation": {
             "anyOf": [
               {
@@ -6924,6 +7075,17 @@
           "session_id": {
             "type": "string",
             "title": "Session Id"
+          },
+          "episode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episode Id"
           },
           "session_version": {
             "type": "integer",
@@ -6984,6 +7146,28 @@
         ],
         "title": "AgentTurnResponse"
       },
+      "AppliedSettings": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "android.provider.Settings.System.FONT_SCALE",
+            "title": "Source"
+          },
+          "font_scale": {
+            "type": "number",
+            "maximum": 10.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Font Scale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "font_scale"
+        ],
+        "title": "AppliedSettings"
+      },
       "CancelSessionRequest": {
         "properties": {
           "expected_version": {
@@ -7025,6 +7209,29 @@
           "new_password"
         ],
         "title": "ChangePasswordRequest"
+      },
+      "ClarificationAnswer": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Question Id"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "question_id",
+          "value"
+        ],
+        "title": "ClarificationAnswer"
       },
       "ClassificationMetadata": {
         "properties": {
@@ -7476,6 +7683,101 @@
         ],
         "title": "FeedbackResponse"
       },
+      "GoalPreparation": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "const": "goal-inputs.v1",
+            "title": "Version",
+            "default": "goal-inputs.v1"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "source_text": {
+            "type": "string",
+            "title": "Source Text"
+          },
+          "family": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "needs_input",
+              "ready",
+              "unsupported",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Values"
+          },
+          "required_fields": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Required Fields"
+          },
+          "missing_fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Fields"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InputQuestion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "graph_reference": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Reference"
+          },
+          "expires_at": {
+            "type": "integer",
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source_text",
+          "status",
+          "expires_at"
+        ],
+        "title": "GoalPreparation"
+      },
       "GraphReference": {
         "properties": {
           "task_id": {
@@ -7511,6 +7813,7 @@
               "highlight",
               "gesture_hint",
               "confirmation",
+              "result_confirmation",
               "done",
               "blocked"
             ],
@@ -7654,6 +7957,93 @@
         ],
         "title": "HistoryPage"
       },
+      "InputChoice": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Aliases"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "InputChoice"
+      },
+      "InputQuestion": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "choice",
+              "text"
+            ],
+            "title": "Kind"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/InputChoice"
+            },
+            "type": "array",
+            "title": "Choices"
+          },
+          "placeholder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Placeholder"
+          },
+          "max_length": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "Max Length",
+            "default": 100
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "field",
+          "label",
+          "kind",
+          "message"
+        ],
+        "title": "InputQuestion"
+      },
       "InterruptVoiceRequest": {
         "properties": {
           "id": {
@@ -7744,6 +8134,19 @@
             "format": "password",
             "title": "Password",
             "writeOnly": true
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
           },
           "age_group": {
             "type": "string",
@@ -7858,12 +8261,7 @@
             "type": "string",
             "enum": [
               "audio/wav",
-              "audio/x-wav",
-              "audio/mpeg",
-              "audio/mp4",
-              "audio/m4a",
-              "audio/webm",
-              "audio/ogg"
+              "audio/x-wav"
             ],
             "title": "Mime Type",
             "default": "audio/wav"
@@ -7890,15 +8288,15 @@
           },
           "model": {
             "type": "string",
-            "const": "gpt-transcribe",
+            "const": "Qwen/Qwen3-ASR-1.7B",
             "title": "Model",
-            "default": "gpt-transcribe"
+            "default": "Qwen/Qwen3-ASR-1.7B"
           },
           "provider": {
             "type": "string",
-            "const": "openai",
+            "const": "self_hosted",
             "title": "Provider",
-            "default": "openai"
+            "default": "self_hosted"
           }
         },
         "type": "object",
@@ -8174,6 +8572,28 @@
       },
       "UserActionEventRequest": {
         "properties": {
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "episode_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Episode Id"
+          },
           "event_id": {
             "anyOf": [
               {
@@ -8274,6 +8694,17 @@
             "type": "string",
             "title": "Id"
           },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
           "age_group": {
             "anyOf": [
               {
@@ -8308,6 +8739,7 @@
         "type": "object",
         "required": [
           "id",
+          "name",
           "age_group",
           "occupation_category",
           "created_at",
@@ -8323,7 +8755,7 @@
           },
           "text": {
             "type": "string",
-            "maxLength": 500,
+            "maxLength": 200,
             "minLength": 1,
             "title": "Text"
           },
@@ -8426,7 +8858,7 @@
               }
             ],
             "title": "Screenshot Base64",
-            "description": "Discarded: external image processing is disabled until server-side redaction is available; send on-device OCR elements"
+            "description": "Rejected for vision use; raw image egress is disabled. Send on-device OCR elements after per-use confirmation."
           },
           "mime_type": {
             "type": "string",
@@ -8450,7 +8882,7 @@
               "$ref": "#/components/schemas/VisionElement"
             },
             "type": "array",
-            "maxItems": 2000,
+            "maxItems": 200,
             "title": "Elements"
           },
           "package_name": {
@@ -8498,8 +8930,46 @@
               }
             ],
             "title": "Captured At Ms"
+          },
+          "observation_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Id"
+          },
+          "active_window_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Window Id"
+          },
+          "processing_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 60000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processing Time Ms"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "VisionSnapshot"
       },

@@ -57,7 +57,8 @@ class AuthService:
         hashed = hash_password(request.password.get_secret_value())
         with self.factory() as db:
             try:
-                user = User(age_group=request.age_group, occupation_category=request.occupation_category)
+                user = User(name=request.name, age_group=request.age_group,
+                            occupation_category=request.occupation_category)
                 user.profile = UserUIProfile()
                 db.add(user)
                 db.flush()

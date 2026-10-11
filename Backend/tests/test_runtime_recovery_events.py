@@ -100,9 +100,10 @@ def test_reselection_stops_instead_of_looping(alternatives, reason):
         response = client.post("/api/v1/agent/commands", json=follow(body))
         assert response.status_code == 200, response.text
         body = response.json()
-        if body["task_status"] == "BLOCKED":
+        if body["metadata"].get("reselection", {}).get("status") == "stopped":
             break
-    assert body["task_status"] == "BLOCKED"
+    assert body["task_status"] == "IN_PROGRESS"
+    assert body["guide_command"]["render_policy"]["recovery"]["waiting_for"] == "user"
     assert body["metadata"]["reselection"]["reason_code"] == reason
     assert "backend_handoff" in body["guide_command"]["render_policy"]
 
@@ -114,7 +115,8 @@ def test_failure_budget_survives_graph_replacement():
     app.state.turn_service.engine_factory = FailedHandoff
     first = client.post("/api/v1/agent/commands", json=follow(started)).json()
     second = client.post("/api/v1/agent/commands", json=follow(first)).json()
-    assert second["task_status"] == "BLOCKED"
+    assert second["task_status"] == "IN_PROGRESS"
+    assert second["guide_command"]["render_policy"]["recovery"]["waiting_for"] == "user"
     assert second["metadata"]["reselection"]["reason_code"] == "failure_budget_exhausted"
 
 

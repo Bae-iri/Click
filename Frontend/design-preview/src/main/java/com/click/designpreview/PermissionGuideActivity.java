@@ -36,6 +36,8 @@ public final class PermissionGuideActivity extends Activity {
     private static final int INK = 0xFF101A36;
     private static final int SECONDARY = 0xFF6F7F9E;
     private int page;
+    private TutorialNarrator narrator;
+    private String spokenPage;
     private LinearLayout body;
     private ScrollView scroll;
     private TextView counter;
@@ -50,6 +52,7 @@ public final class PermissionGuideActivity extends Activity {
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        narrator = new TutorialNarrator(this);
         settingsOpened = savedInstanceState != null
                 && savedInstanceState.getBoolean(SETTINGS_OPENED_STATE, false);
         medium = getResources().getFont(R.font.pretendard_medium);
@@ -137,6 +140,12 @@ public final class PermissionGuideActivity extends Activity {
             if (page < 4) showPage(page + 1, true);
             else openSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS);
         });
+        Button replay = new Button(this); replay.setText("안내 다시 듣기"); replay.setAllCaps(false);
+        replay.setTypeface(medium); replay.setTextSize(15); replay.setTextColor(BLUE);
+        replay.setBackgroundColor(Color.TRANSPARENT); replay.setMinimumHeight(dp(48));
+        replay.setOnClickListener(v -> { if (narrator.isSpeaking()) narrator.stop(); else narrator.speak(spokenPage); });
+        narrator.setListener((speaking, unavailable) -> replay.setText(speaking ? "음성 멈춤" : "안내 다시 듣기"));
+        footer.addView(replay, new LinearLayout.LayoutParams(-1, -2));
         footer.addView(action, new LinearLayout.LayoutParams(-1, -2));
         later = new Button(this);
         later.setId(R.id.guide_later_action);
@@ -180,6 +189,14 @@ public final class PermissionGuideActivity extends Activity {
             case 3: settingsSteps(); break;
             case 4: allowStep(); break;
         }
+        String[] cues = {
+            "어려운 스마트폰 사용, 이제 클릭 한 번으로. 다음을 눌러 권한 안내를 확인해 주세요.",
+            "click은 접근성 기능으로 화면의 정보를 이해하고 다음에 누를 곳을 안내해요. 권한은 직접 선택하고 설정에서 끌 수 있어요.",
+            "화면에서 필요한 버튼을 찾고, 확인이 필요한 순간을 안내해요. 다음을 눌러 설정 방법을 확인해 주세요.",
+            "접근성 설정 열기를 누르면 휴대폰 설정으로 이동해요. 설치된 앱에서 click 화면 안내를 찾아주세요.",
+            "설치된 앱, click 화면 안내, 허용하기 순서로 눌러주세요. 지금 설정하기 버튼으로 이동할 수 있어요."
+        };
+        spokenPage = cues[page]; narrator.speak(spokenPage);
         scroll.scrollTo(0, 0);
         scroll.post(() -> scroll.scrollTo(0, 0));
         body.setAlpha(1f);
@@ -237,7 +254,6 @@ public final class PermissionGuideActivity extends Activity {
         add(body, title(R.string.guide_features_title, 30), 0);
         add(body, text(R.string.guide_features_description, 18, SECONDARY, medium), 18);
         add(body, feature(Kind.SEARCH, R.string.guide_find_title, R.string.guide_find_description), 22);
-        add(body, feature(Kind.READ, R.string.guide_read_title, R.string.guide_read_description), 12);
         add(body, feature(Kind.ALERT, R.string.guide_alert_title, R.string.guide_alert_description), 12);
         add(body, feature(Kind.CONTROL, R.string.guide_control_title, R.string.guide_control_description), 12);
     }
@@ -440,6 +456,9 @@ public final class PermissionGuideActivity extends Activity {
         state.putBoolean(SETTINGS_OPENED_STATE, settingsOpened);
         super.onSaveInstanceState(state);
     }
+
+    @Override protected void onStop() { narrator.stop(); super.onStop(); }
+    @Override protected void onDestroy() { narrator.close(); super.onDestroy(); }
 
     private void configureWindow() {
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);

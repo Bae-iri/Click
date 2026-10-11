@@ -5,9 +5,33 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/** FE goal typing for servers that execute typed goals but do not offer resolve_goal. */
+/** Keyword mapping first; only genuine misses may ask our server for interpretation. */
 public final class LocalGoalResolver {
     private LocalGoalResolver() {}
+
+    public static boolean needsServerResolution(GoalCatalogClassifier catalog, AgentServerContract server,
+                                                 String text, String foregroundPackage, String clarification) {
+        if (catalog == null || server == null || !server.supports("resolve_goal")
+                || !"agent-fe-contract.v0.3".equals(server.contractVersion) || clarification != null) return false;
+        String normalized = GoalCatalogClassifier.normalize(text);
+        if (normalized.isEmpty() || normalized.matches(".*(하지마|하지말|지마|지말|지않|안해|말아).*")) return false;
+        GoalCatalogClassifier.Classification result = catalog.classify(text, foregroundPackage);
+        return !result.matched() && !result.ambiguous;
+    }
+
+    public static JSONObject serverSelection(GoalCatalogClassifier catalog, AgentServerContract server,
+                                              String status, JSONObject goal, String message) throws JSONException {
+        JSONArray candidates = new JSONArray();
+        if ("confirmation_required".equals(status) && goal != null && catalog != null) {
+            GoalCatalogClassifier.Match match = catalog.executableGoal(goal.optString("goal_type"));
+            // Reconstruct slots from the local approved catalog, never from generated content.
+            if (match != null && match.catalogVersion.equals(goal.optString("catalog_version"))
+                    && match.targetApp.equals(goal.optString("target_app"))) add(candidates, match, server);
+        }
+        String prompt = candidates.length() > 0 ? "요청을 이렇게 이해했어요. 내용을 확인해 주세요."
+                : "대상과 원하는 변경을 구체적으로 말씀해 주세요.";
+        return new JSONObject().put("message", prompt).put("candidates", candidates);
+    }
 
     public static JSONObject resolve(GoalCatalogClassifier catalog, AgentServerContract server,
                                      String text, String foregroundPackage, String clarification) throws JSONException {

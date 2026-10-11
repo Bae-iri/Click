@@ -6,6 +6,11 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
+import android.graphics.drawable.Drawable;
+import android.view.ViewGroup;
+import com.click.ui.overlay.TaskFlowOverlayView;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -17,6 +22,8 @@ import com.click.ui.overlay.TrashDropView;
 
 /** Hosts the production floating UI locally so tutorial input never starts the agent service. */
 public final class TutorialFloatingHost extends FrameLayout implements ClickOverlayLayout.Callback {
+    public static final int HIGHLIGHT = 0xFF3478F6;
+    private static final int HINT_BACKGROUND = 0xFF2868E8;
     public interface Listener {
         void onModeChanged(ClickOverlayLayout.Mode mode);
         void onTextSubmitted(String text);
@@ -31,11 +38,20 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     private final TextView tapHint;
     private final Paint highlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path hintPointer = new Path();
-    private ValueAnimator highlightPulse;
+    private ValueAnimator highlightPulse, outlinePulse;
     private boolean clickHighlighted, dragging;
     private float pulseProgress;
     private boolean positioned;
+    private float dragStartX, dragStartY;
     private boolean hidden;
+    private String highlightedLabel;
+    private int highlightedId;
+    private TaskFlowOverlayView review;
+    private View outlinedTarget;
+    private final GradientDrawable contrastOutline = new GradientDrawable();
+    private final GradientDrawable accentOutline = new GradientDrawable();
+    private final LayerDrawable targetOutline = new LayerDrawable(new Drawable[]{contrastOutline, accentOutline});
+    private final OnLayoutChangeListener outlineLayout = (v, l, t, r, b, ol, ot, or, ob) -> updateOutlineBounds();
 
     public TutorialFloatingHost(Context context, Listener listener) {
         super(context);
@@ -52,7 +68,7 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         tapHint.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
         tapHint.setGravity(Gravity.CENTER);
         tapHint.setPadding(dp(16), dp(11), dp(16), dp(11));
-        tapHint.setBackground(ClickUi.rounded(ClickUi.BLUE_DARK, dp(18)));
+        tapHint.setBackground(ClickUi.rounded(HINT_BACKGROUND, dp(18)));
         tapHint.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         tapHint.setVisibility(GONE);
         addView(tapHint, new LayoutParams(-2, -2));
@@ -64,18 +80,110 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
 
     public ClickOverlayLayout getControl() { return control; }
     public boolean isHidden() { return hidden; }
+    public void setHint(String hint) { tapHint.setText(hint); }
     public void setClickHighlighted(boolean highlighted) {
         if (clickHighlighted == highlighted) return;
         clickHighlighted = highlighted;
         updateHighlight();
     }
 
+    public void highlight(String label, int id) {
+        highlightedLabel = label; highlightedId = id; refreshTargetHighlight();
+        post(this::refreshTargetHighlight);
+    }
+    public void showReview(TaskFlowOverlayView view) {
+        if (review != null) removeView(review);
+        review = view; review.setVisibility(VISIBLE); control.setVisibility(GONE);
+        addView(view, new LayoutParams(-1, -2, Gravity.CENTER));
+        updateHighlight(); requestLayout();
+    }
+    public void collapseReview() {
+        if (review == null) return;
+        review.setVisibility(GONE);
+        control.collapse(); control.setVisibility(VISIBLE);
+        updateHighlight(); requestLayout();
+    }
+    @Override public boolean onOpenRequested() {
+        if (review == null || review.getVisibility() != GONE) return false;
+        review.setVisibility(VISIBLE); control.setVisibility(GONE);
+        updateHighlight(); requestLayout();
+        return true;
+    }
+    public void hideReview() {
+        if (review != null) removeView(review);
+        review = null; control.setVisibility(hidden ? GONE : VISIBLE);
+        updateHighlight();
+    }
+    private View highlightTarget(View root) {
+        if (root.getVisibility() != VISIBLE) return null;
+        if (highlightedId != 0 && root.getId() == highlightedId) return root;
+        if (highlightedLabel != null && root instanceof TextView
+                && highlightedLabel.contentEquals(((TextView) root).getText())) {
+            return root.isClickable() ? root : root.getParent() instanceof View ? (View) root.getParent() : root;
+        }
+        if (root instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) root).getChildCount(); i++) {
+            View found = highlightTarget(((ViewGroup) root).getChildAt(i)); if (found != null) return found;
+        }
+        return null;
+    }
+
+    private void refreshTargetHighlight() {
+        View target = dragging || hidden ? null : highlightTarget(review == null ? control : review);
+        if (target != null && (!target.isShown() || !target.isEnabled())) target = null;
+        if (outlinedTarget != target) {
+            if (outlinedTarget != null) {
+                outlinedTarget.getOverlay().remove(targetOutline);
+                outlinedTarget.removeOnLayoutChangeListener(outlineLayout);
+            }
+            outlinedTarget = target;
+            if (target != null) {
+                contrastOutline.setColor(Color.TRANSPARENT);
+                contrastOutline.setStroke(dp(7), Color.WHITE);
+                accentOutline.setColor(Color.TRANSPARENT);
+                accentOutline.setStroke(dp(4), HIGHLIGHT);
+                target.getOverlay().add(targetOutline);
+                target.addOnLayoutChangeListener(outlineLayout);
+            }
+        }
+        updateOutlineBounds();
+        updateOutlinePulse();
+    }
+    private void updateOutlinePulse() {
+        boolean animate = outlinedTarget != null && isAttachedToWindow() && hasWindowFocus()
+                && !dragging && ValueAnimator.areAnimatorsEnabled();
+        if (!animate) { stopOutlinePulse(); return; }
+        if (outlinePulse != null) return;
+        // Keep the outline visible at all times; gently brighten it without flashing.
+        outlinePulse = ValueAnimator.ofInt(255, 185);
+        outlinePulse.setDuration(1200);
+        outlinePulse.setRepeatMode(ValueAnimator.REVERSE);
+        outlinePulse.setRepeatCount(ValueAnimator.INFINITE);
+        outlinePulse.addUpdateListener(animation -> accentOutline.setAlpha((int) animation.getAnimatedValue()));
+        outlinePulse.start();
+    }
+    private void stopOutlinePulse() {
+        if (outlinePulse != null) outlinePulse.cancel();
+        outlinePulse = null;
+        accentOutline.setAlpha(255);
+    }
+    private void updateOutlineBounds() {
+        if (outlinedTarget == null) return;
+        // Draw on the button itself: Android moves and clips its outline together with
+        // the button, including translations, keyboard relayout and ScrollView scrolling.
+        targetOutline.setBounds(dp(1), dp(1), outlinedTarget.getWidth() - dp(1), outlinedTarget.getHeight() - dp(1));
+        float radius = outlinedTarget.getId() == R.id.overlay_microphone
+                ? outlinedTarget.getHeight() / 2f : dp(18);
+        contrastOutline.setCornerRadius(radius);
+        accentOutline.setCornerRadius(radius);
+    }
+
     private boolean highlightVisible() {
-        return clickHighlighted && !hidden && !dragging
+        return review == null && clickHighlighted && !hidden && !dragging
                 && control.getMode() == ClickOverlayLayout.Mode.COLLAPSED;
     }
 
     private void updateHighlight() {
+        refreshTargetHighlight();
         boolean visible = highlightVisible();
         tapHint.setVisibility(visible ? VISIBLE : GONE);
         positionHint();
@@ -107,12 +215,14 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     }
 
     @Override protected void onDetachedFromWindow() {
+        stopOutlinePulse();
         stopPulse();
         super.onDetachedFromWindow();
     }
 
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
+        refreshTargetHighlight();
         positionHint();
     }
 
@@ -128,21 +238,21 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         if (highlightVisible()) {
             float cx = control.getX() + dp(32), cy = control.getY() + dp(32);
             highlightPaint.setStyle(Paint.Style.FILL);
-            highlightPaint.setColor(0xFFDCEAFF);
+            highlightPaint.setColor(0xFFE5EFFF);
             canvas.drawCircle(cx, cy, dp(42), highlightPaint);
             highlightPaint.setStyle(Paint.Style.STROKE);
-            highlightPaint.setStrokeWidth(dp(3));
-            highlightPaint.setColor(ClickUi.BLUE);
+            highlightPaint.setStrokeWidth(dp(4));
+            highlightPaint.setColor(HIGHLIGHT);
             highlightPaint.setAlpha(Math.round(110 * (1f - pulseProgress)));
             canvas.drawCircle(cx, cy, dp(42) + dp(12) * pulseProgress, highlightPaint);
             highlightPaint.setColor(Color.WHITE);
             highlightPaint.setStrokeWidth(dp(8));
             canvas.drawCircle(cx, cy, dp(35), highlightPaint);
-            highlightPaint.setColor(ClickUi.BLUE);
-            highlightPaint.setStrokeWidth(dp(3));
+            highlightPaint.setColor(HIGHLIGHT);
+            highlightPaint.setStrokeWidth(dp(4));
             canvas.drawCircle(cx, cy, dp(35), highlightPaint);
             highlightPaint.setStyle(Paint.Style.FILL);
-            highlightPaint.setColor(ClickUi.BLUE_DARK);
+            highlightPaint.setColor(HINT_BACKGROUND);
             float tailX = Math.max(tapHint.getX() + dp(14),
                     Math.min(cx, tapHint.getX() + tapHint.getWidth() - dp(14)));
             float bottom = tapHint.getY() + tapHint.getHeight();
@@ -176,6 +286,7 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         LayoutParams params = (LayoutParams) control.getLayoutParams();
         params.width = Math.min(width, control.getWindowWidth(control.getMode(), width));
         params.height = Math.min(height, control.getWindowHeight(control.getMode()));
+        if (review != null) review.setAvailableHeight(height);
         super.onMeasure(widthSpec, heightSpec);
     }
 
@@ -215,6 +326,7 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         updateHighlight();
         control.animate().cancel();
         control.collapse();
+        dragStartX = control.getX(); dragStartY = control.getY();
         trash.setActive(false);
         trash.setVisibility(VISIBLE);
     }
@@ -227,7 +339,10 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         boolean removed = overTrash();
         trash.setVisibility(GONE);
         if (removed) onCloseRequested();
-        else { snap(); listener.onMoved(); }
+        else {
+            boolean moved = Math.hypot(control.getX() - dragStartX, control.getY() - dragStartY) > dp(12);
+            snap(); if (moved) listener.onMoved();
+        }
         updateHighlight();
     }
     @Override public void onDragCancelled() {
@@ -253,11 +368,12 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     private void constrain(float x, float y) {
         control.setX(Math.max(0, Math.min(x, getWidth() - control.getLayoutParams().width)));
         control.setY(Math.max(0, Math.min(y, getHeight() - control.getLayoutParams().height)));
-        positionHint();
+        positionHint(); invalidate();
     }
     private void snap() {
         float right = Math.max(0, getWidth() - control.getLayoutParams().width);
         control.animate().x(control.getX() < right / 2f ? 0 : right).setDuration(180)
+                .setUpdateListener(animation -> { positionHint(); invalidate(); })
                 .withEndAction(this::positionHint).start();
     }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }

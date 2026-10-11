@@ -1,5 +1,7 @@
 # 개발 작업표
 
+**2026-09-20 정답 데이터·AI-Agent 계획:** 새 데이터 및 graph 개선 작업은 [공통 단계별 계획](../../docs/task-graph-data-plan.md)을 따른다. Backend는 선택용 catalog snapshot·정책·환경·선택 근거 event와 검수 fixture를 연결하고, AI2가 독립 평가한 승인 artifact의 선택·version 고정·rollback을 검증한다. ColorBench·MobiFlow의 공개 graph를 우리 선택 정답으로 간주하지 않는다. 아래 주차별 이력은 당시 구현 기록이며 제품 gold 구축 완료를 뜻하지 않는다.
+
 **Current backend implementation:** [AI-independent backend completion](backend-completion.md) supersedes historical planning below. Approval IDs, history/feedback, account recovery, consent withdrawal and operations tooling are now implemented; real AI/device/cloud verification remains outstanding.
 
 **4주 차 업데이트:** B11~B15 구현·로컬 검증 결과는 [week4.md](week4.md)에 기록했다. 원본 이미지 외부 전송은 서버 마스킹 기능이 준비될 때까지 차단한다. 신규 지원 작업 추가와 실제 기기 검증은 후속 작업이다.

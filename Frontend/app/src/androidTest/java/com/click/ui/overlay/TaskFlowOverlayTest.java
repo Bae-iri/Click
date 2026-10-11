@@ -65,7 +65,10 @@ public class TaskFlowOverlayTest {
     }
 
     private static class Answers implements TaskFlowOverlayView.Listener {
-        String goal, answer, control, clarification;
+        String goal, answer, control, clarification, replay;
+        boolean audioStopped;
+        public void replayGuidance(String message) { replay = message; }
+        public void stopGuidance() { audioStopped = true; }
         public void chooseGoal(JSONObject value) { goal = value.optString("goal_type"); }
         public void clarify(String value) { clarification = value; }
         public void rephrase(String value) { clarification = value; }
@@ -104,7 +107,7 @@ public class TaskFlowOverlayTest {
         }
     }
 
-    @Test public void progressIsReadOnlyAndSupportsDynamicRouteLength() throws Exception {
+    @Test public void spokenProgressHidesInternalChecklistAndSupportsCaptions() throws Exception {
         JSONArray rows = new JSONArray("[{\"label\":\"디스플레이 메뉴 확인\",\"status\":\"completed\"},"
             + "{\"label\":\"글자 크기 조절하기\",\"status\":\"current\"},{\"label\":\"변경 결과 확인\",\"status\":\"pending\"},"
             + "{\"label\":\"Graph의 추가 단계\",\"status\":\"pending\"}]");
@@ -114,14 +117,22 @@ public class TaskFlowOverlayTest {
                 TaskFlowOverlayView panel = new TaskFlowOverlayView(activity, answers);
                 activity.setContentView(panel); panel.progress("글자를 크게 보기", rows, "글자 크기 버튼을 눌러 주세요.");
                 assertNotNull(find(panel, "글자 크기 버튼을 눌러 주세요."));
-                assertNotNull(find(panel, "디스플레이 메뉴 확인"));
-                assertNotNull(findDescription(panel, "완료: 디스플레이 메뉴 확인"));
-                assertNotNull(findDescription(panel, "지금 할 일: 글자 크기 조절하기"));
-                assertNotNull(findDescription(panel, "대기: Graph의 추가 단계"));
-                assertNotNull(findDescription(panel, "Click 로고"));
+                assertNull(find(panel, "디스플레이 메뉴 확인"));
+                assertNull(find(panel, "진행 단계"));
+                assertEquals(View.GONE, find(panel, "글자 크기 버튼을 눌러 주세요.").getVisibility());
+                find(panel, "다시 듣기").performClick(); assertEquals("글자 크기 버튼을 눌러 주세요.", answers.replay);
+                panel.setNarrationState(true, false);
+                find(panel, "음성 멈춤").performClick(); assertTrue(answers.audioStopped);
+                panel.setNarrationState(false, false);
+                find(panel, "글로 보기").performClick();
+                assertEquals(View.VISIBLE, find(panel, "글자 크기 버튼을 눌러 주세요.").getVisibility());
+                find(panel, "글 접기").performClick();
+                panel.setNarrationState(false, true);
+                assertEquals(View.VISIBLE, find(panel, "글자 크기 버튼을 눌러 주세요.").getVisibility());
+                assertNotNull(findDescription(panel, "안내 창 접기"));
                 assertFalse(containsCheckBox(panel)); snapshot(panel, "progress");
                 panel.completed("사용자 보고상 해결, 기술적 검증 불가", () -> {});
-                assertNotNull(findDescription(panel, "지금 할 일: 글자 크기 조절하기"));
+                assertNull(findDescription(panel, "지금 할 일: 글자 크기 조절하기"));
                 assertNull(findDescription(panel, "완료: 글자 크기 조절하기"));
                 panel.progress("글자를 크게 보기", rows);
                 find(panel, "결과 확인하기").performClick(); assertEquals("request_result", answers.control);
@@ -129,7 +140,7 @@ public class TaskFlowOverlayTest {
             });
         }
     }
-    @Test public void requirementsAskForScopeAndKeepExecutionStepsOutOfChecklist() {
+    @Test public void requirementsUseRequestBoxAndSpeechWithExplicitConfirmation() {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
             scenario.onActivity(activity -> {
                 RequirementReview review = new RequirementReview("글자 크기 키워줘");
@@ -143,27 +154,59 @@ public class TaskFlowOverlayTest {
                 };
                 panel[0] = new TaskFlowOverlayView(activity, answers);
                 activity.setContentView(panel[0]); panel[0].requirements(review, false);
-                assertNotNull(find(panel[0], "대상 · 확인 필요"));
+                assertNull(find(panel[0], "요청 확인 체크리스트"));
+                assertNotNull(find(panel[0], "내 요청"));
+                assertNotNull(find(panel[0], "글자 크기 키워줘"));
+                assertEquals(View.GONE, find(panel[0], review.prompt(false)).getVisibility());
                 assertFalse(find(panel[0], "이 내용으로 시작").isEnabled());
                 assertFalse(confirmed[0]);
                 snapshot(panel[0], "requirements-missing");
                 find(panel[0], "휴대폰 기본 글자").performClick();
-                assertNotNull(find(panel[0], "적용 범위 · 휴대폰 기본 글자 크기"));
+                assertNotNull(find(panel[0], review.summary()));
                 assertTrue(find(panel[0], "이 내용으로 시작").isEnabled());
                 assertFalse(confirmed[0]);
                 snapshot(panel[0], "requirements-ready");
                 find(panel[0], "이 내용으로 시작").performClick(); assertTrue(confirmed[0]);
                 panel[0].progress(review.summary(), new JSONArray().put(json("{\"label\":\"디스플레이 메뉴 확인\",\"status\":\"completed\"}")), "디스플레이를 눌러 주세요", false);
                 assertNull(find(panel[0], "디스플레이 메뉴 확인"));
-                assertNotNull(find(panel[0], "요청 확인 체크리스트"));
-                assertNotNull(find(panel[0], "대상 · 휴대폰 설정"));
+                assertNull(find(panel[0], "요청 확인 체크리스트"));
+                assertNotNull(find(panel[0], review.summary()));
                 RequirementReview app = new RequirementReview("카카오톡 전체 글자를 크게");
                 panel[0].requirements(app, false);
-                assertNotNull(find(panel[0], "대상 · 카카오톡"));
-                assertNotNull(find(panel[0], "적용 범위 · 앱 전체 글자"));
+                assertNotNull(find(panel[0], "카카오톡 전체 글자를 크게"));
                 assertFalse(find(panel[0], "이 내용으로 시작").isEnabled());
                 snapshot(panel[0], "requirements-app");
                 find(panel[0], "요청 중지").performClick(); assertEquals("cancel_task", answers.control);
+            });
+        }
+    }
+    @Test public void cardHeightFitsContentAndLongRequestsStayScrollable() {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(activity -> {
+                TaskFlowOverlayView panel = new TaskFlowOverlayView(activity, new Answers());
+                activity.setContentView(panel);
+                float density = activity.getResources().getDisplayMetrics().density;
+                int width = new ClickOverlayLayout(activity).getWindowWidth(ClickOverlayLayout.Mode.MENU,
+                        activity.getResources().getDisplayMetrics().widthPixels);
+                int cap = Math.round(440 * density);
+                panel.setAvailableHeight(cap);
+                panel.waiting("요청을 살펴보고 있어요");
+                panel.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(cap, View.MeasureSpec.AT_MOST));
+                int shortHeight = panel.getMeasuredHeight();
+                RequirementReview review = new RequirementReview("글자 크기를 키우고 싶어요. ".repeat(20));
+                panel.requirements(review, false);
+                panel.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(cap, View.MeasureSpec.AT_MOST));
+                panel.layout(0, 0, width, panel.getMeasuredHeight());
+                assertTrue(panel.getMeasuredHeight() > shortHeight);
+                assertTrue(panel.getMeasuredHeight() <= cap);
+                assertEquals(width, panel.getMeasuredWidth());
+                assertEquals(View.GONE, find(panel, "이 내용으로 시작").getVisibility());
+                assertTrue(find(panel, "요청 중지").getHeight() > 0);
+                find(panel, "요청 더 보기").performClick();
+                assertNotNull(find(panel, "요청 접기"));
+                assertEquals(activity.getResources().getFont(com.click.designpreview.R.font.pretendard_semibold),
+                        find(panel, "요청을 확인해 주세요").getTypeface());
+                snapshot(panel, "requirements-long");
             });
         }
     }
@@ -192,8 +235,9 @@ public class TaskFlowOverlayTest {
         return false;
     }
     private static void snapshot(View view, String name) {
-        int width = view.getResources().getDisplayMetrics().widthPixels
-                - Math.round(24 * view.getResources().getDisplayMetrics().density);
+        int width = Math.min(view.getResources().getDisplayMetrics().widthPixels
+                - Math.round(24 * view.getResources().getDisplayMetrics().density),
+                Math.round(344 * view.getResources().getDisplayMetrics().density));
         view.forceLayout();
         view.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(1400, View.MeasureSpec.AT_MOST));

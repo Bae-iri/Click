@@ -38,6 +38,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         default void onDragCancelled() {}
         void onTextSubmitted(String text);
         void onCloseRequested();
+        default boolean onOpenRequested() { return false; }
         default void onMicrophoneClicked() {}
         default void onStopRequested() {}
     }
@@ -101,6 +102,7 @@ public final class ClickOverlayLayout extends ViewGroup {
     public void openVoice() { changeMode(Mode.VOICE); }
     public void collapse() { changeMode(Mode.COLLAPSED); }
     public String getDraftText() { return goalInput.getText().toString(); }
+    public void setInputHint(String hint) { goalInput.setHint(hint); }
     public void setDraftText(String text) { goalInput.setText(text); }
     public void setConversationPlaceholder(String text) { chatBubbles.setPlaceholder(text); }
     public void setRecognizedSpeech(String text) {
@@ -133,7 +135,7 @@ public final class ClickOverlayLayout extends ViewGroup {
     }
     public int getWindowHeight(Mode target) {
         if (target == Mode.COLLAPSED) return dp(64);
-        int base = target == Mode.TEXT ? 428 : target == Mode.VOICE ? 420 : 340;
+        int base = target == Mode.TEXT ? 428 : target == Mode.VOICE ? 420 : 256;
         float scale = Math.max(1f, getResources().getConfiguration().fontScale);
         return Math.min(Math.round(dp(base) * scale),
                 getResources().getDisplayMetrics().heightPixels - dp(96));
@@ -142,7 +144,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         return getClickCenterX(target, getWindowWidth(target, getResources().getDisplayMetrics().widthPixels));
     }
     public float getClickCenterX(Mode target, int width) {
-        return target == Mode.COLLAPSED ? dp(32) : width - dp(40);
+        return target == Mode.COLLAPSED ? dp(32) : width - dp(44);
     }
     public float getClickCenterY(Mode target) {
         return target == Mode.COLLAPSED ? dp(32) : dp(16) + headerHeight() / 2f;
@@ -177,7 +179,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         if (mode == Mode.COLLAPSED) return;
         panel = new LinearLayout(getContext());
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(dp(20), dp(16), dp(20), dp(20));
+        panel.setPadding(dp(20), dp(16), dp(20), dp(mode == Mode.MENU ? 16 : 20));
         panel.setBackground(ClickUi.outlined(Color.WHITE, ClickUi.BORDER, dp(28), dp(1)));
         addView(panel);
 
@@ -186,17 +188,16 @@ public final class ClickOverlayLayout extends ViewGroup {
         TextView title = label("click", 22, ClickUi.TEXT, true);
         if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView fold = action("접기", false, this::collapse);
-        fold.setTextSize(15);
-        fold.setContentDescription("Click 메뉴 접기");
-        fold.setPadding(0, 0, 0, 0);
-        fold.setBackground(new RippleDrawable(ColorStateList.valueOf(0x183478F6),
-                ClickUi.rounded(Color.TRANSPARENT, dp(16)), ClickUi.rounded(Color.WHITE, dp(16))));
-        int foldWidth = dp(Math.max(48, Math.round(34 * getResources().getConfiguration().fontScale)));
-        header.addView(fold, new LinearLayout.LayoutParams(foldWidth, -1));
-        View handle = new View(getContext());
-        handle.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-        header.addView(handle, new LinearLayout.LayoutParams(dp(64), -1));
+        ImageView close = new ImageView(getContext());
+        close.setId(R.id.overlay_collapse);
+        close.setImageResource(R.drawable.ic_overlay_close);
+        close.setContentDescription("창 닫기. 작은 click 버튼으로 접기");
+        close.setPadding(dp(12), dp(12), dp(12), dp(12));
+        close.setFocusable(true);
+        close.setBackground(new RippleDrawable(ColorStateList.valueOf(0x183478F6),
+                ClickUi.rounded(0xFFF1F4F9, dp(16)), ClickUi.rounded(Color.WHITE, dp(16))));
+        close.setOnClickListener(view -> collapse());
+        header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
         panel.addView(header, new LinearLayout.LayoutParams(-1, headerHeight()));
 
         requestRow = new LinearLayout(getContext());
@@ -216,7 +217,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             choices.setOrientation(LinearLayout.VERTICAL);
             choices.addView(feature("말로 시작", true, () -> changeMode(Mode.VOICE)), spaced(0));
             choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(12));
-            addScrollableBody(choices, 18);
+            addScrollableBody(choices, 12);
         } else if (mode == Mode.VOICE) {
             LinearLayout listening = new LinearLayout(getContext());
             listening.setOrientation(LinearLayout.VERTICAL);
@@ -377,15 +378,16 @@ public final class ClickOverlayLayout extends ViewGroup {
     }
     @Override protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
-        float x = mode == Mode.COLLAPSED ? getWidth() / 2f : getWidth() - dp(40);
-        ClickIconRenderer.draw(this, canvas, paint, path, x, getClickCenterY(mode),
-                dp(mode == Mode.COLLAPSED ? 28 : 23), 0f, false);
+        if (mode == Mode.COLLAPSED) {
+            ClickIconRenderer.draw(this, canvas, paint, path, getWidth() / 2f,
+                    getClickCenterY(mode), dp(28), 0f, false);
+        }
     }
     @Override public boolean onInterceptTouchEvent(MotionEvent event) {
         return event.getActionMasked() == MotionEvent.ACTION_DOWN && hitsHandle(event);
     }
     private boolean hitsHandle(MotionEvent event) {
-        float cx = mode == Mode.COLLAPSED ? getWidth() / 2f : getWidth() - dp(40);
+        float cx = mode == Mode.COLLAPSED ? getWidth() / 2f : getWidth() - dp(44);
         return Math.hypot(event.getX() - cx, event.getY() - getClickCenterY(mode)) <= dp(32);
     }
     @SuppressLint("ClickableViewAccessibility")
@@ -437,22 +439,23 @@ public final class ClickOverlayLayout extends ViewGroup {
     }
     @Override public boolean performClick() {
         super.performClick();
+        if (mode == Mode.COLLAPSED && callback != null && callback.onOpenRequested()) return true;
         changeMode(mode == Mode.COLLAPSED ? Mode.MENU : Mode.COLLAPSED);
         return true;
     }
     @Override public boolean performLongClick() {
         removeCallbacks(hideAfterHold);
-        holding = false;
-        holdConsumed = true;
+        dragging = true;
+        holdConsumed = false;
         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
         hideKeyboard();
-        if (callback != null) callback.onCloseRequested();
+        if (callback != null) callback.onDragStarted();
         return true;
     }
     private void updateDescription() {
         setContentDescription(mode == Mode.COLLAPSED
-                ? "Click 기능 열기. 꾹 누르면 숨기고, 드래그하면 이동합니다."
-                : "Click 메뉴 접기. 꾹 누르면 숨기고, 드래그하면 이동합니다.");
+                ? "Click 기능 열기. 꾹 누르면 휴지통이 나타납니다. 끌어서 이동하거나 휴지통에 놓아 숨깁니다."
+                : "Click 메뉴 접기. 꾹 누르면 휴지통이 나타납니다. 끌어서 이동하거나 휴지통에 놓아 숨깁니다.");
     }
     private void submitText() {
         String text = goalInput.getText().toString().trim();

@@ -1,5 +1,6 @@
 """Verify one correlated attempt against its original target and baseline."""
 from hashlib import sha256
+from math import isfinite
 
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, target_key
 from ai_agent.runtime.types import VerificationResult, VerificationStatus as Status
@@ -11,7 +12,10 @@ def correlate_action(session, request, transition):
     event = request.user_action_event
     if not attempt or not event or not transition or attempt.get('event_key'):
         return attempt, processed
-    expected = {'tap': {'tap_completed'}, 'drag': {'drag_completed'},
+    if ((event.session_id is not None and event.session_id != request.session_id)
+            or (attempt.get('episode_id') is not None and event.episode_id != attempt['episode_id'])):
+        return attempt, processed
+    expected = {'tap': {'tap_completed'}, 'drag': {'drag_completed', 'tap_completed'},
                 'scroll': {'scroll_completed', 'scroll_failed'}}.get(transition.action_type.value, set())
     if (event.action_type.value not in expected
             or event.guide_command_id != attempt['guide_command_id']
@@ -23,7 +27,8 @@ def correlate_action(session, request, transition):
     if event_key in processed:
         return attempt, processed
     baseline_time = attempt.get('baseline_captured_at_ms')
-    if event.occurred_at_ms is not None and baseline_time is not None and event.occurred_at_ms < baseline_time:
+    if (event.occurred_at_ms is None or baseline_time is None
+            or event.occurred_at_ms <= baseline_time):
         return attempt, processed
     attempt.update(event_key=event_key, action_at_ms=event.occurred_at_ms,
                    action_type=event.action_type.value)
@@ -51,9 +56,9 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
         current_snapshot.observation_id == previous_snapshot.observation_id
         or (observation_time is not None and previous_snapshot.captured_at_ms is not None
             and observation_time <= previous_snapshot.captured_at_ms)))
-    if correlated and (stale_observation
-            or (current_snapshot and current_snapshot.observation_id == baseline_id)
-            or (observation_time is not None and action_time is not None and observation_time < action_time)):
+    if stale_observation or (correlated and (
+            (current_snapshot and current_snapshot.observation_id == baseline_id)
+            or (observation_time is not None and action_time is not None and observation_time <= action_time))):
         return result(Status.WAITING_FOR_OBSERVATION, 'observation_precedes_action')
 
     # A manually reached nonterminal screen is progress, not evidence of executing a guide.
@@ -68,16 +73,26 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
         return result(Status.WAITING_FOR_ACTION, 'no_correlated_action')
 
     if transition.verification_predicate in {'target_value_increased', 'target_value_decreased'}:
+        if (not current_snapshot or not current_snapshot.observation_id or not baseline_id
+                or observation_time is None or action_time is None):
+            return result(Status.UNKNOWN, 'missing_observation_timing')
         candidates = [node for node in eligible_nodes(transition, nodes, graph)
                       if target_key(node) == attempt.get('target_key')
                       and node.window_id == attempt.get('target_window_id')
+                      and not node.node_id.startswith('vision:')
                       and selector_evidence(node, transition, nodes, graph)[0] >= 0.7]
         baseline = attempt.get('baseline_value')
         if len(candidates) != 1 or baseline is None or candidates[0].value is None:
             return result(Status.UNKNOWN, 'target_value_unobservable')
         value = candidates[0].value
         changed = value > baseline if transition.verification_predicate.endswith('increased') else value < baseline
-        if changed:
+        applied_before = attempt.get('baseline_font_scale')
+        applied_after = font_scale(current_snapshot.applied_settings)
+        if applied_before is None or applied_after is None:
+            return result(Status.UNKNOWN, 'applied_setting_unobservable')
+        applied_changed = (applied_after > applied_before if transition.verification_predicate.endswith('increased')
+                           else applied_after < applied_before)
+        if changed and applied_changed:
             return result(Status.SUCCESS, transition.verification_predicate, count=True,
                           completed=transition.completes_task,
                           message='Requested target value changed in the requested direction.')
@@ -100,3 +115,12 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             and observation_time - action_time >= graph.policy.observation_timeout_ms):
         return result(Status.UNKNOWN, 'observation_timeout')
     return result(Status.WAITING_FOR_OBSERVATION, 'awaiting_settled_observation')
+
+
+def font_scale(settings):
+    """Read persisted Android font preference, never infer it from an OCR/slider label."""
+    value = (settings or {}).get('font_scale')
+    if ((settings or {}).get('source') != 'android.provider.Settings.System.FONT_SCALE'
+            or type(value) not in (int, float) or not isfinite(value) or not 0 < value <= 10):
+        return None
+    return float(value)

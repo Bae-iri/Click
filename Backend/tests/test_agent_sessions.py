@@ -103,27 +103,38 @@ def test_owner_cancel_replay_and_expiry():
 
 
 def test_terminal_completion_survives_restart_and_blocks_new_turns(tmp_path):
-    from tests.test_agent_turn_api import slider_tree
+    from tests.test_task_outcomes import screen
     url = f"sqlite+pysqlite:///{tmp_path.as_posix()}/completed.db"
     with TestClient(create_app(url)) as client:
         auth = register(client)
-        first = {**payload(), "accessibility_tree": slider_tree(3)}
+        first = {**payload(), "accessibility_tree": screen(3, 1000, 1.0)}
         initial = post(client, first).json()
         assert initial["task_status"] == "WAITING_CONFIRMATION"
-        assert post(client, {**follow(1), "accessibility_tree": slider_tree(3), "user_confirmation": "accepted", "confirmation_id": initial["metadata"]["confirmation"]["id"]}).status_code == 200
+        accepted = post(client, {**follow(1), "accessibility_tree": screen(3, 1100, 1.0),
+            "user_confirmation": "accepted", "confirmation_id": initial["metadata"]["confirmation"]["id"]})
+        assert accepted.status_code == 200
     with TestClient(create_app(url)) as client:
         client.headers["Authorization"] = "Bearer " + auth["access_token"]
-        unchanged = post(client, {**follow(2, "r3"), "accessibility_tree": slider_tree(3)})
+        unchanged = post(client, {**follow(2, "r3"), "accessibility_tree": screen(3, 1150, 1.0)})
         assert unchanged.json()["task_status"] != "COMPLETED"
-        complete = {**follow(3, "r4"), "accessibility_tree": {**slider_tree(4), "captured_at": "2026-08-30T10:00:01Z"},
-            "user_action_event": {"event_id": "completed-drag", "action_type": "drag_completed",
-                "guide_command_id": unchanged.json()["guide_command"]["guide_command_id"],
-                "target_node_id": "font-slider"}}
-        done = post(client, complete)
+        complete = {**follow(3, "r4"), "accessibility_tree": screen(4, 1800, 1.15),
+            "user_action_event": {"event_id": "completed-drag", "action_type": "drag_completed", "occurred_at_ms": 1200,
+                "guide_command_id": accepted.json()["guide_command"]["guide_command_id"], "target_node_id": "font-slider"}}
+        waiting = post(client, complete)
+        assert waiting.json()["task_status"] == "WAITING_RESULT"
+        assert post(client, complete).json() == waiting.json()
+    with TestClient(create_app(url)) as client:
+        client.headers["Authorization"] = "Bearer " + auth["access_token"]
+        state = session(client).json()
+        assert state["status"] == "WAITING_RESULT"
+        done = client.post("/api/v1/agent/commands", json={"contract_version": "agent-fe-contract.v0.2",
+            "request_id": "confirm-result", "session_id": "s1", "expected_version": 4,
+            "episode_id": state["episode_id"], "command_type": "respond_result", "user_result": "satisfied",
+            "result_prompt_id": state["task_outcome"]["prompt"]["id"]})
+        assert done.status_code == 200, done.text
         assert done.json()["task_status"] == "COMPLETED"
-        assert post(client, complete).json() == done.json()
-        assert post(client, follow(4, "r5")).status_code == 409
-        assert cancel(client, 4).status_code == 409
+        assert post(client, follow(5, "r5")).status_code == 409
+        assert cancel(client, 5).status_code == 409
 
 
 def test_checkpoint_has_no_raw_goal_screen_labels_or_plain_fingerprint():

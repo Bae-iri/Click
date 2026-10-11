@@ -1,7 +1,7 @@
 """Graph-owned selectors shared by matching and result verification."""
 from hashlib import sha256
 
-from ai_agent.runtime.keywords import any_keyword_matches, normalize_text
+from ai_agent.runtime.keywords import any_keyword_matches, any_phrase_matches, normalize_text
 from ai_agent.runtime.types import ActionType, NormalizedNode, TaskGraph, Transition
 
 
@@ -51,9 +51,13 @@ def selector_evidence(node, transition, nodes, graph) -> tuple[float, str]:
     if node.resource_id and node.resource_id in selector.resource_ids:
         return 1.0, 'resource_id'
     keywords = selector_keywords(transition, graph)
-    if normalize_text(node.label) in {normalize_text(word) for word in keywords}:
+    names = {normalize_text(part) for part in (node.label, *node.label_parts)}
+    if names.intersection(normalize_text(word) for word in keywords):
         return 0.9, 'exact_label'
-    if any_keyword_matches(node.label, keywords):
+    # Short/general aliases identify a whole title, not e.g. 홈 화면 or Always on display.
+    specific = tuple(word for word in keywords if len(normalize_text(word)) > 2
+                     and normalize_text(word) not in {"screen", "display"})
+    if any_phrase_matches(node.label, specific):
         return 0.8, 'keyword'
     if not node.label and selector.allow_unlabelled_in_context:
         # A page title may name a single unlabelled control, never a named other setting.

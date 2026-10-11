@@ -30,6 +30,25 @@ class AgentSession(Base):
     expires_at: Mapped[int] = mapped_column(BigInteger, index=True)
     lease_token: Mapped[str | None] = mapped_column(String(36))
     lease_until: Mapped[int | None] = mapped_column(BigInteger)
+    task_outcome: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    outcome_history: Mapped[list] = mapped_column(JSONType, default=list)
+    paused_from: Mapped[str | None] = mapped_column(String(30))
+
+
+class AgentGoalResolution(Base):
+    __tablename__ = "agent_goal_resolutions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    session_id: Mapped[str] = mapped_column(String(200), index=True)
+    request_id: Mapped[str] = mapped_column(String(200))
+    request_hash: Mapped[str] = mapped_column(String(64))
+    candidates: Mapped[list] = mapped_column(JSONType)
+    response: Mapped[dict] = mapped_column(JSONType)
+    selected_goal: Mapped[str | None] = mapped_column(String(200))
+    selection_request_id: Mapped[str | None] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(30), default="PENDING")
+    expires_at: Mapped[int] = mapped_column(BigInteger)
+    __table_args__ = (UniqueConstraint("user_id", "request_id", name="uq_goal_resolution_request"),)
 
 
 class AgentCheckpoint(Base):

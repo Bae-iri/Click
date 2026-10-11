@@ -1,10 +1,14 @@
 # AI-Agent(2): Runtime Data / Graph Proposal Agent
 
+2026-10-10 평가 기준 갱신: [실제 품질·정답 데이터 기준 v1](./ai-quality-evaluation.md)에서 원천 근거·독립 검수·group split·정량 지표·승격 조건을 정했다. 이는 실제 gold·자동 평가 pipeline 구축 완료가 아니다. `graph_proposal/outcomes.py`의 기술/사용자 결과 분리 집계와 영속 수집·학습·release를 구분한다.
+
 ## 1. 목적과 범위
 
 AI-Agent(2)는 **전체 runtime 데이터를 분석해 success/fail 결과 라벨과 내부 데이터셋을 만들고, Task Graph를 추가·업데이트하는 내부용 에이전트**다. 기존의 `graph-proposal`을 이 에이전트의 책임으로 분리한다. Task Graph는 DB에 저장하며 AI2의 승인된 새 버전을 DB에 반영한다. Backend가 사용자 요구에 맞게 선택해 AI1에 전달하고 AI1은 전달 graph를 실행한다.
 
-사용자는 개발·데이터·운영 팀이다. 입력은 실제 사용자의 새 요청이 아니라 AI-Agent(1), Frontend, Backend가 남긴 실행 기록이다. 출력은 화면 조작 명령이 아니라 근거를 추적할 수 있는 라벨, 데이터셋, graph 변경안, 평가 보고서, 승인 가능한 graph artifact다.
+사용자는 개발·데이터·운영 팀이다. 입력은 AI-Agent(1), Frontend, Backend의 실제 실행 기록·통제된 기기 시연과 적용 범위를 검수한 공개 참고 자료다. 출력은 근거를 추적할 수 있는 라벨, 데이터셋, graph 변경안, 평가 보고서, 승인 가능한 graph artifact다. 원천 화면·행동의 생산은 FE, 요청·선택 event는 Backend, 실행 판단 event는 AI1이 담당하고 AI2는 이 데이터를 수집·재구성한다.
+
+**2026-09-20 계획 갱신:** ColorBench는 경로·복구 평가 보조, MobiAgent의 MobiFlow는 의존관계·완료 규칙 설계 참고로 사용한다. 우리 제품의 선택·실행 정답은 실제 대상 환경의 증거와 독립 검수로 구축한다. AI2가 만든 weak label·graph candidate는 자동으로 정답이 되지 않는다. 정답 계약과 우선순위는 [Task Graph 정답 데이터·개발 계획](./task-graph-data-plan.md)을 따른다.
 
 - [전체 구조와 두 에이전트의 경계](./ai-agent-architecture.md)
 - [Backend DB Graph 선택·전달 계약](./backend-task-graph-dispatch.md)
@@ -12,6 +16,8 @@ AI-Agent(2)는 **전체 runtime 데이터를 분석해 success/fail 결과 라�
 - [MVP-01: 글자 크기 확대](./tasks/font-size-increase.md)
 
 이 문서는 2026-09-12의 `a0d3609`에서 확인한 기능 상태와 새 목표 설계를 구분하며, 파일 경로는 이번 `graph_proposal/` 패키지 분리를 반영한다. 아래 pipeline, event 계약, 저장 테이블, job 및 승인 상태는 **구현할 설계**다. 현재 `GraphLearner.generate_proposals()`는 빈 목록을 반환한다. 코드 파일이 있다는 이유로 라벨링·학습·배포가 완성된 것으로 보지 않는다.
+
+2026-09-20 작업 트리에는 MVP-01 합성 fixture를 처리하는 `labeling/mvp01.py`가 있다. 이는 rule-based weak labeler이며 영속 runtime 수집·제품 gold 구축·graph 후보 자동 생성의 구현을 뜻하지 않는다.
 
 예시 ID, 버전, confidence, 표본 수, metric은 이해를 돕기 위한 가상 값이며 실측 결과나 확정된 운영 기준이 아니다. 새 API endpoint, scheduler 제품, queue 제품, 보존 기간은 이 문서로 확정하지 않는다.
 
@@ -29,6 +35,8 @@ AI-Agent(2)는 **전체 runtime 데이터를 분석해 success/fail 결과 라�
 8. 모델 학습용 데이터, 평가용 데이터, 재현 fixture, 오류 분석 자료를 생성한다.
 9. 변경안을 정적 검증·offline 평가하고 승인에 필요한 diff와 근거를 제공한다.
 10. 승인된 후보를 versioned artifact로 준비하고 배포 결과를 다음 분석에 반영한다.
+11. 공개 자료의 원본·변환·검수·제외 이력을 관리하고 해당 benchmark의 정답 범위를 보존한다.
+12. Backend 선택, AI1 경로·완료, AI2 graph 후보 평가용 gold를 각각 구성하고 독립 검수·holdout을 유지한다.
 
 ### 2.2 책임 밖의 작업
 
@@ -53,6 +61,8 @@ AI-Agent(2)가 graph를 업데이트한다는 말은 `candidate 생성 → 검�
 | Labeled Step / Episode | 실행 결과와 실패 원인 분석 | 대상 ID, label, 근거, labeling version |
 | Failure Cluster Report | 반복 문제의 원인 분류 | 환경 cohort, 빈도, 독립 세션 수, 대표·반례 |
 | Dataset Manifest | 학습·평가 재현 | source snapshot, split, label policy, 제외 기준 |
+| Public Reference Manifest | 공개 자료 적용 범위·파생 추적 | URL·revision·hash, 검수 범위, 변환·제외 이력 |
+| Product Gold Manifest | 선택·경로·완료 평가 기준 | 실제 환경·판정 단위·독립 근거·검수 revision·holdout |
 | Training / Evaluation Samples | Goal·State·UI·Verifier 개선 | 입력, 정답, 근거와 데이터 계보 |
 | Graph Update Proposal | 기존 graph 변경 검토 | base version, patch, scope, evidence |
 | New Task Graph Proposal | 지원 Task 확장 검토 | goal schema, graph, 완료 조건, fixture |
@@ -71,17 +81,23 @@ flowchart TD
     C --> D[Schema·Privacy·중복·순서 검증]
     D --> E[Episode·Step 재구성]
     E --> F[Outcome Labeling / Evidence 검증]
-    F --> G{확정 가능한 라벨}
+    F --> G{근거로 outcome 판정 가능}
     G -->|아니오| H[Unknown / Review / 추가 데이터 요청]
-    G -->|예| I[버전이 있는 Labeled Dataset]
+    G -->|예| I[Weak / 검수된 Gold를 구분한 Dataset]
+    PUBLIC[공개 참고 자료] --> IMPORT[출처·구조·범위·변환 검수]
+    IMPORT --> REF[ColorBench 경로 / MobiFlow 규칙 참고]
     I --> J[성공 경로·실패 패턴·화면 Variant 분석]
     J --> K{개선 대상}
+    REF --> K
     K -->|기존 Task| L[Graph Update Proposal]
     K -->|미등록 Task| M[New Task Graph Proposal]
     K -->|Graph 외 문제| N[Goal·Matcher·Verifier Dataset / 내부 Issue]
     L --> O[Candidate Graph 생성]
     M --> O
     O --> P[정적 검증·Replay·Regression·Safety 평가]
+    E --> REVIEW[독립 완료 근거·검수]
+    REVIEW --> GOLD[제품용 Gold / 독립 holdout]
+    GOLD --> P
     P -->|데이터 부족| H
     P -->|실패| Q[Rejected / 수정 후 재평가]
     P -->|통과| R[승인 정책 / 내부 검토]
@@ -219,6 +235,14 @@ AI-Agent(1)의 응답은 이 pipeline의 완료를 기다리지 않는다. 이�
 7. 지연 이벤트는 label revision을 만들 수 있다. 기존 label을 조용히 덮어쓰지 않는다.
 8. graph, runtime, matcher/model, safety policy, label policy 버전을 구분해 저장한다.
 
+### 4.6 공개 참고 자료와 통제된 시연
+
+ColorBench·MobiFlow는 runtime event와 분리해 반입한다. source URL, 고정 revision, 파일 hash, 원본 ID, 적용 환경·용도, 이용 범위, 변환 version 및 제외 사유를 기록한다. ColorBench의 문법·milestone 참조와 MobiFlow의 YAML·의존 노드·조건 필드 결함은 [재재검증 결과](./reviews/2026-09-20-task-graph-gold-fitness-audit.md)에 따라 처리한다. importer나 전체 benchmark 연동이 구현된 것으로 표시하지 않는다.
+
+변환한 graph는 파생 후보 또는 해당 benchmark의 연구용 참조다. 없는 사용자 행동·기준값·설정 변경 결과를 채워 제품 gold로 만들지 않는다. UI 전이 graph의 순환과 단계 DAG의 선행관계를 구분한다. 미다운로드 자료·미재생 환경은 manifest에 미검증으로 표시한다.
+
+초기 제품 gold는 목표 단말의 통제된 시연부터 수집할 수 있다. 운영 graph가 없는 목표도 미지원 요청과 별도 시연을 통해 데이터를 모으되, 사용자 runtime에서 검증되지 않은 graph를 실행하지 않는다. 공개 참고 실험과 실제 시연 수집은 병행한다.
+
 ## 5. Episode와 Step 재구성
 
 ### 5.1 재구성 순서
@@ -306,6 +330,8 @@ task가 성공했다고 모든 step과 선택 target을 positive로 만들지 �
 | `BLOCKED` command | 정책상 금지 또는 동의 거절 | 실행 실패로 단정하지 않고 차단 사유 기록 |
 
 초기 자동 라벨은 rule-based weak label임을 `label_method`로 표시한다. 사람이 검토한 gold label과 구별하고, 동일 runtime verifier의 출력을 정답으로 사용해 그 verifier의 정확도를 다시 평가하지 않는다.
+
+`label_status=final`은 gold 인증이 아니다. 제품 gold에는 실제 대상 환경·판정 단위에 맞는 독립 근거와 검수 revision이 필요하다. 사용자의 완료 응답이나 모델 재판정만으로 실제 값 변화의 근거를 대체하지 않는다. 자동 라벨 검토와 graph release 승인은 별도 이력으로 관리한다.
 
 ### 6.5 실패 원인과 책임 귀속
 
@@ -595,6 +621,7 @@ goal catalog만 먼저 배포해 실행 graph가 없는 task를 지원한다고 
 | Dataset | 입력 → 출력 | 정답 근거와 주의점 |
 | --- | --- | --- |
 | FE Goal/Command Typing | FE 입력·context → goal type, slots, command type | FE clarification·검토 정답; FE 분류 개선용 데이터이며 Agent(1)의 분류 책임이 아님. task 성공만으로 의도 정답 추정 금지 |
+| Backend Graph Selection | 확정 Goal·환경·catalog snapshot·선택 정책 → 허용 graph 집합/미지원/모호성/추가 확인 | 호환 후보와 정책상 허용 선택을 구분; ColorBench 경로와 다른 정답 단위 |
 | State Classification | normalized screen + 환경 → state | 검토된 화면 의미; runtime classifier 출력은 weak label |
 | UI Target Ranking | transition + 전체 후보 → target relevance | 실제 올바른 target과 전후 결과 |
 | Transition Verification | before/action/after → predicate 결과 | 독립 evidence 기반 판정 |
@@ -642,6 +669,8 @@ goal catalog만 먼저 배포해 실행 graph가 없는 task를 지원한다고 
 - proposal을 생성한 evidence set과 검증하는 holdout set을 구분한다.
 - 모델 학습, threshold 조정, proposal 수정에 사용한 test set은 더 이상 순수한 최종 holdout으로 보고하지 않는다.
 - 낮은 신뢰도 weak label과 human-reviewed gold label은 출처와 평가를 분리한다.
+- 공개 원본과 모든 변환·번역·파생본은 같은 source group으로 묶는다. benchmark의 정답 경로·milestone을 숨겨야 하는 실험에서는 실행 입력으로 노출하지 않는다.
+- 공개 benchmark, 합성 fixture, 실제 기기 gold의 성능을 별도로 집계한다. 지원하지 않는 제조사·앱으로 결과를 일반화하지 않는다.
 
 ### 11.4 Dataset Manifest
 
@@ -656,6 +685,12 @@ goal catalog만 먼저 배포해 실행 graph가 없는 task를 지원한다고 
   "allowed_data_use_scope": ["graph_improvement"],
   "split_strategy": "episode_and_subject_grouped_with_time_holdout",
   "included_label_statuses": ["final"],
+  "source_kind": "device_capture",
+  "label_method": "independent_review_with_observation",
+  "review_status": "accepted",
+  "review_revision": "example-review-v1",
+  "evidence_manifest_ref": "example-evidence-manifest",
+  "environment_scope_ref": "example-device-app-scope",
   "excluded_outcomes": ["unknown", "cancelled", "not_applicable"],
   "sample_count": 120,
   "excluded_count": 18,
@@ -665,6 +700,8 @@ goal catalog만 먼저 배포해 실행 graph가 없는 task를 지원한다고 
 ```
 
 실제 생성 시 train/validation/test별 수와 cohort별 수, 제외 사유, 원천 기간도 포함한다. `graph_improvement` 목적만 허용된 데이터는 일반 모델 학습 용도로 자동 확대하지 않는다.
+
+추가 필드는 설계 예시이며 현재 builder에 구현되어 있지 않다. 외부 source에는 URL·revision·hash·원본 ID·변환/제외 이력을, graph 선택 dataset에는 catalog snapshot·선택 정책 version을 추가한다. 위 `excluded_outcomes`는 이진 학습 sample의 예시다. unknown·취소·미지원의 올바른 처리를 평가하는 holdout에서는 해당 기대값과 근거를 보존한다.
 
 ### 11.5 모델 관련 후속 확장
 
@@ -685,12 +722,16 @@ Goal Retriever, Slot Extractor, State Classifier, UI Ranker, State Clusterer, Tr
 - 완료 predicate가 단순 안내 문구나 terminal node 이름에 의존하지 않는다.
 - graph/template/catalog 의존성과 최소 runtime version이 만족된다.
 
+UI 전이 graph의 backtracking 순환을 모두 오류로 처리하지 않는다. 작업 의존관계 DAG와 상태 전이 graph를 구분해 검사한다. 정적 검사를 통과해도 실제 기기 전이와 완료 predicate가 증명되는 것은 아니다.
+
 ### 12.2 Replay의 범위
 
 | 평가 방법 | 확인 가능한 것 | 한계 |
 | --- | --- | --- |
 | Snapshot replay | 같은 화면에서 state·target·safety 판단 | 선택한 action의 실제 다음 화면을 생성하지 못함 |
 | Recorded episode replay | 관측된 경로의 검증·replan 일관성 | 기록되지 않은 대체 action의 결과는 알 수 없음 |
+| ColorBench 검수 subset | 고정 UI graph 안의 경로·milestone·복구 | 우리 후보 graph 선택·실제 기기 설정 변경·사용자 수행 품질은 검증하지 못함 |
+| MobiFlow 검수 rule | DAG 의존관계·분기·관측 조건 처리 | OCR/LLM 및 공개 rule 정확도 별도 검증, 제품 완료 gold 대체 불가 |
 | 검증된 Simulator / 기기 시나리오 | 실제 전이와 최종 완료 여부 | 제공된 환경과 시나리오 범위에 한정 |
 | 제한된 배포 관찰 | 실제 사용자 환경에서 결과 변화 | traffic 구성과 선택 편향을 통제해야 함 |
 
@@ -702,6 +743,7 @@ candidate가 과거에 선택되지 않은 버튼을 고르면 recorded trace의
 | --- | --- |
 | Label coverage | 판정 가능한 eligible 단위 중 success/fail 확정 비율; unknown도 함께 표시 |
 | Label precision / agreement | 검토된 gold subset과 자동 label의 일치, positive/negative별 분리 |
+| Graph selection correctness | Backend 선택이 catalog·환경·정책별 허용 집합/미지원/모호성 정답과 일치; 선택 보류·coverage 함께 보고 |
 | State accuracy | 검토된 화면에서 state 정답 일치 |
 | Target accuracy | 정답 후보가 있는 화면에서 valid target 선택 |
 | Step success rate | eligible한 success / (success + fail), unknown/cancel 별도 |
@@ -713,7 +755,7 @@ candidate가 과거에 선택되지 않은 버튼을 고르면 recorded trace의
 | Safety violations | 금지 action, confirmation 우회, 정책 위반 case 수 |
 | Cohort regression | 제조사·앱 버전·언어 등 subgroup별 baseline 대비 악화 |
 
-분모와 관측 기간 없이 success rate만 제시하지 않는다. cancelled/unknown을 제외해 높아진 성공률과 전체 접수 대비 완료율을 함께 보아야 한다.
+분모와 관측 기간 없이 success rate만 제시하지 않는다. cancelled/unknown을 제외해 높아진 성공률과 전체 접수 대비 완료율을 함께 보아야 한다. 공개 benchmark·합성 fixture·실기기 제품 gold별 결과를 분리하며, graph 선택 평가를 graph 내부 경로 성공률로 대체하지 않는다.
 
 ### 12.4 평가 판정
 
@@ -723,6 +765,8 @@ candidate가 과거에 선택되지 않은 버튼을 고르면 recorded trace의
 - `ERROR`: 평가 도구나 입력 처리 오류. candidate 실패와 별도로 재시도 가능.
 
 공통 필수 기준은 safety invariant 위반 0건, 검토된 필수 regression fixture 통과, 변경 대상 환경에 대한 결과 근거다. 정확도 개선 폭, 최소 표본, latency 허용 범위는 baseline을 확보한 후 metric policy로 버전 관리한다. 측정 사례의 위반 0건을 모든 환경의 안전성 증명으로 표현하지 않는다.
+
+제품 적용 `PASS`에는 우리 환경의 독립 근거와 holdout 결과가 필요하다. 공개 benchmark만 통과했거나 AI2 자신의 라벨만으로 평가했다면 해당 연구 결과를 별도 기록하고 제품 적용은 `NEEDS_DATA`로 둔다. source의 문법·도구 실행 오류는 입력 품질 및 평가 `ERROR`로 구분한다.
 
 ### 12.5 Evaluation Report 예시
 
@@ -938,7 +982,7 @@ AI-Agent(2)는 `AI-Agent/src/ai_agent/graph_proposal/`에 독립 패키지로 �
 | `graph_proposal/schemas.py` | 기존 `GraphUpdateProposal` 정의 | evidence·revision·승인 계약 확장 |
 | `graph_proposal/ingestion/__init__.py` | 수집 책임만 구획, 미구현 | 영속 event·schema·privacy 검사 |
 | `graph_proposal/reconstruction/__init__.py` | 재구성 책임만 구획, 미구현 | episode·step·attempt 연결 |
-| `graph_proposal/labeling/__init__.py` | 라벨링 책임만 구획, 미구현 | step/task outcome·근거·revision |
+| `graph_proposal/labeling/mvp01.py` | 합성 episode fixture의 rule-based weak label 생성 | 영속 실제 event 연동·독립 검수·제품 gold와의 비교 |
 | `graph_proposal/analysis/__init__.py` | 분석 책임만 구획, 미구현 | failure cluster·성공 경로 mining |
 | `graph_proposal/proposals/graph_learner.py` | `generate_proposals()`가 `[]` 반환 | labeled episode 기반 후보 생성 |
 | `graph_proposal/evaluation/graph_validator.py` | 항상 `NEEDS_DATA` 반환 | schema·safety·replay·regression 평가 |
@@ -984,15 +1028,15 @@ AI-Agent/src/ai_agent/
 
 | 단계 | 작업 | 완료 조건 |
 | --- | --- | --- |
-| 1 | event·episode·label 계약 | 모든 종료 경로, 단위 ID, 버전, privacy 범위 정의 |
-| 2 | 영속 수집과 재구성 | 재전송·누락·지연·목표 변경을 재현 가능하게 처리 |
-| 3 | Rule-based Labeler | step/task 분리, success/fail/unknown/cancel 구별 |
-| 4 | 검토 dataset과 quality metric | gold subset, label coverage·오류 분석 |
-| 5 | 기존 graph selector proposal | 근거와 반례, 정확한 diff, base hash 포함 |
-| 6 | Validator와 replay | baseline/candidate 비교, 회귀·NEEDS_DATA 구분 |
-| 7 | 승인·artifact·version loader 연계 | 승인 candidate만 게시, 세션 version 고정 |
-| 8 | 새 State/Transition 및 신규 Task | 관측 근거, catalog 연동, 완료·안전 검증 |
-| 9 | 모델별 dataset 및 선택적 학습 | split·lineage·독립 평가와 모델 호환성 |
+| P0 | 선택·경로·완료 평가 및 event/label/manifest 계약 | 정답 단위·환경·후보 catalog·독립 근거·판정 불가·출처·split 명시 |
+| P1 | 통제된 기기 시연·영속 수집·episode 재구성 | 정상·실패·무변화·누락 사례의 실제 증거, 재전송·지연·목표 변경 처리 |
+| P2 | Weak label 검토·제품 gold·baseline | 독립 검수와 분리된 holdout, Backend 선택·AI1 완료 기준선·오류 분석 |
+| R1 병행 | ColorBench subset·MobiFlow rule 검수 및 참고 실험 | 출처·수정·제외 이력과 benchmark 범위 내 재현; P1 시작을 막지 않음 |
+| P3 | 첫 selector/전이 후보·Validator·회귀 평가 | 실제 근거·반례·diff·base hash, 독립 holdout·필요한 기기 재현 |
+| P4 | 승인·artifact·Backend 선택·AI1 version 소비 | 승인 candidate만 게시, 기존 세션 version 고정, rollback 검증 |
+| P5 | 신규 Task·환경 및 선택적 모델 학습 | 대상별 실제 gold·완료 조건·catalog·split·독립 회귀 근거 |
+
+상태와 선행조건의 기준은 [공통 데이터 계획](./task-graph-data-plan.md#6-개발-순서와-완료-조건)이다. 현재는 제한된 weak labeler와 공개 자료 감사가 있으며 P1/P2의 실제 수집·제품 gold 완료를 선언하지 않는다.
 
 ### 18.2 필수 검증 시나리오
 
@@ -1003,6 +1047,10 @@ AI-Agent/src/ai_agent/
 | 행동 event 없이 동일 화면 반복 | 무조건 fail로 처리하지 않음 |
 | 실패 두 번 후 최종 성공 | 실패 step 유지, task success |
 | runtime DONE이나 완료 증거 없음 | label unknown / false-DONE 검토 |
+| ColorBench milestone 화면만 모두 등장 | 해당 benchmark 기준과 제품 완료 판정을 구분; 실제 값 변화 gold로 승격하지 않음 |
+| MobiFlow rule의 없는 노드·조건 필드 누락 | 반입 검수에서 제외/격리, 원본·수정·사유 보존 |
+| AI2 자동 라벨이 final 상태 | weak label 유지, 독립 근거·검수 없이는 제품 gold 미승격 |
+| 같은 목표에 호환 graph 복수·정책 동점·미지원 환경 | 허용 집합과 모호성/미지원 기대값을 구분한 Backend 선택 fixture |
 | 사용자 수동 복구, 중간 화면 누락 | task 결과와 미확정 edge 분리 |
 | 취소·만료·동의 거절 | 구별된 outcome/reason, UI negative 오염 없음 |
 | 같은 event/request 재전송 | 통계·dataset·proposal 중복 없음 |
@@ -1024,6 +1072,8 @@ AI-Agent/src/ai_agent/
 
 - 하나 이상의 실제 Task에서 전체 실행 수명주기를 영속 수집하고 입력 snapshot으로 재처리할 수 있다.
 - step/task 결과를 근거와 함께 라벨링하며 미확정 항목을 이진 정답에 섞지 않는다.
+- 선택·경로·완료 평가용 제품 gold에 환경·독립 근거·검수 revision·split이 연결되고, 공개 참고 자료·합성 fixture·weak label과 구분된다.
+- 공개 자료 검수 결과와 제품 holdout 결과를 분리해 보고하며 공개 benchmark 통과만으로 제품 graph를 승인하지 않는다.
 - 동일 입력·정책·코드 버전으로 실행할 때 동일한 논리 산출물과 lineage를 재현한다.
 - 최소한 selector/synonym 변경안 하나를 실제 데이터에서 생성하고 반례까지 평가한다.
 - graph 변경이 필요 없는 실패를 내부 분석 또는 데이터 개선 대상으로 보낼 수 있다.

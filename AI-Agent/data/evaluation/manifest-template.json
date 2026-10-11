@@ -1,0 +1,80 @@
+{
+  "schema_version": "click-evaluation-manifest.v2",
+  "artifact_kind": "empty_template_not_product_gold",
+  "dataset_id": null,
+  "dataset_revision": null,
+  "status": "NEEDS_DATA",
+  "policy_ref": "docs/ai-quality-evaluation.md",
+  "policy_version": "2026-10-10.v2",
+  "privacy_boundary": "device_or_our_server_no_third_party_inference",
+  "record_count": 0,
+  "records": [],
+  "source_groups": [],
+  "consent_and_retention_manifest_ref": null,
+  "normalization_version": null,
+  "split": {
+    "group_keys": [
+      "speaker_id",
+      "source_group_id",
+      "episode_id"
+    ],
+    "target_ratios": null,
+    "assignment_manifest_ref": null,
+    "locked_test_hash": null,
+    "policy": "Preserve official benchmark splits. For product evidence, pre-register cluster-based allocation and precision target."
+  },
+  "supported_environments": [],
+  "model_graph_and_code_revisions": [],
+  "independent_review": {
+    "required_reviewers_per_gold_record": null,
+    "adjudication_manifest_ref": null,
+    "required_reviewers_per_new_product_or_derived_label": 2,
+    "public_gold_policy": "Preserve publisher annotation revision; record audit scope and errata separately."
+  },
+  "evaluation": {
+    "run_id": null,
+    "metrics": null,
+    "decision": "NEEDS_DATA",
+    "reason": "No collected, independently reviewed product evidence in this template",
+    "gate_origin": null,
+    "release_gate_status": "UNCALIBRATED",
+    "claim": null,
+    "eligible_population": null,
+    "input_view": null,
+    "oracle_ref": null,
+    "scorer_revision": null,
+    "baseline_revision": null,
+    "uncertainty_method": null
+  },
+  "reference_protocols": [
+    {
+      "dataset": "google/fleurs",
+      "config": "ko_kr",
+      "split": "test",
+      "acquisition_status": "METADATA_ONLY_NOT_AUDIO_DOWNLOADED",
+      "scoring_status": "NOT_RUN"
+    },
+    {
+      "dataset": "KsponSpeech",
+      "split": "eval_clean/eval_other",
+      "acquisition_status": "OFFICIAL_DOCUMENTATION_ONLY",
+      "scoring_status": "NOT_RUN"
+    },
+    {
+      "dataset": "AndroidControl",
+      "split": "official test",
+      "acquisition_status": "OFFICIAL_SPLIT_VERIFIED_NOT_FULL_CORPUS_REVIEWED",
+      "scoring_status": "NOT_RUN"
+    },
+    {
+      "dataset": "ScreenSpot",
+      "acquisition_status": "OFFICIAL_SCORER_INSPECTED_NOT_BENCHMARK_EXECUTED",
+      "scoring_status": "NOT_RUN"
+    },
+    {
+      "dataset": "AndroidWorld",
+      "acquisition_status": "OFFICIAL_DOCUMENTATION_ONLY",
+      "scoring_status": "NOT_RUN"
+    }
+  ]
+}

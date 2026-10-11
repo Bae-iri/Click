@@ -117,3 +117,27 @@ def test_rate_limit():
         response = client.post("/api/v1/auth/login", json={"email": "nobody@example.com", "password": "wrong-password-123"})
         assert response.status_code == 429
         assert response.headers["retry-after"] == "60"
+
+
+def test_eight_character_password_registration_login_change_and_duplicate_email():
+    with TestClient(create_app()) as client:
+        payload = {"email": "eight@example.com", "password": "eight888"}
+        assert client.post("/api/v1/auth/register", json={**payload, "password": "short77"}).status_code == 422
+        response = client.post("/api/v1/auth/register", json=payload)
+        assert response.status_code == 201, response.text
+        assert client.post("/api/v1/auth/register", json={**payload, "email": "EIGHT@example.com"}).status_code == 409
+        assert client.post("/api/v1/auth/login", json=payload).status_code == 200
+        client.headers["Authorization"] = "Bearer " + response.json()["access_token"]
+        assert client.post("/api/v1/auth/password", json={"current_password": "eight888", "new_password": "next8888"}).status_code == 204
+        assert client.post("/api/v1/auth/login", json={**payload, "password": "next8888"}).status_code == 200
+
+
+def test_registration_saves_trimmed_name_in_user_profile():
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.post("/api/v1/auth/register", json={
+            "name": "  김클릭  ", "email": "named@example.com", "password": "eight888"
+        })
+        assert response.status_code == 201, response.text
+        client.headers["Authorization"] = "Bearer " + response.json()["access_token"]
+        assert client.get("/api/v1/users/me").json()["name"] == "김클릭"

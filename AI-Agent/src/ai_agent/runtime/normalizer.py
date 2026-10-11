@@ -18,6 +18,7 @@ def normalize_accessibility_tree(
     seen: set[tuple] = set()
     nodes_by_id = {node.node_id: node for node in nodes}
     inherited_labels: dict[str, list[str]] = {}
+    inherited_titles: dict[str, list[tuple]] = {}
     for node in nodes:
         label = _merge_label(node)
         if not label or not node.visible_to_user or not node.enabled or _is_control(node):
@@ -25,6 +26,9 @@ def normalize_accessibility_tree(
         target = _label_target(node, nodes_by_id, screen_bounds)
         if target is not None:
             inherited_labels.setdefault(target.node_id, []).append(label)
+            inherited_titles.setdefault(target.node_id, []).append((
+                "summary" in (node.resource_id or "").lower(), node.bounds_in_screen[1],
+                node.bounds_in_screen[0], node.node_id, label))
 
     for node in nodes:
         if not node.visible_to_user:
@@ -54,6 +58,13 @@ def normalize_accessibility_tree(
             window_id=node.window_id,
             position_hint=position_hint(node.bounds_in_screen, screen_bounds),
             value=extract_numeric_value(node),
+            range_min=node.extras.get("min"),
+            range_max=node.extras.get("max"),
+            label_parts=tuple(dict.fromkeys(normalize_text(part) for part in (
+                [part for part in (node.text, node.content_description) if part and part.strip()][:1] if _merge_label(node) else
+                [min(inherited_titles[node.node_id])[-1]] if node.node_id in inherited_titles else []
+            ))),
+            structure_role=_structure_role(node, nodes_by_id),
             source_confidence=extract_confidence(node),
         )
         dedupe_key = (
@@ -69,6 +80,26 @@ def normalize_accessibility_tree(
         normalized.append(normalized_node)
 
     return tuple(normalized)
+
+
+def _structure_role(node, nodes_by_id):
+    if _is_control(node):
+        return "control"
+    if node.scrollable or infer_role(node) == "list":
+        return "container"
+    if "summary" in (node.resource_id or "").lower():
+        return "description"
+    seen = {node.node_id}
+    parent_id = node.parent_id
+    while parent_id and parent_id not in seen:
+        seen.add(parent_id)
+        parent = nodes_by_id.get(parent_id)
+        if parent is None:
+            break
+        if _is_control(parent) or parent.scrollable or infer_role(parent) == "list":
+            return "control_label"
+        parent_id = parent.parent_id
+    return "screen_text"
 
 
 def _has_area(bounds: Bounds | None) -> bool:

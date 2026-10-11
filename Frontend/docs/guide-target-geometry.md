@@ -1,5 +1,7 @@
 # Guide 좌표와 클릭 영역
 
+2026-10-10 재검증: geometry·행동 연결 JVM 10개는 통과했지만, 부분 문자열 target 오선택 4건과 FE의 오래된 응답 표시 경로·축소 방향 문구 문제가 확인됐다. 좌표 수정만으로 전체 하이라이트가 해결됐다고 표시하지 않는다. [상세 보고서](../../docs/reviews/2026-10-10-ui-highlight-revalidation.md), [품질·정답 기준](../../docs/ai-quality-evaluation.md). 아래 2026-09-12 결과는 당시의 역사적 기록이다.
+
 ## 좌표 계약
 
 `AccessibilityNodeInfo.getBoundsInScreen()`으로 수집한 `bounds_in_screen`과

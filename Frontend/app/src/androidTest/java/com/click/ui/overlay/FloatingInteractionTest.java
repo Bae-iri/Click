@@ -71,7 +71,7 @@ public class FloatingInteractionTest {
         }
     }
 
-    @Test public void holdingHidesHomeControlAndReleaseDoesNotOpenMenu() {
+    @Test public void holdingShowsTrashAndReleaseKeepsHomeControl() {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
             final ClickOverlayLayout[] control = {null};
             final long down = SystemClock.uptimeMillis();
@@ -81,7 +81,7 @@ public class FloatingInteractionTest {
             });
             SystemClock.sleep(ViewConfiguration.getLongPressTimeout() + 120);
             scenario.onActivity(activity -> {
-                assertFalse("Holding must hide without needing a trash drop", control[0].isShown());
+                assertTrue("Holding exposes trash without hiding the control", control[0].isShown());
                 send(control[0], down, MotionEvent.ACTION_UP, center(control[0]), center(control[0]));
                 assertEquals(ClickOverlayLayout.Mode.COLLAPSED, control[0].getMode());
             });
@@ -130,7 +130,7 @@ public class FloatingInteractionTest {
         }
     }
 
-    @Test public void realTimerClosesExpandedControlOnce() {
+    @Test public void realTimerStartsDraggingExpandedControlOnce() {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
             final ClickOverlayLayout[] control = {null};
             final int[] closeCount = {0};
@@ -138,11 +138,11 @@ public class FloatingInteractionTest {
                 control[0] = new ClickOverlayLayout(activity);
                 control[0].setCallback(new ClickOverlayLayout.Callback() {
                     public void onModeChanged(ClickOverlayLayout.Mode oldMode, ClickOverlayLayout.Mode newMode) {}
-                    public void onDragStarted() {}
+                    public void onDragStarted() { closeCount[0]++; }
                     public void onDragBy(float x, float y) {}
                     public void onDragEnded() {}
                     public void onTextSubmitted(String text) {}
-                    public void onCloseRequested() { closeCount[0]++; }
+                    public void onCloseRequested() { fail("Long press must show trash before hiding"); }
                 });
                 control[0].openVoice();
                 FrameLayout root = new FrameLayout(activity);
