@@ -19,7 +19,7 @@ from ai_agent.runtime.matcher import match_next_ui
 from ai_agent.runtime.normalizer import normalize_accessibility_tree
 from ai_agent.runtime.recovery import decide_recovery, manual_navigation_target, stale_observation_recovery
 from ai_agent.runtime.session import InMemorySessionStore, SessionStore
-from ai_agent.runtime.state_manager import build_screen_snapshot, register_attempt_outcome
+from ai_agent.runtime.state_manager import build_screen_snapshot, register_attempt_outcome, is_failed_attempt
 from ai_agent.runtime.tasks import TASK_GRAPHS
 from ai_agent.runtime.types import (
     AccessibilityNode,
@@ -39,7 +39,7 @@ from ai_agent.runtime.types import (
     VerificationStatus,
 )
 from ai_agent.runtime.validation import ContractViolationError, validate_agent_turn_request
-from ai_agent.runtime.verification import correlate_action, verify_transition, font_scale
+from ai_agent.runtime.verification import correlate_action, verify_transition, font_scale, valid_slider_value
 from ai_agent.runtime.progress import observed_path, checklist
 from ai_agent.runtime.targeting import target_key
 from ai_agent.runtime.similarity import default_similarity_scorer
@@ -221,10 +221,10 @@ class ClickAgentEngine:
         transition_attempts, failed_node_ids = register_attempt_outcome(
             existing_session,
             pending_transition_id=existing_session.pending_transition_id if existing_session else None,
-            verification_result=verification_result, retry_limit=graph.policy.retry_limit)
+            verification_result=verification_result, retry_limit=graph.policy.retry_limit, attempt=attempt)
         failed_target_keys = dict(previous_exclusions)
-        failed_attempt = bool(verification_result and verification_result.count_attempt
-            and verification_result.status in {VerificationStatus.NO_CHANGE, VerificationStatus.WRONG_STATE})
+        failed_attempt = is_failed_attempt(verification_result, attempt,
+            previous_transition.transition_id if previous_transition else None)
         if failed_attempt and attempt and previous_transition:
             counter_key = previous_transition.transition_id + ':' + attempt['target_key']
             if transition_attempts.get(counter_key, 0) >= graph.policy.retry_limit:
@@ -257,7 +257,8 @@ class ClickAgentEngine:
         replan_decision = recovery_plan.replan
         matched_target = next((node for node in normalized_nodes if node.node_id == match_result.target_node_id), None)
         current_transition = next((t for t in graph.transitions if t.transition_id == match_result.transition_id), None)
-        limit_reached = bool(not task_completed and matched_target and matched_target.value is not None
+        limit_reached = bool(not task_completed and matched_target
+            and valid_slider_value(matched_target.value, matched_target.range_min, matched_target.range_max)
             and current_transition and current_transition.completes_task and (
                 (current_transition.verification_predicate == 'target_value_increased'
                  and matched_target.range_max is not None and matched_target.value >= matched_target.range_max)
@@ -271,7 +272,10 @@ class ClickAgentEngine:
             and match_result.target_node_id == attempt.get('target_node_id')
             and matched_target and matched_target.window_id == attempt.get('target_window_id')
             and match_result.target_bounds == tuple(attempt.get('target_bounds', ()))
-            and (attempt.get('event_key') or matched_target.value == attempt.get('baseline_value')))
+            and (attempt.get('event_key') or (
+                matched_target.value == attempt.get('baseline_value')
+                and (not current_transition or current_transition.verification_predicate == 'state_reached'
+                     or font_scale(current_snapshot.applied_settings) == attempt.get('baseline_font_scale')))))
         keep_attempt = bool(attempt and not failed_attempt and not task_completed and
             (awaiting_observation or (same_binding and verification_result
              and verification_result.status == VerificationStatus.WAITING_FOR_ACTION)))
@@ -337,6 +341,7 @@ class ClickAgentEngine:
                     'target_node_id': target.node_id, 'target_key': match_result.target_key,
                     'target_window_id': target.window_id,
                     'target_bounds': target.bounds, 'baseline_value': target.value,
+                    'baseline_range_min': target.range_min, 'baseline_range_max': target.range_max,
                     'baseline_observation_id': request.observation_id,
                     'baseline_captured_at_ms': current_snapshot.captured_at_ms,
                     'baseline_font_scale': font_scale(current_snapshot.applied_settings),

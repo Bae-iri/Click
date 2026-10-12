@@ -10,6 +10,7 @@ REASONS = {
     "target_not_found", "ambiguous_target", "waiting_for_fresh_observation",
     "unknown_transition", "unsupported_verification_predicate", "observation_precedes_action",
     "state_reached", "observed_progress", "target_value_unobservable", "settled_postcondition_not_met",
+    "target_value_out_of_range", "target_range_changed",
     "settled_wrong_state", "observation_timeout", "awaiting_settled_observation",
 }
 

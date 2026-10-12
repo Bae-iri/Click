@@ -59,6 +59,35 @@ def test_idle_observations_never_count_as_failed_attempts(move):
         assert result.guide_command.target_node_id == first.guide_command.target_node_id
     assert not turns.session.transition_attempts
     assert not turns.session.failed_target_keys
+    assert turns.session.total_failed_attempts == 0
+
+
+@pytest.mark.parametrize('problem', [
+    'observe_only', 'manual_override', 'back_navigated', 'wrong_guide', 'wrong_target',
+    'wrong_bounds', 'wrong_session', 'missing_time', 'before_guide',
+])
+def test_uncorrelated_events_never_spend_action_budget(problem):
+    turns = Turns()
+    first = turns.send(at=1000)
+    event = turns.event(first, at=1100, event_id='unrelated-event')
+    changes = {
+        'observe_only': {'action_type': UserActionType.OBSERVE_ONLY},
+        'manual_override': {'action_type': UserActionType.MANUAL_OVERRIDE},
+        'back_navigated': {'action_type': UserActionType.BACK_NAVIGATED},
+        'wrong_guide': {'guide_command_id': 'other-guide'},
+        'wrong_target': {'target_node_id': 'other-target'},
+        'wrong_bounds': {'target_bounds': (0, 0, 10, 10)},
+        'wrong_session': {'session_id': 'other-session'},
+        'missing_time': {'occurred_at_ms': None},
+        'before_guide': {'occurred_at_ms': 999},
+    }[problem]
+    event = replace(event, **changes)
+    for at in (1200, 1800, 6000, 12000):
+        result = turns.send(at=at, event=event)
+        assert result.verification_result.status == Status.WAITING_FOR_ACTION
+    assert turns.session.total_failed_attempts == 0
+    assert not turns.session.transition_attempts
+    assert not turns.session.failed_target_keys
 
 
 def test_only_distinct_failed_actions_count_and_old_event_cannot_fail_retry():
@@ -157,37 +186,58 @@ def test_brightness_change_does_not_complete_font_task():
     first_tree = (*_font_size_control_tree(slider_value=2), brightness)
     # Named font control is required when more than one slider is present.
     first_tree = tuple(replace(n, text='글자 크기') if n.node_id == 'font-slider' else n for n in first_tree)
-    turns.send(first_tree)
-    accepted = turns.send(first_tree, confirmation='accepted')
+    turns.send(first_tree, at=1000, applied_scale=1.0)
+    accepted = turns.send(first_tree, at=1100, applied_scale=1.0, confirmation='accepted')
     after = tuple(replace(n, extras={'progress': 3}) if n.node_id == 'brightness' else n for n in first_tree)
-    result = turns.send(after, event=turns.event(accepted, action=UserActionType.DRAG_COMPLETED))
+    # Even a coincidental FONT_SCALE change cannot substitute for the target slider.
+    result = turns.send(after, at=1400, applied_scale=1.15,
+        event=turns.event(accepted, at=1200, action=UserActionType.DRAG_COMPLETED))
     assert result.guide_command.command_type != CommandType.DONE
     assert not turns.session.task_completed
+    assert result.verification_result.evidence == 'awaiting_settled_observation'
 
 
 @pytest.mark.parametrize('problem', ['no_action', 'wrong_guide', 'wrong_target', 'old_observation', 'missing_value'])
 def test_completion_requires_correlated_target_evidence(problem):
     turns = Turns()
-    turns.send(_font_size_control_tree(slider_value=2), at=1000)
-    accepted = turns.send(_font_size_control_tree(slider_value=2), at=1100, confirmation='accepted')
+    turns.send(_font_size_control_tree(slider_value=2), at=1000, applied_scale=1.0)
+    accepted = turns.send(_font_size_control_tree(slider_value=2), at=1100, confirmation='accepted', applied_scale=1.0)
     event = turns.event(accepted, at=1200, action=UserActionType.DRAG_COMPLETED)
     if problem == 'no_action': event = None
     if problem == 'wrong_guide': event = replace(event, guide_command_id='another-guide')
     if problem == 'wrong_target': event = replace(event, target_node_id='brightness')
     tree = _font_size_control_tree(slider_value=None if problem == 'missing_value' else 3)
-    result = turns.send(tree, at=1150 if problem == 'old_observation' else 1400, event=event)
+    result = turns.send(tree, at=1150 if problem == 'old_observation' else 1400, event=event, applied_scale=1.15)
     assert result.guide_command.command_type != CommandType.DONE
     assert not turns.session.task_completed
 
 
 def test_pre_action_value_change_cannot_be_claimed_by_later_action():
     turns = Turns()
-    turns.send(_font_size_control_tree(slider_value=2))
-    accepted = turns.send(_font_size_control_tree(slider_value=2), confirmation='accepted')
-    turns.send(_font_size_control_tree(slider_value=3))
+    turns.send(_font_size_control_tree(slider_value=2), at=1000, applied_scale=1.0)
+    accepted = turns.send(_font_size_control_tree(slider_value=2), at=1100,
+                          applied_scale=1.0, confirmation='accepted')
+    turns.send(_font_size_control_tree(slider_value=3), at=1150, applied_scale=1.15)
+    event = turns.event(accepted, at=1200, action=UserActionType.DRAG_COMPLETED)
     result = turns.send(_font_size_control_tree(slider_value=3),
-        event=turns.event(accepted, action=UserActionType.DRAG_COMPLETED))
+                        at=1400, applied_scale=1.15, event=event)
     assert result.guide_command.command_type != CommandType.DONE
+    replay = turns.send(_font_size_control_tree(slider_value=3),
+                        at=2000, applied_scale=1.15, event=event)
+    assert replay.guide_command.command_type != CommandType.DONE
+    assert turns.session.total_failed_attempts == 0
+
+
+def test_delayed_event_can_verify_change_observed_after_its_actual_action_time():
+    turns = Turns()
+    turns.send(_font_size_control_tree(slider_value=2), at=1000, applied_scale=1.0)
+    accepted = turns.send(_font_size_control_tree(slider_value=2), at=1100,
+                          applied_scale=1.0, confirmation='accepted')
+    waiting = turns.send(_font_size_control_tree(slider_value=3), at=1300, applied_scale=1.15)
+    assert waiting.guide_command.command_type != CommandType.DONE
+    result = turns.send(_font_size_control_tree(slider_value=3), at=1400, applied_scale=1.15,
+        event=turns.event(accepted, at=1200, action=UserActionType.DRAG_COMPLETED))
+    assert result.guide_command.command_type == CommandType.DONE
 
 
 def test_success_uses_original_baseline_and_survives_waiting_observation():
@@ -225,3 +275,79 @@ def test_same_observation_id_cannot_supply_new_completion_evidence():
     stale = turns.send(_font_size_control_tree(slider_value=3), at=2000, observation='same-observation')
     assert not stale.verification_result.task_completed
     assert stale.verification_result.status == Status.WAITING_FOR_OBSERVATION
+
+
+@pytest.mark.parametrize('slider_value', [1, 2, 3])
+@pytest.mark.parametrize('applied_scale', [None, 0.85, 1.0, 1.15])
+def test_completion_requires_both_target_and_applied_setting_in_requested_direction(slider_value, applied_scale):
+    turns = Turns()
+    turns.send(_font_size_control_tree(slider_value=2), at=1000, applied_scale=1.0)
+    accepted = turns.send(_font_size_control_tree(slider_value=2), at=1100,
+                          applied_scale=1.0, confirmation='accepted')
+    result = turns.send(_font_size_control_tree(slider_value=slider_value), at=1400,
+        applied_scale=applied_scale, event=turns.event(accepted, at=1200, action=UserActionType.DRAG_COMPLETED))
+    completed = slider_value > 2 and applied_scale is not None and applied_scale > 1.0
+    assert turns.session.task_completed is completed
+    assert (result.guide_command.command_type == CommandType.DONE) is completed
+
+
+def test_setting_changed_before_action_requires_a_new_guide_and_baseline():
+    turns = Turns()
+    turns.send(_font_size_control_tree(slider_value=2), at=1000, applied_scale=1.0)
+    accepted = turns.send(_font_size_control_tree(slider_value=2), at=1100,
+                          applied_scale=1.0, confirmation='accepted')
+    changed = turns.send(_font_size_control_tree(slider_value=2), at=1150, applied_scale=1.15)
+    assert changed.guide_command.guide_command_id != accepted.guide_command.guide_command_id
+    assert changed.guide_command.command_type == CommandType.CONFIRMATION
+    stale_action = turns.send(_font_size_control_tree(slider_value=3), at=1400, applied_scale=1.15,
+        event=turns.event(accepted, at=1200, action=UserActionType.DRAG_COMPLETED))
+    assert stale_action.guide_command.command_type != CommandType.DONE
+    assert not turns.session.task_completed
+    assert turns.session.total_failed_attempts == 0
+
+    fresh = turns.send(_font_size_control_tree(slider_value=3), at=1500,
+                       applied_scale=1.15, confirmation='accepted')
+    done = turns.send(_font_size_control_tree(slider_value=4), at=1800, applied_scale=1.3,
+        event=turns.event(fresh, at=1600, action=UserActionType.DRAG_COMPLETED))
+    assert done.guide_command.command_type == CommandType.DONE
+
+
+@pytest.mark.parametrize('progress,maximum,evidence', [
+    (99, 5, 'target_value_out_of_range'),
+    (3, 10, 'target_range_changed'),
+])
+def test_invalid_or_changed_slider_range_cannot_prove_completion(progress, maximum, evidence):
+    def tree(value, upper):
+        return tuple(replace(node, extras={**node.extras, 'min': 0, 'max': upper})
+                     if node.node_id == 'font-slider' else node
+                     for node in _font_size_control_tree(slider_value=value))
+    turns = Turns()
+    turns.send(tree(2, 5), at=1000, applied_scale=1.0)
+    accepted = turns.send(tree(2, 5), at=1100, applied_scale=1.0, confirmation='accepted')
+    result = turns.send(tree(progress, maximum), at=1400, applied_scale=1.15,
+        event=turns.event(accepted, at=1200, action=UserActionType.DRAG_COMPLETED))
+    assert result.verification_result.status == Status.UNKNOWN
+    assert result.verification_result.evidence == evidence
+    assert not turns.session.task_completed
+    assert turns.session.total_failed_attempts == 0
+
+
+@pytest.mark.parametrize('problem', ['missing_action', 'other_attempt', 'other_transition'])
+def test_failure_flag_without_matching_attempt_cannot_increment_counter(problem):
+    from ai_agent.runtime.state_manager import register_attempt_outcome
+    from ai_agent.runtime.types import VerificationResult
+
+    turns = Turns()
+    first = turns.send(at=1000)
+    turns.send(at=1200, event=turns.event(first, at=1100))
+    session = turns.session
+    attempt = dict(session.pending_attempt)
+    result = VerificationResult(Status.NO_CHANGE, session.current_state_id,
+                                attempt_id=attempt['attempt_id'], count_attempt=True)
+    if problem == 'missing_action': attempt.pop('event_key')
+    if problem == 'other_attempt': result = replace(result, attempt_id='other-attempt')
+    if problem == 'other_transition': attempt['transition_id'] = 'other-transition'
+    counters, excluded = register_attempt_outcome(session,
+        pending_transition_id=session.pending_transition_id, verification_result=result, attempt=attempt)
+    assert counters == {}
+    assert excluded == ()
