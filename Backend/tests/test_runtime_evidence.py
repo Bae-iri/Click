@@ -9,6 +9,29 @@ from tests.test_agent_sessions import payload
 from tests.test_agent_turn_api import slider_tree
 
 
+def test_idle_observations_do_not_spend_failure_budget_across_checkpoint_restore():
+    app = create_app()
+    client = authenticated_client(app)
+    version = None
+    for index, at in enumerate((1000, 2000, 7000, 15000, 30000)):
+        request = payload(f'idle-{index}', 'idle-evidence')
+        if index:
+            request.pop('raw_goal')
+            request['expected_version'] = version
+        request['accessibility_tree'].update(observation_id=f'idle-obs-{index}', captured_at_ms=at)
+        response = client.post('/api/v1/agent/turn', json=request)
+        assert response.status_code == 200, response.text
+        body = response.json()
+        version = body['session_version']
+        if index:
+            assert body['metadata']['verification']['result']['status'] == 'WAITING_FOR_ACTION'
+    with app.state.session_factory() as db:
+        checkpoint = db.scalar(select(AgentCheckpoint).where(AgentCheckpoint.session_id == 'idle-evidence'))
+        assert checkpoint.state['total_failed_attempts'] == 0
+        assert not checkpoint.state['transition_attempts']
+        assert not checkpoint.state['failed_target_keys']
+
+
 def test_failures_and_event_dedup_survive_per_turn_checkpoint_restore():
     app = create_app()
     client = authenticated_client(app)

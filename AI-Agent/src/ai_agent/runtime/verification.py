@@ -30,6 +30,20 @@ def correlate_action(session, request, transition):
     if (event.occurred_at_ms is None or baseline_time is None
             or event.occurred_at_ms <= baseline_time):
         return attempt, processed
+    # A delayed event may describe an earlier action, but cannot claim a change
+    # already observed before that action. Retire this guide rather than letting
+    # the same event become valid after another observation overwrites the evidence.
+    previous = session.last_snapshot
+    if (transition.verification_predicate in {'target_value_increased', 'target_value_decreased'}
+            and previous and previous.captured_at_ms is not None
+            and baseline_time < previous.captured_at_ms <= event.occurred_at_ms):
+        observed_value = previous.slider_values.get(attempt['target_node_id'])
+        observed_scale = font_scale(previous.applied_settings)
+        if ((observed_value is not None and attempt.get('baseline_value') is not None
+                and observed_value != attempt['baseline_value'])
+                or (observed_scale is not None and attempt.get('baseline_font_scale') is not None
+                    and observed_scale != attempt['baseline_font_scale'])):
+            return None, processed
     attempt.update(event_key=event_key, action_at_ms=event.occurred_at_ms,
                    action_type=event.action_type.value)
     return attempt, (*processed, event_key)[-128:]
@@ -48,7 +62,8 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
                                   count_attempt=count, task_completed=completed, evidence=evidence)
     if transition.verification_predicate not in {'state_reached', 'target_value_increased', 'target_value_decreased'}:
         return result(Status.UNKNOWN, 'unsupported_verification_predicate')
-    correlated = bool(attempt and attempt.get('event_key'))
+    correlated = bool(attempt and attempt.get('event_key')
+                      and attempt.get('transition_id') == pending_transition_id)
     observation_time = current_snapshot.captured_at_ms if current_snapshot else None
     action_time = attempt.get('action_at_ms') if attempt else None
     baseline_id = attempt.get('baseline_observation_id') if attempt else None
@@ -84,7 +99,16 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
         baseline = attempt.get('baseline_value')
         if len(candidates) != 1 or baseline is None or candidates[0].value is None:
             return result(Status.UNKNOWN, 'target_value_unobservable')
-        value = candidates[0].value
+        target = candidates[0]
+        baseline_min = attempt.get('baseline_range_min')
+        baseline_max = attempt.get('baseline_range_max')
+        if (not valid_slider_value(baseline, baseline_min, baseline_max)
+                or not valid_slider_value(target.value, target.range_min, target.range_max)):
+            return result(Status.UNKNOWN, 'target_value_out_of_range')
+        if ((baseline_min is not None and target.range_min != baseline_min)
+                or (baseline_max is not None and target.range_max != baseline_max)):
+            return result(Status.UNKNOWN, 'target_range_changed')
+        value = target.value
         changed = value > baseline if transition.verification_predicate.endswith('increased') else value < baseline
         applied_before = attempt.get('baseline_font_scale')
         applied_after = font_scale(current_snapshot.applied_settings)
@@ -115,6 +139,18 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             and observation_time - action_time >= graph.policy.observation_timeout_ms):
         return result(Status.UNKNOWN, 'observation_timeout')
     return result(Status.WAITING_FOR_OBSERVATION, 'awaiting_settled_observation')
+
+
+def valid_slider_value(value, minimum=None, maximum=None):
+    """Only finite values inside the reported control range are usable evidence."""
+    if type(value) not in (int, float) or not isfinite(value):
+        return False
+    for bound in (minimum, maximum):
+        if bound is not None and (type(bound) not in (int, float) or not isfinite(bound)):
+            return False
+    return ((minimum is None or value >= minimum)
+            and (maximum is None or value <= maximum)
+            and (minimum is None or maximum is None or minimum <= maximum))
 
 
 def font_scale(settings):

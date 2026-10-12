@@ -136,7 +136,7 @@ def test_guidance_does_not_tick_steps_and_verified_change_waits_for_user():
     assert stored["user"]["confirmed_at"] is not None
 
 
-@pytest.mark.parametrize("problem", ["wrong_target", "wrong_episode", "stale", "unchanged", "missing_setting", "preview_only", "no_action"])
+@pytest.mark.parametrize("problem", ["wrong_target", "wrong_episode", "stale", "unchanged", "missing_setting", "preview_only", "no_action", "out_of_range", "changed_range"])
 def test_insufficient_or_unrelated_evidence_never_completes(problem):
     f = Flow(); f.start(); f.accept()
     event, tree = f.event(), screen(3, 1800, 1.15)
@@ -146,11 +146,38 @@ def test_insufficient_or_unrelated_evidence_never_completes(problem):
     if problem == "unchanged": tree = screen(2, 1800, 1.0)
     if problem == "missing_setting": tree.pop("applied_settings")
     if problem == "preview_only": tree["applied_settings"]["font_scale"] = 1.0
+    if problem == "out_of_range": tree["nodes"][0]["extras"]["progress"] = 99
+    if problem == "changed_range": tree["nodes"][0]["extras"]["max"] = 14
     kwargs = {"accessibility_tree": tree}
     if problem != "no_action": kwargs["user_action_event"] = event
     body = f.send("observe", **kwargs)
     assert body["metadata"]["task_outcome"]["technical"]["status"] != "CHANGED"
     assert body["task_status"] != "COMPLETED"
+
+
+@pytest.mark.parametrize('early_value', [2, 3])
+def test_pre_action_setting_change_invalidates_guide_across_checkpoint_restore(early_value):
+    f = Flow(); f.start(); f.accept()
+    old_event = f.event()
+    changed = f.send("observe", accessibility_tree=screen(early_value, 1150, 1.15))
+    if early_value == 2:
+        assert changed["task_status"] == "WAITING_CONFIRMATION"
+        assert changed["guide_command"]["guide_command_id"] != old_event["guide_command_id"]
+    stale_action = f.send("observe", accessibility_tree=screen(3, 1400, 1.15), user_action_event=old_event)
+    assert stale_action["metadata"]["task_outcome"]["technical"]["status"] != "CHANGED"
+    replay = f.send("observe", accessibility_tree=screen(3, 1450, 1.15), user_action_event=old_event)
+    assert replay["metadata"]["task_outcome"]["technical"]["status"] != "CHANGED"
+    with f.app.state.session_factory() as db:
+        checkpoint = db.scalar(select(AgentCheckpoint).where(AgentCheckpoint.session_id == f.session))
+        assert checkpoint.state["total_failed_attempts"] == 0
+        assert not checkpoint.state["transition_attempts"]
+
+    f.send("respond_confirmation", user_confirmation="accepted",
+        confirmation_id=f.body["metadata"]["confirmation"]["id"], accessibility_tree=screen(3, 1500, 1.15))
+    result = f.send("observe", accessibility_tree=screen(4, 1800, 1.3),
+                    user_action_event=f.event(occurred_at_ms=1600))
+    assert result["task_status"] == "WAITING_RESULT"
+    assert result["metadata"]["task_outcome"]["technical"]["status"] == "CHANGED"
 
 
 def test_unverifiable_positive_report_is_not_technical_success():

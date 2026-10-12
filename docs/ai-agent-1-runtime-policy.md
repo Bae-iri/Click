@@ -28,6 +28,8 @@ AI1은 DB graph를 수정하거나 새 경로를 생성하지 않는다. 진행�
 
 pending attempt에는 원래 target의 의미 식별자, window, bounds, 기준값, 관측 ID/시각, 수신한 행동의 식별자를 저장한다. 새로운 관측이 들어올 때마다 원래 기준값을 덮어쓰지 않는다. 행동 없이 값이 먼저 바뀌거나 target binding이 달라지면 기존 guide를 재사용하지 않는다.
 
+2026-10-11 보강: 조작 전 Android `FONT_SCALE`이 바뀌거나 확인할 수 없게 되어도 기존 설정 변경 guide를 재사용하지 않는다. 새 확인과 기준값이 필요하며, 이전 guide의 늦게 도착한 행동으로 이미 발생한 설정 변화를 완료 근거로 삼지 않는다. 시도별 slider 범위도 checkpoint에 저장한다.
+
 Backend checkpoint schema는 `2`다. pending attempt·처리한 event hash·실패 target·복구 횟수를 저장하고 복원한다. 구버전 checkpoint는 기존 호환성 검사에서 거절하므로 새 실행을 시작해야 한다. graph 정의 변경도 graph hash를 바꾼다.
 
 ## 3. Verification
@@ -43,6 +45,8 @@ Backend checkpoint schema는 `2`다. pending attempt·처리한 event hash·실�
 | task 완료 | `SUCCESS`이고 해당 전이가 `completes_task=True` | 아니오 |
 
 실패 판단은 서로 다른 관측 두 개가 모두 행동 이후에 수집되고, 두 관측 간격이 기본 500ms 이상이며 fingerprint가 같을 때 가능하다. 행동 없이 같은 화면이 반복되거나 UI가 1px 움직였다는 사실만으로 실패를 만들지 않는다. 안정화 대기 500ms 안의 관측으로 복구 예산을 소진하지 않는다. 시각이 누락된 구형 입력으로 시간 기반 실패를 단정하지 않는다.
+
+실패 집계는 `count_attempt`뿐 아니라 검증 결과의 attempt ID, 현재 transition, target key, 귀속된 event와 행동 시각을 다시 확인한다. 대상별 횟수와 전체 실패 예산에 같은 조건을 적용한다. 승인만 받았거나 조작하지 않은 대기, 다른 안내의 이벤트, 중복 전송은 실제 실패 횟수를 늘리지 않는다.
 
 일반 화면 전이는 사용자가 수동으로 예상 화면에 도달해도 `SUCCESS / observed_progress / count_attempt=False`로 현재 위치를 갱신한다. 이것은 직전 guide 실행 성공을 입증한 데이터가 아니다. 완료 전이는 이렇게 자동 통과시키지 않는다.
 
@@ -78,6 +82,8 @@ Backend는 진행도가 마지막이라는 이유로 완료를 덮어쓰지 않�
 현재 채택 기준은 0.7, 1·2위 격차 하한은 0.05다. 같은 이름·같은 근거의 두 버튼이면 입력 순서와 관계없이 `ambiguous_target`을 반환한다. 명시된 우선 경로가 모호하면 낮은 우선순위 경로를 조용히 선택하지 않는다.
 
 slider라는 이유만으로 0.82를 주던 규칙은 제거했다. 이름 없는 slider는 명시된 font-size 문맥에서 해당 역할의 control이 유일할 때만 후보가 된다. 이름이 `밝기`인 slider를 그 문맥으로 구제하지 않는다. slider에는 similarity를 통한 의미 조건 우회도 적용하지 않는다.
+
+완료 검증에는 유한한 수치이며 관측된 최소·최대 범위 안에 있는 slider 값만 사용한다. 조작 전후 범위가 바뀌면 서로 다른 척도로 보고 `UNKNOWN / target_range_changed`로 보류한다. 범위를 벗어난 값은 `UNKNOWN / target_value_out_of_range`이며 완료나 정상 조절 한도 도달로 처리하지 않는다. 범위를 제공하지 않는 기기는 기존 대상·행동·관측·`FONT_SCALE` 조건을 유지한다.
 
 점수는 실측 성공 확률이 아니다. 임계값·격차는 초기 정책값이며 검증 데이터로 조정해야 한다. Backend의 기존 `state_confidence`에는 classifier 점수를 넣고, UI 점수는 `metadata.match_result.confidence`에 둔다. `score_semantics=heuristic_scores_not_probabilities`로 의미를 명시한다.
 
