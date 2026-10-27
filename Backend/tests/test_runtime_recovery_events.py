@@ -171,22 +171,22 @@ def test_events_are_private_and_expire_with_receipts():
 
 
 def test_offline_consumer_is_idempotent_and_respects_consent():
-    from scripts.consume_runtime_events import consume
+    from scripts.agent2 import process_sessions
     app, client, started = setup()
-    assert consume(app.state.session_factory) == 1
-    assert consume(app.state.session_factory) == 0
+    assert process_sessions(app.state.session_factory)["ineligible"] == 1
     with app.state.session_factory() as db:
-        assert db.scalar(select(RuntimeEventConsumption)).result == {"label": "not_eligible"}
+        assert db.scalar(select(RuntimeEventConsumption)) is None
     user = client.get("/api/v1/users/me").json()["id"]
     grant = client.post(f"/api/v1/users/{user}/consents", json={"purpose": "model_training", "consented": True,
                                                             "policy_version": "1"})
     assert grant.status_code == 201, grant.text
     app.state.turn_service.repository.clock = lambda: int(time.time()) + 2
     assert client.post("/api/v1/agent/commands", json=follow(started)).status_code == 200
-    assert consume(app.state.session_factory) == 1
+    assert process_sessions(app.state.session_factory)["processed"] == 1
+    assert process_sessions(app.state.session_factory)["unchanged"] == 1
     with app.state.session_factory() as db:
         results = [row.result for row in db.scalars(select(RuntimeEventConsumption))]
-        assert any(row.get("policy_version") == "runtime-event-label.v1" for row in results)
+        assert any(row.get("schema_version") == "ai2-run.v1" for row in results)
     client.post(f"/api/v1/users/{user}/consents", json={"purpose": "model_training", "consented": False, "policy_version": "1"})
     with app.state.session_factory() as db:
         assert db.scalar(select(func.count()).select_from(RuntimeEventConsumption)) == 0

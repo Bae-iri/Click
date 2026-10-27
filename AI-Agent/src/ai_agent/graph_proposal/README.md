@@ -1,68 +1,70 @@
-# AI-Agent(2): Graph Proposal 패키지
+# AI-Agent 2: 실행 기록 분석과 그래프 개선
 
-2026-10-10: [실제 품질·정답 데이터 기준](../../../../docs/ai-quality-evaluation.md)에서 독립 검수·holdout·승격 조건을 정의했다. `outcomes.py`는 기술 결과와 사용자 응답을 분리 집계하는 오프라인 함수이며 영속 수집·자동 학습 pipeline은 아니다.
+갱신: 2026-10-27. 사용자 안내와 독립적으로 실행하는 오프라인 파이프라인입니다. 별도 GPU·LLM은 필수가 아닙니다.
 
-전체 runtime 데이터를 재구성·라벨링하고 내부 데이터셋과 Task Graph 추가·업데이트 후보를 만드는 영역이다. AI2는 승인된 graph의 새 version을 DB에 반영하는 workflow를 맡고, Backend는 사용자 요구에 맞는 DB graph를 선택·전달한다. 전달 graph의 화면 판단·안내·온라인 검증·세션 내부 Re-plan은 `ai_agent.runtime`의 책임이다.
+## 구현된 범위
 
-ColorBench는 검수한 경로·복구 평가 보조, MobiAgent의 MobiFlow는 의존관계·완료 규칙의 설계 참고로 사용한다. AI2는 실제 실행·통제 시연을 수집해 제품 정답의 검수 자료를 만들고 graph를 제안한다. 자동 라벨·공개 reference·candidate를 제품 gold와 구분한다. [정답 데이터·개발 계획](../../../../docs/task-graph-data-plan.md)이 채택 범위와 구현 순서의 기준이다.
+| 단계 | 구현 |
+| --- | --- |
+| 수집 | Backend의 영속 runtime_events를 최신 model_training 동의 이후·미만료 범위에서 처리 |
+| 재구성 | 이벤트 ID/sequence 충돌·중복·누락·episode 내 graph 변경 검사, 이전 guide·행동·전후 관측 연결 |
+| 라벨·분석 | 시도 성공/실패·대기·수동 진행·불확실 분리, 중복 시도 제외, 실패 cluster·분모·추가 수집 요청 |
+| 데이터 | 출처·revision·검수·근거 manifest 검사, train/validation/holdout 및 group/session 분리 |
+| 후보 생성 | 연결된 개발용 시도 결과로 같은 상태의 기존 대체 전이 우선순위 patch 생성 |
+| 평가 | base/candidate 구조·hash 검사, 동일 관측의 실제 AI1 replay, holdout 누출·회귀·데이터 부족·도구 오류 구분 |
+| 승인·반영 | 정확한 평가·본문 hash에 검토자/시각 결합, DB 활성 version과 audit 원자 반영, stale-base 차단·rollback |
+| 모델 | 명시적으로 weak label을 허용한 train split의 CPU 빈도 baseline, 불변 로컬 artifact registry |
 
-## 파일 구조와 담당 작업
+실제 제품 gold·독립 holdout은 아직 없습니다. 합성·공개 참고 자료만으로 평가 PASS나 운영 release를 만들지 않습니다. 새 selector·UI 경로·작업을 추측 생성하지 않습니다. 실제 실패에서 필요한 새로운 변환 규칙·모델 개선은 후속 데이터에 따라 추가합니다.
 
-```text
-graph_proposal/
-  schemas.py                     # GraphUpdateProposal 계약
-  ingestion/                     # event 수집·schema 검사 경계
-  reconstruction/                # episode·step·attempt 재구성 경계
-  labeling/                      # success/fail/unknown 라벨링 경계
-  analysis/                      # 실패 cluster·성공 경로 분석 경계
-  proposals/
-    graph_learner.py              # graph 후보 생성
-  datasets/
-    dataset_builder.py            # 모델별 dataset 생성
-  evaluation/
-    graph_validator.py            # 후보 검증·replay·회귀 평가
-  models/
-    model_trainer.py              # 후속 모델 학습
-    model_registry.py             # 모델 artifact metadata
-  releases/
-    versioning.py                 # 승인 graph 승격·rollback
-  workflows/                     # offline job orchestration 경계
-```
+## DB 기록 처리
 
-`proposals`, `datasets`, `evaluation`, `models`, `releases`에는 기존 모듈을 옮겼다. `ingestion`, `reconstruction`, `analysis`, `workflows`의 실제 수집·분석 pipeline은 미구현이다. `labeling/mvp01.py`에는 아래 합성 fixture용 weak labeler가 있다. learner는 빈 후보, validator는 `NEEDS_DATA`, dataset builder는 빈 sample 구조를 반환한다. 파일 분리는 제품 gold·graph 학습·배포 구현 완료를 뜻하지 않는다.
-
-## 의존성 경계
-
-- Agent(2)는 `ai_agent.runtime`, 사용자용 Goal/UI/Guide 모듈, Backend HTTP·세션 저장소를 직접 호출하지 않는다.
-- Agent(1)과 Backend의 사용자 응답 경로는 이 패키지를 import하지 않는다.
-- 관측 요약 계약은 `ai_agent.telemetry.schemas`, 공통 graph 구조는 `ai_agent.task_graph`를 사용한다.
-- `GraphUpdateProposal`은 이 패키지의 `schemas.py`에만 정의한다. 공통 `ai_agent.schemas`에 재정의하거나 runtime으로 export하지 않는다.
-- trace 생산·진단 필터는 `ai_agent.telemetry`의 책임이다. Agent(2)가 producer의 개인정보 필터를 우회하거나 직접 사용자 화면을 수집하지 않는다.
-- production graph 변경은 candidate 생성·평가·승인 뒤 별도 release로 처리한다. 현재 세션의 graph 객체를 수정하지 않는다.
-
-데이터 출력의 기준 경로는 `AI-Agent/data/graph_proposal/`다. 공통 입력은 `data/runtime/`의 향후 event 데이터와 `data/fixtures/`의 검토된 fixture다. 현재는 아래 명령을 실행할 때만 label 파일을 저장한다.
-
-## MVP-01 라벨링 시작하기
-
-`data/fixtures/mvp01_episodes.jsonl`은 실제 사용자 기록이 아닌 **합성 예시 20건**이다. 한 줄에 episode 하나를 기록한다. `steps`의 `action_observed`, 전후 `observation_id`, 예상·관측 state가 모두 있어야 단계 success/fail을 판정한다. 최종 작업은 `completion_evidence.source=accessibility_range`와 서로 다른 전후 관측 ID, `before_font_scale`/`after_font_scale` 수치가 있을 때만 success/fail로 판정한다. 정보가 모자라면 unknown이다. 중간 단계 실패 후 최종 작업 성공도 가능하다.
+Backend 디렉터리에서 DATABASE_URL을 설정하고 실행합니다.
 
 ```powershell
-cd Click/AI-Agent
-$env:PYTHONPATH = "src"
-python -m ai_agent.graph_proposal.labeling.mvp01 data/fixtures/mvp01_episodes.jsonl data/graph_proposal/labels/mvp01_labels.jsonl
+python scripts/agent2.py process --limit 100
+python scripts/agent2.py audit
+python scripts/maintenance.py
 ```
 
-출력은 라벨, 근거 관측 ID, 이유, 정책 버전을 담은 JSONL이다. 이는 규칙 기반 **weak label**이며 `label_status=final`이어도 제품 gold가 아니다. 현재 `TraceLogger`의 진단 기록은 제한된 correlation hash만 보관하고 라벨러에 필요한 실제 episode/step·완료 증거를 제공하지 않으므로 이 입력 형식으로 바로 변환할 수 없다. 실제 기록 연동에는 영속 event 계약이 필요하며 기존 개인정보·사용 목적 범위를 따른다.
+process는 세션별 재구성·분석 결과를 원천 event에 연결된 DB receipt로 저장합니다. 같은 입력은 중복 처리하지 않고, 최신 세션 결과 하나를 유지합니다. 원문 화면·목표·토큰을 출력하거나 사용자 데이터를 파일로 반출하지 않습니다. 동의 전 기록을 소급 사용하지 않으며 철회·탈퇴·세션 삭제·가장 오래된 근거 만료 시 결과를 삭제합니다.
 
-## 다음 구현 순서
+운영 DB 분석은 split/독립 검수가 아직 없는 기록을 자동 학습·배포하지 않습니다. 후보 생성·평가는 별도로 검수한 데이터셋과 manifest를 준비한 뒤 실행합니다. audit는 DB에 등록된 graph 전부를 검사하며 초안의 미지원 predicate와 승인 graph 결함을 구분합니다. 구조 통과는 실기기 통과가 아닙니다.
 
-1. P0: 선택·경로·완료 정답 단위와 source/review/split manifest를 정의한다.
-2. P1: 실제 기기 시연·event 수집, episode/step/guide/observation 연결과 누락 검출을 구현한다.
-3. P2: weak label을 독립 근거로 검수해 제품 gold·holdout을 만들고 현재 선택기·verifier baseline을 기록한다.
-4. R1 병행: ColorBench subset·MobiFlow rule을 검수하고 적용 범위가 제한된 참고 실험을 만든다.
-5. P3: 실제 실패에서 graph 후보를 생성하고 정적 검사·실행 근거·독립 holdout 회귀로 평가한다.
-6. P4/P5: 승인·release·Backend 선택·AI1 소비를 연결한 뒤 신규 task/환경으로 확장한다.
+## 데이터 없이 실행하는 합성 예제
 
-공개 benchmark 통과만으로 제품 적용 `PASS`를 반환하지 않는다. 원천 증거가 부족하면 `NEEDS_DATA`, 파싱·평가 도구 오류는 `ERROR`로 구분하는 validator를 구현한다. 실제 수집과 제품 gold 구축은 현재 미완료다.
+다음 fixture는 사람이 만든 8개 이벤트·4개 episode이며 실제 사용자/실기기 자료가 아닙니다.
 
-상세 라벨·proposal·평가·release 설계는 [AI-Agent(2) 설계 문서](../../../../docs/ai-agent-2-graph-proposal.md)에 둔다.
+```powershell
+python scripts/agent2.py fixture --events ../AI-Agent/data/fixtures/agent2/events.jsonl --graphs ../AI-Agent/data/fixtures/agent2/graphs.json --manifest ../AI-Agent/data/fixtures/agent2/manifest.json --now 200 --output ../AI-Agent/data/local/example.json
+python scripts/agent2.py train-baseline --run ../AI-Agent/data/local/example.json --registry ../AI-Agent/data/local/models --allow-weak
+```
+
+첫 명령은 기존 대체 경로 우선순위 후보 1개를 만들고 NEEDS_DATA를 반환합니다. 독립 기기 holdout이 없기 때문입니다. 두 번째는 테스트용 CPU 빈도 baseline이며 운영 모델을 활성화하지 않습니다. 파일 산출물은 새 경로만 허용하고 모델 artifact는 같은 ID의 다른 내용을 덮어쓰지 않습니다. 로컬 산출물은 Git에서 제외됩니다.
+
+## 데이터 계약·검수
+
+[events](../../../data/fixtures/agent2/events.jsonl), [graph](../../../data/fixtures/agent2/graphs.json), [manifest](../../../data/fixtures/agent2/manifest.json)가 실행 가능한 예제입니다.
+
+- event는 ai2-event.v1이며 session/episode/sequence·시각·고정 graph version/hash·구조적 runtime 증거를 포함합니다. 임의 텍스트 필드는 거절합니다.
+- manifest는 ai2-dataset.v1이며 dataset/source revision, episode/group, split, source_kind, review_status, reviewer/review_revision, evidence_refs, label/label_method를 포함합니다.
+- weak label이나 episode 결과 검수가 개별 단계의 독립 정답이 되지는 않습니다. 사용자 만족도 기술 성공과 분리합니다.
+- 같은 group 또는 세션을 train과 holdout에 나누지 않습니다. holdout은 후보 생성과 baseline fitting에 사용하지 않습니다.
+- 실제 신규 경로를 제안하려면 기기에서 그 행동의 결과를 확인해야 합니다. 다른 행동을 선택한 candidate에 과거 행동 이후 화면을 재사용하지 않습니다.
+
+## Replay·승인·롤백
+
+검수한 replay case는 episode_id, task_id, source_kind, base graph_hash, review_revision, evidence_refs와 replay 본문을 담습니다. replay는 ai1-recovery-replay.v1의 turns/observation/독립 expected를 사용합니다. manifest의 holdout·검수 revision·근거와 일치해야 합니다. 행동이 있는 turn은 실제 captured target과 이전 guide 연결이 필요합니다.
+
+GraphValidator는 runtime adapter와 graph loader를 주입받습니다. 실제 AI1을 호출하는 adapter는 [Backend CLI](../../../../Backend/scripts/agent2.py)에 있어 Agent 2가 Agent 1을 직접 import하지 않습니다. 결과는 PASS/REJECT/NEEDS_DATA/ERROR이며 데이터 부족을 성공으로 간주하지 않습니다. PASS는 선언된 사례의 판정일 뿐 전체 사용자 성공률이 아닙니다.
+
+검수 자료를 준비한 운영자가 실행할 명령입니다. publish는 저장된 PASS를 그대로 믿지 않고 replay를 다시 실행합니다.
+
+```powershell
+python scripts/agent2.py publish --proposal proposal.json --base base.json --manifest manifest.json --cases cases.json --version 1.1.0 --reviewer reviewer-id
+python scripts/agent2.py rollback --task MVP-01 --version 1.0.0 --expected-current-hash CURRENT_SHA256 --reviewer reviewer-id
+```
+
+진행 중 episode는 기존 version/hash를 유지합니다. 승인·rollback은 새 선택에 적용됩니다. 실제 운영 배포는 이번 로컬 구현에서 실행하지 않았습니다. 별도 curated 파일/배포 모델의 철회·폐기 정책은 DB cascade와 별도로 관리해야 합니다.
+
+설계 기준: [제품 정답 데이터 계획](../../../../docs/task-graph-data-plan.md), [품질 평가](../../../../docs/ai-quality-evaluation.md), [개인정보](../../../../Backend/docs/README.md#개인정보).

@@ -50,8 +50,8 @@ Backend 디렉터리에서 운영 대상 DB의 DATABASE_URL을 설정한 상태�
 Render의 일반 PostgreSQL URL은 psycopg3 형식으로 변환한다.
 
 ```sh
-python scripts/consume_runtime_events.py --limit 100
-python scripts/cleanup_runtime_events.py
+python scripts/agent2.py process --limit 100
+python scripts/maintenance.py
 ```
 
 소비 명령은 사용자 안내 요청과 별도로 실행한다. 온라인 Backend는 AI2 패키지를 import하거나

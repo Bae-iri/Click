@@ -1,1 +1,1 @@
-"""Reserved Agent(2) boundary for durable event ingestion and schema checks. Not implemented."""
+"""Offline event labeling; durable consent-aware reads live in Backend/scripts/agent2.py."""

@@ -16,7 +16,7 @@ def font_goal(direction):
     """Canonical typed goal for existing help cards; this does not authorize execution."""
     if direction not in {"increase", "decrease"}:
         raise ValueError("Invalid font-size direction")
-    catalog = json.loads((Path(__file__).parents[1] / "task_graphs/goal_catalog.json").read_text())
+    catalog = json.loads((Path(__file__).parents[1] / "task_graphs/goal_catalog.json").read_text(encoding="utf-8"))
     entry = next(g for g in catalog["goals"] if g["goal_type"] == "settings.font_size." + direction)
     return TypedGoalRequest(catalog_version=catalog["version"], goal_type=entry["goal_type"],
         target_app=entry["target_app"], slots=entry["slots"])

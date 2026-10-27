@@ -15,7 +15,7 @@
 
 FE 분류 계약은 [FE Goal·Command 계약](./fe-goal-command-contract.md), runtime 실행은 [AI-Agent(1)](./ai-agent-1-runtime.md), graph 개선은 [AI-Agent(2)](./ai-agent-2-graph-proposal.md)가 기준이다. 이 문서는 **Backend → AI1의 내부 실행 경계**를 정의한다. FE의 typed 요청을 그대로 AI1 입력으로 사용하는 계약과 구분한다.
 
-2026-10-10 코드 확인: `TaskGraphRepository._decode()`는 DB 본문의 schema/hash/목표 metadata를 검증하고 `load_graph(row.body)`로 실행 객체를 만든다. `select_pinned()`는 episode에 저장된 version/hash를 복원한다. adapter 주입과 DB-only graph/version 테스트 코드가 있다. 전체 환경 호환성 필터, AI1 legacy 경로 정리, 임의 parameter 보존은 남은 작업이다. 현재 Backend 충돌 4개로 이 작업 트리의 HTTP 통합 테스트는 재실행할 수 없으며, 코드 존재를 현재 통합 검증 통과와 구분한다.
+2026-10-27: DB 본문 schema/hash/목표 검사·고정 version 복원·adapter 주입·로컬 HTTP/재시작 테스트가 통과했다. AI2 승인·release·rollback도 연결했다. 전체 환경 호환성, AI1 legacy 정리, 실제 기기 품질은 후속 검증 대상이다. [현재 구현](../Backend/docs/README.md)을 참고한다.
 
 정답 데이터의 종류와 단계별 구현 순서는 [Task Graph 정답 데이터·개발 계획](./task-graph-data-plan.md)을 따른다. ColorBench·MobiFlow를 우리 DB graph 선택의 정답표로 사용하지 않는다.
 
@@ -111,11 +111,11 @@ DB는 실행 가능한 graph 내용과 선택 metadata의 기준 저장소다. �
 
 AI2는 `실행 데이터 수집 → episode 재구성 → 근거 기반 success/fail/unknown 등 라벨 → 변경 후보 → 독립 평가 → 승인 정책 → 새 graph 버전 DB 반영`을 담당한다. 운영 중 graph 행의 내용을 덮어쓰기보다 새 불변 버전을 게시하고 활성 선택 대상을 갱신한다. Backend가 이후 새 실행에 반영한다.
 
-공개 reference, 파생 graph, weak label, 제품용 gold, 운영 artifact의 상태를 구분한다. 공개 benchmark 통과나 AI2 후보 생성만으로 `approved`를 부여하지 않는다. release/evaluation 참조에 적용 환경·제품 gold version·독립 holdout 결과를 연결한다. 이 metadata 확장은 구현할 계약이다.
+공개 reference, 파생 graph, weak label, 제품용 gold, 운영 artifact의 상태를 구분한다. 공개 benchmark 통과나 AI2 후보 생성만으로 `approved`를 부여하지 않는다. release/evaluation 참조에 적용 환경·제품 gold version·독립 holdout 결과를 연결한다. 현재 release audit는 평가/manifest hash·검토자·시각을 저장하며 추가 환경 호환성 평가는 후속 확장이다.
 
 진행 중 episode는 고정한 버전을 계속 사용한다. rollback은 새 선택의 대상 버전을 돌리는 작업이며, 위험 버전의 기존 세션은 별도 revoke/중단 정책으로 다룬다. AI2는 사용자 세션 상태나 guide를 직접 변경하지 않는다. 원천 화면·행동은 FE, 요청·선택·제어는 Backend, 판단·안내·검증은 AI1이 생산하고 AI2가 이 이벤트를 수집한다.
 
-최근 추가된 `graph_proposals`·`evaluation_reports` 저장 모델은 AI2의 후보/평가 저장이며, 실행 graph의 DB 선택·주입이 연결됐다는 뜻은 아니다. [AI2 저장 구조](./ai-agent-2-graph-proposal.md#14-저장-구조와-job-운영)를 함께 본다.
+기존 graph_proposals/evaluation_reports 테이블은 migration 호환용으로 유지한다. 현재 동의 기반 분석은 원천 event receipt에 저장하고 승인 이력은 graph_release_audits에 기록한다. [AI2 저장·실행](../AI-Agent/src/ai_agent/graph_proposal/README.md)을 따른다.
 
 ## 7. 구현 전환과 인수 기준
 

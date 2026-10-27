@@ -231,3 +231,5 @@ Backend/click-dev.db-*
 
 # Downloaded AndroidControl data and derived model outputs
 AI-Agent/data/android_control/
+AI-Agent/data/local/
+AI-Agent/data/graph_proposal/

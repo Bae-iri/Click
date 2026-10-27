@@ -2,21 +2,21 @@
 
 **현재 신규 계약:** FE가 Goal Type·Command Type을 확정하고 Backend가 DB에서 Task Graph를 선택·전달하며 Agent(1)은 전달 graph를 실행한다. 공개 endpoint는 `POST /api/v1/agent/commands`이고 상세 형식은 [FE Goal·Command 전달 계약](./fe-goal-command-contract.md)을 따른다. 아래 `/agent/turn` 본문은 전환 기간에만 유지하는 legacy 계약이다.
 
-**Current contract:** [Backend completion](../Backend/docs/backend-completion.md): accepted confirmations require confirmation_id, expected_version and an unchanged fresh observation; raw_goal is omitted. Legacy /api/v1/sessions is disabled by default. History, feedback, account verification/recovery and consent APIs are ready for app integration.
+**Current contract:** [Backend API](../Backend/docs/README.md#API): accepted confirmations require confirmation_id, expected_version and an unchanged fresh observation; raw_goal is omitted. Legacy /api/v1/sessions is disabled by default. History, feedback, account verification/recovery and consent APIs are ready for app integration.
 
-**Week 4 contract update:** [Backend week4](../Backend/docs/week4.md) takes precedence over older examples: graph-derived step/total_steps, reduced debug fields, no raw-image external processing, event metadata allowlist, and 503/504 retry handling. Use accessibility data or consented on-device OCR elements.
+**Privacy contract:** [Backend privacy](../Backend/docs/README.md#개인정보) takes precedence over older examples: graph-derived step/total_steps, reduced debug fields, no raw-image external processing, event metadata allowlist, and 503/504 retry handling. Use accessibility data or consented on-device OCR elements.
 
-## 3주 차 세션 변경
+## 세션·재전송
 
 신규 turn 세션은 DB에 저장한다. 첫 turn 응답의 `session_version`을 보관하고 이후 요청에 `expected_version`으로 보낸다. 정확한 재전송은 이전 ID·본문·version을 그대로 유지한다. 409 응답은 `X-Conflict-Code`를 보고 처리 중 재시도와 오래된 화면 재수집을 구분한다. 조회 `GET /api/v1/agent/sessions/{id}`, 취소 `POST /api/v1/agent/sessions/{id}/cancel`이 추가됐다. 취소 이후 또는 최신 version보다 오래된 안내 응답은 적용하지 않는다.
 
-`source_text`, UI label 샘플, target_label 및 일부 진단 필드는 저장·응답에서 제거한다. 표시할 안내 문구와 target_bounds를 사용한다. [3주 차 상세 계약](../Backend/docs/week3.md)을 따른다. 아래 본문 예시는 최초 요청 중심이며 후속 요청에는 expected_version을 추가해야 한다.
+`source_text`, UI label 샘플, target_label 및 일부 진단 필드는 저장·응답에서 제거한다. 표시할 안내 문구와 target_bounds를 사용한다. [현재 세션 계약](../Backend/docs/README.md#API)을 따른다. 아래 본문 예시는 최초 요청 중심이며 후속 요청에는 expected_version을 추가해야 한다.
 
-## 2주 차 인증 변경
+## 인증
 
 사용자·Agent·레거시 세션 API에 `Authorization: Bearer <access_token>`이 필수다.
-`/api/v1/auth/register` 또는 `/login`으로 받은 토큰을 사용한다. 현재 Android Gateway에는 아직 헤더 연동이 없어 수정 전에는 401이 반환된다.
-토큰 갱신·로그아웃·공통 오류 규약은 [서버 인증 계약](../Backend/docs/week2.md)을 따른다. 아래 turn 본문 규격은 유지하며 user_id는 서버가 인증 사용자로 제한한다.
+`/api/v1/auth/register` 또는 `/login`으로 받은 토큰을 사용한다. 토큰이 없거나 만료되면 401을 반환하므로 갱신·재로그인 흐름을 처리한다.
+토큰 갱신·로그아웃·공통 오류 규약은 [서버 인증 계약](../Backend/docs/README.md#API)을 따른다. 아래 turn 본문 규격은 유지하며 user_id는 서버가 인증 사용자로 제한한다.
 
 legacy FE 연동은 `POST /api/v1/agent/turn`을 사용한다. 신규 FE는 `/api/v1/agent/commands`를 사용한다. 기존
 `/api/v1/sessions` 계열은 이전 버전 호환을 위해 남겨 두었으며 신규 코드에서는

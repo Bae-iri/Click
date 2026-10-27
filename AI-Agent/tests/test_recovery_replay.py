@@ -16,7 +16,7 @@ FIXTURE = Path(__file__).parents[1] / "data/evaluation/runtime_recovery/navigati
 
 
 def test_reviewed_synthetic_recovery_cases():
-    report = evaluate_cases(json.loads(FIXTURE.read_text()), TASK_GRAPHS)
+    report = evaluate_cases(json.loads(FIXTURE.read_text(encoding="utf-8")), TASK_GRAPHS)
     assert not report["violations"], report
     assert report["metrics"]["false_target_count"] == 0
     assert report["metrics"]["false_termination_count"] == 0
@@ -25,14 +25,14 @@ def test_reviewed_synthetic_recovery_cases():
 
 
 def test_metrics_detect_wrong_target_termination_completion_and_missing_recovery():
-    cases = json.loads(FIXTURE.read_text())[:1]
+    cases = json.loads(FIXTURE.read_text(encoding="utf-8"))[:1]
     cases[0]["turns"][0]["expected"]["target_node_id"] = "wrong-target"
     cases[0]["expect_recovery"] = True
     report = evaluate_cases(cases, TASK_GRAPHS)
     assert report["metrics"]["false_target_count"] == 1
     assert report["metrics"]["recovered_cases"] == 0
     assert len(report["violations"]) == 2
-    completion = json.loads(FIXTURE.read_text())[-1:]
+    completion = json.loads(FIXTURE.read_text(encoding="utf-8"))[-1:]
     completion[0]["turns"][-1]["expected"].update(done=False, terminal=False)
     report = evaluate_cases(completion, TASK_GRAPHS)
     assert report["metrics"]["false_termination_count"] == 1
@@ -40,7 +40,7 @@ def test_metrics_detect_wrong_target_termination_completion_and_missing_recovery
 
 
 def test_replay_rejects_a_different_graph_version():
-    cases = json.loads(FIXTURE.read_text())[:1]
+    cases = json.loads(FIXTURE.read_text(encoding="utf-8"))[:1]
     cases[0]["graph_hash"] = "invalid"
     with pytest.raises(ValueError, match="hash mismatch"):
         evaluate_cases(cases, TASK_GRAPHS)

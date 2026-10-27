@@ -18,4 +18,4 @@ FE는 Goal/Command를 확정하고 Backend는 DB graph 본문을 선택·검증�
 
 ColorBench·MobiFlow는 검수한 연구용 보조 자료로 사용한다. 우리 선택·완료 정답은 실제 대상 환경의 독립 근거로 구축하며, 자동 라벨과 graph 후보는 정답으로 자동 승격하지 않는다. 공개 자료를 도입해도 AI2의 수집·검수·graph 개선 역할을 유지한다.
 
-기존 문서의 실행 상세와 구현 평가는 AI-Agent(1) 문서로 통합하고, graph learning/proposal은 AI-Agent(2) 문서에서 확장했다. 실제 코드도 `runtime/`, `graph_proposal/`, 공통 `telemetry/`로 분리했다. 자동 라벨링·학습·graph 배포는 별도 구현 대상이며, [파일 구조](../README.md)에서 현재 상태를 확인할 수 있다.
+기존 문서의 실행 상세와 구현 평가는 AI-Agent(1) 문서로 통합하고, graph learning/proposal은 AI-Agent(2) 문서에서 확장했다. 실제 코드도 `runtime/`, `graph_proposal/`, 공통 `telemetry/`로 분리했다. 오프라인 수집·분석·후보·평가·승인/롤백과 CPU baseline은 구현되어 있으며, [현재 상태](../README.md)에서 실기기 증거·독립 holdout 등 남은 항목을 확인할 수 있다.
