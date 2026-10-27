@@ -6,8 +6,12 @@
 | [Agent 2](src/ai_agent/graph_proposal/README.md) | 오프라인 기록 재구성·분석·데이터셋·그래프 후보·평가·승인 |
 | telemetry | 개인정보를 제한한 실행 증거·진단 계약 |
 | task_graph | 공통 graph 계약·registry |
+| user_modeling | Backend가 사용하는 개인화·안내 난이도 계산 |
+| observation / matching / guide / safety / schemas.py | Backend의 기존 guidance adapter와 공통 graph가 사용하는 호환 코드 |
 
 FE/Backend는 목표를 확인하고 Backend가 승인 graph를 선택·version/hash 고정·복원합니다. AI1은 해당 graph를 실행합니다. Agent 2는 사용자 응답을 기다리게 하지 않으며 검토 없이 진행 중 graph를 바꾸지 않습니다.
+
+AI1 실행 코드는 `src/ai_agent/runtime/`에 모았습니다. OCR 보조 기능은 `runtime/vision.py`의 `VisionFallback`입니다. 호출되지 않던 초기 골격과 번호가 붙은 복사본은 제거했습니다. `runtime/goal_typing.py`와 기본 task registry는 기존 raw goal 요청·회귀 테스트에서 계속 사용합니다.
 
 ## 현재 상태
 

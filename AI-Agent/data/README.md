@@ -8,7 +8,7 @@
 | fixtures/agent2/ | 합성 이벤트 8개·graph·개발용 manifest: AI2 전체 처리 예제 |
 | evaluation/runtime_recovery/ | 합성 화면/행동 replay와 독립 expected를 사용하는 개발 회귀 |
 | evaluation/manifest-template.json | 광범위 품질 평가 설계용 빈 template; AI2 실행 manifest와 별도 |
-| local/ | 명시적 fixture 실행·baseline 학습의 로컬 산출물. Git 제외 |
+| local/ | 명시적 fixture 실행·baseline 학습·OCR 계약 평가의 로컬 산출물. Git 제외 |
 | graph_proposal/ | 기존 weak labeler 등의 재생성 가능한 로컬 출력. Git 제외 |
 
 실제 runtime 이벤트와 동의된 AI2 분석은 Backend DB의 runtime_events/runtime_event_consumptions에 저장합니다. 예전의 빈 폴더 placeholder와 생성된 label 복사본은 제거했습니다. 실제 기록을 이 저장소에 자동 추가하지 않습니다.

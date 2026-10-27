@@ -21,7 +21,7 @@ from ai_agent.runtime.privacy import sanitize_request
 from ai_agent.runtime.types import (AccessibilityNode, AgentTurnRequest, RawGoalInput,
     DeviceContext, VisionSnapshot, VisionElement)
 from ai_agent.telemetry.trace_logger import TraceLogger
-from ai_agent.fallback.llm_vlm_fallback import LLMVLMFallback
+from ai_agent.runtime.vision import VisionFallback
 from ai_agent.runtime.similarity import GeminiSimilarityScorer
 from ai_agent.runtime.budget import deadline
 from ai_agent.runtime.progress import graph_progress
@@ -109,7 +109,7 @@ def test_unverified_images_never_call_network(monkeypatch, consent):
         pytest.fail("Image egress must remain disabled")
     monkeypatch.setenv("GEMINI_API_KEY", "fake-key")
     monkeypatch.setattr("urllib.request.urlopen", forbidden)
-    result = LLMVLMFallback().analyze(VisionSnapshot(user_consented=consent,
+    result = VisionFallback().analyze(VisionSnapshot(user_consented=consent,
         consent_request_id="verified-request" if consent else None,
         privacy_status="verified" if consent else "unverified",
         redaction_applied=True, screenshot_base64="RAW"), reason="test")

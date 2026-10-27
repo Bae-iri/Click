@@ -602,7 +602,6 @@ FE catalog는 사용자가 고를 수 있는 목적과 slot schema를 설명하�
 | 현재 위치 | 현재 동작 | 전환 후 책임 |
 | --- | --- | --- |
 | `AI-Agent/src/ai_agent/runtime/goal_typing.py` | MVP-01 keyword/slot 기반 `type_goal()` | FE 분류 구현의 참고·이관 대상; Agent(1) 호출 경로에서 제거 |
-| `AI-Agent/src/ai_agent/goal_typing/*` | 기존 catalog·normalizer·retriever·slot extractor·typer | FE 소유 입력 처리 참고; Agent(1) 확장 모듈로 유지하지 않음 |
 | `AI-Agent/goal_catalog/mvp_goals.json` | 한 개 Goal과 대표 발화·필수 slot 이름 | FE와 Backend가 버전·제약을 공유하는 catalog 자산 |
 | `runtime/engine.py` | legacy 요청만 `type_goal()` 사용 | typed 경로는 Backend가 전달한 goal·선택 graph로 시작 |
 | `runtime/types.py`, `contracts.py`, `validation.py` | `RawGoalInput`, `TypedGoal`, 첫 turn raw Goal 요구 | Backend → AI1 graph 실행 DTO·명령·상태 정합성 검사 |
@@ -612,6 +611,8 @@ FE catalog는 사용자가 고를 수 있는 목적과 slot schema를 설명하�
 | Backend 세션·checkpoint·확인 저장 | 현재 version·소유권·취소·확인 바인딩 | DB graph 고정·복원, PAUSED·episode·교체 원자성·제어 응답 추가 |
 | FE `AgentTurnContract.java`·`AgentTurnGateway.java` | v0.2 typed Goal·Command 직렬화 | `/agent/commands`의 제어·안내 응답 처리 |
 | FE `VoiceRequestQueue.java`·Overlay Service | 로컬 VIP/NORMAL 큐와 interrupt | 확정 Command 생성, pause/cancel 구분, 응답 상태 동기화 |
+
+2026-10-27 파일 정리: 호출되지 않던 상위 `AI-Agent/src/ai_agent/goal_typing/` 골격은 제거했다. 실제 legacy 요청이 사용하는 `runtime/goal_typing.py`는 유지하며 typed 경로의 목표 확인·분류는 FE/Backend가 담당한다.
 
 권장 전환 순서:
 

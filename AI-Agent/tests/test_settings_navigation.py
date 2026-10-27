@@ -110,7 +110,7 @@ class OverconfidentSimilarity:
 
 @pytest.mark.parametrize("status", ["no_signal", "provider_error", "not_configured"])
 def test_unavailable_vision_waits_for_user_without_ending_or_requesting_capture_again(status):
-    from ai_agent.fallback.llm_vlm_fallback import VisionFallbackAnalysis
+    from ai_agent.runtime.vision import VisionFallbackAnalysis
     from test_vision_fallback import request as vision_request
 
     class UnavailableVision:

@@ -1,11 +1,11 @@
-"""Vision fallback boundary for low-confidence or missing Accessibility data."""
+"""Consume consented on-device OCR when Accessibility data is insufficient."""
 
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from ai_agent.runtime.types import AccessibilityNode, Bounds, VisionElement, VisionSnapshot
+from ai_agent.runtime.types import AccessibilityNode, VisionElement, VisionSnapshot
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,8 +24,8 @@ class VisionFallbackAnalysis:
         return data
 
 
-class LLMVLMFallback:
-    """Analyze a consented vision snapshot without leaking raw images into traces."""
+class VisionFallback:
+    """Validate local OCR elements without sending images to an external model."""
 
     provider = "vision-fallback"
     min_element_confidence = 0.65
@@ -89,16 +89,6 @@ class LLMVLMFallback:
             reason="vision_snapshot_has_no_usable_elements",
             provider=snapshot.provider,
         )
-
-    def _analyze_with_gemini(
-        self,
-        snapshot: VisionSnapshot,
-        *,
-        reason: str,
-    ) -> VisionFallbackAnalysis:
-        # Client assertions cannot authorize unverified raw-image egress.
-        return VisionFallbackAnalysis(status="not_configured",
-            reason="server_image_redaction_unavailable", provider="local")
 
 
 def vision_elements_to_accessibility_nodes(

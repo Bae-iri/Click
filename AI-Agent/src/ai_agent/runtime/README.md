@@ -1,11 +1,13 @@
 # AI-Agent(1): 사용자 Runtime
 
-Backend의 turn API가 사용하는 사용자 작업 실행 경로다. **2026-10-10 코드 확인:** typed 경로는 Backend가 DB 본문에서 선택·복원한 graph를 adapter에 주입해 실행한다. Goal/Command 확정은 FE, DB graph 선택·복원은 Backend, 화면 판단·Guide/Action → Verify → graph 내부 Re-plan은 AI1의 책임이다. [내부 전달 계약](../../../../docs/backend-task-graph-dispatch.md)을 따른다. `ClickAgentEngine`에는 raw goal 분류·기본 registry 경로가 남아 있어 완전한 입력 계약 정리는 후속 작업이다. 실제 tap/drag 수집 및 글자 배율 검증 코드는 연결됐으나 실기기 완료 검증은 남아 있다. 기존 Backend 충돌과 [UI 오선택 재현](../../../../docs/reviews/2026-10-10-ui-highlight-revalidation.md) 때문에 전체 통합 완료로 표시하지 않는다.
+Backend의 turn API가 사용하는 사용자 작업 실행 경로다. **2026-10-27 구조 정리:** typed 경로는 Backend가 DB 본문에서 선택·복원한 graph를 adapter에 주입해 실행한다. 목표 확인·분류는 FE/Backend, DB graph 선택·복원은 Backend, 화면 판단·Guide/Action → Verify → graph 내부 Re-plan은 AI1의 책임이다. [내부 전달 계약](../../../../docs/backend-task-graph-dispatch.md)을 따른다.
+
+실행 진입점은 `ClickAgentEngine.handle_turn()`이다. raw goal 분류와 기본 registry는 기존 요청·테스트에서 사용하므로 유지한다. 호출되지 않던 상위 `goal_typing/`, `execution/`, `replanning/`, `verification/`, `workflows/` 골격은 제거했다. 실제 tap/drag 수집 및 글자 배율 검증 코드는 연결됐으나 실기기 완료 검증과 제품 gold 기반 품질 평가는 남아 있다.
 
 | 파일 | 실행 책임 |
 | --- | --- |
 | `engine.py` | turn 조율 |
-| `goal_typing.py` | legacy 사용자 의도 → Typed Goal; FE 이관 및 runtime 호출 제거 대상 |
+| `goal_typing.py` | legacy raw goal → Typed Goal; typed 경로의 목표 확정은 FE/Backend 담당 |
 | `normalizer.py`, `classifier.py` | 화면 정규화·State 판단 |
 | `matcher.py`, `targeting.py`, `similarity.py` | 역할·앱/window 필터, 공통 graph selector, 동점 선택 보류 |
 | `guide.py`, `contracts.py` | Safety에 따른 안내·확인·허용 Action 계약 |
@@ -15,6 +17,11 @@ Backend의 turn API가 사용하는 사용자 작업 실행 경로다. **2026-10
 | `session.py`, `types.py` | 실행 상태·입출력 계약 |
 | `tasks/`, `progress.py` | 로컬 seed/legacy graph, 전달 graph 기반 진행도·관측 경로 계산 |
 | `privacy.py`, `budget.py` | 개인정보 처리·turn 시간 예산 |
+| `vision.py` | 요청별 동의·개인정보 검사를 통과한 기기 내 OCR 요소를 검증하고 화면 노드로 변환 |
+
+`vision.py`는 외부 LLM/VLM을 호출하지 않는다. 기존 `fallback/llm_vlm_fallback.py`를 이동하고 클래스를 `VisionFallback`으로 명명했다. raw 이미지 차단·지원 provider·confidence 기준은 유지한다. OCR 계약 회귀는 `python scripts/evaluate_vision_fallback.py --output data/local/vision_evaluation.json`으로 실행하며 재생성 가능한 결과는 Git에 저장하지 않는다.
+
+Backend의 기존 guidance adapter가 사용하는 `observation/`, `matching/`, `guide/`, `safety/`와 `schemas.py`는 상위 패키지에 남아 있다. `user_modeling/`은 Backend 개인화에서 사용한다. 각 영역의 책임은 [패키지 구조](../../../README.md)를 참고한다.
 
 이 패키지는 `ai_agent.graph_proposal`을 import하지 않는다. dataset 생성, success/fail 학습 라벨 확정, graph 후보 생성·검증·승격·rollback은 [AI-Agent(2)](../graph_proposal/README.md)의 책임이다.
 

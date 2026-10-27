@@ -11,30 +11,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from ai_agent.telemetry.schemas import RuntimeVerificationStatus as VerificationResult
-
-
 SafetyLevel = Literal["LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"]
 ActionType = Literal["tap", "drag", "scroll", "observe_only"]
 GuideCommandType = Literal["highlight", "gesture_hint", "confirmation", "done", "blocked"]
-
-
-@dataclass(frozen=True)
-class RawGoalInput:
-    source_text: str
-    locale: str = "ko-KR"
-    device_context: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class TypedGoal:
-    goal_type: str
-    target_app: str
-    task_type: str
-    slots: dict[str, Any]
-    source_text: str
-    confidence: float
-    top_candidates: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -96,17 +75,3 @@ class GuideCommand:
     target_node_id: str | None = None
     target_bounds: tuple[int, int, int, int] | None = None
     render_policy: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class ScrollCommand:
-    scroll_command_id: str
-    task_id: str
-    state_id: str
-    transition_id: str
-    direction: Literal["down", "up"]
-    scroll_amount: Literal["page", "half_page"] | float
-    max_attempts: int
-    stop_condition: tuple[str, ...]
-    scrollable_node_id: str | None = None
-    target_hint: dict[str, Any] = field(default_factory=dict)
