@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.main import create_app
 from app.schemas.transcription import TranscriptionRequest
 from app.services.transcription import (InvalidAudio, InvalidTranscriptionResponse, TranscriptionService,
-    TranscriptionUnavailable, TranscriptionTimedOut)
+    TranscriptionUnavailable, TranscriptionTimedOut, NoSpeechDetected)
 from tests.helpers import register
 
 
@@ -83,6 +83,39 @@ def test_timeout_is_distinct(configured):
         raise httpx.ReadTimeout('private worker timeout')
     with pytest.raises(TranscriptionTimedOut):
         TranscriptionService(timeout).transcribe(audio_request())
+
+
+@pytest.mark.parametrize('status,body,error', [
+    (422, {'detail': {'code': 'NO_SPEECH'}}, NoSpeechDetected),
+    (422, {'detail': 'Invalid audio request'}, TranscriptionUnavailable),
+    (422, [], TranscriptionUnavailable),
+    (422, {'detail': {'code': 'NO_SPEECH'}, 'private': 'x' * 2000}, TranscriptionUnavailable),
+    (503, {'detail': {'code': 'NO_SPEECH'}}, TranscriptionUnavailable),
+])
+def test_only_explicit_worker_silence_is_a_no_speech_error(configured, status, body, error):
+    with pytest.raises(error):
+        TranscriptionService(lambda *a, **kw: httpx.Response(status, json=body)).transcribe(audio_request())
+
+
+def test_real_worker_silence_passes_through_backend_without_audio_or_text(configured, monkeypatch):
+    from inference.whisper_stt import create_app as create_worker
+    monkeypatch.setenv('SELF_HOSTED_STT_TOKEN', 'x' * 32)
+    with TestClient(create_worker(lambda: object(), lambda model, pcm: '')) as worker:
+        def send(payload, **kwargs):
+            return worker.post('/v1/transcriptions', json=payload,
+                               headers={'Authorization': 'Bearer ' + 'x' * 32})
+        with TestClient(create_app(transcription_service=TranscriptionService(send))) as client:
+            register(client)
+            response = client.post('/api/v1/speech/transcriptions', json=audio_request().model_dump())
+            contract = client.get('/openapi.json').json()
+            error_contract = contract['paths']['/api/v1/speech/transcriptions']['post']['responses']['422']
+            assert error_contract['content']['application/json']['schema']['$ref'].endswith('/ErrorEnvelope')
+            assert 'NO_SPEECH' in error_contract['description']
+    assert response.status_code == 422
+    assert response.json()['error']['code'] == 'NO_SPEECH'
+    assert response.json()['error']['trace_id'] == response.headers['X-Request-ID']
+    assert 'audio_base64' not in response.text
+    assert 'x' * 32 not in response.text
 
 
 def test_authenticated_transcription_endpoint_returns_private_provider_metadata():

@@ -20,6 +20,10 @@ class InvalidTranscriptionResponse(RuntimeError):
     pass
 
 
+class NoSpeechDetected(RuntimeError):
+    pass
+
+
 class TranscriptionService:
     """Sends short Korean audio only to the configured, operator-owned Whisper worker."""
 
@@ -41,6 +45,13 @@ class TranscriptionService:
             raise TranscriptionTimedOut("Self-hosted STT timed out") from error
         except httpx.HTTPError as error:
             raise TranscriptionUnavailable("Self-hosted STT is unavailable") from error
+        if response.status_code == 422 and len(response.content) <= 1024:
+            try:
+                no_speech = response.json() == {"detail": {"code": "NO_SPEECH"}}
+            except ValueError:
+                no_speech = False
+            if no_speech:
+                raise NoSpeechDetected("No recognizable speech")
         if response.status_code < 200 or response.status_code >= 300:
             raise TranscriptionUnavailable("Self-hosted STT returned an error")
         try:

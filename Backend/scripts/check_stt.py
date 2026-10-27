@@ -16,16 +16,23 @@ from app.schemas.transcription import TranscriptionRequest, TranscriptionRespons
 from app.services.audio_validation import MAX_AUDIO_BYTES, decode_pcm_wav
 from app.services.transcription import (
     TranscriptionService, TranscriptionUnavailable, TranscriptionTimedOut,
-    InvalidTranscriptionResponse,
+    InvalidTranscriptionResponse, NoSpeechDetected,
 )
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--env-file', type=Path, help='Load local server settings; existing environment takes precedence.')
     parser.add_argument('--wav', type=Path, help='16 kHz mono PCM16 test recording')
     parser.add_argument('--api-url', help='Backend base URL; STT_CHECK_ACCESS_TOKEN supplies an existing login token')
     parser.add_argument('--expected-text', help='Optional exact expected transcript (ignores whitespace)')
     args = parser.parse_args(argv)
+    if args.env_file is not None:
+        if not args.env_file.is_file():
+            print('CONFIG_ERROR: env file does not exist.')
+            return 2
+        from dotenv import load_dotenv
+        load_dotenv(args.env_file, override=False)
     if args.expected_text and not args.wav:
         parser.error('--expected-text requires --wav')
     try:
@@ -33,13 +40,14 @@ def main(argv=None):
             base = args.api_url.rstrip('/')
             parsed = urlsplit(base)
             token = os.getenv('STT_CHECK_ACCESS_TOKEN', '').strip()
-            if (parsed.scheme != 'https' or not parsed.hostname or parsed.username
+            local_http = parsed.scheme == 'http' and parsed.hostname in {'localhost', '127.0.0.1', '::1'}
+            if (not (parsed.scheme == 'https' or local_http) or not parsed.hostname or parsed.username
                     or parsed.password or parsed.query or parsed.fragment or not token):
                 raise ValueError()
         else:
             InferenceEndpoint.from_env('SELF_HOSTED_STT')
     except ValueError:
-        print('CONFIG_ERROR: set worker URL/token, or HTTPS API URL and STT_CHECK_ACCESS_TOKEN.')
+        print('CONFIG_ERROR: set worker URL/token, or HTTPS API URL (HTTP only on loopback) and STT_CHECK_ACCESS_TOKEN.')
         return 2
     if args.wav is None:
         print('CONFIGURED_ONLY: no inference performed. Run again with --wav to verify STT.')
@@ -60,6 +68,13 @@ def main(argv=None):
             endpoint = InferenceEndpoint(base + '/api/v1/speech/transcriptions', token)
             response = endpoint.post(request.model_dump(), timeout=30)
             if response.status_code != 200:
+                if response.status_code == 422 and len(response.content) <= 4096:
+                    try:
+                        error = response.json().get('error', {})
+                        if isinstance(error, dict) and error.get('code') == 'NO_SPEECH':
+                            raise NoSpeechDetected()
+                    except (ValueError, AttributeError):
+                        pass
                 print(f'HTTP_ERROR: {response.status_code} (401=login, 422=audio, 503=worker/config, 504=timeout).')
                 return 1
             result = TranscriptionResponse.model_validate(response.json())
@@ -68,6 +83,9 @@ def main(argv=None):
                 raise ValueError()
         else:
             text = TranscriptionService().transcribe(request)
+    except NoSpeechDetected:
+        print('NO_SPEECH: no recognizable speech. Record a new WAV and retry.')
+        return 1
     except (TranscriptionTimedOut, httpx.TimeoutException):
         print('TIMEOUT: inference did not respond in time.')
         return 1
