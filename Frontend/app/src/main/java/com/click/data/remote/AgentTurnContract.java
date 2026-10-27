@@ -194,6 +194,13 @@ public final class AgentTurnContract {
             else targetBounds = new int[]{bounds.getInt(0), bounds.getInt(1), bounds.getInt(2), bounds.getInt(3)};
         }
 
+        /** Only an explicit supported direction may become a drag arrow. */
+        public String dragDirection() {
+            if (!"drag".equals(actionType) || renderPolicy == null) return null;
+            String direction = renderPolicy.optString("direction", "");
+            return "left".equals(direction) || "right".equals(direction) ? direction : null;
+        }
+
         /** Present when the Agent needs the user to reach a screen where the settings app is openable. */
         public JSONObject recoveryAction() {
             return renderPolicy == null ? null : renderPolicy.optJSONObject("recovery_action");
