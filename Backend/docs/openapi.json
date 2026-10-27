@@ -8290,9 +8290,9 @@
           },
           "model": {
             "type": "string",
-            "const": "Qwen/Qwen3-ASR-1.7B",
+            "const": "openai/whisper-large-v3",
             "title": "Model",
-            "default": "Qwen/Qwen3-ASR-1.7B"
+            "default": "openai/whisper-large-v3"
           },
           "provider": {
             "type": "string",

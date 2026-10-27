@@ -4,7 +4,7 @@ from collections.abc import Callable
 import httpx
 
 from app.clients.self_hosted import InferenceEndpoint
-from app.schemas.transcription import TranscriptionRequest
+from app.schemas.transcription import STT_MODEL, TranscriptionRequest
 from app.services.audio_validation import InvalidAudio, decode_pcm_wav
 
 
@@ -21,9 +21,9 @@ class InvalidTranscriptionResponse(RuntimeError):
 
 
 class TranscriptionService:
-    """Sends short Korean audio only to the configured, operator-owned Qwen worker."""
+    """Sends short Korean audio only to the configured, operator-owned Whisper worker."""
 
-    MODEL = "Qwen/Qwen3-ASR-1.7B"
+    MODEL = STT_MODEL
 
     def __init__(self, sender: Callable[..., httpx.Response] | None = None):
         self._sender = sender

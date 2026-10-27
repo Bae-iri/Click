@@ -13,7 +13,7 @@ public class PrivateSpeechContractTest {
         JSONObject operation = new JSONObject().put("post", new JSONObject().put("responses", response));
         return new JSONObject().put("paths", new JSONObject().put("/api/v1/speech/transcriptions", operation));
     }
-    @Test public void acceptsPrivateQwenWorkerContract() throws Exception {
+    @Test public void acceptsPrivateWhisperWorkerContract() throws Exception {
         PrivateSpeechContract.requireSelfHosted(contract("self_hosted", PrivateSpeechContract.MODEL));
     }
     @Test(expected = org.json.JSONException.class) public void refusesOldExternalProviderBeforeAudioUpload() throws Exception {
@@ -24,5 +24,8 @@ public class PrivateSpeechContractTest {
     }
     @Test(expected = org.json.JSONException.class) public void refusesDifferentModelContract() throws Exception {
         PrivateSpeechContract.requireSelfHosted(contract("self_hosted", "unknown"));
+    }
+    @Test(expected = org.json.JSONException.class) public void refusesPreviousQwenContractBeforeAudioUpload() throws Exception {
+        PrivateSpeechContract.requireSelfHosted(contract("self_hosted", "Qwen/Qwen3-ASR-1.7B"));
     }
 }

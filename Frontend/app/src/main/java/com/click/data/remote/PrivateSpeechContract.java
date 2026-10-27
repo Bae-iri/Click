@@ -6,7 +6,7 @@ import org.json.JSONObject;
 
 /** Refuse audio uploads to older Click servers that still declare external STT. */
 public final class PrivateSpeechContract {
-    public static final String MODEL = "Qwen/Qwen3-ASR-1.7B";
+    public static final String MODEL = "openai/whisper-large-v3";
     private PrivateSpeechContract() {}
 
     public static void requireSelfHosted(JSONObject openApi) throws JSONException {

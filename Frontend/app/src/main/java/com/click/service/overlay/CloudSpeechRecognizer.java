@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Records short PCM WAV in memory and sends it to our backend/private Qwen STT. */
+/** Records short PCM WAV in memory and sends it to our backend/private Whisper STT. */
 public final class CloudSpeechRecognizer implements SpeechInput {
     private static final int SAMPLE_RATE = 16_000;
     private static final int SPEECH_RMS_THRESHOLD = 300;

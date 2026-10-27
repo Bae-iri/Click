@@ -75,7 +75,7 @@ def main(argv=None):
         print('UNAVAILABLE: check worker process, endpoint and shared token.')
         return 1
     except (InvalidTranscriptionResponse, ValueError):
-        print('RESPONSE_ERROR: expected nonempty self_hosted Qwen/Qwen3-ASR-1.7B result.')
+        print('RESPONSE_ERROR: expected nonempty self_hosted openai/whisper-large-v3 result.')
         return 1
     if args.expected_text and ''.join(text.split()) != ''.join(args.expected_text.split()):
         print('TEXT_MISMATCH: inference responded, but transcript differs from expected text.')

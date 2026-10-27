@@ -2,11 +2,11 @@
 
 배포 후 실제 추론 점검 명령과 Frontend/AI-Agent/Backend 담당별 확인 항목은 [STT·OCR 인수 문서](../docs/README.md#모델-연결)를 참고한다. API 계약 확인만으로 실제 STT 성공을 기록하지 않는다.
 
-Click의 음성 인식은 **Qwen3-ASR-1.7B**, 목표 해석은 **키워드 매핑 실패 또는 그래프 입력 정보 누락 시 자체 LLM**을 사용한다. API 연결 코드와 독립 STT 실행 프로세스를 제공한다. 실제 가중치 추론·GPU 메모리·한국어 품질·지연은 별도 서버에서 검증해야 한다.
+Click의 음성 인식은 **Whisper large-v3 (`faster-whisper`/CTranslate2)**, 목표 해석은 **키워드 매핑 실패 또는 그래프 입력 정보 누락 시 자체 LLM**을 사용한다. API 연결 코드와 독립 STT 실행 프로세스를 제공한다. 실제 가중치 추론·GPU 메모리·한국어 품질·지연은 별도 서버에서 검증해야 한다.
 
 ## 입력과 실행 경계
 
-1. 앱은 16kHz mono PCM16 WAV를 메모리에서 녹음한다. 업로드 전에 API의 OpenAPI 응답이 `provider=self_hosted`, `model=Qwen/Qwen3-ASR-1.7B`로 제한되는지 검사한다. 구버전 외부 STT 서버나 확인 불가능한 서버에는 음성을 보내지 않는다.
+1. 앱은 16kHz mono PCM16 WAV를 메모리에서 녹음한다. 업로드 전에 API의 OpenAPI 응답이 `provider=self_hosted`, `model=openai/whisper-large-v3`로 제한되는지 검사한다. 구버전 외부 STT 서버나 확인 불가능한 서버에는 음성을 보내지 않는다.
 2. 인증된 `/api/v1/speech/transcriptions`가 지정한 자체 STT 서버에만 전송한다. 최대 20초·650,000바이트이며 앱 녹음은 최대 16초다. MP3 등 다른 형식은 이 초기 연결에서 지원하지 않는다.
 3. v0.3 `resolve_goal`의 `preparation_version=goal-inputs.v1` 경로는 키워드 매핑 후 그래프 입력 조건도 검사한다. 매핑 실패 또는 입력 정보 누락 시 자체 LLM에 개인정보 패턴을 마스킹한 발화·목표 후보·필드 정의를 보낸다. 화면 트리·이미지·음성·대화 이력·사용자 ID는 보내지 않는다. 구버전 준비 계약 없는 경로는 기존의 키워드 실패 fallback을 유지한다.
 4. 부정 요청·키워드 동점·이미 매핑된 미지원 목표는 LLM으로 실행 가능한 목표를 만들어내지 않는다. 새 준비 경로에서 LLM은 목표 ID와 부분 입력값을 제안한다. 누락된 적용 범위는 질문으로 확인하고, 모든 필수값이 모인 뒤 서버가 승인 그래프를 선택한다. 자세한 [입력 계약](../../docs/goal-progress-result-flow.md)을 참고한다.
@@ -53,31 +53,32 @@ python3.12 -m venv .venv-asr
 .venv-asr/bin/pip install -r inference/requirements.txt
 ```
 
-의존성 설치 시 해당 서버의 CUDA와 맞는 PyTorch 구성을 확인한다. 기본 실행 장치는 `cuda:0`이며 `QWEN_ASR_DEVICE=cpu`도 설정할 수 있지만 CPU 지연은 측정 전이다. 최소 VRAM이나 동시 처리량을 확정한 상태가 아니다.
+실행기는 `faster-whisper==1.2.1`이며 PyTorch를 사용하지 않는다. NVIDIA GPU는 CTranslate2에 맞는 CUDA 12/cuDNN 9를 준비한다. 기본값은 `WHISPER_DEVICE=cuda`, `WHISPER_COMPUTE_TYPE=float16`이다. CPU는 `WHISPER_DEVICE=cpu`, `WHISPER_COMPUTE_TYPE=int8`로 설정한다. 실제 자원·한국어 지연은 측정 전이다.
 
-별도 배포 준비 환경에서 `Qwen/Qwen3-ASR-1.7B` 가중치를 내려받아 revision과 파일 SHA-256 목록을 보관한다. 서비스 실행 중에는 다운로드하지 않는다. 승인한 revision으로 다운로드하는 예:
+별도 배포 준비 환경에서 `openai/whisper-large-v3`의 CTranslate2 변환본인 `Systran/faster-whisper-large-v3`를 내려받아 revision과 파일 SHA-256 목록을 보관한다. 서비스 실행 중에는 다운로드하지 않는다. 승인한 revision으로 다운로드하는 예:
 
 ```python
 from huggingface_hub import snapshot_download
-snapshot_download("Qwen/Qwen3-ASR-1.7B", revision="<검증한 commit SHA>",
-                  local_dir="/srv/models/Qwen3-ASR-1.7B")
+snapshot_download("Systran/faster-whisper-large-v3", revision="<검증한 commit SHA>",
+                  local_dir="/srv/models/faster-whisper-large-v3")
 ```
 
-모델 디렉터리를 읽기 전용으로 제공하고, 비밀 관리 시스템에서 32자 이상의 무작위 `SELF_HOSTED_STT_TOKEN`을 주입한다. 다음 파일은 머신에만 보관하며 저장소에 커밋하지 않는다.
+`model.bin`, `config.json`, `tokenizer.json`, `preprocessor_config.json`이 모두 있어야 시작한다. 원본 Transformers 형식이나 Qwen 가중치는 사용할 수 없다. 모델 디렉터리를 읽기 전용으로 제공하고, 비밀 관리 시스템에서 32자 이상의 무작위 `SELF_HOSTED_STT_TOKEN`을 주입한다. [worker 설정 예시](.env.example)를 기준으로 다음 파일은 머신에만 보관하며 저장소에 커밋하지 않는다.
 
 ```dotenv
 # /etc/click/asr.env
-QWEN_ASR_MODEL_PATH=/srv/models/Qwen3-ASR-1.7B
-QWEN_ASR_DEVICE=cuda:0
+WHISPER_MODEL_PATH=/srv/models/faster-whisper-large-v3
+WHISPER_DEVICE=cuda
+WHISPER_COMPUTE_TYPE=float16
 SELF_HOSTED_STT_TOKEN=<32자 이상의 공유 비밀>
 ```
 
 ```bash
-.venv-asr/bin/uvicorn inference.qwen_stt:app --env-file /etc/click/asr.env \
+.venv-asr/bin/uvicorn inference.whisper_stt:app --env-file /etc/click/asr.env \
   --host 127.0.0.1 --port 8091 --workers 1 --no-access-log
 ```
 
-`/health`는 모델 로드가 끝나야 응답한다. 모델 로더는 오프라인 모드에서 로컬 디렉터리만 사용한다. worker는 요청당 하나의 음성을 한국어로 전사하고 동시 요청에는 503을 반환한다. 원음이나 전사 결과를 파일에 저장하지 않는다. API의 STT 대기 시간은 30초다. 대기가 끝나도 이미 시작된 모델 연산이 즉시 취소되는 것은 아니다.
+`/health`는 모델 로드가 끝나야 응답한다. 모델 로더는 오프라인 모드에서 로컬 디렉터리만 사용하며 Hugging Face·ONNX Runtime telemetry를 비활성화한다. worker는 `language=ko`, `task=transcribe`, VAD, temperature 0, beam 5, 이전 문맥 미사용으로 요청당 하나의 음성을 전사한다. 무음·빈 결과는 422, 동시 요청은 503을 반환한다. 지연 생성되는 segment를 잠금 안에서 모두 소비한다. 원음이나 전사 결과를 파일에 저장하지 않는다. API의 STT 대기 시간은 30초다. 대기가 끝나도 이미 시작된 모델 연산이 즉시 취소되는 것은 아니다.
 
 ## API 서버 설정
 
@@ -98,11 +99,11 @@ STT 설정이 없거나 오류가 나면 503/504/502를 반환하며 외부 제�
 ## 배포와 검증
 
 1. worker를 준비하고 모델 로드, 한국어 실제 WAV, 처리 지연과 메모리를 확인한다. 프록시의 요청 본문 로깅·APM 캡처·디스크 버퍼링을 끄고 본문 크기를 1MiB 이하로 제한한다. 인증된 API만 worker에 접근하도록 구성한다.
-2. API에 위 설정을 넣고 배포한다. `/openapi.json`의 STT provider/model 상수와 v0.3 `resolve_goal` 지원을 확인한다. 기존 클라이언트와의 API 호환성도 확인한다.
+2. 새 Whisper worker를 별도 포트에서 확인한 뒤 API의 `SELF_HOSTED_STT_URL`을 새 endpoint로 전환하고 배포한다. `/openapi.json`의 STT provider/model 상수와 v0.3 `resolve_goal` 지원을 확인한다. Qwen만 허용하는 구버전 앱은 새 API에서 업로드를 차단하므로 worker·API·앱을 함께 배포한다. 새 앱도 Qwen API를 거절한다. 롤백은 세 구성요소와 endpoint 설정을 함께 되돌린다.
 3. 앱을 빌드·설치한다. 앱의 API 기본 주소는 `https://click-db.onrender.com`이고 `CLICK_API_BASE_URL` Gradle 설정이 우선한다. 모델 서버 URL이나 비밀은 앱에 넣지 않는다.
 4. 키워드 요청, 우회 표현, 부정 요청, 특정 앱 글자 변경, 미지원 요청, 추론 서버 중단, 취소 후 늦게 도착한 응답을 실제 휴대폰에서 확인한다. 이미 전송한 음성은 클라이언트 취소만으로 회수할 수 없다.
 5. 공개 한국어 평가와 실제 명령 평가는 [품질 평가 기준](../../docs/ai-quality-evaluation.md)에 따라 별도로 시행한다. 단위 테스트 통과를 모델 정확도 통과로 기록하지 않는다.
 
-2026-10-11에 입력 경로를 막던 Backend 코드 충돌과 중복 마이그레이션 revision을 정리했다. 새 질문·답변 흐름은 현재 `agent` 작업 디렉터리에서 검증한다. 운영 배포 전에는 배포 브랜치의 DB 이력과 이 브랜치의 이력을 통합해야 한다. STT 가중치·실제 추론 서버 정보와 실제 휴대폰 검증은 아직 필요하다.
+2026-10-27: Qwen STT worker·응답 계약·앱 검증을 Whisper로 전환했다. 실제 가중치 배치·추론 서버 배포·휴대폰 검증은 별도 단계다. 모델 정확도 향상을 검증한 변경으로 해석하지 않는다. 목표 분류의 self-hosted/Jev 설정과는 독립적이다.
 
-공식 구현 근거: [Qwen3-ASR 실행 API](https://github.com/QwenLM/Qwen3-ASR#quickstart), [고정 toolkit 버전](https://github.com/QwenLM/Qwen3-ASR/blob/main/pyproject.toml). 이 연결은 `qwen-asr==0.0.6`의 Transformers 경로를 사용하며, 외부 DashScope API를 사용하지 않는다.
+구현 근거: [faster-whisper v1.2.1 실행 API](https://github.com/SYSTRAN/faster-whisper/blob/v1.2.1/README.md), [로컬 모델·segment API](https://github.com/SYSTRAN/faster-whisper/blob/v1.2.1/faster_whisper/transcribe.py), [large-v3 변환본](https://huggingface.co/Systran/faster-whisper-large-v3). 음성은 우리 worker에서 처리하며 OpenAI API 키를 사용하지 않는다.

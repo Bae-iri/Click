@@ -1,4 +1,4 @@
-"""Run with uvicorn inference.qwen_stt:app from Backend on our inference host."""
+"""Run with uvicorn inference.whisper_stt:app from Backend on our inference host."""
 from contextlib import asynccontextmanager
 import hmac
 import os
@@ -9,7 +9,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from app.schemas.transcription import TranscriptionRequest, TranscriptionResponse
+from app.schemas.transcription import STT_MODEL, TranscriptionRequest, TranscriptionResponse
 from app.services.audio_validation import InvalidAudio, decode_pcm_wav
 
 
@@ -18,23 +18,32 @@ def load_model():
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
     os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
-    model_dir = Path(os.environ["QWEN_ASR_MODEL_PATH"])
-    if not model_dir.is_dir() or not (model_dir / "config.json").is_file():
-        raise RuntimeError("QWEN_ASR_MODEL_PATH must contain the downloaded Qwen3-ASR-1.7B model")
-    import torch
-    from qwen_asr import Qwen3ASRModel
-    device = os.getenv("QWEN_ASR_DEVICE", "cuda:0")
-    dtype = torch.bfloat16 if device.startswith("cuda") and torch.cuda.is_bf16_supported() else (
-        torch.float16 if device.startswith("cuda") else torch.float32)
-    return Qwen3ASRModel.from_pretrained(str(model_dir.resolve()), dtype=dtype, device_map=device,
-        local_files_only=True, max_inference_batch_size=1, max_new_tokens=256)
+    model_path = os.getenv("WHISPER_MODEL_PATH", "").strip()
+    model_dir = Path(model_path)
+    # A missing tokenizer would otherwise trigger a Hugging Face download.
+    required = ("model.bin", "config.json", "tokenizer.json", "preprocessor_config.json")
+    if not model_path or not all((model_dir / name).is_file() for name in required):
+        raise RuntimeError("WHISPER_MODEL_PATH must contain the complete CTranslate2 Whisper large-v3 model")
+    device = os.getenv("WHISPER_DEVICE", "cuda")
+    if device not in {"cuda", "cpu"}:
+        raise RuntimeError("WHISPER_DEVICE must be cuda or cpu")
+    compute_type = os.getenv("WHISPER_COMPUTE_TYPE", "float16" if device == "cuda" else "int8")
+    # The bundled Silero VAD uses ONNX Runtime; disable its telemetry before audio processing.
+    import onnxruntime
+    onnxruntime.disable_telemetry_events()
+    from faster_whisper import WhisperModel
+    return WhisperModel(str(model_dir.resolve()), device=device, compute_type=compute_type,
+        local_files_only=True, num_workers=1)
 
 
 def infer(model, pcm):
     import numpy as np
     waveform = np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
-    results = model.transcribe(audio=(waveform, 16000), language="Korean")
-    return results[0].text
+    segments, _ = model.transcribe(waveform, language="ko", task="transcribe",
+        beam_size=5, temperature=0.0, condition_on_previous_text=False,
+        vad_filter=True, without_timestamps=True, max_new_tokens=256)
+    # faster-whisper performs inference lazily. Consume inside the worker lock.
+    return "".join(segment.text for segment in segments).strip()
 
 
 def create_app(model_loader=load_model, transcribe=infer):
@@ -50,7 +59,7 @@ def create_app(model_loader=load_model, transcribe=infer):
         yield
         app.state.model = None
 
-    app = FastAPI(title="Click private Qwen STT", lifespan=lifespan, docs_url=None, redoc_url=None)
+    app = FastAPI(title="Click private Whisper STT", lifespan=lifespan, docs_url=None, redoc_url=None)
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request, error):
@@ -64,7 +73,7 @@ def create_app(model_loader=load_model, transcribe=infer):
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "model": "Qwen/Qwen3-ASR-1.7B"}
+        return {"status": "ok", "model": STT_MODEL}
 
     @app.post("/v1/transcriptions", response_model=TranscriptionResponse, dependencies=[Depends(authorize)])
     def transcription(body: TranscriptionRequest):

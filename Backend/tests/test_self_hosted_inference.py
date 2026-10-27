@@ -11,7 +11,7 @@ from app.clients.self_hosted import InferenceEndpoint
 from app.services.goal_llm import LocalGoalLlm
 from app.services.goal_resolution import GoalResolutionService
 from app.repositories.task_graphs import NoCompatibleGraphError
-from inference.qwen_stt import create_app as create_worker, load_model
+from inference.whisper_stt import create_app as create_worker, load_model
 from tests.test_transcription import audio_request, stt_result
 
 
@@ -166,5 +166,5 @@ def test_worker_busy_does_not_queue_private_audio(configured):
 def test_worker_requires_strong_token_and_local_weights(monkeypatch, tmp_path):
     monkeypatch.setenv('SELF_HOSTED_STT_TOKEN', '')
     with pytest.raises(RuntimeError), TestClient(create_worker(lambda: pytest.fail('must reject before model load'))): pass
-    monkeypatch.setenv('QWEN_ASR_MODEL_PATH', str(tmp_path))
+    monkeypatch.setenv('WHISPER_MODEL_PATH', str(tmp_path))
     with pytest.raises(RuntimeError): load_model()
