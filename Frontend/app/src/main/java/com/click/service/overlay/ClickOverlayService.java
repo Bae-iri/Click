@@ -1553,8 +1553,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void sendAgentTurn(String confirmation, boolean force) {
-        if (agentSessionId == null || agentPaused || turnInFlight || agentGateway == null
-                || acceptedGoal == null || requirementReview == null || !requirementReview.confirmed() || resultPrompt != null || followUp != null || pendingControl != null) return;
+        if (closing || agentSessionId == null || agentPaused || turnInFlight || agentGateway == null
+                || !hasConfirmedGoal() || resultPrompt != null || followUp != null || pendingControl != null) return;
         if (confirmation == null && (visionConsentRequested || visionCaptureInFlight)) return;
         ScreenSnapshot snapshot = pendingVisionScreen != null ? pendingVisionScreen
                 : (force || confirmation != null) ? ClickAccessibilityService.freshSnapshot() : LatestScreenSnapshot.get();
@@ -1657,6 +1657,16 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 }
             }
         });
+    }
+
+    private boolean hasConfirmedGoal() {
+        if (acceptedGoal == null) return false;
+        // Server preparation replaces the local review, but still needs explicit user acceptance.
+        if (goalPreparation != null) {
+            return goalPreparation.ready() && !goalPreparation.id().isEmpty()
+                    && goalPreparation.id().equals(goalResolutionId);
+        }
+        return requirementReview != null && requirementReview.confirmed();
     }
 
     private boolean shouldScanHomeForSettings(ScreenSnapshot snapshot) {

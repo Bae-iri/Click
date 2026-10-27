@@ -14,7 +14,7 @@ from app.models.personalization import User
 from app.schemas.agent_turn import AgentGoalResolutionResponse, TypedGoalRequest
 from app.schemas.goal_preparation import GoalPreparation, InputQuestion
 from app.services.goal_inputs import GoalInputRequirements, normalize, negated
-from app.services.goal_llm import LocalGoalLlm
+from app.services.goal_classifier import configured_goal_classifier
 
 
 class GoalPreparationService:
@@ -23,7 +23,7 @@ class GoalPreparationService:
 
     def __init__(self, factory, graphs, sessions, llm=None, requirements=None):
         self.factory, self.graphs, self.sessions = factory, graphs, sessions
-        self.llm = llm or LocalGoalLlm()
+        self.llm = llm if llm is not None else configured_goal_classifier()
         self.requirements = requirements or GoalInputRequirements()
         self.catalog = json.loads((Path(__file__).parents[1] / 'task_graphs/goal_catalog.json').read_text(encoding='utf-8'))
 

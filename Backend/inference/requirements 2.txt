@@ -1,0 +1,7 @@
+# Install only in the separate Python 3.12 inference environment.
+# Version verified against QwenLM/Qwen3-ASR/pyproject.toml on 2026-10-11.
+qwen-asr==0.0.6
+torch>=2.6,<3
+numpy>=1.26,<3
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
