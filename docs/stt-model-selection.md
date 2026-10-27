@@ -1,15 +1,17 @@
-# STT 후보 선정: 개인정보 보호 우선, 한국어 품질 차순위
+# STT 모델 선택과 평가 이력
 
-기준일: 2026-10-11. 사용자 확정 범위는 **원음의 기기 내부 또는 우리 서버 처리까지 허용**이다. 외부 사업자의 STT 추론 API 전송은 이 범위에 포함하지 않는다. Qwen3-ASR-1.7B 자체 서버 연결 코드를 우선 반영했으며 실제 모델 실행·배포·한국어 품질 평가는 별도 검증 단계다.
+2026-10-27 사용자 요청으로 현재 구현을 **Whisper large-v3 + faster-whisper 자체 서버**로 전환했다. worker·Backend 모델 계약·Android 업로드 검증을 함께 변경했으며 [서버 설정](../Backend/inference/README.md)을 따른다. 실제 가중치 추론·배포·한국어 품질 평가는 별도 검증 단계다.
+
+사용자 확정 범위는 **원음의 기기 내부 또는 우리 서버 처리까지 허용**이다. 외부 사업자의 STT 추론 API 전송은 이 범위에 포함하지 않는다. 아래 후보 비교는 2026-10-11 검토 이력이며 현재 운영 모델 선택과 성능 실측 결과를 구분한다.
 
 ## 1. 현재 입력 경로
 
 | 구간 | 이번 변경 | 확인 상태 |
 | --- | --- | --- |
-| 메인 오버레이와 튜토리얼 | PCM WAV → 인증된 Backend → 자체 Qwen worker | 일반 Android 원격 인식과 외부 STT fallback 제거 |
+| 메인 오버레이와 튜토리얼 | PCM WAV → 인증된 Backend → 자체 Whisper worker | 일반 Android 원격 인식과 외부 STT fallback 제거 |
 | 구버전 서버 연결 | 업로드 전에 자체 STT provider와 모델 계약 확인 | 외부 STT 계약이면 업로드 차단 |
 | Backend | `SELF_HOSTED_STT_URL`과 token으로 지정한 우리 서버만 호출 | 설정이 없으면 503, 외부 API로 재시도하지 않음 |
-| Qwen worker | 로컬 가중치와 한국어 지정, 메모리 내 처리 | 실제 가중치·GPU 추론은 미실행 |
+| Whisper worker | CTranslate2 로컬 가중치·한국어 전사·VAD, 메모리 내 처리 | 실제 가중치·GPU 추론은 미실행 |
 
 [실행 방법과 배포 순서](../Backend/inference/README.md)에 서버 설정·제한·검증 단계를 정리했다. 기존 배포의 OpenAI 경로를 새 코드에 남겨두지 않았지만, 운영 서버가 이번 변경으로 배포됐다는 의미는 아니다. 프록시·APM·운영 네트워크 경계와 모델 품질은 실제 서버에서 검증해야 한다.
 
@@ -44,7 +46,7 @@
 
 온디바이스 제품화가 필요하면 Whisper multilingual small/base + `whisper.cpp`도 자원 비교 대상으로 둘 수 있다. 영어 전용 `.en` 모델은 제외한다. 기기별 품질·발열·배터리 실측 없이 서버 후보보다 우수하다고 판정하지 않는다. [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
 
-**선정 결론:** 1차 비교 대상을 Qwen3-ASR-1.7B와 Whisper large-v3로 정한다. 동일 한국어 gold에서 비교한 뒤, turbo/0.6B가 품질 기준을 통과하면 효율 후보로 승격한다. CPU 또는 원음 무전송 요구에는 Korean Zipformer를 별도 검증한다. 새 모델이라는 이유나 서로 다른 benchmark의 점수만으로 한국어 1위를 선언하지 않는다.
+**2026-10-11 비교 계획:** 1차 비교 대상을 Qwen3-ASR-1.7B와 Whisper large-v3로 정한다. 동일 한국어 gold에서 비교한 뒤, turbo/0.6B가 품질 기준을 통과하면 효율 후보로 승격한다. CPU 또는 원음 무전송 요구에는 Korean Zipformer를 별도 검증한다. 새 모델이라는 이유나 서로 다른 benchmark의 점수만으로 한국어 1위를 선언하지 않는다.
 
 ### 3.1 Qwen3-ASR 대 Whisper: 장점·단점과 선택 조건
 
@@ -78,7 +80,7 @@
 
 Qwen 공식 다국어 평균도 한국어 단독 점수가 아니다. 기술보고서는 언어에 따라 CER/WER를 쓰고 언어별 값을 평균하므로, 이를 한국어 WER로 바꿔 적지 않는다. [평가 방법 §3](https://arxiv.org/html/2601.21337v2)
 
-**현재 권고:** 한국어 품질 후보는 Qwen3-ASR-1.7B를 우선 시험하고 Whisper large-v3를 동일 조건 기준선으로 유지한다. 최종 결정은 [공개 데이터 중심 평가 절차](./ai-quality-evaluation.md)의 개발/test 분리를 따른다. 배포비 절감 후보 turbo/0.6B는 별도 모델로 비교한다.
+**2026-10-11 검토 당시 권고:** 한국어 품질 후보는 Qwen3-ASR-1.7B를 우선 시험하고 Whisper large-v3를 동일 조건 기준선으로 유지한다. 최종 결정은 [공개 데이터 중심 평가 절차](./ai-quality-evaluation.md)의 개발/test 분리를 따른다. 배포비 절감 후보 turbo/0.6B는 별도 모델로 비교한다.
 
 ### 3.3 공정한 성능·비용 비교 실험
 

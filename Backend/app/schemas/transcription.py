@@ -3,6 +3,10 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+STTModel = Literal["openai/whisper-large-v3"]
+STT_MODEL: STTModel = "openai/whisper-large-v3"
+
+
 class TranscriptionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -13,5 +17,5 @@ class TranscriptionRequest(BaseModel):
 
 class TranscriptionResponse(BaseModel):
     text: str
-    model: Literal["Qwen/Qwen3-ASR-1.7B"] = "Qwen/Qwen3-ASR-1.7B"
+    model: STTModel = STT_MODEL
     provider: Literal["self_hosted"] = "self_hosted"

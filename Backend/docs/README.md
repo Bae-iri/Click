@@ -56,7 +56,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload --no-access
 
 ## 모델 연결
 
-설정은 루트 `.env.example`과 [모델 worker 안내](../inference/README.md)를 따릅니다. 자체 STT/LLM worker는 API와 분리하고 실제 가중치·한국어 추론·메모리·지연을 확인합니다. Whisper 전환 결정만으로 기존 Qwen 경로가 교체되지는 않습니다. 목표 해석 LLM도 STT와 별도 설정입니다.
+설정은 루트 `.env.example`과 [모델 worker 안내](../inference/README.md)를 따릅니다. 자체 STT/LLM worker는 API와 분리하고 실제 가중치·한국어 추론·메모리·지연을 확인합니다. STT worker와 API·앱 모델 계약은 Whisper large-v3로 전환했습니다. 실제 서버에는 CTranslate2 가중치 배치와 `inference.whisper_stt:app` 실행, API endpoint 변경 및 앱 업데이트가 필요합니다. 목표 해석 LLM도 STT와 별도 설정입니다.
 
 ```powershell
 python scripts/check_stt.py

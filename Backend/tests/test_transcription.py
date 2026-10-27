@@ -34,7 +34,7 @@ def configured(monkeypatch):
 
 
 def stt_result(text='글자 크기 줄여줘'):
-    return {'text': text, 'model': 'Qwen/Qwen3-ASR-1.7B', 'provider': 'self_hosted'}
+    return {'text': text, 'model': 'openai/whisper-large-v3', 'provider': 'self_hosted'}
 
 
 def test_sends_only_korean_audio_to_private_worker(configured):
@@ -65,7 +65,8 @@ def test_rejects_invalid_or_unsupported_audio_before_network(audio):
 
 
 @pytest.mark.parametrize('body', [{}, {'text': None}, stt_result(''), stt_result(['bad']),
-    {'text': 'ok', 'model': 'gpt-transcribe', 'provider': 'openai'}, []])
+    {'text': 'ok', 'model': 'gpt-transcribe', 'provider': 'openai'},
+    {'text': 'ok', 'model': 'Qwen/Qwen3-ASR-1.7B', 'provider': 'self_hosted'}, []])
 def test_rejects_malformed_or_wrong_provider_result(configured, body):
     with pytest.raises(InvalidTranscriptionResponse):
         TranscriptionService(lambda *a, **kw: httpx.Response(200, json=body)).transcribe(audio_request())

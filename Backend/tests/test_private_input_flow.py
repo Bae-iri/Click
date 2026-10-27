@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.main import create_app
 from app.clients.self_hosted import InferenceEndpoint
 from app.models.agent_session import AgentSession
-from inference.qwen_stt import create_app as create_worker
+from inference.whisper_stt import create_app as create_worker
 from tests.helpers import register
 from tests.test_transcription import audio_request
 
