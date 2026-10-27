@@ -42,6 +42,7 @@ import com.click.data.snapshot.ScreenSnapshot;
 import com.click.domain.goal.GoalCatalogClassifier;
 import com.click.domain.goal.QuickHelpTask;
 import com.click.domain.goal.GoalCommandInterpreter;
+import com.click.domain.goal.RepeatRequest;
 import com.click.domain.goal.TaskFlowAnswers;
 import com.click.ui.overlay.TaskFlowOverlayView;
 
@@ -51,6 +52,7 @@ import com.click.service.accessibility.ClickAccessibilityService;
 import com.click.ui.overlay.ClickOverlayLayout;
 import com.click.ui.overlay.FloatingPanelPosition;
 import com.click.ui.overlay.ConfirmationOverlayView;
+import com.click.ui.overlay.GuideDragDirection;
 import com.click.ui.overlay.GuideOverlayView;
 import com.click.ui.overlay.TrashDropView;
 
@@ -150,6 +152,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private ScreenSnapshot lastSubmittedScreen;
     private long confirmationExpiresAt;
     private int freshObservationRetries;
+    private int staleGuideDrops;
     private int scrollExecutions;
     private GuideOverlayView guideOverlayView;
     private WindowManager.LayoutParams guideOverlayParams;
@@ -1294,6 +1297,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void handleRecognizedCommand(String text) {
         String command = text == null ? "" : text.trim();
         if (command.isEmpty()) return;
+        // Before contextual answers: "네?" / "응?" must not accept a confirmation or result prompt.
+        if (RepeatRequest.matches(command)) { repeatLastGuide(); return; }
         if (handleTaskFlowAnswer(command)) return;
         if (handleExitConfirmation(command)) {
             return;
@@ -1315,19 +1320,21 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             sendAgentTurn("rejected", true);
         } else if (control.kind == GoalCommandInterpreter.Kind.REPLACE_TASK) {
             sendAgentReplacement(command);
-        } else if (isRepeatRequest(command)) {
-            if (personalizationEvents != null && lastSpokenMessage != null) {
-                personalizationEvents.recordGuideRepeated(agentSessionId, personalizationStateId);
-            }
-            String repeated = lastSpokenMessage == null
-                    ? "아직 다시 말씀드릴 안내가 없어요." : lastSpokenMessage;
-            if (overlayView != null) overlayView.setRecognizedSpeech(repeated);
-            speak(repeated);
         } else if (isInterruptCommand(command)) {
             processVipRequest(command);
         } else {
             enqueueNormalRequest(command);
         }
+    }
+
+    private void repeatLastGuide() {
+        if (personalizationEvents != null && lastSpokenMessage != null) {
+            personalizationEvents.recordGuideRepeated(agentSessionId, personalizationStateId);
+        }
+        String repeated = lastSpokenMessage == null
+                ? "아직 다시 말씀드릴 안내가 없어요." : lastSpokenMessage;
+        if (overlayView != null) overlayView.setRecognizedSpeech(repeated);
+        speak(repeated);
     }
 
     private void enqueueNormalRequest(String text) {
@@ -1507,13 +1514,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || normalized.equals("stop");
     }
 
-    private boolean isRepeatRequest(String text) {
-        String normalized = text.toLowerCase(Locale.ROOT).replaceAll("[\\s,.!?]", "");
-        return normalized.equals("뭐") || normalized.equals("뭐라고")
-                || normalized.contains("다시말해") || normalized.contains("못들었어")
-                || normalized.contains("한번더말해");
-    }
-
     private void beginAgentSession(String goal, String sessionId) {
         if (closing || goal == null || goal.trim().isEmpty()) return;
         updateRequestStatus(true, true);
@@ -1548,6 +1548,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         lastTargetBounds = null;
         clearVisionState();
         freshObservationRetries = 0;
+        staleGuideDrops = 0;
         scrollExecutions = 0;
         if (overlayView != null) overlayView.setRecognizedSpeech("화면을 확인하고 있어요…");
         // Quick-help cards provide a request, not confirmation of its target and scope.
@@ -1556,6 +1557,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void sendAgentTurn(String confirmation, boolean force) {
         if (closing || agentSessionId == null || agentPaused || turnInFlight || agentGateway == null
+                || staleGuideDrops >= 4
                 || !hasConfirmedGoal() || resultPrompt != null || followUp != null || pendingControl != null) return;
         if (confirmation == null && (visionConsentRequested || visionCaptureInFlight)) return;
         ScreenSnapshot snapshot = pendingVisionScreen != null ? pendingVisionScreen
@@ -1938,11 +1940,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             // A new observation ID alone is fine; its screen content must still match the request.
             displayedSnapshot = ClickAccessibilityService.freshSnapshot();
             if (lastSubmittedScreen == null || displayedSnapshot == null
-                    || !lastSubmittedScreen.fingerprint().equals(displayedSnapshot.fingerprint())) {
+                    || !lastSubmittedScreen.fingerprint().equals(displayedSnapshot.fingerprint())
+                    || !GuideFreshness.stillValid(lastSubmittedScreen, displayedSnapshot,
+                            command.targetNodeId, command.targetBounds,
+                            command.renderPolicy != null && command.renderPolicy.optBoolean("vision_derived"))) {
                 waitForFreshGuide();
                 return;
             }
         }
+        staleGuideDrops = 0;
         taskFlowView.progress(requirementReview != null ? requirementReview.summary() : "선택한 작업",
                 response.metadata == null ? null : response.metadata.optJSONArray("checklist"),
                 response.guideCommand.message, agentGateway.currentContract() != null
@@ -2027,7 +2033,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
         freshObservationRetries = 0;
         hideSettingsOpenButton();
-        showGuideOverlay(command.targetBounds, command.actionType, command.dragDirection());
+        showGuideOverlay(command.targetBounds, command.actionType,
+                GuideDragDirection.resolve(command.renderPolicy, response.metadata));
         if ("scroll".equals(command.actionType)) {
             executeScroll(command);
         } else {
@@ -2050,6 +2057,23 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         pendingSpeech = null;
         activeUtteranceId = null;
         if (textToSpeech != null) textToSpeech.stop();
+        if (++staleGuideDrops >= 4) {
+            forceNextObservation = false;
+            final int generation = executionGeneration;
+            String message = "화면이 계속 바뀌고 있어요. 화면을 멈춘 뒤 다시 확인을 눌러주세요.";
+            lastSpokenMessage = message;
+            taskFlowView.observationRecovery(message, () -> {
+                if (generation != executionGeneration || agentPaused || turnInFlight
+                        || agentSessionId == null || pendingControl != null) return;
+                staleGuideDrops = 0;
+                forceNextObservation = true;
+                ClickAccessibilityService.requestFreshSnapshot();
+            });
+            placeTaskFlow(null, false);
+            if (overlayView != null) overlayView.setRecognizedSpeech(message);
+            speak(message);
+            return;
+        }
         String message = "현재 화면을 다시 확인하고 있어요. 잠시 기다려 주세요.";
         lastSpokenMessage = message;
         taskFlowView.waiting(message);
@@ -2276,13 +2300,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (taskFlowView != null) taskFlowView.setNarrationState(result != TextToSpeech.ERROR, result == TextToSpeech.ERROR);
     }
 
-    private void showGuideOverlay(int[] bounds, String actionType, String direction) {
+    private void showGuideOverlay(int[] bounds, String actionType, int dragDirection) {
         if (bounds == null || windowManager == null) {
             hideGuideOverlay();
             return;
         }
         if (guideOverlayView == null) guideOverlayView = new GuideOverlayView(this);
-        guideOverlayView.showTarget(bounds, actionType, direction);
+        guideOverlayView.showTarget(bounds, actionType, dragDirection);
         if (guideOverlayView.isAttachedToWindow()) return;
         guideOverlayParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,

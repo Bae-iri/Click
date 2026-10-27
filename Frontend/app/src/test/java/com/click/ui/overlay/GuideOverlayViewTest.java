@@ -22,7 +22,7 @@ public class GuideOverlayViewTest {
         for (String direction : new String[]{"left", "right"}) {
             GuideOverlayView view = view();
             AgentTurnContract.GuideCommand guide = command(direction);
-            view.showTarget(new int[]{100, 200, 900, 300}, guide.actionType, guide.dragDirection());
+            view.showTarget(new int[]{100, 200, 900, 300}, guide.actionType, GuideDragDirection.resolve(guide.renderPolicy, null));
             Canvas canvas = mock(Canvas.class);
             view.onDraw(canvas);
             ArgumentCaptor<Float> start = ArgumentCaptor.forClass(Float.class);
@@ -38,9 +38,9 @@ public class GuideOverlayViewTest {
     @Test public void missingOrInvalidDirectionClearsPreviousArrowInsteadOfDefaultingRight() throws Exception {
         for (String direction : new String[]{null, "up", "invalid"}) {
             GuideOverlayView view = view();
-            view.showTarget(new int[]{100, 200, 900, 300}, "drag", "right");
+            view.showTarget(new int[]{100, 200, 900, 300}, "drag", GuideDragDirection.RIGHT);
             AgentTurnContract.GuideCommand guide = command(direction);
-            view.showTarget(new int[]{100, 200, 900, 300}, guide.actionType, guide.dragDirection());
+            view.showTarget(new int[]{100, 200, 900, 300}, guide.actionType, GuideDragDirection.resolve(guide.renderPolicy, null));
             Canvas canvas = mock(Canvas.class);
             view.onDraw(canvas);
             verify(canvas, never()).drawLine(anyFloat(), anyFloat(), anyFloat(), anyFloat(), any(Paint.class));
