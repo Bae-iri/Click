@@ -30,6 +30,8 @@ public final class ClickAccessibilityService extends AccessibilityService {
     private boolean touchInteraction;
     private AccessibilityNodeInfo draggedSource;
     private static WeakReference<ClickAccessibilityService> connectedService = new WeakReference<>(null);
+    // Reused for the service lifetime so repeated fallbacks avoid reloading the OCR model.
+    private VisionOcrEngine visionOcrEngine;
 
     @Override
     protected void onServiceConnected() {
@@ -115,6 +117,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
             connectedService.clear();
             ClickOverlayService.onAccessibilityOverlayLost();
         }
+        if (visionOcrEngine != null) {
+            visionOcrEngine.close();
+            visionOcrEngine = null;
+        }
         super.onDestroy();
     }
 
@@ -140,7 +146,15 @@ public final class ClickAccessibilityService extends AccessibilityService {
             callback.onFailure("screen_changed", "화면이 바뀌었어요. 새 화면에서 다시 허용해 주세요.");
             return;
         }
-        OnDeviceVision.capture(service, fresh, callback);
+        final VisionOcrEngine engine;
+        try {
+            if (service.visionOcrEngine == null) service.visionOcrEngine = new VisionOcrEngine();
+            engine = service.visionOcrEngine;
+        } catch (RuntimeException error) {
+            callback.onFailure("ocr_failed", "화면 분석을 시작하지 못했어요.");
+            return;
+        }
+        OnDeviceVision.capture(service, engine, fresh, callback);
     }
 
     public static WindowManager accessibilityWindowManager() {
