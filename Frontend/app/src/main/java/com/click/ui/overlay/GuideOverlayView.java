@@ -18,12 +18,15 @@ public final class GuideOverlayView extends View {
     private final int[] screenOrigin = new int[2];
     private int[] bounds;
     private String actionType;
+    private int dragDirection;
 
     public GuideOverlayView(Context context) { super(context); }
 
-    public void showTarget(int[] targetBounds, String action) {
+    /** @param direction {@link GuideDragDirection} value; only used for drag hints. */
+    public void showTarget(int[] targetBounds, String action, int direction) {
         bounds = targetBounds == null ? null : targetBounds.clone();
         actionType = action;
+        dragDirection = direction;
         invalidate();
     }
 
@@ -47,13 +50,32 @@ public final class GuideOverlayView extends View {
         outline.inset(strokeWidth / 2f, strokeWidth / 2f);
         canvas.drawRoundRect(outline, dp(12), dp(12), paint);
 
-        float startX = target.right + dp(34);
-        float endX = target.right + dp(6);
-        float y = target.centerY();
-        if (startX > getWidth() - dp(12)) {
-            startX = target.left - dp(34);
-            endX = target.left - dp(6);
+        if (!"drag".equals(actionType)) {
+            // Point at the target from whichever side has room.
+            float startX = target.right + dp(34);
+            float endX = target.right + dp(6);
+            if (startX > getWidth() - dp(12)) {
+                startX = target.left - dp(34);
+                endX = target.left - dp(6);
+            }
+            drawArrow(canvas, startX, endX, target.centerY());
+            return;
         }
+        // Without a known direction the box alone is shown; the spoken guide still explains it.
+        if (dragDirection == GuideDragDirection.UNKNOWN) return;
+        boolean below = target.bottom + dp(48) <= getHeight();
+        float y = below ? target.bottom + dp(16) : target.top - dp(16);
+        float half = Math.min(target.width() * 0.3f, dp(72));
+        drawArrow(canvas, target.centerX() - dragDirection * half, target.centerX() + dragDirection * half, y);
+        paint.setTextSize(dp(18));
+        paint.setFakeBoldText(true);
+        canvas.drawText(dragDirection == GuideDragDirection.RIGHT ? "오른쪽으로 움직이세요  →" : "←  왼쪽으로 움직이세요",
+                Math.max(dp(16), target.left), below ? y + dp(30) : y - dp(14), paint);
+        paint.setFakeBoldText(false);
+    }
+
+    private void drawArrow(Canvas canvas, float startX, float endX, float y) {
+        paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(dp(5));
         paint.setStrokeCap(Paint.Cap.ROUND);
         canvas.drawLine(startX, y, endX, y, paint);
@@ -65,14 +87,6 @@ public final class GuideOverlayView extends View {
         path.close();
         paint.setStyle(Paint.Style.FILL);
         canvas.drawPath(path, paint);
-
-        if ("drag".equals(actionType)) {
-            paint.setTextSize(dp(18));
-            paint.setFakeBoldText(true);
-            canvas.drawText("오른쪽으로 움직이세요  →", Math.max(dp(16), target.left),
-                    Math.min(getHeight() - dp(20), target.bottom + dp(38)), paint);
-            paint.setFakeBoldText(false);
-        }
     }
 
     private int dp(int value) {
