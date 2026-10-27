@@ -149,6 +149,15 @@ def build_guide_command(
         "avoid_covering_target": True,
         "preferred_position": "below_target",
     }
+    # The supported font-size graphs describe horizontal Android Settings sliders.
+    # Use their verification contract, not localized guide text, to render direction.
+    if (transition and transition.action_type == ActionType.DRAG
+            and transition.target_role == "slider"
+            and graph.definition.required_slots.get("setting") == "font_size"):
+        direction = {"target_value_increased": "right", "target_value_decreased": "left"}.get(
+            transition.verification_predicate)
+        if direction:
+            render_policy["direction"] = direction
     if vision_derived:
         render_policy["vision_derived"] = True
         render_policy["requires_visual_confirmation"] = True

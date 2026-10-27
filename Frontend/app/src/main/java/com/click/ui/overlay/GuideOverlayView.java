@@ -18,12 +18,16 @@ public final class GuideOverlayView extends View {
     private final int[] screenOrigin = new int[2];
     private int[] bounds;
     private String actionType;
+    private String dragDirection;
 
     public GuideOverlayView(Context context) { super(context); }
 
-    public void showTarget(int[] targetBounds, String action) {
+    public void showTarget(int[] targetBounds, String action, String direction) {
         bounds = targetBounds == null ? null : targetBounds.clone();
         actionType = action;
+        dragDirection = "drag".equals(action) && ("left".equals(direction) || "right".equals(direction))
+                ? direction : null;
+        setContentDescription("drag".equals(action) ? dragInstruction() : null);
         invalidate();
     }
 
@@ -47,13 +51,39 @@ public final class GuideOverlayView extends View {
         outline.inset(strokeWidth / 2f, strokeWidth / 2f);
         canvas.drawRoundRect(outline, dp(12), dp(12), paint);
 
-        float startX = target.right + dp(34);
-        float endX = target.right + dp(6);
-        float y = target.centerY();
-        if (startX > getWidth() - dp(12)) {
-            startX = target.left - dp(34);
-            endX = target.left - dp(6);
+        if ("drag".equals(actionType)) {
+            if (dragDirection != null) {
+                float inset = Math.min(dp(18), target.width() / 4f);
+                float left = target.left + inset;
+                float right = target.right - inset;
+                boolean movingRight = "right".equals(dragDirection);
+                drawArrow(canvas, movingRight ? left : right, movingRight ? right : left, target.centerY());
+            }
+            paint.setStyle(Paint.Style.FILL);
+            paint.setTextSize(dp(18));
+            paint.setFakeBoldText(true);
+            canvas.drawText(dragInstruction(), Math.max(dp(16), target.left),
+                    Math.min(getHeight() - dp(20), target.bottom + dp(38)), paint);
+            paint.setFakeBoldText(false);
+        } else {
+            float startX = target.right + dp(34);
+            float endX = target.right + dp(6);
+            if (startX > getWidth() - dp(12)) {
+                startX = target.left - dp(34);
+                endX = target.left - dp(6);
+            }
+            drawArrow(canvas, startX, endX, target.centerY());
         }
+    }
+
+    private String dragInstruction() {
+        if ("left".equals(dragDirection)) return "←  왼쪽으로 움직이세요";
+        if ("right".equals(dragDirection)) return "오른쪽으로 움직이세요  →";
+        return "안내에 따라 움직여 주세요";
+    }
+
+    private void drawArrow(Canvas canvas, float startX, float endX, float y) {
+        paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(dp(5));
         paint.setStrokeCap(Paint.Cap.ROUND);
         canvas.drawLine(startX, y, endX, y, paint);
@@ -65,14 +95,6 @@ public final class GuideOverlayView extends View {
         path.close();
         paint.setStyle(Paint.Style.FILL);
         canvas.drawPath(path, paint);
-
-        if ("drag".equals(actionType)) {
-            paint.setTextSize(dp(18));
-            paint.setFakeBoldText(true);
-            canvas.drawText("오른쪽으로 움직이세요  →", Math.max(dp(16), target.left),
-                    Math.min(getHeight() - dp(20), target.bottom + dp(38)), paint);
-            paint.setFakeBoldText(false);
-        }
     }
 
     private int dp(int value) {
