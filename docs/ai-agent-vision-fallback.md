@@ -1,15 +1,15 @@
 # AI-Agent Accessibility Tree → Vision fallback
 
-2026-09-20 구현 기준. Agent(1)의 화면 관측 보완이며 Goal 분류·Task Graph 생성에는 사용하지 않는다.
+Agent(1)의 화면 관측 보완이며 Goal 분류·Task Graph 생성에는 사용하지 않는다. 이 문서는 FE·BE·AI1 사이의 동의 handshake, 필드, 오류 계약의 기준이다. 설계 근거, 기기 안 처리 단계, UX 기준은 [AI-Agent 1-1](ai-agent-1-1-vision.md)을 따른다.
 
 ## 1. 사용 순서와 동의 단위
 
-AX를 우선 사용한다. 빈 tree, 정규화 후 신호가 없는 tree 또는 graph의 다음 target을 찾지 못한 화면에서 `confirmation` + `render_policy.vision_fallback`을 반환한다. 설정 앱을 열어야 하는 launcher 복구 경로와 이미 실패한 target의 재시도 예산은 유지한다. 동의를 기다리는 동안 실패 횟수를 소비하지 않는다.
+AX를 우선 사용한다. 정규화 후 node가 없는 화면, 또는 graph의 다음 target을 찾지 못했고 이미 한 번 이상 복구를 시도한 화면에서 `confirmation` + `render_policy.vision_fallback`을 반환한다. `ambiguous_target`에서는 Vision을 요청하지 않는다. 설정 앱을 열어야 하는 launcher 복구 경로와 이미 실패한 target의 재시도 예산은 유지한다. 동의를 기다리는 동안 실패 횟수를 소비하지 않는다.
 
 1. **FE → BE:** 이미지 없이 현재 AX 관측을 보낸다. 읽을 수 없으면 `nodes: []`와 package·window·화면 크기를 보낸다.
 2. **AI1 → BE → FE:** 분석이 필요하면 BE가 `metadata.confirmation`에 `purpose: vision`, `scope: single_analysis`, 일회용 `id`, `version`, `expires_at`(UTC 초, 발급 후 120초)을 발급한다.
 3. **FE:** 매번 캡처 **이전**에 “현재 화면을 한 번 캡처해 기기에서 글자를 읽고, 글자와 위치를 서버에 보내도 될까요? 원본 이미지는 전송하지 않아요.”를 표시한다. 세션 동의 저장, 과거 `user_consented=true` 재사용, 자동 재캡처는 없다. 확인 대기 중 자동 observe 전송도 멈춘다.
-4. **허용:** 확인 overlay를 닫고 가이드와 Click UI를 숨긴 뒤 같은 화면인지 새 AX로 검사한다. Android screenshot을 한 번 수집하고 기기 내 ML Kit 한국어 OCR을 수행한다. 입력 필드 영역은 읽기 전에 가리고, 현재 graph의 설정 메뉴 vocabulary에 해당하는 글자와 실제 OCR bounds만 전송한다.
+4. **허용:** 확인 overlay를 닫고 가이드와 Click UI를 숨긴 뒤 같은 화면인지 새 AX로 검사한다. 비밀번호·입력 필드가 보이는 화면, 결제·금융, System UI·키보드 화면이면 캡처하지 않는다. Android screenshot을 한 번 수집하고 개인정보 의심 영역을 가린 뒤 기기 내 ML Kit 한국어 OCR을 수행한다. 현재 graph의 설정 메뉴 vocabulary에 해당하는 글자와 실제 OCR bounds만 전송한다. 처리 단계 상세는 [AI-Agent 1-1](ai-agent-1-1-vision.md#기기-안-처리-단계)에 있다.
 5. **FE → BE:** `respond_confirmation`에 `accepted`, 동의 ID, 현재 session/episode/version, 함께 수집한 AX와 `vision_snapshot`을 담는다.
 6. **BE:** owner·session·episode·version·동의 ID·만료·원래 AX 화면 fingerprint·snapshot 문맥·좌표를 검사한다. 통과한 요청 ID만 내부 `consent_request_id`로 AI1에 전달한다. FE가 이 내부 필드를 보내면 422다.
 7. **AI1:** 허용된 OCR을 개인정보 마스킹 후 `vision:*` node로 바꿔 기존 Normalize → Classify → Match → Guide 경로에 합류시킨다. window가 명시된 AX와 Vision은 같은 window여야 한다. 정상 AX만으로 target을 찾으면 Vision은 분석하지 않는다.
@@ -31,7 +31,8 @@ AX를 우선 사용한다. 빈 tree, 정규화 후 신호가 없는 tree 또는 
 | FE → BE | `accessibility_tree` | 새 AX. node를 못 읽어도 package·화면 크기·window·observation ID 유지 |
 | FE → BE | `vision_snapshot.user_consented=true` | 사용자 응답의 보조 표시. 이것만으로는 승인되지 않음 |
 | FE → BE | `observation_id`, `captured_at_ms`, `package_name`, `active_window_id`, `screen_width`, `screen_height` | OCR의 출처·시각·좌표 공간. observation/package/window/크기는 동봉 AX와 일치 |
-| FE → BE | `provider`, `redaction_applied`, `elements` | OCR 출처, FE 마스킹 표시, 메뉴 text·role·실제 bounds. confidence는 제공 가능한 경우만 포함 |
+| FE → BE | `provider`, `redaction_applied`, `elements` | `provider=frontend_ocr`, FE 마스킹 표시, 메뉴 text·role·confidence·실제 bounds. confidence가 없거나 0.65 미만인 element는 FE와 AI1 모두 버린다 |
+| FE → BE | `processing_time_ms` | 선택. 기기 OCR 처리 시간(0~60000). 품질 지표에만 사용 |
 | BE → AI1 내부 | `consent_request_id` | BE 검증을 통과한 이 요청에만 유효. FE 입력이나 checkpoint 동의 저장에 사용 금지 |
 
 좌표는 전체 화면의 물리 px `[left, top, right, bottom]`이다. dp, overlay 상대좌표, 임의 확대 bounds를 보내지 않는다. 현재 FE는 회전·화면 크기가 캡처 도중 바뀌면 결과를 폐기한다. `ocr_text`는 계약상 허용하지만 현재 FE는 자유 텍스트를 보내지 않고 정해진 설정 메뉴 `elements`만 보낸다. 원본 screenshot, OCR 전문, 사용자 동의 값을 로그에 저장하지 않는다.
@@ -60,16 +61,17 @@ AX를 우선 사용한다. 빈 tree, 정규화 후 신호가 없는 tree 또는 
   "vision_snapshot": {
     "user_consented": true,
     "redaction_applied": true,
-    "provider": "mlkit_on_device_ocr",
+    "provider": "frontend_ocr",
     "package_name": "com.android.settings",
     "active_window_id": 42,
     "screen_width": 1080,
     "screen_height": 2400,
     "observation_id": "capture-uuid",
     "captured_at_ms": 1789888322000,
+    "processing_time_ms": 420,
     "elements": [
-      {"element_id": "title", "text": "설정", "bounds_in_screen": [24, 40, 500, 96], "actionable": false},
-      {"element_id": "display", "text": "디스플레이", "bounds_in_screen": [24, 320, 1056, 408], "role": "menu_item", "actionable": true}
+      {"element_id": "ocr_0", "text": "설정", "bounds_in_screen": [24, 40, 500, 96], "role": "text", "confidence": 0.97, "actionable": false},
+      {"element_id": "ocr_1", "text": "디스플레이", "bounds_in_screen": [24, 320, 1056, 408], "role": "text", "confidence": 0.93, "actionable": true}
     ]
   }
 }
@@ -83,12 +85,13 @@ AX를 우선 사용한다. 빈 tree, 정규화 후 신호가 없는 tree 또는 
 
 현재 구현은 Android 11 이상, `com.android.settings` / `com.samsung.android.settings`, 기본 display, 화면 크기가 일치하는 전체 화면 캡처를 지원한다. [ML Kit 한국어 OCR](https://developers.google.com/ml-kit/vision/text-recognition/v2/android)의 번들 모델을 사용한다. Android 8~10, 캡처 권한 미반영, 보호된 화면, 다른 앱은 오류 안내 후 중단한다. 접근성 서비스 설정 변경은 설치 업데이트 후 서비스를 다시 켜야 반영될 수 있다.
 
-이미지는 기기 메모리에서 OCR 후 폐기한다. API key나 외부 VLM credential은 필요하지 않다. 외부 VLM 활성화는 별도 작업이며 서버 측 이미지 마스킹·제공자/전송 대상 안내·비용/timeout 정책이 갖춰지기 전에는 켜지 않는다. 이 변경은 기존 원본 이미지 외부 전송 차단을 유지한다.
+이미지는 기기 메모리에서 OCR 후 폐기한다. API key나 외부 VLM credential은 필요하지 않다. 외부 VLM은 사용하지 않으며 AI1의 VLM 경로는 `not_configured`를 반환한다. 판단 근거와 재검토 조건은 [AI-Agent 1-1](ai-agent-1-1-vision.md#기술-선택-검토)에 있다.
 
 ## 4. 개인정보 마스킹과 실패 대응
 
 **이미지 → 기기 내 OCR → 허용 텍스트만 전송 → BE 재검사** 순서로 처리한다. FE의 `redaction_applied`는 보조 정보이며 서버 검사를 대체하지 않는다.
 
+- 캡처 전 `VisionSafetyPolicy`가 보이는 비밀번호·입력 필드, 결제·금융 패키지와 문구, System UI·키보드를 확인하면 캡처하지 않고 `masking_failed`로 보고한다. OCR 직후에도 인식 글자에 같은 문구 검사를 적용한다.
 - AX 수집 단계에서 `isPassword`, `isEditable`, text-field를 기록한다. 이 node의 text/content description/value를 직렬화하지 않고, clickable/enabled도 비활성화한다. 캡처 전에 필드의 유효 bounds를 검증하고 이미지에서 해당 영역을 검게 가린다. 알려진 민감 필드인데 bounds가 없거나 유효하지 않으면 OCR을 시작하지 않는다.
 - AX가 아예 없으면 민감 영역을 완전히 식별했다고 가정하지 않는다. 원본은 기기 메모리의 로컬 OCR에만 사용하고 이미지 전송은 차단한다. 전송 단계는 유한한 메뉴 허용 목록에 정확히 일치하는 글자만 통과시켜 보호한다. 외부 이미지 전송을 허용할 만큼 완전한 이미지 마스킹을 구현했다는 의미는 아니다.
 - OCR은 메뉴 허용 목록 밖의 **전체 line을 삭제**한다. 이름·주소·이메일·전화번호·계좌/카드번호·주민번호·인증번호를 정규식만으로 놓치는 경우도 전송하지 않는다. `디스플레이 김철수`를 `디스플레이`로 바꾸어 잘못된 actionable target을 만들지 않는다. 해당 line 전체를 버린다.
@@ -98,7 +101,7 @@ AX를 우선 사용한다. 빈 tree, 정규화 후 신호가 없는 tree 또는 
 | 상황 | FE/BE 동작 | 다음 단계 |
 | --- | --- | --- |
 | 사용자 거절 | `rejected`, Vision payload 없음 | 안내 중단 |
-| 민감 영역 bounds 불명·마스크 적용 오류·전송 텍스트 검사 예외 | FE에서 bitmap/결과 폐기, `rejected` + `vision_failure=masking_failed`만 전송 | BE가 BLOCKED와 개인정보 보호 안내 반환 |
+| 민감 화면(캡처 전 또는 OCR 직후)·민감 영역 bounds 불명·마스크 적용 오류·전송 텍스트 검사 예외 | FE에서 bitmap/결과 폐기, `rejected` + `vision_failure=masking_failed`만 전송 | BE가 BLOCKED와 개인정보 보호 안내 반환 |
 | FE가 마스킹 완료를 표시하지 않음 / 서버 sanitizer 예외 | AI1이 payload를 비우고 `masking_failed`, 조작 target 없음 | 동의 소비, BLOCKED |
 | 개인정보/미등록 글자를 제거한 결과가 없음 | `no_signal` | 재캡처하지 않고 관측 부족 안내 |
 | 캡처/인식 실패, 화면 변경, 미지원 | 각각 `capture_failed`, `ocr_failed`, `screen_changed`, `unsupported` | 원본 첨부 없이 중단 |
@@ -110,8 +113,8 @@ AX를 우선 사용한다. 빈 tree, 정규화 후 신호가 없는 tree 또는 
 
 - AI1: `runtime/engine.py`, `runtime/guide.py`, `runtime/privacy.py`, `runtime/vision.py`.
 - BE: `services/safety.py`, `services/agent_turn.py`, `clients/runtime_agent.py`, `schemas/agent_turn.py`. 기존 `safety_confirmations.command` JSON의 purpose를 이용해 추가 DB migration 없이 한 세션의 현재 확인을 관리한다.
-- FE: `ClickOverlayService`, `ClickAccessibilityService`, `OnDeviceVision`, `AgentVisionSnapshot`, 접근성 서비스 XML, ML Kit 의존성.
+- FE: `ClickOverlayService`(동의 UI), `ClickAccessibilityService`(OCR 엔진 수명), `OnDeviceVision`(캡처·입력 필드 마스킹·허용 목록), `VisionOcrEngine`(개인정보 마스킹·OCR·block 삭제), `VisionSafetyPolicy`, `VisionElementMapper`(좌표·AX 결합), `VisionPrivacy`, `AgentVisionSnapshot`, 접근성 서비스 XML, ML Kit 의존성.
 - 회귀: `AI-Agent/tests/test_vision_fallback.py`, `Backend/tests/test_vision_consent.py`에서 요청별 동의, 만료·재사용·다른 owner/window, 원본 이미지 거절, 정상 OCR 안내, 변경 승인 분리, HTTP 멱등성을 검증한다.
 - 기기 QA: 허용/거절, 허용 대기 중 화면 이동, 캡처 중 회전·취소, OCR 실패, API 29 미지원, API 30+ 캡처, 서비스 권한 재활성화, 확인 UI가 캡처되지 않는지, 개인정보 메뉴 외 텍스트 미전송을 확인한다.
 
-검증 환경: AI1 및 BE 전체 Python 테스트, FE `VisionPrivacyTest`의 독립 JUnit 테스트, 변경 Java 파일의 compiler parser 문법 검사를 실행한다. 이 작업 환경에는 Android SDK가 없어 Gradle 앱 컴파일과 실제 screenshot/OCR 기기 실행은 검증하지 못했다. 설치 전 위 기기 QA가 필요하다.
+검증 환경: AI1 Python 테스트, BE vision·STT 관련 테스트, FE Gradle 앱·androidTest 컴파일과 `VisionFallbackTest`·`VisionPrivacyTest` JUnit 테스트를 실행한다. 실제 screenshot/OCR 기기 실행은 아직 검증하지 못했다. 설치 전 위 기기 QA가 필요하다.
