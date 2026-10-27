@@ -5,7 +5,7 @@ import re
 
 from app.schemas.agent_turn import AgentGoalResolutionResponse, TypedGoalRequest
 from app.repositories.task_graphs import NoCompatibleGraphError, AmbiguousGraphError
-from app.services.goal_llm import LocalGoalLlm
+from app.services.goal_classifier import configured_goal_classifier
 
 
 def normalize(value):
@@ -25,7 +25,7 @@ def font_goal(direction):
 class GoalResolutionService:
     def __init__(self, graphs, llm=None):
         self.graphs = graphs
-        self.llm = llm if llm is not None else LocalGoalLlm()
+        self.llm = llm if llm is not None else configured_goal_classifier()
         self.catalog = json.loads((Path(__file__).parents[1] / "task_graphs" / "goal_catalog.json").read_text(encoding="utf-8"))
 
     def resolve(self, request, version):

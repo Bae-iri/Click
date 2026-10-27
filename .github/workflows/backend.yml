@@ -1,4 +1,4 @@
-name: Backend verification
+name: Integration verification
 on:
   push:
     paths: ["Backend/**", "AI-Agent/**", "Frontend/**", ".github/workflows/backend.yml"]
@@ -20,7 +20,7 @@ jobs:
       - run: bash gradlew :app:testDebugUnitTest :app:assembleDebug
         working-directory: Frontend
   backend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         postgres: [17, 18]
@@ -39,8 +39,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - run: python -m pip install -e './Backend[test]'
+          python-version: "3.12.12"
+      - run: python -m pip install -c Backend/constraints-ci.txt setuptools
+      - run: python -m pip install --no-build-isolation -c Backend/constraints-ci.txt -e './Backend[test]'
+      - run: python -m pip check
       - run: python -m pytest -q
         working-directory: Backend
       - run: python -m pytest -q
@@ -55,3 +57,36 @@ jobs:
           TEST_POSTGRES_URL: postgresql+psycopg://click_test:test-only-password@localhost:5432/click_test
       - run: python scripts/export_openapi.py && git diff --exit-code docs/openapi.json
         working-directory: Backend
+  android-contract:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17.0.18+8"
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.12"
+      - run: python -m pip install -c Backend/constraints-ci.txt setuptools
+      - run: python -m pip install --no-build-isolation -c Backend/constraints-ci.txt -e './Backend[test]'
+      - run: python -m pip check
+      - name: Export current backend contract for Android capability negotiation
+        run: python scripts/export_openapi.py && git diff --exit-code docs/openapi.json
+        working-directory: Backend
+      - name: Android unit tests, service regression tests and APK builds
+        run: bash gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon --console=plain
+        working-directory: Frontend
+      - name: Replay Android service requests at the authenticated backend API
+        run: python -m pytest -q contract_tests
+        working-directory: Backend
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-contract-verification
+          path: |
+            Frontend/app/build/reports/tests/
+            Frontend/app/build/test-results/
+            Frontend/app/build/contract/

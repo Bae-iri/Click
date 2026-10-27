@@ -1,4 +1,5 @@
 from copy import deepcopy
+from pathlib import Path
 from uuid import uuid4
 
 import httpx
@@ -15,6 +16,21 @@ from tests.helpers import register
 from tests.test_typed_agent_contract import tree
 
 PATH = '/api/v1/agent/commands'
+
+
+def test_goal_input_requirements_load_with_cp949_default(monkeypatch):
+    original_open = Path.open
+
+    def cp949_open(path, mode="r", buffering=-1, encoding=None, errors=None, newline=None):
+        if "b" not in mode and encoding in (None, "locale"):
+            encoding = "cp949"
+        return original_open(path, mode, buffering, encoding, errors, newline)
+
+    monkeypatch.setattr(Path, "open", cp949_open)
+    requirements = GoalInputRequirements()
+    family = requirements.family(source_text="글자 크기 키워줘")
+    assert family["id"] == "font_size"
+    assert family["fields"][0]["question"] == "어디의 글자 크기를 바꿀까요?"
 
 
 class Flow:

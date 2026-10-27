@@ -9,7 +9,7 @@ sys.path.insert(0, str(BACKEND))
 sys.path.insert(0, str(BACKEND.parent / 'AI-Agent' / 'src'))
 
 from app.services.goal_inputs import GoalInputRequirements
-from app.services.goal_llm import LocalGoalLlm
+from app.services.goal_classifier import configured_goal_classifier
 
 
 def main(argv=None):
@@ -23,10 +23,12 @@ def main(argv=None):
         from dotenv import load_dotenv
         load_dotenv(args.env_file, override=False)
     try:
-        LocalGoalLlm.configuration()
+        llm = configured_goal_classifier()
+        llm.configuration()
     except ValueError:
-        print('CONFIG_ERROR: set SELF_HOSTED_LLM_URL, SELF_HOSTED_LLM_TOKEN and SELF_HOSTED_LLM_MODEL; '
-              'use HTTPS for a remote server (HTTP is allowed only on loopback).')
+        print('CONFIG_ERROR: select GOAL_CLASSIFIER_PROVIDER=self_hosted or jev. '
+              'For self_hosted, set SELF_HOSTED_LLM_URL/TOKEN/MODEL (remote HTTPS). '
+              'For jev, set TYPESAFE_API_KEY, a pinned JEV_MODEL and JEV_MIN_CONFIDENCE in (0, 1].')
         return 2
 
     catalog = json.loads((BACKEND / 'app/task_graphs/goal_catalog.json').read_text(encoding='utf-8'))
@@ -44,7 +46,7 @@ def main(argv=None):
         ('decrease', '휴대폰 전체 문자가 너무 큼직해요. 더 작게 해주세요.', 'decrease'),
         ('missing_scope', '문자가 깨알 같아요. 읽기 편하게 확대해 주세요.', 'increase'),
     )
-    llm, passed = LocalGoalLlm(), 0
+    passed = 0
     for label, source, direction in cases:
         result = llm.interpret_inputs(source, candidates, family['fields'])
         ok = bool(result and result['goal_type'] == 'settings.font_size.' + direction

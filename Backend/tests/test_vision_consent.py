@@ -188,6 +188,46 @@ def test_frontend_masking_failure_sends_only_code_and_rejected_confirmation(fail
     assert "confirmation" not in response.json()["metadata"]
 
 
+@pytest.mark.parametrize("version", ["agent-fe-contract.v0.2", "agent-fe-contract.v0.3"])
+@pytest.mark.parametrize("failure", ["capture_failed", "masking_failed", "ocr_failed", "screen_changed", "unsupported"])
+def test_all_frontend_vision_failures_are_accepted_and_preserved(version, failure):
+    client = authenticated_client(create_app())
+    payload, body = challenge(client)
+    request = accepted(payload, body)
+    request.pop("vision_snapshot")
+    request.update(contract_version=version, user_confirmation="rejected", vision_failure=failure)
+    response = client.post(PATH, json=request)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["metadata"]["vision_failure"] == failure
+    assert result["task_status"] == "BLOCKED"
+    assert result["guide_command"]["target_node_id"] is None
+    assert result["guide_command"]["target_bounds"] is None
+    assert client.post(PATH, json=request).json() == result
+
+
+@pytest.mark.parametrize("invalid", ["unknown_code", "accepted", "vision_payload"])
+def test_vision_failure_does_not_relax_privacy_validation(invalid):
+    client = authenticated_client(create_app())
+    payload, body = challenge(client)
+    request = accepted(payload, body)
+    request.update(user_confirmation="rejected", vision_failure="screen_changed")
+    if invalid != "vision_payload":
+        request.pop("vision_snapshot")
+    if invalid == "accepted":
+        request["user_confirmation"] = "accepted"
+    if invalid == "unknown_code":
+        request["vision_failure"] = "invented_failure"
+    assert client.post(PATH, json=request).status_code == 422
+
+
+def test_openapi_advertises_every_supported_vision_failure():
+    app = create_app()
+    alternatives = app.openapi()["components"]["schemas"]["AgentCommandRequest"]["properties"]["vision_failure"]["anyOf"]
+    codes = next(item["enum"] for item in alternatives if "enum" in item)
+    assert set(codes) == {"capture_failed", "masking_failed", "ocr_failed", "screen_changed", "unsupported"}
+
+
 def test_masking_failure_cannot_upload_the_failed_payload():
     client = authenticated_client(create_app())
     payload, body = challenge(client)
