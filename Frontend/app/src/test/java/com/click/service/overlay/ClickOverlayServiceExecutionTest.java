@@ -311,7 +311,7 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen = changedScreen("com.android.settings", 1080, 2400, 42, 100);
         assertNotEquals(screen.observationId, currentScreen.observationId);
         deliver(1, "highlight", "tap", null);
-        verify((GuideOverlayView) get("guideOverlayView")).showTarget(any(), eq("tap"), isNull());
+        verify((GuideOverlayView) get("guideOverlayView")).showTarget(any(), eq("tap"), eq(com.click.ui.overlay.GuideDragDirection.UNKNOWN));
         verify((TextToSpeech) get("textToSpeech")).speak(eq("대상 안내"), anyInt(), any(), anyString());
         assertEquals(2, sent.size());
         assertNotNull(((GuidedActionTracker) get("actionTracker")).record("tap_completed",
@@ -319,10 +319,34 @@ public class ClickOverlayServiceExecutionTest {
                 System.currentTimeMillis() + 1000));
     }
 
+    @Test public void repeatedStaleGuidesStopAutomaticObservationUntilUserRetries() throws Exception {
+        prepareGuideResponse();
+        for (int index = 1; index <= 4; index++) {
+            currentScreen = changedScreen("com.android.settings", 1080, 2400, 42, 100 + index * 100);
+            deliver(index, "highlight", "tap", null);
+        }
+        assertEquals(5, sent.size());
+        assertEquals(4, get("staleGuideDrops"));
+        assertEquals(false, get("forceNextObservation"));
+        currentScreen = changedScreen("com.android.settings", 1080, 2400, 42, 900);
+        cachedScreen = currentScreen;
+        ((BroadcastReceiver) get("collapseReceiver")).onReceive(service,
+                new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED));
+        assertEquals("Background snapshots cannot bypass the retry limit", 5, sent.size());
+        org.mockito.ArgumentCaptor<Runnable> retry = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView) get("taskFlowView")).observationRecovery(anyString(), retry.capture());
+        retry.getValue().run();
+        ((BroadcastReceiver) get("collapseReceiver")).onReceive(service,
+                new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED));
+        assertEquals(6, sent.size());
+        assertEquals(0, get("staleGuideDrops"));
+        assertEquals(7, sent.get(5).getInt("expected_version"));
+    }
+
     @Test public void servicePassesExplicitDragDirectionToOverlay() throws Exception {
         prepareGuideResponse();
         deliver(1, "highlight", "drag", "left");
-        verify((GuideOverlayView) get("guideOverlayView")).showTarget(any(), eq("drag"), eq("left"));
+        verify((GuideOverlayView) get("guideOverlayView")).showTarget(any(), eq("drag"), eq(com.click.ui.overlay.GuideDragDirection.LEFT));
     }
 
     @Test public void resumedGuideUsesTheResumeRequestsObservation() throws Exception {
@@ -336,7 +360,7 @@ public class ClickOverlayServiceExecutionTest {
         control("resume_task");
         assertEquals("resume_task", sent.get(2).getString("command_type"));
         deliver(2, "highlight", "tap", null);
-        verify((GuideOverlayView) get("guideOverlayView")).showTarget(any(), eq("tap"), isNull());
+        verify((GuideOverlayView) get("guideOverlayView")).showTarget(any(), eq("tap"), eq(com.click.ui.overlay.GuideDragDirection.UNKNOWN));
         assertEquals(3, sent.size());
     }
 
@@ -344,7 +368,7 @@ public class ClickOverlayServiceExecutionTest {
         prepareGuideResponse();
         control("cancel_task");
         deliver(1, "highlight", "tap", null);
-        verify((GuideOverlayView) get("guideOverlayView"), never()).showTarget(any(), any(), any());
+        verify((GuideOverlayView) get("guideOverlayView"), never()).showTarget(any(), any(), anyInt());
         assertEquals("cancel_task", sent.get(2).getString("command_type"));
         assertEquals(7, sent.get(2).getInt("expected_version"));
     }
@@ -365,7 +389,7 @@ public class ClickOverlayServiceExecutionTest {
     }
 
     private void assertStaleGuideSuppressed() throws Exception {
-        verify((GuideOverlayView) get("guideOverlayView"), never()).showTarget(any(), any(), any());
+        verify((GuideOverlayView) get("guideOverlayView"), never()).showTarget(any(), any(), anyInt());
         verify((TaskFlowOverlayView) get("taskFlowView"), never()).progress(any(), any(), any(), anyBoolean());
         verify((TextToSpeech) get("textToSpeech"), never()).speak(anyString(), anyInt(), any(), anyString());
         assertNull(get("pendingSpeech"));
