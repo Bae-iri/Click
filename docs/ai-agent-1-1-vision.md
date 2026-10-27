@@ -89,7 +89,7 @@ OCR 호출을 늘려 해결하지 않고 별도 실패 데이터가 충분해진
 - Android instrumentation: 720p/1080p/1440p, light/dark, 글자 크기 변화에서 실제 번들
   OCR target recall과 평균 처리 시간을 `ClickVisionEval`에 기록
 - Host benchmark: `python scripts/evaluate_vision_fallback.py --output
-  data/runtime/vision_evaluation.json`
+  data/local/vision_evaluation.json`
 
 실기기 OCR 정확도와 처리 시간은 Android 11+ 기기에서 instrumentation test를 실행한
 결과만 성능 수치로 인정한다. Host benchmark는 OCR 이후 계약과 matching 성능만 측정한다.

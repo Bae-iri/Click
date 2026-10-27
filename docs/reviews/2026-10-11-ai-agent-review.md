@@ -122,7 +122,7 @@ AI-Agent(1)은 단순 골격을 넘어 행동 귀속, 결과 검증, 재관측, 
 | Vision만으로 설정 완료 추정 | Vision node를 값 검증의 근거로 사용하지 않음 | 유지. 읽힌 문자열을 실제 시스템 설정값으로 대체하지 않기 |
 | 실행 로그를 학습 정답으로 쓰려 함 | 기술 결과·사용자 보고·진단을 분리하는 계약 존재 | 독립 검수한 gold, 데이터 분할, 회귀 평가와 승인 release 구현 필요 |
 
-근거 모듈: [복구](../../AI-Agent/src/ai_agent/runtime/recovery.py), [대상 선택](../../AI-Agent/src/ai_agent/runtime/targeting.py), [Vision](../../AI-Agent/src/ai_agent/fallback/llm_vlm_fallback.py), [Backend turn 조율](../../Backend/app/services/agent_turn.py), [graph 재선택](../../Backend/app/services/runtime_recovery.py), [실행 제한](../../Backend/app/clients/turn_executor.py).
+근거 모듈: [복구](../../AI-Agent/src/ai_agent/runtime/recovery.py), [대상 선택](../../AI-Agent/src/ai_agent/runtime/targeting.py), [Vision](../../AI-Agent/src/ai_agent/runtime/vision.py), [Backend turn 조율](../../Backend/app/services/agent_turn.py), [graph 재선택](../../Backend/app/services/runtime_recovery.py), [실행 제한](../../Backend/app/clients/turn_executor.py).
 
 ## 후속 우선순위
 

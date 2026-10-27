@@ -174,9 +174,9 @@ ai_agent.graph_proposal                   # Agent(2)
 
 `runtime`과 Backend의 사용자 응답 경로는 `graph_proposal`을 import하지 않는다. `graph_proposal`은 사용자 runtime·Guide·Backend 세션을 직접 호출하지 않는다. `telemetry`와 공통 `task_graph`는 에이전트를 실행하지 않는다.
 
-`GraphUpdateProposal`은 `graph_proposal/schemas.py`, 관측 요약인 `RuntimeTrace`는 `telemetry/schemas.py`에 한 번만 정의한다. 기존 공통 `schemas.py`에서 두 타입을 제거했다. graph 승격·rollback은 Agent(2)의 `releases/versioning.py`, 기존 사용자 StateManager는 `replanning/state_manager.py`로 이동했다.
+`GraphUpdateProposal`은 `graph_proposal/schemas.py`, 관측 요약인 `RuntimeTrace`는 `telemetry/schemas.py`에 한 번만 정의한다. graph 승격·rollback은 Agent(2)의 `releases/versioning.py`, 사용자 관측·시도 상태 갱신과 복구는 Agent(1)의 `runtime/state_manager.py`·`runtime/replanner.py`가 담당한다. 호출되지 않던 상위 `replanning/` 등 초기 골격은 제거했다. OCR 보조 기능은 `runtime/vision.py`에 있다.
 
-원천 데이터는 `data/runtime/`, 공통 fixture는 `data/fixtures/`, 파생 label·dataset·proposal·평가는 `data/graph_proposal/`로 구분한다. 자동 저장·라벨링·배포는 아직 구현하지 않았다. [파일별 책임과 이동 경로](../AI-Agent/README.md)를 기준으로 개발한다.
+실제 실행 이벤트·동의된 분석은 Backend DB에 저장하고, 공통 합성 fixture는 `data/fixtures/`, 재생성 가능한 로컬 출력은 Git에서 제외한 `data/local/`·`data/graph_proposal/`로 구분한다. 오래된 생성 결과를 현재 성능 근거로 사용하지 않는다. [데이터 구분](../AI-Agent/data/README.md)과 [파일별 책임](../AI-Agent/README.md)을 기준으로 개발한다.
 
 ## 9. 제품 전체 성숙도 용어
 

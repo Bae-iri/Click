@@ -19,6 +19,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from ai_agent.runtime.engine import ClickAgentEngine
+from ai_agent.runtime.similarity import KeywordFallbackSimilarityScorer
 from ai_agent.runtime.types import (
     AgentTurnRequest,
     DeviceContext,
@@ -52,6 +53,7 @@ def request(case_name: str, width: int, height: int, bounds, *, vision: bool):
         accessibility_tree=(),
         vision_snapshot=VisionSnapshot(
             user_consented=True,
+            consent_request_id=f"eval-{case_name}-vision",
             redaction_applied=True,
             provider="frontend_ocr",
             package_name="com.android.settings",
@@ -71,14 +73,15 @@ def evaluate() -> dict:
     rows = []
     for name, width, height, expected_bounds in CASES:
         started = perf_counter()
-        vision = ClickAgentEngine().handle_turn(
+        vision = ClickAgentEngine(similarity_scorer=KeywordFallbackSimilarityScorer()).handle_turn(
             request(name, width, height, expected_bounds, vision=True))
         latency_ms = (perf_counter() - started) * 1000
-        baseline = ClickAgentEngine().handle_turn(
+        baseline = ClickAgentEngine(similarity_scorer=KeywordFallbackSimilarityScorer()).handle_turn(
             request(name, width, height, expected_bounds, vision=False))
         rows.append({
             "case": name,
-            "vision_target_found": vision.guide_command.target_node_id == "vision:display",
+            # Privacy normalization replaces provider IDs with their element index.
+            "vision_target_found": vision.guide_command.target_node_id == "vision:ocr_1",
             "vision_bounds_correct": vision.guide_command.target_bounds == expected_bounds,
             "accessibility_only_target_found": baseline.guide_command.target_node_id is not None,
             "runtime_latency_ms": round(latency_ms, 3),

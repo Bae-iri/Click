@@ -108,7 +108,7 @@ AX를 우선 사용한다. 빈 tree, 정규화 후 신호가 없는 tree 또는 
 
 ## 5. 구현 파일과 검증
 
-- AI1: `runtime/engine.py`, `runtime/guide.py`, `runtime/privacy.py`, `fallback/llm_vlm_fallback.py`.
+- AI1: `runtime/engine.py`, `runtime/guide.py`, `runtime/privacy.py`, `runtime/vision.py`.
 - BE: `services/safety.py`, `services/agent_turn.py`, `clients/runtime_agent.py`, `schemas/agent_turn.py`. 기존 `safety_confirmations.command` JSON의 purpose를 이용해 추가 DB migration 없이 한 세션의 현재 확인을 관리한다.
 - FE: `ClickOverlayService`, `ClickAccessibilityService`, `OnDeviceVision`, `AgentVisionSnapshot`, 접근성 서비스 XML, ML Kit 의존성.
 - 회귀: `AI-Agent/tests/test_vision_fallback.py`, `Backend/tests/test_vision_consent.py`에서 요청별 동의, 만료·재사용·다른 owner/window, 원본 이미지 거절, 정상 OCR 안내, 변경 승인 분리, HTTP 멱등성을 검증한다.

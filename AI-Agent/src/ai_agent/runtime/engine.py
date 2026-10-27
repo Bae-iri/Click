@@ -43,8 +43,8 @@ from ai_agent.runtime.verification import correlate_action, verify_transition, f
 from ai_agent.runtime.progress import observed_path, checklist
 from ai_agent.runtime.targeting import target_key
 from ai_agent.runtime.similarity import default_similarity_scorer
-from ai_agent.fallback.llm_vlm_fallback import (
-    LLMVLMFallback,
+from ai_agent.runtime.vision import (
+    VisionFallback,
     VisionFallbackAnalysis,
     vision_elements_to_accessibility_nodes,
 )
@@ -59,14 +59,14 @@ class ClickAgentEngine:
         session_store: SessionStore | None = None,
         task_graphs: dict[str, TaskGraph] | None = None,
         similarity_scorer=None,
-        vision_fallback: LLMVLMFallback | None = None,
+        vision_fallback: VisionFallback | None = None,
         trace_logger: TraceLogger | None = None,
         replay_recorder=None,
     ) -> None:
         self.session_store = session_store or InMemorySessionStore()
         self.task_graphs = task_graphs or TASK_GRAPHS
         self.similarity_scorer = similarity_scorer or default_similarity_scorer()
-        self.vision_fallback = vision_fallback or LLMVLMFallback()
+        self.vision_fallback = vision_fallback or VisionFallback()
         self.trace_logger = trace_logger or TraceLogger()
         self.replay_recorder = replay_recorder
 
