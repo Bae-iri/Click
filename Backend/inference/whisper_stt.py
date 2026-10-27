@@ -85,8 +85,10 @@ def create_app(model_loader=load_model, transcribe=infer):
             raise HTTPException(503, "STT busy", headers={"Retry-After": "1"})
         try:
             text = transcribe(app.state.model, pcm)
-            if not isinstance(text, str) or not text.strip() or len(text) > 4000:
-                raise HTTPException(422, "No usable speech")
+            if not isinstance(text, str) or len(text) > 4000:
+                raise HTTPException(503, "Invalid STT result")
+            if not text.strip():
+                raise HTTPException(422, detail={"code": "NO_SPEECH"})
             return TranscriptionResponse(text=text.strip())
         except HTTPException:
             raise

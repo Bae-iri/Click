@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 
+from app.core.http import ErrorEnvelope, error_response
 from app.schemas.transcription import TranscriptionRequest, TranscriptionResponse
 from app.services.transcription import (
     InvalidAudio,
     InvalidTranscriptionResponse,
+    NoSpeechDetected,
     TranscriptionService,
     TranscriptionTimedOut,
     TranscriptionUnavailable,
@@ -13,11 +16,17 @@ from app.services.transcription import (
 def build_router(service: TranscriptionService, principal) -> APIRouter:
     router = APIRouter(prefix="/speech", tags=["speech"])
 
-    @router.post("/transcriptions", response_model=TranscriptionResponse)
-    def transcribe(body: TranscriptionRequest, user=Depends(principal)) -> TranscriptionResponse:
+    @router.post("/transcriptions", response_model=TranscriptionResponse,
+                 responses={422: {"model": ErrorEnvelope,
+                                  "description": "INVALID_REQUEST for invalid audio; NO_SPEECH for no recognizable speech (error.code)."}})
+    def transcribe(body: TranscriptionRequest, request: Request,
+                   user=Depends(principal)) -> TranscriptionResponse | JSONResponse:
         del user
         try:
             text = service.transcribe(body)
+        except NoSpeechDetected:
+            return error_response(422, "NO_SPEECH", "No recognizable speech. Please record again.",
+                                  request.scope.get("trace_id"))
         except InvalidAudio as error:
             raise HTTPException(422) from error
         except TranscriptionTimedOut as error:

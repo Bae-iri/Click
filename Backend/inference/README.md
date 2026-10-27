@@ -78,7 +78,22 @@ SELF_HOSTED_STT_TOKEN=<32자 이상의 공유 비밀>
   --host 127.0.0.1 --port 8091 --workers 1 --no-access-log
 ```
 
+Windows 로컬 환경은 별도 Python 환경과 `inference/.env`를 사용한다. 이 PC의 실행 예는 다음과 같다. worker 설정은 `WHISPER_DEVICE=cpu`, `WHISPER_COMPUTE_TYPE=int8`이며, 모델 경로는 `C:/click_server/models/faster-whisper-large-v3`다. 가중치·설치 환경은 Git 저장소 밖에 보관한다.
+
+```powershell
+# Backend 디렉터리에서 worker를 API와 별도로 실행
+& C:\click_server\.venv-asr\Scripts\python.exe -m uvicorn inference.whisper_stt:app --env-file inference/.env --host 127.0.0.1 --port 8091 --workers 1 --no-access-log
+# Backend 환경에서 설정만 확인; WAV가 없으면 추론하지 않는다.
+python scripts/check_stt.py --env-file .env
+# 실제 한국어 WAV와 기대 문장을 확보한 뒤 실행
+python scripts/check_stt.py --env-file .env --wav /path/to/test-ko.wav --expected-text "글자 크게 해줘"
+```
+
 `/health`는 모델 로드가 끝나야 응답한다. 모델 로더는 오프라인 모드에서 로컬 디렉터리만 사용하며 Hugging Face·ONNX Runtime telemetry를 비활성화한다. worker는 `language=ko`, `task=transcribe`, VAD, temperature 0, beam 5, 이전 문맥 미사용으로 요청당 하나의 음성을 전사한다. 무음·빈 결과는 422, 동시 요청은 503을 반환한다. 지연 생성되는 segment를 잠금 안에서 모두 소비한다. 원음이나 전사 결과를 파일에 저장하지 않는다. API의 STT 대기 시간은 30초다. 대기가 끝나도 이미 시작된 모델 연산이 즉시 취소되는 것은 아니다.
+
+무음일 때 worker는 `422 {"detail":{"code":"NO_SPEECH"}}`, Backend는 기존 오류 envelope의 `error.code=NO_SPEECH`로 전달한다. 앱은 재녹음을 안내한다. 잘못된 WAV의 `422 INVALID_REQUEST`, 서버 장애의 503, 시간 초과의 504와 구분한다. 모델이 잘못된 타입이나 지나치게 긴 결과를 반환한 경우는 무음으로 취급하지 않는다. 음성 없는 자동 테스트는 이 오류 전달 계약을 검증하며 실제 VAD·한국어 인식 품질을 입증하지 않는다.
+
+2026-10-27 Windows 로컬 준비 확인: Python 3.12.13, faster-whisper 1.2.1, CPU/int8로 revision `edaa852ec7e145841d8ffdb056a99866b5f0a478`의 5개 파일을 내려받고 SHA-256을 검사했다. 모델 로드 후 worker `/health`와 Backend `/health`·`/ready`가 200이며 모델 ID가 일치한다. 올바른 토큰의 잘못된 WAV는 추론 전에 422, 잘못된 토큰은 401로 거절했다. 기동 확인은 약 19.6초, 대기 상태 working set 약 1.67GiB·private commit 약 6.70GiB였다. 전사 중 최대 메모리 측정은 아니다. 테스트 WAV와 기대 문장이 없어 실제 한국어 전사·전사 지연·휴대폰 검증은 진행하지 않았으며, 이 설정은 로컬용으로 운영 서버에 배포하지 않았다.
 
 ## API 서버 설정
 

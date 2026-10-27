@@ -4200,7 +4200,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Content",
+            "description": "INVALID_REQUEST for invalid audio; NO_SPEECH for no recognizable speech (error.code).",
             "content": {
               "application/json": {
                 "schema": {

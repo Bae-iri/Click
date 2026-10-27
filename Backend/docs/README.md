@@ -59,11 +59,13 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload --no-access
 설정은 루트 `.env.example`과 [모델 worker 안내](../inference/README.md)를 따릅니다. 자체 STT/LLM worker는 API와 분리하고 실제 가중치·한국어 추론·메모리·지연을 확인합니다. STT worker와 API·앱 모델 계약은 Whisper large-v3로 전환했습니다. 실제 서버에는 CTranslate2 가중치 배치와 `inference.whisper_stt:app` 실행, API endpoint 변경 및 앱 업데이트가 필요합니다. 목표 해석 LLM도 STT와 별도 설정입니다.
 
 ```powershell
-python scripts/check_stt.py
-python scripts/check_stt.py --wav /path/to/test-ko.wav --expected-text "글자 크게 해줘"
+python scripts/check_stt.py --env-file .env
+python scripts/check_stt.py --env-file .env --wav /path/to/test-ko.wav --expected-text "글자 크게 해줘"
 ```
 
-CONFIGURED_ONLY는 설정 확인이며 추론 성공이 아닙니다. PASS는 실제 provider/model/전사 응답 검사이며 기대 문구를 지정하면 공백 제외 일치도 검사합니다. 공개 API 왕복은 `--api-url`과 STT_CHECK_ACCESS_TOKEN을 사용합니다. CONFIG_ERROR/AUDIO_ERROR/UNAVAILABLE/TIMEOUT/RESPONSE_ERROR/TEXT_MISMATCH를 구분합니다. 음성은 16kHz mono PCM16 WAV, 최대 20초/650000바이트이며 토큰·원음·전사문을 출력하지 않습니다.
+CONFIGURED_ONLY는 설정 확인이며 추론 성공이 아닙니다. PASS는 실제 provider/model/전사 응답 검사이며 기대 문구를 지정하면 공백 제외 일치도 검사합니다. 공개 API 왕복은 `--api-url`과 STT_CHECK_ACCESS_TOKEN을 사용합니다(원격 HTTPS, 로컬 loopback만 HTTP 허용). CONFIG_ERROR/AUDIO_ERROR/NO_SPEECH/UNAVAILABLE/TIMEOUT/RESPONSE_ERROR/TEXT_MISMATCH를 구분합니다. Backend의 `422 NO_SPEECH`는 재녹음, `422 INVALID_REQUEST`는 입력 형식 오류이며 503 서버 장애와 다릅니다. 음성은 16kHz mono PCM16 WAV, 최대 20초/650000바이트이며 토큰·원음·전사문을 출력하지 않습니다.
+
+2026-10-27 Windows 로컬에서는 Whisper large-v3 가중치·해시 확인, CPU/int8 모델 로드, worker와 API 상태 점검 및 인증을 확인했습니다. 관련 Backend 테스트 84개와 앱 오류 안내·모델 계약 단위 테스트 8개가 통과했습니다. 한국어 WAV가 없어 실제 전사·지연·전사 중 메모리 및 휴대폰 검증은 보류했습니다. 운영 배포는 별도입니다.
 
 기기에서는 녹음 → 인증된 Backend → 실제 STT worker → 텍스트 표시와 장애 시 텍스트 입력 복구를 확인합니다. OCR도 동의 → 로컬 한국어 OCR → 마스킹된 elements → 실제 안내를 확인하고, 취소/화면 전환 이후 늦은 응답이 이전 작업을 실행하지 않는지 검사합니다. API 계약 확인만으로 모델·기기 성공을 기록하지 않습니다.
 

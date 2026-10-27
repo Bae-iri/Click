@@ -85,6 +85,18 @@ def test_worker_recovers_from_silence_and_lazy_inference_failure(monkeypatch):
             response = client.post("/v1/transcriptions", json=audio_request().model_dump(),
                 headers={"Authorization": "Bearer " + TOKEN})
             assert response.status_code == expected
+            if expected == 422:
+                assert response.json() == {"detail": {"code": "NO_SPEECH"}}
             assert "PRIVATE_MODEL_INPUT" not in response.text
         assert response.json() == {"text": "글자 크기 줄여줘", "model": "openai/whisper-large-v3",
                                    "provider": "self_hosted"}
+
+
+@pytest.mark.parametrize('text', [None, 123, 'x' * 4001])
+def test_invalid_model_output_is_not_reported_as_silence(monkeypatch, text):
+    monkeypatch.setenv('SELF_HOSTED_STT_TOKEN', TOKEN)
+    with TestClient(create_app(lambda: object(), lambda model, pcm: text)) as client:
+        response = client.post('/v1/transcriptions', json=audio_request().model_dump(),
+                               headers={'Authorization': 'Bearer ' + TOKEN})
+    assert response.status_code == 503
+    assert 'NO_SPEECH' not in response.text
