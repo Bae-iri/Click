@@ -23,7 +23,7 @@ FE는 Goal/Command를 확정하고, Backend는 DB의 graph를 선택·전달한�
 
 이 문서는 두 에이전트의 관계를 설명하는 공통 진입점이다. 기존 전체 구조 문서의 실행 상세와 구현 평가를 AI-Agent(1)에 옮기고, learning/proposal 영역을 AI-Agent(2)로 분리·확장했다. 상세 설계의 기준 경로는 루트 `docs/`이며 `AI-Agent/docs/`에서는 이 문서들로 연결한다.
 
-초기 설계 평가는 2026-09-12 기준이며 **현재 구현 상태는 2026-10-10 코드·테스트로 갱신**했다. Backend의 DB 본문 loader·고정 version 복원, AI1 확대/축소·완료 predicate·동점 보류, FE 행동 수집이 코드에 있다. 영속 학습 event·독립 제품 gold·AI2 자동 proposal/평가/release와 legacy 정리는 남아 있다. 현재 Backend 충돌과 실제 UI 오선택 재현이 있으므로 전체 제품 완료로 읽지 않는다. [재검증 근거](./reviews/2026-10-10-ui-highlight-revalidation.md), [품질·gold 기준](./ai-quality-evaluation.md), [STT 선정](./stt-model-selection.md)이 최신 판단 기준이다.
+초기 설계는 2026-09-12 기준이며 현재 구현은 2026-10-27에 갱신했다. Backend DB graph 고정·복원, AI1 안내·검증·복구, AI2 오프라인 처리·후보·평가·승인/롤백이 구현되어 있다. Backend·AI-Agent 로컬 회귀 1,020개가 통과했지만 실제 UI 정확도·제품 gold·기기 검증 완료를 뜻하지 않는다. [AI2 구현](../AI-Agent/src/ai_agent/graph_proposal/README.md), [품질 기준](./ai-quality-evaluation.md)을 따른다.
 
 ## 2. 두 에이전트 비교
 
@@ -151,12 +151,12 @@ AI2는 graph 파일을 모으는 역할에 한정하지 않는다. 실제 실행
 | --- | --- | --- |
 | Agent(1) 실행 | MVP-01/02·DB 선택 graph 주입·검증·복구 구현; UI 부분 문자열 오선택 및 legacy 경로 잔존 | 주입 계약 완성, 실제 행동·결과 수집과 제품 gold 기반 검증 |
 | Safety·실행 제한 | Backend confirmation·화면·출력 검증, turn deadline·동시 실행 상한 | runtime 공통 policy와 episode 복구 예산 |
-| 세션 영속성 | DB claim·응답·checkpoint·episode graph version 고정 코드 존재 | 충돌 해소, 결과 상태 계약과 parameter 보존 재검증 |
+| 세션 영속성 | DB claim·응답·checkpoint·고정 graph 복원, 로컬 재시작/재전송 검증 | 실제 PostgreSQL·기기 환경 검증 |
 | Graph 선택·호환성 | DB 본문 decode·hash 검사·고정 version 복원 구현 | 전체 환경 조건·선택 gold 평가 |
-| Trace | v2 correlation hash·enum·수치 allowlist, 제한된 메모리 진단 | 증거·순서·종료 사건을 보존하는 별도 영속 event |
-| Agent(2) | MVP-01 합성 fixture용 weak labeler 구현; learner·dataset builder는 빈 결과, validator는 `NEEDS_DATA` | 실제 증거 수집 → 독립 검수 gold → baseline → 후보·회귀 평가 |
+| Trace | 제한된 진단과 영속 runtime_events·동의 기반 AI2 처리 구현 | 실제 기기 증거 수집·누락 검수 |
+| Agent(2) | 재구성·분석·manifest/dataset·기존 경로 후보·실제 replay·CPU baseline 구현 | 실제 기록·독립 gold/holdout·신규 경로 증거 |
 | 외부 참고·제품 gold | 공개 자료 구조·함수 수준 감사 완료; 제품 gold 수집·검수는 미완료 | ColorBench subset/MobiFlow rule 참고 실험과 자체 gold 구축을 별도 진행 |
-| Graph release | version manager는 문자열을 반환하는 골격 | 승인 artifact·registry·배포·rollback 연결 |
+| Graph release | 평가 hash·검토 결합, 불변 DB 승인/활성·audit·rollback 구현 | 실제 독립 기기 평가를 통과한 release |
 
 공통 선행 과제는 평가 계약과 replay 가능한 실제 증거다. [데이터 계획 P0~P2](./task-graph-data-plan.md#6-개발-순서와-완료-조건)에 따라 선택·경로·완료 gold와 baseline을 먼저 만든 뒤 첫 graph 개선과 회귀 평가로 진행한다. 공개 참고 실험 R1은 수집과 병행하고 모델 가중치 학습은 이 기반 이후로 둔다.
 

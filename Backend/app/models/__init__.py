@@ -11,3 +11,4 @@ __all__ = ["Account", "AuthSession", "AgentSession", "AgentCheckpoint", "AgentTu
            "Consent", "UIEvent", "User", "UserUIProfile"]
 from app.models.task_graph import ApprovedTaskGraph  # noqa: F401
 from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption  # noqa: F401
+from app.models.graph_release import GraphReleaseAudit  # noqa: F401

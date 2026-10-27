@@ -172,17 +172,19 @@ def test_internal_consent_binding_cannot_be_supplied_by_client():
     assert client.post(PATH, json=request).status_code == 422
 
 
-def test_frontend_masking_failure_sends_only_code_and_rejected_confirmation():
+@pytest.mark.parametrize("failure", ["masking_failed", "capture_failed", "ocr_failed", "screen_changed", "unsupported"])
+def test_frontend_masking_failure_sends_only_code_and_rejected_confirmation(failure):
     client = authenticated_client(create_app())
     payload, body = challenge(client)
     request = accepted(payload, body)
     request.pop("vision_snapshot")
-    request.update(user_confirmation="rejected", vision_failure="masking_failed")
+    request.update(user_confirmation="rejected", vision_failure=failure)
     response = client.post(PATH, json=request)
     assert response.status_code == 200, response.text
     assert response.json()["task_status"] == "BLOCKED"
-    assert response.json()["metadata"]["vision_failure"] == "masking_failed"
-    assert "개인정보" in response.json()["guide_command"]["message"]
+    assert response.json()["metadata"]["vision_failure"] == failure
+    expected_message = "개인정보" if failure == "masking_failed" else "화면 분석"
+    assert expected_message in response.json()["guide_command"]["message"]
     assert "confirmation" not in response.json()["metadata"]
 
 

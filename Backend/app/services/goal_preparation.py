@@ -25,7 +25,7 @@ class GoalPreparationService:
         self.factory, self.graphs, self.sessions = factory, graphs, sessions
         self.llm = llm or LocalGoalLlm()
         self.requirements = requirements or GoalInputRequirements()
-        self.catalog = json.loads((Path(__file__).parents[1] / 'task_graphs/goal_catalog.json').read_text())
+        self.catalog = json.loads((Path(__file__).parents[1] / 'task_graphs/goal_catalog.json').read_text(encoding='utf-8'))
 
     @staticmethod
     def conflict(code):

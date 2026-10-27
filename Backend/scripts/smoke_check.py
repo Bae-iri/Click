@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import site
 import subprocess
 import sys
 import tempfile
@@ -13,6 +14,15 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 
 BACKEND = Path(__file__).resolve().parents[1]
+
+
+def stop_server(server):
+    server.terminate()
+    try:
+        server.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        server.kill()
+        server.wait(timeout=5)
 
 
 def main() -> None:
@@ -26,10 +36,18 @@ def main() -> None:
             port = reserved.getsockname()[1]
         with (Path(temporary) / "server.log").open("w+", encoding="utf-8") as log:
             def start_server():
+                executable = sys.executable
+                server_env = env
+                if os.name == "nt":
+                    # Start the interpreter directly, not the venv redirector.
+                    # Otherwise terminating the launcher can orphan uvicorn.
+                    executable = getattr(sys, "_base_executable", sys.executable)
+                    server_env = {**env, "PYTHONPATH": os.pathsep.join([
+                        *site.getsitepackages(), *filter(None, [env.get("PYTHONPATH")])])}
                 return subprocess.Popen(
-                    [sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(port),
+                    [executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(port),
                      "--no-access-log", "--no-proxy-headers", "--log-config", "logging.json"],
-                    cwd=BACKEND, env=env, stdout=log, stderr=log)
+                    cwd=BACKEND, env=server_env, stdout=log, stderr=log)
             server = start_server()
             try:
                 base = f"http://127.0.0.1:{port}"
@@ -68,8 +86,7 @@ def main() -> None:
                 status, user = fetch("/api/v1/users/me")
                 assert status == 200
                 assert fetch(f"/api/v1/users/{user['id']}")[1]["id"] == user["id"]
-                server.terminate()
-                server.wait(timeout=10)
+                stop_server(server)
                 server = start_server()
                 deadline = time.monotonic() + 20
                 while True:
@@ -98,12 +115,7 @@ def main() -> None:
                 assert "smoke-password" not in output and token not in output
                 print("PASS: migrations; live auth/turn; process restart/replay/resume/cancel; safe logs")
             finally:
-                server.terminate()
-                try:
-                    server.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    server.kill()
-                    server.wait(timeout=5)
+                stop_server(server)
 
 
 if __name__ == "__main__":

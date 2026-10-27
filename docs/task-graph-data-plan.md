@@ -1,8 +1,6 @@
 # Task Graph 정답 데이터와 AI-Agent 개발 계획
 
-2026-10-10: 평가 단위·gold record·독립 검수·공식 split·수집 계획은 [실제 품질·정답 데이터 기준 v2](./ai-quality-evaluation.md)로 구체화했다. v1의 임시 수치 합격선은 외부 근거가 확정되기 전까지 보류하며 공개 benchmark와 제품 평가를 구분한다. 아래 P0의 평가 기준 문서는 작성했고 자동 schema validator·수집 pipeline은 미구현이다. [STT 후보](./stt-model-selection.md)와 [UI 재검증](./reviews/2026-10-10-ui-highlight-revalidation.md)을 함께 본다.
-
-갱신일: 2026-09-20. 데이터 채택 범위·정답 확정·개발 순서의 기준 문서다. [적합성 재재검증](reviews/2026-09-20-task-graph-gold-fitness-audit.md)의 확인 결과를 계획에 반영한다. 아래 새 dataset/manifest 필드와 단계별 산출물은 구현할 계약이며, 이 문서 작성으로 수집·학습·실기기 검증이 완료된 것은 아니다.
+2026-10-27 구현 현황: [Agent 2 실행 문서](../AI-Agent/src/ai_agent/graph_proposal/README.md). manifest 검사·DB 이벤트 처리·재구성·실패 분석·기존 경로 우선순위 후보·replay 평가·승인/롤백을 구현했다. 실제 기기 증거·제품 gold·독립 holdout 구축과 신규 경로 검증은 남아 있다. 아래는 데이터 채택·정답 검수의 설계 기준이며 합성 테스트를 실제 성능 근거로 삼지 않는다.
 
 ## 1. 확정한 방향
 
@@ -26,7 +24,7 @@
 | Graph candidate | AI2가 제안한 신규 graph 또는 patch | 정적 검사·실행 검증·회귀 평가 대상 |
 | 승인 graph artifact | 검증·승인 참조가 연결된 불변 graph version | Backend가 선택해 AI1에 전달할 운영 자산 |
 
-`label_status=final`은 해당 라벨 revision이 확정됐다는 뜻이다. weak label도 final일 수 있으므로 이를 gold 여부로 사용하지 않는다. `source_kind`, `label_method`, `review_status`, `evidence_refs`, `review_revision`을 분리해 관리한다. 이 추가 메타데이터의 저장 구현은 후속 작업이다.
+`label_status=final`은 해당 라벨 revision이 확정됐다는 뜻이다. weak label도 final일 수 있으므로 이를 gold 여부로 사용하지 않는다. `source_kind`, `label_method`, `review_status`, `evidence_refs`, `review_revision`을 분리해 관리한다. AI2 실행 manifest는 source/review/group/split/evidence 메타데이터를 검사한다. 세부 제품 평가 레코드는 별도 품질 평가 계약을 따른다.
 
 ## 3. 평가 단계별 정답 계약
 
@@ -118,12 +116,12 @@ flowchart TD
 
 | 단계 | 담당 | 작업과 산출물 | 다음 단계로 넘어갈 조건 | 현재 상태 |
 | --- | --- | --- | --- | --- |
-| P0 평가 계약 | AI2 + Backend/AI1 담당 | 선택·경로·완료 정답 단위, MVP 환경 목록, source/review/split manifest | 입력·정답·판정 불가·근거·평가 소유자 명시 | 평가 기준 v1·빈 manifest 제정. 자동 schema 검증·저장 구현 예정 |
-| P1 실제 증거 확보 | FE·Backend·AI1 생산, AI2 수집 | 통제된 MVP-01 시연과 원천 event·episode/attempt 연결 | 정상·실패·무변화·관측 부족 사례의 실제 증거와 재처리 가능한 snapshot | 영속 수집·실기기 수집 예정 |
+| P0 평가 계약 | AI2 + Backend/AI1 담당 | 선택·경로·완료 정답 단위, MVP 환경 목록, source/review/split manifest | 입력·정답·판정 불가·근거·평가 소유자 명시 | manifest schema·source/review/group/split/evidence 검사 구현 |
+| P1 실제 증거 확보 | FE·Backend·AI1 생산, AI2 수집 | 통제된 MVP-01 시연과 원천 event·episode/attempt 연결 | 정상·실패·무변화·관측 부족 사례의 실제 증거와 재처리 가능한 snapshot | 영속 DB 처리·단계 재구성 구현. 실기기 수집 미완료 |
 | P2 제품 gold·baseline | AI2 + 독립 검수 | 선택/경로/완료 gold, 개발/holdout 분리, 현재 선택기·verifier 결과 | 실제 근거·검수·split 추적, unknown과 합성 사례 분리 보고 | 구축 예정 |
 | R1 공개 참고 실험 | AI2 연구 workflow | ColorBench 검수 subset, MobiFlow 유효 rule·어댑터·제한 보고 | 원본/파생 구분, 결함 제외·수정 기록, 해당 benchmark 내 재현 | 구조·함수 감사만 완료. P1과 병행 가능 |
-| P3 첫 graph 개선 | AI2 | 실제 실패 근거로 selector/전이 후보와 정확한 diff 생성 | base hash·환경·반례·독립 holdout 회귀·필요한 기기 전이 확인 | learner/validator 골격 확장 예정 |
-| P4 승인·소비 연결 | AI2 release + Backend + AI1 | 승인 artifact 게시, 새 episode 선택, 고정 version 실행·rollback | 공개 자료나 candidate의 무승인 게시 없음, 기존 세션 일관성 확인 | AI2 release 골격. Backend DB 본문 decode·version 고정 구현, 충돌 해소 후 통합 재검증 필요 |
+| P3 첫 graph 개선 | AI2 | 실제 실패 근거로 selector/전이 후보와 정확한 diff 생성 | base hash·환경·반례·독립 holdout 회귀·필요한 기기 전이 확인 | 기존 경로 우선순위 후보·실제 replay adapter 구현. 독립 holdout 미확보 |
+| P4 승인·소비 연결 | AI2 release + Backend + AI1 | 승인 artifact 게시, 새 episode 선택, 고정 version 실행·rollback | 공개 자료나 candidate의 무승인 게시 없음, 기존 세션 일관성 확인 | 평가 hash 결합·원자적 승인/활성·audit·rollback 구현. 실제 제품 release 미실행 |
 | P5 범위 확장 | 각 역할 담당 | 새 제조사·앱 버전·쿠팡·정부24 task의 별도 gold와 graph | 해당 목표의 실제 경로·완료 predicate·catalog·회귀 근거 확보 | 후속 범위 |
 
 R1의 대용량 다운로드나 전체 benchmark 연동은 P1 시작의 선행조건이 아니다. 새 graph를 얻기 전에도 통제된 시연과 미지원 요청 사례로 데이터 수집을 시작할 수 있다. 초기 graph는 검토한 seed를 사용하고 새 후보의 성능은 별도 holdout으로 평가한다.
@@ -153,10 +151,4 @@ R1의 대용량 다운로드나 전체 benchmark 연동은 P1 시작의 선행�
 
 ## 8. 현재 구현과 문서 연결
 
-- [Backend selector](../Backend/app/repositories/task_graphs.py)는 DB 본문을 schema/hash/목표 metadata로 검증·decode하고 episode에 고정한 version/hash를 복원한다. DB-only graph 실행 테스트 코드도 있다. 환경 호환성 전반·legacy 제거는 미완료이며, 2026-10-10 현재 Backend 충돌 때문에 통합 재검증은 차단되어 있다.
-- [AI1 registry](../AI-Agent/src/ai_agent/runtime/tasks/__init__.py)는 글자 확대 MVP-01과 축소 MVP-02를 task/goal 키로 등록한다. 다른 설정 graph 초안의 존재를 승인·실행·실기기 검수 완료로 세지 않는다.
-- [MVP-01 labeler](../AI-Agent/src/ai_agent/graph_proposal/labeling/mvp01.py)와 합성 fixture 20건이 있다. 출력은 `rule_based_weak_label`이며 제품 gold가 아니다.
-- `GraphLearner`는 빈 후보, `TrainingDatasetBuilder`는 빈 sample, `GraphValidator`는 `NEEDS_DATA`를 반환한다. 진단 trace는 영속 학습 event store를 대신하지 않는다.
-- 현재 repo의 graph seed·합성 fixture·공개 감사 산출물은 제품용 gold 구축 완료의 증거가 아니다. P1/P2에서 실제 수집·검수 manifest를 만들어야 한다.
-
-역할별 구현 계획은 [전체 구조](ai-agent-architecture.md), [AI1](ai-agent-1-runtime.md), [AI2](ai-agent-2-graph-proposal.md), [Backend 선택 계약](backend-task-graph-dispatch.md)에 연결한다. 저장 위치와 원본/파생/정답 구분은 [데이터 README](../AI-Agent/data/README.md)를 따른다.
+[Backend selector](../Backend/app/repositories/task_graphs.py)는 DB 본문·schema/hash·목표를 검증하고 고정 version을 복원한다. [AI2 구현·제약](../AI-Agent/src/ai_agent/graph_proposal/README.md)에 수집·dataset·후보·평가·release와 실행 명령을 정리했다. 실제 gold·holdout·실기기 검수는 수행 전이며 승인 artifact와 자동 weak label을 제품 정답으로 동일시하지 않는다.

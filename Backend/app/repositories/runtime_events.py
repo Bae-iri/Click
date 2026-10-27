@@ -1,13 +1,16 @@
 """Durable execution outbox; receipts and retention never depend on online AI2 calls."""
 import time
 from sqlalchemy import delete
-from app.models.runtime_event import RuntimeEvent
+from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
 
 RETENTION_SECONDS = 7 * 86400
 
 
-def append(db, row, request_id, payload, *, kind="turn", episode_id=None, graph_hash=None, now=None):
+def append(db, row, request_id, payload, *, kind="turn", episode_id=None, graph_hash=None, graph_reference=None, now=None):
     now = int(time.time()) if now is None else now
+    reference = graph_reference or {"task_id": row.task_id, "version": row.graph_version,
+                                   "sha256": graph_hash or row.graph_hash}
+    payload = {**payload, "graph_reference": reference, "source_kind": "runtime"}
     db.add(RuntimeEvent(session_id=row.id, user_id=row.user_id, episode_id=episode_id or row.episode_id,
         sequence=row.version, request_id=request_id, graph_hash=graph_hash or row.graph_hash,
         kind=kind, payload=payload, created_at=now, expires_at=now + RETENTION_SECONDS))
@@ -15,6 +18,11 @@ def append(db, row, request_id, payload, *, kind="turn", episode_id=None, graph_
 
 def cleanup(factory, now=None):
     with factory() as db:
-        removed = db.execute(delete(RuntimeEvent).where(RuntimeEvent.expires_at <= (int(time.time()) if now is None else now))).rowcount
+        now = int(time.time()) if now is None else now
+        # A session summary may refer to events older than its final receipt FK.
+        # Remove it at the earliest contributing event's expiry, not the last one's.
+        db.execute(delete(RuntimeEventConsumption).where(
+            RuntimeEventConsumption.result["expires_at"].as_integer() <= now))
+        removed = db.execute(delete(RuntimeEvent).where(RuntimeEvent.expires_at <= now)).rowcount
         db.commit()
         return removed

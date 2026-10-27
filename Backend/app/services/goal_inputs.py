@@ -14,7 +14,7 @@ def negated(text):
 
 class GoalInputRequirements:
     def __init__(self, document=None):
-        self.document = document or json.loads((Path(__file__).parents[1] / "task_graphs/input_requirements.json").read_text())
+        self.document = document or json.loads((Path(__file__).parents[1] / "task_graphs/input_requirements.json").read_text(encoding="utf-8"))
 
     def family(self, goal_type=None, source_text=""):
         if goal_type:

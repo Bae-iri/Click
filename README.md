@@ -82,7 +82,7 @@ Click/
 
 2026-10-10 기준: [STT 개인정보·한국어 후보 선정](docs/stt-model-selection.md), [UI 하이라이트 재검증](docs/reviews/2026-10-10-ui-highlight-revalidation.md), [실제 품질·정답 데이터 기준 v1](docs/ai-quality-evaluation.md). UI 오선택은 재현되었고 제품 gold·실기기 평가는 미완료다. 문서의 구현 상태와 목표 설계를 구분한다.
 
-두 역할은 `runtime/*`와 `graph_proposal/*`로 분리했고, 공통 trace는 `telemetry/*`에서 관리한다. MVP-01 runtime과 합성 fixture용 weak labeler가 있으며, Agent(2)의 영속 실제 데이터 수집·제품 gold·graph proposal·dataset 생성·release는 후속 구현이다. [실제 파일 구조와 경계](AI-Agent/README.md)를 참고한다.
+두 역할은 `runtime/*`와 `graph_proposal/*`로 분리하고 공통 증거는 `telemetry/*`에서 관리한다. Agent 2의 동의 기반 DB 처리·단계 재구성·실패 분석·데이터 분리·기존 경로 우선순위 후보·replay 평가·승인/롤백을 구현했다. 실제 제품 gold·독립 기기 holdout은 남아 있다. [현재 구현·실행](AI-Agent/src/ai_agent/graph_proposal/README.md)을 참고한다.
 
 ## 정답 데이터와 개발 순서
 

@@ -1,0 +1,68 @@
+{
+  "schema_version": "ai2-dataset.v1",
+  "dataset_id": "synthetic-route-ranking",
+  "revision": "1",
+  "source_revision": "hand-authored-v1",
+  "records": [
+    {
+      "episode_id": "bad-0",
+      "group_id": "group-bad-0",
+      "split": "train",
+      "source_kind": "synthetic",
+      "review_status": "pending",
+      "reviewer": null,
+      "review_revision": null,
+      "evidence_refs": [
+        "bad-0-1",
+        "bad-0-2"
+      ],
+      "label": "unknown",
+      "label_method": "weak"
+    },
+    {
+      "episode_id": "bad-1",
+      "group_id": "group-bad-1",
+      "split": "train",
+      "source_kind": "synthetic",
+      "review_status": "pending",
+      "reviewer": null,
+      "review_revision": null,
+      "evidence_refs": [
+        "bad-1-1",
+        "bad-1-2"
+      ],
+      "label": "unknown",
+      "label_method": "weak"
+    },
+    {
+      "episode_id": "good-0",
+      "group_id": "group-good-0",
+      "split": "train",
+      "source_kind": "synthetic",
+      "review_status": "pending",
+      "reviewer": null,
+      "review_revision": null,
+      "evidence_refs": [
+        "good-0-1",
+        "good-0-2"
+      ],
+      "label": "unknown",
+      "label_method": "weak"
+    },
+    {
+      "episode_id": "good-1",
+      "group_id": "group-good-1",
+      "split": "train",
+      "source_kind": "synthetic",
+      "review_status": "pending",
+      "reviewer": null,
+      "review_revision": null,
+      "evidence_refs": [
+        "good-1-1",
+        "good-1-2"
+      ],
+      "label": "unknown",
+      "label_method": "weak"
+    }
+  ]
+}

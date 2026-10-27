@@ -220,7 +220,7 @@ def test_graph_progress_is_independent_of_font_state_names():
 
 
 def test_event_retention_preserves_recent_records():
-    from scripts.cleanup_ui_events import cleanup
+    from scripts.maintenance import cleanup_ui_events as cleanup
     app = create_app()
     now = datetime.now(timezone.utc)
     with TestClient(app) as client:

@@ -6415,9 +6415,11 @@
               {
                 "type": "string",
                 "enum": [
-                  "capture_failed",
                   "masking_failed",
-                  "ocr_failed"
+                  "capture_failed",
+                  "ocr_failed",
+                  "screen_changed",
+                  "unsupported"
                 ]
               },
               {

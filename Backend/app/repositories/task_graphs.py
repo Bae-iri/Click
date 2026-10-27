@@ -12,7 +12,7 @@ TASK_GRAPHS = approved_graphs()
 def canonical_graph(graph):
     body = graph.to_dict()
     encoded = json.dumps(body, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-    return body, sha256(encoded.encode("utf-8")).hexdigest()
+    return json.loads(encoded), sha256(encoded.encode("utf-8")).hexdigest()
 
 
 class NoCompatibleGraphError(ValueError):

@@ -57,7 +57,8 @@ def test_missing_self_hosted_config_never_falls_back_to_external_api(monkeypatch
 
 
 @pytest.mark.parametrize('audio', [b'not-a-wave', b'RIFF' + b'\0' * 44, wav_payload(8000),
-    wav_payload(channels=2), wav_payload()[:-2], b'\0' * 650001])
+    wav_payload(channels=2), wav_payload()[:-2], b'\0' * 650001],
+    ids=['not-wav', 'invalid-header', 'wrong-rate', 'stereo', 'truncated', 'oversized'])
 def test_rejects_invalid_or_unsupported_audio_before_network(audio):
     with pytest.raises(InvalidAudio):
         TranscriptionService(lambda *a, **kw: pytest.fail('must not send invalid audio')).transcribe(audio_request(audio))

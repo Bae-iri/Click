@@ -162,7 +162,7 @@ class AgentSessionRepository:
                 raise
 
     def finish(self, request, claim, response, checkpoint, schema_version, graph_version,
-               graph_reference=None, recovery_plan=None, execution_event=None):
+               graph_reference=None, recovery_plan=None, execution_event=None, execution_reference=None):
         now = int(self.clock())
         with self.factory() as db:
             self.guard_voice_request(db, request, now)
@@ -226,6 +226,7 @@ class AgentSessionRepository:
             append(db, row, request.request_id, {"runtime": execution_event or {},
                 "reselection": response.metadata.get("reselection")}, now=now,
                 episode_id=claim["episode_id"], graph_hash=(execution_event or {}).get("graph_hash"),
+                graph_reference=execution_reference,
                 kind="reselection" if response.metadata.get("reselection") else "turn")
             db.commit()
 

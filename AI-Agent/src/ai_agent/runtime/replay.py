@@ -127,6 +127,7 @@ def evaluate_cases(cases, graphs):
     metrics = dict(target_checks=0, false_target_count=0, termination_checks=0, false_termination_count=0,
                    completion_checks=0, false_completion_count=0, recovery_cases=0, recovered_cases=0)
     violations = []
+    decisions = []
     for case_index, case in enumerate(cases):
         if case["schema_version"] != SCHEMA:
             raise ValueError("Unsupported replay schema")
@@ -170,6 +171,8 @@ def evaluate_cases(cases, graphs):
                 "terminal": command.command_type.value in {"done", "blocked"},
                 "done": command.command_type.value == "done", "next_action": recovery.get("next_action"),
                 "reason_code": recovery.get("reason_code")}
+            decisions.append({"case": case_index, "turn": index, "target_node_id": command.target_node_id,
+                              "action_type": command.action_type.value})
             expected = step.get("expected", {})
             for field, wanted in expected.items():
                 if field not in actual:
@@ -187,7 +190,7 @@ def evaluate_cases(cases, graphs):
             metrics["recovered_cases"] += int(recovered)
             if not recovered:
                 violations.append({"case": case_index, "field": "recovery", "expected": True, "actual": False})
-    return {"metrics": metrics, "violations": violations}
+    return {"metrics": metrics, "violations": violations, "decisions": decisions}
 
 
 def main():
@@ -196,7 +199,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("fixture", type=Path)
     args = parser.parse_args()
-    report = evaluate_cases(json.loads(args.fixture.read_text()), TASK_GRAPHS)
+    report = evaluate_cases(json.loads(args.fixture.read_text(encoding="utf-8")), TASK_GRAPHS)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return int(bool(report["violations"]))
 

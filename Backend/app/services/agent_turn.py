@@ -113,6 +113,7 @@ class AgentTurnService:
                 }
             recovery_plan = None
             execution_event = getattr(engine, "execution_event", None)
+            execution_reference = selected_reference
             if execution_event and selected_reference:
                 execution_event = {**execution_event, "graph_hash": selected_reference["sha256"]}
             if selected_graph and checkpoint:
@@ -125,7 +126,7 @@ class AgentTurnService:
                     checkpoint_graph_version = selected_reference["sha256"]
             self.repository.finish(request, claim, response, checkpoint, SCHEMA_VERSION,
                 checkpoint_graph_version, graph_reference=selected_reference, recovery_plan=recovery_plan,
-                execution_event=execution_event)
+                execution_event=execution_event, execution_reference=execution_reference)
         except Exception:
             self.repository.release(request.session_id, claim["token"])
             raise

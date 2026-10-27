@@ -485,7 +485,7 @@ class AgentCommandRequest(BaseModel):
     preparation_reset: bool = False
     clarification_answer: ClarificationAnswer | None = None
     workflow_version: Literal["interactive.v1"] | None = None
-    result_prompt_id: str | None = Field(default=None, max_length=200)
+    result_prompt_id: str | None = Field(default=None, min_length=1, max_length=200)
     user_result: Literal["satisfied", "needs_help", "stopped", "no_response"] | None = None
     adjustment_reason: Literal["too_small", "too_large", "other", "unsure"] | None = None
     goal: TypedGoalRequest | None = None
@@ -499,11 +499,6 @@ class AgentCommandRequest(BaseModel):
     source_text: str | None = Field(default=None, max_length=500)
     classification: ClassificationMetadata | None = None
     result_response: Literal["accepted", "rejected"] | None = Field(default=None, exclude=True)
-    user_result: Literal["satisfied", "needs_help", "stopped", "no_response"] | None = None
-    result_prompt_id: str | None = Field(default=None, min_length=1, max_length=200)
-    adjustment_reason: Literal["too_small", "too_large", "other", "unsure"] | None = None
-    workflow_version: Literal["interactive.v1"] | None = None
-    vision_failure: Literal["capture_failed", "masking_failed", "ocr_failed"] | None = Field(default=None, exclude=True)
     user_id: str | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
