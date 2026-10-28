@@ -142,7 +142,8 @@ class RuntimeAgentAdapter:
             observation_id=tree.observation_id if tree else None,
             captured_at_ms=(tree.captured_at_ms if tree.captured_at_ms is not None else
                 int(tree.captured_at.timestamp() * 1000) if tree.captured_at else None) if tree else None,
-            user_confirmation=None if self.vision_consent_request_id else request.user_confirmation,
+            user_confirmation=None if self.vision_consent_request_id and (vision_snapshot or getattr(request, "vision_failure", None)) else request.user_confirmation,
+            vision_failure=getattr(request, "vision_failure", None) if self.vision_consent_request_id else None,
             user_action_event=self._action_event(request),
             episode_id=getattr(request, "episode_id", None),
             applied_settings=tree.applied_settings.model_dump() if tree and tree.applied_settings else {},

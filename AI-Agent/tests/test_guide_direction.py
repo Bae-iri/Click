@@ -22,11 +22,14 @@ def test_approved_font_drag_has_explicit_direction_without_parsing_guide_text(gr
     graph = replace(graph, transitions=tuple(replace(t, guide_message="Move the control")
         if t.action_type == ActionType.DRAG else t for t in graph.transitions))
     assert guide(graph).render_policy["direction"] == direction
+    assert guide(graph).render_policy["automatable_setting"] == "font_size"
 
 
 def test_confirmation_and_unknown_drag_do_not_assume_a_direction():
     assert "direction" not in guide(MVP_01_TASK_GRAPH, accepted=False).render_policy
+    assert "automatable_setting" not in guide(MVP_01_TASK_GRAPH, accepted=False).render_policy
     unknown = replace(MVP_01_TASK_GRAPH, transitions=tuple(
         replace(t, verification_predicate="state_reached") if t.action_type == ActionType.DRAG else t
         for t in MVP_01_TASK_GRAPH.transitions))
     assert "direction" not in guide(unknown).render_policy
+    assert "automatable_setting" not in guide(unknown).render_policy

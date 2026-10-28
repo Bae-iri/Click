@@ -37,8 +37,11 @@ target이 있는 경우에는 요청하지 않는다. 설정 앱을 여는 첫 �
    계정 카드의 이름과 이메일이 함께 빠지게 한다.
 8. confidence가 없거나 0.65 미만인 line은 버린다. OCR box를 screen 좌표로 변환하고
    Accessibility node와 결합해 role과 클릭 가능한 상위 영역을 복원한다.
-9. 메뉴 허용 목록(`VisionPrivacy`)에 정확히 일치하는 line만 남긴다. 나머지 글자는
-   서버로 보내지 않는다.
+9. 공통 파일 `AI-Agent/goal_catalog/vision_vocabulary.json`에서 현재 graph의
+   `setting`에 해당하는 메뉴 허용 목록만 읽고 정확히 일치하는 line만 남긴다.
+   FE는 동의 응답의 `vocabulary_key`로 asset을 선택하고 AI1은 활성 graph의
+   `required_slots.setting`으로 독립 재검사한다. SSID·기기 이름·계정·사용자 입력을
+   어휘로 추가하지 않는다. 알 수 없는 key는 전송/매칭하지 않는다.
 10. FE는 `frontend_ocr` element(text, role, confidence, bounds)를 최대 200개, 각 200자로
     보낸다. 자유 `ocr_text`와 screenshot byte는 보내지 않고 파일·로그에 저장하지 않는다.
 11. AI1은 Task Graph 의미 점수와 OCR 신뢰도의 최솟값으로 후보를 평가하고, 기준 미달
@@ -86,21 +89,38 @@ OCR 호출을 늘려 해결하지 않고 별도 실패 데이터가 충분해진
 ## 종료 조건
 
 - 후보 발견: 좌표를 기존 AI1 matcher/overlay로 반환하고 1-1 종료
-- 동의 거절, 민감 화면, 마스킹·screenshot·OCR 실패: 조작을 발행하지 않고 BLOCKED로
-  안내를 중단한다. 다시 요청하면 새 동의부터 받는다.
-- 허용 목록 글자가 하나도 남지 않음: `no_signal`로 관측 부족을 안내하고 재캡처하지 않는다.
+- 민감 화면·마스킹 실패·미지원: 재캡처하지 않고 안전하게 종료한다.
+- 동의 거절: `declined`로 Agent 1 수동 안내에 반환하며 자동 재동의하지 않는다.
+- 캡처/OCR 오류·허용 글자 없음·목표 미발견: 같은 단계에서 최대 3회 실패까지
+  새 동의를 받아 재캡처한다. 3회 실패 후 Agent 1 수동 안내로 반환한다.
 - stale observation·화면 변경: 결과를 폐기하고 새 Accessibility observation부터 다시 시작
 - 후보 저신뢰·모호성: fresh observation 또는 사용자 확인으로 종료
 - 세션 취소·교체·만료: 결과를 폐기하고 종료
+
+화면 관측에는 접근성 서비스 시작마다 다른 epoch와 외부 앱 변화 카운터로 만든
+`screen_revision`을 붙인다. content·scroll·click·selection·화면 전환 및 window
+bounds/title 변화는 빈 tree에서도 이전 관측을 무효화한다. Click 자체 이벤트와
+오버레이로 인한 layer/focus 변화는 제외한다. 캡처 전·OCR 후 fingerprint를 비교하고,
+BE는 동의 당시 revision 및 AX/OCR revision 일치를 확인한다. 이미 표시한 OCR guide도
+새 관측에서 revision/내용이 바뀌면 서버 응답을 기다리지 않고 지운다.
+이는 이벤트 기반 보강이며, OS가 접근성 이벤트를 전혀 보고하지 않는 픽셀 변화까지
+감지하는 기능은 아니다.
 
 ## 설계와 현재 구현이 다른 점
 
 - 동의창은 `dp(300)`과 화면 높이 중 작은 값으로 고정 높이다. 내용 높이 맞춤은 아직
   구현되지 않았다.
-- 거절·실패 후 Task Graph의 다음 단계 문장을 좌표 없이 제공하는 수동 안내는 구현되지
-  않았다. 현재는 BLOCKED로 중단하며 Backend 메시지는 "사용자가 안내를 중단했어요."다.
-- 허용 목록은 글자 크기 task 어휘로 하드코딩되어 있고 FE `VisionPrivacy`와 AI1
-  `VISION_LABELS`에 따로 있다. 다른 goal은 Vision 결과를 사용할 수 없다.
+- 거절·3회 실패 후 승인된 graph의 문장을 좌표 없이 제공하고 다시 확인을 기다린다.
+  목표 미발견의 LLM 경로는 `not_configured`인 연결 지점만 있으며 실제 모델은 없다.
+- 허용 목록은 FE asset과 AI1이 동일 JSON을 읽도록 통합했다. 설정 카탈로그의
+  목표별 메뉴 어휘를 준비했지만, 실행 승인된 graph는 여전히 글자 크기 확대·축소다.
+  어휘 등록만으로 `catalog_only` goal의 실행이나 설정 변경을 승인하지 않는다.
+
+실패·거절 후 수동 안내와 AI1 반환 정책은
+[후속 구현 명세](ai-agent-1-1-manual-handoff-plan.md)을 참고한다. 목표는
+캡처 → OCR → 목표 매칭을 한 사이클로 보고 같은 단계에서 3번 연속 실패한 뒤
+AI1에 최종 실패를 반환하도록 구현했다. 동의 거절·안전 차단·미지원은 재시도 실패와
+구분한다. 매 사이클은 기존 single_analysis 동의 계약을 사용한다.
 
 ## 검증
 

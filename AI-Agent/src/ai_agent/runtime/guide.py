@@ -158,6 +158,7 @@ def build_guide_command(
             transition.verification_predicate)
         if direction:
             render_policy["direction"] = direction
+            render_policy["automatable_setting"] = "font_size"
     if vision_derived:
         render_policy["vision_derived"] = True
         render_policy["requires_visual_confirmation"] = True

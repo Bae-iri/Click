@@ -13,10 +13,12 @@ from tests.test_typed_agent_contract import start_payload
 PATH = "/api/v1/agent/commands"
 
 
-def challenge(client, *, nodes=None):
+def challenge(client, *, nodes=None, screen_revision=None):
     payload = start_payload()
     payload["accessibility_tree"].update(nodes=nodes or [], active_window_id=42,
         observation_id="before-capture", captured_at_ms=int(time.time() * 1000))
+    if screen_revision is not None:
+        payload["accessibility_tree"]["screen_revision"] = screen_revision
     response = client.post(PATH, json=payload)
     assert response.status_code == 200, response.text
     body = response.json()
@@ -40,6 +42,7 @@ def accepted(payload, body):
             "user_consented": True, "redaction_applied": True, "provider": "mlkit_on_device_ocr",
             "package_name": tree["package_name"], "screen_width": 1080, "screen_height": 2400,
             "observation_id": tree["observation_id"], "active_window_id": 42,
+            "screen_revision": tree.get("screen_revision"),
             "captured_at_ms": tree["captured_at_ms"],
             "elements": [{"element_id": "display", "text": "디스플레이", "confidence": 0.95, "role": "menu_item",
                 "bounds_in_screen": [20, 100, 900, 200], "actionable": True},
@@ -77,9 +80,27 @@ def test_one_analysis_per_consent_and_exact_http_retry():
         assert "screenshot_base64" not in str(checkpoint.state)
 
 
+@pytest.mark.parametrize("changed", [False, True])
+def test_empty_tree_consent_is_bound_to_screen_revision(changed, monkeypatch):
+    from app.clients.runtime_agent import RuntimeAgentAdapter
+    client = authenticated_client(create_app())
+    payload, body = challenge(client, screen_revision="service-epoch:1")
+    assert body["guide_command"]["render_policy"]["vision_fallback"]["vocabulary_key"] == "font_size"
+    request = accepted(payload, body)
+    if changed:
+        # Same package, window, dimensions and empty tree; both payloads describe
+        # the new screen, but consent was granted for the old revision.
+        request["accessibility_tree"]["screen_revision"] = "service-epoch:2"
+        request["vision_snapshot"]["screen_revision"] = "service-epoch:2"
+        monkeypatch.setattr(RuntimeAgentAdapter, "handle_turn", lambda *a: pytest.fail("must not invoke runtime"))
+    response = client.post(PATH, json=request)
+    assert response.status_code == (409 if changed else 200), response.text
+
+
 @pytest.mark.parametrize("field,value", [
     ("user_consented", False), ("observation_id", "stale"),
     ("active_window_id", 43), ("package_name", "another.app"),
+    ("screen_revision", "changed:1"),
     ("screen_width", 720), ("screen_height", 1200), ("captured_at_ms", 1),
     ("screenshot_base64", "raw-image"),
 ])
@@ -128,8 +149,10 @@ def test_rejection_sends_no_vision_and_stops():
     request["user_confirmation"] = "rejected"
     response = client.post(PATH, json=request)
     assert response.status_code == 200, response.text
-    assert response.json()["task_status"] == "BLOCKED"
+    assert response.json()["task_status"] == "IN_PROGRESS"
     assert response.json()["guide_command"]["target_node_id"] is None
+
+    assert response.json()["guide_command"]["render_policy"]["vision_cycle"]["status"] == "declined"
 
 
 def test_vision_consent_does_not_approve_setting_change():
@@ -148,20 +171,20 @@ def test_vision_consent_does_not_approve_setting_change():
     assert response.json()["metadata"]["confirmation"]["purpose"] == "action"
 
 
-def test_no_signal_does_not_recapture_automatically():
+def test_no_signal_requests_a_new_single_use_consent_for_next_cycle():
     client = authenticated_client(create_app())
     payload, body = challenge(client)
     request = accepted(payload, body)
     request["vision_snapshot"]["elements"] = []
     response = client.post(PATH, json=request)
     assert response.status_code == 200, response.text
-    assert response.json()["task_status"] == "IN_PROGRESS"
-    assert response.json()["guide_command"]["command_type"] == "highlight"
-    policy = response.json()["guide_command"]["render_policy"]
-    assert policy["recovery"]["waiting_for"] == "user"
-    assert "vision_fallback" not in policy
-    assert "result_prompt" not in response.json()["metadata"]
-    assert "confirmation" not in response.json()["metadata"]
+    result = response.json()
+    assert result["task_status"] == "WAITING_CONFIRMATION"
+    policy = result["guide_command"]["render_policy"]
+    assert policy["vision_cycle"]["failed_cycles"] == 1
+    assert policy["vision_fallback"]["strategy"] == "upscale"
+    assert result["metadata"]["confirmation"]["id"] != request["confirmation_id"]
+    assert "result_prompt" not in result["metadata"]
 
 
 def test_internal_consent_binding_cannot_be_supplied_by_client():
@@ -181,11 +204,12 @@ def test_frontend_masking_failure_sends_only_code_and_rejected_confirmation(fail
     request.update(user_confirmation="rejected", vision_failure=failure)
     response = client.post(PATH, json=request)
     assert response.status_code == 200, response.text
-    assert response.json()["task_status"] == "BLOCKED"
+    expected = "WAITING_CONFIRMATION" if failure in {"capture_failed", "ocr_failed"} else "IN_PROGRESS" if failure == "screen_changed" else "BLOCKED"
+    assert response.json()["task_status"] == expected
     assert response.json()["metadata"]["vision_failure"] == failure
-    expected_message = "개인정보" if failure == "masking_failed" else "화면 분석"
+    expected_message = "개인정보" if failure == "masking_failed" else "화면"
     assert expected_message in response.json()["guide_command"]["message"]
-    assert "confirmation" not in response.json()["metadata"]
+    assert ("confirmation" in response.json()["metadata"]) == (failure in {"capture_failed", "ocr_failed"})
 
 
 @pytest.mark.parametrize("version", ["agent-fe-contract.v0.2", "agent-fe-contract.v0.3"])
@@ -200,7 +224,8 @@ def test_all_frontend_vision_failures_are_accepted_and_preserved(version, failur
     assert response.status_code == 200, response.text
     result = response.json()
     assert result["metadata"]["vision_failure"] == failure
-    assert result["task_status"] == "BLOCKED"
+    expected = "WAITING_CONFIRMATION" if failure in {"capture_failed", "ocr_failed"} else "IN_PROGRESS" if failure == "screen_changed" else "BLOCKED"
+    assert result["task_status"] == expected
     assert result["guide_command"]["target_node_id"] is None
     assert result["guide_command"]["target_bounds"] is None
     assert client.post(PATH, json=request).json() == result
@@ -245,11 +270,11 @@ def test_backend_does_not_trust_client_redaction_flag():
         elements=[{"element_id": private, "text": private, "bounds_in_screen": [20, 100, 900, 200]}])
     response = client.post(PATH, json=request)
     assert response.status_code == 200, response.text
-    assert response.json()["task_status"] == "IN_PROGRESS"
-    assert response.json()["guide_command"]["command_type"] == "highlight"
+    assert response.json()["task_status"] == "WAITING_CONFIRMATION"
+    assert response.json()["guide_command"]["command_type"] == "confirmation"
     policy = response.json()["guide_command"]["render_policy"]
-    assert policy["recovery"]["waiting_for"] == "user"
-    assert "vision_fallback" not in policy
+    assert policy["vision_cycle"]["last_cycle_reason"] == "recognition_failed"
+    assert policy["vision_cycle"]["failed_cycles"] == 1
     assert "result_prompt" not in response.json()["metadata"]
     assert private not in response.text
     assert response.json()["metadata"]["debug"]["vision_fallback"]["status"] == "no_signal"
@@ -289,3 +314,41 @@ def test_masking_exception_never_leaks_error_or_persists_vision(monkeypatch):
         checkpoint = str(db.scalar(select(AgentCheckpoint)).state)
     assert "PRIVATE-RAW-OCR" not in response.text + stored + checkpoint
     assert "screenshot_base64" not in stored + checkpoint
+
+
+def test_three_empty_ocr_cycles_persist_across_http_turns_and_retry_ids():
+    app = create_app()
+    client = authenticated_client(app)
+    payload, body = challenge(client)
+    for cycle in (1, 2, 3):
+        request = accepted(payload, body)
+        request["request_id"] = f"retry-cycle-{cycle}"
+        request["accessibility_tree"]["observation_id"] = f"retry-observation-{cycle}"
+        request["vision_snapshot"]["observation_id"] = f"retry-observation-{cycle}"
+        request["vision_snapshot"]["elements"] = []
+        response = client.post(PATH, json=request)
+        assert response.status_code == 200, response.text
+        body = response.json()
+        policy = body["guide_command"]["render_policy"]
+        assert policy["vision_cycle"]["failed_cycles"] == cycle
+        assert client.post(PATH, json=request).json() == body
+        if cycle < 3:
+            assert body["task_status"] == "WAITING_CONFIRMATION"
+            assert policy["vision_fallback"]["cycle_number"] == cycle + 1
+        else:
+            assert body["task_status"] == "IN_PROGRESS"
+            assert policy["vision_cycle"]["status"] == "failed"
+            assert "vision_fallback" not in policy
+        payload["accessibility_tree"] = request["accessibility_tree"]
+    with app.state.session_factory() as db:
+        checkpoint = db.scalar(select(AgentCheckpoint))
+        assert checkpoint.state["vision_state"]["failed_cycles"] == 3
+
+
+def test_failure_report_requires_the_current_vision_challenge():
+    client = authenticated_client(create_app())
+    payload, body = challenge(client)
+    request = accepted(payload, body)
+    request.pop("vision_snapshot")
+    request.update(user_confirmation="rejected", vision_failure="ocr_failed", confirmation_id="00000000-0000-4000-8000-000000000099")
+    assert client.post(PATH, json=request).status_code == 409

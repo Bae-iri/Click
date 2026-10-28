@@ -6172,6 +6172,19 @@
             "type": "array",
             "maxItems": 2000,
             "title": "Nodes"
+          },
+          "screen_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen Revision"
           }
         },
         "additionalProperties": true,
@@ -8969,6 +8982,19 @@
               }
             ],
             "title": "Processing Time Ms"
+          },
+          "screen_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen Revision"
           }
         },
         "additionalProperties": false,

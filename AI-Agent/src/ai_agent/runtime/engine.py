@@ -50,6 +50,7 @@ from ai_agent.runtime.vision import (
 )
 from ai_agent.telemetry.trace_logger import TraceLogger
 from ai_agent.runtime.privacy import sanitize_request
+from ai_agent.runtime.vision_cycles import decide_vision_cycle
 
 
 class ClickAgentEngine:
@@ -137,6 +138,11 @@ class ClickAgentEngine:
             )
 
         graph = self._task_graph_for(typed_goal)
+        vocabulary_key = graph.definition.required_slots.get("setting", "")
+        # First pass removes all unapproved text before goal typing. Narrow the
+        # verified payload to this goal before classification, matching or traces.
+        if request.vision_snapshot and request.vision_snapshot.privacy_status == "verified":
+            request = sanitize_request(request, vision_vocabulary_key=vocabulary_key)
         previous_state_id = (
             existing_session.current_state_id
             if existing_session
@@ -148,6 +154,9 @@ class ClickAgentEngine:
         if request.vision_snapshot and request.vision_snapshot.privacy_status == "masking_failed":
             vision_analysis = VisionFallbackAnalysis(status="masking_failed",
                 reason="privacy_validation_failed", provider="local")
+        if request.vision_failure:
+            vision_analysis = VisionFallbackAnalysis(status="provider_error",
+                reason=request.vision_failure, provider="on_device_ocr")
         if not accessibility_nodes and request.vision_snapshot:
             vision_analysis = self.vision_fallback.analyze(
                 request.vision_snapshot,
@@ -158,7 +167,7 @@ class ClickAgentEngine:
                 vision_analysis,
                 package_name=_vision_package_name(request),
             )
-        elif not accessibility_nodes and not (existing_session and existing_session.recovery_state.get("waiting_for_user")):
+        elif not accessibility_nodes and not request.vision_failure and not (existing_session and existing_session.recovery_state.get("waiting_for_user")):
             vision_analysis = VisionFallbackAnalysis(
                 status="not_requested",
                 reason="empty_accessibility_tree_without_vision_snapshot",
@@ -244,7 +253,9 @@ class ClickAgentEngine:
         within_settling_interval = bool(awaiting_observation and action_time is not None
             and request.captured_at_ms is not None
             and 0 <= request.captured_at_ms - action_time < graph.policy.settle_ms)
-        awaiting_vision_consent = bool(vision_analysis and vision_analysis.status in {"not_requested", "consent_required"})
+        cycle = decide_vision_cycle(request=request, session=existing_session, graph=graph,
+            match=match_result, analysis=vision_analysis, completed=task_completed)
+        awaiting_vision_consent = bool(cycle.command and cycle.command.command_type == CommandType.CONFIRMATION)
         recovery_plan = decide_recovery(graph=graph, session=existing_session, snapshot=current_snapshot,
             match=match_result, nodes=normalized_nodes, verification=verification_result,
             failed_node_ids=failed_node_ids, total_failed_attempts=total_failed_attempts,
@@ -309,7 +320,7 @@ class ClickAgentEngine:
                 keep_attempt = True
             if recovery_plan.decision == "handoff":
                 keep_attempt = False
-        if request.user_confirmation == 'rejected':
+        if request.user_confirmation == 'rejected' and not cycle.command:
             guide_command = build_guide_command(session_id=request.session_id,
                 match_result=match_result, graph=graph, user_confirmation='rejected')
             keep_attempt = False
@@ -325,6 +336,15 @@ class ClickAgentEngine:
         if recovery_plan.decision != "continue" and guide_command.command_type != CommandType.BLOCKED:
             guide_command = replace(guide_command, render_policy={**guide_command.render_policy,
                 "recovery": recovery_plan.to_dict()})
+        if "vision_fallback" in guide_command.render_policy:
+            guide_command.render_policy["vision_fallback"]["vocabulary_key"] = vocabulary_key
+        if cycle.command and not awaiting_observation and not task_completed:
+            guide_command = cycle.command
+            guide_command.render_policy["vision_cycle"] = cycle.state
+            if "vision_fallback" in guide_command.render_policy:
+                guide_command.render_policy["vision_fallback"]["vocabulary_key"] = vocabulary_key
+                guide_command.render_policy["recovery"] = recovery_plan.to_dict()
+            keep_attempt = False
         if keep_attempt:
             guide_command = replace(guide_command, guide_command_id=attempt['guide_command_id'])
             pending_transition_id = attempt['transition_id']
@@ -426,7 +446,8 @@ class ClickAgentEngine:
             failed_target_keys=failed_target_keys, recovery_count=recovery_count,
             total_failed_attempts=total_failed_attempts, task_completed=task_completed,
             observed_path=path, technical_outcome=technical,
-            recovery_state=recovery_plan.state, state_candidates=tuple(state_evidence.get("candidates", ())))
+            recovery_state=recovery_plan.state, state_candidates=tuple(state_evidence.get("candidates", ())),
+            vision_state=cycle.state)
         if existing_session:
             self.session_store.update(request.session_id, **session_changes)
         else:

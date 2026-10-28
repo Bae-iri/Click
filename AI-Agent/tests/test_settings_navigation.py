@@ -138,7 +138,7 @@ class OverconfidentSimilarity:
 
 
 @pytest.mark.parametrize("status", ["no_signal", "provider_error", "not_configured"])
-def test_unavailable_vision_waits_for_user_without_ending_or_requesting_capture_again(status):
+def test_unavailable_vision_retries_transient_failures_and_stops_unsupported(status):
     from ai_agent.runtime.vision import VisionFallbackAnalysis
     from test_vision_fallback import request as vision_request
 
@@ -153,14 +153,14 @@ def test_unavailable_vision_waits_for_user_without_ending_or_requesting_capture_
     provider = UnavailableVision()
     engine.vision_fallback = provider
     first = engine.handle_turn(vision_request())
-    policy = first.guide_command.render_policy["recovery"]
-    assert first.guide_command.command_type == CommandType.HIGHLIGHT
-    assert policy["reason_code"] == "VISION_UNAVAILABLE"
-    assert policy["waiting_for"] == "user"
+    if status == "not_configured":
+        assert first.guide_command.command_type == CommandType.BLOCKED
+    else:
+        assert first.guide_command.command_type == CommandType.CONFIRMATION
+        assert first.guide_command.render_policy["vision_cycle"]["failed_cycles"] == 1
     again = engine.handle_turn(replace(vision_request(), request_id="next", raw_goal=None,
                                       vision_snapshot=None))
-    assert again.guide_command.command_type == CommandType.HIGHLIGHT
-    assert again.guide_command.render_policy["recovery"]["waiting_for"] == "user"
+    assert again.guide_command.command_type == first.guide_command.command_type
     assert provider.calls == 1
 
 
