@@ -60,10 +60,7 @@ def normalize_accessibility_tree(
             value=extract_numeric_value(node),
             range_min=node.extras.get("min"),
             range_max=node.extras.get("max"),
-            label_parts=tuple(dict.fromkeys(normalize_text(part) for part in (
-                [part for part in (node.text, node.content_description) if part and part.strip()][:1] if _merge_label(node) else
-                [min(inherited_titles[node.node_id])[-1]] if node.node_id in inherited_titles else []
-            ))),
+            label_parts=_label_parts(node, inherited_titles.get(node.node_id, ())),
             structure_role=_structure_role(node, nodes_by_id),
             source_confidence=extract_confidence(node),
         )
@@ -80,6 +77,16 @@ def normalize_accessibility_tree(
         normalized.append(normalized_node)
 
     return tuple(normalized)
+
+
+def _label_parts(node, child_titles):
+    # A row's accessibility description and its visible title are separate evidence.
+    # Keep its own name, but do not discard a real descendant title when that name exists.
+    parts = [part for part in (node.text, node.content_description) if part and part.strip()][:1]
+    titles = [entry for entry in child_titles if not entry[0]]
+    if titles:
+        parts.append(min(titles)[-1])
+    return tuple(dict.fromkeys(normalize_text(part) for part in parts))
 
 
 def _structure_role(node, nodes_by_id):
@@ -115,7 +122,7 @@ def _label_target(
     nodes_by_id: dict[str, AccessibilityNode],
     screen_bounds: Bounds | None,
 ) -> AccessibilityNode | None:
-    """Name the nearest unnamed control, preserving its real ID and screen bounds.
+    """Associate a title with its nearest control, preserving its real ID and bounds.
 
     Never infer ancestry from an ID string or expand a text rectangle geometrically.
     Stop at control/list/input boundaries rather than borrowing a sibling's label.
@@ -139,7 +146,7 @@ def _label_target(
             return None
         if _is_control(parent):
             # Root/page-sized containers are not a defensible target for one text label.
-            if parent.parent_id is None or _merge_label(parent):
+            if parent.parent_id is None:
                 return None
             if _has_area(screen_bounds):
                 screen_area = (screen_bounds[2] - screen_bounds[0]) * (screen_bounds[3] - screen_bounds[1])

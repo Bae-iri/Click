@@ -73,6 +73,19 @@ def test_an_existing_accessible_name_takes_precedence_over_child_text():
     assert result[ROW.node_id].label == "open details"
 
 
+def test_visible_child_title_can_name_a_row_with_its_own_accessible_description():
+    result = normalized(ROOT, replace(ROW, content_description="Open details"), LABEL)
+    assert "display" in result[ROW.node_id].label_parts
+    assert result[ROW.node_id].bounds == ROW.bounds_in_screen
+    assert not result[LABEL.node_id].actionable
+
+
+def test_child_summary_does_not_become_a_named_rows_primary_label():
+    summary = replace(LABEL, text="Display", resource_id="android:id/summary")
+    result = normalized(ROOT, replace(ROW, content_description="Wallpaper"), summary)
+    assert result[ROW.node_id].label_parts == ("wallpaper",)
+
+
 def test_clickable_child_keeps_its_target_and_does_not_name_an_outer_control():
     result = normalized(ROOT, ROW, replace(LABEL, clickable=True))
     assert ROW.node_id not in result
