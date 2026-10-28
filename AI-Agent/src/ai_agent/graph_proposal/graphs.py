@@ -17,9 +17,10 @@ def graph_errors(body):
     except (TypeError, ValueError):
         return ["invalid_graph_identity_or_values"]
     starts, done = definition.get("start_states"), definition.get("done_state")
-    if not isinstance(starts, (list, tuple)) or not starts or any(s not in states for s in starts):
+    if (not isinstance(starts, (list, tuple)) or not starts
+            or any(not isinstance(s, str) or s not in states for s in starts)):
         return ["invalid_start_states"]
-    if done not in states:
+    if not isinstance(done, str) or done not in states:
         return ["missing_done_state"]
     for key, state in states.items():
         if not isinstance(state, dict) or state.get("state_id") != key:
@@ -34,19 +35,20 @@ def graph_errors(body):
         tid = transition.get("transition_id")
         if not isinstance(tid, str) or not tid or tid in ids:
             errors.append("invalid_transition_id")
-        ids.add(tid)
+        if isinstance(tid, str):
+            ids.add(tid)
         source, target = transition.get("from_state"), transition.get("to_state")
-        if source not in states or target not in states:
+        if not isinstance(source, str) or not isinstance(target, str) or source not in states or target not in states:
             errors.append("dangling_transition")
         else:
             edges.append((source, target))
         if source == done:
             errors.append("terminal_has_outgoing_edges")
-        if transition.get("action_type") not in {"tap", "drag", "scroll", "observe_only"}:
+        if transition.get("action_type") not in ("tap", "drag", "scroll", "observe_only"):
             errors.append("invalid_action_type")
-        if transition.get("safety_level") not in {"LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"}:
+        if transition.get("safety_level") not in ("LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"):
             errors.append("invalid_safety_level")
-        if transition.get("verification_predicate", "state_reached") not in {"state_reached", "target_value_increased", "target_value_decreased"}:
+        if transition.get("verification_predicate", "state_reached") not in ("state_reached", "target_value_increased", "target_value_decreased"):
             errors.append("unsupported_verification_predicate")
         if transition.get("safety_level") == "CONFIRM_REQUIRED" and not transition.get("confirmation_message"):
             errors.append("missing_confirmation")
@@ -76,7 +78,8 @@ def graph_errors(body):
         for key in ("retry_limit", "settle_ms", "observation_timeout_ms", "recovery_limit", "max_failed_attempts"):
             if key in policy and (type(policy[key]) is not int or policy[key] <= 0):
                 errors.append("invalid_runtime_policy")
-        if policy.get("observation_timeout_ms", 5000) < policy.get("settle_ms", 500):
+        timeout, settle = policy.get("observation_timeout_ms", 5000), policy.get("settle_ms", 500)
+        if type(timeout) is int and type(settle) is int and timeout < settle:
             errors.append("invalid_runtime_policy")
     return sorted(set(errors))
 

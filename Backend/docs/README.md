@@ -1,6 +1,31 @@
 # 백엔드 개발·운영 안내
 
-갱신: 2026-10-27. 백엔드 문서는 이 파일과 자동 생성 [OpenAPI](openapi.json)로 관리합니다.
+갱신: 2026-10-28. 백엔드 문서는 이 파일과 자동 생성 [OpenAPI](openapi.json)로 관리합니다.
+
+## 폴더 구조와 책임
+
+```text
+Backend/
+  app/
+    api/v1/endpoints/  # HTTP 경계·인증 주체 전달
+    schemas/           # 요청·응답 계약
+    services/          # 목표 확인·작업 진행·안전 정책 조율
+    repositories/      # 세션·graph·동의·이벤트·release DB 처리
+    models/            # SQLAlchemy 테이블
+    clients/           # AI1 adapter·checkpoint 변환·모델 서버 연결
+    core/              # HTTP·보안·지표·검증용 진단
+    task_graphs/       # 승인 seed·초안·입력 요건·graph loader
+  migrations/          # DB schema 변경 이력
+  scripts/             # 개발·운영 CLI; Agent2의 DB/AI1 연결 진입점
+  inference/           # API와 별도로 실행하는 모델 worker
+  tests/               # 백엔드 단위·통합 테스트
+  contract_tests/      # 연동 계약 검사
+  examples/            # 요청 예제
+  docs/                # 이 안내와 OpenAPI
+  instance/validation/ # 로컬 전용 DB·환경 설정·manifest·로그, Git 제외
+```
+
+Agent2 알고리즘은 `AI-Agent/src/ai_agent/graph_proposal/`에 둡니다. `scripts/agent2.py`는 DB 처리와 AI1 replay를 연결하며, Agent2 내부에서 Backend나 AI1 runtime을 직접 import하지 않습니다. 기존 CLI 경로는 유지합니다. 로컬 가상환경 `click/`, DB, 로그, 모델 가중치는 소스 구조와 구분하며 커밋하지 않습니다.
 
 ## 현재 상태
 
@@ -88,6 +113,27 @@ AI2 상세 계약·합성 예제·승인/롤백은 [AI2 실행 안내](../../AI-
 
 백업은 `python scripts/database_backup.py backup <새-파일>`, SQLite 복구는 같은 스크립트의 `restore-sqlite <백업> --new-database <새-DB>`를 사용합니다. PostgreSQL은 별도 빈 DB의 RESTORE_DATABASE_URL과 `python scripts/restore_postgres.py <백업>`을 사용합니다. 원본 DB를 덮어쓰지 않으며 복구 후 readiness·앱 흐름을 검사합니다.
 
+## 중단 작업 정리와 기기 검증 준비
+
+2026-10-27 중단 당시 변경은 검증용 서버/APK 환경 식별·민감 원문 없는 실행 진단, Agent2 평가 상태 보존·작업별 holdout 연결·graph audit 보완입니다. 백엔드 준비 코드는 아래 CLI로 연결합니다. 실제 휴대폰 실행·한국어 STT·제품 정확도 검증은 아직 완료로 기록하지 않습니다. APK 빌드와 설치는 별도 Frontend 작업입니다.
+
+Backend 디렉터리에서 의존성을 설치한 Python으로 실행합니다. 아래 예제의 `python`은 같은 가상환경을 가리켜야 합니다.
+
+```powershell
+python scripts/validation.py prepare --env-file .env --port 8001
+python scripts/supervise.py run api --python <가상환경-python.exe> --port 8001
+# 다른 터미널에서 준비한 manifest와 실행 서버를 비교
+python scripts/validation.py check
+# 검증 세션의 구조화 진단만 조회; 독립 정답 데이터가 아님
+python scripts/validation.py trace --session <session_id>
+# 해당 supervisor 실행에만 중지 요청
+python scripts/supervise.py stop api
+```
+
+prepare는 운영 DATABASE_URL 대신 `instance/validation/validation.db`를 사용하고 migration·승인 seed를 준비합니다. 같은 폴더의 `.env`에는 비밀값이 있으므로 공유하지 않습니다. 서버의 `/validation/environment`는 환경 ID를 설정한 경우에만 활성화하며 코드·migration·승인 graph hash를 비교합니다. 코드나 승인 graph가 달라지면 prepare·서버 재시작·APK 재빌드로 다시 맞춥니다. 검증 서버는 loopback에서 실행합니다.
+
+`supervise.py run stt --python <STT-가상환경-python.exe>`는 별도 STT worker를 실행하며 기본 환경 파일은 `inference/.env`, 포트는 8091입니다. 모델 가중치와 worker 설정이 먼저 필요합니다. 감독 프로세스는 직접 시작한 자식만 재시작하며 이미 점유된 포트의 프로세스를 종료하지 않습니다. 터미널에서 실행하는 명령이므로 실행 중에는 터미널을 유지합니다.
+
 ## 검증과 남은 작업
 
 ```powershell
@@ -98,5 +144,7 @@ python scripts/export_openapi.py
 ```
 
 2026-10-27 로컬 검증: 전체 1,020개 테스트, SQLite migration 왕복·schema check, 실제 서버 재시작·재전송·취소가 통과했습니다. 테스트 AI 부하는 동시 4개·총 40개가 성공했습니다. 합성 AI2는 episode 4개에서 후보 1개를 만들고 독립 기기 holdout 부재로 NEEDS_DATA를 반환했습니다.
+
+2026-10-28 중단 작업 재개 검증: 기존 프로젝트 가상환경(Python 3.13.9)에서 전체 회귀 1,156개, 최종 Agent2·검증 환경 대상 41개, 원격 통합의 안내 방향 검사 5개가 각각 통과했습니다. migration 왕복·schema check와 실제 서버 재시작·재전송·복구·취소 smoke도 통과했습니다. 임시 검증 DB 준비 → supervisor API 실행 → 환경 fingerprint 일치 → 해당 run 종료를 확인했습니다. 합성 AI2는 episode 4개·후보 1개·NEEDS_DATA였으며 기기 성공률 검증은 아닙니다. 기본 시스템 Python은 numpy가 없어 테스트 수집에 실패했으므로 프로젝트 가상환경을 사용합니다. 기존 Starlette TestClient·Alembic 설정의 deprecation warning은 남아 있습니다.
 
 로컬 seed release 89개 중 승인 2개는 구조 검사를 통과했습니다. 초안 81개는 미지원 완료 조건 등 추가 작업이 필요합니다. 실제 기기 작업별 정확도·완료·복구, 독립 gold/holdout, 실제 STT/LLM 품질·지연, PostgreSQL·실메일·운영 성능·복구 검증은 남아 있습니다. TEST_POSTGRES_URL을 설정한 `scripts/postgres_check.py`는 임시 schema에서 migration/HTTP를 검증합니다. 합성·테스트 AI 결과를 제품 성능으로 보고하지 않습니다.

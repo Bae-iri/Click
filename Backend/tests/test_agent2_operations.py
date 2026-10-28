@@ -165,6 +165,27 @@ def test_catalog_audit_reports_each_registered_release_without_claiming_device_p
     assert report["total"] > 0
     assert all(row["device_validation"] == "NOT_ASSESSED" for row in report["graphs"])
     assert all(row["static_valid"] for row in report["graphs"] if row["approved"])
+    assert report["structural_valid"] == report["total"] == 89
+    assert report["execution_enabled"] == 2
+    assert report["unsupported_predicates"]["target_checked_on"]["task_count"] == 26
+    assert all(not row["execution_enabled"] for row in report["graphs"] if not row["approved"])
+    draft = next(row for row in report["graphs"] if row["unsupported_predicates"])
+    assert draft["structural_valid"] and not draft["static_valid"]
+    assert any(b["owner"] == "ai_agent1" for b in draft["blockers"])
+
+
+def test_catalog_audit_distinguishes_tampered_reference_from_missing_runtime_support():
+    app = create_app()
+    with app.state.session_factory() as db:
+        row = db.get(ApprovedTaskGraph, "MVP-01:1.0.0")
+        row.graph_hash = "0" * 64
+        db.commit()
+    report = audit_catalog(app.state.session_factory)
+    row = next(item for item in report["graphs"] if item["task_id"] == "MVP-01")
+    assert not row["structural_valid"] and not row["execution_enabled"]
+    assert "graph_reference_mismatch" in row["structural_errors"]
+    assert row["unsupported_predicates"] == []
+    assert row["blockers"] == [{"owner": "backend", "reason": "graph_structure_or_reference"}]
 
 
 def test_real_runtime_replay_adapter_scores_expectations_on_seed():

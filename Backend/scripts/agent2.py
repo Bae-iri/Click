@@ -158,17 +158,52 @@ def process_sessions(factory, *, limit=100, now=None):
 
 def audit_catalog(factory):
     reports = []
+    unsupported_tasks = {}
     with factory() as db:
         for row in db.scalars(select(ApprovedTaskGraph).order_by(ApprovedTaskGraph.id)):
-            errors = graph_errors(row.body)
+            try:
+                errors = graph_errors(row.body)
+            except (TypeError, ValueError, KeyError):
+                errors = ["invalid_graph_body"]
+            structural_errors = [error for error in errors if error != "unsupported_verification_predicate"]
+            predicates = []
+            try:
+                graph = load_graph(row.body, executable=False)
+                if (row.schema_version != "runtime-task-graph.v1" or fingerprint(row.body) != row.graph_hash
+                        or (graph.definition.task_id, graph.definition.goal_type, graph.definition.target_app)
+                        != (row.task_id, row.goal_type, row.target_app)):
+                    structural_errors.append("graph_reference_mismatch")
+                from app.task_graphs.validation import PREDICATES
+                predicates = sorted({t.verification_predicate for t in graph.transitions
+                                     if t.verification_predicate not in PREDICATES})
+            except (ValueError, TypeError, KeyError):
+                structural_errors.append("graph_schema_invalid")
             try:
                 TaskGraphRepository._decode(row)
             except (ValueError, TypeError, KeyError):
                 errors.append("runtime_decode_failed")
+            errors.extend(structural_errors)
+            for predicate in predicates:
+                unsupported_tasks.setdefault(predicate, set()).add(row.task_id)
+            blockers = []
+            if structural_errors:
+                blockers.append({"owner": "backend", "reason": "graph_structure_or_reference"})
+            if predicates:
+                blockers.append({"owner": "ai_agent1", "reason": "unsupported_completion_predicate"})
+            if not row.approved:
+                blockers.append({"owner": "fe_and_ai_agent1", "reason": "device_evidence_and_release_review"})
             reports.append({"task_id": row.task_id, "version": row.graph_version,
                 "approved": row.approved, "active": row.active,
-                "static_valid": not errors, "errors": sorted(set(errors)), "device_validation": "NOT_ASSESSED"})
-    return {"total": len(reports), "static_valid": sum(r["static_valid"] for r in reports), "graphs": reports}
+                "static_valid": not errors, "errors": sorted(set(errors)),
+                "structural_valid": not structural_errors, "structural_errors": sorted(set(structural_errors)),
+                "unsupported_predicates": predicates, "blockers": blockers,
+                "execution_enabled": row.approved and row.active and not errors,
+                "device_validation": "NOT_ASSESSED"})
+    return {"total": len(reports), "static_valid": sum(r["static_valid"] for r in reports),
+        "structural_valid": sum(r["structural_valid"] for r in reports),
+        "execution_enabled": sum(r["execution_enabled"] for r in reports),
+        "unsupported_predicates": {key: {"task_ids": sorted(ids), "task_count": len(ids), "owner": "ai_agent1"}
+                                   for key, ids in sorted(unsupported_tasks.items())}, "graphs": reports}
 
 
 def read_json(path):
@@ -220,7 +255,7 @@ def main():
         with output.open("x", encoding="utf-8") as handle:
             json.dump(result, handle, ensure_ascii=False, indent=2)
         print(json.dumps({"status": result["status"], "episodes": len(result["episodes"]), "proposals": len(result["proposals"])}))
-        return 0
+        return int(result["status"] in {"ERROR", "REJECTED"})
     raw = os.environ.get("DATABASE_URL")
     if not raw:
         parser.error("DATABASE_URL is required; no database is created implicitly")
