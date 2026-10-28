@@ -460,7 +460,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 heading = reviewConfirmed ? "요청을 확인했어요" : "내 요청을 확인해요";
                 detail = reviewConfirmed ? "다음은 마이크로 말하는 연습이에요." : "필요한 범위를 고르고 내용을 확인해요.\n수정이 필요하면 ‘내용 수정’을 눌러요.";
                 button = "다음"; enabled = reviewConfirmed;
-                if (!reviewConfirmed) floating.highlight(reviewView != null && practiceReview.needsTarget() ? "휴대폰 기본 글자" : practiceReview.needsDirection() ? "더 크게" : "이 내용으로 시작", 0); break;
+                if (!reviewConfirmed && practiceReview != null) floating.highlight(practiceReview.needsTarget() ? "휴대폰 기본 글자" : practiceReview.needsDirection() ? "더 크게" : "이 내용으로 시작", 0); break;
             case VOICE:
                 heading = voiceTried ? "말씀이 글자로 나타나요" : mode == ClickOverlayLayout.Mode.VOICE ? "마이크를 누르고\n직접 말해보세요" : "‘말로 시작’을\n눌러보세요";
                 detail = voiceTried ? "인식한 말을 확인한 뒤 다음을 눌러요." : "마이크를 눌렀을 때만 들어요.\n예: 휴대폰 글자 크기 키워줘";

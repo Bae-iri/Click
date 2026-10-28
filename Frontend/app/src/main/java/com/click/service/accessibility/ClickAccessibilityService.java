@@ -244,6 +244,34 @@ public final class ClickAccessibilityService extends AccessibilityService {
         return performed;
     }
 
+    /** Scroll only the settings window that the user just asked to search. */
+    public static boolean performSettingsScroll(boolean forward, String expectedPackage, int expectedWindow) {
+        if (!"com.android.settings".equals(expectedPackage)
+                && !"com.samsung.android.settings".equals(expectedPackage)) return false;
+        ClickAccessibilityService service = connectedService.get();
+        if (service == null) return false;
+        AccessibilityNodeInfo root = service.getRootInActiveWindow();
+        if (root == null) return false;
+        try {
+            if (root.getWindowId() != expectedWindow || root.getPackageName() == null
+                    || !expectedPackage.contentEquals(root.getPackageName())) return false;
+            return scrollVisibleList(root, forward ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+                    : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
+        } finally { root.recycle(); }
+    }
+
+    private static boolean scrollVisibleList(AccessibilityNodeInfo node, int action) {
+        if (!node.isVisibleToUser() || !node.isEnabled()) return false;
+        if (node.isScrollable() && node.performAction(action)) return true;
+        for (int index = 0; index < node.getChildCount(); index++) {
+            AccessibilityNodeInfo child = node.getChild(index);
+            if (child == null) continue;
+            try { if (scrollVisibleList(child, action)) return true; }
+            finally { child.recycle(); }
+        }
+        return false;
+    }
+
     private static AccessibilityNodeInfo findScrollableNode(AccessibilityNodeInfo node) {
         if (node == null) return null;
         if (node.isScrollable()) return node;

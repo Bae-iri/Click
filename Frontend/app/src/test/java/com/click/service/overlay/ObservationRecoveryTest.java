@@ -35,4 +35,32 @@ public class ObservationRecoveryTest {
         assertNull(ObservationRecovery.message("S1_SETTINGS_HOME", new JSONObject().put("reason", "target_not_found"), settings("com.example.other")));
         assertNull(ObservationRecovery.message("S4_FONT_SIZE_CONTROL", new JSONObject().put("reason", "target_not_found"), settings("com.android.settings")));
     }
+
+    private JSONObject offscreenPolicy(String reason) throws Exception {
+        return new JSONObject().put("recovery", new JSONObject()
+                .put("recoverable", true).put("waiting_for", "user")
+                .put("reason_code", reason).put("next_action", "manual_navigation"));
+    }
+
+    @Test public void offscreenSettingsMenuAllowsUserRequestedScrollInBothSettingsPackages() throws Exception {
+        assertTrue(ObservationRecovery.canSearchByScrolling(offscreenPolicy("TARGET_NOT_VISIBLE"), settings("com.android.settings")));
+        assertTrue(ObservationRecovery.canSearchByScrolling(offscreenPolicy("TARGET_NOT_VISIBLE"), settings("com.samsung.android.settings")));
+    }
+
+    @Test public void ambiguityAndResultVerificationNeverAllowScroll() throws Exception {
+        for (String reason : new String[]{"TARGET_AMBIGUOUS", "ACTION_RESULT_UNOBSERVABLE", "STATE_UNKNOWN"}) {
+            assertFalse(ObservationRecovery.canSearchByScrolling(offscreenPolicy(reason), settings("com.android.settings")));
+        }
+        assertFalse(ObservationRecovery.canSearchByScrolling(offscreenPolicy("TARGET_NOT_VISIBLE"), settings("com.example.other")));
+        assertFalse(ObservationRecovery.canSearchByScrolling(null, settings("com.android.settings")));
+        assertFalse(ObservationRecovery.canSearchByScrolling(offscreenPolicy("TARGET_NOT_VISIBLE"), null));
+    }
+
+    @Test public void missingWindowOrScrollableListCannotBeScrolled() throws Exception {
+        ScreenSnapshot base = settings("com.android.settings");
+        assertFalse(ObservationRecovery.canSearchByScrolling(offscreenPolicy("TARGET_NOT_VISIBLE"),
+                new ScreenSnapshot(base.packageName, base.capturedAt, 1080, 2400, base.nodes)));
+        assertFalse(ObservationRecovery.canSearchByScrolling(offscreenPolicy("TARGET_NOT_VISIBLE"),
+                new ScreenSnapshot(base.packageName, base.capturedAt, 1080, 2400, Collections.emptyList(), 7)));
+    }
 }
