@@ -1,9 +1,9 @@
 name: Integration verification
 on:
   push:
-    paths: ["Backend/**", "AI-Agent/**", "Frontend/**", ".github/workflows/backend.yml"]
+    paths: ["Backend/**", "AI-Agent/**", "Frontend/**", "render.yaml", ".dockerignore", ".github/workflows/backend.yml"]
   pull_request:
-    paths: ["Backend/**", "AI-Agent/**", "Frontend/**", ".github/workflows/backend.yml"]
+    paths: ["Backend/**", "AI-Agent/**", "Frontend/**", "render.yaml", ".dockerignore", ".github/workflows/backend.yml"]
 permissions:
   contents: read
 jobs:

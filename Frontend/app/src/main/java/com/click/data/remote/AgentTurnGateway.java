@@ -43,7 +43,10 @@ public final class AgentTurnGateway {
         request.contractVersion = server.contractVersion;
         request.interactiveWorkflow = server.interactiveWorkflow;
         HttpResult result = http.post(AgentTurnContract.PATH, request.toJson());
-        return new AgentTurnContract.Response(result.body);
+        AgentTurnContract.Response response = new AgentTurnContract.Response(result.body);
+        if (response.metadata != null && result.traceId != null)
+            response.metadata.put("backend_trace_id", result.traceId);
+        return response;
     }
 
     public AgentServerContract currentContract() { return contract; }

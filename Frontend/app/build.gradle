@@ -2,6 +2,18 @@ plugins {
     id "com.android.application"
 }
 
+def validationFile = rootProject.file("../Backend/instance/validation/environment.json")
+def validationRequested = gradle.startParameter.taskNames.any { it.toLowerCase().contains("validation") }
+if (validationRequested && !validationFile.isFile()) {
+    throw new GradleException("Prepare the paired backend first: Backend/scripts/validation.py prepare")
+}
+def validationEnvironment = validationFile.isFile() ? new groovy.json.JsonSlurper().parse(validationFile) : [:]
+if (validationRequested && (!validationEnvironment.environment_id ||
+        !(validationEnvironment.fingerprint ==~ /[0-9a-f]{64}/) || !validationEnvironment.api_base_url)) {
+    throw new GradleException("Invalid paired backend manifest; run validation.py prepare again")
+}
+def javaString = { value -> groovy.json.JsonOutput.toJson(value ?: "") }
+
 def clickApiBaseUrl = providers.gradleProperty("CLICK_API_BASE_URL")
         .getOrElse("https://click-db.onrender.com")
 
@@ -18,14 +30,27 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "CLICK_API_BASE_URL", "\"${clickApiBaseUrl}\""
+        buildConfigField "String", "CLICK_VALIDATION_ENVIRONMENT_ID", '""'
+        buildConfigField "String", "CLICK_VALIDATION_FINGERPRINT", '""'
     }
 
     buildTypes {
+        validation {
+            initWith debug
+            applicationIdSuffix ".validation"
+            versionNameSuffix "-validation"
+            matchingFallbacks = ["debug"]
+            signingConfig signingConfigs.debug
+            buildConfigField "String", "CLICK_API_BASE_URL", javaString(validationEnvironment.api_base_url)
+            buildConfigField "String", "CLICK_VALIDATION_ENVIRONMENT_ID", javaString(validationEnvironment.environment_id)
+            buildConfigField "String", "CLICK_VALIDATION_FINGERPRINT", javaString(validationEnvironment.fingerprint)
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
+    testBuildType(validationRequested ? "validation" : "debug")
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

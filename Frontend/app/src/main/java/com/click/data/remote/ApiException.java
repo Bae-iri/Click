@@ -8,6 +8,7 @@ public final class ApiException extends IOException {
     public final int status;
     public final String conflictCode;
     public final String responseBody;
+    public final String traceId;
 
     ApiException(String method, String path, HttpResult result) {
         super(method + " " + path + " -> HTTP " + result.status
@@ -18,5 +19,6 @@ public final class ApiException extends IOException {
         this.status = result.status;
         this.conflictCode = result.conflictCode;
         this.responseBody = result.body;
+        this.traceId = result.traceId;
     }
 }
