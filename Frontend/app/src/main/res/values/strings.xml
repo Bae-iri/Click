@@ -14,6 +14,7 @@
     <string name="start_overlay">Click 아이콘 시작</string>
     <string name="stop_overlay">Click 아이콘 종료</string>
     <string name="text_goal_hint">무엇을 도와드릴까요?</string>
+    <string name="unresolved_goal_guidance">어디에서 무엇을 바꾸고 싶은지 알려주세요.</string>
     <string name="accessibility_service_label">click 화면 안내</string>
     <string name="accessibility_service_description">설정 화면의 항목과 위치를 읽어 다음 조작 위치를 안내합니다.</string>
     <string name="accessibility_permission">접근성 권한 설정</string>
