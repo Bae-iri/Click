@@ -343,6 +343,13 @@ public final class HomeActivity extends AppCompatActivity {
     }
 
     private void startOverlayWithPermission(String goal, boolean openVoice, String selectedGoalType) {
+        if (!PermissionStatus.isAccessibilityEnabled(this)
+                || com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() == null) {
+            Toast.makeText(this, "접근성 연결이 끊겼어요. 설정에서 click을 껐다가 다시 켜주세요.",
+                    Toast.LENGTH_LONG).show();
+            openPermissionGuide();
+            return;
+        }
         Intent service = new Intent(this, ClickOverlayService.class);
         if (goal != null) service.putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL, goal);
         if (selectedGoalType != null) service.putExtra(ClickOverlayService.EXTRA_SELECTED_GOAL_TYPE, selectedGoalType);

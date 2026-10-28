@@ -154,6 +154,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int freshObservationRetries;
     private int staleGuideDrops;
     private int scrollExecutions;
+    private int scrollSearchGeneration = -1;
     private GuideOverlayView guideOverlayView;
     private WindowManager.LayoutParams guideOverlayParams;
     private ConfirmationOverlayView confirmationView;
@@ -1559,6 +1560,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void sendAgentTurn(String confirmation, boolean force) {
         if (closing || agentSessionId == null || agentPaused || turnInFlight || agentGateway == null
+                || scrollSearchGeneration == executionGeneration
                 || staleGuideDrops >= 4
                 || !hasConfirmedGoal() || resultPrompt != null || followUp != null || pendingControl != null) return;
         if (confirmation == null && (visionConsentRequested || visionCaptureInFlight)) return;
@@ -1998,7 +2000,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             hideConfirmation(); hideGuideOverlay(); hideSettingsOpenButton();
             actionTracker.clear();
             final int generation = executionGeneration;
-            taskFlowView.observationRecovery(requirementReview != null ? requirementReview.summary() : "선택한 작업", command.message, () -> {
+            Runnable retry = () -> {
                 if (generation != executionGeneration || agentPaused || turnInFlight
                         || agentSessionId == null || pendingControl != null) return;
                 freshObservationRetries = 0;
@@ -2006,7 +2008,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 pendingActionOccurredAtMs = System.currentTimeMillis();
                 forceNextObservation = true;
                 ClickAccessibilityService.requestFreshSnapshot();
-            });
+            };
+            String goal = requirementReview != null ? requirementReview.summary() : "선택한 작업";
+            if (ObservationRecovery.canSearchByScrolling(command.renderPolicy, displayedSnapshot)) {
+                final ScreenSnapshot searchScreen = displayedSnapshot;
+                taskFlowView.scrollRecovery(goal, command.message, retry,
+                        () -> searchSettingsByScrolling(true, searchScreen, generation),
+                        () -> searchSettingsByScrolling(false, searchScreen, generation));
+            } else taskFlowView.observationRecovery(goal, command.message, retry);
             return;
         }
         if (fallbackAction != null
@@ -2125,6 +2134,50 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             forceNextObservation = true;
             ClickAccessibilityService.requestFreshSnapshot();
         }, 700L);
+    }
+
+    private void searchSettingsByScrolling(boolean forward, ScreenSnapshot expected, int generation) {
+        if (generation != executionGeneration || closing || agentPaused || turnInFlight
+                || scrollSearchGeneration == executionGeneration || pendingControl != null
+                || agentSessionId == null || expected == null || expected.activeWindowId == null) return;
+        ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+        if (current == null || !expected.fingerprint().equals(current.fingerprint())) {
+            forceNextObservation = true;
+            ClickAccessibilityService.requestFreshSnapshot();
+            return;
+        }
+        scrollSearchGeneration = generation;
+        taskFlowCollapsed = true;
+        updateFloatingVisibility();
+        speechHandler.postDelayed(() -> {
+            if (generation != executionGeneration) return;
+            if (closing || agentPaused || pendingControl != null || agentSessionId == null) {
+                scrollSearchGeneration = -1;
+                return;
+            }
+            ScreenSnapshot beforeScroll = ClickAccessibilityService.freshSnapshot();
+            boolean sameScreen = beforeScroll != null
+                    && expected.fingerprint().equals(beforeScroll.fingerprint());
+            boolean moved = sameScreen && ClickAccessibilityService.performSettingsScroll(
+                    forward, expected.packageName, expected.activeWindowId);
+            if (sameScreen && !moved) {
+                Toast.makeText(this, "이 방향으로 더 이동할 수 없어요. 반대 방향을 확인해 주세요.",
+                        Toast.LENGTH_LONG).show();
+            }
+            speechHandler.postDelayed(() -> {
+                if (generation != executionGeneration) return;
+                scrollSearchGeneration = -1;
+                if (closing || agentPaused || pendingControl != null || agentSessionId == null) return;
+                // Navigation is not evidence that the graph's tap or setting change succeeded.
+                pendingActionType = AgentActionEvents.MANUAL_OVERRIDE;
+                pendingActionOccurredAtMs = System.currentTimeMillis();
+                freshObservationRetries = 0;
+                forceNextObservation = true;
+                taskFlowCollapsed = false;
+                updateFloatingVisibility();
+                sendAgentTurn(null, true);
+            }, moved ? 700L : 100L);
+        }, 200L);
     }
 
     private void executeScroll(AgentTurnContract.GuideCommand command) {

@@ -56,6 +56,10 @@ AI-Agent 런타임을 호출한다. 서버에서 제공하지 않는 ‘결과 �
 
 Vision fallback은 Android 11 이상 설정 화면에서 매 분석 전 사용자 확인 후 기기 내 OCR을 실행한다. [동의·전송 필드·마스킹 실패 정책](../docs/ai-agent-vision-fallback.md)을 따른다. 앱 업데이트 후 접근성 서비스를 다시 켜 screenshot capability를 반영한다.
 
+설정 목록의 목표 메뉴가 화면 밖에 있으면 복구 화면에 ‘아래 항목 찾기’와 ‘위 항목 찾기’를 표시한다. 버튼을 누를 때마다 같은 설정 창의 보이는 목록을 한 번 스크롤하고, 화면이 안정된 뒤 접근성 정보를 새로 읽어 안내를 이어간다. 화면 전환·일시정지·취소 후에는 예약된 스크롤을 실행하지 않는다. 목록 끝에서는 반대 방향 확인을 안내하며 반복 자동 스크롤은 하지 않는다. 스크롤은 메뉴 탐색이며 설정 변경 성공의 근거로 사용하지 않는다.
+
+실기기 목록 재수집 검증은 앱·AndroidTest APK 설치와 click 접근성 활성화 후 `adb shell am instrument -w -e class com.click.SettingsScrollTest -e liveScroll true com.click.test/androidx.test.runner.AndroidJUnitRunner`로 실행한다. 설정 목록을 한 번 스크롤해 새로 보이는 글자 수집을 확인하고 반대 방향으로 복원하며, 실제 설정값을 변경하지 않는다. 버튼으로 시작한 탐색의 재관측·화면 전환·일시정지 방지는 단위 테스트에서 별도로 검증한다.
+
 Click Android 앱 내부 화면과 다른 앱 위에서 동작하는 Agent Overlay를 구현하는 영역이다.
 
 Frontend는 사용자 음성·텍스트 입출력, Android Accessibility Tree 수집, Guide Command 렌더링과 저위험 자동 스크롤 실행을 담당한다. Goal Typing과 실행 제어용 Command Typing은 FE의 입력 해석 계층이 담당하고, Backend는 DB의 승인 Task Graph를 선택·전달하고 AI-Agent(1)은 전달된 graph에 따른 다음 행동·검증·Re-plan을 담당한다. 이는 갱신된 설계이며 현재 raw-goal DTO의 코드 전환은 남아 있다.

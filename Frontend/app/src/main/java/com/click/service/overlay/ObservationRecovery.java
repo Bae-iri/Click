@@ -3,9 +3,19 @@ package com.click.service.overlay;
 import com.click.data.snapshot.ScreenSnapshot;
 import org.json.JSONObject;
 
-/** Explain an off-screen settings target without inventing a tap or an automatic scroll. */
+/** Settings navigation recovery using fresh, visible screen evidence. */
 public final class ObservationRecovery {
     private ObservationRecovery() {}
+    public static boolean canSearchByScrolling(JSONObject policy, ScreenSnapshot screen) {
+        JSONObject recovery = policy == null ? null : policy.optJSONObject("recovery");
+        return awaitsUser(policy) && recovery != null
+                && "TARGET_NOT_VISIBLE".equals(recovery.optString("reason_code"))
+                && "manual_navigation".equals(recovery.optString("next_action"))
+                && screen != null && screen.activeWindowId != null
+                && ("com.android.settings".equals(screen.packageName)
+                    || "com.samsung.android.settings".equals(screen.packageName))
+                && screen.nodes.stream().anyMatch(node -> node.visibleToUser && node.scrollable && node.enabled);
+    }
     public static boolean awaitsUser(JSONObject policy) {
         JSONObject recovery = policy == null ? null : policy.optJSONObject("recovery");
         return recovery != null && recovery.optBoolean("recoverable", false)

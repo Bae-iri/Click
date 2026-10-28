@@ -486,6 +486,12 @@ public void observationRecovery(String message, Runnable retry) {
         content.addView(secondaryButton("직접 이동하기", listener::collapse), spaced(8));
     }
 
+    public void scrollRecovery(String goal, String message, Runnable retry, Runnable down, Runnable up) {
+        observationRecovery(goal, message, retry);
+        content.addView(primaryButton("아래 항목 찾기", down), spaced(8));
+        content.addView(secondaryButton("위 항목 찾기", up), spaced(8));
+    }
+
     /** Fixed geometry avoids font-dependent checkmark baselines and optical left drift. */
     private final class StatusMark extends Drawable {
         private final boolean checked, current;

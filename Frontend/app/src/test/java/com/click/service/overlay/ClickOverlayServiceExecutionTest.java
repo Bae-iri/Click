@@ -397,6 +397,48 @@ public class ClickOverlayServiceExecutionTest {
         accessibility.verify(ClickAccessibilityService::requestFreshSnapshot);
     }
 
+    @Test public void requestedScrollReadsNewScreenWithoutClaimingSettingSuccess() throws Exception {
+        resolve(); confirm();
+        set("turnInFlight", false);
+        set("firstTurnSent", true);
+        accessibility.when(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42))
+                .thenAnswer(call -> {
+                    currentScreen = changedScreen("com.android.settings", 1080, 2400, 42, 600);
+                    return true;
+                });
+        searchScroll(true, screen);
+        send(null);
+        assertEquals("No observation while the scroll is settling", 2, requests.size());
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42));
+        assertEquals(3, requests.size());
+        assertSame(currentScreen, requests.get(2).accessibilityTree);
+        assertEquals(-1, get("scrollSearchGeneration"));
+        assertNull(get("pendingVerifiedAction"));
+    }
+
+    @Test public void pauseOrChangedWindowPreventsDelayedScroll() throws Exception {
+        resolve(); confirm(); set("turnInFlight", false);
+        searchScroll(true, screen);
+        currentScreen = changedScreen("com.example.other", 1080, 2400, 99, 600);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(anyBoolean(), anyString(), anyInt()), never());
+        set("turnInFlight", false);
+        currentScreen = screen;
+        searchScroll(false, screen);
+        set("agentPaused", true);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(anyBoolean(), anyString(), anyInt()), never());
+        assertEquals(-1, get("scrollSearchGeneration"));
+    }
+
+    private void searchScroll(boolean forward, ScreenSnapshot expected) throws Exception {
+        Method method = ClickOverlayService.class.getDeclaredMethod("searchSettingsByScrolling",
+                boolean.class, ScreenSnapshot.class, int.class);
+        method.setAccessible(true);
+        method.invoke(service, forward, expected, (int) get("executionGeneration"));
+    }
+
     private ScreenSnapshot changedScreen(String packageName, int width, int height, int window, int top) {
         AccessibilityNodeSnapshot title = new AccessibilityNodeSnapshot("title", null, true,
                 packageName, "설정", null, null, "android.widget.TextView", null,
