@@ -55,16 +55,16 @@ public class OnboardingFlowTest {
                 assertEquals("sample-pass13", password.getText().toString());
                 a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
             });
-            shown("이메일을 한 번 더 확인해 주세요"); screenshot("email-review");
-            clickView("수정할게요");
+            shown("이메일을\n확인해 주세요"); screenshot("email-review");
+            clickView("이메일 수정");
             s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_action).performClick());
-            clickView("네, 이 이메일이 맞아요"); shown("안내를 조금 더\n원활히 도와드릴게요");
+            clickView("이 이메일로 계속"); shown("안내를 조금 더\n원활히 도와드릴게요");
             shown("이름");
             s.onActivity(a -> ((EditText) a.findViewById(
                     com.click.designpreview.R.id.signup_name)).setText("김클릭"));
             screenshot("signup-profile-name");
             s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_occupation).performClick());
-            tap("서비스업"); screenshot("occupation"); tap("선택 완료");
+            clickView("서비스업"); screenshot("occupation");
             s.onActivity(a -> assertTrue(((TextView)a.findViewById(com.click.designpreview.R.id.signup_occupation))
                     .getText().toString().contains("서비스업")));
         }
@@ -103,7 +103,7 @@ public class OnboardingFlowTest {
             instrumentation.runOnMainSync(guide::finish);
         }
     }
-    @Test public void occupationSheetUsesCardsAndCompletesSelection() throws Exception {
+    @Test public void occupationExpandsInlineAndSelectsImmediately() throws Exception {
         try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
             s.onActivity(a -> {
                 try {
@@ -115,13 +115,27 @@ public class OnboardingFlowTest {
                     throw new AssertionError(error);
                 }
                 a.findViewById(com.click.designpreview.R.id.signup_occupation).performClick();
+                View options = a.findViewById(com.click.designpreview.R.id.signup_occupation_options);
+                assertEquals(View.VISIBLE, options.getVisibility());
+                assertSame(a.findViewById(com.click.designpreview.R.id.signup_profile_content),
+                        options.getParent());
             });
-            shown("어떤 일을 하고 계신가요?");
-            shown("지금 나에게 가장 가까운 항목을 골라 주세요.\n선택하지 않고 넘어가셔도 괜찮아요.");
-            clickView("서비스업"); screenshot("occupation"); clickView("선택 완료");
-            s.onActivity(a -> assertTrue(((TextView) a.findViewById(
-                    com.click.designpreview.R.id.signup_occupation)).getText().toString()
-                    .contains("서비스업")));
+            shown("선택하지 않음"); screenshot("occupation-expanded");
+            clickView("서비스업");
+            s.onActivity(a -> {
+                TextView field = a.findViewById(com.click.designpreview.R.id.signup_occupation);
+                android.widget.RadioGroup options = a.findViewById(
+                        com.click.designpreview.R.id.signup_occupation_options);
+                assertEquals("서비스업", field.getText().toString());
+                assertEquals(View.GONE, options.getVisibility());
+                field.performClick();
+                assertEquals("서비스업", ((TextView) options.findViewById(
+                        options.getCheckedRadioButtonId())).getText().toString());
+            });
+            clickView("서비스업");
+            s.onActivity(a -> assertEquals(View.GONE, a.findViewById(
+                    com.click.designpreview.R.id.signup_occupation_options).getVisibility()));
+            screenshot("occupation-selected");
         }
     }
     @Test public void loginMatchesSignupAndValidatesInline() throws Exception {
@@ -174,8 +188,8 @@ public class OnboardingFlowTest {
                         .setText(validPassword);
                 a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
             });
-            shown("이메일을 한 번 더 확인해 주세요");
-            clickView("수정할게요");
+            shown("이메일을\n확인해 주세요");
+            clickView("이메일 수정");
         }
     }
 

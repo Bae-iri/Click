@@ -90,14 +90,62 @@
                     android:layout_marginTop="34dp"
                     android:labelFor="@id/signup_email"
                     android:text="@string/signup_email_label" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+                    <EditText
+                        android:id="@+id/signup_email"
+                        style="@style/SignupInput"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:autofillHints="emailAddress"
+                        android:hint="@string/signup_email_id_hint"
+                        android:imeOptions="actionNext"
+                        android:importantForAutofill="yes"
+                        android:inputType="textEmailAddress"
+                        android:paddingHorizontal="12dp"
+                        android:saveEnabled="false"
+                        android:singleLine="true"
+                        android:textSize="17sp" />
+                    <TextView
+                        android:layout_width="28dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:importantForAccessibility="no"
+                        android:text="\u0040"
+                        android:textColor="@color/onboarding_text_secondary"
+                        android:textSize="19sp" />
+                    <Button
+                        android:id="@+id/signup_email_domain"
+                        style="@style/SignupInput"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1.2"
+                        android:drawableEnd="@drawable/signup_dropdown"
+                        android:drawablePadding="4dp"
+                        android:minHeight="64dp"
+                        android:minWidth="0dp"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="12dp"
+                        android:text="@string/signup_email_domain_select"
+                        android:textAllCaps="false"
+                        android:textSize="17sp" />
+                </LinearLayout>
                 <EditText
-                    android:id="@+id/signup_email"
+                    android:id="@+id/signup_email_custom_domain"
                     style="@style/SignupInput"
-                    android:autofillHints="emailAddress"
-                    android:hint="@string/signup_email_hint"
+                    android:layout_marginTop="10dp"
+                    android:contentDescription="@string/signup_email_domain_custom_label"
+                    android:hint="@string/signup_email_domain_custom_hint"
                     android:imeOptions="actionNext"
-                    android:importantForAutofill="yes"
-                    android:inputType="textEmailAddress" />
+                    android:importantForAutofill="no"
+                    android:inputType="textEmailAddress"
+                    android:nextFocusForward="@id/signup_password"
+                    android:saveEnabled="false"
+                    android:singleLine="true"
+                    android:visibility="gone" />
                 <TextView
                     android:id="@+id/signup_email_error"
                     style="@style/SignupError"
@@ -239,16 +287,34 @@
                     android:layout_marginTop="22dp"
                     android:labelFor="@id/signup_occupation"
                     android:text="@string/signup_occupation_label" />
-                <TextView
+                <Button
                     android:id="@+id/signup_occupation"
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
+                    android:layout_height="wrap_content"
                     android:background="@drawable/signup_input_background"
+                    android:backgroundTint="@null"
                     android:contentDescription="@string/signup_occupation_label"
-                    android:textSize="19sp" android:textColor="@color/onboarding_text_primary"
+                    android:drawableEnd="@drawable/signup_occupation_arrow"
+                    android:drawablePadding="12dp"
                     android:fontFamily="@font/pretendard_medium"
-                    android:gravity="center_vertical" android:paddingHorizontal="18dp"
-                    android:clickable="true" android:focusable="true" />
+                    android:gravity="center_vertical"
+                    android:includeFontPadding="false"
+                    android:minHeight="64dp"
+                    android:paddingHorizontal="18dp"
+                    android:paddingVertical="16dp"
+                    android:stateListAnimator="@null"
+                    android:textAllCaps="false"
+                    android:textColor="@color/onboarding_text_primary"
+                    android:textSize="19sp" />
+                <RadioGroup
+                    android:id="@+id/signup_occupation_options"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/signup_field"
+                    android:orientation="vertical"
+                    android:padding="8dp"
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/signup_profile_helper"

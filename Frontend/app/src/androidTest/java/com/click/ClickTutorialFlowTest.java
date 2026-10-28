@@ -37,10 +37,14 @@ public class ClickTutorialFlowTest {
                 assertFalse(control(a).isShown());
             });
             screenshot("click-tutorial-checklist-start");
+            assertHighlightOn(scenario, null, R.id.tutorial_next);
             scenario.recreate();
             tapId(scenario, R.id.tutorial_next);
             scenario.onActivity(a -> assertNotNull(findType(a.getWindow().getDecorView(), PermissionPhoneView.class)));
             screenshot("click-feature-1");
+            // The cue must still pulse while the user takes time to read the instructions.
+            SystemClock.sleep(6000);
+            assertClickPulseContinues(scenario);
             tapId(scenario, R.id.tutorial_floating_control);
             assertMode(scenario, ClickOverlayLayout.Mode.MENU);
             assertHighlightOn(scenario, "글로 입력", 0);
@@ -73,6 +77,7 @@ public class ClickTutorialFlowTest {
             scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "이 화면은 어떻게 사용해요?")));
             screenshot("click-feature-4");
             tapText(scenario, "이 내용으로 시작");
+            assertHighlightOn(scenario, null, R.id.tutorial_next);
             tapId(scenario, R.id.tutorial_next);
             tapText(scenario, "말로 시작");
             assertMode(scenario, ClickOverlayLayout.Mode.VOICE);
@@ -145,6 +150,7 @@ public class ClickTutorialFlowTest {
                 host.onDragEnded();
                 assertTrue(host.isHidden()); assertFalse(a.findViewById(R.id.tutorial_next).isEnabled());
             });
+            assertHighlightOn(scenario, null, R.id.tutorial_restore);
             tapId(scenario, R.id.tutorial_restore);
             scenario.onActivity(a -> assertFalse(((TutorialFloatingHost) a.findViewById(R.id.tutorial_floating_host)).isHidden()));
             tapId(scenario, R.id.tutorial_next);
@@ -279,11 +285,31 @@ public class ClickTutorialFlowTest {
         assertTrue("Highlight top edge must move with the target " + label
                 + ", actual pixel=" + Integer.toHexString(topPixel), isHighlightBlue(topPixel));
     }
+    private void assertClickPulseContinues(ActivityScenario<TutorialActivity> scenario) {
+        int[] sample = new int[2];
+        scenario.onActivity(a -> {
+            control(a).getLocationOnScreen(sample);
+            float density = a.getResources().getDisplayMetrics().density;
+            sample[0] += Math.round(32 * density);
+            sample[1] -= Math.round(3 * density);
+        });
+        int darkest = 255, lightest = 0;
+        for (int frame = 0; frame < 4; frame++) {
+            Bitmap bitmap = instrumentation.getUiAutomation().takeScreenshot();
+            int pixel = bitmap.getPixel(sample[0], sample[1]); bitmap.recycle();
+            assertTrue("The click button cue must remain blue", isHighlightBlue(pixel));
+            int red = android.graphics.Color.red(pixel);
+            darkest = Math.min(darkest, red); lightest = Math.max(lightest, red);
+            SystemClock.sleep(250);
+        }
+        assertTrue("The click button cue must keep shimmering after six seconds", lightest - darkest > 12);
+    }
     private boolean isHighlightBlue(int pixel) {
-        // The gentle pulse keeps at least 185/255 opacity over the white contrast outline.
-        return android.graphics.Color.red(pixel) >= 45 && android.graphics.Color.red(pixel) < 125
-                && android.graphics.Color.green(pixel) >= 110 && android.graphics.Color.green(pixel) < 180
-                && android.graphics.Color.blue(pixel) > 230;
+        int red = android.graphics.Color.red(pixel), green = android.graphics.Color.green(pixel);
+        int blue = android.graphics.Color.blue(pixel);
+        // The pulsing blue outline stays visible over its white contrast border.
+        return red >= 35 && red < 180 && green >= 100 && green < 205
+                && blue > 225 && blue - red > 55 && blue - green > 35;
     }
 
     private void screenshot(String name) throws Exception {

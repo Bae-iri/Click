@@ -17,16 +17,23 @@ public final class TutorialNarrator {
     private int sequence;
     private Listener listener;
     public TutorialNarrator(Context context) {
-        tts = new TextToSpeech(context.getApplicationContext(), status -> {
+        // An engine lookup failure can call onInit before the constructor returns.
+        // Defer it until tts is assigned, and keep listener/UI state on the main thread.
+        tts = new TextToSpeech(context.getApplicationContext(), status -> main.post(() -> {
             if (closed || tts == null) return;
             if (status == TextToSpeech.SUCCESS) {
-                int language = tts.setLanguage(Locale.KOREAN);
-                ready = language != TextToSpeech.LANG_MISSING_DATA && language != TextToSpeech.LANG_NOT_SUPPORTED;
+                int language = tts.setLanguage(Locale.KOREA);
+                ready = language >= TextToSpeech.LANG_AVAILABLE;
                 tts.setSpeechRate(.94f);
+            }
+            if (!ready) {
+                pending = null;
+                speaking = false;
+                android.util.Log.w("ClickNarration", "Korean TTS initialization failed");
             }
             unavailable = !ready; notifyState();
             if (ready && pending != null) speak(pending);
-        });
+        }));
         tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             public void onStart(String id) { update(id, true, false); }
             public void onDone(String id) { update(id, false, false); }
@@ -37,7 +44,7 @@ public final class TutorialNarrator {
     public boolean isSpeaking() { return speaking || pending != null; }
     private void update(String id, boolean value, boolean failed) {
         main.post(() -> {
-            if (closed || !id.equals(active)) return;
+            if (closed || id == null || !id.equals(active)) return;
             speaking = value; unavailable = failed; notifyState();
         });
     }

@@ -21,7 +21,12 @@ HTTP 422를 비밀번호 길이 오류로 단정하지 않으며 가입 오류 �
 `PermissionPhoneView`를 배경으로 사용하고, 실제 앱의 `ClickOverlayLayout`을 그 위에 띄운다.
 버튼 펼치기 → 글로 입력하기 → 요청 확인 → 실제 마이크 입력 → 요청 중지 → 접기 → 이동 → 휴지통에 숨기기 → 다시 보기의 9단계를 직접 익힌다.
 키보드로 보낸 요청은 실제 `TaskFlowOverlayView`의 콜아웃에 표시된다. 범위를 선택하고 확인해야 다음으로 진행한다.
-튜토리얼 마이크는 `DeviceSpeechInput`으로 한국어 시스템 음성 인식을 사용하고, 일부 오류 후 다음 명시적 입력에서 서버 STT를 시도한다. 일반 `SpeechRecognizer`를 사용하므로 온디바이스 전용은 아니다. 메인 오버레이는 `CloudSpeechRecognizer`로 우리 Backend를 거쳐 외부 OpenAI STT를 호출한다. 2026-10-10 선정 정책은 우리 서버 처리까지만 허용하므로 이 경로는 전환 대상이다. [STT 현재 경로·후보·전환 기준](../docs/stt-model-selection.md)을 본다. 입력창을 열거나 TTS가 끝나는 것만으로 녹음하지 않으며, 튜토리얼은 실제 설정 변경을 수행하지 않는다.
+튜토리얼과 메인 오버레이는 모두 `CloudSpeechRecognizer`로 녹음한 PCM WAV를 인증된 Backend와 자체 Whisper large-v3 worker에 보낸다. `DeviceSpeechInput`은 이 경로를 사용하는 호환 진입점이다. 업로드 전 서버가 `provider=self_hosted`, `model=openai/whisper-large-v3`를 선언하는지 확인하며, 이전 Qwen 계약이나 외부 STT 계약이면 음성을 보내지 않는다. 서버·worker·앱을 함께 맞춰야 한다. [STT 현재 경로·후보·전환 기준](../docs/stt-model-selection.md)을 본다. 입력창을 열거나 TTS가 끝나는 것만으로 녹음하지 않으며, 튜토리얼은 실제 설정 변경을 수행하지 않는다.
+
+TTS는 휴대폰에 설치된 한국어 음성 엔진을 사용한다. 공통 UI 라이브러리의 manifest에 `TTS_SERVICE` 조회 선언이 포함되며, 초기화 콜백은 메인 스레드에서 처리한다. 초기화 실패 시 대기 중인 안내를 해제하고 재생 불가 상태를 알린다. 실제 기기 확인은 `LiveNarrationTest`에 `liveSpeech=true`를 명시해 실행한다. 고정된 한국어 문장의 재생 완료를 검사하며 마이크는 사용하지 않는다. 완료 콜백과 별도로 미디어 음량과 실제로 들리는지도 확인한다.
+
+STT 실제 연결 확인은 로그인된 테스트 기기에서 `LiveTranscriptionTest`에 `liveStt=true`를 명시해 실행한다. 테스트 APK의 고정된 합성 한국어 WAV를 앱의 인증·계약 검증·전사 경로로 보내 결과를 검사한다. 마이크 녹음이나 에이전트 작업은 실행하지 않으며, 실제 사용자 발화 품질 검증과는 구분한다.
+
 메뉴의 `튜토리얼`에서 다시 볼 수 있으며, 작성 중인 글·대화·열린 기능은 화면 회전 후 복원된다.
 
 Click 버튼은 홈 화면과 다른 앱 위에서 같은 기능 메뉴를 제공한다.
