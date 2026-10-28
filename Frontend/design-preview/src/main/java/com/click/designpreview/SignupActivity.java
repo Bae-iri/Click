@@ -1,19 +1,22 @@
 package com.click.designpreview;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Dialog;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.RadioGroup;
 import android.widget.RadioButton;
 import android.widget.Toast;
-import android.graphics.drawable.GradientDrawable;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
 import android.util.Patterns;
@@ -21,9 +24,12 @@ import android.view.MotionEvent;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
@@ -32,17 +38,25 @@ import android.window.OnBackInvokedDispatcher;
 public final class SignupActivity extends Activity {
     private static final String PAGE_STATE = "signup_page";
     private static final String EMAIL_STATE = "signup_email";
+    private static final String EMAIL_DOMAIN_STATE = "signup_email_domain";
+    private static final String EMAIL_CUSTOM_DOMAIN_STATE = "signup_email_custom_domain";
     private static final String NAME_STATE = "signup_name";
     private static final String AGE_STATE = "signup_age";
     private static final String OCCUPATION_STATE = "signup_occupation";
 
     private int page;
     private EditText email;
+    private Button emailDomain;
+    private EditText emailCustomDomain;
+    private int emailDomainIndex = -1;
     private EditText password;
     private EditText passwordConfirm;
     private EditText name;
     private EditText age;
     private TextView occupation;
+    private RadioGroup occupationOptions;
+    private boolean occupationExpanded;
+    private ValueAnimator occupationAnimator;
     private int occupationIndex;
     private String confirmedEmail;
     private boolean submitting;
@@ -74,15 +88,19 @@ public final class SignupActivity extends Activity {
                         view.setClipBounds(new Rect(0, 0, right - left, bottom - top)));
 
         email = findViewById(R.id.signup_email);
+        emailDomain = findViewById(R.id.signup_email_domain);
+        emailCustomDomain = findViewById(R.id.signup_email_custom_domain);
+        setupEmailDomain();
         password = findViewById(R.id.signup_password);
         passwordConfirm = findViewById(R.id.signup_password_confirm);
         name = findViewById(R.id.signup_name);
         age = findViewById(R.id.signup_age);
         occupation = findViewById(R.id.signup_occupation);
+        occupationOptions = findViewById(R.id.signup_occupation_options);
         passwordToggle = findViewById(R.id.signup_password_toggle);
         passwordConfirmToggle = findViewById(R.id.signup_password_confirm_toggle);
-        refreshOccupation();
-        occupation.setOnClickListener(v -> showOccupations());
+        setupOccupations();
+        occupation.setOnClickListener(v -> setOccupationExpanded(!occupationExpanded, true));
         password.setSaveEnabled(false);
         passwordConfirm.setSaveEnabled(false);
         setupPasswordToggle(password, passwordToggle, false);
@@ -108,6 +126,9 @@ public final class SignupActivity extends Activity {
 
         if (savedInstanceState != null) {
             email.setText(savedInstanceState.getString(EMAIL_STATE, ""));
+            emailDomainIndex = savedInstanceState.getInt(EMAIL_DOMAIN_STATE, -1);
+            emailCustomDomain.setText(savedInstanceState.getString(EMAIL_CUSTOM_DOMAIN_STATE, ""));
+            refreshEmailDomain();
             name.setText(savedInstanceState.getString(NAME_STATE, ""));
             age.setText(savedInstanceState.getString(AGE_STATE, ""));
             occupationIndex = savedInstanceState.getInt(OCCUPATION_STATE, 0);
@@ -117,6 +138,76 @@ public final class SignupActivity extends Activity {
         }
         showPage(page, false);
         loadPasswordRules();
+    }
+
+    private void setupEmailDomain() {
+        refreshEmailDomain();
+        emailDomain.setOnClickListener(view -> {
+            PopupMenu menu = new PopupMenu(this, emailDomain);
+            String[] domains = getResources().getStringArray(R.array.signup_email_domains);
+            for (int i = 0; i < domains.length; i++) menu.getMenu().add(0, i, i, domains[i]);
+            menu.setOnMenuItemClickListener(item -> {
+                emailDomainIndex = item.getItemId();
+                refreshEmailDomain();
+                clearErrors(R.id.signup_email_error);
+                if (isCustomEmailDomain()) focusCustomEmailDomain();
+                return true;
+            });
+            menu.show();
+        });
+        // Keep full-address paste and email autofill working with the split fields.
+        email.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(Editable text) {
+                String address = text.toString().trim();
+                int separator = address.indexOf('@');
+                if (separator < 0) return;
+                String domain = address.substring(separator + 1);
+                String[] domains = getResources().getStringArray(R.array.signup_email_domains);
+                emailDomainIndex = domains.length - 1;
+                for (int i = 0; i < domains.length - 1; i++) {
+                    if (domains[i].equalsIgnoreCase(domain)) { emailDomainIndex = i; break; }
+                }
+                emailCustomDomain.setText(isCustomEmailDomain() ? domain : "");
+                refreshEmailDomain();
+                text.replace(0, text.length(), address.substring(0, separator));
+                email.setSelection(email.length());
+                if (domain.isEmpty() && email.hasFocus()) focusCustomEmailDomain();
+            }
+        });
+    }
+
+    private boolean isCustomEmailDomain() {
+        return emailDomainIndex == getResources().getStringArray(R.array.signup_email_domains).length - 1;
+    }
+
+    private void refreshEmailDomain() {
+        String[] domains = getResources().getStringArray(R.array.signup_email_domains);
+        if (emailDomainIndex < -1 || emailDomainIndex >= domains.length) emailDomainIndex = -1;
+        String label = emailDomainIndex < 0 ? getString(R.string.signup_email_domain_select)
+                : domains[emailDomainIndex];
+        emailDomain.setText(label);
+        emailDomain.setContentDescription(getString(R.string.signup_email_domain_accessibility, label));
+        emailCustomDomain.setVisibility(isCustomEmailDomain() ? View.VISIBLE : View.GONE);
+        email.setNextFocusForwardId(isCustomEmailDomain() ? R.id.signup_email_custom_domain
+                : emailDomainIndex < 0 ? R.id.signup_email_domain : R.id.signup_password);
+    }
+
+    private void focusCustomEmailDomain() {
+        emailCustomDomain.requestFocus();
+        emailCustomDomain.setSelection(emailCustomDomain.length());
+        emailCustomDomain.post(() -> {
+            InputMethodManager keyboard = getSystemService(InputMethodManager.class);
+            if (keyboard != null) keyboard.showSoftInput(emailCustomDomain, InputMethodManager.SHOW_IMPLICIT);
+        });
+    }
+
+    private String emailAddress() {
+        String domain = emailDomainIndex < 0 ? "" : isCustomEmailDomain()
+                ? emailCustomDomain.getText().toString().trim()
+                : getResources().getStringArray(R.array.signup_email_domains)[emailDomainIndex];
+        return email.getText().toString().trim() + "@" + domain;
     }
 
     private void loadPasswordRules() {
@@ -164,11 +255,11 @@ public final class SignupActivity extends Activity {
         if (!passwordRulesReady) { loadPasswordRules(); return; }
         if (page == 0) {
             if (!validateAccount()) return;
-            String address = email.getText().toString().trim();
+            String address = emailAddress();
             showEmailConfirmation(address);
             return;
         }
-        if (!validateAccount() || !email.getText().toString().trim().equals(confirmedEmail)) {
+        if (!validateAccount() || !emailAddress().equals(confirmedEmail)) {
             showPage(0, true); return;
         }
         if (!validateProfile()) return;
@@ -197,33 +288,34 @@ public final class SignupActivity extends Activity {
     private void showEmailConfirmation(String address) {
         InputMethodManager keyboard = getSystemService(InputMethodManager.class);
         if (keyboard != null) keyboard.hideSoftInputFromWindow(email.getWindowToken(), 0);
+        View focused = getCurrentFocus();
+        if (focused != null) focused.clearFocus();
         Dialog dialog = new Dialog(this);
-        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
-        LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(24), dp(24), dp(24), dp(20));
-        GradientDrawable background = new GradientDrawable(); background.setColor(Color.WHITE);
-        background.setCornerRadius(dp(24)); card.setBackground(background);
-        TextView title = AccountUi.text(this, "이메일을 확인해 주세요", 24);
-        title.setTypeface(getResources().getFont(R.font.pretendard_bold));
-        AccountUi.add(this, card, title, 0);
-        TextView description = AccountUi.text(this, "다시 로그인할 때 사용할 주소예요.\n자주 사용하는 이메일인지 확인해 주세요.", 16);
-        description.setTextColor(0xFF647594); AccountUi.add(this, card, description, 12);
-        TextView value = AccountUi.text(this, address, 18);
-        value.setPadding(dp(16), dp(16), dp(16), dp(16));
-        GradientDrawable callout = new GradientDrawable(); callout.setColor(0xFFF1F6FF); callout.setCornerRadius(dp(14));
-        value.setBackground(callout); AccountUi.add(this, card, value, 20);
-        Button confirm = AccountUi.button(this, "이 이메일로 계속", true);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.dialog_email_confirmation);
+        dialog.findViewById(R.id.email_confirmation_scroll).setClipToOutline(true);
+        dialog.setCanceledOnTouchOutside(true);
+        ((TextView) dialog.findViewById(R.id.email_confirmation_address)).setText(address);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            dialog.findViewById(R.id.email_confirmation_title).setAccessibilityHeading(true);
+        }
+        View confirm = dialog.findViewById(R.id.email_confirmation_continue);
+        confirm.setBackground(OnboardingDrawables.startButton(getResources()));
         confirm.setOnClickListener(v -> { dialog.dismiss(); confirmedEmail = address; showPage(1, true); });
-        AccountUi.add(this, card, confirm, 24);
-        Button edit = AccountUi.button(this, "이메일 수정", false);
-        edit.setOnClickListener(v -> { dialog.dismiss(); email.requestFocus();
+        dialog.findViewById(R.id.email_confirmation_edit).setOnClickListener(v -> {
+            dialog.dismiss(); email.requestFocus();
             if (keyboard != null) keyboard.showSoftInput(email, InputMethodManager.SHOW_IMPLICIT); });
-        AccountUi.add(this, card, edit, 8);
-        ScrollView scroll = new ScrollView(this); scroll.addView(card);
-        dialog.setContentView(scroll);
-        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        dialog.findViewById(R.id.email_confirmation_close).setOnClickListener(v -> dialog.dismiss());
+
+        Window window = dialog.getWindow();
+        window.setBackgroundDrawableResource(android.R.color.transparent);
+        window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+        window.setDimAmount(.38f);
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         dialog.show();
-        dialog.getWindow().setLayout(Math.min(getResources().getDisplayMetrics().widthPixels - dp(40), dp(400)), -2);
+        window.setLayout(Math.min(getResources().getDisplayMetrics().widthPixels - dp(40), dp(400)),
+                WindowManager.LayoutParams.WRAP_CONTENT);
+        window.setGravity(Gravity.CENTER);
     }
 
     private void showExistingAccount(String address) {
@@ -238,96 +330,111 @@ public final class SignupActivity extends Activity {
     private void refreshOccupation() {
         String[] values = getResources().getStringArray(R.array.signup_occupations);
         occupationIndex = Math.max(0, Math.min(values.length - 1, occupationIndex));
-        occupation.setText((occupationIndex == 0 ? "선택하지 않아도 괜찮아요" : values[occupationIndex]) + "   ⌄");
-        occupation.setContentDescription("직업: " + values[occupationIndex] + ", 눌러서 선택");
+        occupation.setText(occupationIndex == 0 ? getString(R.string.signup_occupation_hint)
+                : values[occupationIndex]);
+        occupation.setActivated(occupationExpanded);
+        occupation.setContentDescription(getString(occupationExpanded
+                ? R.string.signup_occupation_collapse : R.string.signup_occupation_expand,
+                values[occupationIndex]));
+        occupationOptions.check(occupationOptions.getChildAt(occupationIndex).getId());
     }
 
-    private void showOccupations() {
-        Dialog dialog = new Dialog(this);
-        LinearLayout sheet = new LinearLayout(this); sheet.setOrientation(LinearLayout.VERTICAL);
-        sheet.setPadding(dp(24), dp(26), dp(24), dp(20));
-        GradientDrawable background = new GradientDrawable(); background.setColor(Color.WHITE); background.setCornerRadius(dp(28));
-        sheet.setBackground(background);
-
-        View handle = new View(this);
-        GradientDrawable handleBackground = new GradientDrawable();
-        handleBackground.setColor(0xFFD9E2F2); handleBackground.setCornerRadius(dp(3));
-        handle.setBackground(handleBackground);
-        handle.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        LinearLayout.LayoutParams handleParams = new LinearLayout.LayoutParams(dp(36), dp(4));
-        handleParams.gravity = Gravity.CENTER_HORIZONTAL; handleParams.bottomMargin = dp(22);
-        sheet.addView(handle, handleParams);
-
-        TextView title = AccountUi.text(this, getString(R.string.signup_occupation_title), 23);
-        title.setTypeface(getResources().getFont(R.font.pretendard_semibold));
-        title.setIncludeFontPadding(false);
-        title.setLetterSpacing(-.025f);
-        title.setLineSpacing(0f, 1.22f);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) title.setAccessibilityHeading(true);
-        AccountUi.add(this, sheet, title, 0);
-
-        TextView description = AccountUi.text(this,
-                "현재 가장 가까운 항목 하나를 선택해 주세요.\n선택하지 않고 넘어가도 괜찮아요.", 15);
-        description.setTypeface(getResources().getFont(R.font.pretendard_medium));
-        description.setIncludeFontPadding(false);
-        description.setLetterSpacing(-.012f);
-        description.setTextColor(0xFF647594);
-        description.setLineSpacing(dp(3), 1.18f);
-        AccountUi.add(this, sheet, description, 12);
-
-        ScrollView scroll = new ScrollView(this);
-        scroll.setVerticalScrollBarEnabled(true);
-        scroll.setScrollbarFadingEnabled(false);
-        scroll.setClipToPadding(false);
-        scroll.setPadding(0, dp(14), 0, dp(6));
-        RadioGroup choices = new RadioGroup(this); choices.setOrientation(RadioGroup.VERTICAL);
-        choices.setPadding(dp(4), dp(4), dp(4), dp(2));
+    private void setupOccupations() {
         String[] values = getResources().getStringArray(R.array.signup_occupations);
         for (int i = 0; i < values.length; i++) {
-            RadioButton option = new RadioButton(this); option.setId(View.generateViewId()); option.setTag(i);
-            option.setText(values[i]); option.setTextSize(17); option.setTextColor(AccountUi.INK);
+            final int index = i;
+            RadioButton option = new RadioButton(this);
+            option.setId(View.generateViewId());
+            option.setSaveEnabled(false);
+            option.setText(values[i]); option.setTextSize(19); option.setTextColor(AccountUi.INK);
             option.setTypeface(getResources().getFont(R.font.pretendard_medium));
             option.setIncludeFontPadding(false);
             option.setLetterSpacing(-.01f);
             option.setButtonDrawable(new android.graphics.drawable.InsetDrawable(
                     new AccountSelectionMark(getResources().getDisplayMetrics().density), dp(12), 0, dp(12), 0));
             option.setGravity(Gravity.CENTER_VERTICAL);
-            option.setPadding(0, dp(10), dp(14), dp(10)); option.setMinHeight(dp(56));
-            RadioGroup.LayoutParams params = new RadioGroup.LayoutParams(-1, -2);
-            params.topMargin = dp(6);
-            choices.addView(option, params);
-            option.setOnCheckedChangeListener((button, checked) -> {
-                GradientDrawable card = new GradientDrawable(); card.setCornerRadius(dp(16));
-                card.setColor(checked ? 0xFFEEF4FF : 0xFFF7F9FC);
-                card.setStroke(dp(checked ? 2 : 1), checked ? AccountUi.BLUE : 0xFFE2E8F0);
-                button.setTypeface(getResources().getFont(checked
-                        ? R.font.pretendard_semibold : R.font.pretendard_medium));
-                button.setBackground(card);
+            option.setPadding(0, dp(14), dp(12), dp(14)); option.setMinHeight(dp(60));
+            option.setBackgroundResource(R.drawable.signup_occupation_option);
+            option.setOnCheckedChangeListener((button, checked) -> button.setTypeface(
+                    getResources().getFont(checked ? R.font.pretendard_semibold : R.font.pretendard_medium)));
+            option.setOnClickListener(view -> {
+                occupationIndex = index;
+                setOccupationExpanded(false, true);
+                occupation.requestFocus();
+                occupation.announceForAccessibility(values[index]);
             });
-            GradientDrawable card = new GradientDrawable(); card.setCornerRadius(dp(16)); card.setColor(0xFFF7F9FC);
-            option.setBackground(card); if (i == occupationIndex) choices.check(option.getId());
+            occupationOptions.addView(option, new RadioGroup.LayoutParams(-1, -2));
         }
-        scroll.addView(choices); sheet.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-        Button done = AccountUi.button(this, "선택 완료", true);
-        done.setOnClickListener(v -> { View selected = choices.findViewById(choices.getCheckedRadioButtonId());
-            if (selected != null) occupationIndex = (Integer) selected.getTag(); refreshOccupation(); dialog.dismiss(); });
-        AccountUi.add(this, sheet, done, 16);
-        Button cancel = AccountUi.button(this, "돌아가기", false); cancel.setOnClickListener(v -> dialog.dismiss());
-        AccountUi.add(this, sheet, cancel, 8);
-        dialog.setContentView(sheet); dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        dialog.getWindow().setGravity(Gravity.BOTTOM); dialog.show();
-        dialog.getWindow().setLayout(Math.min(getResources().getDisplayMetrics().widthPixels - dp(24), dp(480)),
-                (int) (getResources().getDisplayMetrics().heightPixels * .80));
+        refreshOccupation();
+    }
+
+    private void setOccupationExpanded(boolean expanded, boolean animate) {
+        ViewGroup profile = findViewById(R.id.signup_profile_content);
+        if (occupationAnimator != null) {
+            occupationAnimator.removeAllListeners();
+            occupationAnimator.cancel();
+            occupationAnimator = null;
+        }
+        int startHeight = occupationOptions.getVisibility() == View.VISIBLE ? occupationOptions.getHeight() : 0;
+        occupationExpanded = expanded;
+        refreshOccupation();
+        if (expanded) {
+            View focused = getCurrentFocus();
+            if (focused != null && focused != occupation) focused.clearFocus();
+            InputMethodManager keyboard = getSystemService(InputMethodManager.class);
+            if (keyboard != null) keyboard.hideSoftInputFromWindow(occupation.getWindowToken(), 0);
+            occupation.requestFocus();
+        }
+        if (!animate || !ValueAnimator.areAnimatorsEnabled() || profile.getWidth() == 0) {
+            occupationOptions.getLayoutParams().height = ViewGroup.LayoutParams.WRAP_CONTENT;
+            occupationOptions.setVisibility(expanded ? View.VISIBLE : View.GONE);
+            occupationOptions.requestLayout();
+            if (expanded) occupationOptions.post(this::scrollToOccupation);
+            return;
+        }
+        occupationOptions.measure(View.MeasureSpec.makeMeasureSpec(profile.getWidth(), View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int endHeight = expanded ? occupationOptions.getMeasuredHeight() : 0;
+        occupationOptions.getLayoutParams().height = startHeight;
+        occupationOptions.setVisibility(View.VISIBLE);
+        occupationAnimator = ValueAnimator.ofInt(startHeight, endHeight);
+        occupationAnimator.setDuration(200);
+        occupationAnimator.addUpdateListener(animation -> {
+            occupationOptions.getLayoutParams().height = (Integer) animation.getAnimatedValue();
+            occupationOptions.requestLayout();
+        });
+        occupationAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override public void onAnimationEnd(Animator animation) {
+                occupationOptions.setVisibility(occupationExpanded ? View.VISIBLE : View.GONE);
+                occupationOptions.getLayoutParams().height = ViewGroup.LayoutParams.WRAP_CONTENT;
+                occupationOptions.requestLayout();
+                occupationAnimator = null;
+                if (occupationExpanded) occupationOptions.post(SignupActivity.this::scrollToOccupation);
+            }
+        });
+        occupationAnimator.start();
+    }
+
+    private void scrollToOccupation() {
+        if (!occupationExpanded) return;
+        View profile = findViewById(R.id.signup_profile_content);
+        View label = findViewById(R.id.signup_occupation_label);
+        ScrollView scroll = findViewById(R.id.signup_scroll);
+        scroll.smoothScrollTo(0, profile.getTop() + label.getTop() - dp(12));
     }
 
     private boolean validateAccount() {
         if (!passwordRulesReady) return false;
         clearErrors(R.id.signup_email_error, R.id.signup_password_error,
                 R.id.signup_password_confirm_error);
-        String emailValue = email.getText().toString().trim();
+        String emailValue = emailAddress();
         String passwordValue = password.getText().toString();
         if (!Patterns.EMAIL_ADDRESS.matcher(emailValue).matches()) {
             showError(R.id.signup_email_error, R.string.signup_error_email, email);
+            if (!email.getText().toString().trim().isEmpty()) {
+                if (emailDomainIndex < 0) emailDomain.requestFocus();
+                else if (isCustomEmailDomain()) emailCustomDomain.requestFocus();
+            }
             return false;
         }
         int passwordLength = passwordValue.codePointCount(0, passwordValue.length());
@@ -369,6 +476,7 @@ public final class SignupActivity extends Activity {
     private void showPage(int requestedPage, boolean changedByUser) {
         page = Math.max(0, Math.min(1, requestedPage));
         boolean accountPage = page == 0;
+        if (accountPage && occupationExpanded) setOccupationExpanded(false, false);
         findViewById(R.id.signup_account_content).setVisibility(accountPage ? View.VISIBLE : View.GONE);
         findViewById(R.id.signup_profile_content).setVisibility(accountPage ? View.GONE : View.VISIBLE);
         findViewById(R.id.signup_step_one).setBackgroundResource(
@@ -430,7 +538,10 @@ public final class SignupActivity extends Activity {
     }
 
     private void goBack() {
-        if (page > 0) showPage(0, true);
+        if (occupationExpanded) {
+            setOccupationExpanded(false, true);
+            occupation.requestFocus();
+        } else if (page > 0) showPage(0, true);
         else finish();
     }
 
@@ -461,6 +572,8 @@ public final class SignupActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle outState) {
         outState.putInt(PAGE_STATE, page);
         outState.putString(EMAIL_STATE, email.getText().toString());
+        outState.putInt(EMAIL_DOMAIN_STATE, emailDomainIndex);
+        outState.putString(EMAIL_CUSTOM_DOMAIN_STATE, emailCustomDomain.getText().toString());
         outState.putString(NAME_STATE, name.getText().toString());
         outState.putString(AGE_STATE, age.getText().toString());
         outState.putInt(OCCUPATION_STATE, occupationIndex);

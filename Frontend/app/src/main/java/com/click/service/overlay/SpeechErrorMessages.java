@@ -40,6 +40,7 @@ public final class SpeechErrorMessages {
     public static void log(Throwable error) {
         String reason = error instanceof ApiException ? (isNoSpeech((ApiException) error) ? "NO_SPEECH" : "HTTP_" + ((ApiException) error).status)
                 : error instanceof DeviceSpeechInput.DeviceError ? "DEVICE_" + ((DeviceSpeechInput.DeviceError) error).code
+                : "PRIVATE_STT_UNAVAILABLE".equals(error.getMessage()) ? "PRIVATE_STT_UNAVAILABLE"
                 : "AUTH_REQUIRED".equals(error.getMessage()) ? "AUTH_REQUIRED"
                 : "NO_SPEECH".equals(error.getMessage()) ? "NO_SPEECH" : error.getClass().getSimpleName();
         android.util.Log.w("ClickSpeech", "Input failed: " + reason);

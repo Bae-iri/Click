@@ -215,11 +215,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         trashDropParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
         trashDropParams.y = dp(18);
         speechHandler = new Handler(getMainLooper());
-        textToSpeech = new TextToSpeech(this, status -> {
+        textToSpeech = new TextToSpeech(this, status -> speechHandler.post(() -> {
+            if (closing || textToSpeech == null) return;
             ttsReady = status == TextToSpeech.SUCCESS;
             if (ttsReady) {
                 int language = textToSpeech.setLanguage(Locale.KOREA);
-                ttsReady = language != TextToSpeech.LANG_MISSING_DATA && language != TextToSpeech.LANG_NOT_SUPPORTED;
+                ttsReady = language >= TextToSpeech.LANG_AVAILABLE;
                 textToSpeech.setSpeechRate(0.92f);
             }
             ttsUnavailable = !ttsReady;
@@ -227,9 +228,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 String message = pendingSpeech; pendingSpeech = null; speak(message);
             } else if (ttsUnavailable) {
                 pendingSpeech = null;
+                android.util.Log.w("ClickNarration", "Korean TTS initialization failed");
                 if (taskFlowView != null) taskFlowView.setNarrationState(false, true);
             }
-        });
+        }));
         textToSpeech.setOnUtteranceProgressListener(new android.speech.tts.UtteranceProgressListener() {
             @Override public void onStart(String id) { updateNarration(id, true, false); }
             @Override public void onDone(String id) { updateNarration(id, false, false); }

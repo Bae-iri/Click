@@ -278,6 +278,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         if (floating.getControl().isVoiceInputActive() || transcribing) {
             cancelRecording();
             floating.getControl().setRecognizedSpeech("입력을 취소했어요. 다시 마이크를 눌러주세요.");
+            updateCopy();
             return;
         }
         narrator.stop();
@@ -291,6 +292,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     private void startRecording() {
         narrator.stop();
         floating.getControl().setVoiceInputActive(true);
+        floating.highlight(null, 0);
         floating.getControl().setRecognizedSpeech("마이크를 준비하고 있어요…");
         speech.start(new CloudSpeechRecognizer.Callback() {
             @Override public void onReady() {
@@ -315,6 +317,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 transcribing = false; floating.getControl().setVoiceInputActive(false);
                 com.click.service.overlay.SpeechErrorMessages.log(error);
                 String message = com.click.service.overlay.SpeechErrorMessages.message(error);
+                updateCopy();
                 floating.getControl().setRecognizedSpeech(message); narrator.speak(message);
             }
         });
@@ -366,7 +369,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         practiceReview = new RequirementReview(value);
         if (!practiceReview.isFont()) practiceReview = RequirementReview.forGoal(value, new JSONObject(), value);
         reviewView = new TaskFlowOverlayView(this, new TaskFlowOverlayView.Listener() {
-            public void collapse() { narrator.stop(); floating.collapseReview(); }
+            public void collapse() { narrator.stop(); floating.collapseReview(); updateCopy(); }
             public void openInput() { control("edit"); }
             public void chooseGoal(JSONObject goal) {} public void clarify(String choice) {}
             public void rephrase(String text) { requirementAnswer(text); }
@@ -403,7 +406,8 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         String message = practiceReview.isFont() ? practiceReview.prompt(ready)
                 : "내 요청에 방금 입력한 내용이 표시돼요. 내용 수정을 눌러 고칠 수 있어요. 맞으면 이 내용으로 시작을 눌러주세요.";
         narrator.speak(message);
-        floating.highlight(ready ? "이 내용으로 시작" : "휴대폰 기본 글자", 0);
+        floating.highlight(ready ? "이 내용으로 시작"
+                : practiceReview.needsTarget() ? "휴대폰 기본 글자" : "더 크게", 0);
     }
     @Override public void onHidden() {
         cancelRecording();
@@ -460,7 +464,9 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
             case VOICE:
                 heading = voiceTried ? "말씀이 글자로 나타나요" : mode == ClickOverlayLayout.Mode.VOICE ? "마이크를 누르고\n직접 말해보세요" : "‘말로 시작’을\n눌러보세요";
                 detail = voiceTried ? "인식한 말을 확인한 뒤 다음을 눌러요." : "마이크를 눌렀을 때만 들어요.\n예: 휴대폰 글자 크기 키워줘";
-                if (!voiceTried && !transcribing) floating.highlight(mode == ClickOverlayLayout.Mode.VOICE ? null : "말로 시작", mode == ClickOverlayLayout.Mode.VOICE ? R.id.overlay_microphone : 0);
+                if (!voiceTried && !transcribing && !floating.getControl().isVoiceInputActive())
+                    floating.highlight(mode == ClickOverlayLayout.Mode.VOICE ? null : "말로 시작",
+                            mode == ClickOverlayLayout.Mode.VOICE ? R.id.overlay_microphone : 0);
                 button = "다음"; enabled = voiceTried; break;
             case STOP:
                 heading = stopTried ? "요청을 멈췄어요" : "‘요청 중지’를\n눌러보세요";
@@ -484,7 +490,9 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 detail = restored ? "글과 말로 요청하고, 접고, 숨겨봤어요." : "아래 ‘click 버튼 다시 보기’를 눌러요.\n실제 앱에서는 홈에서 다시 켤 수 있어요.";
                 button = "배운 내용 확인하기"; enabled = restored; break;
         }
-        if (mode == ClickOverlayLayout.Mode.COLLAPSED && step > OPEN && step < FOLD && step != REPLY) {
+        boolean collapsedReview = step == REPLY && reviewView != null && reviewView.getVisibility() != View.VISIBLE;
+        if (mode == ClickOverlayLayout.Mode.COLLAPSED && step > OPEN && step < FOLD
+                && (step != REPLY || collapsedReview)) {
             floating.highlight(null, 0); floating.setClickHighlighted(true);
             heading = "click 버튼을 다시 누르면\n메뉴가 열려요";
             detail = "X는 창을 작게 접는 버튼이에요.\n버튼을 눌러 다시 이어서 해보세요.";
@@ -494,6 +502,13 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         action.setText(button);
         action.setEnabled(enabled);
         action.setAlpha(enabled ? 1f : .52f);
+        if (restore.getVisibility() == View.VISIBLE && !restored) {
+            floating.setClickHighlighted(false);
+            floating.highlight(restore);
+        } else if (enabled) {
+            floating.setClickHighlighted(false);
+            floating.highlight(action);
+        }
         feedback.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
         feedback.setText("연습 화면 · 휴대폰 설정은 바뀌지 않아요");
         String spokenDetail = step == WRITE && mode == ClickOverlayLayout.Mode.TEXT
