@@ -8,6 +8,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.TextView;
 import androidx.test.core.app.ActivityScenario;
@@ -105,6 +106,90 @@ public class TaskFlowOverlayTest {
                 find(panel, "요청 중지").performClick(); assertEquals("cancel_task", answers.control);
             });
         }
+    }
+
+    @Test public void unresolvedRequestSupportsVoiceEditingAndCancellationWithoutGoalSelection() {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(activity -> {
+                final int[] voiceEntries = {0};
+                Answers answers = new Answers() {
+                    @Override public void openInput() { voiceEntries[0]++; }
+                };
+                TaskFlowOverlayView panel = new TaskFlowOverlayView(activity, answers);
+                activity.setContentView(panel);
+                panel.unresolvedGoal("이거 좀 바꿔줘");
+                snapshot(panel, "unresolved");
+                assertTrue(find(panel, "어디에서 무엇을 바꾸고 싶은지 알려주세요.").isShown());
+                assertTrue(find(panel, "이거 좀 바꿔줘").isShown());
+                assertNull(find(panel, "이 목표로 시작"));
+                assertFalse(find(panel, "일시정지").isShown());
+                assertFalse(findDescription(panel, "말이나 글로 입력하기").isShown());
+                find(panel, "다시 말하기").performClick();
+                assertEquals(1, voiceEntries[0]);
+                assertTrue(answers.audioStopped);
+                assertNull(answers.goal);
+
+                find(panel, "글로 수정하기").performClick();
+                EditText editor = (EditText) findDescription(panel, "요청 내용 수정");
+                assertEquals("이거 좀 바꿔줘", editor.getText().toString());
+                assertTrue(editor.isShown());
+                editor.setText("   ");
+                assertFalse(find(panel, "이 내용으로 다시 요청").isEnabled());
+                find(panel, "이 내용으로 다시 요청").performClick();
+                assertNull(answers.clarification);
+                editor.setText(" 휴대폰 글자를 크게 해줘 ");
+                panel.setNarrationState(false, true);
+                assertEquals(" 휴대폰 글자를 크게 해줘 ", editor.getText().toString());
+                snapshot(panel, "unresolved-edit");
+                find(panel, "이 내용으로 다시 요청").performClick();
+                assertEquals("휴대폰 글자를 크게 해줘", answers.clarification);
+                assertNull(answers.goal);
+                find(panel, "다시 말하기").performClick();
+                assertEquals(2, voiceEntries[0]);
+                find(panel, "요청 취소").performClick();
+                assertEquals("cancel_task", answers.control);
+
+                panel.progress("글자를 크게 보기", new JSONArray(), "디스플레이를 눌러 주세요");
+                assertNull(find(panel, "이 내용으로 다시 요청"));
+                assertTrue(find(panel, "일시정지").isShown());
+                assertTrue(findDescription(panel, "말이나 글로 입력하기").isShown());
+            });
+        }
+    }
+
+    @Test public void unresolvedRequestKeepsActionsVisibleWithLargeTextAndKeyboardHeight() {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(activity -> {
+                android.content.res.Configuration config = new android.content.res.Configuration(
+                        activity.getResources().getConfiguration());
+                config.fontScale = 1.5f;
+                Context context = activity.createConfigurationContext(config);
+                TaskFlowOverlayView panel = new TaskFlowOverlayView(context, new Answers());
+                activity.setContentView(panel);
+                float density = context.getResources().getDisplayMetrics().density;
+                panel.setAvailableHeight(Math.round(440 * density));
+                panel.unresolvedGoal("이 화면에서 바꾸고 싶은 게 있는데 어떻게 하는지 모르겠어요. ".repeat(4));
+                snapshot(panel, "unresolved-large-text");
+                TextView retry = find(panel, "다시 말하기");
+                assertFullyInside(panel, retry);
+                assertFullyInside(panel, find(panel, "요청 취소"));
+                find(panel, "글로 수정하기").performClick();
+                panel.setAvailableHeight(Math.round(320 * density));
+                snapshot(panel, "unresolved-edit-large-text");
+                assertFullyInside(panel, find(panel, "이 내용으로 다시 요청"));
+                assertFullyInside(panel, find(panel, "요청 취소"));
+            });
+        }
+    }
+
+    private static void assertFullyInside(ViewGroup panel, View child) {
+        android.graphics.Rect bounds = new android.graphics.Rect();
+        child.getDrawingRect(bounds);
+        panel.offsetDescendantRectToMyCoords(child, bounds);
+        assertTrue(child.isShown());
+        assertTrue(bounds.top >= 0);
+        assertTrue(bounds.bottom <= panel.getHeight());
+        assertTrue(child.getHeight() >= Math.round(48 * panel.getResources().getDisplayMetrics().density));
     }
 
     @Test public void spokenProgressHidesInternalChecklistAndSupportsCaptions() throws Exception {

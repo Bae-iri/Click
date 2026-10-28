@@ -62,6 +62,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private final LinearLayout content;
     private final Button pause;
     private final Button reviewConfirm;
+    private final Button headerInput;
+    private final View divider;
+    private final LinearLayout controls;
+    private final LinearLayout recoveryActions;
     private TextView narrationStatus, narrationText;
     private LinearLayout requestCaptionRow;
     private Button narrationPlayback, narrationCaptions;
@@ -101,6 +105,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         titles.addView(heading);
         header.addView(titles, new LayoutParams(0, -2, 1));
         Button input = quietButton("입력", listener::openInput);
+        headerInput = input;
         input.setContentDescription("말이나 글로 입력하기");
         input.setTextSize(14);
         input.setPadding(dp(6), 0, dp(6), 0);
@@ -139,13 +144,18 @@ public final class TaskFlowOverlayView extends LinearLayout {
         LayoutParams reviewParams = spaced(0); reviewParams.bottomMargin = dp(10);
         addView(reviewConfirm, reviewParams);
 
-        View divider = new View(context);
+        recoveryActions = new LinearLayout(context);
+        recoveryActions.setOrientation(VERTICAL);
+        recoveryActions.setVisibility(GONE);
+        addView(recoveryActions, spaced(0));
+
+        divider = new View(context);
         divider.setBackgroundColor(BORDER);
         LayoutParams dividerParams = new LayoutParams(LayoutParams.MATCH_PARENT, dp(1));
         dividerParams.bottomMargin = dp(8);
         addView(divider, dividerParams);
 
-        LinearLayout controls = new LinearLayout(context);
+        controls = new LinearLayout(context);
         controls.setGravity(Gravity.CENTER);
         pause = quietButton("일시정지", () -> listener.control("pause_task"));
         LayoutParams pauseParams = new LayoutParams(0, -2, 1f);
@@ -172,6 +182,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private void clear(String title) {
         content.removeAllViews();
         reviewConfirm.setVisibility(GONE);
+        recoveryActions.removeAllViews();
+        recoveryActions.setVisibility(GONE);
+        headerInput.setVisibility(VISIBLE);
+        divider.setVisibility(VISIBLE);
+        controls.setVisibility(VISIBLE);
         narrationStatus = narrationText = null;
         narrationPlayback = narrationCaptions = null;
         narrationMessage = null; narrationSpeaking = false; requestCaptionRow = null;
@@ -181,6 +196,108 @@ public final class TaskFlowOverlayView extends LinearLayout {
         heading.setText(title);
         pause.setText("일시정지"); pause.setOnClickListener(v -> listener.control("pause_task"));
     }
+
+    /** An unresolved request has no selectable goal or running task to pause. */
+    public void unresolvedGoal(String request) {
+        clear("조금 더 알려주세요");
+        headerInput.setVisibility(GONE);
+        divider.setVisibility(GONE);
+        controls.setVisibility(GONE);
+        recoveryActions.setVisibility(VISIBLE);
+
+        TextView help = text(getContext().getString(R.string.unresolved_goal_guidance), 16);
+        content.addView(help, spaced(0));
+        if (request != null && !request.trim().isEmpty()) {
+            addRequestBox(request, null);
+            ((LayoutParams) content.getChildAt(content.getChildCount() - 1).getLayoutParams()).topMargin = dp(12);
+        }
+        LinearLayout example = new LinearLayout(getContext());
+        example.setOrientation(VERTICAL);
+        example.setPadding(dp(14), dp(10), dp(14), dp(10));
+        example.setBackground(round(PALE_BLUE, 14));
+        TextView exampleLabel = text("이렇게 말해 보세요", 13);
+        exampleLabel.setTextColor(BLUE_DARK);
+        example.addView(exampleLabel);
+        example.addView(text("“휴대폰 글자를 더 크게 해 줘”", 16));
+        content.addView(example, spaced(12));
+
+        LinearLayout editor = new LinearLayout(getContext());
+        editor.setOrientation(VERTICAL);
+        TextView label = text("요청 내용", 14);
+        label.setTextColor(SECONDARY);
+        editor.addView(label);
+        EditText input = new EditText(getContext());
+        input.setTextSize(17); input.setTextColor(INK); input.setHintTextColor(SECONDARY);
+        input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
+        input.setContentDescription("요청 내용 수정");
+        input.setHint("예) 휴대폰 글자를 더 크게 해 줘");
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        input.setGravity(Gravity.TOP | Gravity.START);
+        input.setMinLines(2); input.setMaxLines(4);
+        input.setPadding(dp(14), dp(12), dp(14), dp(12));
+        input.setBackground(outline(Color.WHITE, BORDER, 14));
+        input.setText(request == null ? "" : request);
+        editor.addView(input, spaced(4));
+        editor.setVisibility(GONE);
+        content.addView(editor, spaced(12));
+
+        Runnable voice = () -> {
+            hideKeyboard(input);
+            listener.stopGuidance();
+            listener.openInput();
+        };
+        Button retry = primaryButton("다시 말하기", voice);
+        recoveryActions.addView(retry, spaced(0));
+        LinearLayout alternatives = new LinearLayout(getContext());
+        Button edit = quietButton("글로 수정하기", () -> {});
+        edit.setOnClickListener(v -> {
+            if (editor.getVisibility() == VISIBLE) { voice.run(); return; }
+            listener.stopGuidance();
+            heading.setText("요청을 수정해 주세요");
+            for (int i = 1; i < content.getChildCount(); i++) content.getChildAt(i).setVisibility(GONE);
+            editor.setVisibility(VISIBLE);
+            retry.setText("이 내용으로 다시 요청");
+            retry.setOnClickListener(submit -> {
+                String revised = input.getText().toString().trim();
+                if (revised.isEmpty()) return;
+                hideKeyboard(input);
+                listener.rephrase(revised);
+            });
+            retry.setEnabled(!input.getText().toString().trim().isEmpty());
+            retry.setAlpha(retry.isEnabled() ? 1f : .48f);
+            edit.setText("다시 말하기");
+            input.requestFocus(); input.setSelection(input.length());
+            showKeyboardWhenFocused(input);
+        });
+        input.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (editor.getVisibility() != VISIBLE) return;
+                retry.setEnabled(!s.toString().trim().isEmpty());
+                retry.setAlpha(retry.isEnabled() ? 1f : .48f);
+            }
+            @Override public void afterTextChanged(android.text.Editable value) {}
+        });
+        edit.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 12));
+        alternatives.addView(edit, new LayoutParams(0, -2, 1));
+        Button cancel = quietButton("요청 취소", () -> {
+            hideKeyboard(input);
+            listener.stopGuidance();
+            listener.control("cancel_task");
+        });
+        cancel.setTextColor(SECONDARY);
+        cancel.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 12));
+        alternatives.addView(cancel, new LayoutParams(0, -2, 1));
+        recoveryActions.addView(alternatives, spaced(4));
+    }
+
+    private void hideKeyboard(EditText input) {
+        android.view.inputmethod.InputMethodManager keyboard = (android.view.inputmethod.InputMethodManager)
+                getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (keyboard != null) keyboard.hideSoftInputFromWindow(input.getWindowToken(), 0);
+        input.clearFocus();
+    }
+
     public void goals(String message, JSONArray candidates) {
         clear("어떤 도움을 원하세요?");
         addNarration(message);

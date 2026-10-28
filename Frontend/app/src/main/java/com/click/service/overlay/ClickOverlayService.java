@@ -623,6 +623,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     updateRequestStatus(true, false);
                     org.json.JSONArray candidates = goalSelection.getJSONArray("candidates");
                     if (candidates.length() == 1) { chooseResolvedGoal(candidates.getJSONObject(0).getJSONObject("goal")); return; }
+                    if (candidates.length() == 0) { showUnresolvedGoal(); return; }
                     taskFlowView.goals(goalSelection.getString("message"), goalSelection.getJSONArray("candidates"));
                     placeTaskFlow(null, true);
                     speak(goalSelection.getString("message"));
@@ -729,10 +730,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void showUnresolvedGoal() {
         if (requirementReview != null) { showRequirementReview(); return; }
         try {
-            String message = "요청의 대상을 확인하지 못했어요. 대상과 원하는 변경을 구체적으로 말씀해 주세요.";
+            String message = getString(com.click.R.string.unresolved_goal_guidance);
             goalSelection = new JSONObject().put("message", message).put("candidates", new org.json.JSONArray());
             updateRequestStatus(true, false);
-            taskFlowView.goals(message, goalSelection.getJSONArray("candidates"));
+            taskFlowView.unresolvedGoal(initialGoal);
             placeTaskFlow(null, true); speak(message);
         } catch (org.json.JSONException error) { showQueueError(error); }
     }

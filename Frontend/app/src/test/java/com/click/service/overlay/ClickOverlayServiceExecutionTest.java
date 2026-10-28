@@ -160,6 +160,21 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(1, sent.size());
     }
 
+    @Test public void failedResolutionShowsRecoveryWithOriginalRequestWithoutStartingTask() throws Exception {
+        set("initialGoal", "이거 좀 바꿔줘");
+        doAnswer(call -> {
+            ((AgentTurnGateway.Callback) call.getArgument(1)).onFailure(new java.io.IOException("unavailable"));
+            return null;
+        }).when(gateway).send(any(), any());
+        Method resolve = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
+        resolve.setAccessible(true);
+        resolve.invoke(service, "이거 좀 바꿔줘", null);
+        verify((TaskFlowOverlayView) get("taskFlowView")).unresolvedGoal("이거 좀 바꿔줘");
+        verify((TaskFlowOverlayView) get("taskFlowView"), never()).goals(any(), any());
+        assertNull(get("acceptedGoal"));
+        assertEquals(0, ((JSONObject) get("goalSelection")).getJSONArray("candidates").length());
+    }
+
     @Test public void incompleteOrUnsupportedPreparationCannotStart() throws Exception {
         for (String status : List.of("needs_input", "unsupported", "cancelled")) {
             preparation.put("status", status);
