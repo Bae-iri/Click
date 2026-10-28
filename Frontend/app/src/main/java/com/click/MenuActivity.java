@@ -10,8 +10,10 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -44,6 +46,7 @@ public final class MenuActivity extends AppCompatActivity {
     private static final int SECONDARY = 0xFF7182A4;
     private static final int BORDER = 0xFFE5EDF8;
     private static final int DANGER = 0xFFE94467;
+    private static final int GRANTED = 0xFF1E9E55;
     private static final String[] JOBS = {
             "직업을 선택해주세요", "IT/소프트웨어", "제조업", "서비스업", "사무/관리",
             "자영업", "교육/연구", "의료/보건", "공무원", "주부", "학생", "무직", "기타"
@@ -97,6 +100,8 @@ public final class MenuActivity extends AppCompatActivity {
         divider(settings);
         addRow(settings, MenuIconView.Kind.SLIDERS, "맞춤 안내 기록 설정", false,
                 view -> showTimingConsentDialog());
+        divider(settings);
+        settings.addView(touchAutomationRow());
         add(page, settings, 22);
 
         LinearLayout tutorial = group();
@@ -123,6 +128,24 @@ public final class MenuActivity extends AppCompatActivity {
         setContentView(root);
         root.requestApplyInsets();
         refreshProfile();
+    }
+
+    private View touchAutomationRow() {
+        LinearLayout row = vertical();
+        row.setPadding(dp(16), dp(14), dp(16), dp(14));
+        com.click.data.local.TouchAutomationSettings preferences = new com.click.data.local.TouchAutomationSettings(this);
+        androidx.appcompat.widget.SwitchCompat toggle = new androidx.appcompat.widget.SwitchCompat(this);
+        toggle.setText("버튼 자동 터치");
+        toggle.setTextSize(18);
+        toggle.setTextColor(INK);
+        toggle.setMinHeight(dp(48));
+        toggle.setChecked(preferences.isEnabled());
+        toggle.setOnCheckedChangeListener((button, enabled) -> preferences.setEnabled(enabled));
+        row.addView(toggle, new LinearLayout.LayoutParams(-1, -2));
+        TextView description = text("ON: 지원하는 설정 메뉴 이동과 글자 크기 조절을 자동으로 해요.\nOFF: 위치만 안내해요.\n결제·전화 걸기·메시지 보내기는 자동 실행하지 않아요.", 14, SECONDARY, medium);
+        description.setLineSpacing(dp(4), 1f);
+        add(row, description, 8);
+        return row;
     }
 
     private View header() {
@@ -226,16 +249,90 @@ public final class MenuActivity extends AppCompatActivity {
         boolean overlay = Settings.canDrawOverlays(this);
         boolean microphone = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED;
-        new AlertDialog.Builder(this)
-                .setTitle("권한 상태")
-                .setMessage("접근성  " + mark(accessibility)
-                        + "\n다른 앱 위 표시  " + mark(overlay)
-                        + "\n마이크  " + mark(microphone))
-                .setNegativeButton("닫기", null)
-                .setPositiveButton(accessibility ? "확인" : "접근성 안내 보기", (dialog, which) -> {
-                    if (!accessibility) startActivity(new Intent(this,
-                            com.click.designpreview.AccessibilityHelpActivity.class));
-                }).show();
+        int missing = (accessibility ? 0 : 1) + (overlay ? 0 : 1) + (microphone ? 0 : 1);
+
+        LinearLayout card = vertical();
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(Color.WHITE);
+        background.setCornerRadius(dp(28));
+        card.setBackground(background);
+        card.setPadding(dp(22), dp(26), dp(22), dp(20));
+
+        TextView title = text("권한 상태", 23, INK, bold);
+        if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
+        card.addView(title, new LinearLayout.LayoutParams(-1, -2));
+        TextView summary = text(missing == 0 ? "모든 권한이 허용되어 있어요."
+                : missing + "개 권한이 필요해요. 눌러서 허용할 수 있어요.", 15, SECONDARY, medium);
+        summary.setLineSpacing(dp(3), 1f);
+        add(card, summary, 10);
+
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(card).create();
+        add(card, permissionRow("접근성", "화면을 읽고 안내를 표시해요", accessibility, () -> {
+            dialog.dismiss();
+            startActivity(new Intent(this, com.click.designpreview.AccessibilityHelpActivity.class));
+        }), 20);
+        add(card, permissionRow("다른 앱 위 표시", "Click 버튼을 다른 앱 위에 띄워요", overlay, () -> {
+            dialog.dismiss();
+            startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName())));
+        }), 10);
+        add(card, permissionRow("마이크", "말로 요청할 때 사용해요", microphone, () -> {
+            dialog.dismiss();
+            startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + getPackageName())));
+        }), 10);
+
+        TextView confirm = text("확인", 17, Color.WHITE, semibold);
+        confirm.setGravity(Gravity.CENTER);
+        confirm.setBackground(ripple(BLUE, 18));
+        confirm.setClickable(true);
+        confirm.setFocusable(true);
+        confirm.setOnClickListener(view -> dialog.dismiss());
+        LinearLayout.LayoutParams confirmParams = new LinearLayout.LayoutParams(-1, dp(56));
+        confirmParams.topMargin = dp(22);
+        card.addView(confirm, confirmParams);
+
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
+    }
+
+    /** One permission line: name and purpose on the left, a colored status chip on the right. */
+    private View permissionRow(String label, String purpose, boolean granted, Runnable openSettings) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setMinimumHeight(dp(72));
+        row.setPadding(dp(16), dp(12), dp(12), dp(12));
+        row.setBackground(ripple(granted ? 0xFFF5F8FD : 0xFFFFF4F7, 18));
+
+        LinearLayout copy = vertical();
+        copy.addView(text(label, 17, INK, semibold), new LinearLayout.LayoutParams(-1, -2));
+        TextView detail = text(purpose, 13, SECONDARY, medium);
+        LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(-1, -2);
+        detailParams.topMargin = dp(6);
+        copy.addView(detail, detailParams);
+        row.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
+
+        TextView chip = text(granted ? "허용됨" : "허용하기 ›", 14,
+                granted ? GRANTED : DANGER, semibold);
+        chip.setGravity(Gravity.CENTER);
+        chip.setPadding(dp(12), dp(8), dp(12), dp(8));
+        GradientDrawable chipBackground = new GradientDrawable();
+        chipBackground.setColor(granted ? 0xFFE6F6EC : 0xFFFFE3EA);
+        chipBackground.setCornerRadius(dp(14));
+        chip.setBackground(chipBackground);
+        LinearLayout.LayoutParams chipParams = new LinearLayout.LayoutParams(-2, -2);
+        chipParams.setMarginStart(dp(10));
+        row.addView(chip, chipParams);
+
+        row.setContentDescription(label + ", " + (granted ? "허용됨" : "허용 필요, 눌러서 설정 열기"));
+        if (!granted) {
+            row.setClickable(true);
+            row.setFocusable(true);
+            row.setOnClickListener(view -> openSettings.run());
+        }
+        return row;
     }
 
     private void showEditProfile() {
@@ -373,8 +470,6 @@ public final class MenuActivity extends AppCompatActivity {
         if (personalizationEvents != null) personalizationEvents.close();
         super.onDestroy();
     }
-
-    private String mark(boolean enabled) { return enabled ? "허용됨" : "허용 필요"; }
 
     private void closeMenu() {
         finish();

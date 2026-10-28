@@ -48,6 +48,8 @@ public final class ClickOverlayLayout extends ViewGroup {
     private final EditText goalInput;
     private final ChatBubbleView chatBubbles;
     private LinearLayout panel;
+    private LoadingStatusView loadingStatus;
+    private String loadingMessage;
     private TextView transcript;
     private LinearLayout textEntry;
     private TextView voiceSwitch;
@@ -108,6 +110,10 @@ public final class ClickOverlayLayout extends ViewGroup {
     public void setRecognizedSpeech(String text) {
         recognizedSpeech = text == null || text.trim().isEmpty() ? "인식한 말이 여기에 표시돼요." : text.trim();
         if (transcript != null) transcript.setText(recognizedSpeech);
+    }
+    public void setLoadingStatus(String message) {
+        loadingMessage = message;
+        if (loadingStatus != null) loadingStatus.setStatus(message);
     }
     public void addUserMessage(String text) { chatBubbles.add(text, true); }
     public void addAssistantMessage(String text) { chatBubbles.add(text, false); }
@@ -170,6 +176,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         detach(goalInput);
         detach(chatBubbles);
         removeAllViews();
+        loadingStatus = null;
         transcript = null;
         textEntry = null;
         voiceSwitch = null;
@@ -211,6 +218,10 @@ public final class ClickOverlayLayout extends ViewGroup {
         requestRow.addView(stopRequest, new LinearLayout.LayoutParams(-2, -2));
         panel.addView(requestRow, spaced(8));
         setRequestStatus(requestStatus, requestStoppable);
+
+        loadingStatus = new LoadingStatusView(getContext());
+        loadingStatus.setStatus(loadingMessage);
+        panel.addView(loadingStatus, spaced(8));
 
         if (mode == Mode.MENU) {
             LinearLayout choices = new LinearLayout(getContext());

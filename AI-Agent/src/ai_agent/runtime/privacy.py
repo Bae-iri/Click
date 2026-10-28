@@ -2,6 +2,7 @@
 from dataclasses import replace
 import math
 import re
+from ai_agent.runtime.vision_vocabulary import VISION_LABELS, labels_for
 
 PATTERNS = (
     re.compile(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}"),
@@ -12,31 +13,22 @@ PATTERNS = (
 )
 NUMERIC_EXTRAS = {"progress", "value", "current", "range_current", "percent", "min", "max"}
 
-# Unknown OCR is removed wholesale, including names/addresses regexes cannot recognize.
-# Keep aligned with FE VisionPrivacy; this is the current approved settings graph vocabulary.
-VISION_LABELS = frozenset({
-    "설정", "settings", "디스플레이", "display", "화면", "screen", "접근성", "accessibility",
-    "시인성 향상", "시인성", "visibility", "visibility enhancements", "글자 크기", "글꼴 크기",
-    "폰트 크기", "text size", "글자 크기와 스타일", "글꼴 크기 및 스타일", "font size", "font size and style",
-})
-
-
-def allowed_vision_label(value):
+def allowed_vision_label(value, vocabulary_key=None):
     label = " ".join(value.strip().lower().split())
-    return label if label in VISION_LABELS else None
+    return label if label in labels_for(vocabulary_key) else None
 
 
-def sanitize_vision_snapshot(vision):
+def sanitize_vision_snapshot(vision, vocabulary_key=None):
     if not vision.redaction_applied:
         raise ValueError("Vision masking was not completed")
     elements = []
     for index, element in enumerate(vision.elements):
-        label = allowed_vision_label(element.text)
+        label = allowed_vision_label(element.text, vocabulary_key)
         if label is not None:
             # Do not reflect arbitrary provider/element identifiers containing private text.
             elements.append(replace(element, element_id=f"ocr_{index}", text=label,
                 role=element.role if element.role in {"slider", "button", "menu_item", "text"} else None))
-    lines = tuple(filter(None, (allowed_vision_label(line) for line in (vision.ocr_text or "").splitlines())))
+    lines = tuple(filter(None, (allowed_vision_label(line, vocabulary_key) for line in (vision.ocr_text or "").splitlines())))
     return replace(vision, screenshot_base64=None, mime_type="image/png", provider="on_device_ocr",
         elements=tuple(elements), ocr_text="\n".join(lines) or None, privacy_status="verified")
 
@@ -60,7 +52,7 @@ def sensitive_node(node):
             or any(node.extras.get(key) for key in ("password", "is_password", "isPassword", "editable", "isEditable")))
 
 
-def sanitize_request(request):
+def sanitize_request(request, *, vision_vocabulary_key=None):
     nodes = tuple(replace(node,
         text=None if sensitive_node(node) else redact_text(node.text),
         content_description=None if sensitive_node(node) else redact_text(node.content_description),
@@ -74,7 +66,7 @@ def sanitize_request(request):
         authorized = vision.user_consented and vision.consent_request_id == request.request_id
         if authorized:
             try:
-                vision = sanitize_vision_snapshot(vision)
+                vision = sanitize_vision_snapshot(vision, vision_vocabulary_key)
             except Exception:
                 # Fail closed, without exception text, provider data, labels or image egress.
                 vision = replace(vision, screenshot_base64=None, ocr_text=None, elements=(),

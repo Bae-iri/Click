@@ -17,6 +17,7 @@ public final class ScreenSnapshot {
     public final List<AccessibilityNodeSnapshot> nodes;
     public final boolean privacyMaskingReady;
     public final Float appliedFontScale;
+    public final String screenRevision;
 
     public ScreenSnapshot(
             String packageName,
@@ -41,6 +42,14 @@ public final class ScreenSnapshot {
     public ScreenSnapshot(String packageName, String capturedAt, int screenWidth, int screenHeight,
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
                           Float appliedFontScale) {
+        this(packageName, capturedAt, screenWidth, screenHeight, nodes, activeWindowId,
+                privacyMaskingReady, appliedFontScale, null);
+    }
+
+    private ScreenSnapshot(String packageName, String capturedAt, int screenWidth, int screenHeight,
+                          List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
+                          Float appliedFontScale, String screenRevision) {
+        this.screenRevision = screenRevision;
         this.appliedFontScale = appliedFontScale;
         this.privacyMaskingReady = privacyMaskingReady;
         this.activeWindowId = activeWindowId;
@@ -51,6 +60,11 @@ public final class ScreenSnapshot {
         this.nodes = Collections.unmodifiableList(nodes);
     }
 
+    public ScreenSnapshot withScreenRevision(String revision) {
+        return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
+                activeWindowId, privacyMaskingReady, appliedFontScale, revision);
+    }
+
     public String toJson() {
         try {
             JSONObject object = new JSONObject();
@@ -58,6 +72,7 @@ public final class ScreenSnapshot {
             if (activeWindowId != null) object.put("active_window_id", activeWindowId);
             object.put("captured_at", capturedAt);
             object.put("observation_id", observationId);
+            if (screenRevision != null) object.put("screen_revision", screenRevision);
             object.put("captured_at_ms", java.time.Instant.parse(capturedAt).toEpochMilli());
             if (appliedFontScale != null && Float.isFinite(appliedFontScale) && appliedFontScale > 0) {
                 object.put("applied_settings", new JSONObject()
@@ -79,6 +94,7 @@ public final class ScreenSnapshot {
         StringBuilder value = new StringBuilder(packageName).append('|').append(screenWidth)
                 .append('x').append(screenHeight).append('|').append(activeWindowId);
         value.append('|').append(privacyMaskingReady).append('|').append(appliedFontScale);
+        value.append('|').append(screenRevision);
         for (AccessibilityNodeSnapshot node : nodes) {
             value.append('|').append(node.nodeId).append(':').append(node.text)
                     .append(':').append(node.contentDescription).append(':').append(node.className)

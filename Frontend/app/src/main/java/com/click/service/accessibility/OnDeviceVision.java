@@ -22,6 +22,7 @@ import java.util.List;
 /** Called only once after the user accepts the current BE vision challenge. */
 public final class OnDeviceVision {
     public interface Callback {
+        default void onImageCaptured() {}
         void onSuccess(ScreenSnapshot screen, JSONObject snapshot);
         void onFailure(String code, String message);
     }
@@ -29,7 +30,27 @@ public final class OnDeviceVision {
     private OnDeviceVision() {}
 
     static void capture(AccessibilityService service, VisionOcrEngine engine,
-                        ScreenSnapshot screen, Callback callback) {
+                        VisionPrivacy privacy, String vocabularyKey, String strategy, int[] focus,
+                        ScreenSnapshot screen, Callback resultCallback) {
+        android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+        java.util.concurrent.atomic.AtomicBoolean finished = new java.util.concurrent.atomic.AtomicBoolean();
+        Runnable timeout = () -> {
+            if (finished.compareAndSet(false, true))
+                resultCallback.onFailure("ocr_failed", "화면 분석 시간이 초과됐어요.");
+        };
+        Callback callback = new Callback() {
+            public void onSuccess(ScreenSnapshot observed, JSONObject snapshot) {
+                if (finished.compareAndSet(false, true)) {
+                    handler.removeCallbacks(timeout); resultCallback.onSuccess(observed, snapshot);
+                }
+            }
+            public void onFailure(String code, String message) {
+                if (finished.compareAndSet(false, true)) {
+                    handler.removeCallbacks(timeout); resultCallback.onFailure(code, message);
+                }
+            }
+        };
+        handler.postDelayed(timeout, 10000L);
         if (Build.VERSION.SDK_INT < 30) {
             callback.onFailure("unsupported", "화면 분석은 Android 11 이상에서 지원해요.");
             return;
@@ -49,6 +70,7 @@ public final class OnDeviceVision {
             service.takeScreenshot(Display.DEFAULT_DISPLAY, service.getMainExecutor(),
                     new AccessibilityService.TakeScreenshotCallback() {
                 @Override public void onSuccess(AccessibilityService.ScreenshotResult result) {
+                    if (finished.get()) { result.getHardwareBuffer().close(); return; }
                     Bitmap bitmap = null;
                     try (HardwareBuffer buffer = result.getHardwareBuffer()) {
                         Bitmap hardware = Bitmap.wrapHardwareBuffer(buffer, result.getColorSpace());
@@ -69,6 +91,13 @@ public final class OnDeviceVision {
                         callback.onFailure("screen_changed", "화면 크기가 바뀌었어요. 현재 화면에서 다시 요청해 주세요.");
                         return;
                     }
+                    ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+                    if (current == null || !screen.fingerprint().equals(current.fingerprint())) {
+                        bitmap.recycle();
+                        callback.onFailure("screen_changed", "캡처 중 화면이 바뀌어 분석하지 않았어요. 다시 요청해 주세요.");
+                        return;
+                    }
+                    resultCallback.onImageCaptured();
                     // Remove known input fields before local OCR. Only graph labels leave the device.
                     try {
                         Canvas canvas = new Canvas(bitmap);
@@ -87,10 +116,12 @@ public final class OnDeviceVision {
                         callback.onFailure("masking_failed", "개인정보를 안전하게 가리지 못해 화면 분석을 중단했어요.");
                         return;
                     }
-                    recognize(engine, bitmap, screen, capturedAtMs, callback);
+                    recognize(engine, privacy, vocabularyKey, strategy, focus, bitmap, screen, capturedAtMs, callback);
                 }
                 @Override public void onFailure(int errorCode) {
-                    callback.onFailure("capture_failed", "화면 캡처를 사용할 수 없어요. 접근성 권한 또는 보호된 화면인지 확인해 주세요.");
+                    callback.onFailure(errorCode == AccessibilityService.ERROR_TAKE_SCREENSHOT_NO_ACCESSIBILITY_ACCESS
+                            || errorCode == AccessibilityService.ERROR_TAKE_SCREENSHOT_SECURE_WINDOW ? "unsupported" : "capture_failed",
+                            "화면 캡처를 사용할 수 없어요. 접근성 권한 또는 보호된 화면인지 확인해 주세요.");
                 }
             });
         } catch (RuntimeException error) {
@@ -98,15 +129,17 @@ public final class OnDeviceVision {
         }
     }
 
-    private static void recognize(VisionOcrEngine engine, Bitmap bitmap, ScreenSnapshot screen,
+    private static void recognize(VisionOcrEngine engine, VisionPrivacy privacy, String vocabularyKey,
+                                  String strategy, int[] focus,
+                                  Bitmap bitmap, ScreenSnapshot screen,
                                   long capturedAtMs, Callback callback) {
         try {
-            engine.recognize(bitmap, screen, new VisionOcrEngine.Callback() {
+            engine.recognize(bitmap, screen, strategy, focus, new VisionOcrEngine.Callback() {
                 @Override public void onSuccess(List<VisionOcrElement> elements, long processingTimeMs) {
                     bitmap.recycle();
                     try {
                         callback.onSuccess(screen, AgentVisionSnapshot.fromOcr(
-                                screen, true, exportable(elements), capturedAtMs, processingTimeMs));
+                                screen, true, exportable(elements, privacy, vocabularyKey), capturedAtMs, processingTimeMs));
                     } catch (RuntimeException error) {
                         callback.onFailure("masking_failed", "전송할 글자의 개인정보 검사를 완료하지 못해 분석을 중단했어요.");
                     }
@@ -129,10 +162,11 @@ public final class OnDeviceVision {
     }
 
     /** Only allowlisted graph labels leave the device; everything else is dropped by line. */
-    private static List<VisionOcrElement> exportable(List<VisionOcrElement> elements) {
+    private static List<VisionOcrElement> exportable(List<VisionOcrElement> elements,
+                                                   VisionPrivacy privacy, String vocabularyKey) {
         List<VisionOcrElement> output = new ArrayList<>();
         for (VisionOcrElement element : elements) {
-            String label = VisionPrivacy.exportLabel(element.text);
+            String label = privacy.exportLabel(element.text, vocabularyKey);
             if (label == null) continue;
             boolean title = label.equals("설정") || label.equals("settings");
             output.add(new VisionOcrElement("ocr_" + output.size(), label, element.bounds,
