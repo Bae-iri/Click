@@ -9,6 +9,7 @@
   },
   "loggers": {
     "click.http": {"handlers": ["console"], "level": "INFO", "propagate": false},
+    "click.validation": {"handlers": ["console"], "level": "INFO", "propagate": false},
     "uvicorn": {"handlers": ["console"], "level": "INFO", "propagate": false},
     "uvicorn.access": {"handlers": [], "level": "CRITICAL", "propagate": false}
   }

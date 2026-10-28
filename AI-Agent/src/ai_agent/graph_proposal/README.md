@@ -1,6 +1,28 @@
 # AI-Agent 2: 실행 기록 분석과 그래프 개선
 
-갱신: 2026-10-27. 사용자 안내와 독립적으로 실행하는 오프라인 파이프라인입니다. 별도 GPU·LLM은 필수가 아닙니다.
+갱신: 2026-10-28. 사용자 안내와 독립적으로 실행하는 오프라인 파이프라인입니다. 별도 GPU·LLM은 필수가 아닙니다.
+
+## 폴더 구조와 연결 경계
+
+```text
+graph_proposal/
+  contracts.py       # 이벤트·manifest 계약과 fingerprint
+  schemas.py         # 후보 등 공통 데이터 구조
+  graphs.py          # 순수 JSON graph 검사·우선순위 patch
+  ingestion/         # runtime 이벤트 수집 계약
+  reconstruction/    # episode·step·행동 전후 증거 연결
+  labeling/          # 작업별 라벨 판정
+  outcomes.py        # 단계 결과 판정
+  analysis/          # 실패 유형·분모·추가 수집 요청
+  datasets/          # manifest 검수와 train/validation/holdout 분리
+  proposals/         # 기존 대체 전이 우선순위 후보 생성
+  evaluation/        # 구조·출처·독립 replay·회귀 평가
+  releases/          # 검토·승인·version·rollback 계약
+  models/            # CPU 빈도 baseline·로컬 artifact registry
+  workflows/         # 위 단계를 연결하는 오프라인 pipeline
+```
+
+DB·사용자 동의·삭제 연계와 실제 AI1 replay adapter는 `Backend/scripts/agent2.py`, release 영속화는 `Backend/app/repositories/graph_releases.py`가 담당합니다. 합성 입력은 `AI-Agent/data/fixtures/agent2/`, 로컬 산출물은 Git에서 제외한 `AI-Agent/data/local/`에 둡니다. 모델 학습과 graph 후보 생성은 서로 다른 단계입니다.
 
 ## 구현된 범위
 
@@ -28,6 +50,8 @@ python scripts/maintenance.py
 ```
 
 process는 세션별 재구성·분석 결과를 원천 event에 연결된 DB receipt로 저장합니다. 같은 입력은 중복 처리하지 않고, 최신 세션 결과 하나를 유지합니다. 원문 화면·목표·토큰을 출력하거나 사용자 데이터를 파일로 반출하지 않습니다. 동의 전 기록을 소급 사용하지 않으며 철회·탈퇴·세션 삭제·가장 오래된 근거 만료 시 결과를 삭제합니다.
+
+audit는 `structural_valid`(구조·참조 무결성), `static_valid`(현재 runtime 실행 조건 포함), `execution_enabled`(승인·활성·검사 통과)를 구분합니다. 미지원 완료 predicate와 담당 영역을 별도 보고하며 `device_validation`은 항상 `NOT_ASSESSED`입니다. 초안의 미지원 기능을 DB 손상과 혼동하지 않습니다. 승인 graph 결함이 있으면 CLI는 실패 종료합니다.
 
 운영 DB 분석은 split/독립 검수가 아직 없는 기록을 자동 학습·배포하지 않습니다. 후보 생성·평가는 별도로 검수한 데이터셋과 manifest를 준비한 뒤 실행합니다. audit는 DB에 등록된 graph 전부를 검사하며 초안의 미지원 predicate와 승인 graph 결함을 구분합니다. 구조 통과는 실기기 통과가 아닙니다.
 
@@ -57,6 +81,8 @@ python scripts/agent2.py train-baseline --run ../AI-Agent/data/local/example.jso
 검수한 replay case는 episode_id, task_id, source_kind, base graph_hash, review_revision, evidence_refs와 replay 본문을 담습니다. replay는 ai1-recovery-replay.v1의 turns/observation/독립 expected를 사용합니다. manifest의 holdout·검수 revision·근거와 일치해야 합니다. 행동이 있는 turn은 실제 captured target과 이전 guide 연결이 필요합니다.
 
 GraphValidator는 runtime adapter와 graph loader를 주입받습니다. 실제 AI1을 호출하는 adapter는 [Backend CLI](../../../../Backend/scripts/agent2.py)에 있어 Agent 2가 Agent 1을 직접 import하지 않습니다. 결과는 PASS/REJECT/NEEDS_DATA/ERROR이며 데이터 부족을 성공으로 간주하지 않습니다. PASS는 선언된 사례의 판정일 뿐 전체 사용자 성공률이 아닙니다.
+
+pipeline은 후보의 task에 맞는 holdout을 전달합니다. 실행 집계 상태는 평가 도구 오류가 있으면 ERROR, 그렇지 않고 PASS 후보가 있으면 READY_FOR_REVIEW, 평가가 없거나 추가 증거가 필요하면 NEEDS_DATA, 나머지는 REJECTED입니다. READY_FOR_REVIEW도 개별 후보의 승인 여부를 대신하지 않습니다. fixture CLI는 ERROR/REJECTED에서 종료 코드 1을 반환하며, NEEDS_DATA는 성공 판정이 아니라 정상적인 데이터 부족 보고입니다.
 
 검수 자료를 준비한 운영자가 실행할 명령입니다. publish는 저장된 PASS를 그대로 믿지 않고 replay를 다시 실행합니다.
 

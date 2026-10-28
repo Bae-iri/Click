@@ -71,6 +71,8 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
     app.state.transcription_service = speech
     app.state.engine = engine
     app.state.session_factory = session_factory
+    from app.core.validation import install_validation_endpoint
+    install_validation_endpoint(app)
     auth_service = AuthService(session_factory)
     auth_router, principal = build_auth(auth_service)
     app.state.auth_service = auth_service

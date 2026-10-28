@@ -161,6 +161,40 @@ def evaluation_fixture(source="synthetic"):
     return manifest, [case]
 
 
+@pytest.mark.parametrize('outcome,expected', [('error', 'ERROR'), ('reject', 'REJECTED'),
+    ('missing', 'NEEDS_DATA'), ('pass', 'READY_FOR_REVIEW')])
+def test_pipeline_preserves_evaluation_failures_in_run_status(outcome, expected):
+    events = training_fixture() + events_for('test', source='device_test')
+    manifest = manifest_for(events, holdout={'test'})
+    _, cases = evaluation_fixture('device_test')
+    def evaluate(body, case):
+        if outcome == 'error':
+            raise RuntimeError('simulated evaluator failure')
+        if outcome == 'missing':
+            from ai_agent.graph_proposal.contracts import EvidenceRequired
+            raise EvidenceRequired('new captured transition required')
+        return {'checks': 1, 'failures': ['wrong target'] if outcome == 'reject' else []}
+    result = run_pipeline(events, {fingerprint(graph()): graph()}, now=200, manifest=manifest,
+                          cases=cases, evaluator=evaluate, graph_loader=lambda body: body)
+    assert result['status'] == expected
+    assert len(result['evaluations']) == 1
+
+
+def test_pipeline_routes_holdout_cases_to_their_own_task():
+    events = training_fixture() + events_for('test', source='device_test')
+    manifest = manifest_for(events, holdout={'test'})
+    _, cases = evaluation_fixture('device_test')
+    other = deepcopy(cases[0])
+    other.update(episode_id='different-task-case', task_id='OTHER-TASK')
+    def evaluate(body, case):
+        assert case['task_id'] == body['definition']['task_id']
+        return {'checks': 1, 'failures': []}
+    result = run_pipeline(events, {fingerprint(graph()): graph()}, now=200, manifest=manifest,
+                          cases=cases + [other], evaluator=evaluate, graph_loader=lambda body: body)
+    assert result['status'] == 'READY_FOR_REVIEW'
+    assert result['evaluations'][0]['case_ids'] == ['test']
+
+
 def test_evaluation_requires_real_holdout_and_does_not_mask_tool_errors():
     manifest, cases = evaluation_fixture()
     kwargs = dict(base_graph=graph(), cases=cases, manifest=manifest,
@@ -217,3 +251,25 @@ def test_static_audit_catches_dangling_edges_without_banning_recovery_cycles():
     assert graph_errors(body) == []
     body["transitions"][1]["to_state"] = "ABSENT"
     assert "dangling_transition" in graph_errors(body)
+
+
+@pytest.mark.parametrize('field,value', [('start_states', [[]]), ('done_state', [])])
+def test_malformed_state_identifiers_are_reported_without_crashing_audit(field, value):
+    body = graph()
+    body['definition'][field] = value
+    assert graph_errors(body)
+
+
+@pytest.mark.parametrize('field,value', [('transition_id', []), ('from_state', []), ('to_state', {}),
+    ('action_type', []), ('safety_level', {}), ('verification_predicate', [])])
+def test_malformed_transition_identifiers_are_reported_without_crashing_audit(field, value):
+    body = graph()
+    body['transitions'][0][field] = value
+    assert graph_errors(body)
+
+
+@pytest.mark.parametrize('field,value', [('observation_timeout_ms', 'bad'), ('settle_ms', [])])
+def test_malformed_policy_values_are_reported_without_crashing_audit(field, value):
+    body = graph()
+    body.setdefault('policy', {})[field] = value
+    assert 'invalid_runtime_policy' in graph_errors(body)

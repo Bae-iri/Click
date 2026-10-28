@@ -22,12 +22,20 @@ def run_pipeline(events, graphs, *, now, manifest=None, cases=None, evaluator=No
         # Validate group/session separation before using anything for proposals.
         datasets = TrainingDatasetBuilder().build(episodes, manifest=manifest)
     proposals = GraphLearner().generate_proposals(episodes, graphs)
+    # A run can contain several tasks; each proposal needs its own task's holdout.
+    # Keep malformed cases in the evaluation so invalid input cannot be silently ignored.
     evaluations = [GraphValidator().validate(proposal,
-        base_graph=graphs.get(proposal.evidence["base_graph_hash"]), cases=cases, manifest=manifest,
+        base_graph=graphs.get(proposal.evidence["base_graph_hash"]),
+        cases=[case for case in cases if not isinstance(case, dict) or case.get("task_id") in (None, proposal.task_id)] if cases else cases,
+        manifest=manifest,
         evaluator=evaluator, graph_loader=graph_loader) for proposal in proposals]
+    decisions = {evaluation["decision"] for evaluation in evaluations}
+    status = ("ERROR" if "ERROR" in decisions else
+              "READY_FOR_REVIEW" if "PASS" in decisions else
+              "NEEDS_DATA" if not decisions or "NEEDS_DATA" in decisions else "REJECTED")
     result = {"schema_version": "ai2-run.v1", "episodes": episodes,
         "analysis": analyze(episodes), "dataset": datasets,
         "proposals": [asdict(proposal) for proposal in proposals], "evaluations": evaluations,
-        "status": "READY_FOR_REVIEW" if any(e["decision"] == "PASS" for e in evaluations) else "NEEDS_DATA"}
+        "status": status}
     result["run_hash"] = fingerprint(result)
     return result
