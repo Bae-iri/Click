@@ -103,6 +103,35 @@ def test_display_row_title_outranks_generic_screen_aliases_in_other_rows():
     assert result.fallback_reason is None
 
 
+@pytest.mark.parametrize("graph", [MVP_01_TASK_GRAPH, MVP_02_TASK_GRAPH])
+@pytest.mark.parametrize("own_label", ["text", "content_description"])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_visible_display_with_named_parent_does_not_take_accessibility_detour(graph, own_label, reverse):
+    tree = settings_screen("설정", (
+        ("display", "디스플레이", "밝기, 글자 크기, 다크 모드"),
+        ("accessibility", "접근성", "시인성 향상"),
+    ))
+    tree = tuple(replace(n, **{own_label: "밝기와 화면 설정"}) if n.node_id == "display" else n for n in tree)
+    if reverse:
+        tree = tuple(reversed(tree))
+    result = send(engine_for(graph), tree, 1, "font size")
+    assert result.current_state_id == "S1_SETTINGS_HOME"
+    assert result.match_result.transition_id == "S1_TO_S2_DISPLAY_MENU"
+    assert result.guide_command.message == "디스플레이를 눌러주세요."
+    assert result.guide_command.target_node_id == "display"
+    assert result.guide_command.target_bounds == (0, 260, 1080, 460)
+
+
+@pytest.mark.parametrize("graph", [MVP_01_TASK_GRAPH, MVP_02_TASK_GRAPH])
+def test_starting_on_display_page_uses_visible_font_title_in_named_row(graph):
+    tree = settings_screen("디스플레이", (("font", "글자 크기와 스타일", "글꼴, 글자 크기"),))
+    tree = tuple(replace(n, content_description="글꼴 설정 열기") if n.node_id == "font" else n for n in tree)
+    result = send(engine_for(graph), tree, 1, "font size")
+    assert result.current_state_id == "S2_DISPLAY_MENU"
+    assert result.guide_command.target_node_id == "font"
+    assert result.guide_command.message == "글자 크기와 스타일을 눌러주세요."
+
+
 class OverconfidentSimilarity:
     def score(self, source, candidate):
         return 1.0
