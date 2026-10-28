@@ -109,6 +109,7 @@ public final class AuthGateway {
     }
 
     static HttpResult post(String path, String body, String bearer, int readTimeout) throws IOException {
+        requireValidationEnvironment(path);
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
         connection.setRequestMethod("POST");
         connection.setConnectTimeout(6000);
@@ -123,8 +124,9 @@ public final class AuthGateway {
         InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
         String response = read(stream);
         String conflict = connection.getHeaderField("X-Conflict-Code");
+        String traceId = connection.getHeaderField("X-Request-ID");
         connection.disconnect();
-        return new HttpResult(status, response, conflict);
+        return new HttpResult(status, response, conflict, traceId);
     }
 
     static HttpResult get(String path, String bearer) throws IOException {
@@ -132,6 +134,7 @@ public final class AuthGateway {
     }
 
     private static HttpResult get(String path, String bearer, int readTimeout) throws IOException {
+        requireValidationEnvironment(path);
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
         try {
             connection.setRequestMethod("GET");
@@ -142,7 +145,7 @@ public final class AuthGateway {
             InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
             String response = read(stream);
             String conflict = connection.getHeaderField("X-Conflict-Code");
-            return new HttpResult(status, response, conflict);
+            return new HttpResult(status, response, conflict, connection.getHeaderField("X-Request-ID"));
         } finally {
             connection.disconnect();
         }
@@ -150,6 +153,18 @@ public final class AuthGateway {
 
     static ApiException apiError(String path, HttpResult result) {
         return new ApiException("POST", path, result);
+    }
+
+    private static void requireValidationEnvironment(String path) throws IOException {
+        if (BuildConfig.CLICK_VALIDATION_ENVIRONMENT_ID.isEmpty() || "/validation/environment".equals(path)) return;
+        HttpResult identity = get("/validation/environment", null, 6000);
+        if (identity.status != 200) throw new IOException("VALIDATION_ENVIRONMENT_MISMATCH");
+        try {
+            ValidationServerContract.requireMatch(new JSONObject(identity.body),
+                    BuildConfig.CLICK_VALIDATION_ENVIRONMENT_ID, BuildConfig.CLICK_VALIDATION_FINGERPRINT);
+        } catch (org.json.JSONException error) {
+            throw new IOException("VALIDATION_ENVIRONMENT_MISMATCH");
+        }
     }
 
     private static String read(InputStream stream) throws IOException {

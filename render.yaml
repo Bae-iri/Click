@@ -13,7 +13,7 @@ services:
     preDeployCommand: python scripts/render_start.py --migrate
     healthCheckPath: /ready
     numInstances: 1
-    autoDeployTrigger: "off"
+    autoDeployTrigger: checksPass
     envVars:
       - key: DATABASE_URL
         sync: false

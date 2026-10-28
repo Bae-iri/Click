@@ -1,6 +1,7 @@
 package com.click.data.remote;
 
 import android.content.Context;
+import com.click.BuildConfig;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.click.data.local.AuthTokenStore;
@@ -25,6 +26,13 @@ public class LiveAgentConnectionTest {
     @Test public void typedGoalReachesRealRuntimeAndCanBeCancelled() throws Exception {
         assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("liveAgent")));
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        if (!BuildConfig.CLICK_VALIDATION_ENVIRONMENT_ID.isEmpty()) {
+            HttpResult identity = AuthGateway.get("/validation/environment", null);
+            assertEquals("Paired validation backend must be running", 200, identity.status);
+            JSONObject environment = new JSONObject(identity.body);
+            assertEquals(BuildConfig.CLICK_VALIDATION_ENVIRONMENT_ID, environment.getString("environment_id"));
+            assertEquals(BuildConfig.CLICK_VALIDATION_FINGERPRINT, environment.getString("fingerprint"));
+        }
         assertTrue("Log into the app before running the live agent check",
                 new AuthTokenStore(context).hasRefreshToken());
         AgentServerContract contract = AgentServerContract.fromOpenApi(new JSONObject(AuthGateway.get("/openapi.json", null).body));
@@ -51,8 +59,8 @@ public class LiveAgentConnectionTest {
             assertNotNull(response.metadata);
             assertEquals("ai_agent.runtime", response.metadata.getString("runtime"));
             assertTrue(response.guideCommand.message.length() > 0);
-            android.util.Log.i("ClickLiveAgent", "runtime=" + response.metadata.getString("runtime")
-                    + " status=" + response.taskStatus + " guide=" + response.guideCommand.message);
+            android.util.Log.i("ClickLiveAgent", "evidence=synthetic_screen runtime="
+                    + response.metadata.getString("runtime") + " status=" + response.taskStatus);
             AgentTurnContract.Response stopped = send(gateway, AgentTurnContract.Request.control(session,
                     response.sessionVersion, response.episodeId, "cancel_task", null));
             assertEquals("CANCELLED", stopped.taskStatus);
