@@ -93,7 +93,9 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             return result(Status.UNKNOWN, 'missing_observation_timing')
         candidates = [node for node in eligible_nodes(transition, nodes, graph)
                       if target_key(node) == attempt.get('target_key')
-                      and node.window_id == attempt.get('target_window_id')
+                      and (node.window_id == attempt.get('target_window_id')
+                           or recreated_font_control(node, attempt, transition, graph,
+                               current_state_id, current_snapshot, observation_time, action_time))
                       and not node.node_id.startswith('vision:')
                       and selector_evidence(node, transition, nodes, graph)[0] >= 0.7]
         baseline = attempt.get('baseline_value')
@@ -139,6 +141,27 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             and observation_time - action_time >= graph.policy.observation_timeout_ms):
         return result(Status.UNKNOWN, 'observation_timeout')
     return result(Status.WAITING_FOR_OBSERVATION, 'awaiting_settled_observation')
+
+
+def recreated_font_control(node, attempt, transition, graph, state, snapshot, observed_at, action_at):
+    """FONT_SCALE can recreate Settings' window while preserving the exact native control.
+
+    The caller still requires one matching stable target key, a correlated action,
+    valid unchanged range, and movement in the requested direction. A new window
+    alone, a text-only match, or preview-only movement never qualifies.
+    """
+    if (graph.definition.goal_type not in {'settings.font_size.increase', 'settings.font_size.decrease'}
+            or state != transition.from_state
+            or node.window_id is None or attempt.get('target_window_id') is None
+            or not node.resource_id or node.resource_id != attempt.get('target_resource_id')
+            or observed_at is None or action_at is None
+            or not 0 < observed_at - action_at <= graph.policy.observation_timeout_ms):
+        return False
+    before = attempt.get('baseline_font_scale')
+    after = font_scale(snapshot.applied_settings)
+    if before is None or after is None:
+        return False
+    return after > before if transition.verification_predicate.endswith('increased') else after < before
 
 
 def valid_slider_value(value, minimum=None, maximum=None):

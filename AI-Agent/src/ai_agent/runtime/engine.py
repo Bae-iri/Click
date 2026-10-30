@@ -374,6 +374,7 @@ class ClickAgentEngine:
                     'guide_command_id': guide_command.guide_command_id,
                     'target_node_id': target.node_id, 'target_key': match_result.target_key,
                     'target_window_id': target.window_id,
+                    'target_resource_id': target.resource_id,
                     'target_bounds': target.bounds, 'baseline_value': target.value,
                     'baseline_range_min': target.range_min, 'baseline_range_max': target.range_max,
                     'baseline_observation_id': request.observation_id,
