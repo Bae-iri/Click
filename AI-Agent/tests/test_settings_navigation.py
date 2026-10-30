@@ -3,7 +3,7 @@ from dataclasses import replace
 
 import pytest
 
-from ai_agent.runtime import AccessibilityNode, ClickAgentEngine, CommandType
+from ai_agent.runtime import AccessibilityNode, ClickAgentEngine, CommandType, UserActionEvent, UserActionType
 from ai_agent.runtime.matcher import match_next_ui
 from ai_agent.runtime.normalizer import normalize_accessibility_tree
 from ai_agent.runtime.similarity import KeywordFallbackSimilarityScorer
@@ -54,7 +54,7 @@ def engine_for(graph=MVP_01_TASK_GRAPH):
                             similarity_scorer=KeywordFallbackSimilarityScorer())
 
 
-def send(engine, nodes, index, goal=None):
+def send(engine, nodes, index, goal=None, *, event=None):
     return engine.handle_turn(AgentTurnRequest(
         request_id=f"r{index}", session_id="navigation", observation_id=f"o{index}",
         captured_at_ms=index * 1000, raw_goal=None,
@@ -63,7 +63,7 @@ def send(engine, nodes, index, goal=None):
             task_id=graph.definition.task_id, target_app="android_settings", task_type="settings_change",
             slots=graph.definition.required_slots, source_text="", confidence=1.0,
             is_supported=True, required_slots_filled=True) if goal else None,
-        accessibility_tree=nodes, screen_bounds=SCREEN))
+        accessibility_tree=nodes, screen_bounds=SCREEN, user_action_event=event))
 
 
 @pytest.mark.parametrize("graph,goal", [
@@ -189,6 +189,52 @@ def test_offscreen_menu_waits_for_manual_navigation_then_resumes():
         assert engine.session_store.get("navigation").recovery_count == 0
     result = send(engine, HOME, 7)
     assert result.guide_command.target_node_id == "display"
+
+
+@pytest.mark.parametrize("graph", [MVP_01_TASK_GRAPH, MVP_02_TASK_GRAPH])
+def test_scrolling_display_out_of_view_never_switches_to_accessibility(graph):
+    engine = engine_for(graph)
+    assert send(engine, HOME, 1, "font size").guide_command.target_node_id == "display"
+    scrolled = settings_screen("설정", (("accessibility", "접근성", "시인성 향상"),))
+    response = send(engine, scrolled, 2)
+    assert response.current_state_id == "S1_SETTINGS_HOME"
+    assert response.match_result.transition_id == "S1_TO_S2_DISPLAY_MENU"
+    assert response.guide_command.target_node_id is None
+    assert response.guide_command.render_policy["recovery"]["reason_code"] == "TARGET_NOT_VISIBLE"
+    assert send(engine, HOME, 3).guide_command.target_node_id == "display"
+
+
+@pytest.mark.parametrize("package", ["com.android.settings", "com.samsung.android.settings"])
+def test_wrong_settings_submenu_returns_back_without_reopening_settings(package):
+    tree = (*settings_screen("접근성", (("visibility", "시인성 향상", "글꼴, 색상"),)),
+        AccessibilityNode("back", package_name=PACKAGE, parent_id="root", clickable=True,
+            class_name="android.widget.ImageButton", content_description="뒤로",
+            bounds_in_screen=(0, 80, 40, 180)))
+    tree = tuple(replace(node, package_name=package) for node in tree)
+    engine = engine_for()
+    response = send(engine, tree, 1, "font size")
+    assert response.current_state_id == "S0_UNKNOWN"
+    policy = response.guide_command.render_policy
+    assert policy["recovery"]["reason_code"] == "SETTINGS_OFF_PATH"
+    assert policy["recovery_action"]["type"] == "navigate_back"
+    assert "vision_fallback" not in policy
+    assert "설정 앱" not in response.guide_command.message
+    assert send(engine, HOME, 2).guide_command.target_node_id == "display"
+
+
+def test_back_recovery_retires_the_wrong_turn_instead_of_waiting_for_its_result():
+    engine = engine_for()
+    guide = send(engine, HOME, 1, "font size").guide_command
+    event = UserActionEvent(UserActionType.TAP_COMPLETED, guide.guide_command_id,
+        guide.target_node_id, occurred_at_ms=1500, event_id="wrong-turn", target_bounds=guide.target_bounds)
+    wrong = (*settings_screen("접근성", (("visibility", "시인성 향상", ""),)),
+        AccessibilityNode("back", package_name=PACKAGE, parent_id="root", clickable=True,
+            class_name="android.widget.ImageButton", content_description="뒤로",
+            bounds_in_screen=(0, 80, 40, 180)))
+    response = send(engine, wrong, 2, event=event)
+    assert response.guide_command.render_policy["recovery_action"]["type"] == "navigate_back"
+    assert engine.session_store.get("navigation").pending_attempt is None
+    assert send(engine, HOME, 3).guide_command.target_node_id == "display"
 
 
 def test_visible_but_unactionable_target_still_requests_observation_fallback():

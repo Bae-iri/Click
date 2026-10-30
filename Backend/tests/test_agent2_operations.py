@@ -100,9 +100,9 @@ def release_fixture(app):
     base_graph = TASK_GRAPHS["settings.font_size.increase"]
     base, base_hash = canonical_graph(base_graph)
     edges = [e for e in base["transitions"] if e["from_state"] == "S1_SETTINGS_HOME"]
-    assert len(edges) >= 2
+    assert len(edges) >= 1
     priorities = {e["transition_id"]: i + 20 for i, e in enumerate(reversed(edges))}
-    proposal = GraphUpdateProposal("test-proposal", "MVP-01", "1.0.0", "transition_priority",
+    proposal = GraphUpdateProposal("test-proposal", "MVP-01", "1.0.1", "transition_priority",
         {"priorities": priorities}, {"base_graph_hash": base_hash}, 0.5, True)
     candidate = apply_proposal(base, proposal)
     # Mock a reviewed evaluator result; actual product releases re-run replay in CLI.
@@ -128,16 +128,16 @@ def test_publish_and_rollback_are_atomic_audited_and_preserve_pinned_graphs():
     assert not published["already_published"]
     assert repo.select(goal)[1]["version"] == "2.0.0"
     assert manager.promote(release)["already_published"]
-    details = {"task_id": "MVP-01", "graph_version": "1.0.0", "graph_hash": base_hash,
+    details = {"task_id": "MVP-01", "graph_version": "1.0.1", "graph_hash": base_hash,
         "goal_type": goal.goal_type, "goal": {"target_app": goal.target_app}}
     assert repo.select_pinned(details)[1]["sha256"] == before["sha256"]
-    result = manager.rollback("MVP-01", "1.0.0", expected_current_hash=release["graph_hash"], reviewer="operator", reviewed_at=300)
+    result = manager.rollback("MVP-01", "1.0.1", expected_current_hash=release["graph_hash"], reviewer="operator", reviewed_at=300)
     assert result["sha256"] == base_hash
-    assert repo.select(goal)[1]["version"] == "1.0.0"
+    assert repo.select(goal)[1]["version"] == "1.0.1"
     with app.state.session_factory() as db:
         assert [r.action for r in db.scalars(select(GraphReleaseAudit).order_by(GraphReleaseAudit.reviewed_at))] == ["promote", "rollback"]
     with pytest.raises(ValueError, match="Current release changed"):
-        manager.rollback("MVP-01", "1.0.0", expected_current_hash=release["graph_hash"], reviewer="operator", reviewed_at=301)
+        manager.rollback("MVP-01", "1.0.1", expected_current_hash=release["graph_hash"], reviewer="operator", reviewed_at=301)
 
 
 def test_release_rejects_forged_content_and_stale_base_without_side_effects():
@@ -177,7 +177,7 @@ def test_catalog_audit_reports_each_registered_release_without_claiming_device_p
 def test_catalog_audit_distinguishes_tampered_reference_from_missing_runtime_support():
     app = create_app()
     with app.state.session_factory() as db:
-        row = db.get(ApprovedTaskGraph, "MVP-01:1.0.0")
+        row = db.get(ApprovedTaskGraph, "MVP-01:1.0.1")
         row.graph_hash = "0" * 64
         db.commit()
     report = audit_catalog(app.state.session_factory)

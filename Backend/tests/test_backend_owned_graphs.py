@@ -118,7 +118,7 @@ def test_db_tampering_and_metadata_mismatch_rejected():
     goal = type("Goal", (), {"goal_type": "settings.font_size.increase",
         "target_app": "android_settings"})()
     with repository.factory() as db:
-        row = db.get(ApprovedTaskGraph, "MVP-01:1.0.0")
+        row = db.get(ApprovedTaskGraph, "MVP-01:1.0.1")
         body = deepcopy(row.body)
         body["definition"]["task_id"] = "forged-task"
         row.body = body
@@ -127,8 +127,26 @@ def test_db_tampering_and_metadata_mismatch_rejected():
         repository.select(goal)
     # Even a consistent content hash cannot override DB task identity.
     with repository.factory() as db:
-        row = db.get(ApprovedTaskGraph, "MVP-01:1.0.0")
+        row = db.get(ApprovedTaskGraph, "MVP-01:1.0.1")
         row.graph_hash = canonical_graph(load_graph(row.body))[1]
         db.commit()
     with pytest.raises(ValueError, match="GRAPH_REFERENCE_MISMATCH"):
         repository.select(goal)
+
+
+def test_seed_adds_new_route_release_without_overwriting_a_pinned_old_graph():
+    app = create_app()
+    repository = app.state.turn_service.graphs
+    goal = type("Goal", (), {"goal_type": "settings.font_size.increase", "target_app": "android_settings"})()
+    current, _ = repository.select(goal)
+    old, _ = canonical_graph(current)
+    old["transitions"][0]["guide_message"] = "기존 설정 열기 안내"
+    reference = repository.register(old, version="1.0.0", approved=True, priority=100)
+    with repository.factory() as db:
+        db.delete(db.get(ApprovedTaskGraph, "MVP-01:1.0.1")); db.commit()
+    repository.seed_mvp()
+    assert repository.select(goal)[1]["version"] == "1.0.1"
+    pinned, preserved = repository.select_pinned({"task_id": "MVP-01", "graph_version": "1.0.0",
+        "goal_type": goal.goal_type, "goal": {"target_app": goal.target_app}, "graph_hash": reference["sha256"]})
+    assert preserved["sha256"] == reference["sha256"]
+    assert pinned.transitions[0].guide_message == "기존 설정 열기 안내"

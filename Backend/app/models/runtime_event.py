@@ -1,8 +1,7 @@
 from uuid import uuid4
-from sqlalchemy import BigInteger, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import BigInteger, ForeignKey, Integer, JSON, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
-from app.models.personalization import JSONType
 
 
 class RuntimeEvent(Base):
@@ -16,7 +15,7 @@ class RuntimeEvent(Base):
     request_id: Mapped[str] = mapped_column(String(200))
     graph_hash: Mapped[str | None] = mapped_column(String(64))
     kind: Mapped[str] = mapped_column(String(30))
-    payload: Mapped[dict] = mapped_column(JSONType)
+    payload: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[int] = mapped_column(BigInteger)
     expires_at: Mapped[int] = mapped_column(BigInteger, index=True)
 
@@ -27,5 +26,5 @@ class RuntimeEventConsumption(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid4()))
     event_id: Mapped[str] = mapped_column(String(36), ForeignKey("runtime_events.id", ondelete="CASCADE"), index=True)
     consumer: Mapped[str] = mapped_column(String(100))
-    result: Mapped[dict] = mapped_column(JSONType)
+    result: Mapped[dict] = mapped_column(JSON)
     consumed_at: Mapped[int] = mapped_column(BigInteger)

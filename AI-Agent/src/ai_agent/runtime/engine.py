@@ -202,6 +202,7 @@ class ClickAgentEngine:
                 and not (existing_session and existing_session.recovery_state.get("waiting_for_user"))
                 and not manual_navigation_target(graph, preliminary, normalized_nodes)
                 and preliminary.fallback_reason != "ambiguous_target" and not initial_evidence.get("ambiguous")
+                and not initial_evidence.get("settings_subpage")
                 and (not normalized_nodes or (existing_session
                      and existing_session.recovery_state.get("attempts", 0) >= 1
                      and not existing_session.recovery_state.get("waiting_for_user")))
@@ -318,7 +319,7 @@ class ClickAgentEngine:
                 render_policy={'fallback_action': {'type': 'request_fresh_observation',
                     'reason': verification_result.evidence,
                     'expected_next_observation': {'send_fresh_accessibility_tree': True}}})
-        if (recovery_plan.decision != "continue" and not awaiting_vision_consent and not task_completed
+        if (recovery_plan.decision != "continue" and (not awaiting_vision_consent or recovery_plan.next_action == "go_back") and not task_completed
                 and guide_command.safety_level != SafetyLevel.BLOCKED
                 and recovery_plan.next_action != "open_settings"):
             guide_command = recovery_command(request.session_id, recovery_plan)
@@ -326,6 +327,8 @@ class ClickAgentEngine:
                 keep_attempt = True
             if recovery_plan.decision == "handoff":
                 keep_attempt = False
+        if recovery_plan.next_action == "go_back":
+            keep_attempt = False
         if request.user_confirmation == 'rejected' and not cycle.command:
             guide_command = build_guide_command(session_id=request.session_id,
                 match_result=match_result, graph=graph, user_confirmation='rejected')
@@ -335,9 +338,14 @@ class ClickAgentEngine:
             keep_attempt = False
         if limit_reached:
             guide_command = GuideCommand(guide_command_id='guide_' + uuid4().hex,
-                command_type=CommandType.BLOCKED, action_type=ActionType.OBSERVE_ONLY,
-                message='이미 조절 가능한 끝값이에요. 더 움직이지 않아도 돼요.',
-                safety_level=SafetyLevel.BLOCKED, requires_user_action=False)
+                command_type=CommandType.HIGHLIGHT, action_type=ActionType.OBSERVE_ONLY,
+                target_node_id=matched_target.node_id, target_bounds=matched_target.bounds,
+                target_label=matched_target.label,
+                message=('표시한 슬라이더가 이미 가장 큰 글자 크기예요. 더 크게 조절할 수 없어요.'
+                    if graph.definition.required_slots.get('direction') == 'increase' else
+                    '표시한 슬라이더가 이미 가장 작은 글자 크기예요. 더 작게 조절할 수 없어요.'),
+                safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
+                render_policy={'avoid_covering_target': True, 'adjustment_limit': True})
             keep_attempt = False
         if recovery_plan.decision != "continue" and guide_command.command_type != CommandType.BLOCKED:
             guide_command = replace(guide_command, render_policy={**guide_command.render_policy,

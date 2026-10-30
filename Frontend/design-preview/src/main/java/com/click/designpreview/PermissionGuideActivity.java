@@ -143,7 +143,7 @@ public final class PermissionGuideActivity extends Activity {
         Button replay = new Button(this); replay.setText("안내 다시 듣기"); replay.setAllCaps(false);
         replay.setTypeface(medium); replay.setTextSize(15); replay.setTextColor(BLUE);
         replay.setBackgroundColor(Color.TRANSPARENT); replay.setMinimumHeight(dp(48));
-        replay.setOnClickListener(v -> { if (narrator.isSpeaking()) narrator.stop(); else narrator.speak(spokenPage); });
+        replay.setOnClickListener(v -> { if (narrator.isSpeaking()) narrator.stop(); else narrator.replay(spokenPage); });
         narrator.setListener((speaking, unavailable) -> replay.setText(speaking ? "음성 멈춤" : "안내 다시 듣기"));
         footer.addView(replay, new LinearLayout.LayoutParams(-1, -2));
         footer.addView(action, new LinearLayout.LayoutParams(-1, -2));
@@ -392,6 +392,7 @@ public final class PermissionGuideActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        narrator.resume();
         if (settingsOpened && !tutorialOpened && ClickHost.from(this).accessibilityEnabled()) {
             if (ClickHost.from(this).postPermissionTutorialWasLaunched()) {
                 finish();
@@ -457,7 +458,7 @@ public final class PermissionGuideActivity extends Activity {
         super.onSaveInstanceState(state);
     }
 
-    @Override protected void onStop() { narrator.stop(); super.onStop(); }
+    @Override protected void onPause() { narrator.pause(); super.onPause(); }
     @Override protected void onDestroy() { narrator.close(); super.onDestroy(); }
 
     private void configureWindow() {

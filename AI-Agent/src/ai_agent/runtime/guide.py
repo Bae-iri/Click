@@ -24,9 +24,12 @@ def recovery_command(session_id, plan):
         "VISION_UNAVAILABLE": "화면 분석으로도 다음 항목을 확인하지 못했어요. 직접 메뉴로 이동하거나 화면을 다시 확인해 주세요.",
         "ACTION_BUDGET_EXHAUSTED": "여러 번 시도했지만 진행을 확인하지 못했어요. 현재 위치와 작업 경로를 다시 확인해야 해요.",
         "GRAPH_PATH_UNAVAILABLE": "현재 화면에서 이어갈 작업 경로가 없어요. 이전 화면으로 돌아가거나 화면을 다시 확인해 주세요.",
+        "SETTINGS_OFF_PATH": "다른 설정 메뉴로 들어왔어요. 이전 화면으로 돌아가서 이어서 안내할게요.",
     }
     message = messages.get(plan.reason_code, "다음 항목을 확인하지 못했어요. 직접 메뉴로 이동하거나 화면을 다시 확인해 주세요.")
     policy = {"avoid_covering_target": False, "recovery": plan.to_dict()}
+    if plan.next_action == "go_back":
+        policy["recovery_action"] = {"type": "navigate_back", "target_app": "android_settings"}
     if plan.next_action == "reobserve":
         message = "화면이 바뀌었는지 다시 확인하고 있어요. 잠시 기다려 주세요."
         policy["fallback_action"] = {"type": "request_fresh_observation", "reason_code": plan.reason_code}

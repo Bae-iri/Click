@@ -17,7 +17,7 @@
     <string name="signup_email_domain_select">도메인 선택</string>
     <string name="signup_email_domain_accessibility">이메일 도메인: %1$s, 눌러서 선택</string>
     <string name="signup_email_domain_custom_label">이메일 도메인 직접 입력</string>
-    <string name="signup_email_domain_custom_hint">예) daum.net</string>
+    <string name="signup_email_domain_custom_hint">예) company.com</string>
     <string name="signup_email_confirmation_title">이메일을\n확인해 주세요</string>
     <string name="signup_email_confirmation_description">다시 로그인할 때 사용할 주소예요.\n자주 사용하는 이메일인지 확인해 주세요.</string>
     <string name="signup_email_confirmation_label">로그인할 이메일</string>
@@ -27,6 +27,13 @@
     <string-array name="signup_email_domains">
         <item>naver.com</item>
         <item>gmail.com</item>
+        <item>daum.net</item>
+        <item>hanmail.net</item>
+        <item>kakao.com</item>
+        <item>nate.com</item>
+        <item>outlook.com</item>
+        <item>hotmail.com</item>
+        <item>icloud.com</item>
         <item>직접 입력</item>
     </string-array>
     <string name="signup_password_label">비밀번호</string>

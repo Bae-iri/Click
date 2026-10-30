@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Looper;
-import android.speech.tts.TextToSpeech;
+import com.click.designpreview.TutorialNarrator;
 import android.view.WindowManager;
 import com.click.data.remote.AgentServerContract;
 import com.click.data.remote.AgentTurnContract;
@@ -132,6 +132,126 @@ public class ClickOverlayServiceExecutionTest {
     @After public void cleanup() {
         if (accessibility != null) accessibility.close();
         if (snapshots != null) snapshots.close();
+    }
+
+    @Test public void replayUsesTheExplicitReplayPathAndServiceClosesItsHandle() throws Exception {
+        prepareGuideResponse();
+        Method speak = ClickOverlayService.class.getDeclaredMethod("speak", String.class); speak.setAccessible(true);
+        speak.invoke(service, "디스플레이를 눌러주세요.");
+        TutorialNarrator narrator = (TutorialNarrator) get("narrator");
+        verify(narrator).speak("디스플레이를 눌러주세요.");
+        Method replay = ClickOverlayService.class.getDeclaredMethod("repeatLastGuide"); replay.setAccessible(true);
+        replay.invoke(service); verify(narrator).replay("디스플레이를 눌러주세요.");
+        service.onDestroy(); verify(narrator).close(); assertNull(get("narrator"));
+    }
+
+    @Test public void minimizingTheTaskKeepsSpeechEnabledForFollowingSteps() throws Exception {
+        prepareGuideResponse();
+        Method collapse = ClickOverlayService.class.getDeclaredMethod("collapseTaskFlow"); collapse.setAccessible(true);
+        collapse.invoke(service);
+        assertTrue((boolean) get("voiceReplyEnabled"));
+        verify((TutorialNarrator) get("narrator"), never()).stop();
+        Method speak = ClickOverlayService.class.getDeclaredMethod("speak", String.class); speak.setAccessible(true);
+        speak.invoke(service, "다음 항목을 눌러주세요.");
+        verify((TutorialNarrator) get("narrator")).speak("다음 항목을 눌러주세요.");
+    }
+
+    @Test public void confirmationStopsTheOldQuestionBeforeSendingTheTask() throws Exception {
+        resolve(); set("narrator", mock(TutorialNarrator.class)); confirm();
+        verify((TutorialNarrator) get("narrator")).stop();
+    }
+
+    @Test public void closingInputRestoresOnlyLatestDeferredGuidanceOnce() throws Exception {
+        prepareGuideResponse();
+        ClickOverlayLayout input = (ClickOverlayLayout) get("overlayView");
+        TutorialNarrator narrator = (TutorialNarrator) get("narrator");
+        when(input.getMode()).thenReturn(ClickOverlayLayout.Mode.TEXT);
+        Method speak = ClickOverlayService.class.getDeclaredMethod("speak", String.class); speak.setAccessible(true);
+        speak.invoke(service, "이전 화면 안내");
+        speak.invoke(service, "슬라이더를 오른쪽으로 움직여 주세요.");
+        verify(narrator, never()).speak(anyString());
+        when(((TaskFlowOverlayView) get("taskFlowView")).guidanceMessage()).thenReturn("슬라이더를 오른쪽으로 움직여 주세요.");
+        when(input.getMode()).thenReturn(ClickOverlayLayout.Mode.COLLAPSED);
+        invoke("restorePanelNarration"); invoke("restorePanelNarration");
+        verify(narrator, times(1)).replay("슬라이더를 오른쪽으로 움직여 주세요.");
+        verify(narrator, never()).replay("이전 화면 안내");
+    }
+
+    @Test public void minimizedResultQuestionRemainsVisibleAsConversationBubble() throws Exception {
+        prepareGuideResponse();
+        TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
+        when(panel.hasProgress()).thenReturn(false);
+        when(panel.hasCompactContent()).thenReturn(true);
+        invoke("collapseTaskFlow");
+        verify(panel).setMinimizedProgress(true);
+        verify(panel).setVisibility(android.view.View.VISIBLE);
+    }
+
+    @Test public void rewordedObservationDoesNotInterruptTheSameStepButNextStepSpeaks() throws Exception {
+        prepareGuideResponse();
+        Method narrate = ClickOverlayService.class.getDeclaredMethod("speakGuide", AgentTurnContract.Response.class);
+        narrate.setAccessible(true);
+        JSONObject guide = new JSONObject().put("command_type", "highlight").put("action_type", "tap")
+                .put("target_node_id", "display-1").put("message", "디스플레이를 눌러주세요.");
+        JSONObject response = new JSONObject().put("request_id", "request").put("session_id", "session")
+                .put("task_status", "IN_PROGRESS").put("state_id", "S1_SETTINGS_HOME").put("guide_command", guide);
+        narrate.invoke(service, new AgentTurnContract.Response(response.toString()));
+        guide.put("message", "화면의 디스플레이를 눌러주세요.").put("guide_command_id", "new-observation")
+                .put("target_node_id", "display-2");
+        narrate.invoke(service, new AgentTurnContract.Response(response.toString()));
+        TutorialNarrator narrator = (TutorialNarrator) get("narrator");
+        verify(narrator).speak("디스플레이를 눌러주세요.");
+        verify(narrator, never()).speak("화면의 디스플레이를 눌러주세요.");
+        invoke("repeatLastGuide");
+        verify(narrator).replay("화면의 디스플레이를 눌러주세요.");
+        response.put("state_id", "S2_DISPLAY");
+        guide.put("target_node_id", "font-size").put("message", "글자 크기와 스타일을 눌러주세요.");
+        narrate.invoke(service, new AgentTurnContract.Response(response.toString()));
+        verify(narrator).speak("글자 크기와 스타일을 눌러주세요.");
+    }
+
+    @Test public void pauseStopsSpeechEvenWhileAnAgentResponseIsPending() throws Exception {
+        prepareGuideResponse(); set("turnInFlight", true);
+        control("pause_task");
+        verify((TutorialNarrator) get("narrator")).stop();
+        assertEquals("pause_task", get("pendingControl"));
+    }
+
+    @Test public void navigationAndUnchangedSliderNeverOfferResultCheck() throws Exception {
+        prepareGuideResponse();
+        deliver(1, "highlight", "tap", null);
+        verify((TaskFlowOverlayView) get("taskFlowView")).progress(any(), any(), any(), eq(false));
+    }
+
+    @Test public void permissionPromptShowsSliderTargetBeforeTheUserAdjustsIt() throws Exception {
+        screen = fontScreen(2f, 1f, 1000); currentScreen = screen;
+        prepareGuideResponse();
+        deliver(1, "confirmation", "observe_only", null);
+        verify((GuideOverlayView) get("guideOverlayView")).showTarget(any(), eq("observe_only"), eq(0));
+        verify((TaskFlowOverlayView) get("taskFlowView")).confirmation(eq("대상 안내"), any());
+        assertNull(get("confirmationView"));
+    }
+
+    @Test public void wrongSettingsPageOffersBackAndDoesNotNavigateUntilUserChooses() throws Exception {
+        prepareGuideResponse(); set("turnInFlight", false);
+        NavigationRecovery recovery=(NavigationRecovery)get("navigationRecovery");
+        recovery.onPath(screen); recovery.unplannedTap();
+        AccessibilityNodeSnapshot back = new AccessibilityNodeSnapshot("back", null, true,
+                "com.android.settings", null, "뒤로", null, "android.widget.ImageButton", "button",
+                new int[]{0, 40, 80, 120}, true, true, false, false, false, null, 42);
+        ScreenSnapshot wrong = new ScreenSnapshot("com.android.settings", Instant.now().toString(),
+                1080, 2400, List.of(back), 42);
+        currentScreen = wrong;
+        Method recover = ClickOverlayService.class.getDeclaredMethod("recoverSettingsBack", ScreenSnapshot.class);
+        recover.setAccessible(true); recover.invoke(service, wrong);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1100));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsBack(anyString(), anyInt()), never());
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(anyBoolean()), never());
+        org.mockito.ArgumentCaptor<Runnable> click=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView")).navigationRecovery(eq(true),anyString(),click.capture());
+        currentScreen=screen;
+        click.getValue().run();
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(anyBoolean()), never());
     }
 
     @Test public void preparedGoalConfirmationSendsStartWithoutLegacyReview() throws Exception {
@@ -327,7 +447,7 @@ public class ClickOverlayServiceExecutionTest {
         assertNotEquals(screen.observationId, currentScreen.observationId);
         deliver(1, "highlight", "tap", null);
         verify((GuideOverlayView) get("guideOverlayView")).showTarget(any(), eq("tap"), eq(com.click.ui.overlay.GuideDragDirection.UNKNOWN));
-        verify((TextToSpeech) get("textToSpeech")).speak(eq("대상 안내"), anyInt(), any(), anyString());
+        verify((TutorialNarrator) get("narrator")).speak("대상 안내");
         assertEquals(2, sent.size());
         assertNotNull(((GuidedActionTracker) get("actionTracker")).record("tap_completed",
                 "com.android.settings", 42, "display", null, screen.nodes.get(1).bounds,
@@ -397,17 +517,79 @@ public class ClickOverlayServiceExecutionTest {
         when(view.isAttachedToWindow()).thenReturn(true);
         set("guideOverlayView", view);
         set("overlayView", mock(ClickOverlayLayout.class));
-        set("textToSpeech", mock(TextToSpeech.class));
-        set("ttsReady", true);
+        when(((ClickOverlayLayout) get("overlayView")).getMode()).thenReturn(ClickOverlayLayout.Mode.COLLAPSED);
+        set("narrator", mock(TutorialNarrator.class));
         set("voiceReplyEnabled", true);
         service.getSystemService(AudioManager.class).setStreamVolume(AudioManager.STREAM_MUSIC, 5, 0);
+    }
+
+    @Test public void changedFontWithoutDragEventAsksResultAndReopensCollapsedPanel() throws Exception {
+        prepareFontRecovery(1.15f);
+        assertEquals(4, requests.size());
+        AgentTurnContract.Request resultRequest = requests.get(3);
+        assertEquals("request_result", resultRequest.commandType());
+        assertEquals(8, resultRequest.expectedVersion.intValue());
+        assertEquals("episode", resultRequest.episodeId);
+        assertNull("Do not manufacture a drag event", resultRequest.userActionEvent);
+        assertNull("Only the user can say whether it is comfortable", resultRequest.userResult);
+        verify((TaskFlowOverlayView) get("taskFlowView"), never()).observationRecovery(anyString(), anyString(), any());
+        send(null);
+        assertEquals("Do not duplicate requests while confirmation is loading", 4, requests.size());
+        set("taskFlowCollapsed", true);
+        when(((ClickOverlayLayout) get("overlayView")).getMode()).thenReturn(ClickOverlayLayout.Mode.COLLAPSED);
+        JSONObject prompt = new JSONObject().put("id", "font-result").put("message", "이제 글자가 보기 편한가요?")
+                .put("expires_at", System.currentTimeMillis() / 1000 + 120);
+        callbacks.get(3).onSuccess(new AgentTurnContract.Response(new JSONObject()
+                .put("request_id", resultRequest.requestId).put("session_id", resultRequest.sessionId)
+                .put("session_version", 9).put("episode_id", "episode").put("task_status", "WAITING_RESULT")
+                .put("metadata", new JSONObject().put("result_prompt", prompt)).toString()));
+        verify((TaskFlowOverlayView) get("taskFlowView")).result(any(JSONObject.class));
+        assertEquals(false, get("taskFlowCollapsed"));
+        verify((TaskFlowOverlayView) get("taskFlowView"), atLeastOnce()).setVisibility(android.view.View.VISIBLE);
+        assertEquals(4, requests.size());
+    }
+
+    @Test public void unchangedPersistedFontKeepsRecoveryInsteadOfAskingForSuccess() throws Exception {
+        prepareFontRecovery(1f);
+        assertEquals(3, requests.size());
+        verify((TaskFlowOverlayView) get("taskFlowView")).observationRecovery(anyString(), anyString(), any());
+    }
+
+    private void prepareFontRecovery(float appliedScale) throws Exception {
+        screen = fontScreen(2f, 1f, 1000);
+        currentScreen = screen;
+        prepareGuideResponse();
+        deliver(1, "highlight", "drag", "right");
+        currentScreen = fontScreen(3f, appliedScale, 2000);
+        send(null);
+        AgentTurnContract.Request observation = requests.get(2);
+        JSONObject recovery = new JSONObject().put("recoverable", true).put("waiting_for", "user")
+                .put("reason_code", "ACTION_EVENT_MISSING").put("next_action", "user_assistance");
+        JSONObject guide = new JSONObject().put("guide_command_id", "recovery-guide")
+                .put("command_type", "highlight").put("action_type", "observe_only")
+                .put("requires_user_action", false).put("message", "조작 결과를 확인하지 못했어요.")
+                .put("render_policy", new JSONObject().put("recovery", recovery));
+        callbacks.get(2).onSuccess(new AgentTurnContract.Response(new JSONObject()
+                .put("request_id", observation.requestId).put("session_id", observation.sessionId)
+                .put("session_version", 8).put("episode_id", "episode").put("task_status", "IN_PROGRESS")
+                .put("state_id", "S4_FONT_SIZE_CONTROL").put("guide_command", guide).toString()));
+    }
+
+    private ScreenSnapshot fontScreen(float progress, float appliedScale, long time) {
+        AccessibilityNodeSnapshot title = new AccessibilityNodeSnapshot("title", null, true,
+                "com.android.settings", "글자 크기", null, null, "android.widget.TextView", "text",
+                new int[]{20, 20, 500, 70}, false, true, false, false, false, null, 42);
+        AccessibilityNodeSnapshot slider = new AccessibilityNodeSnapshot("display", null, true,
+                "com.android.settings", "글자 크기", null, "settings:id/font", "android.widget.SeekBar", "slider",
+                new int[]{20, 100, 900, 180}, true, true, false, false, false, progress, 42);
+        return new ScreenSnapshot("com.android.settings", Instant.ofEpochMilli(time).toString(), 1080, 2400,
+                List.of(title, slider), 42, true, appliedScale);
     }
 
     private void assertStaleGuideSuppressed() throws Exception {
         verify((GuideOverlayView) get("guideOverlayView"), never()).showTarget(any(), any(), anyInt());
         verify((TaskFlowOverlayView) get("taskFlowView"), never()).progress(any(), any(), any(), anyBoolean());
-        verify((TextToSpeech) get("textToSpeech"), never()).speak(anyString(), anyInt(), any(), anyString());
-        assertNull(get("pendingSpeech"));
+        verify((TutorialNarrator) get("narrator"), never()).speak(anyString());
         assertNull(get("lastGuideCommandId"));
         accessibility.verify(ClickAccessibilityService::requestFreshSnapshot);
     }
@@ -445,6 +627,128 @@ public class ClickOverlayServiceExecutionTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000));
         accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(anyBoolean(), anyString(), anyInt()), never());
         assertEquals(-1, get("scrollSearchGeneration"));
+    }
+
+    @Test public void offscreenTargetAutomaticallyScrollsThenStopsWhenTargetAppears() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        currentScreen = scrollableScreen("first page");
+        resolve(); confirm();
+        accessibility.when(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42))
+                .thenAnswer(call -> { currentScreen = screen; return true; });
+        deliverMissingTarget(1, "TARGET_NOT_VISIBLE");
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(anyBoolean(), anyString(), anyInt()), never());
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
+        assertEquals("Wait for the moved screen to settle", 2, requests.size());
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(700));
+        assertEquals(3, requests.size());
+        assertSame(screen, requests.get(2).accessibilityTree);
+        assertTrue("Navigation must not claim the requested tap or setting succeeded",
+                sent.get(2).toString().contains("manual_override"));
+        assertNull(get("pendingVerifiedAction"));
+        deliver(2, "highlight", "tap", null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42), times(1));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(false, "com.android.settings", 42), never());
+        assertEquals(3, requests.size());
+    }
+
+    @Test public void automaticSearchStopsAfterFourMovesAndKeepsManualControls() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        currentScreen = scrollableScreen("page 0");
+        resolve(); confirm();
+        int[] page = {0};
+        accessibility.when(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42))
+                .thenAnswer(call -> { currentScreen = scrollableScreen("page " + ++page[0]); return true; });
+        for (int i = 1; i <= 4; i++) {
+            deliverMissingTarget(i, "TARGET_NOT_VISIBLE");
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(900));
+            assertEquals(i + 2, requests.size());
+        }
+        deliverMissingTarget(5, "TARGET_NOT_VISIBLE");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42), times(4));
+        verify((TaskFlowOverlayView) get("taskFlowView")).scrollRecovery(anyString(), anyString(), any(), any(), any());
+        assertEquals(6, requests.size());
+    }
+
+    @Test public void automaticSearchReversesAtListEndThenStops() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        currentScreen = scrollableScreen("only page");
+        resolve(); confirm();
+        // Both directions return false when the list cannot move.
+        deliverMissingTarget(1, "TARGET_NOT_VISIBLE");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+        deliverMissingTarget(2, "TARGET_NOT_VISIBLE");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+        deliverMissingTarget(3, "TARGET_NOT_VISIBLE");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42), times(1));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(false, "com.android.settings", 42), times(1));
+        assertEquals(4, requests.size());
+    }
+
+    @Test public void pauseCancelsAutomaticScrollBeforeItRuns() throws Exception {
+        currentScreen = scrollableScreen("page");
+        resolve(); confirm();
+        deliverMissingTarget(1, "TARGET_NOT_VISIBLE");
+        control("pause_task");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(anyBoolean(), anyString(), anyInt()), never());
+        assertEquals("pause_task", requests.get(2).commandType());
+        assertEquals(3, requests.size());
+    }
+
+    @Test public void cancelCancelsAutomaticScrollBeforeItRuns() throws Exception {
+        currentScreen = scrollableScreen("page");
+        resolve(); confirm();
+        deliverMissingTarget(1, "TARGET_NOT_VISIBLE");
+        control("cancel_task");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(anyBoolean(), anyString(), anyInt()), never());
+        assertEquals("cancel_task", requests.get(2).commandType());
+        assertEquals(3, requests.size());
+    }
+
+    @Test public void changedWindowCancelsAutomaticScrollBeforeItRuns() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        currentScreen = scrollableScreen("page");
+        resolve(); confirm();
+        deliverMissingTarget(1, "TARGET_NOT_VISIBLE");
+        currentScreen = changedScreen("com.example.other", 1080, 2400, 99, 600);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(anyBoolean(), anyString(), anyInt()), never());
+        assertSame(currentScreen, requests.get(2).accessibilityTree);
+    }
+
+    @Test public void ambiguousTargetNeverStartsAutomaticScroll() throws Exception {
+        currentScreen = scrollableScreen("page");
+        resolve(); confirm();
+        deliverMissingTarget(1, "TARGET_AMBIGUOUS");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(anyBoolean(), anyString(), anyInt()), never());
+        assertEquals(2, requests.size());
+    }
+
+    private ScreenSnapshot scrollableScreen(String label) {
+        AccessibilityNodeSnapshot list = new AccessibilityNodeSnapshot("list", null, true,
+                "com.android.settings", label, null, null, "androidx.recyclerview.widget.RecyclerView", "list",
+                new int[]{0, 200, 1080, 2200}, false, true, false, true, false, null, 42);
+        return new ScreenSnapshot("com.android.settings", Instant.now().toString(),
+                1080, 2400, List.of(list), 42);
+    }
+
+    private void deliverMissingTarget(int index, String reason) throws Exception {
+        AgentTurnContract.Request request = requests.get(index);
+        JSONObject guide = new JSONObject().put("guide_command_id", "missing-guide-" + index)
+                .put("command_type", "highlight").put("action_type", "observe_only")
+                .put("requires_user_action", false).put("message", "목록에서 항목을 찾아주세요.")
+                .put("render_policy", new JSONObject().put("recovery", new JSONObject()
+                        .put("recoverable", true).put("waiting_for", "user").put("reason_code", reason)
+                        .put("next_action", "manual_navigation")));
+        JSONObject response = new JSONObject().put("request_id", request.requestId).put("session_id", request.sessionId)
+                .put("session_version", index).put("episode_id", "episode").put("task_status", "IN_PROGRESS")
+                .put("state_id", "S1_SETTINGS_HOME").put("guide_command", guide).put("metadata", new JSONObject());
+        callbacks.get(index).onSuccess(new AgentTurnContract.Response(response.toString()));
     }
 
     private void searchScroll(boolean forward, ScreenSnapshot expected) throws Exception {

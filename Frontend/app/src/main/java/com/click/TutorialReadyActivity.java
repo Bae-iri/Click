@@ -107,7 +107,8 @@ public final class TutorialReadyActivity extends AppCompatActivity {
         });
     }
 
-    @Override protected void onStop() { narrator.stop(); super.onStop(); }
+    @Override protected void onResume() { super.onResume(); narrator.resume(); }
+    @Override protected void onPause() { narrator.pause(); super.onPause(); }
     @Override protected void onDestroy() { narrator.close(); super.onDestroy(); }
 
     private LinearLayout vertical() {
