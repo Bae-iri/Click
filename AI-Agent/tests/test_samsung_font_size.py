@@ -57,7 +57,8 @@ def test_combined_page_selects_slider_instead_of_ambiguous_plus_and_minus(graph,
 
 @pytest.mark.parametrize("graph", [MVP_01_TASK_GRAPH, MVP_02_TASK_GRAPH])
 @pytest.mark.parametrize("delayed_event", [False, True])
-def test_numeric_description_and_layout_changes_keep_original_result_baseline(graph, delayed_event):
+@pytest.mark.parametrize("recreated_window", [False, True])
+def test_numeric_description_and_layout_changes_keep_original_result_baseline(graph, delayed_event, recreated_window):
     engine = ClickAgentEngine(task_graphs={graph.definition.task_id: graph},
                               similarity_scorer=KeywordFallbackSimilarityScorer())
     goal = TypedGoal(goal_type=graph.definition.goal_type, task_id=graph.definition.task_id,
@@ -69,7 +70,7 @@ def test_numeric_description_and_layout_changes_keep_original_result_baseline(gr
             episode_id="episode", observation_id=f"o{index}", captured_at_ms=index * 1000,
             raw_goal=None, typed_goal=goal if index == 1 else None, accessibility_tree=nodes,
             device_context=DeviceContext(platform="android", app_package=PACKAGE),
-            screen_bounds=SCREEN, active_window_id=42, user_confirmation=confirmation,
+            screen_bounds=SCREEN, active_window_id=nodes[0].window_id, user_confirmation=confirmation,
             user_action_event=event,
             applied_settings={"source": "android.provider.Settings.System.FONT_SCALE", "font_scale": scale}))
 
@@ -80,6 +81,8 @@ def test_numeric_description_and_layout_changes_keep_original_result_baseline(gr
     value, scale = (5, 1.5) if increase else (3, 1.15)
     after = tuple(replace(n, node_id="font-slider-new-index", bounds_in_screen=(135, 2020, 945, 2082))
                   if n.node_id == "font-slider" else n for n in samsung_font_screen(value))
+    if recreated_window:
+        after = tuple(replace(n, window_id=44) for n in after)
     event = UserActionEvent(UserActionType.DRAG_COMPLETED, guide.guide_command_id,
         guide.target_node_id, occurred_at_ms=2500, event_id="font-drag", episode_id="episode",
         target_bounds=guide.target_bounds)
@@ -108,3 +111,41 @@ def test_numeric_control_requires_unique_font_context(problem):
     nodes = normalize_accessibility_tree(tree, screen_bounds=SCREEN)
     match = match_next_ui("S4_FONT_SIZE_CONTROL", nodes, MVP_01_TASK_GRAPH)
     assert match.target_node_id is None
+
+
+@pytest.mark.parametrize("problem", ["unchanged_scale", "missing_scale", "opposite_scale",
+    "unchanged_slider", "wrong_resource", "duplicate_control", "wrong_package", "late_observation"])
+def test_recreated_window_requires_unique_control_and_both_persisted_and_slider_changes(problem):
+    graph = MVP_01_TASK_GRAPH
+    engine = ClickAgentEngine(task_graphs={graph.definition.task_id: graph},
+                              similarity_scorer=KeywordFallbackSimilarityScorer())
+    goal = TypedGoal(goal_type=graph.definition.goal_type, task_id=graph.definition.task_id,
+        target_app="android_settings", task_type="settings_change", slots=graph.definition.required_slots,
+        source_text="", confidence=1, is_supported=True, required_slots_filled=True)
+
+    def turn(index, nodes, scale, *, confirmation=None, event=None, at=None):
+        return engine.handle_turn(AgentTurnRequest(request_id=f"r{index}", session_id="recreated-font",
+            episode_id="episode", observation_id=f"o{index}", captured_at_ms=at or index * 1000,
+            typed_goal=goal if index == 1 else None, raw_goal=None, accessibility_tree=nodes,
+            device_context=DeviceContext(platform="android", app_package=PACKAGE),
+            screen_bounds=SCREEN, active_window_id=nodes[0].window_id,
+            user_confirmation=confirmation, user_action_event=event,
+            applied_settings={"source": "android.provider.Settings.System.FONT_SCALE", "font_scale": scale}))
+
+    turn(1, samsung_font_screen(), 1.3)
+    guide = turn(2, samsung_font_screen(), 1.3, confirmation="accepted").guide_command
+    after = tuple(replace(n, window_id=44) for n in samsung_font_screen(4 if problem == "unchanged_slider" else 5))
+    scale = {"unchanged_scale": 1.3, "missing_scale": None, "opposite_scale": 1.1}.get(problem, 1.5)
+    if problem == "wrong_resource":
+        after = tuple(replace(n, resource_id=PACKAGE + ":id/other") if n.node_id == "font-slider" else n for n in after)
+    if problem == "duplicate_control":
+        after = (*after, replace(after[-2], node_id="duplicate", bounds_in_screen=(135, 2120, 945, 2182)))
+    if problem == "wrong_package":
+        after = tuple(replace(n, package_name="com.example.other") for n in after)
+    event = UserActionEvent(UserActionType.DRAG_COMPLETED, guide.guide_command_id,
+        guide.target_node_id, occurred_at_ms=2500, event_id="font-drag", episode_id="episode",
+        target_bounds=guide.target_bounds)
+    result = turn(3, after, scale, event=event,
+        at=2501 + graph.policy.observation_timeout_ms if problem == "late_observation" else 3000)
+    assert not result.verification_result.task_completed
+    assert engine.session_store.get("recreated-font").technical_outcome.get("status") != "CHANGED"
