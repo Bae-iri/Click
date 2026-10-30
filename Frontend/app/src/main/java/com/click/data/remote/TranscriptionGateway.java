@@ -18,32 +18,64 @@ public final class TranscriptionGateway {
     }
 
     private static final String PATH = "/api/v1/speech/transcriptions";
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final ExecutorService executor;
+    private java.util.concurrent.FutureTask<Void> contractPreparation;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final AuthenticatedHttpClient http;
     private volatile int generation;
 
     public TranscriptionGateway(Context context) {
-        http = new AuthenticatedHttpClient(context);
+        this(new AuthenticatedHttpClient(context), Executors.newSingleThreadExecutor());
     }
 
-    public void transcribe(byte[] wav, Callback callback) {
+    TranscriptionGateway(AuthenticatedHttpClient http, ExecutorService executor) {
+        this.http = http;
+        this.executor = executor;
+    }
+
+    /** One fresh contract check per utterance; no cross-utterance trust cache. */
+    public synchronized void prepare() {
+        if (contractPreparation != null) contractPreparation.cancel(false);
+        generation++;
+        contractPreparation = new java.util.concurrent.FutureTask<>(() -> { requirePrivateContract(); return null; });
+        executor.execute(contractPreparation);
+    }
+
+    private void requirePrivateContract() throws Exception {
+        HttpResult contract = AuthGateway.get("/openapi.json", null);
+        if (contract.status < 200 || contract.status >= 300)
+            throw new java.io.IOException("PRIVATE_STT_UNAVAILABLE");
+        try { PrivateSpeechContract.requireSelfHosted(new JSONObject(contract.body)); }
+        catch (org.json.JSONException error) { throw new java.io.IOException("PRIVATE_STT_UNAVAILABLE"); }
+    }
+
+    public synchronized void transcribe(byte[] wav, Callback callback) {
         final int token = ++generation;
+        final java.util.concurrent.FutureTask<Void> preparation = contractPreparation;
+        contractPreparation = null;
+        final long contractStarted = android.os.SystemClock.elapsedRealtime();
         executor.execute(() -> {
             try {
                 if (token != generation) return;
-                // Check before sending any audio: the previously deployed API used external STT.
-                HttpResult contract = AuthGateway.get("/openapi.json", null);
-                if (contract.status < 200 || contract.status >= 300)
-                    throw new java.io.IOException("PRIVATE_STT_UNAVAILABLE");
-                try { PrivateSpeechContract.requireSelfHosted(new JSONObject(contract.body)); }
-                catch (org.json.JSONException error) { throw new java.io.IOException("PRIVATE_STT_UNAVAILABLE"); }
+                // The check may have completed during recording. It still must succeed before audio upload.
+                if (preparation == null) requirePrivateContract();
+                else {
+                    try { preparation.get(); }
+                    catch (java.util.concurrent.ExecutionException error) {
+                        Throwable cause = error.getCause();
+                        if (cause instanceof Exception) throw (Exception) cause;
+                        throw new java.io.IOException("PRIVATE_STT_UNAVAILABLE");
+                    }
+                }
                 if (token != generation) return;
+                android.util.Log.d("ClickSTT", "contract_wait_ms=" + (android.os.SystemClock.elapsedRealtime() - contractStarted));
                 JSONObject body = new JSONObject()
                         .put("audio_base64", Base64.encodeToString(wav, Base64.NO_WRAP))
                         .put("mime_type", "audio/wav")
                         .put("language", "ko");
+                long requestStarted = android.os.SystemClock.elapsedRealtime();
                 HttpResult result = http.post(PATH, body.toString(), 40000);
+                android.util.Log.d("ClickSTT", "request_ms=" + (android.os.SystemClock.elapsedRealtime() - requestStarted));
                 JSONObject response = new JSONObject(result.body);
                 if (!"self_hosted".equals(response.optString("provider"))
                         || !PrivateSpeechContract.MODEL.equals(response.optString("model")))
@@ -57,6 +89,10 @@ public final class TranscriptionGateway {
         });
     }
 
-    public void cancel() { generation++; }
+    public synchronized void cancel() {
+        generation++;
+        if (contractPreparation != null) contractPreparation.cancel(false);
+        contractPreparation = null;
+    }
     public void close() { cancel(); executor.shutdownNow(); }
 }

@@ -100,3 +100,21 @@ def test_invalid_model_output_is_not_reported_as_silence(monkeypatch, text):
                                headers={'Authorization': 'Bearer ' + TOKEN})
     assert response.status_code == 503
     assert 'NO_SPEECH' not in response.text
+
+
+def test_short_commands_use_greedy_decoding():
+    def transcribe(waveform,**options):
+        assert options['beam_size']==1
+        assert options['temperature']==0.0
+        return iter([SimpleNamespace(text='테스트')]),None
+    assert infer(SimpleNamespace(transcribe=transcribe),struct.pack('<h',0))=='테스트'
+
+
+def test_phase_timing_header_contains_no_audio_or_transcript(monkeypatch):
+    monkeypatch.setenv('SELF_HOSTED_STT_TOKEN',TOKEN)
+    with TestClient(create_app(lambda:object(),lambda model,pcm:'테스트')) as client:
+        response=client.post('/v1/transcriptions',json=audio_request().model_dump(),headers={'Authorization':'Bearer '+TOKEN})
+    assert response.status_code==200
+    timing=response.headers['server-timing']
+    assert 'stt_decode;dur=' in timing and 'stt_inference;dur=' in timing
+    assert '테스트' not in timing and TOKEN not in timing
