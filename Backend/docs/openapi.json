@@ -7370,6 +7370,7 @@
               "help_opened",
               "guide_repeated",
               "guide_action_observed",
+              "navigation_recovery",
               "user_confused",
               "explanation_changed",
               "task_completed"
@@ -7393,7 +7394,7 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Metadata",
-            "description": "Only step, duration_ms, attempt_count (nonnegative integers <= 86400000) and explanation_depth (concise/normal/detailed)"
+            "description": "Only step, duration_ms, attempt_count (nonnegative integers <= 86400000), navigation_action (back/home), and explanation_depth (concise/normal/detailed)"
           }
         },
         "type": "object",
@@ -8630,6 +8631,7 @@
               "scroll_completed",
               "scroll_failed",
               "back_navigated",
+              "home_navigated",
               "manual_override",
               "observe_only"
             ],

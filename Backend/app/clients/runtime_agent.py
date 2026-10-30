@@ -97,6 +97,7 @@ class RuntimeAgentAdapter:
                     visible_to_user=node.visible_to_user,
                     package_name=node.package_name or package_name,
                     class_name=node.class_name,
+                    role=node.role,
                     text=node.text,
                     content_description=node.content_description,
                     resource_id=node.resource_id,
@@ -185,7 +186,8 @@ class RuntimeAgentAdapter:
         target = next((node for node in tree.nodes if result.match_result and node.node_id == result.match_result.target_node_id), None) if tree else None
         name = (target.class_name or "").lower() if target else ""
         role = "slider" if "seekbar" in name else "button" if "button" in name else "menu_item" if target and target.clickable else "other"
-        self.execution_event = produce(result, previous, runtime_session, role)
+        self.execution_event = produce(result, previous, runtime_session, role,
+            request.user_action_event.action_type if request.user_action_event else None)
         slider_values = (
             runtime_session.last_snapshot.slider_values
             if runtime_session and runtime_session.last_snapshot else {}

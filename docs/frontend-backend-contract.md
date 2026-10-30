@@ -88,7 +88,8 @@ legacy FE 연동은 `POST /api/v1/agent/turn`을 사용한다. 신규 FE는 `/ap
 ```
 
 허용 값은 `tap_completed`, `drag_completed`, `scroll_completed`,
-`scroll_failed`, `back_navigated`, `manual_override`, `observe_only`다.
+`scroll_failed`, `back_navigated`, `home_navigated`, `manual_override`, `observe_only`다.
+홈·뒤로가기 관측은 조작 시도를 중단하며 성공/실패 학습에서 제외한다. 홈은 실제 런처 관측과 함께 경로만 초기화하고 목표는 유지한다.
 
 ## Vision fallback
 

@@ -175,6 +175,7 @@ public final class AgentTurnContract {
         public final String guideCommandId;
         public final String commandType;
         public final String actionType;
+        public final String proposedAction;
         public final String message;
         public final String targetNodeId;
         public final int[] targetBounds;
@@ -185,6 +186,7 @@ public final class AgentTurnContract {
             guideCommandId = optNullableString(object, "guide_command_id");
             commandType = object.getString("command_type");
             actionType = object.getString("action_type");
+            proposedAction = optNullableString(object, "proposed_action");
             message = object.optString("message", "");
             targetNodeId = optNullableString(object, "target_node_id");
             requiresUserAction = object.optBoolean("requires_user_action", false);

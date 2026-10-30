@@ -51,6 +51,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     private Button action, restore;
     private int step = INTRO, completedSteps;
     private TutorialNarrator narrator;
+    private com.click.ui.tutorial.ReviewedTutorialScripts reviewedScripts;
     private com.click.service.overlay.SpeechInput speech;
     private boolean transcribing, reviewConfirmed, folded, moved, restored;
     private String lastCue = "", voiceText = "";
@@ -62,6 +63,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         narrator = new TutorialNarrator(this);
+        reviewedScripts = new com.click.ui.tutorial.ReviewedTutorialScripts(this);
         speech = new com.click.service.overlay.DeviceSpeechInput(this);
         if (savedInstanceState != null) {
             step = Math.max(INTRO, Math.min(COMPLETE, savedInstanceState.getInt("feature_step", INTRO)));
@@ -514,6 +516,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         String spokenDetail = step == WRITE && mode == ClickOverlayLayout.Mode.TEXT
                 ? "입력 칸의 회색 글씨를 따라 입력한 뒤 화살표를 눌러 보내요." : detail;
         String cue = heading.replace('\n', ' ') + ". " + com.click.ui.tutorial.TutorialNarrationText.instructionsOnly(spokenDetail);
+        cue = reviewedScripts.forSource(cue);
         if (!cue.equals(lastCue)) {
             lastCue = cue;
             if (!keyboardVisible && !floating.getControl().isVoiceInputActive() && !transcribing && step != REPLY) narrator.speak(cue);

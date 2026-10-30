@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from math import isfinite
+
 from ai_agent.runtime.keywords import any_keyword_matches, normalize_text
 from ai_agent.runtime.types import AccessibilityNode, Bounds, NormalizedNode
 
@@ -165,6 +167,10 @@ def infer_role(node: AccessibilityNode, *, label: str | None = None) -> str:
 
     if _looks_like_launcher_app_icon(package_name, resource_id, label, node.clickable):
         return "app_icon"
+    declared_range = [node.extras.get(key) for key in ("progress", "min", "max")]
+    if (node.role == "slider" and all(type(value) in (int, float) and isfinite(value) for value in declared_range)
+            and declared_range[1] < declared_range[2] and declared_range[1] <= declared_range[0] <= declared_range[2]):
+        return "slider"
     if "seekbar" in class_name or "slider" in class_name or "slider" in resource_id:
         return "slider"
     if "switch" in class_name:

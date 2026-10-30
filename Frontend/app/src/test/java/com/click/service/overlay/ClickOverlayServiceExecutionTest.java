@@ -511,6 +511,98 @@ public class ClickOverlayServiceExecutionTest {
 
     }
 
+    @Test public void automationOffNeverExecutesAgentScroll() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
+        JSONObject body = new JSONObject().put("request_id", "scroll").put("session_id", "frontend-session")
+                .put("task_status", "IN_PROGRESS").put("guide_command", new JSONObject()
+                    .put("guide_command_id", "scroll-guide").put("command_type", "gesture_hint")
+                    .put("action_type", "scroll").put("message", "아래로 스크롤해 주세요."));
+        AgentTurnContract.Response response = new AgentTurnContract.Response(body.toString());
+        Method execute = ClickOverlayService.class.getDeclaredMethod("executeScroll", AgentTurnContract.GuideCommand.class);
+        execute.setAccessible(true); execute.invoke(service, response.guideCommand);
+        accessibility.verify(() -> ClickAccessibilityService.performScroll(anyBoolean()), never());
+    }
+
+    @Test public void automationOffNeverSwipesLauncherToFindSettings() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
+        currentScreen = new ScreenSnapshot("com.android.launcher3", Instant.now().toString(), 1080, 2400, List.of(), 42);
+        resolve(); confirm();
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(anyBoolean()), never());
+        assertEquals("start_task", sent.get(1).getString("command_type"));
+    }
+
+    @Test public void oneBackRecoveryIsHighlightedAndEscalatesWhenUnchanged() throws Exception {
+        resolve(); confirm(); set("turnInFlight", false); set("firstTurnSent", true);
+        NavigationRecovery recovery = (NavigationRecovery)get("navigationRecovery");
+        recovery.onPath(screen); recovery.unplannedTap();
+        currentScreen = new ScreenSnapshot("com.android.settings", Instant.now().toString(), 1080, 2400, List.of(), 42);
+        JSONObject body = new JSONObject().put("request_id", "recovery").put("session_id", "frontend-session")
+                .put("state_id", "S0_UNKNOWN").put("task_status", "IN_PROGRESS")
+                .put("guide_command", new JSONObject().put("guide_command_id", "recover-guide")
+                    .put("command_type", "highlight").put("action_type", "observe_only")
+                    .put("message", "화면을 확인해 주세요.").put("render_policy", new JSONObject()
+                        .put("recovery", new JSONObject().put("waiting_for", "user").put("reason_code", "STATE_UNKNOWN"))));
+        AgentTurnContract.Response response = new AgentTurnContract.Response(body.toString());
+        GuideStepTimer timer=(GuideStepTimer)get("guideStepTimer");
+        timer.start("frontend-session", "S1_SETTINGS_HOME", 1, "com.android.settings", 1000);
+        Method render=ClickOverlayService.class.getDeclaredMethod("showNavigationRecoveryIfNeeded",
+                AgentTurnContract.Response.class,ScreenSnapshot.class);
+        render.setAccessible(true);assertEquals(true,render.invoke(service,response,currentScreen));
+        assertNull(timer.firstTap("com.android.settings",5000));
+        org.mockito.ArgumentCaptor<Runnable> click=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        TaskFlowOverlayView card=(TaskFlowOverlayView)get("taskFlowView");
+        verify(card).navigationRecovery(eq(true),contains("뒤로가기"),click.capture());
+        accessibility.when(() -> ClickAccessibilityService.performRecoveryNavigation(true)).thenReturn(true);
+        click.getValue().run();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2600));
+        verify(card).navigationRecovery(eq(false),contains("홈 버튼"),any());
+        assertEquals(NavigationRecovery.Action.HOME,recovery.hint());
+    }
+
+    @Test public void automaticFontFlowAcceptsFinalApprovalThenExecutesSliderWithoutNewPolicyField() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        int[] bounds={20,500,1000,600};
+        AccessibilityNodeSnapshot slider=new AccessibilityNodeSnapshot("node_0_1","node_0",true,
+                "com.android.settings",null,null,"font_size","android.widget.SeekBar","slider",bounds,
+                false,true,false,false,false,2f,42,false,0f,7f);
+        currentScreen=new ScreenSnapshot("com.android.settings",Instant.now().toString(),1080,2400,List.of(slider),42);
+        resolve();confirm();
+        JSONObject metadata=new JSONObject().put("confirmation",new JSONObject().put("id","font-confirmation")
+                    .put("expires_at",System.currentTimeMillis()/1000+120))
+                .put("typed_goal",new JSONObject().put("target_app","android_settings")
+                    .put("slots",new JSONObject().put("setting","font_size").put("direction","increase")));
+        JSONObject guide=new JSONObject().put("guide_command_id","font-confirm").put("command_type","confirmation")
+                .put("action_type","observe_only").put("proposed_action","drag").put("requires_user_action",true)
+                .put("target_node_id","node_0_1").put("target_bounds",new JSONArray(bounds)).put("message","크기를 바꿀까요?");
+        JSONObject body=new JSONObject().put("request_id",requests.get(1).requestId).put("session_id","frontend-session")
+                .put("episode_id","episode").put("session_version",1).put("task_status","IN_PROGRESS")
+                .put("state_id","S4_FONT_SIZE_CONTROL").put("guide_command",guide).put("metadata",metadata);
+        callbacks.get(1).onSuccess(new AgentTurnContract.Response(body.toString()));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(80));
+        assertEquals("respond_confirmation",sent.get(2).getString("command_type"));
+        assertEquals("accepted",sent.get(2).getString("user_confirmation"));
+        accessibility.when(()->ClickAccessibilityService.performGuidedSlider(any(),eq("node_0_1"),any(),eq(1))).thenReturn(true);
+        guide.put("guide_command_id","font-drag").put("command_type","highlight").put("action_type","drag");
+        metadata.remove("confirmation");
+        body.put("request_id",requests.get(2).requestId).put("session_version",2);
+        callbacks.get(2).onSuccess(new AgentTurnContract.Response(body.toString()));
+        accessibility.verify(()->ClickAccessibilityService.performGuidedSlider(any(),eq("node_0_1"),any(),eq(1)));
+    }
+
+    @Test public void waitingResponseKeepsOriginalActionBindingForDelayedAutomaticVerification() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        GuidedActionTracker tracker=(GuidedActionTracker)get("actionTracker");
+        assertTrue(tracker.isBoundToGuide("returned-guide"));
+        JSONObject body=new JSONObject().put("request_id","wait").put("session_id","frontend-session")
+                .put("task_status","IN_PROGRESS").put("state_id","S1_SETTINGS_HOME")
+                .put("guide_command",new JSONObject().put("guide_command_id","returned-guide")
+                    .put("command_type","highlight").put("action_type","observe_only")
+                    .put("message","조작 결과를 확인하고 있어요."));
+        Method render=ClickOverlayService.class.getDeclaredMethod("renderGuide",AgentTurnContract.Response.class);
+        render.setAccessible(true);render.invoke(service,new AgentTurnContract.Response(body.toString()));
+        assertTrue(tracker.isBoundToGuide("returned-guide"));
+    }
+
     private void resolve() throws Exception {
         Method method = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
         method.setAccessible(true);

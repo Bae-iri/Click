@@ -84,7 +84,10 @@ def test_uncorrelated_events_never_spend_action_budget(problem):
     event = replace(event, **changes)
     for at in (1200, 1800, 6000, 12000):
         result = turns.send(at=at, event=event)
-        assert result.verification_result.status == Status.WAITING_FOR_ACTION
+        if problem == "back_navigated" and result.verification_result is None:
+            assert turns.session.total_failed_attempts == 0
+        else:
+            assert result.verification_result.status == Status.WAITING_FOR_ACTION
     assert turns.session.total_failed_attempts == 0
     assert not turns.session.transition_attempts
     assert not turns.session.failed_target_keys

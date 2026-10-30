@@ -65,9 +65,11 @@ final class AccessibilitySnapshotCollector {
     }
 
     private String inferRole(String className, AccessibilityNodeInfo node) {
+        if (node.getRangeInfo() != null
+                && node.getActionList().contains(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS)) return "slider";
         if (className == null) return null;
         String lower = className.toLowerCase();
-        if (lower.contains("seekbar")) return "slider";
+        if (lower.contains("seekbar") || lower.contains("slider")) return "slider";
         if (lower.contains("button")) return "button";
         if (lower.contains("switch")) return "switch";
         if (lower.contains("checkbox")) return "checkbox";

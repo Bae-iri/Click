@@ -606,6 +606,25 @@ public final class TaskFlowOverlayView extends LinearLayout {
         clear("작업을 잠시 멈췄어요"); content.addView(text("이어서 진행하거나 그만할 수 있어요.", 16));
         pause.setText("이어서 진행"); pause.setOnClickListener(v -> listener.control("resume_task"));
     }
+    public void navigationRecovery(boolean back, String message, Runnable navigate) {
+        clear("원래 작업으로 돌아가기");
+        content.addView(text(message, 17), spaced(8));
+        Button action = secondaryButton(back ? "뒤로가기" : "홈으로 이동", () -> {});
+        action.setOnClickListener(view -> {
+            if (!action.isEnabled()) return;
+            action.setEnabled(false);
+            navigate.run();
+        });
+        action.setContentDescription(back ? "뒤로가기. 직전 화면으로 돌아가기" : "홈으로 이동. 목표를 유지하고 처음부터 안내");
+        GradientDrawable outline = new GradientDrawable();
+        outline.setColor(0xFFF1F6FF); outline.setCornerRadius(dp(16));
+        outline.setStroke(dp(3), 0xFFE94467);
+        action.setBackground(outline);
+        recoveryActions.addView(action, spaced(10));
+        recoveryActions.setVisibility(VISIBLE);
+        content.addView(text("강조한 버튼을 누르거나 휴대폰의 내비게이션 버튼·제스처를 사용해 주세요.", 14), spaced(10));
+    }
+
     public void waiting(String message) { clear(message); }
 public void observationRecovery(String message, Runnable retry) {
         observationRecovery(null, message, retry);

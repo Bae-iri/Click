@@ -22,4 +22,11 @@ public class SliderAdjustmentTest {
   assertFalse(SliderAdjustment.moved(2,1,1));
   assertFalse(SliderAdjustment.moved(2,Float.NaN,1));
  }
+ @Test public void calculatesBoundedStepAndHorizontalGesture() {
+  assertEquals(3f,SliderAdjustment.nextValue(2,0,7,1,true),0f);
+  assertEquals(1f,SliderAdjustment.nextValue(2,0,7,-1,true),0f);
+  float[] points=SliderAdjustment.dragPoints(new int[]{0,100,500,200},2,3,0,7);
+  assertNotNull(points);assertTrue(points[2]>points[0]);
+  assertNull(SliderAdjustment.dragPoints(new int[]{0,0,50,500},2,3,0,7));
+ }
 }

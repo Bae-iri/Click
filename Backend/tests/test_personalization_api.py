@@ -152,3 +152,18 @@ def test_profile_personalizes_agent_message_only_after_consent() -> None:
         json={**payload, "user_id": different_user},
     )
     assert replay.status_code == 403
+
+
+def test_navigation_context_never_counts_as_comprehension_difficulty():
+    app=create_app();client=TestClient(app);user_id=create_user(client)
+    base=f"/api/v1/users/{user_id}"
+    client.post(base+'/consents',json={'purpose':'personalization','consented':True,'policy_version':'v1'})
+    for action in ['back','home','home']:
+        result=client.post(base+'/events',json={'event_type':'navigation_recovery','screen_name':'S1_SETTINGS_HOME',
+            'metadata':{'navigation_action':action,'duration_ms':120000}})
+        assert result.status_code==201
+        profile=result.json()['profile']
+        assert profile['confidence_score']==0
+        assert profile['evidence_count']==0
+        assert profile['comprehension_level']=='unknown'
+        assert not profile['state_difficulties']

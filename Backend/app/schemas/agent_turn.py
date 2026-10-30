@@ -167,6 +167,7 @@ class UserActionEventRequest(BaseModel):
         "scroll_completed",
         "scroll_failed",
         "back_navigated",
+        "home_navigated",
         "manual_override",
         "observe_only",
     ]

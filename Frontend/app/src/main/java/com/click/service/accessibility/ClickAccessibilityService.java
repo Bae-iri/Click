@@ -91,9 +91,15 @@ public final class ClickAccessibilityService extends AccessibilityService {
         }
         if (packageName == null || packageName.toString().equals(getPackageName())) return;
         if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED) {
-            ClickOverlayService.onGuidedViewClicked(packageName.toString(), event.getEventTime());
             AccessibilityNodeInfo source = event.getSource();
             if (source != null) {
+                String navigationId = source.getViewIdResourceName();
+                if ("com.android.systemui".contentEquals(packageName) && navigationId != null) {
+                    if (navigationId.endsWith("/back") || navigationId.endsWith("/back_button"))
+                        ClickOverlayService.onSystemNavigationRequested(true);
+                    else if (navigationId.endsWith("/home") || navigationId.endsWith("/home_button"))
+                        ClickOverlayService.onSystemNavigationRequested(false);
+                }
                 emitAction(source, "tap_completed", event.getEventTime());
                 source.recycle();
             }
@@ -185,7 +191,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         ClickAccessibilityService service = connectedService.get();
         if (service == null || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()) return false;
         ScreenSnapshot latest = freshSnapshot();
-        if (expected == null || latest == null || !expected.fingerprint().equals(latest.fingerprint())) return false;
+        if (!TouchAutomationPolicy.sameTarget(expected, latest, id, bounds)) return false;
         com.click.data.snapshot.AccessibilityNodeSnapshot target = TouchAutomationPolicy.clickableTarget(latest, id, bounds);
         if (target == null) return false;
         AccessibilityNodeInfo node = service.getRootInActiveWindow();
@@ -199,33 +205,35 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 if (node == null) return false;
             }
             Rect actual = new Rect(); node.getBoundsInScreen(actual);
+            actual.intersect(0, 0, latest.screenWidth, latest.screenHeight);
             String label = node.getText() != null ? node.getText().toString() : node.getContentDescription() == null ? "" : node.getContentDescription().toString();
-            if (!"com.android.settings".contentEquals(node.getPackageName() == null ? "" : node.getPackageName())
+            if (!target.packageName.contentEquals(node.getPackageName() == null ? "" : node.getPackageName())
                     || node.getWindowId() != latest.activeWindowId || !node.isVisibleToUser() || !node.isEnabled()
-                    || !node.isClickable() || node.isCheckable() || node.isEditable() || node.isPassword()
+                    || node.isCheckable() || node.isEditable() || node.isPassword()
                     || !label.equals(target.text != null ? target.text : target.contentDescription == null ? "" : target.contentDescription)
                     || !java.util.Objects.equals(node.getViewIdResourceName(), target.resourceId)
                     || !java.util.Objects.equals(node.getClassName() == null ? null : node.getClassName().toString(), target.className)
                     || !actual.equals(new Rect(target.bounds[0],target.bounds[1],target.bounds[2],target.bounds[3]))) return false;
             boolean performed = node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+            final long actionAt = System.currentTimeMillis();
             if (performed) {
-                final long actionAt = System.currentTimeMillis();
-                final ScreenSnapshot before = latest;
-                service.mainHandler.postDelayed(() -> {
-                    ScreenSnapshot after = freshSnapshot();
-                    if (after != null && !before.fingerprint().equals(after.fingerprint())) {
-                        for (com.click.data.snapshot.AccessibilityNodeSnapshot original : before.nodes) {
-                            if (id.equals(original.nodeId)) {
-                                ClickOverlayService.onGuidedAction("tap_completed", original.packageName,
-                                        original.windowId, id, original.resourceId, original.bounds, actionAt);
-                                break;
-                            }
-                        }
-                    }
-                    requestFreshSnapshot();
-                }, 350L);
+                service.verifyTapChange(latest, id, actionAt, 0);
+                return true;
             }
-            return performed;
+            ScreenSnapshot current = freshSnapshot();
+            if (!TouchAutomationPolicy.sameTarget(latest, current, id, bounds)
+                    || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()) return false;
+            Path tap = new Path(); tap.moveTo((bounds[0] + bounds[2]) / 2f, (bounds[1] + bounds[3]) / 2f);
+            android.accessibilityservice.GestureDescription gesture = new android.accessibilityservice.GestureDescription.Builder()
+                    .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(tap, 0, 80L)).build();
+            return service.dispatchGesture(gesture, new GestureResultCallback() {
+                @Override public void onCompleted(android.accessibilityservice.GestureDescription description) {
+                    service.verifyTapChange(latest, id, actionAt, 0);
+                }
+                @Override public void onCancelled(android.accessibilityservice.GestureDescription description) {
+                    requestFreshSnapshot();
+                }
+            }, service.mainHandler);
         } catch (IllegalArgumentException | IllegalStateException | SecurityException error) { return false; }
         finally { if (node != null) node.recycle(); }
     }
@@ -236,8 +244,8 @@ public final class ClickAccessibilityService extends AccessibilityService {
         if (service == null || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()
                 || direction != -1 && direction != 1) return false;
         ScreenSnapshot latest = freshSnapshot();
-        if (expected == null || latest == null || !expected.fingerprint().equals(latest.fingerprint())
-                || !"com.android.settings".equals(latest.packageName) || !latest.privacyMaskingReady
+        if (!TouchAutomationPolicy.sameTarget(expected, latest, id, bounds)
+                || !TouchAutomationPolicy.settingsPackage(latest.packageName) || !latest.privacyMaskingReady
                 || latest.activeWindowId == null || id == null || !id.matches("node_0(_[0-9]+)*")
                 || bounds == null || bounds.length != 4) return false;
         com.click.data.snapshot.AccessibilityNodeSnapshot target = null;
@@ -246,7 +254,9 @@ public final class ClickAccessibilityService extends AccessibilityService {
         }
         if (target == null || target.sensitiveInput || !target.enabled || !target.visibleToUser
                 || target.progress == null || target.rangeMin == null || target.rangeMax == null
-                || !"android.widget.SeekBar".equals(target.className)) return false;
+                || !("slider".equals(target.role) || target.className != null
+                    && (target.className.toLowerCase(java.util.Locale.ROOT).contains("seekbar")
+                        || target.className.toLowerCase(java.util.Locale.ROOT).contains("slider")))) return false;
         AccessibilityNodeInfo node = service.getRootInActiveWindow();
         if (node == null) return false;
         try {
@@ -260,44 +270,150 @@ public final class ClickAccessibilityService extends AccessibilityService {
             AccessibilityNodeInfo.RangeInfo range = node.getRangeInfo();
             if (range == null || !node.isEnabled() || !node.isVisibleToUser() || node.isPassword()
                     || node.isEditable() || node.isCheckable()
-                    || !"com.android.settings".contentEquals(node.getPackageName() == null ? "" : node.getPackageName())
-                    || !"android.widget.SeekBar".contentEquals(node.getClassName() == null ? "" : node.getClassName())
+                    || !latest.packageName.contentEquals(node.getPackageName() == null ? "" : node.getPackageName())
+                    || !java.util.Objects.equals(target.className, node.getClassName() == null ? null : node.getClassName().toString())
                     || node.getWindowId() != latest.activeWindowId
                     || !actual.equals(new Rect(bounds[0], bounds[1], bounds[2], bounds[3]))
                     || Float.compare(range.getCurrent(), target.progress) != 0
                     || Float.compare(range.getMin(), target.rangeMin) != 0
                     || Float.compare(range.getMax(), target.rangeMax) != 0
                     || !SliderAdjustment.canMove(range.getCurrent(), range.getMin(), range.getMax(), direction)) return false;
-            int action = direction > 0 ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
-            if (!node.getActionList().contains(direction > 0
-                    ? AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD
-                    : AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD)) return false;
             float before = range.getCurrent();
-            if (!node.performAction(action)) return false;
-            final long actionAt = System.currentTimeMillis();
-            final com.click.data.snapshot.AccessibilityNodeSnapshot original = target;
-            service.mainHandler.postDelayed(() -> {
-                ScreenSnapshot after = freshSnapshot();
-                if (after != null && java.util.Objects.equals(after.packageName, latest.packageName)
-                        && java.util.Objects.equals(after.activeWindowId, latest.activeWindowId)) {
-                    for (com.click.data.snapshot.AccessibilityNodeSnapshot changed : after.nodes) {
-                        if (id.equals(changed.nodeId) && changed.progress != null
-                                && changed.visibleToUser && !changed.sensitiveInput
-                                && java.util.Objects.equals(changed.resourceId, original.resourceId)
-                                && java.util.Objects.equals(changed.className, original.className)
-                                && java.util.Arrays.equals(changed.bounds, bounds)
-                                && SliderAdjustment.moved(before, changed.progress, direction)) {
-                            ClickOverlayService.onGuidedAction("drag_completed", changed.packageName,
-                                    changed.windowId, id, changed.resourceId, changed.bounds, actionAt);
-                            break;
-                        }
-                    }
+            boolean performed = false;
+            // SET_PROGRESS is exposed by Samsung/custom controls even when native scroll is absent.
+            if (node.getActionList().contains(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS)) {
+                float next = SliderAdjustment.nextValue(before, range.getMin(), range.getMax(), direction,
+                        range.getType() == AccessibilityNodeInfo.RangeInfo.RANGE_TYPE_INT);
+                if (Float.isFinite(next) && next != before) {
+                    android.os.Bundle arguments = new android.os.Bundle();
+                    arguments.putFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE, next);
+                    performed = node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(), arguments);
                 }
-                requestFreshSnapshot();
-            }, 350L);
+            }
+            if (!performed) {
+                int action = direction > 0 ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
+                AccessibilityNodeInfo.AccessibilityAction nativeAction = direction > 0
+                        ? AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD
+                        : AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD;
+                if (node.getActionList().contains(nativeAction)) performed = node.performAction(action);
+            }
+            final long actionAt = System.currentTimeMillis();
+            if (!performed) {
+                ScreenSnapshot current = freshSnapshot();
+                if (!TouchAutomationPolicy.sameTarget(latest, current, id, bounds)
+                        || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()) return false;
+                float next = SliderAdjustment.nextValue(before, range.getMin(), range.getMax(), direction,
+                        range.getType() == AccessibilityNodeInfo.RangeInfo.RANGE_TYPE_INT);
+                float[] points = SliderAdjustment.dragPoints(bounds, before, next, range.getMin(), range.getMax());
+                if (points == null) return false;
+                Path drag = new Path(); drag.moveTo(points[0], points[1]); drag.lineTo(points[2], points[3]);
+                android.accessibilityservice.GestureDescription gesture = new android.accessibilityservice.GestureDescription.Builder()
+                        .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(drag, 0, 350L)).build();
+                final com.click.data.snapshot.AccessibilityNodeSnapshot original = target;
+                return service.dispatchGesture(gesture, new GestureResultCallback() {
+                    @Override public void onCompleted(android.accessibilityservice.GestureDescription description) {
+                        service.verifySliderChange(latest, original, direction, before, actionAt, 0);
+                    }
+                    @Override public void onCancelled(android.accessibilityservice.GestureDescription description) {
+                        requestFreshSnapshot();
+                    }
+                }, service.mainHandler);
+            }
+            service.verifySliderChange(latest, target, direction, before, actionAt, 0);
             return true;
         } catch (IllegalArgumentException | IllegalStateException | SecurityException error) { return false; }
         finally { if (node != null) node.recycle(); }
+    }
+
+    private void verifyTapChange(ScreenSnapshot before, String id, long actionAt, int attempt) {
+        if (mainHandler == null) mainHandler = new Handler(getMainLooper());
+        mainHandler.postDelayed(() -> {
+            ScreenSnapshot after = freshSnapshot();
+            if (after != null && !before.fingerprint().equals(after.fingerprint())) {
+                for (com.click.data.snapshot.AccessibilityNodeSnapshot original : before.nodes) {
+                    if (id.equals(original.nodeId)) {
+                        ClickOverlayService.onVerifiedAutomaticAction("tap_completed", original.packageName,
+                                original.windowId, id, original.resourceId, original.bounds, actionAt);
+                        requestFreshSnapshot(); return;
+                    }
+                }
+            }
+            if (attempt < 3) verifyTapChange(before, id, actionAt, attempt + 1);
+            else requestFreshSnapshot();
+        }, attempt == 0 ? 150L : attempt == 1 ? 250L : attempt == 2 ? 600L : 1000L);
+    }
+
+    private void verifySliderChange(ScreenSnapshot baseline, com.click.data.snapshot.AccessibilityNodeSnapshot original,
+                                    int direction, float before, long actionAt, int attempt) {
+        if (mainHandler == null) mainHandler = new Handler(getMainLooper());
+        mainHandler.postDelayed(() -> {
+            ScreenSnapshot after = freshSnapshot();
+            if (after != null && java.util.Objects.equals(after.packageName, baseline.packageName)
+                    && java.util.Objects.equals(after.activeWindowId, baseline.activeWindowId)) {
+                for (com.click.data.snapshot.AccessibilityNodeSnapshot changed : after.nodes) {
+                    if (original.nodeId.equals(changed.nodeId) && changed.progress != null
+                            && changed.visibleToUser && !changed.sensitiveInput
+                            && java.util.Objects.equals(changed.resourceId, original.resourceId)
+                            && java.util.Objects.equals(changed.className, original.className)
+                            && java.util.Arrays.equals(changed.bounds, original.bounds)
+                            && SliderAdjustment.moved(before, changed.progress, direction)) {
+                        ClickOverlayService.onVerifiedAutomaticAction("drag_completed", changed.packageName, changed.windowId,
+                                original.nodeId, original.resourceId, original.bounds, actionAt);
+                        requestFreshSnapshot();
+                        return;
+                    }
+                }
+            }
+            if (attempt < 3 && after != null && java.util.Objects.equals(after.packageName, baseline.packageName)
+                    && java.util.Objects.equals(after.activeWindowId, baseline.activeWindowId))
+                verifySliderChange(baseline, original, direction, before, actionAt, attempt + 1);
+            else requestFreshSnapshot();
+        }, attempt == 0 ? 150L : attempt == 1 ? 250L : attempt == 2 ? 600L : 1000L);
+    }
+
+    /** Recovery is always user-triggered, independent of the automation preference. */
+    public static boolean performRecoveryNavigation(boolean back) {
+        ClickAccessibilityService service = connectedService.get();
+        if (service == null) return false;
+        boolean accepted = service.performGlobalAction(back ? GLOBAL_ACTION_BACK : GLOBAL_ACTION_HOME);
+        requestFreshSnapshot();
+        return accepted;
+    }
+
+    /** Only highlight a real observed system navigation control; never guess gesture coordinates. */
+    public static int[] navigationButtonBounds(boolean back) {
+        ClickAccessibilityService service = connectedService.get();
+        if (service == null) return null;
+        for (AccessibilityWindowInfo window : service.getWindows()) {
+            try {
+                if (window.getType() != AccessibilityWindowInfo.TYPE_SYSTEM) continue;
+                AccessibilityNodeInfo root = window.getRoot();
+                if (root == null) continue;
+                try {
+                    int[] found = findNavigationBounds(root, back);
+                    if (found != null) return found;
+                } finally { root.recycle(); }
+            } finally { window.recycle(); }
+        }
+        return null;
+    }
+
+    private static int[] findNavigationBounds(AccessibilityNodeInfo node, boolean back) {
+        String id = node.getViewIdResourceName();
+        String pkg = node.getPackageName() == null ? "" : node.getPackageName().toString();
+        if ("com.android.systemui".equals(pkg) && node.isVisibleToUser() && node.isEnabled()
+                && id != null && (id.endsWith(back ? "/back" : "/home")
+                    || id.endsWith(back ? "/back_button" : "/home_button"))) {
+            Rect box = new Rect(); node.getBoundsInScreen(box);
+            if (!box.isEmpty()) return new int[]{box.left, box.top, box.right, box.bottom};
+        }
+        for (int i = 0; i < node.getChildCount(); i++) {
+            AccessibilityNodeInfo child = node.getChild(i);
+            if (child == null) continue;
+            try { int[] found = findNavigationBounds(child, back); if (found != null) return found; }
+            finally { child.recycle(); }
+        }
+        return null;
     }
 
     public static WindowManager accessibilityWindowManager() {
