@@ -22,6 +22,7 @@ EVENT_WEIGHTS = {
     # A slower tap can reflect reading, accessibility needs, or interruption.
     # Preserve the duration as evidence without treating it as low comprehension.
     "guide_action_observed": 0.0,
+    "navigation_recovery": 0.0,
     "user_confused": -2.0,
     "explanation_changed": 0.0,
 }
@@ -78,7 +79,7 @@ class PersonalizationService:
         from ai_agent.user_modeling import update_difficulties
         profile.state_difficulties = update_difficulties(
             profile.state_difficulties, request.event_type, request.screen_name)
-        if request.event_type != "guide_action_observed":
+        if request.event_type not in {"guide_action_observed", "navigation_recovery"}:
             profile.confidence_score = max(
                 -10.0,
                 min(10.0, profile.confidence_score + EVENT_WEIGHTS[request.event_type]),

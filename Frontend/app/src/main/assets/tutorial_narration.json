@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "scripts": [
+    {
+      "source": "click 튜토리얼을 시작해볼게요!. click의 기능은 다음과 같아요.",
+      "script": "click 사용법을 함께 연습해 볼게요. 먼저 어떤 기능이 있는지 살펴보세요.",
+      "approved": true,
+      "reviewed_by": "coding-assistant: source and action preservation review",
+      "generated_by": "coding-assistant: offline editorial generation"
+    },
+    {
+      "source": "클릭과 함께 시작해 볼까요?. 아래 클릭 버튼을 눌러보세요.",
+      "script": "클릭과 함께 시작해 볼까요? 화면 아래의 클릭 버튼을 눌러보세요.",
+      "approved": true,
+      "reviewed_by": "coding-assistant: source and action preservation review",
+      "generated_by": "coding-assistant: offline editorial generation"
+    },
+    {
+      "source": "이제 준비됐어요!. 모든 연습을 마쳤어요. 이제 click에게 편하게 요청해 보세요.",
+      "script": "모든 연습을 마쳤어요. 이제 준비됐으니 click에게 편하게 요청해 보세요.",
+      "approved": true,
+      "reviewed_by": "coding-assistant: source and action preservation review",
+      "generated_by": "coding-assistant: offline editorial generation"
+    }
+  ]
+}

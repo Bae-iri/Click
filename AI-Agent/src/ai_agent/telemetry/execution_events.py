@@ -11,6 +11,7 @@ REASONS = {
     "unknown_transition", "unsupported_verification_predicate", "observation_precedes_action",
     "state_reached", "observed_progress", "target_value_unobservable", "settled_postcondition_not_met",
     "target_value_out_of_range", "target_range_changed",
+    "user_back_navigation", "user_home_navigation",
     "settled_wrong_state", "observation_timeout", "awaiting_settled_observation",
 }
 
@@ -24,11 +25,14 @@ def values(snapshot):
             if type(value) in (int, float) and math.isfinite(value) and abs(value) <= 1_000_000}
 
 
-def produce(result, before, after, target_role="other"):
+def produce(result, before, after, target_role="other", navigation_action=None):
     verification = result.verification_result
     replan = result.debug.get("replan_decision") or {}
     evidence = verification.evidence if verification else None
     reason = evidence if evidence in REASONS else replan.get("reason")
+    navigation = navigation_action in {"back_navigated", "home_navigated"}
+    if navigation:
+        reason = "user_home_navigation" if navigation_action == "home_navigated" else "user_back_navigation"
     match = result.match_result
     return {"schema_version": SCHEMA, "state_id": result.current_state_id,
             "before_state_id": before.current_state_id if before else None,
@@ -43,9 +47,9 @@ def produce(result, before, after, target_role="other"):
             "target": {"node_hash": digest(match.target_node_id) if match else None,
                        "role": target_role if target_role in {"slider", "button", "menu_item", "other"} else "other",
                        "transition_id": match.transition_id if match else None},
-            "verification_status": verification.status.value if verification else None,
-            "count_attempt": bool(verification and verification.count_attempt),
-            "task_completed": bool(verification and verification.task_completed),
+            "verification_status": "WAITING_FOR_OBSERVATION" if navigation else verification.status.value if verification else None,
+            "count_attempt": False if navigation else bool(verification and verification.count_attempt),
+            "task_completed": False if navigation else bool(verification and verification.task_completed),
             "reason_code": reason if reason in REASONS else "other" if reason else None,
             "before_values": values(before.last_snapshot if before else None),
             "after_values": values(after.last_snapshot if after else None)}

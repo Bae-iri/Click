@@ -65,6 +65,7 @@ public class GuidedSliderExecutionTest {
   assertFalse(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,1));
   when(node.getRangeInfo()).thenReturn(AccessibilityNodeInfo.RangeInfo.obtain(0,0,7,2));
   when(node.getActionList()).thenReturn(Collections.emptyList());
+  doReturn(false).when(service).dispatchGesture(any(),any(),any());
   assertFalse(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,1));
   verify(node,never()).performAction(anyInt());
  }
@@ -91,5 +92,41 @@ public class GuidedSliderExecutionTest {
   navigation(false);new TouchAutomationSettings(service).setEnabled(false);
   assertFalse(ClickAccessibilityService.performGuidedTap(screen,"node_0_1",bounds));
   verify(node,never()).performAction(anyInt());
+ }
+ @Test public void customSliderWithOnlySetProgressActuallyReceivesNextValue() {
+  AccessibilityNodeSnapshot n=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,"font_size","android.widget.SemSeekBar","slider",bounds,false,true,false,false,false,2f,5,false,0f,7f);
+  screen=new ScreenSnapshot("com.android.settings","2026-10-28T00:00:00Z",1080,2400,Arrays.asList(n),5);
+  when(node.getClassName()).thenReturn("android.widget.SemSeekBar");
+  when(node.getActionList()).thenReturn(Arrays.asList(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS));
+  when(node.performAction(eq(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId()),any())).thenReturn(true);
+  assertTrue(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,1));
+  org.mockito.ArgumentCaptor<android.os.Bundle> args=org.mockito.ArgumentCaptor.forClass(android.os.Bundle.class);
+  verify(node).performAction(eq(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId()),args.capture());
+  assertEquals(3f,args.getValue().getFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE),0f);
+ }
+ @Test public void rejectedNativeClickUsesActualTapGesture() {
+  navigation(false);when(node.performAction(AccessibilityNodeInfo.ACTION_CLICK)).thenReturn(false);
+  doReturn(true).when(service).dispatchGesture(any(),any(),any());
+  assertTrue(ClickAccessibilityService.performGuidedTap(screen,"node_0_1",bounds));
+  verify(service).dispatchGesture(any(android.accessibilityservice.GestureDescription.class),any(),any());
+ }
+ @Test public void unsupportedSliderActionsUseActualDragGesture() {
+  when(node.getActionList()).thenReturn(Collections.emptyList());
+  doReturn(true).when(service).dispatchGesture(any(),any(),any());
+  assertTrue(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,1));
+  verify(service).dispatchGesture(any(android.accessibilityservice.GestureDescription.class),any(),any());
+ }
+ @Test public void delayedSliderUpdateIsVerifiedAfterMoreThanOneCapture() {
+  calls.when(ClickAccessibilityService::requestFreshSnapshot).thenAnswer(i->null);
+  when(node.performAction(anyInt())).thenReturn(true);
+  try (org.mockito.MockedStatic<com.click.service.overlay.ClickOverlayService> overlay=mockStatic(com.click.service.overlay.ClickOverlayService.class)) {
+   assertTrue(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,1));
+   org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));
+   overlay.verifyNoInteractions();
+   AccessibilityNodeSnapshot changed=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,"font_size","android.widget.SeekBar","slider",bounds,false,true,false,false,false,3f,5,false,0f,7f);
+   screen=new ScreenSnapshot("com.android.settings","2026-10-28T00:00:01Z",1080,2400,Arrays.asList(changed),5);
+   org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(600));
+   overlay.verify(()->com.click.service.overlay.ClickOverlayService.onVerifiedAutomaticAction(eq("drag_completed"),eq("com.android.settings"),eq(5),eq("node_0_1"),eq("font_size"),any(),anyLong()));
+  }
  }
 }

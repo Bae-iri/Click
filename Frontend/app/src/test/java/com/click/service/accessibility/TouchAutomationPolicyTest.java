@@ -40,4 +40,31 @@ public class TouchAutomationPolicyTest {
    assertNull(TouchAutomationPolicy.clickableTarget(screen,label.nodeId,bounds));
   }
  }
+ @Test public void launcherAutomationOnlyOpensSettingsNotOtherApps() {
+  assertNotNull(TouchAutomationPolicy.clickableTarget(screen("com.android.launcher3","설정",false),"node_0_1",bounds));
+  assertNull(TouchAutomationPolicy.clickableTarget(screen("com.android.launcher3","디스플레이",false),"node_0_1",bounds));
+  assertNull(TouchAutomationPolicy.clickableTarget(screen("com.android.launcher3","전화",false),"node_0_1",bounds));
+ }
+ @Test public void namedRowWithTitleAndSubtitleCanBeClicked() {
+  AccessibilityNodeSnapshot parent=row("node_0_1","node_0","밝기와 화면 설정",new int[]{0,90,600,250},true,false);
+  AccessibilityNodeSnapshot title=row("node_0_1_0","node_0_1","디스플레이",bounds,false,false);
+  AccessibilityNodeSnapshot subtitle=row("node_0_1_1","node_0_1","밝기, 글꼴, 화면 크기",new int[]{0,200,500,240},false,false);
+  ScreenSnapshot s=new ScreenSnapshot("com.android.settings","2026-10-28T00:00:00Z",1080,2400,Arrays.asList(parent,title,subtitle),5);
+  assertEquals(parent,TouchAutomationPolicy.clickableTarget(s,parent.nodeId,parent.bounds));
+  assertEquals(parent,TouchAutomationPolicy.clickableTarget(s,title.nodeId,title.bounds));
+ }
+ @Test public void opaqueNativeClickFlagDoesNotRemoveKnownPhysicalTarget() {
+  AccessibilityNodeSnapshot label=row("node_0_1","node_0","디스플레이",bounds,false,false);
+  ScreenSnapshot s=new ScreenSnapshot("com.android.settings","2026-10-28T00:00:00Z",1080,2400,Arrays.asList(label),5);
+  assertEquals(label,TouchAutomationPolicy.clickableTarget(s,label.nodeId,bounds));
+ }
+ @Test public void unrelatedRevisionDoesNotBlockSameControlButSubtreeChangeDoes() {
+  ScreenSnapshot before=screen("com.android.settings","디스플레이",false);
+  assertTrue(TouchAutomationPolicy.sameTarget(before,before.withScreenRevision("new-revision"),"node_0_1",bounds));
+  assertFalse(TouchAutomationPolicy.sameTarget(before,screen("com.android.settings","초기화",false),"node_0_1",bounds));
+ }
+ @Test public void graphSupportedFontAliasesAreExecutable() {
+  for (String text : Arrays.asList("글꼴 크기", "폰트 크기", "FONT SIZE", "Text size", "글꼴 크기 및 스타일"))
+   assertNotNull(TouchAutomationPolicy.clickableTarget(screen("com.android.settings",text,false),"node_0_1",bounds));
+ }
 }

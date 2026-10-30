@@ -14,6 +14,7 @@ public final class AgentActionEvents {
     public static final String SCROLL_COMPLETED = "scroll_completed";
     public static final String SCROLL_FAILED = "scroll_failed";
     public static final String BACK_NAVIGATED = "back_navigated";
+    public static final String HOME_NAVIGATED = "home_navigated";
     public static final String MANUAL_OVERRIDE = "manual_override";
     public static final String OBSERVE_ONLY = "observe_only";
 

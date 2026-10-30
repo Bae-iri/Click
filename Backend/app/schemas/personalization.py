@@ -68,21 +68,25 @@ class CreateUIEventRequest(BaseModel):
         "help_opened",
         "guide_repeated",
         "guide_action_observed",
+        "navigation_recovery",
         "user_confused",
         "explanation_changed",
         "task_completed",
     ]
     screen_name: str | None = Field(default=None, max_length=200, description="Registered task graph state ID; never a screen title or user text")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Only step, duration_ms, attempt_count (nonnegative integers <= 86400000) and explanation_depth (concise/normal/detailed)")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Only step, duration_ms, attempt_count (nonnegative integers <= 86400000), navigation_action (back/home), and explanation_depth (concise/normal/detailed)")
 
     @field_validator("metadata")
     @classmethod
     def validate_metadata(cls, value):
-        allowed = {"step", "duration_ms", "attempt_count", "explanation_depth"}
+        allowed = {"step", "duration_ms", "attempt_count", "explanation_depth", "navigation_action"}
         if value.keys() - allowed:
             raise ValueError("Unsupported event metadata")
         for key, item in value.items():
-            if key == "explanation_depth":
+            if key == "navigation_action":
+                if not isinstance(item, str) or item not in {"back", "home"}:
+                    raise ValueError("Invalid navigation action")
+            elif key == "explanation_depth":
                 if not isinstance(item, str) or item not in {"concise", "normal", "detailed"}:
                     raise ValueError("Invalid explanation depth")
             elif type(item) is not int or not 0 <= item <= 86_400_000:

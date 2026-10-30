@@ -45,5 +45,15 @@ public final class GuidedActionTracker {
         return event;
     }
 
+    public boolean isBoundToGuide(String guideId) { return target != null && java.util.Objects.equals(guide, guideId); }
+
+    public boolean isTargetTap(String packageName, int window, String nodeId, int[] bounds) {
+        if (target == null || !java.util.Objects.equals(target.packageName, packageName)
+                || target.windowId != window || nodeId == null || bounds == null || bounds.length != 4) return false;
+        return target.nodeId.equals(nodeId) || target.nodeId.startsWith(nodeId + "_")
+                && bounds[0] <= target.bounds[0] && bounds[1] <= target.bounds[1]
+                && bounds[2] >= target.bounds[2] && bounds[3] >= target.bounds[3];
+    }
+
     public void clear() { target = null; guide = null; consumed = false; }
 }

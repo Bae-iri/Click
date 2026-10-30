@@ -106,6 +106,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private PersonalizationEventGateway personalizationEvents;
     private String personalizationStateId;
     private final GuideStepTimer guideStepTimer = new GuideStepTimer();
+    private final NavigationRecovery navigationRecovery = new NavigationRecovery();
+    private boolean homeSearchRestart;
+    private String lastAutomaticConfirmationId;
     private GoalCatalogClassifier goalClassifier;
     private GoalCatalogClassifier.Match activeGoalMatch;
     private JSONObject acceptedGoal;
@@ -173,7 +176,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 overlayView.collapse();
             } else if (OverlayActions.ACTION_SNAPSHOT_UPDATED.equals(intent.getAction())) {
                 invalidateStaleVisionGuide();
-                sendAgentTurn(null, forceNextObservation);
+                if (!handleNavigationSnapshot(LatestScreenSnapshot.get()))
+                    sendAgentTurn(null, forceNextObservation);
             }
         }
     };
@@ -409,6 +413,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         clearTaskFlow();
         executionGeneration++;
         automationGuard.clear();
+        navigationRecovery.clear();
+        homeSearchRestart = false;
         queueGeneration++;
         speechGeneration++;
         acceptingVoiceCommand = false;
@@ -451,7 +457,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         return service != null && !service.closing && service.overlayView != null;
     }
 
-    /** Only the first tap in the guided app is measured; it is not a success label. */
+    /** Called only for a matched manual guide action; navigation and machine actions are excluded. */
     public static void onGuidedViewClicked(String packageName, long eventUptimeMs) {
         ClickOverlayService service = runningService.get();
         if (service == null || service.agentPaused || service.agentSessionId == null) return;
@@ -465,11 +471,31 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     public static void onGuidedAction(String type, String packageName, int windowId, String nodeId,
                                      String resourceId, int[] bounds, long occurredAt) {
+        recordGuidedAction(type, packageName, windowId, nodeId, resourceId, bounds, occurredAt, false);
+    }
+
+    public static void onVerifiedAutomaticAction(String type, String packageName, int windowId, String nodeId,
+                                                 String resourceId, int[] bounds, long occurredAt) {
+        recordGuidedAction(type, packageName, windowId, nodeId, resourceId, bounds, occurredAt, true);
+    }
+
+    private static void recordGuidedAction(String type, String packageName, int windowId, String nodeId,
+                                          String resourceId, int[] bounds, long occurredAt, boolean automatic) {
         ClickOverlayService service = runningService.get();
         if (service == null || service.agentPaused || service.pendingControl != null) return;
         JSONObject event = service.actionTracker.record(type, packageName, windowId, nodeId,
                 resourceId, bounds, occurredAt);
-        if (event == null) return;
+        if (event == null) {
+            if (!automatic && AgentActionEvents.TAP_COMPLETED.equals(type) && service.lastSubmittedScreen != null
+                    && java.util.Objects.equals(packageName, service.lastSubmittedScreen.packageName)
+                    && !service.actionTracker.isTargetTap(packageName, windowId, nodeId, bounds)) {
+                service.navigationRecovery.unplannedTap();
+                service.guideStepTimer.clear();
+            }
+            return;
+        }
+        if (!automatic && AgentActionEvents.TAP_COMPLETED.equals(type))
+            onGuidedViewClicked(packageName, SystemClock.uptimeMillis() - (System.currentTimeMillis() - occurredAt));
         service.pendingVerifiedAction = event;
         final int generation = service.executionGeneration;
         // Read twice after the action, including unchanged screens, to settle or reject it.
@@ -945,6 +971,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
             executionGeneration++;
         automationGuard.clear();
+        navigationRecovery.clear();
+        homeSearchRestart = false;
             if (message != null) speak(message);
             if (satisfied && taskFlowView != null) {
                 TaskFlowOverlayView completedView = taskFlowView;
@@ -1359,7 +1387,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void repeatLastGuide() {
-        if (personalizationEvents != null && lastSpokenMessage != null) {
+        if (personalizationEvents != null && lastSpokenMessage != null
+                && navigationRecovery.hint() == NavigationRecovery.Action.NONE) {
             personalizationEvents.recordGuideRepeated(agentSessionId, personalizationStateId);
         }
         String repeated = lastSpokenMessage == null
@@ -1442,6 +1471,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         silenceVoiceReply();
         executionGeneration++;
         automationGuard.clear();
+        navigationRecovery.clear();
+        homeSearchRestart = false;
         stopListening();
         pendingSpeech = null;
         updateRequestStatus(false, false);
@@ -1551,6 +1582,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         updateRequestStatus(true, true);
         executionGeneration++;
         automationGuard.clear();
+        navigationRecovery.clear();
+        homeSearchRestart = false;
         guideStepTimer.clear();
         agentSessionId = sessionId;
         personalizationStateId = null;
@@ -1601,7 +1634,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return;
         }
         if (textToSpeech != null) textToSpeech.stop();
-        if (!firstTurnSent && shouldScanHomeForSettings(snapshot)) {
+        if ((!firstTurnSent || homeSearchRestart) && shouldScanHomeForSettings(snapshot)
+                && !AgentActionEvents.HOME_NAVIGATED.equals(pendingActionType)
+                && new com.click.data.local.TouchAutomationSettings(this).isEnabled()) {
             String fingerprint = snapshot.fingerprint();
             if (fingerprint.equals(homeScanPreviousFingerprint)) homeScanTowardNext = false;
             if (homeScanAttempts < 8) {
@@ -1616,8 +1651,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                         ? AgentActionEvents.SCROLL_COMPLETED : AgentActionEvents.SCROLL_FAILED;
                 if (swiped) return;
             }
+            homeSearchRestart = false;
             showSettingsOpenButton();
         } else if (hasSettingsTarget(snapshot)) {
+            homeSearchRestart = false;
             hideSettingsOpenButton();
         }
         String fingerprint = snapshot.fingerprint();
@@ -1670,6 +1707,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     sendAgentControl(control); return;
                 }
                 applyTaskFlowResponse(response);
+                if (homeSearchRestart && new com.click.data.local.TouchAutomationSettings(ClickOverlayService.this).isEnabled()) {
+                    speechHandler.postDelayed(() -> {
+                        if (requestGeneration != executionGeneration || agentPaused || turnInFlight) return;
+                        forceNextObservation = true;
+                        ClickAccessibilityService.requestFreshSnapshot();
+                    }, 300L);
+                }
                 ScreenSnapshot latest = LatestScreenSnapshot.get();
                 if (latest != null && (forceNextObservation || pendingVerifiedAction != null || !latest.fingerprint().equals(lastSnapshotFingerprint))) {
                     sendAgentTurn(null, forceNextObservation);
@@ -1709,7 +1753,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private boolean shouldScanHomeForSettings(ScreenSnapshot snapshot) {
-        if (initialGoal == null || !isSettingsGoal(initialGoal) || !isHomeLauncher(snapshot.packageName)) {
+        if (initialGoal == null || !isSettingsGoal(initialGoal) || !NavigationRecovery.isHomeScreen(snapshot)) {
             return false;
         }
         return !hasSettingsTarget(snapshot);
@@ -1838,6 +1882,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         executionGeneration++;
         automationGuard.clear();
+        navigationRecovery.clear();
+        homeSearchRestart = false;
         if ("cancel_task".equals(commandType) || "pause_task".equals(commandType)) agentPaused = true;
         clearVisionState(); actionTracker.clear(); pendingVerifiedAction = null;
         hideConfirmation(); hideGuideOverlay(); hideSettingsOpenButton();
@@ -1927,7 +1973,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         settingsOpenButton.setBackground(background);
         settingsOpenButton.setOnClickListener(view -> {
             ScreenSnapshot current = LatestScreenSnapshot.get();
-            if (current != null) onGuidedViewClicked(current.packageName, SystemClock.uptimeMillis());
+            guideStepTimer.clear();
             hideSettingsOpenButton();
             // After a manual recovery the contract wants a fresh tree + manual_override.
             pendingActionOccurredAtMs = System.currentTimeMillis();
@@ -1967,6 +2013,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void renderGuide(AgentTurnContract.Response response) {
         response.logDebug("ClickAgent");
         if (response.guideCommand == null) return;
+        if (AgentActionEvents.BACK_NAVIGATED.equals(pendingActionType)
+                || AgentActionEvents.HOME_NAVIGATED.equals(pendingActionType)) return;
         ensureTaskFlow();
         AgentTurnContract.GuideCommand command = response.guideCommand;
         ScreenSnapshot displayedSnapshot = null;
@@ -1975,7 +2023,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             // A new observation ID alone is fine; its screen content must still match the request.
             displayedSnapshot = ClickAccessibilityService.freshSnapshot();
             if (lastSubmittedScreen == null || displayedSnapshot == null
-                    || !lastSubmittedScreen.fingerprint().equals(displayedSnapshot.fingerprint())
+                    || (command.targetBounds == null || command.renderPolicy != null && command.renderPolicy.optBoolean("vision_derived"))
+                        && !lastSubmittedScreen.fingerprint().equals(displayedSnapshot.fingerprint())
                     || !GuideFreshness.stillValid(lastSubmittedScreen, displayedSnapshot,
                             command.targetNodeId, command.targetBounds,
                             command.renderPolicy != null && command.renderPolicy.optBoolean("vision_derived"))) {
@@ -1983,6 +2032,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 return;
             }
         }
+        if (showNavigationRecoveryIfNeeded(response, displayedSnapshot)) return;
+        if (displayedSnapshot != null && command.targetBounds != null
+                && ("tap".equals(command.actionType) || "drag".equals(command.actionType))
+                && !ObservationRecovery.awaitsUser(command.renderPolicy))
+            navigationRecovery.onPath(displayedSnapshot);
         staleGuideDrops = 0;
         taskFlowView.progress(requirementReview != null ? requirementReview.summary() : "선택한 작업",
                 response.metadata == null ? null : response.metadata.optJSONArray("checklist"),
@@ -1995,7 +2049,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (command.requiresUserAction && !"confirmation".equals(command.commandType)) {
             actionTracker.bind(agentSessionId, agentEpisodeId, command.guideCommandId, command.actionType,
                     command.targetNodeId, command.targetBounds, displayedSnapshot, System.currentTimeMillis());
-        } else actionTracker.clear();
+        } else if (!"observe_only".equals(command.actionType) || !actionTracker.isBoundToGuide(command.guideCommandId)) {
+            actionTracker.clear();
+        }
         placeTaskFlow(command.targetBounds, false);
         if (command.requiresUserAction && "tap".equals(command.actionType)
                 && displayedSnapshot != null && displayedSnapshot.fingerprint().equals(lastSnapshotFingerprint)) {
@@ -2005,6 +2061,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         } else {
             guideStepTimer.clear();
         }
+
+        if (tryAutomaticFontSizeApproval(command, response.metadata, displayedSnapshot)) return;
 
         if (overlayView != null && command.message != null && !command.message.isEmpty()) {
             overlayView.setRecognizedSpeech(command.message);
@@ -2087,6 +2145,155 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
     }
 
+    public static void onSystemNavigationRequested(boolean back) {
+        ClickOverlayService service = runningService.get();
+        if (service == null || service.agentSessionId == null || service.agentPaused) return;
+        service.guideStepTimer.clear();
+        service.requestRecoveryNavigation(back ? NavigationRecovery.Action.BACK : NavigationRecovery.Action.HOME,
+                LatestScreenSnapshot.get());
+        ClickAccessibilityService.requestFreshSnapshot();
+    }
+
+    public static void onAutomationSettingChanged() {
+        ClickOverlayService service = runningService.get();
+        if (service == null || service.speechHandler == null) return;
+        service.speechHandler.post(() -> {
+            service.guideStepTimer.clear();
+            service.automationGuard.clear();
+            service.staleGuideDrops = service.freshObservationRetries = service.scrollExecutions = 0;
+            if (new com.click.data.local.TouchAutomationSettings(service).isEnabled()
+                    && NavigationRecovery.isHomeScreen(LatestScreenSnapshot.get())) {
+                service.homeSearchRestart = true;
+                service.homeScanAttempts = 0;
+            }
+            service.forceNextObservation = true;
+            ClickAccessibilityService.requestFreshSnapshot();
+        });
+    }
+
+    private boolean handleNavigationSnapshot(ScreenSnapshot screen) {
+        if (screen == null || agentSessionId == null || !hasConfirmedGoal() || agentPaused
+                || resultPrompt != null || followUp != null) return false;
+        if (lastSubmittedScreen != null && !java.util.Objects.equals(screen.packageName, lastSubmittedScreen.packageName))
+            guideStepTimer.clear();
+        NavigationRecovery.Action before = navigationRecovery.hint();
+        NavigationRecovery.Action observed = navigationRecovery.observe(screen);
+        if (observed != NavigationRecovery.Action.NONE) {
+            guideStepTimer.clear(); actionTracker.clear(); automationGuard.clear();
+            hideGuideOverlay(); hideConfirmation(); clearVisionState();
+            pendingVerifiedAction = null;
+            refreshLoadingStatus();
+            pendingActionType = observed == NavigationRecovery.Action.HOME
+                    ? AgentActionEvents.HOME_NAVIGATED : AgentActionEvents.BACK_NAVIGATED;
+            pendingActionOccurredAtMs = System.currentTimeMillis();
+            agentConfirmationId = null; confirmationExpiresAt = 0;
+            freshObservationRetries = staleGuideDrops = scrollExecutions = 0;
+            scrollSearchGeneration = -1;
+            if (observed == NavigationRecovery.Action.HOME) {
+                homeSearchRestart = true; homeScanAttempts = 0; homeScanTowardNext = true;
+                homeScanPreviousFingerprint = null;
+                lastTargetBounds = null; lastTargetNodeId = lastGuideCommandId = null;
+            }
+            if (personalizationEvents != null) personalizationEvents.recordNavigation(agentSessionId,
+                    personalizationStateId, observed == NavigationRecovery.Action.HOME ? "home" : "back");
+            forceNextObservation = true;
+            return false;
+        }
+        if (navigationRecovery.hint() == NavigationRecovery.Action.BACK && observed == NavigationRecovery.Action.NONE
+                && navigationRecovery.awaiting() == NavigationRecovery.Action.NONE)
+            navigationRecovery.recommend(screen);
+        if (navigationRecovery.hint() == NavigationRecovery.Action.HOME && before == NavigationRecovery.Action.BACK) {
+            showNavigationRecovery(NavigationRecovery.Action.HOME);
+        }
+        return navigationRecovery.hint() != NavigationRecovery.Action.NONE;
+    }
+
+    private boolean showNavigationRecoveryIfNeeded(AgentTurnContract.Response response, ScreenSnapshot screen) {
+        AgentTurnContract.GuideCommand command = response.guideCommand;
+        JSONObject recovery = command.renderPolicy == null ? null : command.renderPolicy.optJSONObject("recovery");
+        if (screen == null || NavigationRecovery.isHome(screen.packageName) || recovery == null
+                || !"user".equals(recovery.optString("waiting_for"))) return false;
+        String reason = recovery.optString("reason_code");
+        if (!("STATE_UNKNOWN".equals(reason) || "GRAPH_PATH_UNAVAILABLE".equals(reason)
+                || "TARGET_NOT_FOUND".equals(reason) || "APP_NOT_OPEN".equals(reason))) return false;
+        showNavigationRecovery(navigationRecovery.recommend(screen));
+        return true;
+    }
+
+    private void requestRecoveryNavigation(NavigationRecovery.Action action, ScreenSnapshot before) {
+        navigationRecovery.requested(action, before);
+        guideStepTimer.clear();
+        if (taskFlowView != null) taskFlowView.setLoadingStatus("이동한 화면을 확인하고 있어요…");
+        final int generation = executionGeneration;
+        speechHandler.postDelayed(() -> {
+            if (generation != executionGeneration || agentPaused || navigationRecovery.awaiting() != action) return;
+            ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+            if (!handleNavigationSnapshot(current)) { sendAgentTurn(null, true); return; }
+            if (action == NavigationRecovery.Action.BACK && navigationRecovery.awaiting() == action) {
+                navigationRecovery.forceHome();
+                showNavigationRecovery(NavigationRecovery.Action.HOME);
+            } else if (action == NavigationRecovery.Action.HOME && navigationRecovery.awaiting() == action) {
+                navigationRecovery.forceHome();
+                showNavigationRecovery(NavigationRecovery.Action.HOME);
+                automationStatus("홈 화면을 아직 확인하지 못했어요. 휴대폰의 홈 버튼이나 제스처를 사용해 주세요.");
+            }
+        }, 2500L);
+    }
+
+    private void showNavigationRecovery(NavigationRecovery.Action action) {
+        guideStepTimer.clear(); actionTracker.clear();
+        hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
+        ensureTaskFlow();
+        taskFlowCollapsed = false;
+        if (overlayView != null) overlayView.collapse();
+        updateFloatingVisibility();
+        taskFlowView.setLoadingStatus(null);
+        boolean back = action == NavigationRecovery.Action.BACK;
+        String message = back ? "직전 작업 화면으로 돌아가 볼게요. 뒤로가기를 한 번 눌러주세요. 돌아온 화면을 확인한 뒤 이어서 안내할게요."
+                : navigationRecovery.backAttempted()
+                    ? "뒤로가기로 원래 화면을 확인하지 못했어요. 홈 버튼을 눌러주세요. 목표는 유지하고 처음부터 다시 안내할게요."
+                    : "한 번의 뒤로가기로 돌아갈 근거가 부족해요. 홈 버튼을 눌러주세요. 목표는 유지하고 처음부터 다시 안내할게요.";
+        final int navigationGeneration = executionGeneration;
+        taskFlowView.navigationRecovery(back, message, () -> {
+            if (navigationGeneration != executionGeneration || agentPaused || navigationRecovery.hint() != action
+                    || navigationRecovery.awaiting() != NavigationRecovery.Action.NONE) return;
+            ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+            requestRecoveryNavigation(action, current);
+            if (!ClickAccessibilityService.performRecoveryNavigation(back)) {
+                automationStatus("이동하지 못했어요. 휴대폰의 뒤로가기·홈 버튼이나 제스처를 사용해 주세요.");
+            }
+        });
+        placeTaskFlow(null, false);
+        showGuideOverlay(ClickAccessibilityService.navigationButtonBounds(back), "tap", 0);
+        if (overlayView != null) overlayView.setRecognizedSpeech(message);
+        speak(message);
+    }
+
+    private boolean tryAutomaticFontSizeApproval(AgentTurnContract.GuideCommand command, JSONObject metadata,
+                                                 ScreenSnapshot screen) {
+        if (agentPaused || pendingControl != null || !hasConfirmedGoal()
+                || navigationRecovery.hint() != NavigationRecovery.Action.NONE
+                || !new com.click.data.local.TouchAutomationSettings(this).isEnabled()
+                || agentConfirmationId == null || agentConfirmationId.equals(lastAutomaticConfirmationId)
+                || System.currentTimeMillis() >= confirmationExpiresAt * 1000L
+                || !AutomaticFontSizeApproval.eligible(command, metadata, screen)) return false;
+        lastAutomaticConfirmationId = agentConfirmationId;
+        hideGuideOverlay(); hideConfirmation(); guideStepTimer.clear();
+        String message = "요청하신 글자 크기를 자동으로 한 단계 조절할게요.";
+        automationStatus(message); speak(message);
+        final int generation = executionGeneration;
+        final String approval = agentConfirmationId;
+        speechHandler.postDelayed(() -> {
+            if (generation != executionGeneration || agentPaused || pendingControl != null || turnInFlight
+                    || !approval.equals(agentConfirmationId) || !new com.click.data.local.TouchAutomationSettings(this).isEnabled()) return;
+            ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+            if (!com.click.service.accessibility.TouchAutomationPolicy.sameTarget(screen, current,
+                    command.targetNodeId, command.targetBounds)) { waitForFreshGuide(); return; }
+            sendAgentTurn("accepted", true);
+        }, 60L);
+        return true;
+    }
+
     private void automationStatus(String message) {
         if (taskFlowView != null) taskFlowView.setAutomationStatus(message);
         if (overlayView != null && message != null) overlayView.setRecognizedSpeech(message);
@@ -2095,14 +2302,18 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void executeAutomaticAction(AgentTurnContract.GuideCommand command, JSONObject metadata,
                                         ScreenSnapshot screen) {
         if (screen != null) automationGuard.observe(screen.fingerprint());
-        if (agentPaused || pendingControl != null || !command.requiresUserAction
+        if (agentPaused || pendingControl != null || navigationRecovery.hint() != NavigationRecovery.Action.NONE
+                || !command.requiresUserAction
                 || command.guideCommandId == null || screen == null
                 || !new com.click.data.local.TouchAutomationSettings(this).isEnabled()
                 || command.renderPolicy != null && command.renderPolicy.optBoolean("vision_derived")) return;
         boolean tap = "tap".equals(command.actionType);
         int direction = GuideDragDirection.resolve(command.renderPolicy, metadata);
-        boolean slider = "drag".equals(command.actionType) && command.renderPolicy != null
-                && "font_size".equals(command.renderPolicy.optString("automatable_setting"))
+        JSONObject typedGoal = metadata == null ? null : metadata.optJSONObject("typed_goal");
+        JSONObject slots = typedGoal == null ? null : typedGoal.optJSONObject("slots");
+        boolean fontSize = command.renderPolicy != null && "font_size".equals(command.renderPolicy.optString("automatable_setting"))
+                || slots != null && "font_size".equals(slots.optString("setting"));
+        boolean slider = "drag".equals(command.actionType) && fontSize
                 && direction != GuideDragDirection.UNKNOWN;
         if (!tap && !slider) return;
         if (tap && com.click.service.accessibility.TouchAutomationPolicy.clickableTarget(screen,
@@ -2121,6 +2332,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 automationStatus("자동 조작 횟수에 도달했어요. 화면을 확인하고 직접 진행해 주세요.");
             return;
         }
+        guideStepTimer.clear(); // Machine actions are never human response-time samples.
         boolean performed = tap
                 ? ClickAccessibilityService.performGuidedTap(screen, command.targetNodeId, command.targetBounds)
                 : ClickAccessibilityService.performGuidedSlider(screen, command.targetNodeId, command.targetBounds, direction);
@@ -2281,6 +2493,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void executeScroll(AgentTurnContract.GuideCommand command) {
+        if (!new com.click.data.local.TouchAutomationSettings(this).isEnabled()) return;
+        guideStepTimer.clear();
         if (++scrollExecutions > 4) return;
         String direction = command.renderPolicy == null
                 ? "down" : command.renderPolicy.optString("direction", "down");

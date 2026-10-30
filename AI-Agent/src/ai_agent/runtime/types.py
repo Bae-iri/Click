@@ -57,6 +57,7 @@ class UserActionType(str, Enum):
     SCROLL_COMPLETED = "scroll_completed"
     SCROLL_FAILED = "scroll_failed"
     BACK_NAVIGATED = "back_navigated"
+    HOME_NAVIGATED = "home_navigated"
     MANUAL_OVERRIDE = "manual_override"
     OBSERVE_ONLY = "observe_only"
 
@@ -121,6 +122,7 @@ class AccessibilityNode:
     parent_id: str | None = None
     visible_to_user: bool = True
     window_id: int | None = None
+    role: str | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)

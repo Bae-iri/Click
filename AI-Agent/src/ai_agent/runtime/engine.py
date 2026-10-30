@@ -106,6 +106,12 @@ class ClickAgentEngine:
                         'recovery': stale_observation_recovery()}),
                 debug={'checklist': list(existing_session.progress_steps), 'recovery': stale_observation_recovery()})
 
+        from ai_agent.runtime.navigation import apply_navigation
+        navigated_session = apply_navigation(self.session_store, request, existing_session)
+        if navigated_session is not existing_session:
+            previous_snapshot = None
+            existing_session = navigated_session
+
         typed_goal = self._resolve_typed_goal(
             request,
             existing_session.typed_goal if existing_session else None,

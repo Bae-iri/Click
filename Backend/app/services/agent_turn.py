@@ -16,6 +16,7 @@ from app.repositories.task_graphs import TaskGraphRepository
 from app.services.goal_resolution import GoalResolutionService
 from app.services.goal_preparation import GoalPreparationService
 from app.services.task_outcome import follow_up
+from app.services.guide_narration import GuideNarrator
 from uuid import uuid4
 
 
@@ -23,6 +24,7 @@ class AgentTurnService:
     def __init__(self, session_factory, engine_factory=RuntimeAgentAdapter):
         self.session_factory = session_factory
         self.engine_factory = engine_factory
+        self.narrator = GuideNarrator()
         self.repository = AgentSessionRepository(session_factory,
             idle_seconds=int(os.getenv("AGENT_SESSION_IDLE_SECONDS", "1800")),
             lease_seconds=int(os.getenv("AGENT_TURN_LEASE_SECONDS", "60")))
@@ -68,7 +70,7 @@ class AgentTurnService:
                 claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] not in compatible_versions
             ):
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
-            return self.personalize(safe_response(AgentTurnResponse.model_validate(claim["cached"])), request.user_id)
+            return self.narrator.decorate(self.personalize(safe_response(AgentTurnResponse.model_validate(claim["cached"])), request.user_id), graph=selected_graph)
         try:
             if getattr(request, "command_type", None):
                 details = self.repository.typed_details(request.session_id, request.user_id)
@@ -131,7 +133,7 @@ class AgentTurnService:
             self.repository.release(request.session_id, claim["token"])
             raise
         # Persist a neutral response; reevaluate consent even on retries.
-        return self.personalize(response, request.user_id)
+        return self.narrator.decorate(self.personalize(response, request.user_id), graph=selected_graph)
 
     def handle_command(self, request):
         command = request.command_type

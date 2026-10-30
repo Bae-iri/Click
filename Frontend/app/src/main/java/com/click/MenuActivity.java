@@ -135,14 +135,17 @@ public final class MenuActivity extends AppCompatActivity {
         row.setPadding(dp(16), dp(14), dp(16), dp(14));
         com.click.data.local.TouchAutomationSettings preferences = new com.click.data.local.TouchAutomationSettings(this);
         androidx.appcompat.widget.SwitchCompat toggle = new androidx.appcompat.widget.SwitchCompat(this);
-        toggle.setText("버튼 자동 터치");
+        toggle.setText("지원 작업 전체 자동화");
         toggle.setTextSize(18);
         toggle.setTextColor(INK);
         toggle.setMinHeight(dp(48));
         toggle.setChecked(preferences.isEnabled());
-        toggle.setOnCheckedChangeListener((button, enabled) -> preferences.setEnabled(enabled));
+        toggle.setOnCheckedChangeListener((button, enabled) -> {
+            preferences.setEnabled(enabled);
+            ClickOverlayService.onAutomationSettingChanged();
+        });
         row.addView(toggle, new LinearLayout.LayoutParams(-1, -2));
-        TextView description = text("ON: 지원하는 설정 메뉴 이동과 글자 크기 조절을 자동으로 해요.\nOFF: 위치만 안내해요.\n결제·전화 걸기·메시지 보내기는 자동 실행하지 않아요.", 14, SECONDARY, medium);
+        TextView description = text("ON: 요청을 확인하고 시작하면 앱 찾기·메뉴 이동·스크롤·글자 크기 변경 확인과 조절까지 자동으로 해요.\nOFF: 직접 조작할 위치만 안내해요.\n길을 벗어나면 뒤로가기·홈은 직접 눌러주세요.\n결제·전화 걸기·메시지 보내기는 자동 실행하지 않아요.", 14, SECONDARY, medium);
         description.setLineSpacing(dp(4), 1f);
         add(row, description, 8);
         return row;

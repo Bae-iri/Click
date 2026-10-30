@@ -55,6 +55,24 @@ public final class PersonalizationEventGateway {
         });
     }
 
+    /** Recovery durations are explicit context, excluded from comprehension evidence on Backend. */
+    public void recordNavigation(String sessionId, String stateId, String action) {
+        if (sessionId == null || !("back".equals(action) || "home".equals(action))) return;
+        executor.execute(() -> {
+            try {
+                String userId = tokens.userId();
+                if (userId == null || userId.isEmpty()) return;
+                String base = userBase(userId);
+                if (!hasConsent(base)) return;
+                JSONObject body = new JSONObject().put("session_id", sessionId)
+                        .put("event_type", "navigation_recovery")
+                        .put("metadata", new JSONObject().put("navigation_action", action));
+                if (stateId != null && !stateId.isEmpty()) body.put("screen_name", stateId);
+                http.post(base + "/events", body.toString());
+            } catch (Exception ignored) { Log.w("ClickTiming", "Navigation context was not saved"); }
+        });
+    }
+
     public void recordGuideRepeated(String sessionId, String stateId) {
         if (sessionId == null || stateId == null) return;
         executor.execute(() -> {
