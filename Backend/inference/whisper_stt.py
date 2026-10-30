@@ -40,7 +40,7 @@ def infer(model, pcm):
     import numpy as np
     waveform = np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
     segments, _ = model.transcribe(waveform, language="ko", task="transcribe",
-        beam_size=5, temperature=0.0, condition_on_previous_text=False,
+        beam_size=1, temperature=0.0, condition_on_previous_text=False,
         vad_filter=True, without_timestamps=True, max_new_tokens=256)
     # faster-whisper performs inference lazily. Consume inside the worker lock.
     return "".join(segment.text for segment in segments).strip()
