@@ -19,7 +19,7 @@ public final class CloudSpeechRecognizer implements SpeechInput {
     private static final int SAMPLE_RATE = 16_000;
     private static final int SPEECH_RMS_THRESHOLD = 300;
     private static final long INITIAL_SILENCE_MS = 8_000L;
-    private static final long END_SILENCE_MS = 1_800L;
+    private static final long END_SILENCE_MS = 1_000L;
     private static final long MAX_RECORDING_MS = 16_000L;
 
     private final ExecutorService recorderExecutor = Executors.newSingleThreadExecutor();
@@ -34,6 +34,7 @@ public final class CloudSpeechRecognizer implements SpeechInput {
 
     public void start(Callback callback) {
         int token = ++generation;
+        gateway.prepare(); // Validate the private endpoint while the user is still speaking.
         recorderExecutor.execute(() -> capture(token, callback));
     }
 
@@ -74,14 +75,14 @@ public final class CloudSpeechRecognizer implements SpeechInput {
             main.post(() -> { if (token == generation) callback.onReady(); });
             ByteArrayOutputStream pcm = new ByteArrayOutputStream(SAMPLE_RATE * 2 * 8);
             byte[] buffer = new byte[bufferSize];
-            long startedAt = System.currentTimeMillis();
+            long startedAt = android.os.SystemClock.elapsedRealtime();
             long lastSpeechAt = startedAt;
             boolean heardSpeech = false;
             while (token == generation) {
                 int read = recorder.read(buffer, 0, buffer.length);
                 if (read <= 0) throw new IOException("AUDIO_READ_FAILED");
                 pcm.write(buffer, 0, read);
-                long now = System.currentTimeMillis();
+                long now = android.os.SystemClock.elapsedRealtime();
                 if (rms(buffer, read) >= SPEECH_RMS_THRESHOLD) {
                     heardSpeech = true;
                     lastSpeechAt = now;
@@ -101,6 +102,7 @@ public final class CloudSpeechRecognizer implements SpeechInput {
             main.post(() -> {
                 if (token == generation) callback.onRecordingFinished();
             });
+            android.util.Log.d("ClickSTT", "recording_ms=" + (android.os.SystemClock.elapsedRealtime() - startedAt));
             byte[] wav = toWav(pcm.toByteArray());
             gateway.transcribe(wav, new TranscriptionGateway.Callback() {
                 @Override public void onSuccess(String text) {

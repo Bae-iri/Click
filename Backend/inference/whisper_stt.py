@@ -4,8 +4,9 @@ import hmac
 import os
 from pathlib import Path
 from threading import Lock
+from time import perf_counter
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -73,22 +74,31 @@ def create_app(model_loader=load_model, transcribe=infer):
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "model": STT_MODEL}
+        return {"status": "ok", "model": STT_MODEL,
+                "device": os.getenv("WHISPER_DEVICE", "cuda")}
 
     @app.post("/v1/transcriptions", response_model=TranscriptionResponse, dependencies=[Depends(authorize)])
-    def transcription(body: TranscriptionRequest):
+    def transcription(body: TranscriptionRequest, response: Response):
+        started = perf_counter()
         try:
             pcm = decode_pcm_wav(body.audio_base64, body.mime_type)
         except InvalidAudio as error:
             raise HTTPException(422, "Invalid audio request") from error
+        decoded = perf_counter()
         if not lock.acquire(blocking=False):
             raise HTTPException(503, "STT busy", headers={"Retry-After": "1"})
         try:
+            inference_started = perf_counter()
             text = transcribe(app.state.model, pcm)
+            inferred = perf_counter()
             if not isinstance(text, str) or len(text) > 4000:
                 raise HTTPException(503, "Invalid STT result")
             if not text.strip():
                 raise HTTPException(422, detail={"code": "NO_SPEECH"})
+            # Numeric phase timings only: no audio, transcript, token, or user identifiers.
+            response.headers["Server-Timing"] = (
+                f"stt_decode;dur={(decoded - started) * 1000:.2f}, "
+                f"stt_inference;dur={(inferred - inference_started) * 1000:.2f}")
             return TranscriptionResponse(text=text.strip())
         except HTTPException:
             raise

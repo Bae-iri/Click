@@ -4,6 +4,8 @@
 
 Click의 음성 인식은 **Whisper large-v3 (`faster-whisper`/CTranslate2)**, 목표 해석은 **키워드 매핑 실패 또는 그래프 입력 정보 누락 시 자체 LLM**을 사용한다. API 연결 코드와 독립 STT 실행 프로세스를 제공한다. 실제 가중치 추론·GPU 메모리·한국어 품질·지연은 별도 서버에서 검증해야 한다.
 
+2026-10-30 속도 개선과 측정 방법은 [Whisper 지연 개선](../../docs/stt-latency.md)을 참고한다.
+
 ## 입력과 실행 경계
 
 1. 앱은 16kHz mono PCM16 WAV를 메모리에서 녹음한다. 업로드 전에 API의 OpenAPI 응답이 `provider=self_hosted`, `model=openai/whisper-large-v3`로 제한되는지 검사한다. 구버전 외부 STT 서버나 확인 불가능한 서버에는 음성을 보내지 않는다.
@@ -89,7 +91,7 @@ python scripts/check_stt.py --env-file .env
 python scripts/check_stt.py --env-file .env --wav /path/to/test-ko.wav --expected-text "글자 크게 해줘"
 ```
 
-`/health`는 모델 로드가 끝나야 응답한다. 모델 로더는 오프라인 모드에서 로컬 디렉터리만 사용하며 Hugging Face·ONNX Runtime telemetry를 비활성화한다. worker는 `language=ko`, `task=transcribe`, VAD, temperature 0, beam 5, 이전 문맥 미사용으로 요청당 하나의 음성을 전사한다. 무음·빈 결과는 422, 동시 요청은 503을 반환한다. 지연 생성되는 segment를 잠금 안에서 모두 소비한다. 원음이나 전사 결과를 파일에 저장하지 않는다. API의 STT 대기 시간은 30초다. 대기가 끝나도 이미 시작된 모델 연산이 즉시 취소되는 것은 아니다.
+`/health`는 모델 로드가 끝나야 응답한다. 모델 로더는 오프라인 모드에서 로컬 디렉터리만 사용하며 Hugging Face·ONNX Runtime telemetry를 비활성화한다. worker는 `language=ko`, `task=transcribe`, VAD, temperature 0, beam 1(greedy), 이전 문맥 미사용으로 요청당 하나의 음성을 전사한다. 무음·빈 결과는 422, 동시 요청은 503을 반환한다. 지연 생성되는 segment를 잠금 안에서 모두 소비한다. 원음이나 전사 결과를 파일에 저장하지 않는다. API의 STT 대기 시간은 30초다. 대기가 끝나도 이미 시작된 모델 연산이 즉시 취소되는 것은 아니다.
 
 무음일 때 worker는 `422 {"detail":{"code":"NO_SPEECH"}}`, Backend는 기존 오류 envelope의 `error.code=NO_SPEECH`로 전달한다. 앱은 재녹음을 안내한다. 잘못된 WAV의 `422 INVALID_REQUEST`, 서버 장애의 503, 시간 초과의 504와 구분한다. 모델이 잘못된 타입이나 지나치게 긴 결과를 반환한 경우는 무음으로 취급하지 않는다. 음성 없는 자동 테스트는 이 오류 전달 계약을 검증하며 실제 VAD·한국어 인식 품질을 입증하지 않는다.
 
