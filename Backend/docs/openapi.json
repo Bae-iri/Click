@@ -7164,23 +7164,83 @@
       "AppliedSettings": {
         "properties": {
           "source": {
-            "type": "string",
-            "const": "android.provider.Settings.System.FONT_SCALE",
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "android.provider.Settings.System.FONT_SCALE"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Source"
           },
           "font_scale": {
-            "type": "number",
-            "maximum": 10.0,
-            "exclusiveMinimum": 0.0,
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 10.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Font Scale"
+          },
+          "brightness_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "android.provider.Settings.System.SCREEN_BRIGHTNESS"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brightness Source"
+          },
+          "screen_brightness": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 65535.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen Brightness"
+          },
+          "media_volume_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "android.media.AudioManager.STREAM_MUSIC"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Volume Source"
+          },
+          "media_volume": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Volume"
           }
         },
         "additionalProperties": false,
         "type": "object",
-        "required": [
-          "source",
-          "font_scale"
-        ],
         "title": "AppliedSettings"
       },
       "CancelSessionRequest": {

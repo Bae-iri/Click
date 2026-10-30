@@ -46,8 +46,8 @@ def prepare(env_file, port):
         manifest = environment_manifest(factory, values['CLICK_VALIDATION_ENVIRONMENT_ID'])
         expected = {graph.definition.task_id: canonical_graph(graph)[1] for graph in approved_graphs().values()}
         actual = {row['task_id']: row['sha256'] for row in manifest['approved_graphs']}
-        if actual != expected or len(actual) != 2:
-            raise ValueError('Validation must use the two current approved seed graphs')
+        if not expected or actual != expected:
+            raise ValueError('Validation must use exactly the current approved seed graphs')
         manifest['api_base_url'] = f'http://127.0.0.1:{port}'
         (INSTANCE / 'environment.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
         audit = audit_catalog(factory)

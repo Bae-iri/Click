@@ -4,7 +4,7 @@
 
 - Catalog version: `2.1.0`
 - 전체 Goal: **160개** (Android 설정 89개, 쿠팡 71개)
-- 실행 승인: **2개**, 분류 전용: **158개**
+- 실행 승인: **6개**, 분류 전용: **154개**
 - `키워드 그룹`의 각 괄호에서는 하나 이상, 괄호와 괄호 사이는 모두 충족해야 분류 후보가 된다.
 - `catalog_only`는 Goal 추출만 가능하다는 뜻이다. 승인 Task Graph가 없으므로 실제 작업은 시작하지 않는다.
 - 이전 v2.0은 82개였고, 현재 v2.1은 보편 설정·쿠팡 기능을 추가한 160개다.
@@ -27,15 +27,15 @@
 | 12 | `settings.airplane_mode.disable` | 비행기 모드 끄기 | (비행기모드 / 에어플레인모드) + (꺼 / 비활성화) | catalog_only | normal |
 | 13 | `settings.hotspot.enable` | 모바일 핫스팟 켜기 | (핫스팟 / 테더링) + (켜 / 활성화 / 공유) | catalog_only | normal |
 | 14 | `settings.hotspot.disable` | 모바일 핫스팟 끄기 | (핫스팟 / 테더링) + (꺼 / 비활성화) | catalog_only | normal |
-| 15 | `settings.brightness.increase` | 화면 밝기 높이기 | (밝기 / 화면빛) + (높여 / 밝게 / 키워 / 올려 / 어두워) | catalog_only | normal |
-| 16 | `settings.brightness.decrease` | 화면 밝기 낮추기 | (밝기 / 화면빛) + (낮춰 / 어둡게 / 줄여 / 눈부셔) | catalog_only | normal |
+| 15 | `settings.brightness.increase` | 화면 밝기 높이기 | (밝기 / 화면빛) + (높여 / 밝게 / 키워 / 올려 / 어두워 / 밝게) | approved (`SET-brightness-increase`) | normal |
+| 16 | `settings.brightness.decrease` | 화면 밝기 낮추기 | (밝기 / 화면빛) + (낮춰 / 어둡게 / 줄여 / 눈부셔 / 어둡게) | approved (`SET-brightness-decrease`) | normal |
 | 17 | `settings.dark_mode.enable` | 다크 모드 켜기 | (다크모드 / 어두운테마 / 야간모드) + (켜 / 적용 / 바꿔) | catalog_only | normal |
 | 18 | `settings.dark_mode.disable` | 다크 모드 끄기 | (다크모드 / 어두운테마 / 야간모드) + (꺼 / 해제 / 밝은테마) | catalog_only | normal |
 | 19 | `settings.screen_timeout.set` | 화면 자동 꺼짐 시간 변경 | (화면자동꺼짐 / 화면꺼짐시간 / 스크린타임아웃) + (변경 / 바꿔 / 늘려 / 줄여 / 설정) | catalog_only | normal |
 | 20 | `settings.display_size.increase` | 화면 요소 크게 하기 | (화면크기 / 화면요소 / 아이콘크기 / 디스플레이크기) + (키워 / 크게 / 확대 / 늘려) | catalog_only | normal |
 | 21 | `settings.display_size.decrease` | 화면 요소 작게 하기 | (화면크기 / 화면요소 / 아이콘크기 / 디스플레이크기) + (줄여 / 작게 / 축소) | catalog_only | normal |
-| 22 | `settings.volume.increase` | 소리 크기 높이기 | (소리 / 볼륨 / 음량) + (키워 / 크게 / 높여 / 올려 / 잘안들려) | catalog_only | normal |
-| 23 | `settings.volume.decrease` | 소리 크기 낮추기 | (소리 / 볼륨 / 음량) + (줄여 / 작게 / 낮춰 / 시끄러워) | catalog_only | normal |
+| 22 | `settings.volume.increase` | 미디어 음량 높이기 | (소리 / 볼륨 / 음량 / 미디어 / 음악 / 동영상) + (키워 / 크게 / 높여 / 올려 / 잘안들려) | approved (`SET-volume-increase`) | normal |
+| 23 | `settings.volume.decrease` | 미디어 음량 낮추기 | (소리 / 볼륨 / 음량 / 미디어 / 음악 / 동영상) + (줄여 / 작게 / 낮춰 / 시끄러워) | approved (`SET-volume-decrease`) | normal |
 | 24 | `settings.mute.enable` | 무음 모드 켜기 | (무음 / 소리안나게 / 조용히) + (켜 / 설정 / 바꿔) | catalog_only | normal |
 | 25 | `settings.mute.disable` | 무음 모드 끄기 | (무음 / 소리안나게) + (꺼 / 해제 / 소리나게) | catalog_only | normal |
 | 26 | `settings.ringtone.change` | 벨소리 변경 | (벨소리 / 전화소리 / 링톤) + (바꿔 / 변경 / 선택) | catalog_only | normal |

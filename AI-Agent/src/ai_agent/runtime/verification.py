@@ -38,11 +38,13 @@ def correlate_action(session, request, transition):
             and previous and previous.captured_at_ms is not None
             and baseline_time < previous.captured_at_ms <= event.occurred_at_ms):
         observed_value = previous.slider_values.get(attempt['target_node_id'])
-        observed_scale = font_scale(previous.applied_settings)
+        setting = attempt.get('setting', 'font_size')
+        observed_scale = applied_value(previous.applied_settings, setting)
+        baseline_setting = attempt.get('baseline_setting_value', attempt.get('baseline_font_scale'))
         if ((observed_value is not None and attempt.get('baseline_value') is not None
                 and observed_value != attempt['baseline_value'])
-                or (observed_scale is not None and attempt.get('baseline_font_scale') is not None
-                    and observed_scale != attempt['baseline_font_scale'])):
+                or (observed_scale is not None and baseline_setting is not None
+                    and observed_scale != baseline_setting)):
             return None, processed
     attempt.update(event_key=event_key, action_at_ms=event.occurred_at_ms,
                    action_type=event.action_type.value)
@@ -112,8 +114,9 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             return result(Status.UNKNOWN, 'target_range_changed')
         value = target.value
         changed = value > baseline if transition.verification_predicate.endswith('increased') else value < baseline
-        applied_before = attempt.get('baseline_font_scale')
-        applied_after = font_scale(current_snapshot.applied_settings)
+        setting = graph.definition.required_slots.get('setting', 'font_size')
+        applied_before = attempt.get('baseline_setting_value', attempt.get('baseline_font_scale') if setting == 'font_size' else None)
+        applied_after = applied_value(current_snapshot.applied_settings, setting)
         if applied_before is None or applied_after is None:
             return result(Status.UNKNOWN, 'applied_setting_unobservable')
         applied_changed = (applied_after > applied_before if transition.verification_predicate.endswith('increased')
@@ -183,3 +186,20 @@ def font_scale(settings):
             or type(value) not in (int, float) or not isfinite(value) or not 0 < value <= 10):
         return None
     return float(value)
+
+
+def applied_value(settings, setting):
+    """Read only the device value and provenance for the requested setting."""
+    if setting == 'font_size':
+        return font_scale(settings)
+    fields = {
+        'brightness': ('screen_brightness', 'brightness_source', 'android.provider.Settings.System.SCREEN_BRIGHTNESS', 65535),
+        'volume': ('media_volume', 'media_volume_source', 'android.media.AudioManager.STREAM_MUSIC', 1000),
+    }.get(setting)
+    if fields is None:
+        return None
+    key, source_key, source, maximum = fields
+    value = (settings or {}).get(key)
+    if (settings or {}).get(source_key) != source or type(value) is not int or not 0 <= value <= maximum:
+        return None
+    return value

@@ -82,6 +82,155 @@
           "target_app": "android_settings"
         }
       ]
+    },
+    {
+      "id": "brightness",
+      "goal_prefix": "settings.brightness.",
+      "keywords": [
+        "밝기",
+        "화면빛",
+        "brightness",
+        "화면이 어두",
+        "화면을 밝",
+        "화면 어두",
+        "화면 밝"
+      ],
+      "direction_terms": {
+        "increase": [
+          "높여",
+          "올려",
+          "키워",
+          "키우",
+          "크게",
+          "늘려",
+          "increase",
+          "brighter",
+          "밝게",
+          "어두워",
+          "어두운"
+        ],
+        "decrease": [
+          "낮춰",
+          "내려",
+          "줄여",
+          "줄이",
+          "작게",
+          "decrease",
+          "dimmer",
+          "어둡게",
+          "눈부셔",
+          "너무밝"
+        ]
+      },
+      "fields": [
+        {
+          "id": "direction",
+          "label": "변경 방향",
+          "kind": "choice",
+          "goal_slot": "direction",
+          "question": "화면 밝기를 어떻게 바꿀까요?",
+          "choices": [
+            {
+              "value": "increase",
+              "label": "더 밝게"
+            },
+            {
+              "value": "decrease",
+              "label": "더 어둡게"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {
+            "scope": "system"
+          },
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "volume",
+      "goal_prefix": "settings.volume.",
+      "keywords": [
+        "음량",
+        "볼륨",
+        "소리",
+        "미디어",
+        "volume",
+        "음악",
+        "동영상"
+      ],
+      "direction_terms": {
+        "increase": [
+          "높여",
+          "올려",
+          "키워",
+          "키우",
+          "크게",
+          "늘려",
+          "increase",
+          "louder",
+          "잘안들려",
+          "너무작"
+        ],
+        "decrease": [
+          "낮춰",
+          "내려",
+          "줄여",
+          "줄이",
+          "작게",
+          "decrease",
+          "quieter",
+          "시끄러워",
+          "너무커"
+        ]
+      },
+      "fields": [
+        {
+          "id": "audio_stream",
+          "label": "소리 종류",
+          "kind": "choice",
+          "question": "어떤 소리를 바꿀까요? 동영상·음악 소리를 안내할 수 있어요.",
+          "choices": [
+            {
+              "value": "media",
+              "label": "동영상·음악 소리"
+            },
+            {
+              "value": "other",
+              "label": "벨소리·알림 등 다른 소리"
+            }
+          ]
+        },
+        {
+          "id": "direction",
+          "label": "변경 방향",
+          "kind": "choice",
+          "goal_slot": "direction",
+          "question": "미디어 음량을 어떻게 바꿀까요?",
+          "choices": [
+            {
+              "value": "increase",
+              "label": "더 크게"
+            },
+            {
+              "value": "decrease",
+              "label": "더 작게"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {
+            "audio_stream": "media",
+            "scope": "system"
+          },
+          "target_app": "android_settings"
+        }
+      ]
     }
   ]
 }

@@ -176,8 +176,12 @@ class AgentTurnService:
             if command == "adjust_task" and request.adjustment_reason in {"too_small", "too_large"}:
                 from app.schemas.agent_turn import TypedGoalRequest
                 direction = "increase" if request.adjustment_reason == "too_small" else "decrease"
-                goal = TypedGoalRequest(catalog_version="2.1.0", goal_type="settings.font_size." + direction,
-                    target_app="android_settings", slots={"setting": "font_size", "direction": direction})
+                stored = legacy or self.repository.typed_details(request.session_id, request.user_id)
+                setting = ((stored.get("goal") or {}).get("slots") or {}).get("setting", "font_size")
+                if setting not in {"font_size", "brightness", "volume"}:
+                    raise ValueError("Unsupported adjustment setting")
+                goal = TypedGoalRequest(catalog_version="2.1.0", goal_type="settings." + setting + "." + direction,
+                    target_app="android_settings", slots={"setting": setting, "direction": direction})
                 _, reference = self.graphs.select(goal)
             digest = sha256(json.dumps(request.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
             details = self.repository.outcome_command(request, digest, goal=goal, reference=reference)

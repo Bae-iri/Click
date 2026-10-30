@@ -127,9 +127,9 @@ class GoalPreparationService:
         matches = [] if negated(source) else self._keywords(source)
         match = matches[0] if len(matches) == 1 else None
         if previous is None:
-            ambiguous_direction = len(self.requirements.directions(source)) > 1
-            values = {} if negated(source) else self.requirements.explicit_values(source)
             family = None if negated(source) else self.requirements.family(match['goal_type'] if match else None, source)
+            ambiguous_direction = len(self.requirements.directions(source, family)) > 1
+            values = {} if negated(source) else self.requirements.explicit_values(source, family)
             if match and family:
                 for field in family['fields']:
                     if field['id'] == 'direction' and ambiguous_direction:
@@ -151,7 +151,7 @@ class GoalPreparationService:
                             key = field['id']
                             # Scope is never invented from an LLM guess or the foreground app.
                             # A model's supported direction may be proposed, then confirmed by the user.
-                            if key in values or key == 'scope' or key not in inferred['inputs']:
+                            if key in values or key in {'scope', 'audio_stream'} or key not in inferred['inputs']:
                                 continue
                             if key == 'direction' and ambiguous_direction:
                                 continue
@@ -202,7 +202,12 @@ class GoalPreparationService:
                 goal = None
                 status, resolution_status = 'unsupported', 'unsupported'
                 label = values.get('app_name', '선택한 범위')
-                message = f'{label}의 글자 크기를 바꾸는 실행 안내는 아직 지원하지 않아요. 요청을 수정할 수 있어요.'
+                if family['id'] == 'font_size':
+                    message = f'{label}의 글자 크기를 바꾸는 실행 안내는 아직 지원하지 않아요. 요청을 수정할 수 있어요.'
+                elif family['id'] == 'volume' and values.get('audio_stream') == 'other':
+                    message = '현재는 동영상·음악의 미디어 음량 조절을 지원해요. 벨소리·알림·통화 소리는 아직 지원하지 않아요.'
+                else:
+                    message = f'{label}에서 이 설정을 바꾸는 실행 안내는 아직 지원하지 않아요. 요청을 수정할 수 있어요.'
         prepared = GoalPreparation(id=identifier, source_text=source, family=family['id'] if family else None,
             status=status, values=values, required_fields=fields, missing_fields=[f['id'] for f in missing] or (
                 ['request'] if question and question.field == 'request' else []), question=question,

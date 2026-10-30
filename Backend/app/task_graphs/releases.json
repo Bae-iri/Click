@@ -12,5 +12,33 @@
     "approved": true,
     "priority": 101,
     "status": "existing_runtime"
+  },
+  {
+    "artifact": "SET-brightness-increase.json",
+    "version": "1.0.0",
+    "approved": true,
+    "priority": 100,
+    "status": "settings_slider"
+  },
+  {
+    "artifact": "SET-brightness-decrease.json",
+    "version": "1.0.0",
+    "approved": true,
+    "priority": 100,
+    "status": "settings_slider"
+  },
+  {
+    "artifact": "SET-volume-increase.json",
+    "version": "1.0.0",
+    "approved": true,
+    "priority": 100,
+    "status": "settings_slider"
+  },
+  {
+    "artifact": "SET-volume-decrease.json",
+    "version": "1.0.0",
+    "approved": true,
+    "priority": 100,
+    "status": "settings_slider"
   }
 ]

@@ -19,6 +19,8 @@ def test_goal_catalog_has_unique_settings_and_coupang_keyword_rules():
     assert {goal["goal_type"] for goal in goals if goal["execution_status"] == "approved"} == {
         "settings.font_size.increase",
         "settings.font_size.decrease",
+        "settings.brightness.increase", "settings.brightness.decrease",
+        "settings.volume.increase", "settings.volume.decrease",
     }
     assert all(goal["keyword_groups"] and all(group for group in goal["keyword_groups"]) for goal in goals)
 

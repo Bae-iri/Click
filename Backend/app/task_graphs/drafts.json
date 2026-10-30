@@ -245,44 +245,6 @@
     "validation_status": "needs_device_evidence"
   },
   {
-    "task_id": "SET-brightness-increase",
-    "goal_type": "settings.brightness.increase",
-    "name": "화면 밝기 높이기",
-    "slots": {
-      "setting": "brightness",
-      "direction": "increase"
-    },
-    "category_labels": [
-      "Display"
-    ],
-    "control_labels": [
-      "밝기",
-      "화면빛"
-    ],
-    "completion_predicate": "target_value_increased",
-    "risk_level": "normal",
-    "validation_status": "needs_device_evidence"
-  },
-  {
-    "task_id": "SET-brightness-decrease",
-    "goal_type": "settings.brightness.decrease",
-    "name": "화면 밝기 낮추기",
-    "slots": {
-      "setting": "brightness",
-      "direction": "decrease"
-    },
-    "category_labels": [
-      "Display"
-    ],
-    "control_labels": [
-      "밝기",
-      "화면빛"
-    ],
-    "completion_predicate": "target_value_decreased",
-    "risk_level": "normal",
-    "validation_status": "needs_device_evidence"
-  },
-  {
     "task_id": "SET-dark_mode-enable",
     "goal_type": "settings.dark_mode.enable",
     "name": "다크 모드 켜기",
@@ -379,46 +341,6 @@
       "화면요소",
       "아이콘크기",
       "디스플레이크기"
-    ],
-    "completion_predicate": "target_value_decreased",
-    "risk_level": "normal",
-    "validation_status": "needs_device_evidence"
-  },
-  {
-    "task_id": "SET-volume-increase",
-    "goal_type": "settings.volume.increase",
-    "name": "소리 크기 높이기",
-    "slots": {
-      "setting": "volume",
-      "direction": "increase"
-    },
-    "category_labels": [
-      "Sound & vibration"
-    ],
-    "control_labels": [
-      "소리",
-      "볼륨",
-      "음량"
-    ],
-    "completion_predicate": "target_value_increased",
-    "risk_level": "normal",
-    "validation_status": "needs_device_evidence"
-  },
-  {
-    "task_id": "SET-volume-decrease",
-    "goal_type": "settings.volume.decrease",
-    "name": "소리 크기 낮추기",
-    "slots": {
-      "setting": "volume",
-      "direction": "decrease"
-    },
-    "category_labels": [
-      "Sound & vibration"
-    ],
-    "control_labels": [
-      "소리",
-      "볼륨",
-      "음량"
     ],
     "completion_predicate": "target_value_decreased",
     "risk_level": "normal",

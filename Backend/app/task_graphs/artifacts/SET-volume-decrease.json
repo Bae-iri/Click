@@ -1,0 +1,339 @@
+{
+  "definition": {
+    "task_id": "SET-volume-decrease",
+    "goal_type": "settings.volume.decrease",
+    "name": "미디어 음량 낮추기",
+    "target_app": "android_settings",
+    "task_type": "settings_change",
+    "start_states": [
+      "S0_UNKNOWN",
+      "S1_SETTINGS_HOME"
+    ],
+    "done_state": "S_DONE",
+    "required_slots": {
+      "setting": "volume",
+      "direction": "decrease"
+    }
+  },
+  "states": {
+    "S0_UNKNOWN": {
+      "state_id": "S0_UNKNOWN",
+      "name": "알 수 없는 화면",
+      "required_keywords": [],
+      "required_keyword_groups": [],
+      "optional_keywords": [],
+      "package_candidates": [],
+      "role_hints": [],
+      "confidence_threshold": 0.0,
+      "verification_only": false
+    },
+    "S1_SETTINGS_HOME": {
+      "state_id": "S1_SETTINGS_HOME",
+      "name": "설정 홈",
+      "required_keywords": [],
+      "required_keyword_groups": [
+        [
+          "설정",
+          "Settings"
+        ]
+      ],
+      "optional_keywords": [
+        "소리 및 진동",
+        "소리",
+        "Sound & vibration",
+        "Sound",
+        "Sounds and vibration",
+        "설정",
+        "Settings"
+      ],
+      "package_candidates": [
+        "com.android.settings",
+        "com.samsung.android.settings"
+      ],
+      "role_hints": [
+        "menu_item",
+        "list"
+      ],
+      "confidence_threshold": 0.75,
+      "verification_only": false
+    },
+    "S_DONE": {
+      "state_id": "S_DONE",
+      "name": "완료",
+      "required_keywords": [],
+      "required_keyword_groups": [],
+      "optional_keywords": [],
+      "package_candidates": [],
+      "role_hints": [],
+      "confidence_threshold": 1.0,
+      "verification_only": false
+    },
+    "S2_CATEGORY": {
+      "state_id": "S2_CATEGORY",
+      "name": "소리 및 진동",
+      "required_keywords": [],
+      "required_keyword_groups": [
+        [
+          "소리 및 진동",
+          "소리",
+          "Sound & vibration",
+          "Sound",
+          "Sounds and vibration"
+        ]
+      ],
+      "optional_keywords": [
+        "소리 및 진동",
+        "소리",
+        "Sound & vibration",
+        "Sound",
+        "Sounds and vibration"
+      ],
+      "package_candidates": [
+        "com.android.settings",
+        "com.samsung.android.settings"
+      ],
+      "role_hints": [
+        "menu_item",
+        "slider"
+      ],
+      "confidence_threshold": 0.78,
+      "verification_only": false
+    },
+    "S3_CONTROL": {
+      "state_id": "S3_CONTROL",
+      "name": "미디어 음량",
+      "required_keywords": [],
+      "required_keyword_groups": [
+        [
+          "미디어",
+          "미디어 음량",
+          "미디어 볼륨",
+          "Media volume",
+          "Media"
+        ]
+      ],
+      "optional_keywords": [
+        "미디어",
+        "미디어 음량",
+        "미디어 볼륨",
+        "Media volume",
+        "Media"
+      ],
+      "package_candidates": [
+        "com.android.settings",
+        "com.samsung.android.settings"
+      ],
+      "role_hints": [
+        "slider"
+      ],
+      "confidence_threshold": 0.78,
+      "verification_only": false
+    },
+    "S4_CHANGED": {
+      "state_id": "S4_CHANGED",
+      "name": "미디어 음량 변경 확인",
+      "required_keywords": [],
+      "required_keyword_groups": [],
+      "optional_keywords": [],
+      "package_candidates": [],
+      "role_hints": [],
+      "confidence_threshold": 1,
+      "verification_only": true
+    }
+  },
+  "transitions": [
+    {
+      "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+      "from_state": "S0_UNKNOWN",
+      "to_state": "S1_SETTINGS_HOME",
+      "action_type": "tap",
+      "action_name": "설정 앱 열기 안내",
+      "target_keywords": [
+        "설정",
+        "Settings"
+      ],
+      "target_role": "app_icon",
+      "safety_level": "LOW_RISK",
+      "guide_message": "설정 앱을 열어주세요.",
+      "allow_scroll": false,
+      "requires_user_action": true,
+      "confirmation_message": null,
+      "selector": {
+        "synonym_keys": [],
+        "package_candidates": [
+          "com.android.launcher3",
+          "com.google.android.apps.nexuslauncher",
+          "com.sec.android.app.launcher",
+          "com.miui.home",
+          "com.huawei.android.launcher",
+          "com.oppo.launcher",
+          "com.vivo.launcher",
+          "org.lineageos.trebuchet"
+        ],
+        "resource_ids": [],
+        "context_keywords": [],
+        "excluded_keywords": [],
+        "allow_unlabelled_in_context": false
+      },
+      "priority": 0,
+      "verification_predicate": "state_reached",
+      "completes_task": false
+    },
+    {
+      "transition_id": "OPEN_CATEGORY",
+      "from_state": "S1_SETTINGS_HOME",
+      "to_state": "S2_CATEGORY",
+      "action_type": "tap",
+      "action_name": "소리 및 진동 열기",
+      "target_keywords": [
+        "소리 및 진동",
+        "소리",
+        "Sound & vibration",
+        "Sound",
+        "Sounds and vibration"
+      ],
+      "target_role": "menu_item",
+      "safety_level": "LOW_RISK",
+      "guide_message": "소리 및 진동 항목을 눌러주세요.",
+      "allow_scroll": false,
+      "requires_user_action": true,
+      "confirmation_message": null,
+      "selector": {
+        "synonym_keys": [],
+        "package_candidates": [],
+        "resource_ids": [],
+        "context_keywords": [],
+        "excluded_keywords": [],
+        "allow_unlabelled_in_context": false
+      },
+      "priority": 10,
+      "verification_predicate": "state_reached",
+      "completes_task": false
+    },
+    {
+      "transition_id": "OPEN_CONTROL",
+      "from_state": "S2_CATEGORY",
+      "to_state": "S3_CONTROL",
+      "action_type": "tap",
+      "action_name": "미디어 음량 열기",
+      "target_keywords": [
+        "음량",
+        "볼륨",
+        "Volume"
+      ],
+      "target_role": "menu_item",
+      "safety_level": "LOW_RISK",
+      "guide_message": "음량 항목을 눌러주세요.",
+      "allow_scroll": false,
+      "requires_user_action": true,
+      "confirmation_message": null,
+      "selector": {
+        "synonym_keys": [],
+        "package_candidates": [],
+        "resource_ids": [],
+        "context_keywords": [],
+        "excluded_keywords": [],
+        "allow_unlabelled_in_context": false
+      },
+      "priority": 0,
+      "verification_predicate": "state_reached",
+      "completes_task": false
+    },
+    {
+      "transition_id": "ADJUST_VOLUME",
+      "from_state": "S3_CONTROL",
+      "to_state": "S4_CHANGED",
+      "action_type": "drag",
+      "action_name": "미디어 음량 낮추기",
+      "target_keywords": [
+        "미디어",
+        "미디어 음량",
+        "미디어 볼륨",
+        "Media volume",
+        "Media"
+      ],
+      "target_role": "slider",
+      "safety_level": "CONFIRM_REQUIRED",
+      "guide_message": "미디어 음량 조절 막대를 왼쪽으로 조금 움직여주세요.",
+      "allow_scroll": false,
+      "requires_user_action": true,
+      "confirmation_message": "미디어 음량을 낮출까요?",
+      "selector": {
+        "synonym_keys": [
+          "volume"
+        ],
+        "package_candidates": [],
+        "resource_ids": [],
+        "context_keywords": [
+          "미디어",
+          "미디어 음량",
+          "미디어 볼륨",
+          "Media volume",
+          "Media"
+        ],
+        "excluded_keywords": [
+          "벨소리",
+          "알림",
+          "알람",
+          "통화",
+          "Ringtone",
+          "Ring volume",
+          "Notification",
+          "Alarm",
+          "Call volume"
+        ],
+        "allow_unlabelled_in_context": false
+      },
+      "priority": 0,
+      "verification_predicate": "target_value_decreased",
+      "completes_task": true
+    },
+    {
+      "transition_id": "VERIFY_CHANGE",
+      "from_state": "S4_CHANGED",
+      "to_state": "S_DONE",
+      "action_type": "observe_only",
+      "action_name": "변경 확인",
+      "target_keywords": [
+        "미디어",
+        "미디어 음량",
+        "미디어 볼륨",
+        "Media volume",
+        "Media"
+      ],
+      "target_role": null,
+      "safety_level": "LOW_RISK",
+      "guide_message": "미디어 음량 변경을 확인했어요.",
+      "allow_scroll": false,
+      "requires_user_action": false,
+      "confirmation_message": null,
+      "selector": {
+        "synonym_keys": [],
+        "package_candidates": [],
+        "resource_ids": [],
+        "context_keywords": [],
+        "excluded_keywords": [],
+        "allow_unlabelled_in_context": false
+      },
+      "priority": 0,
+      "verification_predicate": "state_reached",
+      "completes_task": false
+    }
+  ],
+  "synonyms": {
+    "volume": [
+      "미디어",
+      "미디어 음량",
+      "미디어 볼륨",
+      "Media volume",
+      "Media"
+    ]
+  },
+  "policy": {
+    "retry_limit": 2,
+    "settle_ms": 500,
+    "observation_timeout_ms": 5000,
+    "recovery_limit": 3,
+    "max_failed_attempts": 6
+  }
+}

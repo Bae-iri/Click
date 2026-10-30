@@ -39,7 +39,7 @@ from ai_agent.runtime.types import (
     VerificationStatus,
 )
 from ai_agent.runtime.validation import ContractViolationError, validate_agent_turn_request
-from ai_agent.runtime.verification import correlate_action, verify_transition, font_scale, valid_slider_value
+from ai_agent.runtime.verification import correlate_action, verify_transition, font_scale, applied_value, valid_slider_value
 from ai_agent.runtime.progress import observed_path, checklist
 from ai_agent.runtime.targeting import target_key
 from ai_agent.runtime.similarity import default_similarity_scorer
@@ -293,7 +293,8 @@ class ClickAgentEngine:
             and (attempt.get('event_key') or (
                 matched_target.value == attempt.get('baseline_value')
                 and (not current_transition or current_transition.verification_predicate == 'state_reached'
-                     or font_scale(current_snapshot.applied_settings) == attempt.get('baseline_font_scale')))))
+                     or applied_value(current_snapshot.applied_settings, graph.definition.required_slots.get('setting', 'font_size'))
+                        == attempt.get('baseline_setting_value', attempt.get('baseline_font_scale'))))))
         keep_attempt = bool(attempt and not failed_attempt and not task_completed and
             (awaiting_observation or (same_binding and verification_result
              and verification_result.status == VerificationStatus.WAITING_FOR_ACTION)))
@@ -343,7 +344,11 @@ class ClickAgentEngine:
                 target_label=matched_target.label,
                 message=('표시한 슬라이더가 이미 가장 큰 글자 크기예요. 더 크게 조절할 수 없어요.'
                     if graph.definition.required_slots.get('direction') == 'increase' else
-                    '표시한 슬라이더가 이미 가장 작은 글자 크기예요. 더 작게 조절할 수 없어요.'),
+                    '표시한 슬라이더가 이미 가장 작은 글자 크기예요. 더 작게 조절할 수 없어요.')
+                    if graph.definition.required_slots.get('setting') == 'font_size' else
+                    ('이미 조절 가능한 최댓값이에요. 더 높일 수 없어요.'
+                    if graph.definition.required_slots.get('direction') == 'increase' else
+                    '이미 조절 가능한 최솟값이에요. 더 낮출 수 없어요.'),
                 safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
                 render_policy={'avoid_covering_target': True, 'adjustment_limit': True})
             keep_attempt = False
@@ -379,6 +384,8 @@ class ClickAgentEngine:
                     'baseline_range_min': target.range_min, 'baseline_range_max': target.range_max,
                     'baseline_observation_id': request.observation_id,
                     'baseline_captured_at_ms': current_snapshot.captured_at_ms,
+                    'setting': graph.definition.required_slots.get('setting', 'font_size'),
+                    'baseline_setting_value': applied_value(current_snapshot.applied_settings, graph.definition.required_slots.get('setting', 'font_size')),
                     'baseline_font_scale': font_scale(current_snapshot.applied_settings),
                     'episode_id': request.episode_id,
                 }
@@ -420,6 +427,9 @@ class ClickAgentEngine:
                 'action_at_ms': verified_attempt.get('action_at_ms'),
                 'episode_id': verified_attempt.get('episode_id'),
                 'after_value': next((n.value for n in normalized_nodes if target_key(n) == verified_attempt['target_key']), None),
+                'setting': graph.definition.required_slots.get('setting', 'font_size'),
+                'baseline_setting_value': verified_attempt.get('baseline_setting_value', verified_attempt.get('baseline_font_scale')),
+                'setting_value': applied_value(request.applied_settings, graph.definition.required_slots.get('setting', 'font_size')),
                 'baseline_font_scale': verified_attempt.get('baseline_font_scale'),
                 'font_scale': font_scale(request.applied_settings), 'observation_id': request.observation_id}
             verified_node = next((n for n in normalized_nodes if target_key(n) == verified_attempt['target_key']), None)

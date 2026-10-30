@@ -31,7 +31,7 @@ def test_every_settings_goal_has_backend_graph_and_unreviewed_graphs_are_inactiv
     with repository.factory() as db:
         rows = list(db.scalars(select(ApprovedTaskGraph)))
         assert len(rows) == 89
-        assert sum(row.approved for row in rows) == 2
+        assert sum(row.approved for row in rows) == 6
         assert all(not row.active for row in rows if not row.approved)
     for release, graph in definitions:
         if release["approved"]:
