@@ -1,4 +1,4 @@
-"""Use the unchanged DB graph with named Android rows and visible child titles."""
+"""DB graph routing with named Android rows and visible child titles."""
 import pytest
 
 from app.main import create_app
@@ -50,9 +50,33 @@ def test_typed_command_targets_visible_title_inside_named_row(direction, start_o
         response = client.post("/api/v1/agent/commands", json=payload)
         assert response.status_code == 200, response.text
         body = response.json()
-        assert body["graph_reference"]["version"] == "1.0.0"
+        assert body["graph_reference"]["version"] == "1.0.1"
         assert body["state_id"] == ("S2_DISPLAY_MENU" if start_on_display else "S1_SETTINGS_HOME")
         guide = body["guide_command"]
         assert guide["target_node_id"] == ("font" if start_on_display else "display")
         assert guide["target_bounds"] == [0, 260, 1080, 460]
         assert "접근성" not in guide["message"]
+
+
+@pytest.mark.parametrize("page", ["scrolled_home", "accessibility"])
+def test_off_path_and_offscreen_are_distinct_recovery_actions(page):
+    with authenticated_client(create_app()) as client:
+        payload = start_payload()
+        tree = screen("설정" if page == "scrolled_home" else "접근성", [
+            ("accessibility", "접근성" if page == "scrolled_home" else "시인성 향상", "시인성 향상")])
+        if page == "accessibility":
+            tree["nodes"].append({"node_id": "back", "parent_id": "root", "clickable": True,
+                "package_name": "com.android.settings", "content_description": "뒤로",
+                "class_name": "android.widget.ImageButton", "bounds_in_screen": [0, 80, 40, 180]})
+        payload["accessibility_tree"] = tree
+        response = client.post("/api/v1/agent/commands", json=payload)
+        assert response.status_code == 200, response.text
+        guide = response.json()["guide_command"]
+        policy = guide["render_policy"]
+        if page == "scrolled_home":
+            assert policy["recovery"]["reason_code"] == "TARGET_NOT_VISIBLE"
+            assert guide["target_node_id"] is None
+            assert "디스플레이" in guide["message"]
+        else:
+            assert policy["recovery_action"]["type"] == "navigate_back"
+            assert "설정 앱" not in guide["message"]

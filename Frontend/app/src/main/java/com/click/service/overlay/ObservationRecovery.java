@@ -6,6 +6,17 @@ import org.json.JSONObject;
 /** Settings navigation recovery using fresh, visible screen evidence. */
 public final class ObservationRecovery {
     private ObservationRecovery() {}
+    public static boolean canReturnFromSettings(ScreenSnapshot screen) {
+        if (screen == null || screen.activeWindowId == null
+                || !("com.android.settings".equals(screen.packageName)
+                    || "com.samsung.android.settings".equals(screen.packageName))) return false;
+        return screen.nodes.stream().anyMatch(node -> node.visibleToUser && node.enabled && node.clickable
+                && screen.packageName.equals(node.packageName) && (backLabel(node.text) || backLabel(node.contentDescription)));
+    }
+    private static boolean backLabel(String label) {
+        return label != null && label.trim().toLowerCase(java.util.Locale.ROOT)
+                .matches("뒤로|뒤로 이동|이전|이전 화면|navigate up|back");
+    }
     public static boolean canSearchByScrolling(JSONObject policy, ScreenSnapshot screen) {
         JSONObject recovery = policy == null ? null : policy.optJSONObject("recovery");
         return awaitsUser(policy) && recovery != null
@@ -29,6 +40,6 @@ public final class ObservationRecovery {
         if ("S1_SETTINGS_HOME".equals(stateId)) target = "디스플레이";
         else if ("S2_DISPLAY_MENU".equals(stateId)) target = "글자 크기";
         else return null;
-        return target + " 항목이 현재 화면에 보이지 않아요. X로 안내 창을 접고, 설정 목록을 위로 밀어 아래 항목을 살펴보세요. 화면이 바뀌면 다시 확인할게요.";
+        return target + " 항목이 현재 화면에 보이지 않아요. 줄이기로 안내 창을 접고, 설정 목록을 위로 밀어 아래 항목을 살펴보세요. 화면이 바뀌면 다시 확인할게요.";
     }
 }

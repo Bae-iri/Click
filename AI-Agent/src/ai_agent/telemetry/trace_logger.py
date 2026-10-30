@@ -26,7 +26,7 @@ ENUMS = {
 }
 METRICS = {"count_attempt", "task_completed", "state_score", "score_gap", "recovery_count", "confidence", "element_count", "accessibility_node_count", "vision_element_count",
            "normalized_node_count", "actionable_node_count", "synthetic_vision_node_count",
-           "score", "title_match", "ambiguous", "title_conflict", "attempts", "retry_after_ms", "recoverable", "accessibility_tree_present", "vision_snapshot_present", "vision_has_screenshot",
+           "score", "title_match", "control_match", "ambiguous", "title_conflict", "attempts", "retry_after_ms", "recoverable", "accessibility_tree_present", "vision_snapshot_present", "vision_has_screenshot",
            "vision_has_ocr_text", "requires_user_action", "session_stateful", "matched_from_vision"}
 METRICS.add("vision_processing_time_ms")
 

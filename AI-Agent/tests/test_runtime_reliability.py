@@ -128,14 +128,15 @@ def test_failed_target_stays_excluded_after_no_target_and_node_id_change():
     assert turns.session.recovery_count == graph.policy.recovery_limit
 
 
-def test_exclusion_uses_alternate_graph_edge_and_explicit_priority():
+def test_failed_display_target_does_not_invent_an_accessibility_detour():
     turns = Turns()
     first = turns.send(at=1000)
     assert first.match_result.transition_id == 'S1_TO_S2_DISPLAY_MENU'
     retry = fail_attempt(turns, first, 1100)
     alternate = fail_attempt(turns, retry, 1900)
-    assert alternate.match_result.transition_id == 'S1_TO_S3_ACCESSIBILITY_FALLBACK'
-    assert alternate.debug['replan_decision']['strategy'] == 'alternate_transition'
+    assert alternate.match_result.transition_id == 'S1_TO_S2_DISPLAY_MENU'
+    assert alternate.guide_command.target_node_id is None
+    assert alternate.guide_command.render_policy['recovery']['recoverable']
     reordered = replace(GRAPH, transitions=tuple(reversed(GRAPH.transitions)))
     assert Turns(reordered).send().match_result.transition_id == first.match_result.transition_id
 

@@ -45,7 +45,8 @@
         "배터리"
       ],
       "package_candidates": [
-        "com.android.settings"
+        "com.android.settings",
+        "com.samsung.android.settings"
       ],
       "role_hints": [
         "menu_item",
@@ -68,7 +69,8 @@
         "다크 모드"
       ],
       "package_candidates": [
-        "com.android.settings"
+        "com.android.settings",
+        "com.samsung.android.settings"
       ],
       "role_hints": [
         "menu_item",
@@ -95,7 +97,8 @@
         "크기"
       ],
       "package_candidates": [
-        "com.android.settings"
+        "com.android.settings",
+        "com.samsung.android.settings"
       ],
       "role_hints": [
         "menu_item"
@@ -122,7 +125,8 @@
         "크게"
       ],
       "package_candidates": [
-        "com.android.settings"
+        "com.android.settings",
+        "com.samsung.android.settings"
       ],
       "role_hints": [
         "slider",
@@ -150,7 +154,8 @@
         "미리보기"
       ],
       "package_candidates": [
-        "com.android.settings"
+        "com.android.settings",
+        "com.samsung.android.settings"
       ],
       "role_hints": [
         "slider",
@@ -237,38 +242,6 @@
         "allow_unlabelled_in_context": false
       },
       "priority": 10,
-      "verification_predicate": "state_reached",
-      "completes_task": false
-    },
-    {
-      "transition_id": "S1_TO_S3_ACCESSIBILITY_FALLBACK",
-      "from_state": "S1_SETTINGS_HOME",
-      "to_state": "S3_FONT_MENU",
-      "action_type": "tap",
-      "action_name": "접근성 대체 경로 진입",
-      "target_keywords": [
-        "접근성",
-        "시인성 향상",
-        "Accessibility",
-        "visibility"
-      ],
-      "target_role": "menu_item",
-      "safety_level": "LOW_RISK",
-      "guide_message": "접근성을 눌러주세요.",
-      "allow_scroll": false,
-      "requires_user_action": true,
-      "confirmation_message": null,
-      "selector": {
-        "synonym_keys": [
-          "accessibility"
-        ],
-        "package_candidates": [],
-        "resource_ids": [],
-        "context_keywords": [],
-        "excluded_keywords": [],
-        "allow_unlabelled_in_context": false
-      },
-      "priority": 20,
       "verification_predicate": "state_reached",
       "completes_task": false
     },

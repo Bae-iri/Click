@@ -37,15 +37,14 @@ class Mvp01TaskGraphTests(unittest.TestCase):
             },
         )
 
-    def test_transitions_from_settings_home_prefer_display_then_accessibility(self) -> None:
+    def test_settings_home_keeps_the_display_route_when_scrolled(self) -> None:
         transitions = MVP_01_TASK_GRAPH.transitions_from("S1_SETTINGS_HOME")
 
         self.assertEqual(
             [transition.transition_id for transition in transitions],
-            ["S1_TO_S2_DISPLAY_MENU", "S1_TO_S3_ACCESSIBILITY_FALLBACK"],
+            ["S1_TO_S2_DISPLAY_MENU"],
         )
         self.assertEqual(transitions[0].target_keywords[0], "디스플레이")
-        self.assertEqual(transitions[1].target_keywords[0], "접근성")
 
     def test_font_size_change_requires_confirmation(self) -> None:
         transition = next(

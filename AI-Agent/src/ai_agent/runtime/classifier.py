@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ai_agent.runtime.keywords import any_keyword_matches, any_phrase_matches
+from ai_agent.runtime.targeting import eligible_nodes, selector_evidence
 from ai_agent.runtime.types import DeviceContext, NormalizedNode, TaskGraph, TaskState
 
 
@@ -44,23 +45,43 @@ def classify_screen_state(
         title_match = bool(required_groups and any(
             title in relevant and all(any_phrase_matches(title.label, group) for group in required_groups)
             for title in titles))
+        # Some settings pages combine navigation rows and the actual adjustment
+        # control. A uniquely grounded slider is stronger evidence than a broad
+        # menu title such as Samsung's "글자 크기와 스타일".
+        control_match = any(
+            transition.target_role == 'slider' and transition.action_type.value == 'drag'
+            and transition.completes_task
+            and sum(selector_evidence(node, transition, relevant, graph)[0] >= 0.7
+                    for node in eligible_nodes(transition, relevant, graph)) == 1
+            for transition in graph.transitions_from(state.state_id))
         if score >= state.confidence_threshold:
             candidates.append({"state_id": state.state_id, "score": round(min(score, 1.0), 4),
-                               "title_match": title_match})
+                               "title_match": title_match, "control_match": control_match})
 
     # A page title outranks words in row descriptions, even after a skipped step.
-    candidates.sort(key=lambda item: (-int(item["title_match"]), -item["score"], item["state_id"]))
+    candidates.sort(key=lambda item: (-int(item["control_match"]), -int(item["title_match"]),
+                                      -item["score"], item["state_id"]))
     ambiguous = bool(len(candidates) > 1
+        and candidates[0]["control_match"] == candidates[1]["control_match"]
         and candidates[0]["title_match"] == candidates[1]["title_match"]
         and candidates[0]["score"] - candidates[1]["score"] < 0.025)
     relevant_titles = [title for title in titles if any(
         title.package_name in state.package_candidates for state in graph.states.values())]
-    title_conflict = bool(relevant_titles and candidates and not any(item["title_match"] for item in candidates))
+    title_conflict = bool(relevant_titles and candidates
+                         and not any(item["title_match"] or item["control_match"] for item in candidates))
     chosen = candidates[0] if candidates and not ambiguous and not title_conflict else None
     state_id = chosen["state_id"] if chosen else "S0_UNKNOWN"
     if evidence is not None:
         evidence.update(state_score=chosen["score"] if chosen else 0.0, state_id=state_id,
                         candidates=candidates[:3], ambiguous=ambiguous, title_conflict=title_conflict,
+                        settings_subpage=bool(state_id == "S0_UNKNOWN" and relevant_titles
+                            and any(title.package_name in {"com.android.settings", "com.samsung.android.settings"}
+                                and title.label.strip().casefold() not in {"설정", "settings"}
+                                for title in relevant_titles)
+                            and any(node.actionable and node.label.strip().casefold() in
+                                {"뒤로", "뒤로 이동", "이전", "이전 화면", "navigate up", "back"}
+                                and node.package_name in {"com.android.settings", "com.samsung.android.settings"}
+                                for node in nodes)),
                         reason_code="STATE_AMBIGUOUS" if ambiguous else "STATE_IDENTIFIED" if chosen else "STATE_UNKNOWN")
     return state_id
 
