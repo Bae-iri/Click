@@ -108,10 +108,17 @@ class ReplayRecorder:
                 "occurred_at_ms": event.occurred_at_ms, "event_id": self.identifier(event.event_id),
                 "binding_valid": (event.session_id in {None, request.session_id}
                                   and event.episode_id in {None, request.episode_id})}
-        from ai_agent.runtime.verification import font_scale
+        from ai_agent.runtime.verification import font_scale, applied_value
         scale = font_scale(request.applied_settings)
         if scale is not None:
             step["applied_settings"] = {"source": "android.provider.Settings.System.FONT_SCALE", "font_scale": scale}
+        for setting, key, source_key, source in (
+            ('brightness', 'screen_brightness', 'brightness_source', 'android.provider.Settings.System.SCREEN_BRIGHTNESS'),
+            ('volume', 'media_volume', 'media_volume_source', 'android.media.AudioManager.STREAM_MUSIC'),
+        ):
+            value = applied_value(request.applied_settings, setting)
+            if value is not None:
+                step.setdefault('applied_settings', {}).update({key: value, source_key: source})
         self.guides[response.guide_command.guide_command_id] = len(self.turns)
         self.turns.append(step)
 

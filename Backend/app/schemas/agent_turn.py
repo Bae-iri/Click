@@ -53,8 +53,20 @@ class AccessibilityNode(BaseModel):
 
 class AppliedSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    source: Literal["android.provider.Settings.System.FONT_SCALE"]
-    font_scale: float = Field(gt=0, le=10, allow_inf_nan=False)
+    source: Literal["android.provider.Settings.System.FONT_SCALE"] | None = None
+    font_scale: float | None = Field(default=None, gt=0, le=10, allow_inf_nan=False)
+    brightness_source: Literal["android.provider.Settings.System.SCREEN_BRIGHTNESS"] | None = None
+    screen_brightness: int | None = Field(default=None, ge=0, le=65535)
+    media_volume_source: Literal["android.media.AudioManager.STREAM_MUSIC"] | None = None
+    media_volume: int | None = Field(default=None, ge=0, le=1000)
+
+    @model_validator(mode="after")
+    def require_value_sources(self):
+        for value, source in ((self.font_scale, self.source), (self.screen_brightness, self.brightness_source),
+                              (self.media_volume, self.media_volume_source)):
+            if (value is None) != (source is None):
+                raise ValueError("Applied setting value and source must be supplied together")
+        return self
 
 
 class AccessibilityTree(BaseModel):

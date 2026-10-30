@@ -33,15 +33,14 @@ def validate_agent_turn_request(
 
     if request.typed_goal is not None:
         goal = request.typed_goal
-        supported = {
-            "settings.font_size.increase": "increase",
-            "settings.font_size.decrease": "decrease",
-        }
+        supported = {f"settings.{setting}.{direction}": {"setting": setting, "direction": direction}
+                     for setting in ("font_size", "brightness", "volume")
+                     for direction in ("increase", "decrease")}
         if goal.goal_type not in supported:
             raise ContractViolationError("Unsupported typed goal.")
         if goal.target_app != "android_settings":
             raise ContractViolationError("typed_goal.target_app must be android_settings.")
-        if goal.slots != {"setting": "font_size", "direction": supported[goal.goal_type]}:
+        if goal.slots != supported[goal.goal_type]:
             raise ContractViolationError("typed_goal.slots do not match the approved graph.")
         if request.device_context is None or request.device_context.platform != "android":
             raise ContractViolationError("device_context.platform must be android.")

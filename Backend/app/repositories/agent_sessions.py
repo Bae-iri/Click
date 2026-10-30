@@ -169,7 +169,8 @@ class AgentSessionRepository:
             row = self.owned(db, request.session_id, request.user_id)
             response.episode_id = (recovery_plan or {}).get("episode_id", row.episode_id)
             technical = response.metadata.get("technical_outcome") or {"status": "UNVERIFIABLE", "reason": "insufficient_evidence"}
-            outcome = {"technical": deepcopy(technical), "user": {"status": None, "confirmed_at": None},
+            outcome = {"setting": ((row.goal or {}).get("slots") or {}).get("setting", "font_size"),
+                       "technical": deepcopy(technical), "user": {"status": None, "confirmed_at": None},
                        "final": None, "checklist": response.metadata.get("checklist", [])}
             if response.task_status == "WAITING_RESULT":
                 direction = ((row.goal or {}).get("slots") or {}).get("direction", "increase")
@@ -511,7 +512,8 @@ class AgentSessionRepository:
                 self.conflict("STALE_VERSION")
             if row.status not in ACTIVE:
                 self.conflict("SESSION_CLOSED")
-            outcome = deepcopy(row.task_outcome) or make_outcome({}, now)
+            outcome = deepcopy(row.task_outcome) or make_outcome({}, now,
+                setting=((row.goal or {}).get('slots') or {}).get('setting', 'font_size'))
             status, episode = row.status, row.episode_id
             history = list(row.outcome_history or [])
             message = None
@@ -538,7 +540,7 @@ class AgentSessionRepository:
                     self.conflict("COMMAND_NOT_ALLOWED")
                 reason = request.adjustment_reason
                 if reason in {"other", "unsure"}:
-                    message = "현재는 글자 크기만 조절할 수 있어요. 글자가 작은지 큰지 확인하거나 그만할 수 있어요. 굵기·밝기·화면 전체 확대는 아직 지원하지 않아요."
+                    message = "현재 작업을 더 높이거나 낮출지 선택해 주세요. 다른 설정을 바꾸려면 작업을 끝내고 새 요청을 입력할 수 있어요."
                 else:
                     direction = goal.slots["direction"]
                     if outcome["technical"].get("limit_direction") == direction:

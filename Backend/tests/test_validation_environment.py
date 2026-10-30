@@ -37,14 +37,16 @@ def test_validation_identity_is_disabled_by_default(monkeypatch):
         assert client.get('/validation/environment').status_code == 404
 
 
-def test_prepare_uses_isolated_migrated_db_and_only_two_approved_graphs(paired, capsys):
+def test_prepare_uses_isolated_migrated_db_and_only_current_approved_graphs(paired, capsys):
     app, instance = paired
     prepared = json.loads((instance / 'environment.json').read_text())
     with TestClient(app) as client:
         response = client.get('/validation/environment')
         assert response.status_code == 200
         assert response.json()['fingerprint'] == prepared['fingerprint']
-        assert {g['task_id'] for g in response.json()['approved_graphs']} == {'MVP-01', 'MVP-02'}
+        assert {g['task_id'] for g in response.json()['approved_graphs']} == {
+            'MVP-01', 'MVP-02', 'SET-brightness-increase', 'SET-brightness-decrease',
+            'SET-volume-increase', 'SET-volume-decrease'}
         assert response.json()['database_migrations'] == ['20261027_14']
         assert '/validation/environment' not in client.get('/openapi.json').json()['paths']
     assert (instance / 'validation.db').is_file()

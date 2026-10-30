@@ -36,7 +36,7 @@ def payload_for(goal_type, slots, version="2.1.0"):
     return payload
 
 
-@pytest.mark.parametrize("goal_type,slots", CASES)
+@pytest.mark.parametrize("goal_type,slots", [case for case in CASES if '.mute.' in case[0]])
 @pytest.mark.parametrize("version", ["2.0.0", "2.1.0"])
 def test_valid_audio_toggle_request_cannot_execute_without_graph(goal_type, slots, version):
     app = create_app()

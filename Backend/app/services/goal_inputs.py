@@ -41,15 +41,18 @@ class GoalInputRequirements:
         return value
 
     @staticmethod
-    def directions(text):
+    def directions(text, family=None):
         n = normalize(text)
+        if family and family.get('direction_terms'):
+            return {direction for direction, words in family['direction_terms'].items()
+                    if any(normalize(word) in n for word in words)}
         return {direction for direction, words in (
             ("increase", ("크게", "키워", "키우", "확대", "늘려", "너무작", "작아서")),
             ("decrease", ("작게", "줄여", "줄이", "축소", "너무커", "커서")),
         ) if any(word in n for word in words)}
 
     @staticmethod
-    def explicit_values(text):
+    def explicit_values(text, family=None):
         n = normalize(text)
         values = {}
         phone = any(word in n for word in ("휴대폰전체", "핸드폰전체", "스마트폰전체", "시스템전체", "모든앱",
@@ -68,7 +71,19 @@ class GoalInputRequirements:
             values["scope"] = "app"
             if app:
                 values["app_name"] = app
-        directions = GoalInputRequirements.directions(text)
+        if family and family['id'] in {'brightness', 'volume'}:
+            # Media named after an app still uses the device's media stream. Only
+            # an explicit request for an app-local control is a different scope.
+            restricted = any(word in n for word in ('특정앱', '앱안에서만', '이앱만', '앱에서만'))
+            if family['id'] == 'brightness' and app_scope:
+                restricted = True
+            values['scope'] = 'app' if restricted else 'system'
+        if family and family['id'] == 'volume':
+            media = any(word in n for word in ('미디어', '음악', '동영상', '영상', '유튜브', 'media', 'music'))
+            other = any(word in n for word in ('벨소리', '알림', '알람', '통화', 'ringtone', 'notification', 'alarm', 'callvolume'))
+            if media != other:
+                values['audio_stream'] = 'media' if media else 'other'
+        directions = GoalInputRequirements.directions(text, family)
         if len(directions) == 1:
             values["direction"] = next(iter(directions))
         return values
