@@ -160,7 +160,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         progressSummary.setOrientation(VERTICAL);
         progressSummary.setVisibility(GONE);
         statusBox.addView(progressSummary, spaced(0));
-        loadingStatus = new LoadingStatusView(context);
+        loadingStatus = new LoadingStatusView(context, true);
         statusBox.addView(loadingStatus, spaced(4));
         automationStatus = text("", 14);
         automationStatus.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
@@ -220,7 +220,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void setLoadingStatus(String message) { loadingStatus.setStatus(message); updateStatusBox(); }
     private void updateStatusBox() {
         statusBox.setVisibility(!(minimizedProgress && automaticProgress) && (progressSummary.getVisibility() == VISIBLE
-                || loadingStatus.getVisibility() == VISIBLE || automationStatus.getVisibility() == VISIBLE
+                || loadingStatus.isActive() || automationStatus.getVisibility() == VISIBLE
                 ) ? VISIBLE : GONE);
     }
 
