@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sqlalchemy import BigInteger, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import BigInteger, ForeignKey, Integer, JSON, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -23,8 +23,9 @@ class AgentSession(Base):
     graph_version: Mapped[str | None] = mapped_column(String(64))
     graph_hash: Mapped[str | None] = mapped_column(String(64))
     result_response: Mapped[str | None] = mapped_column(String(10))
-    workflow: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
-    recovery: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    # These columns were released as JSON in migrations 20261010_11/_12.
+    workflow: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    recovery: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[int] = mapped_column(BigInteger)
     updated_at: Mapped[int] = mapped_column(BigInteger)
     expires_at: Mapped[int] = mapped_column(BigInteger, index=True)
