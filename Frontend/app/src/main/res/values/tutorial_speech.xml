@@ -17,10 +17,10 @@
     <string name="tutorial_speech_review_confirmed">요청을 확인했어요. 연습이므로 실제 설정은 바꾸지 않아요. 다음을 눌러 음성 입력을 해보세요.</string>
 
     <string name="tutorial_speech_voice_open">말로 시작 버튼을 눌러보세요.</string>
-    <string name="tutorial_speech_voice_record">마이크 버튼을 누르고 말씀해 주세요. 마이크를 눌렀을 때만 들어요.</string>
+    <string name="tutorial_speech_voice_record">마이크 버튼을 꾹 누른 채 말씀해 주세요. 말씀이 끝나면 손을 떼세요. 누르고 있는 동안만 들어요.</string>
     <!-- %1$s에는 인식한 말이 들어갑니다. 별도 마침표를 덧붙이지 않습니다. -->
     <string name="tutorial_speech_voice_received">이렇게 들었어요. %1$s\n확인했다면 다음을 눌러주세요.</string>
-    <string name="tutorial_speech_microphone_ready">준비됐어요. 마이크 버튼을 다시 누르고 말씀해 주세요.</string>
+    <string name="tutorial_speech_microphone_ready">준비됐어요. 마이크 버튼을 꾹 누르고 말한 뒤 손을 떼세요.</string>
     <string name="tutorial_speech_microphone_denied">마이크 권한이 필요해요. 글로 입력하거나 나중에 다시 연습할 수 있어요.</string>
 
     <string name="tutorial_speech_stop">요청 중지 버튼을 누르면 처리 중에도 바로 멈출 수 있어요.</string>

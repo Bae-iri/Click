@@ -21,6 +21,63 @@ import static org.junit.Assume.assumeTrue;
 /** Opt-in real API regression with the Galaxy combined font page; device settings stay unchanged. */
 @RunWith(AndroidJUnit4.class)
 public class LiveFontGuideTest {
+    @Test public void settingsRouteDoesNotFollowVisibleAccessibilityRow() throws Exception {
+        assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("liveSettings")));
+        InstrumentationRegistry.getInstrumentation().getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+        Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        AuthenticatedHttpClient http = new AuthenticatedHttpClient(context);
+        AgentServerContract contract = AgentServerContract.fromOpenApi(new JSONObject(AuthGateway.get("/openapi.json", null).body));
+        GoalCatalogClassifier catalog;
+        try (java.io.InputStream input = context.getAssets().open("mvp_goals.json")) {
+            catalog = GoalCatalogClassifier.fromJson(new String(input.readAllBytes(), StandardCharsets.UTF_8));
+        }
+        RequirementReview review = new RequirementReview("휴대폰 글자 크기 키워줘");
+        review.choose("phone");
+        String session = UUID.randomUUID().toString();
+        AgentTurnContract.Request request = new AgentTurnContract.Request(session, review.summary(), settingsScreen(true, false), null);
+        request.acceptedGoal = review.confirm(catalog, contract);
+        try {
+            JSONObject result = send(http, contract, request);
+            assertEquals("display", result.getJSONObject("guide_command").optString("target_node_id"));
+            request = AgentTurnContract.Request.control(session, result.getInt("session_version"),
+                    result.getString("episode_id"), "observe", settingsScreen(false, false));
+            result = send(http, contract, request);
+            JSONObject guide = result.getJSONObject("guide_command");
+            android.util.Log.i("ClickFontCheck", "navigation graph=" + result.optJSONObject("graph_reference")
+                    + " state=" + result.optString("state_id") + " target=" + guide.optString("target_node_id")
+                    + " message=" + guide.optString("message") + " policy=" + guide.optJSONObject("render_policy"));
+            assertTrue("Offscreen Display must not be replaced by Accessibility", guide.isNull("target_node_id"));
+            assertTrue(guide.getString("message").contains("디스플레이"));
+            assertEquals("TARGET_NOT_VISIBLE", guide.getJSONObject("render_policy").getJSONObject("recovery").getString("reason_code"));
+            request = AgentTurnContract.Request.control(session, result.getInt("session_version"),
+                    result.getString("episode_id"), "observe", settingsScreen(false, true));
+            result = send(http, contract, request);
+            assertEquals("navigate_back", result.getJSONObject("guide_command").getJSONObject("render_policy")
+                    .getJSONObject("recovery_action").getString("type"));
+        } finally {
+            try {
+                JSONObject state = new JSONObject(http.get("/api/v1/agent/sessions/" + session).body);
+                if (!"CANCELLED".equals(state.optString("status"))) send(http, contract,
+                        AgentTurnContract.Request.control(session, state.getInt("version"),
+                                state.optString("episode_id", null), "cancel_task", null));
+            } catch (ApiException error) { if (error.status != 404) throw error; }
+        }
+    }
+
+    private ScreenSnapshot settingsScreen(boolean displayVisible, boolean wrongPage) {
+        java.util.ArrayList<AccessibilityNodeSnapshot> nodes = new java.util.ArrayList<>();
+        nodes.add(new AccessibilityNodeSnapshot("list", null, true, "com.android.settings", null, null,
+                "android:id/list", "androidx.recyclerview.widget.RecyclerView", null,
+                new int[]{0, 240, 1080, 2200}, false, true, false, true, false, null, 42));
+        nodes.add(node("title", wrongPage ? "접근성" : "설정", null, "title", "android.widget.TextView", null, 80, false, null));
+        nodes.add(node("accessibility", wrongPage ? "시인성 향상" : "접근성", null, "title", "android.widget.TextView", null, 600, true, null));
+        if (displayVisible) nodes.add(node("display", "디스플레이", null, "title", "android.widget.TextView", null, 300, true, null));
+        if (wrongPage) nodes.add(new AccessibilityNodeSnapshot("back", null, true, "com.android.settings",
+                null, "뒤로", "com.android.settings:id/back", "android.widget.ImageButton", null,
+                new int[]{0, 80, 80, 170}, true, true, false, false, false, null, 42));
+        return new ScreenSnapshot("com.android.settings", Instant.now().toString(), 1080, 2400, nodes, 42, true, 1.1f);
+    }
+
     @Test public void samsungCombinedPageSelectsSliderBeforeResult() throws Exception {
         assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("liveFont")));
         InstrumentationRegistry.getInstrumentation().getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
@@ -54,7 +111,7 @@ public class LiveFontGuideTest {
             assertEquals("drag", guide.getString("action_type"));
             assertEquals("font-slider", guide.getString("target_node_id"));
             long actionAt = System.currentTimeMillis();
-            android.os.SystemClock.sleep(250);
+            android.os.SystemClock.sleep(750);
             AgentTurnContract.Request changed = AgentTurnContract.Request.control(session,
                     result.getInt("session_version"), result.getString("episode_id"), "observe", screen(5f, 1.5f));
             changed.userActionEvent = AgentActionEvents.of(AgentActionEvents.DRAG_COMPLETED,

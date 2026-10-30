@@ -38,4 +38,16 @@ final class AuthenticatedHttpClient {
         }
         return result;
     }
+
+    HttpResult delete(String path) throws Exception {
+        if (tokens.accessToken() == null || (tokens.accessExpired() && !AuthGateway.refresh(tokens))) {
+            throw new java.io.IOException("AUTH_REQUIRED");
+        }
+        HttpResult result = AuthGateway.delete(path, tokens.accessToken());
+        if (result.status == 401 && AuthGateway.refresh(tokens)) {
+            result = AuthGateway.delete(path, tokens.accessToken());
+        }
+        if (result.status < 200 || result.status >= 300) throw new ApiException("DELETE", path, result);
+        return result;
+    }
 }

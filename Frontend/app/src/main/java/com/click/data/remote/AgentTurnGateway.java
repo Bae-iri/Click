@@ -40,9 +40,7 @@ public final class AgentTurnGateway {
         AgentServerContract server = loadContract();
         if (!server.supports(request.commandType()))
             throw new java.io.IOException("현재 서버에서 이 작업 단계를 지원하지 않아요.");
-        request.contractVersion = server.contractVersion;
-        request.interactiveWorkflow = server.interactiveWorkflow;
-        HttpResult result = http.post(AgentTurnContract.PATH, request.toJson());
+        HttpResult result = http.post(AgentTurnContract.PATH, server.encode(request));
         AgentTurnContract.Response response = new AgentTurnContract.Response(result.body);
         if (response.metadata != null && result.traceId != null)
             response.metadata.put("backend_trace_id", result.traceId);

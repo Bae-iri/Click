@@ -10,6 +10,7 @@ import org.json.JSONObject;
 public final class GuidedActionTracker {
     private String session, episode, guide, action;
     private AccessibilityNodeSnapshot target;
+    private int[] sliderTrackBounds;
     private long issuedAt;
     private boolean consumed;
 
@@ -24,6 +25,16 @@ public final class GuidedActionTracker {
             }
         }
         if (target == null) return;
+        // Some native sliders expose a moving thumb as the ranged child of a
+        // stationary SeekBar. Retain that exact parent track for range events.
+        if ("slider".equals(target.role) && target.parentId != null) {
+            for (AccessibilityNodeSnapshot parent : screen.nodes) {
+                if (target.parentId.equals(parent.nodeId) && "slider".equals(parent.role)
+                        && parent.progress == null && parent.windowId == target.windowId
+                        && java.util.Objects.equals(parent.packageName, target.packageName)
+                        && contains(parent.bounds, target.bounds)) sliderTrackBounds = parent.bounds.clone();
+            }
+        }
         this.session = session; this.episode = episode; this.guide = guide;
         this.action = action; this.issuedAt = issuedAt;
     }
@@ -45,6 +56,30 @@ public final class GuidedActionTracker {
         return event;
     }
 
+    /** A native range-value event can arrive without touch-exploration start/end events. */
+    public JSONObject recordRangeChange(String packageName, int window, String nodeId,
+                                        String resourceId, int[] bounds, long occurredAt,
+                                        float value, float minimum, float maximum) {
+        if (target == null || !"drag".equals(action) || !"slider".equals(target.role)
+                || target.progress == null || !Float.isFinite(target.progress)
+                || !Float.isFinite(value) || !Float.isFinite(minimum) || !Float.isFinite(maximum)
+                || minimum >= maximum || value < minimum || value > maximum
+                || target.rangeMin == null || target.rangeMax == null
+                || Float.compare(target.rangeMin, minimum) != 0
+                || Float.compare(target.rangeMax, maximum) != 0
+                || Float.compare(target.progress, value) == 0) return null;
+        if (!Arrays.equals(target.bounds, bounds)) {
+            if (sliderTrackBounds == null || !contains(sliderTrackBounds, bounds)
+                    || bounds[1] != target.bounds[1] || bounds[3] != target.bounds[3]
+                    || bounds[2] - bounds[0] != target.bounds[2] - target.bounds[0]) return null;
+            // Correlate with the issued guide's rectangle, while identity and
+            // unchanged native range remain mandatory in record() and above.
+            bounds = target.bounds;
+        }
+        return record(AgentActionEvents.DRAG_COMPLETED, packageName, window, nodeId,
+                resourceId, bounds, occurredAt);
+    }
+
     public boolean isBoundToGuide(String guideId) { return target != null && java.util.Objects.equals(guide, guideId); }
 
     public boolean isTargetTap(String packageName, int window, String nodeId, int[] bounds) {
@@ -55,5 +90,12 @@ public final class GuidedActionTracker {
                 && bounds[2] >= target.bounds[2] && bounds[3] >= target.bounds[3];
     }
 
-    public void clear() { target = null; guide = null; consumed = false; }
+    private static boolean contains(int[] outer, int[] inner) {
+        return outer != null && inner != null && outer.length == 4 && inner.length == 4
+                && inner[0] < inner[2] && inner[1] < inner[3]
+                && outer[0] <= inner[0] && outer[1] <= inner[1]
+                && outer[2] >= inner[2] && outer[3] >= inner[3];
+    }
+
+    public void clear() { target = null; sliderTrackBounds = null; guide = null; consumed = false; }
 }

@@ -21,6 +21,51 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 @SdkSuppress(minSdkVersion = 29)
 public class MenuDialogsTest {
+    @Test public void headerAutomationAndDetailDialogShareTheSavedSetting() throws Exception {
+        var instrumentation = InstrumentationRegistry.getInstrumentation();
+        var settings = new com.click.data.local.TouchAutomationSettings(instrumentation.getTargetContext());
+        boolean initial = settings.isEnabled();
+        settings.setEnabled(false);
+        try (ActivityScenario<MenuActivity> scenario = ActivityScenario.launch(MenuActivity.class)) {
+            scenario.onActivity(activity -> {
+                var toggle = findAutomationSwitch(activity.getWindow().getDecorView());
+                assertNotNull(toggle);
+                assertFalse(toggle.isChecked());
+                toggle.performClick();
+                assertTrue(settings.isEnabled());
+            });
+            scenario.recreate();
+            instrumentation.waitForIdleSync();
+            scenario.onActivity(activity -> {
+                var toggle = findAutomationSwitch(activity.getWindow().getDecorView());
+                assertTrue(toggle.isChecked());
+                assertTextFits(activity.getWindow().getDecorView());
+                View row = find(activity.getWindow().getDecorView(), "지원 작업 전체 자동화");
+                while (!row.isClickable()) row = (View) row.getParent();
+                row.performClick();
+            });
+            instrumentation.waitForIdleSync();
+            scenario.onActivity(activity -> {
+                View action = null;
+                for (View root : WindowInspector.getGlobalWindowViews()) {
+                    if (root != activity.getWindow().getDecorView() && root.isShown()) {
+                        View candidate = find(root, "자동화 끄기");
+                        if (candidate != null) action = candidate;
+                    }
+                }
+                assertNotNull(action);
+                action.performClick();
+                assertFalse(settings.isEnabled());
+                var toggle = findAutomationSwitch(activity.getWindow().getDecorView());
+                assertFalse(toggle.isChecked());
+            });
+            instrumentation.waitForIdleSync();
+            screenshot("menu-header");
+        } finally {
+            settings.setEnabled(initial);
+        }
+    }
+
     @Test public void settingsAndPolicyDialogsKeepAllTextReadable() throws Exception {
         String[] titles = {"권한 상태 확인", "맞춤 안내 기록 설정", "서비스 이용약관", "개인정보 처리방침"};
         var instrumentation = InstrumentationRegistry.getInstrumentation();
@@ -34,6 +79,7 @@ public class MenuDialogsTest {
                     row.performClick();
                 });
                 instrumentation.waitForIdleSync();
+                screenshot("menu-dialog-" + index + "-top");
                 scenario.onActivity(activity -> {
                     View dialog = null;
                     for (View root : WindowInspector.getGlobalWindowViews())
@@ -54,8 +100,19 @@ public class MenuDialogsTest {
         }
     }
 
+    private androidx.appcompat.widget.SwitchCompat findAutomationSwitch(View view) {
+        if (view instanceof androidx.appcompat.widget.SwitchCompat)
+            return (androidx.appcompat.widget.SwitchCompat) view;
+        if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
+            var found = findAutomationSwitch(((ViewGroup) view).getChildAt(i));
+            if (found != null) return found;
+        }
+        return null;
+    }
+
     private TextView find(View view, String title) {
-        if (view instanceof TextView && title.contentEquals(((TextView) view).getText())) return (TextView) view;
+        if (view instanceof TextView && title.equals(((TextView) view).getText().toString().replace('\n', ' ')))
+            return (TextView) view;
         if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
             TextView found = find(((ViewGroup) view).getChildAt(i), title);
             if (found != null) return found;
@@ -89,6 +146,9 @@ public class MenuDialogsTest {
 
     private void screenshot(String name) throws Exception {
         var instrumentation = InstrumentationRegistry.getInstrumentation();
+        // UI idle can precede the final compositor frame of the dialog animation.
+        android.os.SystemClock.sleep(400);
+        instrumentation.waitForIdleSync();
         float scale = instrumentation.getTargetContext().getResources().getConfiguration().fontScale;
         Bitmap bitmap = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).takeScreenshot();
         assertNotNull(bitmap);

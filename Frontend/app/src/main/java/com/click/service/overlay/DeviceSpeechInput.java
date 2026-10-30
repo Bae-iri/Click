@@ -9,6 +9,7 @@ public final class DeviceSpeechInput implements SpeechInput {
     private boolean closed;
     public DeviceSpeechInput(Context context) { backend = new CloudSpeechRecognizer(context); }
     @Override public void start(Callback callback) { if (!closed) backend.start(callback); }
+    @Override public void finish() { if (!closed) backend.finish(); }
     @Override public void cancel() { backend.cancel(); }
     @Override public void close() { closed = true; backend.close(); }
     public static final class DeviceError extends IOException {

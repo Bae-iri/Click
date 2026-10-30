@@ -14,18 +14,18 @@ public final class LoadingStatusView extends LinearLayout {
     public LoadingStatusView(Context context) {
         super(context);
         setGravity(Gravity.CENTER_VERTICAL);
-        int size = Math.round(22 * getResources().getDisplayMetrics().density);
+        int size = Math.round(18 * getResources().getDisplayMetrics().density);
         ProgressBar spinner = new ProgressBar(context, null, android.R.attr.progressBarStyleSmall);
         spinner.setIndeterminate(true);
         spinner.setIndeterminateTintList(ColorStateList.valueOf(0xFF3478F6));
         spinner.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         addView(spinner, new LayoutParams(size, size));
         label = new TextView(context);
-        label.setTextSize(15);
+        label.setTextSize(13);
         label.setTextColor(0xFF6F7F9E);
         label.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         LayoutParams copy = new LayoutParams(0, -2, 1);
-        copy.leftMargin = Math.round(10 * getResources().getDisplayMetrics().density);
+        copy.leftMargin = Math.round(8 * getResources().getDisplayMetrics().density);
         addView(label, copy);
         setVisibility(GONE);
     }

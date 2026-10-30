@@ -5,6 +5,16 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class QuickHelpTaskTest {
+    @Test public void expandedHomeCardsHaveExecutableBundledGoals() throws Exception {
+        try (java.io.InputStream in = getClass().getClassLoader().getResourceAsStream("mvp_goals.json")) {
+            assertNotNull(in);
+            GoalCatalogClassifier bundled = GoalCatalogClassifier.fromJson(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+            for (QuickHelpTask task : new QuickHelpTask[]{QuickHelpTask.BRIGHTNESS, QuickHelpTask.MEDIA_VOLUME}) {
+                assertNotNull(bundled.executableGoal(task.goalType));
+                assertEquals(task, QuickHelpTask.fromGoalType(task.goalType));
+            }
+        }
+    }
     private GoalCatalogClassifier catalog(String status) throws Exception {
         return GoalCatalogClassifier.fromJson("{\"version\":\"2.1.0\",\"goals\":[{"
                 + "\"goal_type\":\"settings.font_size.increase\",\"display_name\":\"이름이 바뀐 카드\","
