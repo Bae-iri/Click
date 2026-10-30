@@ -96,15 +96,20 @@ public class ClickTutorialFlowTest {
                     ((SpeechInput) field.get(a)).close(); field.set(a, speech);
                 } catch (Exception e) { throw new AssertionError(e); }
             });
-            tapId(scenario, R.id.overlay_microphone);
+            microphoneTouch(scenario, android.view.MotionEvent.ACTION_DOWN);
             scenario.onActivity(a -> { assertTrue(control(a).isVoiceInputActive()); assertNotNull(speech.callback); });
-            tapId(scenario, R.id.overlay_microphone);
+            microphoneTouch(scenario, android.view.MotionEvent.ACTION_CANCEL);
             scenario.onActivity(a -> { assertFalse(control(a).isVoiceInputActive()); assertFalse(a.findViewById(R.id.tutorial_next).isEnabled()); });
-            tapId(scenario, R.id.overlay_microphone);
+            microphoneTouch(scenario, android.view.MotionEvent.ACTION_DOWN);
             scenario.onActivity(a -> {
                 speech.callback.onPartialText("휴대폰 글자");
                 assertNotNull(findText(a.getWindow().getDecorView(), "휴대폰 글자"));
-                speech.callback.onRecordingFinished(); speech.callback.onSuccess("휴대폰 글자 크기 키워줘");
+            });
+            microphoneTouch(scenario, android.view.MotionEvent.ACTION_UP);
+            scenario.onActivity(a -> {
+                assertTrue(speech.finished);
+                assertFalse(control(a).isVoiceInputActive());
+                speech.callback.onSuccess("휴대폰 글자 크기 키워줘");
             });
             scenario.onActivity(a -> { assertFalse(control(a).isVoiceInputActive()); assertTrue(a.findViewById(R.id.tutorial_next).isEnabled()); });
             screenshot("click-feature-5");
@@ -214,12 +219,23 @@ public class ClickTutorialFlowTest {
     // Deterministic STT callback checks; live microphone quality is verified separately.
     private static final class FakeSpeech implements SpeechInput {
         Callback callback;
-        public void start(Callback callback) { this.callback = callback; callback.onReady(); }
+        boolean finished;
+        public void start(Callback callback) { this.callback = callback; finished = false; callback.onReady(); }
+        public void finish() { finished = true; callback.onRecordingFinished(); }
         public void cancel() { callback = null; }
         public void close() { cancel(); }
     }
 
     private ClickOverlayLayout control(TutorialActivity a) { return a.findViewById(R.id.tutorial_floating_control); }
+    private void microphoneTouch(ActivityScenario<TutorialActivity> scenario, int action) {
+        scenario.onActivity(a -> {
+            View mic = a.findViewById(R.id.overlay_microphone);
+            long now = android.os.SystemClock.uptimeMillis();
+            android.view.MotionEvent event = android.view.MotionEvent.obtain(now, now, action,
+                    mic.getWidth() / 2f, mic.getHeight() / 2f, 0);
+            mic.dispatchTouchEvent(event); event.recycle();
+        });
+    }
     private void assertMode(ActivityScenario<TutorialActivity> s, ClickOverlayLayout.Mode mode) {
         s.onActivity(a -> assertEquals(mode, control(a).getMode()));
     }

@@ -30,6 +30,9 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         void onModeChanged(ClickOverlayLayout.Mode mode);
         void onTextSubmitted(String text);
         void onMicrophoneClicked();
+        void onMicrophonePressed();
+        void onMicrophoneReleased();
+        void onMicrophoneCancelled();
         void onStopRequested();
         void onHidden();
         void onMoved();
@@ -391,6 +394,9 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
 
     @Override public void onTextSubmitted(String text) { listener.onTextSubmitted(text); }
     @Override public void onMicrophoneClicked() { listener.onMicrophoneClicked(); }
+    @Override public void onMicrophonePressed() { listener.onMicrophonePressed(); }
+    @Override public void onMicrophoneReleased() { listener.onMicrophoneReleased(); }
+    @Override public void onMicrophoneCancelled() { listener.onMicrophoneCancelled(); }
     @Override public void onStopRequested() { listener.onStopRequested(); }
     @Override public void onDragStarted() {
         dragging = true;

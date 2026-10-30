@@ -124,6 +124,14 @@ public final class RequirementReview {
     public boolean needsDirection() { return font && direction == null; }
     public boolean appOnly() { return font && "앱 안에서만".equals(scope); }
     public String request() { return request; }
+    /** Preserve the request and explicit selections when retrying server preparation. */
+    public String preparationSource() {
+        String source = request;
+        if (isPhone()) source += "\n사용자가 선택한 범위: 휴대폰 전체";
+        else if (appOnly()) source += "\n사용자가 선택한 범위: 특정 앱";
+        if (font && direction != null) source += "\n사용자가 선택한 변경: " + change();
+        return source;
+    }
     public String summary() {
         if (!font) return otherLabel == null ? request : otherLabel;
         return (target == null ? "대상 확인 필요" : target) + " · " + change();

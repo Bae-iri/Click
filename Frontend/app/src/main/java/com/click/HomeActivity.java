@@ -148,6 +148,16 @@ public final class HomeActivity extends AppCompatActivity {
         font.setOnClickListener(view -> startQuickHelp(QuickHelpTask.FONT_SIZE));
         add(page, font, 8);
 
+        LinearLayout brightness = helpRow(HomeIconView.Kind.SETTINGS_TILE, "화면 밝기",
+                "더 밝게 하는 방법", true);
+        brightness.setOnClickListener(view -> startQuickHelp(QuickHelpTask.BRIGHTNESS));
+        add(page, brightness, 8);
+
+        LinearLayout volume = helpRow(HomeIconView.Kind.SETTINGS_TILE, "동영상·음악 소리",
+                "소리를 키우는 방법", true);
+        volume.setOnClickListener(view -> startQuickHelp(QuickHelpTask.MEDIA_VOLUME));
+        add(page, volume, 8);
+
         LinearLayout phone = helpRow(HomeIconView.Kind.PHONE, "전화",
                 "걸고 받는 방법 · 준비 중", false);
         phone.setOnClickListener(view -> showComingSoon("전화 도움"));
@@ -237,7 +247,7 @@ public final class HomeActivity extends AppCompatActivity {
         TextView label = text(getString(R.string.start_click_question), 20, INK, bold);
         label.setGravity(Gravity.CENTER);
         add(card, label, 6);
-        TextView example = text("예) 글자 크기를 크게 해줘", 15, SECONDARY, medium);
+        TextView example = text("예) 화면을 밝게 해줘", 15, SECONDARY, medium);
         example.setGravity(Gravity.CENTER);
         add(card, example, 7);
         return card;
@@ -261,7 +271,7 @@ public final class HomeActivity extends AppCompatActivity {
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(LinearLayout.VERTICAL);
         labels.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams labelsParams = new LinearLayout.LayoutParams(0, -1, 1);
+        LinearLayout.LayoutParams labelsParams = new LinearLayout.LayoutParams(0, -2, 1);
         labelsParams.setMarginStart(dp(16));
         labels.addView(text(title, 18, INK, semibold), new LinearLayout.LayoutParams(-1, -2));
         TextView secondary = text(subtitle, 14, supported ? SECONDARY : 0xFF8997B1, medium);
@@ -294,7 +304,7 @@ public final class HomeActivity extends AppCompatActivity {
     }
 
     private void showComingSoon(String feature) {
-        Toast.makeText(this, feature + "은 준비 중이에요.\n지금은 글자 크기 조절을 도와드릴 수 있어요.",
+        Toast.makeText(this, feature + "은 준비 중이에요.\n글자 크기, 화면 밝기, 미디어 음량 조절을 이용해 주세요.",
                 Toast.LENGTH_LONG).show();
     }
 

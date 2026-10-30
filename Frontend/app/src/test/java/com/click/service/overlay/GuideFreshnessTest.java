@@ -41,6 +41,16 @@ public class GuideFreshnessTest {
         assertTrue(valid(settings(node("node_0_3", "글자 크기", DISPLAY, 2f)),
                 settings(node("node_0_3", "글자 크기", DISPLAY, 3f))));
     }
+    @Test public void samsungNumericSliderDescriptionIsAValueNotAnotherControl() {
+        ScreenSnapshot before = settings(samsungSlider("3", 2f));
+        assertTrue(valid(before, settings(samsungSlider("4", 3f))));
+        assertFalse(valid(before, settings(samsungSlider("밝기", 3f))));
+    }
+    private static AccessibilityNodeSnapshot samsungSlider(String description, float value) {
+        return new AccessibilityNodeSnapshot("node_0_3", "node_0", true, "com.android.settings",
+                null, description, "com.android.settings:id/seekBarForFontSize", "android.widget.SeekBar", "slider",
+                DISPLAY, false, true, false, false, false, value, 5, false, 0f, 7f);
+    }
     @Test public void scrolledTargetIsStale() {
         assertFalse(valid(settings(node("node_0_3", "디스플레이", DISPLAY, null)),
                 settings(node("node_0_3", "디스플레이", new int[]{0, 200, 1080, 320}, null))));
@@ -48,6 +58,21 @@ public class GuideFreshnessTest {
     @Test public void sameNodeIdWithOtherMenuIsStale() {
         assertFalse(valid(settings(node("node_0_3", "디스플레이", DISPLAY, null)),
                 settings(node("node_0_3", "잠금화면", DISPLAY, null))));
+    }
+    @Test public void recycledUnnamedRowCannotKeepDisplayGuideOverAccessibility() {
+        AccessibilityNodeSnapshot row = new AccessibilityNodeSnapshot("node_0_3", "node_0", true,
+                "com.android.settings", null, null, "android:id/row", "android.widget.LinearLayout", null,
+                DISPLAY, true, true, false, false, false, null, 5);
+        AccessibilityNodeSnapshot display = rowTitle("디스플레이");
+        AccessibilityNodeSnapshot accessibility = rowTitle("접근성");
+        assertTrue(valid(settings(row, display), settings(row, rowTitle("디스플레이"))));
+        assertFalse(valid(settings(row, display), settings(row, accessibility)));
+        assertFalse(valid(settings(row, display), settings(row)));
+    }
+    private static AccessibilityNodeSnapshot rowTitle(String title) {
+        return new AccessibilityNodeSnapshot("node_0_3_0", "node_0_3", true, "com.android.settings",
+                title, null, "android:id/title", "android.widget.TextView", null,
+                new int[]{30, 420, 900, 480}, false, true, false, false, false, null, 5);
     }
     @Test public void missingTargetAppSwitchRotationOrWindowChangeIsStale() {
         ScreenSnapshot requested = settings(node("node_0_3", "디스플레이", DISPLAY, null));

@@ -10,13 +10,16 @@ import java.util.Set;
 public final class AgentServerContract {
     private final Set<String> commands;
     private final Set<String> goals;
+    private final Set<String> appliedSettingFields;
     public final String contractVersion;
     public final boolean interactiveWorkflow;
     public final boolean goalPreparation;
 
-    private AgentServerContract(Set<String> commands, Set<String> goals, String version, boolean interactive, boolean preparation) {
+    private AgentServerContract(Set<String> commands, Set<String> goals, Set<String> appliedSettingFields,
+                                String version, boolean interactive, boolean preparation) {
         this.commands = commands;
         this.goals = goals;
+        this.appliedSettingFields = appliedSettingFields;
         this.contractVersion = version;
         this.interactiveWorkflow = interactive;
         this.goalPreparation = preparation;
@@ -24,6 +27,22 @@ public final class AgentServerContract {
 
     public boolean supports(String command) { return commands.contains(command); }
     public boolean supportsGoal(String goal) { return goals.contains(goal); }
+
+    /** A staged backend rollout must not make older servers reject existing font requests. */
+    public String encode(AgentTurnContract.Request request) throws JSONException {
+        request.contractVersion = contractVersion;
+        request.interactiveWorkflow = interactiveWorkflow;
+        JSONObject body = new JSONObject(request.toJson());
+        JSONObject screen = body.optJSONObject("accessibility_tree");
+        JSONObject settings = screen == null ? null : screen.optJSONObject("applied_settings");
+        if (settings != null) {
+            java.util.List<String> remove = new java.util.ArrayList<>();
+            settings.keys().forEachRemaining(key -> { if (!appliedSettingFields.contains(key)) remove.add(key); });
+            for (String key : remove) settings.remove(key);
+            if (settings.length() == 0) screen.remove("applied_settings");
+        }
+        return body.toString();
+    }
 
     public static AgentServerContract fromOpenApi(JSONObject document) throws JSONException {
         JSONObject request = document.getJSONObject("paths").getJSONObject(AgentTurnContract.PATH)
@@ -49,7 +68,11 @@ public final class AgentServerContract {
         }
         Set<String> goals = strings(resolve(document, goal).getJSONObject("properties")
                 .getJSONObject("goal_type").getJSONArray("enum"));
-        return new AgentServerContract(commands, goals, selected,
+        Set<String> settingFields = new HashSet<>();
+        JSONObject settings = document.getJSONObject("components").getJSONObject("schemas").optJSONObject("AppliedSettings");
+        if (settings != null && settings.optJSONObject("properties") != null)
+            settings.getJSONObject("properties").keys().forEachRemaining(settingFields::add);
+        return new AgentServerContract(commands, goals, settingFields, selected,
                 AgentTurnContract.CONTRACT_VERSION.equals(selected) && properties.has("workflow_version"),
                 AgentTurnContract.CONTRACT_VERSION.equals(selected) && commands.contains("resolve_goal")
                         && properties.has("preparation_version") && properties.has("clarification_answer")

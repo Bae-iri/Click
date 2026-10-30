@@ -62,6 +62,7 @@ public class FloatingTaskFlowTest {
             scenario.onActivity(activity -> activity.startService(serviceIntent));
             await(() -> service() != null && control().isAttachedToWindow());
             await(() -> !homeControl[0].isShown());
+            assertHighlightBehindLogo(automation);
             instrumentation.runOnMainSync(() -> {
                 // Keep this UI regression independent of shared-server task state.
                 VoiceQueueGateway gateway = (VoiceQueueGateway) field(service(), "queueGateway");
@@ -204,6 +205,54 @@ public class FloatingTaskFlowTest {
             Settings.Secure.putString(app.getContentResolver(), key, original);
             Settings.Secure.putInt(app.getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, enabled);
             automation.dropShellPermissionIdentity();
+        }
+    }
+
+    private void assertHighlightBehindLogo(UiAutomation automation) throws Exception {
+        int[] position = new int[2], size = new int[2];
+        instrumentation.runOnMainSync(() -> {
+            control().getLocationOnScreen(position);
+            size[0] = control().getWidth(); size[1] = control().getHeight();
+        });
+        instrumentation.waitForIdleSync();
+        SystemClock.sleep(300);
+        Bitmap before = automation.takeScreenshot();
+        assertNotNull(before);
+        try {
+            // Cross the opaque centre of the logo; the same border must remain
+            // visible to its left while being occluded by the floating window.
+            int left = position[0] - size[0], top = position[1] + size[1] / 2;
+            int[] target = {left, top, position[0] + size[0], position[1] + size[1]};
+            for (int pass = 0; pass < 3; pass++) {
+                instrumentation.runOnMainSync(() -> {
+                    try {
+                        Method show = ClickOverlayService.class.getDeclaredMethod("showGuideOverlay",
+                                int[].class, String.class, int.class);
+                        show.setAccessible(true); show.invoke(service(), target, "tap", 0);
+                    } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+                });
+                instrumentation.waitForIdleSync();
+                SystemClock.sleep(300);
+                Bitmap after = automation.takeScreenshot();
+                assertNotNull(after);
+                try {
+                    int changedLogo = 0, changedBackground = 0;
+                    for (int y = top; y < top + size[1] / 5; y++) {
+                        for (int x = position[0] + size[0] / 3; x < position[0] + size[0] * 2 / 3; x++)
+                            if (before.getPixel(x, y) != after.getPixel(x, y)) changedLogo++;
+                        for (int x = left + size[0] / 3; x < left + size[0] * 2 / 3; x++)
+                            if (before.getPixel(x, y) != after.getPixel(x, y)) changedBackground++;
+                    }
+                    assertTrue("The highlight must actually be visible beside the logo", changedBackground > 20);
+                    assertEquals("A new, updated or restored highlight must stay behind the logo", 0, changedLogo);
+                } finally { after.recycle(); }
+                // Also exercise updating an attached highlight, then hiding/restoring it.
+                if (pass == 1) instrumentation.runOnMainSync(() -> invoke(service(), "hideGuideOverlay"));
+            }
+            screenshot("floating-logo-above-highlight");
+        } finally {
+            before.recycle();
+            instrumentation.runOnMainSync(() -> invoke(service(), "hideGuideOverlay"));
         }
     }
 

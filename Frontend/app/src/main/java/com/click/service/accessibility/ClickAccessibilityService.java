@@ -104,13 +104,23 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 source.recycle();
             }
         }
-        if (touchInteraction && (event.getEventType() == AccessibilityEvent.TYPE_VIEW_SCROLLED
-                || event.getEventType() == AccessibilityEvent.TYPE_VIEW_SELECTED)) {
+        if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_SCROLLED
+                || event.getEventType() == AccessibilityEvent.TYPE_VIEW_SELECTED
+                || event.getEventType() == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED) {
             AccessibilityNodeInfo source = event.getSource();
-            if (source != null && source.getRangeInfo() != null) {
-                if (draggedSource != null) draggedSource.recycle();
-                draggedSource = source;
-            } else if (source != null) source.recycle();
+            if (source != null) {
+                AccessibilityNodeInfo.RangeInfo range = source.getRangeInfo();
+                if (range != null && source.getClassName() != null
+                        && source.getClassName().toString().toLowerCase(java.util.Locale.ROOT).contains("seekbar")) {
+                    // Record the native value event before a changed-screen observation is sent.
+                    // Ordinary touch mode need not produce TOUCH_INTERACTION_START/END.
+                    emitAction(source, "drag_completed", event.getEventTime(), range);
+                }
+                if (touchInteraction && range != null) {
+                    if (draggedSource != null) draggedSource.recycle();
+                    draggedSource = source;
+                } else source.recycle();
+            }
         }
         if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             lastForegroundPackage = packageName.toString();
@@ -238,7 +248,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         finally { if (node != null) node.recycle(); }
     }
 
-    /** One native slider increment/decrement; never drag arbitrary screen coordinates. */
+    /** One increment/decrement of the freshly validated, explicitly guided slider. */
     public static boolean performGuidedSlider(ScreenSnapshot expected, String id, int[] bounds, int direction) {
         ClickAccessibilityService service = connectedService.get();
         if (service == null || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()
@@ -278,6 +288,34 @@ public final class ClickAccessibilityService extends AccessibilityService {
                     || Float.compare(range.getMin(), target.rangeMin) != 0
                     || Float.compare(range.getMax(), target.rangeMax) != 0
                     || !SliderAdjustment.canMove(range.getCurrent(), range.getMin(), range.getMax(), direction)) return false;
+            if ("com.android.settings:id/seekBarForFontSize".equals(target.resourceId)) {
+                // Samsung updates only the preview for ACTION_SCROLL_FORWARD/BACKWARD.
+                // A real down/up on this validated control also commits FONT_SCALE.
+                if (!target.resourceId.equals(node.getViewIdResourceName())
+                        || range.getType() != AccessibilityNodeInfo.RangeInfo.RANGE_TYPE_INT
+                        || actual.width() <= actual.height()) return false;
+                float next = Math.max(range.getMin(), Math.min(range.getMax(), range.getCurrent() + direction));
+                float fraction = (next - range.getMin()) / (range.getMax() - range.getMin());
+                float x = Math.max(actual.left + 1, Math.min(actual.right - 1,
+                        actual.left + actual.width() * fraction));
+                Path touch = new Path();
+                touch.moveTo(x, actual.exactCenterY());
+                android.accessibilityservice.GestureDescription gesture =
+                        new android.accessibilityservice.GestureDescription.Builder().addStroke(
+                                new android.accessibilityservice.GestureDescription.StrokeDescription(touch, 0, 120)).build();
+                final long actionAt = System.currentTimeMillis();
+                final com.click.data.snapshot.AccessibilityNodeSnapshot original = target;
+                return service.dispatchGesture(gesture, new GestureResultCallback() {
+                    @Override public void onCompleted(android.accessibilityservice.GestureDescription completed) {
+                        ClickOverlayService.onGuidedAction("drag_completed", original.packageName,
+                                original.windowId, original.nodeId, original.resourceId, original.bounds, actionAt);
+                        requestFreshSnapshot();
+                    }
+                    @Override public void onCancelled(android.accessibilityservice.GestureDescription cancelled) {
+                        requestFreshSnapshot();
+                    }
+                }, service.mainHandler);
+            }
             float before = range.getCurrent();
             boolean performed = false;
             // SET_PROGRESS is exposed by Samsung/custom controls even when native scroll is absent.
@@ -586,11 +624,26 @@ public final class ClickAccessibilityService extends AccessibilityService {
         } catch (android.provider.Settings.SettingNotFoundException | SecurityException ignored) {
             // Missing/read-denied means unverifiable, never assume a default scale.
         }
+        Integer brightness = null, mediaVolume = null;
+        try {
+            brightness = android.provider.Settings.System.getInt(getContentResolver(),
+                    android.provider.Settings.System.SCREEN_BRIGHTNESS);
+        } catch (android.provider.Settings.SettingNotFoundException | SecurityException ignored) { }
+        try {
+            android.media.AudioManager audio = getSystemService(android.media.AudioManager.class);
+            if (audio != null) mediaVolume = audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
+        } catch (SecurityException ignored) { }
         return collector.collect(root, packageName, width, height, appliedScale)
+                .withAdjustmentValues(brightness, mediaVolume)
                 .withScreenRevision(screenRevisions.revision());
     }
 
     private void emitAction(AccessibilityNodeInfo source, String action, long eventUptime) {
+        emitAction(source, action, eventUptime, null);
+    }
+
+    private void emitAction(AccessibilityNodeInfo source, String action, long eventUptime,
+                            AccessibilityNodeInfo.RangeInfo range) {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         String nodeId = findNodeId(root, source, "node_0");
         if (root != null) root.recycle();
@@ -598,8 +651,15 @@ public final class ClickAccessibilityService extends AccessibilityService {
         android.graphics.Rect rect = new android.graphics.Rect();
         source.getBoundsInScreen(rect);
         long wallTime = System.currentTimeMillis() - (android.os.SystemClock.uptimeMillis() - eventUptime);
-        ClickOverlayService.onGuidedAction(action, source.getPackageName().toString(), source.getWindowId(),
-                nodeId, source.getViewIdResourceName(), new int[]{rect.left, rect.top, rect.right, rect.bottom}, wallTime);
+        int[] bounds = new int[]{rect.left, rect.top, rect.right, rect.bottom};
+        if (range != null) {
+            ClickOverlayService.onGuidedRangeChanged(source.getPackageName().toString(), source.getWindowId(),
+                    nodeId, source.getViewIdResourceName(), bounds, wallTime,
+                    range.getCurrent(), range.getMin(), range.getMax());
+        } else {
+            ClickOverlayService.onGuidedAction(action, source.getPackageName().toString(), source.getWindowId(),
+                    nodeId, source.getViewIdResourceName(), bounds, wallTime);
+        }
     }
 
     private static String findNodeId(AccessibilityNodeInfo node, AccessibilityNodeInfo target, String id) {

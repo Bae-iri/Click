@@ -17,6 +17,7 @@ public final class ScreenSnapshot {
     public final List<AccessibilityNodeSnapshot> nodes;
     public final boolean privacyMaskingReady;
     public final Float appliedFontScale;
+    public final Integer appliedBrightness, appliedMediaVolume;
     public final String screenRevision;
 
     public ScreenSnapshot(
@@ -43,14 +44,16 @@ public final class ScreenSnapshot {
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
                           Float appliedFontScale) {
         this(packageName, capturedAt, screenWidth, screenHeight, nodes, activeWindowId,
-                privacyMaskingReady, appliedFontScale, null);
+                privacyMaskingReady, appliedFontScale, null, null, null);
     }
 
     private ScreenSnapshot(String packageName, String capturedAt, int screenWidth, int screenHeight,
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
-                          Float appliedFontScale, String screenRevision) {
+                          Float appliedFontScale, String screenRevision, Integer brightness, Integer mediaVolume) {
         this.screenRevision = screenRevision;
         this.appliedFontScale = appliedFontScale;
+        this.appliedBrightness = brightness;
+        this.appliedMediaVolume = mediaVolume;
         this.privacyMaskingReady = privacyMaskingReady;
         this.activeWindowId = activeWindowId;
         this.packageName = packageName;
@@ -62,7 +65,12 @@ public final class ScreenSnapshot {
 
     public ScreenSnapshot withScreenRevision(String revision) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
-                activeWindowId, privacyMaskingReady, appliedFontScale, revision);
+                activeWindowId, privacyMaskingReady, appliedFontScale, revision, appliedBrightness, appliedMediaVolume);
+    }
+
+    public ScreenSnapshot withAdjustmentValues(Integer brightness, Integer mediaVolume) {
+        return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
+                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision, brightness, mediaVolume);
     }
 
     public String toJson() {
@@ -74,11 +82,16 @@ public final class ScreenSnapshot {
             object.put("observation_id", observationId);
             if (screenRevision != null) object.put("screen_revision", screenRevision);
             object.put("captured_at_ms", java.time.Instant.parse(capturedAt).toEpochMilli());
-            if (appliedFontScale != null && Float.isFinite(appliedFontScale) && appliedFontScale > 0) {
-                object.put("applied_settings", new JSONObject()
-                        .put("source", "android.provider.Settings.System.FONT_SCALE")
-                        .put("font_scale", appliedFontScale));
-            }
+            JSONObject applied = new JSONObject();
+            if (appliedFontScale != null && Float.isFinite(appliedFontScale) && appliedFontScale > 0)
+                applied.put("source", "android.provider.Settings.System.FONT_SCALE").put("font_scale", appliedFontScale);
+            if (appliedBrightness != null && appliedBrightness >= 0 && appliedBrightness <= 65535)
+                applied.put("brightness_source", "android.provider.Settings.System.SCREEN_BRIGHTNESS")
+                        .put("screen_brightness", appliedBrightness);
+            if (appliedMediaVolume != null && appliedMediaVolume >= 0 && appliedMediaVolume <= 1000)
+                applied.put("media_volume_source", "android.media.AudioManager.STREAM_MUSIC")
+                        .put("media_volume", appliedMediaVolume);
+            if (applied.length() > 0) object.put("applied_settings", applied);
             object.put("screen_width", screenWidth);
             object.put("screen_height", screenHeight);
             JSONArray nodeArray = new JSONArray();
@@ -91,10 +104,43 @@ public final class ScreenSnapshot {
     }
 
     public String fingerprint() {
+        return fingerprint(true);
+    }
+
+    /** Native AX content can stay identical across redundant accessibility events. */
+    public String contentFingerprint() {
+        return fingerprint(false);
+    }
+
+    /** Empty trees still need event revisions to trigger a fresh observation. */
+    public String observationFingerprint() {
+        return nodes.isEmpty() ? fingerprint() : contentFingerprint();
+    }
+
+    /** Exact native payload comparison for answering a server-bound confirmation. */
+    public boolean sameNativeContent(ScreenSnapshot other) {
+        if (other == null || nodes.isEmpty() || other.nodes.isEmpty()
+                || privacyMaskingReady != other.privacyMaskingReady) return false;
+        return nativeContentJson().equals(other.nativeContentJson());
+    }
+
+    private String nativeContentJson() {
+        try {
+            JSONObject content = new JSONObject(toJson());
+            for (String key : new String[]{"captured_at", "captured_at_ms", "observation_id", "screen_revision"})
+                content.remove(key);
+            return content.toString();
+        } catch (JSONException error) {
+            throw new IllegalStateException(error);
+        }
+    }
+
+    private String fingerprint(boolean includeRevision) {
         StringBuilder value = new StringBuilder(packageName).append('|').append(screenWidth)
                 .append('x').append(screenHeight).append('|').append(activeWindowId);
         value.append('|').append(privacyMaskingReady).append('|').append(appliedFontScale);
-        value.append('|').append(screenRevision);
+        value.append('|').append(appliedBrightness).append('|').append(appliedMediaVolume);
+        if (includeRevision) value.append('|').append(screenRevision);
         for (AccessibilityNodeSnapshot node : nodes) {
             value.append('|').append(node.nodeId).append(':').append(node.text)
                     .append(':').append(node.contentDescription).append(':').append(node.className)

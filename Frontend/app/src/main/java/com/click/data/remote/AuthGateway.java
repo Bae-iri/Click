@@ -134,10 +134,18 @@ public final class AuthGateway {
     }
 
     private static HttpResult get(String path, String bearer, int readTimeout) throws IOException {
+        return requestWithoutBody("GET", path, bearer, readTimeout);
+    }
+
+    static HttpResult delete(String path, String bearer) throws IOException {
+        return requestWithoutBody("DELETE", path, bearer, 15000);
+    }
+
+    private static HttpResult requestWithoutBody(String method, String path, String bearer, int readTimeout) throws IOException {
         requireValidationEnvironment(path);
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
         try {
-            connection.setRequestMethod("GET");
+            connection.setRequestMethod(method);
             connection.setConnectTimeout(6000);
             connection.setReadTimeout(readTimeout);
             if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);

@@ -10,6 +10,8 @@ public interface SpeechInput {
         void onFailure(Throwable error);
     }
     void start(Callback callback);
+    /** Finish the current recording and transcribe it; cancel discards it instead. */
+    void finish();
     void cancel();
     void close();
 }

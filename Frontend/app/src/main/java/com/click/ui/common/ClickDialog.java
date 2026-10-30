@@ -49,6 +49,7 @@ public final class ClickDialog {
         card.addView(body, new LinearLayout.LayoutParams(-1, -2));
 
         Button confirm = ClickUi.primaryButton(activity, positive);
+        confirm.setId(android.R.id.button1);
         confirm.setTextSize(17); confirm.setMinHeight(ClickUi.dp(activity, 50));
         confirm.setPadding(padding, ClickUi.dp(activity, 12), padding, ClickUi.dp(activity, 12));
         confirm.setOnClickListener(view -> { dialog.dismiss(); if (action != null) action.run(); });
@@ -57,6 +58,7 @@ public final class ClickDialog {
         card.addView(confirm, confirmParams);
         if (negative != null) {
             Button cancel = ClickUi.secondaryButton(activity, negative);
+            cancel.setId(android.R.id.button2);
             cancel.setTextSize(16);
             cancel.setPadding(padding, ClickUi.dp(activity, 12), padding, ClickUi.dp(activity, 12));
             cancel.setOnClickListener(view -> dialog.dismiss());

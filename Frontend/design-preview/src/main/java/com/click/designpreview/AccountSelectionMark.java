@@ -7,11 +7,11 @@ import android.graphics.PixelFormat;
 import android.graphics.drawable.Drawable;
 
 /** A centered, consistently sized single-selection indicator. */
-final class AccountSelectionMark extends Drawable {
+public final class AccountSelectionMark extends Drawable {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final float density;
     private boolean checked;
-    AccountSelectionMark(float density) { this.density = density; }
+    public AccountSelectionMark(float density) { this.density = density; }
     @Override public boolean isStateful() { return true; }
     @Override protected boolean onStateChange(int[] states) {
         boolean next = false;

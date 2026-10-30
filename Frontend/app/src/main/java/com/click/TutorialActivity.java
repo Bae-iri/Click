@@ -277,18 +277,33 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     }
 
     @Override public void onMicrophoneClicked() {
-        if (floating.getControl().isVoiceInputActive() || transcribing) {
-            cancelRecording();
-            floating.getControl().setRecognizedSpeech("입력을 취소했어요. 다시 마이크를 눌러주세요.");
-            updateCopy();
-            return;
-        }
+        if (floating.getControl().isVoiceInputActive()) onMicrophoneReleased();
+        else onMicrophonePressed();
+    }
+
+    @Override public void onMicrophonePressed() {
+        if (floating.getControl().isVoiceInputActive() || transcribing) return;
         narrator.stop();
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 81);
             return;
         }
         startRecording();
+    }
+
+    @Override public void onMicrophoneReleased() {
+        if (!floating.getControl().isVoiceInputActive() || transcribing) return;
+        transcribing = true;
+        floating.getControl().setVoiceInputActive(false);
+        floating.getControl().setVoiceInputProcessing(true);
+        floating.getControl().setRecognizedSpeech("말씀을 글자로 바꾸고 있어요…");
+        speech.finish();
+    }
+
+    @Override public void onMicrophoneCancelled() {
+        cancelRecording();
+        floating.getControl().setRecognizedSpeech("입력을 취소했어요. 마이크를 꾹 눌러 다시 말씀해 주세요.");
+        updateCopy();
     }
 
     private void startRecording() {
@@ -298,24 +313,27 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         floating.getControl().setRecognizedSpeech("마이크를 준비하고 있어요…");
         speech.start(new CloudSpeechRecognizer.Callback() {
             @Override public void onReady() {
-                floating.getControl().setRecognizedSpeech("듣고 있어요. 말씀해 주세요.");
+                if (!transcribing) floating.getControl().setRecognizedSpeech("듣고 있어요. 말씀을 마치면 손을 떼세요.");
             }
             @Override public void onPartialText(String value) {
                 floating.getControl().setRecognizedSpeech(value);
             }
             @Override public void onRecordingFinished() {
                 floating.getControl().setVoiceInputActive(false); transcribing = true;
+                floating.getControl().setVoiceInputProcessing(true);
                 floating.getControl().setRecognizedSpeech("말씀을 글자로 바꾸고 있어요…");
             }
             @Override public void onSuccess(String value) {
                 transcribing = false; floating.getControl().setVoiceInputActive(false);
+                floating.getControl().setVoiceInputProcessing(false);
                 if (value == null || value.trim().isEmpty()) { onFailure(new IllegalStateException()); return; }
                 voiceText = value.trim(); voiceTried = true; completeStep(VOICE);
-                floating.getControl().setRecognizedSpeech(voiceText);
                 updateCopy();
+                floating.getControl().showRecognizedSpeechResult(voiceText);
             }
             @Override public void onFailure(Throwable error) {
                 transcribing = false; floating.getControl().setVoiceInputActive(false);
+                floating.getControl().setVoiceInputProcessing(false);
                 com.click.service.overlay.SpeechErrorMessages.log(error);
                 String message = com.click.service.overlay.SpeechErrorMessages.message(error);
                 updateCopy();
@@ -325,7 +343,10 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     }
     private void cancelRecording() {
         if (speech != null) speech.cancel(); transcribing = false;
-        if (floating != null) floating.getControl().setVoiceInputActive(false);
+        if (floating != null) {
+            floating.getControl().setVoiceInputActive(false);
+            floating.getControl().setVoiceInputProcessing(false);
+        }
     }
     @Override public void onRequestPermissionsResult(int code, @NonNull String[] permissions, @NonNull int[] grants) {
         super.onRequestPermissionsResult(code, permissions, grants);
@@ -472,8 +493,8 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
             case VOICE:
                 speechResource = voiceTried ? R.string.tutorial_speech_voice_received
                         : mode == ClickOverlayLayout.Mode.VOICE ? R.string.tutorial_speech_voice_record : R.string.tutorial_speech_voice_open;
-                heading = voiceTried ? "말씀이 글자로 나타나요" : mode == ClickOverlayLayout.Mode.VOICE ? "마이크를 누르고\n직접 말해보세요" : "‘말로 시작’을\n눌러보세요";
-                detail = voiceTried ? "인식한 말을 확인한 뒤 다음을 눌러요." : "마이크를 눌렀을 때만 들어요.\n예: 휴대폰 글자 크기 키워줘";
+                heading = voiceTried ? "말씀이 글자로 나타나요" : mode == ClickOverlayLayout.Mode.VOICE ? "마이크를 꾹 누르고\n직접 말해보세요" : "‘말로 시작’을\n눌러보세요";
+                detail = voiceTried ? "인식한 말을 확인한 뒤 다음을 눌러요." : "누른 채 말하고, 끝나면 손을 떼세요.\n예: 휴대폰 글자 크기 키워줘";
                 if (!voiceTried && !transcribing && !floating.getControl().isVoiceInputActive())
                     floating.highlight(mode == ClickOverlayLayout.Mode.VOICE ? null : "말로 시작",
                             mode == ClickOverlayLayout.Mode.VOICE ? R.id.overlay_microphone : 0);

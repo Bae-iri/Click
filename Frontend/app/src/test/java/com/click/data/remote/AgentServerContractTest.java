@@ -8,6 +8,29 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.*;
 
 public class AgentServerContractTest {
+    @Test public void deviceEvidenceUsesOnlyFieldsAcceptedByTheConnectedBackend() throws Exception {
+        JSONObject current;
+        try (java.io.InputStream in = getClass().getResourceAsStream("/openapi.json")) {
+            current = new JSONObject(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+        }
+        com.click.data.snapshot.ScreenSnapshot screen = new com.click.data.snapshot.ScreenSnapshot(
+                "com.android.settings", "2026-10-30T00:00:00Z", 1080, 2400,
+                java.util.Collections.emptyList(), 42, true, 1.15f).withAdjustmentValues(120, 8);
+        AgentTurnContract.Request request = AgentTurnContract.Request.control("session", 1, "episode", "observe", screen);
+        JSONObject full = new JSONObject(AgentServerContract.fromOpenApi(current).encode(request))
+                .getJSONObject("accessibility_tree").getJSONObject("applied_settings");
+        assertEquals(120, full.getInt("screen_brightness"));
+        assertEquals(8, full.getInt("media_volume"));
+        JSONObject properties = current.getJSONObject("components").getJSONObject("schemas")
+                .getJSONObject("AppliedSettings").getJSONObject("properties");
+        for (String key : new String[]{"screen_brightness", "brightness_source", "media_volume", "media_volume_source"})
+            properties.remove(key);
+        JSONObject old = new JSONObject(AgentServerContract.fromOpenApi(current).encode(request))
+                .getJSONObject("accessibility_tree").getJSONObject("applied_settings");
+        assertEquals(2, old.length());
+        assertEquals(1.15, old.getDouble("font_scale"), .001);
+        assertEquals(120, new JSONObject(screen.toJson()).getJSONObject("applied_settings").getInt("screen_brightness"));
+    }
     @Test public void currentServerAdvertisesPersistedInputPreparation() throws Exception {
         try (java.io.InputStream stream = getClass().getResourceAsStream("/agent-server-goal-inputs.json")) {
             assertNotNull(stream);

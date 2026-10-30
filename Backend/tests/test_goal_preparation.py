@@ -79,7 +79,9 @@ def flow(monkeypatch):
         yield Flow(client, app)
 
 
-def test_keyword_match_still_asks_scope_before_any_graph_selection(flow, monkeypatch):
+@pytest.mark.parametrize('text', ['글자 크기 키워줘', '글자 크기를 키워줘'])
+def test_keyword_match_still_asks_scope_before_any_graph_selection(flow, monkeypatch, text):
+    flow.text = text
     select_calls = []
     original = flow.app.state.turn_service.graphs.select_for_inputs
     def record(goal, values):
@@ -127,6 +129,17 @@ def test_complete_explicit_request_skips_questions_but_requires_confirmation(flo
     assert body['preparation']['status'] == 'ready'
     assert body['preparation']['question'] is None
     assert body['resolution_status'] == 'confirmation_required'
+
+
+def test_recovered_font_scope_choice_still_requires_preparation_and_confirmation(flow):
+    flow.text = '글자 크기를 키워줘\n사용자가 선택한 범위: 휴대폰 전체\n사용자가 선택한 변경: 글자를 더 크게'
+    body = flow.resolve()
+    assert body['preparation']['status'] == 'ready'
+    assert body['preparation']['values'] == {'direction': 'increase', 'scope': 'system'}
+    assert body['resolution_status'] == 'confirmation_required'
+    with flow.app.state.session_factory() as db:
+        row = db.get(AgentSession, flow.session)
+        assert row.episode_id is None and row.version == 0
 
 
 def test_new_graph_input_field_automatically_generates_question(flow):

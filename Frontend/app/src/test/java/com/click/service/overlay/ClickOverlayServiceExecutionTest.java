@@ -134,6 +134,46 @@ public class ClickOverlayServiceExecutionTest {
         if (snapshots != null) snapshots.close();
     }
 
+    @Test public void microphoneReleaseFinishesRecordingWithoutCancellingRecognition() throws Exception {
+        CloudSpeechRecognizer speech = mock(CloudSpeechRecognizer.class);
+        ClickOverlayLayout overlay = mock(ClickOverlayLayout.class);
+        when(overlay.getMode()).thenReturn(ClickOverlayLayout.Mode.VOICE);
+        set("cloudSpeechRecognizer", speech); set("overlayView", overlay);
+        shadowOf(org.robolectric.RuntimeEnvironment.getApplication()).grantPermissions(android.Manifest.permission.RECORD_AUDIO);
+        service.onMicrophonePressed();
+        org.mockito.ArgumentCaptor<SpeechInput.Callback> callback = org.mockito.ArgumentCaptor.forClass(SpeechInput.Callback.class);
+        verify(speech).start(callback.capture());
+        assertTrue((boolean) get("listening"));
+        service.onMicrophoneReleased(); service.onMicrophoneReleased();
+        verify(speech).finish();
+        verify(speech, never()).cancel();
+        assertFalse((boolean) get("listening"));
+        assertTrue((boolean) get("speechProcessing"));
+        assertTrue((boolean) get("acceptingVoiceCommand"));
+        service.onMicrophonePressed();
+        verify(speech, times(1)).start(any());
+        callback.getValue().onFailure(new java.io.IOException("NO_SPEECH"));
+        assertFalse((boolean) get("acceptingVoiceCommand"));
+        verify(overlay).setVoiceInputProcessing(false);
+    }
+
+    @Test public void cancelledMicrophoneIgnoresLateRecognitionResult() throws Exception {
+        CloudSpeechRecognizer speech = mock(CloudSpeechRecognizer.class);
+        ClickOverlayLayout overlay = mock(ClickOverlayLayout.class);
+        when(overlay.getMode()).thenReturn(ClickOverlayLayout.Mode.VOICE);
+        set("cloudSpeechRecognizer", speech); set("overlayView", overlay);
+        shadowOf(org.robolectric.RuntimeEnvironment.getApplication()).grantPermissions(android.Manifest.permission.RECORD_AUDIO);
+        service.onMicrophonePressed();
+        org.mockito.ArgumentCaptor<SpeechInput.Callback> callback = org.mockito.ArgumentCaptor.forClass(SpeechInput.Callback.class);
+        verify(speech).start(callback.capture());
+        service.onMicrophoneCancelled(); service.onMicrophoneReleased();
+        callback.getValue().onSuccess("글자 크기를 키워줘");
+        verify(speech).cancel();
+        verify(speech, never()).finish();
+        verify(overlay, never()).collapse();
+        assertFalse((boolean) get("acceptingVoiceCommand"));
+    }
+
     @Test public void replayUsesTheExplicitReplayPathAndServiceClosesItsHandle() throws Exception {
         prepareGuideResponse();
         Method speak = ClickOverlayService.class.getDeclaredMethod("speak", String.class); speak.setAccessible(true);
@@ -289,10 +329,91 @@ public class ClickOverlayServiceExecutionTest {
         Method resolve = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
         resolve.setAccessible(true);
         resolve.invoke(service, "이거 좀 바꿔줘", null);
-        verify((TaskFlowOverlayView) get("taskFlowView")).unresolvedGoal("이거 좀 바꿔줘");
+        verify((TaskFlowOverlayView) get("taskFlowView")).resolutionUnavailable(eq("이거 좀 바꿔줘"), anyString(), any());
+        verify((TaskFlowOverlayView) get("taskFlowView"), never()).unresolvedGoal(any());
         verify((TaskFlowOverlayView) get("taskFlowView"), never()).goals(any(), any());
         assertNull(get("acceptedGoal"));
-        assertEquals(0, ((JSONObject) get("goalSelection")).getJSONArray("candidates").length());
+        assertNull(get("goalSelection"));
+    }
+
+    @Test public void failedFontResolutionKeepsScopeChoicesAndRequiresServerPreparationBeforeStart() throws Exception {
+        String source = "글자 크기를 키워줘";
+        boolean[] unavailable = {true};
+        doAnswer(call -> {
+            AgentTurnContract.Request request = call.getArgument(0);
+            AgentTurnGateway.Callback callback = call.getArgument(1);
+            requests.add(request);
+            request.contractVersion = contract.contractVersion;
+            request.interactiveWorkflow = contract.interactiveWorkflow;
+            sent.add(new JSONObject(request.toJson()));
+            if ("resolve_goal".equals(request.commandType())) {
+                if (unavailable[0]) callback.onFailure(new java.net.SocketTimeoutException());
+                else callback.onSuccess(new AgentTurnContract.Response(new JSONObject()
+                        .put("request_id", request.requestId).put("session_id", request.sessionId)
+                        .put("session_version", 0).put("task_status", "IN_PROGRESS")
+                        .put("response_type", "goal_resolution")
+                        .put("preparation", preparation).put("goal", goal).put("message", "이 내용으로 시작할까요?")
+                        .toString()));
+            }
+            return null;
+        }).when(gateway).send(any(), any());
+        Method resolve = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
+        resolve.setAccessible(true);
+        resolve.invoke(service, source, null);
+        RequirementReview review = (RequirementReview) get("requirementReview");
+        assertNotNull(review);
+        assertEquals(source, review.request());
+        assertTrue("Even Settings in the foreground must leave scope selectable", review.needsTarget());
+        verify((TaskFlowOverlayView) get("taskFlowView")).requirementsForPreparation(eq(review), eq(false), anyString(), any());
+        verify((TaskFlowOverlayView) get("taskFlowView"), never()).unresolvedGoal(any());
+        confirm();
+        assertEquals("No request can start before choosing a scope", 1, sent.size());
+
+        review.choose("phone");
+        confirm();
+        assertEquals("resolve_goal", sent.get(1).getString("command_type"));
+        assertEquals("goal-inputs.v1", sent.get(1).getString("preparation_version"));
+        assertTrue(sent.get(1).getString("source_text").startsWith(source));
+        assertTrue(sent.get(1).getString("source_text").contains("휴대폰 전체"));
+        assertSame("A repeated failure must retain the user's choice", review, get("requirementReview"));
+        assertTrue(review.isPhone());
+        assertFalse(review.confirmed());
+        assertNull(get("acceptedGoal"));
+
+        unavailable[0] = false;
+        confirm();
+        assertEquals("resolve_goal", sent.get(2).getString("command_type"));
+        assertNull(get("acceptedGoal"));
+        confirm();
+        assertEquals("start_task", sent.get(3).getString("command_type"));
+        assertEquals(RESOLUTION, sent.get(3).getString("goal_resolution_id"));
+        assertEquals("goal-inputs.v1", sent.get(3).getString("preparation_version"));
+    }
+
+    @Test public void normalFontPreparationShowsServerScopeChoicesBeforeStart() throws Exception {
+        preparation.put("source_text", "글자 크기를 키워줘").put("status", "needs_input")
+                .put("missing_fields", new JSONArray().put("scope"))
+                .put("values", new JSONObject().put("direction", "increase"))
+                .put("question", new JSONObject().put("id", "scope-question").put("field", "scope")
+                        .put("kind", "choice").put("message", "어디의 글자 크기를 바꿀까요?")
+                        .put("choices", new JSONArray()
+                                .put(new JSONObject().put("value", "system").put("label", "휴대폰 기본 글자"))
+                                .put(new JSONObject().put("value", "app").put("label", "특정 앱 안에서만"))));
+        Method resolve = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
+        resolve.setAccessible(true);
+        resolve.invoke(service, "글자 크기를 키워줘", null);
+        com.click.domain.goal.GoalPreparationState state =
+                (com.click.domain.goal.GoalPreparationState) get("goalPreparation");
+        assertTrue(state.needsInput()); assertFalse(state.ready());
+        verify((TaskFlowOverlayView) get("taskFlowView")).preparation(state);
+        confirm();
+        assertEquals(1, sent.size());
+        Method answer = ClickOverlayService.class.getDeclaredMethod("answerGoalInput", String.class);
+        answer.setAccessible(true);
+        answer.invoke(service, "system");
+        assertEquals("scope-question", sent.get(1).getJSONObject("clarification_answer").getString("question_id"));
+        assertEquals("system", sent.get(1).getJSONObject("clarification_answer").getString("value"));
+        assertNull(get("acceptedGoal"));
     }
 
     @Test public void incompleteOrUnsupportedPreparationCannotStart() throws Exception {
@@ -372,6 +493,39 @@ public class ClickOverlayServiceExecutionTest {
         }
     }
 
+    @Test public void sliderActionWaitsThroughEmptyRedrawAndIsSentWithTheAppliedValue() throws Exception {
+        prepareGuideResponse();
+        set("turnInFlight", false); set("firstTurnSent", true); set("lastSubmittedScreen", screen);
+        JSONObject event = com.click.data.remote.AgentActionEvents.of("drag_completed", "slider-guide",
+                "display", screen.nodes.get(1).bounds, System.currentTimeMillis());
+        set("pendingVerifiedAction", event);
+        currentScreen = new ScreenSnapshot("com.android.settings", Instant.now().toString(),
+                1080, 2400, List.of(), 42);
+        send(null);
+        assertEquals("An empty redraw must not consume the action on the server", 2, requests.size());
+        assertSame(event, get("pendingVerifiedAction"));
+        assertEquals(true, get("forceNextObservation"));
+        currentScreen = fontScreen(3f, 1.1f, System.currentTimeMillis());
+        send(null);
+        assertEquals(3, requests.size());
+        assertEquals(event.toString(), requests.get(2).userActionEvent.toString());
+        assertEquals(1.1f, requests.get(2).accessibilityTree.appliedFontScale, 0f);
+        assertNull(get("pendingVerifiedAction"));
+    }
+
+    @Test public void missingSliderScreenEventuallyReachesServerRecoveryWithOriginalEvidence() throws Exception {
+        prepareGuideResponse();
+        set("turnInFlight", false); set("firstTurnSent", true); set("lastSubmittedScreen", screen);
+        JSONObject event = com.click.data.remote.AgentActionEvents.of("drag_completed", "slider-guide",
+                "display", screen.nodes.get(1).bounds, System.currentTimeMillis() - 6500L);
+        set("pendingVerifiedAction", event);
+        currentScreen = new ScreenSnapshot("com.android.settings", Instant.now().toString(),
+                1080, 2400, List.of(), 42);
+        send(null);
+        assertEquals("Do not wait forever for a missing native root", 3, requests.size());
+        assertEquals(event.toString(), requests.get(2).userActionEvent.toString());
+    }
+
     @Test public void movedTargetDiscardsGuideBeforeRenderingSpeakingOrBindingAndPreservesActionEvidence() throws Exception {
         prepareGuideResponse();
         GuidedActionTracker tracker = (GuidedActionTracker) get("actionTracker");
@@ -392,7 +546,7 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(event.toString(), observation.getJSONObject("user_action_event").toString());
         assertNull(tracker.record("tap_completed", "com.android.settings", 42, "display", null,
                 screen.nodes.get(1).bounds, System.currentTimeMillis()));
-        verify((WindowManager) get("windowManager")).removeView((GuideOverlayView) get("guideOverlayView"));
+        verify((GuideOverlayView) get("guideOverlayView")).setVisibility(android.view.View.GONE);
     }
 
     @Test public void appSwitchDiscardsOldGuide() throws Exception {
@@ -423,6 +577,125 @@ public class ClickOverlayServiceExecutionTest {
         assertStaleGuideSuppressed();
         assertNull(get("confirmationView"));
         assertNull(get("agentConfirmationId"));
+    }
+
+    @Test public void nativeConfirmationKeepsTheChallengeObservationAfterRedundantEvents() throws Exception {
+        screen = screen.withScreenRevision("screen:1"); currentScreen = screen;
+        prepareGuideResponse();
+        deliver(1, "confirmation", "observe_only", null);
+        java.util.function.Consumer<Boolean> answer = confirmationAnswer();
+        currentScreen = new ScreenSnapshot(screen.packageName, Instant.now().plusMillis(100).toString(),
+                screen.screenWidth, screen.screenHeight, screen.nodes, screen.activeWindowId)
+                .withScreenRevision("screen:2");
+        answer.accept(true);
+        assertEquals(3, requests.size());
+        assertEquals("respond_confirmation", requests.get(2).commandType());
+        assertEquals("confirmation-id", requests.get(2).confirmationId);
+        ScreenSnapshot submitted = requests.get(2).accessibilityTree;
+        assertEquals(screen.screenRevision, submitted.screenRevision);
+        assertEquals("The runtime needs a fresh capture time", currentScreen.capturedAt, submitted.capturedAt);
+        assertNotEquals("Do not replay the old observation", screen.observationId, submitted.observationId);
+        assertTrue(screen.sameNativeContent(submitted));
+    }
+
+    @Test public void nativeConfirmationReobservesInsteadOfApprovingAChangedScreen() throws Exception {
+        prepareGuideResponse();
+        deliver(1, "confirmation", "observe_only", null);
+        java.util.function.Consumer<Boolean> answer = confirmationAnswer();
+        currentScreen = changedScreen("com.android.settings", 1080, 2400, 42, 300);
+        answer.accept(true);
+        assertTrue(requests.stream().noneMatch(r -> "accepted".equals(r.userConfirmation)));
+        assertNull(get("agentConfirmationId"));
+        assertEquals(true, get("forceNextObservation"));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private java.util.function.Consumer<Boolean> confirmationAnswer() throws Exception {
+        org.mockito.ArgumentCaptor<java.util.function.Consumer<Boolean>> answer =
+                org.mockito.ArgumentCaptor.forClass((Class) java.util.function.Consumer.class);
+        verify((TaskFlowOverlayView) get("taskFlowView")).confirmation(anyString(), answer.capture());
+        return answer.getValue();
+    }
+
+    @Test public void oldConfirmationButtonCannotApproveAReplacementChallenge() throws Exception {
+        prepareGuideResponse();
+        deliver(1, "confirmation", "observe_only", null);
+        java.util.function.Consumer<Boolean> answer = confirmationAnswer();
+        set("agentConfirmationId", "replacement-confirmation");
+        answer.accept(true);
+        assertEquals(2, requests.size());
+        assertEquals("replacement-confirmation", get("agentConfirmationId"));
+    }
+
+    @Test public void largerChoiceApprovesTheCurrentFontDirectionWithItsScreenBinding() throws Exception {
+        prepareGuideResponse();
+        deliver(1, "confirmation", "observe_only", null);
+        invoke("showFontSizeConfirmation");
+        fontDirectionAnswer().accept("increase");
+        assertEquals("respond_confirmation", requests.get(2).commandType());
+        assertEquals("accepted", requests.get(2).userConfirmation);
+        assertEquals("confirmation-id", requests.get(2).confirmationId);
+        assertTrue(screen.sameNativeContent(requests.get(2).accessibilityTree));
+    }
+
+    @Test public void smallerChoiceReplacesTheRequestInsteadOfApprovingAnIncrease() throws Exception {
+        prepareGuideResponse();
+        deliver(1, "confirmation", "observe_only", null);
+        invoke("showFontSizeConfirmation");
+        fontDirectionAnswer().accept("decrease");
+        assertEquals("cancel_task", requests.get(2).commandType());
+        assertEquals("휴대폰 전체 글자 크기를 작게 해줘", get("pendingReplacement"));
+        assertTrue(requests.stream().noneMatch(r -> "accepted".equals(r.userConfirmation)));
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private java.util.function.Consumer<String> fontDirectionAnswer() throws Exception {
+        org.mockito.ArgumentCaptor<java.util.function.Consumer<String>> answer =
+                org.mockito.ArgumentCaptor.forClass((Class) java.util.function.Consumer.class);
+        verify((TaskFlowOverlayView) get("taskFlowView")).fontSizeConfirmation(answer.capture());
+        return answer.getValue();
+    }
+
+    @Test public void automaticStepsStayQuietWhileReplayAndResultQuestionsStillSpeak() throws Exception {
+        prepareGuideResponse();
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        deliver(1, "highlight", "tap", null);
+        TutorialNarrator narrator = (TutorialNarrator) get("narrator");
+        verify(narrator, never()).speak(anyString());
+        verify((TaskFlowOverlayView) get("taskFlowView")).setAutomaticProgress(true);
+        Method replay = ClickOverlayService.class.getDeclaredMethod("replayGuidanceMessage", String.class);
+        replay.setAccessible(true); replay.invoke(service, "디스플레이를 눌러주세요.");
+        verify(narrator).replay("디스플레이를 눌러주세요.");
+        JSONObject prompt = new JSONObject().put("id", "result").put("message", "이제 글자가 보기 편한가요?")
+                .put("expires_at", System.currentTimeMillis() / 1000 + 120);
+        applyFlow(new JSONObject().put("task_status", "WAITING_RESULT")
+                .put("metadata", new JSONObject().put("result_prompt", prompt)));
+        verify(narrator).speak("이제 글자가 보기 편한가요?");
+        assertFalse((boolean) get("taskFlowCollapsed"));
+    }
+
+    @Test public void completedResultKeepsItsWindowUntilExitIsPressed() throws Exception {
+        prepareGuideResponse();
+        TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
+        applyFlow(new JSONObject().put("task_status", "COMPLETED").put("message", "보기 편해졌어요.")
+                .put("metadata", new JSONObject()));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        assertSame(panel, get("taskFlowView"));
+        assertTrue((boolean) get("awaitingExitConfirmation"));
+        assertFalse((boolean) get("closing"));
+        verify((WindowManager) get("windowManager"), never()).removeView(panel);
+        org.mockito.ArgumentCaptor<Runnable> exit = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify(panel, atLeastOnce()).completed(anyString(), exit.capture());
+        exit.getValue().run();
+        assertTrue((boolean) get("closing"));
+        assertNull(get("taskFlowView"));
+    }
+
+    private void applyFlow(JSONObject body) throws Exception {
+        body.put("request_id", "flow-response").put("session_id", "frontend-session");
+        Method apply = ClickOverlayService.class.getDeclaredMethod("applyTaskFlowResponse", AgentTurnContract.Response.class);
+        apply.setAccessible(true);
+        apply.invoke(service, new AgentTurnContract.Response(body.toString()));
     }
 
     @Test public void missingFreshScreenWaitsThenReobservesEvenIfContentIsUnchanged() throws Exception {
@@ -482,6 +755,28 @@ public class ClickOverlayServiceExecutionTest {
         prepareGuideResponse();
         deliver(1, "highlight", "drag", "left");
         verify((GuideOverlayView) get("guideOverlayView")).showTarget(any(), eq("drag"), eq(com.click.ui.overlay.GuideDragDirection.LEFT));
+    }
+
+    @Test public void unchangedSliderWithNewAccessibilityEventStillRendersAndTracksTheAction() throws Exception {
+        screen = fontScreen(2f, 1f, 1000).withScreenRevision("screen:1");
+        currentScreen = screen;
+        prepareGuideResponse();
+        currentScreen = fontScreen(2f, 1f, 1100).withScreenRevision("screen:2");
+        deliver(1, "highlight", "drag", "right");
+        verify((GuideOverlayView) get("guideOverlayView")).showTarget(any(), eq("drag"),
+                eq(com.click.ui.overlay.GuideDragDirection.RIGHT));
+        assertEquals("An unchanged control must not enter the stale-guide retry loop", 2, requests.size());
+        assertNotNull(((GuidedActionTracker) get("actionTracker")).record("drag_completed",
+                "com.android.settings", 42, "display", "settings:id/font", screen.nodes.get(1).bounds,
+                System.currentTimeMillis() + 1000));
+    }
+
+    @Test public void unchangedFontRecoveryWithNewAccessibilityEventStillAsksForTheResult() throws Exception {
+        prepareFontRecovery(1.15f, true);
+        assertEquals(4, requests.size());
+        assertEquals("request_result", requests.get(3).commandType());
+        assertNull(requests.get(3).userActionEvent);
+        assertNull(requests.get(3).userResult);
     }
 
     @Test public void resumedGuideUsesTheResumeRequestsObservation() throws Exception {
@@ -556,6 +851,10 @@ public class ClickOverlayServiceExecutionTest {
     }
 
     private void prepareFontRecovery(float appliedScale) throws Exception {
+        prepareFontRecovery(appliedScale, false);
+    }
+
+    private void prepareFontRecovery(float appliedScale, boolean eventWhileWaiting) throws Exception {
         screen = fontScreen(2f, 1f, 1000);
         currentScreen = screen;
         prepareGuideResponse();
@@ -563,6 +862,7 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen = fontScreen(3f, appliedScale, 2000);
         send(null);
         AgentTurnContract.Request observation = requests.get(2);
+        if (eventWhileWaiting) currentScreen = currentScreen.withScreenRevision("same-screen-new-event");
         JSONObject recovery = new JSONObject().put("recoverable", true).put("waiting_for", "user")
                 .put("reason_code", "ACTION_EVENT_MISSING").put("next_action", "user_assistance");
         JSONObject guide = new JSONObject().put("guide_command_id", "recovery-guide")
@@ -630,7 +930,8 @@ public class ClickOverlayServiceExecutionTest {
     }
 
     @Test public void offscreenTargetAutomaticallyScrollsThenStopsWhenTargetAppears() throws Exception {
-        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        // Settings list navigation should not ask the user to enable automatic setting changes.
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
         currentScreen = scrollableScreen("first page");
         resolve(); confirm();
         accessibility.when(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42))
@@ -650,6 +951,28 @@ public class ClickOverlayServiceExecutionTest {
         accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42), times(1));
         accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(false, "com.android.settings", 42), never());
         assertEquals(3, requests.size());
+        verify((TaskFlowOverlayView) get("taskFlowView"), never())
+                .scrollRecovery(anyString(), anyString(), any(), any(), any());
+    }
+
+    @Test public void legacyMissingTargetAlsoSearchesSettingsWithoutAsking() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
+        currentScreen = scrollableScreen("settings page");
+        resolve(); confirm();
+        JSONObject guide = new JSONObject().put("guide_command_id", "legacy-missing")
+                .put("command_type", "highlight").put("action_type", "observe_only")
+                .put("render_policy", new JSONObject().put("fallback_action", new JSONObject()
+                        .put("type", "request_fresh_observation").put("reason", "target_not_found")));
+        AgentTurnContract.Response response = new AgentTurnContract.Response(new JSONObject()
+                .put("request_id", requests.get(1).requestId).put("session_id", "frontend-session")
+                .put("session_version", 1).put("episode_id", "episode").put("state_id", "S1_SETTINGS_HOME")
+                .put("task_status", "IN_PROGRESS").put("guide_command", guide).toString());
+        callbacks.get(1).onSuccess(response);
+        // A redundant native event must not cancel the scheduled scroll.
+        currentScreen = currentScreen.withScreenRevision("redundant-event");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42));
+        verify((TaskFlowOverlayView) get("taskFlowView"), never()).observationRecovery(anyString(), any());
     }
 
     @Test public void automaticSearchStopsAfterFourMovesAndKeepsManualControls() throws Exception {
@@ -808,11 +1131,32 @@ public class ClickOverlayServiceExecutionTest {
         set("lastTargetNodeId", "vision:ocr_0");
         set("turnInFlight", true);
         cachedScreen = after;
-        invoke("invalidateStaleVisionGuide");
-        verify(manager).removeView(guide);
+        invoke("invalidateStaleGuide");
+        verify(guide).setVisibility(android.view.View.GONE);
         assertNull(get("visionGuideScreen"));
         verify(gateway, never()).send(any(), any());
 
+    }
+
+    @Test public void scrollingToAccessibilityClearsNativeGuideBeforePendingServerReply() throws Exception {
+        prepareGuideResponse();
+        deliver(1, "highlight", "tap", null);
+        GuideOverlayView guide = (GuideOverlayView) get("guideOverlayView");
+        TutorialNarrator narrator = (TutorialNarrator) get("narrator");
+        clearInvocations(guide, narrator);
+        set("turnInFlight", true);
+        AccessibilityNodeSnapshot changed = new AccessibilityNodeSnapshot("display", null, true,
+                "com.android.settings", "접근성", null, null, "android.widget.TextView", null,
+                screen.nodes.get(1).bounds, true, true, false, false, false, null, 42);
+        cachedScreen = new ScreenSnapshot("com.android.settings", Instant.now().toString(),
+                1080, 2400, List.of(screen.nodes.get(0), changed), 42);
+        ((BroadcastReceiver) get("collapseReceiver")).onReceive(service,
+                new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED));
+        verify(guide).setVisibility(android.view.View.GONE);
+        verify(narrator).stop();
+        assertNull(get("nativeGuideScreen"));
+        assertEquals(true, get("forceNextObservation"));
+        assertEquals("Wait for the pending reply before sending another request", 2, sent.size());
     }
 
     @Test public void automationOffNeverExecutesAgentScroll() throws Exception {
