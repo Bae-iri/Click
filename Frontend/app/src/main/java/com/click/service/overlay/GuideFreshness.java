@@ -21,8 +21,11 @@ final class GuideFreshness {
                 || !Objects.equals(requested.activeWindowId, latest.activeWindowId)
                 || requested.screenWidth != latest.screenWidth
                 || requested.screenHeight != latest.screenHeight) return false;
-        // OCR targets have no node to compare; re-observing would ask for consent again.
-        if (visionDerived || requested.fingerprint().equals(latest.fingerprint())) return true;
+        // OCR has no real target node. A content/scroll/navigation event invalidates
+        // its coordinates even when the AX tree is empty and the window is unchanged.
+        if (visionDerived) return Objects.equals(requested.screenRevision, latest.screenRevision)
+                && requested.fingerprint().equals(latest.fingerprint());
+        if (requested.fingerprint().equals(latest.fingerprint())) return true;
         AccessibilityNodeSnapshot before = find(requested, targetNodeId);
         if (before == null) return true;
         AccessibilityNodeSnapshot now = find(latest, targetNodeId);

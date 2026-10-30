@@ -62,6 +62,7 @@ class AccessibilityTree(BaseModel):
 
     package_name: str | None = None
     active_window_id: int | None = None
+    screen_revision: str | None = Field(default=None, min_length=1, max_length=100)
     captured_at: datetime | None = None
     observation_id: str | None = Field(default=None, min_length=1, max_length=200)
     captured_at_ms: int | None = Field(default=None, ge=0)
@@ -111,6 +112,7 @@ class VisionSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     user_consented: bool = False
+    screen_revision: str | None = Field(default=None, min_length=1, max_length=100)
     redaction_applied: bool = Field(default=False, description="Client hint only; does not authorize external image processing")
     provider: str | None = None
     screenshot_base64: str | None = Field(default=None, max_length=8_000_000, description="Rejected for vision use; raw image egress is disabled. Send on-device OCR elements after per-use confirmation.")

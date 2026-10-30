@@ -63,9 +63,18 @@ public class GuideFreshnessTest {
         assertTrue(GuideFreshness.stillValid(null, moved, "node_0_3", DISPLAY, false));
         assertTrue(GuideFreshness.stillValid(requested, null, "node_0_3", DISPLAY, false));
     }
-    @Test public void visionTargetOnlyNeedsSameScreenContext() {
+    @Test public void visionTargetNeedsSameScreenContents() {
         ScreenSnapshot requested = settings(node("node_0_3", "디스플레이", DISPLAY, null));
-        assertTrue(GuideFreshness.stillValid(requested, settings(), "vision_1", DISPLAY, true));
+        assertTrue(GuideFreshness.stillValid(requested,
+                settings(node("node_0_3", "디스플레이", DISPLAY, null)), "vision_1", DISPLAY, true));
+        assertFalse(GuideFreshness.stillValid(requested, settings(), "vision_1", DISPLAY, true));
         assertFalse(GuideFreshness.stillValid(requested, screen("com.other", 1080, 5), "vision_1", DISPLAY, true));
+    }
+    @Test public void emptyTreeVisionGuideExpiresOnReportedScreenChange() {
+        ScreenSnapshot requested = settings().withScreenRevision("epoch:1");
+        assertTrue(GuideFreshness.stillValid(requested, settings().withScreenRevision("epoch:1"),
+                "vision_1", DISPLAY, true));
+        assertFalse(GuideFreshness.stillValid(requested, settings().withScreenRevision("epoch:2"),
+                "vision_1", DISPLAY, true));
     }
 }

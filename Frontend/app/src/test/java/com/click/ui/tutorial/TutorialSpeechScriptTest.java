@@ -55,7 +55,8 @@ public class TutorialSpeechScriptTest {
         assertFalse(script.contains("click의 기능은 다음과 같아요"));
         title.setText("화면 제목만 수정한 경우");
         find("안내 다시 듣기").performClick();
-        verify(narrator, times(2)).speak(script);
+        verify(narrator, times(1)).speak(script);
+        verify(narrator).replay(script);
         verify(narrator, never()).speak("화면 제목만 수정한 경우");
     }
 
@@ -66,7 +67,8 @@ public class TutorialSpeechScriptTest {
         verify(narrator).speak(ready);
         find("다시 듣기").performClick();
         find("안내 다시 듣기").performClick();
-        verify(narrator, times(3)).speak(ready);
+        verify(narrator, times(1)).speak(ready);
+        verify(narrator, times(2)).replay(ready);
         find("이 내용으로 시작").performClick();
         verify(narrator).speak(activity.getString(R.string.tutorial_speech_review_confirmed));
     }
@@ -91,7 +93,8 @@ public class TutorialSpeechScriptTest {
         verify(narrator).speak(script);
         assertFalse(script.contains("!."));
         find("안내 다시 듣기").performClick();
-        verify(narrator, times(2)).speak(script);
+        verify(narrator, times(1)).speak(script);
+        verify(narrator).replay(script);
     }
 
     private void updateCopy() throws Exception {

@@ -31,16 +31,23 @@ def validate_confirmation(factory, request, now):
             conflict()
         return None
     # Rejection is always safe, including before an approval was issued.
-    if request.user_confirmation == "rejected":
+    failure_report = request.user_confirmation == "rejected" and getattr(request, "vision_failure", None)
+    if request.user_confirmation == "rejected" and not failure_report:
+        with factory() as db:
+            row = db.get(SafetyConfirmation, request.session_id)
+            if row and row.command.get("purpose") == "vision" and row.id == request.confirmation_id and row.version == request.expected_version:
+                return {**row.command, "approval_expires_at": row.expires_at}
         return None
     with factory() as db:
         row = db.get(SafetyConfirmation, request.session_id)
         vision_consent = row is not None and row.command.get("purpose") == "vision"
         if (row is None or row.id != request.confirmation_id or row.version != request.expected_version
-                or row.expires_at <= now or row.screen_hash != screen_hash(request, include_vision=not vision_consent)
+                or row.expires_at <= now or (not failure_report and row.screen_hash != screen_hash(request, include_vision=not vision_consent))
                 or getattr(request, "raw_goal", None)):
             conflict()
-        if vision_consent:
+        if failure_report and not vision_consent:
+            conflict()
+        if vision_consent and not failure_report:
             validate_vision_snapshot(request, row, now)
         elif request.vision_snapshot is not None:
             conflict()
@@ -54,6 +61,7 @@ def validate_vision_snapshot(request, row, now):
             or not snapshot.observation_id or snapshot.observation_id != tree.observation_id
             or not snapshot.package_name or snapshot.package_name != tree.package_name
             or snapshot.active_window_id != tree.active_window_id
+            or snapshot.screen_revision != tree.screen_revision
             or snapshot.screen_width != tree.screen_width or snapshot.screen_height != tree.screen_height
             or snapshot.captured_at_ms is None
             or not (row.expires_at - 120) * 1000 <= snapshot.captured_at_ms <= (now + 5) * 1000):
@@ -67,10 +75,14 @@ def validate_vision_snapshot(request, row, now):
 
 def validate_output(request, response, approved, *, checkpoint=None, now=0):
     # Permission to read a screen never authorizes tapping or changing settings.
+    vision_response = bool(approved and approved.get("purpose") == "vision")
+    vision_failure_report = vision_response and bool(getattr(request, "vision_failure", None))
     if approved and approved.get("purpose") == "vision":
         approved = None
     guide = response.guide_command
-    if request.user_confirmation == "rejected":
+    if vision_failure_report:
+        response.metadata["vision_failure"] = request.vision_failure
+    if request.user_confirmation == "rejected" and not vision_response:
         response.task_status = "BLOCKED"
         guide.command_type, guide.action_type = "blocked", "observe_only"
         guide.requires_user_action = False

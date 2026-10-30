@@ -6106,6 +6106,19 @@
             ],
             "title": "Active Window Id"
           },
+          "screen_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen Revision"
+          },
           "captured_at": {
             "anyOf": [
               {
@@ -8831,6 +8844,19 @@
             "type": "boolean",
             "title": "User Consented",
             "default": false
+          },
+          "screen_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen Revision"
           },
           "redaction_applied": {
             "type": "boolean",

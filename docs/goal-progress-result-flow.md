@@ -6,7 +6,7 @@
 
 복원 수정 검증: JVM 54개와 실제 오버레이·결과 카드·튜토리얼 UI 13개 통과. 입력 창 왕복 중 음성 중단/재개, 최신 안내 한 번 재생, 결과 질문의 축소/확대 및 답변 버튼 복원을 확인했다. Samsung 휴대폰에 APK를 덮어쓰고 앱 실행 및 접근성 서비스 연결을 확인했다.
 
-실서버 슬라이더 회귀를 `LiveFontGuideTest`로 재현했다. `https://click-db.onrender.com`은 MVP-01 `1.0.0`(`670fb0ef…`)을 반환했고 삼성 통합 글자 화면을 `S3_FONT_MENU`로 분류하여 `TARGET_AMBIGUOUS`, 대상 없음으로 응답했다. 로컬 APK 설치만으로 이 서버 오류는 고쳐지지 않는다. 원격 최신 `d07b4f1`에 서버 수정만 합친 `cf976d5`를 `/private/tmp/click-font-deploy-review`에 준비했다. 삼성 슬라이더·결과 확인·설정 복구 155개와 최신 vision/배포 회귀 69개가 통과했다. develop 자동 배포 반영은 사용자 확인 대기 중이며 아직 운영 서버 수정 완료로 간주하지 않는다.
+실서버 슬라이더 회귀를 `LiveFontGuideTest`로 재현했다. `https://click-db.onrender.com`은 MVP-01 `1.0.0`(`670fb0ef…`)을 반환했고 삼성 통합 글자 화면을 `S3_FONT_MENU`로 분류하여 `TARGET_AMBIGUOUS`, 대상 없음으로 응답했다. 로컬 APK 설치만으로 이 서버 오류는 고쳐지지 않는다. 원격 최신 `d07b4f1`에 서버 수정만 합친 `cf976d5`를 `/private/tmp/click-font-deploy-review`에 준비했다. 삼성 슬라이더·결과 확인·설정 복구 155개와 최신 vision/배포 회귀 69개가 통과했다. 2026-10-30 사용자가 pull·push를 요청하여 최신 develop과 앱·서버 수정을 병합했다. 병합 후 Android 단위 테스트 232개, 에이전트 테스트 227개, 서버·Android 요청 연동 테스트 1,002개가 통과했다. Android 앱·테스트 APK 빌드와 서버 스모크·부하 검사도 통과했다. 운영 서버 반영 여부는 푸시 후 CI·배포 및 실서버 응답으로 별도 확인한다. 이전 develop CI에는 Android SDK의 tools 패키지 설치 오류와 PostgreSQL JSON/JSONB 스키마 불일치가 확인되었다.
 
 추가 질문의 “추가로 확인할게요” 제목을 제거하고, 요청 라벨은 굵은 16sp, 요청 본문은 16sp로 표시한다. 수정 입력은 “내용 수정”으로 펼치며 창은 선택지와 버튼의 실제 높이에 맞춘다. 화면 질문과 TTS는 같은 `GoalPreparationState.guidance()`를 사용한다.
 

@@ -58,7 +58,7 @@ def prepare(recovery, checkpoint, graph, reference, response, graphs):
     fresh.update(task_id=replacement.definition.task_id, current_state_id="S0_UNKNOWN",
         pending_transition_id=None, pending_confirmation_transition_id=None, pending_attempt=None,
         last_guide_command_id=None, last_target_node_id=None, last_snapshot=None, last_user_action_event=None,
-        recovery_count=0, recovery_state={}, state_candidates=(), total_failed_attempts=0, task_completed=False,
+        recovery_count=0, recovery_state={}, vision_state={}, state_candidates=(), total_failed_attempts=0, task_completed=False,
         observed_path=(), progress_steps=(), technical_outcome={},
         failed_target_keys={key: value for key, value in checkpoint.get("failed_target_keys", {}).items() if key in common},
         transition_attempts={key: value for key, value in checkpoint.get("transition_attempts", {}).items()
