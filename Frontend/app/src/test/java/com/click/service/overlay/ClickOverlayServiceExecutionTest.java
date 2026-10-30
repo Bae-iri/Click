@@ -791,6 +791,27 @@ public class ClickOverlayServiceExecutionTest {
         method.invoke(service, command);
     }
 
+    @Test public void staleVisionHighlightIsRemovedBeforeServerResponds() throws Exception {
+        ScreenSnapshot before = new ScreenSnapshot("com.android.settings", Instant.now().toString(),
+                1080, 2400, List.of(), 42).withScreenRevision("epoch:1");
+        ScreenSnapshot after = before.withScreenRevision("epoch:2");
+        WindowManager manager = mock(WindowManager.class);
+        GuideOverlayView guide = mock(GuideOverlayView.class);
+        when(guide.isAttachedToWindow()).thenReturn(true);
+        set("windowManager", manager);
+        set("guideOverlayView", guide);
+        set("visionGuideScreen", before);
+        set("lastTargetBounds", new int[]{20, 100, 900, 200});
+        set("lastTargetNodeId", "vision:ocr_0");
+        set("turnInFlight", true);
+        cachedScreen = after;
+        invoke("invalidateStaleVisionGuide");
+        verify(manager).removeView(guide);
+        assertNull(get("visionGuideScreen"));
+        verify(gateway, never()).send(any(), any());
+
+    }
+
     private void resolve() throws Exception {
         Method method = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
         method.setAccessible(true);

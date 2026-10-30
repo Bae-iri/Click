@@ -47,6 +47,8 @@ public final class ClickOverlayLayout extends ViewGroup {
     private final Path path = new Path();
     private final EditText goalInput;
     private LinearLayout panel;
+    private LoadingStatusView loadingStatus;
+    private String loadingMessage;
     private TextView transcript;
     private LinearLayout textEntry;
     private TextView voiceSwitch;
@@ -113,6 +115,10 @@ public final class ClickOverlayLayout extends ViewGroup {
         inputFeedback.setText(text.trim());
         inputFeedback.setVisibility(VISIBLE);
     }
+    public void setLoadingStatus(String message) {
+        loadingMessage = message;
+        if (loadingStatus != null) loadingStatus.setStatus(message);
+    }
     public boolean isVoiceInputActive() { return voiceInputActive; }
     public void setVoiceInputActive(boolean active) {
         voiceInputActive = active;
@@ -174,6 +180,7 @@ public final class ClickOverlayLayout extends ViewGroup {
     private void renderPanel() {
         detach(goalInput);
         removeAllViews();
+        loadingStatus = null;
         transcript = null;
         textEntry = null;
         voiceSwitch = null;
@@ -217,6 +224,10 @@ public final class ClickOverlayLayout extends ViewGroup {
         requestRow.addView(stopRequest, new LinearLayout.LayoutParams(-2, -2));
         panel.addView(requestRow, spaced(8));
         setRequestStatus(requestStatus, requestStoppable);
+
+        loadingStatus = new LoadingStatusView(getContext());
+        loadingStatus.setStatus(loadingMessage);
+        panel.addView(loadingStatus, spaced(8));
 
         if (mode == Mode.MENU) {
             LinearLayout choices = new LinearLayout(getContext());

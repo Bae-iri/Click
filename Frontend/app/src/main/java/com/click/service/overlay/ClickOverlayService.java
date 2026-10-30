@@ -88,6 +88,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean requestActive;
     private boolean awaitingReplacement;
     private int executionGeneration;
+    private final AutomationRunGuard automationGuard = new AutomationRunGuard();
     private VoiceQueueGateway queueGateway;
     private QuickHelpSelectionStore quickHelpSelections;
     private String activeVoiceRequestId;
@@ -145,10 +146,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int[] lastTargetBounds;
     private boolean visionConsentRequested;
     private boolean visionCaptureInFlight;
+    private boolean visionImageCaptured;
+    private boolean speechProcessing;
     private JSONObject pendingVisionSnapshot;
     private String pendingVisionFailure;
     private ScreenSnapshot pendingVisionScreen;
     private ScreenSnapshot lastSubmittedScreen;
+    private ScreenSnapshot visionGuideScreen;
     private long confirmationExpiresAt;
     private int freshObservationRetries;
     private int staleGuideDrops;
@@ -170,6 +174,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (OverlayActions.ACTION_COLLAPSE.equals(intent.getAction()) && overlayView != null) {
                 overlayView.collapse();
             } else if (OverlayActions.ACTION_SNAPSHOT_UPDATED.equals(intent.getAction())) {
+                invalidateStaleVisionGuide();
                 sendAgentTurn(null, forceNextObservation);
             }
         }
@@ -394,6 +399,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (overlayView != null) overlayView.removeCallbacks(keyboardPlacement);
         clearTaskFlow();
         executionGeneration++;
+        automationGuard.clear();
         queueGeneration++;
         speechGeneration++;
         acceptingVoiceCommand = false;
@@ -474,8 +480,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (taskFlowView != null) taskFlowView.setMinimizedProgress(bubble);
         boolean showTask = taskFlowView != null && !taskFlowCollapsed
                 && overlayView.getMode() == ClickOverlayLayout.Mode.COLLAPSED;
-        overlayView.setVisibility(visionCaptureInFlight || showTask ? View.GONE : View.VISIBLE);
-        if (taskFlowView != null) taskFlowView.setVisibility(!visionCaptureInFlight
+        boolean hideForCapture = visionCaptureInFlight && !visionImageCaptured;
+        overlayView.setVisibility(hideForCapture || showTask ? View.GONE : View.VISIBLE);
+        if (taskFlowView != null) taskFlowView.setVisibility(!hideForCapture
                 && (showTask || bubble && overlayView.getMode() == ClickOverlayLayout.Mode.COLLAPSED)
                 ? View.VISIBLE : View.GONE);
         if (bubble) placeProgressBubble();
@@ -640,12 +647,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             catch (org.json.JSONException error) { showQueueError(error); return; }
         }
         ensureTaskFlow(); updateFloatingVisibility(); taskFlowView.waiting("사용자 요청을 처리하고 있어요");
-        turnInFlight = true;
+        setTurnInFlight(true);
         final int generation = executionGeneration;
         agentGateway.loadContract(new AgentTurnGateway.ContractCallback() {
             @Override public void onSuccess(AgentServerContract contract) {
                 if (generation != executionGeneration || closing) return;
-                turnInFlight = false;
+                setTurnInFlight(false);
                 if (pendingControl != null) {
                     String control = pendingControl; pendingControl = null;
                     sendAgentControl(control); return;
@@ -675,7 +682,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             @Override public void onFailure(Throwable error) {
                 if (generation != executionGeneration || closing) return;
-                turnInFlight = false;
+                setTurnInFlight(false);
                 showQueueError(error);
             }
         });
@@ -689,7 +696,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         final int generation = executionGeneration;
         final AgentTurnContract.Request request = AgentTurnContract.Request.resolve(agentSessionId, text, clarification)
                 .withSessionState(agentSessionVersion, null, null);
-        turnInFlight = true;
+        setTurnInFlight(true);
         boolean prepares = agentGateway.currentContract() != null && agentGateway.currentContract().goalPreparation;
         if (prepares) {
             request.preparationVersion = "goal-inputs.v1";
@@ -707,7 +714,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                         || response.sessionVersion != agentSessionVersion || !"goal_resolution".equals(response.responseType)) {
                     onFailure(new java.io.IOException("INVALID_GOAL_RESOLUTION")); return;
                 }
-                turnInFlight = false;
+                setTurnInFlight(false);
                 try {
                     if (prepares) {
                         if (response.preparation == null) throw new org.json.JSONException("Missing preparation response");
@@ -735,7 +742,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             @Override public void onFailure(Throwable error) {
                 if (generation != executionGeneration || closing) return;
-                turnInFlight = false;
+                setTurnInFlight(false);
                 if (pendingControl != null) {
                     String control = pendingControl; pendingControl = null; sendAgentControl(control); return;
                 }
@@ -871,13 +878,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void sendFlowRequest(AgentTurnContract.Request request, boolean mayRecover) {
         stopNarration();
-        turnInFlight = true;
+        setTurnInFlight(true);
         updateRequestStatus(true, true);
         final int generation = executionGeneration;
         agentGateway.send(request, new AgentTurnGateway.Callback() {
             @Override public void onSuccess(AgentTurnContract.Response response) {
                 if (generation != executionGeneration || !response.sessionId.equals(agentSessionId)) return;
-                turnInFlight = false;
+                setTurnInFlight(false);
                 agentSessionVersion = response.sessionVersion; agentEpisodeId = response.episodeId;
                 if (request.accessibilityTree != null) {
                     lastSubmittedScreen = request.accessibilityTree;
@@ -894,7 +901,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             @Override public void onFailure(Throwable error) {
                 if (generation != executionGeneration) return;
-                turnInFlight = false;
+                setTurnInFlight(false);
                 if (pendingControl != null) {
                     String command = pendingControl; pendingControl = null; recoverControl(command); return;
                 }
@@ -908,11 +915,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void recoverControl(String command) {
         final int generation = executionGeneration;
-        agentPaused = true; turnInFlight = true;
+        agentPaused = true; setTurnInFlight(true);
         agentGateway.synchronize(agentSessionId, new AgentTurnGateway.Callback() {
             @Override public void onSuccess(AgentTurnContract.Response response) {
                 if (generation != executionGeneration) return;
-                turnInFlight = false; agentSessionVersion = response.sessionVersion; agentEpisodeId = response.episodeId;
+                setTurnInFlight(false); agentSessionVersion = response.sessionVersion; agentEpisodeId = response.episodeId;
                 if ("CANCELLED".equals(response.taskStatus) || "EXPIRED".equals(response.taskStatus)
                         || "COMPLETED".equals(response.taskStatus)) { applyTaskFlowResponse(response); return; }
                 sendFlowRequest(AgentTurnContract.Request.control(agentSessionId, agentSessionVersion,
@@ -920,7 +927,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             @Override public void onFailure(Throwable error) {
                 if (generation != executionGeneration) return;
-                turnInFlight = false;
+                setTurnInFlight(false);
                 if (error instanceof com.click.data.remote.ApiException && ((com.click.data.remote.ApiException) error).status == 404
                         && "cancel_task".equals(command)) {
                     abortActiveRequest(); finishActiveQueueRequest("USER_ABORTED"); return;
@@ -989,6 +996,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             String message = response.message;
             hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
             executionGeneration++;
+        automationGuard.clear();
             if (message != null) speak(message);
             if (satisfied && taskFlowView != null) {
                 TaskFlowOverlayView completedView = taskFlowView;
@@ -1294,11 +1302,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return;
         }
         listening = true;
+        refreshLoadingStatus();
         overlayView.setRecognizedSpeech("듣고 있어요… 말씀을 마치면 자동으로 보내요.");
         cloudSpeechRecognizer.start(new CloudSpeechRecognizer.Callback() {
             @Override public void onRecordingFinished() {
                 if (!acceptsSpeech(generation)) return;
                 listening = false;
+                speechProcessing = true;
+                refreshLoadingStatus();
                 overlayView.setRecognizedSpeech("말씀하신 내용을 확인하고 있어요…");
             }
             @Override public void onSuccess(String text) {
@@ -1335,10 +1346,27 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             overlayView.setRecognizedSpeech("마이크 버튼을 누른 뒤 말씀해 주세요.");
         if (cloudSpeechRecognizer != null) cloudSpeechRecognizer.cancel();
         listening = false;
+        speechProcessing = false;
+        refreshLoadingStatus();
         if (overlayView != null) overlayView.setVoiceInputActive(false);
     }
 
+    private void setTurnInFlight(boolean active) {
+        turnInFlight = active;
+        refreshLoadingStatus();
+    }
+
+    private void refreshLoadingStatus() {
+        String message = visionCaptureInFlight ? "화면을 분석하고 있어요…"
+                : speechProcessing ? "음성을 인식하고 있어요…"
+                : listening ? "듣고 있어요. 말씀해 주세요…"
+                : turnInFlight ? "요청을 확인하고 다음 단계를 찾고 있어요…" : null;
+        if (overlayView != null) overlayView.setLoadingStatus(message);
+        if (taskFlowView != null) taskFlowView.setLoadingStatus(message);
+    }
+
     private void updateRequestStatus(boolean active, boolean processing) {
+        refreshLoadingStatus();
         requestActive = active;
         if (overlayView != null) overlayView.setRequestStatus(active
                 ? processing ? "사용자 요청을 처리하고 있어요" : "요청을 진행하고 있어요" : null, active);
@@ -1466,6 +1494,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void abortActiveRequest() {
         silenceVoiceReply();
         executionGeneration++;
+        automationGuard.clear();
         stopListening();
         updateRequestStatus(false, false);
         clearTaskFlow();
@@ -1479,7 +1508,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         activeGoalMatch = null;
         firstTurnSent = false;
         agentPaused = false;
-        turnInFlight = false;
+        setTurnInFlight(false);
         pendingActionType = null;
         speechHandler.removeCallbacksAndMessages(null);
         stopNarration();
@@ -1523,7 +1552,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 quickHelpSelections.remove(finishedId);
                 activeVoiceRequestId = null;
                 agentSessionId = null;
-                turnInFlight = false;
+                setTurnInFlight(false);
                 awaitingReplacement = response.awaitingReplacement;
                 if (response.running != null && response.running.agentSessionId != null
                         && response.running.rawGoal != null) {
@@ -1576,6 +1605,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         lastNarratedGuideKey = null;
         updateRequestStatus(true, true);
         executionGeneration++;
+        automationGuard.clear();
         guideStepTimer.clear();
         agentSessionId = sessionId;
         personalizationStateId = null;
@@ -1669,7 +1699,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             request.withVisionSnapshot(pendingVisionSnapshot);
         }
         if ("rejected".equals(confirmation)) request.visionFailureCode = pendingVisionFailure;
-        turnInFlight = true;
+        setTurnInFlight(true);
         updateRequestStatus(true, true);
         lastSnapshotFingerprint = fingerprint;
         // Consume the fresh-read request only when an observation is actually sent.
@@ -1683,7 +1713,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             private final int requestGeneration = executionGeneration;
             @Override public void onSuccess(AgentTurnContract.Response response) {
                 if (requestGeneration != executionGeneration) return;
-                turnInFlight = false;
+                setTurnInFlight(false);
                 firstTurnSent = true;
                 agentSessionVersion = response.sessionVersion;
                 agentEpisodeId = response.episodeId;
@@ -1706,7 +1736,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
             @Override public void onFailure(Throwable error) {
                 if (requestGeneration != executionGeneration) return;
-                turnInFlight = false;
+                setTurnInFlight(false);
                 if (pendingControl != null) {
                     String control = pendingControl; pendingControl = null;
                     recoverControl(control); return;
@@ -1870,6 +1900,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             speak("현재 화면 정보를 기다리고 있어요. 다시 이어서 진행을 눌러 주세요."); return;
         }
         executionGeneration++;
+        automationGuard.clear();
         if ("cancel_task".equals(commandType) || "pause_task".equals(commandType)) agentPaused = true;
         clearVisionState(); actionTracker.clear(); pendingVerifiedAction = null;
         hideConfirmation(); hideGuideOverlay(); hideSettingsOpenButton();
@@ -2149,6 +2180,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 GuideDragDirection.resolve(command.renderPolicy, response.metadata));
         if (overlayView != null) overlayView.setRecognizedSpeech(command.message);
         speakGuide(response);
+        visionGuideScreen = command.targetBounds != null && command.renderPolicy != null
+                && command.renderPolicy.optBoolean("vision_derived") ? lastSubmittedScreen : null;
+        executeAutomaticAction(command, response.metadata, displayedSnapshot);
         if ("scroll".equals(command.actionType)) {
             executeScroll(command);
         } else {
@@ -2196,6 +2230,72 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 forceNextObservation = true; ClickAccessibilityService.requestFreshSnapshot();
             }, 700L);
         }, 350L);
+    }
+
+    private void automationStatus(String message) {
+        if (taskFlowView != null) taskFlowView.setAutomationStatus(message);
+        if (overlayView != null && message != null) overlayView.setRecognizedSpeech(message);
+    }
+
+    private void executeAutomaticAction(AgentTurnContract.GuideCommand command, JSONObject metadata,
+                                        ScreenSnapshot screen) {
+        if (screen != null) automationGuard.observe(screen.fingerprint());
+        if (agentPaused || pendingControl != null || !command.requiresUserAction
+                || command.guideCommandId == null || screen == null
+                || !new com.click.data.local.TouchAutomationSettings(this).isEnabled()
+                || command.renderPolicy != null && command.renderPolicy.optBoolean("vision_derived")) return;
+        boolean tap = "tap".equals(command.actionType);
+        int direction = GuideDragDirection.resolve(command.renderPolicy, metadata);
+        boolean slider = "drag".equals(command.actionType) && command.renderPolicy != null
+                && "font_size".equals(command.renderPolicy.optString("automatable_setting"))
+                && direction != GuideDragDirection.UNKNOWN;
+        if (!tap && !slider) return;
+        if (tap && com.click.service.accessibility.TouchAutomationPolicy.clickableTarget(screen,
+                command.targetNodeId, command.targetBounds) == null) {
+            automationStatus("이 항목은 자동으로 누를 수 없어요. 표시된 곳을 직접 눌러주세요.");
+            return;
+        }
+        AutomationRunGuard.Decision decision = automationGuard.begin(agentSessionId, agentEpisodeId,
+                command.guideCommandId, screen.fingerprint());
+        if (decision != AutomationRunGuard.Decision.ALLOW) {
+            if (decision == AutomationRunGuard.Decision.DUPLICATE)
+                automationStatus("이미 시도한 단계예요. 반복해서 누르지 않을게요. 필요하면 직접 조작해 주세요.");
+            if (decision == AutomationRunGuard.Decision.WAITING_FOR_OBSERVATION)
+                automationStatus("이전 조작의 화면 변화를 확인하고 있어요…");
+            if (decision == AutomationRunGuard.Decision.LIMIT_REACHED)
+                automationStatus("자동 조작 횟수에 도달했어요. 화면을 확인하고 직접 진행해 주세요.");
+            return;
+        }
+        boolean performed = tap
+                ? ClickAccessibilityService.performGuidedTap(screen, command.targetNodeId, command.targetBounds)
+                : ClickAccessibilityService.performGuidedSlider(screen, command.targetNodeId, command.targetBounds, direction);
+        if (!performed) {
+            automationGuard.finish(command.guideCommandId);
+            automationStatus("자동 조작을 실행하지 못했어요. 표시된 곳을 직접 조작해 주세요.");
+            return;
+        }
+        hideGuideOverlay();
+        automationStatus(tap ? "버튼을 눌렀어요. 화면 변화를 확인하고 있어요…"
+                : "글자 크기를 조절했어요. 실제 변경 결과를 확인하고 있어요…");
+        final int generation = executionGeneration;
+        for (long delay : new long[]{1800L, 5500L}) {
+            speechHandler.postDelayed(() -> {
+                if (generation != executionGeneration || agentPaused || pendingControl != null
+                        || !automationGuard.awaiting(command.guideCommandId)) return;
+                ScreenSnapshot after = ClickAccessibilityService.freshSnapshot();
+                if (after != null) automationGuard.observe(after.fingerprint());
+                if (!automationGuard.awaiting(command.guideCommandId)) {
+                    forceNextObservation = true;
+                    ClickAccessibilityService.requestFreshSnapshot();
+                } else if (delay == 5500L && !turnInFlight) {
+                    automationGuard.finish(command.guideCommandId);
+                    automationStatus("화면 변화를 확인하지 못했어요. 다시 누르지 않고 기다릴게요. 직접 조작해 주세요.");
+                    if (after != null && screen.fingerprint().equals(after.fingerprint())
+                            && java.util.Objects.equals(lastGuideCommandId, command.guideCommandId))
+                        showGuideOverlay(command.targetBounds, command.actionType, direction);
+                }
+            }, delay);
+        }
     }
 
     private void waitForFreshGuide() {
@@ -2250,7 +2350,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (visionConsentRequested || visionCaptureInFlight) return;
         if (agentConfirmationId == null || lastSubmittedScreen == null) return;
         visionConsentRequested = true;
-        showVisionConsent(command.message);
+        showVisionConsent(command.message, visionFallback);
     }
 
     private void handleFreshObservationRequest(AgentTurnContract.GuideCommand command, String stateId) {
@@ -2361,7 +2461,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         speechHandler.postDelayed(() -> sendAgentTurn(null, true), performed ? 650L : 400L);
     }
 
-    private void showVisionConsent(String message) {
+    private void showVisionConsent(String message, JSONObject policy) {
+        String vocabularyKey = policy.optString("vocabulary_key", "");
+        String strategy = policy.optString("strategy", "full_frame");
+        org.json.JSONArray focus = policy.optJSONArray("focus_bounds");
+        int[] focusBounds = focus != null && focus.length() == 4
+                ? new int[]{focus.optInt(0), focus.optInt(1), focus.optInt(2), focus.optInt(3)} : null;
         hideConfirmation();
         if (windowManager == null) return;
         final int generation = executionGeneration;
@@ -2376,13 +2481,21 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 return;
             }
             visionCaptureInFlight = true;
+            visionImageCaptured = false;
+            refreshLoadingStatus();
             hideGuideOverlay();
             hideSettingsOpenButton();
             updateFloatingVisibility();
             // Wait for our consent/guide overlays to leave the display before capturing once.
             speechHandler.postDelayed(() -> {
                 if (generation != executionGeneration || !visionCaptureInFlight) return;
-                ClickAccessibilityService.captureVision(consentScreen, new OnDeviceVision.Callback() {
+                ClickAccessibilityService.captureVision(consentScreen, vocabularyKey, strategy, focusBounds, new OnDeviceVision.Callback() {
+                    @Override public void onImageCaptured() {
+                        if (generation != executionGeneration || !visionCaptureInFlight) return;
+                        visionImageCaptured = true;
+                        refreshLoadingStatus();
+                        updateFloatingVisibility();
+                    }
                     @Override public void onSuccess(ScreenSnapshot screen, JSONObject vision) {
                         if (generation != executionGeneration || !visionCaptureInFlight) return;
                         ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
@@ -2404,7 +2517,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                         Toast.makeText(ClickOverlayService.this, error, Toast.LENGTH_LONG).show();
                     }
                 });
-            }, 250L);
+            }, Math.max(250L, Math.min(1500L, policy.optLong("retry_delay_ms", 250L))));
         });
         confirmationParams = new WindowManager.LayoutParams(
                 screenWidth() - dp(28), Math.min(dp(300), screenHeight() - dp(56)), overlayWindowType,
@@ -2426,6 +2539,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void clearVisionState() {
         visionConsentRequested = false;
         visionCaptureInFlight = false;
+        visionImageCaptured = false;
+        refreshLoadingStatus();
         pendingVisionSnapshot = null;
         pendingVisionFailure = null;
         pendingVisionScreen = null;
@@ -2560,8 +2675,18 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void hideGuideOverlay() {
+        visionGuideScreen = null;
         if (windowManager != null && guideOverlayView != null && guideOverlayView.isAttachedToWindow()) {
             windowManager.removeView(guideOverlayView);
+        }
+    }
+
+    private void invalidateStaleVisionGuide() {
+        if (visionGuideScreen != null && !GuideFreshness.stillValid(visionGuideScreen,
+                LatestScreenSnapshot.get(), lastTargetNodeId, lastTargetBounds, true)) {
+            hideGuideOverlay();
+            actionTracker.clear();
+            guideStepTimer.clear();
         }
     }
 

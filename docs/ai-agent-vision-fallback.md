@@ -24,18 +24,26 @@ AX를 우선 사용한다. 정규화 후 node가 없는 화면, 또는 graph의 
 | 방향 | 필드 | 의미 |
 | --- | --- | --- |
 | BE → FE | `guide_command.command_type=confirmation`, `action_type=observe_only` | 캡처 전 확인 화면 |
-| BE → FE | `render_policy.vision_fallback` | `requires_user_consent=true`, `consent_scope=single_analysis`, `processing=on_device_ocr`, `raw_screenshot_allowed=false`, 허용 payload 목록 |
+| BE → FE | `render_policy.vision_fallback` | `requires_user_consent=true`, `consent_scope=single_analysis`, `processing=on_device_ocr`, `raw_screenshot_allowed=false`, 허용 payload 목록, 현재 graph의 `vocabulary_key` |
 | BE → FE | `metadata.confirmation.id/purpose/scope/version/expires_at` | 요청별 동의 challenge; 설정 변경 확인과 purpose로 구분 |
 | FE → BE | `session_id`, `episode_id`, `expected_version`, `request_id` | 세션/실행 식별, 동시 요청·재전송 통제 |
 | FE → BE | `command_type=respond_confirmation`, `user_confirmation`, `confirmation_id` | 명시적인 사용자 응답 |
 | FE → BE | `accessibility_tree` | 새 AX. node를 못 읽어도 package·화면 크기·window·observation ID 유지 |
 | FE → BE | `vision_snapshot.user_consented=true` | 사용자 응답의 보조 표시. 이것만으로는 승인되지 않음 |
 | FE → BE | `observation_id`, `captured_at_ms`, `package_name`, `active_window_id`, `screen_width`, `screen_height` | OCR의 출처·시각·좌표 공간. observation/package/window/크기는 동봉 AX와 일치 |
+| FE → BE | AX와 `vision_snapshot`의 `screen_revision` | 선택 필드(이전 클라이언트 호환). 현재 FE는 서비스 epoch + 외부 앱 변화 카운터를 항상 전송한다. 두 payload 및 동의 당시 AX revision과 일치해야 함 |
 | FE → BE | `provider`, `redaction_applied`, `elements` | `provider=frontend_ocr`, FE 마스킹 표시, 메뉴 text·role·confidence·실제 bounds. confidence가 없거나 0.65 미만인 element는 FE와 AI1 모두 버린다 |
 | FE → BE | `processing_time_ms` | 선택. 기기 OCR 처리 시간(0~60000). 품질 지표에만 사용 |
 | BE → AI1 내부 | `consent_request_id` | BE 검증을 통과한 이 요청에만 유효. FE 입력이나 checkpoint 동의 저장에 사용 금지 |
 
 좌표는 전체 화면의 물리 px `[left, top, right, bottom]`이다. dp, overlay 상대좌표, 임의 확대 bounds를 보내지 않는다. 현재 FE는 회전·화면 크기가 캡처 도중 바뀌면 결과를 폐기한다. `ocr_text`는 계약상 허용하지만 현재 FE는 자유 텍스트를 보내지 않고 정해진 설정 메뉴 `elements`만 보낸다. 원본 screenshot, OCR 전문, 사용자 동의 값을 로그에 저장하지 않는다.
+
+메뉴 어휘의 단일 원본은 `AI-Agent/goal_catalog/vision_vocabulary.json`이다. Android가
+동일 파일을 asset으로 포함한다. FE는 서버의 `vocabulary_key`로 현재 목표의 유한한
+허용 목록을 선택하고, AI1은 클라이언트 key를 신뢰하지 않고 활성 graph의
+`required_slots.setting`으로 다시 제한한다. 알 수 없는 key는 FE에서 캡처 전에
+`unsupported`, AI1에서 쓸 수 있는 글자 없음으로 처리한다. 어휘 목록은 graph 실행
+승인을 대신하지 않으며 SSID·블루투스 기기 이름·계정·입력값을 포함하지 않는다.
 
 최초 요청은 기존 `start_task` 계약을 따른다. 허용 응답의 예시는 다음과 같다. ID·버전·시각은 실제 응답과 수집 값으로 교체한다.
 
@@ -118,3 +126,17 @@ AX를 우선 사용한다. 정규화 후 node가 없는 화면, 또는 graph의 
 - 기기 QA: 허용/거절, 허용 대기 중 화면 이동, 캡처 중 회전·취소, OCR 실패, API 29 미지원, API 30+ 캡처, 서비스 권한 재활성화, 확인 UI가 캡처되지 않는지, 개인정보 메뉴 외 텍스트 미전송을 확인한다.
 
 검증 환경: AI1 Python 테스트, BE vision·STT 관련 테스트, FE Gradle 앱·androidTest 컴파일과 `VisionFallbackTest`·`VisionPrivacyTest` JUnit 테스트를 실행한다. 실제 screenshot/OCR 기기 실행은 아직 검증하지 못했다. 설치 전 위 기기 QA가 필요하다.
+
+## 3사이클 재시도
+
+현재 분석은 최대 3회 실패까지 이어진다. 매 사이클에는 새 캡처와 새 동의 challenge가
+필요하다. 첫 두 번의 캡처/OCR 실패 또는 no_signal은 새 confirmation을 반환하고,
+3회 실패는 Agent 1 수동 안내와 사용자 재확인 대기로 반환한다. 원래의 동일 요청
+재전송은 저장된 응답을 반환하므로 실패 횟수를 중복 증가시키지 않는다.
+
+FE 실패 보고(rejected + vision_failure)도 현재 vision challenge ID와 version 검증을
+통과해야 재시도에 반영된다. 실제 사용자 거절은 declined, screen_changed는 횟수 증가
+없이 사용자 재확인 대기, masking_failed/unsupported는 즉시 종료한다.
+`render_policy.vision_cycle`에 실패 횟수·실패 원인·AX 빈 여부가 있고, confirmation의
+vision_fallback에는 cycle_number/strategy/retry_delay_ms/focus_bounds가 포함된다.
+인식 실패와 목표 미발견은 별도 원인이며 LLM은 not_configured 연결 지점만 존재한다.

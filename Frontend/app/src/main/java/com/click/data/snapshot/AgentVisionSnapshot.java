@@ -28,6 +28,7 @@ public final class AgentVisionSnapshot {
             snapshot.put("redaction_applied", true);
             snapshot.put("provider", PROVIDER);
             snapshot.put("observation_id", screen.observationId);
+            if (screen.screenRevision != null) snapshot.put("screen_revision", screen.screenRevision);
             snapshot.put("active_window_id", screen.activeWindowId);
             snapshot.put("package_name", screen.packageName);
             snapshot.put("screen_width", screen.screenWidth);

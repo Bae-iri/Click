@@ -59,6 +59,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         default void expand() {}
         default void openInput() {}
     }
+    private final LoadingStatusView loadingStatus;
+    private final TextView automationStatus;
     private final Listener listener;
     private final LinearLayout content;
     private final Button pause;
@@ -146,6 +148,12 @@ public final class TaskFlowOverlayView extends LinearLayout {
         LayoutParams headerParams = new LayoutParams(-1, -2);
         headerParams.bottomMargin = dp(12);
         addView(header, headerParams);
+        loadingStatus = new LoadingStatusView(context);
+        addView(loadingStatus, spaced(8));
+        automationStatus = text("", 14);
+        automationStatus.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
+        automationStatus.setVisibility(GONE);
+        addView(automationStatus, spaced(6));
         content = new LinearLayout(context); content.setOrientation(VERTICAL);
         content.setPadding(0, 0, 0, dp(10));
         scroll = new ScrollView(context); scroll.setFillViewport(false); scroll.addView(content);
@@ -189,6 +197,12 @@ public final class TaskFlowOverlayView extends LinearLayout {
         addView(controls);
     }
 
+    public void setAutomationStatus(String message) {
+        automationStatus.setText(message == null ? "" : message);
+        automationStatus.setVisibility(message == null ? GONE : VISIBLE);
+    }
+    public void setLoadingStatus(String message) { loadingStatus.setStatus(message); }
+
     public void setAvailableHeight(int height) { if (maxHeight != height) { maxHeight = height; requestLayout(); } }
     public boolean hasProgress() { return progressMessage != null; }
     public String guidanceMessage() {
@@ -230,6 +244,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private void clear(String title) {
         setMinimizedProgress(false);
         progressMessage = null;
+        setAutomationStatus(null);
         content.removeAllViews();
         if (title != null && !title.isEmpty()) content.addView(heading, spaced(0));
         reviewConfirm.setVisibility(GONE);
