@@ -24,6 +24,23 @@ public class LoadingStatusViewTest {
   assertEquals(View.GONE, view.getVisibility());
   assertEquals("", ((TextView)view.getChildAt(1)).getText().toString());
  }
+ @Test public void reservedRowKeepsHeightAndOnlyTogglesSpinner() {
+  LoadingStatusView view = new LoadingStatusView(RuntimeEnvironment.getApplication(), true);
+  int spec = View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY);
+  int unspecified = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+  view.measure(spec, unspecified);
+  int idle = view.getMeasuredHeight();
+  assertEquals(View.VISIBLE, view.getVisibility());
+  assertEquals(View.INVISIBLE, view.getChildAt(0).getVisibility());
+  view.setStatus("요청을 확인하고 다음 단계를 찾고 있어요…");
+  view.measure(spec, unspecified);
+  assertEquals(View.VISIBLE, view.getChildAt(0).getVisibility());
+  assertEquals(idle, view.getMeasuredHeight());
+  view.setStatus(null);
+  assertEquals(View.VISIBLE, view.getVisibility());
+  assertEquals(View.INVISIBLE, view.getChildAt(0).getVisibility());
+  assertEquals("", ((TextView)view.getChildAt(1)).getText().toString());
+ }
  @Test public void statusSurvivesInputModeChanges() {
   ClickOverlayLayout overlay = new ClickOverlayLayout(RuntimeEnvironment.getApplication());
   overlay.setLoadingStatus("음성을 인식하고 있어요…");
