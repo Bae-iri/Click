@@ -114,7 +114,7 @@ public final class HomeActivity extends AppCompatActivity {
             return insets;
         });
 
-        page.addView(header(), new LinearLayout.LayoutParams(-1, dp(58)));
+        page.addView(header(), new LinearLayout.LayoutParams(-1, -2));
         TextView title = text("무엇을\n도와드릴까요?", 34, INK, bold);
         title.setLetterSpacing(-.025f);
         title.setLineSpacing(dp(1), 1.03f);
@@ -180,6 +180,7 @@ public final class HomeActivity extends AppCompatActivity {
 
     private View header() {
         LinearLayout row = new LinearLayout(this);
+        row.setMinimumHeight(dp(58));
         row.setGravity(Gravity.CENTER_VERTICAL);
         ImageView mark = new ImageView(this);
         mark.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);

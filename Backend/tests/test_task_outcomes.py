@@ -189,6 +189,20 @@ def test_unverifiable_positive_report_is_not_technical_success():
     assert done["metadata"]["task_outcome"]["final"] == "USER_REPORTED_RESOLVED"
 
 
+def test_changed_font_without_drag_event_can_ask_user_instead_of_repeating_recovery():
+    f = Flow(); f.start(); f.accept()
+    recovery = f.send("observe", accessibility_tree=screen(3, 1800, 1.15))
+    assert recovery["guide_command"]["render_policy"]["recovery"]["reason_code"] == "ACTION_EVENT_MISSING"
+    assert recovery["task_status"] == "IN_PROGRESS"
+    waiting = f.send("request_result")
+    assert waiting["task_status"] == "WAITING_RESULT"
+    assert "보기 편한가요" in waiting["metadata"]["result_prompt"]["message"]
+    assert waiting["metadata"]["task_outcome"]["user"]["status"] is None
+    done = f.answer("satisfied")
+    assert done["metadata"]["task_outcome"]["technical"]["status"] == "UNVERIFIABLE"
+    assert done["metadata"]["task_outcome"]["final"] == "USER_REPORTED_RESOLVED"
+
+
 def test_needs_help_checks_cause_then_new_episode_and_keeps_previous_outcome():
     f = Flow(); f.change(); old_episode = f.body["episode_id"]
     help_needed = f.answer("needs_help")
@@ -204,8 +218,12 @@ def test_needs_help_checks_cause_then_new_episode_and_keeps_previous_outcome():
 
 def test_maximum_does_not_issue_drag_or_offer_same_direction():
     f = Flow(); result = f.start(value=7, scale=2.0)
-    assert result["task_status"] == "WAITING_RESULT"
+    assert result["task_status"] == "IN_PROGRESS"
     assert result["guide_command"]["action_type"] == "observe_only"
+    assert result["guide_command"]["target_node_id"] == "font-slider"
+    assert result["guide_command"]["render_policy"]["adjustment_limit"]
+    assert not result["metadata"].get("result_prompt")
+    result = f.send("request_result")
     assert result["metadata"]["task_outcome"]["technical"]["reason"] == "limit_reached"
     f.answer("needs_help")
     assert "too_small" not in {c["id"] for c in f.body["metadata"]["follow_up"]["choices"]}
@@ -284,7 +302,9 @@ def test_decrease_and_minimum_use_same_directional_contract():
     minimum = Flow(); selection = minimum.prepare("글자 크기 줄여줘", direction="decrease")
     result = minimum.send("start_task", preparation_version="goal-inputs.v1", goal_resolution_id=selection["preparation"]["id"], goal=selection["goal"],
         device_context={"platform": "android", "locale": "ko-KR"}, accessibility_tree=screen(0, 1000, .85))
-    assert result["task_status"] == "WAITING_RESULT"
+    assert result["task_status"] == "IN_PROGRESS"
+    assert result["guide_command"]["target_node_id"] == "font-slider"
+    result = minimum.send("request_result")
     assert result["metadata"]["task_outcome"]["technical"]["limit_direction"] == "decrease"
 
 
@@ -300,6 +320,8 @@ def test_verified_change_to_maximum_does_not_offer_another_increase():
 def test_uncorrelated_change_to_maximum_stays_unverifiable():
     f = Flow(); f.start(value=6); f.accept(value=6)
     result = f.send("observe", accessibility_tree=screen(7, 1800, 1.3))
-    assert result["task_status"] == "WAITING_RESULT"
+    assert result["task_status"] == "IN_PROGRESS"
+    assert result["guide_command"]["target_node_id"] == "font-slider"
+    result = f.send("request_result")
     assert result["metadata"]["task_outcome"]["technical"]["status"] == "UNVERIFIABLE"
     assert "키웠어요" not in result["metadata"]["result_prompt"]["message"]

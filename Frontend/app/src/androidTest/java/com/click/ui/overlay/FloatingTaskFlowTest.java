@@ -70,29 +70,24 @@ public class FloatingTaskFlowTest {
                 ClickOverlayLayout input = control();
                 assertNull("Opening Click must not restore a queued request", field(service(), "agentSessionId"));
                 assertFalse((Boolean) field(service(), "turnInFlight"));
-                boolean ready = (Boolean) field(service(), "ttsReady");
-                boolean unavailable = (Boolean) field(service(), "ttsUnavailable");
-                setField(service(), "ttsUnavailable", false);
-                setField(service(), "ttsReady", false);
+                com.click.designpreview.TutorialNarrator narrator =
+                        (com.click.designpreview.TutorialNarrator) field(service(), "narrator");
                 assertFalse((Boolean) field(service(), "voiceReplyEnabled"));
                 invokeString(service(), "speak", "이전 요청의 늦은 안내");
-                assertNull("Unrequested speech must not be buffered", field(service(), "pendingSpeech"));
+                assertFalse("Unrequested speech must not be buffered", narrator.isSpeaking());
                 input.openVoice();
                 assertFalse(input.isVoiceInputActive());
                 assertFalse((Boolean) field(service(), "acceptingVoiceCommand"));
                 invokeString(service(), "speak", "입력 전 안내");
-                assertNull(field(service(), "pendingSpeech"));
+                assertFalse(narrator.isSpeaking());
                 invokeString(service(), "submitRecognizedSpeech", "  ");
                 assertFalse((Boolean) field(service(), "voiceReplyEnabled"));
-                // A completed, nonempty microphone result enables spoken replies.
                 invokeString(service(), "submitRecognizedSpeech", "다시 말해줘");
                 assertTrue((Boolean) field(service(), "voiceReplyEnabled"));
-                assertNotNull(field(service(), "pendingSpeech"));
+                assertTrue(narrator.isSpeaking());
                 input.openText();
-                assertFalse((Boolean) field(service(), "voiceReplyEnabled"));
-                assertNull("Changing input mode clears pending speech", field(service(), "pendingSpeech"));
-                setField(service(), "ttsReady", ready);
-                setField(service(), "ttsUnavailable", unavailable);
+                assertTrue("Opening input does not mute future guidance", (Boolean) field(service(), "voiceReplyEnabled"));
+                assertFalse("Changing input mode cancels pending speech", narrator.isSpeaking());
                 invoke(service(), "ensureTaskFlow");
                 TaskFlowOverlayView guide = guide();
                 guide.waiting("현재 화면을 확인하고 있어요…");
@@ -100,19 +95,33 @@ public class FloatingTaskFlowTest {
                 assertEquals(View.VISIBLE, guide.getVisibility());
                 assertEquals("Expanded guidance owns the only visible surface", View.GONE, input.getVisibility());
                 guide.findViewById(R.id.task_flow_collapse).performClick();
-                assertEquals(View.GONE, guide.getVisibility());
+                assertEquals("Waiting dialogue remains as a bubble", View.VISIBLE, guide.getVisibility());
+                assertTrue(guide.isMinimizedProgress());
                 assertEquals(View.VISIBLE, input.getVisibility());
                 invoke(service(), "ensureTaskFlow");
                 guide.progress("글자를 크게 보기", null, "다음 항목을 눌러주세요.");
-                assertEquals("A late guide must stay collapsed", View.GONE, guide.getVisibility());
-                input.performClick();
+                invoke(service(), "updateFloatingVisibility");
+                assertTrue("Ongoing guidance stays in a compact bubble", guide.isMinimizedProgress());
+                assertEquals(View.VISIBLE, guide.getVisibility());
+                assertEquals("The bubble keeps the movable click button visible", View.VISIBLE, input.getVisibility());
+                assertFalse(guide.findViewById(R.id.task_flow_collapse).isShown());
+                findText(guide, "click · 펼치기").performClick();
+                assertFalse(guide.isMinimizedProgress());
                 assertEquals(View.VISIBLE, guide.getVisibility());
                 assertEquals(View.GONE, input.getVisibility());
+                invokeString(service(), "speak", "다음 항목을 눌러주세요.");
+                assertTrue(narrator.isSpeaking());
                 guide.findViewById(R.id.task_flow_input).performClick();
                 assertEquals(ClickOverlayLayout.Mode.VOICE, input.getMode());
+                assertFalse(narrator.isSpeaking());
                 assertFalse("Opening input does not record", input.isVoiceInputActive());
                 assertEquals(View.GONE, guide.getVisibility());
                 assertEquals(View.VISIBLE, input.getVisibility());
+
+                input.collapse();
+                assertEquals("Closing input restores the current dialogue", View.VISIBLE, guide.getVisibility());
+                assertTrue("Closing input resumes the interrupted current cue", narrator.isSpeaking());
+                narrator.stop();
 
                 input.openMenu();
                 assertEquals(View.GONE, guide.getVisibility());
@@ -137,6 +146,22 @@ public class FloatingTaskFlowTest {
                 assertEquals(View.VISIBLE, guide().getVisibility());
             });
             screenshot("floating-guide-without-input");
+            instrumentation.runOnMainSync(() -> {
+                guide().progress("글자를 크게 보기", null, "파란색으로 표시된 글자 크기 버튼을 눌러주세요.");
+                guide().findViewById(R.id.task_flow_collapse).performClick();
+                assertTrue(guide().isMinimizedProgress());
+            });
+            screenshot("floating-progress-bubble");
+            instrumentation.runOnMainSync(() -> {
+                android.view.WindowManager.LayoutParams before = (android.view.WindowManager.LayoutParams) guide().getLayoutParams();
+                int oldY = before.y;
+                service().onDragStarted();
+                service().onDragBy(0, -120);
+                ((Runnable) field(service(), "dragFrame")).run();
+                assertNotEquals("The bubble follows the click button", oldY,
+                        ((android.view.WindowManager.LayoutParams) guide().getLayoutParams()).y);
+                service().onDragCancelled();
+            });
             instrumentation.runOnMainSync(() -> {
                 invoke(service(), "clearTaskFlow");
                 control().openText();

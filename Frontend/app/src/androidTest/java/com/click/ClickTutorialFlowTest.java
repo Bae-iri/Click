@@ -68,7 +68,8 @@ public class ClickTutorialFlowTest {
                 View send = findText(a.getWindow().getDecorView(), "↑");
                 Rect visible = new Rect();
                 assertTrue(send.getGlobalVisibleRect(visible));
-                assertEquals("Send must remain fully visible above keyboard", send.getHeight(), visible.height());
+                // Global bounds round a fractional parent translation outward by one pixel.
+                assertTrue("Send must remain fully visible above keyboard", visible.height() >= send.getHeight());
                 ((EditText) input[0]).setText("이 화면은 어떻게 사용해요?");
             });
             assertHighlightOn(scenario, "↑", 0);
@@ -267,23 +268,40 @@ public class ClickTutorialFlowTest {
     private void assertHighlightOn(ActivityScenario<TutorialActivity> scenario, String label, int id) {
         instrumentation.waitForIdleSync(); SystemClock.sleep(150);
         int[] position = new int[2]; int[] size = new int[2]; float[] density = new float[1];
+        View[] highlighted = new View[1];
         scenario.onActivity(a -> {
             View target = id == 0 ? findText(a.getWindow().getDecorView(), label) : a.findViewById(id);
             assertNotNull(target);
             while (!target.isClickable() && target.getParent() instanceof View) target = (View) target.getParent();
+            highlighted[0] = target;
             target.getLocationOnScreen(position); size[0] = target.getWidth(); size[1] = target.getHeight();
             density[0] = a.getResources().getDisplayMetrics().density;
         });
         Bitmap bitmap = instrumentation.getUiAutomation().takeScreenshot();
-        int x = position[0] + Math.round(2 * density[0]);
+        int x = position[0] - Math.round(6 * density[0]);
         int y = position[1] + size[1] / 2;
         int pixel = bitmap.getPixel(x, y);
-        int topPixel = bitmap.getPixel(position[0] + size[0] / 2, position[1] + Math.round(2 * density[0]));
-        bitmap.recycle();
-        assertTrue("Highlight left edge must follow the visible target " + label + " at " + x + "," + y
+        int topPixel = bitmap.getPixel(position[0] + size[0] / 2, position[1] - Math.round(6 * density[0]));
+        assertTrue("Highlight must stay outside the target's left edge " + label + " at " + x + "," + y
                 + ", actual pixel=" + Integer.toHexString(pixel), isHighlightBlue(pixel));
-        assertTrue("Highlight top edge must move with the target " + label
+        assertTrue("Highlight must stay outside the target's top edge " + label
                 + ", actual pixel=" + Integer.toHexString(topPixel), isHighlightBlue(topPixel));
+        scenario.onActivity(a -> ((TutorialFloatingHost) a.findViewById(R.id.tutorial_floating_host)).highlight(null, 0));
+        instrumentation.waitForIdleSync(); SystemClock.sleep(100);
+        Bitmap withoutHighlight = instrumentation.getUiAutomation().takeScreenshot();
+        try {
+            int inset = Math.round(2 * density[0]);
+            int[][] inside = {{position[0] + inset, y}, {position[0] + size[0] - inset, y},
+                    {position[0] + size[0] / 2, position[1] + inset},
+                    {position[0] + size[0] / 2, position[1] + size[1] - inset}};
+            for (int[] point : inside) {
+                assertEquals("Highlight must not recolor the button interior " + label,
+                        withoutHighlight.getPixel(point[0], point[1]), bitmap.getPixel(point[0], point[1]));
+            }
+        } finally {
+            bitmap.recycle(); withoutHighlight.recycle();
+            scenario.onActivity(a -> ((TutorialFloatingHost) a.findViewById(R.id.tutorial_floating_host)).highlight(highlighted[0]));
+        }
     }
     private void assertClickPulseContinues(ActivityScenario<TutorialActivity> scenario) {
         int[] sample = new int[2];

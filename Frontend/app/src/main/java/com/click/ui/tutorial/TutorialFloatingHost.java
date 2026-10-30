@@ -6,6 +6,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Outline;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.Drawable;
@@ -13,6 +14,7 @@ import android.view.ViewGroup;
 import com.click.ui.overlay.TaskFlowOverlayView;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import com.click.R;
@@ -52,7 +54,14 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     private final GradientDrawable contrastOutline = new GradientDrawable();
     private final GradientDrawable accentOutline = new GradientDrawable();
     private final LayerDrawable targetOutline = new LayerDrawable(new Drawable[]{contrastOutline, accentOutline});
-    private final OnLayoutChangeListener outlineLayout = (v, l, t, r, b, ol, ot, or, ob) -> updateOutlineBounds();
+    private View outlineHost;
+    private ViewTreeObserver outlineObserver;
+    private final int[] targetPosition = new int[2], hostPosition = new int[2];
+    private final Outline buttonOutline = new Outline();
+    private final ViewTreeObserver.OnPreDrawListener outlinePosition = () -> {
+        updateOutlineBounds();
+        return true;
+    };
 
     public TutorialFloatingHost(Context context, Listener listener) {
         super(context);
@@ -74,7 +83,6 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         tapHint.setVisibility(GONE);
         addView(tapHint, new LayoutParams(-2, -2));
         control = new ClickOverlayLayout(context);
-        control.setConversationPlaceholder("궁금한 내용을 아래에 적어보세요.");
         control.setCallback(this);
         addView(control, new LayoutParams(dp(64), dp(64)));
     }
@@ -146,18 +154,20 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         if (target != null && (!target.isShown() || !target.isEnabled())) target = null;
         if (outlinedTarget != target) {
             stopOutlinePulse();
-            if (outlinedTarget != null) {
-                outlinedTarget.getOverlay().remove(targetOutline);
-                outlinedTarget.removeOnLayoutChangeListener(outlineLayout);
-            }
+            removeTargetOutline();
             outlinedTarget = target;
             if (target != null) {
                 contrastOutline.setColor(Color.TRANSPARENT);
                 contrastOutline.setStroke(dp(9), Color.WHITE);
                 accentOutline.setColor(Color.TRANSPARENT);
                 accentOutline.setStroke(dp(4), HIGHLIGHT);
-                target.getOverlay().add(targetOutline);
-                target.addOnLayoutChangeListener(outlineLayout);
+                targetOutline.setLayerInset(1, dp(2), dp(2), dp(2), dp(2));
+                // The window overlay lets the ring extend beyond the button and its
+                // clipped parents, including targets outside this floating host.
+                outlineHost = target.getRootView();
+                outlineHost.getOverlay().add(targetOutline);
+                outlineObserver = outlineHost.getViewTreeObserver();
+                outlineObserver.addOnPreDrawListener(outlinePosition);
             }
         }
         updateOutlineBounds();
@@ -177,7 +187,6 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         outlinePulse.addUpdateListener(animation -> {
             float brightness = (float) animation.getAnimatedValue();
             accentOutline.setStroke(dp(3) + Math.round(dp(2) * brightness), HIGHLIGHT);
-            accentOutline.setColor(Color.argb(Math.round(12 + 22 * brightness), 52, 120, 246));
             accentOutline.setAlpha(Math.round(120 + 135 * brightness));
         });
         outlinePulse.start();
@@ -189,17 +198,39 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         accentOutline.setColor(Color.TRANSPARENT);
         accentOutline.setAlpha(255);
     }
+    private void removeTargetOutline() {
+        if (outlineHost != null) outlineHost.getOverlay().remove(targetOutline);
+        if (outlineObserver != null && outlineObserver.isAlive()) {
+            outlineObserver.removeOnPreDrawListener(outlinePosition);
+        }
+        outlineHost = null;
+        outlineObserver = null;
+    }
     private void updateOutlineBounds() {
-        if (outlinedTarget == null) return;
-        // Draw on the button itself: Android moves and clips its outline together with
-        // the button, including translations, keyboard relayout and ScrollView scrolling.
+        if (outlinedTarget == null || outlineHost == null) return;
         int width = outlinedTarget.getWidth(), height = outlinedTarget.getHeight();
-        if (width <= dp(2) || height <= dp(2)) return;
-        targetOutline.setBounds(dp(1), dp(1), width - dp(1), height - dp(1));
-        float radius = outlinedTarget.getId() == R.id.overlay_microphone
-                ? outlinedTarget.getHeight() / 2f : dp(18);
-        contrastOutline.setCornerRadius(radius);
-        accentOutline.setCornerRadius(radius);
+        boolean visible = outlinedTarget.isShown() && outlinedTarget.isEnabled()
+                && width > dp(2) && height > dp(2) && !dragging;
+        targetOutline.setVisible(visible, false);
+        if (!visible) return;
+        // Recompute before drawing so parent scrolling, translations and keyboard
+        // relayout all move the external ring with the target in the same frame.
+        outlinedTarget.getLocationOnScreen(targetPosition);
+        outlineHost.getLocationOnScreen(hostPosition);
+        int left = targetPosition[0] - hostPosition[0];
+        int top = targetPosition[1] - hostPosition[1];
+        int outset = dp(10);
+        targetOutline.setBounds(left - outset, top - outset, left + width + outset, top + height + outset);
+        buttonOutline.setEmpty();
+        if (outlinedTarget.getOutlineProvider() != null) {
+            outlinedTarget.getOutlineProvider().getOutline(outlinedTarget, buttonOutline);
+        }
+        float radius = buttonOutline.getRadius() >= 0 ? buttonOutline.getRadius() : dp(18);
+        // Transparent fills and an outer stroke leave the button's content intact.
+        if (contrastOutline.getCornerRadius() != radius + outset) {
+            contrastOutline.setCornerRadius(radius + outset);
+            accentOutline.setCornerRadius(radius + outset - dp(2));
+        }
     }
 
     private boolean highlightVisible() {
@@ -252,11 +283,8 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     @Override protected void onDetachedFromWindow() {
         stopOutlinePulse();
         stopPulse();
-        if (outlinedTarget != null) {
-            outlinedTarget.getOverlay().remove(targetOutline);
-            outlinedTarget.removeOnLayoutChangeListener(outlineLayout);
-            outlinedTarget = null;
-        }
+        removeTargetOutline();
+        outlinedTarget = null;
         super.onDetachedFromWindow();
     }
 

@@ -29,7 +29,7 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.PopupMenu;
+import android.widget.PopupWindow;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
@@ -39,6 +39,7 @@ public final class SignupActivity extends Activity {
     private static final String PAGE_STATE = "signup_page";
     private static final String EMAIL_STATE = "signup_email";
     private static final String EMAIL_DOMAIN_STATE = "signup_email_domain";
+    private static final String EMAIL_DOMAIN_VALUE_STATE = "signup_email_domain_value";
     private static final String EMAIL_CUSTOM_DOMAIN_STATE = "signup_email_custom_domain";
     private static final String NAME_STATE = "signup_name";
     private static final String AGE_STATE = "signup_age";
@@ -49,6 +50,7 @@ public final class SignupActivity extends Activity {
     private Button emailDomain;
     private EditText emailCustomDomain;
     private int emailDomainIndex = -1;
+    private PopupWindow emailDomainMenu;
     private EditText password;
     private EditText passwordConfirm;
     private EditText name;
@@ -126,7 +128,16 @@ public final class SignupActivity extends Activity {
 
         if (savedInstanceState != null) {
             email.setText(savedInstanceState.getString(EMAIL_STATE, ""));
-            emailDomainIndex = savedInstanceState.getInt(EMAIL_DOMAIN_STATE, -1);
+            String savedDomain = savedInstanceState.getString(EMAIL_DOMAIN_VALUE_STATE);
+            String[] domains = getResources().getStringArray(R.array.signup_email_domains);
+            emailDomainIndex = -1;
+            if (savedDomain != null) {
+                for (int i = 0; i < domains.length; i++)
+                    if (domains[i].equals(savedDomain)) { emailDomainIndex = i; break; }
+            } else {
+                int previous = savedInstanceState.getInt(EMAIL_DOMAIN_STATE, -1);
+                emailDomainIndex = previous == 2 ? domains.length - 1 : previous;
+            }
             emailCustomDomain.setText(savedInstanceState.getString(EMAIL_CUSTOM_DOMAIN_STATE, ""));
             refreshEmailDomain();
             name.setText(savedInstanceState.getString(NAME_STATE, ""));
@@ -142,19 +153,7 @@ public final class SignupActivity extends Activity {
 
     private void setupEmailDomain() {
         refreshEmailDomain();
-        emailDomain.setOnClickListener(view -> {
-            PopupMenu menu = new PopupMenu(this, emailDomain);
-            String[] domains = getResources().getStringArray(R.array.signup_email_domains);
-            for (int i = 0; i < domains.length; i++) menu.getMenu().add(0, i, i, domains[i]);
-            menu.setOnMenuItemClickListener(item -> {
-                emailDomainIndex = item.getItemId();
-                refreshEmailDomain();
-                clearErrors(R.id.signup_email_error);
-                if (isCustomEmailDomain()) focusCustomEmailDomain();
-                return true;
-            });
-            menu.show();
-        });
+        emailDomain.setOnClickListener(view -> showEmailDomainMenu());
         // Keep full-address paste and email autofill working with the split fields.
         email.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -176,6 +175,74 @@ public final class SignupActivity extends Activity {
                 if (domain.isEmpty() && email.hasFocus()) focusCustomEmailDomain();
             }
         });
+    }
+
+    private void showEmailDomainMenu() {
+        if (emailDomainMenu != null) { emailDomainMenu.dismiss(); return; }
+        InputMethodManager keyboard = getSystemService(InputMethodManager.class);
+        if (keyboard != null) keyboard.hideSoftInputFromWindow(email.getWindowToken(), 0);
+        email.clearFocus();
+        emailCustomDomain.clearFocus();
+
+        RadioGroup options = new RadioGroup(this);
+        options.setOrientation(RadioGroup.VERTICAL);
+        options.setPadding(dp(6), dp(6), dp(6), dp(6));
+        String[] domains = getResources().getStringArray(R.array.signup_email_domains);
+        for (int i = 0; i < domains.length; i++) {
+            final int index = i;
+            RadioButton option = new RadioButton(this);
+            option.setId(View.generateViewId());
+            option.setText(domains[i]);
+            option.setTextSize(16);
+            option.setTextColor(i == emailDomainIndex ? AccountUi.BLUE : AccountUi.INK);
+            option.setTypeface(getResources().getFont(i == emailDomainIndex
+                    ? R.font.pretendard_semibold : R.font.pretendard_medium));
+            option.setIncludeFontPadding(false);
+            option.setGravity(Gravity.CENTER_VERTICAL);
+            option.setMinHeight(dp(48));
+            option.setPadding(0, dp(12), dp(10), dp(12));
+            option.setButtonDrawable(new android.graphics.drawable.InsetDrawable(
+                    new AccountSelectionMark(getResources().getDisplayMetrics().density), dp(8), 0, dp(8), 0));
+            option.setBackgroundResource(R.drawable.signup_occupation_option);
+            options.addView(option, new RadioGroup.LayoutParams(-1, -2));
+            option.setChecked(i == emailDomainIndex);
+            option.setOnClickListener(view -> {
+                emailDomainIndex = index;
+                emailDomainMenu.dismiss();
+                refreshEmailDomain();
+                clearErrors(R.id.signup_email_error);
+                emailDomain.announceForAccessibility(domains[index]);
+                if (isCustomEmailDomain()) focusCustomEmailDomain();
+                else emailDomain.requestFocus();
+            });
+        }
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(false);
+        scroll.setScrollbarFadingEnabled(false);
+        scroll.addView(options, new ScrollView.LayoutParams(-1, -2));
+        android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
+        background.setColor(Color.WHITE);
+        background.setCornerRadius(dp(18));
+        background.setStroke(dp(1), 0xFFD9E2F2);
+        scroll.setBackground(background.getConstantState().newDrawable());
+        scroll.setClipToOutline(true);
+        int width = Math.min(getResources().getDisplayMetrics().widthPixels - dp(40),
+                dp(208 + Math.round(40 * Math.max(0f, getResources().getConfiguration().fontScale - 1f))));
+        int height = Math.min(dp(300), Math.round(getResources().getDisplayMetrics().heightPixels * .42f));
+        PopupWindow popup = new PopupWindow(scroll, width, height, true);
+        emailDomainMenu = popup;
+        popup.setBackgroundDrawable(background);
+        popup.setElevation(dp(8));
+        popup.setOutsideTouchable(true);
+        popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
+        popup.setOnDismissListener(() -> {
+            emailDomainMenu = null;
+            emailDomain.setActivated(false);
+        });
+        emailDomain.setActivated(true);
+        popup.showAsDropDown(emailDomain, 0, dp(6), Gravity.END);
+        if (emailDomainIndex >= 0) scroll.post(() ->
+                scroll.smoothScrollTo(0, options.getChildAt(emailDomainIndex).getTop()));
     }
 
     private boolean isCustomEmailDomain() {
@@ -538,7 +605,8 @@ public final class SignupActivity extends Activity {
     }
 
     private void goBack() {
-        if (occupationExpanded) {
+        if (emailDomainMenu != null) emailDomainMenu.dismiss();
+        else if (occupationExpanded) {
             setOccupationExpanded(false, true);
             occupation.requestFocus();
         } else if (page > 0) showPage(0, true);
@@ -573,11 +641,18 @@ public final class SignupActivity extends Activity {
         outState.putInt(PAGE_STATE, page);
         outState.putString(EMAIL_STATE, email.getText().toString());
         outState.putInt(EMAIL_DOMAIN_STATE, emailDomainIndex);
+        outState.putString(EMAIL_DOMAIN_VALUE_STATE, emailDomainIndex < 0 ? ""
+                : getResources().getStringArray(R.array.signup_email_domains)[emailDomainIndex]);
         outState.putString(EMAIL_CUSTOM_DOMAIN_STATE, emailCustomDomain.getText().toString());
         outState.putString(NAME_STATE, name.getText().toString());
         outState.putString(AGE_STATE, age.getText().toString());
         outState.putInt(OCCUPATION_STATE, occupationIndex);
         super.onSaveInstanceState(outState);
+    }
+
+    @Override protected void onStop() {
+        if (emailDomainMenu != null) emailDomainMenu.dismiss();
+        super.onStop();
     }
 
     private void configureWindow() {

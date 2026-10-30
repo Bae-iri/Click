@@ -55,8 +55,8 @@ def test_registry_graph_is_seeded_once_selected_and_forwarded_without_font_assum
     # Synthetic fixture only: does not implement real Wi-Fi execution.
     graph = replace(MVP_01_TASK_GRAPH, definition=replace(MVP_01_TASK_GRAPH.definition,
         task_id="TEST-WIFI", goal_type="settings.wifi." + intent, required_slots=slots))
-    monkeypatch.setattr(task_graphs, "TASK_GRAPHS", {
-        graph.definition.task_id: graph, graph.definition.goal_type: graph})
+    monkeypatch.setattr(task_graphs, "releases", lambda: [
+        ({"version": "1.0.0", "approved": True, "priority": 100}, graph)])
     app = create_app()
     repository = app.state.turn_service.graphs
     repository.seed_mvp()

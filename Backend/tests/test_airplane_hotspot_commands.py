@@ -49,8 +49,8 @@ def test_registered_graph_is_deduplicated_selected_and_forwarded(monkeypatch, in
     # Synthetic graph only; no production Airplane mode and hotspot graph or runtime changes.
     graph = replace(MVP_01_TASK_GRAPH, definition=replace(MVP_01_TASK_GRAPH.definition,
         task_id="TEST-RADIO-TOGGLE", goal_type="settings." + slots["setting"] + "." + intent, required_slots=slots))
-    monkeypatch.setattr(task_graphs, "TASK_GRAPHS", {
-        graph.definition.task_id: graph, graph.definition.goal_type: graph})
+    monkeypatch.setattr(task_graphs, "releases", lambda: [
+        ({"version": "1.0.0", "approved": True, "priority": 100}, graph)])
     app = create_app()
     repository = app.state.turn_service.graphs
     repository.seed_mvp()

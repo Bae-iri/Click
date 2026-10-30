@@ -17,6 +17,10 @@ public final class GoalPreparationState {
     public String id() { return data.optString("id"); }
     public boolean needsInput() { return "needs_input".equals(data.optString("status")) && question() != null; }
     public JSONObject question() { return data.optJSONObject("question"); }
+    public String guidance() {
+        JSONObject current = question();
+        return current == null ? message : current.optString("message", message);
+    }
     public boolean ready() {
         JSONArray missing = data.optJSONArray("missing_fields");
         return "ready".equals(data.optString("status")) && goal != null && question() == null

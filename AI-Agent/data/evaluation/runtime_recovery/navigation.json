@@ -4,7 +4,7 @@
     "name": "launcher_home_descriptions_display_control",
     "source": "synthetic_regression",
     "task_id": "MVP-01",
-    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "graph_hash": "5a507528746d472bd1fec5405ec70ecccf40db3758a617336fb7c5d51943daef",
     "expect_recovery": false,
     "turns": [
       {
@@ -694,7 +694,7 @@
     "name": "offscreen_wait_and_resume",
     "source": "synthetic_regression",
     "task_id": "MVP-01",
-    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "graph_hash": "5a507528746d472bd1fec5405ec70ecccf40db3758a617336fb7c5d51943daef",
     "expect_recovery": true,
     "turns": [
       {
@@ -1948,7 +1948,7 @@
     "name": "ambiguous_wait_and_resume",
     "source": "synthetic_regression",
     "task_id": "MVP-01",
-    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "graph_hash": "5a507528746d472bd1fec5405ec70ecccf40db3758a617336fb7c5d51943daef",
     "expect_recovery": true,
     "turns": [
       {
@@ -3162,7 +3162,7 @@
     "name": "popup_then_relocalize",
     "source": "synthetic_regression",
     "task_id": "MVP-01",
-    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "graph_hash": "5a507528746d472bd1fec5405ec70ecccf40db3758a617336fb7c5d51943daef",
     "expect_recovery": true,
     "turns": [
       {
@@ -3626,7 +3626,7 @@
     "name": "stale_then_fresh",
     "source": "synthetic_regression",
     "task_id": "MVP-01",
-    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "graph_hash": "5a507528746d472bd1fec5405ec70ecccf40db3758a617336fb7c5d51943daef",
     "expect_recovery": true,
     "turns": [
       {
@@ -4524,7 +4524,7 @@
     "name": "missing_action_event_never_completes",
     "source": "synthetic_regression",
     "task_id": "MVP-01",
-    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "graph_hash": "5a507528746d472bd1fec5405ec70ecccf40db3758a617336fb7c5d51943daef",
     "expect_recovery": false,
     "turns": [
       {
@@ -4987,7 +4987,7 @@
     "name": "verified_change_completes",
     "source": "synthetic_regression",
     "task_id": "MVP-01",
-    "graph_hash": "670fb0efa3a49982b331c32c7789828863ad71d81e74a667a76398118b3fa7b4",
+    "graph_hash": "5a507528746d472bd1fec5405ec70ecccf40db3758a617336fb7c5d51943daef",
     "expect_recovery": false,
     "turns": [
       {
