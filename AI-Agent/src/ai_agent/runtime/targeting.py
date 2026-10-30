@@ -1,5 +1,6 @@
 """Graph-owned selectors shared by matching and result verification."""
 from hashlib import sha256
+import re
 
 from ai_agent.runtime.keywords import any_keyword_matches, any_phrase_matches, normalize_text
 from ai_agent.runtime.types import ActionType, NormalizedNode, TaskGraph, Transition
@@ -7,8 +8,16 @@ from ai_agent.runtime.types import ActionType, NormalizedNode, TaskGraph, Transi
 
 def target_key(node: NormalizedNode) -> str:
     # Stable across tree-index and rectangle changes; never persist arbitrary UI text.
-    identity = (node.package_name or '', node.resource_id or '', node.role, normalize_text(node.label))
+    identity = (node.package_name or '', node.resource_id or '', node.role, control_label(node))
     return sha256('\x1f'.join(identity).encode()).hexdigest()
+
+
+def control_label(node: NormalizedNode) -> str:
+    """Samsung SeekBars expose their changing step number as contentDescription."""
+    label = normalize_text(node.label)
+    if node.role == 'slider' and re.fullmatch(r'[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)\s*%?', label):
+        return ''
+    return label
 
 
 def selector_keywords(transition: Transition, graph: TaskGraph) -> tuple[str, ...]:
@@ -59,7 +68,7 @@ def selector_evidence(node, transition, nodes, graph) -> tuple[float, str]:
                      and normalize_text(word) not in {"screen", "display"})
     if any_phrase_matches(node.label, specific):
         return 0.8, 'keyword'
-    if not node.label and selector.allow_unlabelled_in_context:
+    if not control_label(node) and selector.allow_unlabelled_in_context:
         # A page title may name a single unlabelled control, never a named other setting.
         context = ' '.join(n.label for n in nodes if n.package_name == node.package_name
                            and n.role == 'text' and not n.actionable)

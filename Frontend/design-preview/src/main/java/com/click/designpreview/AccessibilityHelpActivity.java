@@ -57,7 +57,7 @@ public final class AccessibilityHelpActivity extends Activity {
             return insets;
         });
 
-        column.addView(brandHeader(), new LinearLayout.LayoutParams(-1, dp(58)));
+        column.addView(brandHeader(), new LinearLayout.LayoutParams(-1, -2));
 
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
@@ -78,6 +78,7 @@ public final class AccessibilityHelpActivity extends Activity {
 
     private View brandHeader() {
         LinearLayout row = new LinearLayout(this);
+        row.setMinimumHeight(dp(58));
         row.setGravity(Gravity.CENTER_VERTICAL);
         ImageView mark = new ImageView(this);
         mark.setImageResource(R.drawable.ic_click_cursor);

@@ -24,7 +24,7 @@ import static org.junit.Assert.*;
 public class FloatingInteractionTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
-    @Test public void expandedPanelsKeepFeaturesAndReadableConversation() {
+    @Test public void expandedPanelsKeepInputCompactAndFeedbackReadable() {
         instrumentation.runOnMainSync(() -> {
             ClickOverlayLayout control = new ClickOverlayLayout(instrumentation.getTargetContext());
             control.performClick();
@@ -34,10 +34,17 @@ public class FloatingInteractionTest {
             render(control, "voice");
             findText(control, "글로 입력").performClick();
             assertEquals(ClickOverlayLayout.Mode.TEXT, control.getMode());
-            control.addUserMessage("글자 크기를 키워줘");
-            control.addAssistantMessage("글자 크기를 함께 바꿔볼게요. 화면의 안내를 따라주세요.");
+            control.setDraftText("글자 크기를 키워줘");
             assertNotNull(findText(control, "글자 크기를 키워줘"));
+            assertNull(findText(control, "예: 글자 크기를 키워줘"));
             render(control, "text");
+            control.showInputFeedback("연결을 확인한 뒤 다시 보내주세요.");
+            assertNotNull(findText(control, "연결을 확인한 뒤 다시 보내주세요."));
+            control.collapse();
+            control.openText();
+            assertNull("Previous feedback must not appear when opening input", findText(control,
+                    "연결을 확인한 뒤 다시 보내주세요."));
+            assertEquals("글자 크기를 키워줘", control.getDraftText());
         });
     }
 

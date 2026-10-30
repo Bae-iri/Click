@@ -145,7 +145,7 @@ Vision은 1회 분석마다 별도 동의 ID를 발급·검증한다. FE 캡처 
 
 `render_policy.recovery`와 `metadata.recovery`는 `schema_version=ai1-recovery.v1`, `decision`, `reason_code`, `next_action`, `waiting_for`, `recoverable`, `attempts`, `retry_after_ms`, `options`를 포함한다. `reason_code`는 화면 밖 대상, 화면/대상 모호성, 관측 부족·오래됨, 조작 결과 미확인, 행동 이벤트 누락, 경로 소진 등을 구분한다. 자유 텍스트 원인을 저장하지 않는다.
 
-FE는 `waiting_for=user`이면 목표를 유지하면서 화면 다시 확인·직접 이동·중지를 제공한다. 직접 이동은 창 접기이며 자동 조작을 실행하지 않는다. 다시 확인은 새 관측과 `manual_override`를 보내 관측 재시도 예산만 초기화하고 실패 대상·실제 조작 실패 기록을 유지한다. 화면 밖 대상은 읽을 수 있는 scrollable 목록이 있고 대상 이름도 보이지 않을 때만 수동 탐색으로 처리한다. 제목만 있고 컨트롤이 없거나 동점인 경우에는 좌표를 만들지 않는다.
+FE는 `waiting_for=user`이면 목표를 유지하면서 화면 다시 확인·직접 이동·중지를 제공한다. 직접 이동은 창 접기이며 자동 조작을 실행하지 않는다. 다시 확인은 새 관측과 `manual_override`를 보내 관측 재시도 예산만 초기화하고 실패 대상·실제 조작 실패 기록을 유지한다. `TARGET_NOT_VISIBLE`·`manual_navigation` 응답이고 Android 설정의 활성 창에 보이고 활성화된 scrollable 목록이 있으면 FE가 자동으로 목록을 탐색한다. 한 번마다 새 관측을 보내고, 같은 단계·창에서 최대 4번까지만 움직이며 목록 끝이나 반복 화면에서는 반대 방향을 확인한다. 목표 발견 시 다음 안내로 넘어가고, 한도 소진 시 수동 탐색 버튼을 제공한다. 화면 전환·일시정지·취소는 예약된 탐색을 막는다. 탐색 이벤트는 `manual_override`이며 tap·설정 변경 성공으로 취급하지 않는다. 제목만 있고 컨트롤이 없거나 동점인 경우에는 좌표를 만들지 않는다.
 
 `recovery_state`와 `state_candidates`는 checkpoint에 함께 저장한다. 구 checkpoint의 새 필드는 기본값으로 복원한다. 진단은 허용된 원인 enum과 hash 처리한 후보 ID를 남긴다. 선택적으로 `ReplayRecorder`를 주입하여 구조·허용 UI 어휘만 남긴 관측을 내보낼 수 있다. 저장/업로드는 기본 비활성이고 캡처 결과를 정답으로 자동 채택하지 않는다. [재현 실행법과 한계](../AI-Agent/data/evaluation/runtime_recovery/README.md).
 

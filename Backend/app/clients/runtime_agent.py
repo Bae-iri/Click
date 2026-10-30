@@ -177,8 +177,7 @@ class RuntimeAgentAdapter:
         if legacy_handoff:
             command_type = "highlight"
             status = "IN_PROGRESS"
-        result_check = runtime_session is not None and not recovering and (
-            command_type == "done" or (command_type == "blocked" and technical.get("reason") in {"limit_reached", "unverified_change_at_limit"}))
+        result_check = runtime_session is not None and not recovering and command_type == "done"
         if result_check:
             status = "WAITING_RESULT"
         target = next((node for node in tree.nodes if result.match_result and node.node_id == result.match_result.target_node_id), None) if tree else None

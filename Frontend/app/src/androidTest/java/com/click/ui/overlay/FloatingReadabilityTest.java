@@ -26,7 +26,7 @@ public class FloatingReadabilityTest {
                     + "이 안내가 길어져도 마지막 문장까지 읽을 수 있고 언제든지 듣기를 멈출 수 있어야 해요.";
             control.setRecognizedSpeech(message);
             layout(control, 296, 460);
-            TextView stop = find(control, "듣기 중지"), fold = find(control, "접기");
+            TextView stop = find(control, "메뉴로"), fold = find(control, "줄이기");
             assertActionVisible(control, stop);
             assertActionVisible(control, fold);
             TextView transcript = find(control, message);
@@ -42,8 +42,30 @@ public class FloatingReadabilityTest {
             TextView voice = find(control, "말로 시작"), write = find(control, "글로 입력");
             assertLabelFits(voice);
             assertLabelFits(write);
-            find(control, "접기").performClick();
+            find(control, "줄이기").performClick();
             assertEquals(ClickOverlayLayout.Mode.COLLAPSED, control.getMode());
+        });
+    }
+
+    @Test public void largeTextInputAndSendFitTheSmallerPanelWithKeyboard() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
+            for (float scale : new float[]{1f, 1.5f, 2f}) {
+                Configuration config = new Configuration(app.getResources().getConfiguration());
+                config.fontScale = scale;
+                ClickOverlayLayout control = new ClickOverlayLayout(app.createConfigurationContext(config));
+                control.openText();
+                control.setDraftText("글자 크기를 조금 더 크게");
+                layout(control, 296, 260);
+                assertActionVisible(control, find(control, "줄이기"));
+                assertActionVisible(control, find(control, "↑"));
+                TextView input = find(control, "글자 크기를 조금 더 크게");
+                assertLabelFits(input);
+                Rect bounds = new Rect(0, 0, input.getWidth(), input.getHeight());
+                control.offsetDescendantRectToMyCoords(input, bounds);
+                assertTrue(bounds.bottom <= control.getHeight());
+                assertEquals("글자 크기를 조금 더 크게", control.getDraftText());
+            }
         });
     }
 

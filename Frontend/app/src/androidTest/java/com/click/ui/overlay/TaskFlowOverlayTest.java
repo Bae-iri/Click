@@ -26,6 +26,35 @@ import static org.junit.Assert.*;
 
 @RunWith(AndroidJUnit4.class)
 public class TaskFlowOverlayTest {
+    @Test public void additionalQuestionFitsItsChoicesAndKeepsEditingOptional() {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(activity -> {
+                for (float scale : new float[]{1f, 1.5f}) {
+                    android.content.res.Configuration config = new android.content.res.Configuration(activity.getResources().getConfiguration());
+                    config.fontScale = scale;
+                    Context context = activity.createConfigurationContext(config);
+                    TaskFlowOverlayView panel = new TaskFlowOverlayView(context, new Answers());
+                    activity.setContentView(panel);
+                    panel.setAvailableHeight(Math.round(650 * context.getResources().getDisplayMetrics().density));
+                    try {
+                        JSONObject data = json("{\"version\":\"goal-inputs.v1\",\"id\":\"q1\",\"source_text\":\"글자 크기 키워줘\",\"status\":\"needs_input\",\"values\":{},\"question\":{\"id\":\"scope\",\"kind\":\"choice\",\"message\":\"어디의 글자를 키울까요?\",\"choices\":[{\"label\":\"휴대폰 전체\",\"value\":\"system\"},{\"label\":\"특정 앱\",\"value\":\"app\"}]}}");
+                        panel.preparation(new com.click.domain.goal.GoalPreparationState(data, null, "추가로 확인할게요"));
+                    } catch (org.json.JSONException error) { throw new AssertionError(error); }
+                    snapshot(panel, "preparation-" + scale);
+                    assertNull(find(panel, "추가로 확인할게요"));
+                    assertTrue(find(panel, "내 요청:").getTypeface().isBold());
+                    assertTrue(find(panel, "글자 크기 키워줘").getTextSize() < find(panel, "어디의 글자를 키울까요?").getTextSize());
+                    assertFalse(find(panel, "수정한 요청 확인").isShown());
+                    assertFullyInside(panel, find(panel, "휴대폰 전체"));
+                    assertFullyInside(panel, find(panel, "특정 앱"));
+                    assertEquals(1, find(panel, "다시 듣기").getLineCount());
+                    assertEquals(1, find(panel, "글로 보기").getLineCount());
+                    find(panel, "내용 수정").performClick();
+                    assertTrue(find(panel, "수정한 요청 확인").isShown());
+                }
+            });
+        }
+    }
     @Test public void voiceEntryOpensTheFloatingControlInVoiceMode() {
         Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
         final ClickOverlayLayout[] overlay = new ClickOverlayLayout[1];
@@ -214,7 +243,7 @@ public class TaskFlowOverlayTest {
                 find(panel, "글 접기").performClick();
                 panel.setNarrationState(false, true);
                 assertEquals(View.VISIBLE, find(panel, "글자 크기 버튼을 눌러 주세요.").getVisibility());
-                assertNotNull(findDescription(panel, "안내 창 접기"));
+                assertNotNull(findDescription(panel, "안내 창 줄이기"));
                 assertFalse(containsCheckBox(panel)); snapshot(panel, "progress");
                 panel.completed("사용자 보고상 해결, 기술적 검증 불가", () -> {});
                 assertNull(findDescription(panel, "지금 할 일: 글자 크기 조절하기"));
@@ -240,7 +269,7 @@ public class TaskFlowOverlayTest {
                 panel[0] = new TaskFlowOverlayView(activity, answers);
                 activity.setContentView(panel[0]); panel[0].requirements(review, false);
                 assertNull(find(panel[0], "요청 확인 체크리스트"));
-                assertNotNull(find(panel[0], "내 요청"));
+                assertNotNull(find(panel[0], "내 요청:"));
                 assertNotNull(find(panel[0], "글자 크기 키워줘"));
                 assertEquals(View.GONE, find(panel[0], review.prompt(false)).getVisibility());
                 assertFalse(find(panel[0], "이 내용으로 시작").isEnabled());
@@ -295,6 +324,44 @@ public class TaskFlowOverlayTest {
             });
         }
     }
+    @Test public void minimizedProgressScrollsAtLargeFontAndResultRestoresChoices() {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(activity -> {
+                android.content.res.Configuration config = new android.content.res.Configuration(
+                        activity.getResources().getConfiguration());
+                config.fontScale = 2f;
+                TaskFlowOverlayView panel = new TaskFlowOverlayView(activity.createConfigurationContext(config), new Answers());
+                activity.setContentView(panel);
+                int cap = Math.round(220 * panel.getResources().getDisplayMetrics().density);
+                panel.setAvailableHeight(cap);
+                panel.progress("글자 크기 키우기", null, "파란색으로 표시된 글자 크기 버튼을 눌러주세요. ".repeat(8));
+                panel.setMinimizedProgress(true);
+                snapshot(panel, "progress-bubble-large-text");
+                assertTrue(panel.isMinimizedProgress());
+                assertTrue(panel.getHeight() <= cap);
+                assertFalse(panel.findViewById(com.click.R.id.task_flow_collapse).isShown());
+                TextView expand = find(panel, "click · 펼치기");
+                assertTrue(expand.isShown());
+                android.widget.ScrollView scroll = (android.widget.ScrollView) expand.getParent().getParent();
+                assertTrue(scroll.getChildAt(0).getHeight() > scroll.getHeight());
+                panel.result(json("{\"message\":\"글자가 편하게 보이나요?\"}"));
+                panel.setAvailableHeight(cap * 3);
+                snapshot(panel, "result-large-text");
+                assertFalse(panel.isMinimizedProgress());
+                assertFalse(panel.hasProgress());
+                assertTrue(find(panel, "네, 잘 보여요").isShown());
+                assertTrue(panel.findViewById(com.click.R.id.task_flow_collapse).isShown());
+                panel.setMinimizedProgress(true);
+                snapshot(panel, "result-question-bubble");
+                assertTrue(panel.isMinimizedProgress());
+                assertEquals("글자가 편하게 보이나요?", panel.guidanceMessage());
+                assertTrue(find(panel, "click · 펼치기").isShown());
+                panel.setMinimizedProgress(false);
+                snapshot(panel, "result-question-restored");
+                assertTrue(find(panel, "네, 잘 보여요").isShown());
+            });
+        }
+    }
     private static JSONObject json(String value) {
         try { return new JSONObject(value); } catch (Exception e) { throw new AssertionError(e); }
     }
@@ -322,7 +389,7 @@ public class TaskFlowOverlayTest {
     private static void snapshot(View view, String name) {
         int width = Math.min(view.getResources().getDisplayMetrics().widthPixels
                 - Math.round(24 * view.getResources().getDisplayMetrics().density),
-                Math.round(344 * view.getResources().getDisplayMetrics().density));
+                Math.round(320 * view.getResources().getDisplayMetrics().density));
         view.forceLayout();
         view.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(1400, View.MeasureSpec.AT_MOST));

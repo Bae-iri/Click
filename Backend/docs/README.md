@@ -100,6 +100,8 @@ CONFIGURED_ONLY는 설정 확인이며 추론 성공이 아닙니다. PASS는 �
 
 배포는 루트 Compose/render.yaml과 기존 DB를 사용합니다. Dockerfile은 Backend/Dockerfile, build context는 저장소 루트, 시작은 `python scripts/render_start.py`, pre-deploy는 `python scripts/render_start.py --migrate`, health check는 `/ready`입니다. 앱 API 주소·배포 branch/commit·서버 OpenAPI를 함께 확인합니다. 비밀값은 Git·로그·채팅에 넣지 않습니다.
 
+글자 크기 경로 수정은 MVP-01/02의 `1.0.1` release(우선순위 101)에 포함됩니다. 시작 시 release 목록의 버전을 그대로 seed하며 기존 `1.0.0` 행은 변경하지 않습니다. 새 요청은 디스플레이 경로를 사용하고, 진행 중인 세션은 기존에 고정한 graph를 유지하므로 재배포 후 새 요청으로 검증합니다. 최대·최소값에서는 슬라이더 위치와 한계를 먼저 안내하며 결과 질문으로 자동 전환하지 않습니다.
+
 DATABASE_URL을 설정한 환경에서 실행합니다.
 
 ```powershell

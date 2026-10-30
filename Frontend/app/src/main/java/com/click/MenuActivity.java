@@ -36,6 +36,7 @@ import com.click.data.local.AuthTokenStore;
 import com.click.data.local.LocalAccountStore;
 import com.click.data.remote.PersonalizationEventGateway;
 import com.click.service.overlay.ClickOverlayService;
+import com.click.ui.common.ClickDialog;
 
 /** Account and settings menu using the same soft-blue visual system as the Click home screen. */
 public final class MenuActivity extends AppCompatActivity {
@@ -88,7 +89,7 @@ public final class MenuActivity extends AppCompatActivity {
             return insets;
         });
 
-        page.addView(header(), new LinearLayout.LayoutParams(-1, dp(58)));
+        page.addView(header(), new LinearLayout.LayoutParams(-1, -2));
         add(page, profileHeader(), 20);
 
         LinearLayout settings = group();
@@ -128,19 +129,21 @@ public final class MenuActivity extends AppCompatActivity {
     private View header() {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setMinimumHeight(dp(58));
         TextView title = text("메뉴", 31, INK, bold);
         title.setLetterSpacing(-.025f);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         row.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
 
-        TextView close = text("×", 38, INK, medium);
+        TextView close = text("닫기", 16, BLUE, semibold);
         close.setGravity(Gravity.CENTER);
         close.setContentDescription("메뉴 닫기");
         close.setClickable(true);
         close.setFocusable(true);
         close.setBackground(ripple(Color.TRANSPARENT, 25));
         close.setOnClickListener(view -> closeMenu());
-        row.addView(close, new LinearLayout.LayoutParams(dp(50), dp(50)));
+        close.setMinHeight(dp(48)); close.setPadding(dp(12), dp(12), dp(12), dp(12));
+        row.addView(close, new LinearLayout.LayoutParams(-2, -2));
         return row;
     }
 
@@ -172,7 +175,10 @@ public final class MenuActivity extends AppCompatActivity {
         edit.setClickable(true);
         edit.setFocusable(true);
         edit.setOnClickListener(view -> showEditProfile());
-        row.addView(edit, new LinearLayout.LayoutParams(-2, -2));
+        if (getResources().getConfiguration().fontScale > 1.3f) {
+            LinearLayout.LayoutParams editParams = new LinearLayout.LayoutParams(-2, -2);
+            editParams.topMargin = dp(10); copy.addView(edit, editParams);
+        } else row.addView(edit, new LinearLayout.LayoutParams(-2, -2));
         return row;
     }
 
@@ -207,6 +213,7 @@ public final class MenuActivity extends AppCompatActivity {
         row.addView(title, titleParams);
         TextView arrow = text("›", 32, 0xFF7890B8, medium);
         arrow.setGravity(Gravity.CENTER);
+        arrow.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 28);
         arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         row.addView(arrow, new LinearLayout.LayoutParams(dp(34), dp(42)));
         group.addView(row, new LinearLayout.LayoutParams(-1, -2));
@@ -226,16 +233,26 @@ public final class MenuActivity extends AppCompatActivity {
         boolean overlay = Settings.canDrawOverlays(this);
         boolean microphone = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED;
-        new AlertDialog.Builder(this)
-                .setTitle("권한 상태")
-                .setMessage("접근성  " + mark(accessibility)
-                        + "\n다른 앱 위 표시  " + mark(overlay)
-                        + "\n마이크  " + mark(microphone))
-                .setNegativeButton("닫기", null)
-                .setPositiveButton(accessibility ? "확인" : "접근성 안내 보기", (dialog, which) -> {
+        LinearLayout statuses = vertical();
+        permissionRow(statuses, "접근성", "화면을 읽고 눌러야 할 곳을 안내해요.", accessibility);
+        permissionRow(statuses, "다른 앱 위 표시", "다른 앱에서도 click 안내를 볼 수 있어요.", overlay);
+        permissionRow(statuses, "마이크", "도움이 필요한 내용을 말로 입력해요.", microphone);
+        ClickDialog.show(this, "권한 상태 확인", statuses,
+                accessibility ? "확인했어요" : "접근성 안내 보기", () -> {
                     if (!accessibility) startActivity(new Intent(this,
                             com.click.designpreview.AccessibilityHelpActivity.class));
-                }).show();
+                }, accessibility ? null : "닫기");
+    }
+
+    private void permissionRow(LinearLayout parent, String title, String description, boolean enabled) {
+        LinearLayout row = vertical();
+        row.setPadding(dp(16), dp(14), dp(16), dp(14));
+        row.setBackground(ripple(enabled ? 0xFFF0F6FF : 0xFFF7F8FC, 18));
+        row.addView(text(title, 17, INK, semibold));
+        TextView status = text(mark(enabled), 14, enabled ? BLUE : SECONDARY, semibold);
+        status.setPadding(0, dp(6), 0, dp(6)); row.addView(status);
+        row.addView(text(description, 14, SECONDARY, medium));
+        add(parent, row, parent.getChildCount() == 0 ? 0 : 10);
     }
 
     private void showEditProfile() {
@@ -309,14 +326,12 @@ public final class MenuActivity extends AppCompatActivity {
     }
 
     private void showTimingConsentDialog() {
-        new AlertDialog.Builder(this)
-                .setTitle(timingConsented ? "기록 동의를 철회할까요?" : "맞춤 안내 기록에 동의할까요?")
-                .setMessage(timingConsented
+        final boolean consent = !timingConsented;
+        ClickDialog.show(this, "맞춤 안내 기록 설정", ClickDialog.body(this, timingConsented
                         ? "동의를 철회하면 저장된 개인화 행동 기록과 분석 이력이 삭제되고 맞춤 안내가 중단됩니다."
-                        : "안내가 표시된 뒤 첫 탭까지 걸린 시간과 단계 진행 정보를 저장해 더 쉬운 안내를 만드는 데 사용해요. 화면 글자나 비밀번호는 저장하지 않아요.")
-                .setNegativeButton("취소", null)
-                .setPositiveButton(timingConsented ? "동의 철회" : "동의", (dialog, which) ->
-                        personalizationEvents.setConsent(!timingConsented,
+                        : "안내가 표시된 뒤 첫 탭까지 걸린 시간과 단계 진행 정보를 저장해 더 쉬운 안내를 만드는 데 사용해요. 화면 글자나 비밀번호는 저장하지 않아요."),
+                timingConsented ? "기록 동의 철회" : "동의하고 사용하기", () ->
+                        personalizationEvents.setConsent(consent,
                                 new PersonalizationEventGateway.ConsentCallback() {
                                     @Override public void onResult(boolean consented) {
                                         timingConsented = consented;
@@ -328,13 +343,12 @@ public final class MenuActivity extends AppCompatActivity {
                                         Toast.makeText(MenuActivity.this, "변경하지 못했어요. 다시 시도해 주세요.",
                                                 Toast.LENGTH_SHORT).show();
                                     }
-                                })).show();
+                                }), "취소");
     }
 
     private void showPolicy(String title) {
-        new AlertDialog.Builder(this).setTitle(title)
-                .setMessage("정식 정책 문서를 준비하고 있어요.")
-                .setPositiveButton("확인", null).show();
+        ClickDialog.show(this, title, ClickDialog.body(this, "정식 정책 문서를 준비하고 있어요."),
+                "확인했어요", null, null);
     }
 
     private void confirmLogout() {

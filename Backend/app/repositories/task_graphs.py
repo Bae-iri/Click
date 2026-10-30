@@ -29,19 +29,7 @@ class TaskGraphRepository:
 
     def seed_mvp(self):
         with self.factory() as db:
-            graphs = {graph.definition.task_id: graph for graph in TASK_GRAPHS.values()}
-            for task_id, graph in graphs.items():
-                body, digest = canonical_graph(graph)
-                row = db.get(ApprovedTaskGraph, f"{task_id}:1.0.0")
-                if row is None:
-                    db.add(ApprovedTaskGraph(id=f"{task_id}:1.0.0", graph_id=task_id,
-                        task_id=task_id, goal_type=graph.definition.goal_type,
-                        target_app=graph.definition.target_app, graph_version="1.0.0",
-                        graph_hash=digest, schema_version="runtime-task-graph.v1", body=body,
-                        active=True, approved=True, priority=100))
             for release, graph in releases():
-                if release["approved"]:
-                    continue
                 body, digest = canonical_graph(graph)
                 task_id = graph.definition.task_id
                 identifier = f"{task_id}:{release['version']}"
@@ -50,7 +38,7 @@ class TaskGraphRepository:
                         task_id=task_id, goal_type=graph.definition.goal_type,
                         target_app=graph.definition.target_app, graph_version=release["version"],
                         graph_hash=digest, schema_version="runtime-task-graph.v1", body=body,
-                        active=False, approved=False, priority=release["priority"]))
+                        active=release["approved"], approved=release["approved"], priority=release["priority"]))
             db.commit()
 
     def register(self, body, *, version, approved=False, priority=100):

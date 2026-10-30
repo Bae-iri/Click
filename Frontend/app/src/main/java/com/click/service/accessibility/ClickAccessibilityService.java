@@ -260,6 +260,21 @@ public final class ClickAccessibilityService extends AccessibilityService {
         } finally { root.recycle(); }
     }
 
+    /** Return only while the same Settings window is still in front. */
+    public static boolean performSettingsBack(String expectedPackage, int expectedWindow) {
+        if (!"com.android.settings".equals(expectedPackage)
+                && !"com.samsung.android.settings".equals(expectedPackage)) return false;
+        ClickAccessibilityService service = connectedService.get();
+        if (service == null) return false;
+        AccessibilityNodeInfo root = service.getRootInActiveWindow();
+        if (root == null) return false;
+        try {
+            if (root.getWindowId() != expectedWindow || root.getPackageName() == null
+                    || !expectedPackage.contentEquals(root.getPackageName())) return false;
+            return service.performGlobalAction(GLOBAL_ACTION_BACK);
+        } finally { root.recycle(); }
+    }
+
     private static boolean scrollVisibleList(AccessibilityNodeInfo node, int action) {
         if (!node.isVisibleToUser() || !node.isEnabled()) return false;
         if (node.isScrollable() && node.performAction(action)) return true;

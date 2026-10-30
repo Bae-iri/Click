@@ -46,11 +46,11 @@ public final class ClickOverlayLayout extends ViewGroup {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final EditText goalInput;
-    private final ChatBubbleView chatBubbles;
     private LinearLayout panel;
     private TextView transcript;
     private LinearLayout textEntry;
     private TextView voiceSwitch;
+    private TextView inputFeedback;
     private ImageView microphone;
     private TextView microphoneLabel, requestLabel, stopRequest;
     private LinearLayout requestRow;
@@ -84,14 +84,14 @@ public final class ClickOverlayLayout extends ViewGroup {
         goalInput.setSingleLine(true);
         goalInput.setInputType(InputType.TYPE_CLASS_TEXT);
         goalInput.setImeOptions(EditorInfo.IME_ACTION_SEND);
-        goalInput.setPadding(dp(14), 0, dp(10), 0);
+        goalInput.setPadding(dp(12), dp(10), dp(10), dp(10));
+        goalInput.setMinimumHeight(dp(48));
         goalInput.setBackground(ClickUi.outlined(Color.WHITE, ClickUi.BORDER, dp(16), dp(1)));
         goalInput.setOnEditorActionListener((view, actionId, event) -> {
             if (actionId != EditorInfo.IME_ACTION_SEND) return false;
             submitText();
             return true;
         });
-        chatBubbles = new ChatBubbleView(context);
         updateDescription();
     }
 
@@ -104,13 +104,15 @@ public final class ClickOverlayLayout extends ViewGroup {
     public String getDraftText() { return goalInput.getText().toString(); }
     public void setInputHint(String hint) { goalInput.setHint(hint); }
     public void setDraftText(String text) { goalInput.setText(text); }
-    public void setConversationPlaceholder(String text) { chatBubbles.setPlaceholder(text); }
     public void setRecognizedSpeech(String text) {
         recognizedSpeech = text == null || text.trim().isEmpty() ? "인식한 말이 여기에 표시돼요." : text.trim();
         if (transcript != null) transcript.setText(recognizedSpeech);
     }
-    public void addUserMessage(String text) { chatBubbles.add(text, true); }
-    public void addAssistantMessage(String text) { chatBubbles.add(text, false); }
+    public void showInputFeedback(String text) {
+        if (inputFeedback == null || text == null || text.trim().isEmpty()) return;
+        inputFeedback.setText(text.trim());
+        inputFeedback.setVisibility(VISIBLE);
+    }
     public boolean isVoiceInputActive() { return voiceInputActive; }
     public void setVoiceInputActive(boolean active) {
         voiceInputActive = active;
@@ -131,27 +133,30 @@ public final class ClickOverlayLayout extends ViewGroup {
     }
 
     public int getWindowWidth(Mode target, int screenWidth) {
-        return target == Mode.COLLAPSED ? dp(64) : Math.min(screenWidth - dp(24), dp(344));
+        return target == Mode.COLLAPSED ? dp(64) : Math.min(screenWidth - dp(24), dp(320));
     }
     public int getWindowHeight(Mode target) {
         if (target == Mode.COLLAPSED) return dp(64);
-        int base = target == Mode.TEXT ? 428 : target == Mode.VOICE ? 420 : 256;
+        int base = target == Mode.TEXT ? 204 : target == Mode.VOICE ? 340 : 232;
         float scale = Math.max(1f, getResources().getConfiguration().fontScale);
-        return Math.min(Math.round(dp(base) * scale),
+        return Math.min(Math.round(dp(base) + dp(100) * (scale - 1f)),
                 getResources().getDisplayMetrics().heightPixels - dp(96));
     }
     public float getClickCenterX(Mode target) {
         return getClickCenterX(target, getWindowWidth(target, getResources().getDisplayMetrics().widthPixels));
     }
     public float getClickCenterX(Mode target, int width) {
-        return target == Mode.COLLAPSED ? dp(32) : width - dp(44);
+        return target == Mode.COLLAPSED ? dp(32) : width - dp(16) - handleWidth() / 2f;
     }
     public float getClickCenterY(Mode target) {
-        return target == Mode.COLLAPSED ? dp(32) : dp(16) + headerHeight() / 2f;
+        return target == Mode.COLLAPSED ? dp(32) : dp(12) + headerHeight() / 2f;
     }
 
     private int headerHeight() {
-        return dp(Math.max(48, Math.round(28 * getResources().getConfiguration().fontScale)));
+        return dp(Math.max(48, Math.round(30 * getResources().getConfiguration().fontScale) + 12));
+    }
+    private int handleWidth() {
+        return dp(Math.max(64, Math.round(44 * getResources().getConfiguration().fontScale) + 20));
     }
 
     private void changeMode(Mode next) {
@@ -168,18 +173,18 @@ public final class ClickOverlayLayout extends ViewGroup {
 
     private void renderPanel() {
         detach(goalInput);
-        detach(chatBubbles);
         removeAllViews();
         transcript = null;
         textEntry = null;
         voiceSwitch = null;
+        inputFeedback = null;
         microphone = null;
         microphoneLabel = requestLabel = stopRequest = null;
         requestRow = null;
         if (mode == Mode.COLLAPSED) return;
         panel = new LinearLayout(getContext());
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(dp(20), dp(16), dp(20), dp(mode == Mode.MENU ? 16 : 20));
+        panel.setPadding(dp(16), dp(12), dp(16), dp(12));
         panel.setBackground(ClickUi.outlined(Color.WHITE, ClickUi.BORDER, dp(28), dp(1)));
         addView(panel);
 
@@ -188,16 +193,17 @@ public final class ClickOverlayLayout extends ViewGroup {
         TextView title = label("click", 22, ClickUi.TEXT, true);
         if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-        ImageView close = new ImageView(getContext());
+        TextView close = label("줄이기", 14, ClickUi.SUBTEXT, true);
         close.setId(R.id.overlay_collapse);
-        close.setImageResource(R.drawable.ic_overlay_close);
-        close.setContentDescription("창 닫기. 작은 click 버튼으로 접기");
-        close.setPadding(dp(12), dp(12), dp(12), dp(12));
+        close.setGravity(Gravity.CENTER);
+        close.setSingleLine(true);
+        close.setContentDescription("줄이기. 작은 click 버튼으로 접기");
+        close.setPadding(dp(8), dp(8), dp(8), dp(8));
         close.setFocusable(true);
         close.setBackground(new RippleDrawable(ColorStateList.valueOf(0x183478F6),
                 ClickUi.rounded(0xFFF1F4F9, dp(16)), ClickUi.rounded(Color.WHITE, dp(16))));
         close.setOnClickListener(view -> collapse());
-        header.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        header.addView(close, new LinearLayout.LayoutParams(handleWidth(), headerHeight()));
         panel.addView(header, new LinearLayout.LayoutParams(-1, headerHeight()));
 
         requestRow = new LinearLayout(getContext());
@@ -216,13 +222,13 @@ public final class ClickOverlayLayout extends ViewGroup {
             LinearLayout choices = new LinearLayout(getContext());
             choices.setOrientation(LinearLayout.VERTICAL);
             choices.addView(feature("말로 시작", true, () -> changeMode(Mode.VOICE)), spaced(0));
-            choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(12));
-            addScrollableBody(choices, 12);
+            choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(8));
+            addScrollableBody(choices, 8);
         } else if (mode == Mode.VOICE) {
             LinearLayout listening = new LinearLayout(getContext());
             listening.setOrientation(LinearLayout.VERTICAL);
             listening.setGravity(Gravity.CENTER);
-            listening.setPadding(dp(18), dp(20), dp(18), dp(20));
+            listening.setPadding(dp(12), dp(12), dp(12), dp(12));
             listening.setBackground(ClickUi.rounded(ClickUi.PALE_BLUE, dp(22)));
             ImageView mic = new ImageView(getContext());
             microphone = mic;
@@ -251,32 +257,35 @@ public final class ClickOverlayLayout extends ViewGroup {
             TextView write = action("글로 입력", true, () -> changeMode(Mode.TEXT));
             TextView stop = action("메뉴로", false, () -> changeMode(Mode.MENU));
             stop.setContentDescription("음성 입력을 닫고 메뉴로 돌아가기");
-            actions.addView(write, new LinearLayout.LayoutParams(0, -1, 1));
-            LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(0, -1, 1);
+            actions.addView(write, new LinearLayout.LayoutParams(0, -2, 1));
+            LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(0, -2, 1);
             stopParams.leftMargin = dp(10);
             actions.addView(stop, stopParams);
-            panel.addView(actions, spaced(16));
+            panel.addView(actions, spaced(8));
         } else {
-            chatBubbles.setBackground(ClickUi.rounded(ClickUi.PALE_BLUE, dp(20)));
-            LinearLayout.LayoutParams chatParams = new LinearLayout.LayoutParams(-1, 0, 1);
-            chatParams.setMargins(0, dp(18), 0, dp(16));
-            panel.addView(chatBubbles, chatParams);
+            LinearLayout composer = new LinearLayout(getContext());
+            composer.setOrientation(LinearLayout.VERTICAL);
             LinearLayout entry = new LinearLayout(getContext());
             textEntry = entry;
             entry.setGravity(Gravity.CENTER_VERTICAL);
-            entry.addView(goalInput, new LinearLayout.LayoutParams(0, dp(54), 1));
+            entry.addView(goalInput, new LinearLayout.LayoutParams(0, -2, 1));
             TextView send = action("↑", true, this::submitText);
             send.setContentDescription("입력한 요청 보내기");
             send.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 26);
             send.setPadding(0, 0, 0, 0);
-            LinearLayout.LayoutParams sendParams = new LinearLayout.LayoutParams(dp(52), dp(54));
+            LinearLayout.LayoutParams sendParams = new LinearLayout.LayoutParams(dp(48), -2);
             sendParams.leftMargin = dp(8);
             entry.addView(send, sendParams);
-            panel.addView(entry, new LinearLayout.LayoutParams(-1, -2));
+            composer.addView(entry, new LinearLayout.LayoutParams(-1, -2));
+            inputFeedback = label("", 15, ClickUi.SUBTEXT, false);
+            inputFeedback.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
+            inputFeedback.setVisibility(GONE);
+            composer.addView(inputFeedback, spaced(8));
             TextView voice = action("말로 시작", false, () -> changeMode(Mode.VOICE));
             voiceSwitch = voice;
             voice.setContentDescription("음성으로 입력하기");
-            panel.addView(voice, buttonParams());
+            composer.addView(voice, buttonParams());
+            addScrollableBody(composer, 12);
         }
     }
 
@@ -307,7 +316,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         LinearLayout row = new LinearLayout(getContext());
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(16), dp(16), dp(16), dp(16));
-        row.setMinimumHeight(dp(76));
+        row.setMinimumHeight(dp(64));
         row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x223478F6),
                 ClickUi.rounded(microphone ? 0xFFEAF2FF : 0xFFF6F8FC, dp(20)),
                 ClickUi.rounded(Color.WHITE, dp(20))));
@@ -363,11 +372,8 @@ public final class ClickOverlayLayout extends ViewGroup {
         setMeasuredDimension(width, height);
         if (mode != Mode.COLLAPSED && panel != null) {
             if (mode == Mode.TEXT && textEntry != null) {
-                boolean compact = height < dp(300) * Math.max(1f, getResources().getConfiguration().fontScale);
-                chatBubbles.setVisibility(compact ? GONE : VISIBLE);
+                boolean compact = height < dp(180) * Math.max(1f, getResources().getConfiguration().fontScale);
                 voiceSwitch.setVisibility(compact ? GONE : VISIBLE);
-                LinearLayout.LayoutParams entryParams = (LinearLayout.LayoutParams) textEntry.getLayoutParams();
-                entryParams.topMargin = compact ? dp(12) : 0;
             }
             panel.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
@@ -387,8 +393,11 @@ public final class ClickOverlayLayout extends ViewGroup {
         return event.getActionMasked() == MotionEvent.ACTION_DOWN && hitsHandle(event);
     }
     private boolean hitsHandle(MotionEvent event) {
-        float cx = mode == Mode.COLLAPSED ? getWidth() / 2f : getWidth() - dp(44);
-        return Math.hypot(event.getX() - cx, event.getY() - getClickCenterY(mode)) <= dp(32);
+        float cx = getClickCenterX(mode, getWidth());
+        if (mode == Mode.COLLAPSED)
+            return Math.hypot(event.getX() - cx, event.getY() - getClickCenterY(mode)) <= dp(32);
+        return Math.abs(event.getX() - cx) <= handleWidth() / 2f
+                && Math.abs(event.getY() - getClickCenterY(mode)) <= headerHeight() / 2f;
     }
     @SuppressLint("ClickableViewAccessibility")
     @Override public boolean onTouchEvent(MotionEvent event) {

@@ -54,6 +54,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     private com.click.service.overlay.SpeechInput speech;
     private boolean transcribing, reviewConfirmed, folded, moved, restored;
     private String lastCue = "", voiceText = "";
+    private boolean cuePending;
     private RequirementReview practiceReview;
     private TaskFlowOverlayView reviewView;
     private boolean voiceTried, stopTried, restoring, keyboardVisible;
@@ -157,7 +158,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         replay.setFocusable(true);
         replay.setOnClickListener(v -> {
             if (narrator.isSpeaking()) narrator.stop();
-            else { cancelRecording(); narrator.speak(lastCue); }
+            else { cancelRecording(); narrator.replay(lastCue); }
         });
         narrator.setListener((speaking, unavailable) -> {
             replay.setText(speaking ? "음성 멈춤" : "안내 다시 듣기");
@@ -194,7 +195,6 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         });
         restoring = true;
         if (savedInstanceState != null) {
-            for (String message : messages) addConversation(message);
             floating.getControl().setDraftText(savedInstanceState.getString("draft", ""));
             String mode = savedInstanceState.getString("floating_mode", "COLLAPSED");
             try { showMode(ClickOverlayLayout.Mode.valueOf(mode)); }
@@ -311,7 +311,6 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 voiceText = value.trim(); voiceTried = true; completeStep(VOICE);
                 floating.getControl().setRecognizedSpeech(voiceText);
                 updateCopy();
-                narrator.speak("이렇게 들었어요. " + voiceText + ". 확인했다면 다음을 눌러주세요.");
             }
             @Override public void onFailure(Throwable error) {
                 transcribing = false; floating.getControl().setVoiceInputActive(false);
@@ -330,10 +329,9 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         super.onRequestPermissionsResult(code, permissions, grants);
         // Permission confirmation does not open the microphone automatically.
         if (code == 81) {
-            String message = grants.length > 0 && grants[0] == PackageManager.PERMISSION_GRANTED
-                    ? "준비됐어요. 마이크 버튼을 다시 누르고 말씀해 주세요."
-                    : "마이크 권한이 필요해요. 글로 입력하거나 나중에 다시 연습할 수 있어요.";
-            floating.getControl().setRecognizedSpeech(message); narrator.speak(message);
+            String message = getString(grants.length > 0 && grants[0] == PackageManager.PERMISSION_GRANTED
+                    ? R.string.tutorial_speech_microphone_ready : R.string.tutorial_speech_microphone_denied);
+            floating.getControl().setRecognizedSpeech(message); lastCue = message; narrator.speak(message);
         }
     }
 
@@ -362,14 +360,11 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         showRequestReview(value);
         updateCopy();
     }
-    private void addConversation(String value) {
-        floating.getControl().addUserMessage(value);
-    }
     private void showRequestReview(String value) {
         practiceReview = new RequirementReview(value);
         if (!practiceReview.isFont()) practiceReview = RequirementReview.forGoal(value, new JSONObject(), value);
         reviewView = new TaskFlowOverlayView(this, new TaskFlowOverlayView.Listener() {
-            public void collapse() { narrator.stop(); floating.collapseReview(); updateCopy(); }
+            public void collapse() { floating.collapseReview(); updateCopy(); }
             public void openInput() { control("edit"); }
             public void chooseGoal(JSONObject goal) {} public void clarify(String choice) {}
             public void rephrase(String text) { requirementAnswer(text); }
@@ -387,10 +382,9 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 practiceReview.update(answer); renderReview(); updateCopy();
             }
             public void confirmRequirements() {
-                reviewConfirmed = true; completeStep(REPLY); updateCopy();
-                narrator.speak("요청을 확인했어요. 연습이므로 실제 설정은 바꾸지 않아요. 다음을 눌러 음성 입력을 해보세요.");
+                reviewConfirmed = true; completeStep(REPLY); renderReview(); updateCopy();
             }
-            public void replayGuidance(String message) { narrator.speak(message); }
+            public void replayGuidance(String message) { narrator.replay(message); }
             public void stopGuidance() { narrator.stop(); }
         });
         for (String answer : reviewActions) {
@@ -401,13 +395,19 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     }
     private void renderReview() {
         boolean ready = !practiceReview.isFont() || (!practiceReview.needsTarget() && !practiceReview.needsDirection() && practiceReview.isPhone());
-        reviewView.requirements(practiceReview, ready);
+        reviewView.requirements(practiceReview, ready, getString(reviewSpeechResource()));
         reviewView.setNarrationState(false, false);
-        String message = practiceReview.isFont() ? practiceReview.prompt(ready)
-                : "내 요청에 방금 입력한 내용이 표시돼요. 내용 수정을 눌러 고칠 수 있어요. 맞으면 이 내용으로 시작을 눌러주세요.";
-        narrator.speak(message);
         floating.highlight(ready ? "이 내용으로 시작"
                 : practiceReview.needsTarget() ? "휴대폰 기본 글자" : "더 크게", 0);
+    }
+    private int reviewSpeechResource() {
+        if (reviewConfirmed) return R.string.tutorial_speech_review_confirmed;
+        if (practiceReview == null) return R.string.tutorial_speech_review_intro;
+        if (practiceReview.needsTarget()) return practiceReview.appOnly()
+                ? R.string.tutorial_speech_review_app : R.string.tutorial_speech_review_target;
+        if (practiceReview.needsDirection()) return R.string.tutorial_speech_review_direction;
+        if (practiceReview.isFont() && !practiceReview.isPhone()) return R.string.tutorial_speech_review_unsupported;
+        return R.string.tutorial_speech_review_ready;
     }
     @Override public void onHidden() {
         cancelRecording();
@@ -435,6 +435,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         progress.setContentDescription("click 기능 설명 " + (step + 1) + "단계, 전체 " + STEP_COUNT + "단계");
         for (int i = 0; i < STEP_COUNT; i++) progress.getChildAt(i).setBackground(ClickUi.rounded(i <= step ? ClickUi.BLUE : ClickUi.BORDER, dp(3)));
         String heading, detail, button;
+        int speechResource;
         boolean enabled = false;
         ClickOverlayLayout.Mode mode = floating.getControl().getMode();
         floating.setHint(step == MOVE ? "누른 채 옮겨보세요" : step == HIDE ? "꾹 누르고 휴지통으로" : "여기를 눌러보세요");
@@ -442,26 +443,33 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         floating.highlight(null, 0);
         switch (step) {
             case INTRO:
+                speechResource = R.string.tutorial_speech_intro;
                 heading = "click 튜토리얼을\n시작해볼게요!";
                 detail = "click의 기능은 다음과 같아요.";
                 button = "시작하기"; enabled = true; break;
             case COMPLETE:
+                speechResource = R.string.tutorial_speech_complete;
                 heading = "이제 준비됐어요!";
                 detail = "모든 연습을 마쳤어요.\n이제 click에게 편하게 요청해 보세요.";
                 button = "click 시작하기"; enabled = completedSteps == (1 << STEP_COUNT) - 1; break;
             case OPEN:
+                speechResource = R.string.tutorial_speech_open;
                 heading = "클릭과 함께\n시작해 볼까요?"; detail = "아래 클릭 버튼을 눌러보세요."; button = "다음"; break;
             case WRITE:
                 boolean input = mode == ClickOverlayLayout.Mode.TEXT;
+                speechResource = input ? R.string.tutorial_speech_write_input : R.string.tutorial_speech_write_open;
                 heading = input ? "질문을 적고\n↑ 버튼을 눌러보세요" : "‘글로 입력’을\n눌러보세요";
                 detail = input ? "‘글자 크기 키워줘’를 입력해 보세요.\n입력한 뒤 화살표를 눌러 보내요." : "아래 ‘글로 입력’ 버튼을 눌러보세요.";
                 floating.highlight(input ? "↑" : "글로 입력", 0); button = "다음"; break;
             case REPLY:
+                speechResource = reviewSpeechResource();
                 heading = reviewConfirmed ? "요청을 확인했어요" : "내 요청을 확인해요";
                 detail = reviewConfirmed ? "다음은 마이크로 말하는 연습이에요." : "필요한 범위를 고르고 내용을 확인해요.\n수정이 필요하면 ‘내용 수정’을 눌러요.";
                 button = "다음"; enabled = reviewConfirmed;
                 if (!reviewConfirmed && practiceReview != null) floating.highlight(practiceReview.needsTarget() ? "휴대폰 기본 글자" : practiceReview.needsDirection() ? "더 크게" : "이 내용으로 시작", 0); break;
             case VOICE:
+                speechResource = voiceTried ? R.string.tutorial_speech_voice_received
+                        : mode == ClickOverlayLayout.Mode.VOICE ? R.string.tutorial_speech_voice_record : R.string.tutorial_speech_voice_open;
                 heading = voiceTried ? "말씀이 글자로 나타나요" : mode == ClickOverlayLayout.Mode.VOICE ? "마이크를 누르고\n직접 말해보세요" : "‘말로 시작’을\n눌러보세요";
                 detail = voiceTried ? "인식한 말을 확인한 뒤 다음을 눌러요." : "마이크를 눌렀을 때만 들어요.\n예: 휴대폰 글자 크기 키워줘";
                 if (!voiceTried && !transcribing && !floating.getControl().isVoiceInputActive())
@@ -469,23 +477,28 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                             mode == ClickOverlayLayout.Mode.VOICE ? R.id.overlay_microphone : 0);
                 button = "다음"; enabled = voiceTried; break;
             case STOP:
+                speechResource = stopTried ? R.string.tutorial_speech_stopped : R.string.tutorial_speech_stop;
                 heading = stopTried ? "요청을 멈췄어요" : "‘요청 중지’를\n눌러보세요";
                 detail = stopTried ? "이제 창을 접는 연습을 해볼게요." : "처리 중에도 바로 멈출 수 있어요.";
                 floating.highlight(null, stopTried ? 0 : R.id.overlay_stop_request);
                 button = "다음"; enabled = stopTried; break;
             case FOLD:
-                heading = folded ? "작은 버튼으로 접었어요" : "오른쪽 위 X를 눌러보세요";
-                detail = folded ? "필요할 때 버튼을 누르면 다시 열려요." : "X를 누르면 작은 click 버튼으로 접혀요.";
+                speechResource = folded ? R.string.tutorial_speech_folded : R.string.tutorial_speech_fold;
+                heading = folded ? "작은 버튼으로 줄였어요" : "오른쪽 위 ‘줄이기’를 눌러보세요";
+                detail = folded ? "필요할 때 버튼을 누르면 다시 열려요." : "‘줄이기’를 누르면 작은 click 버튼으로 접혀요.";
                 if (!folded) floating.highlight(null, R.id.overlay_collapse); button = "다음"; enabled = folded; break;
             case MOVE:
+                speechResource = moved ? R.string.tutorial_speech_moved : R.string.tutorial_speech_move;
                 heading = moved ? "원하는 곳으로 옮겼어요" : "버튼을 끌어서\n옮겨보세요";
                 detail = moved ? "다음은 휴지통으로 숨기는 연습이에요." : "click 버튼을 누른 채 다른 곳으로 움직여요.";
                 button = "다음"; enabled = moved; break;
             case HIDE:
+                speechResource = R.string.tutorial_speech_hide;
                 heading = "꾹 누른 뒤\n휴지통에 놓아보세요";
                 detail = "click 버튼을 꾹 누르면 휴지통이 나타나요.\n손을 떼지 말고 휴지통까지 끌어 놓아요.";
                 button = "다음"; break;
             default:
+                speechResource = restored ? R.string.tutorial_speech_restored : R.string.tutorial_speech_restore;
                 heading = restored ? "직접 사용해 볼 준비가 됐어요" : "숨긴 버튼을\n다시 꺼내보세요";
                 detail = restored ? "글과 말로 요청하고, 접고, 숨겨봤어요." : "아래 ‘click 버튼 다시 보기’를 눌러요.\n실제 앱에서는 홈에서 다시 켤 수 있어요.";
                 button = "배운 내용 확인하기"; enabled = restored; break;
@@ -495,7 +508,8 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 && (step != REPLY || collapsedReview)) {
             floating.highlight(null, 0); floating.setClickHighlighted(true);
             heading = "click 버튼을 다시 누르면\n메뉴가 열려요";
-            detail = "X는 창을 작게 접는 버튼이에요.\n버튼을 눌러 다시 이어서 해보세요.";
+            detail = "‘줄이기’는 창을 작게 접는 버튼이에요.\nclick 버튼을 눌러 다시 이어서 해보세요.";
+            speechResource = R.string.tutorial_speech_reopen;
         }
         title.setText(keyboardVisible ? "질문을 적고 ↑를 눌러주세요" : heading);
         description.setText(detail);
@@ -511,12 +525,17 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         }
         feedback.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
         feedback.setText("연습 화면 · 휴대폰 설정은 바뀌지 않아요");
-        String spokenDetail = step == WRITE && mode == ClickOverlayLayout.Mode.TEXT
-                ? "입력 칸의 회색 글씨를 따라 입력한 뒤 화살표를 눌러 보내요." : detail;
-        String cue = heading.replace('\n', ' ') + ". " + com.click.ui.tutorial.TutorialNarrationText.instructionsOnly(spokenDetail);
+        // Speech is authored independently; never derive it from visible headings or descriptions.
+        String cue = speechResource == R.string.tutorial_speech_voice_received
+                ? getString(speechResource, voiceText) : getString(speechResource);
         if (!cue.equals(lastCue)) {
             lastCue = cue;
-            if (!keyboardVisible && !floating.getControl().isVoiceInputActive() && !transcribing && step != REPLY) narrator.speak(cue);
+            cuePending = true;
+        }
+        if (cuePending && !keyboardVisible && !floating.getControl().isVoiceInputActive() && !transcribing) {
+            cuePending = false;
+            if (cue.trim().isEmpty()) narrator.stop();
+            else narrator.speak(cue);
         }
     }
 
@@ -607,8 +626,11 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         state.putBoolean("floating_hidden", floating.isHidden());
         super.onSaveInstanceState(state);
     }
-    @Override protected void onStop() {
-        cancelRecording(); narrator.stop(); super.onStop();
+    @Override protected void onResume() {
+        super.onResume(); narrator.resume();
+    }
+    @Override protected void onPause() {
+        cancelRecording(); narrator.pause(); super.onPause();
     }
     @Override protected void onDestroy() {
         speech.close(); narrator.close(); super.onDestroy();

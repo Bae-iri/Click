@@ -59,7 +59,7 @@ def test_identity_refuses_code_or_graph_changes_until_pair_is_rebuilt(paired, mo
         monkeypatch.setattr('app.core.validation.source_digest', lambda: '0' * 64)
     else:
         with app.state.session_factory() as db:
-            db.get(ApprovedTaskGraph, 'MVP-01:1.0.0').active = False
+            db.get(ApprovedTaskGraph, 'MVP-01:1.0.1').active = False
             db.commit()
     with TestClient(app) as client:
         assert client.get('/validation/environment').status_code == 503

@@ -64,6 +64,8 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
 
     if total_failed_attempts >= graph.policy.max_failed_attempts:
         return plan("handoff", "ACTION_BUDGET_EXHAUSTED", "reselect_graph", "user")
+    if state_evidence.get("settings_subpage") and graph.definition.target_app == "android_settings":
+        return plan("wait", "SETTINGS_OFF_PATH", "go_back", "user")
     if awaiting_vision_consent:
         previous = dict(session.recovery_state) if session else {}
         return plan("recover", "OBSERVATION_INSUFFICIENT", "vision_analysis", "consent", previous)
