@@ -130,7 +130,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         cursor.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
         cursor.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         identity.addView(cursor, new LayoutParams(dp(23), dp(23)));
-        brand = text("click 안내", 12);
+        brand = text("click 안내", 14);
         brand.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
         brand.setTextColor(BLUE_DARK);
         brand.setPadding(dp(6), 0, 0, 0);

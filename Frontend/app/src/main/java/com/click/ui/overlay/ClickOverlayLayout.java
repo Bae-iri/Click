@@ -230,7 +230,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         return dp(Math.max(48, Math.round(30 * getResources().getConfiguration().fontScale) + 12));
     }
     private int handleWidth() {
-        return dp(Math.max(64, Math.round(44 * getResources().getConfiguration().fontScale) + 20));
+        return dp(Math.max(56, Math.round(30 * getResources().getConfiguration().fontScale) + 20));
     }
 
     private void changeMode(Mode next) {
@@ -276,12 +276,12 @@ public final class ClickOverlayLayout extends ViewGroup {
         cursor.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
         cursor.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         identity.addView(cursor, new LinearLayout.LayoutParams(dp(23), dp(23)));
-        TextView title = label("click 안내", 12, ClickUi.TEXT, true);
+        TextView title = label("click 안내", 14, ClickUi.TEXT, true);
         title.setPadding(dp(6), 0, 0, 0);
         identity.addView(title);
         if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         header.addView(identity, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView close = label("줄이기  −", 12, ClickUi.BLUE, true);
+        TextView close = label("줄이기", 12, ClickUi.BLUE, true);
         close.setId(R.id.overlay_collapse);
         close.setGravity(Gravity.CENTER);
         close.setMaxLines(1);
@@ -339,16 +339,16 @@ public final class ClickOverlayLayout extends ViewGroup {
             listening.setId(R.id.overlay_microphone);
             listening.setOrientation(LinearLayout.VERTICAL);
             listening.setGravity(Gravity.CENTER);
-            listening.setPadding(dp(8), dp(12), dp(8), dp(16));
+            listening.setPadding(dp(8), dp(16), dp(8), dp(20));
             listening.setFocusable(true);
             listening.setOnClickListener(view -> { if (callback != null) callback.onMicrophoneClicked(); });
             listening.setOnTouchListener(this::onMicrophoneTouch);
             microphone = new VoiceCaptureIndicator(getContext());
-            listening.addView(microphone, new LinearLayout.LayoutParams(dp(148), dp(148)));
+            listening.addView(microphone, new LinearLayout.LayoutParams(dp(128), dp(128)));
             microphoneLabel = label("", 18, ClickUi.TEXT, true);
             microphoneLabel.setGravity(Gravity.CENTER);
             microphoneLabel.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-            listening.addView(microphoneLabel, spaced(12));
+            listening.addView(microphoneLabel, spaced(16));
             voiceHelp = label("", 13, ClickUi.SUBTEXT, false);
             voiceHelp.setGravity(Gravity.CENTER);
             voiceHelp.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -361,7 +361,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             transcript.setVisibility(GONE);
             transcript.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
             listening.addView(transcript, spaced(8));
-            addScrollableBody(listening, 6);
+            addScrollableBody(listening, 8);
             panel.addView(statusBox, spaced(0));
             LinearLayout actions = new LinearLayout(getContext());
             actions.setGravity(Gravity.CENTER_VERTICAL);
