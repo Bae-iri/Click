@@ -31,6 +31,7 @@ public final class HomeIconView extends View {
         this.kind = kind;
         artwork = kind == Kind.WORDMARK ? context.getDrawable(com.click.designpreview.R.drawable.click)
                 : kind == Kind.CLICK ? context.getDrawable(com.click.designpreview.R.drawable.ic_click_cursor)
+                : kind == Kind.SETTINGS ? context.getDrawable(R.drawable.ic_home_settings_button)
                 : kind == Kind.PHONE ? context.getDrawable(R.drawable.ic_home_phone) : null;
         if (artwork instanceof BitmapDrawable) ((BitmapDrawable) artwork).setFilterBitmap(true);
         bold = getResources().getFont(com.click.designpreview.R.font.pretendard_bold);
@@ -60,7 +61,7 @@ public final class HomeIconView extends View {
         switch (kind) {
             case CLICK: artwork.setBounds(2, 2, 46, 46); artwork.draw(canvas); break;
             case PHONE: artwork.setBounds(0, 0, 48, 48); artwork.draw(canvas); break;
-            case SETTINGS: gear(canvas, 14, 0xFF315CBC); break;
+            case SETTINGS: artwork.setBounds(9, 9, 39, 39); artwork.draw(canvas); break;
             case FONT:
                 tile(canvas, 0xFFE7F1FF, 0xFFD8E8FF); gear(canvas, 16, 0xFF416FC5); break;
             case KAKAO:
