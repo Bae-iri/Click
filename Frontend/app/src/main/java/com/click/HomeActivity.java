@@ -328,8 +328,8 @@ public final class HomeActivity extends AppCompatActivity {
         add(favoritesPage, heading, 0);
         int count = 0;
         for (HomeHelpItem item : HomeHelpItem.values()) if (favorites.contains(item.id)) count++;
-        TextView subtitle = text(addingFavorites ? "자주 쓰는 기능의 별을 눌러 추가해 보세요."
-                : "저장한 기능 " + count + "개 · 별을 누르면 해제돼요.", 14, SECONDARY, regular);
+        TextView subtitle = text(addingFavorites ? "자주 쓰는 기능을 별로 표시해 보세요!"
+                : "기능 " + count + "개를 모아뒀어요!\n별을 다시 누르면 목록에서 뺄 수 있어요.", 14, SECONDARY, regular);
         add(favoritesPage, subtitle, 14);
         int row = 0;
         for (HomeHelpItem item : HomeHelpItem.values()) if (addingFavorites || favorites.contains(item.id))
@@ -342,8 +342,8 @@ public final class HomeActivity extends AppCompatActivity {
         empty.setOrientation(LinearLayout.VERTICAL); empty.setGravity(Gravity.CENTER);
         empty.setPadding(dp(20), dp(30), dp(20), dp(30));
         whiteCard(empty, 22, 2);
-        add(empty, text("아직 즐겨찾기가 없어요", 17, INK, medium), 0);
-        add(empty, text("자주 쓰는 기능을 추가해 보세요.", 14, SECONDARY, regular), 10);
+        add(empty, text("자주 쓰는 기능을 모아볼까요?", 17, INK, medium), 0);
+        add(empty, text("별을 눌러 즐겨찾기에 담아보세요!", 14, SECONDARY, regular), 10);
         TextView button = text("+ 즐겨찾기 추가", 15, BLUE, medium);
         button.setGravity(Gravity.CENTER); button.setMinimumHeight(dp(48));
         button.setBackground(ripple(0xFFEEF4FF, 16));
@@ -392,7 +392,7 @@ public final class HomeActivity extends AppCompatActivity {
         favorites.setSelected(item.id, selected);
         refreshFavorites();
         (favoritesVisible ? favoritesScroll : homeScroll).announceForAccessibility(
-                item.title + (selected ? " 즐겨찾기에 추가했어요" : " 즐겨찾기에서 해제했어요"));
+                item.title + (selected ? " 기능을 즐겨찾기에 담았어요!" : " 기능을 즐겨찾기에서 뺐어요."));
     }
 
     private void openHelp(HomeHelpItem item) {
@@ -457,7 +457,7 @@ public final class HomeActivity extends AppCompatActivity {
         startOverlayWithPermission(task.requestText, task.goalType, false);
     }
     private void showComingSoon(String feature) {
-        Toast.makeText(this, feature + "은 준비 중이에요.\n글자 크기, 화면 밝기, 미디어 음량 조절을 이용해 주세요.", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, feature + "을 준비하고 있어요.\n지금은 글씨 크기·화면 밝기·소리 조절을 도와드릴게요!", Toast.LENGTH_LONG).show();
     }
     private void openPermissionGuide() {
         startActivity(new Intent(this, com.click.designpreview.AccessibilityHelpActivity.class));
@@ -472,7 +472,7 @@ public final class HomeActivity extends AppCompatActivity {
         if (requestLaunching) return false;
         if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return false; }
         if (com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() == null) {
-            Toast.makeText(this, "접근성 연결이 끊겼어요. 설정에서 click을 껐다가 다시 켜주세요.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "클릭을 다시 연결해 주세요.\n설정에서 click을 껐다 켜면 이어서 도와드릴게요.", Toast.LENGTH_LONG).show();
             openPermissionGuide(); return false;
         }
         Intent service = new Intent(this, ClickOverlayService.class);

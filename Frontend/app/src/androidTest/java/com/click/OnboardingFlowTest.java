@@ -209,7 +209,7 @@ public class OnboardingFlowTest {
         try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
             shown("안녕하세요!");
             shown("오늘도\n클릭과 함께\n해볼까요?");
-            s.onActivity(a -> assertEquals("궁금한 기능을 말해보세요",
+            s.onActivity(a -> assertEquals("궁금한 기능을 적거나 말해보세요!",
                     ((EditText) a.findViewById(R.id.home_request_input)).getHint().toString()));
             shown("즐겨찾기");
             shown("카카오톡");
@@ -268,7 +268,7 @@ public class OnboardingFlowTest {
                 }
             });
             s.recreate();
-            shown("아직 즐겨찾기가 없어요");
+            shown("자주 쓰는 기능을 모아볼까요?");
             s.onActivity(a -> {
                 assertTrue(new com.click.data.local.HomeFavoritesStore(a).selectedIds().isEmpty());
                 a.findViewById(R.id.home_nav_favorites).performClick();
