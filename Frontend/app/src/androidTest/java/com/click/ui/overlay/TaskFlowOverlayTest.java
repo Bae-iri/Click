@@ -196,6 +196,12 @@ public class TaskFlowOverlayTest {
                 voice.openText();
                 assertTrue(voice.getWindowHeight(ClickOverlayLayout.Mode.TEXT) < readyHeight);
                 voice.openMenu();
+                voice.setRequestStatus("요청을 멈췄어요", false);
+                assertNull(find(voice, "요청을 멈췄어요"));
+                assertNull(voice.findViewById(com.click.R.id.overlay_stop_request));
+                assertNotNull(find(voice, "무엇을 도와드릴까요?"));
+                assertNotNull(find(voice, "말로 입력하기"));
+                assertNotNull(find(voice, "글로 입력하기"));
                 width = voice.getWindowWidth(ClickOverlayLayout.Mode.MENU, activity.getResources().getDisplayMetrics().widthPixels);
                 int height = voice.getWindowHeight(ClickOverlayLayout.Mode.MENU);
                 voice.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
