@@ -1,12 +1,7 @@
 package com.click;
 
-import android.Manifest;
 import android.app.Dialog;
 import android.content.Intent;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -31,9 +26,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.OnBackPressedCallback;
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
@@ -44,10 +36,8 @@ import androidx.core.view.WindowInsetsCompat;
 import com.click.core.permission.PermissionStatus;
 import com.click.domain.goal.QuickHelpTask;
 import com.click.service.overlay.ClickOverlayService;
-import com.click.service.overlay.OverlayActions;
 import com.click.ui.common.ClickUi;
 import com.click.ui.home.HomeStartArtworkView;
-import com.click.ui.overlay.FloatingClickHost;
 
 /** Main Click entry screen after accessibility onboarding. */
 public final class HomeActivity extends AppCompatActivity {
@@ -56,23 +46,7 @@ public final class HomeActivity extends AppCompatActivity {
     private Typeface medium;
     private Typeface semibold;
     private Typeface bold;
-    private FloatingClickHost floatingControl;
     private HomeStartArtworkView startArtwork;
-    private boolean homeResumed;
-    private boolean inputOpened;
-    private OnBackPressedCallback closeInput;
-    private final BroadcastReceiver overlayVisibilityReceiver = new BroadcastReceiver() {
-        @Override public void onReceive(Context context, Intent intent) {
-            syncFloatingControl();
-        }
-    };
-
-    private final ActivityResultLauncher<String> microphonePermission = registerForActivityResult(
-            new ActivityResultContracts.RequestPermission(), granted -> {
-                if (granted) startOverlayWithPermission(null, true);
-                else Toast.makeText(this, "음성으로 요청하려면 마이크 권한이 필요해요.",
-                        Toast.LENGTH_LONG).show();
-            });
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -107,16 +81,6 @@ public final class HomeActivity extends AppCompatActivity {
             Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars()
                     | WindowInsetsCompat.Type.displayCutout());
             page.setPadding(horizontal, dp(16) + bars.top, horizontal, dp(96) + bars.bottom);
-            if (floatingControl != null) {
-                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) floatingControl.getLayoutParams();
-                int left = bars.left, top = bars.top;
-                int right = bars.right, bottom = bars.bottom;
-                if (params.leftMargin != left || params.topMargin != top
-                        || params.rightMargin != right || params.bottomMargin != bottom) {
-                    params.setMargins(left, top, right, bottom);
-                    floatingControl.setLayoutParams(params);
-                }
-            }
             return insets;
         });
 
@@ -173,57 +137,18 @@ public final class HomeActivity extends AppCompatActivity {
         tutorial.setOnClickListener(view -> startActivity(new Intent(this, TutorialActivity.class)));
         add(page, tutorial, 8);
 
-        floatingControl = new FloatingClickHost(this, new FloatingClickHost.Listener() {
-            @Override public void onVoiceRequested() { startVoiceRequest(); }
-            @Override public void onTextSubmitted(String text) { startSupportedGoal(text); }
-            @Override public void onHidden() {
-                inputOpened = false;
-                closeInput.setEnabled(false);
-                syncFloatingControl();
-            }
-        });
-        floatingControl.setVisibility(View.INVISIBLE);
-        root.addView(floatingControl, new FrameLayout.LayoutParams(-1, -1));
-        closeInput = new OnBackPressedCallback(false) {
-            @Override public void handleOnBackPressed() {
-                inputOpened = false;
-                syncFloatingControl();
-                setEnabled(false);
-            }
-        };
-        getOnBackPressedDispatcher().addCallback(this, closeInput);
         setContentView(root);
         root.requestApplyInsets();
     }
 
-    @Override protected void onStart() {
-        super.onStart();
-        ContextCompat.registerReceiver(this, overlayVisibilityReceiver,
-                new IntentFilter(OverlayActions.ACTION_VISIBILITY_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED);
-    }
-
-    @Override protected void onStop() {
-        unregisterReceiver(overlayVisibilityReceiver);
-        super.onStop();
-    }
-
     @Override protected void onResume() {
         super.onResume();
-        homeResumed = true;
-        syncFloatingControl();
+        if (startArtwork != null) startArtwork.setAnimationActive(true);
     }
 
     @Override protected void onPause() {
-        homeResumed = false;
         if (startArtwork != null) startArtwork.setAnimationActive(false);
         super.onPause();
-    }
-
-    private void syncFloatingControl() {
-        if (startArtwork != null) startArtwork.setAnimationActive(homeResumed && !inputOpened);
-        if (floatingControl == null) return;
-        if (!inputOpened) floatingControl.setVisibility(View.INVISIBLE);
-        else floatingControl.setSystemOverlayVisible(ClickOverlayService.isRunning());
     }
 
     private View header() {
@@ -271,12 +196,7 @@ public final class HomeActivity extends AppCompatActivity {
         card.setContentDescription(getString(R.string.home_start_accessibility));
         startArtwork = new HomeStartArtworkView(this);
         card.addView(startArtwork, new LinearLayout.LayoutParams(dp(244), dp(148)));
-        card.setOnClickListener(view -> {
-            inputOpened = true;
-            closeInput.setEnabled(true);
-            startArtwork.setAnimationActive(false);
-            floatingControl.showMenuFrom(startArtwork.getLogoAnchor());
-        });
+        card.setOnClickListener(view -> startOverlayWithPermission(null, null));
         return card;
     }
 
@@ -308,25 +228,13 @@ public final class HomeActivity extends AppCompatActivity {
         row.addView(labels, labelsParams);
 
         HomeIconView star = new HomeIconView(HomeIconView.Kind.STAR);
-        row.addView(star, new LinearLayout.LayoutParams(dp(28), dp(42)));
+        row.addView(star, new LinearLayout.LayoutParams(dp(42), dp(42)));
         return row;
-    }
-
-    private void startVoiceRequest() {
-        if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return; }
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-                == PackageManager.PERMISSION_GRANTED) startOverlayWithPermission(null, true);
-        else microphonePermission.launch(Manifest.permission.RECORD_AUDIO);
-    }
-
-    private void startSupportedGoal(String goal) {
-        if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return; }
-        startOverlayWithPermission(goal, false);
     }
 
     private void startQuickHelp(QuickHelpTask task) {
         if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return; }
-        startOverlayWithPermission(task.requestText, false, task.goalType);
+        startOverlayWithPermission(task.requestText, task.goalType);
     }
 
     private void showComingSoon(String feature) {
@@ -375,25 +283,18 @@ public final class HomeActivity extends AppCompatActivity {
         startActivity(new Intent(this, com.click.designpreview.AccessibilityHelpActivity.class));
     }
 
-    private void startOverlayWithPermission(String goal, boolean openVoice) {
-        startOverlayWithPermission(goal, openVoice, null);
-    }
-
-    private void startOverlayWithPermission(String goal, boolean openVoice, String selectedGoalType) {
-        if (!PermissionStatus.isAccessibilityEnabled(this)
-                || com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() == null) {
+    private void startOverlayWithPermission(String goal, String selectedGoalType) {
+        if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return; }
+        if (com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() == null) {
             Toast.makeText(this, "접근성 연결이 끊겼어요. 설정에서 click을 껐다가 다시 켜주세요.",
                     Toast.LENGTH_LONG).show();
             openPermissionGuide();
             return;
         }
-        inputOpened = false;
-        closeInput.setEnabled(false);
-        floatingControl.setVisibility(View.INVISIBLE);
         Intent service = new Intent(this, ClickOverlayService.class);
         if (goal != null) service.putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL, goal);
         if (selectedGoalType != null) service.putExtra(ClickOverlayService.EXTRA_SELECTED_GOAL_TYPE, selectedGoalType);
-        service.putExtra(ClickOverlayService.EXTRA_OPEN_VOICE, openVoice);
+        service.putExtra(ClickOverlayService.EXTRA_OPEN_MENU, goal == null && selectedGoalType == null);
         startService(service);
         moveTaskToBack(true);
     }
@@ -509,9 +410,11 @@ public final class HomeActivity extends AppCompatActivity {
                 canvas.drawLine(0, 5, 8, 18, paint);
                 canvas.restore();
             } else if (kind == Kind.STAR) {
+                paint.setColor(0xFFFFF1C2); paint.setStyle(Paint.Style.FILL);
+                canvas.drawCircle(cx, cy, Math.min(w, h) * .43f, paint);
                 paint.setColor(0xFFFFC83D); paint.setStyle(Paint.Style.FILL);
                 path.reset();
-                float radius = Math.min(w, h) * .43f;
+                float radius = Math.min(w, h) * .26f;
                 for (int i = 0; i < 10; i++) {
                     double angle = -Math.PI / 2 + i * Math.PI / 5;
                     float r = i % 2 == 0 ? radius : radius * .48f;

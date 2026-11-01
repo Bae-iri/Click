@@ -216,10 +216,6 @@ public class OnboardingFlowTest {
             shown("전화");
             shown("클릭 튜토리얼");
             screenshot("home-current");
-            s.onActivity(a -> a.findViewById(R.id.home_start).performClick());
-            instrumentation.waitForIdleSync();
-            shown("말로 시작");
-            shown("글로 입력");
         }
     }
     @Test public void menuMatchesProfileCardReference() throws Exception {
