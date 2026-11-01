@@ -149,6 +149,22 @@ public final class FloatingClickHost extends FrameLayout implements ClickOverlay
         control.collapse();
         setVisibility(VISIBLE);
     }
+    /** Opens the existing voice/text menu at an in-app start button. */
+    public void showMenuFrom(View anchor) {
+        showAgain();
+        post(() -> {
+            if (!isAttachedToWindow() || !anchor.isAttachedToWindow()) return;
+            int[] anchorLocation = new int[2], hostLocation = new int[2];
+            anchor.getLocationOnScreen(anchorLocation);
+            getLocationOnScreen(hostLocation);
+            float centerX = anchorLocation[0] - hostLocation[0] + anchor.getWidth() / 2f;
+            float centerY = anchorLocation[1] - hostLocation[1] + anchor.getHeight() / 3f;
+            constrain(centerX - control.getClickCenterX(ClickOverlayLayout.Mode.COLLAPSED),
+                    centerY - control.getClickCenterY(ClickOverlayLayout.Mode.COLLAPSED));
+            positioned = true;
+            control.openMenu();
+        });
+    }
     private boolean overTrash() {
         if (trash.getVisibility() != VISIBLE) return false;
         float cx = control.getX() + control.getClickCenterX(control.getMode(), control.getLayoutParams().width);

@@ -205,14 +205,16 @@ public class OnboardingFlowTest {
         }
         fail("회원가입 기준을 불러오지 못했습니다.");
     }
-    @Test public void homeMatchesVoiceFirstReference() throws Exception {
+    @Test public void homeMatchesStartAndFavoritesReference() throws Exception {
         try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
-            shown("무엇을\n도와드릴까요?");
-            shown("click을 시작할까요?");
-            shown("예) 글자 크기를 크게 해줘");
-            shown("자주 묻는 도움");
-            shown("사진 보내는 방법 · 준비 중");
+            shown("클릭을 시작할까요?");
+            shown("즐겨찾기");
+            shown("클릭 튜토리얼");
             screenshot("home-current");
+            s.onActivity(a -> a.findViewById(R.id.home_start).performClick());
+            instrumentation.waitForIdleSync();
+            shown("말로 시작");
+            shown("글로 입력");
         }
     }
     @Test public void menuMatchesProfileCardReference() throws Exception {
@@ -261,9 +263,9 @@ public class OnboardingFlowTest {
             screenshot("accessibility-complete");
         }
         try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
-            shown("무엇을\n도와드릴까요?");
-            shown("click을 시작할까요?");
-            shown("자주 묻는 도움");
+            shown("클릭을 시작할까요?");
+            shown("즐겨찾기");
+            shown("클릭 튜토리얼");
             screenshot("home");
         }
         try (ActivityScenario<MenuActivity> s = ActivityScenario.launch(MenuActivity.class)) {
