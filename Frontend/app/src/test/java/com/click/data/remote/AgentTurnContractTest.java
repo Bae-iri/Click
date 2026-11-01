@@ -7,6 +7,16 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AgentTurnContractTest {
+    @Test public void guidanceUsesServerStepCountAndDoesNotInventMissingTotals() throws Exception {
+        JSONObject response = new JSONObject().put("request_id", "request").put("session_id", "session")
+                .put("task_status", "IN_PROGRESS").put("step", 2).put("total_steps", 5);
+        AgentTurnContract.Response parsed = new AgentTurnContract.Response(response.toString());
+        assertEquals(2, parsed.step);
+        assertEquals(5, parsed.totalSteps);
+        response.remove("total_steps");
+        assertEquals(0, new AgentTurnContract.Response(response.toString()).totalSteps);
+    }
+
     @Test public void interactiveStartUsesV03AndExplicitWorkflow() throws Exception {
         ScreenSnapshot screen = new ScreenSnapshot("com.android.settings", "2026-10-10T00:00:00Z",
                 1080, 2400, Collections.emptyList());

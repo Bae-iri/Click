@@ -2263,6 +2263,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                         && (acceptedGoal == null || !acceptedGoal.optString("goal_type").startsWith("settings.font_size.")
                             || fontSizeResultCheck.changed(agentEpisodeId, acceptedGoal.optString("goal_type"), displayedSnapshot)
                             || command.renderPolicy != null && command.renderPolicy.optBoolean("adjustment_limit")));
+        taskFlowView.setGuidanceProgress(response.step, response.totalSteps);
         taskFlowView.setAutomaticProgress(automaticTouchEnabled()
                 && !"confirmation".equals(command.commandType) && !"blocked".equals(command.commandType));
         taskFlowCollapsed = !"confirmation".equals(command.commandType) && !"blocked".equals(command.commandType);
