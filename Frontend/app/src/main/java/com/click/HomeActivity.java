@@ -46,6 +46,7 @@ import com.click.domain.goal.QuickHelpTask;
 import com.click.service.overlay.ClickOverlayService;
 import com.click.service.overlay.OverlayActions;
 import com.click.ui.common.ClickUi;
+import com.click.ui.home.HomeStartArtworkView;
 import com.click.ui.overlay.FloatingClickHost;
 
 /** Main Click entry screen after accessibility onboarding. */
@@ -56,6 +57,8 @@ public final class HomeActivity extends AppCompatActivity {
     private Typeface semibold;
     private Typeface bold;
     private FloatingClickHost floatingControl;
+    private HomeStartArtworkView startArtwork;
+    private boolean homeResumed;
     private boolean inputOpened;
     private OnBackPressedCallback closeInput;
     private final BroadcastReceiver overlayVisibilityReceiver = new BroadcastReceiver() {
@@ -118,17 +121,17 @@ public final class HomeActivity extends AppCompatActivity {
         });
 
         page.addView(header(), new LinearLayout.LayoutParams(-1, -2));
-        TextView title = text(getString(R.string.home_start_title), 30, INK, bold);
+        TextView title = text(getString(R.string.home_start_title), 24, INK, bold);
         title.setLetterSpacing(-.025f);
         title.setLineSpacing(dp(1), 1.03f);
-        add(page, title, 30);
-        add(page, startCard(), 22);
+        add(page, title, 24);
+        add(page, startCard(), 18);
 
         LinearLayout sectionHeader = new LinearLayout(this);
         sectionHeader.setGravity(Gravity.CENTER_VERTICAL);
-        sectionHeader.addView(text(getString(R.string.home_favorites), 22, INK, bold),
+        sectionHeader.addView(text(getString(R.string.home_favorites), 19, INK, bold),
                 new LinearLayout.LayoutParams(0, -2, 1));
-        TextView more = text("더보기  ›", 16, SECONDARY, semibold);
+        TextView more = text("더보기", 14, SECONDARY, semibold);
         more.setGravity(Gravity.CENTER);
         more.setPadding(dp(12), dp(10), 0, dp(10));
         more.setClickable(true);
@@ -173,14 +176,18 @@ public final class HomeActivity extends AppCompatActivity {
         floatingControl = new FloatingClickHost(this, new FloatingClickHost.Listener() {
             @Override public void onVoiceRequested() { startVoiceRequest(); }
             @Override public void onTextSubmitted(String text) { startSupportedGoal(text); }
-            @Override public void onHidden() { inputOpened = false; closeInput.setEnabled(false); }
+            @Override public void onHidden() {
+                inputOpened = false;
+                closeInput.setEnabled(false);
+                syncFloatingControl();
+            }
         });
         floatingControl.setVisibility(View.INVISIBLE);
         root.addView(floatingControl, new FrameLayout.LayoutParams(-1, -1));
         closeInput = new OnBackPressedCallback(false) {
             @Override public void handleOnBackPressed() {
                 inputOpened = false;
-                floatingControl.setVisibility(View.INVISIBLE);
+                syncFloatingControl();
                 setEnabled(false);
             }
         };
@@ -202,10 +209,18 @@ public final class HomeActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume();
+        homeResumed = true;
         syncFloatingControl();
     }
 
+    @Override protected void onPause() {
+        homeResumed = false;
+        if (startArtwork != null) startArtwork.setAnimationActive(false);
+        super.onPause();
+    }
+
     private void syncFloatingControl() {
+        if (startArtwork != null) startArtwork.setAnimationActive(homeResumed && !inputOpened);
         if (floatingControl == null) return;
         if (!inputOpened) floatingControl.setVisibility(View.INVISIBLE);
         else floatingControl.setSystemOverlayVisible(ClickOverlayService.isRunning());
@@ -245,7 +260,7 @@ public final class HomeActivity extends AppCompatActivity {
         card.setId(R.id.home_start);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER);
-        card.setPadding(dp(18), dp(20), dp(18), dp(20));
+        card.setPadding(dp(18), dp(16), dp(18), dp(16));
         GradientDrawable fill = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
                 new int[]{0xFFF1F7FF, 0xFFEAF3FF, 0xFFF5F8FD});
         fill.setCornerRadius(dp(26));
@@ -254,17 +269,13 @@ public final class HomeActivity extends AppCompatActivity {
         card.setClickable(true);
         card.setFocusable(true);
         card.setContentDescription(getString(R.string.home_start_accessibility));
-        ImageView logo = new ImageView(this);
-        logo.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
-        logo.setBackground(ClickUi.rounded(Color.WHITE, dp(56)));
-        logo.setPadding(dp(12), dp(12), dp(12), dp(12));
-        logo.setElevation(dp(3));
-        logo.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        card.addView(logo, new LinearLayout.LayoutParams(dp(112), dp(112)));
+        startArtwork = new HomeStartArtworkView(this);
+        card.addView(startArtwork, new LinearLayout.LayoutParams(dp(244), dp(148)));
         card.setOnClickListener(view -> {
             inputOpened = true;
             closeInput.setEnabled(true);
-            floatingControl.showMenuFrom(logo);
+            startArtwork.setAnimationActive(false);
+            floatingControl.showMenuFrom(startArtwork.getLogoAnchor());
         });
         return card;
     }
@@ -289,16 +300,15 @@ public final class HomeActivity extends AppCompatActivity {
         labels.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout.LayoutParams labelsParams = new LinearLayout.LayoutParams(0, -2, 1);
         labelsParams.setMarginStart(dp(16));
-        labels.addView(text(title, 18, INK, semibold), new LinearLayout.LayoutParams(-1, -2));
-        TextView secondary = text(subtitle, 14, supported ? SECONDARY : 0xFF8997B1, medium);
+        labels.addView(text(title, 16, INK, semibold), new LinearLayout.LayoutParams(-1, -2));
+        TextView secondary = text(subtitle, 13, supported ? SECONDARY : 0xFF8997B1, medium);
         LinearLayout.LayoutParams secondaryParams = new LinearLayout.LayoutParams(-1, -2);
         secondaryParams.topMargin = dp(4);
         labels.addView(secondary, secondaryParams);
         row.addView(labels, labelsParams);
 
-        HomeIconView chevron = new HomeIconView(HomeIconView.Kind.CHEVRON);
-        chevron.setAlpha(supported ? 1f : .58f);
-        row.addView(chevron, new LinearLayout.LayoutParams(dp(28), dp(42)));
+        HomeIconView star = new HomeIconView(HomeIconView.Kind.STAR);
+        row.addView(star, new LinearLayout.LayoutParams(dp(28), dp(42)));
         return row;
     }
 
@@ -444,7 +454,7 @@ public final class HomeActivity extends AppCompatActivity {
     }
 
     private final class HomeIconView extends View {
-        enum Kind { SETTINGS, MIC, KAKAO, SETTINGS_TILE, PHONE, ACCESSIBILITY, CHEVRON, CLICK }
+        enum Kind { SETTINGS, MIC, KAKAO, SETTINGS_TILE, PHONE, ACCESSIBILITY, STAR, CLICK }
         private final Kind kind;
         private final Drawable referenceIcon;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -498,11 +508,19 @@ public final class HomeActivity extends AppCompatActivity {
                 canvas.drawLine(0, 5, -8, 18, paint);
                 canvas.drawLine(0, 5, 8, 18, paint);
                 canvas.restore();
-            } else if (kind == Kind.CHEVRON) {
-                paint.setColor(0xFF7083A8); paint.setStyle(Paint.Style.STROKE);
-                paint.setStrokeWidth(dp(2)); paint.setStrokeCap(Paint.Cap.ROUND);
-                path.reset(); path.moveTo(w * .38f, h * .32f); path.lineTo(w * .62f, h * .5f);
-                path.lineTo(w * .38f, h * .68f); canvas.drawPath(path, paint);
+            } else if (kind == Kind.STAR) {
+                paint.setColor(0xFFFFC83D); paint.setStyle(Paint.Style.FILL);
+                path.reset();
+                float radius = Math.min(w, h) * .43f;
+                for (int i = 0; i < 10; i++) {
+                    double angle = -Math.PI / 2 + i * Math.PI / 5;
+                    float r = i % 2 == 0 ? radius : radius * .48f;
+                    float x = cx + (float) Math.cos(angle) * r;
+                    float y = cy + (float) Math.sin(angle) * r;
+                    if (i == 0) path.moveTo(x, y); else path.lineTo(x, y);
+                }
+                path.close();
+                canvas.drawPath(path, paint);
             }
             paint.setShader(null); paint.setStyle(Paint.Style.FILL); paint.setTextAlign(Paint.Align.LEFT);
         }
