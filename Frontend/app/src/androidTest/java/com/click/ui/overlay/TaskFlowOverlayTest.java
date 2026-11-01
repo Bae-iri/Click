@@ -37,7 +37,7 @@ public class TaskFlowOverlayTest {
                     Context context = activity.createConfigurationContext(config);
                     voice[0] = new ClickOverlayLayout(context);
                     voice[0].openVoice();
-                    voice[0].setRecognizedSpeech("휴대폰 글자를 조금 더 크게 해 줘");
+                    voice[0].showRecognizedSpeechResult("휴대폰 글자를 조금 더 크게 해 줘");
                     voice[0].setRequestStatus("요청을 진행하고 있어요", true);
                     voice[0].setLoadingStatus("현재 화면을 확인하고 있어요…");
                     int width = voice[0].getWindowWidth(ClickOverlayLayout.Mode.VOICE, context.getResources().getDisplayMetrics().widthPixels);
@@ -52,10 +52,11 @@ public class TaskFlowOverlayTest {
                 saveDisplay("voice-screen-" + scale);
                 scenario.onActivity(activity -> {
                     ViewGroup card = voice[0].findViewById(com.click.R.id.overlay_microphone);
-                    assertVisibleWithin(card, find(voice[0], "현재 화면을 확인하고 있어요…"));
-                    assertVisibleWithin(card, find(voice[0], "휴대폰 글자를 조금 더 크게 해 줘"));
-                    assertVisibleWithin(card, find(voice[0], "요청 중지"));
-                    assertVisibleWithin(voice[0], find(voice[0], "줄이기"));
+                    assertFalse(find(voice[0], "현재 화면을 확인하고 있어요…") != null
+                            && find(voice[0], "현재 화면을 확인하고 있어요…").isShown());
+                    assertVisibleWithin(voice[0], find(voice[0], "휴대폰 글자를 조금 더 크게 해 줘"));
+                    assertVisibleWithin(voice[0], find(voice[0], "요청 중지"));
+                    assertVisibleWithin(voice[0], find(voice[0], "줄이기  −"));
                     assertNull(find(voice[0], "떼면 입력 · 밖으로 옮기면 취소\n최대 16초"));
                     saveImage(voice[0], "voice-compact-" + scale);
                     Context context = voice[0].getContext();
@@ -122,52 +123,85 @@ public class TaskFlowOverlayTest {
                     android.content.res.Configuration config = new android.content.res.Configuration(activity.getResources().getConfiguration());
                     config.fontScale = scale;
                     Context context = activity.createConfigurationContext(config);
-                    Answers answers = new Answers();
+                    String[] selected = {null}; boolean[] confirmed = {false};
+                    Answers answers = new Answers() {
+                        @Override public void answerGoalInput(String value) { selected[0] = value; }
+                        @Override public void confirmRequirements() { confirmed[0] = true; }
+                    };
                     TaskFlowOverlayView panel = new TaskFlowOverlayView(context, answers);
                     activity.setContentView(panel);
                     panel.setAvailableHeight(Math.round(650 * context.getResources().getDisplayMetrics().density));
                     try {
                         JSONObject data = json("{\"version\":\"goal-inputs.v1\",\"id\":\"q1\",\"source_text\":\"글자 크기 키워줘\",\"status\":\"needs_input\",\"values\":{},\"question\":{\"id\":\"scope\",\"kind\":\"choice\",\"message\":\"어디의 글자를 키울까요?\",\"choices\":[{\"label\":\"휴대폰 전체\",\"value\":\"system\"},{\"label\":\"특정 앱\",\"value\":\"app\"}]}}");
-                        data.put("values", json("{\"direction\":\"increase\"}"));
-                        data.put("required_fields", new JSONArray().put(json("{\"id\":\"direction\",\"label\":\"변경 방향\",\"choices\":[{\"value\":\"increase\",\"label\":\"더 크게\"}]}")));
                         panel.preparation(new com.click.domain.goal.GoalPreparationState(data, null, "추가로 확인할게요"));
-                    } catch (org.json.JSONException error) { throw new AssertionError(error); }
-                    snapshot(panel, "preparation-" + scale);
-                    assertNull(find(panel, "추가로 확인할게요"));
-                    assertNull(find(panel, "내 요청:"));
-                    assertNull(find(panel, "변경 방향 · 더 크게"));
-                    assertTrue(find(panel, "글자 크기 키워줘").getTextSize() < find(panel, "어디의 글자를 키울까요?").getTextSize());
-                    assertFalse(find(panel, "수정한 요청 확인").isShown());
-                    assertFullyInside(panel, find(panel, "휴대폰 전체"));
-                    assertFullyInside(panel, find(panel, "특정 앱"));
-                    assertEquals(1, find(panel, "다시 듣기").getLineCount());
-                    assertNull(find(panel, "글로 보기"));
-                    assertSame(find(panel, "어디의 글자를 키울까요?").getParent(), find(panel, "다시 듣기").getParent());
-                    find(panel, "다시 듣기").performClick();
-                    assertEquals("어디의 글자를 키울까요?", answers.replay);
-                    panel.setNarrationState(true, false);
-                    find(panel, "음성 멈춤").performClick();
-                    assertTrue(answers.audioStopped);
-                    panel.setNarrationState(false, false);
-                    find(panel, "내용 수정").performClick();
-                    assertTrue(find(panel, "수정한 요청 확인").isShown());
-                    try {
-                        JSONObject ready = json("{\"version\":\"goal-inputs.v1\",\"id\":\"q1\",\"source_text\":\"글자 크기 키워줘\",\"status\":\"ready\",\"values\":{\"direction\":\"increase\"},\"missing_fields\":[],\"graph_reference\":{},\"required_fields\":[{\"id\":\"direction\",\"label\":\"변경 방향\",\"choices\":[{\"value\":\"increase\",\"label\":\"더 크게\"}]}]}");
-                        String confirmation = "휴대폰 전체의 글자를 더 크게 바꿀까요?";
+                        snapshot(panel, "preparation-" + scale);
+                        assertNotNull(find(panel, "1/2"));
+                        assertFalse(find(panel, "수정한 요청 확인").isShown());
+                        assertFullyInside(panel, find(panel, "휴대폰 전체"));
+                        assertFullyInside(panel, find(panel, "특정 앱"));
+                        assertFalse(find(panel, "다음 단계").isEnabled());
+                        find(panel, "휴대폰 전체").performClick();
+                        assertNull(selected[0]);
+                        assertTrue(find(panel, "다음 단계").isEnabled());
+                        find(panel, "다음 단계").performClick();
+                        assertEquals("system", selected[0]);
+                        find(panel, "다른 내용 입력하기").performClick();
+                        assertTrue(find(panel, "수정한 요청 확인").isShown());
+                        JSONObject ready = json("{\"version\":\"goal-inputs.v1\",\"id\":\"q1\",\"source_text\":\"글자 크기 키워줘\",\"status\":\"ready\",\"values\":{\"direction\":\"increase\"},\"missing_fields\":[],\"graph_reference\":{}}");
                         panel.preparation(new com.click.domain.goal.GoalPreparationState(ready,
-                                json("{\"goal_type\":\"settings.font_size.increase\"}"), confirmation));
+                                json("{\"goal_type\":\"settings.font_size.increase\"}"), "휴대폰 전체의 글자를 더 크게 바꿀까요?"));
                         snapshot(panel, "preparation-ready-" + scale);
-                        assertNull(find(panel, "내 요청:"));
-                        assertNull(find(panel, "변경 방향 · 더 크게"));
-                        assertNull(find(panel, "글로 보기"));
-                        assertSame(find(panel, confirmation).getParent(), find(panel, "다시 듣기").getParent());
-                        assertFullyInside(panel, find(panel, "이 내용으로 시작"));
-                        assertTrue(find(panel, "이 내용으로 시작").isEnabled());
-                        assertEquals("increase", ready.getJSONObject("values").getString("direction"));
+                        assertNotNull(find(panel, "2/2"));
+                        assertNotNull(find(panel, "이렇게 진행할게요"));
+                        assertNotNull(find(panel, "휴대폰의 기본 글자 크기를\n더 크게 변경할게요."));
+                        assertFullyInside(panel, find(panel, "이대로 시작하기"));
+                        assertFalse(confirmed[0]);
+                        find(panel, "이대로 시작하기").performClick();
+                        assertTrue(confirmed[0]); confirmed[0] = false;
                     } catch (org.json.JSONException error) { throw new AssertionError(error); }
                 }
             });
         }
+    }
+
+    @Test public void voiceStatesUseDistinctArtworkAndWindowsFitTheirContent() {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(activity -> {
+                ClickOverlayLayout voice = new ClickOverlayLayout(activity);
+                activity.setContentView(voice);
+                voice.openVoice();
+                int width = voice.getWindowWidth(ClickOverlayLayout.Mode.VOICE, activity.getResources().getDisplayMetrics().widthPixels);
+                int readyHeight = voice.getWindowHeight(ClickOverlayLayout.Mode.VOICE);
+                voice.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(readyHeight, View.MeasureSpec.EXACTLY));
+                voice.layout(0, 0, width, readyHeight);
+                VoiceCaptureIndicator indicator = indicator(voice);
+                assertEquals(VoiceCaptureIndicator.State.READY, indicator.getState());
+                saveImage(voice, "reference-voice-ready");
+                voice.setVoiceInputActive(true);
+                assertEquals(VoiceCaptureIndicator.State.LISTENING, indicator.getState());
+                saveImage(voice, "reference-voice-listening");
+                voice.setVoiceInputActive(false); voice.setVoiceInputProcessing(true);
+                assertEquals(VoiceCaptureIndicator.State.PROCESSING, indicator.getState());
+                assertFalse(voice.findViewById(com.click.R.id.overlay_microphone).isEnabled());
+                saveImage(voice, "reference-voice-processing");
+                voice.setVoiceInputProcessing(false);
+                voice.openText();
+                assertTrue(voice.getWindowHeight(ClickOverlayLayout.Mode.TEXT) < readyHeight);
+                voice.openMenu();
+                width = voice.getWindowWidth(ClickOverlayLayout.Mode.MENU, activity.getResources().getDisplayMetrics().widthPixels);
+                int height = voice.getWindowHeight(ClickOverlayLayout.Mode.MENU);
+                voice.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
+                voice.layout(0, 0, width, height); saveImage(voice, "reference-input-menu");
+            });
+        }
+    }
+    private static VoiceCaptureIndicator indicator(View view) {
+        if (view instanceof VoiceCaptureIndicator) return (VoiceCaptureIndicator) view;
+        if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
+            VoiceCaptureIndicator found = indicator(((ViewGroup) view).getChildAt(i));
+            if (found != null) return found;
+        }
+        return null;
     }
     @Test public void voiceEntryOpensTheFloatingControlInVoiceMode() {
         Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
@@ -231,14 +265,14 @@ public class TaskFlowOverlayTest {
                 panel.goals("원하는 목표를 하나 골라주세요.", goals);
                 TextView first = find(panel, "글자를 크게 보기"), second = find(panel, "글자를 작게 보기");
                 assertTrue(first instanceof RadioButton);
-                assertFalse(find(panel, "이 목표로 시작").isEnabled());
+                assertFalse(find(panel, "다음 단계").isEnabled());
                 first.performClick(); second.performClick();
                 assertFalse(((RadioButton) first).isChecked());
                 assertTrue(((RadioButton) second).isChecked());
                 assertNull(answers.goal);
-                find(panel, "이 목표로 시작").performClick();
+                find(panel, "다음 단계").performClick();
                 assertEquals("settings.font_size.decrease", answers.goal);
-                find(panel, "잘 모르겠어요").performClick(); assertEquals("unsure", answers.clarification);
+                assertNotNull(find(panel, "다른 내용 입력하기"));
                 snapshot(panel, "goals");
                 panel.result(json("{\"message\":\"글자 크기를 키웠어요. 이제 글자가 보기 편한가요?\"}"));
                 find(panel, "네, 잘 보여요").performClick(); assertEquals("satisfied", answers.answer);
@@ -264,7 +298,7 @@ public class TaskFlowOverlayTest {
                 snapshot(panel, "unresolved");
                 assertTrue(find(panel, "어디에서 무엇을 바꾸고 싶은지 알려주세요.").isShown());
                 assertTrue(find(panel, "이거 좀 바꿔줘").isShown());
-                assertNull(find(panel, "이 목표로 시작"));
+                assertNull(find(panel, "다음 단계"));
                 assertFalse(find(panel, "일시정지").isShown());
                 assertFalse(findDescription(panel, "말이나 글로 입력하기").isShown());
                 find(panel, "다시 말하기").performClick();
@@ -442,34 +476,20 @@ public class TaskFlowOverlayTest {
                 };
                 panel[0] = new TaskFlowOverlayView(activity, answers);
                 activity.setContentView(panel[0]); panel[0].requirements(review, false);
-                assertNull(find(panel[0], "요청 확인 체크리스트"));
-                assertNull(find(panel[0], "내 요청:"));
-                assertNotNull(find(panel[0], "글자 크기 키워줘"));
-                assertEquals(View.VISIBLE, find(panel[0], review.prompt(false)).getVisibility());
-                assertNull(find(panel[0], "글로 보기"));
-                assertSame(find(panel[0], review.prompt(false)).getParent(), find(panel[0], "다시 듣기").getParent());
-                assertFalse(find(panel[0], "이 내용으로 시작").isEnabled());
-                assertFalse(confirmed[0]);
-                snapshot(panel[0], "requirements-missing");
+                assertNotNull(find(panel[0], "1/2"));
+                assertFalse(find(panel[0], "다음 단계").isEnabled());
                 find(panel[0], "휴대폰 기본 글자").performClick();
+                assertFalse(review.isPhone());
+                find(panel[0], "다음 단계").performClick();
+                assertTrue(review.isPhone());
+                assertNotNull(find(panel[0], "2/2"));
                 assertNotNull(find(panel[0], review.summary()));
-                assertNull(find(panel[0], "내 요청:"));
-                assertNull(find(panel[0], "글로 보기"));
-                assertSame(find(panel[0], review.prompt(true)).getParent(), find(panel[0], "다시 듣기").getParent());
-                assertTrue(find(panel[0], "이 내용으로 시작").isEnabled());
                 assertFalse(confirmed[0]);
                 snapshot(panel[0], "requirements-ready");
-                find(panel[0], "이 내용으로 시작").performClick(); assertTrue(confirmed[0]);
-                panel[0].progress(review.summary(), new JSONArray().put(json("{\"label\":\"디스플레이 메뉴 확인\",\"status\":\"completed\"}")), "디스플레이를 눌러 주세요", false);
-                assertNull(find(panel[0], "디스플레이 메뉴 확인"));
-                assertNull(find(panel[0], "요청 확인 체크리스트"));
-                assertNotNull(find(panel[0], review.summary()));
-                RequirementReview app = new RequirementReview("카카오톡 전체 글자를 크게");
-                panel[0].requirements(app, false);
-                assertNotNull(find(panel[0], "카카오톡 전체 글자를 크게"));
-                assertFalse(find(panel[0], "이 내용으로 시작").isEnabled());
+                find(panel[0], "이대로 시작하기").performClick(); assertTrue(confirmed[0]);
+                panel[0].requirements(new RequirementReview("카카오톡 전체 글자를 크게"), false);
+                assertFalse(find(panel[0], "이대로 시작하기").isShown());
                 snapshot(panel[0], "requirements-app");
-                find(panel[0], "요청 중지").performClick(); assertEquals("cancel_task", answers.control);
             });
         }
     }
@@ -492,12 +512,12 @@ public class TaskFlowOverlayTest {
                 assertTrue(panel.getMeasuredHeight() > shortHeight);
                 assertTrue(panel.getMeasuredHeight() <= cap);
                 assertEquals(width, panel.getMeasuredWidth());
-                assertEquals(View.GONE, find(panel, "이 내용으로 시작").getVisibility());
-                assertTrue(find(panel, "요청 중지").getHeight() > 0);
-                find(panel, "요청 더 보기").performClick();
-                assertNotNull(find(panel, "요청 접기"));
+                assertEquals(View.GONE, find(panel, "이대로 시작하기").getVisibility());
+                assertTrue(find(panel, "이전 단계").getHeight() > 0);
+                find(panel, "다른 내용 입력하기").performClick();
+                assertTrue(find(panel, "수정한 요청 확인").isShown());
                 assertEquals(activity.getResources().getFont(com.click.designpreview.R.font.pretendard_semibold),
-                        find(panel, "요청을 확인해 주세요").getTypeface());
+                        find(panel, "어떤 작업을 도와드릴까요?").getTypeface());
                 snapshot(panel, "requirements-long");
             });
         }

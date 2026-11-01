@@ -24,9 +24,9 @@ public class FloatingReadabilityTest {
             control.openVoice();
             String message = "요청하신 글자 크기 설정 화면을 확인하고 있어요. 화면의 안내를 따라 천천히 진행해 주세요. "
                     + "이 안내가 길어져도 마지막 문장까지 읽을 수 있고 언제든지 듣기를 멈출 수 있어야 해요.";
-            control.setRecognizedSpeech(message);
+            control.showRecognizedSpeechResult(message);
             layout(control, 296, 460);
-            TextView stop = find(control, "메뉴로"), fold = find(control, "줄이기");
+            TextView stop = find(control, "취소"), fold = find(control, "줄이기  −");
             assertActionVisible(control, stop);
             assertActionVisible(control, fold);
             TextView transcript = find(control, message);
@@ -39,10 +39,10 @@ public class FloatingReadabilityTest {
             stop.performClick();
             assertEquals(ClickOverlayLayout.Mode.MENU, control.getMode());
             layout(control, 296, 460);
-            TextView voice = find(control, "말로 시작"), write = find(control, "글로 입력");
+            TextView voice = find(control, "말로 입력하기"), write = find(control, "글로 입력하기");
             assertLabelFits(voice);
             assertLabelFits(write);
-            find(control, "줄이기").performClick();
+            find(control, "줄이기  −").performClick();
             assertEquals(ClickOverlayLayout.Mode.COLLAPSED, control.getMode());
         });
     }
@@ -57,7 +57,7 @@ public class FloatingReadabilityTest {
                 control.openText();
                 control.setDraftText("글자 크기를 조금 더 크게");
                 layout(control, 296, 260);
-                assertActionVisible(control, find(control, "줄이기"));
+                assertActionVisible(control, find(control, "줄이기  −"));
                 assertActionVisible(control, find(control, "↑"));
                 TextView input = find(control, "글자 크기를 조금 더 크게");
                 assertLabelFits(input);

@@ -47,11 +47,11 @@ public class ClickTutorialFlowTest {
             assertClickPulseContinues(scenario);
             tapId(scenario, R.id.tutorial_floating_control);
             assertMode(scenario, ClickOverlayLayout.Mode.MENU);
-            assertHighlightOn(scenario, "글로 입력", 0);
+            assertHighlightOn(scenario, "글로 입력하기", 0);
             scenario.onActivity(a -> control(a).setTranslationY(control(a).getTranslationY() - 18 * a.getResources().getDisplayMetrics().density));
-            assertHighlightOn(scenario, "글로 입력", 0);
+            assertHighlightOn(scenario, "글로 입력하기", 0);
             screenshot("click-feature-2");
-            tapText(scenario, "글로 입력");
+            tapText(scenario, "글로 입력하기");
             assertMode(scenario, ClickOverlayLayout.Mode.TEXT);
             screenshot("click-feature-3");
             final View[] input = {null};
@@ -77,10 +77,10 @@ public class ClickTutorialFlowTest {
             tapText(scenario, "↑");
             scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "이 화면은 어떻게 사용해요?")));
             screenshot("click-feature-4");
-            tapText(scenario, "이 내용으로 시작");
+            tapText(scenario, "이대로 시작하기");
             assertHighlightOn(scenario, null, R.id.tutorial_next);
             tapId(scenario, R.id.tutorial_next);
-            tapText(scenario, "말로 시작");
+            tapText(scenario, "말로 입력하기");
             assertMode(scenario, ClickOverlayLayout.Mode.VOICE);
             scenario.onActivity(a -> {
                 assertFalse(control(a).isVoiceInputActive());
@@ -103,7 +103,8 @@ public class ClickTutorialFlowTest {
             microphoneTouch(scenario, android.view.MotionEvent.ACTION_DOWN);
             scenario.onActivity(a -> {
                 speech.callback.onPartialText("휴대폰 글자");
-                assertNotNull(findText(a.getWindow().getDecorView(), "휴대폰 글자"));
+                assertTrue(control(a).isVoiceInputActive());
+                assertNotNull(findText(a.getWindow().getDecorView(), "지금 듣고 있어요"));
             });
             microphoneTouch(scenario, android.view.MotionEvent.ACTION_UP);
             scenario.onActivity(a -> {
@@ -180,7 +181,7 @@ public class ClickTutorialFlowTest {
         try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
             tapId(scenario, R.id.tutorial_next);
             tapId(scenario, R.id.tutorial_floating_control);
-            tapText(scenario, "글로 입력");
+            tapText(scenario, "글로 입력하기");
             scenario.onActivity(a -> {
                 EditText input = findType(a.getWindow().getDecorView(), EditText.class);
                 assertEquals("글자 크기 키워줘", input.getHint().toString());
@@ -194,11 +195,12 @@ public class ClickTutorialFlowTest {
             scenario.onActivity(a -> assertEquals("글자 크기 키워줘", control(a).getDraftText()));
             tapText(scenario, "↑");
             tapText(scenario, "휴대폰 기본 글자");
+            tapText(scenario, "다음 단계");
             scenario.recreate();
             scenario.onActivity(a -> {
-                assertNotNull("Chosen scope must survive recreation", findText(a.getWindow().getDecorView(), "이 내용으로 시작"));
+                assertNotNull("Chosen scope must survive recreation", findText(a.getWindow().getDecorView(), "이대로 시작하기"));
                 assertEquals("", control(a).getDraftText());
-                assertNotNull(findText(a.getWindow().getDecorView(), "글자 크기 키워줘"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "휴대폰 설정 · 글자를 더 크게"));
                 assertFalse(a.findViewById(R.id.tutorial_next).isEnabled());
             });
             tapId(scenario, R.id.tutorial_back);

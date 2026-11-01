@@ -41,9 +41,10 @@ public class FloatingInteractionTest {
             control.performClick();
             render(control, "menu");
             control.openVoice();
-            control.setRecognizedSpeech("글자 크기를 키워줘");
+            control.showRecognizedSpeechResult("글자 크기를 키워줘");
             render(control, "voice");
-            findText(control, "글로 입력").performClick();
+            findText(control, "취소").performClick();
+            clickAncestor(findText(control, "글로 입력하기"));
             assertEquals(ClickOverlayLayout.Mode.TEXT, control.getMode());
             control.setDraftText("글자 크기를 키워줘");
             assertNotNull(findText(control, "글자 크기를 키워줘"));
@@ -81,10 +82,10 @@ public class FloatingInteractionTest {
                 assertNotNull("The host must have a real interactive control", control);
                 control.performClick();
                 assertEquals(ClickOverlayLayout.Mode.MENU, control.getMode());
-                assertNotNull(findText(control, "말로 시작"));
-                clickAncestor(findText(control, "글로 입력"));
+                assertNotNull(findText(control, "말로 입력하기"));
+                clickAncestor(findText(control, "글로 입력하기"));
                 assertEquals(ClickOverlayLayout.Mode.TEXT, control.getMode());
-                assertNotNull(findText(control, "말로 시작"));
+                assertNotNull(findText(control, "말로 입력하기"));
             });
         }
     }

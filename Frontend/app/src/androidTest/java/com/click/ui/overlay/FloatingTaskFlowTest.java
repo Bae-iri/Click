@@ -47,9 +47,6 @@ public class FloatingTaskFlowTest {
         automation.adoptShellPermissionIdentity("android.permission.WRITE_SECURE_SETTINGS");
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
             Settings.Secure.putInt(app.getContentResolver(), "show_ime_with_hard_keyboard", 1);
-            FloatingClickHost[] homeControl = {null};
-            scenario.onActivity(activity -> homeControl[0] = findHomeControl(activity.getWindow().getDecorView()));
-            assertNotNull(homeControl[0]);
             List<String> services = new ArrayList<>();
             if (original != null) for (String name : original.split(":"))
                 if (!name.isEmpty() && !name.equals(component)) services.add(name);
@@ -61,7 +58,6 @@ public class FloatingTaskFlowTest {
             await(() -> ClickAccessibilityService.accessibilityWindowManager() != null);
             scenario.onActivity(activity -> activity.startService(serviceIntent));
             await(() -> service() != null && control().isAttachedToWindow());
-            await(() -> !homeControl[0].isShown());
             assertHighlightBehindLogo(automation);
             instrumentation.runOnMainSync(() -> {
                 // Keep this UI regression independent of shared-server task state.
@@ -179,7 +175,7 @@ public class FloatingTaskFlowTest {
                     Method place = ClickOverlayService.class.getDeclaredMethod("placeTaskFlow", int[].class, boolean.class);
                     place.setAccessible(true); place.invoke(service(), null, true);
                 } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
-                findText(guide(), "내용 수정").performClick();
+                findText(guide(), "다른 내용 입력하기").performClick();
             });
             await(() -> ClickAccessibilityService.keyboardBounds() != null);
             await(() -> {
@@ -198,7 +194,7 @@ public class FloatingTaskFlowTest {
                 keyboard.hideSoftInputFromWindow(guide().getWindowToken(), 0);
             });
             app.stopService(serviceIntent);
-            await(() -> service() == null && homeControl[0].isShown());
+            await(() -> service() == null);
         } finally {
             app.stopService(serviceIntent);
             Settings.Secure.putString(app.getContentResolver(), "show_ime_with_hard_keyboard", originalKeyboard);

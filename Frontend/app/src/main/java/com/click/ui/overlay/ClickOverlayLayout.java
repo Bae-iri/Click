@@ -44,6 +44,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         default void onMicrophoneReleased() {}
         default void onMicrophoneCancelled() {}
         default void onStopRequested() {}
+        default void onContentSizeChanged() {}
     }
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -56,11 +57,14 @@ public final class ClickOverlayLayout extends ViewGroup {
     private LinearLayout textEntry;
     private TextView voiceSwitch;
     private TextView inputFeedback;
-    private ImageView microphone;
+    private VoiceCaptureIndicator microphone;
+    private TextView voiceHelp;
     private LinearLayout voiceCaptureArea;
     private TextView microphoneLabel, requestLabel, stopRequest;
     private LinearLayout requestRow;
     private LinearLayout inputStatusBox;
+    private boolean requestControlsVisible = true;
+    private String taskPhase;
     private boolean voiceInputActive, voiceInputProcessing, requestStoppable;
     private View microphoneTouchTarget;
     private String requestStatus;
@@ -103,6 +107,18 @@ public final class ClickOverlayLayout extends ViewGroup {
         updateDescription();
     }
 
+    public void setTaskPhase(String phase) {
+        taskPhase = phase;
+        if (panel != null) panel.setContentDescription(phase == null ? null : phase + " 안내 창");
+    }
+    public void showVoiceInputError(String message) {
+        if (mode != Mode.VOICE || transcript == null) return;
+        transcript.setText(message); transcript.setVisibility(VISIBLE); resizeToContent();
+    }
+    public void setRequestControlsVisible(boolean visible) {
+        requestControlsVisible = visible;
+        setRequestStatus(requestStatus, requestStoppable);
+    }
     public void setCallback(Callback callback) { this.callback = callback; }
     public Mode getMode() { return mode; }
     public void openMenu() { changeMode(Mode.MENU); }
@@ -114,11 +130,13 @@ public final class ClickOverlayLayout extends ViewGroup {
     public void setDraftText(String text) { goalInput.setText(text); }
     public void setRecognizedSpeech(String text) {
         recognizedSpeech = text == null || text.trim().isEmpty() ? "어떤 도움이 필요하세요?" : text.trim();
-        if (transcript != null) transcript.setText(recognizedSpeech);
     }
     public void showRecognizedSpeechResult(String text) {
         setRecognizedSpeech(text);
         TextView result = transcript;
+        if (result != null) {
+            result.setText(recognizedSpeech); result.setVisibility(VISIBLE); resizeToContent();
+        }
         if (result != null) result.post(() -> {
             if (transcript == result && mode == Mode.VOICE)
                 result.requestRectangleOnScreen(new android.graphics.Rect(0, 0, result.getWidth(), result.getHeight()), true);
@@ -128,55 +146,75 @@ public final class ClickOverlayLayout extends ViewGroup {
         if (inputFeedback == null || text == null || text.trim().isEmpty()) return;
         inputFeedback.setText(text.trim());
         inputFeedback.setVisibility(VISIBLE);
+        resizeToContent();
     }
     public void setLoadingStatus(String message) {
         loadingMessage = message;
-        if (loadingStatus != null) loadingStatus.setStatus(message);
+        if (loadingStatus != null) loadingStatus.setStatus(mode == Mode.VOICE ? null : message);
         setRequestStatus(requestStatus, requestStoppable);
     }
     public boolean isVoiceInputActive() { return voiceInputActive; }
     public void setVoiceInputActive(boolean active) {
         voiceInputActive = active;
+        if (active && transcript != null) transcript.setVisibility(GONE);
         if (!active) clearMicrophoneTouch();
         updateMicrophone();
     }
     public void setVoiceInputProcessing(boolean processing) {
         voiceInputProcessing = processing;
+        if (processing && transcript != null) transcript.setVisibility(GONE);
         updateMicrophone();
     }
     private void updateMicrophone() {
-        if (microphone != null) {
-            // Accessibility/keyboard clicks toggle start/finish without requiring a sustained touch.
-            voiceCaptureArea.setContentDescription(voiceInputProcessing ? "음성을 글자로 바꾸는 중"
-                    : voiceInputActive ? "음성 입력 완료" : "음성 입력 시작. 파란 박스를 꾹 누르고 말한 뒤 손을 떼세요");
-            voiceCaptureArea.setBackground(ClickUi.rounded(voiceInputActive ? 0xFFFFEDED : ClickUi.PALE_BLUE, dp(20)));
-            microphoneLabel.setText(voiceInputProcessing ? "변환 중…" : voiceInputActive ? "떼면 입력 완료" : "꾹 누르고 말하기");
-            voiceCaptureArea.setEnabled(!voiceInputProcessing);
-        }
+        if (microphone == null) return;
+        microphone.setState(voiceInputProcessing ? VoiceCaptureIndicator.State.PROCESSING
+                : voiceInputActive ? VoiceCaptureIndicator.State.LISTENING : VoiceCaptureIndicator.State.READY);
+        voiceCaptureArea.setContentDescription(voiceInputProcessing ? "말씀하신 내용을 확인하고 있어요"
+                : voiceInputActive ? "지금 듣고 있어요. 손을 떼면 입력이 끝나요"
+                : "마이크를 꾹 누르고 말씀해 주세요");
+        voiceCaptureArea.setBackgroundColor(Color.TRANSPARENT);
+        microphoneLabel.setText(voiceInputProcessing ? "말씀을 확인하고 있어요" : voiceInputActive ? "지금 듣고 있어요" : "꾹 누르고 말씀해 주세요");
+        voiceHelp.setText(voiceInputProcessing ? "잠시만 기다려 주세요." : voiceInputActive
+                ? "말씀을 마치면 손을 떼어 주세요." : "손을 떼면 말씀하신 내용을 확인할게요.");
+        voiceCaptureArea.setEnabled(!voiceInputProcessing);
+        resizeToContent();
+    }
+    private final Runnable notifyContentSize = () -> {
+        if (callback != null && mode != Mode.COLLAPSED) callback.onContentSizeChanged();
+    };
+    private void resizeToContent() {
+        requestLayout();
+        removeCallbacks(notifyContentSize);
+        post(notifyContentSize);
     }
     public void setRequestStatus(String status, boolean canStop) {
         requestStatus = status;
         requestStoppable = canStop;
         if (requestRow != null) {
-            boolean loading = loadingMessage != null && !loadingMessage.trim().isEmpty();
+            boolean loading = mode != Mode.VOICE && loadingMessage != null && !loadingMessage.trim().isEmpty();
             requestRow.setVisibility(status == null && !loading ? GONE : VISIBLE);
             requestLabel.setText(status);
             requestLabel.setVisibility(loading ? GONE : VISIBLE);
             requestRow.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
             stopRequest.setVisibility(canStop ? VISIBLE : GONE);
-            if (inputStatusBox != null) inputStatusBox.setVisibility(requestRow.getVisibility());
+            if (inputStatusBox != null) inputStatusBox.setVisibility(requestControlsVisible ? requestRow.getVisibility() : GONE);
+            resizeToContent();
         }
     }
 
     public int getWindowWidth(Mode target, int screenWidth) {
-        return target == Mode.COLLAPSED ? dp(64) : Math.min(screenWidth - dp(24), dp(320));
+        return target == Mode.COLLAPSED ? dp(64) : Math.min(screenWidth - dp(24), dp(target == Mode.VOICE ? 300 : target == Mode.TEXT ? 340 : 320));
     }
     public int getWindowHeight(Mode target) {
         if (target == Mode.COLLAPSED) return dp(64);
-        int base = target == Mode.TEXT ? 204 : target == Mode.VOICE ? 384 : 232;
-        float scale = Math.max(1f, getResources().getConfiguration().fontScale);
-        return Math.min(Math.round(dp(base) + dp(100) * (scale - 1f)),
-                getResources().getDisplayMetrics().heightPixels - dp(96));
+        int limit = getResources().getDisplayMetrics().heightPixels - dp(96);
+        if (target == mode && panel != null) {
+            int width = getWindowWidth(target, getResources().getDisplayMetrics().widthPixels);
+            panel.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(limit, MeasureSpec.AT_MOST));
+            return Math.min(limit, panel.getMeasuredHeight());
+        }
+        return Math.min(limit, dp(target == Mode.TEXT ? 216 : target == Mode.VOICE ? 350 : 340));
     }
     public float getClickCenterX(Mode target) {
         return getClickCenterX(target, getWindowWidth(target, getResources().getDisplayMetrics().widthPixels));
@@ -217,6 +255,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         voiceSwitch = null;
         inputFeedback = null;
         microphone = null;
+        voiceHelp = null;
         voiceCaptureArea = null;
         microphoneLabel = requestLabel = stopRequest = null;
         requestRow = null;
@@ -224,16 +263,25 @@ public final class ClickOverlayLayout extends ViewGroup {
         if (mode == Mode.COLLAPSED) return;
         panel = new LinearLayout(getContext());
         panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setContentDescription(taskPhase == null ? null : taskPhase + " 안내 창");
         panel.setPadding(dp(16), dp(12), dp(16), dp(12));
         panel.setBackground(ClickUi.outlined(Color.WHITE, ClickUi.BORDER, dp(28), dp(1)));
         addView(panel);
 
         LinearLayout header = new LinearLayout(getContext());
         header.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = label("click", 22, ClickUi.TEXT, true);
+        LinearLayout identity = new LinearLayout(getContext());
+        identity.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView cursor = new ImageView(getContext());
+        cursor.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
+        cursor.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        identity.addView(cursor, new LinearLayout.LayoutParams(dp(23), dp(23)));
+        TextView title = label("click 안내", 12, ClickUi.TEXT, true);
+        title.setPadding(dp(6), 0, 0, 0);
+        identity.addView(title);
         if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
-        header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView close = label("줄이기", 14, ClickUi.SUBTEXT, true);
+        header.addView(identity, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView close = label("줄이기  −", 12, ClickUi.BLUE, true);
         close.setId(R.id.overlay_collapse);
         close.setGravity(Gravity.CENTER);
         close.setMaxLines(1);
@@ -241,7 +289,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         close.setPadding(dp(8), dp(8), dp(8), dp(8));
         close.setFocusable(true);
         close.setBackground(new RippleDrawable(ColorStateList.valueOf(0x183478F6),
-                ClickUi.rounded(0xFFF1F4F9, dp(16)), ClickUi.rounded(Color.WHITE, dp(16))));
+                new android.graphics.drawable.InsetDrawable(ClickUi.rounded(ClickUi.PALE_BLUE, dp(12)), 0, dp(10), 0, dp(10)), ClickUi.rounded(Color.WHITE, dp(16))));
         close.setOnClickListener(view -> collapse());
         header.addView(close, new LinearLayout.LayoutParams(handleWidth(), headerHeight()));
         panel.addView(header, new LinearLayout.LayoutParams(-1, headerHeight()));
@@ -260,7 +308,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         setRequestStatus(requestStatus, requestStoppable);
 
         loadingStatus = new LoadingStatusView(getContext());
-        loadingStatus.setStatus(loadingMessage);
+        loadingStatus.setStatus(mode == Mode.VOICE ? null : loadingMessage);
         requestRow.addView(loadingStatus, 0, new LinearLayout.LayoutParams(0, -2, 1));
         LinearLayout statusBox = new LinearLayout(getContext());
         inputStatusBox = statusBox;
@@ -276,56 +324,50 @@ public final class ClickOverlayLayout extends ViewGroup {
             LinearLayout choices = new LinearLayout(getContext());
             choices.setOrientation(LinearLayout.VERTICAL);
             choices.addView(statusBox, spaced(0));
-            choices.addView(feature("말로 시작", true, () -> changeMode(Mode.VOICE)), spaced(0));
-            choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(8));
+            TextView welcome = label("무엇을\n도와드릴까요?", 24, ClickUi.TEXT, true);
+            choices.addView(welcome, spaced(10));
+            TextView examples = label("예) 글자 크기 키워줘\n    화면을 더 밝게 해줘", 14, ClickUi.SUBTEXT, false);
+            examples.setPadding(dp(14), dp(12), dp(14), dp(12));
+            examples.setBackground(ClickUi.rounded(ClickUi.PALE_BLUE, dp(16)));
+            choices.addView(examples, spaced(14));
+            choices.addView(feature("말로 입력하기", true, () -> changeMode(Mode.VOICE)), spaced(14));
+            choices.addView(feature("글로 입력하기", false, () -> changeMode(Mode.TEXT)), spaced(8));
             addScrollableBody(choices, 8);
         } else if (mode == Mode.VOICE) {
             LinearLayout listening = new LinearLayout(getContext());
             voiceCaptureArea = listening;
             listening.setId(R.id.overlay_microphone);
             listening.setOrientation(LinearLayout.VERTICAL);
-            listening.setGravity(Gravity.CENTER_VERTICAL);
-            listening.setPadding(dp(12), dp(12), dp(12), dp(12));
+            listening.setGravity(Gravity.CENTER);
+            listening.setPadding(dp(8), dp(12), dp(8), dp(16));
             listening.setFocusable(true);
             listening.setOnClickListener(view -> { if (callback != null) callback.onMicrophoneClicked(); });
             listening.setOnTouchListener(this::onMicrophoneTouch);
-            LinearLayout prompt = new LinearLayout(getContext());
-            prompt.setOrientation(LinearLayout.VERTICAL);
-            prompt.setGravity(Gravity.CENTER);
-            ImageView mic = new ImageView(getContext());
-            microphone = mic;
-            mic.setImageResource(R.drawable.ic_overlay_microphone);
-            mic.setPadding(dp(8), dp(8), dp(8), dp(8));
-            mic.setBackground(ClickUi.rounded(Color.WHITE, dp(40)));
-            mic.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-            prompt.addView(mic, new LinearLayout.LayoutParams(dp(80), dp(80)));
-            microphoneLabel = label("", 14, ClickUi.BLUE_DARK, true);
-            microphoneLabel.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            microphone = new VoiceCaptureIndicator(getContext());
+            listening.addView(microphone, new LinearLayout.LayoutParams(dp(148), dp(148)));
+            microphoneLabel = label("", 18, ClickUi.TEXT, true);
             microphoneLabel.setGravity(Gravity.CENTER);
-            LinearLayout.LayoutParams promptCopy = new LinearLayout.LayoutParams(-1, -2);
-            promptCopy.topMargin = dp(6);
-            prompt.addView(microphoneLabel, promptCopy);
-            listening.addView(prompt, spaced(0));
-            setVoiceInputActive(voiceInputActive);
-            transcript = label(recognizedSpeech, 15, ClickUi.TEXT, false);
+            microphoneLabel.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            listening.addView(microphoneLabel, spaced(12));
+            voiceHelp = label("", 13, ClickUi.SUBTEXT, false);
+            voiceHelp.setGravity(Gravity.CENTER);
+            voiceHelp.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            listening.addView(voiceHelp, spaced(6));
+            updateMicrophone();
+            transcript = label("", 14, ClickUi.SUBTEXT, false);
             transcript.setGravity(Gravity.CENTER);
-            transcript.setMaxLines(3);
-            transcript.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            transcript.setMaxLines(Integer.MAX_VALUE);
+            transcript.setEllipsize(null);
+            transcript.setVisibility(GONE);
             transcript.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
             listening.addView(transcript, spaced(8));
-            listening.addView(statusBox, spaced(8));
-            LinearLayout.LayoutParams voiceParams = new LinearLayout.LayoutParams(-1, 0, 1);
-            voiceParams.topMargin = dp(8);
-            panel.addView(listening, voiceParams);
+            addScrollableBody(listening, 6);
+            panel.addView(statusBox, spaced(0));
             LinearLayout actions = new LinearLayout(getContext());
             actions.setGravity(Gravity.CENTER_VERTICAL);
-            TextView write = action("글로 입력", false, () -> changeMode(Mode.TEXT));
-            TextView stop = action("메뉴로", false, () -> changeMode(Mode.MENU));
-            stop.setContentDescription("음성 입력을 닫고 메뉴로 돌아가기");
-            actions.addView(write, new LinearLayout.LayoutParams(0, -2, 1));
-            LinearLayout.LayoutParams stopParams = new LinearLayout.LayoutParams(0, -2, 1);
-            stopParams.leftMargin = dp(10);
-            actions.addView(stop, stopParams);
+            TextView stop = action("취소", false, () -> changeMode(Mode.MENU));
+            stop.setContentDescription("음성 입력을 취소하고 메뉴로 돌아가기");
+            actions.addView(stop, new LinearLayout.LayoutParams(-1, -2));
             panel.addView(actions, spaced(8));
         } else {
             LinearLayout composer = new LinearLayout(getContext());
@@ -347,7 +389,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             inputFeedback.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
             inputFeedback.setVisibility(GONE);
             composer.addView(inputFeedback, spaced(8));
-            TextView voice = action("말로 시작", false, () -> changeMode(Mode.VOICE));
+            TextView voice = action("말로 입력하기", false, () -> changeMode(Mode.VOICE));
             voiceSwitch = voice;
             voice.setContentDescription("음성으로 입력하기");
             composer.addView(voice, buttonParams());
@@ -357,7 +399,7 @@ public final class ClickOverlayLayout extends ViewGroup {
 
     private void addScrollableBody(View content, int margin) {
         ScrollView scroll = new ScrollView(getContext());
-        scroll.setFillViewport(true);
+        scroll.setFillViewport(false);
         scroll.setVerticalScrollBarEnabled(false);
         scroll.addView(content, new ScrollView.LayoutParams(-1, -2));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, 0, 1);
@@ -381,10 +423,10 @@ public final class ClickOverlayLayout extends ViewGroup {
     private View feature(String title, boolean microphone, Runnable action) {
         LinearLayout row = new LinearLayout(getContext());
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(16), dp(16), dp(16), dp(16));
-        row.setMinimumHeight(dp(64));
+        row.setPadding(dp(14), dp(10), dp(14), dp(10));
+        row.setMinimumHeight(dp(52));
         row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x223478F6),
-                ClickUi.rounded(microphone ? 0xFFEAF2FF : 0xFFF6F8FC, dp(20)),
+                ClickUi.rounded(microphone ? ClickUi.BLUE : ClickUi.PALE_BLUE, dp(16)),
                 ClickUi.rounded(Color.WHITE, dp(20))));
         ImageView icon = new ImageView(getContext());
         icon.setImageResource(microphone ? R.drawable.ic_overlay_microphone : R.drawable.ic_overlay_edit);
@@ -393,12 +435,12 @@ public final class ClickOverlayLayout extends ViewGroup {
         icon.setBackground(ClickUi.rounded(microphone ? ClickUi.BLUE : 0xFFE6EFFF, dp(15)));
         icon.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         row.addView(icon, new LinearLayout.LayoutParams(dp(44), dp(44)));
-        TextView copy = label(title, 19, ClickUi.TEXT, true);
+        TextView copy = label(title, 16, microphone ? Color.WHITE : ClickUi.TEXT, true);
         copy.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);
         copyParams.leftMargin = dp(16);
         row.addView(copy, copyParams);
-        TextView arrow = label("›", 26, ClickUi.SUBTEXT, false);
+        TextView arrow = label("", 20, ClickUi.SUBTEXT, false);
         arrow.setGravity(Gravity.CENTER);
         arrow.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         row.addView(arrow, new LinearLayout.LayoutParams(dp(20), dp(32)));
@@ -588,6 +630,7 @@ public final class ClickOverlayLayout extends ViewGroup {
     @Override protected void onDetachedFromWindow() {
         finishMicrophoneTouch(true);
         removeCallbacks(hideAfterHold);
+        removeCallbacks(notifyContentSize);
         holding = dragging = false;
         super.onDetachedFromWindow();
     }

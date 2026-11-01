@@ -392,6 +392,9 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         updateHighlight();
     }
 
+    @Override public void onContentSizeChanged() {
+        resize(); constrain(control.getX(), control.getY()); updateHighlight();
+    }
     @Override public void onTextSubmitted(String text) { listener.onTextSubmitted(text); }
     @Override public void onMicrophoneClicked() { listener.onMicrophoneClicked(); }
     @Override public void onMicrophonePressed() { listener.onMicrophonePressed(); }

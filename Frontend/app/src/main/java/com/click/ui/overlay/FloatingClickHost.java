@@ -87,6 +87,13 @@ public final class FloatingClickHost extends FrameLayout implements ClickOverlay
         }
     }
 
+    @Override public void onContentSizeChanged() {
+        if (control.getMode() == ClickOverlayLayout.Mode.TEXT) { fitTextAboveKeyboard(); return; }
+        if (getHeight() <= 0) return;
+        LayoutParams params = (LayoutParams) control.getLayoutParams();
+        int height = Math.min(getHeight(), control.getWindowHeight(control.getMode()));
+        if (params.height != height) { params.height = height; control.setLayoutParams(params); constrain(control.getX(), control.getY()); }
+    }
     private void fitTextAboveKeyboard() {
         if (getHeight() == 0 || control.getMode() != ClickOverlayLayout.Mode.TEXT) return;
         int availableBottom = getHeight();

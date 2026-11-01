@@ -55,6 +55,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         default void confirmRequirements() {}
         default void answerGoalInput(String value) {}
         default void resetGoalInputs() {}
+        default void onReviewChoiceSelected() {}
         default void replayGuidance(String message) {}
         default void stopGuidance() {}
         default void collapse() {}
@@ -68,13 +69,16 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private final LinearLayout content;
     private final Button pause;
     private final Button reviewConfirm;
+    private final LinearLayout reviewNavigation, stepHeader;
+    private final android.widget.ProgressBar stepProgress;
+    private final TextView stepLabel;
     private final Button headerInput;
     private final View divider;
     private final LinearLayout controls;
     private final LinearLayout recoveryActions;
     private TextView narrationStatus, narrationText;
     private LinearLayout requestCaptionRow;
-    private Button narrationPlayback, narrationCaptions;
+    private Button narrationPlayback, narrationCaptions, reviewReplay;
     private String narrationMessage;
     private boolean narrationSpeaking, narrationUnavailable;
     private final TextView heading;
@@ -90,6 +94,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private boolean minimizedProgress;
     private boolean automaticProgress;
     private int[] expandedVisibility;
+    private String requestSummary;
+    private final CompactBubbleBackground compactBackground = new CompactBubbleBackground();
 
     public TaskFlowOverlayView(Context context, Listener listener) {
         super(context);
@@ -118,10 +124,18 @@ public final class TaskFlowOverlayView extends LinearLayout {
         header.setGravity(Gravity.CENTER_VERTICAL);
         LinearLayout titles = new LinearLayout(context);
         titles.setOrientation(VERTICAL);
+        LinearLayout identity = new LinearLayout(context);
+        identity.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView cursor = new ImageView(context);
+        cursor.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
+        cursor.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        identity.addView(cursor, new LayoutParams(dp(23), dp(23)));
         brand = text("click 안내", 12);
+        brand.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
         brand.setTextColor(BLUE_DARK);
-        brand.setPadding(0, 0, 0, dp(3));
-        titles.addView(brand);
+        brand.setPadding(dp(6), 0, 0, 0);
+        identity.addView(brand);
+        titles.addView(identity);
         heading = ClickUi.title(context, "");
         heading.setTextSize(20);
         heading.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
@@ -132,19 +146,20 @@ public final class TaskFlowOverlayView extends LinearLayout {
         Button input = quietButton("입력", listener::openInput);
         headerInput = input;
         input.setContentDescription("말이나 글로 입력하기");
-        input.setTextSize(14);
+        input.setTextSize(12); input.setMinimumWidth(dp(48));
         input.setPadding(dp(8), dp(8), dp(8), dp(8));
-        input.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 16));
+        input.setBackground(new InsetDrawable(ripple(PALE_BLUE, 0x183478F6, 12), 0, dp(8), 0, dp(8)));
         input.setId(R.id.task_flow_input);
-        header.addView(input, new LayoutParams(-2, -2));
+        LayoutParams inputParams = new LayoutParams(-2, -2); inputParams.leftMargin = dp(4);
+        header.addView(input, inputParams);
         Button minimize = quietButton("줄이기", listener::collapse);
         close = minimize;
         close.setId(R.id.task_flow_collapse);
-        minimize.setTextSize(14);
+        minimize.setTextSize(12); minimize.setMinimumWidth(dp(54));
         close.setContentDescription("안내 창 줄이기");
         close.setPadding(dp(10), dp(8), dp(10), dp(8));
         close.setFocusable(true);
-        close.setBackground(ripple(0xFFF1F4F9, 0x183478F6, 16));
+        close.setBackground(new InsetDrawable(ripple(PALE_BLUE, 0x183478F6, 12), 0, dp(8), 0, dp(8)));
         close.setOnClickListener(view -> listener.collapse());
         LayoutParams closeParams = new LayoutParams(-2, -2);
         closeParams.leftMargin = dp(4);
@@ -152,6 +167,22 @@ public final class TaskFlowOverlayView extends LinearLayout {
         LayoutParams headerParams = new LayoutParams(-1, -2);
         headerParams.bottomMargin = dp(12);
         addView(header, headerParams);
+        stepHeader = new LinearLayout(context);
+        stepHeader.setGravity(Gravity.CENTER_VERTICAL);
+        stepProgress = new android.widget.ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal);
+        stepProgress.setMax(2);
+        android.graphics.drawable.ClipDrawable fill = new android.graphics.drawable.ClipDrawable(round(BLUE, 3), Gravity.LEFT,
+                android.graphics.drawable.ClipDrawable.HORIZONTAL);
+        android.graphics.drawable.LayerDrawable track = new android.graphics.drawable.LayerDrawable(new Drawable[]{round(0xFFE8F0FF, 3), fill});
+        track.setId(0, android.R.id.background); track.setId(1, android.R.id.progress);
+        stepProgress.setProgressDrawable(track);
+        stepHeader.addView(stepProgress, new LayoutParams(0, dp(5), 1));
+        stepLabel = text("", 12); stepLabel.setTextColor(SECONDARY);
+        stepLabel.setPadding(dp(10), 0, 0, 0);
+        stepHeader.addView(stepLabel);
+        stepHeader.setVisibility(GONE);
+        LayoutParams stageParams = spaced(0); stageParams.bottomMargin = dp(22);
+        addView(stepHeader, stageParams);
         statusBox = new LinearLayout(context);
         statusBox.setOrientation(VERTICAL);
         statusBox.setPadding(dp(12), dp(8), dp(12), dp(8));
@@ -181,10 +212,13 @@ public final class TaskFlowOverlayView extends LinearLayout {
         });
         addView(scroll, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
 
-        reviewConfirm = primaryButton("이 내용으로 시작", () -> listener.confirmRequirements());
+        reviewConfirm = primaryButton("이대로 시작하기", () -> listener.confirmRequirements());
         reviewConfirm.setVisibility(GONE);
         LayoutParams reviewParams = spaced(0); reviewParams.bottomMargin = dp(10);
         addView(reviewConfirm, reviewParams);
+        reviewNavigation = new LinearLayout(context);
+        reviewNavigation.setVisibility(GONE);
+        addView(reviewNavigation, spaced(0));
 
         recoveryActions = new LinearLayout(context);
         recoveryActions.setOrientation(VERTICAL);
@@ -234,7 +268,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         return automaticProgress ? AUTOMATIC_PROGRESS_MESSAGE : guidanceMessage();
     }
 
-    public int getWindowWidth(int screenWidth) { return Math.min(screenWidth - dp(24), dp(440)); }
+    public int getWindowWidth(int screenWidth) { return Math.min(screenWidth - dp(24), dp(minimizedProgress ? 260 : 340)); }
     public void setAvailableHeight(int height) { if (maxHeight != height) { maxHeight = height; requestLayout(); } }
     public boolean hasProgress() { return progressMessage != null; }
     public String guidanceMessage() {
@@ -249,19 +283,38 @@ public final class TaskFlowOverlayView extends LinearLayout {
         minimizedProgress = minimized;
         compactMessage.setText(minimized ? compactGuidance() : "");
         compactScroll.setVisibility(minimized ? VISIBLE : GONE);
-        View[] sections = {header, scroll, controls, divider, reviewConfirm, recoveryActions, progressSummary};
+        View[] sections = {header, scroll, controls, divider, reviewConfirm, recoveryActions, progressSummary, stepHeader, reviewNavigation};
         if (minimized) expandedVisibility = new int[sections.length];
         for (int i = 0; i < sections.length; i++) {
             if (minimized) { expandedVisibility[i] = sections[i].getVisibility(); sections[i].setVisibility(GONE); }
             else if (expandedVisibility != null) sections[i].setVisibility(expandedVisibility[i]);
         }
         updateStatusBox();
-        setPadding(dp(14), dp(minimized ? 10 : 12), dp(14), dp(minimized ? 10 : 12));
-        GradientDrawable background = outline(Color.WHITE, minimized ? 0xFFB9D1FA : BORDER, 22);
-        if (minimized) background.setCornerRadii(new float[]{dp(22), dp(22), dp(22), dp(22),
-                dp(6), dp(6), dp(22), dp(22)});
-        setBackground(background);
+        updateBubblePadding();
+        setBackground(minimized ? compactBackground : outline(Color.WHITE, BORDER, 24));
         requestLayout();
+    }
+    public void setRequestSummary(String request) {
+        if (request != null && !request.trim().isEmpty() && !"선택한 작업".equals(request)) requestSummary = request;
+    }
+    public String phaseLabel() {
+        return stepHeader.getVisibility() == VISIBLE ? (stepProgress.getProgress() == 1 ? "상세정보 확인" : "요청 확인")
+                : hasProgress() ? "안내 중" : heading.getText().toString();
+    }
+    public void actionRequired(String message) {
+        if (hasProgress()) progress(requestSummary, null, message, false);
+        else { clear("함께 확인해 주세요"); addQuestionNarration(message); }
+        setAutomaticProgress(false);
+    }
+    public void setCompactAnchor(float centerX, boolean above) {
+        compactBackground.anchorX = centerX;
+        boolean changed = compactBackground.above != above;
+        compactBackground.above = above; compactBackground.invalidateSelf();
+        if (changed && minimizedProgress) { updateBubblePadding(); invalidateOutline(); }
+    }
+    private void updateBubblePadding() {
+        if (minimizedProgress) setPadding(dp(14), dp(compactBackground.above ? 22 : 10), dp(14), dp(compactBackground.above ? 10 : 22));
+        else setPadding(dp(14), dp(12), dp(14), dp(12));
     }
     @Override protected void onMeasure(int width, int height) {
         int available = MeasureSpec.getMode(height) == MeasureSpec.UNSPECIFIED ? maxHeight
@@ -275,6 +328,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     private void clear(String title) {
         setMinimizedProgress(false);
+        if (reviewReplay != null) { header.removeView(reviewReplay); reviewReplay = null; }
         automaticProgress = false;
         progressMessage = null;
         progressSummary.removeAllViews();
@@ -283,6 +337,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.removeAllViews();
         if (title != null && !title.isEmpty()) content.addView(heading, spaced(0));
         reviewConfirm.setVisibility(GONE);
+        stepHeader.setVisibility(GONE);
+        reviewNavigation.removeAllViews(); reviewNavigation.setVisibility(GONE);
         recoveryActions.removeAllViews();
         recoveryActions.setVisibility(GONE);
         headerInput.setVisibility(VISIBLE);
@@ -412,129 +468,192 @@ public final class TaskFlowOverlayView extends LinearLayout {
         input.clearFocus();
     }
 
-    public void goals(String message, JSONArray candidates) {
-        clear("어떤 도움을 원하세요?");
-        addNarration(message);
-        RadioGroup group = new RadioGroup(getContext()); group.setOrientation(VERTICAL);
-        final JSONObject[] selected = {null};
-        Button confirm = primaryButton("이 목표로 시작", () -> {
-            if (selected[0] != null) listener.chooseGoal(selected[0]);
+    private void reviewStage(int step, String title, String description) {
+        clear(title);
+        stepHeader.setVisibility(VISIBLE);
+        stepProgress.setProgress(step); stepLabel.setText(step + "/2");
+        stepHeader.setContentDescription(step + "단계, 전체 2단계");
+        divider.setVisibility(GONE); controls.setVisibility(GONE);
+        TextView subtitle = text(description, 14); subtitle.setTextColor(SECONDARY);
+        content.addView(subtitle, spaced(4));
+        content.setPadding(0, 0, 0, dp(16));
+        reviewReplay = quietButton("", () -> {
+            if (narrationSpeaking) listener.stopGuidance();
+            else listener.replayGuidance(narrationMessage);
         });
-        confirm.setEnabled(false); confirm.setAlpha(.48f);
-        if (candidates != null) for (int i = 0; i < candidates.length(); i++) {
-            JSONObject candidate = candidates.optJSONObject(i);
-            if (candidate == null) continue;
-            String label = candidate.optString("label");
+        Drawable speaker = getContext().getDrawable(R.drawable.ic_overlay_speaker);
+        speaker.setBounds(0, 0, dp(18), dp(18));
+        reviewReplay.setCompoundDrawables(speaker, null, null, null);
+        reviewReplay.setPadding(dp(11), dp(10), dp(11), dp(10));
+        reviewReplay.setBackground(new InsetDrawable(ripple(PALE_BLUE, 0x183478F6, 12), 0, dp(8), 0, dp(8)));
+        reviewReplay.setContentDescription("Click 음성 안내 다시 듣기");
+        header.addView(reviewReplay, 1, new LayoutParams(dp(40), -2));
+        narrationPlayback = reviewReplay;
+    }
+
+    private Button reviewNext(Runnable back, Runnable next) {
+        reviewNavigation.removeAllViews(); reviewNavigation.setOrientation(HORIZONTAL);
+        reviewNavigation.setVisibility(VISIBLE);
+        Button previous = quietButton("이전 단계", back);
+        reviewNavigation.addView(previous, new LayoutParams(0, -2, 1));
+        Button forward = primaryButton("다음 단계", next);
+        LayoutParams params = new LayoutParams(0, -2, 1); params.leftMargin = dp(8);
+        reviewNavigation.addView(forward, params);
+        StateListDrawable states = new StateListDrawable();
+        states.addState(new int[]{-android.R.attr.state_enabled}, round(0xFFDCE3EE, 18));
+        states.addState(new int[]{}, forward.getBackground());
+        forward.setBackground(states);
+        forward.setEnabled(false); forward.setAlpha(1f);
+        return forward;
+    }
+
+    private void readyActions(Runnable back) {
+        reviewConfirm.setText("이대로 시작하기");
+        reviewConfirm.setVisibility(VISIBLE); reviewConfirm.setEnabled(true); reviewConfirm.setAlpha(1f);
+        reviewNavigation.removeAllViews(); reviewNavigation.setOrientation(VERTICAL);
+        reviewNavigation.setVisibility(VISIBLE);
+        Button previous = secondaryButton("이전 단계", back);
+        previous.setTextColor(SECONDARY);
+        reviewNavigation.addView(previous, new LayoutParams(-1, -2));
+    }
+
+    private RadioGroup choiceCards(JSONArray choices, java.util.function.Consumer<JSONObject> selected) {
+        RadioGroup group = new RadioGroup(getContext()); group.setOrientation(VERTICAL);
+        if (choices != null) for (int i = 0; i < choices.length(); i++) {
+            JSONObject choice = choices.optJSONObject(i); if (choice == null) continue;
             RadioButton card = new RadioButton(getContext()); card.setId(View.generateViewId());
-            card.setText(label); card.setTextSize(17); card.setTextColor(INK);
-            card.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
-            StateListDrawable selection = new StateListDrawable();
-            selection.addState(new int[]{android.R.attr.state_checked}, new StatusMark(true, false));
-            selection.addState(new int[]{}, new StatusMark(false, false));
-            // CompoundButton positions its button at x=0, independently of text padding.
-            card.setButtonDrawable(new InsetDrawable(selection, dp(12), 0, 0, 0));
-            card.setCompoundDrawablePadding(dp(10));
-            card.setIncludeFontPadding(false);
-            card.setGravity(Gravity.CENTER_VERTICAL);
-            card.setMinHeight(dp(56)); card.setPadding(dp(12), dp(10), dp(12), dp(10));
+            card.setText(choice.optString("label")); card.setTextSize(15); card.setTextColor(INK);
+            card.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
+            card.setButtonDrawable((Drawable) null); card.setIncludeFontPadding(false);
+            card.setGravity(Gravity.CENTER_VERTICAL); card.setMinHeight(dp(52));
+            card.setPadding(dp(14), dp(12), dp(12), dp(12));
+            Drawable arrow = new ChoiceArrow(); arrow.setBounds(0, 0, dp(16), dp(16));
+            card.setCompoundDrawables(null, null, arrow, null); card.setCompoundDrawablePadding(dp(8));
             card.setBackground(cardBackground(false));
             RadioGroup.LayoutParams params = new RadioGroup.LayoutParams(-1, -2); params.bottomMargin = dp(8);
             group.addView(card, params);
-            card.setOnCheckedChangeListener((v, checked) -> {
+            card.setOnCheckedChangeListener((view, checked) -> {
                 card.setBackground(cardBackground(checked));
-                card.setText(label);
-                if (checked) {
-                    selected[0] = candidate.optJSONObject("goal");
-                    confirm.setEnabled(true); confirm.setAlpha(1f);
-                }
+                card.setTextColor(checked ? BLUE_DARK : INK);
+                if (checked) { selected.accept(choice); listener.onReviewChoiceSelected(); }
             });
         }
-        content.addView(group, spaced(6));
-        content.addView(confirm, spaced(4));
-
-        LinearLayout clarification = new LinearLayout(getContext());
-        Button unsure = quietButton("잘 모르겠어요", () -> listener.clarify("unsure"));
-        Button different = quietButton("다른 뜻이에요", () -> listener.clarify("different"));
-        LayoutParams halfLeft = new LayoutParams(0, -2, 1f); halfLeft.rightMargin = dp(5);
-        LayoutParams halfRight = new LayoutParams(0, -2, 1f); halfRight.leftMargin = dp(5);
-        clarification.addView(unsure, halfLeft); clarification.addView(different, halfRight);
-        content.addView(clarification, spaced(8));
-
-        TextView direct = text("직접 입력해도 돼요", 14);
-        direct.setTextColor(SECONDARY); content.addView(direct, spaced(8));
-        EditText input = new EditText(getContext()); input.setTextSize(16); input.setTextColor(INK);
-        input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
-        input.setHintTextColor(0xFF8A9AB4); input.setHint("예) 글자가 너무 작아요");
-        input.setSingleLine(false); input.setMinHeight(dp(48));
-        input.setPadding(dp(16), dp(10), dp(16), dp(10)); input.setBackground(outline(0xFFFFFFFF, BORDER, 16));
-        content.addView(input);
-        content.addView(quietButton("입력한 내용으로 다시 확인", () -> {
-            if (!input.getText().toString().trim().isEmpty()) listener.rephrase(input.getText().toString());
-        }), spaced(8));
+        return group;
     }
-    public void preparation(com.click.domain.goal.GoalPreparationState state) {
-        clear(state.ready() ? "요청을 확인해 주세요" : null);
-        addRequestBox(state.data.optString("source_text"), null);
-        JSONObject values = state.data.optJSONObject("values");
-        JSONArray fields = state.data.optJSONArray("required_fields");
-        if (fields != null && values != null) for (int i = 0; i < fields.length(); i++) {
-            JSONObject field = fields.optJSONObject(i);
-            if (field == null || !values.has(field.optString("id"))) continue;
-            if ("direction".equals(field.optString("id"))) continue;
-            String value = values.optString(field.optString("id"));
-            JSONArray choices = field.optJSONArray("choices");
-            if (choices != null) for (int j = 0; j < choices.length(); j++) {
-                JSONObject choice = choices.optJSONObject(j);
-                if (choice != null && value.equals(choice.optString("value"))) { value = choice.optString("label"); break; }
-            }
-            content.addView(text(field.optString("label") + " · " + value, 15), spaced(6));
-        }
-        JSONObject question = state.question();
-        String message = state.guidance();
-        addQuestionNarration(message == null ? "요청을 확인해 주세요." : message);
-        if (state.needsInput()) {
-            if ("choice".equals(question.optString("kind"))) {
-                JSONArray choices = question.optJSONArray("choices");
-                if (choices != null) for (int i = 0; i < choices.length(); i++) {
-                    JSONObject choice = choices.optJSONObject(i);
-                    if (choice != null) content.addView(secondaryButton(choice.optString("label"),
-                            () -> listener.answerGoalInput(choice.optString("value"))), spaced(8));
-                }
-            } else {
-                EditText input = new EditText(getContext()); input.setTextSize(17);
-                input.setHint(question.optString("placeholder", "답변을 입력해 주세요"));
-                input.setSingleLine(true); input.setMinHeight(dp(48));
-                input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(
-                        question.optInt("max_length", 100))});
-                content.addView(input, spaced(8));
-                content.addView(secondaryButton("이 답변으로 확인", () -> {
-                    if (!input.getText().toString().trim().isEmpty()) listener.answerGoalInput(input.getText().toString());
-                }), spaced(8));
-            }
-        }
-        reviewConfirm.setVisibility(state.ready() ? VISIBLE : GONE);
-        reviewConfirm.setEnabled(state.ready());
-        reviewConfirm.setAlpha(1f);
-        reviewConfirm.setText("이 내용으로 시작");
+
+    private void requestEditor(String request, Runnable reset) {
         LinearLayout editor = new LinearLayout(getContext()); editor.setOrientation(VERTICAL);
         editor.setVisibility(GONE);
-        if (values != null && values.length() > 0)
-            editor.addView(quietButton("답변을 다시 선택", listener::resetGoalInputs), spaced(8));
-        EditText rephrase = new EditText(getContext()); rephrase.setHint("요청을 다르게 입력하기");
-        rephrase.setTextSize(16); rephrase.setMinHeight(dp(48));
-        rephrase.setContentDescription("요청 내용 수정");
-        editor.addView(rephrase, spaced(8));
-        editor.addView(quietButton("수정한 요청 확인", () -> {
-            if (!rephrase.getText().toString().trim().isEmpty()) listener.rephrase(rephrase.getText().toString());
-        }), spaced(6));
-        Button edit = quietButton("내용 수정", () -> {
-            listener.stopGuidance(); editor.setVisibility(VISIBLE); rephrase.requestFocus();
-            rephrase.post(() -> scroll.smoothScrollTo(0, editor.getTop()));
-            showKeyboardWhenFocused(rephrase);
+        EditText input = new EditText(getContext()); input.setTextSize(16); input.setTextColor(INK);
+        input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
+        input.setContentDescription("요청 내용 수정"); input.setHint("원하시는 내용을 적어 주세요");
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        input.setMinLines(2); input.setMaxLines(4); input.setGravity(Gravity.TOP | Gravity.START);
+        input.setPadding(dp(12), dp(12), dp(12), dp(12)); input.setBackground(outline(Color.WHITE, BORDER, 14));
+        input.setText(request);
+        editor.addView(input, spaced(0));
+        Button apply = primaryButton("수정한 요청 확인", () -> {
+            String value = input.getText().toString().trim();
+            if (value.isEmpty()) return;
+            hideKeyboard(input); listener.rephrase(value);
         });
-        edit.setTextSize(13); edit.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 10));
-        requestCaptionRow.addView(edit, new LayoutParams(-2, -2));
-        content.addView(editor, spaced(0));
+        editor.addView(apply, spaced(8));
+        if (reset != null) editor.addView(quietButton("답변을 다시 선택", reset), spaced(6));
+        Button edit = quietButton(stepProgress.getProgress() == 2 ? "내용 수정하기" : "다른 내용 입력하기", () -> {
+            listener.stopGuidance(); editor.setVisibility(VISIBLE); reviewConfirm.setVisibility(GONE);
+            input.requestFocus(); input.setSelection(input.length());
+            editor.post(() -> scroll.smoothScrollTo(0, editor.getTop()));
+            showKeyboardWhenFocused(input);
+        });
+        edit.setTextSize(14);
+        edit.setBackground(stepProgress.getProgress() == 2 ? ripple(Color.TRANSPARENT, 0x183478F6, 14)
+                : ripple(PALE_BLUE, 0x183478F6, 14));
+        content.addView(edit, spaced(12)); content.addView(editor, spaced(8));
+    }
+
+    private void reviewSummary(String message) {
+        TextView summary = text(message, 18);
+        summary.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
+        summary.setPadding(dp(16), dp(18), dp(16), dp(18));
+        summary.setBackground(round(PALE_BLUE, 18));
+        content.addView(summary, spaced(16));
+    }
+
+    private String preparedSummary(com.click.domain.goal.GoalPreparationState state) {
+        String type = state.goal == null ? "" : state.goal.optString("goal_type");
+        boolean increase = type.endsWith(".increase");
+        if (type.startsWith("settings.font_size."))
+            return "휴대폰의 기본 글자 크기를\n" + (increase ? "더 크게" : "더 작게") + " 변경할게요.";
+        if (type.startsWith("settings.brightness."))
+            return "휴대폰 화면을\n" + (increase ? "더 밝게" : "더 어둡게") + " 조절할게요.";
+        if (type.startsWith("settings.volume."))
+            return "동영상·음악 소리를\n" + (increase ? "더 크게" : "더 작게") + " 조절할게요.";
+        return state.message == null || state.message.trim().isEmpty() ? state.data.optString("source_text") : state.message;
+    }
+
+    public void goals(String message, JSONArray candidates) {
+        reviewStage(1, "어떤 작업을 도와드릴까요?", "원하시는 작업을 선택해 주세요.");
+        narrationMessage = message;
+        final JSONObject[] selected = {null};
+        Button next = reviewNext(listener::openInput, () -> {
+            if (selected[0] != null) listener.chooseGoal(selected[0]);
+        });
+        content.addView(choiceCards(candidates, choice -> {
+            selected[0] = choice.optJSONObject("goal");
+            next.setEnabled(selected[0] != null); next.setAlpha(1f);
+        }), spaced(14));
+        requestEditor("", null);
+    }
+
+    public void preparation(com.click.domain.goal.GoalPreparationState state) {
+        if (state.ready()) {
+            reviewStage(2, "이렇게 진행할게요", "요청하신 내용을 확인해 주세요.");
+            narrationMessage = state.guidance();
+            reviewSummary(preparedSummary(state));
+            requestEditor(state.data.optString("source_text"), listener::resetGoalInputs);
+            readyActions(listener::resetGoalInputs);
+            return;
+        }
+        JSONObject question = state.question();
+        reviewStage(1, question == null ? "조금 더 확인할게요" : question.optString("message", "어떤 작업을 도와드릴까요?"),
+                question != null && "choice".equals(question.optString("kind"))
+                        ? "원하시는 항목을 선택해 주세요." : "필요한 내용을 알려주세요.");
+        narrationMessage = state.guidance();
+        if (state.needsInput()) {
+            if ("choice".equals(question.optString("kind"))) {
+                final String[] answer = {null};
+                Button next = reviewNext(listener::resetGoalInputs, () -> {
+                    if (answer[0] != null) listener.answerGoalInput(answer[0]);
+                });
+                content.addView(choiceCards(question.optJSONArray("choices"), choice -> {
+                    answer[0] = choice.optString("value"); next.setEnabled(true); next.setAlpha(1f);
+                }), spaced(14));
+            } else {
+                EditText input = new EditText(getContext()); input.setTextSize(16);
+                input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
+                input.setHint(question.optString("placeholder", "답변을 입력해 주세요"));
+                input.setSingleLine(true); input.setMinHeight(dp(52));
+                input.setPadding(dp(12), dp(10), dp(12), dp(10));
+                input.setBackground(outline(Color.WHITE, BORDER, 14));
+                input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(question.optInt("max_length", 100))});
+                content.addView(input, spaced(14));
+                Button next = reviewNext(listener::openInput, () -> {
+                    String answer = input.getText().toString().trim();
+                    if (!answer.isEmpty()) { hideKeyboard(input); listener.answerGoalInput(answer); }
+                });
+                input.addTextChangedListener(new android.text.TextWatcher() {
+                    public void beforeTextChanged(CharSequence value, int start, int count, int after) {}
+                    public void onTextChanged(CharSequence value, int start, int before, int count) {
+                        next.setEnabled(!value.toString().trim().isEmpty()); next.setAlpha(1f);
+                    }
+                    public void afterTextChanged(android.text.Editable value) {}
+                });
+            }
+        } else {
+            TextView help = text(state.guidance(), 15); help.setTextColor(SECONDARY);
+            content.addView(help, spaced(14));
+        }
+        requestEditor(state.data.optString("source_text"), null);
     }
 
     public void requirements(RequirementReview review, boolean executable) {
@@ -547,45 +666,34 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.addView(quietButton("다시 확인", retry), spaced(6));
     }
     public void requirements(RequirementReview review, boolean executable, String spokenGuidance) {
-        clear("요청을 확인해 주세요");
-        reviewConfirm.setText("이 내용으로 시작");
-        addRequestBox(review.request().split("\n추가 확인:", 2)[0],
-                executable ? review.summary() : null);
-        addQuestionNarration(spokenGuidance);
-        if (review.needsTarget()) {
-            content.addView(secondaryButton("휴대폰 기본 글자", () -> listener.requirementChoice("phone")), spaced(6));
-            if (!review.appOnly()) content.addView(secondaryButton("특정 앱 안에서만", () -> listener.requirementChoice("app")), spaced(6));
+        reviewStage(executable ? 2 : 1, executable ? "이렇게 진행할게요" : "어떤 작업을 도와드릴까요?",
+                executable ? "요청하신 내용을 확인해 주세요." : "원하시는 항목을 선택해 주세요.");
+        narrationMessage = spokenGuidance;
+        if (executable) {
+            reviewSummary(review.summary());
+            readyActions(listener::resetGoalInputs);
+        } else if (review.needsTarget() || review.needsDirection()) {
+            JSONArray choices = new JSONArray();
+            try {
+                if (review.needsTarget()) {
+                    choices.put(new JSONObject().put("label", "휴대폰 기본 글자").put("value", "phone"));
+                    if (!review.appOnly()) choices.put(new JSONObject().put("label", "특정 앱 안에서만").put("value", "app"));
+                } else {
+                    choices.put(new JSONObject().put("label", "더 크게").put("value", "increase"));
+                    choices.put(new JSONObject().put("label", "더 작게").put("value", "decrease"));
+                }
+            } catch (org.json.JSONException impossible) { throw new IllegalStateException(impossible); }
+            final String[] choice = {null};
+            Button next = reviewNext(listener::openInput, () -> {
+                if (choice[0] != null) listener.requirementChoice(choice[0]);
+            });
+            content.addView(choiceCards(choices, selected -> {
+                choice[0] = selected.optString("value"); next.setEnabled(true); next.setAlpha(1f);
+            }), spaced(14));
+        } else {
+            content.addView(text(spokenGuidance, 15), spaced(12));
         }
-        if (review.needsDirection()) {
-            LinearLayout directions = new LinearLayout(getContext());
-            directions.addView(quietButton("더 크게", () -> listener.requirementChoice("increase")), new LayoutParams(0, -2, 1));
-            LayoutParams right = new LayoutParams(0, -2, 1); right.leftMargin = dp(8);
-            directions.addView(quietButton("더 작게", () -> listener.requirementChoice("decrease")), right);
-            content.addView(directions, spaced(8));
-        }
-        LinearLayout editor = new LinearLayout(getContext()); editor.setOrientation(VERTICAL);
-        EditText input = new EditText(getContext()); input.setTextSize(16); input.setTextColor(INK);
-        input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
-        input.setHint(review.needsTarget() && review.appOnly() ? "앱 이름을 입력해 주세요" : "예) 카카오톡 앱 전체 글자를 크게");
-        input.setContentDescription("요청 내용 수정"); input.setMinHeight(dp(48));
-        input.setPadding(dp(12), dp(8), dp(12), dp(8)); input.setBackground(outline(Color.WHITE, BORDER, 12));
-        editor.addView(input);
-        editor.addView(quietButton("수정한 내용 반영", () -> {
-            String answer = input.getText().toString().trim();
-            if (!answer.isEmpty()) listener.requirementAnswer(answer);
-        }), spaced(6));
-        boolean showEditor = review.needsTarget() && review.appOnly();
-        editor.setVisibility(showEditor ? VISIBLE : GONE);
-        Button edit = quietButton("내용 수정", () -> {
-            listener.stopGuidance(); editor.setVisibility(VISIBLE); input.requestFocus();
-            input.post(() -> scroll.smoothScrollTo(0, editor.getTop()));
-            showKeyboardWhenFocused(input);
-        });
-        edit.setTextSize(13); edit.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 10));
-        requestCaptionRow.addView(edit, new LayoutParams(-2, -2));
-        content.addView(editor, spaced(6));
-        reviewConfirm.setVisibility(executable ? VISIBLE : GONE); reviewConfirm.setEnabled(executable);
-        reviewConfirm.setAlpha(executable ? 1f : .48f);
+        requestEditor(review.request().split("\n추가 확인:", 2)[0], null);
     }
     private void showKeyboardWhenFocused(EditText input) {
         Runnable show = () -> input.post(() -> {
@@ -701,9 +809,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if (narrationPlayback == null) return;
         if (narrationStatus != null) narrationStatus.setText(progressMessage != null ? "현재 진행"
                 : unavailable ? "글로 안내할게요" : speaking ? "말하고 있어요" : "Click의 안내");
-        narrationPlayback.setText(speaking ? "음성 멈춤" : "다시 듣기");
+        narrationPlayback.setText(reviewReplay == narrationPlayback ? "" : speaking ? "음성 멈춤" : "다시 듣기");
         narrationPlayback.setContentDescription(speaking ? "음성 안내 멈추기" : "Click 음성 안내 다시 듣기");
-        if (unavailable) {
+        if (unavailable && narrationText != null) {
             narrationText.setVisibility(VISIBLE);
             if (narrationCaptions != null) narrationCaptions.setText("글 접기");
         }
@@ -850,6 +958,63 @@ public void observationRecovery(String message, Runnable retry) {
         observationRecovery(goal, message, retry);
         content.addView(primaryButton("아래 항목 찾기", down), spaced(8));
         content.addView(secondaryButton("위 항목 찾기", up), spaced(8));
+    }
+
+    /** One continuous outline keeps the curved tail seamless with the message card. */
+    private final class CompactBubbleBackground extends Drawable {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path shape = new Path(), tail = new Path();
+        private float anchorX = Float.NaN;
+        private boolean above;
+
+        @Override public void draw(Canvas canvas) {
+            android.graphics.Rect bounds = getBounds();
+            float inset = dp(1) / 2f;
+            float top = bounds.top + inset + (above ? dp(12) : 0);
+            float bottom = bounds.bottom - inset - (above ? 0 : dp(12));
+            float tipX = Float.isNaN(anchorX) ? bounds.right - dp(32) : anchorX;
+            tipX = Math.max(bounds.left + dp(10), Math.min(bounds.right - dp(10), tipX));
+            float baseX = Math.max(bounds.left + dp(28), Math.min(bounds.right - dp(28), tipX));
+            float edge = above ? top : bottom;
+            float tipY = above ? bounds.top + inset : bounds.bottom - inset;
+            float bendY = edge + (above ? -dp(6) : dp(6));
+            shape.reset();
+            shape.addRoundRect(bounds.left + inset, top, bounds.right - inset, bottom,
+                    dp(18), dp(18), Path.Direction.CW);
+            tail.reset();
+            tail.moveTo(baseX - dp(10), edge);
+            tail.quadTo(baseX - dp(3), bendY, tipX, tipY);
+            tail.quadTo(baseX + dp(5), bendY, baseX + dp(10), edge);
+            tail.close();
+            shape.op(tail, Path.Op.UNION);
+            paint.setStyle(Paint.Style.FILL); paint.setColor(Color.WHITE);
+            canvas.drawPath(shape, paint);
+            paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(1)); paint.setColor(BORDER);
+            canvas.drawPath(shape, paint);
+        }
+
+        @Override public void getOutline(android.graphics.Outline outline) {
+            android.graphics.Rect bounds = getBounds();
+            outline.setRoundRect(bounds.left, bounds.top + (above ? dp(12) : 0),
+                    bounds.right, bounds.bottom - (above ? 0 : dp(12)), dp(18));
+        }
+        @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); invalidateSelf(); }
+        @Override public void setColorFilter(ColorFilter filter) { paint.setColorFilter(filter); invalidateSelf(); }
+        @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
+    }
+
+    private final class ChoiceArrow extends Drawable {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        @Override public void draw(Canvas canvas) {
+            paint.setColor(SECONDARY); paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dp(2)); paint.setStrokeCap(Paint.Cap.ROUND); paint.setStrokeJoin(Paint.Join.ROUND);
+            float x = getBounds().centerX(), y = getBounds().centerY(), d = dp(4);
+            Path path = new Path(); path.moveTo(x - d / 2, y - d); path.lineTo(x + d / 2, y); path.lineTo(x - d / 2, y + d);
+            canvas.drawPath(path, paint);
+        }
+        @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); }
+        @Override public void setColorFilter(ColorFilter filter) { paint.setColorFilter(filter); }
+        @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
     }
 
     /** Fixed geometry avoids font-dependent checkmark baselines and optical left drift. */

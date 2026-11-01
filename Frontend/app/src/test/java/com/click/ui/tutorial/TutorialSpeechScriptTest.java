@@ -69,7 +69,7 @@ public class TutorialSpeechScriptTest {
         find("안내 다시 듣기").performClick();
         verify(narrator, times(1)).speak(ready);
         verify(narrator, times(2)).replay(ready);
-        find("이 내용으로 시작").performClick();
+        find("이대로 시작하기").performClick();
         verify(narrator).speak(activity.getString(R.string.tutorial_speech_review_confirmed));
     }
 
@@ -114,7 +114,8 @@ public class TutorialSpeechScriptTest {
     }
 
     private TextView find(View view, String label) {
-        if (view instanceof TextView && label.contentEquals(((TextView) view).getText())) return (TextView) view;
+        if (view instanceof TextView && (label.contentEquals(((TextView) view).getText())
+                || "다시 듣기".equals(label) && "Click 음성 안내 다시 듣기".contentEquals(view.getContentDescription() == null ? "" : view.getContentDescription()))) return (TextView) view;
         if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
             TextView result = find(((ViewGroup) view).getChildAt(i), label);
             if (result != null) return result;
