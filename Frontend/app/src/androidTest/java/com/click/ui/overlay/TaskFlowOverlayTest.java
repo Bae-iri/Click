@@ -56,7 +56,7 @@ public class TaskFlowOverlayTest {
                             && find(voice[0], "현재 화면을 확인하고 있어요…").isShown());
                     assertVisibleWithin(voice[0], find(voice[0], "휴대폰 글자를 조금 더 크게 해 줘"));
                     assertVisibleWithin(voice[0], find(voice[0], "요청 중지"));
-                    assertVisibleWithin(voice[0], find(voice[0], "줄이기  −"));
+                    assertVisibleWithin(voice[0], find(voice[0], "줄이기"));
                     assertNull(find(voice[0], "떼면 입력 · 밖으로 옮기면 취소\n최대 16초"));
                     saveImage(voice[0], "voice-compact-" + scale);
                     Context context = voice[0].getContext();
