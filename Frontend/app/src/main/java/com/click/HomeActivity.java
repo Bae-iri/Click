@@ -20,7 +20,6 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -155,14 +154,9 @@ public final class HomeActivity extends AppCompatActivity {
         LinearLayout row = new LinearLayout(this);
         row.setMinimumHeight(dp(58));
         row.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView mark = new ImageView(this);
-        mark.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
-        mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        row.addView(mark, new LinearLayout.LayoutParams(dp(44), dp(44)));
         TextView wordmark = text("click", 30, 0xFF07183F, bold);
         wordmark.setLetterSpacing(-.04f);
         LinearLayout.LayoutParams wordmarkParams = new LinearLayout.LayoutParams(0, -2, 1);
-        wordmarkParams.setMarginStart(dp(4));
         row.addView(wordmark, wordmarkParams);
 
         HomeIconView settings = new HomeIconView(HomeIconView.Kind.SETTINGS);
