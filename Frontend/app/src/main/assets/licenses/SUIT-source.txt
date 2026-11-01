@@ -1,9 +1,0 @@
-SUIT
-https://github.com/sun-typeface/SUIT
-Source commit: 55118d981336d8fce005eb62888c12c0568ef7b0
-Unmodified upstream font files. See SUIT-OFL.txt.
-
-fonts/static/ttf/SUIT-Regular.ttf SHA-256 88c94c990b9996c558666ef07c11664ab177c3be191e2846950b48f245d02274
-fonts/static/ttf/SUIT-Medium.ttf SHA-256 06be0060927642883b9027b275744fc8234826e6563015ebe3324f3802ae005f
-fonts/static/ttf/SUIT-SemiBold.ttf SHA-256 8d202e0341b9426b653c1b3d36b2c0d1f4b482a7dfa83baaccf84d355d688fbd
-LICENSE SHA-256 30d101ee3c35ef629d622d933d261a27b2f60223e0a3b0f36791e569c2b9daa9

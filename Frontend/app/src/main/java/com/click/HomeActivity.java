@@ -51,7 +51,7 @@ public final class HomeActivity extends AppCompatActivity {
     private static final int INK = 0xFF101A36;
     private static final int SECONDARY = 0xFF8190AA;
     private static final int BLUE = 0xFF3478FF;
-    private Typeface regular, medium, semibold;
+    private Typeface medium, semibold, bold;
     private HomeStartArtworkView startArtwork;
     private ScrollView homeScroll;
     private ScrollView favoritesScroll;
@@ -68,9 +68,9 @@ public final class HomeActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         favorites = new HomeFavoritesStore(this);
-        regular = getResources().getFont(R.font.suit_regular);
-        medium = getResources().getFont(R.font.suit_medium);
-        semibold = getResources().getFont(R.font.suit_semibold);
+        medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
+        semibold = getResources().getFont(com.click.designpreview.R.font.pretendard_semibold);
+        bold = getResources().getFont(com.click.designpreview.R.font.pretendard_bold);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) getWindow().setDecorFitsSystemWindows(false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.WHITE);
@@ -209,14 +209,14 @@ public final class HomeActivity extends AppCompatActivity {
                 dp(180), Gravity.RIGHT | Gravity.BOTTOM));
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
-        copy.addView(text(getString(R.string.home_greeting), 14, SECONDARY, regular));
-        TextView headline = text(getString(R.string.home_start_title), 24, INK, semibold);
+        copy.addView(text(getString(R.string.home_greeting), 14, SECONDARY, semibold));
+        TextView headline = text(getString(R.string.home_start_title), 26, INK, bold);
         SpannableString title = new SpannableString(getString(R.string.home_start_title));
         int start = title.toString().indexOf("클릭");
         if (start >= 0) title.setSpan(new ForegroundColorSpan(BLUE), start, start + 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         headline.setText(title);
-        headline.setLetterSpacing(-.015f);
-        headline.setLineSpacing(dp(4), 1f);
+        headline.setLetterSpacing(-.025f);
+        headline.setLineSpacing(dp(2), 1f);
         if (Build.VERSION.SDK_INT >= 28) headline.setAccessibilityHeading(true);
         add(copy, headline, 8);
         hero.addView(copy, new FrameLayout.LayoutParams(Math.round(contentWidth * .63f), -2, Gravity.LEFT | Gravity.CENTER_VERTICAL));
@@ -234,8 +234,7 @@ public final class HomeActivity extends AppCompatActivity {
         requestInput.setId(R.id.home_request_input);
         requestInput.setHint(R.string.home_request_hint);
         requestInput.setContentDescription("궁금한 기능 입력");
-        requestInput.setTextSize(15); requestInput.setTypeface(regular);
-        requestInput.setLetterSpacing(-.01f);
+        requestInput.setTextSize(15); requestInput.setTypeface(medium);
         requestInput.setTextColor(INK); requestInput.setHintTextColor(SECONDARY);
         requestInput.setSingleLine(true); requestInput.setInputType(InputType.TYPE_CLASS_TEXT);
         requestInput.setImeOptions(EditorInfo.IME_ACTION_SEND);
@@ -284,7 +283,7 @@ public final class HomeActivity extends AppCompatActivity {
     private View favoritesHeader() {
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = text(getString(R.string.home_favorites), 18, INK, semibold);
+        TextView title = text(getString(R.string.home_favorites), 19, INK, bold);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
         TextView more = text("더보기  ›", 14, BLUE, medium);
@@ -312,7 +311,7 @@ public final class HomeActivity extends AppCompatActivity {
         favoritesPage.removeAllViews();
         LinearLayout heading = new LinearLayout(this);
         heading.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = text(addingFavorites ? "즐겨찾기 추가" : "내 즐겨찾기", 22, INK, semibold);
+        TextView title = text(addingFavorites ? "즐겨찾기 추가" : "내 즐겨찾기", 23, INK, bold);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
         TextView action = text(addingFavorites ? "완료" : "+ 추가", 15, BLUE, semibold);
@@ -329,7 +328,7 @@ public final class HomeActivity extends AppCompatActivity {
         int count = 0;
         for (HomeHelpItem item : HomeHelpItem.values()) if (favorites.contains(item.id)) count++;
         TextView subtitle = text(addingFavorites ? "자주 쓰는 기능의 별을 눌러 추가해 보세요."
-                : "저장한 기능 " + count + "개 · 별을 누르면 해제돼요.", 14, SECONDARY, regular);
+                : "저장한 기능 " + count + "개 · 별을 누르면 해제돼요.", 14, SECONDARY, medium);
         add(favoritesPage, subtitle, 14);
         int row = 0;
         for (HomeHelpItem item : HomeHelpItem.values()) if (addingFavorites || favorites.contains(item.id))
@@ -343,7 +342,7 @@ public final class HomeActivity extends AppCompatActivity {
         empty.setPadding(dp(20), dp(30), dp(20), dp(30));
         whiteCard(empty, 22, 2);
         add(empty, text("아직 즐겨찾기가 없어요", 17, INK, semibold), 0);
-        add(empty, text("자주 쓰는 기능을 추가해 보세요.", 14, SECONDARY, regular), 10);
+        add(empty, text("자주 쓰는 기능을 추가해 보세요.", 14, SECONDARY, medium), 10);
         TextView button = text("+ 즐겨찾기 추가", 15, BLUE, semibold);
         button.setGravity(Gravity.CENTER); button.setMinimumHeight(dp(48));
         button.setBackground(ripple(0xFFEEF4FF, 16));
@@ -367,8 +366,8 @@ public final class HomeActivity extends AppCompatActivity {
         launch.addView(icon(item.icon), new LinearLayout.LayoutParams(dp(44), dp(44)));
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(LinearLayout.VERTICAL);
-        labels.addView(text(item.title, 16, INK, semibold));
-        add(labels, text(item.subtitle, 13, SECONDARY, regular), 4);
+        labels.addView(text(item.title, 16, INK, bold));
+        add(labels, text(item.subtitle, 13, SECONDARY, medium), 4);
         LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, -2, 1);
         labelParams.setMarginStart(dp(14)); labelParams.setMarginEnd(dp(6));
         launch.addView(labels, labelParams);
@@ -437,7 +436,7 @@ public final class HomeActivity extends AppCompatActivity {
         item.setClickable(true); item.setFocusable(true); item.setContentDescription(label);
         item.setBackground(ripple(Color.TRANSPARENT, 18));
         item.addView(icon(kind), new LinearLayout.LayoutParams(dp(25), dp(25)));
-        TextView title = text(label, 10, 0xFF8993A4, medium);
+        TextView title = text(label, 10, 0xFF8993A4, semibold);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
         params.topMargin = dp(4); item.addView(title, params);
         return item;
@@ -488,7 +487,7 @@ public final class HomeActivity extends AppCompatActivity {
     private TextView text(String value, float size, int color, Typeface typeface) {
         TextView text = new TextView(this);
         text.setText(value); text.setTextSize(size); text.setTextColor(color); text.setTypeface(typeface);
-        text.setIncludeFontPadding(false); text.setLetterSpacing(-.01f); return text;
+        text.setIncludeFontPadding(false); return text;
     }
     private void add(LinearLayout parent, View child, int topMargin) {
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
