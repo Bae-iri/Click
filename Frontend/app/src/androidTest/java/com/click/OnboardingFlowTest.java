@@ -209,6 +209,11 @@ public class OnboardingFlowTest {
         try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
             shown("클릭을 시작할까요?");
             shown("즐겨찾기");
+            shown("카카오톡");
+            shown("글씨 크기");
+            shown("화면 밝기");
+            shown("동영상·음악 소리");
+            shown("전화");
             shown("클릭 튜토리얼");
             screenshot("home-current");
             s.onActivity(a -> a.findViewById(R.id.home_start).performClick());
