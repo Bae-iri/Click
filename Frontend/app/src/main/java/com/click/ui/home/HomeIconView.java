@@ -31,7 +31,7 @@ public final class HomeIconView extends View {
         this.kind = kind;
         artwork = kind == Kind.WORDMARK ? context.getDrawable(com.click.designpreview.R.drawable.click)
                 : kind == Kind.CLICK ? context.getDrawable(com.click.designpreview.R.drawable.ic_click_cursor)
-                : kind == Kind.SETTINGS ? context.getDrawable(R.drawable.ic_home_settings_button)
+                : (kind == Kind.SETTINGS || kind == Kind.FONT) ? context.getDrawable(R.drawable.ic_home_settings_button)
                 : kind == Kind.PHONE ? context.getDrawable(R.drawable.ic_home_phone) : null;
         if (artwork instanceof BitmapDrawable) ((BitmapDrawable) artwork).setFilterBitmap(true);
         bold = getResources().getFont(com.click.designpreview.R.font.pretendard_bold);
@@ -63,7 +63,8 @@ public final class HomeIconView extends View {
             case PHONE: artwork.setBounds(0, 0, 48, 48); artwork.draw(canvas); break;
             case SETTINGS: artwork.setBounds(9, 9, 39, 39); artwork.draw(canvas); break;
             case FONT:
-                tile(canvas, 0xFFE7F1FF, 0xFFD8E8FF); gear(canvas, 16, 0xFF416FC5); break;
+                tile(canvas, 0xFFE7F1FF, 0xFFD8E8FF);
+                artwork.setBounds(6, 6, 42, 42); artwork.draw(canvas); break;
             case KAKAO:
                 tile(canvas, 0xFFFFEF67, 0xFFFFE532);
                 paint.setColor(0xFF3A2630); canvas.drawOval(9, 10, 39, 34, paint);
@@ -155,16 +156,5 @@ public final class HomeIconView extends View {
     }
     private void stroke(int color, float width) {
         paint.setColor(color); paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(width);
-    }
-    private void gear(Canvas canvas, float radius, int color) {
-        paint.setColor(color); path.reset(); path.setFillType(Path.FillType.EVEN_ODD);
-        for (int i = 0; i < 48; i++) {
-            double angle = Math.PI * 2 * i / 48;
-            float r = radius * (i % 6 == 2 || i % 6 == 3 ? 1f : .77f);
-            float px = 24 + (float) Math.cos(angle) * r, py = 24 + (float) Math.sin(angle) * r;
-            if (i == 0) path.moveTo(px, py); else path.lineTo(px, py);
-        }
-        path.close(); path.addCircle(24, 24, radius * .38f, Path.Direction.CW);
-        canvas.drawPath(path, paint); path.setFillType(Path.FillType.WINDING);
     }
 }
