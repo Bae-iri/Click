@@ -1,6 +1,5 @@
 package com.click;
 
-import android.app.Dialog;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
@@ -14,25 +13,33 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.RippleDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.InputType;
+import android.text.TextWatcher;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
 import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.view.View;
-import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.click.core.permission.PermissionStatus;
+import com.click.data.local.HomeFavoritesStore;
+import com.click.ui.home.HomeHelpItem;
 import com.click.domain.goal.QuickHelpTask;
 import com.click.service.overlay.ClickOverlayService;
 import com.click.ui.common.ClickUi;
@@ -47,13 +54,20 @@ public final class HomeActivity extends AppCompatActivity {
     private Typeface medium, semibold, bold;
     private HomeStartArtworkView startArtwork;
     private ScrollView homeScroll;
-    private View favoritesHeading;
+    private ScrollView favoritesScroll;
+    private LinearLayout homeFavorites, favoritesPage;
+    private HomeFavoritesStore favorites;
+    private EditText requestInput;
+    private View sendRequest;
+    private boolean favoritesVisible, addingFavorites, requestLaunching;
+    private OnBackPressedCallback pageBack;
     private LinearLayout homeTab, favoritesTab;
     private boolean homeResumed;
     private final Rect visibleArtwork = new Rect();
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        favorites = new HomeFavoritesStore(this);
         medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
         semibold = getResources().getFont(com.click.designpreview.R.font.pretendard_semibold);
         bold = getResources().getFont(com.click.designpreview.R.font.pretendard_bold);
@@ -73,6 +87,8 @@ public final class HomeActivity extends AppCompatActivity {
         homeScroll.setVerticalScrollBarEnabled(false);
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
+        page.setFocusableInTouchMode(true);
+        page.setDefaultFocusHighlightEnabled(false);
         page.setClipChildren(false);
         int horizontal = dp(24);
         page.setPadding(horizontal, dp(16), horizontal, dp(92));
@@ -83,33 +99,71 @@ public final class HomeActivity extends AppCompatActivity {
         page.addView(header(), new LinearLayout.LayoutParams(-1, dp(48)));
         add(page, hero(), 14);
         add(page, requestCard(), 8);
-        add(page, suggestions(), 8);
-        favoritesHeading = favoritesHeader();
-        add(page, favoritesHeading, 14);
-        addFavorites(page);
+        add(page, favoritesHeader(), 20);
+        homeFavorites = new LinearLayout(this);
+        homeFavorites.setOrientation(LinearLayout.VERTICAL);
+        add(page, homeFavorites, 8);
+        favoritesScroll = new ScrollView(this);
+        favoritesScroll.setId(R.id.home_favorites_scroll);
+        favoritesScroll.setFillViewport(true);
+        favoritesScroll.setVerticalScrollBarEnabled(false);
+        favoritesPage = new LinearLayout(this);
+        favoritesPage.setOrientation(LinearLayout.VERTICAL);
+        favoritesPage.setClipChildren(false);
+        favoritesScroll.addView(favoritesPage, new ScrollView.LayoutParams(-1, -2));
+        root.addView(favoritesScroll, new FrameLayout.LayoutParams(
+                Math.min(getResources().getDisplayMetrics().widthPixels, dp(520)), -1, Gravity.CENTER_HORIZONTAL));
+        favoritesScroll.setVisibility(View.GONE);
+        pageBack = new OnBackPressedCallback(false) {
+            @Override public void handleOnBackPressed() {
+                if (addingFavorites) { addingFavorites = false; renderFavoritesPage(); }
+                else showFavorites(false);
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, pageBack);
+        refreshFavorites();
 
         LinearLayout navigation = bottomNavigation();
         root.addView(navigation, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
         ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
             Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars()
                     | WindowInsetsCompat.Type.displayCutout());
-            homeScroll.setPadding(0, bars.top, 0, 0);
-            page.setPadding(horizontal + bars.left, dp(16),
-                    horizontal + bars.right, dp(92) + bars.bottom);
+            boolean keyboard = insets.isVisible(WindowInsetsCompat.Type.ime());
+            int keyboardBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+            homeScroll.setPadding(0, bars.top, 0, keyboard ? keyboardBottom : 0);
+            favoritesScroll.setPadding(0, bars.top, 0, 0);
+            page.setPadding(horizontal + bars.left, dp(16), horizontal + bars.right,
+                    keyboard ? dp(24) : dp(92) + bars.bottom);
+            favoritesPage.setPadding(horizontal + bars.left, dp(24), horizontal + bars.right, dp(92) + bars.bottom);
+            navigation.setVisibility(keyboard ? View.GONE : View.VISIBLE);
             navigation.setPadding(bars.left + dp(10), dp(6), bars.right + dp(10), bars.bottom + dp(4));
+            if (keyboard && requestInput.hasFocus()) requestInput.post(() -> requestInput.requestRectangleOnScreen(
+                    new Rect(0, 0, requestInput.getWidth(), requestInput.getHeight()), false));
             return insets;
         });
         homeScroll.setOnScrollChangeListener((View view, int x, int y, int oldX, int oldY) -> {
-            if (y == 0) selectNavigation(false);
             updateArtworkAnimation();
         });
         setContentView(root);
+        page.requestFocus();
         root.requestApplyInsets();
+        if (savedInstanceState != null) {
+            requestInput.setText(savedInstanceState.getString("request_draft", ""));
+            addingFavorites = savedInstanceState.getBoolean("adding_favorites");
+            showFavorites(savedInstanceState.getBoolean("favorites_visible"));
+        }
+    }
+
+    @Override protected void onSaveInstanceState(Bundle state) {
+        state.putString("request_draft", requestInput.getText().toString());
+        state.putBoolean("favorites_visible", favoritesVisible);
+        state.putBoolean("adding_favorites", addingFavorites);
+        super.onSaveInstanceState(state);
     }
 
     @Override protected void onResume() {
-        super.onResume(); homeResumed = true;
-        startArtwork.setAnimationActive(true);
+        super.onResume(); homeResumed = true; requestLaunching = false;
+        refreshFavorites();
         homeScroll.post(this::updateArtworkAnimation);
     }
     @Override protected void onPause() {
@@ -175,42 +229,57 @@ public final class HomeActivity extends AppCompatActivity {
         LinearLayout card = new LinearLayout(this);
         card.setId(R.id.home_start);
         card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setMinimumHeight(dp(54));
-        card.setPadding(dp(16), dp(12), dp(14), dp(12));
-        card.setContentDescription(getString(R.string.home_start_accessibility));
-        card.setClickable(true); card.setFocusable(true);
+        card.setMinimumHeight(dp(60));
+        card.setPadding(dp(16), dp(6), dp(8), dp(6));
         whiteCard(card, 22, 4);
-        card.addView(icon(HomeIconView.Kind.SEARCH), new LinearLayout.LayoutParams(dp(23), dp(23)));
-        TextView hint = text(getString(R.string.home_request_hint), 15, SECONDARY, medium);
-        LinearLayout.LayoutParams label = new LinearLayout.LayoutParams(0, -2, 1);
-        label.setMarginStart(dp(14));
-        card.addView(hint, label);
-        card.addView(icon(HomeIconView.Kind.CHEVRON), new LinearLayout.LayoutParams(dp(18), dp(24)));
-        card.setOnClickListener(view -> startOverlayWithPermission(null, null));
+        requestInput = new EditText(this);
+        requestInput.setId(R.id.home_request_input);
+        requestInput.setHint(R.string.home_request_hint);
+        requestInput.setContentDescription("궁금한 기능 입력");
+        requestInput.setTextSize(15); requestInput.setTypeface(medium);
+        requestInput.setTextColor(INK); requestInput.setHintTextColor(SECONDARY);
+        requestInput.setSingleLine(true); requestInput.setInputType(InputType.TYPE_CLASS_TEXT);
+        requestInput.setImeOptions(EditorInfo.IME_ACTION_SEND);
+        requestInput.setBackgroundColor(Color.TRANSPARENT);
+        requestInput.setPadding(0, dp(10), dp(6), dp(10));
+        requestInput.setMinimumHeight(dp(48));
+        requestInput.setOnEditorActionListener((view, actionId, event) -> {
+            boolean enter = event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER;
+            if (actionId != EditorInfo.IME_ACTION_SEND && !enter) return false;
+            if (!enter || event.getAction() == KeyEvent.ACTION_DOWN) submitHomeRequest();
+            return true;
+        });
+        card.addView(requestInput, new LinearLayout.LayoutParams(0, -2, 1));
+        View microphone = iconButton(HomeIconView.Kind.MICROPHONE, "말로 입력", R.id.home_microphone);
+        microphone.setOnClickListener(view -> startOverlayWithPermission(null, null, true));
+        card.addView(microphone, new LinearLayout.LayoutParams(dp(44), dp(44)));
+        sendRequest = iconButton(HomeIconView.Kind.SEND, "요청 보내기", R.id.home_request_send);
+        sendRequest.setVisibility(View.GONE);
+        sendRequest.setOnClickListener(view -> submitHomeRequest());
+        card.addView(sendRequest, new LinearLayout.LayoutParams(dp(44), dp(44)));
+        requestInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
+                sendRequest.setVisibility(text.toString().trim().isEmpty() ? View.GONE : View.VISIBLE);
+            }
+            @Override public void afterTextChanged(Editable text) {}
+        });
         return card;
     }
 
-    private View suggestions() {
-        HorizontalScrollView scroll = new HorizontalScrollView(this);
-        scroll.setHorizontalScrollBarEnabled(false);
-        LinearLayout chips = new LinearLayout(this);
-        chips.setGravity(Gravity.CENTER_VERTICAL);
-        addChip(chips, "카카오톡 사진 보내기", () -> showComingSoon("카카오톡 도움"));
-        addChip(chips, "글씨 크게 하기", () -> startQuickHelp(QuickHelpTask.FONT_SIZE));
-        addChip(chips, "전화 걸기", () -> showComingSoon("전화 도움"));
-        scroll.addView(chips, new HorizontalScrollView.LayoutParams(-2, -2));
-        return scroll;
+    private void submitHomeRequest() {
+        String request = requestInput.getText().toString().trim();
+        if (request.isEmpty()) return;
+        if (startOverlayWithPermission(request, null, false)) requestInput.setText("");
     }
-    private void addChip(LinearLayout chips, String label, Runnable action) {
-        TextView chip = text(label, 12, 0xFF6586BC, medium);
-        chip.setGravity(Gravity.CENTER); chip.setMinimumHeight(dp(34));
-        chip.setPadding(dp(13), dp(7), dp(13), dp(7));
-        chip.setBackground(ripple(0xFFF0F5FD, 20));
-        chip.setClickable(true); chip.setFocusable(true);
-        chip.setOnClickListener(view -> action.run());
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
-        if (chips.getChildCount() > 0) params.setMarginStart(dp(6));
-        chips.addView(chip, params);
+
+    private HomeIconView iconButton(HomeIconView.Kind kind, String label, int id) {
+        HomeIconView button = icon(kind);
+        button.setId(id); button.setContentDescription(label);
+        button.setClickable(true); button.setFocusable(true);
+        button.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+        button.setBackground(ripple(Color.TRANSPARENT, 22));
+        return button;
     }
 
     private View favoritesHeader() {
@@ -225,45 +294,127 @@ public final class HomeActivity extends AppCompatActivity {
         more.setContentDescription("즐겨찾기 더보기");
         more.setClickable(true); more.setFocusable(true);
         more.setBackground(ripple(Color.TRANSPARENT, 14));
-        more.setOnClickListener(view -> showMoreHelp());
+        more.setOnClickListener(view -> showFavorites(true));
         header.addView(more, new LinearLayout.LayoutParams(-2, -2));
         return header;
     }
 
-    private void addFavorites(LinearLayout page) {
-        View kakao = helpRow(HomeIconView.Kind.KAKAO, "카카오톡", "사진 보내는 방법 · 준비 중");
-        kakao.setOnClickListener(view -> showComingSoon("카카오톡 도움")); add(page, kakao, 8);
-        View font = helpRow(HomeIconView.Kind.FONT, "글씨 크기", "크게 하는 방법");
-        font.setOnClickListener(view -> startQuickHelp(QuickHelpTask.FONT_SIZE)); add(page, font, 4);
-        View brightness = helpRow(HomeIconView.Kind.BRIGHTNESS, "화면 밝기", "더 밝게 하는 방법");
-        brightness.setOnClickListener(view -> startQuickHelp(QuickHelpTask.BRIGHTNESS)); add(page, brightness, 4);
-        View volume = helpRow(HomeIconView.Kind.MEDIA, "동영상·음악 소리", "소리를 키우는 방법");
-        volume.setOnClickListener(view -> startQuickHelp(QuickHelpTask.MEDIA_VOLUME)); add(page, volume, 4);
-        View phone = helpRow(HomeIconView.Kind.PHONE, "전화", "걸고 받는 방법 · 준비 중");
-        phone.setOnClickListener(view -> showComingSoon("전화 도움")); add(page, phone, 4);
-        View tutorial = helpRow(HomeIconView.Kind.CLICK, getString(R.string.home_tutorial), "사용 방법 다시 보기");
-        tutorial.setId(R.id.home_tutorial);
-        tutorial.setOnClickListener(view -> startActivity(new Intent(this, TutorialActivity.class)));
-        add(page, tutorial, 4);
+    private void refreshFavorites() {
+        homeFavorites.removeAllViews();
+        int count = 0;
+        for (HomeHelpItem item : HomeHelpItem.values()) if (favorites.contains(item.id)) {
+            add(homeFavorites, helpRow(item, false), count++ == 0 ? 0 : 6);
+        }
+        if (count == 0) add(homeFavorites, emptyFavorites(), 0);
+        renderFavoritesPage();
     }
 
-    private View helpRow(HomeIconView.Kind kind, String title, String subtitle) {
+    private void renderFavoritesPage() {
+        favoritesPage.removeAllViews();
+        LinearLayout heading = new LinearLayout(this);
+        heading.setGravity(Gravity.CENTER_VERTICAL);
+        TextView title = text(addingFavorites ? "즐겨찾기 추가" : "내 즐겨찾기", 23, INK, bold);
+        if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
+        heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView action = text(addingFavorites ? "완료" : "+ 추가", 15, BLUE, semibold);
+        action.setId(addingFavorites ? R.id.home_favorites_done : R.id.home_favorites_add);
+        action.setContentDescription(addingFavorites ? "즐겨찾기 선택 완료" : "즐겨찾기 추가");
+        action.setGravity(Gravity.CENTER); action.setMinimumHeight(dp(48));
+        action.setPadding(dp(12), 0, dp(12), 0);
+        action.setBackground(ripple(0xFFEEF4FF, 16));
+        action.setOnClickListener(view -> {
+            addingFavorites = !addingFavorites; renderFavoritesPage(); favoritesScroll.scrollTo(0, 0);
+        });
+        heading.addView(action, new LinearLayout.LayoutParams(-2, -2));
+        add(favoritesPage, heading, 0);
+        int count = 0;
+        for (HomeHelpItem item : HomeHelpItem.values()) if (favorites.contains(item.id)) count++;
+        TextView subtitle = text(addingFavorites ? "자주 쓰는 기능의 별을 눌러 추가해 보세요."
+                : "저장한 기능 " + count + "개 · 별을 누르면 해제돼요.", 14, SECONDARY, medium);
+        add(favoritesPage, subtitle, 14);
+        int row = 0;
+        for (HomeHelpItem item : HomeHelpItem.values()) if (addingFavorites || favorites.contains(item.id))
+            add(favoritesPage, helpRow(item, addingFavorites), row++ == 0 ? 24 : 6);
+        if (row == 0) add(favoritesPage, emptyFavorites(), 24);
+    }
+
+    private View emptyFavorites() {
+        LinearLayout empty = new LinearLayout(this);
+        empty.setOrientation(LinearLayout.VERTICAL); empty.setGravity(Gravity.CENTER);
+        empty.setPadding(dp(20), dp(30), dp(20), dp(30));
+        whiteCard(empty, 22, 2);
+        add(empty, text("아직 즐겨찾기가 없어요", 17, INK, semibold), 0);
+        add(empty, text("자주 쓰는 기능을 추가해 보세요.", 14, SECONDARY, medium), 10);
+        TextView button = text("+ 즐겨찾기 추가", 15, BLUE, semibold);
+        button.setGravity(Gravity.CENTER); button.setMinimumHeight(dp(48));
+        button.setBackground(ripple(0xFFEEF4FF, 16));
+        button.setOnClickListener(view -> { addingFavorites = true; showFavorites(true); });
+        add(empty, button, 20);
+        return empty;
+    }
+
+    private View helpRow(HomeHelpItem item, boolean selecting) {
         LinearLayout row = new LinearLayout(this);
+        row.setTag("help_" + item.id);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(15), dp(10), dp(13), dp(10));
-        row.setMinimumHeight(dp(64)); row.setClickable(true); row.setFocusable(true);
-        row.setContentDescription(title + ". " + subtitle);
+        row.setPadding(dp(15), dp(10), dp(9), dp(10));
+        row.setMinimumHeight(dp(64));
         whiteCard(row, 22, 2);
-        row.addView(icon(kind), new LinearLayout.LayoutParams(dp(44), dp(44)));
+        LinearLayout launch = new LinearLayout(this);
+        launch.setGravity(Gravity.CENTER_VERTICAL);
+        launch.setMinimumHeight(dp(48)); launch.setClickable(true); launch.setFocusable(true);
+        launch.setContentDescription(item.title + ". " + item.subtitle);
+        if (item == HomeHelpItem.TUTORIAL && !selecting) launch.setId(R.id.home_tutorial);
+        launch.addView(icon(item.icon), new LinearLayout.LayoutParams(dp(44), dp(44)));
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(LinearLayout.VERTICAL);
-        labels.addView(text(title, 16, INK, bold));
-        add(labels, text(subtitle, 13, SECONDARY, medium), 4);
+        labels.addView(text(item.title, 16, INK, bold));
+        add(labels, text(item.subtitle, 13, SECONDARY, medium), 4);
         LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, -2, 1);
         labelParams.setMarginStart(dp(14)); labelParams.setMarginEnd(dp(6));
-        row.addView(labels, labelParams);
-        row.addView(icon(HomeIconView.Kind.STAR), new LinearLayout.LayoutParams(dp(36), dp(36)));
+        launch.addView(labels, labelParams);
+        launch.setOnClickListener(view -> { if (selecting) toggleFavorite(item); else openHelp(item); });
+        row.addView(launch, new LinearLayout.LayoutParams(0, -2, 1));
+        HomeIconView star = icon(HomeIconView.Kind.STAR);
+        star.setTag("favorite_" + item.id);
+        star.setFavoriteSelected(favorites.contains(item.id));
+        star.setSelected(favorites.contains(item.id));
+        star.setContentDescription(item.title + (favorites.contains(item.id) ? " 즐겨찾기 해제" : " 즐겨찾기 추가"));
+        star.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+        star.setClickable(true); star.setFocusable(true);
+        star.setBackground(ripple(Color.TRANSPARENT, 24));
+        star.setOnClickListener(view -> toggleFavorite(item));
+        row.addView(star, new LinearLayout.LayoutParams(dp(48), dp(48)));
         return row;
+    }
+
+    private void toggleFavorite(HomeHelpItem item) {
+        boolean selected = !favorites.contains(item.id);
+        favorites.setSelected(item.id, selected);
+        refreshFavorites();
+        (favoritesVisible ? favoritesScroll : homeScroll).announceForAccessibility(
+                item.title + (selected ? " 즐겨찾기에 추가했어요" : " 즐겨찾기에서 해제했어요"));
+    }
+
+    private void openHelp(HomeHelpItem item) {
+        if (item.task != null) startQuickHelp(item.task);
+        else if (item == HomeHelpItem.TUTORIAL) startActivity(new Intent(this, TutorialActivity.class));
+        else if (item == HomeHelpItem.ACCESSIBILITY)
+            startActivity(new Intent(this, com.click.designpreview.PermissionGuideActivity.class));
+        else showComingSoon(item.title + " 도움");
+    }
+
+    private void showFavorites(boolean visible) {
+        hideKeyboard();
+        favoritesVisible = visible;
+        homeScroll.setVisibility(visible ? View.GONE : View.VISIBLE);
+        favoritesScroll.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (!visible) homeScroll.getChildAt(0).requestFocus();
+        pageBack.setEnabled(visible);
+        if (visible) renderFavoritesPage();
+        else addingFavorites = false;
+        selectNavigation(visible);
+        updateArtworkAnimation();
     }
 
     private LinearLayout bottomNavigation() {
@@ -273,15 +424,10 @@ public final class HomeActivity extends AppCompatActivity {
         navigation.setBackground(ClickUi.rounded(Color.WHITE, dp(24)));
         shadow(navigation, 8);
         homeTab = navigationItem(HomeIconView.Kind.HOME, "홈", R.id.home_nav_home);
-        homeTab.setOnClickListener(view -> { homeScroll.smoothScrollTo(0, 0); selectNavigation(false); });
-        LinearLayout help = navigationItem(HomeIconView.Kind.HELP, "도와주세요", R.id.home_nav_help);
-        help.setOnClickListener(view -> startOverlayWithPermission(null, null));
+        homeTab.setOnClickListener(view -> { showFavorites(false); homeScroll.smoothScrollTo(0, 0); });
         favoritesTab = navigationItem(HomeIconView.Kind.BOOKMARK, "내 즐겨찾기", R.id.home_nav_favorites);
-        favoritesTab.setOnClickListener(view -> {
-            homeScroll.smoothScrollTo(0, Math.max(0, favoritesHeading.getTop() - dp(12)));
-            selectNavigation(true);
-        });
-        for (View tab : new View[]{homeTab, help, favoritesTab})
+        favoritesTab.setOnClickListener(view -> { addingFavorites = false; showFavorites(true); });
+        for (View tab : new View[]{homeTab, favoritesTab})
             navigation.addView(tab, new LinearLayout.LayoutParams(0, dp(58), 1));
         selectNavigation(false);
         return navigation;
@@ -309,47 +455,35 @@ public final class HomeActivity extends AppCompatActivity {
     }
 
     private void startQuickHelp(QuickHelpTask task) {
-        startOverlayWithPermission(task.requestText, task.goalType);
+        startOverlayWithPermission(task.requestText, task.goalType, false);
     }
     private void showComingSoon(String feature) {
         Toast.makeText(this, feature + "은 준비 중이에요.\n글자 크기, 화면 밝기, 미디어 음량 조절을 이용해 주세요.", Toast.LENGTH_LONG).show();
     }
-    private void showMoreHelp() {
-        Dialog dialog = new Dialog(this);
-        LinearLayout panel = new LinearLayout(this);
-        panel.setOrientation(LinearLayout.VERTICAL); panel.setPadding(dp(24), dp(26), dp(24), dp(20));
-        panel.setBackground(ClickUi.rounded(0xFFFCFDFF, dp(28)));
-        add(panel, text(getString(R.string.home_favorites), 21, INK, bold), 0);
-        add(panel, text("필요한 안내를 다시 확인해 보세요.", 15, SECONDARY, medium), 12);
-        View accessibility = helpRow(HomeIconView.Kind.ACCESSIBILITY, "접근성 설정 안내", "처음부터 다시 보기");
-        accessibility.setOnClickListener(view -> {
-            dialog.dismiss(); startActivity(new Intent(this, com.click.designpreview.PermissionGuideActivity.class));
-        });
-        add(panel, accessibility, 24);
-        Button close = new Button(this);
-        close.setText("닫기"); close.setTextSize(16); close.setTypeface(semibold);
-        close.setTextColor(BLUE); close.setAllCaps(false); close.setMinHeight(dp(48));
-        close.setBackground(ripple(0xFFEEF4FF, 16)); close.setOnClickListener(view -> dialog.dismiss());
-        add(panel, close, 20);
-        ScrollView scroll = new ScrollView(this); scroll.addView(panel); dialog.setContentView(scroll);
-        dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        dialog.getWindow().setGravity(Gravity.BOTTOM); dialog.show();
-        dialog.getWindow().setLayout(Math.min(getResources().getDisplayMetrics().widthPixels - dp(24), dp(480)), -2);
-    }
     private void openPermissionGuide() {
         startActivity(new Intent(this, com.click.designpreview.AccessibilityHelpActivity.class));
     }
-    private void startOverlayWithPermission(String goal, String selectedGoalType) {
-        if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return; }
+    private void hideKeyboard() {
+        if (requestInput == null) return;
+        getSystemService(InputMethodManager.class).hideSoftInputFromWindow(requestInput.getWindowToken(), 0);
+        requestInput.clearFocus();
+        if (homeScroll.isShown()) homeScroll.getChildAt(0).requestFocus();
+    }
+    private boolean startOverlayWithPermission(String goal, String selectedGoalType, boolean voice) {
+        if (requestLaunching) return false;
+        if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return false; }
         if (com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() == null) {
             Toast.makeText(this, "접근성 연결이 끊겼어요. 설정에서 click을 껐다가 다시 켜주세요.", Toast.LENGTH_LONG).show();
-            openPermissionGuide(); return;
+            openPermissionGuide(); return false;
         }
         Intent service = new Intent(this, ClickOverlayService.class);
         if (goal != null) service.putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL, goal);
         if (selectedGoalType != null) service.putExtra(ClickOverlayService.EXTRA_SELECTED_GOAL_TYPE, selectedGoalType);
-        service.putExtra(ClickOverlayService.EXTRA_OPEN_MENU, goal == null && selectedGoalType == null);
+        service.putExtra(ClickOverlayService.EXTRA_OPEN_VOICE, voice);
+        requestLaunching = true;
+        hideKeyboard();
         startService(service); moveTaskToBack(true);
+        return true;
     }
     private HomeIconView icon(HomeIconView.Kind kind) { return new HomeIconView(this, kind); }
     private TextView text(String value, float size, int color, Typeface typeface) {

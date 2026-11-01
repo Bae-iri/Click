@@ -209,7 +209,8 @@ public class OnboardingFlowTest {
         try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
             shown("안녕하세요!");
             shown("오늘도\n클릭과 함께\n해볼까요?");
-            shown("궁금한 기능을 말해보세요");
+            s.onActivity(a -> assertEquals("궁금한 기능을 말해보세요",
+                    ((EditText) a.findViewById(R.id.home_request_input)).getHint().toString()));
             shown("즐겨찾기");
             shown("카카오톡");
             shown("글씨 크기");
@@ -218,14 +219,15 @@ public class OnboardingFlowTest {
             shown("전화");
             shown("클릭 튜토리얼");
             shown("홈");
-            shown("도와주세요");
-            shown("내 즐겨찾기");
+
             screenshot("home-current");
             s.onActivity(a -> a.findViewById(R.id.home_nav_favorites).performClick());
             SystemClock.sleep(500);
             s.onActivity(a -> {
                 assertTrue(a.findViewById(R.id.home_nav_favorites).isSelected());
-                assertTrue(a.findViewById(R.id.home_scroll).getScrollY() > 0);
+                assertEquals(View.GONE, a.findViewById(R.id.home_scroll).getVisibility());
+                assertTrue(a.findViewById(R.id.home_favorites_scroll).isShown());
+                assertNotNull(a.findViewById(R.id.home_favorites_add));
                 a.findViewById(R.id.home_nav_home).performClick();
             });
             SystemClock.sleep(500);
@@ -233,6 +235,53 @@ public class OnboardingFlowTest {
                 assertTrue(a.findViewById(R.id.home_nav_home).isSelected());
                 assertEquals(0, a.findViewById(R.id.home_scroll).getScrollY());
             });
+        }
+    }
+    @Test public void favoritesCanBeRemovedAddedAndKeptEmptyAfterRecreation() throws Exception {
+        android.content.SharedPreferences prefs = instrumentation.getTargetContext()
+                .getSharedPreferences("home_favorites", android.content.Context.MODE_PRIVATE);
+        boolean existed = prefs.contains("selected_ids");
+        java.util.Set<String> original = new java.util.HashSet<>(prefs.getStringSet("selected_ids", java.util.Collections.emptySet()));
+        prefs.edit().clear().commit();
+        try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
+            s.onActivity(a -> {
+                View home = a.findViewById(R.id.home_scroll);
+                home.findViewWithTag("favorite_font_size").performClick();
+                assertNull(home.findViewWithTag("favorite_font_size"));
+                a.findViewById(R.id.home_nav_favorites).performClick();
+                a.findViewById(R.id.home_favorites_add).performClick();
+                View star = a.findViewById(R.id.home_favorites_scroll).findViewWithTag("favorite_font_size");
+                assertFalse(star.isSelected());
+                star.performClick();
+                assertTrue(a.findViewById(R.id.home_favorites_scroll).findViewWithTag("favorite_font_size").isSelected());
+            });
+            s.recreate();
+            s.onActivity(a -> {
+                assertNotNull(a.findViewById(R.id.home_favorites_done));
+                assertTrue(a.findViewById(R.id.home_favorites_scroll).findViewWithTag("favorite_font_size").isSelected());
+                a.findViewById(R.id.home_favorites_done).performClick();
+                a.findViewById(R.id.home_nav_home).performClick();
+                assertNotNull(a.findViewById(R.id.home_scroll).findViewWithTag("favorite_font_size"));
+                for (com.click.ui.home.HomeHelpItem item : com.click.ui.home.HomeHelpItem.values()) {
+                    View star = a.findViewById(R.id.home_scroll).findViewWithTag("favorite_" + item.id);
+                    if (star != null) star.performClick();
+                }
+            });
+            s.recreate();
+            shown("아직 즐겨찾기가 없어요");
+            s.onActivity(a -> {
+                assertTrue(new com.click.data.local.HomeFavoritesStore(a).selectedIds().isEmpty());
+                a.findViewById(R.id.home_nav_favorites).performClick();
+                a.findViewById(R.id.home_favorites_add).performClick();
+                a.findViewById(R.id.home_favorites_scroll).findViewWithTag("favorite_accessibility").performClick();
+                a.findViewById(R.id.home_favorites_done).performClick();
+                assertNotNull(a.findViewById(R.id.home_favorites_scroll).findViewWithTag("favorite_accessibility"));
+                a.findViewById(R.id.home_nav_home).performClick();
+                assertNotNull(a.findViewById(R.id.home_scroll).findViewWithTag("favorite_accessibility"));
+            });
+        } finally {
+            if (existed) prefs.edit().putStringSet("selected_ids", original).commit();
+            else prefs.edit().remove("selected_ids").commit();
         }
     }
     @Test public void menuMatchesProfileCardReference() throws Exception {

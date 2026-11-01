@@ -32,7 +32,7 @@ import static org.junit.Assert.*;
 public class FloatingKeyboardTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
-    @Test public void homeStartOpensSystemMenuAndInputAvoidsKeyboard() throws Exception {
+    @Test public void homeMicrophoneOpensVoiceAndInputAvoidsKeyboard() throws Exception {
         Context app = instrumentation.getTargetContext();
         android.app.UiAutomation automation = instrumentation.getUiAutomation(
                 android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
@@ -56,25 +56,24 @@ public class FloatingKeyboardTest {
             android.provider.Settings.Secure.putString(resolver, key, String.join(":", others));
             android.provider.Settings.Secure.putInt(resolver, android.provider.Settings.Secure.ACCESSIBILITY_ENABLED, 1);
             await(() -> ClickAccessibilityService.accessibilityWindowManager() != null);
-            scenario.onActivity(activity -> activity.findViewById(com.click.R.id.home_start).performClick());
+            scenario.onActivity(activity -> activity.findViewById(com.click.R.id.home_microphone).performClick());
             await(() -> runningOverlay() != null && overlayPanel().isAttachedToWindow()
-                    && overlayPanel().getMode() == ClickOverlayLayout.Mode.MENU);
+                    && overlayPanel().getMode() == ClickOverlayLayout.Mode.VOICE);
             awaitBackground(scenario);
             ClickOverlayService initialService = runningOverlay();
             instrumentation.runOnMainSync(() -> {
                 assertEquals(android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                         ((android.view.WindowManager.LayoutParams) overlayPanel().getLayoutParams()).type);
-                assertNotNull(findText(overlayPanel(), "말로 시작"));
-                assertNotNull(findText(overlayPanel(), "글로 입력"));
+                assertNotNull(overlayPanel().findViewById(com.click.R.id.overlay_microphone));
                 assertFalse(overlayPanel().isVoiceInputActive());
             });
-            screenshot("home-start-system-menu");
+            screenshot("home-microphone-system-voice");
             ClickOverlayLayout[] panel = {null};
             EditText[] input = {null};
             int[] restingY = {0};
             instrumentation.runOnMainSync(() -> {
                 panel[0] = overlayPanel();
-                click(findText(panel[0], "글로 입력"));
+                panel[0].openText();
                 input[0] = find(panel[0], EditText.class);
                 restingY[0] = ((android.view.WindowManager.LayoutParams) panel[0].getLayoutParams()).y;
                 input[0].setText("글자 크기");
@@ -98,8 +97,8 @@ public class FloatingKeyboardTest {
                     && ((android.view.WindowManager.LayoutParams) panel[0].getLayoutParams()).y == restingY[0]);
             instrumentation.runOnMainSync(() -> assertEquals("글자 크기", input[0].getText().toString()));
             try (ActivityScenario<HomeActivity> reopened = ActivityScenario.launch(HomeActivity.class)) {
-                reopened.onActivity(activity -> activity.findViewById(com.click.R.id.home_nav_help).performClick());
-                await(() -> overlayPanel().getMode() == ClickOverlayLayout.Mode.MENU);
+                reopened.onActivity(activity -> activity.findViewById(com.click.R.id.home_microphone).performClick());
+                await(() -> overlayPanel().getMode() == ClickOverlayLayout.Mode.VOICE);
                 awaitBackground(reopened);
                 assertSame("Reopening from home must reuse the existing popup", initialService, runningOverlay());
             }
@@ -108,6 +107,36 @@ public class FloatingKeyboardTest {
             android.provider.Settings.Secure.putString(resolver, key, original);
             android.provider.Settings.Secure.putInt(resolver, android.provider.Settings.Secure.ACCESSIBILITY_ENABLED, originallyEnabled);
             automation.dropShellPermissionIdentity();
+        }
+    }
+
+    @Test public void homeInputStaysAboveKeyboardAndPreservesDraft() throws Exception {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            EditText[] input = {null};
+            scenario.onActivity(a -> {
+                input[0] = a.findViewById(com.click.R.id.home_request_input);
+                input[0].setText("화면 밝기를 높여줘");
+                input[0].requestFocus();
+                a.getSystemService(InputMethodManager.class).showSoftInput(input[0], InputMethodManager.SHOW_IMPLICIT);
+            });
+            await(() -> {
+                WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(input[0]);
+                if (insets == null || !insets.isVisible(WindowInsetsCompat.Type.ime())) return false;
+                int[] location = new int[2]; input[0].getLocationOnScreen(location);
+                return location[1] + input[0].getHeight() <= input[0].getRootView().getHeight()
+                        - insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+            });
+            screenshot("home-direct-input-keyboard");
+            scenario.onActivity(a -> {
+                assertFalse(a.findViewById(com.click.R.id.home_nav_home).isShown());
+                a.getSystemService(InputMethodManager.class).hideSoftInputFromWindow(input[0].getWindowToken(), 0);
+            });
+            await(() -> !ViewCompat.getRootWindowInsets(input[0]).isVisible(WindowInsetsCompat.Type.ime()));
+            scenario.recreate();
+            scenario.onActivity(a -> {
+                assertEquals("화면 밝기를 높여줘", ((EditText) a.findViewById(com.click.R.id.home_request_input)).getText().toString());
+                assertTrue(a.findViewById(com.click.R.id.home_nav_home).isShown());
+            });
         }
     }
 
