@@ -207,7 +207,9 @@ public class OnboardingFlowTest {
     }
     @Test public void homeMatchesStartAndFavoritesReference() throws Exception {
         try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
-            shown("클릭을 시작할까요?");
+            shown("안녕하세요!");
+            shown("오늘도\n클릭과 함께\n해볼까요?");
+            shown("궁금한 기능을 말해보세요");
             shown("즐겨찾기");
             shown("카카오톡");
             shown("글씨 크기");
@@ -215,7 +217,22 @@ public class OnboardingFlowTest {
             shown("동영상·음악 소리");
             shown("전화");
             shown("클릭 튜토리얼");
+            shown("홈");
+            shown("도와주세요");
+            shown("내 즐겨찾기");
             screenshot("home-current");
+            s.onActivity(a -> a.findViewById(R.id.home_nav_favorites).performClick());
+            SystemClock.sleep(500);
+            s.onActivity(a -> {
+                assertTrue(a.findViewById(R.id.home_nav_favorites).isSelected());
+                assertTrue(a.findViewById(R.id.home_scroll).getScrollY() > 0);
+                a.findViewById(R.id.home_nav_home).performClick();
+            });
+            SystemClock.sleep(500);
+            s.onActivity(a -> {
+                assertTrue(a.findViewById(R.id.home_nav_home).isSelected());
+                assertEquals(0, a.findViewById(R.id.home_scroll).getScrollY());
+            });
         }
     }
     @Test public void menuMatchesProfileCardReference() throws Exception {
@@ -264,7 +281,7 @@ public class OnboardingFlowTest {
             screenshot("accessibility-complete");
         }
         try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
-            shown("클릭을 시작할까요?");
+            shown("오늘도\n클릭과 함께\n해볼까요?");
             shown("즐겨찾기");
             shown("클릭 튜토리얼");
             screenshot("home");
