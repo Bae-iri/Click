@@ -98,7 +98,7 @@ public class FloatingKeyboardTest {
                     && ((android.view.WindowManager.LayoutParams) panel[0].getLayoutParams()).y == restingY[0]);
             instrumentation.runOnMainSync(() -> assertEquals("글자 크기", input[0].getText().toString()));
             try (ActivityScenario<HomeActivity> reopened = ActivityScenario.launch(HomeActivity.class)) {
-                reopened.onActivity(activity -> activity.findViewById(com.click.R.id.home_start).performClick());
+                reopened.onActivity(activity -> activity.findViewById(com.click.R.id.home_nav_help).performClick());
                 await(() -> overlayPanel().getMode() == ClickOverlayLayout.Mode.MENU);
                 awaitBackground(reopened);
                 assertSame("Reopening from home must reuse the existing popup", initialService, runningOverlay());

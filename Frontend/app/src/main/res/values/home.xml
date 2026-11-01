@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="home_start_title">클릭을 시작할까요?</string>
+    <string name="home_start_title">오늘도\n클릭과 함께\n해볼까요?</string>
+    <string name="home_greeting">안녕하세요!</string>
+    <string name="home_intro">궁금한 기능을 선택하면\n쉽게 알려드릴게요.</string>
+    <string name="home_request_hint">궁금한 기능을 말해보세요</string>
     <string name="home_start_accessibility">클릭 시작. 말이나 글로 요청하기</string>
     <string name="home_settings_accessibility">설정 열기</string>
     <string name="home_favorites">즐겨찾기</string>
@@ -9,4 +12,8 @@
     <item name="home_start" type="id" />
     <item name="home_settings" type="id" />
     <item name="home_tutorial" type="id" />
+    <item name="home_scroll" type="id" />
+    <item name="home_nav_home" type="id" />
+    <item name="home_nav_help" type="id" />
+    <item name="home_nav_favorites" type="id" />
 </resources>
