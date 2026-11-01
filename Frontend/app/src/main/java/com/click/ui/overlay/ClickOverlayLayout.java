@@ -323,13 +323,8 @@ public final class ClickOverlayLayout extends ViewGroup {
         if (mode == Mode.MENU) {
             LinearLayout choices = new LinearLayout(getContext());
             choices.setOrientation(LinearLayout.VERTICAL);
-            choices.addView(statusBox, spaced(0));
-            TextView welcome = label("무엇을\n도와드릴까요?", 24, ClickUi.TEXT, true);
+            TextView welcome = label("무엇을 도와드릴까요?", 18, ClickUi.TEXT, true);
             choices.addView(welcome, spaced(10));
-            TextView examples = label("예) 글자 크기 키워줘\n    화면을 더 밝게 해줘", 14, ClickUi.SUBTEXT, false);
-            examples.setPadding(dp(14), dp(12), dp(14), dp(12));
-            examples.setBackground(ClickUi.rounded(ClickUi.PALE_BLUE, dp(16)));
-            choices.addView(examples, spaced(14));
             choices.addView(feature("말로 입력하기", true, () -> changeMode(Mode.VOICE)), spaced(14));
             choices.addView(feature("글로 입력하기", false, () -> changeMode(Mode.TEXT)), spaced(8));
             addScrollableBody(choices, 8);
