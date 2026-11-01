@@ -17,13 +17,14 @@ import com.click.R;
 /** Consistent icons for the home cards and navigation. */
 public final class HomeIconView extends View {
     public enum Kind { WORDMARK, CLICK, SETTINGS, FONT, KAKAO, BRIGHTNESS, MEDIA, PHONE,
-        STAR, SEARCH, CHEVRON, HOME, HELP, BOOKMARK, ACCESSIBILITY }
+        STAR, SEARCH, CHEVRON, HOME, HELP, BOOKMARK, ACCESSIBILITY, MICROPHONE, SEND }
     private final Kind kind;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final Drawable artwork;
     private final Typeface bold;
     private int accent = 0xFF8993A4;
+    private boolean favoriteSelected = true;
 
     public HomeIconView(Context context, Kind kind) {
         super(context);
@@ -37,6 +38,7 @@ public final class HomeIconView extends View {
     }
 
     public void setAccentColor(int color) { accent = color; invalidate(); }
+    public void setFavoriteSelected(boolean selected) { favoriteSelected = selected; invalidate(); }
 
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -86,8 +88,12 @@ public final class HomeIconView extends View {
                 path.reset(); path.moveTo(21, 17); path.lineTo(31, 24); path.lineTo(21, 31);
                 path.close(); canvas.drawPath(path, paint); break;
             case STAR:
-                paint.setColor(0xFFFFF7E2); canvas.drawCircle(24, 24, 23, paint);
-                paint.setShader(new LinearGradient(12, 10, 32, 37, 0xFFFFD42C, 0xFFFFB800, Shader.TileMode.CLAMP));
+                canvas.translate(6, 6); canvas.scale(.75f, .75f);
+                paint.setColor(favoriteSelected ? 0xFFFFF7E2 : 0xFFF2F5FA);
+                canvas.drawCircle(24, 24, 23, paint);
+                if (favoriteSelected) paint.setShader(new LinearGradient(12, 10, 32, 37,
+                        0xFFFFD42C, 0xFFFFB800, Shader.TileMode.CLAMP));
+                else stroke(0xFF9AA8BD, 2.2f);
                 paint.setPathEffect(new CornerPathEffect(1.3f)); path.reset();
                 for (int i = 0; i < 10; i++) {
                     double angle = -Math.PI / 2 + i * Math.PI / 5;
@@ -96,6 +102,18 @@ public final class HomeIconView extends View {
                     if (i == 0) path.moveTo(x, y); else path.lineTo(x, y);
                 }
                 path.close(); canvas.drawPath(path, paint); break;
+            case MICROPHONE:
+                stroke(0xFF3478FF, 2.6f);
+                canvas.drawRoundRect(19, 10, 29, 29, 5, 5, paint);
+                canvas.drawArc(14, 17, 34, 35, 0, 180, false, paint);
+                canvas.drawLine(24, 35, 24, 40, paint);
+                canvas.drawLine(19, 40, 29, 40, paint); break;
+            case SEND:
+                paint.setColor(0xFF3478FF); canvas.drawCircle(24, 24, 19, paint);
+                stroke(Color.WHITE, 2.8f);
+                canvas.drawLine(24, 33, 24, 15, paint);
+                canvas.drawLine(24, 15, 17, 22, paint);
+                canvas.drawLine(24, 15, 31, 22, paint); break;
             case SEARCH:
                 stroke(0xFF3478FF, 3.8f); canvas.drawCircle(21, 21, 13, paint);
                 canvas.drawLine(31, 31, 41, 41, paint); break;

@@ -281,6 +281,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     speak("지금은 이 도움을 시작할 수 없어요. 잠시 후 다시 눌러 주세요.");
                 } else {
                     overlayView.post(() -> {
+                        overlayView.collapse();
                         enqueueNormalRequest(selected.requestText, selected.goalType);
                     });
                 }
@@ -289,6 +290,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 voiceReplyEnabled = true;
                 String request = initialRequest.trim();
                 overlayView.post(() -> {
+                    overlayView.collapse();
                     handleRecognizedCommand(request);
                 });
             } else if (openVoice) {
