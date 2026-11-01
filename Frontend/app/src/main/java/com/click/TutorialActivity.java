@@ -302,7 +302,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
 
     @Override public void onMicrophoneCancelled() {
         cancelRecording();
-        floating.getControl().setRecognizedSpeech("입력을 취소했어요. 마이크를 꾹 눌러 다시 말씀해 주세요.");
+        floating.getControl().showVoiceInputError("입력을 취소했어요. 마이크를 꾹 눌러 다시 말씀해 주세요.");
         updateCopy();
     }
 
@@ -337,7 +337,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 com.click.service.overlay.SpeechErrorMessages.log(error);
                 String message = com.click.service.overlay.SpeechErrorMessages.message(error);
                 updateCopy();
-                floating.getControl().setRecognizedSpeech(message); narrator.speak(message);
+                floating.getControl().showVoiceInputError(message); narrator.speak(message);
             }
         });
     }
@@ -354,7 +354,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         if (code == 81) {
             String message = getString(grants.length > 0 && grants[0] == PackageManager.PERMISSION_GRANTED
                     ? R.string.tutorial_speech_microphone_ready : R.string.tutorial_speech_microphone_denied);
-            floating.getControl().setRecognizedSpeech(message); lastCue = message; narrator.speak(message);
+            floating.getControl().showVoiceInputError(message); lastCue = message; narrator.speak(message);
         }
     }
 
@@ -383,7 +383,10 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         showRequestReview(value);
         updateCopy();
     }
+    private boolean reviewChoicePending;
+
     private void showRequestReview(String value) {
+        reviewChoicePending = false;
         practiceReview = new RequirementReview(value);
         if (!practiceReview.isFont()) practiceReview = RequirementReview.forGoal(value, new JSONObject(), value);
         reviewView = new TaskFlowOverlayView(this, new TaskFlowOverlayView.Listener() {
@@ -396,7 +399,10 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 narrator.stop(); floating.hideReview(); reviewView = null; step = WRITE;
                 showMode(ClickOverlayLayout.Mode.MENU); updateCopy();
             }
+            public void resetGoalInputs() { control("edit"); }
+            public void onReviewChoiceSelected() { reviewChoicePending = true; updateCopy(); }
             public void requirementChoice(String choice) {
+                reviewChoicePending = false;
                 reviewConfirmed = false; reviewActions.add("choice:" + choice);
                 practiceReview.choose(choice); renderReview(); updateCopy();
             }
@@ -420,7 +426,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         boolean ready = !practiceReview.isFont() || (!practiceReview.needsTarget() && !practiceReview.needsDirection() && practiceReview.isPhone());
         reviewView.requirements(practiceReview, ready, getString(reviewSpeechResource()));
         reviewView.setNarrationState(false, false);
-        floating.highlight(ready ? "이 내용으로 시작"
+        floating.highlight(reviewChoicePending ? "다음 단계" : ready ? "이대로 시작하기"
                 : practiceReview.needsTarget() ? "휴대폰 기본 글자" : "더 크게", 0);
     }
     private int reviewSpeechResource() {
@@ -481,22 +487,22 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
             case WRITE:
                 boolean input = mode == ClickOverlayLayout.Mode.TEXT;
                 speechResource = input ? R.string.tutorial_speech_write_input : R.string.tutorial_speech_write_open;
-                heading = input ? "질문을 적고\n↑ 버튼을 눌러보세요" : "‘글로 입력’을\n눌러보세요";
-                detail = input ? "‘글자 크기 키워줘’를 입력해 보세요.\n입력한 뒤 화살표를 눌러 보내요." : "아래 ‘글로 입력’ 버튼을 눌러보세요.";
-                floating.highlight(input ? "↑" : "글로 입력", 0); button = "다음"; break;
+                heading = input ? "질문을 적고\n↑ 버튼을 눌러보세요" : "‘글로 입력하기’을\n눌러보세요";
+                detail = input ? "‘글자 크기 키워줘’를 입력해 보세요.\n입력한 뒤 화살표를 눌러 보내요." : "아래 ‘글로 입력하기’ 버튼을 눌러보세요.";
+                floating.highlight(input ? "↑" : "글로 입력하기", 0); button = "다음"; break;
             case REPLY:
                 speechResource = reviewSpeechResource();
                 heading = reviewConfirmed ? "요청을 확인했어요" : "내 요청을 확인해요";
-                detail = reviewConfirmed ? "다음은 마이크로 말하는 연습이에요." : "필요한 범위를 고르고 내용을 확인해요.\n수정이 필요하면 ‘내용 수정’을 눌러요.";
+                detail = reviewConfirmed ? "다음은 마이크로 말하는 연습이에요." : "필요한 범위를 고르고 내용을 확인해요.\n수정이 필요하면 ‘내용 수정하기’를 눌러요.";
                 button = "다음"; enabled = reviewConfirmed;
-                if (!reviewConfirmed && practiceReview != null) floating.highlight(practiceReview.needsTarget() ? "휴대폰 기본 글자" : practiceReview.needsDirection() ? "더 크게" : "이 내용으로 시작", 0); break;
+                if (!reviewConfirmed && practiceReview != null) floating.highlight(reviewChoicePending ? "다음 단계" : practiceReview.needsTarget() ? "휴대폰 기본 글자" : practiceReview.needsDirection() ? "더 크게" : "이대로 시작하기", 0); break;
             case VOICE:
                 speechResource = voiceTried ? R.string.tutorial_speech_voice_received
                         : mode == ClickOverlayLayout.Mode.VOICE ? R.string.tutorial_speech_voice_record : R.string.tutorial_speech_voice_open;
-                heading = voiceTried ? "말씀이 글자로 나타나요" : mode == ClickOverlayLayout.Mode.VOICE ? "마이크를 꾹 누르고\n직접 말해보세요" : "‘말로 시작’을\n눌러보세요";
+                heading = voiceTried ? "말씀이 글자로 나타나요" : mode == ClickOverlayLayout.Mode.VOICE ? "마이크를 꾹 누르고\n직접 말해보세요" : "‘말로 입력하기’를\n눌러보세요";
                 detail = voiceTried ? "인식한 말을 확인한 뒤 다음을 눌러요." : "누른 채 말하고, 끝나면 손을 떼세요.\n예: 휴대폰 글자 크기 키워줘";
                 if (!voiceTried && !transcribing && !floating.getControl().isVoiceInputActive())
-                    floating.highlight(mode == ClickOverlayLayout.Mode.VOICE ? null : "말로 시작",
+                    floating.highlight(mode == ClickOverlayLayout.Mode.VOICE ? null : "말로 입력하기",
                             mode == ClickOverlayLayout.Mode.VOICE ? R.id.overlay_microphone : 0);
                 button = "다음"; enabled = voiceTried; break;
             case STOP:

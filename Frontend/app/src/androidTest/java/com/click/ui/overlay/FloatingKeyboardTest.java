@@ -168,7 +168,7 @@ public class FloatingKeyboardTest {
             scenario.onActivity(activity -> {
                 panel[0] = find(activity.getWindow().getDecorView(), ClickOverlayLayout.class);
                 panel[0].performClick();
-                click(findText(panel[0], "글로 입력"));
+                click(findText(panel[0], "글로 입력하기"));
                 input[0] = find(panel[0], EditText.class);
             });
             instrumentation.waitForIdleSync();

@@ -633,7 +633,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowParams.gravity = (atBottom ? Gravity.BOTTOM : Gravity.TOP) | Gravity.CENTER_HORIZONTAL;
         taskFlowParams.y = dp(24);
         taskFlowParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
-                | (goalSelection == null && (requirementReview == null || requirementReview.confirmed()) ? WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE : 0);
+                | (goalSelection == null && goalPreparation == null && (requirementReview == null || requirementReview.confirmed()) ? WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE : 0);
         taskFlowHeightLimit = height;
         taskFlowRestingGravity = taskFlowParams.gravity;
         appliedTaskFlowHeight = -1;
@@ -644,7 +644,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void placeProgressBubble() {
         if (taskFlowView == null || taskFlowParams == null || windowParams == null || windowManager == null
                 || !taskFlowView.isAttachedToWindow() || !taskFlowView.isMinimizedProgress() || closing) return;
-        int width = Math.min(screenWidth() - dp(24), dp(230));
+        int width = taskFlowView.getWindowWidth(screenWidth());
         int limit = Math.min(Math.round(screenHeight() * .30f), dp(260));
         taskFlowView.setAvailableHeight(limit);
         taskFlowView.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
@@ -661,6 +661,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (above >= dp(24)) top = above;
             else if (below + height <= screenHeight() - dp(24)) top = below;
         }
+        taskFlowView.setCompactAnchor(windowParams.x + dp(32) - left,
+                windowParams.y + dp(32) < top + height / 2f);
         taskFlowParams.width = width;
         taskFlowParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
         taskFlowParams.gravity = Gravity.TOP | Gravity.START;
@@ -1364,6 +1366,17 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         windowManager.updateViewLayout(overlayView, windowParams);
     }
 
+    @Override public void onContentSizeChanged() {
+        if (overlayView == null || windowManager == null || windowParams == null
+                || !overlayView.isAttachedToWindow() || closing) return;
+        if (overlayView.getMode() == ClickOverlayLayout.Mode.TEXT) { fitTextAboveKeyboard(); return; }
+        int height = overlayView.getWindowHeight(overlayView.getMode());
+        if (windowParams.height == height) return;
+        windowParams.height = height;
+        clampWindowPosition();
+        windowManager.updateViewLayout(overlayView, windowParams);
+    }
+
     @Override public void onMicrophoneClicked() {
         if (listening) onMicrophoneReleased();
         else onMicrophonePressed();
@@ -1391,7 +1404,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     @Override public void onMicrophoneCancelled() {
         if (!acceptingVoiceCommand) return;
         stopListening();
-        overlayView.setRecognizedSpeech("음성 입력을 취소했어요. 파란 박스를 꾹 눌러 다시 말씀해 주세요.");
+        overlayView.showVoiceInputError("음성 입력을 취소했어요. 마이크를 꾹 눌러 다시 말씀해 주세요.");
     }
 
     private boolean acceptsSpeech(int generation) {
@@ -1404,7 +1417,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || overlayView.getMode() != ClickOverlayLayout.Mode.VOICE) return;
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             stopListening();
-            overlayView.setRecognizedSpeech("마이크 권한을 허용해주세요.");
+            overlayView.showVoiceInputError("마이크 권한을 허용해주세요.");
             return;
         }
         final int generation = ++speechGeneration;
@@ -1412,7 +1425,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         // Audio leaves the device only for our authenticated backend/self-hosted STT.
         if (cloudSpeechRecognizer == null) {
             stopListening();
-            overlayView.setRecognizedSpeech("음성 입력을 사용할 수 없어요. 글로 입력해 주세요.");
+            overlayView.showVoiceInputError("음성 입력을 사용할 수 없어요. 글로 입력해 주세요.");
             return;
         }
         listening = true;
@@ -1442,14 +1455,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 stopListening();
                 // A provider failure must not reopen the microphone without another tap.
                 SpeechErrorMessages.log(error);
-                overlayView.setRecognizedSpeech(SpeechErrorMessages.message(error));
+                overlayView.showVoiceInputError(SpeechErrorMessages.message(error));
             }
         });
     }
 
     private void submitRecognizedSpeech(String text) {
         if (text == null || text.trim().isEmpty()) {
-            overlayView.setRecognizedSpeech("파란 박스를 꾹 눌러 다시 말씀해 주세요.");
+            overlayView.showVoiceInputError("마이크를 꾹 눌러 다시 말씀해 주세요.");
             return;
         }
         voiceReplyEnabled = true;
@@ -1599,7 +1612,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if (activeVoiceRequestId != null) quickHelpSelections.remove(activeVoiceRequestId);
                 awaitingReplacement = response.awaitingReplacement;
                 activeVoiceRequestId = null;
-                String message = "요청을 멈췄어요. 파란 박스를 꾹 눌러 새로 말해 주세요.";
+                String message = "요청을 멈췄어요. 마이크를 꾹 눌러 새로 말해 주세요.";
                 if (!requestActive) {
                     overlayView.setRequestStatus("요청을 멈췄어요", false);
                     overlayView.setRecognizedSpeech(message);
