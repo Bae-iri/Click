@@ -32,7 +32,7 @@ import static org.junit.Assert.*;
 public class FloatingKeyboardTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
-    @Test public void systemOverlayAvoidsRealKeyboardAndRestoresItsPosition() throws Exception {
+    @Test public void homeStartOpensSystemMenuAndInputAvoidsKeyboard() throws Exception {
         Context app = instrumentation.getTargetContext();
         android.app.UiAutomation automation = instrumentation.getUiAutomation(
                 android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
@@ -56,14 +56,24 @@ public class FloatingKeyboardTest {
             android.provider.Settings.Secure.putString(resolver, key, String.join(":", others));
             android.provider.Settings.Secure.putInt(resolver, android.provider.Settings.Secure.ACCESSIBILITY_ENABLED, 1);
             await(() -> ClickAccessibilityService.accessibilityWindowManager() != null);
-            scenario.onActivity(activity -> activity.startService(serviceIntent));
-            await(() -> runningOverlay() != null && overlayPanel().isAttachedToWindow());
+            scenario.onActivity(activity -> activity.findViewById(com.click.R.id.home_start).performClick());
+            await(() -> runningOverlay() != null && overlayPanel().isAttachedToWindow()
+                    && overlayPanel().getMode() == ClickOverlayLayout.Mode.MENU);
+            awaitBackground(scenario);
+            ClickOverlayService initialService = runningOverlay();
+            instrumentation.runOnMainSync(() -> {
+                assertEquals(android.view.WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                        ((android.view.WindowManager.LayoutParams) overlayPanel().getLayoutParams()).type);
+                assertNotNull(findText(overlayPanel(), "말로 시작"));
+                assertNotNull(findText(overlayPanel(), "글로 입력"));
+                assertFalse(overlayPanel().isVoiceInputActive());
+            });
+            screenshot("home-start-system-menu");
             ClickOverlayLayout[] panel = {null};
             EditText[] input = {null};
             int[] restingY = {0};
             instrumentation.runOnMainSync(() -> {
                 panel[0] = overlayPanel();
-                panel[0].performClick();
                 click(findText(panel[0], "글로 입력"));
                 input[0] = find(panel[0], EditText.class);
                 restingY[0] = ((android.view.WindowManager.LayoutParams) panel[0].getLayoutParams()).y;
@@ -87,6 +97,12 @@ public class FloatingKeyboardTest {
             await(() -> ClickAccessibilityService.keyboardBounds() == null
                     && ((android.view.WindowManager.LayoutParams) panel[0].getLayoutParams()).y == restingY[0]);
             instrumentation.runOnMainSync(() -> assertEquals("글자 크기", input[0].getText().toString()));
+            try (ActivityScenario<HomeActivity> reopened = ActivityScenario.launch(HomeActivity.class)) {
+                reopened.onActivity(activity -> activity.findViewById(com.click.R.id.home_start).performClick());
+                await(() -> overlayPanel().getMode() == ClickOverlayLayout.Mode.MENU);
+                awaitBackground(reopened);
+                assertSame("Reopening from home must reuse the existing popup", initialService, runningOverlay());
+            }
         } finally {
             app.stopService(serviceIntent);
             android.provider.Settings.Secure.putString(resolver, key, original);
@@ -109,8 +125,14 @@ public class FloatingKeyboardTest {
         } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
     }
 
-    @Test public void homeInputMovesAboveRealKeyboardAndReturnsWithoutLosingText() throws Exception {
+    @Test public void hostedInputMovesAboveRealKeyboardAndReturnsWithoutLosingText() throws Exception {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(activity -> activity.setContentView(new FloatingClickHost(activity,
+                    new FloatingClickHost.Listener() {
+                        @Override public void onVoiceRequested() {}
+                        @Override public void onTextSubmitted(String text) {}
+                    })));
+            instrumentation.waitForIdleSync();
             ClickOverlayLayout[] panel = {null};
             EditText[] input = {null};
             float[] restingY = {0};
@@ -154,6 +176,14 @@ public class FloatingKeyboardTest {
     }
 
     private interface Condition { boolean check(); }
+    private void awaitBackground(ActivityScenario<HomeActivity> scenario) {
+        long deadline = SystemClock.uptimeMillis() + 8000;
+        while (scenario.getState() != androidx.lifecycle.Lifecycle.State.CREATED
+                && SystemClock.uptimeMillis() < deadline) SystemClock.sleep(100);
+        assertEquals("Home must be in the background while the system popup is open",
+                androidx.lifecycle.Lifecycle.State.CREATED, scenario.getState());
+    }
+
     private void await(Condition condition) {
         long deadline = SystemClock.uptimeMillis() + 8000;
         AtomicBoolean ready = new AtomicBoolean();

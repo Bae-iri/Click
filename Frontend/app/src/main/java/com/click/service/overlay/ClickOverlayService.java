@@ -68,6 +68,7 @@ import java.net.UnknownHostException;
 public final class ClickOverlayService extends Service implements ClickOverlayLayout.Callback {
     public static final String EXTRA_INITIAL_GOAL = "com.click.extra.INITIAL_GOAL";
     public static final String EXTRA_OPEN_VOICE = "com.click.extra.OPEN_VOICE";
+    public static final String EXTRA_OPEN_MENU = "com.click.extra.OPEN_MENU";
     public static final String EXTRA_SELECTED_GOAL_TYPE = "com.click.extra.SELECTED_GOAL_TYPE";
     private static WeakReference<ClickOverlayService> runningService = new WeakReference<>(null);
     private WindowManager windowManager;
@@ -292,6 +293,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 });
             } else if (openVoice) {
                 overlayView.post(overlayView::openVoice);
+            } else if (intent.getBooleanExtra(EXTRA_OPEN_MENU, false)) {
+                overlayView.post(overlayView::openMenu);
             }
         }
         return START_STICKY;

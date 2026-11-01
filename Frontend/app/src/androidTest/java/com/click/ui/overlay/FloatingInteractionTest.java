@@ -24,6 +24,17 @@ import static org.junit.Assert.*;
 public class FloatingInteractionTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
+    private ActivityScenario<HomeActivity> launchHost() {
+        ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class);
+        scenario.onActivity(activity -> activity.setContentView(new FloatingClickHost(activity,
+                new FloatingClickHost.Listener() {
+                    @Override public void onVoiceRequested() {}
+                    @Override public void onTextSubmitted(String text) {}
+                })));
+        instrumentation.waitForIdleSync();
+        return scenario;
+    }
+
     @Test public void expandedPanelsKeepInputCompactAndFeedbackReadable() {
         instrumentation.runOnMainSync(() -> {
             ClickOverlayLayout control = new ClickOverlayLayout(instrumentation.getTargetContext());
@@ -64,10 +75,10 @@ public class FloatingInteractionTest {
     }
 
     @Test public void tapOpensMenuAndBothInputModesRemainReachable() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchHost()) {
             scenario.onActivity(activity -> {
                 ClickOverlayLayout control = findControl(activity.getWindow().getDecorView());
-                assertNotNull("Home must have a real interactive control", control);
+                assertNotNull("The host must have a real interactive control", control);
                 control.performClick();
                 assertEquals(ClickOverlayLayout.Mode.MENU, control.getMode());
                 assertNotNull(findText(control, "말로 시작"));
@@ -78,8 +89,8 @@ public class FloatingInteractionTest {
         }
     }
 
-    @Test public void holdingShowsTrashAndReleaseKeepsHomeControl() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+    @Test public void holdingShowsTrashAndReleaseKeepsHostedControl() {
+        try (ActivityScenario<HomeActivity> scenario = launchHost()) {
             final ClickOverlayLayout[] control = {null};
             final long down = SystemClock.uptimeMillis();
             scenario.onActivity(activity -> {
@@ -96,7 +107,7 @@ public class FloatingInteractionTest {
     }
 
     @Test public void movingBeforeHoldDeadlineMovesInsteadOfOpeningOrHiding() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchHost()) {
             final ClickOverlayLayout[] control = {null};
             final long down = SystemClock.uptimeMillis();
             final float[] start = new float[2];
@@ -120,7 +131,7 @@ public class FloatingInteractionTest {
     }
 
     @Test public void cancelledHoldNeverHidesOrOpens() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchHost()) {
             final ClickOverlayLayout[] control = {null};
             final long down = SystemClock.uptimeMillis();
             scenario.onActivity(activity -> {
@@ -138,7 +149,7 @@ public class FloatingInteractionTest {
     }
 
     @Test public void realTimerStartsDraggingExpandedControlOnce() {
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+        try (ActivityScenario<HomeActivity> scenario = launchHost()) {
             final ClickOverlayLayout[] control = {null};
             final int[] closeCount = {0};
             scenario.onActivity(activity -> {
