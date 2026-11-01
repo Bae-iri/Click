@@ -536,7 +536,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if (choices != null) for (int i = 0; i < choices.length(); i++) {
             JSONObject choice = choices.optJSONObject(i); if (choice == null) continue;
             RadioButton card = new RadioButton(getContext()); card.setId(View.generateViewId());
-            card.setText(choice.optString("label")); card.setTextSize(14); card.setTextColor(INK);
+            String label = choice.optString("label");
+            if ("휴대폰 설정에서 기본 글자 크기 변경".equals(label)) label = "휴대폰 기본 글자 크기";
+            else if ("특정 앱 안에서만 변경".equals(label)) label = "특정 앱 안에서만";
+            card.setText(label); card.setTextSize(14); card.setTextColor(INK);
             card.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
             card.setButtonDrawable((Drawable) null); card.setIncludeFontPadding(false);
             card.setGravity(Gravity.CENTER_VERTICAL); card.setMinHeight(dp(48));
