@@ -94,6 +94,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private boolean minimizedProgress;
     private boolean automaticProgress;
     private boolean reviewScreen;
+    private int reviewStep;
     private int[] expandedVisibility;
     private String requestSummary;
     private final CompactBubbleBackground compactBackground = new CompactBubbleBackground();
@@ -279,13 +280,17 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public boolean hasCompactContent() { return !guidanceMessage().trim().isEmpty(); }
     public boolean isMinimizedProgress() { return minimizedProgress; }
+    private View[] expandedSections() {
+        return new View[]{header, scroll, controls, divider, reviewConfirm, recoveryActions,
+                progressSummary, stepHeader, reviewNavigation};
+    }
     public void setMinimizedProgress(boolean minimized) {
         minimized = minimized && hasCompactContent();
         if (minimizedProgress == minimized) return;
         minimizedProgress = minimized;
         compactMessage.setText(minimized ? compactGuidance() : "");
         compactScroll.setVisibility(minimized ? VISIBLE : GONE);
-        View[] sections = {header, scroll, controls, divider, reviewConfirm, recoveryActions, progressSummary, stepHeader, reviewNavigation};
+        View[] sections = expandedSections();
         if (minimized) expandedVisibility = new int[sections.length];
         for (int i = 0; i < sections.length; i++) {
             if (minimized) { expandedVisibility[i] = sections[i].getVisibility(); sections[i].setVisibility(GONE); }
@@ -300,8 +305,22 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if (request != null && !request.trim().isEmpty() && !"선택한 작업".equals(request)) requestSummary = request;
     }
     public String phaseLabel() {
-        return stepHeader.getVisibility() == VISIBLE ? (stepProgress.getProgress() == 1 ? "상세정보 확인" : "요청 확인")
+        return reviewScreen ? (reviewStep == 1 ? "상세정보 확인" : "요청 확인")
                 : hasProgress() ? "안내 중" : heading.getText().toString();
+    }
+    public void setGuidanceProgress(int completed, int total) {
+        boolean visible = hasProgress() && total > 0;
+        stepHeader.setVisibility(visible && !minimizedProgress ? VISIBLE : GONE);
+        if (minimizedProgress && expandedVisibility != null) {
+            View[] sections = expandedSections();
+            for (int i = 0; i < sections.length; i++)
+                if (sections[i] == stepHeader) expandedVisibility[i] = visible ? VISIBLE : GONE;
+        }
+        if (!visible) return;
+        int current = Math.max(0, Math.min(completed, total));
+        stepProgress.setMax(total); stepProgress.setProgress(current);
+        stepLabel.setText(current + "/" + total);
+        stepHeader.setContentDescription("전체 " + total + "단계 중 " + current + "단계를 진행했어요");
     }
     public void actionRequired(String message) {
         if (hasProgress()) progress(requestSummary, null, message, false);
@@ -331,6 +350,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     private void clear(String title) {
         reviewScreen = false;
+        reviewStep = 0;
         setMinimizedProgress(false);
         updateBubblePadding();
         if (reviewReplay != null) { header.removeView(reviewReplay); reviewReplay = null; }
@@ -344,6 +364,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if (title != null && !title.isEmpty()) content.addView(heading, spaced(0));
         reviewConfirm.setVisibility(GONE);
         stepHeader.setVisibility(GONE);
+        stepLabel.setText("");
         reviewNavigation.removeAllViews(); reviewNavigation.setVisibility(GONE);
         recoveryActions.removeAllViews();
         recoveryActions.setVisibility(GONE);
@@ -477,16 +498,14 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private void reviewStage(int step, String title, String description) {
         clear(title);
         reviewScreen = true;
+        reviewStep = step;
         updateBubblePadding();
-        stepHeader.setVisibility(VISIBLE);
-        stepProgress.setProgress(step); stepLabel.setText(step + "/2");
-        stepHeader.setContentDescription(step + "단계, 전체 2단계");
         divider.setVisibility(GONE); controls.setVisibility(GONE);
         TextView subtitle = text(description, 12); subtitle.setTextColor(SECONDARY);
         subtitle.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
         subtitle.setPadding(0, 0, 0, 0);
         content.addView(subtitle, spaced(6));
-        content.setPadding(0, 0, 0, dp(12));
+        content.setPadding(0, 0, 0, dp(step == 2 ? 4 : 12));
         reviewReplay = quietButton("", () -> {
             if (narrationSpeaking) listener.stopGuidance();
             else listener.replayGuidance(narrationMessage);
@@ -580,7 +599,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         styleReviewButton(apply, true);
         editor.addView(apply, spaced(8));
         if (reset != null) editor.addView(quietButton("답변을 다시 선택", reset), spaced(6));
-        Button edit = quietButton(stepProgress.getProgress() == 2 ? "내용 수정하기" : "다른 내용 입력하기", () -> {
+        boolean confirmation = reviewStep == 2;
+        Button edit = quietButton(confirmation ? "내용 수정하기" : "다른 내용 입력하기", () -> {
             listener.stopGuidance(); editor.setVisibility(VISIBLE); reviewConfirm.setVisibility(GONE);
             input.requestFocus(); input.setSelection(input.length());
             editor.post(() -> scroll.smoothScrollTo(0, editor.getTop()));
@@ -588,9 +608,17 @@ public final class TaskFlowOverlayView extends LinearLayout {
         });
         edit.setTextSize(13);
         edit.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
-        edit.setBackground(stepProgress.getProgress() == 2 ? ripple(Color.TRANSPARENT, 0x183478F6, 14)
+        edit.setBackground(confirmation ? ripple(Color.TRANSPARENT, 0x183478F6, 12)
                 : ripple(0xFFF5F8FD, 0x183478F6, 14));
-        content.addView(edit, spaced(8)); content.addView(editor, spaced(8));
+        if (confirmation) {
+            edit.setMinHeight(dp(40)); edit.setMinimumHeight(dp(40));
+            edit.setPadding(dp(8), dp(6), 0, dp(6));
+            edit.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+            LayoutParams editParams = new LayoutParams(-2, -2);
+            editParams.gravity = Gravity.END; editParams.topMargin = dp(2);
+            content.addView(edit, editParams);
+        } else content.addView(edit, spaced(8));
+        content.addView(editor, spaced(8));
     }
 
     private void reviewSummary(String message) {

@@ -248,6 +248,7 @@ public final class AgentTurnContract {
         public final JSONObject resolvedGoal;
         public final JSONObject preparation;
         public final int step;
+        public final int totalSteps;
         public final GuideCommand guideCommand;
         public final JSONObject metadata;
 
@@ -265,6 +266,7 @@ public final class AgentTurnContract {
             taskStatus = object.getString("task_status");
             stateId = object.optString("state_id", null);
             step = object.optInt("step", 0);
+            totalSteps = object.optInt("total_steps", 0);
             JSONObject guide = object.optJSONObject("guide_command");
             guideCommand = guide == null ? null : new GuideCommand(guide);
             metadata = object.optJSONObject("metadata");

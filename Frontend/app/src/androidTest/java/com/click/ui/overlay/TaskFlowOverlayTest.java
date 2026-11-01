@@ -135,7 +135,7 @@ public class TaskFlowOverlayTest {
                         JSONObject data = json("{\"version\":\"goal-inputs.v1\",\"id\":\"q1\",\"source_text\":\"글자 크기 키워줘\",\"status\":\"needs_input\",\"values\":{},\"question\":{\"id\":\"scope\",\"kind\":\"choice\",\"message\":\"어디의 글자를 키울까요?\",\"choices\":[{\"label\":\"휴대폰 전체\",\"value\":\"system\"},{\"label\":\"특정 앱\",\"value\":\"app\"}]}}");
                         panel.preparation(new com.click.domain.goal.GoalPreparationState(data, null, "추가로 확인할게요"));
                         snapshot(panel, "preparation-" + scale);
-                        assertNotNull(find(panel, "1/2"));
+                        assertNull(find(panel, "1/2"));
                         assertFalse(find(panel, "수정한 요청 확인").isShown());
                         assertFullyInside(panel, find(panel, "휴대폰 전체"));
                         assertFullyInside(panel, find(panel, "특정 앱"));
@@ -151,10 +151,18 @@ public class TaskFlowOverlayTest {
                         panel.preparation(new com.click.domain.goal.GoalPreparationState(ready,
                                 json("{\"goal_type\":\"settings.font_size.increase\"}"), "휴대폰 전체의 글자를 더 크게 바꿀까요?"));
                         snapshot(panel, "preparation-ready-" + scale);
-                        assertNotNull(find(panel, "2/2"));
+                        assertNull(find(panel, "2/2"));
                         assertNotNull(find(panel, "이렇게 진행할게요"));
                         assertNotNull(find(panel, "휴대폰의 기본 글자 크기를\n더 크게 변경할게요."));
                         assertFullyInside(panel, find(panel, "이대로 시작하기"));
+                        View edit = find(panel, "내용 수정하기");
+                        View start = find(panel, "이대로 시작하기");
+                        android.graphics.Rect editBounds = new android.graphics.Rect();
+                        android.graphics.Rect startBounds = new android.graphics.Rect();
+                        edit.getDrawingRect(editBounds); panel.offsetDescendantRectToMyCoords(edit, editBounds);
+                        start.getDrawingRect(startBounds); panel.offsetDescendantRectToMyCoords(start, startBounds);
+                        assertEquals("Edit link aligns with the summary and action edge", startBounds.right, editBounds.right);
+                        assertTrue("Edit link stays compact", editBounds.width() < startBounds.width() / 2);
                         assertFalse(confirmed[0]);
                         find(panel, "이대로 시작하기").performClick();
                         assertTrue(confirmed[0]); confirmed[0] = false;
@@ -440,6 +448,12 @@ public class TaskFlowOverlayTest {
                 Answers answers = new Answers();
                 TaskFlowOverlayView panel = new TaskFlowOverlayView(activity, answers);
                 activity.setContentView(panel); panel.progress("글자를 크게 보기", rows, "글자 크기 버튼을 눌러 주세요.");
+                panel.setGuidanceProgress(1, 4);
+                assertTrue(find(panel, "1/4").isShown());
+                panel.setMinimizedProgress(true);
+                assertFalse(find(panel, "1/4").isShown());
+                panel.setMinimizedProgress(false);
+                assertTrue(find(panel, "1/4").isShown());
                 assertNotNull(find(panel, "글자 크기 버튼을 눌러 주세요."));
                 assertNull(find(panel, "디스플레이 메뉴 확인"));
                 assertNull(find(panel, "진행 단계"));
@@ -454,6 +468,7 @@ public class TaskFlowOverlayTest {
                 assertNotNull(findDescription(panel, "안내 창 줄이기"));
                 assertFalse(containsCheckBox(panel)); snapshot(panel, "progress");
                 panel.completed("사용자 보고상 해결, 기술적 검증 불가", () -> {});
+                assertNull(find(panel, "1/4"));
                 assertNull(findDescription(panel, "지금 할 일: 글자 크기 조절하기"));
                 assertNull(findDescription(panel, "완료: 글자 크기 조절하기"));
                 panel.progress("글자를 크게 보기", rows);
@@ -476,13 +491,13 @@ public class TaskFlowOverlayTest {
                 };
                 panel[0] = new TaskFlowOverlayView(activity, answers);
                 activity.setContentView(panel[0]); panel[0].requirements(review, false);
-                assertNotNull(find(panel[0], "1/2"));
+                assertNull(find(panel[0], "1/2"));
                 assertFalse(find(panel[0], "다음 단계").isEnabled());
                 find(panel[0], "휴대폰 기본 글자").performClick();
                 assertFalse(review.isPhone());
                 find(panel[0], "다음 단계").performClick();
                 assertTrue(review.isPhone());
-                assertNotNull(find(panel[0], "2/2"));
+                assertNull(find(panel[0], "2/2"));
                 assertNotNull(find(panel[0], review.summary()));
                 assertFalse(confirmed[0]);
                 snapshot(panel[0], "requirements-ready");
