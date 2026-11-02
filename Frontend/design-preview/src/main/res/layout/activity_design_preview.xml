@@ -4,15 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <ImageView
-        android:id="@+id/splash_waves"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:importantForAccessibility="no"
-        android:scaleType="fitXY"
-        android:src="@drawable/splash_waves" />
-
-    <com.click.designpreview.SpacedLogoView
+    <com.click.designpreview.SplashBrandView
         android:id="@+id/splash_logo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -22,44 +14,11 @@
         android:id="@+id/splash_tagline"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="sans-serif-medium"
+        android:fontFamily="@font/pretendard_regular"
         android:gravity="center"
         android:includeFontPadding="false"
-        android:lineSpacingExtra="6dp"
+        android:lineSpacingExtra="7dp"
         android:text="@string/splash_tagline"
-        android:textColor="@color/click_ink"
-        android:textSize="20sp" />
-
-    <LinearLayout
-        android:id="@+id/splash_signature"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:rotation="-7">
-
-        <FrameLayout
-            android:layout_width="162.5dp"
-            android:layout_height="65dp"
-            android:contentDescription="@string/click_wordmark"
-            android:importantForAccessibility="yes">
-
-            <ImageView
-                android:layout_width="150dp"
-                android:layout_height="50dp"
-                android:layout_gravity="bottom|center_horizontal"
-                android:importantForAccessibility="no"
-                android:scaleType="fitCenter"
-                android:src="@drawable/click"
-                android:tint="@color/click_signature_accent" />
-
-            <ImageView
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:layout_gravity="top|left"
-                android:layout_marginLeft="3.75dp"
-                android:importantForAccessibility="no"
-                android:src="@drawable/click_signature_rays" />
-        </FrameLayout>
-    </LinearLayout>
+        android:textColor="#7182A4"
+        android:textSize="17sp" />
 </com.click.designpreview.SplashLayout>
