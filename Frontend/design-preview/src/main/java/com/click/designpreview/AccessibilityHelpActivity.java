@@ -147,18 +147,6 @@ public final class AccessibilityHelpActivity extends Activity {
         description.setLineSpacing(dp(4), 1.16f);
         add(body, description, 18);
         add(body, heroCard(true), 28, 260);
-
-        LinearLayout ready = vertical();
-        ready.setPadding(dp(18), dp(16), dp(18), dp(16));
-        ready.setBackground(round(0xFFF1F7FF, 22));
-        ready.addView(text("Click이 준비됐어요", 19, INK, semibold),
-                new LinearLayout.LayoutParams(-1, -2));
-        TextView readyCopy = text("홈에서 말하거나 원하는 도움을 눌러 시작해 보세요.",
-                15, SECONDARY, medium);
-        LinearLayout.LayoutParams readyCopyParams = new LinearLayout.LayoutParams(-1, -2);
-        readyCopyParams.topMargin = dp(6);
-        ready.addView(readyCopy, readyCopyParams);
-        add(body, ready, 16);
     }
 
     private FrameLayout heroCard(boolean enabled) {
