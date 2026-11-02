@@ -40,7 +40,7 @@ public class MenuDialogsTest {
                 var toggle = findAutomationSwitch(activity.getWindow().getDecorView());
                 assertTrue(toggle.isChecked());
                 assertTextFits(activity.getWindow().getDecorView());
-                View row = find(activity.getWindow().getDecorView(), "지원 작업 전체 자동화");
+                View row = find(activity.getWindow().getDecorView(), "자동으로 도와주기");
                 while (!row.isClickable()) row = (View) row.getParent();
                 row.performClick();
             });
@@ -49,7 +49,7 @@ public class MenuDialogsTest {
                 View action = null;
                 for (View root : WindowInspector.getGlobalWindowViews()) {
                     if (root != activity.getWindow().getDecorView() && root.isShown()) {
-                        View candidate = find(root, "자동화 끄기");
+                        View candidate = find(root, "자동 모드 끄기");
                         if (candidate != null) action = candidate;
                     }
                 }
@@ -67,7 +67,7 @@ public class MenuDialogsTest {
     }
 
     @Test public void settingsAndPolicyDialogsKeepAllTextReadable() throws Exception {
-        String[] titles = {"권한 상태 확인", "맞춤 안내 기록 설정", "서비스 이용약관", "개인정보 처리방침"};
+        String[] titles = {"앱 권한 확인", "나에게 맞는 안내", "서비스 이용약관", "개인정보 처리방침"};
         var instrumentation = InstrumentationRegistry.getInstrumentation();
         try (ActivityScenario<MenuActivity> scenario = ActivityScenario.launch(MenuActivity.class)) {
             for (int index = 0; index < titles.length; index++) {
