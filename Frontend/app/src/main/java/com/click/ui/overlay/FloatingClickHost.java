@@ -32,7 +32,7 @@ public final class FloatingClickHost extends FrameLayout implements ClickOverlay
         this.listener = listener;
         setClipChildren(false);
         trash = new TrashDropView(context);
-        trash.setContentDescription("여기에 놓으면 Click 숨기기");
+        trash.setContentDescription("여기에 놓으면 클릭 숨기기");
         trash.setVisibility(GONE);
         LayoutParams trashParams = new LayoutParams(dp(112), dp(112), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         trashParams.bottomMargin = dp(18);
@@ -141,7 +141,7 @@ public final class FloatingClickHost extends FrameLayout implements ClickOverlay
         hidden = true;
         trash.setVisibility(GONE);
         setVisibility(GONE);
-        announceForAccessibility("Click 버튼을 숨겼어요");
+        announceForAccessibility("클릭 버튼을 숨겼어요");
         listener.onHidden();
     }
     @Override public void onTextSubmitted(String text) {

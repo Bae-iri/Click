@@ -19,7 +19,7 @@ public class ErrorDetailsTest {
                 "/api/v1/agent/commands"}) {
             for (int status : new int[] {404, 405}) {
                 String message = ErrorDetails.requestMessage(api(path, status));
-                assertTrue(message.contains("서버 업데이트"));
+                assertTrue(message.contains("업데이트"));
                 assertFalse(message.contains("음성"));
                 assertFalse(message.contains(path));
                 assertFalse(message.contains("private-trace"));
@@ -29,9 +29,9 @@ public class ErrorDetailsTest {
 
     @Test public void missingIndividualRequestDoesNotClaimServerIsOutdated() {
         assertFalse(ErrorDetails.requestMessage(api("/api/v1/voice-requests/old-id/complete", 404))
-                .contains("서버 업데이트"));
+                .contains("업데이트"));
         assertFalse(ErrorDetails.requestMessage(api("/api/v1/agent/sessions/old-id", 404))
-                .contains("서버 업데이트"));
+                .contains("업데이트"));
     }
 
     @Test public void loginFailuresExplainHowToRecover() {

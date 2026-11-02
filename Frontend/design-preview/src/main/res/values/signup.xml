@@ -62,13 +62,13 @@
     <string name="signup_progress">회원가입, 2단계 중 %1$d단계</string>
     <string name="signup_show_password">비밀번호 보기</string>
     <string name="signup_hide_password">비밀번호 숨기기</string>
-    <string name="signup_error_email">올바른 이메일 주소를 입력해 주세요.</string>
+    <string name="signup_error_email">이메일 주소를 한 번 더 확인해 주세요.</string>
     <string name="signup_error_name">이름을 입력해 주세요.</string>
     <string name="signup_error_password_confirm">비밀번호가 서로 달라요. 다시 확인해 주세요.</string>
     <string name="signup_error_age">1세부터 120세 사이의 나이를 입력해 주세요.</string>
     <string name="signup_information_checked">입력하신 내용을 확인했어요.</string>
     <string name="account_exists_title">이미 가입된\n계정이에요</string>
-    <string name="account_exists_description">다시 만나 반가워요!\n로그인하고 Click을 시작해요.</string>
+    <string name="account_exists_description">다시 만나 반가워요!\n로그인하고 클릭을 시작해요.</string>
     <string name="account_exists_email_label">가입된 이메일</string>
     <string name="account_exists_edit">다른 이메일로 가입하기</string>
     <string name="account_exists_close">안내창 닫기</string>

@@ -32,7 +32,7 @@ public class ClickTutorialFlowTest {
     @Test public void actualFloatingMenuKeyboardConversationVoiceAndHome() throws Exception {
         try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
             scenario.onActivity(a -> {
-                assertNotNull(findText(a.getWindow().getDecorView(), "click 튜토리얼을\n시작해볼게요!"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "클릭 튜토리얼을\n시작해볼게요!"));
                 assertChecklist(a, false);
                 assertFalse(control(a).isShown());
             });
@@ -209,7 +209,7 @@ public class ClickTutorialFlowTest {
     }
 
     private void assertChecklist(TutorialActivity activity, boolean completed) {
-        String[] labels = {"click 버튼 열기", "글로 입력하고 요청 확인하기", "마이크로 말하기", "진행 중인 요청 멈추기", "창 접고 버튼 옮기기", "버튼 숨기고 다시 꺼내기"};
+        String[] labels = {"클릭 버튼 열기", "글로 입력하고 요청 확인하기", "마이크로 말하기", "진행 중인 요청 멈추기", "창 접고 버튼 옮기기", "버튼 숨기고 다시 꺼내기"};
         for (String label : labels) {
             TextView text = findText(activity.getWindow().getDecorView(), label);
             assertNotNull(label, text);

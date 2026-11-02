@@ -110,7 +110,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         setBackground(bg); setElevation(dp(10));
         LinearLayout bubble = new LinearLayout(context);
         bubble.setOrientation(VERTICAL);
-        TextView bubbleLabel = text("click · 펼치기", 13);
+        TextView bubbleLabel = text("클릭 · 펼치기", 13);
         bubbleLabel.setTextColor(BLUE_DARK);
         bubble.addView(bubbleLabel);
         compactMessage = text("", 16);
@@ -132,7 +132,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         cursor.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
         cursor.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         identity.addView(cursor, new LayoutParams(dp(23), dp(23)));
-        brand = text("click 안내", 14);
+        brand = text("클릭 안내", 14);
         brand.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
         brand.setTextColor(INK);
         brand.setPadding(dp(6), 0, 0, 0);
@@ -383,7 +383,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     /** A transport or contract failure is not a request for the user to rephrase. */
     public void resolutionUnavailable(String request, String message, Runnable retry) {
-        clear("요청을 확인하지 못했어요");
+        clear("요청을 다시 확인할게요");
         headerInput.setVisibility(GONE);
         divider.setVisibility(GONE);
         controls.setVisibility(GONE);
@@ -396,7 +396,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     /** An unresolved request has no selectable goal or running task to pause. */
     public void unresolvedGoal(String request) {
-        clear("조금 더 알려주세요");
+        clear("조금 더 여쭤볼게요");
         headerInput.setVisibility(GONE);
         divider.setVisibility(GONE);
         controls.setVisibility(GONE);
@@ -515,7 +515,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         reviewReplay.setCompoundDrawables(speaker, null, null, null);
         reviewReplay.setPadding(dp(11), dp(10), dp(11), dp(10));
         reviewReplay.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 12));
-        reviewReplay.setContentDescription("Click 음성 안내 다시 듣기");
+        reviewReplay.setContentDescription("클릭 음성 안내 다시 듣기");
         header.addView(reviewReplay, 1, new LayoutParams(dp(40), -2));
         narrationPlayback = reviewReplay;
     }
@@ -668,7 +668,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         JSONObject question = state.question();
         reviewStage(1, question == null ? "조금 더 확인할게요" : question.optString("message", "어떤 작업을 도와드릴까요?"),
                 question != null && "choice".equals(question.optString("kind"))
-                        ? "원하시는 항목을 선택해 주세요." : "필요한 내용을 알려주세요.");
+                        ? "원하시는 항목을 선택해 주세요." : "몇 가지만 더 여쭤볼게요.");
         narrationMessage = state.guidance();
         if (state.needsInput()) {
             if ("choice".equals(question.optString("kind"))) {
@@ -829,7 +829,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         LinearLayout section = new LinearLayout(getContext()); section.setOrientation(VERTICAL);
         LinearLayout player = new LinearLayout(getContext()); player.setGravity(Gravity.CENTER_VERTICAL);
         boolean largeText = getResources().getConfiguration().fontScale > 1.2f;
-        narrationStatus = text("Click의 안내", 13); narrationStatus.setTextColor(SECONDARY);
+        narrationStatus = text("클릭의 안내", 13); narrationStatus.setTextColor(SECONDARY);
         narrationStatus.setVisibility(largeText ? GONE : VISIBLE);
         player.addView(narrationStatus, new LayoutParams(0, -2, 1));
         narrationPlayback = quietButton("다시 듣기", () -> {
@@ -859,9 +859,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         narrationSpeaking = speaking; narrationUnavailable = unavailable;
         if (narrationPlayback == null) return;
         if (narrationStatus != null) narrationStatus.setText(progressMessage != null ? "현재 진행"
-                : unavailable ? "글로 안내할게요" : speaking ? "말하고 있어요" : "Click의 안내");
+                : unavailable ? "글로 안내할게요" : speaking ? "말하고 있어요" : "클릭의 안내");
         narrationPlayback.setText(reviewReplay == narrationPlayback ? "" : speaking ? "음성 멈춤" : "다시 듣기");
-        narrationPlayback.setContentDescription(speaking ? "음성 안내 멈추기" : "Click 음성 안내 다시 듣기");
+        narrationPlayback.setContentDescription(speaking ? "음성 안내 멈추기" : "클릭 음성 안내 다시 듣기");
         if (unavailable && narrationText != null) {
             narrationText.setVisibility(VISIBLE);
             if (narrationCaptions != null) narrationCaptions.setText("글 접기");

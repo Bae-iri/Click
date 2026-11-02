@@ -9,7 +9,7 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.widget.FrameLayout;
 
-/** A light home-style backdrop with a single brand card and comfortably spaced copy. */
+/** A light home-style backdrop with an unframed logo and comfortably spaced copy. */
 public final class SplashLayout extends FrameLayout {
     private final Paint background = new Paint(Paint.ANTI_ALIAS_FLAG);
 
@@ -41,11 +41,11 @@ public final class SplashLayout extends FrameLayout {
                 MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
         int gap = dp(contentHeight < dp(400) ? 20 : 30);
         int availableHeight = Math.max(0, contentHeight - tagline.getMeasuredHeight() - gap - dp(32));
-        int logoWidth = Math.min(dp(272), Math.max(0, contentWidth - dp(64)));
-        logoWidth = Math.min(logoWidth, availableHeight * 2);
+        int logoWidth = Math.min(dp(222), Math.max(0, contentWidth - dp(64)));
+        logoWidth = Math.min(logoWidth, availableHeight * 222 / 72);
         findViewById(R.id.splash_logo).measure(
                 MeasureSpec.makeMeasureSpec(logoWidth, MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(logoWidth / 2, MeasureSpec.EXACTLY));
+                MeasureSpec.makeMeasureSpec(Math.round(logoWidth * 72f / 222f), MeasureSpec.EXACTLY));
     }
 
     @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {

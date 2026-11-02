@@ -72,7 +72,7 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         setClipChildren(false);
         trash = new TrashDropView(context);
         trash.setVisibility(GONE);
-        trash.setContentDescription("여기에 놓으면 click 숨기기");
+        trash.setContentDescription("여기에 놓으면 클릭 숨기기");
         LayoutParams trashParams = new LayoutParams(dp(96), dp(96), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         trashParams.bottomMargin = dp(12);
         addView(trash, trashParams);

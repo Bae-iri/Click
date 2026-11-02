@@ -88,7 +88,7 @@ public final class LoginActivity extends Activity {
         String address = email.getText().toString().trim();
         String secret = password.getText().toString();
         if (!Patterns.EMAIL_ADDRESS.matcher(address).matches()) {
-            showError(R.id.login_email_error, "올바른 이메일 주소를 입력해 주세요.", email); return;
+            showError(R.id.login_email_error, "이메일 주소를 한 번 더 확인해 주세요.", email); return;
         }
         if (secret.isEmpty()) {
             showError(R.id.login_password_error, getString(R.string.login_error_password_required), password); return;

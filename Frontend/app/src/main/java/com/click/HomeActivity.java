@@ -472,7 +472,7 @@ public final class HomeActivity extends AppCompatActivity {
         if (requestLaunching) return false;
         if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return false; }
         if (com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() == null) {
-            Toast.makeText(this, "클릭을 다시 연결해 주세요.\n설정에서 click을 껐다 켜면 이어서 도와드릴게요.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "클릭을 다시 연결해 주세요.\n설정에서 클릭을 껐다 켜면 이어서 도와드릴게요.", Toast.LENGTH_LONG).show();
             openPermissionGuide(); return false;
         }
         Intent service = new Intent(this, ClickOverlayService.class);

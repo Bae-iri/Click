@@ -26,7 +26,7 @@ public final class TutorialReadyActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         narrator = new com.click.designpreview.TutorialNarrator(this);
-        narrator.speak("준비됐어요. 시작하기를 눌러 click 버튼과 마이크를 직접 사용해 보세요.");
+        narrator.speak("이제 준비됐어요. 시작하기를 눌러 클릭 버튼과 마이크 사용법을 함께 알아볼까요?");
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.WHITE);
@@ -47,7 +47,7 @@ public final class TutorialReadyActivity extends AppCompatActivity {
         mark.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
         mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         brand.addView(mark, new LinearLayout.LayoutParams(dp(36), dp(36)));
-        TextView wordmark = ClickUi.title(this, "click");
+        TextView wordmark = ClickUi.title(this, "클릭");
         LinearLayout.LayoutParams wordmarkParams = new LinearLayout.LayoutParams(-2, -2);
         wordmarkParams.setMarginStart(dp(5));
         brand.addView(wordmark, wordmarkParams);

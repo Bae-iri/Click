@@ -276,7 +276,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         cursor.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
         cursor.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         identity.addView(cursor, new LinearLayout.LayoutParams(dp(23), dp(23)));
-        TextView title = label("click 안내", 14, ClickUi.TEXT, true);
+        TextView title = label("클릭 안내", 14, ClickUi.TEXT, true);
         title.setPadding(dp(6), 0, 0, 0);
         identity.addView(title);
         if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
@@ -285,7 +285,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         close.setId(R.id.overlay_collapse);
         close.setGravity(Gravity.CENTER);
         close.setMaxLines(1);
-        close.setContentDescription("줄이기. 작은 click 버튼으로 접기");
+        close.setContentDescription("줄이기. 작은 클릭 버튼으로 접기");
         close.setPadding(dp(8), dp(8), dp(8), dp(8));
         close.setFocusable(true);
         close.setBackground(new RippleDrawable(ColorStateList.valueOf(0x183478F6),
@@ -607,8 +607,8 @@ public final class ClickOverlayLayout extends ViewGroup {
     }
     private void updateDescription() {
         setContentDescription(mode == Mode.COLLAPSED
-                ? "Click 기능 열기. 꾹 누르면 휴지통이 나타납니다. 끌어서 이동하거나 휴지통에 놓아 숨깁니다."
-                : "Click 메뉴 접기. 꾹 누르면 휴지통이 나타납니다. 끌어서 이동하거나 휴지통에 놓아 숨깁니다.");
+                ? "클릭 기능 열기. 꾹 누르면 휴지통이 나타납니다. 끌어서 이동하거나 휴지통에 놓아 숨깁니다."
+                : "클릭 메뉴 접기. 꾹 누르면 휴지통이 나타납니다. 끌어서 이동하거나 휴지통에 놓아 숨깁니다.");
     }
     private void submitText() {
         String text = goalInput.getText().toString().trim();

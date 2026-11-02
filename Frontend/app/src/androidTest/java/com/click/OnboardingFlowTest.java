@@ -79,7 +79,7 @@ public class OnboardingFlowTest {
         try (ActivityScenario<AccessibilityHelpActivity> s = ActivityScenario.launch(
                 AccessibilityHelpActivity.class)) {
             shown("아직은 보고 계신 화면을\n확인할 수 없어요");
-            shown("그래서 지금은 Click이 도와드릴 수 없어요.\n접근성 설정에서 Click을 허용해 주시면\n바로 도와드릴 수 있어요!");
+            shown("지금은 접근성 허용이 되지 않아\n클릭이 도와드릴 수 없어요.\n\n접근성 설정에서 클릭을 허용해 주시면\n바로 도와드릴게요.");
             shown("접근성 설정하러 가기"); shown("지금은 앱 닫기"); screenshot("accessibility-later");
             s.onActivity(a -> {
                 assertFalse("테스트 시작 시 Click 접근성 서비스는 꺼져 있어야 합니다.",
@@ -151,7 +151,7 @@ public class OnboardingFlowTest {
                         .setText("short");
                 a.findViewById(com.click.designpreview.R.id.login_action).performClick();
             });
-            shown("올바른 이메일 주소를 입력해 주세요.");
+            shown("이메일 주소를 한 번 더 확인해 주세요.");
             shown("가입할 때 설정한 비밀번호를 입력해 주세요.");
             s.onActivity(a -> {
                 ((EditText) a.findViewById(com.click.designpreview.R.id.login_email))
@@ -325,7 +325,7 @@ public class OnboardingFlowTest {
         try (ActivityScenario<AccessibilityHelpActivity> s = ActivityScenario.launch(
                 AccessibilityHelpActivity.class)) {
             shown("접근성 설정이\n완료됐어요");
-            shown("Click 시작하기");
+            shown("클릭 시작하기");
             screenshot("accessibility-complete");
         }
         try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {

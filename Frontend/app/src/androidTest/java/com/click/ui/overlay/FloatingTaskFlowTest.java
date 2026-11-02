@@ -102,7 +102,7 @@ public class FloatingTaskFlowTest {
                 assertEquals(View.VISIBLE, guide.getVisibility());
                 assertEquals("The bubble keeps the movable click button visible", View.VISIBLE, input.getVisibility());
                 assertFalse(guide.findViewById(R.id.task_flow_collapse).isShown());
-                findText(guide, "click · 펼치기").performClick();
+                findText(guide, "클릭 · 펼치기").performClick();
                 assertFalse(guide.isMinimizedProgress());
                 assertEquals(View.VISIBLE, guide.getVisibility());
                 assertEquals(View.GONE, input.getVisibility());

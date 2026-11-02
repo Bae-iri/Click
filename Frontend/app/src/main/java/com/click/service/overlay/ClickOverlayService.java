@@ -854,7 +854,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         try {
             resolveGoalOnServer(initialGoal, null, goalPreparation.answer(value), false);
         } catch (org.json.JSONException error) {
-            speak("화면에 나온 선택지로 다시 답해 주세요.");
+            speak("화면의 선택지에서 원하시는 내용을 골라 주시겠어요?");
         }
     }
 
@@ -1145,7 +1145,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             else if (goalPreparation.needsInput()) {
                 String value = goalPreparation.exactSpokenChoice(text);
                 if (value != null) answerGoalInput(value);
-                else speak("화면의 선택지를 눌러 답해 주세요.");
+                else speak("화면의 선택지에서 원하시는 내용을 골라 주시겠어요?");
             } else resolveGoal(text, null);
             return true;
         }
@@ -1417,7 +1417,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || overlayView.getMode() != ClickOverlayLayout.Mode.VOICE) return;
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             stopListening();
-            overlayView.showVoiceInputError("마이크 권한을 허용해주세요.");
+            overlayView.showVoiceInputError("말로 입력하시려면 마이크 사용을 허용해 주세요.");
             return;
         }
         final int generation = ++speechGeneration;
@@ -1425,7 +1425,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         // Audio leaves the device only for our authenticated backend/self-hosted STT.
         if (cloudSpeechRecognizer == null) {
             stopListening();
-            overlayView.showVoiceInputError("음성 입력을 사용할 수 없어요. 글로 입력해 주세요.");
+            overlayView.showVoiceInputError("지금은 음성 입력에 연결하기 어려워요. 글로 적어 주시면 이어서 도와드릴게요.");
             return;
         }
         listening = true;
@@ -2028,12 +2028,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         if (normalized.equals("아니") || normalized.equals("아니오") || normalized.equals("계속")) {
             awaitingExitConfirmation = false;
-            String message = "Click을 계속 사용할게요.";
+            String message = "클릭을 계속 사용할게요.";
             if (overlayView != null) overlayView.setRecognizedSpeech(message);
             speak(message);
             return true;
         }
-        String message = "Click을 종료할지 예 또는 아니오로 말씀해주세요.";
+        String message = "클릭을 종료할지 예 또는 아니오로 말씀해주세요.";
         if (overlayView != null) overlayView.setRecognizedSpeech(message);
         speak(message);
         return true;
@@ -2041,7 +2041,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void askToExitAfterQueueCompleted() {
         awaitingExitConfirmation = true;
-        String message = "요청한 작업이 모두 끝났어요. Click을 종료할까요?";
+        String message = "요청한 작업이 모두 끝났어요. 클릭을 종료할까요?";
         ensureTaskFlow();
         taskFlowView.completed("요청한 작업이 모두 끝났어요.", this::shutdownClick);
         taskFlowCollapsed = false;
