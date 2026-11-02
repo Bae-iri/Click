@@ -115,8 +115,13 @@ class LocalGoalLlm:
             if not isinstance(goal, str) or goal not in by_goal:
                 return None
             selected = by_goal[goal]
-            explicit = GoalInputRequirements.explicit_values(text)
-            directions = GoalInputRequirements.directions(text)
+            # Brightness/volume use 높여/낮춰, not only font-size 크게/작게.
+            # Validate against the selected task's input contract even when the
+            # request needed model interpretation to identify that task.
+            requirements = GoalInputRequirements()
+            family = requirements.family(selected['goal_type'])
+            explicit = requirements.explicit_values(text, family)
+            directions = requirements.directions(text, family)
             if 'direction' in selected['slots'] and (len(directions) > 1 or (
                     directions and selected['slots']['direction'] not in directions)):
                 return None
