@@ -9,7 +9,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.RectF;
+import android.graphics.RadialGradient;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
@@ -41,13 +42,12 @@ public final class MenuActivity extends AppCompatActivity {
     private static final int BLUE = 0xFF3478F6;
     private static final int INK = 0xFF101A36;
     private static final int SECONDARY = 0xFF7182A4;
-    private static final int BORDER = 0xFFE5EDF8;
     private static final int DANGER = 0xFFE94467;
     private static final int GRANTED = 0xFF1E9E55;
 
+    private Typeface regular;
     private Typeface medium;
     private Typeface semibold;
-    private Typeface bold;
     private PersonalizationEventGateway personalizationEvents;
     private boolean timingConsented;
     private androidx.appcompat.widget.SwitchCompat automationToggle;
@@ -57,9 +57,9 @@ public final class MenuActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         configureWindow();
+        regular = getResources().getFont(com.click.designpreview.R.font.pretendard_regular);
         medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
         semibold = getResources().getFont(com.click.designpreview.R.font.pretendard_semibold);
-        bold = getResources().getFont(com.click.designpreview.R.font.pretendard_bold);
         personalizationEvents = new PersonalizationEventGateway(this);
         automationSettings = new TouchAutomationSettings(this);
         accountActions = new AccountActionsGateway(this);
@@ -70,9 +70,11 @@ public final class MenuActivity extends AppCompatActivity {
 
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
+        scroll.setClipChildren(false);
         scroll.setClipToPadding(false);
         scroll.setVerticalScrollBarEnabled(false);
         LinearLayout page = vertical();
+        page.setClipChildren(false);
         int horizontal = dp(22);
         page.setPadding(horizontal, dp(14), horizontal, dp(34));
         scroll.addView(page, new ScrollView.LayoutParams(-1, -2));
@@ -87,37 +89,40 @@ public final class MenuActivity extends AppCompatActivity {
 
         page.addView(header(), new LinearLayout.LayoutParams(-1, -2));
 
+        section(page, "도움 설정");
         LinearLayout settings = group();
-        addRow(settings, MenuIconView.Kind.SHIELD, "권한 상태 확인", false,
+        addRow(settings, MenuIconView.Kind.SHIELD, "앱 권한 확인", "안내에 필요한 권한을 확인해요", false,
                 view -> showPermissionStatus());
         divider(settings);
-        addRow(settings, MenuIconView.Kind.SLIDERS, "맞춤 안내 기록 설정", false,
+        addRow(settings, MenuIconView.Kind.PERSONALIZE, "나에게 맞는 안내", "사용 기록을 활용할지 선택해요", false,
                 view -> showTimingConsentDialog());
         divider(settings);
-        addRow(settings, MenuIconView.Kind.SLIDERS, "지원 작업 전체 자동화", false,
+        addRow(settings, MenuIconView.Kind.AUTOMATION, "자동으로 도와주기", "화면 이동과 설정 조절을 도와드려요", false,
                 view -> showAutomationSettings());
-        add(page, settings, 18);
+        add(page, settings, 10);
 
+        section(page, "이용 안내");
         LinearLayout tutorial = group();
-        addRow(tutorial, MenuIconView.Kind.BOOK, "튜토리얼", false,
+        addRow(tutorial, MenuIconView.Kind.BOOK, "클릭 사용법", "직접 따라 하며 익혀보세요", false,
                 view -> startActivity(new Intent(this, TutorialActivity.class)));
-        add(page, tutorial, 14);
+        add(page, tutorial, 10);
 
         LinearLayout policies = group();
-        addRow(policies, MenuIconView.Kind.DOCUMENT, "서비스 이용약관", false,
+        addRow(policies, MenuIconView.Kind.DOCUMENT, "서비스 이용약관", null, false,
                 view -> showPolicy("서비스 이용약관", R.array.click_terms_sections));
         divider(policies);
-        addRow(policies, MenuIconView.Kind.SHIELD, "개인정보 처리방침", false,
+        addRow(policies, MenuIconView.Kind.LOCK, "개인정보 처리방침", null, false,
                 view -> showPolicy("개인정보 처리방침", R.array.click_privacy_sections));
-        add(page, policies, 14);
+        add(page, policies, 12);
 
+        section(page, "계정 관리");
         LinearLayout accountActions = group();
-        addRow(accountActions, MenuIconView.Kind.LOGOUT, "로그아웃", false,
+        addRow(accountActions, MenuIconView.Kind.LOGOUT, "로그아웃", null, false,
                 view -> confirmLogout());
         divider(accountActions);
-        addRow(accountActions, MenuIconView.Kind.TRASH, "회원탈퇴", true,
+        addRow(accountActions, MenuIconView.Kind.TRASH, "회원 탈퇴", null, true,
                 view -> confirmDelete());
-        add(page, accountActions, 14);
+        add(page, accountActions, 10);
 
         setContentView(root);
         root.requestApplyInsets();
@@ -125,12 +130,12 @@ public final class MenuActivity extends AppCompatActivity {
 
     private void showAutomationSettings() {
         boolean enabled = automationSettings.isEnabled();
-        ClickDialog.show(this, "지원 작업 전체 자동화", ClickDialog.body(this,
-                (enabled ? "자동화가 켜져 있어요.\n\n" : "자동화가 꺼져 있어요.\n\n")
-                        + "ON · 요청을 확인하고 시작하면 지원되는 앱 열기, 메뉴 이동, 스크롤과 설정 조절을 자동으로 진행해요. 직접 조작이 필요한 단계는 따로 안내해요.\n\n"
-                        + "OFF · 눌러야 할 곳을 안내하고 사용자가 직접 조작해요.\n\n"
+        ClickDialog.show(this, "자동으로 도와주기", ClickDialog.body(this,
+                (enabled ? "자동 모드가 켜져 있어요.\n\n" : "자동 모드가 꺼져 있어요.\n\n")
+                        + "켜짐 · 요청을 확인하고 시작하면 지원되는 앱 열기, 메뉴 이동, 스크롤과 설정 조절을 자동으로 진행해요. 직접 조작이 필요한 단계는 따로 안내해요.\n\n"
+                        + "꺼짐 · 눌러야 할 곳을 안내하고 사용자가 직접 조작해요.\n\n"
                         + "진행 중에도 상단 스위치로 끌 수 있어요. 결제·전화 걸기·메시지 보내기는 자동 실행하지 않아요."),
-                enabled ? "자동화 끄기" : "자동화 켜기",
+                enabled ? "자동 모드 끄기" : "자동 모드 켜기",
                 () -> automationToggle.setChecked(!enabled), "닫기");
     }
 
@@ -138,30 +143,29 @@ public final class MenuActivity extends AppCompatActivity {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setMinimumHeight(dp(58));
-        TextView back = text("‹", 32, BLUE, medium);
-        back.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 36);
-        back.setGravity(Gravity.CENTER);
-        back.setContentDescription("메뉴 닫고 돌아가기");
+        View back = new MenuIconView(MenuIconView.Kind.BACK, false);
+        back.setContentDescription("홈으로 돌아가기");
+        back.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         back.setClickable(true);
         back.setFocusable(true);
-        back.setBackground(ripple(0xFFEAF3FF, 24));
+        back.setBackground(ripple(Color.WHITE, 24));
         back.setOnClickListener(view -> closeMenu());
         row.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        TextView title = text("메뉴", 28, INK, bold);
+        TextView title = text("설정", 24, INK, semibold);
         title.setLetterSpacing(-.025f);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
-        title.setPadding(dp(10), 0, dp(8), 0);
+        title.setPadding(dp(12), 0, dp(8), 0);
         row.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
 
         automationToggle = new androidx.appcompat.widget.SwitchCompat(this);
-        automationToggle.setText(automationSettings.isEnabled() ? "자동 ON" : "자동 OFF");
-        automationToggle.setTextSize(15);
-        automationToggle.setTypeface(semibold);
+        automationToggle.setText("자동 모드");
+        automationToggle.setTextSize(13);
+        automationToggle.setTypeface(medium);
         automationToggle.setTextColor(BLUE);
         automationToggle.setShowText(false);
-        automationToggle.setTextOn("ON");
-        automationToggle.setTextOff("OFF");
-        automationToggle.setSwitchMinWidth(dp(62));
+        automationToggle.setTextOn("켜짐");
+        automationToggle.setTextOff("꺼짐");
+        automationToggle.setSwitchMinWidth(dp(48));
         automationToggle.setSwitchPadding(dp(6));
         automationToggle.setMinHeight(dp(48));
         automationToggle.setThumbTintList(new ColorStateList(
@@ -171,9 +175,9 @@ public final class MenuActivity extends AppCompatActivity {
                 new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
                 new int[]{0xFFBFD7FF, 0xFFE5EDF8}));
         automationToggle.setChecked(automationSettings.isEnabled());
-        automationToggle.setContentDescription("지원 작업 전체 자동화");
+        automationToggle.setContentDescription("자동 모드");
         automationToggle.setOnCheckedChangeListener((button, enabled) -> {
-            automationToggle.setText(enabled ? "자동 ON" : "자동 OFF");
+            automationToggle.setText("자동 모드");
             automationSettings.setEnabled(enabled);
             ClickOverlayService.onAutomationSettingChanged();
         });
@@ -186,45 +190,58 @@ public final class MenuActivity extends AppCompatActivity {
         GradientDrawable card = new GradientDrawable();
         card.setColor(0xF9FFFFFF);
         card.setCornerRadius(dp(24));
-        card.setStroke(dp(1), BORDER);
+
         group.setBackground(card);
-        group.setElevation(dp(2));
+        group.setElevation(dp(3));
+        if (Build.VERSION.SDK_INT >= 28) {
+            group.setOutlineAmbientShadowColor(0x243D5D8F);
+            group.setOutlineSpotShadowColor(0x303D5D8F);
+        }
         group.setPadding(dp(8), dp(5), dp(8), dp(5));
         return group;
     }
 
-    private void addRow(LinearLayout group, MenuIconView.Kind kind, String label, boolean danger,
+    private void section(LinearLayout page, String title) {
+        TextView heading = text(title, 14, SECONDARY, medium);
+        heading.setPadding(dp(4), 0, 0, 0);
+        if (Build.VERSION.SDK_INT >= 28) heading.setAccessibilityHeading(true);
+        add(page, heading, 24);
+    }
+
+    private void addRow(LinearLayout group, MenuIconView.Kind kind, String label, String description, boolean danger,
                         View.OnClickListener listener) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(8), dp(7), dp(8), dp(7));
+        row.setPadding(dp(8), dp(13), dp(8), dp(13));
         row.setMinimumHeight(dp(72));
         row.setClickable(true);
         row.setFocusable(true);
-        row.setContentDescription(label);
+        row.setContentDescription(description == null ? label : label + ", " + description);
         row.setBackground(ripple(Color.TRANSPARENT, 18));
         row.setOnClickListener(listener);
-        row.addView(new MenuIconView(kind, danger), new LinearLayout.LayoutParams(dp(54), dp(54)));
+        row.addView(new MenuIconView(kind, danger), new LinearLayout.LayoutParams(dp(44), dp(44)));
 
-        String displayLabel = getResources().getConfiguration().fontScale > 1.3f
-                && "지원 작업 전체 자동화".equals(label) ? "지원 작업\n전체 자동화" : label;
-        TextView title = text(displayLabel, 18, danger ? DANGER : INK, semibold);
+        LinearLayout copy = vertical();
+        TextView title = text(label, 16, danger ? DANGER : INK, medium);
+        copy.addView(title, new LinearLayout.LayoutParams(-1, -2));
+        if (description != null) {
+            TextView detail = text(description, 12, SECONDARY, regular);
+            detail.setLineSpacing(dp(2), 1f);
+            add(copy, detail, 5);
+        }
         LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(0, -2, 1);
-        titleParams.setMarginStart(dp(15));
-        row.addView(title, titleParams);
-        TextView arrow = text("›", 32, 0xFF7890B8, medium);
-        arrow.setGravity(Gravity.CENTER);
-        arrow.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 28);
-        arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        row.addView(arrow, new LinearLayout.LayoutParams(dp(34), dp(42)));
+        titleParams.setMarginStart(dp(12));
+        row.addView(copy, titleParams);
+        row.addView(new MenuIconView(MenuIconView.Kind.NEXT, false),
+                new LinearLayout.LayoutParams(dp(24), dp(32)));
         group.addView(row, new LinearLayout.LayoutParams(-1, -2));
     }
 
     private void divider(LinearLayout group) {
         View line = new View(this);
-        line.setBackgroundColor(0xFFE9EFF8);
+        line.setBackgroundColor(0xFFF0F4FA);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(1));
-        params.setMarginStart(dp(70));
+        params.setMarginStart(dp(64));
         params.setMarginEnd(dp(12));
         group.addView(line, params);
     }
@@ -240,7 +257,7 @@ public final class MenuActivity extends AppCompatActivity {
             if (dialog[0] != null) dialog[0].dismiss();
             startActivity(new Intent(this, com.click.designpreview.AccessibilityHelpActivity.class));
         }), 0);
-        add(statuses, permissionRow("다른 앱 위 표시", "다른 앱에서도 click 안내를 볼 수 있어요.", overlay, () -> {
+        add(statuses, permissionRow("다른 앱 위 표시", "다른 앱에서도 클릭 안내를 볼 수 있어요.", overlay, () -> {
             if (dialog[0] != null) dialog[0].dismiss();
             startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
         }), 10);
@@ -248,7 +265,7 @@ public final class MenuActivity extends AppCompatActivity {
             if (dialog[0] != null) dialog[0].dismiss();
             startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName())));
         }), 10);
-        dialog[0] = ClickDialog.show(this, "권한 상태 확인", statuses, "확인했어요", null, null);
+        dialog[0] = ClickDialog.show(this, "앱 권한 확인", statuses, "확인했어요", null, null);
     }
 
     /** One permission line: name and purpose on the left, a colored status chip on the right. */
@@ -290,7 +307,7 @@ public final class MenuActivity extends AppCompatActivity {
 
     private void showTimingConsentDialog() {
         final boolean consent = !timingConsented;
-        ClickDialog.show(this, "맞춤 안내 기록 설정", ClickDialog.body(this, timingConsented
+        ClickDialog.show(this, "나에게 맞는 안내", ClickDialog.body(this, timingConsented
                         ? "동의를 철회하면 저장된 맞춤 안내 행동 기록이 삭제되고 안내 수준이 초기화돼요. 기본 안내는 계속 이용할 수 있어요."
                         : "안내가 표시된 뒤 첫 탭까지 걸린 시간과 단계 진행 정보를 저장해 더 쉬운 안내를 만드는 데 사용해요. 화면 글자나 비밀번호는 저장하지 않아요."),
                 timingConsented ? "기록 동의 철회" : "동의하고 사용하기", () ->
@@ -336,13 +353,13 @@ public final class MenuActivity extends AppCompatActivity {
         LinearLayout content = vertical();
         content.addView(ClickDialog.body(this, delete
                 ? "서버의 계정과 연결된 이용 기록, 이 기기의 회원 정보를 삭제해요. 삭제한 정보는 되돌릴 수 없어요."
-                : "진행 중인 안내를 종료하고 로그아웃해요. 다시 로그인하면 Click을 이용할 수 있어요."));
+                : "진행 중인 안내를 종료하고 로그아웃해요. 다시 로그인하면 클릭을 이용할 수 있어요."));
         TextView errorMessage = text("", 14, DANGER, medium);
         errorMessage.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         errorMessage.setVisibility(View.GONE);
         add(content, errorMessage, 12);
-        Dialog dialog = ClickDialog.show(this, delete ? "회원탈퇴를 진행할까요?" : "로그아웃할까요?",
-                content, delete ? "회원탈퇴" : "로그아웃", null, "취소");
+        Dialog dialog = ClickDialog.show(this, delete ? "회원 탈퇴를 진행할까요?" : "로그아웃할까요?",
+                content, delete ? "회원 탈퇴" : "로그아웃", null, "취소");
         TextView confirm = dialog.findViewById(android.R.id.button1);
         View cancel = dialog.findViewById(android.R.id.button2);
         confirm.setOnClickListener(view -> {
@@ -447,21 +464,23 @@ public final class MenuActivity extends AppCompatActivity {
 
     private final class MenuBackgroundView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        MenuBackgroundView() { super(MenuActivity.this); }
+        MenuBackgroundView() {
+            super(MenuActivity.this);
+            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
+        @Override protected void onSizeChanged(int w, int h, int oldW, int oldH) {
+            paint.setShader(new RadialGradient(w + dp(4), dp(175), dp(230),
+                    new int[]{0xFFDFF1FF, 0xFFECF7FF, 0xFFFCFDFF},
+                    new float[]{0, .67f, 1}, Shader.TileMode.CLAMP));
+        }
         @Override protected void onDraw(Canvas canvas) {
-            float w = getWidth();
-            float h = getHeight();
-            paint.setColor(0x2B74A9FF);
-            canvas.drawCircle(w * .98f, h * .05f, w * .27f, paint);
-            paint.setColor(0x1B74A9FF);
-            canvas.drawCircle(w * .88f, h * .13f, w * .21f, paint);
-            paint.setColor(0x1574A9FF);
-            canvas.drawCircle(w * .05f, h * .98f, w * .30f, paint);
+            canvas.drawRect(0, 0, getWidth(), getHeight(), paint);
         }
     }
 
+    /** Rounded, consistently weighted pictograms paired with the home card palette. */
     private final class MenuIconView extends View {
-        enum Kind { USER, SHIELD, SLIDERS, BOOK, DOCUMENT, LOGOUT, TRASH }
+        enum Kind { SHIELD, PERSONALIZE, AUTOMATION, BOOK, DOCUMENT, LOCK, LOGOUT, TRASH, BACK, NEXT }
         private final Kind kind;
         private final boolean danger;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -472,58 +491,92 @@ public final class MenuActivity extends AppCompatActivity {
             this.danger = danger;
             setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         }
+        private void stroke(int color) {
+            paint.setColor(color);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(2.1f);
+        }
         @Override protected void onDraw(Canvas canvas) {
-            float w = getWidth(), h = getHeight(), cx = w / 2f, cy = h / 2f;
-            paint.setStyle(Paint.Style.FILL);
-            paint.setColor(danger ? 0xFFFFEAF0 : 0xFFEAF3FF);
-            canvas.drawCircle(cx, cy, Math.min(w, h) * .48f, paint);
-            paint.setColor(danger ? DANGER : BLUE);
-            paint.setStrokeWidth(dp(2));
+            float size = Math.min(getWidth(), getHeight());
+            canvas.save();
+            canvas.translate((getWidth() - size) / 2, (getHeight() - size) / 2);
+            canvas.scale(size / 48f, size / 48f);
             paint.setStrokeCap(Paint.Cap.ROUND);
             paint.setStrokeJoin(Paint.Join.ROUND);
-            if (kind == Kind.USER) {
-                paint.setColor(0xFF74A7FF);
-                canvas.drawCircle(cx, cy - dp(8), dp(9), paint);
-                RectF body = new RectF(cx - dp(15), cy + dp(3), cx + dp(15), cy + dp(20));
-                canvas.drawRoundRect(body, dp(10), dp(10), paint);
-            } else if (kind == Kind.SHIELD) {
-                path.reset(); path.moveTo(cx, cy - dp(16)); path.lineTo(cx + dp(14), cy - dp(10));
-                path.lineTo(cx + dp(12), cy + dp(9)); path.quadTo(cx, cy + dp(19), cx, cy + dp(19));
-                path.quadTo(cx - dp(12), cy + dp(9), cx - dp(12), cy + dp(9));
-                path.lineTo(cx - dp(14), cy - dp(10)); path.close(); canvas.drawPath(path, paint);
-                paint.setColor(Color.WHITE); paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(2));
-                canvas.drawLine(cx - dp(5), cy + dp(1), cx - dp(1), cy + dp(5), paint);
-                canvas.drawLine(cx - dp(1), cy + dp(5), cx + dp(7), cy - dp(4), paint);
-            } else if (kind == Kind.SLIDERS) {
-                paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(2));
-                for (int i = -1; i <= 1; i++) {
-                    float y = cy + i * dp(10); canvas.drawLine(cx - dp(15), y, cx + dp(15), y, paint);
-                    float knob = cx + (i == -1 ? dp(7) : i == 0 ? -dp(6) : dp(3));
-                    paint.setStyle(Paint.Style.FILL); canvas.drawCircle(knob, y, dp(4), paint);
-                    paint.setStyle(Paint.Style.STROKE);
-                }
-            } else if (kind == Kind.BOOK) {
-                RectF left = new RectF(cx - dp(15), cy - dp(14), cx - dp(1), cy + dp(15));
-                RectF right = new RectF(cx + dp(1), cy - dp(14), cx + dp(15), cy + dp(15));
-                canvas.drawRoundRect(left, dp(3), dp(3), paint); canvas.drawRoundRect(right, dp(3), dp(3), paint);
-            } else if (kind == Kind.DOCUMENT) {
-                canvas.drawRoundRect(new RectF(cx - dp(12), cy - dp(16), cx + dp(12), cy + dp(16)), dp(4), dp(4), paint);
-                paint.setColor(Color.WHITE); paint.setStrokeWidth(dp(2));
-                for (int i = -1; i <= 1; i++) canvas.drawLine(cx - dp(6), cy + i * dp(7), cx + dp(6), cy + i * dp(7), paint);
-            } else if (kind == Kind.LOGOUT) {
-                paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(3));
-                canvas.drawRoundRect(new RectF(cx - dp(14), cy - dp(15), cx + dp(2), cy + dp(15)), dp(3), dp(3), paint);
-                canvas.drawLine(cx - dp(1), cy, cx + dp(16), cy, paint);
-                canvas.drawLine(cx + dp(16), cy, cx + dp(10), cy - dp(6), paint);
-                canvas.drawLine(cx + dp(16), cy, cx + dp(10), cy + dp(6), paint);
-            } else {
-                canvas.drawRoundRect(new RectF(cx - dp(10), cy - dp(10), cx + dp(10), cy + dp(15)), dp(3), dp(3), paint);
-                canvas.drawRoundRect(new RectF(cx - dp(14), cy - dp(16), cx + dp(14), cy - dp(10)), dp(3), dp(3), paint);
-                paint.setColor(danger ? 0xFFFFEAF0 : 0xFFEAF3FF); paint.setStrokeWidth(dp(2));
-                canvas.drawLine(cx - dp(4), cy - dp(5), cx - dp(4), cy + dp(9), paint);
-                canvas.drawLine(cx + dp(4), cy - dp(5), cx + dp(4), cy + dp(9), paint);
-            }
             paint.setStyle(Paint.Style.FILL);
+            if (kind == Kind.BACK || kind == Kind.NEXT) {
+                stroke(kind == Kind.BACK ? INK : 0xFF9BAAC0);
+                paint.setStrokeWidth(kind == Kind.BACK ? 2.2f : 2.8f);
+                path.reset();
+                if (kind == Kind.BACK) {
+                    path.moveTo(27, 17); path.lineTo(20, 24); path.lineTo(27, 31);
+                } else {
+                    path.moveTo(20, 16); path.lineTo(28, 24); path.lineTo(20, 32);
+                }
+                canvas.drawPath(path, paint);
+                canvas.restore(); return;
+            }
+            int accent = danger ? DANGER : BLUE;
+            int tint = 0xFFEAF2FF;
+            if (kind == Kind.PERSONALIZE) { accent = 0xFF8970D7; tint = 0xFFF1ECFF; }
+            if (kind == Kind.AUTOMATION) { accent = 0xFFE8A028; tint = 0xFFFFF4DD; }
+            if (kind == Kind.BOOK) { accent = 0xFF39A78C; tint = 0xFFE6F7F0; }
+            if (kind == Kind.LOGOUT) { accent = 0xFF8391A8; tint = 0xFFF0F3F8; }
+            if (danger) tint = 0xFFFFEBEF;
+            paint.setColor(tint);
+            canvas.drawRoundRect(1, 1, 47, 47, 15, 15, paint);
+            stroke(accent);
+            switch (kind) {
+                case SHIELD:
+                    path.reset(); path.moveTo(24, 11); path.lineTo(35, 15);
+                    path.lineTo(34, 25); path.quadTo(33, 32, 24, 37);
+                    path.quadTo(15, 32, 14, 25); path.lineTo(13, 15); path.close();
+                    canvas.drawPath(path, paint);
+                    path.reset(); path.moveTo(19, 24); path.lineTo(23, 28); path.lineTo(30, 20);
+                    canvas.drawPath(path, paint); break;
+                case PERSONALIZE:
+                    canvas.drawCircle(22, 19, 5, paint);
+                    canvas.drawArc(12, 27, 32, 41, 190, 160, false, paint);
+                    canvas.drawLine(35, 14, 35, 22, paint);
+                    canvas.drawLine(31, 18, 39, 18, paint); break;
+                case AUTOMATION:
+                    path.reset(); path.moveTo(25, 10); path.lineTo(15, 26); path.lineTo(23, 26);
+                    path.lineTo(21, 38); path.lineTo(34, 21); path.lineTo(26, 21); path.close();
+                    paint.setStyle(Paint.Style.FILL); canvas.drawPath(path, paint); break;
+                case BOOK:
+                    path.reset(); path.moveTo(24, 16); path.quadTo(18, 12, 11, 14);
+                    path.lineTo(11, 33); path.quadTo(18, 31, 24, 35);
+                    path.quadTo(30, 31, 37, 33); path.lineTo(37, 14);
+                    path.quadTo(30, 12, 24, 16); path.lineTo(24, 35);
+                    canvas.drawPath(path, paint);
+                    canvas.drawLine(16, 20, 20, 21, paint);
+                    canvas.drawLine(28, 21, 32, 20, paint); break;
+                case DOCUMENT:
+                    canvas.drawRoundRect(14, 11, 34, 37, 4, 4, paint);
+                    canvas.drawLine(19, 19, 29, 19, paint);
+                    canvas.drawLine(19, 24, 29, 24, paint);
+                    canvas.drawLine(19, 29, 25, 29, paint); break;
+                case LOCK:
+                    canvas.drawRoundRect(14, 21, 34, 36, 5, 5, paint);
+                    canvas.drawArc(18, 11, 30, 29, 180, 180, false, paint);
+                    canvas.drawLine(24, 27, 24, 30, paint); break;
+                case LOGOUT:
+                    path.reset(); path.moveTo(22, 13); path.lineTo(15, 13);
+                    path.quadTo(12, 13, 12, 16); path.lineTo(12, 32);
+                    path.quadTo(12, 35, 15, 35); path.lineTo(22, 35);
+                    canvas.drawPath(path, paint);
+                    canvas.drawLine(21, 24, 37, 24, paint);
+                    path.reset(); path.moveTo(31, 18); path.lineTo(37, 24); path.lineTo(31, 30);
+                    canvas.drawPath(path, paint); break;
+                case TRASH:
+                    canvas.drawRoundRect(16, 18, 32, 36, 3, 3, paint);
+                    canvas.drawLine(12, 16, 36, 16, paint);
+                    canvas.drawRoundRect(20, 11, 28, 16, 2, 2, paint);
+                    canvas.drawLine(21, 23, 21, 30, paint);
+                    canvas.drawLine(27, 23, 27, 30, paint); break;
+                default: break;
+            }
+            canvas.restore();
         }
     }
 }

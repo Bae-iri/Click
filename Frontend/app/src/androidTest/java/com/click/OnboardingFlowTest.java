@@ -286,15 +286,14 @@ public class OnboardingFlowTest {
     }
     @Test public void menuMatchesProfileCardReference() throws Exception {
         try (ActivityScenario<MenuActivity> s = ActivityScenario.launch(MenuActivity.class)) {
-            shown("메뉴");
-            shown("Click과 함께해요.");
-            shown("권한 상태 확인");
-            shown("맞춤 안내 기록 설정");
-            shown("튜토리얼");
+            shown("설정");
+            shown("앱 권한 확인");
+            shown("나에게 맞는 안내");
+            shown("클릭 사용법");
             shown("서비스 이용약관");
             shown("개인정보 처리방침");
             shown("로그아웃");
-            shown("회원탈퇴");
+            shown("회원 탈퇴");
             screenshot("menu-current");
         }
     }
@@ -336,11 +335,10 @@ public class OnboardingFlowTest {
             screenshot("home");
         }
         try (ActivityScenario<MenuActivity> s = ActivityScenario.launch(MenuActivity.class)) {
-            shown("메뉴");
-            shown("Click과 함께해요.");
-            shown("권한 상태 확인");
-            shown("맞춤 안내 기록 설정");
-            shown("튜토리얼");
+            shown("설정");
+            shown("앱 권한 확인");
+            shown("나에게 맞는 안내");
+            shown("클릭 사용법");
             shown("로그아웃");
             screenshot("menu");
         }
