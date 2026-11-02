@@ -1,78 +1,66 @@
 package com.click.designpreview;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.RadialGradient;
+import android.graphics.Shader;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.FrameLayout;
 
-/** Keeps the brand above center and the signature above the system navigation area. */
+/** A light home-style backdrop with a single brand card and comfortably spaced copy. */
 public final class SplashLayout extends FrameLayout {
+    private final Paint background = new Paint(Paint.ANTI_ALIAS_FLAG);
+
     public SplashLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
+        setWillNotDraw(false);
+        setClipChildren(false);
+        setClipToPadding(false);
     }
 
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+    @Override protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
+        background.setShader(new RadialGradient(width + dp(4), height * .30f, dp(260),
+                new int[]{0xFFDFF1FF, 0xFFECF7FF, 0xFFFCFDFF},
+                new float[]{0, .67f, 1}, Shader.TileMode.CLAMP));
+    }
+
+    @Override protected void onDraw(Canvas canvas) {
+        canvas.drawRect(0, 0, getWidth(), getHeight(), background);
+    }
+
+    @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int height = MeasureSpec.getSize(heightMeasureSpec);
         setMeasuredDimension(width, height);
         int contentWidth = Math.max(0, width - getPaddingLeft() - getPaddingRight());
         int contentHeight = Math.max(0, height - getPaddingTop() - getPaddingBottom());
-        boolean compact = contentHeight < dp(520);
-
-        View waves = findViewById(R.id.splash_waves);
-        measureExactly(waves, width, Math.round(Math.min(height * .39f, width * .88f)));
-
-        int textWidth = MeasureSpec.makeMeasureSpec(Math.max(0, contentWidth - dp(40)), MeasureSpec.AT_MOST);
-        int textHeight = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
-        findViewById(R.id.splash_tagline).measure(textWidth, textHeight);
-        findViewById(R.id.splash_signature).measure(textWidth, textHeight);
-
-        int logoWidth = Math.round(Math.min(dp(compact ? 132 : 248), contentWidth * .64f));
-        int wordmarkGap = getResources().getDimensionPixelSize(R.dimen.splash_logo_wordmark_gap);
-        // Reserve the text, lifted signature, and gaps before sizing the logo on short screens.
-        int availableLogoHeight = Math.max(0, contentHeight
-                - findViewById(R.id.splash_tagline).getMeasuredHeight()
-                - findViewById(R.id.splash_signature).getMeasuredHeight()
-                - dp(compact ? 12 : 34) - dp(compact ? 8 : 24)
-                - dp(compact ? 12 : 26) - dp(8 + 28));
-        logoWidth = Math.min(logoWidth,
-                Math.max(0, (int) Math.floor((availableLogoHeight - wordmarkGap) * 224f / 194f)));
-        measureExactly(findViewById(R.id.splash_logo), logoWidth,
-                Math.min(availableLogoHeight, Math.round(logoWidth * 194f / 224f) + wordmarkGap));
+        View tagline = findViewById(R.id.splash_tagline);
+        tagline.measure(MeasureSpec.makeMeasureSpec(Math.max(0, contentWidth - dp(48)), MeasureSpec.AT_MOST),
+                MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+        int gap = dp(contentHeight < dp(400) ? 20 : 30);
+        int availableHeight = Math.max(0, contentHeight - tagline.getMeasuredHeight() - gap - dp(32));
+        int logoWidth = Math.min(dp(272), Math.max(0, contentWidth - dp(64)));
+        logoWidth = Math.min(logoWidth, availableHeight * 2);
+        findViewById(R.id.splash_logo).measure(
+                MeasureSpec.makeMeasureSpec(logoWidth, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(logoWidth / 2, MeasureSpec.EXACTLY));
     }
 
-    @Override
-    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+    @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         int width = right - left;
-        int height = bottom - top;
-        int contentHeight = height - getPaddingTop() - getPaddingBottom();
+        int contentHeight = bottom - top - getPaddingTop() - getPaddingBottom();
         int centerX = getPaddingLeft() + (width - getPaddingLeft() - getPaddingRight()) / 2;
-        boolean compact = contentHeight < dp(520);
-        int contentLift = dp(compact ? 8 : 24);
-
-        View waves = findViewById(R.id.splash_waves);
-        waves.layout(0, height - waves.getMeasuredHeight(), width, height);
-
-        View signature = findViewById(R.id.splash_signature);
-        int signatureTop = height - getPaddingBottom() - dp(compact ? 12 : 34)
-                - signature.getMeasuredHeight() - contentLift;
-        placeCentered(signature, centerX, signatureTop);
-
         View logo = findViewById(R.id.splash_logo);
         View tagline = findViewById(R.id.splash_tagline);
-        int gap = dp(compact ? 12 : 26);
-        int desiredTop = getPaddingTop() + Math.round(contentHeight * (compact ? .06f : .25f))
-                - contentLift;
-        int latestTop = signatureTop - dp(28) - tagline.getMeasuredHeight() - gap - logo.getMeasuredHeight();
-        int logoTop = Math.max(getPaddingTop() + dp(8), Math.min(desiredTop, latestTop));
+        int gap = dp(contentHeight < dp(400) ? 20 : 30);
+        int groupHeight = logo.getMeasuredHeight() + gap + tagline.getMeasuredHeight();
+        int desiredTop = getPaddingTop() + Math.round(contentHeight * .45f) - groupHeight / 2;
+        int logoTop = Math.max(getPaddingTop() + dp(8), Math.min(desiredTop,
+                bottom - top - getPaddingBottom() - dp(8) - groupHeight));
         placeCentered(logo, centerX, logoTop);
         placeCentered(tagline, centerX, logoTop + logo.getMeasuredHeight() + gap);
-    }
-
-    private void measureExactly(View view, int width, int height) {
-        view.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
     }
 
     private void placeCentered(View view, int centerX, int top) {

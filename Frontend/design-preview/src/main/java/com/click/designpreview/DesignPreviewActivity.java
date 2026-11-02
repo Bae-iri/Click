@@ -46,7 +46,7 @@ public final class DesignPreviewActivity extends Activity {
             getWindow().setDecorFitsSystemWindows(false);
         }
         getWindow().setStatusBarColor(Color.TRANSPARENT);
-        getWindow().setNavigationBarColor(getColor(R.color.splash_wave_base));
+        getWindow().setNavigationBarColor(getColor(R.color.design_canvas_background));
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                         | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
@@ -66,10 +66,9 @@ public final class DesignPreviewActivity extends Activity {
         splash.requestApplyInsets();
 
         if (savedInstanceState == null && ValueAnimator.areAnimatorsEnabled()) {
-            SpacedLogoView logo = findViewById(R.id.splash_logo);
-            reveal(logo, 0L).withEndAction(logo::playClickAnimation).start();
+            View logo = findViewById(R.id.splash_logo);
+            reveal(logo, 0L).start();
             reveal(findViewById(R.id.splash_tagline), 100L).start();
-            reveal(findViewById(R.id.splash_signature), 180L).start();
         }
     }
 
