@@ -191,10 +191,10 @@ public final class PermissionGuideActivity extends Activity {
         }
         String[] cues = {
             "어려운 스마트폰 사용, 이제 클릭 한 번으로. 다음을 눌러 권한 안내를 확인해 주세요.",
-            "click은 접근성 기능으로 화면의 정보를 이해하고 다음에 누를 곳을 안내해요. 권한은 직접 선택하고 설정에서 끌 수 있어요.",
+            "클릭은 접근성 기능으로 화면의 정보를 이해하고 다음에 누를 곳을 안내해요. 권한은 직접 선택하고 설정에서 끌 수 있어요.",
             "화면에서 필요한 버튼을 찾고, 확인이 필요한 순간을 안내해요. 다음을 눌러 설정 방법을 확인해 주세요.",
-            "접근성 설정 열기를 누르면 휴대폰 설정으로 이동해요. 설치된 앱에서 click 화면 안내를 찾아주세요.",
-            "설치된 앱, click 화면 안내, 허용하기 순서로 눌러주세요. 지금 설정하기 버튼으로 이동할 수 있어요."
+            "접근성 설정 열기를 누르면 휴대폰 설정으로 이동해요. 설치된 앱에서 클릭 화면 안내를 찾아주세요.",
+            "설치된 앱, 클릭 화면 안내, 허용하기 순서로 눌러주세요. 지금 설정하기 버튼으로 이동할 수 있어요."
         };
         spokenPage = cues[page]; narrator.speak(spokenPage);
         scroll.scrollTo(0, 0);
@@ -296,7 +296,6 @@ public final class PermissionGuideActivity extends Activity {
         LinearLayout ready = vertical();
         ready.setGravity(Gravity.CENTER_HORIZONTAL);
         ready.setPadding(dp(16), dp(12), dp(16), dp(16));
-        ready.setBackground(rounded(0xFFF1F7FF, 22));
         ready.addView(new PermissionIconView(this, Kind.CHECK, BLUE),
                 new LinearLayout.LayoutParams(dp(42), dp(42)));
         TextView note = text(R.string.guide_ready, 17, SECONDARY, medium);
@@ -313,7 +312,6 @@ public final class PermissionGuideActivity extends Activity {
         card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding(dp(14), dp(17), dp(14), dp(17));
         card.setMinimumHeight(dp(94));
-        card.setBackground(rounded(0xFFF1F7FF, 24));
         card.addView(new PermissionIconView(this, icon, BLUE),
                 new LinearLayout.LayoutParams(dp(54), dp(54)));
         LinearLayout copy = vertical();

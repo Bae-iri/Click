@@ -354,7 +354,7 @@ public final class MenuActivity extends AppCompatActivity {
                     "안내가 나온 뒤 처음 누르기까지 걸린 시간과 단계 진행 정보를 저장해요."), 22);
             add(content, dialogSection("어떻게 활용하나요?",
                     "사용 기록을 바탕으로 더 쉬운 안내를 만드는 데 사용해요."), 22);
-            add(content, dialogSection("안심하고 선택하세요",
+            add(content, dialogSection("편하게 선택해 주세요",
                     "이 기록에는 화면 글자나 비밀번호를 저장하지 않아요.",
                     "동의하지 않아도 기본 안내는 이용할 수 있어요."), 22);
         }
@@ -410,7 +410,7 @@ public final class MenuActivity extends AppCompatActivity {
                     "서버에 저장된 계정과 연결된 이용 기록을 삭제해요.",
                     "이 기기에 저장된 회원 정보도 함께 삭제해요."), 22);
             add(content, dialogSection("되돌릴 수 없어요",
-                    "삭제한 정보는 복구할 수 없으니 신중하게 선택해 주세요."), 22);
+                    "탈퇴 후에는 삭제한 정보를 복구할 수 없어요. 계속 진행하실지 확인해 주세요."), 22);
         } else {
             add(content, dialogSection("진행 중인 안내가 종료돼요",
                     "현재 안내를 종료하고 로그아웃해요."), 22);

@@ -37,7 +37,7 @@ public final class ClickDialog {
         card.setPadding(padding, padding, padding, padding);
         card.setBackground(ClickUi.rounded(Color.WHITE, ClickUi.dp(activity, 26)));
 
-        TextView brand = ClickUi.body(activity, "click");
+        TextView brand = ClickUi.body(activity, "클릭");
         brand.setTextSize(16); brand.setTextColor(ClickUi.BLUE);
         card.addView(brand);
         TextView heading = ClickUi.title(activity, title);

@@ -92,41 +92,11 @@ public final class AccessibilityHelpActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         body.addView(title, new LinearLayout.LayoutParams(-1, -2));
 
-        TextView description = text("그래서 지금은 Click이 도와드릴 수 없어요.\n접근성 설정에서 Click을 허용해 주시면\n바로 도와드릴 수 있어요!", 17, SECONDARY, medium);
+        TextView description = text("지금은 접근성 허용이 되지 않아\n클릭이 도와드릴 수 없어요.\n\n접근성 설정에서 클릭을 허용해 주시면\n바로 도와드릴게요.", 17, SECONDARY, medium);
         description.setLineSpacing(dp(4), 1.16f);
         add(body, description, 18);
 
-        add(body, heroCard(false), 28, 235);
-
-        LinearLayout permission = new LinearLayout(this);
-        permission.setGravity(Gravity.CENTER_VERTICAL);
-        permission.setPadding(dp(16), dp(14), dp(16), dp(14));
-        GradientDrawable permissionFill = new GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[]{0xFFF2F7FF, 0xFFEAF3FF, 0xFFF7FAFF});
-        permissionFill.setCornerRadius(dp(22));
-        permission.setBackground(permissionFill);
-
-        FrameLayout iconCircle = new FrameLayout(this);
-        iconCircle.setBackground(round(0xFFDCEBFF, 28));
-        ImageView icon = new ImageView(this);
-        icon.setImageResource(R.drawable.ic_click_cursor);
-        icon.setPadding(dp(10), dp(10), dp(10), dp(10));
-        icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        iconCircle.addView(icon, new FrameLayout.LayoutParams(-1, -1));
-        permission.addView(iconCircle, new LinearLayout.LayoutParams(dp(54), dp(54)));
-
-        LinearLayout copy = vertical();
-        copy.addView(text("접근성에서 Click 허용하기", 18, INK, semibold),
-                new LinearLayout.LayoutParams(-1, -2));
-        TextView subheading = text("화면을 확인하고 필요한 순서를 안내해요", 14, SECONDARY, medium);
-        LinearLayout.LayoutParams subheadingParams = new LinearLayout.LayoutParams(-1, -2);
-        subheadingParams.topMargin = dp(5);
-        copy.addView(subheading, subheadingParams);
-        LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);
-        copyParams.setMarginStart(dp(14));
-        permission.addView(copy, copyParams);
-        add(body, permission, 16);
+        add(body, characterIllustration(), 28, 260);
     }
 
     private void addCompleteContent(LinearLayout body) {
@@ -139,35 +109,15 @@ public final class AccessibilityHelpActivity extends Activity {
         TextView description = text("이제 보고 계신 화면을 확인하고\n필요한 버튼과 순서를 안내할 수 있어요.", 17, SECONDARY, medium);
         description.setLineSpacing(dp(4), 1.16f);
         add(body, description, 18);
-        add(body, heroCard(true), 28, 260);
+        add(body, characterIllustration(), 28, 260);
     }
 
-    private FrameLayout heroCard(boolean enabled) {
-        FrameLayout hero = new FrameLayout(this);
-        GradientDrawable fill = new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{0xFFF5F9FF, 0xFFEAF3FF});
-        fill.setCornerRadius(dp(30));
-        hero.setBackground(fill);
-
+    private ImageView characterIllustration() {
         ImageView character = new ImageView(this);
         character.setImageResource(R.drawable.welcome);
-        character.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        character.setScaleType(ImageView.ScaleType.FIT_CENTER);
         character.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        FrameLayout.LayoutParams characterParams = new FrameLayout.LayoutParams(
-                enabled ? dp(220) : dp(195), enabled ? dp(225) : dp(205),
-                Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
-        characterParams.bottomMargin = enabled ? dp(5) : 0;
-        hero.addView(character, characterParams);
-
-        TextView badge = text(enabled ? "✓" : "!", 20, Color.WHITE, bold);
-        badge.setGravity(Gravity.CENTER);
-        badge.setBackground(round(BLUE, 26));
-        badge.setContentDescription(enabled ? "접근성 허용 완료" : "접근성 설정 필요");
-        FrameLayout.LayoutParams badgeParams = new FrameLayout.LayoutParams(dp(50), dp(50),
-                Gravity.END | Gravity.BOTTOM);
-        badgeParams.setMargins(0, 0, dp(24), dp(22));
-        hero.addView(badge, badgeParams);
-        return hero;
+        return character;
     }
 
     private View footer(boolean enabled) {
@@ -180,7 +130,7 @@ public final class AccessibilityHelpActivity extends Activity {
         action.setPadding(dp(18), dp(15), dp(18), dp(15));
         action.setBackground(OnboardingDrawables.startButton(getResources()));
         action.setElevation(dp(6));
-        TextView label = text(enabled ? "Click 시작하기" : "접근성 설정하러 가기",
+        TextView label = text(enabled ? "클릭 시작하기" : "접근성 설정하러 가기",
                 20, Color.WHITE, semibold);
         label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         action.addView(label, new LinearLayout.LayoutParams(-2, -2));

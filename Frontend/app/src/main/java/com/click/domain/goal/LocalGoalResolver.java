@@ -29,7 +29,7 @@ public final class LocalGoalResolver {
                     && match.targetApp.equals(goal.optString("target_app"))) add(candidates, match, server);
         }
         String prompt = candidates.length() > 0 ? "요청을 이렇게 이해했어요. 내용을 확인해 주세요."
-                : "대상과 원하는 변경을 구체적으로 말씀해 주세요.";
+                : "어떤 앱에서 무엇을 바꾸고 싶으신지 말씀해 주시겠어요?";
         return new JSONObject().put("message", prompt).put("candidates", candidates);
     }
 
@@ -42,14 +42,14 @@ public final class LocalGoalResolver {
             if (goal != null) candidates.put(new JSONObject().put("label", review.summary()).put("goal", goal));
             return new JSONObject().put("message", review.prompt(goal != null)).put("candidates", candidates);
         }
-        String message = "원하는 대상과 변경 방향을 구체적으로 입력해 주세요. 예: 글자 크기를 키워줘.";
+        String message = "어떤 내용을 바꾸고 싶으신지 말씀해 주시겠어요? 예를 들어 “글자 크기를 키워주세요”라고 요청하실 수 있어요.";
         String normalized = GoalCatalogClassifier.normalize(text);
         boolean negative = normalized.matches(".*(하지마|하지말|지마|지말|지않|안해|말아).*");
         if (catalog != null && clarification == null && !negative) {
             GoalCatalogClassifier.Classification result = catalog.classify(text, foregroundPackage);
             if (result.matched()) {
                 add(candidates, result.match, server);
-                if (candidates.length() == 0) message = "이 요청의 실행 안내는 아직 지원하지 않아요. 다른 요청을 입력해 주세요.";
+                if (candidates.length() == 0) message = "말씀하신 기능은 아직 준비 중이에요. 다른 도움이 필요하시면 말씀해 주세요.";
             } else if (normalized.contains("글자") || normalized.contains("글씨") || normalized.contains("폰트")) {
                 add(candidates, catalog.executableGoal("settings.font_size.increase"), server);
                 add(candidates, catalog.executableGoal("settings.font_size.decrease"), server);

@@ -12,13 +12,13 @@ public class SpeechErrorMessagesTest {
 
     @Test public void silencePromptsAnotherRecording() {
         String result = message(422, "{\"error\":{\"code\":\"NO_SPEECH\",\"message\":\"PRIVATE\"}}");
-        assertTrue(result.contains("말소리를 듣지 못했어요"));
+        assertTrue(result.contains("말씀하신 내용을 잘 듣지 못했어요"));
         assertFalse(result.contains("PRIVATE"));
     }
 
     @Test public void invalidAudioAndMalformedErrorsAreNotReportedAsSilence() {
         for (String body : new String[]{"{\"error\":{\"code\":\"INVALID_REQUEST\"}}", "NO_SPEECH", "[]", "{\"error\":null}"}) {
-            assertFalse(message(422, body).contains("말소리를 듣지 못했어요"));
+            assertFalse(message(422, body).contains("말씀하신 내용을 잘 듣지 못했어요"));
         }
     }
 

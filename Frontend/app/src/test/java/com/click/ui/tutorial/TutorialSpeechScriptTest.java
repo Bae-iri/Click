@@ -51,7 +51,7 @@ public class TutorialSpeechScriptTest {
         String script = activity.getString(R.string.tutorial_speech_intro);
         verify(narrator).speak(script);
         TextView title = activity.findViewById(R.id.tutorial_title);
-        assertEquals("click 튜토리얼을\n시작해볼게요!", title.getText().toString());
+        assertEquals("클릭 튜토리얼을\n시작해볼게요!", title.getText().toString());
         assertFalse(script.contains("click의 기능은 다음과 같아요"));
         title.setText("화면 제목만 수정한 경우");
         find("안내 다시 듣기").performClick();
@@ -115,7 +115,7 @@ public class TutorialSpeechScriptTest {
 
     private TextView find(View view, String label) {
         if (view instanceof TextView && (label.contentEquals(((TextView) view).getText())
-                || "다시 듣기".equals(label) && "Click 음성 안내 다시 듣기".contentEquals(view.getContentDescription() == null ? "" : view.getContentDescription()))) return (TextView) view;
+                || "다시 듣기".equals(label) && "클릭 음성 안내 다시 듣기".contentEquals(view.getContentDescription() == null ? "" : view.getContentDescription()))) return (TextView) view;
         if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
             TextView result = find(((ViewGroup) view).getChildAt(i), label);
             if (result != null) return result;

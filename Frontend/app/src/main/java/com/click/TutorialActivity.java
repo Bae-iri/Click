@@ -119,7 +119,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         phoneParams.setMargins(dp(5), 0, dp(5), 0);
         stage.addView(phone, phoneParams);
 
-        restore = ClickUi.secondaryButton(this, "click 버튼 다시 보기");
+        restore = ClickUi.secondaryButton(this, "클릭 버튼 다시 보기");
         restore.setId(R.id.tutorial_restore);
         restore.setBackground(ClickUi.outlined(0xFFF1F6FF, TutorialFloatingHost.HIGHLIGHT, dp(18), dp(4)));
         restore.setTextColor(ClickUi.BLUE);
@@ -222,7 +222,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         back.setBackgroundColor(Color.TRANSPARENT);
         back.setOnClickListener(view -> previous());
         row.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        TextView label = text("click 사용 방법", 16, ClickUi.BLUE, true);
+        TextView label = text("클릭 사용 방법", 16, ClickUi.BLUE, true);
         row.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
         counter = text("", 14, ClickUi.SUBTEXT, false);
         row.addView(counter, new LinearLayout.LayoutParams(-2, -2));
@@ -241,7 +241,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         grandmother = new ImageView(this);
         grandmother.setImageResource(com.click.designpreview.R.drawable.welcome);
         grandmother.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        grandmother.setContentDescription("click 사용법을 안내하는 할머니");
+        grandmother.setContentDescription("클릭 사용법을 안내하는 할머니");
         coach.addView(grandmother, new LinearLayout.LayoutParams(dp(65), dp(86)));
         LinearLayout copy = vertical();
         LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);
@@ -461,7 +461,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         counter.setText(overviewPage ? (step == COMPLETE ? "완료" : "시작 안내")
                 : getString(R.string.click_tutorial_progress, step + 1, STEP_COUNT));
         if (overviewPage) renderChecklist();
-        progress.setContentDescription("click 기능 설명 " + (step + 1) + "단계, 전체 " + STEP_COUNT + "단계");
+        progress.setContentDescription("클릭 기능 설명 " + (step + 1) + "단계, 전체 " + STEP_COUNT + "단계");
         for (int i = 0; i < STEP_COUNT; i++) progress.getChildAt(i).setBackground(ClickUi.rounded(i <= step ? ClickUi.BLUE : ClickUi.BORDER, dp(3)));
         String heading, detail, button;
         int speechResource;
@@ -473,21 +473,21 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         switch (step) {
             case INTRO:
                 speechResource = R.string.tutorial_speech_intro;
-                heading = "click 튜토리얼을\n시작해볼게요!";
-                detail = "click의 기능은 다음과 같아요.";
+                heading = "클릭 튜토리얼을\n시작해볼게요!";
+                detail = "클릭의 기능은 다음과 같아요.";
                 button = "시작하기"; enabled = true; break;
             case COMPLETE:
                 speechResource = R.string.tutorial_speech_complete;
                 heading = "이제 준비됐어요!";
-                detail = "모든 연습을 마쳤어요.\n이제 click에게 편하게 요청해 보세요.";
-                button = "click 시작하기"; enabled = completedSteps == (1 << STEP_COUNT) - 1; break;
+                detail = "모든 연습을 마쳤어요.\n이제 클릭에게 편하게 요청해 보세요.";
+                button = "클릭 시작하기"; enabled = completedSteps == (1 << STEP_COUNT) - 1; break;
             case OPEN:
                 speechResource = R.string.tutorial_speech_open;
                 heading = "클릭과 함께\n시작해 볼까요?"; detail = "아래 클릭 버튼을 눌러보세요."; button = "다음"; break;
             case WRITE:
                 boolean input = mode == ClickOverlayLayout.Mode.TEXT;
                 speechResource = input ? R.string.tutorial_speech_write_input : R.string.tutorial_speech_write_open;
-                heading = input ? "질문을 적고\n↑ 버튼을 눌러보세요" : "‘글로 입력하기’을\n눌러보세요";
+                heading = input ? "질문을 적고\n↑ 버튼을 눌러보세요" : "‘글로 입력하기’를\n눌러보세요";
                 detail = input ? "‘글자 크기 키워줘’를 입력해 보세요.\n입력한 뒤 화살표를 눌러 보내요." : "아래 ‘글로 입력하기’ 버튼을 눌러보세요.";
                 floating.highlight(input ? "↑" : "글로 입력하기", 0); button = "다음"; break;
             case REPLY:
@@ -514,30 +514,30 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
             case FOLD:
                 speechResource = folded ? R.string.tutorial_speech_folded : R.string.tutorial_speech_fold;
                 heading = folded ? "작은 버튼으로 줄였어요" : "오른쪽 위 ‘줄이기’를 눌러보세요";
-                detail = folded ? "필요할 때 버튼을 누르면 다시 열려요." : "‘줄이기’를 누르면 작은 click 버튼으로 접혀요.";
+                detail = folded ? "필요할 때 버튼을 누르면 다시 열려요." : "‘줄이기’를 누르면 작은 클릭 버튼으로 접혀요.";
                 if (!folded) floating.highlight(null, R.id.overlay_collapse); button = "다음"; enabled = folded; break;
             case MOVE:
                 speechResource = moved ? R.string.tutorial_speech_moved : R.string.tutorial_speech_move;
                 heading = moved ? "원하는 곳으로 옮겼어요" : "버튼을 끌어서\n옮겨보세요";
-                detail = moved ? "다음은 휴지통으로 숨기는 연습이에요." : "click 버튼을 누른 채 다른 곳으로 움직여요.";
+                detail = moved ? "다음은 휴지통으로 숨기는 연습이에요." : "클릭 버튼을 누른 채 다른 곳으로 움직여요.";
                 button = "다음"; enabled = moved; break;
             case HIDE:
                 speechResource = R.string.tutorial_speech_hide;
                 heading = "꾹 누른 뒤\n휴지통에 놓아보세요";
-                detail = "click 버튼을 꾹 누르면 휴지통이 나타나요.\n손을 떼지 말고 휴지통까지 끌어 놓아요.";
+                detail = "클릭 버튼을 꾹 누르면 휴지통이 나타나요.\n손을 떼지 말고 휴지통까지 끌어 놓아요.";
                 button = "다음"; break;
             default:
                 speechResource = restored ? R.string.tutorial_speech_restored : R.string.tutorial_speech_restore;
                 heading = restored ? "직접 사용해 볼 준비가 됐어요" : "숨긴 버튼을\n다시 꺼내보세요";
-                detail = restored ? "글과 말로 요청하고, 접고, 숨겨봤어요." : "아래 ‘click 버튼 다시 보기’를 눌러요.\n실제 앱에서는 홈에서 다시 켤 수 있어요.";
+                detail = restored ? "글과 말로 요청하고, 접고, 숨겨봤어요." : "아래 ‘클릭 버튼 다시 보기’를 눌러요.\n실제 앱에서는 홈에서 다시 켤 수 있어요.";
                 button = "배운 내용 확인하기"; enabled = restored; break;
         }
         boolean collapsedReview = step == REPLY && reviewView != null && reviewView.getVisibility() != View.VISIBLE;
         if (mode == ClickOverlayLayout.Mode.COLLAPSED && step > OPEN && step < FOLD
                 && (step != REPLY || collapsedReview)) {
             floating.highlight(null, 0); floating.setClickHighlighted(true);
-            heading = "click 버튼을 다시 누르면\n메뉴가 열려요";
-            detail = "‘줄이기’는 창을 작게 접는 버튼이에요.\nclick 버튼을 눌러 다시 이어서 해보세요.";
+            heading = "클릭 버튼을 다시 누르면\n메뉴가 열려요";
+            detail = "‘줄이기’는 창을 작게 접는 버튼이에요.\n클릭 버튼을 눌러 다시 이어서 해보세요.";
             speechResource = R.string.tutorial_speech_reopen;
         }
         title.setText(keyboardVisible ? "질문을 적고 ↑를 눌러주세요" : heading);
@@ -575,7 +575,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         checklist.removeAllViews();
         checklist.setBackgroundResource(com.click.designpreview.R.drawable.onboarding_feature_card);
         checklist.setPadding(dp(22), dp(22), dp(22), dp(22));
-        String[] labels = {"click 버튼 열기", "글로 입력하고 요청 확인하기", "마이크로 말하기", "진행 중인 요청 멈추기", "창 접고 버튼 옮기기", "버튼 숨기고 다시 꺼내기"};
+        String[] labels = {"클릭 버튼 열기", "글로 입력하고 요청 확인하기", "마이크로 말하기", "진행 중인 요청 멈추기", "창 접고 버튼 옮기기", "버튼 숨기고 다시 꺼내기"};
         int[] masks = {1 << OPEN, (1 << WRITE) | (1 << REPLY), 1 << VOICE, 1 << STOP,
                 (1 << FOLD) | (1 << MOVE), (1 << HIDE) | (1 << RESTORE)};
         for (int i = 0; i < labels.length; i++) {

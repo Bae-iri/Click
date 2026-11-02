@@ -18,14 +18,14 @@ public final class ErrorDetails {
                     || "/api/v1/voice-requests/interrupt-and-clear".equals(api.path)
                     || "/api/v1/agent/commands".equals(api.path);
             if (requestEndpoint && (api.status == 404 || api.status == 405)) {
-                return "현재 서버에서 요청 기능을 사용할 수 없어요. 서버 업데이트가 필요해요.";
+                return "이 기능은 업데이트가 필요한 상태예요. 지금은 다른 도움을 요청하실 수 있어요.";
             }
-            if (api.status == 401) return "로그인이 만료됐어요. Click 앱에서 다시 로그인해 주세요.";
-            if (api.status == 429) return "요청이 많아 잠시 기다려야 해요. 잠시 후 다시 시도해 주세요.";
+            if (api.status == 401) return "로그인이 만료됐어요. 클릭 앱에서 다시 로그인해 주세요.";
+            if (api.status == 429) return "요청이 많아 연결이 조금 늦어지고 있어요. 잠시 후 다시 시도해 주시겠어요?";
             if (api.status >= 500) return "서버가 요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.";
         }
         if (error != null && "AUTH_REQUIRED".equals(error.getMessage())) {
-            return "로그인이 필요해요. Click 앱에서 로그인해 주세요.";
+            return "로그인이 필요해요. 클릭 앱에서 로그인해 주세요.";
         }
         if (error instanceof SocketTimeoutException) {
             return "서버 응답이 늦어지고 있어요. 잠시 후 요청 상태를 확인해 주세요.";

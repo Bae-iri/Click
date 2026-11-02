@@ -51,7 +51,7 @@ public final class GoalCommandInterpreter {
         if (catalog != null) {
             GoalCatalogClassifier.Classification classification = catalog.classify(source, foregroundPackage);
             if (classification.ambiguous) {
-                return result(Kind.NEEDS_CLARIFICATION, "비슷한 요청이 여러 개예요. 대상과 원하는 동작을 더 구체적으로 말씀해주세요.");
+                return result(Kind.NEEDS_CLARIFICATION, "몇 가지 도움 중에서 확인하고 있어요. 어떤 앱에서 무엇을 하고 싶으신지 말씀해 주시겠어요?");
             }
             if (classification.matched()) {
                 GoalCatalogClassifier.Match match = classification.match;
@@ -87,7 +87,7 @@ public final class GoalCommandInterpreter {
             Kind kind = hasActiveTask && text.contains("대신") ? Kind.REPLACE_TASK : Kind.START_TASK;
             return new Result(kind, null, null);
         }
-        return result(Kind.UNSUPPORTED, "지원하는 설정이나 쿠팡 기능을 구체적으로 말씀해주세요.");
+        return result(Kind.UNSUPPORTED, "설정이나 쿠팡에서 어떤 도움이 필요하신지 말씀해 주시겠어요?");
     }
 
     private static boolean isCancelControl(String text) {
