@@ -109,8 +109,12 @@ class JevGoalClassifier:
             if min(answer["confidence"], computed_confidence) < minimum:
                 return None
             selected = choices[selected_key]
-            explicit = GoalInputRequirements.explicit_values(text)
-            directions = GoalInputRequirements.directions(text)
+            # Apply the selected setting's direction vocabulary; the generic
+            # font-size vocabulary cannot reject reversed brightness/volume.
+            requirements = GoalInputRequirements()
+            family = requirements.family(selected['goal_type'])
+            explicit = requirements.explicit_values(text, family)
+            directions = requirements.directions(text, family)
             if "direction" in selected["slots"] and (len(directions) > 1 or (
                     directions and selected["slots"]["direction"] not in directions)):
                 return None
