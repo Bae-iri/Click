@@ -130,13 +130,50 @@ public final class MenuActivity extends AppCompatActivity {
 
     private void showAutomationSettings() {
         boolean enabled = automationSettings.isEnabled();
-        ClickDialog.show(this, "자동으로 도와주기", ClickDialog.body(this,
-                (enabled ? "자동 모드가 켜져 있어요.\n\n" : "자동 모드가 꺼져 있어요.\n\n")
-                        + "켜짐 · 요청을 확인하고 시작하면 지원되는 앱 열기, 메뉴 이동, 스크롤과 설정 조절을 자동으로 진행해요. 직접 조작이 필요한 단계는 따로 안내해요.\n\n"
-                        + "꺼짐 · 눌러야 할 곳을 안내하고 사용자가 직접 조작해요.\n\n"
-                        + "진행 중에도 상단 스위치로 끌 수 있어요. 결제·전화 걸기·메시지 보내기는 자동 실행하지 않아요."),
+        LinearLayout content = vertical();
+        add(content, dialogNotice(MenuIconView.Kind.AUTOMATION,
+                enabled ? "지금은 자동 모드가 켜져 있어요" : "지금은 자동 모드가 꺼져 있어요"), 0);
+        add(content, dialogSection("자동 모드를 켜면",
+                "요청을 확인하고 시작하면 지원되는 앱 열기, 메뉴 이동, 스크롤과 설정 조절을 도와드려요.",
+                "직접 조작이 필요한 단계는 따로 안내해요."), 22);
+        add(content, dialogSection("자동 모드를 끄면",
+                "눌러야 할 곳을 안내해 드려요. 안내에 따라 직접 조작해 주세요."), 22);
+        add(content, dialogSection("기억해 주세요",
+                "진행 중에도 설정 화면 위의 스위치로 끌 수 있어요.",
+                "결제·전화 걸기·메시지 보내기는 자동으로 실행하지 않아요."), 22);
+        ClickDialog.show(this, "자동으로 도와주기", content,
                 enabled ? "자동 모드 끄기" : "자동 모드 켜기",
                 () -> automationToggle.setChecked(!enabled), "닫기");
+    }
+
+    /** Short sections leave breathing room without putting all copy in one box. */
+    private View dialogSection(String title, String... paragraphs) {
+        LinearLayout section = vertical();
+        section.setPadding(dp(2), 0, dp(2), 0);
+        TextView heading = text(title, 15, INK, semibold);
+        if (Build.VERSION.SDK_INT >= 28) heading.setAccessibilityHeading(true);
+        section.addView(heading, new LinearLayout.LayoutParams(-1, -2));
+        for (String paragraph : paragraphs) {
+            TextView copy = text(paragraph, 14, 0xFF65738C, regular);
+            copy.setLineSpacing(dp(3), 1.15f);
+            add(section, copy, 9);
+        }
+        return section;
+    }
+
+    private View dialogNotice(MenuIconView.Kind kind, String message) {
+        LinearLayout note = new LinearLayout(this);
+        note.setGravity(Gravity.CENTER_VERTICAL);
+        note.setPadding(dp(12), dp(12), dp(14), dp(12));
+        note.setBackground(ripple(0xFFF5F8FE, 18));
+        note.addView(new MenuIconView(kind, kind == MenuIconView.Kind.TRASH),
+                new LinearLayout.LayoutParams(dp(36), dp(36)));
+        TextView copy = text(message, 14, INK, medium);
+        copy.setLineSpacing(dp(2), 1.1f);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1);
+        params.setMarginStart(dp(10));
+        note.addView(copy, params);
+        return note;
     }
 
     private View header() {
@@ -268,35 +305,31 @@ public final class MenuActivity extends AppCompatActivity {
         dialog[0] = ClickDialog.show(this, "앱 권한 확인", statuses, "확인했어요", null, null);
     }
 
-    /** One permission line: name and purpose on the left, a colored status chip on the right. */
+    /** Status stays beside the heading; the explanation gets the full card width. */
     private View permissionRow(String label, String purpose, boolean granted, Runnable openSettings) {
-        LinearLayout row = new LinearLayout(this);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setMinimumHeight(dp(72));
-        row.setPadding(dp(16), dp(12), dp(12), dp(12));
+        LinearLayout row = vertical();
+        row.setPadding(dp(16), dp(16), dp(16), dp(16));
         row.setBackground(ripple(granted ? 0xFFF5F8FD : 0xFFFFF4F7, 18));
-
-        LinearLayout copy = vertical();
-        copy.addView(text(label, 17, INK, semibold), new LinearLayout.LayoutParams(-1, -2));
-        TextView detail = text(purpose, 13, SECONDARY, medium);
-        LinearLayout.LayoutParams detailParams = new LinearLayout.LayoutParams(-1, -2);
-        detailParams.topMargin = dp(6);
-        copy.addView(detail, detailParams);
-        row.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
-
-        TextView chip = text(granted ? "허용됨" : "허용하기 ›", 14,
-                granted ? GRANTED : DANGER, semibold);
+        LinearLayout header = new LinearLayout(this);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        header.addView(text(label, 16, INK, semibold), new LinearLayout.LayoutParams(0, -2, 1));
+        TextView chip = text(granted ? "허용됨" : "허용하기 ›", 13,
+                granted ? GRANTED : DANGER, medium);
         chip.setGravity(Gravity.CENTER);
-        chip.setPadding(dp(12), dp(8), dp(12), dp(8));
+        chip.setPadding(dp(10), dp(6), dp(10), dp(6));
         GradientDrawable chipBackground = new GradientDrawable();
         chipBackground.setColor(granted ? 0xFFE6F6EC : 0xFFFFE3EA);
-        chipBackground.setCornerRadius(dp(14));
+        chipBackground.setCornerRadius(dp(12));
         chip.setBackground(chipBackground);
         LinearLayout.LayoutParams chipParams = new LinearLayout.LayoutParams(-2, -2);
         chipParams.setMarginStart(dp(10));
-        row.addView(chip, chipParams);
-
-        row.setContentDescription(label + ", " + (granted ? "허용됨" : "허용 필요, 눌러서 설정 열기"));
+        header.addView(chip, chipParams);
+        row.addView(header, new LinearLayout.LayoutParams(-1, -2));
+        TextView detail = text(purpose, 14, SECONDARY, regular);
+        detail.setLineSpacing(dp(3), 1.15f);
+        add(row, detail, 10);
+        row.setContentDescription(label + ", " + purpose + ", "
+                + (granted ? "허용됨" : "허용 필요, 눌러서 설정 열기"));
         if (!granted) {
             row.setClickable(true);
             row.setFocusable(true);
@@ -307,9 +340,25 @@ public final class MenuActivity extends AppCompatActivity {
 
     private void showTimingConsentDialog() {
         final boolean consent = !timingConsented;
-        ClickDialog.show(this, "나에게 맞는 안내", ClickDialog.body(this, timingConsented
-                        ? "동의를 철회하면 저장된 맞춤 안내 행동 기록이 삭제되고 안내 수준이 초기화돼요. 기본 안내는 계속 이용할 수 있어요."
-                        : "안내가 표시된 뒤 첫 탭까지 걸린 시간과 단계 진행 정보를 저장해 더 쉬운 안내를 만드는 데 사용해요. 화면 글자나 비밀번호는 저장하지 않아요."),
+        LinearLayout content = vertical();
+        add(content, dialogNotice(MenuIconView.Kind.PERSONALIZE,
+                timingConsented ? "사용 기록으로 안내를 맞추고 있어요" : "나에게 맞는 안내를 위한 선택이에요"), 0);
+        if (timingConsented) {
+            add(content, dialogSection("동의를 철회하면",
+                    "저장된 맞춤 안내 행동 기록이 삭제돼요.",
+                    "안내 수준도 처음 상태로 돌아가요."), 22);
+            add(content, dialogSection("기본 안내는 그대로",
+                    "동의를 철회해도 기본 안내는 계속 이용할 수 있어요."), 22);
+        } else {
+            add(content, dialogSection("어떤 기록을 사용하나요?",
+                    "안내가 나온 뒤 처음 누르기까지 걸린 시간과 단계 진행 정보를 저장해요."), 22);
+            add(content, dialogSection("어떻게 활용하나요?",
+                    "사용 기록을 바탕으로 더 쉬운 안내를 만드는 데 사용해요."), 22);
+            add(content, dialogSection("안심하고 선택하세요",
+                    "이 기록에는 화면 글자나 비밀번호를 저장하지 않아요.",
+                    "동의하지 않아도 기본 안내는 이용할 수 있어요."), 22);
+        }
+        ClickDialog.show(this, "나에게 맞는 안내", content,
                 timingConsented ? "기록 동의 철회" : "동의하고 사용하기", () ->
                         personalizationEvents.setConsent(consent,
                                 new PersonalizationEventGateway.ConsentCallback() {
@@ -328,15 +377,18 @@ public final class MenuActivity extends AppCompatActivity {
 
     private void showPolicy(String title, int contentId) {
         LinearLayout content = vertical();
-        add(content, ClickDialog.body(this, getString(R.string.click_policy_draft_notice)), 0);
+        add(content, dialogNotice(MenuIconView.Kind.DOCUMENT,
+                getString(R.string.click_policy_draft_notice)), 0);
         String[] sections = getResources().getStringArray(contentId);
         for (int index = 0; index < sections.length; index += 2) {
-            TextView heading = text(sections[index], 17, INK, semibold);
-            if (Build.VERSION.SDK_INT >= 28) heading.setAccessibilityHeading(true);
-            add(content, heading, 22);
-            TextView paragraph = text(sections[index + 1], 15, INK, medium);
-            paragraph.setLineSpacing(dp(3), 1.15f);
-            add(content, paragraph, 8);
+            if (index > 0) {
+                View line = new View(this);
+                line.setBackgroundColor(0xFFEAF0F8);
+                LinearLayout.LayoutParams lineParams = new LinearLayout.LayoutParams(-1, dp(1));
+                lineParams.topMargin = dp(24);
+                content.addView(line, lineParams);
+            }
+            add(content, dialogSection(sections[index], sections[index + 1].split("\\n+")), 24);
         }
         ClickDialog.show(this, title, content, "확인했어요", null, null);
     }
@@ -351,9 +403,20 @@ public final class MenuActivity extends AppCompatActivity {
 
     private void confirmAccountAction(boolean delete) {
         LinearLayout content = vertical();
-        content.addView(ClickDialog.body(this, delete
-                ? "서버의 계정과 연결된 이용 기록, 이 기기의 회원 정보를 삭제해요. 삭제한 정보는 되돌릴 수 없어요."
-                : "진행 중인 안내를 종료하고 로그아웃해요. 다시 로그인하면 클릭을 이용할 수 있어요."));
+        add(content, dialogNotice(delete ? MenuIconView.Kind.TRASH : MenuIconView.Kind.LOGOUT,
+                delete ? "탈퇴 전에 꼭 확인해 주세요" : "잠시 이용을 마치시나요?"), 0);
+        if (delete) {
+            add(content, dialogSection("삭제되는 정보",
+                    "서버에 저장된 계정과 연결된 이용 기록을 삭제해요.",
+                    "이 기기에 저장된 회원 정보도 함께 삭제해요."), 22);
+            add(content, dialogSection("되돌릴 수 없어요",
+                    "삭제한 정보는 복구할 수 없으니 신중하게 선택해 주세요."), 22);
+        } else {
+            add(content, dialogSection("진행 중인 안내가 종료돼요",
+                    "현재 안내를 종료하고 로그아웃해요."), 22);
+            add(content, dialogSection("언제든 다시 이용할 수 있어요",
+                    "다시 로그인하면 클릭을 이용할 수 있어요."), 22);
+        }
         TextView errorMessage = text("", 14, DANGER, medium);
         errorMessage.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         errorMessage.setVisibility(View.GONE);
