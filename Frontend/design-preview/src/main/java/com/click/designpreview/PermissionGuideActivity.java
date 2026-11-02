@@ -212,9 +212,10 @@ public final class PermissionGuideActivity extends Activity {
     }
 
     private void intro() {
-        SpacedLogoView logo = new SpacedLogoView(this, null);
+        ClickBrandView logo = new ClickBrandView(this, null);
         logo.setContentDescription(getString(R.string.splash_logo_description));
-        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(dp(176), dp(180));
+        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(
+                Math.min(dp(222), getResources().getDisplayMetrics().widthPixels - dp(64)), dp(72));
         logoParams.gravity = Gravity.CENTER_HORIZONTAL;
         logoParams.topMargin = dp(10);
         body.addView(logo, logoParams);

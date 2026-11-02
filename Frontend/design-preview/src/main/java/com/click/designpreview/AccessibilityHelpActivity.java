@@ -80,15 +80,8 @@ public final class AccessibilityHelpActivity extends Activity {
         LinearLayout row = new LinearLayout(this);
         row.setMinimumHeight(dp(58));
         row.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView mark = new ImageView(this);
-        mark.setImageResource(R.drawable.ic_click_cursor);
-        mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        row.addView(mark, new LinearLayout.LayoutParams(dp(42), dp(42)));
-        TextView wordmark = text("click", 29, 0xFF07183F, bold);
-        wordmark.setLetterSpacing(-.04f);
-        LinearLayout.LayoutParams wordmarkParams = new LinearLayout.LayoutParams(-2, -2);
-        wordmarkParams.setMarginStart(dp(4));
-        row.addView(wordmark, wordmarkParams);
+        ClickBrandView logo = new ClickBrandView(this, null);
+        row.addView(logo, new LinearLayout.LayoutParams(dp(112), dp(38)));
         return row;
     }
 
