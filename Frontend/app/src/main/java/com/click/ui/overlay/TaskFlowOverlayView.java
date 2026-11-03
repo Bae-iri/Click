@@ -640,7 +640,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
                 : ripple(0xFFF5F8FD, 0x183478F6, 14));
         if (confirmation) {
             edit.setTextSize(15); edit.setTextColor(SECONDARY);
-            edit.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 12));
+            edit.setBackground(rippleOutlined(Color.WHITE, BORDER, 0x183478F6, 12));
             edit.setPadding(dp(12), dp(10), dp(12), dp(10));
             edit.setGravity(Gravity.CENTER);
             reviewNavigation.addView(edit, new LayoutParams(-1, -2));
