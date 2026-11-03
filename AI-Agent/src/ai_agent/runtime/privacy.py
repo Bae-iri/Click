@@ -2,7 +2,7 @@
 from dataclasses import replace
 import math
 import re
-from ai_agent.runtime.vision_vocabulary import VISION_LABELS, labels_for
+from ai_agent.runtime.vision_vocabulary import labels_for
 
 PATTERNS = (
     re.compile(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}"),

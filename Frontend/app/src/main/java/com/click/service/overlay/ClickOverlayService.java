@@ -26,7 +26,6 @@ import androidx.annotation.Nullable;
 
 import com.click.data.remote.AgentActionEvents;
 import com.click.data.local.QuickHelpSelectionStore;
-import com.click.BuildConfig;
 import com.click.core.permission.PermissionStatus;
 import com.click.data.remote.AgentTurnContract;
 import com.click.data.remote.AgentTurnGateway;
@@ -61,9 +60,6 @@ import java.io.InputStreamReader;
 import java.lang.ref.WeakReference;
 import java.util.Locale;
 import java.nio.charset.StandardCharsets;
-import java.net.ConnectException;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 
 public final class ClickOverlayService extends Service implements ClickOverlayLayout.Callback {
     public static final String EXTRA_INITIAL_GOAL = "com.click.extra.INITIAL_GOAL";
@@ -118,7 +114,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int appliedTaskFlowHeight, appliedTaskFlowFlags, appliedTaskFlowGravity;
     private String goalResolutionId;
     private com.click.domain.goal.GoalPreparationState goalPreparation;
-    private String goalPreparationError;
+    private boolean restoredStartedSession;
+    private Runnable nextQueuedRequest;
+    private String lastCompletedVoiceRequestId, lastCompletedAgentSessionId;
     private JSONObject resultPrompt;
     private JSONObject followUp;
     private String pendingControl;
@@ -146,6 +144,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private String pendingActionType;
     private long pendingActionOccurredAtMs;
     private boolean forceNextObservation;
+    private Runnable missingScreenRetry;
+    private int missingScreenAttempts;
+    private boolean missingScreenRecovery;
     private String lastGuideCommandId;
     private String lastTargetNodeId;
     private int[] lastTargetBounds;
@@ -408,6 +409,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     @Override
     public void onDestroy() {
         closing = true;
+        clearMissingScreenWait();
         stopNarration();
         if (narrator != null) { narrator.close(); narrator = null; }
         if (overlayView != null) overlayView.removeCallbacks(keyboardPlacement);
@@ -529,6 +531,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void updateFloatingVisibility() {
         if (overlayView == null || closing) return;
+        overlayView.setTaskPhase(taskFlowView == null ? null : taskFlowView.phaseLabel());
         boolean bubble = taskFlowView != null && taskFlowCollapsed && taskFlowView.hasCompactContent();
         if (taskFlowView != null) taskFlowView.setMinimizedProgress(bubble);
         boolean showTask = taskFlowView != null && !taskFlowCollapsed
@@ -562,7 +565,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void ensureTaskFlow() {
-        if (taskFlowView != null || windowManager == null) return;
+        if (taskFlowView != null) { taskFlowView.setRequestSummary(initialGoal); return; }
+        if (windowManager == null) return;
         // Hand off to guidance once, without closing a draft on later task updates.
         if (overlayView != null) overlayView.collapse();
         taskFlowView = new TaskFlowOverlayView(this, new TaskFlowOverlayView.Listener() {
@@ -594,9 +598,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 else sendAgentControl(command);
             }
         });
+        taskFlowView.setRequestSummary(initialGoal);
         taskFlowParams = new WindowManager.LayoutParams(taskFlowView.getWindowWidth(screenWidth()),
                 WindowManager.LayoutParams.WRAP_CONTENT, overlayWindowType,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                // Waiting/guidance must not become the active accessibility window.
+                // Editable preparation explicitly enables focus in placeTaskFlow.
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
         taskFlowParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING;
         taskFlowParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
@@ -675,7 +682,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         adjustmentResultCheck.clear();
         resultPrompt = followUp = goalSelection = acceptedGoal = null;
         requirementReview = null;
-        goalResolutionId = null; goalPreparation = null; goalPreparationError = null; pendingControl = null;
+        goalResolutionId = null; goalPreparation = null; restoredStartedSession = false; pendingControl = null;
         if (taskFlowView != null && taskFlowView.isAttachedToWindow()) windowManager.removeView(taskFlowView);
         taskFlowView = null; taskFlowCollapsed = false;
         updateFloatingVisibility();
@@ -687,7 +694,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         initialGoal = text;
         taskFlowCollapsed = false;
         goalPreparation = null;
-        goalPreparationError = null;
+        restoredStartedSession = false;
         goalResolutionId = null;
         String selectedType = quickHelpSelections == null || activeVoiceRequestId == null
                 ? null : quickHelpSelections.get(activeVoiceRequestId);
@@ -778,7 +785,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                                 response.preparation, response.resolvedGoal, response.message);
                         goalResolutionId = goalPreparation.id();
                         initialGoal = response.preparation.getString("source_text");
-                        goalPreparationError = null;
+                        restoredStartedSession = false;
                         requirementReview = null; goalSelection = null;
                     }
                 } catch (org.json.JSONException error) { onFailure(error); return; }
@@ -808,6 +815,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 android.util.Log.w("ClickGoal", "resolve_goal failed: " + error.getClass().getSimpleName()
                         + (error instanceof com.click.data.remote.ApiException
                         ? " HTTP " + ((com.click.data.remote.ApiException) error).status : ""));
+                if (prepares && error instanceof com.click.data.remote.ApiException
+                        && "GOAL_PREPARATION_NOT_ALLOWED".equals(
+                                ((com.click.data.remote.ApiException) error).conflictCode)) {
+                    restoreQueuedSession(false); return;
+                }
                 if (prepares) {
                     // Never turn a failed preparation into a locally executable goal.
                     if (answer != null || reset) {
@@ -815,9 +827,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                         resolveGoalOnServer(text, null, null, false); return;
                     }
                     goalPreparation = null; goalResolutionId = null;
-                    goalPreparationError = ErrorDetails.requestMessage(error);
+                    String message = ErrorDetails.requestMessage(error);
                     if (requirementReview != null) showRequirementReview();
-                    else showGoalResolutionFailure(text, goalPreparationError);
+                    else showGoalResolutionFailure(text, message);
                     return;
                 }
                 showGoalResolutionFailure(text, ErrorDetails.requestMessage(error));
@@ -879,14 +891,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         try {
             ensureTaskFlow();
             boolean executable = requirementReview.proposedGoal(goalClassifier, agentGateway.currentContract()) != null;
-            if (goalPreparationError != null) {
-                final int generation = executionGeneration;
-                taskFlowView.requirementsForPreparation(requirementReview, executable, goalPreparationError, () -> {
-                    if (generation != executionGeneration || closing || agentPaused || turnInFlight
-                            || agentSessionId == null || pendingControl != null) return;
-                    resolveGoalOnServer(requirementReview.preparationSource(), null);
-                });
-            } else taskFlowView.requirements(requirementReview, executable);
+            taskFlowView.requirements(requirementReview, executable);
             updateRequestStatus(true, false); placeTaskFlow(null, true);
             speak(requirementReview.prompt(executable));
         } catch (org.json.JSONException error) { showQueueError(error); }
@@ -938,6 +943,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void startSelectedTask() {
+        clearMissingScreenWait();
         stopNarration();
         ensureTaskFlow(); taskFlowView.waiting("사용자 요청을 처리하고 있어요");
         placeTaskFlow(null, false);
@@ -1059,10 +1065,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             adjustmentResultCheck.clear();
             hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
             taskFlowView.setChecklist(response.metadata.optJSONArray("checklist"));
-            taskFlowView.result(resultPrompt); placeTaskFlow(null, true);
+            boolean fontSize = acceptedGoal != null && SettingsAdjustment.forGoal(
+                    acceptedGoal.optString("goal_type")) == SettingsAdjustment.FONT_SIZE;
+            taskFlowView.result(resultPrompt, fontSize);
             taskFlowCollapsed = false;
             if (overlayView != null) overlayView.collapse();
             updateFloatingVisibility();
+            placeTaskFlow(null, true);
             speak(resultPrompt.optString("message"));
             final String promptId = resultPrompt.optString("id");
             final int generation = executionGeneration;
@@ -1138,7 +1147,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (resultPrompt != null) {
             String answer = TaskFlowAnswers.result(text);
             if (answer != null) sendResult(answer);
-            else speak("잘 보여요, 아직 불편해요, 그만할게요 중 하나로 답해 주세요.");
+            else if (acceptedGoal != null && SettingsAdjustment.forGoal(
+                    acceptedGoal.optString("goal_type")) == SettingsAdjustment.FONT_SIZE)
+                speak("네, 글씨가 잘 보여요 또는 더 커졌으면 좋겠어 중 하나로 답해 주세요.");
+            else speak("좋아요 또는 조금 더 도와주세요 중 하나로 답해 주세요.");
             return true;
         }
         if (followUp != null) {
@@ -1542,6 +1554,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (command.isEmpty()) return;
         // Before contextual answers: "네?" / "응?" must not accept a confirmation or result prompt.
         if (RepeatRequest.matches(command)) { repeatLastGuide(); return; }
+        if (nextQueuedRequest != null && GoalCatalogClassifier.normalize(command)
+                .matches("다음요청시작|다음요청시작해|다음요청시작해주세요|다음작업시작")) {
+            nextQueuedRequest.run(); return;
+        }
         if (handleTaskFlowAnswer(command)) return;
         if (handleExitConfirmation(command)) {
             return;
@@ -1652,6 +1668,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void abortActiveRequest() {
+        nextQueuedRequest = null;
         silenceVoiceReply();
         executionGeneration++;
         automationGuard.clear();
@@ -1679,7 +1696,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         hideSettingsOpenButton();
     }
 
-    private void claimNextQueuedRequest() {
+    private void claimNextQueuedRequest() { claimNextQueuedRequest(false); }
+
+    private void claimNextQueuedRequest(boolean afterCompletion) {
         if (closing || queueGateway == null || agentSessionId != null || turnInFlight || awaitingReplacement) return;
         final long generation = executionGeneration;
         queueGateway.claim(new VoiceQueueGateway.Callback() {
@@ -1688,18 +1707,52 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 awaitingReplacement = response.awaitingReplacement;
                 if (response.running != null && response.running.agentSessionId != null
                         && response.running.rawGoal != null) {
-                    activeVoiceRequestId = response.running.id;
-                    beginAgentSession(response.running.rawGoal, response.running.agentSessionId);
-                }
+                    if (isCompletedQueueRequest(response.running)) { askToExitAfterQueueCompleted(); return; }
+                    if (afterCompletion) offerNextQueuedRequest(response.running, response.claimed);
+                    else {
+                        activeVoiceRequestId = response.running.id;
+                        beginAgentSession(response.running.rawGoal, response.running.agentSessionId, response.claimed);
+                    }
+                } else if (afterCompletion) askToExitAfterQueueCompleted();
             }
 
             @Override public void onFailure(Throwable error) { if (generation == executionGeneration) showQueueError(error); }
         });
     }
 
+    private boolean isCompletedQueueRequest(VoiceQueueGateway.Request request) {
+        return request != null && (lastCompletedVoiceRequestId != null && lastCompletedVoiceRequestId.equals(request.id)
+                || lastCompletedAgentSessionId != null && lastCompletedAgentSessionId.equals(request.agentSessionId));
+    }
+
+    /** Completion is a stopping point; queued work needs a separate, explicit start. */
+    private void offerNextQueuedRequest(VoiceQueueGateway.Request request, boolean newlyClaimed) {
+        if (isCompletedQueueRequest(request)) { askToExitAfterQueueCompleted(); return; }
+        agentPaused = true;
+        awaitingExitConfirmation = false;
+        final int generation = executionGeneration;
+        nextQueuedRequest = () -> {
+            if (generation != executionGeneration || closing || nextQueuedRequest == null) return;
+            nextQueuedRequest = null;
+            activeVoiceRequestId = request.id;
+            beginAgentSession(request.rawGoal, request.agentSessionId, newlyClaimed);
+        };
+        ensureTaskFlow();
+        taskFlowView.completedWithNext(request.rawGoal, nextQueuedRequest, this::shutdownClick);
+        taskFlowCollapsed = false;
+        updateFloatingVisibility();
+        placeTaskFlow(null, true);
+        speak("현재 요청은 마쳤어요. 대기 중인 다음 요청은 다음 요청 시작을 눌러야 진행해요.");
+    }
+
     private void finishActiveQueueRequest(String failureCode) {
         updateRequestStatus(false, false);
         final boolean completedSuccessfully = failureCode == null;
+        if (completedSuccessfully) {
+            lastCompletedVoiceRequestId = activeVoiceRequestId;
+            lastCompletedAgentSessionId = agentSessionId;
+            resultPrompt = followUp = null;
+        }
         if (activeVoiceRequestId == null || queueGateway == null) {
             agentSessionId = null;
             if (completedSuccessfully) askToExitAfterQueueCompleted();
@@ -1718,13 +1771,17 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 awaitingReplacement = response.awaitingReplacement;
                 if (response.running != null && response.running.agentSessionId != null
                         && response.running.rawGoal != null) {
-                    activeVoiceRequestId = response.running.id;
-                    beginAgentSession(response.running.rawGoal, response.running.agentSessionId);
+                    if (isCompletedQueueRequest(response.running)) { askToExitAfterQueueCompleted(); return; }
+                    if (completedSuccessfully) offerNextQueuedRequest(response.running, response.claimed);
+                    else {
+                        activeVoiceRequestId = response.running.id;
+                        beginAgentSession(response.running.rawGoal, response.running.agentSessionId, response.claimed);
+                    }
                 } else if (completedSuccessfully && response.queuedCount == 0
                         && !response.awaitingReplacement) {
                     askToExitAfterQueueCompleted();
                 } else {
-                    claimNextQueuedRequest();
+                    claimNextQueuedRequest(completedSuccessfully);
                 }
             }
 
@@ -1760,8 +1817,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || normalized.equals("stop");
     }
 
-    private void beginAgentSession(String goal, String sessionId) {
+    private void beginAgentSession(String goal, String sessionId, boolean newlyClaimed) {
         if (closing || goal == null || goal.trim().isEmpty()) return;
+        nextQueuedRequest = null;
+        clearMissingScreenWait();
         if (narrator != null) narrator.reset();
         lastSpokenMessage = null;
         lastNarratedGuideKey = null;
@@ -1774,6 +1833,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         agentSessionId = sessionId;
         personalizationStateId = null;
         agentSessionVersion = 0;
+        restoredStartedSession = false;
         agentConfirmationId = null;
         initialGoal = goal.trim();
         goalPreparation = null;
@@ -1807,8 +1867,76 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         automaticScrollSearch.clear();
         lastBackRecoveryScreen = null; settingsBackRecoveries = 0;
         if (overlayView != null) overlayView.setRecognizedSpeech("화면을 확인하고 있어요…");
-        // Quick-help cards provide a request, not confirmation of its target and scope.
-        resolveGoal(initialGoal, null);
+        // A queue claim can return an existing episode after the service restarts.
+        if (newlyClaimed) resolveGoal(initialGoal, null);
+        else restoreQueuedSession(true);
+    }
+
+    /** Restore server state before deciding whether a queued request still needs preparation. */
+    private void restoreQueuedSession(boolean allowPreparation) {
+        final int generation = executionGeneration;
+        final String sessionId = agentSessionId;
+        setTurnInFlight(true);
+        ensureTaskFlow();
+        taskFlowView.waiting("진행하던 요청을 확인하고 있어요…");
+        agentGateway.synchronize(sessionId, new AgentTurnGateway.Callback() {
+            @Override public void onSuccess(AgentTurnContract.Response response) {
+                if (generation != executionGeneration || closing) return;
+                if (!sessionId.equals(response.sessionId)) {
+                    onFailure(new java.io.IOException("INVALID_SESSION_STATE")); return;
+                }
+                setTurnInFlight(false);
+                agentSessionVersion = response.sessionVersion;
+                agentEpisodeId = response.episodeId;
+                if ("COMPLETED".equals(response.taskStatus) || "CANCELLED".equals(response.taskStatus)
+                        || "EXPIRED".equals(response.taskStatus)) {
+                    applyTaskFlowResponse(response); return;
+                }
+                if (response.sessionVersion == 0 && response.episodeId == null && allowPreparation) {
+                    if (pendingControl != null) {
+                        String control = pendingControl; pendingControl = null;
+                        sendAgentControl(control); return;
+                    }
+                    if (agentPaused) { taskFlowView.paused(); return; }
+                    resolveGoal(initialGoal, null); return;
+                }
+                // Use the server's exact graph ID, never reclassify the user's ambiguous wording.
+                GoalCatalogClassifier.Match match = goalClassifier == null || response.metadata == null ? null
+                        : goalClassifier.executableGraph(response.metadata.optString("task_id"));
+                if (response.episodeId == null || match == null
+                        || response.metadata.optBoolean("requires_goal", false)) {
+                    onFailure(new java.io.IOException("SESSION_CANNOT_RESUME")); return;
+                }
+                try { acceptedGoal = match.toTypedGoalJson(); }
+                catch (org.json.JSONException error) { onFailure(error); return; }
+                activeGoalMatch = match;
+                goalPreparation = null; goalResolutionId = null; requirementReview = null;
+                restoredStartedSession = true;
+                firstTurnSent = true;
+                if (pendingControl != null) {
+                    String control = pendingControl; pendingControl = null;
+                    sendAgentControl(control); return;
+                }
+                if (agentPaused) { taskFlowView.paused(); return; }
+                applyTaskFlowResponse(response);
+            }
+
+            @Override public void onFailure(Throwable error) {
+                if (generation != executionGeneration || closing) return;
+                setTurnInFlight(false);
+                if (pendingControl != null) {
+                    String control = pendingControl; pendingControl = null;
+                    sendAgentControl(control); return;
+                }
+                if (agentPaused) { taskFlowView.paused(); return; }
+                taskFlowView.resolutionUnavailable(initialGoal, "진행하던 요청을 불러오지 못했어요. 다시 시도해 주세요.", () -> {
+                    if (generation == executionGeneration && !closing && !agentPaused && !turnInFlight)
+                        restoreQueuedSession(allowPreparation);
+                });
+                updateRequestStatus(true, false);
+                placeTaskFlow(null, true);
+            }
+        });
     }
 
     private void sendAgentTurn(String confirmation, boolean force) {
@@ -1827,10 +1955,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         // Vision consent keeps the observation to which the permission was bound.
         ScreenSnapshot snapshot = pendingVisionScreen != null ? pendingVisionScreen
                 : ClickAccessibilityService.freshSnapshot();
-        if (snapshot == null) {
-            if (overlayView != null) overlayView.setRecognizedSpeech("접근성 화면 정보를 기다리고 있어요…");
-            return;
-        }
+        if (snapshot == null) { waitForMissingScreen(); return; }
+        clearMissingScreenWait();
         if (confirmation == null && pendingVerifiedAction != null
                 && AgentActionEvents.DRAG_COMPLETED.equals(pendingVerifiedAction.optString("action_type"))
                 && snapshot.nodes.isEmpty() && lastSubmittedScreen != null
@@ -1961,8 +2087,60 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         });
     }
 
+    private void clearMissingScreenWait() {
+        if (missingScreenRetry != null && speechHandler != null) speechHandler.removeCallbacks(missingScreenRetry);
+        missingScreenRetry = null;
+        missingScreenAttempts = 0;
+        missingScreenRecovery = false;
+    }
+
+    /** A missing native screen is not a server request: retry briefly, then give the user a way out. */
+    private void waitForMissingScreen() {
+        if (missingScreenRecovery || missingScreenRetry != null) return;
+        final int generation = executionGeneration;
+        final String session = agentSessionId;
+        ensureTaskFlow();
+        if (missingScreenAttempts < 3) {
+            String message = "안내를 시작할 화면을 확인하고 있어요…";
+            taskFlowView.waiting(message);
+            if (overlayView != null) overlayView.setRecognizedSpeech(message);
+            updateRequestStatus(true, false);
+            missingScreenAttempts++;
+            missingScreenRetry = new Runnable() {
+                @Override public void run() {
+                    if (missingScreenRetry != this) return;
+                    missingScreenRetry = null;
+                    if (generation != executionGeneration || !java.util.Objects.equals(session, agentSessionId)
+                            || closing || agentPaused || pendingControl != null) return;
+                    // Read again even if Android emits no new accessibility event.
+                    // Never replay an earlier confirmation against a later screen.
+                    sendAgentTurn(null, true);
+                }
+            };
+            speechHandler.postDelayed(missingScreenRetry, 750L);
+            return;
+        }
+        missingScreenRecovery = true;
+        String message = ClickAccessibilityService.accessibilityWindowManager() == null
+                ? "화면 읽기 연결이 끊겼어요. 휴대폰 접근성 설정에서 클릭을 껐다 켠 뒤 새로고침을 눌러주세요."
+                : "현재 화면을 읽지 못했어요. 휴대폰 잠금을 풀고 홈이나 설정 화면으로 이동한 뒤 새로고침을 눌러주세요.";
+        hideGuideOverlay();
+        taskFlowView.observationRecovery(initialGoal, message, () -> {
+            if (generation != executionGeneration || !java.util.Objects.equals(session, agentSessionId)
+                    || closing || agentPaused || turnInFlight || pendingControl != null) return;
+            clearMissingScreenWait();
+            sendAgentTurn(null, true);
+        });
+        taskFlowCollapsed = false;
+        updateRequestStatus(true, false);
+        updateFloatingVisibility();
+        placeTaskFlow(null, true);
+        speak(message);
+    }
+
     private boolean hasConfirmedGoal() {
         if (acceptedGoal == null) return false;
+        if (restoredStartedSession && firstTurnSent && agentEpisodeId != null) return true;
         // Server preparation replaces the local review, but still needs explicit user acceptance.
         if (goalPreparation != null) {
             return goalPreparation.ready() && !goalPreparation.id().isEmpty()
@@ -2053,6 +2231,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void askToExitAfterQueueCompleted() {
+        nextQueuedRequest = null;
         awaitingExitConfirmation = true;
         String message = "요청한 작업이 모두 끝났어요. 클릭을 종료할까요?";
         ensureTaskFlow();
@@ -2128,7 +2307,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (snapshot == null) return false;
         for (AccessibilityNodeSnapshot node : snapshot.nodes) {
             if (!node.visibleToUser || !node.enabled || node.sensitiveInput
-                    || !snapshot.packageName.equals(node.packageName)) continue;
+                    || !snapshot.packageName.equals(node.packageName)
+                    || node.bounds == null || node.bounds.length != 4
+                    || node.bounds[2] <= 0 || node.bounds[3] <= 0
+                    || node.bounds[0] >= snapshot.screenWidth || node.bounds[1] >= snapshot.screenHeight
+                    || node.bounds[0] >= node.bounds[2] || node.bounds[1] >= node.bounds[3]) continue;
             if (containsSettingsLabel(node.text) || containsSettingsLabel(node.contentDescription)) return true;
         }
         return false;
@@ -2162,12 +2345,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             android.util.Log.e("ClickGoal", "Goal catalog could not be loaded", error);
             return null;
         }
-    }
-
-    private boolean isHomeLauncher(String packageName) {
-        return packageName != null && (packageName.equals("com.sec.android.app.launcher")
-                || packageName.equals("com.android.launcher3")
-                || packageName.toLowerCase(java.util.Locale.ROOT).contains("launcher"));
     }
 
     private boolean containsSettingsLabel(String value) {
@@ -2271,7 +2448,17 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 return;
             }
         }
-        if (showNavigationRecoveryIfNeeded(response, displayedSnapshot)) return;
+        // A HOME_NAVIGATED event must reach the server first. Continue page search from
+        // its response as well; an unchanged launcher need not emit another AX event.
+        if (displayedSnapshot != null && hasConfirmedGoal() && shouldScanHomeForSettings(displayedSnapshot)) {
+            hideConfirmation(); hideGuideOverlay();
+            if (startAutomaticHomeSearch(displayedSnapshot)) return;
+        }
+        boolean canSearchByScrolling = command.targetBounds == null
+                && "observe_only".equals(command.actionType)
+                && ObservationRecovery.canSearchByScrolling(response.stateId, command.renderPolicy, displayedSnapshot);
+        // An absent item on a recognized menu needs list search before back/home recovery.
+        if (!canSearchByScrolling && showNavigationRecoveryIfNeeded(response, displayedSnapshot)) return;
         if (displayedSnapshot != null && command.targetBounds != null
                 && ("tap".equals(command.actionType) || "drag".equals(command.actionType))
                 && !ObservationRecovery.awaitsUser(command.renderPolicy))
@@ -2327,7 +2514,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             staleGuideDrops = 0;
             return;
         }
-        boolean canSearchByScrolling = ObservationRecovery.canSearchByScrolling(command.renderPolicy, displayedSnapshot);
         // BE-driven fallback / recovery policies are checked first: vision_fallback in
         // particular rides on a command_type of "confirmation".
         JSONObject recoveryAction = command.recoveryAction();
@@ -2352,7 +2538,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             handleVisionFallback(command, visionFallback);
             return;
         }
-        if (ObservationRecovery.awaitsUser(command.renderPolicy)) {
+        if (canSearchByScrolling || ObservationRecovery.awaitsUser(command.renderPolicy)) {
             hideConfirmation(); hideGuideOverlay(); hideSettingsOpenButton();
             actionTracker.clear();
             final int generation = executionGeneration;
@@ -2425,7 +2611,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             scrollExecutions = 0;
         }
     }
-
 
     public static void onSystemNavigationRequested(boolean back) {
         ClickOverlayService service = runningService.get();
@@ -2506,7 +2691,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void requestRecoveryNavigation(NavigationRecovery.Action action, ScreenSnapshot before) {
         navigationRecovery.requested(action, before);
         guideStepTimer.clear();
-        if (taskFlowView != null) taskFlowView.setLoadingStatus("이동한 화면을 확인하고 있어요…");
+        if (taskFlowView != null) taskFlowView.setLoadingStatus(null);
         final int generation = executionGeneration;
         speechHandler.postDelayed(() -> {
             if (generation != executionGeneration || agentPaused || navigationRecovery.awaiting() != action) return;
@@ -2518,7 +2703,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             } else if (action == NavigationRecovery.Action.HOME && navigationRecovery.awaiting() == action) {
                 navigationRecovery.forceHome();
                 showNavigationRecovery(NavigationRecovery.Action.HOME);
-                automationStatus("홈 화면을 아직 확인하지 못했어요. 휴대폰의 홈 버튼이나 제스처를 사용해 주세요.");
+                automationNeedsHelp("홈 화면을 아직 확인하지 못했어요. 휴대폰의 홈 버튼이나 제스처를 사용해 주세요.");
             }
         }, 2500L);
     }
@@ -2550,7 +2735,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             requestRecoveryNavigation(action, current);
             if (!ClickAccessibilityService.performRecoveryNavigation(back)) {
-                automationStatus("이동하지 못했어요. 휴대폰의 뒤로가기·홈 버튼이나 제스처를 사용해 주세요.");
+                automationNeedsHelp("이동하지 못했어요. 휴대폰의 뒤로가기·홈 버튼이나 제스처를 사용해 주세요.");
             }
         });
         placeTaskFlow(null, false);
@@ -2601,9 +2786,17 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (overlayView != null && message != null) overlayView.setRecognizedSpeech(message);
     }
 
+    private void automationNeedsHelp(String message) {
+        if (taskFlowView == null) return;
+        taskFlowView.actionRequired(message);
+        taskFlowCollapsed = false;
+        updateFloatingVisibility();
+        placeTaskFlow(lastTargetBounds, true);
+    }
+
     private void executeAutomaticAction(AgentTurnContract.GuideCommand command, JSONObject metadata,
                                         ScreenSnapshot screen) {
-        if (screen != null) automationGuard.observe(screen.fingerprint());
+        if (screen != null) automationGuard.observe(screen.contentFingerprint());
         if (agentPaused || pendingControl != null || navigationRecovery.hint() != NavigationRecovery.Action.NONE
                 || !command.requiresUserAction
                 || command.guideCommandId == null || screen == null
@@ -2617,18 +2810,18 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (!tap && !slider) return;
         if (tap && com.click.service.accessibility.TouchAutomationPolicy.clickableTarget(screen,
                 command.targetNodeId, command.targetBounds) == null) {
-            automationStatus("이 항목은 자동으로 누를 수 없어요. 표시된 곳을 직접 눌러주세요.");
+            automationNeedsHelp("이 항목은 자동으로 누를 수 없어요. 표시된 곳을 직접 눌러주세요.");
             return;
         }
         AutomationRunGuard.Decision decision = automationGuard.begin(agentSessionId, agentEpisodeId,
-                command.guideCommandId, screen.fingerprint());
+                command.guideCommandId, screen.contentFingerprint());
         if (decision != AutomationRunGuard.Decision.ALLOW) {
             if (decision == AutomationRunGuard.Decision.DUPLICATE)
-                automationStatus("이미 시도한 단계예요. 반복해서 누르지 않을게요. 필요하면 직접 조작해 주세요.");
+                automationNeedsHelp("이미 시도한 단계예요. 반복해서 누르지 않을게요. 필요하면 직접 조작해 주세요.");
             if (decision == AutomationRunGuard.Decision.WAITING_FOR_OBSERVATION)
                 automationStatus("이전 조작의 화면 변화를 확인하고 있어요…");
             if (decision == AutomationRunGuard.Decision.LIMIT_REACHED)
-                automationStatus("자동 조작 횟수에 도달했어요. 화면을 확인하고 직접 진행해 주세요.");
+                automationNeedsHelp("자동 조작 횟수에 도달했어요. 화면을 확인하고 직접 진행해 주세요.");
             return;
         }
         guideStepTimer.clear(); // Machine actions are never human response-time samples.
@@ -2637,7 +2830,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 : ClickAccessibilityService.performGuidedSlider(screen, command.targetNodeId, command.targetBounds, direction);
         if (!performed) {
             automationGuard.finish(command.guideCommandId);
-            automationStatus("자동 조작을 실행하지 못했어요. 표시된 곳을 직접 조작해 주세요.");
+            automationNeedsHelp("자동 조작을 실행하지 못했어요. 표시된 곳을 직접 조작해 주세요.");
             return;
         }
         hideGuideOverlay();
@@ -2649,13 +2842,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if (generation != executionGeneration || agentPaused || pendingControl != null
                         || !automationGuard.awaiting(command.guideCommandId)) return;
                 ScreenSnapshot after = ClickAccessibilityService.freshSnapshot();
-                if (after != null) automationGuard.observe(after.fingerprint());
+                if (after != null && !after.nodes.isEmpty()) automationGuard.observe(after.contentFingerprint());
                 if (!automationGuard.awaiting(command.guideCommandId)) {
                     forceNextObservation = true;
                     ClickAccessibilityService.requestFreshSnapshot();
                 } else if (delay == 5500L && !turnInFlight) {
                     automationGuard.finish(command.guideCommandId);
-                    automationStatus("화면 변화를 확인하지 못했어요. 다시 누르지 않고 기다릴게요. 직접 조작해 주세요.");
+                    automationNeedsHelp("화면 변화를 확인하지 못했어요. 다시 누르지 않고 기다릴게요. 직접 조작해 주세요.");
                     if (after != null && screen.fingerprint().equals(after.fingerprint())
                             && java.util.Objects.equals(lastGuideCommandId, command.guideCommandId))
                         showGuideOverlay(command.targetBounds, command.actionType, direction);
@@ -2685,14 +2878,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             final int generation = executionGeneration;
             String message = "조절 결과를 아직 확인하지 못했어요. 현재 화면을 다시 확인해 주세요.";
             lastSpokenMessage = message;
-            taskFlowView.observationRecovery(message, () -> {
-                if (generation != executionGeneration || agentPaused || turnInFlight
-                        || agentSessionId == null || pendingControl != null) return;
-                staleGuideDrops = 0;
-                forceNextObservation = true;
-                ClickAccessibilityService.requestFreshSnapshot();
-            });
-            placeTaskFlow(null, false);
+            taskFlowView.observationRecovery(message, () -> retryObservation(generation, false));
+            placeTaskFlow(null, true);
             if (overlayView != null) overlayView.setRecognizedSpeech(message);
             speak(message);
             return;
@@ -2701,7 +2888,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         lastSpokenMessage = message;
         taskFlowView.waitingProgress(message);
         taskFlowView.setAutomaticProgress(automaticTouchEnabled());
-        taskFlowCollapsed = true;
         updateFloatingVisibility();
         placeTaskFlow(null, false);
         if (overlayView != null) overlayView.setRecognizedSpeech(message);
@@ -2732,12 +2918,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             final int generation = executionGeneration;
             String message = recovery != null ? recovery
                     : "현재 화면에서 다음 항목을 찾지 못했어요. 화면을 확인한 뒤 다시 확인을 눌러주세요.";
-            taskFlowView.observationRecovery(message, () -> {
-                if (generation != executionGeneration || agentPaused || turnInFlight || agentSessionId == null) return;
-                freshObservationRetries = 0;
-                forceNextObservation = true;
-                ClickAccessibilityService.requestFreshSnapshot();
-            });
+            taskFlowView.observationRecovery(message, () -> retryObservation(generation, true));
+            // The preceding guide may have been a compact progress bubble. Re-layout the
+            // recovery card so its actions are reachable instead of inheriting that size.
+            placeTaskFlow(null, true);
             if (overlayView != null) overlayView.setRecognizedSpeech(message);
             speak(message);
             return;
@@ -2834,10 +3018,16 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 return;
             }
             ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
-            boolean unchanged = expected.sameNativeContent(current);
-            boolean moved = unchanged && ClickAccessibilityService.swipeHomePage(
+            // Clocks/widgets change text without leaving the launcher page. Revalidate
+            // the foreground window and the missing icon instead of exact widget values.
+            boolean searchable = current != null && NavigationRecovery.isHomeScreen(current)
+                    && expected.packageName.equals(current.packageName)
+                    && java.util.Objects.equals(expected.activeWindowId, current.activeWindowId)
+                    && !current.nodes.isEmpty() && !hasSettingsTarget(current);
+            boolean moved = searchable && ClickAccessibilityService.swipeHomePage(
                     forward, expected.packageName, expected.activeWindowId);
-            if (unchanged && !moved) homeScrollSearch.reachedEnd(forward);
+            if (searchable && !moved) homeScrollSearch.reachedEnd(forward);
+            android.util.Log.i("ClickScroll", "home forward=" + forward + " eligible=" + searchable + " dispatched=" + moved);
             speechHandler.postDelayed(() -> {
                 if (generation != executionGeneration || token != homeSearchToken) return;
                 scrollSearchGeneration = -1;
@@ -2865,9 +3055,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         stopNarration();
         panelInterruptedNarration = false;
         lastSpokenMessage = TaskFlowOverlayView.AUTOMATIC_PROGRESS_MESSAGE;
-        taskFlowCollapsed = true;
         updateFloatingVisibility();
         if (overlayView != null) overlayView.setRecognizedSpeech(message);
+        collapseTaskFlow();
         searchSettingsByScrolling(forward, screen, executionGeneration, true);
         return true;
     }
@@ -2883,7 +3073,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return;
         }
         scrollSearchGeneration = generation;
-        taskFlowCollapsed = true;
         updateFloatingVisibility();
         speechHandler.postDelayed(() -> {
             if (generation != executionGeneration) return;
@@ -2895,6 +3084,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             boolean sameScreen = expected.sameNativeContent(beforeScroll);
             boolean moved = sameScreen && ClickAccessibilityService.performSettingsScroll(
                     forward, expected.packageName, expected.activeWindowId);
+            android.util.Log.i("ClickScroll", "settings forward=" + forward + " sameScreen=" + sameScreen + " dispatched=" + moved);
             if (sameScreen && !moved) {
                 if (automatic) automaticScrollSearch.reachedEnd(forward);
                 else Toast.makeText(this, "이 방향으로 더 이동할 수 없어요. 반대 방향을 확인해 주세요.",
@@ -2909,7 +3099,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 pendingActionOccurredAtMs = System.currentTimeMillis();
                 freshObservationRetries = 0;
                 forceNextObservation = true;
-                taskFlowCollapsed = false;
                 updateFloatingVisibility();
                 sendAgentTurn(null, true);
             }, moved ? 700L : 100L);
@@ -3020,60 +3209,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         pendingVisionFailure = null;
         pendingVisionScreen = null;
         updateFloatingVisibility();
-    }
-
-    private String userMessageForAgentError(Throwable error) {
-        if (error instanceof SocketTimeoutException) {
-            return "서버 연결 또는 응답 대기 시간이 초과됐습니다. "
-                    + "API 주소(" + BuildConfig.CLICK_API_BASE_URL + ")에 연결 가능한지, "
-                    + "백엔드가 실행 중인지 확인해주세요. 연결 제한은 6초, 응답 제한은 15초입니다.";
-        }
-        if (error instanceof UnknownHostException) {
-            return "서버 주소를 찾지 못했습니다: " + BuildConfig.CLICK_API_BASE_URL
-                    + ". 주소와 Wi-Fi/DNS 연결을 확인해주세요.";
-        }
-        if (error instanceof ConnectException) {
-            return "서버가 연결을 거부했습니다: " + BuildConfig.CLICK_API_BASE_URL
-                    + ". 백엔드 실행 여부와 포트, 같은 네트워크인지 확인해주세요.";
-        }
-        if (error instanceof org.json.JSONException) {
-            return "서버 응답 형식이 올바르지 않습니다. 백엔드 응답 규격을 확인해주세요.";
-        }
-        String message = error.getMessage() == null ? "" : error.getMessage();
-        if (message.contains("AUTH_REQUIRED") || message.startsWith("API 401")) {
-            return "로그인이 만료되었습니다. 앱에서 다시 로그인해주세요.";
-        }
-        if (message.contains("QUEUE_BUSY") || message.contains("QUEUE_CONFLICT")) {
-            return "요청 대기열을 다른 작업이 갱신 중입니다. 잠시 후 같은 요청을 다시 보내주세요.";
-        }
-        if (message.startsWith("API 409")) {
-            return "요청 대기열 상태가 변경되어 처리하지 못했습니다. 오류 코드: " + message;
-        }
-        if (message.startsWith("API 429")) {
-            return "요청 대기열이 가득 찼거나 호출이 너무 많습니다. 잠시 후 다시 시도해주세요.";
-        }
-        if (message.startsWith("API 422")) {
-            return "서버가 요청 형식을 거부했습니다. 상세 응답: " + message;
-        }
-        if (message.startsWith("Agent API 400")) return "요청 형식이 올바르지 않습니다.";
-        if (message.startsWith("Agent API 401") || message.startsWith("Agent API 403")) {
-            return "서버 인증 또는 접근 권한을 확인해주세요.";
-        }
-        if (message.startsWith("Agent API 404")) return "에이전트 API 경로를 찾지 못했습니다.";
-        if (message.startsWith("Agent API 409")) return "요청 순서가 맞지 않습니다. 새 요청으로 다시 시작해주세요.";
-        if (message.startsWith("Agent API 422")) return "현재 화면 정보에 잘못된 값이 있어 처리하지 못했습니다.";
-        if (message.startsWith("Agent API 429")) return "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.";
-        if (message.startsWith("Agent API 500") || message.startsWith("Agent API 502")
-                || message.startsWith("Agent API 503")) {
-            return "백엔드 또는 에이전트 처리 중 오류가 발생했습니다.";
-        }
-        if (message.contains("unexpected end of stream") || message.contains("EOFException")) {
-            return "서버가 응답을 보내는 중 연결을 종료했습니다. 백엔드 로그를 확인해주세요.";
-        }
-        if (error instanceof java.io.IOException) {
-            return "네트워크 통신 중 오류가 발생했습니다. 연결 상태를 확인해주세요.";
-        }
-        return "요청 처리 중 알 수 없는 오류가 발생했습니다.";
     }
 
     private void silenceVoiceReply() {
@@ -3193,8 +3328,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (taskFlowView != null) {
                 taskFlowView.waitingProgress("화면이 바뀌었어요. 현재 위치를 다시 확인하고 있어요.");
                 taskFlowView.setAutomaticProgress(automaticTouchEnabled());
-                taskFlowCollapsed = true;
                 updateFloatingVisibility();
+                placeTaskFlow(null, false);
             }
         }
     }
@@ -3223,8 +3358,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 && "confirmation".equals(command.commandType) && "observe_only".equals(command.actionType)
                 && "drag".equals(command.proposedAction) && command.visionFallback() == null;
     }
-
-
 
     private void hideConfirmation() {
         if (windowManager != null && confirmationView != null && confirmationView.isAttachedToWindow()) {

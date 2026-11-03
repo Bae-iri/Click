@@ -25,13 +25,13 @@ public final class AccessibilityHelpActivity extends Activity {
     private static final int SECONDARY = 0xFF7182A4;
     private Typeface medium;
     private Typeface semibold;
-    private Typeface bold;
+    private Typeface regular;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         medium = getResources().getFont(R.font.pretendard_medium);
         semibold = getResources().getFont(R.font.pretendard_semibold);
-        bold = getResources().getFont(R.font.pretendard_bold);
+        regular = getResources().getFont(R.font.pretendard_regular);
         configureWindow();
     }
 
@@ -86,13 +86,13 @@ public final class AccessibilityHelpActivity extends Activity {
     }
 
     private void addRequiredContent(LinearLayout body) {
-        TextView title = text("아직은 보고 계신 화면을\n확인할 수 없어요", 31, INK, bold);
+        TextView title = text("아직은 보고 계신 화면을\n확인할 수 없어요", 31, INK, semibold);
         title.setLetterSpacing(-.025f);
         title.setLineSpacing(dp(2), 1.04f);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         body.addView(title, new LinearLayout.LayoutParams(-1, -2));
 
-        TextView description = text("지금은 접근성 허용이 되지 않아\n클릭이 도와드릴 수 없어요.\n\n접근성 설정에서 클릭을 허용해 주시면\n바로 도와드릴게요.", 17, SECONDARY, medium);
+        TextView description = text("지금은 접근성 허용이 되지 않아\n클릭이 도와드릴 수 없어요.\n\n접근성 설정에서 클릭을 허용해 주시면\n바로 도와드릴게요.", 17, SECONDARY, regular);
         description.setLineSpacing(dp(4), 1.16f);
         add(body, description, 18);
 
@@ -100,13 +100,13 @@ public final class AccessibilityHelpActivity extends Activity {
     }
 
     private void addCompleteContent(LinearLayout body) {
-        TextView title = text("접근성 설정이\n완료됐어요", 31, INK, bold);
+        TextView title = text("접근성 설정이\n완료됐어요", 31, INK, semibold);
         title.setLetterSpacing(-.025f);
         title.setLineSpacing(dp(2), 1.04f);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         body.addView(title, new LinearLayout.LayoutParams(-1, -2));
 
-        TextView description = text("이제 보고 계신 화면을 확인하고\n필요한 버튼과 순서를 안내할 수 있어요.", 17, SECONDARY, medium);
+        TextView description = text("이제 보고 계신 화면을 확인하고\n필요한 버튼과 순서를 안내할 수 있어요.", 17, SECONDARY, regular);
         description.setLineSpacing(dp(4), 1.16f);
         add(body, description, 18);
         add(body, characterIllustration(), 28, 260);

@@ -81,4 +81,38 @@ public class LauncherScrollTest {
         assertFalse(ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43));
         verify(service, never()).dispatchGesture(any(), any(), any());
     }
+
+    @Test public void listSearchNeverAdjustsAScrollableSlider() {
+        when(root.getPackageName()).thenReturn("com.android.settings");
+        AccessibilityNodeInfo slider = mock(AccessibilityNodeInfo.class);
+        AccessibilityNodeInfo list = mock(AccessibilityNodeInfo.class);
+        when(root.getChildCount()).thenReturn(2);
+        when(root.getChild(0)).thenReturn(slider); when(root.getChild(1)).thenReturn(list);
+        for (AccessibilityNodeInfo node : List.of(slider, list)) {
+            when(node.isVisibleToUser()).thenReturn(true); when(node.isEnabled()).thenReturn(true);
+            when(node.isScrollable()).thenReturn(true); when(node.performAction(anyInt())).thenReturn(true);
+        }
+        when(slider.getClassName()).thenReturn("android.widget.SeekBar");
+        when(list.getClassName()).thenReturn("androidx.recyclerview.widget.RecyclerView");
+        assertTrue(ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 43));
+        verify(slider, never()).performAction(anyInt());
+        verify(list).performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+    }
+
+    @Test public void generalScrollReleasesTheSelectedNodeAndItsParents() {
+        AccessibilityNodeInfo list = mock(AccessibilityNodeInfo.class);
+        when(root.getChildCount()).thenReturn(1); when(root.getChild(0)).thenReturn(list);
+        when(list.isScrollable()).thenReturn(true);
+        when(list.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)).thenReturn(true);
+        assertTrue(ClickAccessibilityService.performScroll(true));
+        verify(root).recycle(); verify(list).recycle();
+    }
+
+    @Test public void unsuccessfulSearchReleasesAllVisitedNodes() {
+        AccessibilityNodeInfo child = mock(AccessibilityNodeInfo.class);
+        when(root.getChildCount()).thenReturn(1); when(root.getChild(0)).thenReturn(child);
+        assertFalse(ClickAccessibilityService.performScroll(false));
+        verify(root).recycle(); verify(child).recycle();
+        verify(child, never()).performAction(anyInt());
+    }
 }

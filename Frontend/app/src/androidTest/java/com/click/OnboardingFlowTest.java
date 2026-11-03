@@ -34,6 +34,40 @@ import static org.junit.Assert.*;
 public class OnboardingFlowTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
+    @Test public void automationSummaryAppearsOnEachEnableButNotOnReopen() throws Exception {
+        com.click.data.local.TouchAutomationSettings settings = new com.click.data.local.TouchAutomationSettings(
+                instrumentation.getTargetContext());
+        boolean original = settings.isEnabled();
+        settings.setEnabled(false);
+        try (ActivityScenario<MenuActivity> scenario = ActivityScenario.launch(MenuActivity.class)) {
+            for (int i = 0; i < 2; i++) {
+                clickView("자동 모드");
+                shown("자동 모드를 켰어요");
+                shown("결제·전화 걸기·메시지 보내기는 자동으로 실행하지 않아요.");
+                assertTrue(settings.isEnabled());
+                if (i == 0) screenshot("automation-summary");
+                clickView("알겠어요");
+                clickView("자동 모드");
+                assertFalse(settings.isEnabled());
+                assertNoWindowText("자동 모드를 켰어요");
+            }
+            tap("자동으로 도와주기");
+            clickView("자동 모드 켜기");
+            shown("자동 모드를 켰어요");
+            assertTrue(settings.isEnabled());
+            clickView("알겠어요");
+            scenario.recreate();
+            assertTrue(settings.isEnabled());
+            assertNoWindowText("자동 모드를 켰어요");
+        } finally { settings.setEnabled(original); }
+    }
+
+    private void assertNoWindowText(String value) {
+        instrumentation.runOnMainSync(() -> {
+            for (View root : WindowInspector.getGlobalWindowViews()) assertNull(find(root, value));
+        });
+    }
+
     @Test public void threePagesEndWithKakaoAndEmailChoices() throws Exception {
         try (ActivityScenario<OnboardingActivity> s = ActivityScenario.launch(OnboardingActivity.class)) {
             tap("건너뛰기");
@@ -299,7 +333,7 @@ public class OnboardingFlowTest {
             screenshot("menu-current");
         }
     }
-    @Test public void fourthGuidePageOpensAccessibilitySettingsDirectly() throws Exception {
+    @Test public void finalConsentGuidePageOpensAccessibilitySettings() throws Exception {
         Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(
                 new android.content.IntentFilter(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS),
                 new Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true);
@@ -309,10 +343,11 @@ public class OnboardingFlowTest {
                     a.findViewById(com.click.designpreview.R.id.guide_action).performClick();
                 }
             });
-            shown("이 버튼을 누르면\n‘설정 > 접근성’으로 바로 이동해요.");
-            screenshot("permission-settings-destination");
+            shown("이 확인창이 뜨면\n‘허용’을 눌러주세요");
+            shown("클릭 화면 안내에\n휴대전화의 전체 제어 권한 허용");
+            screenshot("permission-consent");
             s.onActivity(a -> a.findViewById(
-                    com.click.designpreview.R.id.guide_settings_shortcut).performClick());
+                    com.click.designpreview.R.id.guide_action).performClick());
             assertEquals("접근성 설정 Intent를 열어야 합니다.", 1, monitor.getHits());
         } finally {
             instrumentation.removeMonitor(monitor);

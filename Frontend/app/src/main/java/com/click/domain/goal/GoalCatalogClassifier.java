@@ -62,6 +62,7 @@ public final class GoalCatalogClassifier {
         final String displayName;
         final String targetApp;
         final String taskType;
+        final String graphId;
         final String executionStatus;
         final String riskLevel;
         final JSONObject slots;
@@ -73,6 +74,7 @@ public final class GoalCatalogClassifier {
             displayName = object.optString("display_name", goalType);
             targetApp = object.getString("target_app");
             taskType = object.optString("task_type", "unknown");
+            graphId = object.optString("graph_id", "");
             executionStatus = object.optString("execution_status", "catalog_only");
             riskLevel = object.optString("risk_level", "normal");
             slots = object.optJSONObject("slots") == null
@@ -112,6 +114,19 @@ public final class GoalCatalogClassifier {
             }
         }
         return null;
+    }
+
+    /** Exact server task lookup for resuming an already accepted episode. */
+    public Match executableGraph(String graphId) {
+        if (graphId == null || graphId.isEmpty()) return null;
+        Match match = null;
+        for (Rule rule : rules) {
+            if (graphId.equals(rule.graphId) && "approved".equals(rule.executionStatus)) {
+                if (match != null) return null; // Ambiguous mappings must not guess the goal.
+                match = new Match(version, rule, 0);
+            }
+        }
+        return match;
     }
 
     public Classification classify(String source, String foregroundPackage) {

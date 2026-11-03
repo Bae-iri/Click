@@ -2,6 +2,8 @@
 
 # Frontend
 
+파일별 수정 위치와 테스트 실행 방법은 [코드 안내](docs/code-map.md)를 참고한다.
+
 튜토리얼 음성 대본은 [`app/src/main/res/values/tutorial_speech.xml`](app/src/main/res/values/tutorial_speech.xml)에서 수정한다.
 각 `tutorial_speech_*` 항목은 화면의 `heading`·`detail`과 독립적이며, 자동 안내와 ‘안내 다시 듣기’가 같은 대본을 사용한다.
 읽지 않을 단계는 해당 문자열을 비워 둔다. `%1$s`는 음성 인식 결과가 들어가는 자리이며, 실제 사용 중의 서버 안내 대본은 별도로 관리한다.

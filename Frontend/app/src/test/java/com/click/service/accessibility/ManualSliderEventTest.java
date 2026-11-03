@@ -19,6 +19,12 @@ import static org.mockito.AdditionalMatchers.aryEq;
 @LooperMode(LooperMode.Mode.PAUSED)
 public class ManualSliderEventTest {
     @Test public void nativeRangeEventsReachGuideTrackerWithoutTouchExplorationEvents() {
+        checkNativeRangeEvents("android.widget.SeekBar");
+    }
+    @Test public void genericSetProgressControlAlsoReportsNativeRangeEvents() {
+        checkNativeRangeEvents("android.view.View");
+    }
+    private void checkNativeRangeEvents(String className) {
         ClickAccessibilityService service = spy(Robolectric.buildService(ClickAccessibilityService.class).create().get());
         AccessibilityNodeInfo root = mock(AccessibilityNodeInfo.class);
         AccessibilityNodeInfo slider = mock(AccessibilityNodeInfo.class);
@@ -26,7 +32,9 @@ public class ManualSliderEventTest {
         when(root.getChildCount()).thenReturn(1);
         when(root.getChild(0)).thenReturn(slider);
         when(slider.getPackageName()).thenReturn("com.android.settings");
-        when(slider.getClassName()).thenReturn("android.widget.SeekBar");
+        when(slider.getClassName()).thenReturn(className);
+        when(slider.getActionList()).thenReturn(java.util.Collections.singletonList(
+                AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS));
         when(slider.getViewIdResourceName()).thenReturn("settings:id/font");
         when(slider.getWindowId()).thenReturn(5);
         when(slider.getRangeInfo()).thenReturn(AccessibilityNodeInfo.RangeInfo.obtain(0, 0, 7, 3));

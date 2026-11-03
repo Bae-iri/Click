@@ -7,12 +7,13 @@ from uuid import uuid4
 from hashlib import sha256
 import json
 
+from ai_agent.runtime import diagnostics, observation_context
 from ai_agent.runtime.classifier import classify_screen_state
 from ai_agent.runtime.goal_typing import type_goal
 from ai_agent.runtime.guide import (
     build_guide_command,
     clarification_command,
-    vision_fallback_command,
+    command_for_vision_analysis,
     recovery_command,
 )
 from ai_agent.runtime.matcher import match_next_ui
@@ -29,8 +30,6 @@ from ai_agent.runtime.types import (
     Bounds,
     CommandType,
     GuideCommand,
-    JsonDict,
-    MatchResult,
     NormalizedNode,
     SafetyLevel,
     TaskGraph,
@@ -46,11 +45,12 @@ from ai_agent.runtime.similarity import default_similarity_scorer
 from ai_agent.runtime.vision import (
     VisionFallback,
     VisionFallbackAnalysis,
-    vision_elements_to_accessibility_nodes,
+    append_vision_nodes,
 )
 from ai_agent.telemetry.trace_logger import TraceLogger
 from ai_agent.runtime.privacy import sanitize_request
 from ai_agent.runtime.vision_cycles import decide_vision_cycle
+from ai_agent.runtime.semantic_state import resolve_state
 
 
 class ClickAgentEngine:
@@ -63,6 +63,7 @@ class ClickAgentEngine:
         vision_fallback: VisionFallback | None = None,
         trace_logger: TraceLogger | None = None,
         replay_recorder=None,
+        state_resolver=None,
     ) -> None:
         self.session_store = session_store or InMemorySessionStore()
         self.task_graphs = task_graphs or TASK_GRAPHS
@@ -70,6 +71,7 @@ class ClickAgentEngine:
         self.vision_fallback = vision_fallback or VisionFallback()
         self.trace_logger = trace_logger or TraceLogger()
         self.replay_recorder = replay_recorder
+        self.state_resolver = state_resolver
 
     @property
     def traces(self):
@@ -133,8 +135,8 @@ class ClickAgentEngine:
                 guide_command=guide_command,
                 debug={
                     "contract": "unsupported_or_ambiguous_goal",
-                    "observation": _raw_observation_debug(request),
-                    "agent_chain": _agent_chain_debug(
+                    "observation": diagnostics.raw_observation_debug(request),
+                    "agent_chain": diagnostics.agent_chain_debug(
                         typed_goal=typed_goal,
                         vision_analysis=None,
                         match_result=None,
@@ -154,7 +156,7 @@ class ClickAgentEngine:
             if existing_session
             else request.previous_state_id
         )
-        screen_bounds = _screen_bounds(request)
+        screen_bounds = observation_context.screen_bounds(request)
         accessibility_nodes = request.accessibility_tree
         vision_analysis: VisionFallbackAnalysis | None = None
         if request.vision_snapshot and request.vision_snapshot.privacy_status == "masking_failed":
@@ -168,10 +170,10 @@ class ClickAgentEngine:
                 request.vision_snapshot,
                 reason="empty_accessibility_tree",
             )
-            accessibility_nodes = _append_vision_nodes(
+            accessibility_nodes = append_vision_nodes(
                 accessibility_nodes,
                 vision_analysis,
-                package_name=_vision_package_name(request),
+                package_name=observation_context.vision_package_name(request),
             )
         elif not accessibility_nodes and not request.vision_failure and not (existing_session and existing_session.recovery_state.get("waiting_for_user")):
             vision_analysis = VisionFallbackAnalysis(
@@ -189,7 +191,7 @@ class ClickAgentEngine:
         current_state_id = classify_screen_state(
             normalized_nodes,
             graph,
-            device_context=_device_context(request),
+            device_context=observation_context.device_context(request),
             previous_state_id=previous_state_id,
             evidence=initial_evidence,
         )
@@ -207,7 +209,7 @@ class ClickAgentEngine:
                      and existing_session.recovery_state.get("attempts", 0) >= 1
                      and not existing_session.recovery_state.get("waiting_for_user")))
                 and (not normalized_nodes or preliminary.transition_id != "S0_TO_S1_OPEN_SETTINGS"
-                     or _vision_package_name(request) in {"com.android.settings", "com.samsung.android.settings"})):
+                     or observation_context.vision_package_name(request) in {"com.android.settings", "com.samsung.android.settings"})):
             vision_analysis = VisionFallbackAnalysis(status="not_requested",
                 reason="no_matching_target_node", provider="on_device_ocr")
         if preliminary.fallback_reason and request.vision_snapshot:
@@ -219,14 +221,23 @@ class ClickAgentEngine:
                 normalized_nodes = retry_nodes
         state_evidence = {}
         current_state_id = classify_screen_state(normalized_nodes, graph,
-            device_context=_device_context(request),
+            device_context=observation_context.device_context(request),
             previous_state_id=previous_state_id, evidence=state_evidence)
+        if current_state_id == 'S0_UNKNOWN':
+            current_state_id = resolve_state(normalized_nodes, graph, self.state_resolver,
+                previous_state_id=previous_state_id, evidence=state_evidence,
+                excluded_target_keys=previous_exclusions) or current_state_id
         current_snapshot = build_screen_snapshot(current_state_id, normalized_nodes,
             observation_id=request.observation_id or request.request_id,
             captured_at_ms=request.captured_at_ms, applied_settings=request.applied_settings)
         previous_transition = next((t for t in graph.transitions if existing_session
             and t.transition_id == existing_session.pending_transition_id), None)
         attempt, processed_events = correlate_action(existing_session, request, previous_transition)
+        if (attempt and not attempt.get('target_node_id', '').startswith('vision:')
+                and not normalized_nodes and request.captured_at_ms is not None):
+            attempt.setdefault('observation_gap_started_at_ms', request.captured_at_ms)
+        elif attempt:
+            attempt.pop('observation_gap_started_at_ms', None)
         verified_attempt = attempt
         verification_result = verify_transition(
             graph=graph, previous_state_id=previous_state_id,
@@ -254,7 +265,8 @@ class ClickAgentEngine:
             effective_state_id = existing_session.current_state_id
         match_result = match_next_ui(effective_state_id, normalized_nodes, graph,
             excluded_target_keys=failed_target_keys, similarity_scorer=self.similarity_scorer)
-        awaiting_observation = bool(attempt and attempt.get('event_key') and verification_result
+        awaiting_observation = bool(attempt and verification_result
+            and (attempt.get('event_key') or verification_result.evidence == 'transient_screen_unavailable')
             and verification_result.status in {VerificationStatus.WAITING_FOR_OBSERVATION, VerificationStatus.UNKNOWN})
         action_time = attempt.get('action_at_ms') if attempt else None
         within_settling_interval = bool(awaiting_observation and action_time is not None
@@ -307,8 +319,7 @@ class ClickAgentEngine:
         if match_result.fallback_reason and vision_analysis and not awaiting_observation:
             transition = next((item for item in graph.transitions
                                if item.transition_id == match_result.transition_id), None)
-            vision_command = _command_for_vision_analysis(request.session_id, vision_analysis,
-                tree_was_empty=not request.accessibility_tree,
+            vision_command = command_for_vision_analysis(request.session_id, vision_analysis,
                 manual_instruction=transition.guide_message if transition else None)
             if vision_command:
                 guide_command = vision_command
@@ -335,7 +346,7 @@ class ClickAgentEngine:
                 match_result=match_result, graph=graph, user_confirmation='rejected')
             keep_attempt = False
         if vision_analysis and vision_analysis.status == "masking_failed":
-            guide_command = _command_for_vision_analysis(request.session_id, vision_analysis, tree_was_empty=False)
+            guide_command = command_for_vision_analysis(request.session_id, vision_analysis)
             keep_attempt = False
         if limit_reached:
             guide_command = GuideCommand(guide_command_id='guide_' + uuid4().hex,
@@ -395,20 +406,20 @@ class ClickAgentEngine:
             'runtime_strategy': replan_decision.strategy,
             'attempt_id': attempt['attempt_id'] if attempt else None,
             'step_id': pending_transition_id})
-        observation_debug = _observation_debug(
+        observation_debug = diagnostics.observation_debug(
             request=request,
             normalized_nodes=normalized_nodes,
             current_state_id=current_state_id,
             effective_state_id=effective_state_id,
             vision_analysis=vision_analysis,
         )
-        fallback_debug = _fallback_debug(
+        fallback_debug = diagnostics.fallback_debug(
             match_result=match_result,
             guide_command=guide_command,
             vision_analysis=vision_analysis,
             verification_result=verification_result,
         )
-        agent_chain_debug = _agent_chain_debug(
+        agent_chain_debug = diagnostics.agent_chain_debug(
             typed_goal=typed_goal,
             vision_analysis=vision_analysis,
             match_result=match_result,
@@ -587,10 +598,10 @@ class ClickAgentEngine:
             request.vision_snapshot,
             reason="no_matching_target_node",
         )
-        augmented_nodes = _append_vision_nodes(
+        augmented_nodes = append_vision_nodes(
             existing_nodes,
             vision_analysis,
-            package_name=_vision_package_name(request),
+            package_name=observation_context.vision_package_name(request),
         )
         if len(augmented_nodes) <= len(existing_nodes):
             return (), vision_analysis
@@ -602,7 +613,7 @@ class ClickAgentEngine:
         current_state_id = classify_screen_state(
             normalized_nodes,
             graph,
-            device_context=_device_context(request),
+            device_context=observation_context.device_context(request),
             previous_state_id=previous_state_id,
         )
         match_result = match_next_ui(
@@ -615,143 +626,6 @@ class ClickAgentEngine:
         if match_result.fallback_reason:
             return (), vision_analysis
         return normalized_nodes, vision_analysis
-
-
-def _raw_observation_debug(request: AgentTurnRequest) -> JsonDict:
-    vision_snapshot = request.vision_snapshot
-    return {
-        "accessibility_tree_present": bool(request.accessibility_tree),
-        "accessibility_node_count": len(request.accessibility_tree),
-        "vision_snapshot_present": vision_snapshot is not None,
-        "vision_element_count": len(vision_snapshot.elements) if vision_snapshot else 0,
-        "vision_has_screenshot": bool(vision_snapshot and vision_snapshot.screenshot_base64),
-        "vision_has_ocr_text": bool(vision_snapshot and vision_snapshot.ocr_text),
-        "vision_processing_time_ms": (
-            vision_snapshot.processing_time_ms if vision_snapshot else None
-        ),
-        "foreground_app": _device_context(request).foreground_app
-        if _device_context(request) else None,
-        "app_package": _vision_package_name(request),
-    }
-
-
-def _observation_debug(
-    *,
-    request: AgentTurnRequest,
-    normalized_nodes: tuple[NormalizedNode, ...],
-    current_state_id: str,
-    effective_state_id: str,
-    vision_analysis: VisionFallbackAnalysis | None,
-) -> JsonDict:
-    raw_debug = _raw_observation_debug(request)
-    packages = sorted(
-        {
-            node.package_name
-            for node in normalized_nodes
-            if node.package_name
-        }
-    )
-    roles = sorted({node.role for node in normalized_nodes})
-    tags = sorted(
-        {
-            tag
-            for node in normalized_nodes
-            for tag in node.semantic_tags
-        }
-    )
-    actionable_count = sum(1 for node in normalized_nodes if node.actionable)
-    synthetic_vision_count = sum(
-        1 for node in normalized_nodes if node.node_id.startswith("vision:")
-    )
-    raw_debug.update({
-        "normalized_node_count": len(normalized_nodes),
-        "actionable_node_count": actionable_count,
-        "synthetic_vision_node_count": synthetic_vision_count,
-        "current_state_id": current_state_id,
-        "effective_state_id": effective_state_id,
-        "observed_packages": packages,
-        "visible_roles": roles,
-        "visible_tags": tags,
-        "vision_status": vision_analysis.status if vision_analysis else "not_requested",
-    })
-    return raw_debug
-
-
-def _fallback_debug(
-    *,
-    match_result: MatchResult,
-    guide_command: GuideCommand,
-    vision_analysis: VisionFallbackAnalysis | None,
-    verification_result: VerificationResult | None,
-) -> JsonDict:
-    render_policy = guide_command.render_policy
-    recovery_action = render_policy.get("recovery_action")
-    fallback_action = render_policy.get("fallback_action")
-    expected_next_observation = (
-        render_policy.get("expected_next_observation")
-        or (fallback_action or {}).get("expected_next_observation")
-    )
-    matched_from_vision = bool(
-        match_result.target_node_id
-        and match_result.target_node_id.startswith("vision:")
-    )
-    fallback_type = "none"
-    if recovery_action:
-        fallback_type = "settings_app_recovery"
-    elif render_policy.get("vision_fallback"):
-        fallback_type = "vision_fallback"
-    elif matched_from_vision:
-        fallback_type = "vision_augmented_match"
-    elif match_result.fallback_reason:
-        fallback_type = "target_match_fallback"
-    elif verification_result and verification_result.status in {
-        VerificationStatus.NO_CHANGE,
-        VerificationStatus.WRONG_STATE,
-        VerificationStatus.UNKNOWN,
-    }:
-        fallback_type = "replan"
-
-    return {
-        "type": fallback_type,
-        "reason": (
-            match_result.fallback_reason
-            or (verification_result.message if verification_result else None)
-        ),
-        "matched_from_vision": matched_from_vision,
-        "vision_status": vision_analysis.status if vision_analysis else "not_requested",
-        "recovery_action": recovery_action,
-        "fallback_action": fallback_action,
-        "expected_next_observation": expected_next_observation,
-    }
-
-
-def _agent_chain_debug(
-    *,
-    typed_goal: TypedGoal | None,
-    vision_analysis: VisionFallbackAnalysis | None,
-    match_result: MatchResult | None,
-    guide_command: GuideCommand,
-) -> JsonDict:
-    fallback_used = (
-        bool(match_result and match_result.fallback_reason)
-        or bool(vision_analysis and vision_analysis.status != "not_requested")
-        or bool(guide_command.render_policy.get("recovery_action"))
-        or bool(guide_command.render_policy.get("vision_fallback"))
-    )
-    return {
-        "goal_typing": {
-            "method": typed_goal.typing_method if typed_goal else None,
-            "goal_type": typed_goal.goal_type if typed_goal else None,
-            "confidence": typed_goal.confidence if typed_goal else None,
-        },
-        "screen_classifier": "rule_based_task_graph",
-        "matcher": getattr(match_result, "match_method", None),
-        "similarity": "runtime_similarity_scorer",
-        "verification": "snapshot_and_state_transition",
-        "replanner": "rule_based_retry_exclusion",
-        "fallback": "enabled" if fallback_used else "not_used",
-        "guide_builder": guide_command.command_type.value,
-    }
 
 
 def _pending_transition_id(
@@ -789,70 +663,3 @@ def _effective_state_id(
     ):
         return verification_result.expected_state_id
     return current_state_id
-
-
-def _screen_bounds(request: AgentTurnRequest) -> Bounds | None:
-    if request.screen_bounds:
-        return request.screen_bounds
-    if request.raw_goal and request.raw_goal.device_context.screen_bounds:
-        return request.raw_goal.device_context.screen_bounds
-    if request.device_context and request.device_context.screen_bounds:
-        return request.device_context.screen_bounds
-    snapshot = request.vision_snapshot
-    if snapshot and snapshot.screen_width and snapshot.screen_height:
-        return (0, 0, snapshot.screen_width, snapshot.screen_height)
-    return None
-
-
-def _vision_package_name(request: AgentTurnRequest) -> str | None:
-    if request.vision_snapshot and request.vision_snapshot.package_name:
-        return request.vision_snapshot.package_name
-    if request.raw_goal:
-        return request.raw_goal.device_context.app_package
-    if request.device_context:
-        return request.device_context.app_package
-    first_node = next((node for node in request.accessibility_tree if node.package_name), None)
-    return first_node.package_name if first_node else None
-
-
-def _device_context(request: AgentTurnRequest):
-    return request.device_context or (
-        request.raw_goal.device_context if request.raw_goal else None
-    )
-
-
-def _append_vision_nodes(
-    nodes: tuple[AccessibilityNode, ...],
-    analysis: VisionFallbackAnalysis,
-    *,
-    package_name: str | None,
-) -> tuple[AccessibilityNode, ...]:
-    if analysis.status != "used":
-        return nodes
-    vision_nodes = vision_elements_to_accessibility_nodes(
-        analysis,
-        package_name=package_name,
-    )
-    return nodes + vision_nodes
-
-
-def _command_for_vision_analysis(
-    session_id: str,
-    analysis: VisionFallbackAnalysis,
-    *,
-    tree_was_empty: bool,
-    manual_instruction: str | None = None,
-) -> GuideCommand | None:
-    if analysis.status == "masking_failed":
-        return vision_fallback_command(session_id=session_id,
-            message="개인정보를 안전하게 가렸는지 확인하지 못해 화면 분석을 중단했어요. 다시 요청하면 새로 허용을 확인할게요.",
-            command_type=CommandType.BLOCKED, safety_level=SafetyLevel.BLOCKED)
-    if analysis.status in {"consent_required", "not_requested"}:
-        return vision_fallback_command(
-            session_id=session_id,
-            message="접근성 정보로 안내할 항목을 찾지 못했어요. 현재 화면을 한 번 캡처해 기기에서 글자를 읽고, 글자와 위치를 서버에 보내도 될까요? 원본 이미지는 전송하지 않아요.",
-            manual_instruction=manual_instruction,
-        )
-    # Missing analysis is an observation failure handled by recovery.py.
-    # Only privacy/safety failures above may terminate the analysis flow.
-    return None

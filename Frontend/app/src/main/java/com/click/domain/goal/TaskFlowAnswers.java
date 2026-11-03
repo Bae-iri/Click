@@ -7,9 +7,11 @@ public final class TaskFlowAnswers {
         String s = GoalCatalogClassifier.normalize(source);
         if (s.equals("네") || s.equals("예") || s.equals("잘보여요") || s.equals("네잘보여요")
                 || s.equals("이제잘보여요") || s.equals("보기편해요") || s.equals("네좋아요")
-                || s.equals("좋아요") || s.equals("잘들려요")) return "satisfied";
+                || s.equals("좋아요") || s.equals("잘들려요")
+                || s.equals("네글씨가잘보여요") || s.equals("글씨가잘보여요")) return "satisfied";
         if (s.equals("아직불편해요") || s.equals("잘안보여요") || s.equals("아니요")
-                || s.equals("아니오") || s.equals("조금더도와주세요") || s.equals("잘안들려요")) return "needs_help";
+                || s.equals("아니오") || s.equals("조금더도와주세요") || s.equals("잘안들려요")
+                || s.equals("더커졌으면좋겠어") || s.equals("더커졌으면좋겠어요")) return "needs_help";
         if (stop(s)) return "stopped";
         return null;
     }

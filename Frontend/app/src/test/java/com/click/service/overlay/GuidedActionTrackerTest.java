@@ -48,4 +48,25 @@ public class GuidedActionTrackerTest {
     @Test public void spokenClaimIsNotAnAccessibilityAction() {
         assertNull(tracker().record("observe_only", "com.android.settings", 5, "slider", "settings:id/font", bounds, 1200));
     }
+
+    @Test public void childTextTapBindsToOriginalRowUsingRealAncestry() throws Exception {
+        AccessibilityNodeSnapshot row = menu("row", "root", bounds, true);
+        int[] small = {40, 110, 200, 150};
+        AccessibilityNodeSnapshot title = menu("unrelated-id", "row", small, false);
+        AccessibilityNodeSnapshot sibling = menu("row_fake_child", "root", small, false);
+        ScreenSnapshot screen = new ScreenSnapshot("com.android.settings", "2026-10-09T00:00:00Z",
+                1080, 2400, java.util.Arrays.asList(row, title, sibling), 5);
+        GuidedActionTracker t = new GuidedActionTracker();
+        t.bind("s", "e", "g", "tap", "row", bounds, screen, 1000);
+        assertFalse(t.isTargetTap("com.android.settings", 5, sibling.nodeId, small));
+        assertNull(t.record("tap_completed", "com.android.settings", 5, sibling.nodeId, null, small, 1200));
+        JSONObject event = t.record("tap_completed", "com.android.settings", 5, title.nodeId, null, small, 1200);
+        assertEquals("row", event.getString("target_node_id"));
+        assertEquals(20, event.getJSONArray("target_bounds").getInt(0));
+    }
+
+    private AccessibilityNodeSnapshot menu(String id, String parent, int[] box, boolean clickable) {
+        return new AccessibilityNodeSnapshot(id, parent, true, "com.android.settings", "디스플레이", null,
+                null, "android.widget.TextView", "menu_item", box, clickable, true, false, false, false, null, 5);
+    }
 }

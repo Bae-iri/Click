@@ -28,8 +28,9 @@ import android.window.OnBackInvokedDispatcher;
 
 import static com.click.designpreview.PermissionIconView.Kind;
 
-/** A five-page explanation shown before the user chooses whether to open system settings. */
+/** A four-page explanation shown before the user chooses whether to open system settings. */
 public final class PermissionGuideActivity extends Activity {
+    private static final int PAGE_COUNT = 4;
     private static final String PAGE_STATE = "permission_guide_page";
     private static final String SETTINGS_OPENED_STATE = "permission_settings_opened";
     private static final int BLUE = 0xFF3478F6;
@@ -46,9 +47,10 @@ public final class PermissionGuideActivity extends Activity {
     private Button later;
     private Typeface medium;
     private Typeface semibold;
-    private Typeface bold;
+    private Typeface regular;
     private boolean settingsOpened;
     private boolean tutorialOpened;
+    private PermissionEnableAnimationView enableAnimation;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,7 +59,7 @@ public final class PermissionGuideActivity extends Activity {
                 && savedInstanceState.getBoolean(SETTINGS_OPENED_STATE, false);
         medium = getResources().getFont(R.font.pretendard_medium);
         semibold = getResources().getFont(R.font.pretendard_semibold);
-        bold = getResources().getFont(R.font.pretendard_bold);
+        regular = getResources().getFont(R.font.pretendard_regular);
         configureWindow();
 
         FrameLayout canvas = new FrameLayout(this);
@@ -82,7 +84,7 @@ public final class PermissionGuideActivity extends Activity {
         back.setPadding(dp(12), dp(12), dp(12), dp(12));
         back.setOnClickListener(view -> goBack());
         header.addView(back, new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.START));
-        TextView label = text(R.string.guide_name, 14, SECONDARY, medium);
+        TextView label = text(R.string.guide_name, 14, SECONDARY, regular);
         label.setGravity(Gravity.CENTER);
         FrameLayout.LayoutParams nameParams = new FrameLayout.LayoutParams(-1, -1);
         nameParams.setMargins(dp(54), 0, dp(66), 0);
@@ -137,7 +139,7 @@ public final class PermissionGuideActivity extends Activity {
         arrowParams.setMarginStart(dp(10));
         action.addView(arrow, arrowParams);
         action.setOnClickListener(view -> {
-            if (page < 4) showPage(page + 1, true);
+            if (page < PAGE_COUNT - 1) showPage(page + 1, true);
             else openSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS);
         });
         Button replay = new Button(this); replay.setText("안내 다시 듣기"); replay.setAllCaps(false);
@@ -172,29 +174,29 @@ public final class PermissionGuideActivity extends Activity {
     }
 
     private void showPage(int requestedPage, boolean animate) {
-        page = Math.max(0, Math.min(4, requestedPage));
+        page = Math.max(0, Math.min(PAGE_COUNT - 1, requestedPage));
+        if (enableAnimation != null) enableAnimation.setPlaying(false);
+        enableAnimation = null;
         body.animate().cancel();
         body.removeAllViews();
-        counter.setText(getString(R.string.guide_progress, page + 1));
-        counter.setContentDescription(getString(R.string.guide_progress_description, page + 1));
+        counter.setText(getString(R.string.guide_progress, page + 1, PAGE_COUNT));
+        counter.setContentDescription(getString(R.string.guide_progress_description, page + 1, PAGE_COUNT));
         int actionText = page == 0 ? R.string.onboarding_start
-                : page == 4 ? R.string.guide_settings_now : R.string.onboarding_next;
+                : page == PAGE_COUNT - 1 ? R.string.guide_settings_now : R.string.onboarding_next;
         actionLabel.setText(actionText);
         action.setContentDescription(getString(actionText));
-        later.setVisibility(page == 1 || page == 4 ? View.VISIBLE : View.GONE);
+        later.setVisibility(page == 1 || page == PAGE_COUNT - 1 ? View.VISIBLE : View.GONE);
         switch (page) {
             case 0: intro(); break;
             case 1: reason(); break;
-            case 2: features(); break;
-            case 3: settingsSteps(); break;
-            case 4: allowStep(); break;
+            case 2: allowStep(); break;
+            case 3: consentStep(); break;
         }
         String[] cues = {
             "어려운 스마트폰 사용, 이제 클릭 한 번으로. 다음을 눌러 권한 안내를 확인해 주세요.",
             "클릭은 접근성 기능으로 화면의 정보를 이해하고 다음에 누를 곳을 안내해요. 권한은 직접 선택하고 설정에서 끌 수 있어요.",
-            "화면에서 필요한 버튼을 찾고, 확인이 필요한 순간을 안내해요. 다음을 눌러 설정 방법을 확인해 주세요.",
-            "접근성 설정 열기를 누르면 휴대폰 설정으로 이동해요. 설치된 앱에서 클릭 화면 안내를 찾아주세요.",
-            "설치된 앱, 클릭 화면 안내, 허용하기 순서로 눌러주세요. 지금 설정하기 버튼으로 이동할 수 있어요."
+            "접근성 설정에서 설치된 앱을 누르고, 클릭 화면 안내를 선택해 주세요. 사용 안 함을 사용함으로 켜주세요. 다음 페이지에서 마지막 확인창을 보여드릴게요.",
+            getString(R.string.guide_consent_cue)
         };
         spokenPage = cues[page]; narrator.speak(spokenPage);
         scroll.scrollTo(0, 0);
@@ -234,7 +236,7 @@ public final class PermissionGuideActivity extends Activity {
         TextView accent = title(R.string.guide_reason_accent, 28);
         accent.setTextColor(BLUE);
         add(body, accent, 4);
-        add(body, text(R.string.guide_reason_description, 19, SECONDARY, medium), 20);
+        add(body, text(R.string.guide_reason_description, 19, SECONDARY, regular), 20);
         FrameLayout scene = new FrameLayout(this);
         scene.setPadding(dp(8), dp(14), dp(8), dp(16));
         scene.setBackground(rounded(0xFFF1F7FF, 140));
@@ -251,93 +253,58 @@ public final class PermissionGuideActivity extends Activity {
         add(body, scene, 34);
     }
 
-    private void features() {
-        add(body, title(R.string.guide_features_title, 30), 0);
-        add(body, text(R.string.guide_features_description, 18, SECONDARY, medium), 18);
-        add(body, feature(Kind.SEARCH, R.string.guide_find_title, R.string.guide_find_description), 22);
-        add(body, feature(Kind.ALERT, R.string.guide_alert_title, R.string.guide_alert_description), 12);
-        add(body, feature(Kind.CONTROL, R.string.guide_control_title, R.string.guide_control_description), 12);
-    }
-
-    private void settingsSteps() {
-        add(body, title(R.string.guide_settings_title, 28), 0);
-        add(body, step(1, R.string.guide_step_one, R.string.guide_step_one_description), 26);
-        LinearLayout settings = vertical();
-        settings.setId(R.id.guide_settings_shortcut);
-        settings.setGravity(Gravity.CENTER_HORIZONTAL);
-        settings.setPadding(dp(18), dp(6), dp(18), dp(6));
-        settings.setBackground(new RippleDrawable(ColorStateList.valueOf(0x161673FF), null,
-                rounded(Color.WHITE, 20)));
-        settings.setContentDescription(getString(R.string.guide_open_settings_description));
-        settings.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
-        settings.setFocusable(true);
-        settings.setOnClickListener(view -> openSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-        PermissionIconView gear = new PermissionIconView(this, Kind.SETTINGS, 0xFF4B607E);
-        settings.addView(gear, new LinearLayout.LayoutParams(dp(84), dp(84)));
-        TextView settingsLabel = text(R.string.guide_accessibility_shortcut, 18, BLUE, semibold);
-        settingsLabel.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        add(settings, settingsLabel, 4);
-        settingsLabel.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams settingsParams = new LinearLayout.LayoutParams(-2, -2);
-        settingsParams.gravity = Gravity.CENTER_HORIZONTAL;
-        settingsParams.topMargin = dp(12);
-        body.addView(settings, settingsParams);
-        TextView destination = text(R.string.guide_settings_destination, 16, SECONDARY, medium);
-        destination.setGravity(Gravity.CENTER);
-        add(body, destination, 12);
-        add(body, step(2, R.string.guide_step_two, R.string.guide_step_two_description), 22);
-        add(body, phone(false, false), 18);
-    }
-
     private void allowStep() {
         add(body, title(R.string.guide_allow_title, 30), 0);
-        add(body, step(3, R.string.guide_step_three, R.string.guide_step_three_description), 24);
-        add(body, phone(true, false), 24);
-        LinearLayout ready = vertical();
-        ready.setGravity(Gravity.CENTER_HORIZONTAL);
-        ready.setPadding(dp(16), dp(12), dp(16), dp(16));
-        ready.addView(new PermissionIconView(this, Kind.CHECK, BLUE),
-                new LinearLayout.LayoutParams(dp(42), dp(42)));
-        TextView note = text(R.string.guide_ready, 17, SECONDARY, medium);
-        note.setGravity(Gravity.CENTER);
-        add(ready, note, 6);
-        add(body, ready, 18);
-        TextView deviceNote = text(R.string.guide_device_note, 13, SECONDARY, medium);
+        add(body, text(R.string.guide_enable_description, 18, SECONDARY, regular), 18);
+        enableAnimation = new PermissionEnableAnimationView(this);
+        enableAnimation.setId(R.id.guide_enable_animation);
+        add(body, enableAnimation, 24);
+        enableAnimation.setPlaying(true);
+        TextView deviceNote = text(R.string.guide_device_note, 13, SECONDARY, regular);
         deviceNote.setGravity(Gravity.CENTER);
-        add(body, deviceNote, 12);
+        add(body, deviceNote, 14);
     }
 
-    private View feature(Kind icon, int label, int example) {
-        LinearLayout card = new LinearLayout(this);
-        card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setPadding(dp(14), dp(17), dp(14), dp(17));
-        card.setMinimumHeight(dp(94));
-        card.addView(new PermissionIconView(this, icon, BLUE),
-                new LinearLayout.LayoutParams(dp(54), dp(54)));
-        LinearLayout copy = vertical();
-        LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);
-        copyParams.setMarginStart(dp(14));
-        card.addView(copy, copyParams);
-        add(copy, text(label, 17, INK, semibold), 0);
-        add(copy, text(example, 14, SECONDARY, medium), 6);
-        return card;
-    }
+    private void consentStep() {
+        add(body, title(R.string.guide_consent_title, 29), 0);
+        add(body, text(R.string.guide_consent_description, 17, SECONDARY, regular), 18);
 
-    private View step(int number, int label, int description) {
-        LinearLayout row = new LinearLayout(this);
-        TextView badge = text(0, 21, Color.WHITE, semibold);
-        badge.setText(getString(R.string.guide_step_number, number));
-        badge.setGravity(Gravity.CENTER);
-        badge.setBackground(rounded(BLUE, 22));
-        int badgeSize = Math.max(dp(40), badge.getLineHeight() + dp(8));
-        row.addView(badge, new LinearLayout.LayoutParams(badgeSize, badgeSize));
-        LinearLayout copy = vertical();
-        LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);
-        copyParams.setMarginStart(dp(13));
-        row.addView(copy, copyParams);
-        add(copy, text(label, 19, INK, semibold), 2);
-        add(copy, text(description, 14, SECONDARY, medium), 7);
-        return row;
+        LinearLayout example = vertical();
+        example.setId(R.id.guide_consent_example);
+        example.setPadding(dp(16), dp(16), dp(16), dp(16));
+        example.setBackground(rounded(0xFFF0F5FF, 24));
+        TextView caption = text(R.string.guide_enable_example, 12, SECONDARY, regular);
+        add(example, caption, 0);
+        LinearLayout dialog = vertical();
+        dialog.setPadding(dp(16), dp(18), dp(16), dp(12));
+        dialog.setBackground(rounded(Color.WHITE, 20));
+        add(dialog, text(R.string.guide_consent_dialog_title, 19, INK, semibold), 0);
+        add(dialog, text(R.string.guide_consent_dialog_body, 14, SECONDARY, regular), 12);
+        LinearLayout choices = new LinearLayout(this);
+        choices.setGravity(Gravity.CENTER_VERTICAL);
+        TextView cancel = text(R.string.guide_consent_cancel, 16, SECONDARY, regular);
+        cancel.setGravity(Gravity.CENTER); cancel.setMinHeight(dp(44));
+        choices.addView(cancel, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView allow = text(R.string.guide_consent_allow, 16, BLUE, semibold);
+        allow.setGravity(Gravity.CENTER); allow.setMinHeight(dp(44));
+        allow.setPadding(dp(10), dp(8), dp(10), dp(8));
+        GradientDrawable highlight = rounded(0xFFEAF2FF, 14);
+        highlight.setStroke(dp(2), BLUE);
+        allow.setBackground(highlight);
+        choices.addView(allow, new LinearLayout.LayoutParams(0, -2, 1));
+        add(dialog, choices, 16);
+        add(example, dialog, 10);
+        // This is an example; only the system's own confirmation grants permission.
+        example.setContentDescription(getString(R.string.guide_enable_example) + ". "
+                + getString(R.string.guide_consent_dialog_title) + ". "
+                + getString(R.string.guide_consent_dialog_body) + " 허용을 눌러주세요.");
+        example.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+        caption.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        dialog.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+        add(body, example, 22);
+        add(body, text(R.string.guide_consent_purpose, 16, INK, medium), 20);
+        add(body, text(R.string.guide_consent_check, 16, BLUE, semibold), 12);
+        add(body, text(R.string.guide_consent_revoke, 14, SECONDARY, regular), 12);
     }
 
     private View phone(boolean accessList, boolean muted) {
@@ -392,6 +359,7 @@ public final class PermissionGuideActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         narrator.resume();
+        if (enableAnimation != null) enableAnimation.setPlaying(true);
         if (settingsOpened && !tutorialOpened && ClickHost.from(this).accessibilityEnabled()) {
             if (ClickHost.from(this).postPermissionTutorialWasLaunched()) {
                 finish();
@@ -404,7 +372,7 @@ public final class PermissionGuideActivity extends Activity {
     }
 
     private TextView title(int string, int size) {
-        TextView result = text(string, size, INK, bold);
+        TextView result = text(string, size, INK, semibold);
         result.setLetterSpacing(-.025f);
         if (Build.VERSION.SDK_INT >= 28) result.setAccessibilityHeading(true);
         return result;
@@ -457,7 +425,11 @@ public final class PermissionGuideActivity extends Activity {
         super.onSaveInstanceState(state);
     }
 
-    @Override protected void onPause() { narrator.pause(); super.onPause(); }
+    @Override protected void onPause() {
+        if (enableAnimation != null) enableAnimation.setPlaying(false);
+        narrator.pause();
+        super.onPause();
+    }
     @Override protected void onDestroy() { narrator.close(); super.onDestroy(); }
 
     private void configureWindow() {

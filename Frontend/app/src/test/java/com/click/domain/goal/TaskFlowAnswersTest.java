@@ -7,6 +7,9 @@ public class TaskFlowAnswersTest {
     @Test public void resultAnswersStayDistinct() {
         assertEquals("satisfied", TaskFlowAnswers.result("네, 잘 보여요"));
         assertEquals("satisfied", TaskFlowAnswers.result("네, 좋아요"));
+        assertEquals("satisfied", TaskFlowAnswers.result("네, 글씨가 잘 보여요"));
+        assertEquals("needs_help", TaskFlowAnswers.result("더 커졌으면 좋겠어"));
+        assertEquals("needs_help", TaskFlowAnswers.result("더 커졌으면 좋겠어요"));
         assertEquals("needs_help", TaskFlowAnswers.result("조금 더 도와주세요"));
         assertEquals("needs_help", TaskFlowAnswers.result("아직 불편해요"));
         assertEquals("stopped", TaskFlowAnswers.result("그만할게요"));

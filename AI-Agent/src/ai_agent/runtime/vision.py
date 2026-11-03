@@ -136,3 +136,18 @@ def _class_name_for_role(role: str | None) -> str:
     if role == "button":
         return "android.widget.Button"
     return "android.widget.TextView"
+
+
+def append_vision_nodes(
+    nodes: tuple[AccessibilityNode, ...],
+    analysis: VisionFallbackAnalysis,
+    *,
+    package_name: str | None,
+) -> tuple[AccessibilityNode, ...]:
+    if analysis.status != "used":
+        return nodes
+    vision_nodes = vision_elements_to_accessibility_nodes(
+        analysis,
+        package_name=package_name,
+    )
+    return nodes + vision_nodes

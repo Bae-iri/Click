@@ -43,6 +43,7 @@ public class FloatingReferenceFlowTest {
                         TaskFlowOverlayView panel = new TaskFlowOverlayView(context, replies);
                         host(activity, panel, 340);
                         panel.preparation(question()); measure(panel, 340, 650);
+                        controlsWork(panel, replies);
                         assertFalse(find(panel, "다음 단계").isEnabled());
                         RadioButton phone = (RadioButton) find(panel, "휴대폰 전체");
                         RadioButton app = (RadioButton) find(panel, "특정 앱 안에서만");
@@ -56,6 +57,7 @@ public class FloatingReferenceFlowTest {
                         ((EditText) description(panel, "요청 내용 수정")).setText("밝기를 높여줘");
                         find(panel, "수정한 요청 확인").performClick(); assertEquals("밝기를 높여줘", replies.rephrased);
                         panel.preparation(ready()); measure(panel, 340, 650);
+                        controlsWork(panel, replies);
                         assertNull(find(panel, "1/2")); assertNull(find(panel, "2/2"));
                         readable(find(panel, "안내 시작하기")); readable(find(panel, "내용 수정"));
                         assertTrue(top(panel, find(panel, "내용 수정")) > top(panel, find(panel, "안내 시작하기")));
@@ -80,6 +82,7 @@ public class FloatingReferenceFlowTest {
                     panel.progress("글자 크기", null, "디스플레이 메뉴를 눌러주세요.", false);
                     panel.setGuidanceProgress(2, 3); panel.setGuidanceTarget("디스플레이"); measure(panel, 340, 650);
                     readable(find(panel, "2/3")); readable(find(panel, "디스플레이"));
+                    controlsWork(panel, replies);
                     save(panel, "reference-guidance");
                     description(panel, "디스플레이. 안내를 접고 화면에서 찾기").performClick(); assertTrue(replies.collapsed);
                     panel.setMinimizedProgress(true); assertFalse(find(panel, "2/3").isShown());
@@ -101,6 +104,10 @@ public class FloatingReferenceFlowTest {
                 panel.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                         View.MeasureSpec.makeMeasureSpec(panel.getWindowHeight(ClickOverlayLayout.Mode.MENU), View.MeasureSpec.EXACTLY));
                 panel.layout(0, 0, panel.getMeasuredWidth(), panel.getMeasuredHeight()); save(panel, "reference-input");
+                panel.setRequestStatus("요청을 진행하고 있어요", true);
+                assertTrue("Active request can be stopped from the menu", find(panel, "요청 중지").isShown());
+                panel.setRequestStatus(null, false);
+                assertFalse(find(panel, "요청 중지").isShown());
                 ((View) find(panel, "말로 입력").getParent()).performClick();
                 assertEquals(ClickOverlayLayout.Mode.VOICE, panel.getMode()); assertFalse(panel.isVoiceInputActive());
                 panel.openMenu(); ((View) find(panel, "글로 입력").getParent()).performClick();
@@ -128,13 +135,29 @@ public class FloatingReferenceFlowTest {
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync();
                 scenario.onActivity(activity -> {
                     readable(find(shown[0], "다시 듣기")); readable(find(shown[0], "줄이기"));
+                    footerVisible(shown[0]);
                     if (screen == 0) readable(find(shown[0], "휴대폰 전체"));
                     if (screen == 1) readable(find(shown[0], "안내 시작하기"));
                     if (screen == 3) readable(find(shown[0], "새로고침"));
                     save(shown[0], "reference-attached-" + screen + "-" + scale);
+                    save((View) shown[0].getParent(), "compact-host-" + screen + "-" + scale);
                 });
             }
         }
+    }
+    private static void footerVisible(TaskFlowOverlayView panel) {
+        for (String label : new String[]{"일시정지", "요청 중지"}) {
+            TextView button = find(panel, label);
+            readable(button);
+            int y = top(panel, button);
+            assertTrue(label + " stays outside the scrolling body", y >= 0 && y + button.getHeight() <= panel.getHeight());
+            assertTrue(button.getHeight() >= Math.round(48 * panel.getResources().getDisplayMetrics().density));
+        }
+    }
+    private static void controlsWork(TaskFlowOverlayView panel, Replies replies) {
+        footerVisible(panel);
+        find(panel, "일시정지").performClick(); assertEquals("pause_task", replies.command);
+        find(panel, "요청 중지").performClick(); assertEquals("cancel_task", replies.command);
     }
     private static void host(HomeActivity activity, View panel, int width) {
         FrameLayout host = new FrameLayout(activity); host.setBackgroundColor(0xFFEAF0FA);
@@ -171,8 +194,8 @@ public class FloatingReferenceFlowTest {
         try (FileOutputStream out = new FileOutputStream(new File(InstrumentationRegistry.getInstrumentation().getTargetContext().getCacheDir(), name + ".png"))) { bitmap.compress(Bitmap.CompressFormat.PNG, 100, out); } catch (Exception error) { throw new AssertionError(error); } bitmap.recycle();
     }
     private static final class Replies implements TaskFlowOverlayView.Listener {
-        String answer, rephrased; boolean confirmed, collapsed;
-        public void chooseGoal(JSONObject goal) {} public void clarify(String choice) {} public void result(String answer) {} public void adjust(String reason) {} public void control(String command) {}
+        String answer, rephrased, command; boolean confirmed, collapsed;
+        public void chooseGoal(JSONObject goal) {} public void clarify(String choice) {} public void result(String answer) {} public void adjust(String reason) {} public void control(String command) { this.command = command; }
         public void rephrase(String value) { rephrased = value; } public void answerGoalInput(String value) { answer = value; }
         public void confirmRequirements() { confirmed = true; } public void collapse() { collapsed = true; }
     }

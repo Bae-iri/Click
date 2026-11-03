@@ -21,6 +21,23 @@ SETTINGS_PACKAGE = "com.android.settings"
 
 
 class EngineFlowTests(unittest.TestCase):
+    def test_unsupported_goal_returns_clarification_with_raw_observation_debug(self) -> None:
+        engine = ClickAgentEngine()
+        response = engine.handle_turn(AgentTurnRequest(
+            request_id="clarify-request",
+            session_id="clarify-session",
+            raw_goal=_raw_goal("도와줘", device_context=DeviceContext(
+                platform="android", app_package=SETTINGS_PACKAGE,
+            )),
+            accessibility_tree=_settings_home_tree(),
+        ))
+
+        self.assertEqual(response.debug["contract"], "unsupported_or_ambiguous_goal")
+        self.assertTrue(response.debug["observation"]["accessibility_tree_present"])
+        self.assertEqual(response.debug["observation"]["app_package"], SETTINGS_PACKAGE)
+        self.assertEqual(response.debug["agent_chain"]["guide_builder"], response.guide_command.command_type.value)
+        self.assertIsNone(engine.session_store.get("clarify-session"))
+
     def test_first_turn_requires_raw_goal(self) -> None:
         engine = ClickAgentEngine()
 

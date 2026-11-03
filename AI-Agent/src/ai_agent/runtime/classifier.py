@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ai_agent.runtime.keywords import any_keyword_matches, any_phrase_matches
+from ai_agent.runtime.keywords import any_keyword_matches, any_phrase_matches, normalize_text
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence
 from ai_agent.runtime.types import DeviceContext, NormalizedNode, TaskGraph, TaskState
 
@@ -29,9 +29,10 @@ def classify_screen_state(
             and device_context.app_package in state.package_candidates)
         if state.package_candidates and not relevant:
             continue
-        screen_text = " ".join(node.label for node in relevant)
+        screen_text = " ".join(" ".join(node.label_parts) if node.label_parts else node.label
+                               for node in relevant if node.structure_role != 'description')
         roles = {node.role for node in relevant}
-        required_groups = _required_groups(state)
+        required_groups = _required_groups(state, graph)
         if required_groups and not _all_required_groups_match(screen_text, required_groups):
             continue
 
@@ -106,10 +107,12 @@ def _screen_titles(nodes):
     return tuple(titles.values())
 
 
-def _required_groups(state: TaskState) -> tuple[tuple[str, ...], ...]:
-    if state.required_keyword_groups:
-        return state.required_keyword_groups
-    return tuple((keyword,) for keyword in state.required_keywords)
+def _required_groups(state: TaskState, graph: TaskGraph) -> tuple[tuple[str, ...], ...]:
+    groups = state.required_keyword_groups or tuple((keyword,) for keyword in state.required_keywords)
+    # Screen recognition and target matching must understand the same graph-owned aliases.
+    return tuple(tuple(dict.fromkeys((*group, *(word for words in graph.synonyms.values()
+        if set(map(normalize_text, group)) & set(map(normalize_text, words)) for word in words))))
+        for group in groups)
 
 
 def _all_required_groups_match(

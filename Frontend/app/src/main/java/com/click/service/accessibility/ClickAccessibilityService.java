@@ -110,8 +110,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
             AccessibilityNodeInfo source = event.getSource();
             if (source != null) {
                 AccessibilityNodeInfo.RangeInfo range = source.getRangeInfo();
-                if (range != null && source.getClassName() != null
-                        && source.getClassName().toString().toLowerCase(java.util.Locale.ROOT).contains("seekbar")) {
+                String sourceClass = source.getClassName() == null ? ""
+                        : source.getClassName().toString().toLowerCase(java.util.Locale.ROOT);
+                if (range != null && (sourceClass.contains("seekbar") || sourceClass.contains("slider")
+                        || source.getActionList().contains(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS))) {
                     // Record the native value event before a changed-screen observation is sent.
                     // Ordinary touch mode need not produce TOUCH_INTERACTION_START/END.
                     emitAction(source, "drag_completed", event.getEventTime(), range);
@@ -282,6 +284,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
                     || node.isEditable() || node.isCheckable()
                     || !latest.packageName.contentEquals(node.getPackageName() == null ? "" : node.getPackageName())
                     || !java.util.Objects.equals(target.className, node.getClassName() == null ? null : node.getClassName().toString())
+                    || !java.util.Objects.equals(target.resourceId, node.getViewIdResourceName())
                     || node.getWindowId() != latest.activeWindowId
                     || !actual.equals(new Rect(bounds[0], bounds[1], bounds[2], bounds[3]))
                     || Float.compare(range.getCurrent(), target.progress) != 0
@@ -307,7 +310,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 final com.click.data.snapshot.AccessibilityNodeSnapshot original = target;
                 return service.dispatchGesture(gesture, new GestureResultCallback() {
                     @Override public void onCompleted(android.accessibilityservice.GestureDescription completed) {
-                        ClickOverlayService.onGuidedAction("drag_completed", original.packageName,
+                        ClickOverlayService.onVerifiedAutomaticAction("drag_completed", original.packageName,
                                 original.windowId, original.nodeId, original.resourceId, original.bounds, actionAt);
                         requestFreshSnapshot();
                     }
@@ -367,7 +370,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         if (mainHandler == null) mainHandler = new Handler(getMainLooper());
         mainHandler.postDelayed(() -> {
             ScreenSnapshot after = freshSnapshot();
-            if (after != null && !before.fingerprint().equals(after.fingerprint())) {
+            if (after != null && !after.nodes.isEmpty() && !before.contentFingerprint().equals(after.contentFingerprint())) {
                 for (com.click.data.snapshot.AccessibilityNodeSnapshot original : before.nodes) {
                     if (id.equals(original.nodeId)) {
                         ClickOverlayService.onVerifiedAutomaticAction("tap_completed", original.packageName,
@@ -386,27 +389,17 @@ public final class ClickAccessibilityService extends AccessibilityService {
         if (mainHandler == null) mainHandler = new Handler(getMainLooper());
         mainHandler.postDelayed(() -> {
             ScreenSnapshot after = freshSnapshot();
-            if (after != null && java.util.Objects.equals(after.packageName, baseline.packageName)
-                    && java.util.Objects.equals(after.activeWindowId, baseline.activeWindowId)) {
-                for (com.click.data.snapshot.AccessibilityNodeSnapshot changed : after.nodes) {
-                    if (original.nodeId.equals(changed.nodeId) && changed.progress != null
-                            && changed.visibleToUser && !changed.sensitiveInput
-                            && java.util.Objects.equals(changed.resourceId, original.resourceId)
-                            && java.util.Objects.equals(changed.className, original.className)
-                            && java.util.Arrays.equals(changed.bounds, original.bounds)
-                            && SliderAdjustment.moved(before, changed.progress, direction)) {
-                        ClickOverlayService.onVerifiedAutomaticAction("drag_completed", changed.packageName, changed.windowId,
-                                original.nodeId, original.resourceId, original.bounds, actionAt);
-                        requestFreshSnapshot();
-                        return;
-                    }
-                }
+            if (SliderResultEvidence.changed(baseline, after, original, direction, actionAt)) {
+                ClickOverlayService.onVerifiedAutomaticAction("drag_completed", original.packageName, original.windowId,
+                        original.nodeId, original.resourceId, original.bounds, actionAt);
+                requestFreshSnapshot();
+                return;
             }
-            if (attempt < 3 && after != null && java.util.Objects.equals(after.packageName, baseline.packageName)
-                    && java.util.Objects.equals(after.activeWindowId, baseline.activeWindowId))
+            if (attempt < 5 && (after == null || after.packageName == null
+                    || java.util.Objects.equals(after.packageName, baseline.packageName)))
                 verifySliderChange(baseline, original, direction, before, actionAt, attempt + 1);
             else requestFreshSnapshot();
-        }, attempt == 0 ? 150L : attempt == 1 ? 250L : attempt == 2 ? 600L : 1000L);
+        }, attempt == 0 ? 150L : attempt == 1 ? 250L : attempt == 2 ? 600L : attempt == 3 ? 1000L : 1500L);
     }
 
     /** Recovery is always user-triggered, independent of the automation preference. */
@@ -484,100 +477,23 @@ public final class ClickAccessibilityService extends AccessibilityService {
 
     public static boolean swipeHomePage(boolean towardNextPage, String expectedPackage, Integer expectedWindow) {
         ClickAccessibilityService service = connectedService.get();
-        if (service == null) return false;
-        AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(service);
-        if (root == null) return false;
-        try {
-            String pkg = root.getPackageName() == null ? "" : root.getPackageName().toString();
-            if (!(pkg.contains("launcher") || pkg.equals("com.miui.home"))
-                    || expectedPackage != null && !expectedPackage.equals(pkg)
-                    || expectedWindow != null && root.getWindowId() != expectedWindow) return false;
-            int action = towardNextPage ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
-                    : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
-            // Native containers determine their own axis: home pages move sideways,
-            // while an app drawer's RecyclerView moves vertically.
-            if (scrollVisibleList(root, action)) {
-                if (service.mainHandler != null) service.mainHandler.postDelayed(service.captureRunnable, 650L);
-                return true;
-            }
-        } finally { root.recycle(); }
-        int width = service.getResources().getDisplayMetrics().widthPixels;
-        int height = service.getResources().getDisplayMetrics().heightPixels;
-        float y = service.uncoveredSwipeY(height);
-        if (y < 0) return false;
-        Path path = new Path();
-        path.moveTo(towardNextPage ? width * .82f : width * .18f, y);
-        path.lineTo(towardNextPage ? width * .18f : width * .82f, y);
-        android.accessibilityservice.GestureDescription gesture =
-                new android.accessibilityservice.GestureDescription.Builder()
-                        .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(path, 0L, 420L))
-                        .build();
-        return service.dispatchGesture(gesture, new GestureResultCallback() {
-            @Override public void onCompleted(android.accessibilityservice.GestureDescription description) {
-                if (service.mainHandler != null) service.mainHandler.postDelayed(service.captureRunnable, 450L);
-            }
-            @Override public void onCancelled(android.accessibilityservice.GestureDescription description) {
-                if (service.mainHandler != null) service.mainHandler.post(service.captureRunnable);
-            }
-        }, service.mainHandler);
-    }
-
-    /** Avoid dragging Click's logo or speech bubble instead of the launcher. */
-    private float uncoveredSwipeY(int height) {
-        java.util.List<Rect> covered = new java.util.ArrayList<>();
-        for (AccessibilityWindowInfo window : getWindows()) {
-            try {
-                if (window.getType() != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY) continue;
-                AccessibilityNodeInfo root = window.getRoot();
-                if (root == null) continue;
-                try {
-                    if (!root.isVisibleToUser() || root.getPackageName() == null
-                            || !getPackageName().contentEquals(root.getPackageName())) continue;
-                    Rect bounds = new Rect(); window.getBoundsInScreen(bounds); covered.add(bounds);
-                } finally { root.recycle(); }
-            } finally { window.recycle(); }
-        }
-        for (float fraction : new float[]{.52f, .68f, .36f, .78f}) {
-            float y = height * fraction;
-            boolean clear = true;
-            for (Rect bounds : covered) if (y >= bounds.top - 24 && y <= bounds.bottom + 24) { clear = false; break; }
-            if (clear) return y;
-        }
-        return -1;
+        return service != null && new NativeScrollExecutor(service, service.mainHandler, service.captureRunnable)
+                .swipeHomePage(towardNextPage, expectedPackage, expectedWindow);
     }
 
     /** Executes a scroll on the current screen's scrollable container ({@code action_type: scroll},
      * whose {@code execution_owner} is the frontend accessibility service). */
     public static boolean performScroll(boolean forward) {
         ClickAccessibilityService service = connectedService.get();
-        if (service == null) return false;
-        AccessibilityNodeInfo pager = findScrollableNode(ForegroundWindowReader.readRoot(service));
-        if (pager == null) return false;
-        int action = forward
-                ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
-                : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
-        boolean performed = pager.performAction(action);
-        Log.i(TAG, "Active window scroll forward=" + forward + " performed=" + performed);
-        if (performed && service.mainHandler != null) {
-            service.mainHandler.postDelayed(service.captureRunnable, 550L);
-        }
-        return performed;
+        return service != null && new NativeScrollExecutor(service, service.mainHandler, service.captureRunnable)
+                .performScroll(forward);
     }
 
     /** Scroll only the settings window that the user just asked to search. */
     public static boolean performSettingsScroll(boolean forward, String expectedPackage, int expectedWindow) {
-        if (!"com.android.settings".equals(expectedPackage)
-                && !"com.samsung.android.settings".equals(expectedPackage)) return false;
         ClickAccessibilityService service = connectedService.get();
-        if (service == null) return false;
-        AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(service);
-        if (root == null) return false;
-        try {
-            if (root.getWindowId() != expectedWindow || root.getPackageName() == null
-                    || !expectedPackage.contentEquals(root.getPackageName())) return false;
-            return scrollVisibleList(root, forward ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
-                    : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
-        } finally { root.recycle(); }
+        return service != null && new NativeScrollExecutor(service, service.mainHandler, service.captureRunnable)
+                .performSettingsScroll(forward, expectedPackage, expectedWindow);
     }
 
     /** Return only while the same Settings window is still in front. */
@@ -593,28 +509,6 @@ public final class ClickAccessibilityService extends AccessibilityService {
                     || !expectedPackage.contentEquals(root.getPackageName())) return false;
             return service.performGlobalAction(GLOBAL_ACTION_BACK);
         } finally { root.recycle(); }
-    }
-
-    private static boolean scrollVisibleList(AccessibilityNodeInfo node, int action) {
-        if (!node.isVisibleToUser() || !node.isEnabled()) return false;
-        if (node.isScrollable() && node.performAction(action)) return true;
-        for (int index = 0; index < node.getChildCount(); index++) {
-            AccessibilityNodeInfo child = node.getChild(index);
-            if (child == null) continue;
-            try { if (scrollVisibleList(child, action)) return true; }
-            finally { child.recycle(); }
-        }
-        return false;
-    }
-
-    private static AccessibilityNodeInfo findScrollableNode(AccessibilityNodeInfo node) {
-        if (node == null) return null;
-        if (node.isScrollable()) return node;
-        for (int index = 0; index < node.getChildCount(); index++) {
-            AccessibilityNodeInfo result = findScrollableNode(node.getChild(index));
-            if (result != null) return result;
-        }
-        return null;
     }
 
     private void captureCurrentScreen() {
@@ -695,12 +589,6 @@ public final class ClickAccessibilityService extends AccessibilityService {
             if (found != null) return found;
         }
         return null;
-    }
-
-    private boolean isSettingsPackage(String packageName) {
-        return packageName.equals("com.android.settings")
-                || packageName.equals("com.samsung.android.settings")
-                || packageName.endsWith(".settings");
     }
 
     private boolean isSystemNavigationEvent(AccessibilityEvent event, String packageName) {

@@ -14,7 +14,8 @@ def target_key(node: NormalizedNode) -> str:
 
 def control_label(node: NormalizedNode) -> str:
     """Samsung SeekBars expose their changing step number as contentDescription."""
-    label = normalize_text(node.label)
+    label = normalize_text(node.label_parts[0] if node.role in {'menu_item', 'button', 'app_icon'}
+                           and node.label_parts else node.label)
     if node.role == 'slider' and re.fullmatch(r'[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)\s*%?', label):
         return ''
     return label
@@ -60,13 +61,14 @@ def selector_evidence(node, transition, nodes, graph) -> tuple[float, str]:
     if node.resource_id and node.resource_id in selector.resource_ids:
         return 1.0, 'resource_id'
     keywords = selector_keywords(transition, graph)
-    names = {normalize_text(part) for part in (node.label, *node.label_parts)}
+    labels = node.label_parts or (node.label,)
+    names = {normalize_text(part) for part in labels}
     if names.intersection(normalize_text(word) for word in keywords):
         return 0.9, 'exact_label'
     # Short/general aliases identify a whole title, not e.g. 홈 화면 or Always on display.
     specific = tuple(word for word in keywords if len(normalize_text(word)) > 2
                      and normalize_text(word) not in {"screen", "display"})
-    if any_phrase_matches(node.label, specific):
+    if any(any_phrase_matches(label, specific) for label in labels):
         return 0.8, 'keyword'
     if not control_label(node) and selector.allow_unlabelled_in_context:
         # A page title may name a single unlabelled control, never a named other setting.

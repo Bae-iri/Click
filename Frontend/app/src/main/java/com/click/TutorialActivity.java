@@ -316,7 +316,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 if (!transcribing) floating.getControl().setRecognizedSpeech("듣고 있어요. 말씀을 마치면 손을 떼세요.");
             }
             @Override public void onPartialText(String value) {
-                floating.getControl().setRecognizedSpeech(value);
+                floating.getControl().showRecognizedSpeechResult(value);
             }
             @Override public void onRecordingFinished() {
                 floating.getControl().setVoiceInputActive(false); transcribing = true;
@@ -368,6 +368,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
 
     private void showStopPractice() {
         cancelRecording();
+        floating.getControl().setRequestControlsVisible(true);
         floating.getControl().setRequestStatus(stopTried ? "요청을 멈췄어요" : "사용자 요청을 처리하고 있어요", !stopTried);
         floating.getControl().setRecognizedSpeech(stopTried
                 ? "작업을 중지했어요.\n새 입력은 마이크를 눌러 시작해요."
@@ -599,7 +600,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         else if (step == COMPLETE) { finishToHome(); return; }
         else if (step == REPLY) { step = VOICE; voiceTried = false; voiceText = ""; showMode(ClickOverlayLayout.Mode.MENU); }
         else if (step == VOICE) { step = STOP; stopTried = false; showMode(ClickOverlayLayout.Mode.VOICE); showStopPractice(); }
-        else if (step == STOP) { step = FOLD; folded = false; floating.getControl().setRequestStatus(null, false); showMode(ClickOverlayLayout.Mode.MENU); }
+        else if (step == STOP) { step = FOLD; folded = false; floating.getControl().setRequestControlsVisible(false); floating.getControl().setRequestStatus(null, false); showMode(ClickOverlayLayout.Mode.MENU); }
         else if (step == FOLD) { step = MOVE; moved = false; }
         else if (step == MOVE) { step = HIDE; }
         else if (step == RESTORE) {
@@ -617,7 +618,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     private void previous() {
         if (step == INTRO) { finishToHome(); return; }
         cancelRecording(); narrator.stop(); floating.hideReview(); reviewView = null;
-        restoring = true; floating.getControl().setRequestStatus(null, false);
+        restoring = true; floating.getControl().setRequestControlsVisible(false); floating.getControl().setRequestStatus(null, false);
         step--; floating.showAgain(); restore.setVisibility(View.GONE);
         if (step == OPEN || step >= MOVE) showMode(ClickOverlayLayout.Mode.COLLAPSED);
         else if (step == WRITE || step == FOLD || step == VOICE) showMode(ClickOverlayLayout.Mode.MENU);
