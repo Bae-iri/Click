@@ -41,15 +41,32 @@ public class LoadingStatusViewTest {
   assertEquals(View.INVISIBLE, view.getChildAt(0).getVisibility());
   assertEquals("", ((TextView)view.getChildAt(1)).getText().toString());
  }
- @Test public void statusSurvivesInputModeChanges() {
+ @Test public void statusUpdatesNeverInsertProgressIntoInput() {
   ClickOverlayLayout overlay = new ClickOverlayLayout(RuntimeEnvironment.getApplication());
   overlay.setLoadingStatus("음성을 인식하고 있어요…");
+  overlay.setVoiceInputProcessing(true);
   overlay.openVoice();
-  assertNotNull(findVisibleStatus(overlay));
+  // Voice mode uses the microphone's processing animation instead of a second spinner.
+  assertNull(findVisibleStatus(overlay));
+  assertEquals(VoiceCaptureIndicator.State.PROCESSING, findVoiceIndicator(overlay).getState());
   overlay.openText();
-  assertNotNull(findVisibleStatus(overlay));
+  assertNull(findVisibleStatus(overlay));
+  overlay.openVoice();
+  assertEquals(VoiceCaptureIndicator.State.PROCESSING, findVoiceIndicator(overlay).getState());
+  overlay.openText();
+  assertNull(findVisibleStatus(overlay));
   overlay.setLoadingStatus(null);
   assertNull(findVisibleStatus(overlay));
+ }
+ private VoiceCaptureIndicator findVoiceIndicator(android.view.ViewGroup parent) {
+  for(int i=0;i<parent.getChildCount();i++) {
+   View view=parent.getChildAt(i);
+   if(view instanceof VoiceCaptureIndicator)return (VoiceCaptureIndicator)view;
+   if(view instanceof android.view.ViewGroup) {
+    VoiceCaptureIndicator found=findVoiceIndicator((android.view.ViewGroup)view);if(found!=null)return found;
+   }
+  }
+  return null;
  }
  private LoadingStatusView findVisibleStatus(android.view.ViewGroup parent) {
   for(int i=0;i<parent.getChildCount();i++) {

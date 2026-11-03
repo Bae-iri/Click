@@ -2,7 +2,6 @@ package com.click.service.overlay;
 
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 import com.click.ui.overlay.ClickOverlayLayout;
 import com.click.ui.overlay.LoadingStatusView;
 import java.lang.reflect.Field;
@@ -26,22 +25,23 @@ public class LoadingStatusLifecycleTest {
   }
   return null;
  }
- @Test public void speechVisionAndServerWaitStatesEndWithoutStaleSpinner() throws Exception {
+ @Test public void speechVisionAndServerUpdatesNeverAddFloatingStatusBanner() throws Exception {
   ClickOverlayService service=new ClickOverlayService();
-  ClickOverlayLayout overlay=new ClickOverlayLayout(RuntimeEnvironment.getApplication());overlay.openVoice();
+  // Transport callbacks must not recreate a status panel in the input window.
+  ClickOverlayLayout overlay=new ClickOverlayLayout(RuntimeEnvironment.getApplication());overlay.openText();
   field(service,"overlayView",overlay);
   Method refresh=ClickOverlayService.class.getDeclaredMethod("refreshLoadingStatus");refresh.setAccessible(true);
-  LoadingStatusView status=find(overlay);
+  assertNull(find(overlay));
   field(service,"listening",true);refresh.invoke(service);
-  assertEquals(View.VISIBLE,status.getVisibility());
-  assertTrue(((TextView)status.getChildAt(1)).getText().toString().contains("듣고"));
+  assertNull(find(overlay));
+  assertNull(find(overlay));
   field(service,"listening",false);field(service,"speechProcessing",true);refresh.invoke(service);
-  assertTrue(((TextView)status.getChildAt(1)).getText().toString().contains("음성을 인식"));
+  assertNull(find(overlay));
   field(service,"speechProcessing",false);field(service,"visionCaptureInFlight",true);refresh.invoke(service);
-  assertTrue(((TextView)status.getChildAt(1)).getText().toString().contains("화면을 분석"));
+  assertNull(find(overlay));
   field(service,"visionCaptureInFlight",false);field(service,"turnInFlight",true);refresh.invoke(service);
-  assertEquals(View.VISIBLE,status.getVisibility());
+  assertNull(find(overlay));
   field(service,"turnInFlight",false);refresh.invoke(service);
-  assertEquals(View.GONE,status.getVisibility());
+  assertNull(find(overlay));
  }
 }

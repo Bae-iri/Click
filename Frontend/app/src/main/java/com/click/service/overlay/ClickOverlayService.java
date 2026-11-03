@@ -2264,6 +2264,16 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                             || fontSizeResultCheck.changed(agentEpisodeId, acceptedGoal.optString("goal_type"), displayedSnapshot)
                             || command.renderPolicy != null && command.renderPolicy.optBoolean("adjustment_limit")));
         taskFlowView.setGuidanceProgress(response.step, response.totalSteps);
+        if (displayedSnapshot != null && command.requiresUserAction
+                && "tap".equals(command.actionType) && command.targetNodeId != null) {
+            for (AccessibilityNodeSnapshot node : displayedSnapshot.nodes) {
+                if (!command.targetNodeId.equals(node.nodeId) || !node.visibleToUser
+                        || !node.enabled || node.sensitiveInput) continue;
+                taskFlowView.setGuidanceTarget(node.text != null && !node.text.trim().isEmpty()
+                        ? node.text : node.contentDescription);
+                break;
+            }
+        }
         taskFlowView.setAutomaticProgress(automaticTouchEnabled()
                 && !"confirmation".equals(command.commandType) && !"blocked".equals(command.commandType));
         taskFlowCollapsed = !"confirmation".equals(command.commandType) && !"blocked".equals(command.commandType);

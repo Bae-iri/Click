@@ -18,7 +18,7 @@ import android.graphics.drawable.RippleDrawable;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
+import com.click.ui.common.ClickArtworkView;
 import com.click.R;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -32,11 +32,24 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 
-/** Compact request box, spoken guidance, and explicit user choices. */
+/**
+ * 요청 확인, 단계별 안내, 결과 확인을 보여주는 플로팅 안내창. Java 코드로 레이아웃을 구성한다.
+ * 작은 플로팅 버튼/음성·글 입력 메뉴는 ClickOverlayLayout.java에서 수정한다.
+ *
+ * 수정 위치 안내 (파일에서 "[UI 수정]"을 검색):
+ * - 색상: 아래 BLUE/INK/PALE_BLUE 등의 상수. ClickUi의 공통 색상과 별도로 정의되어 있다.
+ * - 공통 틀/헤더: 생성자. 창 너비: getWindowWidth(), 모드별 안쪽 여백: updateBubblePadding().
+ * - 요청 확인 화면: reviewStage(), addRequestBox(), addQuestionNarration(), choiceCards().
+ * - 진행/결과 화면: progress(), result(), completed().
+ * - 줄인 안내 말풍선: setMinimizedProgress(), CompactBubbleBackground.
+ * - 버튼 스타일: quietButton(), primaryButton(), secondaryButton(), styleReviewButton().
+ * 창 위치와 화면별 호출 시점은 service/overlay/ClickOverlayService.java에서 관리한다.
+ */
 @SuppressLint("ViewConstructor")
 public final class TaskFlowOverlayView extends LinearLayout {
     public static final String AUTOMATIC_PROGRESS_MESSAGE = "지금 진행 중이에요.";
     public static final String FONT_SIZE_QUESTION = "글자 크기를 어떻게 조절할까요?";
+    // [UI 수정] 이 안내창의 기본 팔레트. 각 메서드의 직접 지정 색상/ClickUi 호출도 함께 확인한다.
     private static final int BLUE = 0xFF3478F6;
     private static final int BLUE_DARK = 0xFF2868E8;
     private static final int INK = 0xFF101A36;
@@ -62,27 +75,32 @@ public final class TaskFlowOverlayView extends LinearLayout {
         default void expand() {}
         default void openInput() {}
     }
-    private final LoadingStatusView loadingStatus;
-    private final TextView automationStatus;
-    private final LinearLayout statusBox, progressSummary;
     private final Listener listener;
     private final LinearLayout content;
     private final Button pause;
     private final Button reviewConfirm;
-    private final LinearLayout reviewNavigation, stepHeader;
-    private final android.widget.ProgressBar stepProgress;
-    private final TextView stepLabel;
-    private final Button headerInput;
+    private final LinearLayout reviewNavigation;
+    private final Button headerReplay;
+    private final LinearLayout headerIdentity, headerActions;
     private final View divider;
     private final LinearLayout controls;
     private final LinearLayout recoveryActions;
     private TextView narrationStatus, narrationText;
     private LinearLayout requestCaptionRow;
-    private Button narrationPlayback, narrationCaptions, reviewReplay;
+    private Button narrationCaptions, requestEditorToggle;
+    private LinearLayout reviewEditor;
+    private TextView reviewSummaryView;
+    private EditText reviewRequestInput;
+    private RadioGroup reviewChoices;
     private String narrationMessage;
     private boolean narrationSpeaking, narrationUnavailable;
     private final TextView heading;
-    private final TextView brand;
+    private final Button backButton;
+    private LinearLayout guidanceProgress;
+    private android.widget.ProgressBar progressBar;
+    private TextView progressCount;
+    private View guidanceTarget;
+    private final View brand;
     private final View close;
     private final LinearLayout header;
     private final ScrollView scroll;
@@ -99,23 +117,20 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private String requestSummary;
     private final CompactBubbleBackground compactBackground = new CompactBubbleBackground();
 
+    // [UI 수정] 공통 틀을 만드는 곳: 배경/모서리 → 헤더 → 스크롤 본문 → 하단 버튼.
+    // 화면 전환 때 reviewStage()/updateBubblePadding() 등에서 일부 스타일을 다시 적용한다.
     public TaskFlowOverlayView(Context context, Listener listener) {
         super(context);
         this.listener = listener;
         maxHeight = (int) (getResources().getDisplayMetrics().heightPixels * .78f);
         setOrientation(VERTICAL);
-        setPadding(dp(14), dp(12), dp(14), dp(12));
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.WHITE); bg.setCornerRadius(dp(24)); bg.setStroke(dp(1), BORDER);
-        setBackground(bg); setElevation(dp(10));
+        setPadding(dp(22), dp(10), dp(22), dp(22));
+        setBackground(FloatingPanelStyle.surface(getResources().getDisplayMetrics().density)); setElevation(dp(7));
         LinearLayout bubble = new LinearLayout(context);
         bubble.setOrientation(VERTICAL);
-        TextView bubbleLabel = text("클릭 · 펼치기", 13);
-        bubbleLabel.setTextColor(BLUE_DARK);
-        bubble.addView(bubbleLabel);
         compactMessage = text("", 16);
         compactMessage.setOnClickListener(view -> listener.expand());
-        bubbleLabel.setOnClickListener(view -> listener.expand());
+        bubble.setOnClickListener(view -> listener.expand());
         bubble.addView(compactMessage);
         compactScroll = new ScrollView(context);
         compactScroll.setFillViewport(false);
@@ -124,84 +139,67 @@ public final class TaskFlowOverlayView extends LinearLayout {
         addView(compactScroll, new LayoutParams(-1, -2));
         header = new LinearLayout(context);
         header.setGravity(Gravity.CENTER_VERTICAL);
+        backButton = quietButton("", listener::openInput);
+        backButton.setContentDescription("이전 단계");
+        backButton.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 12));
+        Drawable backIcon = context.getDrawable(R.drawable.ic_flow_back);
+        backIcon.setBounds(0, 0, dp(22), dp(22));
+        backButton.setCompoundDrawables(backIcon, null, null, null);
+        backButton.setPadding(dp(4), dp(10), dp(10), dp(10));
+        backButton.setVisibility(GONE);
+        header.addView(backButton, new LayoutParams(dp(48), dp(48)));
         LinearLayout titles = new LinearLayout(context);
+        headerIdentity = titles;
         titles.setOrientation(VERTICAL);
-        LinearLayout identity = new LinearLayout(context);
-        identity.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView cursor = new ImageView(context);
-        cursor.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
-        cursor.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-        identity.addView(cursor, new LayoutParams(dp(23), dp(23)));
-        brand = text("클릭 안내", 14);
-        brand.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
-        brand.setTextColor(INK);
-        brand.setPadding(dp(6), 0, 0, 0);
-        identity.addView(brand);
-        titles.addView(identity);
+        brand = new ClickArtworkView(context, ClickArtworkView.Kind.WORDMARK);
+        brand.setContentDescription("클릭 로고");
+        brand.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
+        titles.addView(brand, new LayoutParams(dp(66), dp(24)));
         heading = ClickUi.title(context, "");
         heading.setTextSize(20);
         heading.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
         heading.setLetterSpacing(0);
+        heading.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
         heading.setPadding(0, 0, 0, 0);
         if (android.os.Build.VERSION.SDK_INT >= 28) heading.setAccessibilityHeading(true);
         header.addView(titles, new LayoutParams(0, -2, 1));
-        Button input = quietButton("입력", listener::openInput);
-        headerInput = input;
-        input.setContentDescription("말이나 글로 입력하기");
-        input.setTextSize(12); input.setMinimumWidth(dp(48));
-        input.setPadding(dp(8), dp(8), dp(8), dp(8));
-        input.setBackground(new InsetDrawable(ripple(PALE_BLUE, 0x183478F6, 12), 0, dp(8), 0, dp(8)));
-        input.setId(R.id.task_flow_input);
-        LayoutParams inputParams = new LayoutParams(-2, -2); inputParams.leftMargin = dp(4);
-        header.addView(input, inputParams);
+        headerActions = new LinearLayout(context);
+        headerActions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        headerReplay = quietButton("다시 듣기", () -> {
+            if (narrationSpeaking) listener.stopGuidance();
+            else listener.replayGuidance(guidanceMessage());
+        });
+        headerReplay.setContentDescription("클릭 음성 안내 다시 듣기");
+        headerReplay.setTextSize(11); headerReplay.setSingleLine(true);
+        headerReplay.setBackground(new InsetDrawable(rippleOutlined(Color.WHITE, 0xFFCEDDF4, 0x183478F6, 10), 0, dp(8), 0, dp(8)));
+        headerReplay.setPadding(dp(8), dp(8), dp(8), dp(8));
+        Drawable speaker = context.getDrawable(R.drawable.ic_overlay_speaker);
+        speaker.setBounds(0, 0, dp(14), dp(14));
+        headerReplay.setCompoundDrawablesRelative(speaker, null, null, null);
+        headerReplay.setCompoundDrawablePadding(dp(4));
+        headerReplay.setId(R.id.task_flow_replay);
+        headerActions.addView(headerReplay, new LayoutParams(-2, -2));
         Button minimize = quietButton("줄이기", listener::collapse);
         close = minimize;
         close.setId(R.id.task_flow_collapse);
-        minimize.setTextSize(12); minimize.setMinimumWidth(dp(54));
+        minimize.setTextSize(11); minimize.setTextColor(SECONDARY);
+        minimize.setSingleLine(true);
         close.setContentDescription("안내 창 줄이기");
-        close.setPadding(dp(10), dp(8), dp(10), dp(8));
         close.setFocusable(true);
-        close.setBackground(new InsetDrawable(ripple(PALE_BLUE, 0x183478F6, 12), 0, dp(8), 0, dp(8)));
+        close.setBackground(new InsetDrawable(ripple(Color.TRANSPARENT, 0x183478F6, 10), 0, dp(8), 0, dp(8)));
+        close.setPadding(dp(6), dp(8), dp(6), dp(8));
+        Drawable minus = context.getDrawable(R.drawable.ic_overlay_minimize);
+        minus.setBounds(0, 0, dp(14), dp(14));
+        minimize.setCompoundDrawablesRelative(minus, null, null, null);
+        minimize.setCompoundDrawablePadding(dp(3));
         close.setOnClickListener(view -> listener.collapse());
         LayoutParams closeParams = new LayoutParams(-2, -2);
         closeParams.leftMargin = dp(4);
-        header.addView(close, closeParams);
+        headerActions.addView(close, closeParams);
+        header.addView(headerActions, new LayoutParams(-2, -2));
         LayoutParams headerParams = new LayoutParams(-1, -2);
         headerParams.bottomMargin = dp(12);
         addView(header, headerParams);
-        stepHeader = new LinearLayout(context);
-        stepHeader.setGravity(Gravity.CENTER_VERTICAL);
-        stepProgress = new android.widget.ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal);
-        stepProgress.setMax(2);
-        android.graphics.drawable.ClipDrawable fill = new android.graphics.drawable.ClipDrawable(round(BLUE, 3), Gravity.LEFT,
-                android.graphics.drawable.ClipDrawable.HORIZONTAL);
-        android.graphics.drawable.LayerDrawable track = new android.graphics.drawable.LayerDrawable(new Drawable[]{round(0xFFE8F0FF, 3), fill});
-        track.setId(0, android.R.id.background); track.setId(1, android.R.id.progress);
-        stepProgress.setProgressDrawable(track);
-        stepHeader.addView(stepProgress, new LayoutParams(0, dp(3), 1));
-        stepLabel = text("", 11); stepLabel.setTextColor(SECONDARY);
-        stepLabel.setPadding(dp(10), 0, 0, 0);
-        stepHeader.addView(stepLabel);
-        stepHeader.setVisibility(GONE);
-        LayoutParams stageParams = spaced(0); stageParams.bottomMargin = dp(16);
-        addView(stepHeader, stageParams);
-        statusBox = new LinearLayout(context);
-        statusBox.setOrientation(VERTICAL);
-        statusBox.setPadding(dp(12), dp(8), dp(12), dp(8));
-        statusBox.setBackground(round(PALE_BLUE, 16));
-        progressSummary = new LinearLayout(context);
-        progressSummary.setOrientation(VERTICAL);
-        progressSummary.setVisibility(GONE);
-        statusBox.addView(progressSummary, spaced(0));
-        loadingStatus = new LoadingStatusView(context, true);
-        statusBox.addView(loadingStatus, spaced(4));
-        automationStatus = text("", 14);
-        automationStatus.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
-        automationStatus.setVisibility(GONE);
-        statusBox.addView(automationStatus, spaced(4));
-        statusBox.setVisibility(GONE);
-        LayoutParams statusParams = spaced(0); statusParams.bottomMargin = dp(8);
-        addView(statusBox, statusParams);
         content = new LinearLayout(context); content.setOrientation(VERTICAL);
         content.setPadding(0, 0, 0, dp(10));
         scroll = new ScrollView(context); scroll.setFillViewport(false); scroll.addView(content);
@@ -214,7 +212,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         });
         addView(scroll, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
 
-        reviewConfirm = primaryButton("이대로 시작하기", () -> listener.confirmRequirements());
+        reviewConfirm = primaryButton("안내 시작하기", () -> listener.confirmRequirements());
         styleReviewButton(reviewConfirm, true);
         reviewConfirm.setVisibility(GONE);
         LayoutParams reviewParams = spaced(0); reviewParams.bottomMargin = dp(8);
@@ -249,28 +247,23 @@ public final class TaskFlowOverlayView extends LinearLayout {
         addView(controls);
     }
 
-    public void setAutomationStatus(String message) {
-        automationStatus.setText(message == null ? "" : message);
-        automationStatus.setVisibility(message == null || message.trim().isEmpty() ? GONE : VISIBLE);
-        updateStatusBox();
-    }
-    public void setLoadingStatus(String message) { loadingStatus.setStatus(message); updateStatusBox(); }
-    private void updateStatusBox() {
-        statusBox.setVisibility(!(minimizedProgress && automaticProgress) && (progressSummary.getVisibility() == VISIBLE
-                || loadingStatus.isActive() || automationStatus.getVisibility() == VISIBLE
-                ) ? VISIBLE : GONE);
-    }
+    // Background status callbacks must never add a banner to a floating guide.
+    public void setAutomationStatus(String message) { }
+    public void setLoadingStatus(String message) { }
 
     public void setAutomaticProgress(boolean automatic) {
         automaticProgress = automatic && hasProgress();
-        if (minimizedProgress) compactMessage.setText(compactGuidance());
-        updateStatusBox();
+        if (minimizedProgress) {
+            compactMessage.setText(compactGuidance());
+            compactMessage.setContentDescription(compactGuidance() + ". 눌러서 안내 펼치기");
+        }
     }
 
     private String compactGuidance() {
         return automaticProgress ? AUTOMATIC_PROGRESS_MESSAGE : guidanceMessage();
     }
 
+    // 화면 폭에 맞추되 큰 글자에서도 선택 카드가 충분한 너비를 갖도록 한다.
     public int getWindowWidth(int screenWidth) { return Math.min(screenWidth - dp(24), dp(minimizedProgress ? 260 : 340)); }
     public void setAvailableHeight(int height) { if (maxHeight != height) { maxHeight = height; requestLayout(); } }
     public boolean hasProgress() { return progressMessage != null; }
@@ -282,13 +275,15 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public boolean isMinimizedProgress() { return minimizedProgress; }
     private View[] expandedSections() {
         return new View[]{header, scroll, controls, divider, reviewConfirm, recoveryActions,
-                progressSummary, stepHeader, reviewNavigation};
+                reviewNavigation};
     }
+    // [UI 수정] 줄이기 상태의 표시 항목/배경. 말풍선 꼬리 모양은 CompactBubbleBackground에서 그린다.
     public void setMinimizedProgress(boolean minimized) {
         minimized = minimized && hasCompactContent();
         if (minimizedProgress == minimized) return;
         minimizedProgress = minimized;
         compactMessage.setText(minimized ? compactGuidance() : "");
+        compactMessage.setContentDescription(minimized ? compactGuidance() + ". 눌러서 안내 펼치기" : null);
         compactScroll.setVisibility(minimized ? VISIBLE : GONE);
         View[] sections = expandedSections();
         if (minimized) expandedVisibility = new int[sections.length];
@@ -296,9 +291,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
             if (minimized) { expandedVisibility[i] = sections[i].getVisibility(); sections[i].setVisibility(GONE); }
             else if (expandedVisibility != null) sections[i].setVisibility(expandedVisibility[i]);
         }
-        updateStatusBox();
         updateBubblePadding();
-        setBackground(minimized ? compactBackground : outline(Color.WHITE, BORDER, 24));
+        setBackground(minimized ? compactBackground : FloatingPanelStyle.surface(getResources().getDisplayMetrics().density));
         requestLayout();
     }
     public void setRequestSummary(String request) {
@@ -308,19 +302,58 @@ public final class TaskFlowOverlayView extends LinearLayout {
         return reviewScreen ? (reviewStep == 1 ? "상세정보 확인" : "요청 확인")
                 : hasProgress() ? "안내 중" : heading.getText().toString();
     }
-    public void setGuidanceProgress(int completed, int total) {
-        boolean visible = hasProgress() && total > 0;
-        stepHeader.setVisibility(visible && !minimizedProgress ? VISIBLE : GONE);
-        if (minimizedProgress && expandedVisibility != null) {
-            View[] sections = expandedSections();
-            for (int i = 0; i < sections.length; i++)
-                if (sections[i] == stepHeader) expandedVisibility[i] = visible ? VISIBLE : GONE;
+    // Only execution has a counter. Unknown totals must never imply a made-up plan.
+    public void setGuidanceProgress(int step, int total) {
+        if (!hasProgress() || guidanceProgress == null) return;
+        boolean known = total > 0 && step >= 0 && step <= total;
+        guidanceProgress.setVisibility(known ? VISIBLE : GONE);
+        if (!known) return;
+        progressBar.setMax(total); progressBar.setProgress(step);
+        progressCount.setText(step + "/" + total);
+        guidanceProgress.setContentDescription("전체 " + total + "단계 중 " + step + "단계");
+    }
+
+    /** The target comes from the current observed screen, never from guessed instructions. */
+    public void setGuidanceTarget(String label) {
+        if (!hasProgress()) return;
+        if (guidanceTarget != null) content.removeView(guidanceTarget);
+        guidanceTarget = null;
+        if (label == null || label.trim().isEmpty()) return;
+        String target = label.trim();
+        LinearLayout section = new LinearLayout(getContext()); section.setOrientation(VERTICAL);
+        TextView help = text("안내를 접고 화면에서 이 항목을 눌러 주세요.", 15);
+        help.setTextColor(SECONDARY);
+        section.addView(help, spaced(12));
+        LinearLayout row = new LinearLayout(getContext()); row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(16), dp(16), dp(16), dp(16));
+        row.setMinimumHeight(dp(78)); row.setBackground(ripple(Color.WHITE, 0x183478F6, 18));
+        row.setElevation(dp(2));
+        android.widget.ImageView icon = new android.widget.ImageView(getContext());
+        boolean settings = "설정".equals(target);
+        icon.setImageResource(settings ? R.drawable.ic_home_settings
+                : target.contains("디스플레이") || target.contains("화면") ? R.drawable.ic_flow_display
+                : R.drawable.ic_flow_document);
+        if (!settings) {
+            icon.setPadding(dp(12), dp(12), dp(12), dp(12));
+            icon.setBackground(FloatingPanelStyle.summary(getResources().getDisplayMetrics().density));
         }
-        if (!visible) return;
-        int current = Math.max(0, Math.min(completed, total));
-        stepProgress.setMax(total); stepProgress.setProgress(current);
-        stepLabel.setText(current + "/" + total);
-        stepHeader.setContentDescription("전체 " + total + "단계 중 " + current + "단계를 진행했어요");
+        icon.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.addView(icon, new LayoutParams(dp(50), dp(50)));
+        TextView name = text(target, 17);
+        name.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
+        LayoutParams copy = new LayoutParams(0, -2, 1); copy.leftMargin = dp(16);
+        row.addView(name, copy);
+        android.widget.ImageView arrow = new android.widget.ImageView(getContext());
+        arrow.setImageResource(R.drawable.ic_review_chevron);
+        arrow.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.addView(arrow, new LayoutParams(dp(20), dp(24)));
+        row.setFocusable(true);
+        row.setContentDescription(target + ". 안내를 접고 화면에서 찾기");
+        row.setOnClickListener(view -> listener.collapse());
+        section.addView(row, spaced(24));
+        LayoutParams params = spaced(0); params.bottomMargin = dp(16);
+        content.addView(section, Math.min(2, content.getChildCount()), params);
+        guidanceTarget = section;
     }
     public void actionRequired(String message) {
         if (hasProgress()) progress(requestSummary, null, message, false);
@@ -333,58 +366,66 @@ public final class TaskFlowOverlayView extends LinearLayout {
         compactBackground.above = above; compactBackground.invalidateSelf();
         if (changed && minimizedProgress) { updateBubblePadding(); invalidateOutline(); }
     }
+    // [UI 수정] 줄인 말풍선/요청 확인/일반 안내마다 다른 내부 여백을 적용한다.
     private void updateBubblePadding() {
         if (minimizedProgress) setPadding(dp(14), dp(compactBackground.above ? 22 : 10), dp(14), dp(compactBackground.above ? 10 : 22));
-        else if (reviewScreen) setPadding(dp(20), dp(14), dp(20), dp(16));
-        else setPadding(dp(14), dp(12), dp(14), dp(12));
+        else setPadding(dp(22), dp(10), dp(22), dp(22));
     }
     @Override protected void onMeasure(int width, int height) {
         int available = MeasureSpec.getMode(height) == MeasureSpec.UNSPECIFIED ? maxHeight
                 : Math.min(maxHeight, MeasureSpec.getSize(height));
         boolean compact = available < dp(260) * Math.max(1f, getResources().getConfiguration().fontScale);
-        brand.setVisibility(compact ? GONE : VISIBLE);
-        heading.setTextSize(reviewScreen ? 17 : compact ? 18 : 20);
+        brand.setVisibility(reviewScreen ? GONE : VISIBLE);
+        heading.setTextSize(compact ? 20 : 22);
+        int innerWidth = MeasureSpec.getSize(width) - getPaddingLeft() - getPaddingRight();
+        float headerWidth = dp((reviewScreen ? 48 : 66) + 16 + 12 + 14 + 14 + 4 + 3 + 4 + 8)
+                + headerReplay.getPaint().measureText("음성 멈춤")
+                + ((TextView) close).getPaint().measureText("줄이기");
+        boolean stacked = headerWidth > innerWidth;
+        if (header.getOrientation() != (stacked ? VERTICAL : HORIZONTAL)) {
+            header.setOrientation(stacked ? VERTICAL : HORIZONTAL);
+            headerIdentity.setLayoutParams(new LayoutParams(stacked ? -1 : 0, -2, stacked ? 0 : 1));
+            headerActions.setLayoutParams(new LayoutParams(stacked ? -1 : -2, -2));
+        }
         LayoutParams headerParams = (LayoutParams) header.getLayoutParams();
-        headerParams.bottomMargin = dp(compact ? 6 : 8);
+        headerParams.bottomMargin = dp(reviewScreen ? 14 : compact ? 8 : 16);
         super.onMeasure(width, MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST));
     }
     private void clear(String title) {
         reviewScreen = false;
+        backButton.setVisibility(GONE);
         reviewStep = 0;
         setMinimizedProgress(false);
         updateBubblePadding();
-        if (reviewReplay != null) { header.removeView(reviewReplay); reviewReplay = null; }
+        reviewChoices = null; reviewEditor = null; reviewRequestInput = null; requestEditorToggle = null;
+        reviewSummaryView = null;
         automaticProgress = false;
         progressMessage = null;
-        progressSummary.removeAllViews();
-        progressSummary.setVisibility(GONE);
-        setAutomationStatus(null);
+        guidanceProgress = null; progressBar = null; progressCount = null; guidanceTarget = null;
         content.removeAllViews();
         content.setPadding(0, 0, 0, dp(10));
         if (title != null && !title.isEmpty()) content.addView(heading, spaced(0));
         reviewConfirm.setVisibility(GONE);
-        stepHeader.setVisibility(GONE);
-        stepLabel.setText("");
         reviewNavigation.removeAllViews(); reviewNavigation.setVisibility(GONE);
         recoveryActions.removeAllViews();
         recoveryActions.setVisibility(GONE);
-        headerInput.setVisibility(VISIBLE);
+        headerReplay.setVisibility(VISIBLE);
         divider.setVisibility(VISIBLE);
         controls.setVisibility(VISIBLE);
         narrationStatus = narrationText = null;
-        narrationPlayback = narrationCaptions = null;
+        narrationCaptions = null;
         narrationMessage = null; narrationSpeaking = false; requestCaptionRow = null;
         resetScrollPending = true;
         scroll.scrollTo(0, 0);
         scroll.post(() -> scroll.scrollTo(0, 0));
         heading.setText(title);
+        setNarrationState(false, narrationUnavailable);
         pause.setText("일시정지"); pause.setOnClickListener(v -> listener.control("pause_task"));
     }
 
     /** A transport or contract failure is not a request for the user to rephrase. */
     public void resolutionUnavailable(String request, String message, Runnable retry) {
         clear("요청을 다시 확인할게요");
-        headerInput.setVisibility(GONE);
         divider.setVisibility(GONE);
         controls.setVisibility(GONE);
         recoveryActions.setVisibility(VISIBLE);
@@ -397,7 +438,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
     /** An unresolved request has no selectable goal or running task to pause. */
     public void unresolvedGoal(String request) {
         clear("조금 더 여쭤볼게요");
-        headerInput.setVisibility(GONE);
         divider.setVisibility(GONE);
         controls.setVisibility(GONE);
         recoveryActions.setVisibility(VISIBLE);
@@ -495,40 +535,30 @@ public final class TaskFlowOverlayView extends LinearLayout {
         input.clearFocus();
     }
 
+    // [UI 수정] 요청 확인 단계에서 공통 헤더/버튼의 표시와 제목을 재설정하는 곳.
     private void reviewStage(int step, String title, String description) {
         clear(title);
         reviewScreen = true;
         reviewStep = step;
+        backButton.setVisibility(VISIBLE);
+        backButton.setOnClickListener(view -> listener.openInput());
         updateBubblePadding();
         divider.setVisibility(GONE); controls.setVisibility(GONE);
-        TextView subtitle = text(description, 12); subtitle.setTextColor(SECONDARY);
+        TextView subtitle = text(description, 15); subtitle.setTextColor(SECONDARY);
+        subtitle.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
         subtitle.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
         subtitle.setPadding(0, 0, 0, 0);
-        content.addView(subtitle, spaced(6));
-        content.setPadding(0, 0, 0, dp(step == 2 ? 4 : 12));
-        reviewReplay = quietButton("", () -> {
-            if (narrationSpeaking) listener.stopGuidance();
-            else listener.replayGuidance(narrationMessage);
-        });
-        Drawable speaker = getContext().getDrawable(R.drawable.ic_overlay_speaker);
-        speaker.setBounds(0, 0, dp(18), dp(18));
-        reviewReplay.setCompoundDrawables(speaker, null, null, null);
-        reviewReplay.setPadding(dp(11), dp(10), dp(11), dp(10));
-        reviewReplay.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 12));
-        reviewReplay.setContentDescription("클릭 음성 안내 다시 듣기");
-        header.addView(reviewReplay, 1, new LayoutParams(dp(40), -2));
-        narrationPlayback = reviewReplay;
+        if (description != null && !description.isEmpty()) content.addView(subtitle, spaced(8));
+        content.setPadding(0, 0, 0, dp(step == 2 ? 4 : 6));
     }
 
     private Button reviewNext(Runnable back, Runnable next) {
         reviewNavigation.removeAllViews(); reviewNavigation.setOrientation(HORIZONTAL);
         reviewNavigation.setVisibility(VISIBLE);
-        Button previous = quietButton("이전 단계", back);
-        styleReviewButton(previous, false);
-        reviewNavigation.addView(previous, new LayoutParams(0, -2, 1));
+        backButton.setOnClickListener(view -> back.run());
         Button forward = primaryButton("다음 단계", next);
         styleReviewButton(forward, true);
-        LayoutParams params = new LayoutParams(0, -2, 1); params.leftMargin = dp(8);
+        LayoutParams params = new LayoutParams(0, -2, 1); params.topMargin = dp(12);
         reviewNavigation.addView(forward, params);
         StateListDrawable states = new StateListDrawable();
         states.addState(new int[]{-android.R.attr.state_enabled}, round(0xFFF0F3F8, 14));
@@ -541,40 +571,40 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     private void readyActions(Runnable back) {
-        reviewConfirm.setText("이대로 시작하기");
+        reviewConfirm.setText("안내 시작하기");
         reviewConfirm.setVisibility(VISIBLE); reviewConfirm.setEnabled(true); reviewConfirm.setAlpha(1f);
-        reviewNavigation.removeAllViews(); reviewNavigation.setOrientation(VERTICAL);
+        backButton.setOnClickListener(view -> back.run());
+        reviewNavigation.setOrientation(VERTICAL);
         reviewNavigation.setVisibility(VISIBLE);
-        Button previous = secondaryButton("이전 단계", back);
-        styleReviewButton(previous, false);
-        reviewNavigation.addView(previous, new LayoutParams(-1, -2));
     }
 
+    // [UI 수정] 선택지 카드의 배치/선택 표시. 선택 결과 전달은 selected 콜백이 담당한다.
     private RadioGroup choiceCards(JSONArray choices, java.util.function.Consumer<JSONObject> selected) {
         RadioGroup group = new RadioGroup(getContext()); group.setOrientation(VERTICAL);
+        reviewChoices = group;
         if (choices != null) for (int i = 0; i < choices.length(); i++) {
             JSONObject choice = choices.optJSONObject(i); if (choice == null) continue;
             RadioButton card = new RadioButton(getContext()); card.setId(View.generateViewId());
             String label = choice.optString("label");
-            if ("휴대폰 설정에서 기본 글자 크기 변경".equals(label)) label = "휴대폰 기본 글자 크기";
+            if ("휴대폰 설정에서 기본 글자 크기 변경".equals(label)) label = "휴대폰 전체";
             else if ("특정 앱 안에서만 변경".equals(label)) label = "특정 앱 안에서만";
-            card.setText(label); card.setTextSize(14); card.setTextColor(INK);
-            card.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
+            card.setText(label); card.setTextSize(16); card.setTextColor(INK);
+            card.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
             card.setButtonDrawable((Drawable) null); card.setIncludeFontPadding(false);
-            card.setGravity(Gravity.CENTER_VERTICAL); card.setMinHeight(dp(48));
-            card.setPadding(dp(14), dp(11), dp(14), dp(11));
+            card.setGravity(Gravity.CENTER_VERTICAL); card.setMinHeight(dp(58));
+            card.setPadding(dp(16), dp(14), dp(16), dp(14));
             StateListDrawable mark = new StateListDrawable();
             mark.addState(new int[]{android.R.attr.state_checked}, new StatusMark(true, false));
             mark.addState(new int[]{}, new StatusMark(false, false));
             mark.setBounds(0, 0, dp(20), dp(20));
-            card.setCompoundDrawables(null, null, mark, null); card.setCompoundDrawablePadding(dp(12));
+            card.setCompoundDrawablesRelative(mark, null, null, null); card.setCompoundDrawablePadding(dp(10));
             card.setBackground(cardBackground(false));
-            RadioGroup.LayoutParams params = new RadioGroup.LayoutParams(-1, -2); params.bottomMargin = dp(8);
+            RadioGroup.LayoutParams params = new RadioGroup.LayoutParams(-1, -2); params.topMargin = dp(i == 0 ? 0 : 10);
             group.addView(card, params);
             card.setOnCheckedChangeListener((view, checked) -> {
                 card.setBackground(cardBackground(checked));
-                card.setTextColor(checked ? BLUE_DARK : INK);
-                if (checked) { selected.accept(choice); listener.onReviewChoiceSelected(); }
+                card.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
+                if (checked) { closeRequestEditor(); selected.accept(choice); listener.onReviewChoiceSelected(); }
             });
         }
         return group;
@@ -582,8 +612,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     private void requestEditor(String request, Runnable reset) {
         LinearLayout editor = new LinearLayout(getContext()); editor.setOrientation(VERTICAL);
+        reviewEditor = editor;
         editor.setVisibility(GONE);
         EditText input = new EditText(getContext()); input.setTextSize(14); input.setTextColor(INK);
+        reviewRequestInput = input;
         input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
         input.setContentDescription("요청 내용 수정"); input.setHint("원하시는 내용을 적어 주세요");
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
@@ -600,8 +632,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
         editor.addView(apply, spaced(8));
         if (reset != null) editor.addView(quietButton("답변을 다시 선택", reset), spaced(6));
         boolean confirmation = reviewStep == 2;
-        Button edit = quietButton(confirmation ? "내용 수정하기" : "다른 내용 입력하기", () -> {
+        Button edit = quietButton(confirmation ? "내용 수정" : "직접 입력하기", () -> {
             listener.stopGuidance(); editor.setVisibility(VISIBLE); reviewConfirm.setVisibility(GONE);
+            reviewNavigation.setVisibility(GONE);
+            if (reviewChoices != null) reviewChoices.clearCheck();
+            if (!confirmation) styleInputChoice(true);
             input.requestFocus(); input.setSelection(input.length());
             editor.post(() -> scroll.smoothScrollTo(0, editor.getTop()));
             showKeyboardWhenFocused(input);
@@ -611,30 +646,60 @@ public final class TaskFlowOverlayView extends LinearLayout {
         edit.setBackground(confirmation ? ripple(Color.TRANSPARENT, 0x183478F6, 12)
                 : ripple(0xFFF5F8FD, 0x183478F6, 14));
         if (confirmation) {
-            edit.setMinHeight(dp(40)); edit.setMinimumHeight(dp(40));
-            edit.setPadding(dp(8), dp(6), 0, dp(6));
-            edit.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-            LayoutParams editParams = new LayoutParams(-2, -2);
-            editParams.gravity = Gravity.END; editParams.topMargin = dp(2);
-            content.addView(edit, editParams);
-        } else content.addView(edit, spaced(8));
+            edit.setTextSize(15); edit.setTextColor(SECONDARY);
+            edit.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 12));
+            edit.setPadding(dp(12), dp(10), dp(12), dp(10));
+            edit.setGravity(Gravity.CENTER);
+            reviewNavigation.addView(edit, new LayoutParams(-1, -2));
+        } else {
+            requestEditorToggle = edit;
+            styleInputChoice(false);
+            content.addView(edit, spaced(10));
+        }
         content.addView(editor, spaced(8));
     }
 
+    private void styleInputChoice(boolean selected) {
+        if (requestEditorToggle == null) return;
+        requestEditorToggle.setTextSize(16); requestEditorToggle.setTextColor(INK);
+        requestEditorToggle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
+        requestEditorToggle.setMinHeight(dp(58)); requestEditorToggle.setMinimumHeight(dp(58));
+        requestEditorToggle.setPadding(dp(16), dp(14), dp(16), dp(14));
+        Drawable mark = new StatusMark(selected, false); mark.setBounds(0, 0, dp(20), dp(20));
+        requestEditorToggle.setCompoundDrawablesRelative(mark, null, null, null);
+        requestEditorToggle.setCompoundDrawablePadding(dp(10));
+        requestEditorToggle.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
+        requestEditorToggle.setBackground(cardBackground(selected));
+    }
+
+    private void closeRequestEditor() {
+        if (reviewEditor == null || reviewEditor.getVisibility() != VISIBLE) return;
+        hideKeyboard(reviewRequestInput);
+        reviewEditor.setVisibility(GONE);
+        reviewNavigation.setVisibility(VISIBLE);
+        styleInputChoice(false);
+    }
+
     private void reviewSummary(String message) {
-        TextView summary = text(message, 15);
-        summary.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
+        TextView summary = text(message, 17);
+        reviewSummaryView = summary;
+        summary.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         summary.setLineSpacing(dp(2), 1.15f);
-        summary.setPadding(dp(16), dp(14), dp(16), dp(14));
-        summary.setBackground(round(0xFFF4F7FC, 16));
-        content.addView(summary, spaced(16));
+        summary.setPadding(dp(20), dp(22), dp(20), dp(22));
+        Drawable document = getContext().getDrawable(R.drawable.ic_flow_document);
+        document.setBounds(0, 0, dp(28), dp(28));
+        summary.setCompoundDrawablesRelative(document, null, null, null);
+        summary.setCompoundDrawablePadding(dp(16));
+        summary.setBackground(FloatingPanelStyle.summary(getResources().getDisplayMetrics().density));
+        LayoutParams params = spaced(24); params.bottomMargin = dp(24);
+        content.addView(summary, params);
     }
 
     private String preparedSummary(com.click.domain.goal.GoalPreparationState state) {
         String type = state.goal == null ? "" : state.goal.optString("goal_type");
         boolean increase = type.endsWith(".increase");
         if (type.startsWith("settings.font_size."))
-            return "휴대폰의 기본 글자 크기를\n" + (increase ? "더 크게" : "더 작게") + " 변경할게요.";
+            return "휴대폰 전체 글자 크기\n" + (increase ? "키워주기" : "줄여주기");
         if (type.startsWith("settings.brightness."))
             return "휴대폰 화면을\n" + (increase ? "더 밝게" : "더 어둡게") + " 조절할게요.";
         if (type.startsWith("settings.volume."))
@@ -652,13 +717,13 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.addView(choiceCards(candidates, choice -> {
             selected[0] = choice.optJSONObject("goal");
             next.setEnabled(selected[0] != null); next.setAlpha(1f);
-        }), spaced(14));
+        }), spaced(24));
         requestEditor("", null);
     }
 
     public void preparation(com.click.domain.goal.GoalPreparationState state) {
         if (state.ready()) {
-            reviewStage(2, "이렇게 진행할게요", "요청하신 내용을 확인해 주세요.");
+            reviewStage(2, "이렇게 이해했어요", "");
             narrationMessage = state.guidance();
             reviewSummary(preparedSummary(state));
             requestEditor(state.data.optString("source_text"), listener::resetGoalInputs);
@@ -668,7 +733,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         JSONObject question = state.question();
         reviewStage(1, question == null ? "조금 더 확인할게요" : question.optString("message", "어떤 작업을 도와드릴까요?"),
                 question != null && "choice".equals(question.optString("kind"))
-                        ? "원하시는 항목을 선택해 주세요." : "몇 가지만 더 여쭤볼게요.");
+                        ? "필요한 정보를 먼저 확인할게요." : "몇 가지만 더 여쭤볼게요.");
         narrationMessage = state.guidance();
         if (state.needsInput()) {
             if ("choice".equals(question.optString("kind"))) {
@@ -678,7 +743,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
                 });
                 content.addView(choiceCards(question.optJSONArray("choices"), choice -> {
                     answer[0] = choice.optString("value"); next.setEnabled(true); next.setAlpha(1f);
-                }), spaced(14));
+                }), spaced(24));
             } else {
                 EditText input = new EditText(getContext()); input.setTextSize(14);
                 input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
@@ -717,8 +782,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.addView(quietButton("다시 확인", retry), spaced(6));
     }
     public void requirements(RequirementReview review, boolean executable, String spokenGuidance) {
-        reviewStage(executable ? 2 : 1, executable ? "이렇게 진행할게요" : "어떤 작업을 도와드릴까요?",
-                executable ? "요청하신 내용을 확인해 주세요." : "원하시는 항목을 선택해 주세요.");
+        reviewStage(executable ? 2 : 1, executable ? "이렇게 이해했어요" : "어떤 작업을 도와드릴까요?",
+                executable ? "" : "원하시는 항목을 선택해 주세요.");
         narrationMessage = spokenGuidance;
         if (executable) {
             reviewSummary(review.summary());
@@ -740,7 +805,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             });
             content.addView(choiceCards(choices, selected -> {
                 choice[0] = selected.optString("value"); next.setEnabled(true); next.setAlpha(1f);
-            }), spaced(14));
+            }), spaced(24));
         } else {
             content.addView(text(spokenGuidance, 15), spaced(12));
         }
@@ -767,6 +832,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void setRequirements(RequirementReview review) {}
     public void setChecklist(JSONArray checklist) {}
 
+    // [UI 수정] 사용자가 요청한 내용을 담는 박스: 배경, 글자, 여백과 요약 표시.
     private void addRequestBox(String request, String resolved) {
         LinearLayout box = new LinearLayout(getContext());
         box.setGravity(Gravity.TOP);
@@ -796,6 +862,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.addView(box, spaced(0));
     }
 
+    // 확인 질문은 본문에, 음성 재생은 공통 헤더 한 곳에 표시한다.
     private void addQuestionNarration(String message) {
         if (message == null || message.trim().isEmpty()) return;
         narrationMessage = message;
@@ -805,20 +872,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         question.setBackground(outline(PALE_BLUE, 0xFFD5E4FF, 16));
         narrationText = text(message, 17);
         narrationText.setTextColor(INK);
-        narrationText.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
+        narrationText.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         if (android.os.Build.VERSION.SDK_INT >= 28) narrationText.setAccessibilityHeading(true);
         question.addView(narrationText, new LayoutParams(0, -2, 1));
-        narrationPlayback = quietButton("다시 듣기", () -> {
-            if (narrationSpeaking) listener.stopGuidance();
-            else listener.replayGuidance(narrationMessage);
-        });
-        narrationPlayback.setTextSize(13);
-        narrationPlayback.setMaxLines(1);
-        narrationPlayback.setPadding(dp(8), dp(6), dp(8), dp(6));
-        narrationPlayback.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 10));
-        LayoutParams playbackParams = new LayoutParams(-2, -2);
-        playbackParams.leftMargin = dp(8);
-        question.addView(narrationPlayback, playbackParams);
         content.addView(question, spaced(10));
         setNarrationState(false, narrationUnavailable);
     }
@@ -832,12 +888,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         narrationStatus = text("클릭의 안내", 13); narrationStatus.setTextColor(SECONDARY);
         narrationStatus.setVisibility(largeText ? GONE : VISIBLE);
         player.addView(narrationStatus, new LayoutParams(0, -2, 1));
-        narrationPlayback = quietButton("다시 듣기", () -> {
-            if (narrationSpeaking) listener.stopGuidance();
-            else listener.replayGuidance(narrationMessage);
-        });
-        narrationPlayback.setTextSize(13); narrationPlayback.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 10));
-        player.addView(narrationPlayback, largeText ? new LayoutParams(0, -2, 1) : new LayoutParams(dp(80), -2));
         narrationCaptions = quietButton("글로 보기", () -> {
             boolean show = narrationText.getVisibility() != VISIBLE;
             narrationText.setVisibility(show ? VISIBLE : GONE);
@@ -857,11 +907,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
     /** TTS lifecycle updates never rebuild the card or discard a user's draft. */
     public void setNarrationState(boolean speaking, boolean unavailable) {
         narrationSpeaking = speaking; narrationUnavailable = unavailable;
-        if (narrationPlayback == null) return;
-        if (narrationStatus != null) narrationStatus.setText(progressMessage != null ? "현재 진행"
-                : unavailable ? "글로 안내할게요" : speaking ? "말하고 있어요" : "클릭의 안내");
-        narrationPlayback.setText(reviewReplay == narrationPlayback ? "" : speaking ? "음성 멈춤" : "다시 듣기");
-        narrationPlayback.setContentDescription(speaking ? "음성 안내 멈추기" : "클릭 음성 안내 다시 듣기");
+        if (narrationStatus != null) narrationStatus.setText(unavailable ? "글로 안내할게요" : speaking ? "말하고 있어요" : "클릭의 안내");
+        headerReplay.setText(speaking ? "음성 멈춤" : "다시 듣기");
+        headerReplay.setContentDescription(speaking ? "음성 안내 멈추기" : "클릭 음성 안내 다시 듣기");
         if (unavailable && narrationText != null) {
             narrationText.setVisibility(VISIBLE);
             if (narrationCaptions != null) narrationCaptions.setText("글 접기");
@@ -877,32 +925,31 @@ public final class TaskFlowOverlayView extends LinearLayout {
         clear(null);
         progressMessage = instruction == null || instruction.trim().isEmpty() ? "작업을 진행하고 있어요." : instruction;
         narrationMessage = progressMessage;
-        LinearLayout titleRow = new LinearLayout(getContext());
-        titleRow.setGravity(Gravity.CENTER_VERTICAL);
-        narrationStatus = text("현재 진행", 13); narrationStatus.setTextColor(BLUE_DARK);
-        titleRow.addView(narrationStatus, new LayoutParams(0, -2, 1));
-        narrationPlayback = quietButton("다시 듣기", () -> {
-            if (narrationSpeaking) listener.stopGuidance();
-            else listener.replayGuidance(narrationMessage);
-        });
-        narrationPlayback.setTextSize(13);
-        narrationPlayback.setPadding(dp(8), dp(4), dp(8), dp(4));
-        narrationPlayback.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 10));
-        titleRow.addView(narrationPlayback, new LayoutParams(-2, -2));
-        progressSummary.addView(titleRow, spaced(0));
-        narrationText = text(progressMessage, 15);
+        guidanceProgress = new LinearLayout(getContext());
+        guidanceProgress.setGravity(Gravity.CENTER_VERTICAL);
+        guidanceProgress.setVisibility(GONE);
+        progressBar = new android.widget.ProgressBar(getContext(), null, android.R.attr.progressBarStyleHorizontal);
+        progressBar.setIndeterminate(false);
+        android.graphics.drawable.ClipDrawable fill = new android.graphics.drawable.ClipDrawable(
+                FloatingPanelStyle.primary(getResources().getDisplayMetrics().density), Gravity.LEFT,
+                android.graphics.drawable.ClipDrawable.HORIZONTAL);
+        android.graphics.drawable.LayerDrawable track = new android.graphics.drawable.LayerDrawable(
+                new Drawable[]{round(0xFFE6EAF3, 8), fill});
+        track.setId(0, android.R.id.background); track.setId(1, android.R.id.progress);
+        progressBar.setProgressDrawable(track);
+        guidanceProgress.addView(progressBar, new LayoutParams(0, dp(8), 1));
+        progressCount = text("", 14); progressCount.setTextColor(SECONDARY);
+        LayoutParams countParams = new LayoutParams(-2, -2); countParams.leftMargin = dp(16);
+        guidanceProgress.addView(progressCount, countParams);
+        content.addView(guidanceProgress, spaced(0));
+        narrationText = text(progressMessage, 22);
+        narrationText.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
         narrationText.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
-        progressSummary.addView(narrationText, spaced(2));
-        if (goal != null && !goal.isEmpty()) {
-            TextView request = text(goal, 13); request.setTextColor(SECONDARY);
-            request.setMaxLines(1); request.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            progressSummary.addView(request, spaced(8));
-        }
-        progressSummary.setVisibility(VISIBLE);
-        updateStatusBox();
+        content.addView(narrationText, spaced(24));
+        divider.setVisibility(GONE);
         setNarrationState(false, narrationUnavailable);
         if (canRequestResult)
-            content.addView(secondaryButton("결과 확인하기", () -> listener.control("request_result")), spaced(0));
+            content.addView(secondaryButton("결과 확인하기", () -> listener.control("request_result")), spaced(12));
     }
     public void result(JSONObject prompt) {
         clear("결과를 확인해 주세요");
@@ -936,8 +983,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
     /** Report the user outcome separately from internal execution evidence. */
     public void completed(String message, Runnable onExit) {
         clear("결과 확인을 마쳤어요");
-        setLoadingStatus(null);
-        headerInput.setVisibility(GONE);
         controls.setVisibility(GONE);
         divider.setVisibility(GONE);
         TextView completion = text(message == null || message.trim().isEmpty()
@@ -1001,8 +1046,9 @@ public void observationRecovery(String message, Runnable retry) {
         clear("화면을 함께 확인해요");
         if (goal != null && !goal.isEmpty()) addRequestBox(goal, null);
         content.addView(text(message, 16), spaced(0));
-        content.addView(primaryButton("화면 다시 확인", retry), spaced(12));
-        content.addView(secondaryButton("직접 이동하기", listener::collapse), spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
+        recoveryActions.addView(primaryButton("화면 다시 확인", retry), spaced(12));
+        recoveryActions.addView(secondaryButton("직접 이동하기", listener::collapse), spaced(8));
     }
 
     public void scrollRecovery(String goal, String message, Runnable retry, Runnable down, Runnable up) {
@@ -1069,10 +1115,8 @@ public void observationRecovery(String message, Runnable retry) {
             paint.setColor(checked || current ? BLUE : 0xFFB7C5D8);
             canvas.drawCircle(12, 12, 9.5f, paint);
             if (checked) {
-                paint.setColor(Color.WHITE); paint.setStyle(Paint.Style.STROKE);
-                paint.setStrokeWidth(2.1f); paint.setStrokeCap(Paint.Cap.ROUND); paint.setStrokeJoin(Paint.Join.ROUND);
-                tick.reset(); tick.moveTo(7.5f, 12); tick.lineTo(10.5f, 15); tick.lineTo(16.5f, 9);
-                canvas.drawPath(tick, paint);
+                paint.setColor(Color.WHITE); paint.setStyle(Paint.Style.FILL);
+                canvas.drawCircle(12, 12, 3.5f, paint);
             } else if (current) {
                 paint.setStyle(Paint.Style.FILL);
                 canvas.drawCircle(12, 12, 3.5f, paint);
@@ -1090,13 +1134,13 @@ public void observationRecovery(String message, Runnable retry) {
         TextView text = new TextView(getContext()); text.setText(value); text.setTextSize(size);
         text.setTextColor(INK); text.setPadding(0, dp(4), 0, dp(4));
         text.setIncludeFontPadding(false); text.setLineSpacing(dp(2), 1.05f);
-        text.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
+        text.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
         return text;
     }
     private Button quietButton(String label, Runnable action) {
         Button button = new Button(getContext()); button.setText(label); button.setTextSize(16);
         button.setTextColor(BLUE); button.setAllCaps(false); button.setMinHeight(dp(48));
-        button.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
+        button.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         button.setMinimumHeight(dp(48)); button.setMinWidth(0); button.setMinimumWidth(0);
         button.setPadding(dp(10), dp(10), dp(10), dp(10)); button.setIncludeFontPadding(false);
         button.setGravity(Gravity.CENTER);
@@ -1113,7 +1157,7 @@ public void observationRecovery(String message, Runnable retry) {
         Button button = quietButton(label, action);
         button.setTextColor(Color.WHITE);
         GradientDrawable gradient = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[]{0xFF376FF7, 0xFF4385FA});
+                new int[]{0xFF3987FF, 0xFF1954F5});
         gradient.setCornerRadius(dp(18));
         GradientDrawable mask = new GradientDrawable(); mask.setColor(Color.WHITE); mask.setCornerRadius(dp(18));
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x33FFFFFF), gradient, mask));
@@ -1122,12 +1166,12 @@ public void observationRecovery(String message, Runnable retry) {
         return button;
     }
     private void styleReviewButton(Button button, boolean primary) {
-        button.setTextSize(14);
+        button.setTextSize(16);
         button.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         button.setMinHeight(dp(48)); button.setMinimumHeight(dp(48));
         button.setPadding(dp(14), dp(10), dp(14), dp(10));
         button.setTextColor(primary ? Color.WHITE : SECONDARY);
-        button.setBackground(primary ? ripple(BLUE, 0x33FFFFFF, 14)
+        button.setBackground(primary ? FloatingPanelStyle.primary(getResources().getDisplayMetrics().density)
                 : rippleOutlined(Color.WHITE, 0xFFE4EBF5, 0x183478F6, 14));
     }
     private LayoutParams spaced(int top) {
@@ -1142,8 +1186,11 @@ public void observationRecovery(String message, Runnable retry) {
         return drawable;
     }
     private Drawable cardBackground(boolean checked) {
-        return rippleOutlined(checked ? 0xFFF0F5FF : Color.WHITE,
-                checked ? 0xFF95B8F6 : 0xFFE4EBF5, 0x183478F6, 14);
+        if (!checked) return rippleOutlined(Color.WHITE, 0xFFF0F2F8, 0x183478F6, 16);
+        GradientDrawable fill = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{0xFFEAF2FF, 0xFFDCE9FF});
+        fill.setCornerRadius(dp(16));
+        return new RippleDrawable(ColorStateList.valueOf(0x183478F6), fill, round(Color.WHITE, 16));
     }
     private GradientDrawable outline(int fill, int stroke, int radius) {
         return outline(fill, stroke, radius, 1);
