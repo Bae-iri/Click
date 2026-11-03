@@ -1,5 +1,6 @@
 package com.click.designpreview;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -7,13 +8,18 @@ import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
+import android.util.AttributeSet;
 import android.view.View;
+import android.view.animation.LinearInterpolator;
 
 /** Decorative phone and soft 3D hand; all instructions remain accessible native text. */
-final class PermissionTouchArtworkView extends View {
+public final class PermissionTouchArtworkView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Drawable cursor;
     private final Drawable hand;
+    private ValueAnimator animation;
+    private boolean animationActive;
+    private float press;
     private final Shader phoneShell = new LinearGradient(48, 20, 224, 300,
             0xFFACC0DB, 0xFF607C9E, Shader.TileMode.CLAMP);
     private final Shader phoneScreen = new LinearGradient(60, 30, 204, 280,
@@ -21,13 +27,46 @@ final class PermissionTouchArtworkView extends View {
     private final Shader tile = new LinearGradient(100, 108, 181, 182,
             0xFF66A8FF, 0xFF3478F6, Shader.TileMode.CLAMP);
 
-    PermissionTouchArtworkView(Context context) {
-        super(context);
+    public PermissionTouchArtworkView(Context context) { this(context, null); }
+
+    public PermissionTouchArtworkView(Context context, AttributeSet attrs) {
+        super(context, attrs);
         cursor = context.getDrawable(R.drawable.ic_click_cursor).mutate();
         cursor.setTint(Color.WHITE);
         hand = context.getDrawable(R.drawable.permission_touch_hand);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
     }
+
+    public void setAnimationActive(boolean active) {
+        animationActive = active;
+        syncAnimation();
+    }
+
+    private void syncAnimation() {
+        if (!animationActive || !isAttachedToWindow() || !isShown() || !hasWindowFocus()
+                || getWindowVisibility() != VISIBLE || !ValueAnimator.areAnimatorsEnabled()) {
+            stopAnimation();
+            return;
+        }
+        if (animation != null) return;
+        animation = ValueAnimator.ofFloat(0f, 0f, 1f, 0f, 0f);
+        animation.setDuration(1800L);
+        animation.setRepeatCount(ValueAnimator.INFINITE);
+        animation.setInterpolator(new LinearInterpolator());
+        animation.addUpdateListener(value -> { press = (float) value.getAnimatedValue(); invalidate(); });
+        animation.start();
+    }
+
+    private void stopAnimation() {
+        if (animation != null) { animation.cancel(); animation = null; }
+        press = 0f;
+        invalidate();
+    }
+
+    @Override protected void onAttachedToWindow() { super.onAttachedToWindow(); syncAnimation(); }
+    @Override public void onWindowFocusChanged(boolean focused) { super.onWindowFocusChanged(focused); syncAnimation(); }
+    @Override protected void onWindowVisibilityChanged(int visibility) { super.onWindowVisibilityChanged(visibility); syncAnimation(); }
+    @Override protected void onDetachedFromWindow() { stopAnimation(); super.onDetachedFromWindow(); }
 
     @Override protected void onDraw(Canvas canvas) {
         // Keep the complete phone, fingertips and cuff inside the illustration bounds.
@@ -54,10 +93,13 @@ final class PermissionTouchArtworkView extends View {
         }
         fill(0xFFDCEAFF);
         canvas.drawCircle(140, 146, 59, paint);
+        canvas.save();
+        canvas.scale(1f - .025f * press, 1f - .025f * press, 140, 146);
         shader(tile);
         canvas.drawRoundRect(102, 108, 178, 184, 21, 21, paint);
         cursor.setBounds(107, 111, 172, 176);
         cursor.draw(canvas);
+        canvas.restore();
         fill(0xFF9AB3D5);
         canvas.drawRoundRect(113, 281, 162, 285, 2, 2, paint);
         canvas.restore();
@@ -65,7 +107,10 @@ final class PermissionTouchArtworkView extends View {
         // Preserve the original alpha and aspect ratio. The fingertip meets the phone tile,
         // while the full cuff stays inside the illustration's 340 x 330 design bounds.
         hand.setBounds(110, 111, 333, 334);
+        canvas.save();
+        canvas.translate(-4 * press, -5 * press);
         hand.draw(canvas);
+        canvas.restore();
 
         stroke(0xFF3478F6, 3.5f);
         canvas.drawLine(181, 111, 186, 101, paint);

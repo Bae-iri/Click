@@ -18,6 +18,7 @@ public final class DesignPreviewActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ForegroundCountdown countdown;
     private View splash;
+    private PermissionTouchArtworkView artwork;
     private boolean resumed;
     private boolean navigated;
     private final Runnable openOnboarding = () -> {
@@ -58,6 +59,7 @@ public final class DesignPreviewActivity extends Activity {
         }
         setContentView(R.layout.activity_design_preview);
         splash = findViewById(R.id.splash_screen);
+        artwork = findViewById(R.id.splash_artwork);
         splash.setOnApplyWindowInsetsListener((view, insets) -> {
             view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
                     insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
@@ -68,7 +70,8 @@ public final class DesignPreviewActivity extends Activity {
         if (savedInstanceState == null && ValueAnimator.areAnimatorsEnabled()) {
             View logo = findViewById(R.id.splash_logo);
             reveal(logo, 0L).start();
-            reveal(findViewById(R.id.splash_tagline), 100L).start();
+            reveal(artwork, 80L).start();
+            reveal(findViewById(R.id.splash_tagline), 160L).start();
         }
     }
 
@@ -76,6 +79,7 @@ public final class DesignPreviewActivity extends Activity {
     protected void onResume() {
         super.onResume();
         resumed = true;
+        artwork.setAnimationActive(true);
         // Posting to the attached view starts the timer after the initial layout.
         splash.post(startCountdown);
     }
@@ -83,6 +87,7 @@ public final class DesignPreviewActivity extends Activity {
     @Override
     protected void onPause() {
         resumed = false;
+        artwork.setAnimationActive(false);
         splash.removeCallbacks(startCountdown);
         handler.removeCallbacks(openOnboarding);
         countdown.pause(SystemClock.uptimeMillis());
