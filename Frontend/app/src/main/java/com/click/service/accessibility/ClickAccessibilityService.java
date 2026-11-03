@@ -204,7 +204,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         if (!TouchAutomationPolicy.sameTarget(expected, latest, id, bounds)) return false;
         com.click.data.snapshot.AccessibilityNodeSnapshot target = TouchAutomationPolicy.clickableTarget(latest, id, bounds);
         if (target == null) return false;
-        AccessibilityNodeInfo node = service.getRootInActiveWindow();
+        AccessibilityNodeInfo node = ForegroundWindowReader.readRoot(service);
         if (node == null) return false;
         try {
             if (!target.nodeId.matches("node_0(_[0-9]+)*")) return false;
@@ -267,7 +267,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 || !("slider".equals(target.role) || target.className != null
                     && (target.className.toLowerCase(java.util.Locale.ROOT).contains("seekbar")
                         || target.className.toLowerCase(java.util.Locale.ROOT).contains("slider")))) return false;
-        AccessibilityNodeInfo node = service.getRootInActiveWindow();
+        AccessibilityNodeInfo node = ForegroundWindowReader.readRoot(service);
         if (node == null) return false;
         try {
             String[] path = id.split("_");
@@ -551,7 +551,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
     public static boolean performScroll(boolean forward) {
         ClickAccessibilityService service = connectedService.get();
         if (service == null) return false;
-        AccessibilityNodeInfo pager = findScrollableNode(service.getRootInActiveWindow());
+        AccessibilityNodeInfo pager = findScrollableNode(ForegroundWindowReader.readRoot(service));
         if (pager == null) return false;
         int action = forward
                 ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
@@ -570,7 +570,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 && !"com.samsung.android.settings".equals(expectedPackage)) return false;
         ClickAccessibilityService service = connectedService.get();
         if (service == null) return false;
-        AccessibilityNodeInfo root = service.getRootInActiveWindow();
+        AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(service);
         if (root == null) return false;
         try {
             if (root.getWindowId() != expectedWindow || root.getPackageName() == null
@@ -586,7 +586,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 && !"com.samsung.android.settings".equals(expectedPackage)) return false;
         ClickAccessibilityService service = connectedService.get();
         if (service == null) return false;
-        AccessibilityNodeInfo root = service.getRootInActiveWindow();
+        AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(service);
         if (root == null) return false;
         try {
             if (root.getWindowId() != expectedWindow || root.getPackageName() == null
@@ -625,7 +625,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
     }
 
     private ScreenSnapshot readCurrentScreen() {
-        AccessibilityNodeInfo root = getRootInActiveWindow();
+        AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(this);
         String packageName = root == null || root.getPackageName() == null
                 ? lastForegroundPackage : root.getPackageName().toString();
         if (packageName == null || packageName.equals(getPackageName())) return null;
@@ -667,7 +667,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
 
     private void emitAction(AccessibilityNodeInfo source, String action, long eventUptime,
                             AccessibilityNodeInfo.RangeInfo range) {
-        AccessibilityNodeInfo root = getRootInActiveWindow();
+        AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(this);
         String nodeId = findNodeId(root, source, "node_0");
         if (root != null) root.recycle();
         if (nodeId == null || source.getPackageName() == null) return;

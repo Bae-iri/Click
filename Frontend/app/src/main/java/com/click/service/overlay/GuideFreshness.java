@@ -54,7 +54,8 @@ final class GuideFreshness {
                 && Objects.equals(before.packageName, now.packageName)
                 && Objects.equals(before.text, now.text)
                 && (Objects.equals(before.contentDescription, now.contentDescription)
-                    || numericSliderValue(before) && numericSliderValue(now))
+                    || numericSliderValue(before) && numericSliderValue(now)
+                        && valueLabel(before.contentDescription).equals(valueLabel(now.contentDescription)))
                 && Objects.equals(before.resourceId, now.resourceId)
                 && Objects.equals(before.className, now.className);
     }
@@ -64,7 +65,11 @@ final class GuideFreshness {
         // This is a value change on the same control, not a renamed/recycled target.
         return "slider".equals(node.role) && node.progress != null && Float.isFinite(node.progress)
                 && node.contentDescription != null
-                && node.contentDescription.trim().matches("[+-]?(?:\\d+(?:[.,]\\d+)?|[.,]\\d+)\\s*%?");
+                && node.contentDescription.matches(".*\\d.*");
+    }
+
+    private static String valueLabel(String label) {
+        return label.replaceAll("[+-]?(?:\\d+(?:[.,]\\d+)?|[.,]\\d+)\\s*%?", "#");
     }
 
     private static Map<String, AccessibilityNodeSnapshot> subtree(ScreenSnapshot screen, String root) {

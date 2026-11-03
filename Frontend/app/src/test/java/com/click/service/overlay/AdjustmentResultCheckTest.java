@@ -10,13 +10,27 @@ import org.json.JSONObject;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class FontSizeResultCheckTest {
+public class AdjustmentResultCheckTest {
     private final int[] bounds = {20, 100, 900, 180};
     private static final String INCREASE = "settings.font_size.increase";
 
+    @Test public void brightnessAndVolumeUsePersistedValuesInBothDirections() throws Exception {
+        for (String setting : List.of("brightness", "volume")) for (String direction : List.of("increase", "decrease")) {
+            AdjustmentResultCheck check = new AdjustmentResultCheck();
+            String goal = "settings." + setting + "." + direction;
+            ScreenSnapshot before = screen("com.android.settings", 1000, 1f).withAdjustmentValues(100, 5);
+            check.bind("episode", goal, guide("highlight"), before);
+            int brightness = setting.equals("brightness") ? (direction.equals("increase") ? 120 : 80) : 100;
+            int volume = setting.equals("volume") ? (direction.equals("increase") ? 6 : 4) : 5;
+            assertTrue(check.changed("episode", goal, screen("com.android.settings", 2000, 1f).withAdjustmentValues(brightness, volume)));
+            assertFalse(check.changed("episode", goal, screen("com.android.settings", 2000, 1f).withAdjustmentValues(100, 5)));
+            assertFalse(check.changed("episode", goal, screen("com.android.settings", 2000, 1f)));
+        }
+    }
+
     @Test public void persistedChangeInEitherRequestedDirectionAllowsAskingTheUser() throws Exception {
         for (String goal : List.of(INCREASE, "settings.font_size.decrease")) {
-            FontSizeResultCheck check = new FontSizeResultCheck();
+            AdjustmentResultCheck check = new AdjustmentResultCheck();
             check.bind("episode", goal, guide("highlight"), screen("com.android.settings", 1000, 1f));
             float after = goal.equals(INCREASE) ? 1.15f : .85f;
             assertTrue(check.changed("episode", goal, screen("com.android.settings", 2000, after)));
@@ -27,7 +41,7 @@ public class FontSizeResultCheckTest {
     }
 
     @Test public void previewUnchangedWrongDirectionMissingOrStaleValuesDoNotAsk() throws Exception {
-        FontSizeResultCheck check = new FontSizeResultCheck();
+        AdjustmentResultCheck check = new AdjustmentResultCheck();
         check.bind("episode", INCREASE, guide("highlight"), screen("com.android.settings", 1000, 1f));
         for (Float value : new Float[]{null, Float.NaN, Float.POSITIVE_INFINITY, 0f, 11f, 1f, .85f})
             assertFalse(check.changed("episode", INCREASE, screen("com.android.settings", 2000, value)));
@@ -39,8 +53,22 @@ public class FontSizeResultCheckTest {
         assertFalse(check.changed("episode", INCREASE, screen("com.android.settings", 2000, 1.15f)));
     }
 
+    @Test public void nativeConfirmationCapturesBaselineBeforeUserCanMoveTheSlider() throws Exception {
+        AdjustmentResultCheck check = new AdjustmentResultCheck();
+        JSONObject command = new JSONObject().put("command_type", "confirmation")
+                .put("action_type", "observe_only").put("proposed_action", "drag")
+                .put("requires_user_action", true).put("target_node_id", "font")
+                .put("target_bounds", new JSONArray(bounds));
+        AgentTurnContract.GuideCommand guide = new AgentTurnContract.Response(new JSONObject()
+                .put("request_id", "r").put("session_id", "s").put("task_status", "WAITING_CONFIRMATION")
+                .put("guide_command", command).toString()).guideCommand;
+        check.bind("episode", INCREASE, guide, screen("com.android.settings", 1000, 1f));
+        check.bind("episode", INCREASE, guide("highlight"), screen("com.android.settings", 2000, 1.15f));
+        assertTrue(check.changed("episode", INCREASE, screen("com.android.settings", 2500, 1.15f)));
+    }
+
     @Test public void onlyAnApprovedFontSliderGuideArmsTheCheck() throws Exception {
-        FontSizeResultCheck check = new FontSizeResultCheck();
+        AdjustmentResultCheck check = new AdjustmentResultCheck();
         check.bind("episode", INCREASE, guide("confirmation"), screen("com.android.settings", 1000, 1f));
         assertFalse(check.changed("episode", INCREASE, screen("com.android.settings", 2000, 1.15f)));
         check.bind("episode", "settings.brightness.increase", guide("highlight"), screen("com.android.settings", 1000, 1f));

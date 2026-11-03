@@ -6,9 +6,10 @@ public final class TaskFlowAnswers {
     public static String result(String source) {
         String s = GoalCatalogClassifier.normalize(source);
         if (s.equals("네") || s.equals("예") || s.equals("잘보여요") || s.equals("네잘보여요")
-                || s.equals("이제잘보여요") || s.equals("보기편해요")) return "satisfied";
+                || s.equals("이제잘보여요") || s.equals("보기편해요") || s.equals("네좋아요")
+                || s.equals("좋아요") || s.equals("잘들려요")) return "satisfied";
         if (s.equals("아직불편해요") || s.equals("잘안보여요") || s.equals("아니요")
-                || s.equals("아니오")) return "needs_help";
+                || s.equals("아니오") || s.equals("조금더도와주세요") || s.equals("잘안들려요")) return "needs_help";
         if (stop(s)) return "stopped";
         return null;
     }
@@ -18,8 +19,10 @@ public final class TaskFlowAnswers {
     }
     public static String adjustment(String source) {
         String s = GoalCatalogClassifier.normalize(source);
-        if (s.contains("작아") || s.contains("작아요") || s.equals("글자가아직작아요")) return "too_small";
-        if (s.contains("너무커") || s.equals("커요")) return "too_large";
+        if (s.contains("작아") || s.contains("작아요") || s.equals("글자가아직작아요")
+                || s.equals("화면이아직어두워요") || s.equals("아직어두워요")) return "too_small";
+        if (s.contains("너무커") || s.equals("커요") || s.equals("화면이너무밝아요")
+                || s.equals("너무밝아요")) return "too_large";
         if (s.contains("다른") || s.contains("크기말고")) return "other";
         if (s.contains("모르겠")) return "unsure";
         return null;
