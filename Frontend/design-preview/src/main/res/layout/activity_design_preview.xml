@@ -14,11 +14,11 @@
         android:id="@+id/splash_tagline"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/pretendard_regular"
+        android:fontFamily="@font/pretendard_medium"
         android:gravity="center"
         android:includeFontPadding="false"
-        android:lineSpacingExtra="7dp"
+        android:lineSpacingExtra="4dp"
         android:text="@string/splash_tagline"
-        android:textColor="#7182A4"
-        android:textSize="17sp" />
+        android:textColor="#627196"
+        android:textSize="19sp" />
 </com.click.designpreview.SplashLayout>
