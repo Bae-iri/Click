@@ -6,7 +6,7 @@ import java.util.Set;
 
 /** Bounded navigation only; every move must be followed by a fresh agent observation. */
 final class AutomaticScrollSearch {
-    private static final int MAX_ATTEMPTS = 4;
+    private final int maxAttempts;
     private String scope;
     private int attempts;
     private boolean forward = true;
@@ -14,12 +14,15 @@ final class AutomaticScrollSearch {
     private final Set<String> seenForward = new HashSet<>();
     private final Set<String> seenBackward = new HashSet<>();
 
+    AutomaticScrollSearch() { this(4); }
+    AutomaticScrollSearch(int maxAttempts) { this.maxAttempts = maxAttempts; }
+
     Boolean next(String scope, String fingerprint) {
         if (!Objects.equals(this.scope, scope)) {
             clear();
             this.scope = scope;
         }
-        if (stopped || attempts >= MAX_ATTEMPTS) return null;
+        if (stopped || attempts >= maxAttempts) return null;
         if (forward && !seenForward.add(fingerprint)) forward = false;
         if (!forward && !seenBackward.add(fingerprint)) {
             stopped = true;

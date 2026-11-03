@@ -140,9 +140,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean agentPaused;
     private boolean awaitingExitConfirmation;
     private String lastSnapshotFingerprint;
-    private int homeScanAttempts;
-    private boolean homeScanTowardNext = true;
-    private String homeScanPreviousFingerprint;
+    private final AutomaticScrollSearch homeScrollSearch = new AutomaticScrollSearch(8);
+    private int homeSearchToken;
     private String pendingActionType;
     private long pendingActionOccurredAtMs;
     private boolean forceNextObservation;
@@ -1107,6 +1106,19 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             } else {
                 if (message != null) speak(message);
                 clearTaskFlow();
+                boolean expired = "EXPIRED".equals(response.taskStatus);
+                if (expired) {
+                    agentPaused = true;
+                    ensureTaskFlow();
+                    taskFlowView.expired(() -> {
+                        clearTaskFlow();
+                        if (overlayView != null) overlayView.openMenu();
+                    });
+                    taskFlowCollapsed = false;
+                    if (overlayView != null) overlayView.collapse();
+                    placeTaskFlow(null, true);
+                    updateFloatingVisibility();
+                }
                 finishActiveQueueRequest("USER_ABORTED");
                 if (next != null) enqueueNormalRequest(next);
             }
@@ -1199,7 +1211,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void rebindWindows(WindowManager target, int windowType) {
         if (target == null || overlayView == null || windowParams == null
-                || overlayWindowType == windowType) {
+                || target == windowManager && overlayWindowType == windowType
+                    && overlayView.isAttachedToWindow()
+                    && (taskFlowView == null || taskFlowView.isAttachedToWindow())) {
             return;
         }
         detachGuideOverlay();
@@ -1213,6 +1227,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             } catch (IllegalArgumentException ignored) {
             }
         }
+        if (windowManager != null && taskFlowView != null && taskFlowView.isAttachedToWindow()) {
+            try { windowManager.removeViewImmediate(taskFlowView); }
+            catch (IllegalArgumentException ignored) { }
+        }
         windowManager = target;
         overlayWindowType = windowType;
         windowParams.type = windowType;
@@ -1220,8 +1238,16 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         try {
             attachGuideOverlay();
             windowManager.addView(overlayView, windowParams);
+            if (taskFlowView != null && taskFlowParams != null) {
+                taskFlowParams.type = windowType;
+                windowManager.addView(taskFlowView, taskFlowParams);
+            }
+            updateFloatingVisibility();
         } catch (RuntimeException error) {
             android.util.Log.e("ClickOverlay", "Failed to rebind overlay window", error);
+            // Do not leave a successfully restored logo hidden behind a missing task window.
+            taskFlowCollapsed = true;
+            if (overlayView.isAttachedToWindow()) overlayView.setVisibility(View.VISIBLE);
         }
     }
 
@@ -1768,9 +1794,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         fontSizeResultCheck.clear();
         firstTurnSent = false;
         lastSnapshotFingerprint = null;
-        homeScanAttempts = 0;
-        homeScanTowardNext = true;
-        homeScanPreviousFingerprint = null;
+        homeScrollSearch.clear();
+        homeSearchToken++;
         pendingActionType = null;
         forceNextObservation = false;
         lastGuideCommandId = null;
@@ -1832,23 +1857,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             snapshot = snapshot.withScreenRevision(nativeConsentScreen.screenRevision);
         }
-        if ((!firstTurnSent || homeSearchRestart) && shouldScanHomeForSettings(snapshot)
-                && !AgentActionEvents.HOME_NAVIGATED.equals(pendingActionType)
-                && new com.click.data.local.TouchAutomationSettings(this).isEnabled()) {
-            String fingerprint = snapshot.fingerprint();
-            if (fingerprint.equals(homeScanPreviousFingerprint)) homeScanTowardNext = false;
-            if (homeScanAttempts < 8) {
-                homeScanAttempts++;
-                homeScanPreviousFingerprint = fingerprint;
-                if (overlayView != null) {
-                    overlayView.setRecognizedSpeech("설정 앱을 찾기 위해 홈 화면을 이동하고 있어요…");
-                }
-                boolean swiped = ClickAccessibilityService.swipeHomePage(homeScanTowardNext);
-                pendingActionOccurredAtMs = System.currentTimeMillis();
-                pendingActionType = swiped
-                        ? AgentActionEvents.SCROLL_COMPLETED : AgentActionEvents.SCROLL_FAILED;
-                if (swiped) return;
-            }
+        if (shouldScanHomeForSettings(snapshot)
+                && !AgentActionEvents.HOME_NAVIGATED.equals(pendingActionType)) {
+            if (startAutomaticHomeSearch(snapshot)) return;
             homeSearchRestart = false;
             showSettingsOpenButton();
         } else if (hasSettingsTarget(snapshot)) {
@@ -1916,7 +1927,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     sendAgentControl(control); return;
                 }
                 applyTaskFlowResponse(response);
-                if (homeSearchRestart && new com.click.data.local.TouchAutomationSettings(ClickOverlayService.this).isEnabled()) {
+                if (homeSearchRestart) {
                     speechHandler.postDelayed(() -> {
                         if (requestGeneration != executionGeneration || agentPaused || turnInFlight) return;
                         forceNextObservation = true;
@@ -2117,12 +2128,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean hasSettingsTarget(ScreenSnapshot snapshot) {
         if (snapshot == null) return false;
         for (AccessibilityNodeSnapshot node : snapshot.nodes) {
+            if (!node.visibleToUser || !node.enabled || node.sensitiveInput
+                    || !snapshot.packageName.equals(node.packageName)) continue;
             if (containsSettingsLabel(node.text) || containsSettingsLabel(node.contentDescription)) return true;
         }
         return false;
     }
 
     private boolean isSettingsGoal(String goal) {
+        if (acceptedGoal != null) return "android_settings".equals(acceptedGoal.optString("target_app"));
         if (activeGoalMatch != null) return "android_settings".equals(activeGoalMatch.targetApp);
         String normalized = goal.toLowerCase(java.util.Locale.ROOT).replace(" ", "");
         return normalized.contains("설정") || normalized.contains("글자크기")
@@ -2428,7 +2442,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (new com.click.data.local.TouchAutomationSettings(service).isEnabled()
                     && NavigationRecovery.isHomeScreen(LatestScreenSnapshot.get())) {
                 service.homeSearchRestart = true;
-                service.homeScanAttempts = 0;
+                service.homeScrollSearch.clear();
             }
             service.forceNextObservation = true;
             ClickAccessibilityService.requestFreshSnapshot();
@@ -2455,8 +2469,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             scrollSearchGeneration = -1;
             if (observed == NavigationRecovery.Action.HOME) {
                 fontSizeResultCheck.clear(); automaticScrollSearch.clear();
-                homeSearchRestart = true; homeScanAttempts = 0; homeScanTowardNext = true;
-                homeScanPreviousFingerprint = null;
+                homeSearchRestart = true;
+                homeScrollSearch.clear(); homeSearchToken++;
                 lastTargetBounds = null; lastTargetNodeId = lastGuideCommandId = null;
             }
             if (personalizationEvents != null) personalizationEvents.recordNavigation(agentSessionId,
@@ -2755,6 +2769,42 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void searchSettingsByScrolling(boolean forward, ScreenSnapshot expected, int generation) {
         searchSettingsByScrolling(forward, expected, generation, false);
+    }
+
+    /** Navigation searches do not authorize taps or setting changes. Keep the logo visible. */
+    private boolean startAutomaticHomeSearch(ScreenSnapshot expected) {
+        if (expected.activeWindowId == null || expected.nodes.isEmpty()) return false;
+        Boolean forward = homeScrollSearch.next(agentSessionId + ":" + expected.packageName + ":" + expected.activeWindowId,
+                expected.contentFingerprint());
+        if (forward == null) return false;
+        final int generation = executionGeneration;
+        final int token = ++homeSearchToken;
+        scrollSearchGeneration = generation;
+        ensureTaskFlow();
+        taskFlowView.waitingProgress("설정 앱을 찾기 위해 화면을 넘겨 보고 있어요.");
+        collapseTaskFlow();
+        speechHandler.postDelayed(() -> {
+            if (generation != executionGeneration || token != homeSearchToken) return;
+            if (closing || agentPaused || pendingControl != null || agentSessionId == null) {
+                scrollSearchGeneration = -1;
+                return;
+            }
+            ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+            boolean unchanged = expected.sameNativeContent(current);
+            boolean moved = unchanged && ClickAccessibilityService.swipeHomePage(
+                    forward, expected.packageName, expected.activeWindowId);
+            if (unchanged && !moved) homeScrollSearch.reachedEnd(forward);
+            speechHandler.postDelayed(() -> {
+                if (generation != executionGeneration || token != homeSearchToken) return;
+                scrollSearchGeneration = -1;
+                if (closing || agentPaused || pendingControl != null || agentSessionId == null) return;
+                pendingActionType = AgentActionEvents.MANUAL_OVERRIDE;
+                pendingActionOccurredAtMs = System.currentTimeMillis();
+                forceNextObservation = true;
+                sendAgentTurn(null, true);
+            }, moved ? 700L : 100L);
+        }, 200L);
+        return true;
     }
 
     /** Finding a Settings item is navigation, independent of automatic button/slider changes. */
