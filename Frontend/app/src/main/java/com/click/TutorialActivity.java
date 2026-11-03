@@ -123,7 +123,6 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         floating = new TutorialFloatingHost(this, this);
         floating.setId(R.id.tutorial_floating_host);
         floating.getControl().setId(R.id.tutorial_floating_control);
-        floating.getControl().setInputHint("휴대폰 전체 글자 크기 키워줘");
         FrameLayout.LayoutParams floatingParams = new FrameLayout.LayoutParams(-1, -1);
         floatingParams.setMargins(dp(14), dp(34), dp(14), dp(16));
         stage.addView(floating, floatingParams);

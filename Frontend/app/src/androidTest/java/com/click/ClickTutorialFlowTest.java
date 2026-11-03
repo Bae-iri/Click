@@ -33,7 +33,15 @@ public class ClickTutorialFlowTest {
             screenshot("tutorial-short-intro");
             tapId(scenario, R.id.tutorial_next);
             tapId(scenario, R.id.tutorial_floating_control);
+            scenario.onActivity(a -> {
+                assertNotNull(findText(control(a), "무엇을 도와드릴까요?"));
+                assertNull(findText(control(a), "예) 글자 크기 키워줘"));
+                assertNull(findText(control(a), "말하거나 글로 입력해 주세요."));
+            });
+            screenshot("tutorial-current-input-menu");
             tapText(scenario, "글로 입력");
+            scenario.onActivity(a -> assertEquals("무엇이 궁금하세요?",
+                    findType(control(a), EditText.class).getHint().toString()));
             scenario.onActivity(a -> control(a).setDraftText("휴대폰 전체 글자 크기 키워줘"));
             tapText(scenario, "↑");
             scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "2/4")));
