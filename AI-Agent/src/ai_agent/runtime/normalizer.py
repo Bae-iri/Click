@@ -29,7 +29,7 @@ def normalize_accessibility_tree(
         if target is not None:
             inherited_labels.setdefault(target.node_id, []).append(label)
             inherited_titles.setdefault(target.node_id, []).append((
-                "summary" in (node.resource_id or "").lower(), node.bounds_in_screen[1],
+                _description(node), not (node.resource_id or "").endswith(":id/title"), node.bounds_in_screen[1],
                 node.bounds_in_screen[0], node.node_id, label))
 
     for node in nodes:
@@ -84,11 +84,17 @@ def normalize_accessibility_tree(
 def _label_parts(node, child_titles):
     # A row's accessibility description and its visible title are separate evidence.
     # Keep its own name, but do not discard a real descendant title when that name exists.
-    parts = [part for part in (node.text, node.content_description) if part and part.strip()][:1]
     titles = [entry for entry in child_titles if not entry[0]]
-    if titles:
-        parts.append(min(titles)[-1])
+    # A visible descendant title is the identity of a row. Its changing content
+    # description/summary must not become a second, competing menu identity.
+    parts = [min(titles)[-1]] if titles else [
+        part for part in (node.text, node.content_description) if part and part.strip()][:1]
     return tuple(dict.fromkeys(normalize_text(part) for part in parts))
+
+
+def _description(node):
+    resource = (node.resource_id or "").lower().rsplit("/", 1)[-1]
+    return "summary" in resource or resource in {"subtitle", "description", "secondary_text"}
 
 
 def _structure_role(node, nodes_by_id):
@@ -96,7 +102,7 @@ def _structure_role(node, nodes_by_id):
         return "control"
     if node.scrollable or infer_role(node) == "list":
         return "container"
-    if "summary" in (node.resource_id or "").lower():
+    if _description(node):
         return "description"
     seen = {node.node_id}
     parent_id = node.parent_id
@@ -140,7 +146,8 @@ def _label_target(
         if parent is None or not parent.visible_to_user or not parent.enabled:
             return None
         bounds = parent.bounds_in_screen
-        if (parent.package_name != label_node.package_name or not _has_area(bounds)
+        if (parent.package_name != label_node.package_name or parent.window_id != label_node.window_id
+                or not _has_area(bounds)
                 or not (bounds[0] <= child_bounds[0] < child_bounds[2] <= bounds[2]
                         and bounds[1] <= child_bounds[1] < child_bounds[3] <= bounds[3])):
             return None

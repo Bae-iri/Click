@@ -69,9 +69,7 @@ public class CloudSpeechRecognizerTest {
             verify(gateway, never()).transcribe(any(), any());
             return 2;
         };
-        speech.start(callback);
-        verify(gateway).prepare();
-        capture.run();
+        speech.start(callback); capture.run();
         shadowOf(Looper.getMainLooper()).idle();
         assertEquals(3, reads);
         verify(recorders.constructed().get(0)).release();

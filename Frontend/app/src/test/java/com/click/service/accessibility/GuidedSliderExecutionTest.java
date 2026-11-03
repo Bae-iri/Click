@@ -38,6 +38,7 @@ public class GuidedSliderExecutionTest {
   doReturn(root).when(service).getRootInActiveWindow();when(root.getChild(1)).thenReturn(node);
   when(node.getPackageName()).thenReturn("com.android.settings");
   when(node.getClassName()).thenReturn("android.widget.SeekBar");
+  when(node.getViewIdResourceName()).thenReturn("font_size");
   when(node.getWindowId()).thenReturn(5);when(node.isEnabled()).thenReturn(true);when(node.isVisibleToUser()).thenReturn(true);
   doAnswer(i->{ ((Rect)i.getArgument(0)).set(0,100,500,200);return null; }).when(node).getBoundsInScreen(any());
   when(node.getRangeInfo()).thenReturn(AccessibilityNodeInfo.RangeInfo.obtain(0,0,7,2));
@@ -60,6 +61,25 @@ public class GuidedSliderExecutionTest {
   assertFalse(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,1));
   verify(node,never()).performAction(anyInt());
  }
+ @Test public void resultPollingSurvivesMissingRootAndRecreatedWindow() {
+  AccessibilityNodeSnapshot original=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,
+      "com.android.settings:id/font_size","android.widget.SeekBar","slider",bounds,false,true,false,false,false,2f,5,false,0f,7f);
+  screen=new ScreenSnapshot("com.android.settings",java.time.Instant.now().toString(),1080,2400,Arrays.asList(original),5,true,1f);
+  when(node.getViewIdResourceName()).thenReturn(original.resourceId);
+  when(node.performAction(anyInt())).thenReturn(true);
+  try (MockedStatic<com.click.service.overlay.ClickOverlayService> events=mockStatic(com.click.service.overlay.ClickOverlayService.class)) {
+   assertTrue(ClickAccessibilityService.performGuidedSlider(screen,original.nodeId,bounds,1));
+   calls.when(ClickAccessibilityService::freshSnapshot).thenReturn(null);
+   org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(200));
+   AccessibilityNodeSnapshot after=new AccessibilityNodeSnapshot("node_0_9","node_0",true,"com.android.settings",null,null,
+       original.resourceId,"android.widget.SeekBar","slider",bounds,false,true,false,false,false,3f,8,false,0f,7f);
+   calls.when(ClickAccessibilityService::freshSnapshot).thenAnswer(i -> new ScreenSnapshot("com.android.settings",
+       java.time.Instant.now().plusMillis(1000).toString(),1080,2400,Arrays.asList(after),8,true,1.2f));
+   org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2));
+   events.verify(() -> com.click.service.overlay.ClickOverlayService.onVerifiedAutomaticAction(eq("drag_completed"),
+       eq(original.packageName),eq(5),eq(original.nodeId),eq(original.resourceId),eq(bounds),anyLong()));
+  }
+ }
  @Test public void changedValueAndUnsupportedActionsAreRejected() {
   when(node.getRangeInfo()).thenReturn(AccessibilityNodeInfo.RangeInfo.obtain(0,0,7,3));
   assertFalse(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,1));
@@ -74,6 +94,7 @@ public class GuidedSliderExecutionTest {
   AccessibilityNodeSnapshot parent = new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,null,"android.widget.TextView",null,bounds,true,true,false,false,false,null,5);
   screen=new ScreenSnapshot("com.android.settings","2026-10-28T00:00:00Z",1080,2400,nested ? Arrays.asList(label,parent) : Arrays.asList(label),5);
   when(node.getClassName()).thenReturn("android.widget.TextView");
+  when(node.getViewIdResourceName()).thenReturn(null);
   when(node.getText()).thenReturn(nested ? null : "디스플레이");
   when(node.isClickable()).thenReturn(true);
   when(node.performAction(AccessibilityNodeInfo.ACTION_CLICK)).thenReturn(true);
@@ -124,7 +145,7 @@ public class GuidedSliderExecutionTest {
    org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));
    overlay.verifyNoInteractions();
    AccessibilityNodeSnapshot changed=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,"font_size","android.widget.SeekBar","slider",bounds,false,true,false,false,false,3f,5,false,0f,7f);
-   screen=new ScreenSnapshot("com.android.settings","2026-10-28T00:00:01Z",1080,2400,Arrays.asList(changed),5);
+   screen=new ScreenSnapshot("com.android.settings",java.time.Instant.now().toString(),1080,2400,Arrays.asList(changed),5);
    org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(600));
    overlay.verify(()->com.click.service.overlay.ClickOverlayService.onVerifiedAutomaticAction(eq("drag_completed"),eq("com.android.settings"),eq(5),eq("node_0_1"),eq("font_size"),any(),anyLong()));
   }

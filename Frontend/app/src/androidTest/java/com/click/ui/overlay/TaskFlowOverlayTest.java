@@ -199,7 +199,12 @@ public class TaskFlowOverlayTest {
                 voice.openMenu();
                 voice.setRequestStatus("요청을 멈췄어요", false);
                 assertNull(find(voice, "요청을 멈췄어요"));
-                assertNull(voice.findViewById(com.click.R.id.overlay_stop_request));
+                View stop = voice.findViewById(com.click.R.id.overlay_stop_request);
+                assertNotNull(stop);
+                assertEquals(View.GONE, stop.getVisibility());
+                voice.setRequestStatus("안내 중", true);
+                assertEquals(View.VISIBLE, stop.getVisibility());
+                voice.setRequestStatus(null, false);
                 assertNotNull(find(voice, "무엇을 도와드릴까요?"));
                 assertNotNull(find(voice, "말로 입력"));
                 assertNotNull(find(voice, "글로 입력"));
@@ -530,6 +535,26 @@ public class TaskFlowOverlayTest {
         }
     }
 
+    @Test public void completedQueueOffersExplicitNextWithoutReopeningRequirements() {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(activity -> {
+                TaskFlowOverlayView panel = new TaskFlowOverlayView(activity, new Answers());
+                activity.setContentView(panel);
+                int[] actions = {0, 0};
+                panel.completedWithNext("글자 크기 키워줘", () -> actions[0]++, () -> actions[1]++);
+                assertNotNull(find(panel, "현재 요청을 마쳤어요."));
+                assertNotNull(find(panel, "대기 중인 다음 요청"));
+                assertNull(find(panel, "어디의 글자를 키울까요?"));
+                assertEquals(0, actions[0]);
+                snapshot(panel, "completed-queue-choice");
+                find(panel, "다음 요청 시작").performClick();
+                find(panel, "다음 요청 시작").performClick();
+                find(panel, "클릭 종료하기").performClick();
+                assertEquals(1, actions[0]); assertEquals(0, actions[1]);
+            });
+        }
+    }
+
     @Test public void progressShowsCurrentInstructionImmediatelyAndKeepsAudioControls() throws Exception {
         JSONArray rows = new JSONArray("[{\"label\":\"디스플레이 메뉴 확인\",\"status\":\"completed\"},"
             + "{\"label\":\"글자 크기 조절하기\",\"status\":\"current\"},{\"label\":\"변경 결과 확인\",\"status\":\"pending\"},"
@@ -680,7 +705,9 @@ public class TaskFlowOverlayTest {
         try { return new JSONObject(value); } catch (Exception e) { throw new AssertionError(e); }
     }
     private static TextView find(View view, String label) {
-        if (view instanceof TextView && label.contentEquals(((TextView) view).getText())) return (TextView) view;
+        // Font scaling can add line breaks without changing the control's label.
+        if (view instanceof TextView && label.replaceAll("\\s+", " ")
+                .equals(((TextView) view).getText().toString().replaceAll("\\s+", " "))) return (TextView) view;
         if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
             TextView found = find(((ViewGroup) view).getChildAt(i), label); if (found != null) return found;
         }

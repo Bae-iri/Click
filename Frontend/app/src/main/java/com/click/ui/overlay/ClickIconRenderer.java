@@ -23,7 +23,8 @@ public final class ClickIconRenderer {
         }
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(Color.WHITE);
-        paint.setShadowLayer(dp(owner, 7), 0, dp(owner, 3), 0x453478F6);
+        // 64dp 창 안의 28dp 원 주변 여유에 맞춰 그림자가 잘리지 않게 한다.
+        paint.setShadowLayer(dp(owner, 3), 0, dp(owner, 1), 0x20101A36);
         canvas.drawCircle(cx, cy, radius, paint);
         paint.clearShadowLayer();
 

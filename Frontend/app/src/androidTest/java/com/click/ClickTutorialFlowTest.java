@@ -177,7 +177,7 @@ public class ClickTutorialFlowTest {
         }
     }
 
-    @Test public void realInputDraftAndConversationSurviveRecreation() {
+    @Test public void realInputDraftAndConversationSurviveRecreation() throws Exception {
         try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
             tapId(scenario, R.id.tutorial_next);
             tapId(scenario, R.id.tutorial_floating_control);
@@ -203,6 +203,7 @@ public class ClickTutorialFlowTest {
                 assertNotNull(findText(a.getWindow().getDecorView(), "휴대폰 설정 · 글자를 더 크게"));
                 assertFalse(a.findViewById(R.id.tutorial_next).isEnabled());
             });
+            screenshot("request-confirmation-live");
             tapId(scenario, R.id.tutorial_back);
             assertMode(scenario, ClickOverlayLayout.Mode.MENU);
         }

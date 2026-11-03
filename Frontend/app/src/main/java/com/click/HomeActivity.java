@@ -51,7 +51,7 @@ public final class HomeActivity extends AppCompatActivity {
     private static final int INK = 0xFF101A36;
     private static final int SECONDARY = 0xFF8190AA;
     private static final int BLUE = 0xFF3478FF;
-    private Typeface regular, medium, semibold, bold;
+    private Typeface regular, medium, semibold;
     private HomeStartArtworkView startArtwork;
     private ScrollView homeScroll;
     private ScrollView favoritesScroll;
@@ -71,7 +71,6 @@ public final class HomeActivity extends AppCompatActivity {
         regular = getResources().getFont(com.click.designpreview.R.font.pretendard_regular);
         medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
         semibold = getResources().getFont(com.click.designpreview.R.font.pretendard_semibold);
-        bold = getResources().getFont(com.click.designpreview.R.font.pretendard_bold);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) getWindow().setDecorFitsSystemWindows(false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.WHITE);
@@ -211,7 +210,7 @@ public final class HomeActivity extends AppCompatActivity {
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.addView(text(getString(R.string.home_greeting), 14, SECONDARY, medium));
-        TextView headline = text(getString(R.string.home_start_title), 26, INK, bold);
+        TextView headline = text(getString(R.string.home_start_title), 26, INK, semibold);
         SpannableString title = new SpannableString(getString(R.string.home_start_title));
         int start = title.toString().indexOf("클릭");
         if (start >= 0) title.setSpan(new ForegroundColorSpan(BLUE), start, start + 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -367,7 +366,7 @@ public final class HomeActivity extends AppCompatActivity {
         launch.addView(icon(item.icon), new LinearLayout.LayoutParams(dp(44), dp(44)));
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(LinearLayout.VERTICAL);
-        labels.addView(text(item.title, 16, INK, semibold));
+        labels.addView(text(item.title, 16, INK, medium));
         add(labels, text(item.subtitle, 13, SECONDARY, regular), 4);
         LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, -2, 1);
         labelParams.setMarginStart(dp(14)); labelParams.setMarginEnd(dp(6));

@@ -7,8 +7,11 @@ Backend의 turn API가 사용하는 사용자 작업 실행 경로다. **2026-10
 | 파일 | 실행 책임 |
 | --- | --- |
 | `engine.py` | turn 조율 |
+| `observation_context.py` | 요청·기기·OCR 관측에서 화면 크기와 앱 문맥 해석 |
+| `diagnostics.py` | 응답·실행 기록의 관측/복구/처리 단계 진단 정보 생성 |
 | `goal_typing.py` | legacy raw goal → Typed Goal; typed 경로의 목표 확정은 FE/Backend 담당 |
 | `normalizer.py`, `classifier.py` | 화면 정규화·State 판단 |
+| `semantic_state.py` | 규칙으로 분류하지 못한 화면에 주입된 의미 해석기를 적용하고 결과 검증 |
 | `matcher.py`, `targeting.py`, `similarity.py` | 역할·앱/window 필터, 공통 graph selector, 동점 선택 보류 |
 | `guide.py`, `contracts.py` | Safety에 따른 안내·확인·허용 Action 계약 |
 | `verification.py`, `state_manager.py` | 새 화면을 이용한 직전 단계 결과 검증 |

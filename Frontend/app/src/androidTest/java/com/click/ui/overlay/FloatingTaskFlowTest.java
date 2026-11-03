@@ -37,6 +37,10 @@ public class FloatingTaskFlowTest {
 
     @Test public void guidanceAndInputNeverShareTheScreenAndUpdatesPreserveDraft() throws Exception {
         Context app = instrumentation.getTargetContext();
+        com.click.data.local.TouchAutomationSettings mode = new com.click.data.local.TouchAutomationSettings(app);
+        boolean originalAutomaticMode = mode.isEnabled();
+        // This scenario checks spoken manual guidance; automatic mode intentionally stays quiet.
+        mode.setEnabled(false);
         UiAutomation automation = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         String key = Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES;
         String original = Settings.Secure.getString(app.getContentResolver(), key);
@@ -102,13 +106,20 @@ public class FloatingTaskFlowTest {
                 assertEquals(View.VISIBLE, guide.getVisibility());
                 assertEquals("The bubble keeps the movable click button visible", View.VISIBLE, input.getVisibility());
                 assertFalse(guide.findViewById(R.id.task_flow_collapse).isShown());
-                findText(guide, "클릭 · 펼치기").performClick();
+                findText(guide, "다음 항목을 눌러주세요.").performClick();
                 assertFalse(guide.isMinimizedProgress());
                 assertEquals(View.VISIBLE, guide.getVisibility());
                 assertEquals(View.GONE, input.getVisibility());
                 invokeString(service(), "speak", "다음 항목을 눌러주세요.");
                 assertTrue(narrator.isSpeaking());
-                guide.findViewById(R.id.task_flow_input).performClick();
+                assertNull(guide.findViewById(R.id.task_flow_input));
+                guide.findViewById(R.id.task_flow_replay).performClick();
+                assertFalse(narrator.isSpeaking());
+                assertEquals(ClickOverlayLayout.Mode.COLLAPSED, input.getMode());
+                guide.findViewById(R.id.task_flow_replay).performClick();
+                assertTrue(narrator.isSpeaking());
+                assertEquals(View.VISIBLE, guide.getVisibility());
+                input.openVoice();
                 assertEquals(ClickOverlayLayout.Mode.VOICE, input.getMode());
                 assertFalse(narrator.isSpeaking());
                 assertFalse("Opening input does not record", input.isVoiceInputActive());
@@ -175,7 +186,7 @@ public class FloatingTaskFlowTest {
                     Method place = ClickOverlayService.class.getDeclaredMethod("placeTaskFlow", int[].class, boolean.class);
                     place.setAccessible(true); place.invoke(service(), null, true);
                 } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
-                findText(guide(), "다른 내용 입력하기").performClick();
+                findText(guide(), "직접 입력하기").performClick();
             });
             await(() -> ClickAccessibilityService.keyboardBounds() != null);
             await(() -> {
@@ -197,6 +208,7 @@ public class FloatingTaskFlowTest {
             await(() -> service() == null);
         } finally {
             app.stopService(serviceIntent);
+            mode.setEnabled(originalAutomaticMode);
             Settings.Secure.putString(app.getContentResolver(), "show_ime_with_hard_keyboard", originalKeyboard);
             Settings.Secure.putString(app.getContentResolver(), key, original);
             Settings.Secure.putInt(app.getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, enabled);

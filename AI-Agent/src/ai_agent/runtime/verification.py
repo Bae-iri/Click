@@ -3,7 +3,7 @@ from hashlib import sha256
 from math import isfinite
 
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, target_key
-from ai_agent.runtime.types import VerificationResult, VerificationStatus as Status
+from ai_agent.runtime.types import VerificationResult, VerificationStatus as Status, SafetyLevel
 
 
 def correlate_action(session, request, transition):
@@ -77,6 +77,10 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             (current_snapshot and current_snapshot.observation_id == baseline_id)
             or (observation_time is not None and action_time is not None and observation_time <= action_time))):
         return result(Status.WAITING_FOR_OBSERVATION, 'observation_precedes_action')
+    gap_started = attempt.get('observation_gap_started_at_ms') if attempt else None
+    if (not nodes and gap_started is not None and observation_time is not None
+            and 0 <= observation_time - gap_started < graph.policy.observation_timeout_ms):
+        return result(Status.WAITING_FOR_OBSERVATION, 'transient_screen_unavailable')
 
     # A manually reached nonterminal screen is progress, not evidence of executing a guide.
     if (transition.verification_predicate == 'state_reached'
@@ -86,6 +90,12 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             and (not transition.completes_task or correlated)):
         return result(Status.SUCCESS, 'state_reached' if correlated else 'observed_progress',
                       count=correlated, completed=transition.completes_task)
+    if (transition.verification_predicate == 'state_reached' and not transition.completes_task
+            and navigation_reachable(graph, transition.to_state, current_state_id)):
+        # Combined OEM screens / several manual taps can skip navigation screens.
+        # This is observed progress, not proof that every skipped guide was executed.
+        return VerificationResult(Status.SUCCESS, current_state_id, current_state_id,
+                                  evidence='observed_progress', count_attempt=False)
     if not correlated:
         return result(Status.WAITING_FOR_ACTION, 'no_correlated_action')
 
@@ -144,6 +154,31 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             and observation_time - action_time >= graph.policy.observation_timeout_ms):
         return result(Status.UNKNOWN, 'observation_timeout')
     return result(Status.WAITING_FOR_OBSERVATION, 'awaiting_settled_observation')
+
+
+def navigation_reachable(graph, start, destination):
+    """Only traverse navigation; never bypass a setting change or consent boundary."""
+    if destination not in graph.states or destination in {'S0_UNKNOWN', graph.definition.done_state}:
+        return False
+    if graph.states[destination].verification_only or start == destination:
+        return False
+    seen, pending = set(), [start]
+    while pending:
+        state = pending.pop()
+        if state in seen:
+            continue
+        seen.add(state)
+        for edge in graph.transitions_from(state):
+            if (edge.completes_task or edge.verification_predicate != 'state_reached'
+                    or edge.safety_level != SafetyLevel.LOW_RISK
+                    or edge.action_type.value not in {'tap', 'scroll'}
+                    or graph.states[edge.to_state].verification_only
+                    or edge.to_state == graph.definition.done_state):
+                continue
+            if edge.to_state == destination:
+                return True
+            pending.append(edge.to_state)
+    return False
 
 
 def recreated_font_control(node, attempt, transition, graph, state, snapshot, observed_at, action_at):

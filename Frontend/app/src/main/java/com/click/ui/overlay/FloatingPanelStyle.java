@@ -12,7 +12,11 @@ import android.widget.Button;
 
 /** Shared surfaces for the input, review and guidance panels. */
 final class FloatingPanelStyle {
-    static final int HEADER_GAP_DP = 8;
+    // [UI 수정] 입력·요청 확인·진행 안내창에 공통으로 쓰는 간격.
+    static final int HORIZONTAL_PADDING_DP = 16;
+    static final int TOP_PADDING_DP = 8;
+    static final int BOTTOM_PADDING_DP = 12;
+    static final int HEADER_GAP_DP = 4;
     private FloatingPanelStyle() {}
 
     /** Compact visual controls retain a 48dp touch target and grow with system text. */
@@ -29,7 +33,7 @@ final class FloatingPanelStyle {
         fill.setStroke(Math.max(1, Math.round(density)), 0xFFE1E9F5);
         Drawable ripple = new RippleDrawable(ColorStateList.valueOf(0x183478F6), fill,
                 gradient(density, 10, Color.WHITE, Color.WHITE));
-        button.setBackground(new InsetDrawable(ripple, 0, Math.round(6 * density), 0, Math.round(6 * density)));
+        button.setBackground(new InsetDrawable(ripple, 0, Math.round(4 * density), 0, Math.round(4 * density)));
         button.setPadding(Math.round(10 * density), Math.round(6 * density),
                 Math.round(10 * density), Math.round(6 * density));
         button.setStateListAnimator(null);
@@ -38,7 +42,10 @@ final class FloatingPanelStyle {
     }
 
     static GradientDrawable surface(float density) {
-        return gradient(density, 28, 0xFFFEFEFF, 0xFFF5F7FD);
+        GradientDrawable surface = gradient(density, 22, 0xFFFEFEFF, 0xFFF5F7FD);
+        // 오버레이 창 경계에서 잘리는 elevation 그림자 대신 얇은 테두리로 구분한다.
+        surface.setStroke(Math.max(1, Math.round(density)), 0xFFDCE6F5);
+        return surface;
     }
 
     static GradientDrawable summary(float density) {

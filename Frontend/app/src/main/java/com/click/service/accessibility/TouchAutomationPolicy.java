@@ -82,16 +82,18 @@ public final class TouchAutomationPolicy {
     private static boolean approvedRow(ScreenSnapshot screen, AccessibilityNodeSnapshot row) {
         if (!usable(screen, row) || row.scrollable || risky(row)) return false;
         Set<String> titles = new HashSet<>(), otherLabels = new HashSet<>();
-        if (allowedTitle(screen, label(row))) otherLabels.add(canonical(label(row)));
         for (AccessibilityNodeSnapshot child : screen.nodes) {
             if (!child.visibleToUser || !descendant(screen, child, row.nodeId)) continue;
             if (child.sensitiveInput || child.checkable || child.progress != null || risky(child)
                     || child.clickable && !allowedTitle(screen, label(child))) return false;
+            String resource = child.resourceId == null ? "" : child.resourceId.substring(child.resourceId.lastIndexOf('/') + 1);
+            if (Set.of("summary", "subtitle", "description", "secondary_text").contains(resource)) continue;
             if (allowedTitle(screen, label(child))) {
                 otherLabels.add(canonical(label(child)));
                 if (child.resourceId != null && child.resourceId.endsWith(":id/title")) titles.add(canonical(label(child)));
             }
         }
+        if (otherLabels.isEmpty() && allowedTitle(screen, label(row))) otherLabels.add(canonical(label(row)));
         // Multiple independently named menu controls in a parent are ambiguous, not one row.
         return otherLabels.size() == 1 && titles.size() <= 1;
     }
@@ -135,17 +137,20 @@ public final class TouchAutomationPolicy {
         return shape(before, id).equals(shape(after, id));
     }
     private static String shape(ScreenSnapshot screen, String id) {
-        StringBuilder result = new StringBuilder();
+        java.util.List<String> rows = new java.util.ArrayList<>();
         for (AccessibilityNodeSnapshot n : screen.nodes) {
             if (!n.nodeId.equals(id) && !descendant(screen, n, id)) continue;
+            StringBuilder result = new StringBuilder();
             result.append(n.nodeId).append('|').append(n.parentId).append('|').append(n.packageName)
                     .append('|').append(n.windowId).append('|').append(n.text).append('|').append(n.contentDescription)
                     .append('|').append(n.resourceId).append('|').append(n.className).append('|').append(n.visibleToUser)
                     .append('|').append(n.enabled).append('|').append(n.clickable).append('|').append(n.checkable)
                     .append('|').append(n.sensitiveInput).append('|').append(Arrays.toString(n.bounds))
                     .append('|').append(n.progress).append('|').append(n.rangeMin).append('|').append(n.rangeMax).append(';');
+            rows.add(result.toString());
         }
-        return result.toString();
+        java.util.Collections.sort(rows);
+        return String.join("", rows);
     }
 
     private static AccessibilityNodeSnapshot find(ScreenSnapshot screen, String id) {

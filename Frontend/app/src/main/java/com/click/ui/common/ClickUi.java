@@ -48,7 +48,7 @@ public final class ClickUi {
         TextView view = new TextView(context);
         view.setText(text);
         view.setTextSize(30);
-        view.setTypeface(font(context, com.click.designpreview.R.font.pretendard_bold));
+        view.setTypeface(font(context, com.click.designpreview.R.font.pretendard_semibold));
         view.setTextColor(TEXT);
         view.setGravity(Gravity.START);
         view.setIncludeFontPadding(false);
@@ -62,7 +62,7 @@ public final class ClickUi {
         view.setTextSize(18);
         view.setTextColor(SUBTEXT);
         view.setLineSpacing(0, 1.25f);
-        view.setTypeface(font(context, com.click.designpreview.R.font.pretendard_medium));
+        view.setTypeface(font(context, com.click.designpreview.R.font.pretendard_regular));
         view.setIncludeFontPadding(false);
         return view;
     }
@@ -86,7 +86,7 @@ public final class ClickUi {
         button.setText(text);
         button.setTextSize(20);
         button.setTextColor(Color.WHITE);
-        button.setTypeface(font(context, com.click.designpreview.R.font.pretendard_semibold));
+        button.setTypeface(font(context, com.click.designpreview.R.font.pretendard_medium));
         GradientDrawable fill = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
                 new int[]{0xFF3979F6, 0xFF4B89FA});
         fill.setCornerRadius(dp(context, 22));
@@ -102,7 +102,7 @@ public final class ClickUi {
         button.setText(text);
         button.setTextSize(19);
         button.setTextColor(BLUE_DARK);
-        button.setTypeface(font(context, com.click.designpreview.R.font.pretendard_semibold));
+        button.setTypeface(font(context, com.click.designpreview.R.font.pretendard_medium));
         button.setBackground(new RippleDrawable(ColorStateList.valueOf(0x183478F6),
                 rounded(PALE_BLUE, dp(context, 18)), rounded(Color.WHITE, dp(context, 18))));
         button.setAllCaps(false);

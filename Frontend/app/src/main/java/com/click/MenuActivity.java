@@ -52,6 +52,7 @@ public final class MenuActivity extends AppCompatActivity {
     private boolean timingConsented;
     private androidx.appcompat.widget.SwitchCompat automationToggle;
     private TouchAutomationSettings automationSettings;
+    private boolean syncingAutomationToggle;
     private AccountActionsGateway accountActions;
 
     @Override protected void onCreate(Bundle state) {
@@ -75,6 +76,7 @@ public final class MenuActivity extends AppCompatActivity {
         scroll.setVerticalScrollBarEnabled(false);
         LinearLayout page = vertical();
         page.setClipChildren(false);
+        page.setClipToPadding(false);
         int horizontal = dp(22);
         page.setPadding(horizontal, dp(14), horizontal, dp(34));
         scroll.addView(page, new ScrollView.LayoutParams(-1, -2));
@@ -146,6 +148,16 @@ public final class MenuActivity extends AppCompatActivity {
                 () -> automationToggle.setChecked(!enabled), "닫기");
     }
 
+    private void showAutomationSummary() {
+        LinearLayout content = vertical();
+        add(content, dialogSection("이렇게 도와드려요",
+                "앱 열기·화면 이동·스크롤·설정 조절을 자동으로 도와드려요.",
+                "언제든 자동 모드를 끄거나 작업을 멈출 수 있어요."), 0);
+        add(content, dialogNotice(MenuIconView.Kind.AUTOMATION,
+                "결제·전화 걸기·메시지 보내기는 자동으로 실행하지 않아요."), 16);
+        ClickDialog.show(this, "자동 모드를 켰어요", content, "알겠어요", null, null);
+    }
+
     /** Short sections leave breathing room without putting all copy in one box. */
     private View dialogSection(String title, String... paragraphs) {
         LinearLayout section = vertical();
@@ -214,9 +226,11 @@ public final class MenuActivity extends AppCompatActivity {
         automationToggle.setChecked(automationSettings.isEnabled());
         automationToggle.setContentDescription("자동 모드");
         automationToggle.setOnCheckedChangeListener((button, enabled) -> {
+            if (syncingAutomationToggle) return;
             automationToggle.setText("자동 모드");
             automationSettings.setEnabled(enabled);
             ClickOverlayService.onAutomationSettingChanged();
+            if (enabled) showAutomationSummary();
         });
         row.addView(automationToggle, new LinearLayout.LayoutParams(-2, -2));
         return row;
@@ -225,14 +239,17 @@ public final class MenuActivity extends AppCompatActivity {
     private LinearLayout group() {
         LinearLayout group = vertical();
         GradientDrawable card = new GradientDrawable();
-        card.setColor(0xF9FFFFFF);
+        card.setColor(Color.WHITE);
         card.setCornerRadius(dp(24));
+        card.setStroke(dp(1), 0xFFF0F3F8);
 
         group.setBackground(card);
-        group.setElevation(dp(3));
+        group.setOutlineProvider(android.view.ViewOutlineProvider.BACKGROUND);
+        group.setClipToOutline(true);
+        group.setElevation(dp(1));
         if (Build.VERSION.SDK_INT >= 28) {
-            group.setOutlineAmbientShadowColor(0x243D5D8F);
-            group.setOutlineSpotShadowColor(0x303D5D8F);
+            group.setOutlineAmbientShadowColor(0x183D5D8F);
+            group.setOutlineSpotShadowColor(0x143D5D8F);
         }
         group.setPadding(dp(8), dp(5), dp(8), dp(5));
         return group;
@@ -377,8 +394,6 @@ public final class MenuActivity extends AppCompatActivity {
 
     private void showPolicy(String title, int contentId) {
         LinearLayout content = vertical();
-        add(content, dialogNotice(MenuIconView.Kind.DOCUMENT,
-                getString(R.string.click_policy_draft_notice)), 0);
         String[] sections = getResources().getStringArray(contentId);
         for (int index = 0; index < sections.length; index += 2) {
             if (index > 0) {
@@ -388,7 +403,7 @@ public final class MenuActivity extends AppCompatActivity {
                 lineParams.topMargin = dp(24);
                 content.addView(line, lineParams);
             }
-            add(content, dialogSection(sections[index], sections[index + 1].split("\\n+")), 24);
+            add(content, dialogSection(sections[index], sections[index + 1].split("\\n+")), index == 0 ? 0 : 24);
         }
         ClickDialog.show(this, title, content, "확인했어요", null, null);
     }
@@ -456,7 +471,9 @@ public final class MenuActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume();
+        syncingAutomationToggle = true;
         automationToggle.setChecked(automationSettings.isEnabled());
+        syncingAutomationToggle = false;
         personalizationEvents.readConsent(new PersonalizationEventGateway.ConsentCallback() {
             @Override public void onResult(boolean consented) { timingConsented = consented; }
             @Override public void onFailure() { }

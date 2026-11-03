@@ -73,7 +73,7 @@
             <TextView
                 android:id="@+id/onboarding_title"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:fontFamily="@font/pretendard_bold"
+                android:fontFamily="@font/pretendard_semibold"
                 android:gravity="center"
                 android:includeFontPadding="false" android:letterSpacing="-0.02"
                 android:text="@string/onboarding_title"
@@ -83,7 +83,7 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
                 android:breakStrategy="balanced"
-                android:fontFamily="@font/pretendard_medium" android:gravity="center"
+                android:fontFamily="@font/pretendard_regular" android:gravity="center"
                 android:includeFontPadding="false" android:letterSpacing="-0.01"
                 android:text="@string/onboarding_description"
                 android:textColor="@color/onboarding_text_secondary" android:textSize="19sp" />
@@ -92,7 +92,7 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:breakStrategy="balanced"
-                android:fontFamily="@font/pretendard_medium" android:gravity="center"
+                android:fontFamily="@font/pretendard_regular" android:gravity="center"
                 android:includeFontPadding="false"
                 android:paddingHorizontal="16dp" android:paddingTop="20dp" android:paddingBottom="28dp"
                 android:text="@string/onboarding_task_quote"
@@ -119,7 +119,7 @@
                         android:src="@drawable/welcome" />
                     <TextView android:id="@+id/onboarding_bubble"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:fontFamily="@font/pretendard_semibold" android:gravity="center"
+                        android:fontFamily="@font/pretendard_medium" android:gravity="center"
                         android:includeFontPadding="false"
                         android:paddingHorizontal="18dp" android:paddingTop="16dp" android:paddingBottom="25dp"
                         android:text="@string/onboarding_bubble"
@@ -136,7 +136,7 @@
                         android:importantForAccessibility="no" />
                     <TextView android:id="@+id/onboarding_feature_bubble"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:fontFamily="@font/pretendard_semibold" android:gravity="center"
+                        android:fontFamily="@font/pretendard_medium" android:gravity="center"
                         android:includeFontPadding="false"
                         android:paddingHorizontal="24dp" android:paddingTop="18dp" android:paddingBottom="29dp"
                         android:text="@string/onboarding_question_bubble"
@@ -191,7 +191,7 @@
                 android:paddingHorizontal="24dp" android:paddingVertical="16dp">
                 <TextView android:id="@+id/onboarding_start_label"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:fontFamily="@font/pretendard_semibold" android:importantForAccessibility="no"
+                    android:fontFamily="@font/pretendard_medium" android:importantForAccessibility="no"
                     android:includeFontPadding="false" android:text="@string/onboarding_start"
                     android:textColor="@color/onboarding_surface" android:textSize="22sp" />
                 <ImageView android:id="@+id/onboarding_start_arrow"

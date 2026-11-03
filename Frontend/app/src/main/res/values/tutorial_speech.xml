@@ -9,8 +9,8 @@
     <string name="tutorial_speech_write_input">요청을 입력한 뒤, 위쪽 화살표가 있는 보내기 버튼을 눌러 보내세요.</string>
 
     <string name="tutorial_speech_review_intro">입력한 요청을 확인해 볼게요. 요청하신 대상과 변경할 내용을골라주세요.</string>
-    <string name="tutorial_speech_review_target">어디의 글자를 바꿀까요? 휴대폰 기본 글자, 특정 앱 안에서만 중에서 골라주세요. 클릭이 더 잘 이해하기 위한 단계예요</string>
-    <string name="tutorial_speech_review_app">앱 이름을 입력해 주세요. 휴대폰 전체 글자를 바꾸려면 휴대폰 기본 글자를 눌러주세요.</string>
+    <string name="tutorial_speech_review_target">어디의 글자를 바꿀까요? 휴대폰 전체 또는 특정 앱 안에서를 골라주세요. 클릭이 더 잘 이해하기 위한 단계예요</string>
+    <string name="tutorial_speech_review_app">앱 이름을 입력해 주세요. 휴대폰 전체 글자를 바꾸려면 휴대폰 전체를 눌러주세요.</string>
     <string name="tutorial_speech_review_direction">글자 크기를 어떻게 바꿀까요? 더 크게, 더 작게 중에서 골라주세요.</string>
     <string name="tutorial_speech_review_unsupported">이 요청의 실행 안내는 아직 지원하지 않아요. 내용을 수정하거나 요청을 중지할 수 있어요.</string>
     <string name="tutorial_speech_review_ready">요청 내용이 맞는지 확인해 주세요. 맞으면 이대로 시작하기를 눌러주세요.</string>

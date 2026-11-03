@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ai_agent.runtime.vision import VisionFallbackAnalysis
 from ai_agent.runtime.types import (
     ActionType,
     CommandType,
@@ -254,3 +255,24 @@ def _blocked_command(
         safety_level=SafetyLevel.BLOCKED,
         requires_user_action=False,
     )
+
+
+def command_for_vision_analysis(
+    session_id: str,
+    analysis: VisionFallbackAnalysis,
+    *,
+    manual_instruction: str | None = None,
+) -> GuideCommand | None:
+    if analysis.status == "masking_failed":
+        return vision_fallback_command(session_id=session_id,
+            message="개인정보를 안전하게 가렸는지 확인하지 못해 화면 분석을 중단했어요. 다시 요청하면 새로 허용을 확인할게요.",
+            command_type=CommandType.BLOCKED, safety_level=SafetyLevel.BLOCKED)
+    if analysis.status in {"consent_required", "not_requested"}:
+        return vision_fallback_command(
+            session_id=session_id,
+            message="접근성 정보로 안내할 항목을 찾지 못했어요. 현재 화면을 한 번 캡처해 기기에서 글자를 읽고, 글자와 위치를 서버에 보내도 될까요? 원본 이미지는 전송하지 않아요.",
+            manual_instruction=manual_instruction,
+        )
+    # Missing analysis is an observation failure handled by recovery.py.
+    # Only privacy/safety failures above may terminate the analysis flow.
+    return None

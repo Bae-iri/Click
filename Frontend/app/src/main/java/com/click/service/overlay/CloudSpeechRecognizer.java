@@ -41,11 +41,10 @@ public final class CloudSpeechRecognizer implements SpeechInput {
     public void start(Callback callback) {
         cancel();
         int token = ++generation;
-        gateway.prepare(); // Validate the private endpoint while the user is still speaking.
         recorderExecutor.execute(() -> capture(token, callback));
     }
 
-    @Override public void finish() {
+    public void finish() {
         finishedGeneration = generation;
         stopRecorder();
     }
@@ -118,7 +117,6 @@ public final class CloudSpeechRecognizer implements SpeechInput {
             // Release the microphone before the network transcription begins.
             releaseRecorder(recorder);
             recorder = null;
-            android.util.Log.d("ClickSTT", "recording_ms=" + (SystemClock.elapsedRealtime() - startedAt));
             if (!heardSpeech) throw new IOException("NO_SPEECH");
             byte[] wav = toWav(pcm.toByteArray());
             main.post(() -> {

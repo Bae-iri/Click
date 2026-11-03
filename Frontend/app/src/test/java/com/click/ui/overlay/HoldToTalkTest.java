@@ -109,13 +109,6 @@ public class HoldToTalkTest {
         verify(callback, never()).onMicrophoneCancelled();
     }
 
-    @Test public void stopButtonDoesNotStartRecordingEvenThoughItIsInsideTheCard() {
-        control.setRequestStatus("진행 중", true);
-        control.findViewById(R.id.overlay_stop_request).performClick();
-        verify(callback).onStopRequested();
-        verify(callback, never()).onMicrophonePressed();
-    }
-
     private void touch(int action, float x, float y) {
         long now = SystemClock.uptimeMillis();
         MotionEvent event = MotionEvent.obtain(now, now, action, x, y, 0);

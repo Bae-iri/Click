@@ -63,4 +63,27 @@ public class ObservationRecoveryTest {
         assertFalse(ObservationRecovery.canSearchByScrolling(offscreenPolicy("TARGET_NOT_VISIBLE"),
                 new ScreenSnapshot(base.packageName, base.capturedAt, 1080, 2400, Collections.emptyList(), 7)));
     }
+
+    @Test public void currentMissingTargetCodesSearchMenusBeforeManualRecovery() throws Exception {
+        JSONObject policy = new JSONObject().put("recovery", new JSONObject()
+                .put("recoverable", true).put("waiting_for", "observation")
+                .put("reason_code", "TARGET_NOT_FOUND").put("next_action", "reobserve"));
+        for (String state : new String[]{"S1_SETTINGS_HOME", "S2_DISPLAY_MENU", "S3_FONT_MENU"})
+            assertTrue(ObservationRecovery.canSearchByScrolling(state, policy, settings("com.android.settings")));
+        for (String state : new String[]{"S0_UNKNOWN", "S4_FONT_SIZE_CONTROL", "S5_FONT_SIZE_CHANGED"})
+            assertFalse(ObservationRecovery.canSearchByScrolling(state, policy, settings("com.android.settings")));
+        policy.put("backend_handoff", new JSONObject().put("type", "task_graph_reselection_required"));
+        assertFalse(ObservationRecovery.canSearchByScrolling("S1_SETTINGS_HOME", policy, settings("com.android.settings")));
+    }
+
+    @Test public void legacyAndCurrentFallbackKeysBothSearchFontSubmenu() throws Exception {
+        for (String key : new String[]{"reason", "reason_code"}) {
+            JSONObject policy = new JSONObject().put("fallback_action", new JSONObject()
+                    .put("type", "request_fresh_observation")
+                    .put(key, "reason".equals(key) ? "target_not_found" : "TARGET_NOT_FOUND"));
+            assertTrue(ObservationRecovery.canSearchByScrolling("S3_FONT_MENU", policy, settings("com.android.settings")));
+        }
+        for (String reason : new String[]{"TARGET_AMBIGUOUS", "ACTION_RESULT_UNOBSERVABLE", "STATE_UNKNOWN", "ACTION_EVENT_MISSING"})
+            assertFalse(ObservationRecovery.canSearchByScrolling("S1_SETTINGS_HOME", offscreenPolicy(reason), settings("com.android.settings")));
+    }
 }

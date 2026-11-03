@@ -119,6 +119,7 @@ public final class RequirementReview {
         if ("increase".equals(choice) || "decrease".equals(choice)) direction = choice;
     }
     public boolean isFont() { return font; }
+    public boolean isBlocked() { return blocked; }
     public boolean isPhone() { return "휴대폰 설정".equals(target); }
     public boolean needsTarget() { return font && target == null; }
     public boolean needsDirection() { return font && direction == null; }
@@ -165,8 +166,8 @@ public final class RequirementReview {
         if (blocked) return "변경을 원하시는지 다시 알려주세요. 아직 시작하지 않았어요.";
         if (needsTarget()) {
             String question = appOnly()
-                    ? "어느 앱의 글자를 바꿀까요? 앱 이름을 알려주세요. 휴대폰 전체 글자를 바꾸려면 휴대폰 기본 글자를 눌러주세요."
-                    : "어디의 글자를 바꿀까요? 휴대폰 기본 글자, 특정 앱 안에서만 중에서 선택해 주세요.";
+                    ? "어느 앱의 글자를 바꿀까요? 앱 이름을 알려주세요. 휴대폰 전체 글자를 바꾸려면 휴대폰 전체를 눌러주세요."
+                    : "어디의 글자를 바꿀까요? 휴대폰 전체 또는 특정 앱 안에서를 선택해 주세요.";
             if (needsDirection()) question += " 글자 크기는 더 크게, 더 작게 중에서 선택해 주세요.";
             return question;
         }
@@ -174,7 +175,7 @@ public final class RequirementReview {
         if (font && !isPhone()) return target + "의 글자 변경 안내는 아직 지원하지 않아요. 내용을 수정하거나 요청을 중지해 주세요.";
         if (!executable) return "이 요청의 실행 안내는 아직 지원하지 않아요. 내용을 수정할 수 있어요.";
         return font ? "휴대폰 기본 글자를 " + ("increase".equals(direction) ? "더 크게" : "더 작게")
-                + " 바꾸려는 거죠? 앱에 따라 적용되지 않을 수 있어요. 맞으면 이 내용으로 시작을 눌러주세요."
-                : summary() + ". 원하신 내용이 맞으면 이 내용으로 시작을 눌러주세요.";
+                + " 바꾸려는 거죠? 앱에 따라 적용되지 않을 수 있어요. 맞으면 안내 시작하기를 눌러주세요."
+                : summary() + ". 원하신 내용이 맞으면 안내 시작하기를 눌러주세요.";
     }
 }

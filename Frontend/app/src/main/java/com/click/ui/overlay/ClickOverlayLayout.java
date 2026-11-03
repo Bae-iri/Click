@@ -229,10 +229,10 @@ public final class ClickOverlayLayout extends ViewGroup {
         return getClickCenterX(target, getWindowWidth(target, getResources().getDisplayMetrics().widthPixels));
     }
     public float getClickCenterX(Mode target, int width) {
-        return target == Mode.COLLAPSED ? dp(32) : width - dp(16) - handleWidth() / 2f;
+        return target == Mode.COLLAPSED ? dp(32) : width - dp(FloatingPanelStyle.HORIZONTAL_PADDING_DP) - handleWidth() / 2f;
     }
     public float getClickCenterY(Mode target) {
-        return target == Mode.COLLAPSED ? dp(32) : dp(6) + headerHeight() / 2f;
+        return target == Mode.COLLAPSED ? dp(32) : dp(FloatingPanelStyle.TOP_PADDING_DP) + headerHeight() / 2f;
     }
 
     // [UI 수정] 헤더/줄이기 버튼 크기. 시스템 글자 확대 설정을 반영한 최소 높이/너비이다.
@@ -274,7 +274,8 @@ public final class ClickOverlayLayout extends ViewGroup {
         panel = new LinearLayout(getContext());
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setContentDescription(taskPhase == null ? null : taskPhase + " 안내 창");
-        panel.setPadding(dp(22), dp(10), dp(22), dp(22));
+        panel.setPadding(dp(FloatingPanelStyle.HORIZONTAL_PADDING_DP), dp(FloatingPanelStyle.TOP_PADDING_DP),
+                dp(FloatingPanelStyle.HORIZONTAL_PADDING_DP), dp(FloatingPanelStyle.BOTTOM_PADDING_DP));
         panel.setBackground(FloatingPanelStyle.surface(getResources().getDisplayMetrics().density));
         addView(panel);
 
@@ -319,35 +320,39 @@ public final class ClickOverlayLayout extends ViewGroup {
             TextView welcome = label("무엇을 도와드릴까요?", 22, ClickUi.TEXT, true);
             welcome.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
             choices.addView(welcome, spaced(0));
-            choices.addView(label("말하거나 글로 입력해 주세요.", 15, ClickUi.SUBTEXT, false), spaced(8));
+            choices.addView(label("말하거나 글로 입력해 주세요.", 15, ClickUi.SUBTEXT, false), spaced(4));
             TextView example = label("예) 글자 크기 키워줘", 15, ClickUi.SUBTEXT, false);
-            example.setPadding(dp(16), dp(16), dp(16), dp(16));
+            example.setPadding(dp(12), dp(10), dp(12), dp(10));
+            example.setMinHeight(dp(48));
+            example.setGravity(Gravity.CENTER_VERTICAL);
             example.setBackground(ClickUi.outlined(Color.TRANSPARENT, 0xFFDEE3EE, dp(16), dp(1)));
             example.setContentDescription("글로 입력하기. 예: 글자 크기 키워줘");
             example.setFocusable(true);
             example.setOnClickListener(view -> changeMode(Mode.TEXT));
-            choices.addView(example, spaced(24));
-            choices.addView(feature("말로 입력", true, () -> changeMode(Mode.VOICE)), spaced(20));
-            choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(10));
+            choices.addView(example, spaced(12));
+            choices.addView(feature("말로 입력", true, () -> changeMode(Mode.VOICE)), spaced(12));
+            choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(8));
             addScrollableBody(choices, FloatingPanelStyle.HEADER_GAP_DP);
+            // 진행 중인 요청에서 입력 메뉴를 다시 열어도 중지 버튼에 접근할 수 있다.
+            panel.addView(requestRow, spaced(4));
         } else if (mode == Mode.VOICE) {
-            // [UI 수정] 음성 입력: 마이크 크기(128dp), 설명, 인식 결과, 취소 버튼 배치.
+            // [UI 수정] 음성 입력: 마이크 크기(104dp), 설명, 인식 결과, 취소 버튼 배치.
             // 마이크 그림/애니메이션은 VoiceCaptureIndicator.java, 누르기 동작은 onMicrophoneTouch().
             LinearLayout listening = new LinearLayout(getContext());
             voiceCaptureArea = listening;
             listening.setId(R.id.overlay_microphone);
             listening.setOrientation(LinearLayout.VERTICAL);
             listening.setGravity(Gravity.CENTER);
-            listening.setPadding(dp(8), dp(16), dp(8), dp(20));
+            listening.setPadding(dp(8), dp(8), dp(8), dp(10));
             listening.setFocusable(true);
             listening.setOnClickListener(view -> { if (callback != null) callback.onMicrophoneClicked(); });
             listening.setOnTouchListener(this::onMicrophoneTouch);
             microphone = new VoiceCaptureIndicator(getContext());
-            listening.addView(microphone, new LinearLayout.LayoutParams(dp(128), dp(128)));
+            listening.addView(microphone, new LinearLayout.LayoutParams(dp(104), dp(104)));
             microphoneLabel = label("", 18, ClickUi.TEXT, true);
             microphoneLabel.setGravity(Gravity.CENTER);
             microphoneLabel.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-            listening.addView(microphoneLabel, spaced(16));
+            listening.addView(microphoneLabel, spaced(10));
             voiceHelp = label("", 13, ClickUi.SUBTEXT, false);
             voiceHelp.setGravity(Gravity.CENTER);
             voiceHelp.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -425,7 +430,7 @@ public final class ClickOverlayLayout extends ViewGroup {
     private View feature(String title, boolean microphone, Runnable action) {
         LinearLayout row = new LinearLayout(getContext());
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(14), dp(12), dp(14), dp(12));
+        row.setPadding(dp(12), dp(8), dp(12), dp(8));
         row.setMinimumHeight(dp(52));
         row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x223478F6),
                 ClickUi.rounded(Color.WHITE, dp(18)),
@@ -434,9 +439,9 @@ public final class ClickOverlayLayout extends ViewGroup {
         icon.setImageResource(microphone ? R.drawable.ic_overlay_microphone : R.drawable.ic_overlay_edit);
         icon.setImageTintList(ColorStateList.valueOf(ClickUi.BLUE));
         icon.setPadding(dp(6), dp(6), dp(6), dp(6));
-        row.setElevation(dp(2));
+        row.setElevation(0);
         icon.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-        row.addView(icon, new LinearLayout.LayoutParams(dp(44), dp(44)));
+        row.addView(icon, new LinearLayout.LayoutParams(dp(36), dp(36)));
         TextView copy = label(title, 17, ClickUi.TEXT, true);
         copy.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);

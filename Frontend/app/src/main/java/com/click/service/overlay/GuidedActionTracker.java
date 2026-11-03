@@ -13,10 +13,12 @@ public final class GuidedActionTracker {
     private int[] sliderTrackBounds;
     private long issuedAt;
     private boolean consumed;
+    private final java.util.Map<String, AccessibilityNodeSnapshot> tapSources = new java.util.HashMap<>();
 
     public void bind(String session, String episode, String guide, String action,
                      String nodeId, int[] bounds, ScreenSnapshot screen, long issuedAt) {
-        if (guide != null && guide.equals(this.guide)) return;
+        if (guide != null && guide.equals(this.guide) && java.util.Objects.equals(session, this.session)
+                && java.util.Objects.equals(episode, this.episode)) return;
         clear();
         if (screen == null || nodeId == null || bounds == null) return;
         for (AccessibilityNodeSnapshot node : screen.nodes) {
@@ -25,6 +27,19 @@ public final class GuidedActionTracker {
             }
         }
         if (target == null) return;
+        tapSources.put(target.nodeId, target);
+        if ("tap".equals(action)) {
+            for (AccessibilityNodeSnapshot child : screen.nodes) {
+                if (child.visibleToUser && child.enabled && !child.sensitiveInput && !child.clickable
+                        && !child.scrollable && !child.checkable && child.progress == null
+                        && child.windowId == target.windowId && java.util.Objects.equals(child.packageName, target.packageName)
+                        && contains(target.bounds, child.bounds) && descendant(screen, child, target.nodeId))
+                    tapSources.put(child.nodeId, child);
+            }
+            AccessibilityNodeSnapshot click = com.click.service.accessibility.TouchAutomationPolicy.clickableTarget(
+                    screen, nodeId, bounds);
+            if (click != null) tapSources.put(click.nodeId, click);
+        }
         // Some native sliders expose a moving thumb as the ranged child of a
         // stationary SeekBar. Retain that exact parent track for range events.
         if ("slider".equals(target.role) && target.parentId != null) {
@@ -41,6 +56,12 @@ public final class GuidedActionTracker {
 
     public JSONObject record(String type, String packageName, int window, String nodeId,
                              String resourceId, int[] bounds, long occurredAt) {
+        if ("tap".equals(action) && AgentActionEvents.TAP_COMPLETED.equals(type)) {
+            AccessibilityNodeSnapshot source = tapSources.get(nodeId);
+            if (source == null || !java.util.Objects.equals(source.resourceId, resourceId)
+                    || !Arrays.equals(source.bounds, bounds)) return null;
+            nodeId = target.nodeId; resourceId = target.resourceId; bounds = target.bounds;
+        }
         if (target == null || consumed || occurredAt <= issuedAt || !java.util.Objects.equals(target.packageName, packageName)
                 || target.windowId != window || !target.nodeId.equals(nodeId)
                 || !java.util.Objects.equals(target.resourceId, resourceId)
@@ -86,9 +107,22 @@ public final class GuidedActionTracker {
     public boolean isTargetTap(String packageName, int window, String nodeId, int[] bounds) {
         if (target == null || !java.util.Objects.equals(target.packageName, packageName)
                 || target.windowId != window || nodeId == null || bounds == null || bounds.length != 4) return false;
-        return target.nodeId.equals(nodeId) || target.nodeId.startsWith(nodeId + "_")
-                && bounds[0] <= target.bounds[0] && bounds[1] <= target.bounds[1]
-                && bounds[2] >= target.bounds[2] && bounds[3] >= target.bounds[3];
+        AccessibilityNodeSnapshot source = tapSources.get(nodeId);
+        return source != null && Arrays.equals(source.bounds, bounds);
+    }
+
+    private static boolean descendant(ScreenSnapshot screen, AccessibilityNodeSnapshot child, String ancestor) {
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        String parent = child.parentId;
+        while (parent != null && seen.add(parent)) {
+            if (parent.equals(ancestor)) return true;
+            AccessibilityNodeSnapshot found = null;
+            for (AccessibilityNodeSnapshot node : screen.nodes) if (parent.equals(node.nodeId)) { found = node; break; }
+            if (found == null || found.windowId != child.windowId
+                    || !java.util.Objects.equals(found.packageName, child.packageName)) return false;
+            parent = found.parentId;
+        }
+        return false;
     }
 
     private static boolean contains(int[] outer, int[] inner) {
@@ -98,5 +132,5 @@ public final class GuidedActionTracker {
                 && outer[2] >= inner[2] && outer[3] >= inner[3];
     }
 
-    public void clear() { target = null; sliderTrackBounds = null; guide = null; consumed = false; }
+    public void clear() { target = null; sliderTrackBounds = null; guide = null; consumed = false; tapSources.clear(); }
 }

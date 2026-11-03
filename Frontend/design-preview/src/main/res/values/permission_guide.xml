@@ -4,8 +4,8 @@
     <string name="guide_step_number">%1$d</string>
     <string name="guide_name">접근성 안내</string>
     <string name="guide_open">접근성 설정 안내</string>
-    <string name="guide_progress">%1$d / 5</string>
-    <string name="guide_progress_description">접근성 안내, 5단계 중 %1$d단계</string>
+    <string name="guide_progress">%1$d / %2$d</string>
+    <string name="guide_progress_description">접근성 안내, %2$d단계 중 %1$d단계</string>
     <string name="guide_intro">어려운 스마트폰 사용,\n이제 클릭 한 번으로</string>
     <string name="guide_reason_title">앱을 더 편리하게\n사용하기 위해</string>
     <string name="guide_reason_accent">접근성 권한이 필요해요</string>
@@ -28,8 +28,25 @@
     <string name="guide_step_two">접근성을 선택해 주세요</string>
     <string name="guide_step_two_description">직접 찾으실 때는 설정 앱에서\n‘접근성’을 눌러주세요.</string>
     <string name="guide_allow_title">접근성을\n허용해 주세요</string>
-    <string name="guide_step_three">클릭 화면 안내를 선택하고\n허용해 주세요</string>
-    <string name="guide_step_three_description">설치된 앱 → 클릭 화면 안내 → 허용하기\n순서로 눌러주세요.</string>
+    <string name="guide_enable_description">설치된 앱 → 클릭 화면 안내를 누르고,\n‘사용 안 함’을 ‘사용함’으로 바꿔주세요.</string>
+    <string name="guide_enable_example">설정 화면 예시</string>
+    <string name="guide_enable_step_apps">1. 설치된 앱을 눌러주세요</string>
+    <string name="guide_enable_step_click">2. 클릭 화면 안내를 눌러주세요</string>
+    <string name="guide_enable_step_switch">3. 스위치를 켜주세요</string>
+    <string name="guide_enable_step_done">‘사용함’으로 바뀌었어요</string>
+    <string name="guide_service_off">사용 안 함</string>
+    <string name="guide_service_on">사용함</string>
+    <string name="guide_service_summary">화면을 이해하고 필요한 동작을 도와드려요.</string>
+    <string name="guide_consent_title">이 확인창이 뜨면\n‘허용’을 눌러주세요</string>
+    <string name="guide_consent_description">접근성을 켤 때 나오는 정상적인\n권한 확인창이에요.</string>
+    <string name="guide_consent_dialog_title">클릭 화면 안내에\n휴대전화의 전체 제어 권한 허용</string>
+    <string name="guide_consent_dialog_body">화면의 내용을 확인하고\n화면에서 동작을 수행할 수 있어요.</string>
+    <string name="guide_consent_allow">허용</string>
+    <string name="guide_consent_cancel">취소</string>
+    <string name="guide_consent_purpose">클릭이 화면을 읽고 요청하신 작업에 필요한 버튼을 누르기 위한 권한이에요.</string>
+    <string name="guide_consent_check">‘클릭 화면 안내’인지 확인하고\n‘허용’을 눌러주세요.</string>
+    <string name="guide_consent_revoke">원하시면 언제든 접근성 설정에서 끌 수 있어요.</string>
+    <string name="guide_consent_cue">휴대전화의 전체 제어 권한 허용이라는 창은 접근성 기능을 켤 때 나오는 정상적인 권한 확인창이에요. 클릭이 화면을 읽고 요청하신 작업에 필요한 버튼을 누르기 위한 권한입니다. 앱 이름이 클릭 화면 안내인지 확인한 뒤 허용을 눌러주세요. 원하시면 언제든 접근성 설정에서 끌 수 있어요. 지금 설정하기 버튼을 누르면 접근성 설정으로 이동해요.</string>
     <string name="guide_ready">설정이 완료되면\n더 편리하게 사용할 수 있어요!</string>
     <string name="guide_device_note">휴대폰에 따라 메뉴 이름이 다를 수 있어요.</string>
     <string name="guide_later">나중에 설정하기</string>
@@ -53,4 +70,8 @@
     <item name="guide_step_counter" type="id" />
     <item name="guide_entry" type="id" />
     <item name="guide_settings_shortcut" type="id" />
+    <item name="guide_enable_animation" type="id" />
+    <item name="guide_animation_step" type="id" />
+    <item name="guide_demo_switch_state" type="id" />
+    <item name="guide_consent_example" type="id" />
 </resources>
