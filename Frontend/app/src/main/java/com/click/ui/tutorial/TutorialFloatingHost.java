@@ -118,6 +118,11 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     }
     public void collapseReview() {
         if (review == null) return;
+        if (review.hasProgress()) {
+            review.setMinimizedProgress(true);
+            updateHighlight(); requestLayout();
+            return;
+        }
         review.setVisibility(GONE);
         control.collapse(); control.setVisibility(VISIBLE);
         updateHighlight(); requestLayout();

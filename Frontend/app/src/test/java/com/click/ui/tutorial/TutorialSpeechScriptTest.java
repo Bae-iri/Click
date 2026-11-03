@@ -51,7 +51,7 @@ public class TutorialSpeechScriptTest {
         String script = activity.getString(R.string.tutorial_speech_intro);
         verify(narrator).speak(script);
         TextView title = activity.findViewById(R.id.tutorial_title);
-        assertEquals("클릭 튜토리얼을\n시작해볼게요!", title.getText().toString());
+        assertEquals("핵심만 함께\n연습해 볼까요?", title.getText().toString());
         assertFalse(script.contains("click의 기능은 다음과 같아요"));
         title.setText("화면 제목만 수정한 경우");
         find("안내 다시 듣기").performClick();
@@ -70,7 +70,7 @@ public class TutorialSpeechScriptTest {
         verify(narrator, times(1)).speak(ready);
         verify(narrator, times(2)).replay(ready);
         find("안내 시작하기").performClick();
-        verify(narrator).speak(activity.getString(R.string.tutorial_speech_review_confirmed));
+        verify(narrator).speak(activity.getString(R.string.tutorial_speech_running));
     }
 
     @Test public void keyboardDefersTheScriptUntilTheUserCanHearTheNextInstruction() throws Exception {
@@ -84,17 +84,17 @@ public class TutorialSpeechScriptTest {
         verify(narrator).speak(activity.getString(R.string.tutorial_speech_review_ready));
     }
 
-    @Test public void recognizedSpeechUsesTheEditableTemplateWithoutAppendingPunctuation() throws Exception {
+    @Test public void voiceInstructionsTeachHoldingAndReleasingWithoutAddingAStep() throws Exception {
         clearInvocations(narrator);
-        set("step", 3); set("voiceTried", true); set("voiceText", "좋아요!");
+        set("step", 0);
         ((ClickOverlayLayout) activity.findViewById(R.id.tutorial_floating_control)).openVoice();
         updateCopy();
-        String script = activity.getString(R.string.tutorial_speech_voice_received, "좋아요!");
+        String script = activity.getString(R.string.tutorial_speech_voice_record);
         verify(narrator).speak(script);
-        assertFalse(script.contains("!."));
         find("안내 다시 듣기").performClick();
-        verify(narrator, times(1)).speak(script);
         verify(narrator).replay(script);
+        activity.onTextSubmitted("휴대폰 전체 글자 크기 키워줘");
+        verify(narrator).speak(activity.getString(R.string.tutorial_speech_review_ready));
     }
 
     private void updateCopy() throws Exception {
