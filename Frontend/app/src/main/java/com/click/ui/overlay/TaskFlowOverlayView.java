@@ -179,26 +179,20 @@ public final class TaskFlowOverlayView extends LinearLayout {
         headerReplay.setCompoundDrawablePadding(dp(4));
         headerReplay.setId(R.id.task_flow_replay);
         headerActions.addView(headerReplay, new LayoutParams(-2, -2));
-        Button minimize = quietButton("줄이기", listener::collapse);
+        Button minimize = FloatingPanelStyle.compactButton(context, "줄이기", listener::collapse);
         close = minimize;
         close.setId(R.id.task_flow_collapse);
-        minimize.setTextSize(11); minimize.setTextColor(SECONDARY);
+        minimize.setTextSize(12);
         minimize.setSingleLine(true);
         close.setContentDescription("안내 창 줄이기");
         close.setFocusable(true);
-        close.setBackground(new InsetDrawable(ripple(Color.TRANSPARENT, 0x183478F6, 10), 0, dp(8), 0, dp(8)));
-        close.setPadding(dp(6), dp(8), dp(6), dp(8));
-        Drawable minus = context.getDrawable(R.drawable.ic_overlay_minimize);
-        minus.setBounds(0, 0, dp(14), dp(14));
-        minimize.setCompoundDrawablesRelative(minus, null, null, null);
-        minimize.setCompoundDrawablePadding(dp(3));
         close.setOnClickListener(view -> listener.collapse());
         LayoutParams closeParams = new LayoutParams(-2, -2);
         closeParams.leftMargin = dp(4);
         headerActions.addView(close, closeParams);
         header.addView(headerActions, new LayoutParams(-2, -2));
         LayoutParams headerParams = new LayoutParams(-1, -2);
-        headerParams.bottomMargin = dp(12);
+        headerParams.bottomMargin = dp(FloatingPanelStyle.HEADER_GAP_DP);
         addView(header, headerParams);
         content = new LinearLayout(context); content.setOrientation(VERTICAL);
         content.setPadding(0, 0, 0, dp(10));
@@ -234,11 +228,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
         controls = new LinearLayout(context);
         controls.setGravity(Gravity.CENTER);
-        pause = quietButton("일시정지", () -> listener.control("pause_task"));
+        pause = FloatingPanelStyle.compactButton(context, "일시정지", () -> listener.control("pause_task"));
         LayoutParams pauseParams = new LayoutParams(0, -2, 1f);
         pauseParams.rightMargin = dp(6);
         controls.addView(pause, pauseParams);
-        Button stop = secondaryButton("요청 중지", () -> listener.control("cancel_task"));
+        Button stop = FloatingPanelStyle.compactButton(context, "요청 중지", () -> listener.control("cancel_task"));
         stop.setContentDescription("처리 중인 요청 중지");
         stop.setTextColor(0xFF536885);
         LayoutParams stopParams = new LayoutParams(0, -2, 1f);
@@ -378,7 +372,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         brand.setVisibility(reviewScreen ? GONE : VISIBLE);
         heading.setTextSize(compact ? 20 : 22);
         int innerWidth = MeasureSpec.getSize(width) - getPaddingLeft() - getPaddingRight();
-        float headerWidth = dp((reviewScreen ? 48 : 66) + 16 + 12 + 14 + 14 + 4 + 3 + 4 + 8)
+        float headerWidth = dp((reviewScreen ? 48 : 66) + 16 + 16 + 14 + 4 + 20 + 4)
                 + headerReplay.getPaint().measureText("음성 멈춤")
                 + ((TextView) close).getPaint().measureText("줄이기");
         boolean stacked = headerWidth > innerWidth;
@@ -388,7 +382,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             headerActions.setLayoutParams(new LayoutParams(stacked ? -1 : -2, -2));
         }
         LayoutParams headerParams = (LayoutParams) header.getLayoutParams();
-        headerParams.bottomMargin = dp(reviewScreen ? 14 : compact ? 8 : 16);
+        headerParams.bottomMargin = dp(FloatingPanelStyle.HEADER_GAP_DP);
         super.onMeasure(width, MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST));
     }
     private void clear(String title) {
@@ -1039,16 +1033,14 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void waitingProgress(String message) {
         progress(null, null, message, false);
     }
-public void observationRecovery(String message, Runnable retry) {
+    public void observationRecovery(String message, Runnable retry) {
         observationRecovery(null, message, retry);
     }
     public void observationRecovery(String goal, String message, Runnable retry) {
         clear("화면을 함께 확인해요");
-        if (goal != null && !goal.isEmpty()) addRequestBox(goal, null);
-        content.addView(text(message, 16), spaced(0));
+        content.addView(text(message, 16), spaced(8));
         recoveryActions.setVisibility(VISIBLE);
-        recoveryActions.addView(primaryButton("화면 다시 확인", retry), spaced(12));
-        recoveryActions.addView(secondaryButton("직접 이동하기", listener::collapse), spaced(8));
+        recoveryActions.addView(primaryButton("새로고침", retry), spaced(8));
     }
 
     public void scrollRecovery(String goal, String message, Runnable retry, Runnable down, Runnable up) {
