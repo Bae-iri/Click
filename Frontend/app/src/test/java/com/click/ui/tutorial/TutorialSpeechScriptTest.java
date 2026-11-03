@@ -69,7 +69,7 @@ public class TutorialSpeechScriptTest {
         find("안내 다시 듣기").performClick();
         verify(narrator, times(1)).speak(ready);
         verify(narrator, times(2)).replay(ready);
-        find("이대로 시작하기").performClick();
+        find("안내 시작하기").performClick();
         verify(narrator).speak(activity.getString(R.string.tutorial_speech_review_confirmed));
     }
 

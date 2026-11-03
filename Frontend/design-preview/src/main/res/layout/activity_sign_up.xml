@@ -330,6 +330,10 @@
                     style="@style/SignupInfo"
                     android:layout_marginTop="26dp"
                     android:text="@string/signup_profile_helper" />
+                <Button android:id="@+id/signup_skip_profile" style="@style/OnboardingQuietButton"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp" android:minHeight="56dp"
+                    android:text="@string/signup_skip_profile" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

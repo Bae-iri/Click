@@ -34,12 +34,14 @@ import static org.junit.Assert.*;
 public class OnboardingFlowTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
-    @Test public void threePagesEndWithSignupAndLogin() throws Exception {
+    @Test public void threePagesEndWithKakaoAndEmailChoices() throws Exception {
         try (ActivityScenario<OnboardingActivity> s = ActivityScenario.launch(OnboardingActivity.class)) {
             tap("건너뛰기");
             shown("회원가입하기"); shown("이미 가입하셨나요? 로그인하기");
             screenshot("onboarding-third");
-            tap("이미 가입하셨나요? 로그인하기"); shown("다시 만나 반가워요");
+            tap("이미 가입하셨나요? 로그인하기");
+            shown("카카오 로그인"); shown("이메일로 가입하기"); shown("이메일로 로그인하기");
+            clickView("이메일로 로그인하기"); shown("다시 만나 반가워요");
         }
     }
     @Test public void emailReviewPrecedesProfileAndOccupationIsSelectable() throws Exception {
@@ -59,7 +61,7 @@ public class OnboardingFlowTest {
             clickView("이메일 수정");
             s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_action).performClick());
             clickView("이 이메일로 계속"); shown("안내를 조금 더\n원활히 도와드릴게요");
-            shown("이름");
+            shown("이름 (선택)");
             s.onActivity(a -> ((EditText) a.findViewById(
                     com.click.designpreview.R.id.signup_name)).setText("김클릭"));
             screenshot("signup-profile-name");
@@ -142,7 +144,7 @@ public class OnboardingFlowTest {
         try (ActivityScenario<LoginActivity> s = ActivityScenario.launch(LoginActivity.class)) {
             shown("다시 만나 반가워요");
             shown("가입할 때 사용한\n이메일과 비밀번호를 입력해 주세요.");
-            shown("로그인하기"); shown("처음 오셨나요? 회원가입하기");
+            shown("로그인하기"); shown("다른 방법으로 시작하기");
             screenshot("login");
             s.onActivity(a -> {
                 ((EditText) a.findViewById(com.click.designpreview.R.id.login_email))

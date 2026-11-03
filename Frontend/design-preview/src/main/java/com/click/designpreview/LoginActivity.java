@@ -73,7 +73,7 @@ public final class LoginActivity extends Activity {
         passwordToggle.setOnClickListener(view -> updatePasswordVisibility(!passwordVisible));
         findViewById(R.id.login_back).setOnClickListener(view -> finish());
         findViewById(R.id.login_signup).setOnClickListener(view -> {
-            startActivity(new Intent(this, SignupActivity.class)); finish();
+            startActivity(new Intent(this, AccountStartActivity.class)); finish();
         });
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(

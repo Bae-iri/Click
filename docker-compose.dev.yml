@@ -16,6 +16,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://click:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/click
       GEMINI_API_KEY: ""
+      KAKAO_APP_ID: ${KAKAO_APP_ID:-}
       SELF_HOSTED_STT_URL: ${SELF_HOSTED_STT_URL:-}
       SELF_HOSTED_STT_TOKEN: ${SELF_HOSTED_STT_TOKEN:-}
       GUIDE_NARRATION_ENABLED: ${GUIDE_NARRATION_ENABLED:-false}

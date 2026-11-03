@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <queries>
+        <package android:name="com.kakao.talk" />
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
@@ -20,6 +21,14 @@
         android:theme="@style/Theme.Click">
         <activity android:name=".MainActivity" android:exported="false" />
         <activity android:name=".SignUpActivity" android:exported="false" />
+        <activity android:name="com.kakao.sdk.auth.AuthCodeHandlerActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="${kakaoRedirectScheme}" android:host="oauth" />
+            </intent-filter>
+        </activity>
         <activity android:name=".HomeActivity" android:exported="false"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name=".MenuActivity" android:exported="false" />

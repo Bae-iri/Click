@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.schemas.auth import Credentials, RegisterRequest, RefreshRequest, TokenResponse, ChangePasswordRequest
+from app.schemas.auth import Credentials, RegisterRequest, RefreshRequest, TokenResponse, ChangePasswordRequest, KakaoLoginRequest
 
 
 def build_auth(service):
@@ -26,6 +26,11 @@ def build_auth(service):
     def login(body: Credentials, response: Response):
         response.headers["Cache-Control"] = "no-store"
         return service.login(body)
+
+    @router.post("/kakao", response_model=TokenResponse, dependencies=[Depends(throttle)])
+    def login_kakao(body: KakaoLoginRequest, response: Response):
+        response.headers["Cache-Control"] = "no-store"
+        return service.login_kakao(body)
 
     @router.post("/refresh", response_model=TokenResponse, dependencies=[Depends(throttle)])
     def refresh(body: RefreshRequest, response: Response):

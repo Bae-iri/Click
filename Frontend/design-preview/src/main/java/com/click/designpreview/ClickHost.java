@@ -14,6 +14,7 @@ public interface ClickHost {
     boolean accessibilityEnabled();
     void register(Activity activity, String name, String email, String password, Integer age, String occupation, Callback callback);
     void login(Activity activity, String email, String password, Callback callback);
+    void loginWithKakao(Activity activity, Callback callback);
     void openHome(Activity activity);
     void openAccessibilityGuide(Activity activity);
     void openAccessibilitySettings(Activity activity);

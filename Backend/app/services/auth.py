@@ -7,7 +7,8 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.core.security import hash_password, new_token, token_hash, verify_password
-from app.models.auth import Account, AuthSession
+from app.models.auth import Account, AuthSession, KakaoIdentity
+from app.clients.kakao import KakaoTokenVerifier
 from app.models.personalization import User, UserUIProfile
 from app.schemas.auth import TokenResponse
 
@@ -27,6 +28,7 @@ class AuthService:
         self._dummy = hash_password(new_token())
         self._attempts = {}
         self._lock = Lock()
+        self.kakao = KakaoTokenVerifier()
 
     def throttle(self, identity):
         # Single-process development limiter. No forwarded-header trust.
@@ -71,6 +73,30 @@ class AuthService:
             except IntegrityError as error:
                 db.rollback()
                 raise HTTPException(409) from error
+
+    def login_kakao(self, request):
+        subject = self.kakao.verify(request.access_token.get_secret_value())
+        with self.factory() as db:
+            identity = db.get(KakaoIdentity, subject)
+            if identity is None:
+                try:
+                    user = User(age_group="unknown")
+                    user.profile = UserUIProfile()
+                    db.add(user)
+                    db.flush()
+                    identity = KakaoIdentity(subject=subject, user_id=user.id)
+                    db.add(identity)
+                    db.flush()
+                except IntegrityError:
+                    # A concurrent first login may have registered this same identity.
+                    db.rollback()
+                    identity = db.get(KakaoIdentity, subject)
+                    if identity is None:
+                        raise HTTPException(409)
+            tokens = self.tokens(identity.user_id)
+            self.add_session(db, tokens)
+            db.commit()
+            return tokens
 
     def login(self, request):
         with self.factory() as db:

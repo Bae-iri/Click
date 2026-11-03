@@ -99,6 +99,12 @@ public final class SignupActivity extends Activity {
         age = findViewById(R.id.signup_age);
         occupation = findViewById(R.id.signup_occupation);
         occupationOptions = findViewById(R.id.signup_occupation_options);
+        findViewById(R.id.signup_skip_profile).setOnClickListener(view -> {
+            if (submitting) return;
+            name.setText(""); age.setText(""); occupationIndex = 0;
+            refreshOccupation();
+            onAction();
+        });
         passwordToggle = findViewById(R.id.signup_password_toggle);
         passwordConfirmToggle = findViewById(R.id.signup_password_confirm_toggle);
         setupOccupations();
@@ -524,10 +530,6 @@ public final class SignupActivity extends Activity {
 
     private boolean validateProfile() {
         clearErrors(R.id.signup_name_error, R.id.signup_age_error);
-        if (name.getText().toString().trim().isEmpty()) {
-            showError(R.id.signup_name_error, R.string.signup_error_name, name);
-            return false;
-        }
         String ageValue = age.getText().toString().trim();
         if (ageValue.isEmpty()) return true;
         try {
@@ -543,6 +545,7 @@ public final class SignupActivity extends Activity {
     private void showPage(int requestedPage, boolean changedByUser) {
         page = Math.max(0, Math.min(1, requestedPage));
         boolean accountPage = page == 0;
+        findViewById(R.id.signup_skip_profile).setVisibility(accountPage ? View.GONE : View.VISIBLE);
         if (accountPage && occupationExpanded) setOccupationExpanded(false, false);
         findViewById(R.id.signup_account_content).setVisibility(accountPage ? View.VISIBLE : View.GONE);
         findViewById(R.id.signup_profile_content).setVisibility(accountPage ? View.GONE : View.VISIBLE);

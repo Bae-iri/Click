@@ -44,7 +44,7 @@ public final class RegistrationContract {
         }
         JSONObject body = new JSONObject().put("email", email).put("password", password).put("age_group", ageGroup);
         // Older deployments forbid the newly added name field. The app also saves the name locally.
-        if (acceptsName) body.put("name", name);
+        if (acceptsName && name != null && !name.trim().isEmpty()) body.put("name", name.trim());
         if (occupation != null) body.put("occupation_category", occupation);
         return body;
     }
