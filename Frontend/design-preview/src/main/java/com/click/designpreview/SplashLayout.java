@@ -15,11 +15,8 @@ import android.widget.FrameLayout;
 public final class SplashLayout extends FrameLayout {
     private final Paint background = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint wave = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint dots = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path topWave = new Path(), bottomWave = new Path();
     private Shader topGradient, bottomGradient;
-    private float dotsY;
-    private boolean showDots;
 
     public SplashLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -54,12 +51,6 @@ public final class SplashLayout extends FrameLayout {
         canvas.drawRect(0, 0, getWidth(), getHeight(), background);
         wave.setShader(topGradient); canvas.drawPath(topWave, wave);
         wave.setShader(bottomGradient); canvas.drawPath(bottomWave, wave);
-        if (showDots) {
-            for (int i = 0; i < 3; i++) {
-                dots.setColor(i == 0 ? 0xFF216BFF : 0xFFBFD3FF);
-                canvas.drawCircle(getWidth() / 2f + dp(18) * (i - 1), dotsY, dp(4), dots);
-            }
-        }
     }
 
     @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -93,10 +84,6 @@ public final class SplashLayout extends FrameLayout {
                 bottom - top - getPaddingBottom() - dp(8) - groupHeight));
         placeCentered(logo, centerX, logoTop);
         placeCentered(tagline, centerX, logoTop + logo.getMeasuredHeight() + gap);
-        int groupBottom = logoTop + groupHeight;
-        int dotLimit = bottom - top - getPaddingBottom() - dp(20);
-        dotsY = Math.min(dotLimit, Math.max((bottom - top) * .792f, groupBottom + dp(48)));
-        showDots = dotsY >= groupBottom + dp(24);
     }
 
     private void placeCentered(View view, int centerX, int top) {
