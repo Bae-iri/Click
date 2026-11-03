@@ -237,10 +237,10 @@ public final class ClickOverlayLayout extends ViewGroup {
 
     // [UI 수정] 헤더/줄이기 버튼 크기. 시스템 글자 확대 설정을 반영한 최소 높이/너비이다.
     private int headerHeight() {
-        return dp(Math.max(48, Math.round(30 * getResources().getConfiguration().fontScale) + 12));
+        return dp(Math.max(48, Math.round(20 * getResources().getConfiguration().fontScale) + 12));
     }
     private int handleWidth() {
-        return dp(Math.max(56, Math.round(30 * getResources().getConfiguration().fontScale) + 20));
+        return dp(Math.max(56, Math.round(36 * getResources().getConfiguration().fontScale) + 20));
     }
 
     private void changeMode(Mode next) {
@@ -274,7 +274,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         panel = new LinearLayout(getContext());
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setContentDescription(taskPhase == null ? null : taskPhase + " 안내 창");
-        panel.setPadding(dp(20), dp(10), dp(20), dp(22));
+        panel.setPadding(dp(22), dp(10), dp(22), dp(22));
         panel.setBackground(FloatingPanelStyle.surface(getResources().getDisplayMetrics().density));
         addView(panel);
 
@@ -292,15 +292,13 @@ public final class ClickOverlayLayout extends ViewGroup {
         identity.addView(title);
         if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         header.addView(identity, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView close = label("줄이기", 12, ClickUi.BLUE, true);
+        TextView close = FloatingPanelStyle.compactButton(getContext(), "줄이기", this::collapse);
+        close.setTextSize(12);
         close.setId(R.id.overlay_collapse);
         close.setGravity(Gravity.CENTER);
         close.setMaxLines(1);
         close.setContentDescription("줄이기. 작은 클릭 버튼으로 접기");
-        close.setPadding(dp(8), dp(8), dp(8), dp(8));
         close.setFocusable(true);
-        close.setBackground(new RippleDrawable(ColorStateList.valueOf(0x183478F6),
-                new android.graphics.drawable.InsetDrawable(ClickUi.rounded(ClickUi.PALE_BLUE, dp(12)), 0, dp(10), 0, dp(10)), ClickUi.rounded(Color.WHITE, dp(16))));
         close.setOnClickListener(view -> collapse());
         header.addView(close, new LinearLayout.LayoutParams(handleWidth(), headerHeight()));
         panel.addView(header, new LinearLayout.LayoutParams(-1, headerHeight()));
@@ -308,11 +306,9 @@ public final class ClickOverlayLayout extends ViewGroup {
         // Keep cancellation available without showing transport or task-state copy.
         requestRow = new LinearLayout(getContext());
         requestRow.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
-        stopRequest = action("요청 중지", false, () -> { if (callback != null) callback.onStopRequested(); });
+        stopRequest = FloatingPanelStyle.compactButton(getContext(), "요청 중지",
+                () -> { if (callback != null) callback.onStopRequested(); });
         stopRequest.setId(R.id.overlay_stop_request);
-        stopRequest.setTextSize(13);
-        stopRequest.setPadding(dp(8), dp(6), dp(8), dp(6));
-        stopRequest.setBackground(null);
         requestRow.addView(stopRequest, new LinearLayout.LayoutParams(-2, -2));
         setRequestStatus(requestStatus, requestStoppable);
 
@@ -322,7 +318,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             choices.setOrientation(LinearLayout.VERTICAL);
             TextView welcome = label("무엇을 도와드릴까요?", 22, ClickUi.TEXT, true);
             welcome.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
-            choices.addView(welcome, spaced(14));
+            choices.addView(welcome, spaced(0));
             choices.addView(label("말하거나 글로 입력해 주세요.", 15, ClickUi.SUBTEXT, false), spaced(8));
             TextView example = label("예) 글자 크기 키워줘", 15, ClickUi.SUBTEXT, false);
             example.setPadding(dp(16), dp(16), dp(16), dp(16));
@@ -333,7 +329,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             choices.addView(example, spaced(24));
             choices.addView(feature("말로 입력", true, () -> changeMode(Mode.VOICE)), spaced(20));
             choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(10));
-            addScrollableBody(choices, 8);
+            addScrollableBody(choices, FloatingPanelStyle.HEADER_GAP_DP);
         } else if (mode == Mode.VOICE) {
             // [UI 수정] 음성 입력: 마이크 크기(128dp), 설명, 인식 결과, 취소 버튼 배치.
             // 마이크 그림/애니메이션은 VoiceCaptureIndicator.java, 누르기 동작은 onMicrophoneTouch().
@@ -364,7 +360,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             transcript.setVisibility(GONE);
             transcript.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
             listening.addView(transcript, spaced(8));
-            addScrollableBody(listening, 8);
+            addScrollableBody(listening, FloatingPanelStyle.HEADER_GAP_DP);
             panel.addView(requestRow, spaced(0));
             LinearLayout actions = new LinearLayout(getContext());
             actions.setGravity(Gravity.CENTER_VERTICAL);
@@ -397,7 +393,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             voiceSwitch = voice;
             voice.setContentDescription("음성으로 입력하기");
             composer.addView(voice, buttonParams());
-            addScrollableBody(composer, 12);
+            addScrollableBody(composer, FloatingPanelStyle.HEADER_GAP_DP);
         }
     }
 

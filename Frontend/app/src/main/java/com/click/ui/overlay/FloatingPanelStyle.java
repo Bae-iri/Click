@@ -5,10 +5,37 @@ import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
+import android.graphics.drawable.InsetDrawable;
+import android.content.Context;
+import android.view.Gravity;
+import android.widget.Button;
 
 /** Shared surfaces for the input, review and guidance panels. */
 final class FloatingPanelStyle {
+    static final int HEADER_GAP_DP = 8;
     private FloatingPanelStyle() {}
+
+    /** Compact visual controls retain a 48dp touch target and grow with system text. */
+    static Button compactButton(Context context, String label, Runnable action) {
+        float density = context.getResources().getDisplayMetrics().density;
+        Button button = new Button(context);
+        button.setText(label); button.setTextSize(13); button.setAllCaps(false);
+        button.setTextColor(0xFF536885);
+        button.setTypeface(context.getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
+        button.setIncludeFontPadding(false); button.setGravity(Gravity.CENTER);
+        button.setMinWidth(0); button.setMinimumWidth(0);
+        button.setMinHeight(Math.round(48 * density)); button.setMinimumHeight(Math.round(48 * density));
+        GradientDrawable fill = gradient(density, 10, 0xFFF0F5FD, 0xFFF0F5FD);
+        fill.setStroke(Math.max(1, Math.round(density)), 0xFFE1E9F5);
+        Drawable ripple = new RippleDrawable(ColorStateList.valueOf(0x183478F6), fill,
+                gradient(density, 10, Color.WHITE, Color.WHITE));
+        button.setBackground(new InsetDrawable(ripple, 0, Math.round(6 * density), 0, Math.round(6 * density)));
+        button.setPadding(Math.round(10 * density), Math.round(6 * density),
+                Math.round(10 * density), Math.round(6 * density));
+        button.setStateListAnimator(null);
+        button.setOnClickListener(view -> action.run());
+        return button;
+    }
 
     static GradientDrawable surface(float density) {
         return gradient(density, 28, 0xFFFEFEFF, 0xFFF5F7FD);

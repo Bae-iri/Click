@@ -110,7 +110,7 @@ public class FloatingReferenceFlowTest {
     }
     @Test public void attachedPanelsRenderAfterLayoutAtNormalAndLargeFonts() {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
-            for (float scale : new float[]{1f, 2f}) for (int stage = 0; stage < 3; stage++) {
+            for (float scale : new float[]{1f, 2f}) for (int stage = 0; stage < 4; stage++) {
                 final int screen = stage; final TaskFlowOverlayView[] shown = {null};
                 scenario.onActivity(activity -> {
                     try {
@@ -120,7 +120,8 @@ public class FloatingReferenceFlowTest {
                         panel.setAvailableHeight(Math.round(650 * context.getResources().getDisplayMetrics().density));
                         if (screen == 0) { panel.preparation(question()); find(panel, "휴대폰 전체").performClick(); }
                         else if (screen == 1) panel.preparation(ready());
-                        else { panel.progress("글자 크기", null, "디스플레이 메뉴를 눌러주세요.", false); panel.setGuidanceProgress(2, 3); panel.setGuidanceTarget("디스플레이"); }
+                        else if (screen == 2) { panel.progress("글자 크기", null, "디스플레이 메뉴를 눌러주세요.", false); panel.setGuidanceProgress(2, 3); panel.setGuidanceTarget("디스플레이"); }
+                        else panel.observationRecovery("글자 크기", "현재 화면에서 다음 항목을 찾지 못했어요. 화면을 이동하셨다면 새로고침을 눌러주세요.", () -> {});
                         host(activity, panel, 340);
                     } catch (Exception error) { throw new AssertionError(error); }
                 });
@@ -129,6 +130,7 @@ public class FloatingReferenceFlowTest {
                     readable(find(shown[0], "다시 듣기")); readable(find(shown[0], "줄이기"));
                     if (screen == 0) readable(find(shown[0], "휴대폰 전체"));
                     if (screen == 1) readable(find(shown[0], "안내 시작하기"));
+                    if (screen == 3) readable(find(shown[0], "새로고침"));
                     save(shown[0], "reference-attached-" + screen + "-" + scale);
                 });
             }

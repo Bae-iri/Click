@@ -377,12 +377,13 @@ public class TaskFlowOverlayTest {
         }
     }
 
-    @Test public void observationRecoveryKeepsRetryAndManualNavigationVisible() {
+    @Test public void observationRecoveryUsesOneRefreshActionAndHeaderCollapse() {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
             scenario.onActivity(activity -> {
+              for (float scale : new float[]{1f, 1.5f, 2f}) {
                 android.content.res.Configuration config = new android.content.res.Configuration(
                         activity.getResources().getConfiguration());
-                config.fontScale = 1.5f;
+                config.fontScale = scale;
                 Context context = activity.createConfigurationContext(config);
                 int[] actions = {0, 0};
                 TaskFlowOverlayView panel = new TaskFlowOverlayView(context, new Answers() {
@@ -392,16 +393,27 @@ public class TaskFlowOverlayTest {
                 panel.setAvailableHeight(Math.round(440 * context.getResources().getDisplayMetrics().density));
                 panel.progress("화면 밝기 높여줘", null, "지금 진행 중이에요.");
                 panel.setMinimizedProgress(true);
+                panel.observationRecovery("화면 밝기 높여줘", "현재 화면에서 다음 항목을 찾지 못했어요. 화면을 이동하셨다면 새로고침을 눌러주세요.",
+                        () -> actions[0]++);
+                snapshot(panel, "observation-recovery-" + scale);
                 panel.observationRecovery("화면 밝기 높여줘", "현재 화면에서 다음 항목을 찾지 못했어요. ".repeat(12),
                         () -> actions[0]++);
-                snapshot(panel, "observation-recovery-large-text");
+                snapshot(panel, "observation-recovery-long-" + scale);
                 assertFalse(panel.isMinimizedProgress());
-                assertFullyInside(panel, find(panel, "화면 다시 확인"));
-                assertFullyInside(panel, find(panel, "직접 이동하기"));
-                find(panel, "화면 다시 확인").performClick();
-                find(panel, "직접 이동하기").performClick();
+                assertNull(find(panel, "화면 밝기 높여줘"));
+                assertNull(find(panel, "직접 이동하기"));
+                assertNull(find(panel, "화면 다시 확인"));
+                assertFullyInside(panel, find(panel, "새로고침"));
+                assertFullyInside(panel, find(panel, "줄이기"));
+                assertFullyInside(panel, find(panel, "일시정지"));
+                assertFullyInside(panel, find(panel, "요청 중지"));
+                assertNull(find(panel, "줄이기").getCompoundDrawablesRelative()[0]);
+                find(panel, "새로고침").performClick();
+                assertEquals(0, actions[1]);
+                find(panel, "줄이기").performClick();
                 assertEquals(1, actions[0]);
                 assertEquals(1, actions[1]);
+              }
             });
         }
     }
@@ -434,7 +446,7 @@ public class TaskFlowOverlayTest {
                 assertNull(find(panel, "다음 화면으로 이동했어요."));
                 panel.observationRecovery("설정 화면에서 다시 확인해 주세요.", () -> {});
                 panel.setLoadingStatus("화면을 확인하고 있어요.");
-                assertNotNull(find(panel, "화면 다시 확인"));
+                assertNotNull(find(panel, "새로고침"));
                 assertNull(find(panel, "화면을 확인하고 있어요."));
                 panel.completed("원하는 밝기로 바뀌었어요.", () -> {});
                 panel.setLoadingStatus("화면을 확인하고 있어요.");
