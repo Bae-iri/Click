@@ -1798,8 +1798,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || staleGuideDrops >= 4
                 || !hasConfirmedGoal() || resultPrompt != null || followUp != null || pendingControl != null) return;
         if (confirmation == null && (visionConsentRequested || visionCaptureInFlight)) return;
+        // A launcher page can change before the debounced snapshot broadcast arrives.
+        // Re-read native content before deduplication; force controls sending, not freshness.
+        // Vision consent keeps the observation to which the permission was bound.
         ScreenSnapshot snapshot = pendingVisionScreen != null ? pendingVisionScreen
-                : (force || confirmation != null) ? ClickAccessibilityService.freshSnapshot() : LatestScreenSnapshot.get();
+                : ClickAccessibilityService.freshSnapshot();
         if (snapshot == null) {
             if (overlayView != null) overlayView.setRecognizedSpeech("접근성 화면 정보를 기다리고 있어요…");
             return;

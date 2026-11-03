@@ -714,6 +714,25 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(false, get("forceNextObservation"));
     }
 
+    @Test public void ordinaryObservationReadsVisibleLauncherInsteadOfPreviousPageCache() throws Exception {
+        resolve(); confirm();
+        set("turnInFlight", false);
+        set("firstTurnSent", true);
+        cachedScreen = screen;
+        AccessibilityNodeSnapshot settingsIcon = new AccessibilityNodeSnapshot("settings-icon", null, true,
+                "com.sec.android.app.launcher", "설정", "설정", "com.sec.android.app.launcher:id/home_icon",
+                "android.widget.TextView", "menu_item", new int[]{39, 1209, 285, 1558},
+                true, true, false, false, false, null, 43);
+        currentScreen = new ScreenSnapshot("com.sec.android.app.launcher", Instant.now().toString(),
+                1080, 2400, List.of(settingsIcon), 43);
+        Method method = ClickOverlayService.class.getDeclaredMethod("sendAgentTurn", String.class, boolean.class);
+        method.setAccessible(true);
+        method.invoke(service, null, false);
+        assertEquals("A new launcher page must not be skipped as an unchanged cached screen", 3, requests.size());
+        assertSame(currentScreen, requests.get(2).accessibilityTree);
+        assertEquals("설정", requests.get(2).accessibilityTree.nodes.get(0).text);
+    }
+
     @Test public void equivalentFreshCaptureCanRenderAndBindWithoutAnotherRequest() throws Exception {
         prepareGuideResponse();
         currentScreen = changedScreen("com.android.settings", 1080, 2400, 42, 100);
