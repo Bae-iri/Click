@@ -40,6 +40,19 @@ class RefreshRequest(BaseModel):
     refresh_token: SecretStr = Field(min_length=40, max_length=128)
 
 
+class KakaoLoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    access_token: SecretStr = Field(min_length=1, max_length=2048)
+
+    @field_validator("access_token")
+    @classmethod
+    def validate_access_token(cls, value):
+        token = value.get_secret_value()
+        if any(char.isspace() or ord(char) < 33 or ord(char) > 126 for char in token):
+            raise ValueError("Invalid access token")
+        return value
+
+
 class TokenResponse(BaseModel):
     user_id: str
     token_type: str = "bearer"

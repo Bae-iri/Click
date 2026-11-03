@@ -16,12 +16,19 @@ def javaString = { value -> groovy.json.JsonOutput.toJson(value ?: "") }
 
 def clickApiBaseUrl = providers.gradleProperty("CLICK_API_BASE_URL")
         .getOrElse("https://click-db.onrender.com")
+def kakaoNativeAppKey = providers.gradleProperty("KAKAO_NATIVE_APP_KEY")
+        .orElse(providers.environmentVariable("KAKAO_NATIVE_APP_KEY")).getOrElse("").trim()
+if (kakaoNativeAppKey && !(kakaoNativeAppKey ==~ /[0-9a-fA-F]{32}/)) {
+    throw new GradleException("KAKAO_NATIVE_APP_KEY must be the 32-character native app key")
+}
 
 android {
     namespace "com.click"
     compileSdk 34
 
     defaultConfig {
+        buildConfigField "String", "KAKAO_NATIVE_APP_KEY", javaString(kakaoNativeAppKey)
+        manifestPlaceholders.kakaoRedirectScheme = "kakao${kakaoNativeAppKey ?: 'unconfigured'}"
         applicationId "com.click"
         minSdk 26
         targetSdk 34
@@ -73,6 +80,7 @@ android {
 }
 
 dependencies {
+    implementation "com.kakao.sdk:v2-user:2.26.0"
     implementation project(":design-preview")
     implementation "androidx.appcompat:appcompat:1.7.0"
     implementation "com.google.android.material:material:1.12.0"

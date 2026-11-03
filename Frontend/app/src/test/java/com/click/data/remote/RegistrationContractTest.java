@@ -47,6 +47,15 @@ public class RegistrationContractTest {
         assertEquals(8, contract.minimumPasswordLength);
     }
 
+    @Test public void optionalNameCanBeSkippedWithUpdatedServer() throws Exception {
+        RegistrationContract contract = RegistrationContract.fromOpenApi(document(8, true));
+        for (String name : new String[]{null, "", "   "}) {
+            JSONObject body = contract.request(name, "review@example.com", "eight888", "unknown", null);
+            assertFalse(body.has("name"));
+            assertFalse(body.has("occupation_category"));
+        }
+    }
+
     @Test public void bothServerPasswordBoundariesAreRespected() throws Exception {
         for (int minimum : new int[] {8, 12}) {
             RegistrationContract contract = RegistrationContract.fromOpenApi(document(minimum, false));
@@ -84,7 +93,7 @@ public class RegistrationContractTest {
         assertFalse(message.contains("비밀번호"));
         assertFalse(message.contains("8글자"));
         assertFalse(message.contains("private-input"));
-        assertTrue(message.contains("입력한 내용"));
+        assertTrue(message.contains("확인"));
     }
 
     @Test public void connectionFailureDoesNotBlameInput() {

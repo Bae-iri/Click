@@ -82,11 +82,11 @@ public final class OnboardingActivity extends Activity {
         addShadow(start, 8);
         start.setOnClickListener(view -> {
             if (page < 2) showPage(page + 1, true);
-            else startActivity(new Intent(this, SignupActivity.class));
+            else startActivity(new Intent(this, AccountStartActivity.class));
         });
         findViewById(R.id.onboarding_skip).setOnClickListener(view -> showPage(2, true));
         findViewById(R.id.guide_entry).setOnClickListener(view ->
-                startActivity(new Intent(this, LoginActivity.class)));
+                startActivity(new Intent(this, AccountStartActivity.class)));
         findViewById(R.id.onboarding_back).setOnClickListener(view -> goBack());
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(

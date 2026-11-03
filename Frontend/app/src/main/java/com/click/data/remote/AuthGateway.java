@@ -75,6 +75,13 @@ public final class AuthGateway {
         authenticate("/api/v1/auth/login", body, callback);
     }
 
+    public void loginWithKakao(String accessToken, Callback callback) {
+        JSONObject body = new JSONObject();
+        try { body.put("access_token", accessToken); }
+        catch (Exception error) { callback.onFailure(error); return; }
+        authenticate("/api/v1/auth/kakao", body, callback);
+    }
+
     private void authenticate(String path, JSONObject body, Callback callback) {
         executor.execute(() -> {
             try {
