@@ -314,22 +314,12 @@ public final class ClickOverlayLayout extends ViewGroup {
         setRequestStatus(requestStatus, requestStoppable);
 
         if (mode == Mode.MENU) {
-            // [UI 수정] 처음 펼친 메뉴: 제목과 "말로 입력하기"/"글로 입력하기" 카드 순서·간격.
+            // 앱과 튜토리얼이 함께 사용하는 입력 메뉴. 예시는 튜토리얼 바깥 설명에만 둔다.
             LinearLayout choices = new LinearLayout(getContext());
             choices.setOrientation(LinearLayout.VERTICAL);
             TextView welcome = label("무엇을 도와드릴까요?", 22, ClickUi.TEXT, true);
             welcome.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
             choices.addView(welcome, spaced(0));
-            choices.addView(label("말하거나 글로 입력해 주세요.", 15, ClickUi.SUBTEXT, false), spaced(4));
-            TextView example = label("예) 글자 크기 키워줘", 15, ClickUi.SUBTEXT, false);
-            example.setPadding(dp(12), dp(10), dp(12), dp(10));
-            example.setMinHeight(dp(48));
-            example.setGravity(Gravity.CENTER_VERTICAL);
-            example.setBackground(ClickUi.outlined(Color.TRANSPARENT, 0xFFDEE3EE, dp(16), dp(1)));
-            example.setContentDescription("글로 입력하기. 예: 글자 크기 키워줘");
-            example.setFocusable(true);
-            example.setOnClickListener(view -> changeMode(Mode.TEXT));
-            choices.addView(example, spaced(12));
             choices.addView(feature("말로 입력", true, () -> changeMode(Mode.VOICE)), spaced(12));
             choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(8));
             addScrollableBody(choices, FloatingPanelStyle.HEADER_GAP_DP);
