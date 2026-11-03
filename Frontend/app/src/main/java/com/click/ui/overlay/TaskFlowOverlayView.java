@@ -1010,6 +1010,14 @@ public final class TaskFlowOverlayView extends LinearLayout {
         clear("작업을 잠시 멈췄어요"); content.addView(text("이어서 진행하거나 그만할 수 있어요.", 16));
         pause.setText("이어서 진행"); pause.setOnClickListener(v -> listener.control("resume_task"));
     }
+    public void expired(Runnable newRequest) {
+        clear("안내를 잠시 멈췄어요");
+        content.addView(text("응답을 기다리다가 안내 시간이 지났어요. 원하실 때 새 요청을 시작해 주세요.", 16), spaced(8));
+        divider.setVisibility(GONE);
+        controls.setVisibility(GONE);
+        recoveryActions.setVisibility(VISIBLE);
+        recoveryActions.addView(primaryButton("새 요청하기", newRequest), spaced(8));
+    }
     public void navigationRecovery(boolean back, String message, Runnable navigate) {
         clear("원래 작업으로 돌아가기");
         content.addView(text(message, 17), spaced(8));

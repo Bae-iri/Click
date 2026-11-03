@@ -1190,12 +1190,111 @@ public class ClickOverlayServiceExecutionTest {
         accessibility.verify(() -> ClickAccessibilityService.performScroll(anyBoolean()), never());
     }
 
-    @Test public void automationOffNeverSwipesLauncherToFindSettings() throws Exception {
+    @Test public void emptyLauncherObservationNeverStartsBlindSwipes() throws Exception {
         new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
         currentScreen = new ScreenSnapshot("com.android.launcher3", Instant.now().toString(), 1080, 2400, List.of(), 42);
         resolve(); confirm();
         accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(anyBoolean()), never());
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(anyBoolean(), anyString(), any()), never());
         assertEquals("start_task", sent.get(1).getString("command_type"));
+    }
+
+    private ScreenSnapshot launcher(boolean settingsVisible) {
+        String pkg = "com.sec.android.app.launcher";
+        AccessibilityNodeSnapshot folder = new AccessibilityNodeSnapshot("folder", null, true, pkg, "Google", null,
+                pkg + ":id/home_icon", "android.widget.TextView", "menu_item", new int[]{40, 200, 260, 400},
+                true, true, false, false, false, null, 43);
+        AccessibilityNodeSnapshot settings = new AccessibilityNodeSnapshot("settings", null, settingsVisible, pkg, "설정", "설정",
+                pkg + ":id/home_icon", "android.widget.TextView", "menu_item", new int[]{40, 1200, 260, 1400},
+                true, true, false, false, false, null, 43);
+        return new ScreenSnapshot(pkg, Instant.now().toString(), 1080, 2400, List.of(folder, settings), 43);
+    }
+
+    @Test public void launcherSearchContinuesAfterFirstTurnAndIgnoresHiddenSettingsEvenWithAutomationOff() throws Exception {
+        prepareGuideResponse();
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
+        set("turnInFlight", false); set("firstTurnSent", true);
+        currentScreen = launcher(false);
+        accessibility.when(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43))
+                .thenAnswer(call -> { currentScreen = launcher(true); return true; });
+        send(null);
+        assertEquals("Wait for navigation before sending another observation", 2, requests.size());
+        verify((ClickOverlayLayout) get("overlayView")).setVisibility(android.view.View.VISIBLE);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000));
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43));
+        assertEquals(3, requests.size());
+        assertSame(currentScreen, requests.get(2).accessibilityTree);
+        assertTrue(requests.get(2).accessibilityTree.nodes.get(1).visibleToUser);
+    }
+
+    @Test public void serverResolvedBrightnessGoalAlsoSearchesLauncher() throws Exception {
+        prepareGuideResponse();
+        set("turnInFlight", false); set("firstTurnSent", true);
+        set("initialGoal", "밝기를 높여줘");
+        set("acceptedGoal", new JSONObject().put("target_app", "android_settings").put("goal_type", "settings.brightness.increase"));
+        currentScreen = launcher(false);
+        send(null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43));
+    }
+
+    @Test public void launcherSearchReversesAtTheEndAndStopsOnAnUnchangedPage() throws Exception {
+        prepareGuideResponse(); set("turnInFlight", false); set("firstTurnSent", true);
+        set("windowParams", new WindowManager.LayoutParams());
+        currentScreen = launcher(false);
+        send(null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true, "com.sec.android.app.launcher", 43));
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(false, "com.sec.android.app.launcher", 43));
+        assertEquals(3, requests.size());
+        assertEquals(-1, get("scrollSearchGeneration"));
+    }
+
+    @Test public void pauseOrWindowChangeBeforeLauncherSwipePreventsMovement() throws Exception {
+        prepareGuideResponse(); set("turnInFlight", false); set("firstTurnSent", true);
+        currentScreen = launcher(false);
+        send(null); set("agentPaused", true);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000));
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(anyBoolean(), anyString(), any()), never());
+        assertEquals(-1, get("scrollSearchGeneration"));
+        set("agentPaused", false);
+        send(null); currentScreen = screen;
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1000));
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(anyBoolean(), anyString(), any()), never());
+    }
+
+    @Test public void expiredRequestKeepsAnExplanationVisibleUntilTheUserChooses() throws Exception {
+        prepareGuideResponse(); set("turnInFlight", false);
+        Method apply = ClickOverlayService.class.getDeclaredMethod("applyTaskFlowResponse", AgentTurnContract.Response.class);
+        apply.setAccessible(true);
+        apply.invoke(service, new AgentTurnContract.Response(new JSONObject()
+                .put("request_id", "expired").put("session_id", "frontend-session")
+                .put("task_status", "EXPIRED").put("metadata", new JSONObject()).toString()));
+        TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
+        assertNotNull(panel);
+        assertEquals("안내를 잠시 멈췄어요", panel.phaseLabel());
+        assertEquals(android.view.View.VISIBLE, panel.getVisibility());
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(2));
+        assertSame(panel, get("taskFlowView"));
+        assertNull(get("agentSessionId"));
+    }
+
+    @Test public void reconnectingAccessibilityRestoresBothLogoAndExpandedTaskWindow() throws Exception {
+        prepareGuideResponse();
+        WindowManager previous = (WindowManager) get("windowManager"), replacement = mock(WindowManager.class);
+        ClickOverlayLayout logo = (ClickOverlayLayout) get("overlayView");
+        TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
+        when(logo.isAttachedToWindow()).thenReturn(true); when(panel.isAttachedToWindow()).thenReturn(true);
+        set("windowParams", new WindowManager.LayoutParams());
+        set("overlayWindowType", WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY);
+        set("taskFlowCollapsed", false);
+        Method rebind = ClickOverlayService.class.getDeclaredMethod("rebindWindows", WindowManager.class, int.class);
+        rebind.setAccessible(true);
+        rebind.invoke(service, replacement, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY);
+        verify(previous).removeViewImmediate(panel);
+        verify(replacement).addView(eq(panel), any());
+        verify(replacement).addView(eq(logo), any());
+        verify(panel).setVisibility(android.view.View.VISIBLE);
     }
 
     @Test public void oneBackRecoveryIsHighlightedAndEscalatesWhenUnchanged() throws Exception {

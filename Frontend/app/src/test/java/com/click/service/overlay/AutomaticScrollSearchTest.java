@@ -4,6 +4,11 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class AutomaticScrollSearchTest {
+    @Test public void launcherSearchCanVisitEightPagesButNeverLoopsForever() {
+        AutomaticScrollSearch search = new AutomaticScrollSearch(8);
+        for (int i = 0; i < 8; i++) assertNotNull(search.next("launcher", "page" + i));
+        assertNull(search.next("launcher", "page8"));
+    }
     @Test public void unchangedScreenReversesOnceThenStops() {
         AutomaticScrollSearch search = new AutomaticScrollSearch();
         assertEquals(Boolean.TRUE, search.next("step", "same-screen"));

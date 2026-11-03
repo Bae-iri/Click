@@ -479,48 +479,71 @@ public final class ClickAccessibilityService extends AccessibilityService {
     }
 
     public static boolean swipeHomePage(boolean towardNextPage) {
+        return swipeHomePage(towardNextPage, null, null);
+    }
+
+    public static boolean swipeHomePage(boolean towardNextPage, String expectedPackage, Integer expectedWindow) {
         ClickAccessibilityService service = connectedService.get();
         if (service == null) return false;
-        AccessibilityNodeInfo root = service.getRootInActiveWindow();
-        AccessibilityNodeInfo pager = findScrollableNode(root);
-        if (pager != null) {
-            int action = towardNextPage
-                    ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+        AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(service);
+        if (root == null) return false;
+        try {
+            String pkg = root.getPackageName() == null ? "" : root.getPackageName().toString();
+            if (!(pkg.contains("launcher") || pkg.equals("com.miui.home"))
+                    || expectedPackage != null && !expectedPackage.equals(pkg)
+                    || expectedWindow != null && root.getWindowId() != expectedWindow) return false;
+            int action = towardNextPage ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
                     : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
-            boolean performed = pager.performAction(action);
-            Log.i(TAG, "Home page accessibility scroll direction="
-                    + (towardNextPage ? "forward" : "backward") + " performed=" + performed);
-            if (performed) {
-                if (service.mainHandler != null) {
-                    service.mainHandler.postDelayed(service.captureRunnable, 650L);
-                }
+            // Native containers determine their own axis: home pages move sideways,
+            // while an app drawer's RecyclerView moves vertically.
+            if (scrollVisibleList(root, action)) {
+                if (service.mainHandler != null) service.mainHandler.postDelayed(service.captureRunnable, 650L);
                 return true;
             }
-        }
+        } finally { root.recycle(); }
         int width = service.getResources().getDisplayMetrics().widthPixels;
         int height = service.getResources().getDisplayMetrics().heightPixels;
-        float startX = towardNextPage ? width * 0.82f : width * 0.18f;
-        float endX = towardNextPage ? width * 0.18f : width * 0.82f;
+        float y = service.uncoveredSwipeY(height);
+        if (y < 0) return false;
         Path path = new Path();
-        path.moveTo(startX, height * 0.52f);
-        path.lineTo(endX, height * 0.52f);
+        path.moveTo(towardNextPage ? width * .82f : width * .18f, y);
+        path.lineTo(towardNextPage ? width * .18f : width * .82f, y);
         android.accessibilityservice.GestureDescription gesture =
                 new android.accessibilityservice.GestureDescription.Builder()
-                        .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(
-                                path, 0L, 420L))
+                        .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(path, 0L, 420L))
                         .build();
-        boolean dispatched = service.dispatchGesture(gesture,
-                new GestureResultCallback() {
-                    @Override
-                    public void onCompleted(android.accessibilityservice.GestureDescription gestureDescription) {
-                        if (service.mainHandler != null) {
-                            service.mainHandler.postDelayed(service.captureRunnable, 450L);
-                        }
-                    }
-                }, service.mainHandler);
-        Log.i(TAG, "Home page gesture fallback direction="
-                + (towardNextPage ? "forward" : "backward") + " dispatched=" + dispatched);
-        return dispatched;
+        return service.dispatchGesture(gesture, new GestureResultCallback() {
+            @Override public void onCompleted(android.accessibilityservice.GestureDescription description) {
+                if (service.mainHandler != null) service.mainHandler.postDelayed(service.captureRunnable, 450L);
+            }
+            @Override public void onCancelled(android.accessibilityservice.GestureDescription description) {
+                if (service.mainHandler != null) service.mainHandler.post(service.captureRunnable);
+            }
+        }, service.mainHandler);
+    }
+
+    /** Avoid dragging Click's logo or speech bubble instead of the launcher. */
+    private float uncoveredSwipeY(int height) {
+        java.util.List<Rect> covered = new java.util.ArrayList<>();
+        for (AccessibilityWindowInfo window : getWindows()) {
+            try {
+                if (window.getType() != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY) continue;
+                AccessibilityNodeInfo root = window.getRoot();
+                if (root == null) continue;
+                try {
+                    if (!root.isVisibleToUser() || root.getPackageName() == null
+                            || !getPackageName().contentEquals(root.getPackageName())) continue;
+                    Rect bounds = new Rect(); window.getBoundsInScreen(bounds); covered.add(bounds);
+                } finally { root.recycle(); }
+            } finally { window.recycle(); }
+        }
+        for (float fraction : new float[]{.52f, .68f, .36f, .78f}) {
+            float y = height * fraction;
+            boolean clear = true;
+            for (Rect bounds : covered) if (y >= bounds.top - 24 && y <= bounds.bottom + 24) { clear = false; break; }
+            if (clear) return y;
+        }
+        return -1;
     }
 
     /** Executes a scroll on the current screen's scrollable container ({@code action_type: scroll},
