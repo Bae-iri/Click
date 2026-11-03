@@ -143,6 +143,9 @@ public final class ScreenSnapshot {
         if (includeRevision) value.append('|').append(screenRevision);
         for (AccessibilityNodeSnapshot node : nodes) {
             value.append('|').append(node.nodeId).append(':').append(node.text)
+                    .append(':').append(node.resourceId).append(':').append(node.packageName)
+                    .append(':').append(node.windowId).append(':').append(node.role)
+                    .append(':').append(node.sensitiveInput).append(':').append(node.rangeMin).append(':').append(node.rangeMax)
                     .append(':').append(node.contentDescription).append(':').append(node.className)
                     .append(':').append(java.util.Arrays.toString(node.bounds))
                     .append(':').append(node.parentId).append(':').append(node.visibleToUser)

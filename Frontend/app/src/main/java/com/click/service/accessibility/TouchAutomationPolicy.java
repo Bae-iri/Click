@@ -13,7 +13,9 @@ import java.util.Set;
 public final class TouchAutomationPolicy {
     private static final Set<String> LABELS = Set.of("설정", "디스플레이", "화면", "일반", "접근성", "시인성 향상",
             "글자 크기와 스타일", "글자 크기 및 스타일", "글꼴 크기 및 스타일", "글자 크기", "글꼴 크기", "폰트 크기", "삼성 키보드 설정",
-            "Settings", "Display", "General management", "Accessibility", "Font size", "Font size and style");
+            "소리 및 진동", "소리", "음량", "밝기",
+            "Settings", "Display", "General management", "Accessibility", "Font size", "Font size and style",
+            "Sound & vibration", "Sound and vibration", "Sound", "Volume", "Brightness");
     private static final String[] RISKY = {"결제", "구매", "송금", "전화 걸기", "메시지 보내기", "초기화", "삭제",
             "비밀번호", "payment", "purchase", "send message", "make call", "reset", "delete", "password"};
     private TouchAutomationPolicy() {}
@@ -46,6 +48,10 @@ public final class TouchAutomationPolicy {
             case "font size": case "text size": case "글꼴 크기": case "폰트 크기": return "글자 크기";
             case "font size and style": case "글꼴 크기 및 스타일": case "글자 크기 및 스타일": return "글자 크기와 스타일";
             case "general management": return "일반";
+            case "sound & vibration": case "sound and vibration": return "소리 및 진동";
+            case "sound": return "소리";
+            case "volume": return "음량";
+            case "brightness": return "밝기";
             default: return normalized;
         }
     }

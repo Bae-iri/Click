@@ -81,6 +81,7 @@ public final class GuidedActionTracker {
     }
 
     public boolean isBoundToGuide(String guideId) { return target != null && java.util.Objects.equals(guide, guideId); }
+    public boolean hasSliderBinding() { return target != null && "drag".equals(action) && "slider".equals(target.role); }
 
     public boolean isTargetTap(String packageName, int window, String nodeId, int[] bounds) {
         if (target == null || !java.util.Objects.equals(target.packageName, packageName)

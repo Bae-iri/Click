@@ -627,33 +627,140 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("replacement-confirmation", get("agentConfirmationId"));
     }
 
-    @Test public void largerChoiceApprovesTheCurrentFontDirectionWithItsScreenBinding() throws Exception {
+    @Test public void confirmedIncreaseDoesNotAskForDirectionAgainInManualMode() throws Exception {
+        screen = fontScreen(2f, 1f, 1000); currentScreen = screen;
         prepareGuideResponse();
-        deliver(1, "confirmation", "observe_only", null);
-        invoke("showFontSizeConfirmation");
-        fontDirectionAnswer().accept("increase");
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
+        deliverFontConfirmation(1);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+        assertEquals(3, requests.size());
         assertEquals("respond_confirmation", requests.get(2).commandType());
         assertEquals("accepted", requests.get(2).userConfirmation);
         assertEquals("confirmation-id", requests.get(2).confirmationId);
         assertTrue(screen.sameNativeContent(requests.get(2).accessibilityTree));
+        verify((TaskFlowOverlayView) get("taskFlowView"), never()).confirmation(anyString(), any());
+        assertFalse("Reusing the requested direction does not enable auto-touch",
+                new com.click.data.local.TouchAutomationSettings(service).isEnabled());
     }
 
-    @Test public void smallerChoiceReplacesTheRequestInsteadOfApprovingAnIncrease() throws Exception {
+    @Test public void backendConfirmationDoesNotReopenMinimizedPanel() throws Exception {
+        screen = fontScreen(2f, 1f, 1000); currentScreen = screen;
         prepareGuideResponse();
-        deliver(1, "confirmation", "observe_only", null);
-        invoke("showFontSizeConfirmation");
-        fontDirectionAnswer().accept("decrease");
-        assertEquals("cancel_task", requests.get(2).commandType());
-        assertEquals("휴대폰 전체 글자 크기를 작게 해줘", get("pendingReplacement"));
-        assertTrue(requests.stream().noneMatch(r -> "accepted".equals(r.userConfirmation)));
+        when(((TaskFlowOverlayView) get("taskFlowView")).hasCompactContent()).thenReturn(true);
+        invoke("collapseTaskFlow");
+        deliverFontConfirmation(1);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+        assertTrue((boolean) get("taskFlowCollapsed"));
+        assertEquals("accepted", requests.get(2).userConfirmation);
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private java.util.function.Consumer<String> fontDirectionAnswer() throws Exception {
-        org.mockito.ArgumentCaptor<java.util.function.Consumer<String>> answer =
-                org.mockito.ArgumentCaptor.forClass((Class) java.util.function.Consumer.class);
-        verify((TaskFlowOverlayView) get("taskFlowView")).fontSizeConfirmation(answer.capture());
-        return answer.getValue();
+    @Test public void changedSliderBeforeAutomaticApprovalCannotApproveAnOldChallenge() throws Exception {
+        screen = fontScreen(2f, 1f, 1000); currentScreen = screen;
+        prepareGuideResponse();
+        deliverFontConfirmation(1);
+        currentScreen = fontScreen(3f, 1.15f, 2000);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+        assertTrue(requests.stream().noneMatch(r -> "accepted".equals(r.userConfirmation)));
+        assertNull(get("agentConfirmationId"));
+    }
+
+    @Test public void unsupportedFontConfirmationStopsAfterBoundedRefreshes() throws Exception {
+        screen = fontScreen(2f, 1f, 1000); currentScreen = screen;
+        prepareGuideResponse();
+        for (int i = 1; i <= 4; i++) deliverFontConfirmation(i, true);
+        assertEquals(4, get("staleGuideDrops"));
+        assertEquals("Unsupported responses must not create an endless observe loop", 5, requests.size());
+        verify((TaskFlowOverlayView) get("taskFlowView")).observationRecovery(anyString(), any());
+    }
+
+    @Test public void brightnessUsesAutomaticApprovalAndAutomaticSliderWithoutAnExtraQuestion() throws Exception {
+        automaticAdjustment("brightness");
+    }
+    @Test public void volumeUsesAutomaticApprovalAndAutomaticSliderWithoutAnExtraQuestion() throws Exception {
+        automaticAdjustment("volume");
+    }
+    private void automaticAdjustment(String setting) throws Exception {
+        screen = fontScreen(2f, 1f, 1000).withAdjustmentValues(100, 5); currentScreen = screen;
+        prepareGuideResponse();
+        goal = catalog.executableGoal("settings." + setting + ".increase").toTypedGoalJson();
+        set("acceptedGoal", goal);
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        deliverFontConfirmation(1);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+        assertEquals("respond_confirmation", requests.get(2).commandType());
+        assertEquals("accepted", requests.get(2).userConfirmation);
+        verify((TaskFlowOverlayView)get("taskFlowView"), never()).confirmation(anyString(), any());
+        verify((TaskFlowOverlayView)get("taskFlowView")).progress(anyString(), any(), anyString(), eq(false));
+        accessibility.when(() -> ClickAccessibilityService.performGuidedSlider(any(), eq("display"), any(), eq(1))).thenReturn(true);
+        JSONObject guide = new JSONObject().put("guide_command_id", "adjust-control")
+                .put("command_type", "highlight").put("action_type", "drag").put("requires_user_action", true)
+                .put("target_node_id", "display").put("target_bounds", new JSONArray(screen.nodes.get(1).bounds))
+                .put("message", "조절 막대를 오른쪽으로 움직여주세요.");
+        callbacks.get(2).onSuccess(new AgentTurnContract.Response(new JSONObject()
+                .put("request_id", requests.get(2).requestId).put("session_id", "frontend-session")
+                .put("episode_id", "episode").put("session_version", 8).put("task_status", "IN_PROGRESS")
+                .put("guide_command", guide).put("metadata", new JSONObject().put("typed_goal", goal)).toString()));
+        accessibility.verify(() -> ClickAccessibilityService.performGuidedSlider(any(), eq("display"), any(), eq(1)));
+    }
+
+    @Test public void movingBrightnessWaitsForASettledValueWithoutStaleScreenRecovery() throws Exception {
+        screen = fontScreen(2f, 1f, 1000).withAdjustmentValues(100, 5); currentScreen = screen;
+        prepareGuideResponse(); goal = catalog.executableGoal("settings.brightness.increase").toTypedGoalJson();
+        set("acceptedGoal", goal); deliver(1, "highlight", "drag", "right");
+        currentScreen = fontScreen(3f, 1f, 2000).withAdjustmentValues(120, 5); send(null);
+        currentScreen = fontScreen(4f, 1f, 2100).withAdjustmentValues(140, 5);
+        deliver(2, "highlight", "observe_only", null);
+        assertEquals(3, requests.size()); assertEquals(0, get("staleGuideDrops"));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
+        assertEquals(4, requests.size()); assertNotEquals("request_result", requests.get(3).commandType());
+        deliver(3, "highlight", "observe_only", null);
+        assertEquals("request_result", requests.get(4).commandType());
+        verify((TaskFlowOverlayView)get("taskFlowView"), never()).observationRecovery(anyString(), any());
+    }
+
+    @Test public void brightnessChangeDuringRedrawAsksForResultInsteadOfReportingAnUnstableScreen() throws Exception {
+        adjustedSettingRecovery("brightness");
+    }
+    @Test public void mediaVolumeChangeDuringRedrawUsesTheSameResultFlow() throws Exception {
+        adjustedSettingRecovery("volume");
+    }
+    private void adjustedSettingRecovery(String setting) throws Exception {
+        screen = fontScreen(2f, 1f, 1000).withAdjustmentValues(100, 5); currentScreen = screen;
+        prepareGuideResponse();
+        goal = catalog.executableGoal("settings." + setting + ".increase").toTypedGoalJson();
+        set("acceptedGoal", goal);
+        deliver(1, "highlight", "drag", "right");
+        currentScreen = fontScreen(3f, 1f, 2000).withAdjustmentValues(setting.equals("brightness") ? 120 : 100,
+                setting.equals("volume") ? 6 : 5);
+        send(null);
+        deliver(2, "highlight", "observe_only", null);
+        assertEquals(4, requests.size());
+        assertEquals("request_result", requests.get(3).commandType());
+        assertNull(requests.get(3).userActionEvent);
+        assertNull(requests.get(3).userResult);
+        verify((TaskFlowOverlayView)get("taskFlowView"), never()).observationRecovery(anyString(), any());
+        assertEquals(0, get("staleGuideDrops"));
+    }
+
+    private void deliverFontConfirmation(int index) throws Exception {
+        deliverFontConfirmation(index, false);
+    }
+
+    private void deliverFontConfirmation(int index, boolean unsupported) throws Exception {
+        AgentTurnContract.Request request = requests.get(index);
+        JSONObject guide = new JSONObject().put("guide_command_id", "font-confirm")
+                .put("command_type", "confirmation").put("action_type", "observe_only")
+                .put("proposed_action", "drag").put("requires_user_action", true)
+                .put("target_node_id", "display").put("target_bounds", new JSONArray(request.accessibilityTree.nodes.get(1).bounds))
+                .put("message", "계속할까요?").put("render_policy", new JSONObject()
+                        .put("avoid_covering_target", true).put("preferred_position", "below_target"));
+        if (unsupported) guide.getJSONObject("render_policy").put("unknown_consent", true);
+        JSONObject metadata = new JSONObject().put("typed_goal", goal).put("confirmation", new JSONObject()
+                .put("id", "confirmation-id").put("expires_at", System.currentTimeMillis() / 1000 + 120));
+        callbacks.get(index).onSuccess(new AgentTurnContract.Response(new JSONObject()
+                .put("request_id", request.requestId).put("session_id", request.sessionId)
+                .put("session_version", 7).put("episode_id", "episode").put("task_status", "WAITING_CONFIRMATION")
+                .put("state_id", "S4_FONT_SIZE_CONTROL").put("guide_command", guide).put("metadata", metadata).toString()));
     }
 
     @Test public void automaticStepsStayQuietWhileReplayAndResultQuestionsStillSpeak() throws Exception {
@@ -900,7 +1007,7 @@ public class ClickOverlayServiceExecutionTest {
                 new int[]{20, 20, 500, 70}, false, true, false, false, false, null, 42);
         AccessibilityNodeSnapshot slider = new AccessibilityNodeSnapshot("display", null, true,
                 "com.android.settings", "글자 크기", null, "settings:id/font", "android.widget.SeekBar", "slider",
-                new int[]{20, 100, 900, 180}, true, true, false, false, false, progress, 42);
+                new int[]{20, 100, 900, 180}, true, true, false, false, false, progress, 42, false, 0f, 7f);
         return new ScreenSnapshot("com.android.settings", Instant.ofEpochMilli(time).toString(), 1080, 2400,
                 List.of(title, slider), 42, true, appliedScale);
     }

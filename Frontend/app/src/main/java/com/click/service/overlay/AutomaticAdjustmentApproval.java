@@ -9,9 +9,9 @@ import com.click.ui.overlay.GuideDragDirection;
 import org.json.JSONObject;
 import java.util.Arrays;
 
-/** Only the user's already-confirmed font-size goal can cover this final one-step approval. */
-public final class AutomaticFontSizeApproval {
-    private AutomaticFontSizeApproval() {}
+/** Reuses the already-confirmed direction for native slider guidance, independently of auto-touch. */
+public final class AutomaticAdjustmentApproval {
+    private AutomaticAdjustmentApproval() {}
     public static boolean eligible(AgentTurnContract.GuideCommand command, JSONObject metadata, ScreenSnapshot screen) {
         if (!"confirmation".equals(command.commandType) || !"drag".equals(command.proposedAction)
                 || !"observe_only".equals(command.actionType) || !command.requiresUserAction
@@ -19,15 +19,17 @@ public final class AutomaticFontSizeApproval {
                 || command.targetNodeId == null || command.targetBounds == null) return false;
         JSONObject goal = metadata == null ? null : metadata.optJSONObject("typed_goal");
         JSONObject slots = goal == null ? null : goal.optJSONObject("slots");
-        if (goal == null || !"android_settings".equals(goal.optString("target_app")) || slots == null
-                || !"font_size".equals(slots.optString("setting"))) return false;
+        if (SettingsAdjustment.from(goal) == null) return false;
         if (command.renderPolicy != null) {
             java.util.Iterator<String> keys = command.renderPolicy.keys();
             while (keys.hasNext()) {
                 String key = keys.next();
-                if (!java.util.Set.of("runtime_strategy", "attempt_id", "step_id").contains(key)) return false;
+                if (!java.util.Set.of("runtime_strategy", "attempt_id", "step_id",
+                        "avoid_covering_target", "preferred_position", "direction", "automatable_setting").contains(key)) return false;
             }
             if (!"continue".equals(command.renderPolicy.optString("runtime_strategy", "continue"))) return false;
+            if (command.renderPolicy.has("automatable_setting")
+                    && !slots.optString("setting").equals(command.renderPolicy.optString("automatable_setting"))) return false;
         }
         int direction = GuideDragDirection.resolve(command.renderPolicy, metadata);
         for (AccessibilityNodeSnapshot node : screen.nodes) {

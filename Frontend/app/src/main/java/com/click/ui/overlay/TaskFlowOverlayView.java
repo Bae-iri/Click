@@ -48,7 +48,6 @@ import org.json.JSONObject;
 @SuppressLint("ViewConstructor")
 public final class TaskFlowOverlayView extends LinearLayout {
     public static final String AUTOMATIC_PROGRESS_MESSAGE = "지금 진행 중이에요.";
-    public static final String FONT_SIZE_QUESTION = "글자 크기를 어떻게 조절할까요?";
     // [UI 수정] 이 안내창의 기본 팔레트. 각 메서드의 직접 지정 색상/ClickUi 호출도 함께 확인한다.
     private static final int BLUE = 0xFF3478F6;
     private static final int BLUE_DARK = 0xFF2868E8;
@@ -693,7 +692,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         String type = state.goal == null ? "" : state.goal.optString("goal_type");
         boolean increase = type.endsWith(".increase");
         if (type.startsWith("settings.font_size."))
-            return "휴대폰 전체 글자 크기\n" + (increase ? "키워주기" : "줄여주기");
+            return (getResources().getConfiguration().fontScale >= 1.4f
+                    ? "휴대폰 전체\n글자 크기\n" : "휴대폰 전체 글자 크기\n")
+                    + (increase ? "키워주기" : "줄여주기");
         if (type.startsWith("settings.brightness."))
             return "휴대폰 화면을\n" + (increase ? "더 밝게" : "더 어둡게") + " 조절할게요.";
         if (type.startsWith("settings.volume."))
@@ -873,28 +874,12 @@ public final class TaskFlowOverlayView extends LinearLayout {
         setNarrationState(false, narrationUnavailable);
     }
 
-    private void addNarration(String message) {
+    private void addOutcomeMessage(String message) {
         if (message == null || message.trim().isEmpty()) return;
         narrationMessage = message;
-        LinearLayout section = new LinearLayout(getContext()); section.setOrientation(VERTICAL);
-        LinearLayout player = new LinearLayout(getContext()); player.setGravity(Gravity.CENTER_VERTICAL);
-        boolean largeText = getResources().getConfiguration().fontScale > 1.2f;
-        narrationStatus = text("클릭의 안내", 13); narrationStatus.setTextColor(SECONDARY);
-        narrationStatus.setVisibility(largeText ? GONE : VISIBLE);
-        player.addView(narrationStatus, new LayoutParams(0, -2, 1));
-        narrationCaptions = quietButton("글로 보기", () -> {
-            boolean show = narrationText.getVisibility() != VISIBLE;
-            narrationText.setVisibility(show ? VISIBLE : GONE);
-            narrationCaptions.setText(show ? "글 접기" : "글로 보기");
-        });
-        narrationCaptions.setTextSize(13); narrationCaptions.setTextColor(SECONDARY);
-        narrationCaptions.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 10));
-        player.addView(narrationCaptions, largeText ? new LayoutParams(0, -2, 1) : new LayoutParams(dp(80), -2));
-        section.addView(player);
-        narrationText = text(message, 15); narrationText.setPadding(dp(12), dp(10), dp(12), dp(10));
-        narrationText.setBackground(round(PALE_BLUE, 12)); narrationText.setVisibility(GONE);
-        section.addView(narrationText);
-        content.addView(section, spaced(8));
+        narrationText = text(message, 17);
+        narrationText.setTextColor(SECONDARY);
+        content.addView(narrationText, spaced(8));
         setNarrationState(false, narrationUnavailable);
     }
 
@@ -943,15 +928,13 @@ public final class TaskFlowOverlayView extends LinearLayout {
         divider.setVisibility(GONE);
         setNarrationState(false, narrationUnavailable);
         if (canRequestResult)
-            content.addView(secondaryButton("결과 확인하기", () -> listener.control("request_result")), spaced(12));
+            content.addView(primaryButton("다 했어요", () -> listener.control("request_result")), spaced(12));
     }
     public void result(JSONObject prompt) {
-        clear("결과를 확인해 주세요");
-        addNarration(prompt.optString("message"));
-        content.addView(primaryButton("네, 잘 보여요", () -> listener.result("satisfied")), spaced(12));
-        content.addView(secondaryButton("아직 불편해요", () -> listener.result("needs_help")), spaced(8));
-        TextView note = text("답하지 않으면 완료로 기록하지 않아요.", 13);
-        note.setTextColor(SECONDARY); note.setGravity(Gravity.CENTER); content.addView(note, spaced(6));
+        clear("원하시는 대로 되었나요?");
+        addOutcomeMessage(prompt.optString("message"));
+        content.addView(primaryButton("네, 좋아요", () -> listener.result("satisfied")), spaced(12));
+        content.addView(secondaryButton("조금 더 도와주세요", () -> listener.result("needs_help")), spaced(8));
     }
 
     public void confirmation(String message, java.util.function.Consumer<Boolean> answer) {
@@ -961,16 +944,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         actions.addView(secondaryButton("아니요", () -> answer.accept(false)), new LayoutParams(0, -2, 1));
         LayoutParams yes = new LayoutParams(0, -2, 1.4f); yes.leftMargin = dp(8);
         actions.addView(primaryButton("네, 계속할게요", () -> answer.accept(true)), yes);
-        content.addView(actions, spaced(8));
-    }
-
-    public void fontSizeConfirmation(java.util.function.Consumer<String> answer) {
-        clear(null);
-        addQuestionNarration(FONT_SIZE_QUESTION);
-        LinearLayout actions = new LinearLayout(getContext());
-        actions.addView(secondaryButton("작게", () -> answer.accept("decrease")), new LayoutParams(0, -2, 1));
-        LayoutParams larger = new LayoutParams(0, -2, 1); larger.leftMargin = dp(8);
-        actions.addView(secondaryButton("크게", () -> answer.accept("increase")), larger);
         content.addView(actions, spaced(8));
     }
 
@@ -998,7 +971,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         recoveryActions.setVisibility(VISIBLE);
     }
     public void followUp(JSONObject followUp) {
-        clear("조금 더 도와드릴게요"); addNarration(followUp.optString("message"));
+        clear("조금 더 도와드릴게요"); addOutcomeMessage(followUp.optString("message"));
         JSONArray choices = followUp.optJSONArray("choices");
         if (choices != null) for (int i = 0; i < choices.length(); i++) {
             JSONObject choice = choices.optJSONObject(i); if (choice == null) continue;

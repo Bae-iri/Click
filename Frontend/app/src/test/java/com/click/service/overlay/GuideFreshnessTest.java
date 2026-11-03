@@ -46,6 +46,18 @@ public class GuideFreshnessTest {
         assertTrue(valid(before, settings(samsungSlider("4", 3f))));
         assertFalse(valid(before, settings(samsungSlider("밝기", 3f))));
     }
+    @Test public void brightnessPercentageChangeKeepsIdentityButDifferentSliderLabelDoesNot() {
+        ScreenSnapshot before = settings(samsungSlider("밝기, 40%", 2f));
+        assertTrue(valid(before, settings(samsungSlider("밝기, 50%", 3f))));
+        assertFalse(valid(before, settings(samsungSlider("음량, 50%", 3f))));
+    }
+    @Test public void replacedResourceCannotHideBehindAnEqualScreenFingerprint() {
+        AccessibilityNodeSnapshot original = samsungSlider("3", 2f);
+        AccessibilityNodeSnapshot replacement = new AccessibilityNodeSnapshot(original.nodeId, original.parentId, true,
+                original.packageName, original.text, original.contentDescription, "settings:id/brightness", original.className,
+                original.role, original.bounds, original.clickable, true, false, false, false, 2f, 5, false, 0f, 7f);
+        assertFalse(valid(settings(original), settings(replacement)));
+    }
     private static AccessibilityNodeSnapshot samsungSlider(String description, float value) {
         return new AccessibilityNodeSnapshot("node_0_3", "node_0", true, "com.android.settings",
                 null, description, "com.android.settings:id/seekBarForFontSize", "android.widget.SeekBar", "slider",
