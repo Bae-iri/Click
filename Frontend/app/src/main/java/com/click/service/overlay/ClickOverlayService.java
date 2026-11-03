@@ -2974,6 +2974,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || !adjustmentResultCheck.changed(agentEpisodeId, goalType, current)) return false;
         hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
         taskFlowView.waiting("조절한 결과를 확인하고 있어요.");
+        if (automaticTouchEnabled()) {
+            taskFlowView.waitingProgress(TaskFlowOverlayView.AUTOMATIC_PROGRESS_MESSAGE);
+            taskFlowView.setAutomaticProgress(true);
+        }
         placeTaskFlow(null, true);
         SettingsAdjustment task = SettingsAdjustment.forGoal(goalType);
         if (task != null && !java.util.Objects.equals(task.value(lastSubmittedScreen), task.value(current))) {
@@ -3010,6 +3014,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         scrollSearchGeneration = generation;
         ensureTaskFlow();
         taskFlowView.waitingProgress("설정 앱을 찾기 위해 화면을 넘겨 보고 있어요.");
+        taskFlowView.setAutomaticProgress(automaticTouchEnabled());
         collapseTaskFlow();
         speechHandler.postDelayed(() -> {
             if (generation != executionGeneration || token != homeSearchToken) return;

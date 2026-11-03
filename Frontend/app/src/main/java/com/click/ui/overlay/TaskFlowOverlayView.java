@@ -47,7 +47,7 @@ import org.json.JSONObject;
  */
 @SuppressLint("ViewConstructor")
 public final class TaskFlowOverlayView extends LinearLayout {
-    public static final String AUTOMATIC_PROGRESS_MESSAGE = "지금 진행 중이에요.";
+    public static final String AUTOMATIC_PROGRESS_MESSAGE = "진행중이에요!";
     // [UI 수정] 이 안내창의 기본 팔레트. 각 메서드의 직접 지정 색상/ClickUi 호출도 함께 확인한다.
     private static final int BLUE = 0xFF3478F6;
     private static final int BLUE_DARK = 0xFF2868E8;
@@ -110,6 +110,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private String progressMessage;
     private boolean minimizedProgress;
     private boolean automaticProgress;
+    private boolean guidanceProgressKnown;
+    private Button progressCompletion;
     private boolean reviewScreen;
     private int reviewStep;
     private int[] expandedVisibility;
@@ -249,6 +251,13 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     public void setAutomaticProgress(boolean automatic) {
         automaticProgress = automatic && hasProgress();
+        if (hasProgress()) {
+            narrationText.setText(automaticProgress ? AUTOMATIC_PROGRESS_MESSAGE : progressMessage);
+            if (guidanceTarget != null) guidanceTarget.setVisibility(automaticProgress ? GONE : VISIBLE);
+            if (guidanceProgress != null) guidanceProgress.setVisibility(!automaticProgress && guidanceProgressKnown ? VISIBLE : GONE);
+            if (progressCompletion != null) progressCompletion.setVisibility(automaticProgress ? GONE : VISIBLE);
+            headerReplay.setVisibility(automaticProgress ? GONE : VISIBLE);
+        }
         if (minimizedProgress) {
             compactMessage.setText(compactGuidance());
             compactMessage.setContentDescription(compactGuidance() + ". 눌러서 안내 펼치기");
@@ -264,6 +273,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void setAvailableHeight(int height) { if (maxHeight != height) { maxHeight = height; requestLayout(); } }
     public boolean hasProgress() { return progressMessage != null; }
     public String guidanceMessage() {
+        if (automaticProgress) return AUTOMATIC_PROGRESS_MESSAGE;
         return narrationMessage != null ? narrationMessage : progressMessage != null ? progressMessage
                 : heading.getText().toString();
     }
@@ -302,7 +312,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void setGuidanceProgress(int step, int total) {
         if (!hasProgress() || guidanceProgress == null) return;
         boolean known = total > 0 && step >= 0 && step <= total;
-        guidanceProgress.setVisibility(known ? VISIBLE : GONE);
+        guidanceProgressKnown = known;
+        guidanceProgress.setVisibility(known && !automaticProgress ? VISIBLE : GONE);
         if (!known) return;
         progressBar.setMax(total); progressBar.setProgress(step);
         progressCount.setText(step + "/" + total);
@@ -350,6 +361,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         LayoutParams params = spaced(0); params.bottomMargin = dp(8);
         content.addView(section, Math.min(2, content.getChildCount()), params);
         guidanceTarget = section;
+        section.setVisibility(automaticProgress ? GONE : VISIBLE);
     }
     public void actionRequired(String message) {
         if (hasProgress()) progress(requestSummary, null, message, false);
@@ -397,6 +409,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         reviewChoices = null; reviewEditor = null; reviewRequestInput = null; requestEditorToggle = null;
         reviewSummaryView = null;
         automaticProgress = false;
+        guidanceProgressKnown = false;
+        progressCompletion = null;
         progressMessage = null;
         guidanceProgress = null; progressBar = null; progressCount = null; guidanceTarget = null;
         content.removeAllViews();
@@ -932,8 +946,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.addView(narrationText, spaced(12));
         divider.setVisibility(GONE);
         setNarrationState(false, narrationUnavailable);
-        if (canRequestResult)
-            content.addView(primaryButton("다 했어요", () -> listener.control("request_result")), spaced(12));
+        if (canRequestResult) {
+            progressCompletion = primaryButton("다 했어요", () -> listener.control("request_result"));
+            content.addView(progressCompletion, spaced(12));
+        }
     }
     public void result(JSONObject prompt) {
         result(prompt, false);
