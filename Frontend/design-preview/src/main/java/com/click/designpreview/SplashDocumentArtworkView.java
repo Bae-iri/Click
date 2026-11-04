@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.Typeface;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
@@ -69,10 +70,25 @@ public final class SplashDocumentArtworkView extends View {
         paint.setColor(0xFFFFFFFF);
         canvas.drawRoundRect(40, 14, 106, 92, 14, 14, paint);
 
-        paint.setColor(0xFFBFD6FA);
-        canvas.drawRoundRect(52, 35, 91, 40, 2.5f, 2.5f, paint);
-        canvas.drawRoundRect(52, 48, 93, 53, 2.5f, 2.5f, paint);
-        canvas.drawRoundRect(52, 61, 84, 66, 2.5f, 2.5f, paint);
+        paint.setColor(0xFF17264D);
+        paint.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        paint.setTextSize(25);
+        canvas.drawText("가", 51, 57, paint);
+        paint.setTextSize(17);
+        paint.setColor(0xFF8495B4);
+        canvas.drawText("가", 73, 56, paint);
+
+        paint.setColor(0xFFD8E2F2);
+        canvas.drawRoundRect(51, 70, 94, 76, 3, 3, paint);
+        paint.setColor(0xFF3478F6);
+        canvas.drawRoundRect(51, 70, 80 + 2 * (float) Math.sin(phase * Math.PI), 76, 3, 3, paint);
+        paint.setColor(0xFFFFFFFF);
+        canvas.drawCircle(81 + 2 * (float) Math.sin(phase * Math.PI), 73, 6, paint);
+        paint.setColor(0xFF3478F6);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(2.2f);
+        canvas.drawCircle(81 + 2 * (float) Math.sin(phase * Math.PI), 73, 5.5f, paint);
+        paint.setStyle(Paint.Style.FILL);
 
         paint.setColor(0xFF3478F6);
         paint.setStrokeWidth(3.5f);
@@ -80,9 +96,11 @@ public final class SplashDocumentArtworkView extends View {
         paint.setStyle(Paint.Style.STROKE);
         canvas.drawCircle(117, 38, 18, paint);
         paint.setStyle(Paint.Style.FILL);
-        path.reset();
-        path.moveTo(108, 38); path.lineTo(114, 44); path.lineTo(126, 30);
-        canvas.drawPath(path, paint);
+        paint.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        paint.setTextSize(12);
+        paint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText("가+", 117, 42, paint);
+        paint.setTextAlign(Paint.Align.LEFT);
         canvas.restore();
     }
 }
