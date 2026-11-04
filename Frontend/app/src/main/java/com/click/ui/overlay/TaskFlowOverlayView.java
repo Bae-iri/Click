@@ -697,6 +697,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         reviewSummaryView = summary;
         summary.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         summary.setLineSpacing(dp(2), 1.15f);
+        summary.setMaxLines(2);
+        summary.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
         summary.setPadding(dp(14), dp(12), dp(14), dp(12));
         Drawable document = getContext().getDrawable(R.drawable.ic_flow_document);
         document.setBounds(0, 0, dp(28), dp(28));
@@ -711,13 +713,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
         String type = state.goal == null ? "" : state.goal.optString("goal_type");
         boolean increase = type.endsWith(".increase");
         if (type.startsWith("settings.font_size."))
-            return (getResources().getConfiguration().fontScale >= 1.4f
-                    ? "휴대폰 전체\n글자 크기\n" : "휴대폰 전체 글자 크기\n")
-                    + (increase ? "키워주기" : "줄여주기");
+            return "휴대폰 글자를 " + (increase ? "더 크게" : "더 작게") + " 바꿔요.";
         if (type.startsWith("settings.brightness."))
-            return "휴대폰 화면을\n" + (increase ? "더 밝게" : "더 어둡게") + " 조절할게요.";
+            return "화면 밝기를 " + (increase ? "높여요." : "낮춰요.");
         if (type.startsWith("settings.volume."))
-            return "동영상·음악 소리를\n" + (increase ? "더 크게" : "더 작게") + " 조절할게요.";
+            return "미디어 소리를 " + (increase ? "키워요." : "줄여요.");
         return state.message == null || state.message.trim().isEmpty() ? state.data.optString("source_text") : state.message;
     }
 

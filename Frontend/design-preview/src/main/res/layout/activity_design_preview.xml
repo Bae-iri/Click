@@ -10,7 +10,7 @@
         android:layout_height="wrap_content"
         android:contentDescription="@string/splash_logo_description" />
 
-    <com.click.designpreview.PermissionTouchArtworkView
+    <com.click.designpreview.SplashDocumentArtworkView
         android:id="@+id/splash_artwork"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -26,5 +26,5 @@
         android:lineSpacingExtra="4dp"
         android:text="@string/splash_tagline"
         android:textColor="#627196"
-        android:textSize="19sp" />
+        android:textSize="16sp" />
 </com.click.designpreview.SplashLayout>

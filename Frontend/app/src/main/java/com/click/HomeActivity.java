@@ -210,7 +210,7 @@ public final class HomeActivity extends AppCompatActivity {
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.addView(text(getString(R.string.home_greeting), 14, SECONDARY, medium));
-        TextView headline = text(getString(R.string.home_start_title), 26, INK, semibold);
+        TextView headline = text(getString(R.string.home_start_title), 24, INK, semibold);
         SpannableString title = new SpannableString(getString(R.string.home_start_title));
         int start = title.toString().indexOf("클릭");
         if (start >= 0) title.setSpan(new ForegroundColorSpan(BLUE), start, start + 2, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
