@@ -12,7 +12,7 @@ from app.schemas.agent_session import AgentSessionResponse
 from app.services.safety import save_confirmation
 from app.models.lifecycle import SafetyConfirmation
 from app.models.voice_queue import VoiceRequest
-from app.models.personalization import User
+from app.models.user import User
 from app.services.task_outcome import make_outcome, answer_outcome, follow_up
 
 ACTIVE = ("IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "WAITING_ADJUSTMENT")

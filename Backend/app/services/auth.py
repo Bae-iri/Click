@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from app.core.security import hash_password, new_token, token_hash, verify_password
 from app.models.auth import Account, AuthSession, KakaoIdentity
 from app.clients.kakao import KakaoTokenVerifier
-from app.models.personalization import User, UserUIProfile
+from app.models.user import User
 from app.schemas.auth import TokenResponse
 
 ACCESS_TTL = 900
@@ -59,9 +59,7 @@ class AuthService:
         hashed = hash_password(request.password.get_secret_value())
         with self.factory() as db:
             try:
-                user = User(name=request.name, age_group=request.age_group,
-                            occupation_category=request.occupation_category)
-                user.profile = UserUIProfile()
+                user = User(name=request.name)
                 db.add(user)
                 db.flush()
                 db.add(Account(user_id=user.id, email=request.email, password_hash=hashed))
@@ -80,8 +78,7 @@ class AuthService:
             identity = db.get(KakaoIdentity, subject)
             if identity is None:
                 try:
-                    user = User(age_group="unknown")
-                    user.profile = UserUIProfile()
+                    user = User()
                     db.add(user)
                     db.flush()
                     identity = KakaoIdentity(subject=subject, user_id=user.id)

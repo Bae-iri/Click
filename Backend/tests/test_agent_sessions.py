@@ -254,22 +254,6 @@ def test_graph_change_rejects_resume_and_cleanup_removes_only_old_terminal():
         assert session(client, "active").status_code == 200
 
 
-def test_cached_response_rechecks_withdrawn_personalization_consent():
-    app = create_app()
-    with TestClient(app) as client:
-        auth = register(client)
-        uid = auth["user_id"]
-        client.patch(f"/api/v1/users/{uid}/profile", json={"comprehension_level": "beginner"})
-        consent = {"purpose": "personalization", "consented": True, "policy_version": "v1"}
-        assert client.post(f"/api/v1/users/{uid}/consents", json=consent).status_code == 201
-        first = post(client, payload())
-        assert first.status_code == 200 and "ui_profile" in first.json()["metadata"]
-        assert client.post(f"/api/v1/users/{uid}/consents", json={**consent, "consented": False}).status_code == 201
-        retried = post(client, payload())
-        assert retried.status_code == 200 and "ui_profile" not in retried.json()["metadata"]
-        assert retried.json()["session_version"] == first.json()["session_version"]
-        with app.state.session_factory() as db:
-            assert "ui_profile" not in db.scalar(select(AgentTurn)).response["metadata"]
 
 
 def test_abandoned_claim_is_recoverable_without_runtime_memory():

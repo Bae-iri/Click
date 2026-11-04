@@ -198,7 +198,7 @@ class RuntimeAgentAdapter:
             status = "WAITING_RESULT"
         target = next((node for node in tree.nodes if result.match_result and node.node_id == result.match_result.target_node_id), None) if tree else None
         name = (target.class_name or "").lower() if target else ""
-        role = "slider" if "seekbar" in name else "button" if "button" in name else "menu_item" if target and target.clickable else "other"
+        role = "slider" if "seekbar" in name or (target and target.role == "slider") else "button" if "button" in name else "menu_item" if target and target.clickable else "other"
         self.execution_event = produce(result, previous, runtime_session, role,
             request.user_action_event.action_type if request.user_action_event else None)
         slider_values = (

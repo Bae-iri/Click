@@ -30,7 +30,7 @@ class JevScreenResolver(JevGoalClassifier):
             # All role/geometry/package eligible controls are considered, even if
             # the local string matcher could not recognize their labels.
             bindings = {}
-            for transition in graph.transitions:
+            for transition in sorted(graph.transitions, key=lambda t: (t.from_state, t.priority, t.transition_id)):
                 if (graph.states[transition.from_state].verification_only
                         or transition.safety_level == SafetyLevel.BLOCKED):
                     continue
@@ -65,7 +65,7 @@ class JevScreenResolver(JevGoalClassifier):
                 return None
             ids = {n.node_id: f"n{i}" for i,n in enumerate(selected_nodes)}
             criteria = {key: {"step": t.from_state, "transition": t.transition_id,
-                "action": t.action_type.value, "node": ids[n.node_id]}
+                "action": t.action_type.value, "node": ids[n.node_id], "route_priority": t.priority}
                 for key,(t,n) in bindings.items()}
             criteria.update(wait_for_result="Wait for the previous action result without acting.",
                             insufficient_evidence="Screen or target is ambiguous or unrelated; request fresh evidence.")
@@ -92,6 +92,9 @@ class JevScreenResolver(JevGoalClassifier):
                     "If the screen has moved to a different graph step, select that observed step and target, "
                     "even when it skips steps or contradicts the earlier rule-based result. "
                     "Choose wait_for_result only when an action is still settling on the same screen. "
+                    "First identify the observed step, then choose its matching target. "
+                    "Within that step prefer the lowest route_priority among equally supported routes. "
+                    "Priority never supplies missing evidence or overrides the observed current step. "
                     "Otherwise abstain when uncertain."}}}
             if len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode()) > 65536:
                 self.last_diagnostics["status"] = "input_too_large"
@@ -135,6 +138,20 @@ class JevScreenResolver(JevGoalClassifier):
             if transition not in graph.transitions or node not in eligible_nodes(transition, nodes, graph):
                 return None
             self.last_diagnostics["status"] = "selected"
+            # Honor reviewed ordering for equally grounded alternatives in this step.
+            from ai_agent.runtime.matcher import match_next_ui, MATCH_THRESHOLD
+            from ai_agent.runtime.targeting import selector_evidence
+            preferred = match_next_ui(transition.from_state, nodes, graph,
+                                      excluded_target_keys=excluded_target_keys)
+            selected_score, _ = selector_evidence(node, transition, nodes, graph)
+            if (selected_score >= MATCH_THRESHOLD and not preferred.fallback_reason
+                    and preferred.confidence >= selected_score
+                    and preferred.transition_id != transition.transition_id
+                    and any(t.transition_id == preferred.transition_id and n.node_id == preferred.target_node_id
+                            for t, n in bindings.values())):
+                preferred_transition = next(t for t in graph.transitions if t.transition_id == preferred.transition_id)
+                if preferred_transition.priority < transition.priority:
+                    return preferred
             return MatchResult(transition.from_state, transition.to_state, transition.action_type,
                 node.node_id, node.label, node.bounds,
                 "vision_jev_choice" if node.source_confidence is not None else "jev_choice", confidence,

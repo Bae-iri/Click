@@ -2,6 +2,7 @@
 from copy import deepcopy
 from hashlib import sha256
 import json
+import time
 from sqlalchemy import select, update
 from app.models.task_graph import ApprovedTaskGraph
 from app.models.graph_release import GraphReleaseAudit
@@ -35,11 +36,38 @@ class GraphReleaseRepository:
             raise ValueError("Invalid release identity")
         identifier = f"{task}:{version}"
         with self.factory() as db:
+            if release.get("runtime_run_id"):
+                from app.models.runtime_event import RuntimeEventConsumption
+                receipt = db.scalar(select(RuntimeEventConsumption).where(
+                    RuntimeEventConsumption.id == release["runtime_run_id"],
+                    RuntimeEventConsumption.consumer == "ai2-routes.v1").with_for_update())
+                if receipt is None or receipt.result.get("expires_at", 0) <= int(time.time()):
+                    raise ValueError("Runtime route evidence expired or was withdrawn")
+                stored = next((p for p in receipt.result.get("proposals", [])
+                               if p["proposal_id"] == release["proposal_id"]), None)
+                if stored is None:
+                    raise ValueError("Runtime proposal does not belong to the run")
             base = db.scalar(select(ApprovedTaskGraph).where(
                 ApprovedTaskGraph.id == f"{task}:{release['base_version']}").with_for_update())
             if base is None or base.graph_hash != release["base_hash"] or not base.approved:
                 raise ValueError("Stale or unapproved base")
             TaskGraphRepository._decode(base)
+            if release.get("runtime_run_id"):
+                if (stored.get("task_id") != task or stored.get("proposal_type") != "transition_priority"
+                        or stored.get("evidence", {}).get("base_graph_hash") != base.graph_hash
+                        or set(stored.get("change", {})) != {"priorities"}):
+                    raise ValueError("Runtime proposal content mismatch")
+                priorities = stored["change"]["priorities"]
+                recorded = deepcopy(base.body)
+                edges = {t["transition_id"]: t for t in recorded["transitions"]}
+                if (not isinstance(priorities, dict) or not priorities or priorities.keys() - edges.keys()
+                        or any(type(p) is not int or abs(p) > 10000 for p in priorities.values())
+                        or len({edges[tid]["from_state"] for tid in priorities}) != 1):
+                    raise ValueError("Invalid stored runtime priorities")
+                for tid, priority in priorities.items():
+                    edges[tid]["priority"] = priority
+                if digest(recorded) != graph_hash:
+                    raise ValueError("Runtime proposal content mismatch")
             # A priority proposal cannot change tasks, selectors, predicates or safety.
             normalized = deepcopy(body)
             original = {t["transition_id"]: t for t in base.body["transitions"]}

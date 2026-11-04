@@ -47,7 +47,7 @@ def test_prepare_uses_isolated_migrated_db_and_only_current_approved_graphs(pair
         assert {g['task_id'] for g in response.json()['approved_graphs']} == {
             'MVP-01', 'MVP-02', 'SET-brightness-increase', 'SET-brightness-decrease',
             'SET-volume-increase', 'SET-volume-decrease'}
-        assert response.json()['database_migrations'] == ['20261103_15']
+        assert response.json()['database_migrations'] == ['20261104_16']
         assert '/validation/environment' not in client.get('/openapi.json').json()['paths']
     assert (instance / 'validation.db').is_file()
     assert 'PRIVATE_API_KEY' not in response.text + capsys.readouterr().out

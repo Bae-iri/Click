@@ -66,13 +66,11 @@ def test_sensitive_or_non_action_steps_never_call_model(updates):
     original=response(**updates)
     assert GuideNarrator(fail).decorate(original) is original
 
-def test_terminal_and_personalized_responses_kept():
+def test_terminal_responses_kept():
     def fail(*a,**kw): pytest.fail('must not call model')
     for state in ['COMPLETED','BLOCKED','WAITING_RESULT','WAITING_CONFIRMATION']:
         original=response();original.task_status=state
         assert GuideNarrator(fail).decorate(original) is original
-    original=response();original.metadata['ui_profile']={'explanation_depth':'detailed'}
-    assert GuideNarrator(fail).decorate(original) is original
 
 def test_disabled_or_missing_config_falls_back(monkeypatch):
     original=response()

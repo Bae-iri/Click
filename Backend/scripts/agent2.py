@@ -18,11 +18,11 @@ from app import models  # noqa: F401
 from app.database import build_engine, build_session_factory
 from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
 from app.models.task_graph import ApprovedTaskGraph
-from app.repositories.personalization import PersonalizationRepository, UserNotFoundError
+from app.repositories.users import UserRepository, UserNotFoundError
 from app.repositories.task_graphs import TaskGraphRepository
 from app.repositories.graph_releases import GraphReleaseRepository
 from app.task_graphs.validation import load_graph
-from ai_agent.graph_proposal.contracts import EVENT_SCHEMA, EvidenceRequired, fingerprint
+from ai_agent.graph_proposal.contracts import EVENT_SCHEMA, EvidenceRequired, fingerprint, validate_manifest
 from ai_agent.graph_proposal.graphs import graph_errors
 from ai_agent.graph_proposal.schemas import GraphUpdateProposal
 from ai_agent.graph_proposal.workflows.pipeline import run_pipeline
@@ -34,6 +34,7 @@ from ai_agent.runtime.replay import evaluate_cases
 from scripts.render_start import database_url
 
 CONSUMER = "ai2-pipeline.v1"
+ROUTE_CONSUMER = "ai2-routes.v1"
 
 
 def replay_evaluator(body, case):
@@ -74,7 +75,8 @@ def event_envelope(event, graph_row, *, session_key):
         "session_key": session_key, "episode_id": event.episode_id,
         "sequence": event.sequence, "created_at": event.created_at, "expires_at": event.expires_at,
         "task_id": graph_row.task_id, "graph_version": graph_row.graph_version, "graph_hash": event.graph_hash,
-        "source_kind": "runtime", "runtime": event.payload.get("runtime") or {},
+        "source_kind": "runtime", "device_cohort": event.payload.get("device_cohort", "unknown:android-unknown"),
+        "runtime": event.payload.get("runtime") or {},
         "control": {key: event.payload[key] for key in ("command_type", "status", "user_result", "result_response", "adjustment_reason")
                     if key in event.payload}}
 
@@ -99,7 +101,7 @@ def process_sessions(factory, *, limit=100, now=None):
             break
         try:
             with factory() as db:
-                profiles = PersonalizationRepository(db)
+                profiles = UserRepository(db)
                 profiles.lock_user(user_id)
                 consent = profiles.latest_consent(user_id, "model_training")
                 if not consent or not consent.consented:
@@ -154,6 +156,87 @@ def process_sessions(factory, *, limit=100, now=None):
             # Do not print event contents or turn a corrupt record into success.
             summary["errors"] += 1
     return summary
+
+
+def propose_routes(factory, *, manifest, cases=None, now=None, limit=100, evaluator=None):
+    """Compare consented sessions across users, retaining evidence only in expiring DB receipts.
+
+    Explicit reviewed splits are mandatory. No personal profile or user identifier
+    enters the pipeline. Nothing is promoted by this operation.
+    """
+    manifest = validate_manifest(manifest)
+    if type(limit) is not int or not 1 <= limit <= 1000:
+        raise ValueError("limit must be between 1 and 1000")
+    now = int(time.time()) if now is None else now
+    with factory() as db:
+        sessions = list(db.execute(select(RuntimeEvent.session_id, RuntimeEvent.user_id).where(
+            RuntimeEvent.expires_at > now).distinct().order_by(RuntimeEvent.user_id, RuntimeEvent.session_id).limit(limit + 1)))
+        if len(sessions) > limit:
+            raise ValueError("Route run exceeds session budget; narrow retained input first")
+        events, envelopes, graphs = [], [], {}
+        users = UserRepository(db)
+        for session_id, user_id in sessions:
+            # Same lock and transaction as withdrawal/deletion; eligibility is
+            # rechecked on every run, including when old analysis receipts exist.
+            users.lock_user(user_id)
+            consent = users.latest_consent(user_id, "model_training")
+            if not consent or not consent.consented:
+                continue
+            granted = consent.recorded_at.replace(tzinfo=timezone.utc).timestamp()
+            batch = list(db.scalars(select(RuntimeEvent).where(RuntimeEvent.session_id == session_id,
+                RuntimeEvent.expires_at > now, RuntimeEvent.created_at >= granted).order_by(RuntimeEvent.sequence).limit(10001)))
+            if len(events) + len(batch) > 10000:
+                raise ValueError("Route run exceeds event budget")
+            for event in batch:
+                ref = event.payload.get("graph_reference") or {}
+                query = select(ApprovedTaskGraph).where(ApprovedTaskGraph.graph_hash == event.graph_hash,
+                    ApprovedTaskGraph.approved.is_(True))
+                if ref.get("version"):
+                    query = query.where(ApprovedTaskGraph.graph_version == ref["version"])
+                matches = list(db.scalars(query))
+                if len(matches) != 1 or not event.episode_id:
+                    raise ValueError("Missing immutable graph/episode evidence")
+                row = matches[0]
+                TaskGraphRepository._decode(row)
+                graphs[event.graph_hash] = row.body
+                envelopes.append(event_envelope(event, row, session_key="session-" + fingerprint(session_id)))
+                events.append(event)
+        if not events:
+            return {"status": "NEEDS_DATA", "run_id": None, "episodes": 0, "proposals": []}
+        # Catch omitted, expired, withdrawn or pre-consent reviewed evidence.
+        eligible_episodes = {e["episode_id"] for e in envelopes}
+        if any(r["source_kind"] == "runtime" and r["episode_id"] not in eligible_episodes for r in manifest["records"]):
+            raise ValueError("Manifest refers to ineligible or expired runtime evidence")
+        result = run_pipeline(envelopes, graphs, now=now, manifest=manifest, cases=cases,
+            evaluator=evaluator or replay_evaluator, graph_loader=load_graph)
+        result["expires_at"] = min(e.expires_at for e in events)
+        anchor = max(events, key=lambda e: (e.created_at, e.id))
+        receipt = db.scalar(select(RuntimeEventConsumption).where(
+            RuntimeEventConsumption.consumer == ROUTE_CONSUMER, RuntimeEventConsumption.event_id == anchor.id))
+        if receipt is None:
+            receipt = RuntimeEventConsumption(event_id=anchor.id, consumer=ROUTE_CONSUMER,
+                                              result=result, consumed_at=now)
+            db.add(receipt)
+        else:
+            receipt.result, receipt.consumed_at = result, now
+        db.flush()
+        summary = {"status": result["status"], "run_id": receipt.id,
+            "episodes": len(result["episodes"]), "expires_at": result["expires_at"],
+            "proposals": [{"proposal_id": p["proposal_id"], "task_id": p["task_id"]} for p in result["proposals"]]}
+        db.commit()
+        return summary
+
+
+def stored_proposal(factory, run_id, proposal_id, *, now=None):
+    now = int(time.time()) if now is None else now
+    with factory() as db:
+        receipt = db.get(RuntimeEventConsumption, run_id)
+        if receipt is None or receipt.consumer != ROUTE_CONSUMER or receipt.result.get("expires_at", 0) <= now:
+            raise ValueError("Runtime proposal evidence expired or was withdrawn; run again")
+        proposals = [p for p in receipt.result.get("proposals", []) if p["proposal_id"] == proposal_id]
+        if len(proposals) != 1:
+            raise ValueError("Unknown runtime route proposal")
+        return GraphUpdateProposal(**proposals[0])
 
 
 def audit_catalog(factory):
@@ -215,6 +298,10 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     process = commands.add_parser("process", help="Process consented DB sessions; no user-data file export")
     process.add_argument("--limit", type=int, default=100)
+    propose = commands.add_parser("propose-routes", help="Compare consented DB sessions with explicit reviewed splits; no auto release")
+    propose.add_argument("--manifest", required=True)
+    propose.add_argument("--cases", help="Independent device replay cases; omitted cases yield NEEDS_DATA")
+    propose.add_argument("--limit", type=int, default=100)
     commands.add_parser("audit", help="Validate stored graph structures; no device-quality claims")
     fixture = commands.add_parser("fixture", help="Run curated/synthetic JSONL through the full offline pipeline")
     fixture.add_argument("--events", required=True)
@@ -228,7 +315,11 @@ def main():
     train.add_argument("--registry", required=True, help="Local artifact directory; never a production model activation")
     train.add_argument("--allow-weak", action="store_true", help="Acknowledge that step outcomes are weak labels")
     approve = commands.add_parser("publish", help="Re-evaluate curated holdout then publish an explicitly reviewed candidate")
-    for arg in ("proposal", "base", "manifest", "cases", "version", "reviewer"):
+    source = approve.add_mutually_exclusive_group(required=True)
+    source.add_argument("--proposal", help="Curated proposal JSON")
+    source.add_argument("--run-id", help="Unexpired DB runtime proposal receipt")
+    approve.add_argument("--proposal-id", help="Required with --run-id")
+    for arg in ("base", "manifest", "cases", "version", "reviewer"):
         approve.add_argument("--" + arg, required=True)
     rollback = commands.add_parser("rollback")
     for arg in ("task", "version", "expected-current-hash", "reviewer"):
@@ -264,16 +355,23 @@ def main():
     try:
         if args.command == "process":
             result = process_sessions(factory, limit=args.limit)
+        elif args.command == "propose-routes":
+            result = propose_routes(factory, manifest=read_json(args.manifest),
+                cases=read_json(args.cases) if args.cases else None, limit=args.limit)
         elif args.command == "audit":
             result = audit_catalog(factory)
         elif args.command == "publish":
-            proposal = GraphUpdateProposal(**read_json(args.proposal))
+            if args.run_id and not args.proposal_id:
+                parser.error("--proposal-id is required with --run-id")
+            proposal = stored_proposal(factory, args.run_id, args.proposal_id) if args.run_id else GraphUpdateProposal(**read_json(args.proposal))
             base = read_json(args.base)
             evaluation = GraphValidator().validate(proposal, base_graph=base, manifest=read_json(args.manifest),
                 cases=read_json(args.cases), evaluator=replay_evaluator, graph_loader=load_graph)
             manager = GraphVersionManager(GraphReleaseRepository(factory))
             release = manager.prepare(proposal, base, candidate_version=args.version, evaluation=evaluation,
                                       reviewer=args.reviewer, reviewed_at=int(time.time()))
+            if args.run_id:
+                release["runtime_run_id"] = args.run_id
             result = manager.promote(release)
         else:
             result = GraphVersionManager(GraphReleaseRepository(factory)).rollback(args.task, args.version,

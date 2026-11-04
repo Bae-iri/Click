@@ -1,169 +1,65 @@
+"""Accounts and runtime evidence remain usable after user modeling is removed."""
 from fastapi.testclient import TestClient
-from sqlalchemy import select
-
+from sqlalchemy import inspect
 from app.main import create_app
-from app.models.personalization import UIEvent
+from tests.helpers import register
+from tests.test_agent_sessions import payload, post
+import pytest
 
 
-def test_state_difficulties_recovery_isolation_and_revocation():
-    from ai_agent.user_modeling import guidance_context
-    client = TestClient(create_app())
-    user_id = create_user(client)
-    base = f"/api/v1/users/{user_id}"
-    client.post(base + "/consents", json={"purpose": "personalization",
-        "consented": True, "policy_version": "v1"})
-    for _ in range(2):
-        result = client.post(base + "/events", json={"event_type": "guide_repeated",
-            "screen_name": "S1_SETTINGS_HOME"})
-        assert result.status_code == 201
-    evidence = result.json()["profile"]["state_difficulties"]
-    assert guidance_context(evidence, "S1_SETTINGS_HOME")["needs_extra_guidance"]
-    assert not guidance_context(evidence, "S2_DISPLAY_SETTINGS")["needs_extra_guidance"]
-    payload = {"request_id": "difficulty-1", "session_id": "difficulty-session",
-        "user_id": user_id, "raw_goal": "increase font size",
-        "accessibility_tree": {"package_name": "com.android.settings",
-            "screen_width": 1080, "screen_height": 2400,
-            "nodes": [{"node_id": "title", "text": "Settings", "package_name": "com.android.settings"},
-                {"node_id": "display", "text": "Display", "clickable": True,
-                 "package_name": "com.android.settings", "class_name": "android.widget.TextView",
-                 "bounds_in_screen": [24, 320, 1056, 408]}]}}
-    guided = client.post("/api/v1/agent/turn", json=payload)
-    assert guided.status_code == 200
-    assert guided.json()["metadata"]["ui_profile"]["current_state_difficulty"]["needs_extra_guidance"]
-    assert "이름과 위치" in guided.json()["guide_command"]["message"]
-    recovered = client.post(base + "/events", json={"event_type": "guide_step_completed",
-        "screen_name": "S1_SETTINGS_HOME"}).json()["profile"]["state_difficulties"]
-    assert recovered["S1_SETTINGS_HOME"]["completion_count"] == 1
-    assert not guidance_context(recovered, "S1_SETTINGS_HOME")["needs_extra_guidance"]
-    client.post(base + "/consents", json={"purpose": "personalization",
-        "consented": False, "policy_version": "v1"})
-    assert client.get(base).json()["profile"]["state_difficulties"] == {}
-    retry = client.post("/api/v1/agent/turn", json=payload)
-    assert retry.status_code == 200
-    assert "ui_profile" not in retry.json()["metadata"]
-    other = create_user(client)
-    assert client.get(f"/api/v1/users/{other}").json()["profile"]["state_difficulties"] == {}
-
-
-def create_user(client: TestClient) -> str:
-    from tests.helpers import register
-    return register(client)["user_id"]
-
-
-def test_user_profile_lifecycle_and_deletion() -> None:
-    client = TestClient(create_app())
-    user_id = create_user(client)
-
-    updated = client.patch(
-        f"/api/v1/users/{user_id}/profile",
-        json={"explanation_depth": "detailed", "prefers_step_by_step": True},
-    )
-    assert updated.status_code == 200
-    assert updated.json()["explanation_depth"] == "detailed"
-
-    deleted = client.delete(f"/api/v1/users/{user_id}")
-    assert deleted.status_code == 204
-    assert client.get(f"/api/v1/users/{user_id}").status_code == 401
-
-
-def test_ui_events_require_consent_and_update_profile() -> None:
-    client = TestClient(create_app())
-    user_id = create_user(client)
-    event_url = f"/api/v1/users/{user_id}/events"
-    confused = {"event_type": "user_confused", "metadata": {}}
-
-    assert client.post(event_url, json=confused).status_code == 403
-    consent = client.post(
-        f"/api/v1/users/{user_id}/consents",
-        json={
-            "purpose": "personalization",
-            "consented": True,
-            "policy_version": "2026-08-30",
-        },
-    )
-    assert consent.status_code == 201
-
-    for _ in range(3):
-        response = client.post(event_url, json=confused)
-        assert response.status_code == 201
-    assert response.json()["profile"]["comprehension_level"] == "beginner"
-    assert response.json()["profile"]["confidence_score"] == -6
-
-
-def test_guide_tap_duration_requires_consent_and_does_not_score_comprehension() -> None:
+def test_profiles_are_absent_and_legacy_routes_do_not_collect():
     app = create_app()
-    client = TestClient(app)
-    user_id = create_user(client)
-    event_url = f"/api/v1/users/{user_id}/events"
-    event = {"event_type": "guide_action_observed", "screen_name": "S1_SETTINGS_HOME",
-             "metadata": {"step": 1, "duration_ms": 4200}}
-    assert client.post(event_url, json=event).status_code == 403
-    assert client.post(f"/api/v1/users/{user_id}/consents", json={
-        "purpose": "personalization", "consented": True, "policy_version": "v1"}).status_code == 201
-    result = client.post(event_url, json=event)
-    assert result.status_code == 201
-    assert result.json()["profile"]["confidence_score"] == 0
-    assert result.json()["profile"]["comprehension_level"] == "unknown"
-    assert result.json()["profile"]["evidence_count"] == 0
-    with app.state.session_factory() as db:
-        saved = db.scalars(select(UIEvent).where(UIEvent.user_id == user_id)).one()
-        assert saved.screen_name == "S1_SETTINGS_HOME"
-        assert saved.event_metadata == {"step": 1, "duration_ms": 4200}
-    assert client.post(event_url, json={**event, "metadata": {"duration_ms": 86_400_001}}).status_code == 422
-    for _ in range(2):
-        assert client.post(event_url, json=event).json()["profile"]["comprehension_level"] == "unknown"
-    assert client.post(f"/api/v1/users/{user_id}/consents", json={
-        "purpose": "personalization", "consented": False, "policy_version": "v1"}).status_code == 201
-    with app.state.session_factory() as db:
-        assert db.scalars(select(UIEvent).where(UIEvent.user_id == user_id)).all() == []
+    with TestClient(app) as client:
+        auth = register(client)
+        base = "/api/v1/users/" + auth["user_id"]
+        assert "profile" not in client.get(base).json()
+        assert client.patch(base + "/profile", json={"comprehension_level": "beginner"}).status_code == 410
+        assert client.post(base + "/events", json={"event_type": "guide_repeated"}).status_code == 410
+        assert client.post(base + "/consents", json={"purpose": "personalization", "consented": True,
+            "policy_version": "v1"}).status_code == 422
+        tables = inspect(app.state.engine).get_table_names()
+        assert "user_ui_profiles" not in tables and "ui_events" not in tables
+        assert "runtime_events" in tables and "approved_task_graphs" in tables
 
 
-def test_profile_personalizes_agent_message_only_after_consent() -> None:
-    client = TestClient(create_app())
-    user_id = create_user(client)
-    client.patch(
-        f"/api/v1/users/{user_id}/profile",
-        json={"comprehension_level": "beginner"},
-    )
-    client.post(
-        f"/api/v1/users/{user_id}/consents",
-        json={"purpose": "personalization", "consented": True, "policy_version": "v1"},
-    )
-    payload = {
-        "request_id": "personalized-1",
-        "session_id": "personalized-session",
-        "user_id": user_id,
-        "raw_goal": "increase font size",
-        "accessibility_tree": {
-            "package_name": "com.android.settings",
-            "screen_width": 1080,
-            "screen_height": 2400,
-            "nodes": [{"node_id": "display", "text": "Display", "clickable": True}],
-        },
-    }
-    response = client.post("/api/v1/agent/turn", json=payload)
-    assert response.status_code == 200
-    assert response.json()["guide_command"]["message"].startswith("천천히 한 단계씩")
-    assert response.json()["metadata"]["ui_profile"]["comprehension_level"] == "beginner"
-
-    different_user = create_user(client)
-    replay = client.post(
-        "/api/v1/agent/turn",
-        json={**payload, "user_id": different_user},
-    )
-    assert replay.status_code == 403
+def test_shared_guidance_and_cached_response_have_no_profile():
+    with TestClient(create_app()) as client:
+        auth = register(client)
+        first = post(client, payload())
+        assert first.status_code == 200, first.text
+        repeated = post(client, payload())
+        assert repeated.status_code == 200
+        assert repeated.json()["session_version"] == first.json()["session_version"]
+        assert "ui_profile" not in repeated.json()["metadata"]
+        assert client.post(f"/api/v1/users/{auth['user_id']}/consents", json={"purpose": "model_training",
+            "consented": True, "policy_version": "graph-improvement.v1"}).status_code == 201
 
 
-def test_navigation_context_never_counts_as_comprehension_difficulty():
-    app=create_app();client=TestClient(app);user_id=create_user(client)
-    base=f"/api/v1/users/{user_id}"
-    client.post(base+'/consents',json={'purpose':'personalization','consented':True,'policy_version':'v1'})
-    for action in ['back','home','home']:
-        result=client.post(base+'/events',json={'event_type':'navigation_recovery','screen_name':'S1_SETTINGS_HOME',
-            'metadata':{'navigation_action':action,'duration_ms':120000}})
-        assert result.status_code==201
-        profile=result.json()['profile']
-        assert profile['confidence_score']==0
-        assert profile['evidence_count']==0
-        assert profile['comprehension_level']=='unknown'
-        assert not profile['state_difficulties']
+def test_old_cached_profile_metadata_is_stripped():
+    from app.clients.checkpoint import safe_response
+    from app.schemas.agent_turn import AgentTurnResponse
+    with TestClient(create_app()) as client:
+        register(client)
+        response = AgentTurnResponse.model_validate(post(client, payload()).json())
+        response.metadata["ui_profile"] = {"comprehension_level": "beginner"}
+        assert "ui_profile" not in safe_response(response).metadata
+
+
+@pytest.mark.parametrize('legacy_fields', [{}, {'age_group':'60_plus','occupation_category':'retired'}])
+def test_registration_keeps_account_identity_and_discards_legacy_demographics(legacy_fields):
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.post('/api/v1/auth/register', json={'email':'account@example.com',
+            'password':'test-password-1234','name':'Account display',**legacy_fields})
+        assert response.status_code == 201, response.text
+        client.headers['Authorization'] = 'Bearer ' + response.json()['access_token']
+        user = client.get('/api/v1/users/me').json()
+        assert set(user) == {'id','name','created_at'}
+        assert user['name'] == 'Account display'
+        properties = client.get('/openapi.json').json()['components']['schemas']['RegisterRequest']['properties']
+        assert 'age_group' not in properties and 'occupation_category' not in properties
+        from app.schemas.auth import RegisterRequest
+        parsed = RegisterRequest(email='account@example.com',password='test-password-1234',**legacy_fields)
+        assert 'age_group' not in parsed.model_dump() and 'occupation_category' not in parsed.model_dump()
+        assert client.post('/api/v1/auth/login',json={'email':'account@example.com',
+            'password':'test-password-1234'}).status_code == 200

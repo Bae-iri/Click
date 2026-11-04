@@ -33,7 +33,7 @@ public class RegistrationRulesLoaderTest {
         assertEquals(8, displayed.minimumPasswordLength);
         RegistrationContract submitted = loader.load();
         assertSame(displayed, submitted);
-        assertEquals("12345678", submitted.request("테스트", "test@example.com", "12345678", "unknown", null)
+        assertEquals("12345678", submitted.request("테스트", "test@example.com", "12345678")
                 .getString("password"));
         assertEquals(2, calls.get());
     }

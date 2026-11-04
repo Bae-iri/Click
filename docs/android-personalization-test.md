@@ -1,4 +1,6 @@
-# Android 사용자별 맞춤 안내 테스트
+# Android common route improvement test
+
+User-specific profiles and UI behavior uploads have been removed. This document keeps the existing USB setup path. See [shared graph improvement](../Backend/docs/shared-graph-improvement.md) for DB migration, analysis and release procedures.
 
 ## USB로 PC 서버 연결
 
@@ -22,28 +24,14 @@ cd Frontend
 
 여러 기기가 연결돼 있으면 -Serial로 테스트 기기를 지정한다. SDK 경로는 Android Studio 또는 커밋하지 않는 Frontend/local.properties의 sdk.dir에 설정한다. 이 빌드는 USB 연결 중에 PC 서버를 사용하는 테스트 APK다.
 
-## 사용자 테스트
+## Device checks
 
-1. 회원가입 또는 로그인 후 메뉴의 '맞춤 안내 기록'에 동의한다.
-2. 다른 앱 위에 표시, 접근성, 마이크 권한을 설정한다.
-3. '글자 크기를 키워줘'를 요청해 안내를 시작한다.
-4. 같은 안내 화면에서 '다시 말해줘'를 두 번 요청한다. 이벤트 전송은 비동기이므로 잠시 기다린다.
-5. 다음 서버 안내가 발생하거나 같은 화면에서 새 작업을 시작할 때 항목의 이름과 위치를 확인하라는 추가 안내가 나오는지 확인한다. 반복 요청 자체는 직전 문장을 재생하므로 즉시 새 문구로 바뀌지는 않는다.
-6. PC의 /docs에서 로그인 토큰으로 GET /api/v1/users/{user_id}를 호출해 profile.state_difficulties에 해당 화면의 consecutive_difficulties가 2 이상인지 확인한다. 토큰은 문서·로그·Git에 저장하지 않는다.
-7. 동의를 철회한 뒤 화면별 이력이 비워지고 새 반복 요청이 저장되지 않는지 확인한다.
+1. Log in and open the menu. The old personalized-guidance menu must be absent.
+2. Open the shared route improvement participation setting. Opting in or out must not interrupt guidance.
+3. Complete a supported task and confirm the actual setting changed in the requested direction.
+4. Check that runtime evidence links the guide, action and fresh result observation. Waiting and uncorrelated actions must not count as failures.
+5. Run Agent 2 analysis against a disposable test database, then test a reviewed manifest with `propose-routes`. Insufficient independent device holdout must yield NEEDS_DATA.
+6. Withdraw participation and verify unpublished cross-user analysis is invalidated. Accounts and approved graph versions must remain usable.
+7. A route-priority release must affect new sessions while existing sessions stay pinned to their original graph.
 
-현재 실패·완료 이벤트의 Android 자동 수집은 연결되지 않았다. 완료 시 연속 어려움 초기화는 API 테스트로 검증되어 있으며 실기기 자동 회복 검증은 후속 연동이 필요하다.
-
-## 프론트 담당자 휴대폰에서 공용 서버 사용
-
-공용 Backend API 주소는 https://click-db.onrender.com 이다. 앱 기본 주소도 이 서버로 설정되어 있어 프론트 담당자의 PC나 휴대폰은 백엔드 개발 PC에 USB로 연결할 필요가 없다. PostgreSQL 연결 문자열은 앱에 넣지 않는다.
-
-프론트 담당자는 최신 develop을 가져와 Frontend를 Android Studio에서 열고 본인 휴대폰에 새 앱을 빌드·설치한다. 기존 Gradle 속성에 CLICK_API_BASE_URL이 설정돼 있다면 해당 값이 기본 주소보다 우선하므로 삭제하거나 공용 주소로 변경한다.
-
-Render 설정은 자동 배포가 꺼져 있으므로 Git push 후 서버를 별도로 배포해야 한다. 현재 커밋으로 배포하고 migration 20261007_09까지 적용한 뒤 HTTPS 서버의 /ready를 확인한다. APK는 다음처럼 실제 서버 주소를 지정해 다시 빌드·설치한다.
-
-```powershell
-.\gradlew.bat :app:assembleDebug -PCLICK_API_BASE_URL=https://click-db.onrender.com
-```
-
-기존 APK의 서버 주소는 Git push로 바뀌지 않는다. 공용 서버 주소와 실제 배포 완료는 별도 확인해야 한다.
+Do not change the APK or apply the deletion migration during another person's active device test. Repository changes do not update an installed APK. The Render blueprint uses `develop` with `autoDeployTrigger: checksPass`; confirm the actual service's environment and deployment status separately.

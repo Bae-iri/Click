@@ -123,3 +123,31 @@ def test_action_waits_and_unchanged_failure_does_not_repeat(setting):
 def test_wrong_target_never_enters_slider_candidates(change):
     graph,t,n,goal=scene("brightness")
     assert JevScreenResolver(sender_for(t)).resolve(nodes=(replace(n,**change),),graph=graph,goal=goal) is None
+
+
+def test_reviewed_route_priorities_apply_even_when_model_prefers_old_route():
+    graph, transition, node, goal = scene("font_size")
+    primary = replace(transition, priority=0)
+    alternative = replace(transition, transition_id="ALTERNATE_SLIDER_ROUTE", priority=10)
+    graph = replace(graph, transitions=tuple(primary if t == transition else t for t in graph.transitions) + (alternative,))
+    node = replace(node, label=transition.target_keywords[0])
+    selected = JevScreenResolver(sender_for(alternative)).resolve(nodes=(node,), graph=graph, goal=goal)
+    assert selected.transition_id == primary.transition_id
+    # A priority-only graph release changes the runtime decision without changing selectors.
+    graph = replace(graph, transitions=tuple(replace(t, priority=20) if t == primary else
+        replace(t, priority=0) if t == alternative else t for t in graph.transitions))
+    selected = JevScreenResolver(sender_for(primary)).resolve(nodes=(node,), graph=graph, goal=goal)
+    assert selected.transition_id == alternative.transition_id
+
+
+def test_route_priority_never_overrides_candidate_geometry_validation():
+    graph, transition, node, goal = scene("font_size")
+    primary = replace(transition, priority=0, selector=replace(transition.selector, resource_ids=("outside",)))
+    alternative = replace(transition, transition_id="VISIBLE_ROUTE", priority=10)
+    graph = replace(graph, transitions=tuple(primary if t == transition else t for t in graph.transitions) + (alternative,))
+    node = replace(node, label=transition.target_keywords[0])
+    outside = replace(node, node_id="outside", resource_id="outside", bounds=(500, 100, 700, 140))
+    selected = JevScreenResolver(sender_for(alternative)).resolve(nodes=(node, outside), graph=graph,
+        goal=goal, screen_bounds=(0, 0, 400, 800))
+    assert selected.transition_id == alternative.transition_id
+    assert selected.target_node_id == node.node_id

@@ -9,19 +9,13 @@ public final class LocalAccountStore {
 
     public LocalAccountStore(Context context) {
         preferences = context.getSharedPreferences(STORE, Context.MODE_PRIVATE);
+        preferences.edit().remove("age").remove("job").remove("gender").apply();
     }
 
-    public void saveProfile(String email, String age, String job, String gender) {
-        saveProfile(name(), email, age, job, gender);
-    }
-
-    public void saveProfile(String name, String email, String age, String job, String gender) {
+    public void saveProfile(String name, String email) {
         preferences.edit()
                 .putString("name", name == null ? "" : name)
                 .putString("email", email)
-                .putString("age", age)
-                .putString("job", job)
-                .putString("gender", gender)
                 .putBoolean("signed_up", true)
                 .apply();
     }
@@ -32,18 +26,6 @@ public final class LocalAccountStore {
 
     public String email() {
         return preferences.getString("email", "");
-    }
-
-    public String age() {
-        return preferences.getString("age", "");
-    }
-
-    public String job() {
-        return preferences.getString("job", "");
-    }
-
-    public String gender() {
-        return preferences.getString("gender", "");
     }
 
     public boolean hasAccount() {

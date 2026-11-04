@@ -21,7 +21,7 @@ def test_readiness_rejects_missing_schema():
     app = create_app("sqlite+pysqlite:///:memory:")
     with TestClient(app) as client:
         with app.state.engine.begin() as connection:
-            connection.execute(text("DROP TABLE ui_events"))
+            connection.execute(text("DROP TABLE consents"))
         response = client.get("/ready")
         assert response.status_code == 503
         assert response.json()["database"] == "schema_missing"

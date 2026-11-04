@@ -111,7 +111,10 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
                       and not node.node_id.startswith('vision:')
                       and (selector_evidence(node, transition, nodes, graph)[0] >= 0.7
                            or (attempt.get('target_selection_method') == 'jev_choice'
-                               and node.node_id == attempt.get('target_node_id')))]
+                               and node.node_id == attempt.get('target_node_id')
+                               and node.window_id == attempt.get('target_window_id')
+                               and node.resource_id == attempt.get('target_resource_id')
+                               and node.bounds == tuple(attempt.get('target_bounds', ()))))]
         baseline = attempt.get('baseline_value')
         if len(candidates) != 1 or baseline is None or candidates[0].value is None:
             return result(Status.UNKNOWN, 'target_value_unobservable')

@@ -30,7 +30,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.click.core.permission.PermissionStatus;
-import com.click.data.remote.PersonalizationEventGateway;
+import com.click.data.remote.GraphImprovementConsentGateway;
 import com.click.data.remote.AccountActionsGateway;
 import com.click.data.remote.AuthGateway;
 import com.click.data.local.TouchAutomationSettings;
@@ -49,12 +49,12 @@ public final class MenuActivity extends AppCompatActivity {
     private Typeface regular;
     private Typeface medium;
     private Typeface semibold;
-    private PersonalizationEventGateway personalizationEvents;
-    private boolean timingConsented;
     private androidx.appcompat.widget.SwitchCompat automationToggle;
     private TouchAutomationSettings automationSettings;
     private boolean syncingAutomationToggle;
     private AccountActionsGateway accountActions;
+    private GraphImprovementConsentGateway graphConsent;
+    private boolean graphConsented;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -62,9 +62,9 @@ public final class MenuActivity extends AppCompatActivity {
         regular = getResources().getFont(com.click.designpreview.R.font.pretendard_regular);
         medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
         semibold = getResources().getFont(com.click.designpreview.R.font.pretendard_semibold);
-        personalizationEvents = new PersonalizationEventGateway(this);
         automationSettings = new TouchAutomationSettings(this);
         accountActions = new AccountActionsGateway(this);
+        graphConsent = new GraphImprovementConsentGateway(this);
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.WHITE);
@@ -97,11 +97,11 @@ public final class MenuActivity extends AppCompatActivity {
         addRow(settings, MenuIconView.Kind.SHIELD, "앱 권한 확인", "안내에 필요한 권한을 확인해요", false,
                 view -> showPermissionStatus());
         divider(settings);
-        addRow(settings, MenuIconView.Kind.PERSONALIZE, "나에게 맞는 안내", "사용 기록을 활용할지 선택해요", false,
-                view -> showTimingConsentDialog());
-        divider(settings);
         addRow(settings, MenuIconView.Kind.AUTOMATION, "자동으로 도와주기", "화면 이동과 설정 조절을 도와드려요", false,
                 view -> showAutomationSettings());
+        divider(settings);
+        addRow(settings, MenuIconView.Kind.SHIELD, "안내 경로 개선 참여", "공통 안내를 개선하는 데 실행 결과를 사용해요", false,
+                view -> showGraphConsent());
         add(page, settings, 10);
 
         section(page, "화면 설정");
@@ -362,41 +362,25 @@ public final class MenuActivity extends AppCompatActivity {
         return row;
     }
 
-    private void showTimingConsentDialog() {
-        final boolean consent = !timingConsented;
+    private void showGraphConsent() {
         LinearLayout content = vertical();
-        add(content, dialogNotice(MenuIconView.Kind.PERSONALIZE,
-                timingConsented ? "사용 기록으로 안내를 맞추고 있어요" : "나에게 맞는 안내를 위한 선택이에요"), 0);
-        if (timingConsented) {
-            add(content, dialogSection("동의를 철회하면",
-                    "저장된 맞춤 안내 행동 기록이 삭제돼요.",
-                    "안내 수준도 처음 상태로 돌아가요."), 22);
-            add(content, dialogSection("기본 안내는 그대로",
-                    "동의를 철회해도 기본 안내는 계속 이용할 수 있어요."), 22);
-        } else {
-            add(content, dialogSection("어떤 기록을 사용하나요?",
-                    "안내가 나온 뒤 처음 누르기까지 걸린 시간과 단계 진행 정보를 저장해요."), 22);
-            add(content, dialogSection("어떻게 활용하나요?",
-                    "사용 기록을 바탕으로 더 쉬운 안내를 만드는 데 사용해요."), 22);
-            add(content, dialogSection("편하게 선택해 주세요",
-                    "이 기록에는 화면 글자나 비밀번호를 저장하지 않아요.",
-                    "동의하지 않아도 기본 안내는 이용할 수 있어요."), 22);
-        }
-        ClickDialog.show(this, "나에게 맞는 안내", content,
-                timingConsented ? "기록 동의 철회" : "동의하고 사용하기", () ->
-                        personalizationEvents.setConsent(consent,
-                                new PersonalizationEventGateway.ConsentCallback() {
-                                    @Override public void onResult(boolean consented) {
-                                        timingConsented = consented;
-                                        Toast.makeText(MenuActivity.this,
-                                                consented ? "맞춤 안내 기록에 동의했어요." : "기록 동의를 철회했어요.",
-                                                Toast.LENGTH_SHORT).show();
-                                    }
-                                    @Override public void onFailure() {
-                                        Toast.makeText(MenuActivity.this, "변경하지 못했어요. 다시 시도해 주세요.",
-                                                Toast.LENGTH_SHORT).show();
-                                    }
-                                }), "취소");
+        add(content, dialogSection("공통 안내 경로 개선",
+                "동의하면 앞으로의 작업 단계, 조작 결과, 소요 시간과 기종 정보를 공통 안내 경로 개선에 사용해요.",
+                "음성 원문이나 화면 문구, 개인별 이해도와 선호도는 이 분석에 사용하지 않아요.",
+                "동의하지 않아도 안내를 이용할 수 있어요. 철회하면 아직 적용되지 않은 분석 결과를 삭제해요."), 0);
+        ClickDialog.show(this, "안내 경로 개선 참여", content,
+                graphConsented ? "참여 동의 철회" : "동의하고 참여하기", () ->
+                        graphConsent.set(!graphConsented, new GraphImprovementConsentGateway.Callback() {
+                            @Override public void onResult(boolean consented) {
+                                if (isFinishing() || isDestroyed()) return;
+                                graphConsented = consented;
+                                Toast.makeText(MenuActivity.this, consented ? "경로 개선 참여에 동의했어요." : "참여 동의를 철회했어요.", Toast.LENGTH_SHORT).show();
+                            }
+                            @Override public void onFailure() {
+                                if (!isFinishing() && !isDestroyed()) Toast.makeText(MenuActivity.this,
+                                        "변경하지 못했어요. 다시 시도해 주세요.", Toast.LENGTH_SHORT).show();
+                            }
+                        }), "취소");
     }
 
     private void showPolicy(String title, int contentId) {
@@ -481,14 +465,14 @@ public final class MenuActivity extends AppCompatActivity {
         syncingAutomationToggle = true;
         automationToggle.setChecked(automationSettings.isEnabled());
         syncingAutomationToggle = false;
-        personalizationEvents.readConsent(new PersonalizationEventGateway.ConsentCallback() {
-            @Override public void onResult(boolean consented) { timingConsented = consented; }
+        graphConsent.read(new GraphImprovementConsentGateway.Callback() {
+            @Override public void onResult(boolean consented) { graphConsented = consented; }
             @Override public void onFailure() { }
         });
     }
 
     @Override protected void onDestroy() {
-        if (personalizationEvents != null) personalizationEvents.close();
+        if (graphConsent != null) graphConsent.close();
         if (accountActions != null) accountActions.close();
         super.onDestroy();
     }

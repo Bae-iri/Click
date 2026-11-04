@@ -96,7 +96,8 @@ def test_invalid_response_cannot_select_a_target(problem):
     assert outcome.choice is None
 
 
-@pytest.mark.parametrize("raw", [b'{', b'null', b'{"answers":{},"answers":{}}', b' ' * (MAX_BYTES + 1)])
+@pytest.mark.parametrize("raw", [b'{', b'null', b'{"answers":{},"answers":{}}', b' ' * (MAX_BYTES + 1)],
+                         ids=["malformed", "null", "duplicate", "oversized"])
 def test_malformed_duplicate_or_oversized_json_is_rejected(raw):
     result = JevUiSelector(Mock(return_value=(200, raw))).select(OBSERVATION)
     assert result.status == "invalid_response"

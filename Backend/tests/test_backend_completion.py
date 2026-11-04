@@ -7,7 +7,6 @@ import pytest
 from sqlalchemy import select, func
 from app.main import create_app
 from app.models.lifecycle import SafetyConfirmation, TaskFeedback, AccountAction
-from app.models.personalization import UIEvent
 from app.schemas.agent_turn import AgentTurnResponse
 from app.schemas.guidance import GuideCommandResponse
 from tests.helpers import register
@@ -150,18 +149,6 @@ def test_expired_and_wrong_purpose_tokens_and_unknown_email():
         assert len(app.state.account_actions.delivery.messages) == 1
 
 
-def test_consent_withdrawal_erases_events_and_resets_profile():
-    app = setup()
-    with TestClient(app) as client:
-        auth = register(client)
-        base = "/api/v1/users/" + auth["user_id"]
-        assert client.post(base + "/consents", json={"purpose": "personalization", "consented": True, "policy_version": "1"}).status_code == 201
-        assert client.post(base + "/events", json={"event_type": "task_completed"}).status_code == 201
-        assert client.post(base + "/consents", json={"purpose": "personalization", "consented": False, "policy_version": "1"}).status_code == 201
-        assert client.get(base).json()["profile"]["evidence_count"] == 0
-        assert client.post(base + "/events", json={"event_type": "task_completed"}).status_code == 403
-        with app.state.session_factory() as db:
-            assert db.scalar(select(func.count()).select_from(UIEvent)) == 0
 
 
 def test_backup_restore_requires_new_destination(tmp_path):

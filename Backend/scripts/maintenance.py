@@ -10,17 +10,8 @@ from app.database import build_engine, build_session_factory
 from app.models.auth import AuthSession
 from app.models.lifecycle import AccountAction, SafetyConfirmation
 from app.repositories.agent_sessions import AgentSessionRepository
-from app.models.personalization import UIEvent
 from app.repositories.runtime_events import cleanup as cleanup_runtime_events
 from app.services.voice_queue import VoiceQueueService
-
-
-def cleanup_ui_events(factory, retention_seconds=86400, now=None):
-    if retention_seconds <= 0:
-        raise ValueError("Retention must be positive")
-    cutoff = (now or datetime.now(timezone.utc)) - timedelta(seconds=retention_seconds)
-    with factory() as db, db.begin():
-        return db.execute(delete(UIEvent).where(UIEvent.created_at < cutoff)).rowcount
 
 
 def run(factory, retention=86400):
@@ -30,7 +21,6 @@ def run(factory, retention=86400):
     voice_removed = VoiceQueueService(factory).cleanup(retention)
     result = AgentSessionRepository(factory).cleanup(retention)
     result["voice_requests"] = voice_removed
-    result["events"] = cleanup_ui_events(factory, retention)
     result["runtime_events"] = cleanup_runtime_events(factory, now=now)
     with factory() as db, db.begin():
         for model, field, name in ((AuthSession, AuthSession.refresh_expires_at, "auth_sessions"),

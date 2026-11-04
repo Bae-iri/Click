@@ -7,7 +7,7 @@ from uuid import uuid4
 from fastapi import HTTPException
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError, OperationalError
-from app.models.personalization import User
+from app.models.user import User
 from app.models.voice_queue import VoiceQueueState, VoiceRequest
 from app.models.agent_session import AgentSession, AgentTurn, AgentCheckpoint
 from app.models.lifecycle import SafetyConfirmation

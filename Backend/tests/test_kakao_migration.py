@@ -28,7 +28,7 @@ def test_upgrade_preserves_email_sessions_and_downgrade_protects_kakao_users(tmp
         assert db.execute(text("SELECT email FROM accounts")).scalar_one() == "old@example.com"
         assert db.execute(text("SELECT id FROM auth_sessions")).scalar_one() == "session"
         assert inspect(db).get_foreign_keys("auth_sessions")[0]["referred_table"] == "users"
-        db.execute(text("INSERT INTO users (id, age_group) VALUES ('kakao-user', 'unknown')"))
+        db.execute(text("INSERT INTO users (id) VALUES ('kakao-user')"))
         db.execute(text("INSERT INTO kakao_identities (subject,user_id) VALUES ('123','kakao-user')"))
     with pytest.raises(RuntimeError, match="Migrate Kakao accounts"):
         command.downgrade(config, "20261027_14")

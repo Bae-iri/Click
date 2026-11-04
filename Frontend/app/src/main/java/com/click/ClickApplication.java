@@ -41,17 +41,13 @@ public final class ClickApplication extends Application implements ClickHost {
         });
     }
 
-    @Override public void register(Activity activity, String name, String email, String password, Integer age,
-                                   String occupation, Callback callback) {
+    @Override public void register(Activity activity, String name, String email, String password, Callback callback) {
         AuthGateway gateway = new AuthGateway(this);
-        String group = age == null ? "unknown"
-                : age < 14 ? "under_14" : age < 20 ? "14_19" : age < 30 ? "20_29"
-                : age < 40 ? "30_39" : age < 50 ? "40_49" : age < 60 ? "50_59" : "60_plus";
-        gateway.register(name, email, password, group, occupation, new AuthGateway.Callback() {
+        gateway.register(name, email, password, new AuthGateway.Callback() {
             @Override public void onSuccess() {
                 gateway.close();
                 new LocalAccountStore(ClickApplication.this).saveProfile(
-                        name, email, age == null ? "" : String.valueOf(age), occupation, "");
+                        name, email);
                 if (!activity.isDestroyed()) callback.complete(true, false, "");
             }
             @Override public void onFailure(Throwable error) {
@@ -72,7 +68,7 @@ public final class ClickApplication extends Application implements ClickHost {
             @Override public void onSuccess() {
                 gateway.close();
                 LocalAccountStore account = new LocalAccountStore(ClickApplication.this);
-                account.saveProfile(email, account.age(), account.job(), account.gender());
+                account.saveProfile(account.name(), email);
                 if (!activity.isDestroyed()) callback.complete(true, false, "");
             }
             @Override public void onFailure(Throwable error) {

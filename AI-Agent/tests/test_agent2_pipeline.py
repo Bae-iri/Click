@@ -131,6 +131,43 @@ def test_learner_generates_hash_bound_existing_route_patch_only():
         apply_proposal(changed, proposal)
 
 
+def test_shared_route_rejects_device_regression_hidden_by_aggregate_success():
+    events = []
+    for cohort, count in [('samsung:android-14', 6), ('google:android-14', 2)]:
+        for route in ('A', 'B'):
+            for i in range(count):
+                good = (route == 'B') == cohort.startswith('samsung')
+                pair = events_for(f'{cohort.replace(":", "-")}-{route}-{i}', route, 'SUCCESS' if good else 'NO_CHANGE')
+                events.extend({**event, 'device_cohort':cohort} for event in pair)
+    result = run_pipeline(events, {fingerprint(graph()):graph()}, now=200, manifest=manifest_for(events))
+    assert not result['proposals']
+
+
+def test_same_success_rate_can_prefer_faster_verified_route():
+    events = []
+    for route, duration in [('A', 2000), ('B', 1000)]:
+        for i in range(2):
+            pair = events_for(f'{route}-{i}', route, 'SUCCESS')
+            pair[1]['runtime']['duration_ms'] = duration
+            events.extend(pair)
+    result = run_pipeline(events, {fingerprint(graph()):graph()}, now=200, manifest=manifest_for(events))
+    assert result['proposals'][0]['change']['priorities']['B'] == 0
+    assert result['proposals'][0]['evidence']['route_metrics']['B']['mean_success_duration_ms'] == 1000
+
+
+def test_repeated_pending_guide_id_preserves_target_and_links_fresh_observation():
+    pair = events_for('polling', 'B', 'SUCCESS')
+    waiting = deepcopy(pair[0])
+    waiting.update(event_id='polling-wait', sequence=2)
+    waiting['runtime']['after_observation_hash'] = fingerprint('waiting-observation')
+    pair[1]['sequence'] = 3
+    pair[1]['runtime']['before_observation_hash'] = waiting['runtime']['after_observation_hash']
+    assert reconstruct([pair[0], waiting, pair[1]], now=200)[0]['steps'][-1]['label'] == 'verified_success'
+    waiting['runtime']['target']['node_hash'] = fingerprint('different-target')
+    with pytest.raises(ValueError, match='different target'):
+        reconstruct([pair[0], waiting, pair[1]], now=200)
+
+
 def test_dataset_split_and_source_leakage_are_blocked():
     events = events_for("one", session="shared") + events_for("two", session="shared", offset=2)
     episodes = reconstruct(events, now=200)
@@ -212,6 +249,19 @@ def test_evaluation_requires_real_holdout_and_does_not_mask_tool_errors():
     assert GraphValidator().validate(proposed(), **kwargs)["decision"] == "NEEDS_DATA"
     kwargs["evaluator"] = lambda body, case: {"checks": 1, "failures": ["wrong target"]}
     assert GraphValidator().validate(proposed(), **kwargs)["decision"] == "REJECT"
+
+
+def test_shared_route_requires_holdout_coverage_of_observed_device_cohorts():
+    manifest, cases = evaluation_fixture('device_test')
+    proposal = proposed()
+    proposal.evidence['device_cohorts'] = ['samsung:android-14']
+    kwargs = dict(base_graph=graph(), cases=cases, manifest=manifest,
+        evaluator=lambda body, case: {'checks':1,'failures':[]}, graph_loader=lambda body: body)
+    report = GraphValidator().validate(proposal, **kwargs)
+    assert report['decision'] == 'NEEDS_DATA'
+    assert 'device_holdout:samsung:android-14' in report['missing']
+    cases[0]['device_cohort'] = 'samsung:android-14'
+    assert GraphValidator().validate(proposal, **kwargs)['decision'] == 'PASS'
 
 
 def test_release_gate_binds_reviewed_evaluation_and_exact_artifact():
