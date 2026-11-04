@@ -8,6 +8,39 @@ import java.util.Collections;
 import static org.junit.Assert.*;
 
 public class ObservationRecoveryTest {
+    private JSONObject jevWait() throws Exception {
+        return new JSONObject().put("ui_selector", "jev").put("revalidate_before_action", true)
+                .put("runtime_strategy", "wait_for_action")
+                .put("fallback_action", new JSONObject().put("type", "request_fresh_observation"));
+    }
+    @Test public void unreasonedJevWaitSearchesKnownSettingsLists() throws Exception {
+        for (String state : new String[]{"S1_SETTINGS_HOME", "S2_DISPLAY_MENU", "S3_FONT_MENU", "S2_SOUND_MENU"}) {
+            assertTrue(ObservationRecovery.canSearchJevWait(state, jevWait(), null, settings("com.android.settings")));
+        }
+        JSONObject metadata = new JSONObject().put("verification", new JSONObject().put("result",
+                new JSONObject().put("status", "SUCCESS").put("evidence", "observed_progress")));
+        assertTrue(ObservationRecovery.canSearchJevWait("S2_DISPLAY_MENU", jevWait(), metadata, settings("com.android.settings")));
+    }
+    @Test public void jevWaitNeverScrollsPendingResultsOrProviderFailures() throws Exception {
+        for (String status : new String[]{"WAITING_FOR_OBSERVATION", "UNKNOWN", "NO_CHANGE", "WRONG_STATE"}) {
+            JSONObject metadata = new JSONObject().put("verification", new JSONObject().put("result",
+                    new JSONObject().put("status", status)));
+            assertFalse(ObservationRecovery.canSearchJevWait("S1_SETTINGS_HOME", jevWait(), metadata, settings("com.android.settings")));
+        }
+        JSONObject metadata = new JSONObject().put("debug", new JSONObject().put("ui_selection",
+                new JSONObject().put("status", "provider_error")));
+        assertFalse(ObservationRecovery.canSearchJevWait("S1_SETTINGS_HOME", jevWait(), metadata, settings("com.android.settings")));
+        metadata.put("debug", new JSONObject().put("ui_selection", new JSONObject()
+                .put("status", "low_confidence").put("grounded_candidate_count", 1)));
+        assertFalse(ObservationRecovery.canSearchJevWait("S1_SETTINGS_HOME", jevWait(), metadata, settings("com.android.settings")));
+    }
+    @Test public void jevWaitDoesNotOverrideExplicitRecoveryOrUnknownScreens() throws Exception {
+        for (String key : new String[]{"recovery", "vision_fallback", "backend_handoff", "recovery_action"})
+            assertFalse(ObservationRecovery.canSearchJevWait("S1_SETTINGS_HOME", jevWait().put(key, new JSONObject()), null, settings("com.android.settings")));
+        assertFalse(ObservationRecovery.canSearchJevWait("S4_FONT_SIZE_CONTROL", jevWait(), null, settings("com.android.settings")));
+        assertFalse(ObservationRecovery.canSearchJevWait("S0_UNKNOWN", jevWait(), null, settings("com.android.settings")));
+        assertFalse(ObservationRecovery.canSearchJevWait("S1_SETTINGS_HOME", jevWait(), null, settings("com.example.other")));
+    }
     @Test public void structuredRecoveryWaitsWithoutEndingTask() throws Exception {
         for (String decision : new String[]{"wait", "handoff"}) {
             JSONObject policy = new JSONObject().put("recovery", new JSONObject()

@@ -151,3 +151,59 @@ def test_route_priority_never_overrides_candidate_geometry_validation():
         goal=goal, screen_bounds=(0, 0, 400, 800))
     assert selected.transition_id == alternative.transition_id
     assert selected.target_node_id == node.node_id
+
+
+def test_samsung_rows_preserve_menu_identity_and_independent_page_title():
+    from ai_agent.runtime.normalizer import normalize_accessibility_tree
+    graph, _, _, goal = scene('font_size')
+    entry = next(t for t in graph.transitions if t.from_state == 'S1_SETTINGS_HOME')
+    raw = (
+        AccessibilityNode(node_id='list', scrollable=True, class_name='androidx.recyclerview.widget.RecyclerView',
+            package_name='com.android.settings', bounds_in_screen=(0, 100, 400, 800)),
+        AccessibilityNode(node_id='title', text='설정', class_name='android.widget.TextView',
+            package_name='com.android.settings', bounds_in_screen=(0, 0, 400, 80)),
+        AccessibilityNode(node_id='row', parent_id='list', clickable=True, class_name='android.widget.LinearLayout',
+            package_name='com.android.settings', bounds_in_screen=(0, 200, 400, 400)),
+        AccessibilityNode(node_id='name', parent_id='row', text='디스플레이',
+            resource_id='android:id/title', package_name='com.android.settings',
+            bounds_in_screen=(20, 210, 380, 260)),
+        AccessibilityNode(node_id='summary', parent_id='row', text='밝기 · 편안하게 화면 보기 · 내비게이션 바',
+            resource_id='android:id/summary', package_name='com.android.settings',
+            bounds_in_screen=(20, 270, 380, 350)),
+    )
+    def send(payload, **kwargs):
+        nodes = {n['id']: n for n in payload['state']['nodes']}
+        candidate = next(c for c in payload['questions']['screen']['criteria'].values()
+                         if isinstance(c, dict) and c['transition'] == entry.transition_id)
+        row = nodes[candidate['node']]
+        assert row['label_parts'] == ['디스플레이']
+        assert row['structure_role'] == 'control'
+        assert row['actionable'] is True
+        assert '밝기' in row['label']
+        assert any(n['label'] == '설정' and n['structure_role'] == 'screen_text' for n in nodes.values())
+        assert any(n['structure_role'] == 'description' for n in nodes.values())
+        assert candidate['current_page'] == graph.states[entry.from_state].name
+        assert candidate['destination_page'] == graph.states[entry.to_state].name
+        assert '디스플레이' in candidate['target_names']
+        return sender_for(entry)(payload, **kwargs)
+    resolver = JevScreenResolver(send)
+    selected = resolver.resolve(nodes=normalize_accessibility_tree(raw), raw_nodes=raw, graph=graph, goal=goal)
+    assert selected.target_node_id == 'row'
+    assert selected.target_bounds == (0, 200, 400, 400)
+    assert resolver.last_diagnostics['grounded_candidate_count'] > 0
+
+
+def test_low_confidence_reports_rejected_step_without_screen_text(monkeypatch):
+    monkeypatch.setenv('JEV_MIN_CONFIDENCE', '0.8')
+    graph, transition, node, goal = scene('font_size')
+    resolver = JevScreenResolver(sender_for(transition, mutate=lambda r:
+        r['answers']['screen'].update(confidence=0.4)))
+    assert resolver.resolve(nodes=(node,), graph=graph, goal=goal) is None
+    diagnostic = resolver.last_diagnostics
+    assert diagnostic['status'] == 'low_confidence'
+    assert diagnostic['confidence'] == 0.4
+    assert diagnostic['minimum_confidence'] == 0.8
+    assert diagnostic['chosen_transition'] == transition.transition_id
+    assert diagnostic['chosen_state'] == transition.from_state
+    assert node.node_id not in str(diagnostic)
+    assert node.label not in str(diagnostic)
