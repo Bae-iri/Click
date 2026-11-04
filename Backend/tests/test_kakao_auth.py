@@ -1,4 +1,4 @@
-import httpx
+﻿import httpx
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
@@ -47,27 +47,27 @@ def test_kakao_signup_login_refresh_and_delete(kakao_app):
             assert db.scalars(select(AuthSession)).all() == []
 
 
-def test_email_accounts_keep_working_and_are_not_automatically_linked(kakao_app):
+def test_phone_accounts_keep_working_and_are_not_automatically_linked(kakao_app):
     with TestClient(kakao_app) as client:
-        payload = {"email": "person@example.com", "password": "password123"}
+        payload = {"phone_number": "01046191429", "password": "1234"}
         local = client.post("/api/v1/auth/register", json=payload).json()
         social = client.post("/api/v1/auth/kakao", json={"access_token": "valid-kakao-token"}).json()
         assert social["user_id"] != local["user_id"]
         assert client.post("/api/v1/auth/login", json=payload).json()["user_id"] == local["user_id"]
         client.headers["Authorization"] = "Bearer " + social["access_token"]
         assert client.post("/api/v1/auth/password",
-                           json={"current_password": "anything", "new_password": "new-password"}).status_code == 401
+                           json={"current_password": "anything", "new_password": "5678"}).status_code == 401
 
 
 @pytest.mark.parametrize("payload", [
     {}, {"access_token": ""}, {"access_token": "token\r\nInjected: header"},
-    {"access_token": "token", "user_id": "forged"}, {"access_token": "token", "email": "victim@example.com"},
+    {"access_token": "token", "user_id": "forged"}, {"access_token": "token", "phone_number": "01065739871"},
 ])
 def test_kakao_rejects_invalid_requests_without_exposing_credentials(kakao_app, payload):
     with TestClient(kakao_app) as client:
         response = client.post("/api/v1/auth/kakao", json=payload)
         assert response.status_code == 422
-        assert "victim@example.com" not in response.text
+        assert "01065739871" not in response.text
         assert "Injected" not in response.text
 
 

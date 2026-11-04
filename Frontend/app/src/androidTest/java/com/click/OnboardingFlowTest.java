@@ -74,27 +74,27 @@ public class OnboardingFlowTest {
             shown("회원가입하기"); shown("이미 가입하셨나요? 로그인하기");
             screenshot("onboarding-third");
             tap("이미 가입하셨나요? 로그인하기");
-            shown("카카오 로그인"); shown("이메일로 가입하기"); shown("이메일로 로그인하기");
-            clickView("이메일로 로그인하기"); shown("다시 만나 반가워요");
+            shown("카카오 로그인"); shown("전화번호로 가입하기"); shown("전화번호로 로그인하기");
+            clickView("전화번호로 로그인하기"); shown("다시 만나 반가워요");
         }
     }
-    @Test public void emailReviewPrecedesOptionalDisplayName() throws Exception {
+    @Test public void phoneReviewPrecedesOptionalDisplayName() throws Exception {
         try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
             awaitSignupRules(s);
             s.onActivity(a -> {
-                ((EditText)a.findViewById(com.click.designpreview.R.id.signup_email)).setText("review@example.com");
+                ((EditText)a.findViewById(com.click.designpreview.R.id.signup_email)).setText("01012345678");
                 EditText password = a.findViewById(com.click.designpreview.R.id.signup_password);
-                password.setText("sample-pass13");
-                ((EditText)a.findViewById(com.click.designpreview.R.id.signup_password_confirm)).setText("sample-pass13");
+                password.setText("0123");
+                ((EditText)a.findViewById(com.click.designpreview.R.id.signup_password_confirm)).setText("0123");
                 a.findViewById(com.click.designpreview.R.id.signup_password_toggle).performClick();
                 a.findViewById(com.click.designpreview.R.id.signup_password_toggle).performClick();
-                assertEquals("sample-pass13", password.getText().toString());
+                assertEquals("0123", password.getText().toString());
                 a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
             });
-            shown("이메일을\n확인해 주세요"); screenshot("email-review");
-            clickView("이메일 수정");
+            shown("전화번호를\n확인해 주세요"); screenshot("phone-review");
+            clickView("전화번호 수정");
             s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_action).performClick());
-            clickView("이 이메일로 계속"); shown("어떻게 불러드릴까요?");
+            clickView("이 전화번호로 계속"); shown("어떻게 불러드릴까요?");
             shown("이름 (선택)");
             s.onActivity(a -> ((EditText) a.findViewById(
                     com.click.designpreview.R.id.signup_name)).setText("김클릭"));
@@ -139,7 +139,7 @@ public class OnboardingFlowTest {
     @Test public void loginMatchesSignupAndValidatesInline() throws Exception {
         try (ActivityScenario<LoginActivity> s = ActivityScenario.launch(LoginActivity.class)) {
             shown("다시 만나 반가워요");
-            shown("가입할 때 사용한\n이메일과 비밀번호를 입력해 주세요.");
+            shown("가입할 때 사용한\n전화번호와 비밀번호를 입력해 주세요.");
             shown("로그인하기"); shown("다른 방법으로 시작하기");
             screenshot("login");
             s.onActivity(a -> {
@@ -149,44 +149,42 @@ public class OnboardingFlowTest {
                         .setText("short");
                 a.findViewById(com.click.designpreview.R.id.login_action).performClick();
             });
-            shown("이메일 주소를 한 번 더 확인해 주세요.");
+            shown("전화번호를 한 번 더 확인해 주세요.");
             shown("가입할 때 설정한 비밀번호를 입력해 주세요.");
             s.onActivity(a -> {
                 ((EditText) a.findViewById(com.click.designpreview.R.id.login_email))
-                        .setText("review@example.com");
+                        .setText("01012345678");
                 ((EditText) a.findViewById(com.click.designpreview.R.id.login_password)).setText("");
                 a.findViewById(com.click.designpreview.R.id.login_action).performClick();
             });
-            shown("비밀번호를 입력해 주세요.");
+            shown("비밀번호는 숫자 4자리로 입력해 주세요.");
         }
     }
 
-    @Test public void signupPasswordHintAndValidationUseLoadedServerMinimum() throws Exception {
+    @Test public void signupPasswordValidationRequiresFourDigits() throws Exception {
         try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
             awaitSignupRules(s);
-            final int[] minimum = {0};
             s.onActivity(a -> {
                 EditText password = a.findViewById(com.click.designpreview.R.id.signup_password);
-                minimum[0] = Integer.parseInt(password.getHint().toString().split("글자")[0]);
                 ((EditText) a.findViewById(com.click.designpreview.R.id.signup_email))
-                        .setText("review@example.com");
-                String shortPassword = new String(new char[minimum[0] - 1]).replace('\0', 'a');
+                        .setText("01012345678");
+                String shortPassword = "123";
                 password.setText(shortPassword);
                 ((EditText) a.findViewById(com.click.designpreview.R.id.signup_password_confirm))
                         .setText(shortPassword);
                 a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
             });
-            shown("비밀번호를 " + minimum[0] + "글자 이상 입력해 주세요.");
+            shown("비밀번호는 숫자 4자리로 입력해 주세요.");
             screenshot("signup-password-minimum");
             s.onActivity(a -> {
-                String validPassword = new String(new char[minimum[0]]).replace('\0', 'a');
+                String validPassword = "0123";
                 ((EditText) a.findViewById(com.click.designpreview.R.id.signup_password))
                         .setText(validPassword);
                 ((EditText) a.findViewById(com.click.designpreview.R.id.signup_password_confirm))
                         .setText(validPassword);
                 a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
             });
-            shown("이메일을\n확인해 주세요");
+            shown("전화번호를\n확인해 주세요");
             clickView("이메일 수정");
         }
     }

@@ -87,10 +87,10 @@ public final class LoginActivity extends Activity {
         clearError(R.id.login_api_error);
         String address = email.getText().toString().trim();
         String secret = password.getText().toString();
-        if (!Patterns.EMAIL_ADDRESS.matcher(address).matches()) {
-            showError(R.id.login_email_error, "이메일 주소를 한 번 더 확인해 주세요.", email); return;
+        if (!address.replace("-", "").replace(" ", "").matches("01[016789][0-9]{7,8}")) {
+            showError(R.id.login_email_error, "전화번호를 한 번 더 확인해 주세요.", email); return;
         }
-        if (secret.isEmpty()) {
+        if (!secret.matches("[0-9]{4}")) {
             showError(R.id.login_password_error, getString(R.string.login_error_password_required), password); return;
         }
         submitting = true; action.setEnabled(false); action.setAlpha(.62f);

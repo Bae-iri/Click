@@ -10,10 +10,10 @@ from tests.test_typed_agent_contract import start_payload
 
 def test_logged_in_text_queue_starts_font_guidance_and_accepts_followup():
     with TestClient(create_app()) as client:
-        email = f"text-{uuid4().hex}@example.com"
+        email = "010" + str(uuid4().int % 100000000).zfill(8)
         register(client, email=email)
         login = client.post("/api/v1/auth/login", json={
-            "email": email, "password": "test-password-1234",
+            "phone_number": email, "password": "1234",
         })
         assert login.status_code == 200, login.text
         client.headers["Authorization"] = f"Bearer {login.json()['access_token']}"

@@ -62,7 +62,7 @@ class AuthService:
                 user = User(name=request.name)
                 db.add(user)
                 db.flush()
-                db.add(Account(user_id=user.id, email=request.email, password_hash=hashed))
+                db.add(Account(user_id=user.id, phone_number=request.phone_number, password_hash=hashed))
                 db.flush()
                 tokens = self.tokens(user.id)
                 self.add_session(db, tokens)
@@ -97,7 +97,7 @@ class AuthService:
 
     def login(self, request):
         with self.factory() as db:
-            account = db.scalar(select(Account).where(Account.email == request.email).with_for_update())
+            account = db.scalar(select(Account).where(Account.phone_number == request.phone_number).with_for_update())
             valid = verify_password(request.password.get_secret_value(), account.password_hash if account else self._dummy)
             if not account or not valid:
                 raise HTTPException(401)
