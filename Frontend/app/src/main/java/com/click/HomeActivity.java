@@ -42,6 +42,7 @@ import com.click.data.local.HomeFavoritesStore;
 import com.click.ui.home.HomeHelpItem;
 import com.click.domain.goal.QuickHelpTask;
 import com.click.service.overlay.ClickOverlayService;
+import com.click.service.overlay.OverlayActions;
 import com.click.ui.common.ClickUi;
 import com.click.ui.common.ClickTextScale;
 import com.click.ui.home.HomeIconView;
@@ -167,6 +168,8 @@ public final class HomeActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume(); homeResumed = true; requestLaunching = false;
+        // Do not let a previously opened input panel intercept taps on home shortcuts.
+        sendBroadcast(new Intent(OverlayActions.ACTION_COLLAPSE).setPackage(getPackageName()));
         if (Float.compare(renderedTextScale, ClickTextScale.scale(this)) != 0) {
             recreate();
             return;
