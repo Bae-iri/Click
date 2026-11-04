@@ -23,6 +23,7 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,6 +37,7 @@ import com.click.data.remote.AuthGateway;
 import com.click.data.local.TouchAutomationSettings;
 import com.click.service.overlay.ClickOverlayService;
 import com.click.ui.common.ClickDialog;
+import com.click.ui.common.ClickTextScale;
 
 /** Account and settings menu using the same soft-blue visual system as the Click home screen. */
 public final class MenuActivity extends AppCompatActivity {
@@ -103,6 +105,9 @@ public final class MenuActivity extends AppCompatActivity {
                 view -> showAutomationSettings());
         add(page, settings, 10);
 
+        section(page, "화면 설정");
+        add(page, textScaleSettings(), 10);
+
         section(page, "이용 안내");
         LinearLayout tutorial = group();
         addRow(tutorial, MenuIconView.Kind.BOOK, "클릭 사용법", "직접 따라 하며 익혀보세요", false,
@@ -128,6 +133,62 @@ public final class MenuActivity extends AppCompatActivity {
 
         setContentView(root);
         root.requestApplyInsets();
+    }
+
+    private LinearLayout textScaleSettings() {
+        LinearLayout card = group();
+        TextView title = text("클릭 글자 크기", 16, INK, medium);
+        TextView current = text(ClickTextScale.label(this), 13, BLUE, medium);
+        LinearLayout heading = new LinearLayout(this);
+        heading.setGravity(Gravity.CENTER_VERTICAL);
+        heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        heading.addView(current, new LinearLayout.LayoutParams(-2, -2));
+        add(card, heading, 8);
+        add(card, text("클릭 화면과 안내 글자의 크기를 조절해요.", 13, SECONDARY, regular), 4);
+
+        LinearLayout previewRow = new LinearLayout(this);
+        previewRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView smaller = text("가", 15, SECONDARY, regular);
+        TextView preview = text("가나다라마바사", 17, INK, medium);
+        ClickTextScale.apply(preview, 17);
+        TextView bigger = text("가", 23, BLUE, semibold);
+        previewRow.addView(smaller, new LinearLayout.LayoutParams(-2, dp(44)));
+        LinearLayout.LayoutParams previewParams = new LinearLayout.LayoutParams(0, dp(44), 1);
+        previewParams.setMarginStart(dp(12)); previewParams.setMarginEnd(dp(12));
+        previewRow.addView(preview, previewParams);
+        previewRow.addView(bigger, new LinearLayout.LayoutParams(-2, dp(44)));
+        add(card, previewRow, 8);
+
+        SeekBar scale = new SeekBar(this);
+        scale.setMax(3);
+        scale.setProgress(ClickTextScale.level(this));
+        scale.setContentDescription("클릭 글자 크기 조절");
+        scale.setMinHeight(dp(48));
+        scale.setPadding(dp(4), 0, dp(4), 0);
+        scale.setProgressTintList(ColorStateList.valueOf(BLUE));
+        scale.setThumbTintList(ColorStateList.valueOf(BLUE));
+        scale.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                if (!fromUser) return;
+                ClickTextScale.saveLevel(MenuActivity.this, progress);
+                current.setText(ClickTextScale.label(MenuActivity.this));
+                ClickTextScale.apply(preview, 17);
+            }
+            @Override public void onStartTrackingTouch(SeekBar bar) {}
+            @Override public void onStopTrackingTouch(SeekBar bar) {
+                recreate();
+            }
+        });
+        add(card, scale, 2);
+        LinearLayout labels = new LinearLayout(this);
+        labels.setGravity(Gravity.CENTER_VERTICAL);
+        TextView min = text("작게", 12, SECONDARY, regular);
+        TextView max = text("아주 크게", 12, SECONDARY, regular);
+        labels.addView(min, new LinearLayout.LayoutParams(0, -2, 1));
+        max.setGravity(Gravity.END);
+        labels.addView(max, new LinearLayout.LayoutParams(0, -2, 1));
+        add(card, labels, 0);
+        return card;
     }
 
     private void showAutomationSettings() {
@@ -208,7 +269,7 @@ public final class MenuActivity extends AppCompatActivity {
 
         automationToggle = new androidx.appcompat.widget.SwitchCompat(this);
         automationToggle.setText("자동 모드");
-        automationToggle.setTextSize(13);
+        automationToggle.setTextSize(ClickTextScale.size(this, 13));
         automationToggle.setTypeface(medium);
         automationToggle.setTextColor(BLUE);
         automationToggle.setShowText(false);
@@ -502,7 +563,7 @@ public final class MenuActivity extends AppCompatActivity {
     private TextView text(String value, int size, int color, Typeface typeface) {
         TextView text = new TextView(this);
         text.setText(value);
-        text.setTextSize(size);
+        text.setTextSize(ClickTextScale.size(this, size));
         text.setTextColor(color);
         text.setTypeface(typeface);
         text.setIncludeFontPadding(false);

@@ -28,6 +28,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import com.click.domain.goal.RequirementReview;
 import com.click.ui.common.ClickUi;
+import com.click.ui.common.ClickTextScale;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -159,7 +160,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         brand.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
         titles.addView(brand, new LayoutParams(dp(66), dp(24)));
         heading = ClickUi.title(context, "");
-        heading.setTextSize(20);
+        heading.setTextSize(ClickTextScale.size(context, 20));
         heading.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
         heading.setLetterSpacing(0);
         heading.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
@@ -173,7 +174,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             else listener.replayGuidance(guidanceMessage());
         });
         headerReplay.setContentDescription("클릭 음성 안내 다시 듣기");
-        headerReplay.setTextSize(11); headerReplay.setSingleLine(true);
+        headerReplay.setTextSize(ClickTextScale.size(context, 11)); headerReplay.setSingleLine(true);
         headerReplay.setBackground(new InsetDrawable(rippleOutlined(Color.WHITE, 0xFFCEDDF4, 0x183478F6, 10), 0, dp(8), 0, dp(8)));
         headerReplay.setPadding(dp(8), dp(8), dp(8), dp(8));
         Drawable speaker = context.getDrawable(R.drawable.ic_overlay_speaker);
@@ -185,7 +186,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         Button minimize = FloatingPanelStyle.compactButton(context, "줄이기", listener::collapse);
         close = minimize;
         close.setId(R.id.task_flow_collapse);
-        minimize.setTextSize(12);
+        minimize.setTextSize(ClickTextScale.size(context, 12));
         minimize.setSingleLine(true);
         close.setContentDescription("안내 창 줄이기");
         close.setFocusable(true);
@@ -385,7 +386,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
                 : Math.min(maxHeight, MeasureSpec.getSize(height));
         boolean compact = available < dp(260) * Math.max(1f, getResources().getConfiguration().fontScale);
         brand.setVisibility(reviewScreen ? GONE : VISIBLE);
-        heading.setTextSize(compact ? 20 : 22);
+        heading.setTextSize(ClickTextScale.size(getContext(), compact ? 20 : 22));
         int innerWidth = MeasureSpec.getSize(width) - getPaddingLeft() - getPaddingRight();
         float headerWidth = dp((reviewScreen ? 48 : 66) + 16 + 16 + 14 + 4 + 20 + 4)
                 + headerReplay.getPaint().measureText("음성 멈춤")
@@ -475,7 +476,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         label.setTextColor(SECONDARY);
         editor.addView(label);
         EditText input = new EditText(getContext());
-        input.setTextSize(17); input.setTextColor(INK); input.setHintTextColor(SECONDARY);
+        input.setTextSize(ClickTextScale.size(getContext(), 17)); input.setTextColor(INK); input.setHintTextColor(SECONDARY);
         input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         input.setContentDescription("요청 내용 수정");
         input.setHint("예) 휴대폰 글자를 더 크게 해 줘");
@@ -600,7 +601,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             String label = choice.optString("label");
             if ("휴대폰 설정에서 기본 글자 크기 변경".equals(label)) label = "휴대폰 전체";
             else if ("특정 앱 안에서만 변경".equals(label)) label = "특정 앱 안에서만";
-            card.setText(label); card.setTextSize(16); card.setTextColor(INK);
+            card.setText(label); card.setTextSize(ClickTextScale.size(getContext(), 16)); card.setTextColor(INK);
             card.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
             card.setButtonDrawable((Drawable) null); card.setIncludeFontPadding(false);
             card.setGravity(Gravity.CENTER_VERTICAL); card.setMinHeight(dp(48));
@@ -626,7 +627,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         LinearLayout editor = new LinearLayout(getContext()); editor.setOrientation(VERTICAL);
         reviewEditor = editor;
         editor.setVisibility(GONE);
-        EditText input = new EditText(getContext()); input.setTextSize(14); input.setTextColor(INK);
+        EditText input = new EditText(getContext()); input.setTextSize(ClickTextScale.size(getContext(), 14)); input.setTextColor(INK);
         reviewRequestInput = input;
         input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
         input.setContentDescription("요청 내용 수정"); input.setHint("원하시는 내용을 적어 주세요");
@@ -653,12 +654,12 @@ public final class TaskFlowOverlayView extends LinearLayout {
             editor.post(() -> scroll.smoothScrollTo(0, editor.getTop()));
             showKeyboardWhenFocused(input);
         });
-        edit.setTextSize(13);
+        edit.setTextSize(ClickTextScale.size(getContext(), 13));
         edit.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         edit.setBackground(confirmation ? ripple(Color.TRANSPARENT, 0x183478F6, 12)
                 : ripple(0xFFF5F8FD, 0x183478F6, 14));
         if (confirmation) {
-            edit.setTextSize(15); edit.setTextColor(SECONDARY);
+            edit.setTextSize(ClickTextScale.size(getContext(), 15)); edit.setTextColor(SECONDARY);
             edit.setBackground(rippleOutlined(Color.WHITE, BORDER, 0x183478F6, 12));
             edit.setPadding(dp(12), dp(10), dp(12), dp(10));
             edit.setGravity(Gravity.CENTER);
@@ -673,7 +674,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     private void styleInputChoice(boolean selected) {
         if (requestEditorToggle == null) return;
-        requestEditorToggle.setTextSize(16); requestEditorToggle.setTextColor(INK);
+        requestEditorToggle.setTextSize(ClickTextScale.size(getContext(), 16)); requestEditorToggle.setTextColor(INK);
         requestEditorToggle.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         requestEditorToggle.setMinHeight(dp(48)); requestEditorToggle.setMinimumHeight(dp(48));
         requestEditorToggle.setPadding(dp(12), dp(10), dp(12), dp(10));
@@ -759,7 +760,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
                     answer[0] = choice.optString("value"); next.setEnabled(true); next.setAlpha(1f);
                 }), spaced(12));
             } else {
-                EditText input = new EditText(getContext()); input.setTextSize(14);
+                EditText input = new EditText(getContext()); input.setTextSize(ClickTextScale.size(getContext(), 14));
                 input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
                 input.setHint(question.optString("placeholder", "답변을 입력해 주세요"));
                 input.setSingleLine(true); input.setMinHeight(dp(48));
@@ -860,7 +861,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if (request.length() > 80) {
             value.setMaxLines(3); value.setEllipsize(android.text.TextUtils.TruncateAt.END);
             Button expand = quietButton("요청 더 보기", () -> {});
-            expand.setTextSize(13); expand.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 10));
+            expand.setTextSize(ClickTextScale.size(getContext(), 13)); expand.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 10));
             expand.setOnClickListener(v -> {
                 boolean more = value.getMaxLines() == 3;
                 value.setMaxLines(more ? Integer.MAX_VALUE : 3);
@@ -1150,14 +1151,14 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     private TextView text(String value, int size) {
-        TextView text = new TextView(getContext()); text.setText(value); text.setTextSize(size);
+        TextView text = new TextView(getContext()); text.setText(value); text.setTextSize(ClickTextScale.size(getContext(), size));
         text.setTextColor(INK); text.setPadding(0, dp(2), 0, dp(2));
         text.setIncludeFontPadding(false); text.setLineSpacing(dp(2), 1.05f);
         text.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
         return text;
     }
     private Button quietButton(String label, Runnable action) {
-        Button button = new Button(getContext()); button.setText(label); button.setTextSize(16);
+        Button button = new Button(getContext()); button.setText(label); button.setTextSize(ClickTextScale.size(getContext(), 16));
         button.setTextColor(BLUE); button.setAllCaps(false); button.setMinHeight(dp(48));
         button.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         button.setMinimumHeight(dp(48)); button.setMinWidth(0); button.setMinimumWidth(0);
@@ -1185,7 +1186,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         return button;
     }
     private void styleReviewButton(Button button, boolean primary) {
-        button.setTextSize(16);
+        button.setTextSize(ClickTextScale.size(getContext(), 16));
         button.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         button.setMinHeight(dp(48)); button.setMinimumHeight(dp(48));
         button.setPadding(dp(14), dp(10), dp(14), dp(10));
