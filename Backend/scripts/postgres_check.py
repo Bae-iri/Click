@@ -90,6 +90,11 @@ def check_http():
         accepted.pop("raw_goal")
         assert client.post("/api/v1/agent/turn", json=accepted).status_code == 200
         restarted_app.state.account_actions.delivery = Delivery()
+        # Email actions remain available only for legacy accounts with an email.
+        from app.models.auth import Account
+        with restarted_app.state.session_factory() as db:
+            db.get(Account, second["user_id"]).email = "legacy-check@example.com"
+            db.commit()
         assert client.post("/api/v1/auth/email/request").status_code == 202
         token = restarted_app.state.account_actions.delivery.messages[-1][2]
         assert client.post("/api/v1/auth/email/verify", json={"token": token}).status_code == 204

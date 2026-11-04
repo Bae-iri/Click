@@ -49,8 +49,8 @@ def test_old_cached_profile_metadata_is_stripped():
 def test_registration_keeps_account_identity_and_discards_legacy_demographics(legacy_fields):
     app = create_app()
     with TestClient(app) as client:
-        response = client.post('/api/v1/auth/register', json={'email':'account@example.com',
-            'password':'test-password-1234','name':'Account display',**legacy_fields})
+        response = client.post('/api/v1/auth/register', json={'phone_number':'01002870585',
+            'password':'1234','name':'Account display',**legacy_fields})
         assert response.status_code == 201, response.text
         client.headers['Authorization'] = 'Bearer ' + response.json()['access_token']
         user = client.get('/api/v1/users/me').json()
@@ -59,7 +59,7 @@ def test_registration_keeps_account_identity_and_discards_legacy_demographics(le
         properties = client.get('/openapi.json').json()['components']['schemas']['RegisterRequest']['properties']
         assert 'age_group' not in properties and 'occupation_category' not in properties
         from app.schemas.auth import RegisterRequest
-        parsed = RegisterRequest(email='account@example.com',password='test-password-1234',**legacy_fields)
+        parsed = RegisterRequest(phone_number='01002870585',password='1234',**legacy_fields)
         assert 'age_group' not in parsed.model_dump() and 'occupation_category' not in parsed.model_dump()
-        assert client.post('/api/v1/auth/login',json={'email':'account@example.com',
-            'password':'test-password-1234'}).status_code == 200
+        assert client.post('/api/v1/auth/login',json={'phone_number':'01002870585',
+            'password':'1234'}).status_code == 200

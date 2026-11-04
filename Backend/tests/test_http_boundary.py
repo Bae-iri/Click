@@ -15,7 +15,7 @@ def test_errors_have_safe_envelope_and_server_trace_id(caplog):
         raise RuntimeError("private-password-and-db-url")
 
     with caplog.at_level(logging.INFO, logger="click.http"), TestClient(app) as client:
-        validation = client.post("/api/v1/auth/register", json={"email": "private-email", "password": "sensitive"})
+        validation = client.post("/api/v1/auth/register", json={"phone_number": "private-email", "password": "sensitive"})
         assert validation.status_code == 422
         response = client.get("/test-failure?secret=private-query", headers={"X-Request-ID": "untrusted-private-id"})
         assert response.status_code == 500

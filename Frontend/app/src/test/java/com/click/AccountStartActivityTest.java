@@ -23,7 +23,7 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 34, application = ClickApplication.class)
 public class AccountStartActivityTest {
-    @Test public void missingKakaoConfigurationKeepsEmailRoutesAvailable() {
+    @Test public void missingKakaoConfigurationKeepsPhoneRoutesAvailable() {
         assumeTrue(BuildConfig.KAKAO_NATIVE_APP_KEY.isEmpty());
         try (ActivityController<AccountStartActivity> controller =
                      Robolectric.buildActivity(AccountStartActivity.class).setup()) {
@@ -31,7 +31,7 @@ public class AccountStartActivityTest {
             activity.findViewById(R.id.account_start_kakao).performClick();
             TextView error = activity.findViewById(R.id.account_start_error);
             assertEquals(View.VISIBLE, error.getVisibility());
-            assertTrue(error.getText().toString().contains("이메일"));
+            assertTrue(error.getText().toString().contains("전화번호"));
             assertTrue(activity.findViewById(R.id.account_start_kakao).isEnabled());
             assertTrue(activity.findViewById(R.id.account_start_email).isEnabled());
             assertEquals(View.GONE, activity.findViewById(R.id.account_start_progress).getVisibility());
@@ -41,7 +41,7 @@ public class AccountStartActivityTest {
         }
     }
 
-    @Test public void returningEmailUsersHaveAnExplicitLoginRoute() {
+    @Test public void returningPhoneUsersHaveAnExplicitLoginRoute() {
         try (ActivityController<AccountStartActivity> controller =
                      Robolectric.buildActivity(AccountStartActivity.class).setup()) {
             AccountStartActivity activity = controller.get();

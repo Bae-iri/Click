@@ -1,3 +1,4 @@
+import re
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from app.schemas.auth import Credentials
@@ -7,7 +8,13 @@ from app.models.lifecycle import EmailVerification
 class EmailRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     email: str = Field(min_length=3, max_length=254)
-    normalize_email = field_validator("email")(Credentials.normalize_email.__func__)
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value):
+        value = value.strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value):
+            raise ValueError("Invalid email format")
+        return value
 
 
 class ActionToken(BaseModel):
@@ -16,7 +23,8 @@ class ActionToken(BaseModel):
 
 
 class ResetPassword(ActionToken):
-    new_password: SecretStr = Field(min_length=8, max_length=128)
+    new_password: SecretStr = Field(min_length=4, max_length=4)
+    validate_pin = field_validator("new_password")(Credentials.validate_pin.__func__)
 
 
 def build_router(service, auth, principal):

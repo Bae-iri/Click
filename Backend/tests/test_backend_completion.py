@@ -9,7 +9,17 @@ from app.main import create_app
 from app.models.lifecycle import SafetyConfirmation, TaskFeedback, AccountAction
 from app.schemas.agent_turn import AgentTurnResponse
 from app.schemas.guidance import GuideCommandResponse
-from tests.helpers import register
+from tests.helpers import register as register_phone
+from app.models.auth import Account
+
+def register(client, *args, **kwargs):
+    tokens = register_phone(client, *args, **kwargs)
+    with client.app.state.session_factory() as db:
+        account = db.get(Account, tokens["user_id"])
+        account.email = account.phone_number + "@example.com"
+        db.commit()
+    return tokens
+
 from tests.test_agent_sessions import payload, post, follow, cancel
 
 
@@ -104,7 +114,7 @@ def test_history_feedback_pagination_ownership_and_deletion():
         with app.state.session_factory() as db:
             assert db.scalar(select(func.count()).select_from(TaskFeedback)) == 1
         assert client.put(path, json={"rating": 6}).status_code == 422
-        register(client, "second@example.com")
+        register(client, "01080447345")
         assert client.get(path).status_code == 403
         assert client.get("/api/v1/agent/sessions").json()["items"] == []
         client.headers["Authorization"] = "Bearer " + auth["access_token"]
@@ -129,11 +139,11 @@ def test_account_email_verification_and_reset_revoke_sessions():
         with app.state.session_factory() as db:
             row = db.scalar(select(AccountAction))
             assert row.token_hash != token
-        assert client.post("/api/v1/auth/password/reset", json={"token": token, "new_password": "replacement-pass-123"}).status_code == 204
+        assert client.post("/api/v1/auth/password/reset", json={"token": token, "new_password": "5678"}).status_code == 204
         assert client.get("/api/v1/users/me").status_code == 401
         assert client.post("/api/v1/auth/refresh", json={"refresh_token": auth["refresh_token"]}).status_code == 401
-        assert client.post("/api/v1/auth/login", json={"email": email, "password": "replacement-pass-123"}).status_code == 200
-        assert client.post("/api/v1/auth/password/reset", json={"token": token, "new_password": "replacement-pass-123"}).status_code == 400
+        assert client.post("/api/v1/auth/login", json={"phone_number": email.split("@")[0], "password": "5678"}).status_code == 200
+        assert client.post("/api/v1/auth/password/reset", json={"token": token, "new_password": "5678"}).status_code == 400
 
 
 def test_expired_and_wrong_purpose_tokens_and_unknown_email():
@@ -142,10 +152,10 @@ def test_expired_and_wrong_purpose_tokens_and_unknown_email():
         register(client)
         assert client.post("/api/v1/auth/email/request").status_code == 202
         token = app.state.account_actions.delivery.messages[-1][2]
-        assert client.post("/api/v1/auth/password/reset", json={"token": token, "new_password": "replacement-pass-123"}).status_code == 400
+        assert client.post("/api/v1/auth/password/reset", json={"token": token, "new_password": "5678"}).status_code == 400
         app.state.account_actions.clock = lambda: time.time() + 86401
         assert client.post("/api/v1/auth/email/verify", json={"token": token}).status_code == 400
-        assert client.post("/api/v1/auth/password/forgot", json={"email": "missing@example.com"}).status_code == 202
+        assert client.post("/api/v1/auth/password/forgot", json={"email": "unknown@example.com"}).status_code == 202
         assert len(app.state.account_actions.delivery.messages) == 1
 
 
@@ -215,7 +225,7 @@ def test_concurrent_reset_consumes_token_once(tmp_path):
         barrier = Barrier(2)
         def reset(target):
             barrier.wait(timeout=5)
-            return target.post("/api/v1/auth/password/reset", json={"token": token, "new_password": "replacement-pass-123"}).status_code
+            return target.post("/api/v1/auth/password/reset", json={"token": token, "new_password": "5678"}).status_code
         with ThreadPoolExecutor(max_workers=2) as pool:
             assert sorted(pool.map(reset, (client, second))) == [204, 400]
 

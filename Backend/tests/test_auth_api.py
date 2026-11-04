@@ -13,20 +13,20 @@ from tests.helpers import register
 def test_registration_login_rotation_logout_and_hash_storage():
     app = create_app(enable_legacy=True)
     with TestClient(app) as client:
-        tokens = register(client, "Person@Example.com")
+        tokens = register(client, "01046191429")
         assert client.get("/api/v1/users/me").json()["id"] == tokens["user_id"]
         with app.state.session_factory() as db:
             account = db.scalar(select(Account))
             session = db.scalar(select(AuthSession))
-            assert account.email == "person@example.com"
-            assert "test-password" not in account.password_hash
+            assert account.phone_number == "01046191429"
+            assert "1234" != account.password_hash
             assert tokens["access_token"] != session.access_hash
             assert tokens["refresh_token"] != session.refresh_hash
-        invalid = client.post("/api/v1/auth/login", json={"email": "person@example.com", "password": "wrong-password-123"})
-        missing = client.post("/api/v1/auth/login", json={"email": "absent@example.com", "password": "wrong-password-123"})
+        invalid = client.post("/api/v1/auth/login", json={"phone_number": "01046191429", "password": "9999"})
+        missing = client.post("/api/v1/auth/login", json={"phone_number": "01064606197", "password": "9999"})
         assert invalid.status_code == missing.status_code == 401
         assert invalid.json()["error"]["code"] == missing.json()["error"]["code"]
-        login = client.post("/api/v1/auth/login", json={"email": "person@example.com", "password": "test-password-1234"})
+        login = client.post("/api/v1/auth/login", json={"phone_number": "01046191429", "password": "1234"})
         assert login.status_code == 200 and login.headers["cache-control"] == "no-store"
         refreshed = client.post("/api/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]})
         assert refreshed.status_code == 200
@@ -42,8 +42,8 @@ def test_missing_tampered_expired_tokens_and_duplicate_registration():
     app = create_app(enable_legacy=True)
     with TestClient(app) as client:
         assert client.get("/api/v1/users/me").status_code == 401
-        tokens = register(client, "same@example.com")
-        assert client.post("/api/v1/auth/register", json={"email": "SAME@example.com", "password": "test-password-1234"}).status_code == 409
+        tokens = register(client, "01082399437")
+        assert client.post("/api/v1/auth/register", json={"phone_number": "01082399437", "password": "1234"}).status_code == 409
         with app.state.session_factory() as db:
             assert len(db.scalars(select(User)).all()) == 1
             db.execute(update(AuthSession).values(access_expires_at=int(time.time()) - 1,
@@ -74,14 +74,14 @@ def test_every_user_route_rejects_another_owner_and_delete_revokes_tokens():
 
 def test_password_change_revokes_all_logins():
     with TestClient(create_app(enable_legacy=True)) as client:
-        tokens = register(client, "password@example.com")
-        other = client.post("/api/v1/auth/login", json={"email": "password@example.com", "password": "test-password-1234"}).json()
-        assert client.post("/api/v1/auth/password", json={"current_password": "wrong", "new_password": "new-password-1234"}).status_code == 401
-        assert client.post("/api/v1/auth/password", json={"current_password": "test-password-1234", "new_password": "new-password-1234"}).status_code == 204
+        tokens = register(client, "01000671871")
+        other = client.post("/api/v1/auth/login", json={"phone_number": "01000671871", "password": "1234"}).json()
+        assert client.post("/api/v1/auth/password", json={"current_password": "9999", "new_password": "5678"}).status_code == 401
+        assert client.post("/api/v1/auth/password", json={"current_password": "1234", "new_password": "5678"}).status_code == 204
         for token in (tokens, other):
             client.headers["Authorization"] = "Bearer " + token["access_token"]
             assert client.get("/api/v1/users/me").status_code == 401
-        assert client.post("/api/v1/auth/login", json={"email": "password@example.com", "password": "new-password-1234"}).status_code == 200
+        assert client.post("/api/v1/auth/login", json={"phone_number": "01000671871", "password": "5678"}).status_code == 200
 
 
 def test_concurrent_refresh_only_succeeds_once(tmp_path):
@@ -113,31 +113,45 @@ def test_agent_and_legacy_sessions_require_and_enforce_ownership():
 def test_rate_limit():
     with TestClient(create_app(enable_legacy=True)) as client:
         for _ in range(20):
-            assert client.post("/api/v1/auth/login", json={"email": "nobody@example.com", "password": "wrong-password-123"}).status_code == 401
-        response = client.post("/api/v1/auth/login", json={"email": "nobody@example.com", "password": "wrong-password-123"})
+            assert client.post("/api/v1/auth/login", json={"phone_number": "01089580331", "password": "9999"}).status_code == 401
+        response = client.post("/api/v1/auth/login", json={"phone_number": "01089580331", "password": "9999"})
         assert response.status_code == 429
         assert response.headers["retry-after"] == "60"
 
 
 def test_eight_character_password_registration_login_change_and_duplicate_email():
     with TestClient(create_app()) as client:
-        payload = {"email": "eight@example.com", "password": "eight888"}
-        assert client.post("/api/v1/auth/register", json={**payload, "password": "short77"}).status_code == 422
+        payload = {"phone_number": "01080349856", "password": "1234"}
+        assert client.post("/api/v1/auth/register", json={**payload, "password": "123"}).status_code == 422
         response = client.post("/api/v1/auth/register", json=payload)
         assert response.status_code == 201, response.text
-        assert client.post("/api/v1/auth/register", json={**payload, "email": "EIGHT@example.com"}).status_code == 409
+        assert client.post("/api/v1/auth/register", json={**payload, "phone_number": "01080349856"}).status_code == 409
         assert client.post("/api/v1/auth/login", json=payload).status_code == 200
         client.headers["Authorization"] = "Bearer " + response.json()["access_token"]
-        assert client.post("/api/v1/auth/password", json={"current_password": "eight888", "new_password": "next8888"}).status_code == 204
-        assert client.post("/api/v1/auth/login", json={**payload, "password": "next8888"}).status_code == 200
+        assert client.post("/api/v1/auth/password", json={"current_password": "1234", "new_password": "5678"}).status_code == 204
+        assert client.post("/api/v1/auth/login", json={**payload, "password": "5678"}).status_code == 200
 
 
 def test_registration_saves_trimmed_name_in_user_profile():
     app = create_app()
     with TestClient(app) as client:
         response = client.post("/api/v1/auth/register", json={
-            "name": "  김클릭  ", "email": "named@example.com", "password": "eight888"
+            "name": "  김클릭  ", "phone_number": "01097905424", "password": "1234"
         })
         assert response.status_code == 201, response.text
         client.headers["Authorization"] = "Bearer " + response.json()["access_token"]
         assert client.get("/api/v1/users/me").json()["name"] == "김클릭"
+
+
+def test_phone_normalization_and_four_digit_password_validation():
+    with TestClient(create_app()) as client:
+        payload = {"phone_number": "010-1234-5678", "password": "0123"}
+        for invalid in ("123", "12345", "abcd", "１２３４", "12 3"):
+            assert client.post("/api/v1/auth/register", json={**payload, "password": invalid}).status_code == 422
+        result = client.post("/api/v1/auth/register", json=payload)
+        assert result.status_code == 201
+        assert client.post("/api/v1/auth/login", json={**payload, "phone_number": "01012345678"}).status_code == 200
+        assert client.post("/api/v1/auth/register", json={**payload, "phone_number": "01012345678"}).status_code == 409
+        assert client.post("/api/v1/auth/register", json={**payload, "phone_number": "invalid"}).status_code == 422
+        client.headers["Authorization"] = "Bearer " + result.json()["access_token"]
+        assert client.post("/api/v1/auth/password", json={"current_password": "0123", "new_password": "abcd"}).status_code == 422
