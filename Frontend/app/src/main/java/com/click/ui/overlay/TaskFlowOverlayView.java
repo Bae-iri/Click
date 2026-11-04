@@ -11,14 +11,12 @@ import android.graphics.Path;
 import android.graphics.ColorFilter;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.StateListDrawable;
-import android.graphics.drawable.InsetDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
-import com.click.ui.common.ClickArtworkView;
 import com.click.R;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -39,7 +37,8 @@ import org.json.JSONObject;
  *
  * 수정 위치 안내 (파일에서 "[UI 수정]"을 검색):
  * - 색상: 아래 BLUE/INK/PALE_BLUE 등의 상수. ClickUi의 공통 색상과 별도로 정의되어 있다.
- * - 공통 틀/헤더: 생성자. 창 너비: getWindowWidth(), 모드별 안쪽 여백: updateBubblePadding().
+ * - 공통 헤더/구분선: FloatingPanelHeader.java. 창 너비: FloatingPanelStyle.PANEL_WIDTH_DP.
+ * - 모드별 안쪽 여백: updateBubblePadding().
  * - 요청 확인 화면: reviewStage(), addRequestBox(), addQuestionNarration(), choiceCards().
  * - 진행/결과 화면: progress(), result(), completed().
  * - 줄인 안내 말풍선: setMinimizedProgress(), CompactBubbleBackground.
@@ -81,8 +80,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private final Button reviewConfirm;
     private final LinearLayout reviewNavigation;
     private final Button headerReplay;
-    private final LinearLayout headerIdentity, headerActions;
-    private final View divider, headerDivider;
+    private final View divider;
     private final LinearLayout controls;
     private final LinearLayout recoveryActions;
     private TextView narrationStatus, narrationText;
@@ -100,9 +98,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private android.widget.ProgressBar progressBar;
     private TextView progressCount;
     private View guidanceTarget;
-    private final View brand;
-    private final View close;
-    private final LinearLayout header;
+    private final FloatingPanelHeader header;
     private final ScrollView scroll;
     private int maxHeight;
     private boolean resetScrollPending;
@@ -141,25 +137,15 @@ public final class TaskFlowOverlayView extends LinearLayout {
         compactScroll.addView(bubble, new ScrollView.LayoutParams(-1, -2));
         compactScroll.setVisibility(GONE);
         addView(compactScroll, new LayoutParams(-1, -2));
-        header = new LinearLayout(context);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        backButton = quietButton("", listener::openInput);
-        backButton.setContentDescription("이전 단계");
-        backButton.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 12));
-        Drawable backIcon = context.getDrawable(R.drawable.ic_flow_back);
-        backIcon.setBounds(0, 0, dp(22), dp(22));
-        backButton.setCompoundDrawables(backIcon, null, null, null);
-        backButton.setPadding(dp(4), dp(10), dp(10), dp(10));
-        backButton.setVisibility(GONE);
-        LinearLayout titles = new LinearLayout(context);
-        headerIdentity = titles;
-        titles.setOrientation(HORIZONTAL);
-        titles.setGravity(Gravity.CENTER_VERTICAL);
-        titles.addView(backButton, new LayoutParams(dp(48), dp(48)));
-        brand = new ClickArtworkView(context, ClickArtworkView.Kind.WORDMARK);
-        brand.setContentDescription("CLICK");
-        brand.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
-        titles.addView(brand, new LayoutParams(dp(66), dp(24)));
+        header = new FloatingPanelHeader(context, listener::openInput, () -> {
+            if (narrationSpeaking) listener.stopGuidance();
+            else listener.replayGuidance(guidanceMessage());
+        }, listener::collapse);
+        backButton = header.back;
+        headerReplay = header.replay;
+        headerReplay.setId(R.id.task_flow_replay);
+        header.collapse.setId(R.id.task_flow_collapse);
+        addView(header, new LayoutParams(-1, -2));
         heading = ClickUi.title(context, "");
         heading.setTextSize(ClickTextScale.size(context, 20));
         heading.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
@@ -167,45 +153,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         heading.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
         heading.setPadding(0, 0, 0, 0);
         if (android.os.Build.VERSION.SDK_INT >= 28) heading.setAccessibilityHeading(true);
-        header.addView(titles, new LayoutParams(0, -2, 1));
-        headerActions = new LinearLayout(context);
-        headerActions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-        headerReplay = quietButton("다시 듣기", () -> {
-            if (narrationSpeaking) listener.stopGuidance();
-            else listener.replayGuidance(guidanceMessage());
-        });
-        headerReplay.setContentDescription("클릭 음성 안내 다시 듣기");
-        headerReplay.setTextSize(ClickTextScale.size(context, 11)); headerReplay.setSingleLine(true);
-        headerReplay.setBackground(new InsetDrawable(
-                rippleOutlined(0xFFEAF2FF, 0xFFCEDDF4, 0x223478F6, 10), 0, dp(8), 0, dp(8)));
-        headerReplay.setPadding(dp(14), dp(8), dp(14), dp(8));
-        Drawable speaker = context.getDrawable(R.drawable.ic_overlay_speaker);
-        speaker.setBounds(0, 0, dp(14), dp(14));
-        headerReplay.setCompoundDrawablesRelative(speaker, null, null, null);
-        headerReplay.setCompoundDrawablePadding(dp(4));
-        headerReplay.setId(R.id.task_flow_replay);
-        headerActions.addView(headerReplay, new LayoutParams(-2, -2));
-        Button minimize = FloatingPanelStyle.compactButton(context, "줄이기", listener::collapse);
-        close = minimize;
-        close.setId(R.id.task_flow_collapse);
-        minimize.setTextSize(ClickTextScale.size(context, 12));
-        minimize.setSingleLine(true);
-        close.setContentDescription("안내 창 줄이기");
-        close.setFocusable(true);
-        close.setOnClickListener(view -> listener.collapse());
-        LayoutParams closeParams = new LayoutParams(-2, -2);
-        closeParams.leftMargin = dp(4);
-        headerActions.addView(close, closeParams);
-        header.addView(headerActions, new LayoutParams(-2, -2));
-        LayoutParams headerParams = new LayoutParams(-1, -2);
-        headerParams.bottomMargin = dp(FloatingPanelStyle.HEADER_DIVIDER_GAP_DP);
-        addView(header, headerParams);
-        headerDivider = new View(context);
-        headerDivider.setBackgroundColor(0xFFE1E9F5);
-        headerDivider.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-        LayoutParams headerDividerParams = new LayoutParams(LayoutParams.MATCH_PARENT, dp(1));
-        headerDividerParams.bottomMargin = dp(FloatingPanelStyle.HEADER_DIVIDER_GAP_DP);
-        addView(headerDivider, headerDividerParams);
         content = new LinearLayout(context); content.setOrientation(VERTICAL);
         content.setPadding(0, 0, 0, dp(4));
         scroll = new ScrollView(context); scroll.setFillViewport(false); scroll.addView(content);
@@ -265,7 +212,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             if (guidanceTarget != null) guidanceTarget.setVisibility(automaticProgress ? GONE : VISIBLE);
             if (guidanceProgress != null) guidanceProgress.setVisibility(!automaticProgress && guidanceProgressKnown ? VISIBLE : GONE);
             if (progressCompletion != null) progressCompletion.setVisibility(automaticProgress ? GONE : VISIBLE);
-            headerReplay.setVisibility(automaticProgress ? GONE : VISIBLE);
+            headerReplay.setVisibility(automaticProgress ? INVISIBLE : VISIBLE);
         }
         if (minimizedProgress) {
             compactMessage.setText(compactGuidance());
@@ -278,7 +225,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     // 화면 폭에 맞추되 큰 글자에서도 선택 카드가 충분한 너비를 갖도록 한다.
-    public int getWindowWidth(int screenWidth) { return Math.min(screenWidth - dp(24), dp(minimizedProgress ? 260 : 340)); }
+    public int getWindowWidth(int screenWidth) { return Math.min(screenWidth - dp(24), dp(minimizedProgress ? 260 : FloatingPanelStyle.PANEL_WIDTH_DP)); }
     public void setAvailableHeight(int height) { if (maxHeight != height) { maxHeight = height; requestLayout(); } }
     public boolean hasProgress() { return progressMessage != null; }
     public String guidanceMessage() {
@@ -289,7 +236,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public boolean hasCompactContent() { return !guidanceMessage().trim().isEmpty(); }
     public boolean isMinimizedProgress() { return minimizedProgress; }
     private View[] expandedSections() {
-        return new View[]{header, headerDivider, scroll, controls, divider, reviewConfirm, recoveryActions,
+        return new View[]{header, scroll, controls, divider, reviewConfirm, recoveryActions,
                 reviewNavigation};
     }
     // [UI 수정] 줄이기 상태의 표시 항목/배경. 말풍선 꼬리 모양은 CompactBubbleBackground에서 그린다.
@@ -394,23 +341,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
                 : Math.min(maxHeight, MeasureSpec.getSize(height));
         boolean compact = available < dp(260) * Math.max(1f, getResources().getConfiguration().fontScale);
         heading.setTextSize(ClickTextScale.size(getContext(), compact ? 20 : 22));
-        int innerWidth = MeasureSpec.getSize(width) - getPaddingLeft() - getPaddingRight();
-        float headerWidth = dp((backButton.getVisibility() == VISIBLE ? 48 : 0) + 66 + 16 + 16 + 14 + 4 + 20 + 4)
-                + headerReplay.getPaint().measureText("음성 멈춤")
-                + ((TextView) close).getPaint().measureText("줄이기");
-        boolean stacked = headerWidth > innerWidth;
-        if (header.getOrientation() != (stacked ? VERTICAL : HORIZONTAL)) {
-            header.setOrientation(stacked ? VERTICAL : HORIZONTAL);
-            headerIdentity.setLayoutParams(new LayoutParams(stacked ? -1 : 0, -2, stacked ? 0 : 1));
-            headerActions.setLayoutParams(new LayoutParams(stacked ? -1 : -2, -2));
-        }
-        LayoutParams headerParams = (LayoutParams) header.getLayoutParams();
-        headerParams.bottomMargin = dp(FloatingPanelStyle.HEADER_DIVIDER_GAP_DP);
         super.onMeasure(width, MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST));
     }
     private void clear(String title) {
         reviewScreen = false;
-        backButton.setVisibility(GONE);
+        backButton.setVisibility(INVISIBLE);
         reviewStep = 0;
         setMinimizedProgress(false);
         updateBubblePadding();
