@@ -60,6 +60,12 @@ public final class DesignPreviewActivity extends Activity {
         setContentView(R.layout.activity_design_preview);
         splash = findViewById(R.id.splash_screen);
         artwork = findViewById(R.id.splash_artwork);
+        // Library R ids can be unresolved in some host APKs; the splash layout order is fixed.
+        if (artwork == null && splash instanceof android.view.ViewGroup
+                && ((android.view.ViewGroup) splash).getChildCount() > 1
+                && ((android.view.ViewGroup) splash).getChildAt(1) instanceof HomeStartArtworkView) {
+            artwork = (HomeStartArtworkView) ((android.view.ViewGroup) splash).getChildAt(1);
+        }
         splash.setOnApplyWindowInsetsListener((view, insets) -> {
             view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
                     insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
@@ -69,9 +75,14 @@ public final class DesignPreviewActivity extends Activity {
 
         if (savedInstanceState == null && ValueAnimator.areAnimatorsEnabled()) {
             View logo = findViewById(R.id.splash_logo);
-            reveal(logo, 0L).start();
-            reveal(artwork, 80L).start();
-            reveal(findViewById(R.id.splash_tagline), 160L).start();
+            if (logo != null) reveal(logo, 0L).start();
+            if (artwork != null) reveal(artwork, 80L).start();
+            View tagline = findViewById(R.id.splash_tagline);
+            if (tagline == null && splash instanceof android.view.ViewGroup
+                    && ((android.view.ViewGroup) splash).getChildCount() > 2) {
+                tagline = ((android.view.ViewGroup) splash).getChildAt(2);
+            }
+            if (tagline != null) reveal(tagline, 160L).start();
         }
     }
 
@@ -79,7 +90,7 @@ public final class DesignPreviewActivity extends Activity {
     protected void onResume() {
         super.onResume();
         resumed = true;
-        artwork.setAnimationActive(true);
+        if (artwork != null) artwork.setAnimationActive(true);
         // Posting to the attached view starts the timer after the initial layout.
         splash.post(startCountdown);
     }
@@ -87,7 +98,7 @@ public final class DesignPreviewActivity extends Activity {
     @Override
     protected void onPause() {
         resumed = false;
-        artwork.setAnimationActive(false);
+        if (artwork != null) artwork.setAnimationActive(false);
         splash.removeCallbacks(startCountdown);
         handler.removeCallbacks(openOnboarding);
         countdown.pause(SystemClock.uptimeMillis());
