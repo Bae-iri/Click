@@ -34,7 +34,7 @@ import com.click.ui.common.ClickTextScale;
  * 수정 위치 안내 (파일에서 "[UI 수정]"을 검색):
  * - 접힌 원형 버튼: dispatchDraw(). 커서 모양/색/그림자는 ClickIconRenderer.java.
  * - 창 크기: getWindowWidth(), getWindowHeight().
- * - 펼친 창의 배치: renderPanel()의 공통 헤더와 MENU/VOICE/TEXT 분기.
+ * - 펼친 창의 헤더/구분선: FloatingPanelHeader.java. 본문: renderPanel()의 MENU/VOICE/TEXT 분기.
  * - 공통 버튼/글꼴: action(), feature(), label(). 입력창 스타일은 생성자.
  * - 기본 색상: ui/common/ClickUi.java. 다른 화면에서도 쓰므로 변경 시 함께 영향을 받는다.
  * - 요청 확인/진행 안내창: 이 파일이 아니라 TaskFlowOverlayView.java.
@@ -66,6 +66,7 @@ public final class ClickOverlayLayout extends ViewGroup {
     private final Path path = new Path();
     private final EditText goalInput;
     private LinearLayout panel;
+    private FloatingPanelHeader panelHeader;
     private TextView transcript;
     private LinearLayout textEntry;
     private TextView voiceSwitch;
@@ -207,10 +208,10 @@ public final class ClickOverlayLayout extends ViewGroup {
         }
     }
 
-    // [UI 수정] 모드별 창 너비: 접힘 64dp, 음성 300dp, 글 340dp, 메뉴 320dp.
+    // [UI 수정] 접힌 버튼은 64dp, 모든 펼친 창은 요청 확인과 같은 공통 너비.
     // 화면 폭에서는 24dp를 비운다. 실제 화면 좌표는 호스트가 결정한다.
     public int getWindowWidth(Mode target, int screenWidth) {
-        return target == Mode.COLLAPSED ? dp(64) : Math.min(screenWidth - dp(24), dp(target == Mode.VOICE ? 300 : target == Mode.TEXT ? 340 : 320));
+        return target == Mode.COLLAPSED ? dp(64) : Math.min(screenWidth - dp(24), dp(FloatingPanelStyle.PANEL_WIDTH_DP));
     }
     // [UI 수정] 펼친 창은 내용 높이를 측정하고 화면 높이 - 96dp로 제한한다.
     // 마지막 줄의 216/350/340dp는 패널을 아직 측정할 수 없을 때만 쓰는 초기 높이이다.
@@ -230,18 +231,25 @@ public final class ClickOverlayLayout extends ViewGroup {
         return getClickCenterX(target, getWindowWidth(target, getResources().getDisplayMetrics().widthPixels));
     }
     public float getClickCenterX(Mode target, int width) {
-        return target == Mode.COLLAPSED ? dp(32) : width - dp(FloatingPanelStyle.HORIZONTAL_PADDING_DP) - handleWidth() / 2f;
+        if (target == Mode.COLLAPSED) return dp(32);
+        return dp(FloatingPanelStyle.HORIZONTAL_PADDING_DP) + headerHandleBounds(width).exactCenterX();
     }
     public float getClickCenterY(Mode target) {
-        return target == Mode.COLLAPSED ? dp(32) : dp(FloatingPanelStyle.TOP_PADDING_DP) + headerHeight() / 2f;
+        if (target == Mode.COLLAPSED) return dp(32);
+        return dp(FloatingPanelStyle.TOP_PADDING_DP) + headerHandleBounds(
+                target == mode && getWidth() > dp(64) ? getWidth()
+                        : getWindowWidth(target, getResources().getDisplayMetrics().widthPixels)).exactCenterY();
     }
-
-    // [UI 수정] 헤더/줄이기 버튼 크기. 시스템 글자 확대 설정을 반영한 최소 높이/너비이다.
+    private android.graphics.Rect headerHandleBounds(int width) {
+        int inner = Math.max(1, width - dp(2 * FloatingPanelStyle.HORIZONTAL_PADDING_DP));
+        return panelHeader == null ? new android.graphics.Rect(inner - dp(56), 0, inner, dp(48))
+                : panelHeader.collapseBounds(inner);
+    }
     private int headerHeight() {
-        return dp(Math.max(48, Math.round(20 * getResources().getConfiguration().fontScale) + 12));
+        return panelHeader == null ? dp(48) : panelHeader.collapse.getMeasuredHeight();
     }
     private int handleWidth() {
-        return dp(Math.max(56, Math.round(36 * getResources().getConfiguration().fontScale) + 20));
+        return panelHeader == null ? dp(56) : panelHeader.collapse.getMeasuredWidth();
     }
 
     private void changeMode(Mode next) {
@@ -280,30 +288,12 @@ public final class ClickOverlayLayout extends ViewGroup {
         panel.setBackground(FloatingPanelStyle.surface(getResources().getDisplayMetrics().density));
         addView(panel);
 
-        // 공통 헤더: 왼쪽 커서/"클릭 안내", 오른쪽 "줄이기" 버튼.
-        LinearLayout header = new LinearLayout(getContext());
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout identity = new LinearLayout(getContext());
-        identity.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView cursor = new ImageView(getContext());
-        cursor.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
-        cursor.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-        identity.addView(cursor, new LinearLayout.LayoutParams(dp(23), dp(23)));
-        TextView title = label("클릭 안내", 16, ClickUi.TEXT, true);
-        title.setPadding(dp(6), 0, 0, 0);
-        identity.addView(title);
-        if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
-        header.addView(identity, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView close = FloatingPanelStyle.compactButton(getContext(), "줄이기", this::collapse);
-        close.setTextSize(ClickTextScale.size(getContext(), 12));
-        close.setId(R.id.overlay_collapse);
-        close.setGravity(Gravity.CENTER);
-        close.setMaxLines(1);
-        close.setContentDescription("줄이기. 작은 클릭 버튼으로 접기");
-        close.setFocusable(true);
-        close.setOnClickListener(view -> collapse());
-        header.addView(close, new LinearLayout.LayoutParams(handleWidth(), headerHeight()));
-        panel.addView(header, new LinearLayout.LayoutParams(-1, headerHeight()));
+        // 요청 확인·진행·결과와 같은 헤더/구분선을 사용한다.
+        panelHeader = new FloatingPanelHeader(getContext(), this::openMenu, () -> {}, this::collapse);
+        panelHeader.replay.setVisibility(INVISIBLE);
+        panelHeader.back.setVisibility(mode == Mode.MENU ? INVISIBLE : VISIBLE);
+        panelHeader.collapse.setId(R.id.overlay_collapse);
+        panel.addView(panelHeader, new LinearLayout.LayoutParams(-1, -2));
 
         // Keep cancellation available without showing transport or task-state copy.
         requestRow = new LinearLayout(getContext());
@@ -323,7 +313,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             choices.addView(welcome, spaced(0));
             choices.addView(feature("말로 입력", true, () -> changeMode(Mode.VOICE)), spaced(12));
             choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(8));
-            addScrollableBody(choices, FloatingPanelStyle.HEADER_GAP_DP);
+            addScrollableBody(choices, 0);
             // 진행 중인 요청에서 입력 메뉴를 다시 열어도 중지 버튼에 접근할 수 있다.
             panel.addView(requestRow, spaced(4));
         } else if (mode == Mode.VOICE) {
@@ -356,7 +346,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             transcript.setVisibility(GONE);
             transcript.setAccessibilityLiveRegion(ACCESSIBILITY_LIVE_REGION_POLITE);
             listening.addView(transcript, spaced(8));
-            addScrollableBody(listening, FloatingPanelStyle.HEADER_GAP_DP);
+            addScrollableBody(listening, 0);
             panel.addView(requestRow, spaced(0));
             LinearLayout actions = new LinearLayout(getContext());
             actions.setGravity(Gravity.CENTER_VERTICAL);
@@ -389,7 +379,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             voiceSwitch = voice;
             voice.setContentDescription("음성으로 입력하기");
             composer.addView(voice, buttonParams());
-            addScrollableBody(composer, FloatingPanelStyle.HEADER_GAP_DP);
+            addScrollableBody(composer, 0);
         }
     }
 
