@@ -176,8 +176,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         });
         headerReplay.setContentDescription("클릭 음성 안내 다시 듣기");
         headerReplay.setTextSize(ClickTextScale.size(context, 11)); headerReplay.setSingleLine(true);
-        headerReplay.setBackground(new InsetDrawable(rippleOutlined(Color.WHITE, 0xFFCEDDF4, 0x183478F6, 10), 0, dp(8), 0, dp(8)));
-        headerReplay.setPadding(dp(8), dp(8), dp(8), dp(8));
+        headerReplay.setBackground(new InsetDrawable(
+                rippleOutlined(0xFFEAF2FF, 0xFFCEDDF4, 0x223478F6, 10), 0, dp(8), 0, dp(8)));
+        headerReplay.setPadding(dp(14), dp(8), dp(14), dp(8));
         Drawable speaker = context.getDrawable(R.drawable.ic_overlay_speaker);
         speaker.setBounds(0, 0, dp(14), dp(14));
         headerReplay.setCompoundDrawablesRelative(speaker, null, null, null);
