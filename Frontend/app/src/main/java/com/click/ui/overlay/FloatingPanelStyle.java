@@ -9,6 +9,7 @@ import android.graphics.drawable.InsetDrawable;
 import android.content.Context;
 import android.view.Gravity;
 import android.widget.Button;
+import com.click.ui.common.ClickTextScale;
 
 /** Shared surfaces for the input, review and guidance panels. */
 final class FloatingPanelStyle {
@@ -23,7 +24,7 @@ final class FloatingPanelStyle {
     static Button compactButton(Context context, String label, Runnable action) {
         float density = context.getResources().getDisplayMetrics().density;
         Button button = new Button(context);
-        button.setText(label); button.setTextSize(13); button.setAllCaps(false);
+        button.setText(label); button.setTextSize(ClickTextScale.size(context, 13)); button.setAllCaps(false);
         button.setTextColor(0xFF536885);
         button.setTypeface(context.getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         button.setIncludeFontPadding(false); button.setGravity(Gravity.CENTER);

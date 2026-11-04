@@ -43,6 +43,7 @@ import com.click.ui.home.HomeHelpItem;
 import com.click.domain.goal.QuickHelpTask;
 import com.click.service.overlay.ClickOverlayService;
 import com.click.ui.common.ClickUi;
+import com.click.ui.common.ClickTextScale;
 import com.click.ui.home.HomeIconView;
 import com.click.ui.home.HomeStartArtworkView;
 
@@ -64,9 +65,11 @@ public final class HomeActivity extends AppCompatActivity {
     private LinearLayout homeTab, favoritesTab;
     private boolean homeResumed;
     private final Rect visibleArtwork = new Rect();
+    private float renderedTextScale;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        renderedTextScale = ClickTextScale.scale(this);
         favorites = new HomeFavoritesStore(this);
         regular = getResources().getFont(com.click.designpreview.R.font.pretendard_regular);
         medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
@@ -164,6 +167,10 @@ public final class HomeActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume(); homeResumed = true; requestLaunching = false;
+        if (Float.compare(renderedTextScale, ClickTextScale.scale(this)) != 0) {
+            recreate();
+            return;
+        }
         refreshFavorites();
         homeScroll.post(this::updateArtworkAnimation);
     }
@@ -234,7 +241,7 @@ public final class HomeActivity extends AppCompatActivity {
         requestInput.setId(R.id.home_request_input);
         requestInput.setHint(R.string.home_request_hint);
         requestInput.setContentDescription("궁금한 기능 입력");
-        requestInput.setTextSize(15); requestInput.setTypeface(regular);
+        requestInput.setTextSize(ClickTextScale.size(this, 15)); requestInput.setTypeface(regular);
         requestInput.setTextColor(INK); requestInput.setHintTextColor(SECONDARY);
         requestInput.setSingleLine(true); requestInput.setInputType(InputType.TYPE_CLASS_TEXT);
         requestInput.setImeOptions(EditorInfo.IME_ACTION_SEND);
@@ -486,7 +493,7 @@ public final class HomeActivity extends AppCompatActivity {
     private HomeIconView icon(HomeIconView.Kind kind) { return new HomeIconView(this, kind); }
     private TextView text(String value, float size, int color, Typeface typeface) {
         TextView text = new TextView(this);
-        text.setText(value); text.setTextSize(size); text.setTextColor(color); text.setTypeface(typeface);
+        text.setText(value); text.setTextSize(ClickTextScale.size(this, size)); text.setTextColor(color); text.setTypeface(typeface);
         text.setIncludeFontPadding(false); return text;
     }
     private void add(LinearLayout parent, View child, int topMargin) {

@@ -25,6 +25,7 @@ import android.widget.TextView;
 
 import com.click.R;
 import com.click.ui.common.ClickUi;
+import com.click.ui.common.ClickTextScale;
 
 /**
  * 플로팅 UI 수정의 시작점. 앱 내부와 다른 앱 위에 띄우는 버튼/입력창이 이 View를 공유한다.
@@ -99,7 +100,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         dragSlop = Math.max(ViewConfiguration.get(context).getScaledTouchSlop(), dp(12));
         // [UI 수정] 글 입력칸의 글자 크기(sp), 안내 문구, 여백(dp), 높이, 테두리/둥근 모서리.
         goalInput = new EditText(context);
-        goalInput.setTextSize(18);
+        goalInput.setTextSize(ClickTextScale.size(context, 18));
         goalInput.setTextColor(ClickUi.TEXT);
         goalInput.setHintTextColor(ClickUi.SUBTEXT);
         goalInput.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
@@ -294,7 +295,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         header.addView(identity, new LinearLayout.LayoutParams(0, -2, 1));
         TextView close = FloatingPanelStyle.compactButton(getContext(), "줄이기", this::collapse);
-        close.setTextSize(12);
+        close.setTextSize(ClickTextScale.size(getContext(), 12));
         close.setId(R.id.overlay_collapse);
         close.setGravity(Gravity.CENTER);
         close.setMaxLines(1);
@@ -451,7 +452,7 @@ public final class ClickOverlayLayout extends ViewGroup {
     private TextView label(String value, int size, int color, boolean bold) {
         TextView text = new TextView(getContext());
         text.setText(value);
-        text.setTextSize(size);
+        text.setTextSize(ClickTextScale.size(getContext(), size));
         text.setTextColor(color);
         text.setIncludeFontPadding(false);
         text.setTypeface(getResources().getFont(bold
