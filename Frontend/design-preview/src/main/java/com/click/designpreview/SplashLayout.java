@@ -65,8 +65,8 @@ public final class SplashLayout extends FrameLayout {
         int gap = dp(contentHeight < dp(400) ? 12 : 20);
         int availableHeight = Math.max(0, contentHeight - tagline.getMeasuredHeight() - gap * 2 - dp(32));
         int logoWidth = Math.min(dp(224), Math.round(contentWidth * .50f));
-        int artWidth = Math.min(dp(176), Math.round(contentWidth * .42f));
-        float illustrationHeight = logoWidth * 72f / 222f + artWidth * 112f / 160f;
+        int artWidth = Math.min(dp(180), Math.round(contentWidth * .48f));
+        float illustrationHeight = logoWidth * 72f / 222f + artWidth * 210f / 180f;
         float fit = illustrationHeight > 0 ? Math.min(1f, availableHeight / illustrationHeight) : 0f;
         logoWidth = Math.round(logoWidth * fit);
         artWidth = Math.round(artWidth * fit);
@@ -75,7 +75,7 @@ public final class SplashLayout extends FrameLayout {
                 MeasureSpec.makeMeasureSpec(Math.round(logoWidth * 72f / 222f), MeasureSpec.EXACTLY));
         findViewById(R.id.splash_artwork).measure(
                 MeasureSpec.makeMeasureSpec(artWidth, MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(Math.round(artWidth * 112f / 160f), MeasureSpec.EXACTLY));
+                MeasureSpec.makeMeasureSpec(Math.round(artWidth * 210f / 180f), MeasureSpec.EXACTLY));
     }
 
     @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {

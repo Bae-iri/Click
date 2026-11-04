@@ -18,7 +18,7 @@ public final class DesignPreviewActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ForegroundCountdown countdown;
     private View splash;
-    private SplashDocumentArtworkView artwork;
+    private HomeStartArtworkView artwork;
     private boolean resumed;
     private boolean navigated;
     private final Runnable openOnboarding = () -> {
