@@ -12,10 +12,12 @@ import com.click.data.remote.AgentServerContract;
 import com.click.data.remote.AgentActionEvents;
 import com.click.data.remote.AgentTurnContract;
 import com.click.data.remote.AgentTurnGateway;
+import com.click.data.local.QuickHelpSelectionStore;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
 import com.click.data.snapshot.ScreenSnapshot;
 import com.click.domain.goal.GoalCatalogClassifier;
 import com.click.domain.goal.RequirementReview;
+import com.click.domain.goal.QuickHelpTask;
 import com.click.service.accessibility.ClickAccessibilityService;
 import com.click.service.accessibility.LatestScreenSnapshot;
 import com.click.ui.overlay.GuideOverlayView;
@@ -557,6 +559,38 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("goal-inputs.v1", sent.get(3).getString("preparation_version"));
     }
 
+    @Test public void favoriteSelectionReachesServerPreparationAndStillRequiresConfirmation() throws Exception {
+        QuickHelpSelectionStore selections = mock(QuickHelpSelectionStore.class);
+        set("quickHelpSelections", selections);
+        set("activeVoiceRequestId", "favorite-request");
+        Method resolve = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
+        resolve.setAccessible(true);
+        for (QuickHelpTask task : QuickHelpTask.values()) {
+            when(selections.get("favorite-request")).thenReturn(task.goalType);
+            goal = catalog.executableGoal(task.goalType).toTypedGoalJson();
+            resolve.invoke(service, task.requestText, null);
+            JSONObject request = sent.get(sent.size() - 1);
+            assertEquals("resolve_goal", request.getString("command_type"));
+            assertEquals("goal-inputs.v1", request.getString("preparation_version"));
+            assertTrue(request.getString("source_text").startsWith(task.requestText));
+            assertTrue(request.getString("source_text").contains("사용자가 선택한 범위: 휴대폰 전체"));
+            assertNull("Selecting a favorite must not start an unconfirmed task", get("acceptedGoal"));
+        }
+        assertEquals(QuickHelpTask.values().length, sent.size());
+    }
+
+    @Test public void editedFavoriteRequestDoesNotReuseItsOriginalScope() throws Exception {
+        QuickHelpSelectionStore selections = mock(QuickHelpSelectionStore.class);
+        when(selections.get("favorite-request")).thenReturn(QuickHelpTask.FONT_SIZE.goalType);
+        set("quickHelpSelections", selections);
+        set("activeVoiceRequestId", "favorite-request");
+        Method resolve = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
+        resolve.setAccessible(true);
+        String edited = "카카오톡에서 글자 크기 키워줘";
+        resolve.invoke(service, edited, null);
+        assertEquals(edited, sent.get(0).getString("source_text"));
+    }
+
     @Test public void normalFontPreparationShowsServerScopeChoicesBeforeStart() throws Exception {
         preparation.put("source_text", "글자 크기를 키워줘").put("status", "needs_input")
                 .put("missing_fields", new JSONArray().put("scope"))
@@ -569,6 +603,7 @@ public class ClickOverlayServiceExecutionTest {
         Method resolve = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
         resolve.setAccessible(true);
         resolve.invoke(service, "글자 크기를 키워줘", null);
+        assertEquals("글자 크기를 키워줘", sent.get(0).getString("source_text"));
         com.click.domain.goal.GoalPreparationState state =
                 (com.click.domain.goal.GoalPreparationState) get("goalPreparation");
         assertTrue(state.needsInput()); assertFalse(state.ready());
@@ -1880,6 +1915,15 @@ public class ClickOverlayServiceExecutionTest {
     }
 
     @Test public void automaticFontFlowAcceptsFinalApprovalThenExecutesSliderWithoutNewPolicyField() throws Exception {
+        assertAutomaticFontFlow(null);
+    }
+
+    @Test public void jevFontFlowAcceptsNativeApprovalAndExecutesSlider() throws Exception {
+        assertAutomaticFontFlow(new JSONObject().put("ui_selector", "jev")
+                .put("revalidate_before_action", true).put("runtime_strategy", "continue"));
+    }
+
+    private void assertAutomaticFontFlow(JSONObject policy) throws Exception {
         new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
         int[] bounds={20,500,1000,600};
         AccessibilityNodeSnapshot slider=new AccessibilityNodeSnapshot("node_0_1","node_0",true,
@@ -1894,6 +1938,7 @@ public class ClickOverlayServiceExecutionTest {
         JSONObject guide=new JSONObject().put("guide_command_id","font-confirm").put("command_type","confirmation")
                 .put("action_type","observe_only").put("proposed_action","drag").put("requires_user_action",true)
                 .put("target_node_id","node_0_1").put("target_bounds",new JSONArray(bounds)).put("message","크기를 바꿀까요?");
+        if (policy != null) guide.put("render_policy", policy);
         JSONObject body=new JSONObject().put("request_id",requests.get(1).requestId).put("session_id","frontend-session")
                 .put("episode_id","episode").put("session_version",1).put("task_status","IN_PROGRESS")
                 .put("state_id","S4_FONT_SIZE_CONTROL").put("guide_command",guide).put("metadata",metadata);

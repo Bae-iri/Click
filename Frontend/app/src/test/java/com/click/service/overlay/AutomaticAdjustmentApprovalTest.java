@@ -40,4 +40,17 @@ public class AutomaticAdjustmentApprovalTest {
   assertFalse(AutomaticAdjustmentApproval.eligible(command("drag",new JSONObject().put("vision_fallback",new JSONObject())),metadata("font_size"),screen()));
   assertFalse(AutomaticAdjustmentApproval.eligible(command("drag",new JSONObject().put("recovery",new JSONObject())),metadata("font_size"),screen()));
  }
+ @Test public void acceptsJevProvenanceWithoutBypassingConcreteSliderChecks() throws Exception {
+  JSONObject policy = new JSONObject().put("ui_selector", "jev").put("revalidate_before_action", true)
+    .put("runtime_strategy", "continue");
+  assertTrue(AutomaticAdjustmentApproval.eligible(command("drag", policy), metadata("font_size"), screen()));
+  ScreenSnapshot moved = new ScreenSnapshot("com.android.settings", "2026-10-30T00:00:00Z",1080,2400,Collections.emptyList(),5);
+  assertFalse(AutomaticAdjustmentApproval.eligible(command("drag", policy), metadata("font_size"), moved));
+  policy.put("recovery", new JSONObject());
+  assertFalse(AutomaticAdjustmentApproval.eligible(command("drag", policy), metadata("font_size"), screen()));
+  policy.remove("recovery"); policy.put("revalidate_before_action", false);
+  assertFalse(AutomaticAdjustmentApproval.eligible(command("drag", policy), metadata("font_size"), screen()));
+  policy.put("revalidate_before_action", true).put("ui_selector", "unknown");
+  assertFalse(AutomaticAdjustmentApproval.eligible(command("drag", policy), metadata("font_size"), screen()));
+ }
 }

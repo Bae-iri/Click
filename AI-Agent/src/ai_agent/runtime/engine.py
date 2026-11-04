@@ -447,13 +447,21 @@ class ClickAgentEngine:
                 and not awaiting_vision_consent
                 and not (cycle.command and not normalized_nodes)
                 and not (vision_analysis and vision_analysis.status == 'masking_failed')):
-            guide_command = GuideCommand(guide_command_id='guide_' + uuid4().hex,
-                command_type=CommandType.HIGHLIGHT, action_type=ActionType.OBSERVE_ONLY,
-                message='조작 결과를 확인하고 있어요.' if awaiting_observation else
-                    '현재 화면에서 다음 조작을 확정하지 못했어요. 화면을 다시 확인해 주세요.',
-                safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
-                render_policy={'fallback_action': {'type': 'request_fresh_observation'},
-                    'ui_selector': 'jev', 'revalidate_before_action': True})
+            # An abstention must retain why fresh evidence is needed. Otherwise
+            # Android cannot distinguish an off-screen menu from a pending result
+            # and keeps rereading the same page instead of bounded list search.
+            if recovery_plan.decision != 'continue' and recovery_plan.next_action in {
+                    'manual_navigation', 'user_assistance', 'reobserve', 'reselect_graph'}:
+                guide_command = recovery_command(request.session_id, recovery_plan)
+            else:
+                guide_command = GuideCommand(guide_command_id='guide_' + uuid4().hex,
+                    command_type=CommandType.HIGHLIGHT, action_type=ActionType.OBSERVE_ONLY,
+                    message='조작 결과를 확인하고 있어요.' if awaiting_observation else
+                        '현재 화면에서 다음 조작을 확정하지 못했어요. 화면을 다시 확인해 주세요.',
+                    safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
+                    render_policy={'fallback_action': {'type': 'request_fresh_observation'}})
+            guide_command = replace(guide_command, render_policy={**guide_command.render_policy,
+                'ui_selector': 'jev', 'revalidate_before_action': True})
             keep_attempt = bool(attempt and not failed_attempt)
         elif self.screen_resolver:
             guide_command = replace(guide_command, render_policy={**guide_command.render_policy,
