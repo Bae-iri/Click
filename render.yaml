@@ -19,3 +19,11 @@ services:
         sync: false
       - key: GEMINI_API_KEY
         value: ""
+      - key: AI1_UI_SELECTOR_PROVIDER
+        value: jev
+      - key: TYPESAFE_API_KEY
+        sync: false
+      - key: JEV_MODEL
+        value: jev-1.14.0
+      - key: JEV_MIN_CONFIDENCE
+        value: "0.8"

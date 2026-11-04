@@ -25,6 +25,6 @@ class InferenceEndpoint:
         return cls(url, token)
 
     def post(self, payload: dict, *, timeout: float) -> httpx.Response:
-        with httpx.Client(timeout=httpx.Timeout(timeout, connect=3.0),
+        with httpx.Client(timeout=httpx.Timeout(timeout, connect=min(3.0, timeout)),
                           follow_redirects=False, trust_env=False) as client:
             return client.post(self.url, headers={"Authorization": f"Bearer {self.token}"}, json=payload)

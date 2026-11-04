@@ -29,12 +29,32 @@ METRICS = {"count_attempt", "task_completed", "state_score", "score_gap", "recov
            "score", "title_match", "control_match", "ambiguous", "title_conflict", "attempts", "retry_after_ms", "recoverable", "accessibility_tree_present", "vision_snapshot_present", "vision_has_screenshot",
            "vision_has_ocr_text", "requires_user_action", "session_stateful", "matched_from_vision"}
 METRICS.add("vision_processing_time_ms")
+UI_SELECTION_STATUSES = {"selected", "disabled", "skipped", "ineligible", "no_candidates", "candidate_limit",
+    "not_configured", "invalid_candidates", "input_too_large", "deadline_exceeded", "provider_error",
+    "timeout", "invalid_response", "uncertain", "low_confidence", "abstained", "invalid_choice", "waiting"}
 
 
 def diagnostic_payload(value, depth=0):
     if not isinstance(value, Mapping) or depth > 5:
         return {}
     output = {}
+    # AI1 provider diagnostics are a closed schema, never a provider response body.
+    selection = value.get("ui_selection")
+    if isinstance(selection, Mapping):
+        safe = {}
+        for key, allowed in (("provider", {"rules", "jev"}), ("status", UI_SELECTION_STATUSES),
+                             ("mode", {"primary", "auxiliary"})):
+            if isinstance(selection.get(key), str) and selection[key] in allowed:
+                safe[key] = selection[key]
+        if type(selection.get("called")) is bool:
+            safe["called"] = selection["called"]
+        count = selection.get("candidate_count")
+        if type(count) is int and 0 <= count <= 250:
+            safe["candidate_count"] = count
+        confidence = selection.get("confidence")
+        if type(confidence) in (int, float) and math.isfinite(confidence) and 0 <= confidence <= 1:
+            safe["confidence"] = confidence
+        output["ui_selection"] = safe
     if isinstance(value.get("candidates"), (list, tuple)):
         output["candidates"] = []
         for candidate in value["candidates"][:3]:

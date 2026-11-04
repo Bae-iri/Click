@@ -142,7 +142,7 @@ def evaluate_cases(cases, graphs):
         if case.get("graph_hash") and case["graph_hash"] != graph_digest(graph):
             raise ValueError("Replay graph hash mismatch")
         engine = ClickAgentEngine(task_graphs={graph.definition.task_id: graph},
-                                  similarity_scorer=KeywordFallbackSimilarityScorer())
+                                  similarity_scorer=KeywordFallbackSimilarityScorer(), ui_selector=None)
         responses, recovery_seen, recovered = [], False, False
         for index, step in enumerate(case["turns"]):
             obs = step["observation"]

@@ -109,7 +109,9 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
                            or recreated_font_control(node, attempt, transition, graph,
                                current_state_id, current_snapshot, observation_time, action_time))
                       and not node.node_id.startswith('vision:')
-                      and selector_evidence(node, transition, nodes, graph)[0] >= 0.7]
+                      and (selector_evidence(node, transition, nodes, graph)[0] >= 0.7
+                           or (attempt.get('target_selection_method') == 'jev_choice'
+                               and node.node_id == attempt.get('target_node_id')))]
         baseline = attempt.get('baseline_value')
         if len(candidates) != 1 or baseline is None or candidates[0].value is None:
             return result(Status.UNKNOWN, 'target_value_unobservable')

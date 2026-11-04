@@ -73,10 +73,10 @@ def evaluate() -> dict:
     rows = []
     for name, width, height, expected_bounds in CASES:
         started = perf_counter()
-        vision = ClickAgentEngine(similarity_scorer=KeywordFallbackSimilarityScorer()).handle_turn(
+        vision = ClickAgentEngine(similarity_scorer=KeywordFallbackSimilarityScorer(), ui_selector=None).handle_turn(
             request(name, width, height, expected_bounds, vision=True))
         latency_ms = (perf_counter() - started) * 1000
-        baseline = ClickAgentEngine(similarity_scorer=KeywordFallbackSimilarityScorer()).handle_turn(
+        baseline = ClickAgentEngine(similarity_scorer=KeywordFallbackSimilarityScorer(), ui_selector=None).handle_turn(
             request(name, width, height, expected_bounds, vision=False))
         rows.append({
             "case": name,
