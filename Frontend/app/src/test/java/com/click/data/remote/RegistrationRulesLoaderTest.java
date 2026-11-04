@@ -17,8 +17,8 @@ public class RegistrationRulesLoaderTest {
                 {"paths":{"/api/v1/auth/register":{"post":{"requestBody":{"content":{
                 "application/json":{"schema":{"$ref":"#/components/schemas/RegisterRequest"}}
                 }}}}},"components":{"schemas":{"RegisterRequest":{"properties":{
-                "email":{"type":"string"},"age_group":{"type":"string"},
-                "password":{"type":"string","minLength":%d,"maxLength":128}
+                "phone_number":{"type":"string"},"age_group":{"type":"string"},
+                "password":{"type":"string","minLength":%d,"maxLength":4}
                 }}}}}
                 """.formatted(minimum), null);
     }
@@ -27,13 +27,13 @@ public class RegistrationRulesLoaderTest {
         AtomicInteger calls = new AtomicInteger();
         RegistrationRulesLoader loader = new RegistrationRulesLoader(() -> {
             if (calls.incrementAndGet() == 1) throw new SocketTimeoutException();
-            return rules(8);
+            return rules(4);
         }, () -> 0L);
         RegistrationContract displayed = loader.load();
-        assertEquals(8, displayed.minimumPasswordLength);
+        assertEquals(4, displayed.minimumPasswordLength);
         RegistrationContract submitted = loader.load();
         assertSame(displayed, submitted);
-        assertEquals("12345678", submitted.request("테스트", "test@example.com", "12345678")
+        assertEquals("0123", submitted.request("테스트", "01012345678", "0123")
                 .getString("password"));
         assertEquals(2, calls.get());
     }
@@ -42,8 +42,8 @@ public class RegistrationRulesLoaderTest {
         for (int status : new int[] {408, 502, 503, 504}) {
             AtomicInteger calls = new AtomicInteger();
             RegistrationRulesLoader loader = new RegistrationRulesLoader(() ->
-                    calls.incrementAndGet() == 1 ? new HttpResult(status, "unavailable", null) : rules(12), () -> 0L);
-            assertEquals(12, loader.load().minimumPasswordLength);
+                    calls.incrementAndGet() == 1 ? new HttpResult(status, "unavailable", null) : rules(4), () -> 0L);
+            assertEquals(4, loader.load().minimumPasswordLength);
             assertEquals(2, calls.get());
         }
     }
@@ -64,14 +64,14 @@ public class RegistrationRulesLoaderTest {
         RegistrationRulesLoader loader = new RegistrationRulesLoader(() -> {
             int call = calls.incrementAndGet();
             if (call >= 3) throw new SocketTimeoutException();
-            return rules(call == 1 ? 12 : 8);
+            return rules(4);
         }, time::get);
-        assertEquals(12, loader.load().minimumPasswordLength);
+        assertEquals(4, loader.load().minimumPasswordLength);
         time.set(15 * 60 * 1000L - 1);
-        assertEquals(12, loader.load().minimumPasswordLength);
+        assertEquals(4, loader.load().minimumPasswordLength);
         assertEquals(1, calls.get());
         time.incrementAndGet();
-        assertEquals(8, loader.load().minimumPasswordLength);
+        assertEquals(4, loader.load().minimumPasswordLength);
         time.addAndGet(15 * 60 * 1000L);
         assertThrows(SocketTimeoutException.class, loader::load);
         assertEquals(4, calls.get());
@@ -80,10 +80,10 @@ public class RegistrationRulesLoaderTest {
     @Test public void invalidDocumentIsNotCachedOrRetried() throws Exception {
         AtomicInteger calls = new AtomicInteger();
         RegistrationRulesLoader loader = new RegistrationRulesLoader(() ->
-                calls.incrementAndGet() == 1 ? new HttpResult(200, "{}", null) : rules(8), () -> 0L);
+                calls.incrementAndGet() == 1 ? new HttpResult(200, "{}", null) : rules(4), () -> 0L);
         assertThrows(JSONException.class, loader::load);
         assertEquals(1, calls.get());
-        assertEquals(8, loader.load().minimumPasswordLength);
+        assertEquals(4, loader.load().minimumPasswordLength);
         assertEquals(2, calls.get());
     }
 

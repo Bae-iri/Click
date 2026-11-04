@@ -27,7 +27,7 @@ public final class KakaoSignIn {
 
     public static void start(Activity activity, Callback callback) {
         if (BuildConfig.KAKAO_NATIVE_APP_KEY.isEmpty()) {
-            callback.failed("카카오 로그인을 준비 중이에요. 이메일로 시작해 주세요.");
+            callback.failed("카카오 로그인을 준비 중이에요. 전화번호로 시작해 주세요.");
             return;
         }
         UserApiClient client = UserApiClient.Companion.getInstance();
@@ -51,7 +51,7 @@ public final class KakaoSignIn {
                 });
             } else client.loginWithKakaoAccount(activity, complete);
         } catch (RuntimeException error) {
-            callback.failed("카카오 로그인을 열지 못했어요. 이메일로 시작해 주세요.");
+            callback.failed("카카오 로그인을 열지 못했어요. 전화번호로 시작해 주세요.");
         }
     }
 

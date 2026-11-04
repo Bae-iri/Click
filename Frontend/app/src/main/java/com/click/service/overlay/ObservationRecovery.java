@@ -86,6 +86,26 @@ public final class ObservationRecovery {
         return recovery != null && recovery.optBoolean("recoverable", false)
                 && "user".equals(recovery.optString("waiting_for"));
     }
+    /** Fixed vocabulary of the supported task routes, not a guess from screen text. */
+    public static boolean targetSelectionFailed(JSONObject policy) {
+        JSONObject recovery = policy == null ? null : policy.optJSONObject("recovery");
+        return recovery != null && java.util.Set.of("TARGET_NOT_FOUND", "TARGET_NOT_VISIBLE",
+                "TARGET_AMBIGUOUS", "VISION_UNAVAILABLE").contains(recovery.optString("reason_code"));
+    }
+
+    public static String targetLabel(String stateId, String goalType) {
+        if (goalType == null) return null;
+        boolean font = goalType.startsWith("settings.font_size.");
+        boolean brightness = goalType.startsWith("settings.brightness.");
+        boolean volume = goalType.startsWith("settings.volume.");
+        if (!font && !brightness && !volume) return null;
+        if ("S0_UNKNOWN".equals(stateId)) return "설정";
+        if ("S1_SETTINGS_HOME".equals(stateId)) return volume ? "소리 및 진동" : "디스플레이";
+        if ("S2_DISPLAY_MENU".equals(stateId)) return font ? "글자 크기와 스타일" : brightness ? "밝기" : null;
+        if ("S3_FONT_MENU".equals(stateId) && font) return "글자 크기";
+        if ("S2_SOUND_MENU".equals(stateId) && volume) return "음량";
+        return null;
+    }
     public static String message(String stateId, JSONObject fallback, ScreenSnapshot screen) {
         if (fallback == null || !"target_not_found".equals(fallback.optString("reason"))
                 || !settingsScreen(screen) || !hasVisibleList(screen)) return null;

@@ -4,7 +4,7 @@ import android.app.Activity;
 
 /** Account and device integration owned by the single installed Click application. */
 public interface ClickHost {
-    interface Callback { void complete(boolean success, boolean duplicateEmail, String message); }
+    interface Callback { void complete(boolean success, boolean duplicateAccount, String message); }
     interface PasswordRulesCallback {
         void complete(int minimum, int maximum);
         void failed();
@@ -12,8 +12,8 @@ public interface ClickHost {
     void loadRegistrationRules(Activity activity, PasswordRulesCallback callback);
     boolean signedIn();
     boolean accessibilityEnabled();
-    void register(Activity activity, String name, String email, String password, Callback callback);
-    void login(Activity activity, String email, String password, Callback callback);
+    void register(Activity activity, String name, String phone, String password, Callback callback);
+    void login(Activity activity, String phone, String password, Callback callback);
     void loginWithKakao(Activity activity, Callback callback);
     void openHome(Activity activity);
     void openAccessibilityGuide(Activity activity);

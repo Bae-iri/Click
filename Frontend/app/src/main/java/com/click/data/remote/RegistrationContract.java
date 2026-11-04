@@ -1,5 +1,6 @@
 package com.click.data.remote;
 
+import com.click.designpreview.SignupInputRules;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -29,25 +30,35 @@ public final class RegistrationContract {
         JSONObject password = properties.getJSONObject("password");
         int minimum = password.getInt("minLength");
         int maximum = password.getInt("maxLength");
-        if (minimum < 1 || maximum < minimum || maximum > 4096) throw new JSONException("Invalid password limits");
+        if (!properties.has("phone_number") || minimum != 4 || maximum != 4)
+            throw new JSONException("Unsupported authentication contract: expected phone number and four-digit PIN");
         return new RegistrationContract(minimum, maximum, properties.has("name"));
     }
 
-    public JSONObject request(String name, String email, String password) throws JSONException {
-        int length = password.codePointCount(0, password.length());
-        if (length < minimumPasswordLength) {
-            throw new PasswordLengthException("비밀번호를 " + minimumPasswordLength + "글자 이상 입력해 주세요.");
+    public JSONObject request(String name, String phone, String password) throws JSONException {
+        JSONObject body = credentials(phone, password);
+        if (acceptsName && !SignupInputRules.validOptionalName(name)) {
+            throw new RegistrationInputException("이름은 50글자까지 입력할 수 있어요. 줄이거나 비워 두고 가입해 주세요.");
         }
-        if (length > maximumPasswordLength) {
-            throw new PasswordLengthException("비밀번호는 " + maximumPasswordLength + "글자까지 입력할 수 있어요.");
-        }
-        JSONObject body = new JSONObject().put("email", email).put("password", password);
         // Older deployments forbid the newly added name field. The app also saves the name locally.
         if (acceptsName && name != null && !name.trim().isEmpty()) body.put("name", name.trim());
         return body;
     }
 
+    public static JSONObject credentials(String phone, String pin) throws JSONException {
+        if (!SignupInputRules.validPhone(phone))
+            throw new RegistrationInputException("전화번호를 한 번 더 확인해 주세요.");
+        if (!SignupInputRules.validPin(pin))
+            throw new PasswordLengthException("비밀번호는 숫자 4자리로 입력해 주세요.");
+        return new JSONObject().put("phone_number", SignupInputRules.normalizePhone(phone))
+                .put("password", pin);
+    }
+
     public static final class PasswordLengthException extends IllegalArgumentException {
         private PasswordLengthException(String message) { super(message); }
+    }
+
+    public static final class RegistrationInputException extends IllegalArgumentException {
+        private RegistrationInputException(String message) { super(message); }
     }
 }

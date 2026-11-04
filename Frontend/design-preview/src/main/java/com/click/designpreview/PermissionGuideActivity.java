@@ -41,7 +41,9 @@ public final class PermissionGuideActivity extends Activity {
     private String spokenPage;
     private LinearLayout body;
     private ScrollView scroll;
+    private View backButton;
     private TextView counter;
+    private View[] progressBars;
     private TextView actionLabel;
     private OnboardingStartButton action;
     private Button later;
@@ -75,7 +77,27 @@ public final class PermissionGuideActivity extends Activity {
         });
 
         FrameLayout header = new FrameLayout(this);
+        header.setBackgroundColor(Color.WHITE);
+        LinearLayout progress = new LinearLayout(this);
+        progress.setId(R.id.guide_progress_bars);
+        progress.setOrientation(LinearLayout.HORIZONTAL);
+        progress.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+        FrameLayout.LayoutParams progressParams = new FrameLayout.LayoutParams(-2, -2,
+                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        progressParams.topMargin = dp(18);
+        header.addView(progress, progressParams);
+        progressBars = new View[PAGE_COUNT];
+        for (int i = 0; i < PAGE_COUNT; i++) {
+            View bar = new View(this);
+            bar.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(dp(46), dp(6));
+            if (i > 0) barParams.leftMargin = dp(6);
+            progress.addView(bar, barParams);
+            progressBars[i] = bar;
+        }
+
         ImageButton back = new ImageButton(this);
+        backButton = back;
         back.setId(R.id.guide_back);
         back.setImageResource(R.drawable.onboarding_back);
         back.setContentDescription(getString(R.string.onboarding_previous));
@@ -83,17 +105,18 @@ public final class PermissionGuideActivity extends Activity {
                 rounded(Color.WHITE, 24)));
         back.setPadding(dp(12), dp(12), dp(12), dp(12));
         back.setOnClickListener(view -> goBack());
-        header.addView(back, new FrameLayout.LayoutParams(dp(48), dp(48), Gravity.START));
-        TextView label = text(R.string.guide_name, 14, SECONDARY, regular);
-        label.setGravity(Gravity.CENTER);
-        FrameLayout.LayoutParams nameParams = new FrameLayout.LayoutParams(-1, -1);
-        nameParams.setMargins(dp(54), 0, dp(66), 0);
-        header.addView(label, nameParams);
+        FrameLayout.LayoutParams backParams = new FrameLayout.LayoutParams(dp(48), dp(48),
+                Gravity.BOTTOM | Gravity.START);
+        header.addView(back, backParams);
+
+        // Keep the old counter value available to existing accessibility instrumentation;
+        // the visible page indicator is the three-bar onboarding treatment above.
         counter = text(0, 14, BLUE, semibold);
         counter.setId(R.id.guide_step_counter);
-        counter.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
-        header.addView(counter, new FrameLayout.LayoutParams(dp(62), -1, Gravity.END));
-        column.addView(header, new LinearLayout.LayoutParams(-1, dp(48)));
+        counter.setVisibility(View.GONE);
+        counter.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        header.addView(counter, new FrameLayout.LayoutParams(1, 1, Gravity.END));
+        column.addView(header, new LinearLayout.LayoutParams(-1, dp(72)));
 
         scroll = new ScrollView(this);
         scroll.setId(R.id.guide_scroll);
@@ -180,7 +203,14 @@ public final class PermissionGuideActivity extends Activity {
         body.animate().cancel();
         body.removeAllViews();
         counter.setText(getString(R.string.guide_progress, page + 1, PAGE_COUNT));
-        counter.setContentDescription(getString(R.string.guide_progress_description, page + 1, PAGE_COUNT));
+        String description = getString(R.string.guide_progress_description, page + 1, PAGE_COUNT);
+        View progress = findViewById(R.id.guide_progress_bars);
+        progress.setContentDescription(description);
+        backButton.setVisibility(page == 0 ? View.INVISIBLE : View.VISIBLE);
+        for (int i = 0; i < progressBars.length; i++) {
+            progressBars[i].setBackgroundResource(i <= page
+                    ? R.drawable.onboarding_progress_active : R.drawable.onboarding_progress_inactive);
+        }
         int actionText = page == PAGE_COUNT - 1 ? R.string.guide_settings_now : R.string.onboarding_next;
         actionLabel.setText(actionText);
         action.setContentDescription(getString(actionText));
@@ -206,7 +236,7 @@ public final class PermissionGuideActivity extends Activity {
                 body.setTranslationY(dp(8));
                 body.animate().alpha(1f).translationY(0).setDuration(200).start();
             }
-            counter.announceForAccessibility(counter.getContentDescription());
+            progress.announceForAccessibility(description);
         }
     }
 

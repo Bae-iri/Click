@@ -545,6 +545,8 @@ public final class ClickOverlayLayout extends ViewGroup {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 if (!hitsHandle(event)) return false;
+                // Reserve this gesture before a surrounding ScrollView sees the first move.
+                if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                 downRawX = lastRawX = rawX;
                 downRawY = lastRawY = rawY;
                 holding = true;
@@ -565,6 +567,7 @@ public final class ClickOverlayLayout extends ViewGroup {
                 return true;
             case MotionEvent.ACTION_UP:
                 removeCallbacks(hideAfterHold);
+                if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
                 holding = false;
                 if (holdConsumed) return true;
                 if (dragging) {
@@ -578,6 +581,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_POINTER_DOWN:
                 removeCallbacks(hideAfterHold);
+                if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
                 holding = false;
                 holdConsumed = true;
                 if (dragging && callback != null) callback.onDragCancelled();

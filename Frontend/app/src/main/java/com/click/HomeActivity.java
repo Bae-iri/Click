@@ -2,12 +2,8 @@ package com.click;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.RadialGradient;
 import android.graphics.Rect;
-import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.RippleDrawable;
@@ -82,8 +78,7 @@ public final class HomeActivity extends AppCompatActivity {
                 | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
 
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(0xFFFCFDFF);
-        root.addView(new HomeBackgroundView(), new FrameLayout.LayoutParams(-1, -1));
+        root.setBackground(new com.click.designpreview.ClickBackgroundDrawable(getResources()));
         homeScroll = new ScrollView(this);
         homeScroll.setId(R.id.home_scroll);
         homeScroll.setFillViewport(true);
@@ -519,13 +514,4 @@ public final class HomeActivity extends AppCompatActivity {
     }
     private int dp(int value) { return ClickUi.dp(this, value); }
 
-    private final class HomeBackgroundView extends View {
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        HomeBackgroundView() { super(HomeActivity.this); setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO); }
-        @Override protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
-            paint.setShader(new RadialGradient(width + dp(4), dp(215), dp(210),
-                    new int[]{0xFFDFF1FF, 0xFFECF7FF, 0xFFFCFDFF}, new float[]{0, .67f, 1}, Shader.TileMode.CLAMP));
-        }
-        @Override protected void onDraw(Canvas canvas) { canvas.drawRect(0, 0, getWidth(), getHeight(), paint); }
-    }
 }

@@ -86,7 +86,7 @@ public final class OnboardingActivity extends Activity {
         });
         findViewById(R.id.onboarding_skip).setOnClickListener(view -> showPage(2, true));
         findViewById(R.id.guide_entry).setOnClickListener(view ->
-                startActivity(new Intent(this, AccountStartActivity.class)));
+                startActivity(new Intent(this, LoginActivity.class)));
         findViewById(R.id.onboarding_back).setOnClickListener(view -> goBack());
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
@@ -117,7 +117,7 @@ public final class OnboardingActivity extends Activity {
         visible(R.id.onboarding_skip, welcome);
         visible(R.id.onboarding_back, !welcome);
         visible(R.id.onboarding_start_arrow, page != 2);
-        visible(R.id.guide_entry, page == 2);
+        visible(R.id.guide_entry, false);
         if (feature) {
             ((OnboardingFeatureLayout) findViewById(R.id.onboarding_feature_scene)).setTask(page == 2);
             TextView bubble = findViewById(R.id.onboarding_feature_bubble);

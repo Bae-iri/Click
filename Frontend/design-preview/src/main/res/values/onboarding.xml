@@ -13,8 +13,8 @@
     <string name="onboarding_description">클릭이 휴대폰 사용을\n더 쉽고, 더 편하게 도와드릴게요.</string>
     <string name="onboarding_bubble">이제\n어렵지 않아요!</string>
     <string name="onboarding_skip">건너뛰기</string>
-    <string name="onboarding_signup">회원가입하기</string>
-    <string name="onboarding_login">이미 가입하셨나요? 로그인하기</string>
+    <string name="onboarding_signup">가입하기</string>
+    <string name="onboarding_login">전화번호로 로그인하기</string>
     <string name="onboarding_start">시작하기</string>
     <string name="onboarding_question_title">궁금한 화면을\n물어보세요</string>
     <string name="onboarding_question_description">지금 보고 있는 화면을\n클릭이 이해하고 알려드려요.</string>
