@@ -64,6 +64,7 @@ class ClickAgentEngine:
         trace_logger: TraceLogger | None = None,
         replay_recorder=None,
         state_resolver=None,
+        screen_resolver=None,
     ) -> None:
         self.session_store = session_store or InMemorySessionStore()
         self.task_graphs = task_graphs or TASK_GRAPHS
@@ -72,6 +73,7 @@ class ClickAgentEngine:
         self.trace_logger = trace_logger or TraceLogger()
         self.replay_recorder = replay_recorder
         self.state_resolver = state_resolver
+        self.screen_resolver = screen_resolver
 
     @property
     def traces(self):
@@ -272,6 +274,25 @@ class ClickAgentEngine:
         within_settling_interval = bool(awaiting_observation and action_time is not None
             and request.captured_at_ms is not None
             and 0 <= request.captured_at_ms - action_time < graph.policy.settle_ms)
+        selector_wait = False
+        if self.screen_resolver and not task_completed:
+            # Always allow correction of an apparently recognized but wrong state.
+            # Never issue another operation while its actual result is pending.
+            repeated_screen = bool(existing_session and existing_session.recovery_state.get(
+                "jev_wait_fingerprint") == current_snapshot.fingerprint)
+            if repeated_screen or awaiting_observation or (failed_attempt and previous_snapshot
+                    and previous_snapshot.fingerprint == current_snapshot.fingerprint):
+                selector_wait = True
+            else:
+                selected = self.screen_resolver.resolve(nodes=normalized_nodes, graph=graph,
+                    goal=typed_goal, raw_nodes=accessibility_nodes, session=existing_session,
+                    verification=verification_result, excluded_target_keys=failed_target_keys)
+                if selected is None:
+                    selector_wait = True
+                else:
+                    match_result = selected
+                    current_state_id = effective_state_id = selected.state_id
+                    current_snapshot = replace(current_snapshot, state_id=selected.state_id)
         cycle = decide_vision_cycle(request=request, session=existing_session, graph=graph,
             match=match_result, analysis=vision_analysis, completed=task_completed)
         awaiting_vision_consent = bool(cycle.command and cycle.command.command_type == CommandType.CONFIRMATION)
@@ -283,6 +304,12 @@ class ClickAgentEngine:
                 or (vision_analysis.status == "used" and match_result.fallback_reason))),
             within_settling_interval=within_settling_interval, completed=task_completed,
             user_retry=bool(request.user_action_event and request.user_action_event.action_type.value == "manual_override"))
+        if self.screen_resolver:
+            if selector_wait and (failed_attempt or (existing_session and
+                    existing_session.recovery_state.get("jev_wait_fingerprint") == current_snapshot.fingerprint)):
+                recovery_plan.state["jev_wait_fingerprint"] = current_snapshot.fingerprint
+            else:
+                recovery_plan.state.pop("jev_wait_fingerprint", None)
         recovery_count = recovery_plan.state.get("attempts", 0)
         replan_decision = recovery_plan.replan
         matched_target = next((node for node in normalized_nodes if node.node_id == match_result.target_node_id), None)
@@ -331,7 +358,7 @@ class ClickAgentEngine:
                 render_policy={'fallback_action': {'type': 'request_fresh_observation',
                     'reason': verification_result.evidence,
                     'expected_next_observation': {'send_fresh_accessibility_tree': True}}})
-        if (recovery_plan.decision != "continue" and (not awaiting_vision_consent or recovery_plan.next_action == "go_back") and not task_completed
+        if (not self.screen_resolver and recovery_plan.decision != "continue" and (not awaiting_vision_consent or recovery_plan.next_action == "go_back") and not task_completed
                 and guide_command.safety_level != SafetyLevel.BLOCKED
                 and recovery_plan.next_action != "open_settings"):
             guide_command = recovery_command(request.session_id, recovery_plan)
@@ -339,7 +366,7 @@ class ClickAgentEngine:
                 keep_attempt = True
             if recovery_plan.decision == "handoff":
                 keep_attempt = False
-        if recovery_plan.next_action == "go_back":
+        if not self.screen_resolver and recovery_plan.next_action == "go_back":
             keep_attempt = False
         if request.user_confirmation == 'rejected' and not cycle.command:
             guide_command = build_guide_command(session_id=request.session_id,
@@ -368,13 +395,24 @@ class ClickAgentEngine:
                 "recovery": recovery_plan.to_dict()})
         if "vision_fallback" in guide_command.render_policy:
             guide_command.render_policy["vision_fallback"]["vocabulary_key"] = vocabulary_key
-        if cycle.command and not awaiting_observation and not task_completed:
+        if cycle.command and not self.screen_resolver and not awaiting_observation and not task_completed:
             guide_command = cycle.command
             guide_command.render_policy["vision_cycle"] = cycle.state
             if "vision_fallback" in guide_command.render_policy:
                 guide_command.render_policy["vision_fallback"]["vocabulary_key"] = vocabulary_key
                 guide_command.render_policy["recovery"] = recovery_plan.to_dict()
             keep_attempt = False
+        if selector_wait and not task_completed:
+            guide_command = GuideCommand(guide_command_id='guide_' + uuid4().hex,
+                command_type=CommandType.HIGHLIGHT, action_type=ActionType.OBSERVE_ONLY,
+                message='?? ??? ??? ?? ??? ???? ???.',
+                safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
+                render_policy={'fallback_action': {'type': 'request_fresh_observation'},
+                    'ui_selector': 'jev', 'revalidate_before_action': True})
+            keep_attempt = bool(attempt and not failed_attempt)
+        elif self.screen_resolver:
+            guide_command = replace(guide_command, render_policy={**guide_command.render_policy,
+                'ui_selector': 'jev', 'revalidate_before_action': True})
         if keep_attempt:
             guide_command = replace(guide_command, guide_command_id=attempt['guide_command_id'])
             pending_transition_id = attempt['transition_id']

@@ -30,7 +30,17 @@ class RuntimeAgentAdapter:
             task_graph.definition.task_id: task_graph,
             task_graph.definition.goal_type: task_graph,
         }
-        self.runtime = ClickAgentEngine(session_store=session_store, task_graphs=graphs)
+        import os
+        provider = os.getenv("AI1_UI_SELECTOR_PROVIDER", "local").strip().lower()
+        if provider not in {"local", "jev"}:
+            raise ValueError("AI1_UI_SELECTOR_PROVIDER must be local or jev")
+        resolver = None
+        if provider == "jev":
+            from app.services.screen_jev import JevScreenResolver
+            resolver = JevScreenResolver()
+            resolver.configuration()
+        self.runtime = ClickAgentEngine(session_store=session_store, task_graphs=graphs,
+                                        screen_resolver=resolver)
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
         previous = self.runtime.session_store.get(request.session_id)
