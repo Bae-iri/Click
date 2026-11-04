@@ -289,9 +289,8 @@ public final class ClickOverlayLayout extends ViewGroup {
         addView(panel);
 
         // 요청 확인·진행·결과와 같은 헤더/구분선을 사용한다.
-        panelHeader = new FloatingPanelHeader(getContext(), this::openMenu, () -> {}, this::collapse);
+        panelHeader = new FloatingPanelHeader(getContext(), () -> {}, this::collapse);
         panelHeader.replay.setVisibility(INVISIBLE);
-        panelHeader.back.setVisibility(mode == Mode.MENU ? INVISIBLE : VISIBLE);
         panelHeader.collapse.setId(R.id.overlay_collapse);
         panel.addView(panelHeader, new LinearLayout.LayoutParams(-1, -2));
 

@@ -93,6 +93,6 @@ public final class ObservationRecovery {
         if ("S1_SETTINGS_HOME".equals(stateId)) target = "디스플레이";
         else if ("S2_DISPLAY_MENU".equals(stateId) || "S3_FONT_MENU".equals(stateId)) target = "글자 크기";
         else return null;
-        return target + " 항목이 현재 화면에 보이지 않아요. 줄이기로 안내 창을 접고, 설정 목록을 위로 밀어 아래 항목을 살펴보세요. 화면이 바뀌면 다시 확인할게요.";
+        return target + " 항목을 찾아주세요";
     }
 }

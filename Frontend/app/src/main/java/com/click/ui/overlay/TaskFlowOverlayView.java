@@ -19,6 +19,7 @@ import android.view.View;
 import android.widget.Button;
 import com.click.R;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -93,7 +94,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private String narrationMessage;
     private boolean narrationSpeaking, narrationUnavailable;
     private final TextView heading;
-    private final Button backButton;
     private LinearLayout guidanceProgress;
     private android.widget.ProgressBar progressBar;
     private TextView progressCount;
@@ -105,6 +105,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private final ScrollView compactScroll;
     private final TextView compactMessage;
     private String progressMessage;
+    private String targetHelpInstruction;
+    private boolean targetHelpOpened;
     private boolean minimizedProgress;
     private boolean automaticProgress;
     private boolean guidanceProgressKnown;
@@ -137,11 +139,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
         compactScroll.addView(bubble, new ScrollView.LayoutParams(-1, -2));
         compactScroll.setVisibility(GONE);
         addView(compactScroll, new LayoutParams(-1, -2));
-        header = new FloatingPanelHeader(context, listener::openInput, () -> {
+        header = new FloatingPanelHeader(context, () -> {
             if (narrationSpeaking) listener.stopGuidance();
             else listener.replayGuidance(guidanceMessage());
         }, listener::collapse);
-        backButton = header.back;
         headerReplay = header.replay;
         headerReplay.setId(R.id.task_flow_replay);
         header.collapse.setId(R.id.task_flow_collapse);
@@ -168,7 +169,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         reviewConfirm = primaryButton("안내 시작하기", () -> listener.confirmRequirements());
         styleReviewButton(reviewConfirm, true);
         reviewConfirm.setVisibility(GONE);
-        LayoutParams reviewParams = spaced(0); reviewParams.bottomMargin = dp(4);
+        LayoutParams reviewParams = spaced(0); reviewParams.bottomMargin = dp(12);
         addView(reviewConfirm, reviewParams);
         reviewNavigation = new LinearLayout(context);
         reviewNavigation.setVisibility(GONE);
@@ -182,21 +183,21 @@ public final class TaskFlowOverlayView extends LinearLayout {
         divider = new View(context);
         divider.setBackgroundColor(BORDER);
         LayoutParams dividerParams = new LayoutParams(LayoutParams.MATCH_PARENT, dp(1));
-        dividerParams.topMargin = dp(5);
-        dividerParams.bottomMargin = dp(5);
+        dividerParams.topMargin = dp(8);
+        dividerParams.bottomMargin = dp(8);
         addView(divider, dividerParams);
 
         controls = new LinearLayout(context);
         controls.setGravity(Gravity.CENTER);
         pause = FloatingPanelStyle.compactButton(context, "일시정지", () -> listener.control("pause_task"));
         LayoutParams pauseParams = new LayoutParams(0, -2, 1f);
-        pauseParams.rightMargin = dp(4);
+        pauseParams.rightMargin = dp(6);
         controls.addView(pause, pauseParams);
         Button stop = FloatingPanelStyle.compactButton(context, "요청 중지", () -> listener.control("cancel_task"));
         stop.setContentDescription("처리 중인 요청 중지");
         stop.setTextColor(0xFF536885);
         LayoutParams stopParams = new LayoutParams(0, -2, 1f);
-        stopParams.leftMargin = dp(4);
+        stopParams.leftMargin = dp(6);
         controls.addView(stop, stopParams);
         addView(controls);
     }
@@ -221,6 +222,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     private String compactGuidance() {
+        if (targetHelpInstruction != null && !targetHelpOpened) return "도움이 필요해요!";
         return automaticProgress ? AUTOMATIC_PROGRESS_MESSAGE : guidanceMessage();
     }
 
@@ -229,12 +231,15 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void setAvailableHeight(int height) { if (maxHeight != height) { maxHeight = height; requestLayout(); } }
     public boolean hasProgress() { return progressMessage != null; }
     public String guidanceMessage() {
+        if (targetHelpInstruction != null) return targetHelpInstruction;
         if (automaticProgress) return AUTOMATIC_PROGRESS_MESSAGE;
         return narrationMessage != null ? narrationMessage : progressMessage != null ? progressMessage
                 : heading.getText().toString();
     }
     public boolean hasCompactContent() { return !guidanceMessage().trim().isEmpty(); }
     public boolean isMinimizedProgress() { return minimizedProgress; }
+    public boolean isTargetHelp() { return targetHelpInstruction != null; }
+    public boolean hasOpenedTargetHelp() { return isTargetHelp() && targetHelpOpened; }
     private View[] expandedSections() {
         return new View[]{header, scroll, controls, divider, reviewConfirm, recoveryActions,
                 reviewNavigation};
@@ -243,6 +248,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void setMinimizedProgress(boolean minimized) {
         minimized = minimized && hasCompactContent();
         if (minimizedProgress == minimized) return;
+        if (!minimized && isTargetHelp()) targetHelpOpened = true;
         minimizedProgress = minimized;
         compactMessage.setText(minimized ? compactGuidance() : "");
         compactMessage.setContentDescription(minimized ? compactGuidance() + ". 눌러서 안내 펼치기" : null);
@@ -340,12 +346,14 @@ public final class TaskFlowOverlayView extends LinearLayout {
         int available = MeasureSpec.getMode(height) == MeasureSpec.UNSPECIFIED ? maxHeight
                 : Math.min(maxHeight, MeasureSpec.getSize(height));
         boolean compact = available < dp(260) * Math.max(1f, getResources().getConfiguration().fontScale);
-        heading.setTextSize(ClickTextScale.size(getContext(), compact ? 20 : 22));
+        heading.setTextSize(ClickTextScale.size(getContext(), reviewScreen && reviewStep == 2
+                ? (compact ? 19 : 20) : (compact ? 20 : 22)));
         super.onMeasure(width, MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST));
     }
     private void clear(String title) {
+        targetHelpInstruction = null;
+        targetHelpOpened = false;
         reviewScreen = false;
-        backButton.setVisibility(INVISIBLE);
         reviewStep = 0;
         setMinimizedProgress(false);
         updateBubblePadding();
@@ -373,6 +381,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         scroll.scrollTo(0, 0);
         scroll.post(() -> scroll.scrollTo(0, 0));
         heading.setText(title);
+        heading.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
         setNarrationState(false, narrationUnavailable);
         pause.setText("일시정지"); pause.setOnClickListener(v -> listener.control("pause_task"));
     }
@@ -494,8 +503,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         clear(title);
         reviewScreen = true;
         reviewStep = step;
-        backButton.setVisibility(VISIBLE);
-        backButton.setOnClickListener(view -> listener.openInput());
+        if (step == 2) heading.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         updateBubblePadding();
         // 요청 확인 중에도 일시정지/중지를 본문 스크롤 밖의 하단에 유지한다.
         divider.setVisibility(VISIBLE); controls.setVisibility(VISIBLE);
@@ -507,10 +515,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.setPadding(0, 0, 0, dp(step == 2 ? 4 : 6));
     }
 
-    private Button reviewNext(Runnable back, Runnable next) {
+    private Button reviewNext(Runnable next) {
         reviewNavigation.removeAllViews(); reviewNavigation.setOrientation(HORIZONTAL);
         reviewNavigation.setVisibility(VISIBLE);
-        backButton.setOnClickListener(view -> back.run());
         Button forward = primaryButton("다음 단계", next);
         styleReviewButton(forward, true);
         LayoutParams params = new LayoutParams(0, -2, 1); params.topMargin = dp(8);
@@ -525,10 +532,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         return forward;
     }
 
-    private void readyActions(Runnable back) {
+    private void readyActions() {
         reviewConfirm.setText("안내 시작하기");
         reviewConfirm.setVisibility(VISIBLE); reviewConfirm.setEnabled(true); reviewConfirm.setAlpha(1f);
-        backButton.setOnClickListener(view -> back.run());
         reviewNavigation.setOrientation(VERTICAL);
         reviewNavigation.setVisibility(VISIBLE);
     }
@@ -636,20 +642,33 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     private void reviewSummary(String message) {
-        TextView summary = text(message, 17);
+        reviewSummary(message, false);
+    }
+
+    private void reviewSummary(String message, boolean singleLine) {
+        LinearLayout card = new LinearLayout(getContext());
+        card.setTag("review_summary_card");
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(dp(16), dp(14), dp(16), dp(14));
+        card.setBackground(FloatingPanelStyle.summary(getResources().getDisplayMetrics().density));
+        ImageView icon = new ImageView(getContext());
+        icon.setImageResource(R.drawable.ic_flow_document);
+        icon.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        icon.setTag("review_summary_icon");
+        card.addView(icon, new LayoutParams(dp(26), dp(26)));
+        TextView summary = text(message, singleLine ? 15 : 17);
         reviewSummaryView = summary;
+        summary.setTag("review_summary_text");
         summary.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
-        summary.setLineSpacing(dp(2), 1.15f);
-        summary.setMaxLines(2);
+        summary.setGravity(Gravity.CENTER_VERTICAL);
+        summary.setPadding(0, 0, 0, 0);
+        summary.setLineSpacing(dp(2), 1.1f);
         summary.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
-        summary.setPadding(dp(14), dp(12), dp(14), dp(12));
-        Drawable document = getContext().getDrawable(R.drawable.ic_flow_document);
-        document.setBounds(0, 0, dp(28), dp(28));
-        summary.setCompoundDrawablesRelative(document, null, null, null);
-        summary.setCompoundDrawablePadding(dp(10));
-        summary.setBackground(FloatingPanelStyle.summary(getResources().getDisplayMetrics().density));
-        LayoutParams params = spaced(12); params.bottomMargin = dp(12);
-        content.addView(summary, params);
+        LayoutParams labelParams = new LayoutParams(0, -2, 1);
+        labelParams.setMarginStart(dp(12));
+        card.addView(summary, labelParams);
+        LayoutParams params = spaced(14); params.bottomMargin = dp(16);
+        content.addView(card, params);
     }
 
     private String preparedSummary(com.click.domain.goal.GoalPreparationState state) {
@@ -668,7 +687,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         reviewStage(1, "어떤 작업을 도와드릴까요?", "원하시는 작업을 선택해 주세요.");
         narrationMessage = message;
         final JSONObject[] selected = {null};
-        Button next = reviewNext(listener::openInput, () -> {
+        Button next = reviewNext(() -> {
             if (selected[0] != null) listener.chooseGoal(selected[0]);
         });
         content.addView(choiceCards(candidates, choice -> {
@@ -684,7 +703,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             narrationMessage = state.guidance();
             reviewSummary(preparedSummary(state));
             requestEditor(state.data.optString("source_text"), listener::resetGoalInputs);
-            readyActions(listener::resetGoalInputs);
+            readyActions();
             return;
         }
         JSONObject question = state.question();
@@ -695,7 +714,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if (state.needsInput()) {
             if ("choice".equals(question.optString("kind"))) {
                 final String[] answer = {null};
-                Button next = reviewNext(listener::resetGoalInputs, () -> {
+                Button next = reviewNext(() -> {
                     if (answer[0] != null) listener.answerGoalInput(answer[0]);
                 });
                 content.addView(choiceCards(question.optJSONArray("choices"), choice -> {
@@ -710,7 +729,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
                 input.setBackground(outline(Color.WHITE, BORDER, 14));
                 input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(question.optInt("max_length", 100))});
                 content.addView(input, spaced(14));
-                Button next = reviewNext(listener::openInput, () -> {
+                Button next = reviewNext(() -> {
                     String answer = input.getText().toString().trim();
                     if (!answer.isEmpty()) { hideKeyboard(input); listener.answerGoalInput(answer); }
                 });
@@ -743,8 +762,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
                 executable ? "" : "원하시는 항목을 선택해 주세요.");
         narrationMessage = spokenGuidance;
         if (executable) {
-            reviewSummary(review.summary());
-            readyActions(listener::resetGoalInputs);
+            String summary = review.summary();
+            if (review.isFont()) summary = summary.replace(" · ", " ");
+            reviewSummary(summary, review.isFont());
+            readyActions();
         } else if (review.needsTarget() || review.needsDirection()) {
             JSONArray choices = new JSONArray();
             try {
@@ -757,7 +778,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
                 }
             } catch (org.json.JSONException impossible) { throw new IllegalStateException(impossible); }
             final String[] choice = {null};
-            Button next = reviewNext(listener::openInput, () -> {
+            Button next = reviewNext(() -> {
                 if (choice[0] != null) listener.requirementChoice(choice[0]);
             });
             content.addView(choiceCards(choices, selected -> {
@@ -1007,16 +1028,34 @@ public final class TaskFlowOverlayView extends LinearLayout {
         observationRecovery(null, message, retry);
     }
     public void observationRecovery(String goal, String message, Runnable retry) {
-        clear("화면을 함께 확인해요");
+        clear("도움이 필요해요!");
         content.addView(text(message, 16), spaced(8));
         recoveryActions.setVisibility(VISIBLE);
-        recoveryActions.addView(primaryButton("새로고침", retry), spaced(8));
+        recoveryActions.addView(primaryButton("화면 다시 확인하기", retry), spaced(8));
     }
 
+    /** Compatibility for runtime callers that still expose manual list navigation. */
     public void scrollRecovery(String goal, String message, Runnable retry, Runnable down, Runnable up) {
         observationRecovery(goal, message, retry);
         content.addView(primaryButton("아래 항목 찾기", down), spaced(8));
         content.addView(secondaryButton("위 항목 찾기", up), spaced(8));
+    }
+
+    public void targetHelp(String target, Runnable notFound) {
+        clear("도움이 필요해요!");
+        targetHelpInstruction = target + " 항목을 찾아주세요";
+        content.addView(text(targetHelpInstruction, 20), spaced(8));
+        controls.setVisibility(GONE);
+        divider.setVisibility(GONE);
+        Button button = primaryButton("못 찾겠어요", () -> {});
+        button.setContentDescription("못 찾겠어요. 휴대폰 홈 화면으로 돌아가기");
+        button.setOnClickListener(view -> {
+            if (!button.isEnabled()) return;
+            button.setEnabled(false);
+            notFound.run();
+        });
+        recoveryActions.addView(button, spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
     }
 
     /** One continuous outline keeps the curved tail seamless with the message card. */

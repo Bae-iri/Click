@@ -18,11 +18,11 @@ import com.click.ui.common.ClickTextScale;
 
 /** 요청 확인 기준의 공통 헤더. 입력·진행·결과 화면도 이 규격을 그대로 사용한다. */
 final class FloatingPanelHeader extends LinearLayout {
-    final Button back, replay, collapse;
+    final Button replay, collapse;
     final View divider;
     private final LinearLayout row, identity, actions;
 
-    FloatingPanelHeader(Context context, Runnable onBack, Runnable onReplay, Runnable onCollapse) {
+    FloatingPanelHeader(Context context, Runnable onReplay, Runnable onCollapse) {
         super(context);
         setOrientation(VERTICAL);
         setTag("floating_header");
@@ -31,16 +31,8 @@ final class FloatingPanelHeader extends LinearLayout {
         identity = new LinearLayout(context);
         identity.setGravity(Gravity.CENTER_VERTICAL);
         identity.setMinimumHeight(dp(48));
-        back = button("", onBack, false);
-        back.setContentDescription("이전 단계");
-        back.setBackgroundColor(Color.TRANSPARENT);
-        Drawable arrow = context.getDrawable(R.drawable.ic_flow_back);
-        arrow.setBounds(0, 0, dp(22), dp(22));
-        back.setCompoundDrawables(arrow, null, null, null);
-        back.setPadding(dp(4), dp(10), dp(10), dp(10));
-        back.setVisibility(INVISIBLE);
-        identity.addView(back, new LayoutParams(dp(48), -1));
         ClickArtworkView brand = new ClickArtworkView(context, ClickArtworkView.Kind.WORDMARK);
+        brand.setTag("floating_logo");
         brand.setContentDescription("CLICK");
         identity.addView(brand, new LayoutParams(dp(66), dp(24)));
         row.addView(identity, new LayoutParams(0, -2, 1));
@@ -55,7 +47,7 @@ final class FloatingPanelHeader extends LinearLayout {
         actions.addView(replay, new LayoutParams(-2, -2));
         collapse = button("줄이기", onCollapse, false);
         collapse.setContentDescription("안내 창 줄이기");
-        LayoutParams gap = new LayoutParams(-2, -2); gap.leftMargin = dp(4);
+        LayoutParams gap = new LayoutParams(-2, -2); gap.leftMargin = dp(8);
         actions.addView(collapse, gap);
         row.addView(actions, new LayoutParams(-2, -2));
         addView(row, new LayoutParams(-1, -2));
@@ -94,9 +86,8 @@ final class FloatingPanelHeader extends LinearLayout {
         replay.measure(natural, natural); collapse.measure(natural, natural);
         int actionHeight = Math.max(dp(48), Math.max(replay.getMeasuredHeight(), collapse.getMeasuredHeight()));
         replay.getLayoutParams().height = collapse.getLayoutParams().height = actionHeight;
-        // Reserve back/replay slots even where unavailable. Screen changes cannot
-        // shift the logo/divider or unexpectedly switch between one and two rows.
-        boolean stacked = dp(48 + 66 + 8 + 4) + replay.getMeasuredWidth() + collapse.getMeasuredWidth()
+        // Replay keeps its slot when unavailable; the logo always starts at the left edge.
+        boolean stacked = dp(66 + 12 + 8) + replay.getMeasuredWidth() + collapse.getMeasuredWidth()
                 > MeasureSpec.getSize(width);
         int orientation = stacked ? VERTICAL : HORIZONTAL;
         if (row.getOrientation() != orientation) {
