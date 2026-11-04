@@ -11,7 +11,7 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="72dp"
-        android:background="@color/onboarding_surface"
+        android:background="@android:color/transparent"
         android:elevation="1dp"
         android:outlineProvider="none">
 
@@ -90,71 +90,10 @@
                     android:layout_marginTop="34dp"
                     android:labelFor="@id/signup_email"
                     android:text="@string/signup_email_label" />
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-                    <EditText
-                        android:id="@+id/signup_email"
-                        style="@style/SignupInput"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1.5"
-                        android:minHeight="64dp"
-                        android:autofillHints="emailAddress"
-                        android:hint="@string/signup_email_id_hint"
-                        android:imeOptions="actionNext"
-                        android:importantForAutofill="yes"
-                        android:inputType="textEmailAddress"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="12dp"
-                        android:saveEnabled="false"
-                        android:singleLine="true"
-                        android:textSize="17sp" />
-                    <TextView
-                        android:layout_width="28dp"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:importantForAccessibility="no"
-                        android:text="\u0040"
-                        android:textColor="@color/onboarding_text_secondary"
-                        android:textSize="19sp" />
-                    <Button
-                        android:id="@+id/signup_email_domain"
-                        style="@style/SignupInput"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:background="@drawable/signup_email_domain_background"
-                        android:drawableEnd="@drawable/signup_dropdown"
-                        android:drawablePadding="4dp"
-                        android:minHeight="64dp"
-                        android:minWidth="0dp"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="12dp"
-                        android:text="@string/signup_email_domain_select"
-                        android:textAllCaps="false"
-                        android:textColor="#2868E8"
-                        android:stateListAnimator="@null"
-                        android:textSize="15sp" />
-                </LinearLayout>
-                <EditText
-                    android:id="@+id/signup_email_custom_domain"
-                    style="@style/SignupInput"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:minHeight="64dp"
-                    android:paddingVertical="12dp"
-                    android:contentDescription="@string/signup_email_domain_custom_label"
-                    android:hint="@string/signup_email_domain_custom_hint"
-                    android:imeOptions="actionNext"
-                    android:importantForAutofill="no"
-                    android:inputType="textEmailAddress"
-                    android:nextFocusForward="@id/signup_password"
-                    android:saveEnabled="false"
-                    android:singleLine="true"
-                    android:visibility="gone" />
+                <EditText android:id="@+id/signup_email" style="@style/SignupInput"
+                    android:autofillHints="phoneNumber" android:hint="@string/signup_email_hint"
+                    android:imeOptions="actionNext" android:importantForAutofill="yes"
+                    android:inputType="phone" android:singleLine="true" android:saveEnabled="false" />
                 <TextView
                     android:id="@+id/signup_email_error"
                     style="@style/SignupError"
@@ -168,7 +107,7 @@
                     android:text="@string/signup_password_label" />
                 <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
+                    android:layout_height="56dp"
                     android:background="@drawable/signup_input_background">
                     <EditText
                         android:id="@+id/signup_password"
@@ -177,7 +116,7 @@
                         android:hint="@string/signup_password_hint"
                         android:imeOptions="actionNext"
                         android:importantForAutofill="yes"
-                        android:inputType="textPassword" />
+                        android:inputType="numberPassword" />
                     <ImageButton
                         android:id="@+id/signup_password_toggle"
                         android:layout_width="48dp"
@@ -207,7 +146,7 @@
                     android:text="@string/signup_password_confirm_label" />
                 <FrameLayout
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
+                    android:layout_height="56dp"
                     android:background="@drawable/signup_input_background">
                     <EditText
                         android:id="@+id/signup_password_confirm"
@@ -216,7 +155,7 @@
                         android:hint="@string/signup_password_confirm_hint"
                         android:imeOptions="actionDone"
                         android:importantForAutofill="yes"
-                        android:inputType="textPassword" />
+                        android:inputType="numberPassword" />
                     <ImageButton
                         android:id="@+id/signup_password_confirm_toggle"
                         android:layout_width="48dp"
@@ -265,22 +204,15 @@
                     android:hint="@string/signup_name_hint"
                     android:imeOptions="actionDone"
                     android:importantForAutofill="yes"
-                    android:inputType="textPersonName"
-                    android:maxLength="50" />
+                    android:inputType="textPersonName" />
+                <TextView
+                    style="@style/SignupHelper"
+                    android:text="@string/signup_name_helper" />
                 <TextView
                     android:id="@+id/signup_name_error"
                     style="@style/SignupError"
                     android:visibility="gone" />
 
-                <TextView
-                    android:id="@+id/signup_profile_helper"
-                    style="@style/SignupInfo"
-                    android:layout_marginTop="26dp"
-                    android:text="@string/signup_profile_helper" />
-                <Button android:id="@+id/signup_skip_profile" style="@style/OnboardingQuietButton"
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp" android:minHeight="56dp"
-                    android:text="@string/signup_skip_profile" />
             </LinearLayout>
         </LinearLayout>
     </ScrollView>
@@ -288,7 +220,7 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/onboarding_surface"
+        android:background="@android:color/transparent"
         android:clipChildren="false"
         android:clipToPadding="false"
         android:paddingTop="16dp"

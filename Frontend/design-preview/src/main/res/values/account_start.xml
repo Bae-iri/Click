@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="account_surface">#FCFDFF</color>
+    <color name="account_ink">#101A36</color>
+    <color name="account_blue">#3478FF</color>
     <string name="account_start_back">뒤로</string>
-    <string name="account_start_title">Click을 시작해볼까요?</string>
-    <string name="account_start_description">편한 방법을 골라 주세요.\n처음이라면 바로 가입을 도와드려요.</string>
-    <string name="account_start_kakao">카카오 로그인</string>
-    <string name="account_start_kakao_hint">카카오톡 계정으로 간편하게 시작해요.\nClick 비밀번호를 따로 만들 필요가 없어요.</string>
-    <string name="account_start_email">이메일로 가입하기</string>
-    <string name="account_start_login">이메일로 로그인하기</string>
+    <string name="account_start_title">회원가입</string>
+    <string name="account_start_close">회원가입 닫기</string>
+    <string name="account_start_description">나에게 편한 방법으로 가입하고,\n클릭과 함께 시작해요.</string>
+    <string name="account_start_kakao">카카오로 가입하기</string>
+    <string name="account_start_email">전화번호로 가입하기</string>
+    <string name="account_start_login">로그인하기</string>
     <string name="account_start_progress">카카오 로그인을 진행하고 있어요…</string>
-    <string name="account_start_existing">이메일로 가입한 적이 있다면 이메일로 로그인해 주세요. 카카오 계정은 별도의 Click 계정으로 시작해요.</string>
-    <string name="signup_skip_profile">입력 없이 가입하기</string>
+    <string name="login_kakao">카카오로 로그인</string>
+    <string name="login_kakao_progress">카카오 로그인 중…</string>
 </resources>

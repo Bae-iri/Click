@@ -2,9 +2,6 @@ package com.click.designpreview;
 
 import android.app.Activity;
 import android.app.Dialog;
-import android.widget.Button;
-import android.widget.RadioGroup;
-import android.widget.RadioButton;
 import android.widget.Toast;
 import android.content.Context;
 import android.content.Intent;
@@ -12,21 +9,16 @@ import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
-import android.util.Patterns;
 import android.view.MotionEvent;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.PopupWindow;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
@@ -34,29 +26,20 @@ import android.window.OnBackInvokedDispatcher;
 /** Two short, high-legibility signup steps for the independent design preview. */
 public final class SignupActivity extends Activity {
     private static final String PAGE_STATE = "signup_page";
-    private static final String EMAIL_STATE = "signup_email";
-    private static final String EMAIL_DOMAIN_STATE = "signup_email_domain";
-    private static final String EMAIL_DOMAIN_VALUE_STATE = "signup_email_domain_value";
-    private static final String EMAIL_CUSTOM_DOMAIN_STATE = "signup_email_custom_domain";
+    private static final String PHONE_STATE = "signup_email";
     private static final String NAME_STATE = "signup_name";
 
     private int page;
-    private EditText email;
-    private Button emailDomain;
-    private EditText emailCustomDomain;
-    private int emailDomainIndex = -1;
-    private PopupWindow emailDomainMenu;
+    private EditText phone;
     private EditText password;
     private EditText passwordConfirm;
     private EditText name;
-    private String confirmedEmail;
+    private String confirmedPhone;
     private boolean submitting;
     private ImageButton passwordToggle;
     private ImageButton passwordConfirmToggle;
     private boolean passwordVisible;
     private boolean passwordConfirmVisible;
-    private int minimumPasswordLength;
-    private int maximumPasswordLength;
     private boolean loadingPasswordRules;
     private boolean passwordRulesReady;
 
@@ -66,6 +49,7 @@ public final class SignupActivity extends Activity {
         configureWindow();
         setContentView(R.layout.activity_sign_up);
         View root = findViewById(R.id.signup_screen);
+        root.setBackground(new ClickBackgroundDrawable(getResources()));
         int side = dp(20);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             view.setPadding(side + insets.getSystemWindowInsetLeft(),
@@ -78,18 +62,10 @@ public final class SignupActivity extends Activity {
                 (view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
                         view.setClipBounds(new Rect(0, 0, right - left, bottom - top)));
 
-        email = findViewById(R.id.signup_email);
-        emailDomain = findViewById(R.id.signup_email_domain);
-        emailCustomDomain = findViewById(R.id.signup_email_custom_domain);
-        setupEmailDomain();
+        phone = findViewById(R.id.signup_email);
         password = findViewById(R.id.signup_password);
         passwordConfirm = findViewById(R.id.signup_password_confirm);
         name = findViewById(R.id.signup_name);
-        findViewById(R.id.signup_skip_profile).setOnClickListener(view -> {
-            if (submitting) return;
-            name.setText("");
-            onAction();
-        });
         passwordToggle = findViewById(R.id.signup_password_toggle);
         passwordConfirmToggle = findViewById(R.id.signup_password_confirm_toggle);
         password.setSaveEnabled(false);
@@ -107,7 +83,7 @@ public final class SignupActivity extends Activity {
 
         View action = findViewById(R.id.signup_action);
         action.setBackground(OnboardingDrawables.startButton(getResources()));
-        addShadow(action, 8);
+        addShadow(action, 2);
         action.setOnClickListener(view -> onAction());
         findViewById(R.id.signup_back).setOnClickListener(view -> goBack());
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -116,19 +92,7 @@ public final class SignupActivity extends Activity {
         }
 
         if (savedInstanceState != null) {
-            email.setText(savedInstanceState.getString(EMAIL_STATE, ""));
-            String savedDomain = savedInstanceState.getString(EMAIL_DOMAIN_VALUE_STATE);
-            String[] domains = getResources().getStringArray(R.array.signup_email_domains);
-            emailDomainIndex = -1;
-            if (savedDomain != null) {
-                for (int i = 0; i < domains.length; i++)
-                    if (domains[i].equals(savedDomain)) { emailDomainIndex = i; break; }
-            } else {
-                int previous = savedInstanceState.getInt(EMAIL_DOMAIN_STATE, -1);
-                emailDomainIndex = previous == 2 ? domains.length - 1 : previous;
-            }
-            emailCustomDomain.setText(savedInstanceState.getString(EMAIL_CUSTOM_DOMAIN_STATE, ""));
-            refreshEmailDomain();
+            phone.setText(savedInstanceState.getString(PHONE_STATE, ""));
             name.setText(savedInstanceState.getString(NAME_STATE, ""));
             // Passwords are never written into saved state; re-enter the account step after recreation.
             page = 0;
@@ -137,130 +101,8 @@ public final class SignupActivity extends Activity {
         loadPasswordRules();
     }
 
-    private void setupEmailDomain() {
-        refreshEmailDomain();
-        emailDomain.setOnClickListener(view -> showEmailDomainMenu());
-        // Keep full-address paste and email autofill working with the split fields.
-        email.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
-            @Override public void afterTextChanged(Editable text) {
-                String address = text.toString().trim();
-                int separator = address.indexOf('@');
-                if (separator < 0) return;
-                String domain = address.substring(separator + 1);
-                String[] domains = getResources().getStringArray(R.array.signup_email_domains);
-                emailDomainIndex = domains.length - 1;
-                for (int i = 0; i < domains.length - 1; i++) {
-                    if (domains[i].equalsIgnoreCase(domain)) { emailDomainIndex = i; break; }
-                }
-                emailCustomDomain.setText(isCustomEmailDomain() ? domain : "");
-                refreshEmailDomain();
-                text.replace(0, text.length(), address.substring(0, separator));
-                email.setSelection(email.length());
-                if (domain.isEmpty() && email.hasFocus()) focusCustomEmailDomain();
-            }
-        });
-    }
-
-    private void showEmailDomainMenu() {
-        if (emailDomainMenu != null) { emailDomainMenu.dismiss(); return; }
-        InputMethodManager keyboard = getSystemService(InputMethodManager.class);
-        if (keyboard != null) keyboard.hideSoftInputFromWindow(email.getWindowToken(), 0);
-        email.clearFocus();
-        emailCustomDomain.clearFocus();
-
-        RadioGroup options = new RadioGroup(this);
-        options.setOrientation(RadioGroup.VERTICAL);
-        options.setPadding(dp(6), dp(6), dp(6), dp(6));
-        String[] domains = getResources().getStringArray(R.array.signup_email_domains);
-        for (int i = 0; i < domains.length; i++) {
-            final int index = i;
-            RadioButton option = new RadioButton(this);
-            option.setId(View.generateViewId());
-            option.setText(domains[i]);
-            option.setTextSize(16);
-            option.setTextColor(i == emailDomainIndex ? AccountUi.BLUE : AccountUi.INK);
-            option.setTypeface(getResources().getFont(i == emailDomainIndex
-                    ? R.font.pretendard_semibold : R.font.pretendard_medium));
-            option.setIncludeFontPadding(false);
-            option.setGravity(Gravity.CENTER_VERTICAL);
-            option.setMinHeight(dp(48));
-            option.setPadding(0, dp(12), dp(10), dp(12));
-            option.setButtonDrawable(new android.graphics.drawable.InsetDrawable(
-                    new AccountSelectionMark(getResources().getDisplayMetrics().density), dp(8), 0, dp(8), 0));
-            option.setBackgroundResource(R.drawable.signup_selection_option);
-            options.addView(option, new RadioGroup.LayoutParams(-1, -2));
-            option.setChecked(i == emailDomainIndex);
-            option.setOnClickListener(view -> {
-                emailDomainIndex = index;
-                emailDomainMenu.dismiss();
-                refreshEmailDomain();
-                clearErrors(R.id.signup_email_error);
-                emailDomain.announceForAccessibility(domains[index]);
-                if (isCustomEmailDomain()) focusCustomEmailDomain();
-                else emailDomain.requestFocus();
-            });
-        }
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(false);
-        scroll.setScrollbarFadingEnabled(false);
-        scroll.addView(options, new ScrollView.LayoutParams(-1, -2));
-        android.graphics.drawable.GradientDrawable background = new android.graphics.drawable.GradientDrawable();
-        background.setColor(Color.WHITE);
-        background.setCornerRadius(dp(18));
-        background.setStroke(dp(1), 0xFFD9E2F2);
-        scroll.setBackground(background.getConstantState().newDrawable());
-        scroll.setClipToOutline(true);
-        int width = Math.min(getResources().getDisplayMetrics().widthPixels - dp(40),
-                dp(208 + Math.round(40 * Math.max(0f, getResources().getConfiguration().fontScale - 1f))));
-        int height = Math.min(dp(300), Math.round(getResources().getDisplayMetrics().heightPixels * .42f));
-        PopupWindow popup = new PopupWindow(scroll, width, height, true);
-        emailDomainMenu = popup;
-        popup.setBackgroundDrawable(background);
-        popup.setElevation(dp(8));
-        popup.setOutsideTouchable(true);
-        popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
-        popup.setOnDismissListener(() -> {
-            emailDomainMenu = null;
-            emailDomain.setActivated(false);
-        });
-        emailDomain.setActivated(true);
-        popup.showAsDropDown(emailDomain, 0, dp(6), Gravity.END);
-        if (emailDomainIndex >= 0) scroll.post(() ->
-                scroll.smoothScrollTo(0, options.getChildAt(emailDomainIndex).getTop()));
-    }
-
-    private boolean isCustomEmailDomain() {
-        return emailDomainIndex == getResources().getStringArray(R.array.signup_email_domains).length - 1;
-    }
-
-    private void refreshEmailDomain() {
-        String[] domains = getResources().getStringArray(R.array.signup_email_domains);
-        if (emailDomainIndex < -1 || emailDomainIndex >= domains.length) emailDomainIndex = -1;
-        String label = emailDomainIndex < 0 ? getString(R.string.signup_email_domain_select)
-                : domains[emailDomainIndex];
-        emailDomain.setText(label);
-        emailDomain.setContentDescription(getString(R.string.signup_email_domain_accessibility, label));
-        emailCustomDomain.setVisibility(isCustomEmailDomain() ? View.VISIBLE : View.GONE);
-        email.setNextFocusForwardId(isCustomEmailDomain() ? R.id.signup_email_custom_domain
-                : emailDomainIndex < 0 ? R.id.signup_email_domain : R.id.signup_password);
-    }
-
-    private void focusCustomEmailDomain() {
-        emailCustomDomain.requestFocus();
-        emailCustomDomain.setSelection(emailCustomDomain.length());
-        emailCustomDomain.post(() -> {
-            InputMethodManager keyboard = getSystemService(InputMethodManager.class);
-            if (keyboard != null) keyboard.showSoftInput(emailCustomDomain, InputMethodManager.SHOW_IMPLICIT);
-        });
-    }
-
-    private String emailAddress() {
-        String domain = emailDomainIndex < 0 ? "" : isCustomEmailDomain()
-                ? emailCustomDomain.getText().toString().trim()
-                : getResources().getStringArray(R.array.signup_email_domains)[emailDomainIndex];
-        return email.getText().toString().trim() + "@" + domain;
+    private String phoneNumber() {
+        return SignupInputRules.normalizePhone(phone.getText().toString());
     }
 
     private void loadPasswordRules() {
@@ -276,10 +118,8 @@ public final class SignupActivity extends Activity {
                 if (isDestroyed()) return;
                 loadingPasswordRules = false;
                 passwordRulesReady = true;
-                minimumPasswordLength = minimum;
-                maximumPasswordLength = maximum;
-                password.setHint(getString(R.string.signup_password_hint_length, minimum));
-                helper.setText(getString(R.string.signup_password_helper_length, minimum));
+                password.setHint(getString(R.string.signup_password_hint));
+                helper.setText(getString(R.string.signup_password_helper));
                 updateAction();
             }
 
@@ -298,7 +138,7 @@ public final class SignupActivity extends Activity {
         action.setEnabled(!loadingPasswordRules && !submitting);
         int label = loadingPasswordRules ? R.string.signup_password_rules_loading
                 : !passwordRulesReady ? R.string.signup_retry
-                : page == 0 ? R.string.signup_next : R.string.signup_review;
+                : R.string.signup_next;
         ((TextView) findViewById(R.id.signup_action_label)).setText(label);
         action.setContentDescription(getString(label));
     }
@@ -308,23 +148,28 @@ public final class SignupActivity extends Activity {
         if (!passwordRulesReady) { loadPasswordRules(); return; }
         if (page == 0) {
             if (!validateAccount()) return;
-            String address = emailAddress();
-            showEmailConfirmation(address);
+            String address = phoneNumber();
+            showPhoneConfirmation(address);
             return;
         }
-        if (!validateAccount() || !emailAddress().equals(confirmedEmail)) {
+        if (!validateAccount() || !phoneNumber().equals(confirmedPhone)) {
             showPage(0, true); return;
+        }
+        clearErrors(R.id.signup_name_error);
+        if (!SignupInputRules.validOptionalName(name.getText().toString())) {
+            showError(R.id.signup_name_error, R.string.signup_error_name, name);
+            return;
         }
         submitting = true;
         findViewById(R.id.signup_action).setEnabled(false);
         ((TextView) findViewById(R.id.signup_action_label)).setText("가입하는 중이에요…");
-        String address = confirmedEmail;
+        String address = confirmedPhone;
         ClickHost.from(this).register(this, name.getText().toString().trim(), address,
                 password.getText().toString(),
                 (success, duplicate, message) -> {
                     submitting = false;
                     findViewById(R.id.signup_action).setEnabled(true);
-                    ((TextView) findViewById(R.id.signup_action_label)).setText(R.string.signup_review);
+                    ((TextView) findViewById(R.id.signup_action_label)).setText(R.string.signup_next);
                     if (success) {
                         password.setText(""); passwordConfirm.setText("");
                         startActivity(new Intent(this, PermissionGuideActivity.class)); finish();
@@ -334,9 +179,9 @@ public final class SignupActivity extends Activity {
                 });
     }
 
-    private void showEmailConfirmation(String address) {
+    private void showPhoneConfirmation(String address) {
         InputMethodManager keyboard = getSystemService(InputMethodManager.class);
-        if (keyboard != null) keyboard.hideSoftInputFromWindow(email.getWindowToken(), 0);
+        if (keyboard != null) keyboard.hideSoftInputFromWindow(phone.getWindowToken(), 0);
         View focused = getCurrentFocus();
         if (focused != null) focused.clearFocus();
         Dialog dialog = new Dialog(this);
@@ -350,10 +195,10 @@ public final class SignupActivity extends Activity {
         }
         View confirm = dialog.findViewById(R.id.email_confirmation_continue);
         confirm.setBackground(OnboardingDrawables.startButton(getResources()));
-        confirm.setOnClickListener(v -> { dialog.dismiss(); confirmedEmail = address; showPage(1, true); });
+        confirm.setOnClickListener(v -> { dialog.dismiss(); confirmedPhone = address; showPage(1, true); });
         dialog.findViewById(R.id.email_confirmation_edit).setOnClickListener(v -> {
-            dialog.dismiss(); email.requestFocus();
-            if (keyboard != null) keyboard.showSoftInput(email, InputMethodManager.SHOW_IMPLICIT); });
+            dialog.dismiss(); phone.requestFocus();
+            if (keyboard != null) keyboard.showSoftInput(phone, InputMethodManager.SHOW_IMPLICIT); });
         dialog.findViewById(R.id.email_confirmation_close).setOnClickListener(v -> dialog.dismiss());
 
         Window window = dialog.getWindow();
@@ -369,9 +214,9 @@ public final class SignupActivity extends Activity {
 
     private void showExistingAccount(String address) {
         AccountExistsDialog.show(this, address,
-                () -> { showPage(0, true); email.requestFocus(); },
+                () -> { showPage(0, true); phone.requestFocus(); },
                 () -> {
-                    startActivity(new Intent(this, LoginActivity.class).putExtra("email", address));
+                    startActivity(new Intent(this, LoginActivity.class).putExtra("phone_number", address));
                     finish();
                 });
     }
@@ -380,24 +225,14 @@ public final class SignupActivity extends Activity {
         if (!passwordRulesReady) return false;
         clearErrors(R.id.signup_email_error, R.id.signup_password_error,
                 R.id.signup_password_confirm_error);
-        String emailValue = emailAddress();
+        String phoneValue = phoneNumber();
         String passwordValue = password.getText().toString();
-        if (!Patterns.EMAIL_ADDRESS.matcher(emailValue).matches()) {
-            showError(R.id.signup_email_error, R.string.signup_error_email, email);
-            if (!email.getText().toString().trim().isEmpty()) {
-                if (emailDomainIndex < 0) emailDomain.requestFocus();
-                else if (isCustomEmailDomain()) emailCustomDomain.requestFocus();
-            }
+        if (!SignupInputRules.validPhone(phoneValue)) {
+            showError(R.id.signup_email_error, R.string.signup_error_email, phone);
             return false;
         }
-        int passwordLength = passwordValue.codePointCount(0, passwordValue.length());
-        if (passwordLength < minimumPasswordLength || passwordLength > maximumPasswordLength) {
-            TextView error = findViewById(R.id.signup_password_error);
-            error.setText(getString(passwordLength < minimumPasswordLength
-                    ? R.string.signup_error_password_minimum : R.string.signup_error_password_maximum,
-                    passwordLength < minimumPasswordLength ? minimumPasswordLength : maximumPasswordLength));
-            error.setVisibility(View.VISIBLE);
-            password.requestFocus();
+        if (!SignupInputRules.validPin(passwordValue)) {
+            showError(R.id.signup_password_error, R.string.signup_error_pin, password);
             return false;
         }
         if (!passwordValue.equals(passwordConfirm.getText().toString())) {
@@ -411,7 +246,6 @@ public final class SignupActivity extends Activity {
     private void showPage(int requestedPage, boolean changedByUser) {
         page = Math.max(0, Math.min(1, requestedPage));
         boolean accountPage = page == 0;
-        findViewById(R.id.signup_skip_profile).setVisibility(accountPage ? View.GONE : View.VISIBLE);
         findViewById(R.id.signup_account_content).setVisibility(accountPage ? View.VISIBLE : View.GONE);
         findViewById(R.id.signup_profile_content).setVisibility(accountPage ? View.GONE : View.VISIBLE);
         findViewById(R.id.signup_step_one).setBackgroundResource(
@@ -473,8 +307,7 @@ public final class SignupActivity extends Activity {
     }
 
     private void goBack() {
-        if (emailDomainMenu != null) emailDomainMenu.dismiss();
-        else if (page > 0) showPage(0, true);
+        if (page > 0) showPage(0, true);
         else finish();
     }
 
@@ -504,19 +337,11 @@ public final class SignupActivity extends Activity {
 
     @Override protected void onSaveInstanceState(Bundle outState) {
         outState.putInt(PAGE_STATE, page);
-        outState.putString(EMAIL_STATE, email.getText().toString());
-        outState.putInt(EMAIL_DOMAIN_STATE, emailDomainIndex);
-        outState.putString(EMAIL_DOMAIN_VALUE_STATE, emailDomainIndex < 0 ? ""
-                : getResources().getStringArray(R.array.signup_email_domains)[emailDomainIndex]);
-        outState.putString(EMAIL_CUSTOM_DOMAIN_STATE, emailCustomDomain.getText().toString());
+        outState.putString(PHONE_STATE, phone.getText().toString());
         outState.putString(NAME_STATE, name.getText().toString());
         super.onSaveInstanceState(outState);
     }
 
-    @Override protected void onStop() {
-        if (emailDomainMenu != null) emailDomainMenu.dismiss();
-        super.onStop();
-    }
 
     private void configureWindow() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) getWindow().setDecorFitsSystemWindows(false);

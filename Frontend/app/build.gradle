@@ -16,8 +16,13 @@ def javaString = { value -> groovy.json.JsonOutput.toJson(value ?: "") }
 
 def clickApiBaseUrl = providers.gradleProperty("CLICK_API_BASE_URL")
         .getOrElse("https://click-db.onrender.com")
+// Keep machine-local Kakao setup across builds without committing an app key.
+def localSettings = new Properties()
+def localSettingsFile = rootProject.file("local.properties")
+if (localSettingsFile.isFile()) localSettingsFile.withInputStream { localSettings.load(it) }
 def kakaoNativeAppKey = providers.gradleProperty("KAKAO_NATIVE_APP_KEY")
-        .orElse(providers.environmentVariable("KAKAO_NATIVE_APP_KEY")).getOrElse("").trim()
+        .orElse(providers.environmentVariable("KAKAO_NATIVE_APP_KEY"))
+        .getOrElse(localSettings.getProperty("KAKAO_NATIVE_APP_KEY", "")).trim()
 if (kakaoNativeAppKey && !(kakaoNativeAppKey ==~ /[0-9a-fA-F]{32}/)) {
     throw new GradleException("KAKAO_NATIVE_APP_KEY must be the 32-character native app key")
 }

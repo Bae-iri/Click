@@ -100,28 +100,26 @@ public class TutorialSpeechScriptTest {
         verify(narrator).speak(activity.getString(R.string.tutorial_speech_review_ready));
     }
 
-    @Test public void holdingForOneSecondAdvancesOnReleaseWithoutRecordingOrServer() {
+    @Test public void releasingMicrophoneAdvancesWithoutMinimumHoldTimeOrRecording() {
         activity.findViewById(R.id.tutorial_next).performClick();
         ClickOverlayLayout control = activity.findViewById(R.id.tutorial_floating_control);
         control.openVoice();
         activity.onMicrophonePressed();
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(999));
         assertTrue(control.isVoiceInputActive());
         assertEquals("마이크를 꾹 눌러보세요", ((TextView) activity.findViewById(R.id.tutorial_title)).getText());
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1));
-        assertTrue(control.isVoiceInputActive());
         activity.onMicrophoneReleased();
         assertFalse(control.isVoiceInputActive());
         assertNotNull(find("안내 시작하기"));
         assertTrue("Practice must not create a microphone or STT client", inputs.constructed().isEmpty());
     }
 
-    @Test public void releaseAndBackgroundCancelThePendingPracticeStep() {
+    @Test public void cancelledGestureAndBackgroundNeverSubmitARequest() {
         activity.findViewById(R.id.tutorial_next).performClick();
         ClickOverlayLayout control = activity.findViewById(R.id.tutorial_floating_control);
         control.openVoice();
         activity.onMicrophonePressed();
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
+        activity.onMicrophoneCancelled();
         activity.onMicrophoneReleased();
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(4));
         assertEquals("마이크를 꾹 눌러보세요", ((TextView) activity.findViewById(R.id.tutorial_title)).getText());
@@ -129,6 +127,7 @@ public class TutorialSpeechScriptTest {
         controller.pause().stop();
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(4));
         controller.start().resume();
+        activity.onMicrophoneReleased();
         assertFalse(control.isVoiceInputActive());
         assertEquals("마이크를 꾹 눌러보세요", ((TextView) activity.findViewById(R.id.tutorial_title)).getText());
     }

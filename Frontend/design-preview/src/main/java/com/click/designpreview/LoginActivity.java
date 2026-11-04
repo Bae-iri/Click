@@ -9,7 +9,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
-import android.util.Patterns;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -21,8 +20,8 @@ import android.window.OnBackInvokedDispatcher;
 
 /** Login screen using the same typography, fields, and actions as signup. */
 public final class LoginActivity extends Activity {
-    private static final String EMAIL_STATE = "login_email";
-    private EditText email;
+    private static final String PHONE_STATE = "login_email";
+    private EditText phone;
     private EditText password;
     private ImageButton passwordToggle;
     private View action;
@@ -35,6 +34,7 @@ public final class LoginActivity extends Activity {
         setContentView(R.layout.activity_login);
 
         View root = findViewById(R.id.login_screen);
+        root.setBackground(new ClickBackgroundDrawable(getResources()));
         int side = dp(20);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             view.setPadding(side + insets.getSystemWindowInsetLeft(),
@@ -47,15 +47,15 @@ public final class LoginActivity extends Activity {
                 (view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
                         view.setClipBounds(new Rect(0, 0, right - left, bottom - top)));
 
-        email = findViewById(R.id.login_email);
+        phone = findViewById(R.id.login_email);
         password = findViewById(R.id.login_password);
         passwordToggle = findViewById(R.id.login_password_toggle);
         action = findViewById(R.id.login_action);
         password.setSaveEnabled(false);
         updatePasswordVisibility(false);
 
-        String suppliedEmail = getIntent().getStringExtra("email");
-        email.setText(state == null ? suppliedEmail : state.getString(EMAIL_STATE, suppliedEmail));
+        String suppliedPhone = getIntent().getStringExtra("phone_number");
+        phone.setText(state == null ? suppliedPhone : state.getString(PHONE_STATE, suppliedPhone));
         setLineHeight(R.id.login_title, 1.28f);
         setLineHeight(R.id.login_description, 1.5f);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -63,17 +63,24 @@ public final class LoginActivity extends Activity {
         }
 
         action.setBackground(OnboardingDrawables.startButton(getResources()));
-        action.setElevation(dp(8));
+        action.setElevation(dp(2));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            action.setOutlineAmbientShadowColor(0x243D5D8F);
+            action.setOutlineSpotShadowColor(0x303D5D8F);
+        }
         action.setContentDescription(getString(R.string.login_action));
         action.setOnClickListener(view -> login());
+        findViewById(R.id.login_kakao).setOnClickListener(view -> loginWithKakao());
         password.setOnEditorActionListener((view, actionId, event) -> {
             if (actionId != EditorInfo.IME_ACTION_DONE) return false;
             login(); return true;
         });
         passwordToggle.setOnClickListener(view -> updatePasswordVisibility(!passwordVisible));
         findViewById(R.id.login_back).setOnClickListener(view -> finish());
+        findViewById(R.id.login_signup).setBackgroundResource(R.drawable.account_email_button_background);
+        ((TextView) findViewById(R.id.login_signup)).setTextColor(getColor(R.color.account_blue));
         findViewById(R.id.login_signup).setOnClickListener(view -> {
-            startActivity(new Intent(this, AccountStartActivity.class)); finish();
+            if (!submitting) startActivity(new Intent(this, SignupActivity.class));
         });
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
@@ -85,24 +92,51 @@ public final class LoginActivity extends Activity {
         if (submitting) return;
         clearError(R.id.login_email_error); clearError(R.id.login_password_error);
         clearError(R.id.login_api_error);
-        String address = email.getText().toString().trim();
+        String address = SignupInputRules.normalizePhone(phone.getText().toString());
         String secret = password.getText().toString();
-        if (!Patterns.EMAIL_ADDRESS.matcher(address).matches()) {
-            showError(R.id.login_email_error, "이메일 주소를 한 번 더 확인해 주세요.", email); return;
+        if (!SignupInputRules.validPhone(address)) {
+            showError(R.id.login_email_error, getString(R.string.signup_error_email), phone); return;
         }
-        if (secret.isEmpty()) {
+        if (!SignupInputRules.validPin(secret)) {
             showError(R.id.login_password_error, getString(R.string.login_error_password_required), password); return;
         }
-        submitting = true; action.setEnabled(false); action.setAlpha(.62f);
+        setSubmitting(true);
         ((TextView) findViewById(R.id.login_action_label)).setText("로그인하는 중이에요…");
         ClickHost.from(this).login(this, address, secret, (success, duplicate, message) -> {
-            submitting = false; action.setEnabled(true); action.setAlpha(1f);
-            ((TextView) findViewById(R.id.login_action_label)).setText(R.string.login_action);
-            if (!success) { showError(R.id.login_api_error, message, null); return; }
-            password.setText("");
-            if (ClickHost.from(this).accessibilityEnabled()) ClickHost.from(this).openHome(this);
-            else { startActivity(new Intent(this, PermissionGuideActivity.class)); finish(); }
+            completeLogin(success, message);
         });
+    }
+
+    private void loginWithKakao() {
+        if (submitting) return;
+        clearError(R.id.login_api_error);
+        setSubmitting(true);
+        ((TextView) findViewById(R.id.login_kakao_label)).setText(R.string.login_kakao_progress);
+        ClickHost.from(this).loginWithKakao(this,
+                (success, duplicate, message) -> completeLogin(success, message));
+    }
+
+    private void completeLogin(boolean success, String message) {
+        if (isFinishing() || isDestroyed()) return;
+        setSubmitting(false);
+        if (!success) { showError(R.id.login_api_error, message, null); return; }
+        password.setText("");
+        if (ClickHost.from(this).accessibilityEnabled()) ClickHost.from(this).openHome(this);
+        else { startActivity(new Intent(this, PermissionGuideActivity.class)); finish(); }
+    }
+
+    // Both login methods share one in-flight request; switching cannot create duplicate sessions.
+    private void setSubmitting(boolean value) {
+        submitting = value;
+        for (int id : new int[]{R.id.login_action, R.id.login_kakao, R.id.login_signup}) {
+            View button = findViewById(id);
+            button.setEnabled(!value);
+            button.setAlpha(value ? .62f : 1f);
+        }
+        if (!value) {
+            ((TextView) findViewById(R.id.login_action_label)).setText(R.string.login_action);
+            ((TextView) findViewById(R.id.login_kakao_label)).setText(R.string.login_kakao);
+        }
     }
 
     private void updatePasswordVisibility(boolean visible) {
@@ -141,7 +175,7 @@ public final class LoginActivity extends Activity {
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
-        state.putString(EMAIL_STATE, email.getText().toString());
+        state.putString(PHONE_STATE, phone.getText().toString());
         super.onSaveInstanceState(state);
     }
 
