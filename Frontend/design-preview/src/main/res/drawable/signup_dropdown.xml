@@ -6,7 +6,7 @@
     <path
         android:fillColor="@android:color/transparent"
         android:pathData="M6,9 L12,15 L18,9"
-        android:strokeColor="@color/onboarding_text_secondary"
+        android:strokeColor="#697386"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
         android:strokeWidth="2" />

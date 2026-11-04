@@ -100,7 +100,7 @@ public final class MenuActivity extends AppCompatActivity {
         addRow(settings, MenuIconView.Kind.AUTOMATION, "자동으로 도와주기", "화면 이동과 설정 조절을 도와드려요", false,
                 view -> showAutomationSettings());
         divider(settings);
-        addRow(settings, MenuIconView.Kind.SHIELD, "안내 경로 개선 참여", "공통 안내를 개선하는 데 실행 결과를 사용해요", false,
+        addRow(settings, MenuIconView.Kind.SHIELD, "클릭 개선 참여", "사용 결과를 바탕으로 클릭을 더 편리하게 만들어요", false,
                 view -> showGraphConsent());
         add(page, settings, 10);
 
@@ -364,17 +364,17 @@ public final class MenuActivity extends AppCompatActivity {
 
     private void showGraphConsent() {
         LinearLayout content = vertical();
-        add(content, dialogSection("공통 안내 경로 개선",
-                "동의하면 앞으로의 작업 단계, 조작 결과, 소요 시간과 기종 정보를 공통 안내 경로 개선에 사용해요.",
+        add(content, dialogSection("더 편리한 클릭을 함께 만들어요",
+                "동의하면 앞으로의 작업 단계, 조작 결과, 소요 시간과 기종 정보를 클릭의 안내를 개선하는 데 사용해요.",
                 "음성 원문이나 화면 문구, 개인별 이해도와 선호도는 이 분석에 사용하지 않아요.",
                 "동의하지 않아도 안내를 이용할 수 있어요. 철회하면 아직 적용되지 않은 분석 결과를 삭제해요."), 0);
-        ClickDialog.show(this, "안내 경로 개선 참여", content,
+        ClickDialog.show(this, "클릭 개선 참여", content,
                 graphConsented ? "참여 동의 철회" : "동의하고 참여하기", () ->
                         graphConsent.set(!graphConsented, new GraphImprovementConsentGateway.Callback() {
                             @Override public void onResult(boolean consented) {
                                 if (isFinishing() || isDestroyed()) return;
                                 graphConsented = consented;
-                                Toast.makeText(MenuActivity.this, consented ? "경로 개선 참여에 동의했어요." : "참여 동의를 철회했어요.", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MenuActivity.this, consented ? "클릭 개선에 참여했어요." : "참여 동의를 철회했어요.", Toast.LENGTH_SHORT).show();
                             }
                             @Override public void onFailure() {
                                 if (!isFinishing() && !isDestroyed()) Toast.makeText(MenuActivity.this,

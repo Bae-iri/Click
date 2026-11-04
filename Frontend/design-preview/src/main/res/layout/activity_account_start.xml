@@ -1,45 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/account_start_screen"
     android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="@color/onboarding_surface" android:fillViewport="true">
+    android:background="@color/account_surface">
+<ScrollView
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:clipToPadding="false" android:scrollbars="none">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:padding="24dp">
-        <Button android:id="@+id/account_start_back" style="@style/OnboardingQuietButton"
-            android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:minHeight="48dp" android:text="@string/account_start_back" />
-        <TextView android:id="@+id/account_start_title" style="@style/SignupTitle"
-            android:layout_marginTop="36dp" android:text="@string/account_start_title" />
-        <TextView style="@style/SignupDescription" android:layout_marginTop="18dp"
-            android:text="@string/account_start_description" />
-        <TextView style="@style/SignupInfo" android:layout_marginTop="28dp"
-            android:text="@string/account_start_kakao_hint" />
-        <LinearLayout android:id="@+id/account_start_kakao"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="32dp" android:background="@drawable/kakao_login_background"
-            android:clickable="true" android:focusable="true"
-            android:contentDescription="@string/account_start_kakao"
-            android:minHeight="66dp" android:gravity="center" android:orientation="horizontal"
-            android:paddingHorizontal="16dp" android:paddingVertical="18dp">
-            <ImageView android:layout_width="24dp" android:layout_height="24dp"
-                android:layout_marginEnd="12dp" android:importantForAccessibility="no"
-                android:src="@drawable/kakao_symbol" />
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:importantForAccessibility="no" android:text="@string/account_start_kakao"
-                android:textColor="#D9000000" android:textSize="21sp" />
+        android:orientation="vertical" android:paddingHorizontal="24dp"
+        android:paddingTop="16dp" android:paddingBottom="32dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="48dp"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <com.click.designpreview.ClickBrandView
+                android:layout_width="106dp" android:layout_height="36dp"
+                android:importantForAccessibility="no" />
+            <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+            <ImageButton android:id="@+id/account_start_back"
+                android:layout_width="48dp" android:layout_height="48dp"
+                android:padding="14dp" android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/account_dialog_close" android:contentDescription="@string/account_start_close" />
         </LinearLayout>
-        <TextView android:id="@+id/account_start_progress" style="@style/SignupHelper"
-            android:accessibilityLiveRegion="polite" android:gravity="center"
-            android:text="@string/account_start_progress" android:visibility="gone" />
-        <TextView android:id="@+id/account_start_error" style="@style/SignupError"
-            android:accessibilityLiveRegion="polite" android:visibility="gone" />
-        <Button android:id="@+id/account_start_email" style="@style/OnboardingQuietButton"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="16dp" android:minHeight="56dp"
-            android:text="@string/account_start_email" />
-        <Button android:id="@+id/account_start_login" style="@style/OnboardingQuietButton"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:minHeight="56dp" android:text="@string/account_start_login" />
-        <TextView style="@style/SignupHelper" android:layout_marginTop="24dp"
-            android:text="@string/account_start_existing" />
+        <TextView android:id="@+id/account_start_title" style="@style/SignupTitle"
+            android:layout_marginTop="28dp" android:textSize="28sp"
+            android:textColor="@color/account_ink" android:text="@string/account_start_title" />
+        <TextView style="@style/SignupDescription"
+            android:layout_marginTop="12dp" android:textSize="18sp" android:lineSpacingExtra="5dp"
+            android:textColor="@color/account_ink" android:text="@string/account_start_description" />
+        <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:minHeight="244dp" android:layout_weight="1"
+            android:layout_marginVertical="16dp">
+            <com.click.designpreview.HomeStartArtworkView
+                android:layout_width="match_parent" android:layout_height="180dp"
+                android:layout_gravity="center" android:importantForAccessibility="no" />
+        </FrameLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <FrameLayout android:id="@+id/account_start_kakao"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:background="@drawable/kakao_login_background"
+                android:clickable="true" android:focusable="true"
+                android:contentDescription="@string/account_start_kakao" android:minHeight="48dp">
+                <ImageView android:layout_width="20dp" android:layout_height="20dp"
+                    android:layout_gravity="start|center_vertical" android:layout_marginStart="18dp"
+                    android:importantForAccessibility="no" android:src="@drawable/kakao_symbol" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_gravity="center" android:minHeight="48dp"
+                    android:paddingHorizontal="48dp" android:paddingVertical="12dp"
+                    android:importantForAccessibility="no" android:text="@string/account_start_kakao"
+                    android:fontFamily="@font/pretendard_medium" android:includeFontPadding="false"
+                    android:gravity="center" android:textColor="#D9000000" android:textSize="17sp" />
+            </FrameLayout>
+            <TextView android:id="@+id/account_start_progress" style="@style/SignupHelper"
+                android:accessibilityLiveRegion="polite" android:gravity="center"
+                android:text="@string/account_start_progress" android:visibility="gone" />
+            <TextView android:id="@+id/account_start_error" style="@style/SignupError"
+                android:accessibilityLiveRegion="polite" android:visibility="gone" />
+            <FrameLayout android:id="@+id/account_start_email"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:minHeight="48dp"
+                android:clickable="true" android:focusable="true"
+                android:contentDescription="@string/account_start_email"
+                android:background="@drawable/account_email_button_background">
+                <ImageView android:layout_width="20dp" android:layout_height="20dp"
+                    android:layout_gravity="start|center_vertical" android:layout_marginStart="18dp"
+                    android:importantForAccessibility="no" android:tint="@android:color/white"
+                    android:src="@drawable/account_phone_icon" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_gravity="center" android:minHeight="48dp"
+                    android:paddingHorizontal="48dp" android:paddingVertical="12dp"
+                    android:importantForAccessibility="no" android:text="@string/account_start_email"
+                    android:fontFamily="@font/pretendard_medium" android:includeFontPadding="false"
+                    android:gravity="center" android:textColor="@android:color/white" android:textSize="17sp" />
+            </FrameLayout>
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:layout_marginTop="16dp" android:layout_marginBottom="16dp"
+                android:background="@color/signup_border" android:importantForAccessibility="no" />
+            <Button android:id="@+id/account_start_login" style="@style/OnboardingQuietButton"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:minHeight="48dp" android:textColor="@color/account_blue"
+                android:background="@drawable/account_email_button_background"
+                android:paddingVertical="12dp" android:text="@string/account_start_login" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>
+</FrameLayout>

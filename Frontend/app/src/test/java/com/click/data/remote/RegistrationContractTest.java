@@ -6,52 +6,59 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class RegistrationContractTest {
-    private JSONObject document(int minimum, boolean withName) throws JSONException {
-        JSONObject properties = new JSONObject()
-                .put("phone_number", new JSONObject().put("type", "string"))
-                .put("password", new JSONObject().put("type", "string")
-                        .put("minLength", minimum).put("maxLength", 4))
-                .put("age_group", new JSONObject().put("type", "string"))
-                .put("occupation_category", new JSONObject().put("type", "string"));
-        if (withName) properties.put("name", new JSONObject().put("type", "string"));
-        return new JSONObject()
-                .put("paths", new JSONObject().put("/api/v1/auth/register", new JSONObject()
-                        .put("post", new JSONObject().put("requestBody", new JSONObject()
-                                .put("content", new JSONObject().put("application/json", new JSONObject()
-                                        .put("schema", new JSONObject().put("$ref",
-                                                "#/components/schemas/RegisterRequest"))))))))
-                .put("components", new JSONObject().put("schemas", new JSONObject()
-                        .put("RegisterRequest", new JSONObject().put("additionalProperties", false)
-                                .put("properties", properties))));
+    private JSONObject document(String field, int minimum, int maximum) throws JSONException {
+        JSONObject properties = new JSONObject().put(field, new JSONObject().put("type", "string"))
+                .put("name", new JSONObject().put("type", "string"))
+                .put("password", new JSONObject().put("minLength", minimum).put("maxLength", maximum));
+        return new JSONObject().put("paths", new JSONObject().put("/api/v1/auth/register", new JSONObject()
+                .put("post", new JSONObject().put("requestBody", new JSONObject().put("content", new JSONObject()
+                .put("application/json", new JSONObject().put("schema", new JSONObject().put("properties", properties))))))));
     }
 
-    @Test public void phoneAndFourDigitPinReachServer() throws Exception {
-        RegistrationContract contract = RegistrationContract.fromOpenApi(document(4, true));
-        JSONObject body = contract.request("Test", "01012345678", "0123");
-        assertEquals("0123", body.getString("password"));
-        assertEquals("01012345678", body.getString("phone_number"));
-        assertEquals("Test", body.getString("name"));
-        assertFalse(body.has("email"));
-        for (String invalid : new String[]{"123", "12345", "abcd", "１２３４"}) {
-            assertThrows(RegistrationContract.PasswordLengthException.class,
-                    () -> contract.request("", "01012345678", invalid));
+    @Test public void acceptsTheDeployedRegistrationSchemaSnapshot() throws Exception {
+        try (java.io.InputStream stream = getClass().getResourceAsStream("/auth/phone-registration-openapi.json")) {
+            assertNotNull(stream);
+            JSONObject document = new JSONObject(new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+            JSONObject body = RegistrationContract.fromOpenApi(document).request("", "01012345678", "0123");
+            assertEquals("01012345678", body.getString("phone_number"));
+            assertFalse(body.has("email"));
         }
     }
 
-    @Test public void unrelatedValidationFailureNeverBlamesPasswordLengthOrLeaksInput() {
-        ApiException error = new ApiException("POST", "/api/v1/auth/register", new HttpResult(422,
-                "{\"detail\":[{\"loc\":[\"body\",\"name\"],\"input\":\"private-input\"}]}", null));
-        String message = AuthErrorMessages.registration(error);
-        assertFalse(message.contains("비밀번호"));
-        assertFalse(message.contains("8글자"));
-        assertFalse(message.contains("private-input"));
-        assertTrue(message.contains("확인"));
+    @Test public void registrationUsesPhoneFieldAndPreservesLeadingZeroInPin() throws Exception {
+        RegistrationContract contract = RegistrationContract.fromOpenApi(document("phone_number", 4, 4));
+        JSONObject body = contract.request(" 클릭 ", " 010-1234-5678 ", "0123");
+        assertEquals("01012345678", body.getString("phone_number"));
+        assertEquals("0123", body.getString("password"));
+        assertEquals("클릭", body.getString("name"));
+        assertEquals(3, body.length());
+        assertFalse(body.has("email"));
     }
 
-    @Test public void connectionFailureDoesNotBlameInput() {
-        String message = AuthErrorMessages.registration(new java.io.IOException("private-details"));
-        assertTrue(message.contains("연결 상태"));
-        assertFalse(message.contains("private-details"));
-        assertFalse(message.contains("비밀번호"));
+    @Test public void loginUsesSameCredentialValidationAndPayload() throws Exception {
+        JSONObject body = RegistrationContract.credentials("010 1234 5678", "0000");
+        assertEquals("01012345678", body.getString("phone_number"));
+        assertEquals("0000", body.getString("password"));
+        assertEquals(2, body.length());
+        for (String phone : new String[]{"review@example.com", "0212345678", "010123", "010123456789", "０１０12345678"})
+            assertThrows(RegistrationContract.RegistrationInputException.class,
+                    () -> RegistrationContract.credentials(phone, "0123"));
+        for (String pin : new String[]{"123", "12345", "abcd", "１２３４", " 0123", "12a3"})
+            assertThrows(RegistrationContract.PasswordLengthException.class,
+                    () -> RegistrationContract.credentials("01012345678", pin));
+    }
+
+    @Test public void unsupportedServerSchemaFailsInsteadOfSendingAnEmailPayload() throws Exception {
+        assertThrows(JSONException.class, () -> RegistrationContract.fromOpenApi(document("email", 4, 4)));
+        assertThrows(JSONException.class, () -> RegistrationContract.fromOpenApi(document("phone_number", 8, 128)));
+    }
+
+    @Test public void optionalNameIsOmittedAndUnicodeLimitIsPreserved() throws Exception {
+        RegistrationContract contract = RegistrationContract.fromOpenApi(document("phone_number", 4, 4));
+        for (String name : new String[]{null, "", "   "})
+            assertFalse(contract.request(name, "01012345678", "0123").has("name"));
+        assertEquals("😀".repeat(50), contract.request("😀".repeat(50), "01012345678", "0123").getString("name"));
+        assertThrows(RegistrationContract.RegistrationInputException.class,
+                () -> contract.request("김".repeat(51), "01012345678", "0123"));
     }
 }

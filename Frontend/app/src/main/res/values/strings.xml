@@ -6,7 +6,7 @@
     <string name="overlay_tutorial_progress">%1$d / 3</string>
     <string name="overlay_tutorial_confirmed_title">확인이 완료됐어요!</string>
     <string name="overlay_tutorial_confirmed_description">확인한 요청으로 안내를 시작할 수 있어요.</string>
-    <string name="overlay_tutorial_retry_description">실제 안내에서는 앱 이름이나 변경할 범위를 수정할 수 있어요. 지금은 예시 내용을 확인해 보세요.</string>
+    <string name="overlay_tutorial_retry_description">앱 이름이나 변경할 범위를 확인하고, 원하는 내용으로 수정해 주세요.</string>
     <string name="overlay_tutorial_start">클릭 시작하기</string>
     <string name="app_ready">클릭을 사용할 준비가 되었어요</string>
     <string name="overlay_demo_title">클릭 안내</string>

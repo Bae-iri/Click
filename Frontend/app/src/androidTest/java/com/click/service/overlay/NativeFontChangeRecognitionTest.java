@@ -125,13 +125,26 @@ public class NativeFontChangeRecognitionTest {
         }
         assertNotNull(service);
         final ClickOverlayService active = service;
-        instrumentation.runOnMainSync(() -> call(active, "claimNextQueuedRequest"));
+        boolean freshRequest = "true".equals(InstrumentationRegistry.getArguments().getString("freshFontBackendFlow"));
+        com.click.data.local.TouchAutomationSettings automatic = new com.click.data.local.TouchAutomationSettings(app);
+        boolean originalAutomatic = automatic.isEnabled();
+        boolean startedFresh = false;
         try {
+            if (freshRequest) {
+                assertNull("Do not replace a running user request", field(active, "acceptedGoal"));
+                automatic.setEnabled(false);
+                app.startService(new Intent(app, ClickOverlayService.class)
+                        .putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL, "휴대폰 전체 글자 크기 키워줘")
+                        .putExtra(ClickOverlayService.EXTRA_SELECTED_GOAL_TYPE, "settings.font_size.increase"));
+                startedFresh = true;
+            } else instrumentation.runOnMainSync(() -> call(active, "claimNextQueuedRequest"));
             boolean ready = false;
             for (int i = 0; i < 160; i++) {
                 SystemClock.sleep(250);
                 final boolean[] state = {false};
                 instrumentation.runOnMainSync(() -> {
+                    if (freshRequest && field(active, "acceptedGoal") == null
+                            && !(boolean) field(active, "turnInFlight")) call(active, "confirmRequirementReview");
                     JSONObject goal = (JSONObject) field(active, "acceptedGoal");
                     state[0] = goal != null && "settings.font_size.increase".equals(goal.optString("goal_type"))
                             && field(active, "lastAutomaticConfirmationId") != null
@@ -163,6 +176,16 @@ public class NativeFontChangeRecognitionTest {
             AccessibilityNodeSnapshot slider = slider(current); assertNotNull(slider);
             assertTrue("A larger step must exist", slider.progress < slider.rangeMax);
             tapValue(automation, slider, slider.progress + 1);
+            SystemClock.sleep(700);
+            android.util.Log.i("ClickBackendFontFlow", "nativeStep before=" + current.appliedFontScale
+                    + " after=" + Settings.System.getFloat(app.getContentResolver(), Settings.System.FONT_SCALE)
+                    + " target=" + java.util.Arrays.toString(slider.bounds));
+            android.graphics.Bitmap diagnostic = automation.takeScreenshot();
+            if (diagnostic != null) {
+                try (java.io.FileOutputStream out = new java.io.FileOutputStream(new java.io.File(app.getCacheDir(), "native-font-after-tap.png"))) {
+                    diagnostic.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
+                } finally { diagnostic.recycle(); }
+            }
             boolean result = false;
             for (int i = 0; i < 160; i++) {
                 SystemClock.sleep(250);
@@ -171,8 +194,20 @@ public class NativeFontChangeRecognitionTest {
                 if (state[0]) { result = true; break; }
             }
             assertTrue("A real persisted slider change must reach the server result prompt", result);
+            SystemClock.sleep(500);
+            android.graphics.Bitmap image = automation.takeScreenshot();
+            assertNotNull(image);
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(new java.io.File(app.getCacheDir(), "native-font-result.png"))) {
+                image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
+            } finally { image.recycle(); }
             android.util.Log.i("ClickBackendFontFlow", "confirmationAccepted=true minimizedRetained=true resultPrompt=true");
         } finally {
+            if (startedFresh) {
+                // Cancel only the test request; do not fabricate a satisfaction answer.
+                instrumentation.runOnMainSync(active::onStopRequested);
+                SystemClock.sleep(1500);
+                automatic.setEnabled(originalAutomatic);
+            }
             try (android.os.ParcelFileDescriptor fd = automation.executeShellCommand("settings put system font_scale " + Float.toString(original));
                  FileInputStream in = new FileInputStream(fd.getFileDescriptor())) { in.readAllBytes(); }
             SystemClock.sleep(500);

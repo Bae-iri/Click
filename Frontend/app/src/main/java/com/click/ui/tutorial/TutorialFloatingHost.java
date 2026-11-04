@@ -44,7 +44,7 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     private final Paint highlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path hintPointer = new Path();
     private ValueAnimator highlightPulse, outlinePulse;
-    private boolean clickHighlighted, dragging;
+    private boolean clickHighlighted, dragging, hintBelow;
     private float pulseProgress;
     private boolean positioned;
     private float dragStartX, dragStartY;
@@ -113,7 +113,10 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     public void showReview(TaskFlowOverlayView view) {
         if (review != null) removeView(review);
         review = view; review.setVisibility(VISIBLE); control.setVisibility(GONE);
-        addView(view, new LayoutParams(-1, -2, Gravity.CENTER));
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int availableWidth = getWidth() > 0 ? getWidth() : screenWidth - dp(44);
+        int panelWidth = Math.min(availableWidth, view.getWindowWidth(screenWidth));
+        addView(view, new LayoutParams(panelWidth, -2, Gravity.CENTER));
         updateHighlight(); requestLayout();
     }
     public void collapseReview() {
@@ -310,7 +313,10 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         tapHint.setX(Math.max(0, Math.min(cx + dp(24) - tapHint.getMeasuredWidth(),
                 getWidth() - tapHint.getMeasuredWidth())));
         float buttonTop = control.getY() + control.getClickCenterY(ClickOverlayLayout.Mode.COLLAPSED) - dp(32);
-        tapHint.setY(Math.max(dp(8), buttonTop - dp(20) - tapHint.getMeasuredHeight()));
+        float above = buttonTop - dp(20) - tapHint.getMeasuredHeight();
+        hintBelow = above < dp(8);
+        float desired = hintBelow ? buttonTop + dp(64) + dp(20) : above;
+        tapHint.setY(Math.max(dp(8), Math.min(desired, getHeight() - tapHint.getMeasuredHeight() - dp(8))));
     }
 
     @Override protected void dispatchDraw(Canvas canvas) {
@@ -337,11 +343,12 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
             highlightPaint.setColor(HINT_BACKGROUND);
             float tailX = Math.max(tapHint.getX() + dp(14),
                     Math.min(cx, tapHint.getX() + tapHint.getWidth() - dp(14)));
-            float bottom = tapHint.getY() + tapHint.getHeight();
+            float edge = hintBelow ? tapHint.getY() : tapHint.getY() + tapHint.getHeight();
+            float base = edge + (hintBelow ? dp(1) : -dp(1));
             hintPointer.reset();
-            hintPointer.moveTo(tailX - dp(8), bottom - dp(1));
-            hintPointer.lineTo(tailX, bottom + dp(9));
-            hintPointer.lineTo(tailX + dp(8), bottom - dp(1));
+            hintPointer.moveTo(tailX - dp(8), base);
+            hintPointer.lineTo(tailX, edge + (hintBelow ? -dp(9) : dp(9)));
+            hintPointer.lineTo(tailX + dp(8), base);
             hintPointer.close();
             canvas.drawPath(hintPointer, highlightPaint);
         }
@@ -386,7 +393,7 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         super.onSizeChanged(w, h, oldW, oldH);
         if (!positioned && w > 0 && h > 0) {
             control.setX(Math.max(0, w - control.getLayoutParams().width - dp(24)));
-            control.setY(Math.max(0, h - control.getLayoutParams().height - dp(28)));
+            control.setY(Math.max(0, h - control.getLayoutParams().height - dp(12)));
             positioned = true;
         } else constrain(control.getX(), control.getY());
     }

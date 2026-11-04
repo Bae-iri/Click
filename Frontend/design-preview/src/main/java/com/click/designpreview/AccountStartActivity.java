@@ -2,7 +2,6 @@ package com.click.designpreview;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -14,11 +13,13 @@ public final class AccountStartActivity extends Activity {
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        getWindow().setStatusBarColor(Color.WHITE);
-        getWindow().setNavigationBarColor(Color.WHITE);
+        getWindow().setStatusBarColor(getColor(R.color.account_surface));
+        getWindow().setNavigationBarColor(getColor(R.color.account_surface));
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         setContentView(R.layout.activity_account_start);
+        findViewById(R.id.account_start_screen).setBackground(new ClickBackgroundDrawable(getResources()));
+        findViewById(R.id.account_start_email).setBackground(OnboardingDrawables.startButton(getResources()));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             findViewById(R.id.account_start_title).setAccessibilityHeading(true);
         }
@@ -56,7 +57,8 @@ public final class AccountStartActivity extends Activity {
 
     private void setSubmitting(boolean value) {
         submitting = value;
-        for (int id : new int[]{R.id.account_start_kakao, R.id.account_start_email, R.id.account_start_login}) {
+        for (int id : new int[]{R.id.account_start_kakao,
+                R.id.account_start_email, R.id.account_start_login}) {
             findViewById(id).setEnabled(!value);
             findViewById(id).setAlpha(value ? .6f : 1f);
         }

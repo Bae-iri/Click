@@ -18,6 +18,7 @@ import androidx.test.filters.SdkSuppress;
 import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
 import androidx.test.runner.lifecycle.Stage;
 import com.click.designpreview.OnboardingActivity;
+import com.click.designpreview.AccountStartActivity;
 import com.click.designpreview.LoginActivity;
 import com.click.designpreview.PermissionGuideActivity;
 import com.click.designpreview.AccessibilityHelpActivity;
@@ -68,30 +69,51 @@ public class OnboardingFlowTest {
         });
     }
 
-    @Test public void threePagesEndWithKakaoAndEmailChoices() throws Exception {
+    @Test public void onboardingEndsWithSignupThenOffersSeparateLogin() throws Exception {
         try (ActivityScenario<OnboardingActivity> s = ActivityScenario.launch(OnboardingActivity.class)) {
             tap("건너뛰기");
-            shown("회원가입하기"); shown("이미 가입하셨나요? 로그인하기");
+            shown("가입하기"); assertNoWindowText("전화번호로 로그인하기");
             screenshot("onboarding-third");
-            tap("이미 가입하셨나요? 로그인하기");
-            shown("카카오 로그인"); shown("전화번호로 가입하기"); shown("전화번호로 로그인하기");
-            clickView("전화번호로 로그인하기"); shown("다시 만나 반가워요");
+            tap("가입하기");
+            shown("회원가입");
+            shown("카카오로 가입하기"); shown("전화번호로 가입하기"); shown("로그인하기");
+            assertNoWindowText("또는");
+            screenshot("account-login-options");
+            tap("로그인하기"); shown("로그인"); shown("카카오로 로그인");
         }
     }
-    @Test public void phoneReviewPrecedesOptionalDisplayName() throws Exception {
+
+    @Test public void signupChoicesRemainAboveLoginAfterRecreation() throws Exception {
+        try (ActivityScenario<AccountStartActivity> s = ActivityScenario.launch(AccountStartActivity.class)) {
+            shown("카카오로 가입하기"); shown("전화번호로 가입하기");
+            s.recreate();
+            shown("회원가입");
+            s.onActivity(a -> {
+                View login = a.findViewById(com.click.designpreview.R.id.account_start_login);
+                View signup = a.findViewById(com.click.designpreview.R.id.account_start_email);
+                assertTrue("Login follows the signup buttons", login.getTop() > signup.getBottom());
+            });
+            tap("전화번호로 가입하기");
+            shown("전화번호로 가입해요");
+            screenshot("email-signup-explicit");
+        }
+    }
+    @Test public void emailReviewPrecedesOptionalDisplayName() throws Exception {
         try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
             awaitSignupRules(s);
             s.onActivity(a -> {
                 ((EditText)a.findViewById(com.click.designpreview.R.id.signup_email)).setText("01012345678");
                 EditText password = a.findViewById(com.click.designpreview.R.id.signup_password);
-                password.setText("0123");
-                ((EditText)a.findViewById(com.click.designpreview.R.id.signup_password_confirm)).setText("0123");
+                int minimum = 4;
+                String validPassword = new String(new char[minimum]).replace('\0', '7');
+                password.setText(validPassword);
+                ((EditText)a.findViewById(com.click.designpreview.R.id.signup_password_confirm)).setText(validPassword);
                 a.findViewById(com.click.designpreview.R.id.signup_password_toggle).performClick();
                 a.findViewById(com.click.designpreview.R.id.signup_password_toggle).performClick();
-                assertEquals("0123", password.getText().toString());
+                assertEquals(validPassword, password.getText().toString());
                 a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
             });
-            shown("전화번호를\n확인해 주세요"); screenshot("phone-review");
+            shown("확인해주세요"); screenshot("email-review");
             clickView("전화번호 수정");
             s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_action).performClick());
             clickView("이 전화번호로 계속"); shown("어떻게 불러드릴까요?");
@@ -103,9 +125,9 @@ public class OnboardingFlowTest {
         }
     }
     @Test public void accessibilityRequirementLinksToInAppGuide() throws Exception {
-        instrumentation.getUiAutomation().executeShellCommand(
+        instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).executeShellCommand(
                 "settings delete secure enabled_accessibility_services").close();
-        instrumentation.getUiAutomation().executeShellCommand(
+        instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).executeShellCommand(
                 "settings put secure accessibility_enabled 0").close();
         // Secure-setting changes restart the accessibility manager asynchronously.
         SystemClock.sleep(1500);
@@ -138,9 +160,9 @@ public class OnboardingFlowTest {
     }
     @Test public void loginMatchesSignupAndValidatesInline() throws Exception {
         try (ActivityScenario<LoginActivity> s = ActivityScenario.launch(LoginActivity.class)) {
-            shown("다시 만나 반가워요");
+            shown("로그인");
             shown("가입할 때 사용한\n전화번호와 비밀번호를 입력해 주세요.");
-            shown("로그인하기"); shown("다른 방법으로 시작하기");
+            shown("전화번호로 로그인"); shown("카카오로 로그인"); shown("회원가입하기");
             screenshot("login");
             s.onActivity(a -> {
                 ((EditText) a.findViewById(com.click.designpreview.R.id.login_email))
@@ -150,7 +172,7 @@ public class OnboardingFlowTest {
                 a.findViewById(com.click.designpreview.R.id.login_action).performClick();
             });
             shown("전화번호를 한 번 더 확인해 주세요.");
-            shown("가입할 때 설정한 비밀번호를 입력해 주세요.");
+            shown("가입할 때 설정한 숫자 4자리를 입력해 주세요.");
             s.onActivity(a -> {
                 ((EditText) a.findViewById(com.click.designpreview.R.id.login_email))
                         .setText("01012345678");
@@ -158,17 +180,21 @@ public class OnboardingFlowTest {
                 a.findViewById(com.click.designpreview.R.id.login_action).performClick();
             });
             shown("비밀번호는 숫자 4자리로 입력해 주세요.");
+            clickView("회원가입하기");
+            shown("전화번호로 가입해요");
         }
     }
 
-    @Test public void signupPasswordValidationRequiresFourDigits() throws Exception {
+    @Test public void signupPasswordHintAndValidationUseLoadedServerMinimum() throws Exception {
         try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
             awaitSignupRules(s);
+            final int[] minimum = {0};
             s.onActivity(a -> {
                 EditText password = a.findViewById(com.click.designpreview.R.id.signup_password);
+                minimum[0] = 4;
                 ((EditText) a.findViewById(com.click.designpreview.R.id.signup_email))
                         .setText("01012345678");
-                String shortPassword = "123";
+                String shortPassword = new String(new char[minimum[0] - 1]).replace('\0', '7');
                 password.setText(shortPassword);
                 ((EditText) a.findViewById(com.click.designpreview.R.id.signup_password_confirm))
                         .setText(shortPassword);
@@ -177,15 +203,45 @@ public class OnboardingFlowTest {
             shown("비밀번호는 숫자 4자리로 입력해 주세요.");
             screenshot("signup-password-minimum");
             s.onActivity(a -> {
-                String validPassword = "0123";
+                String validPassword = new String(new char[minimum[0]]).replace('\0', '7');
                 ((EditText) a.findViewById(com.click.designpreview.R.id.signup_password))
                         .setText(validPassword);
                 ((EditText) a.findViewById(com.click.designpreview.R.id.signup_password_confirm))
                         .setText(validPassword);
                 a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
             });
-            shown("전화번호를\n확인해 주세요");
-            clickView("이메일 수정");
+            shown("확인해주세요");
+            clickView("전화번호 수정");
+        }
+    }
+
+    @Test public void signupShowsRequiredFieldsAndRejectsLongNameWithoutTruncating() throws Exception {
+        try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
+            awaitSignupRules(s);
+            shown("전화번호 (필수)");
+            shown("비밀번호 (필수)");
+            s.onActivity(a -> {
+                assertEquals("비밀번호는 숫자 4자리로 만들어 주세요.", ((TextView) a.findViewById(
+                        com.click.designpreview.R.id.signup_password_hint_text)).getText().toString());
+                ((EditText) a.findViewById(com.click.designpreview.R.id.signup_email)).setText("010-1234-5678");
+                ((EditText) a.findViewById(com.click.designpreview.R.id.signup_password)).setText("0123");
+                ((EditText) a.findViewById(com.click.designpreview.R.id.signup_password_confirm)).setText("0123");
+                a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
+            });
+            shown("01012345678");
+            clickView("이 전화번호로 계속");
+            shown("이름 (선택)");
+            shown("이름은 50글자까지 입력할 수 있어요.");
+            screenshot("signup-current-profile");
+            s.onActivity(a -> {
+                EditText name = a.findViewById(com.click.designpreview.R.id.signup_name);
+                String longName = new String(new char[51]).replace('\0', '김');
+                name.setText(longName);
+                assertEquals(longName, name.getText().toString());
+                a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
+            });
+            shown("이름은 50글자까지 입력할 수 있어요. 줄이거나 비워 두고 가입해 주세요.");
+            // Stop before submitting: this test must never create a real server account.
         }
     }
 
@@ -314,9 +370,9 @@ public class OnboardingFlowTest {
         }
     }
     @Test public void postAccessibilityScreensShareClickBrand() throws Exception {
-        instrumentation.getUiAutomation().executeShellCommand(
+        instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).executeShellCommand(
                 "settings put secure enabled_accessibility_services com.click/com.click.service.accessibility.ClickAccessibilityService").close();
-        instrumentation.getUiAutomation().executeShellCommand(
+        instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).executeShellCommand(
                 "settings put secure accessibility_enabled 1").close();
         SystemClock.sleep(500);
         try (ActivityScenario<AccessibilityHelpActivity> s = ActivityScenario.launch(
@@ -369,8 +425,8 @@ public class OnboardingFlowTest {
         long time = SystemClock.uptimeMillis();
         MotionEvent down = MotionEvent.obtain(time, time, MotionEvent.ACTION_DOWN, bounds.centerX(), bounds.centerY(), 0);
         MotionEvent up = MotionEvent.obtain(time, time + 50, MotionEvent.ACTION_UP, bounds.centerX(), bounds.centerY(), 0);
-        assertTrue(instrumentation.getUiAutomation().injectInputEvent(down, true));
-        assertTrue(instrumentation.getUiAutomation().injectInputEvent(up, true)); down.recycle(); up.recycle();
+        assertTrue(instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).injectInputEvent(down, true));
+        assertTrue(instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).injectInputEvent(up, true)); down.recycle(); up.recycle();
         instrumentation.waitForIdleSync(); SystemClock.sleep(250);
     }
     private void clickView(String text) {
@@ -387,7 +443,7 @@ public class OnboardingFlowTest {
     }
     private void screenshot(String name) throws Exception {
         instrumentation.waitForIdleSync(); SystemClock.sleep(300);
-        Bitmap image = instrumentation.getUiAutomation().takeScreenshot(); assertNotNull(image);
+        Bitmap image = instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).takeScreenshot(); assertNotNull(image);
         try (FileOutputStream out = new FileOutputStream(new File(instrumentation.getTargetContext().getCacheDir(), name + ".png"))) {
             image.compress(Bitmap.CompressFormat.PNG, 100, out);
         }

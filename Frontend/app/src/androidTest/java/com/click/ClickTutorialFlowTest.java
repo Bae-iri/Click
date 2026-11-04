@@ -23,6 +23,62 @@ import static org.junit.Assert.*;
 public class ClickTutorialFlowTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
+    @Test public void clickButtonCanDragAcrossTheWholePhoneWithoutScrollingTheLesson() throws Exception {
+        try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
+            tapId(scenario, R.id.tutorial_next);
+            Rect phone = new Rect(), button = new Rect();
+            scenario.onActivity(a -> {
+                View stage = a.findViewById(R.id.tutorial_phone_stage);
+                View host = a.findViewById(R.id.tutorial_floating_host);
+                assertEquals("The drag area must fill the phone", stage.getHeight(), host.getHeight());
+                assertEquals(0, host.getTop());
+                assertTrue(stage.getGlobalVisibleRect(phone));
+                assertTrue(control(a).getGlobalVisibleRect(button));
+            });
+            int topCenter = phone.top + button.height() / 2 + 16;
+            drag(button.centerX(), button.centerY(), button.centerX(), topCenter);
+            scenario.onActivity(a -> {
+                Rect after = new Rect(), currentPhone = new Rect();
+                control(a).getGlobalVisibleRect(after);
+                a.findViewById(R.id.tutorial_phone_stage).getGlobalVisibleRect(currentPhone);
+                assertEquals("Dragging must not scroll the lesson", phone.top, currentPhone.top);
+                assertTrue("Button must reach above the accessibility rows", Math.abs(after.centerY() - topCenter) < 8);
+                Rect hint = new Rect();
+                findText(a.getWindow().getDecorView(), "클릭 버튼을 눌러보세요").getGlobalVisibleRect(hint);
+                assertFalse("The hint must not cover the button at the top", Rect.intersects(after, hint));
+                assertEquals(ClickOverlayLayout.Mode.COLLAPSED, control(a).getMode());
+                button.set(after);
+            });
+            screenshot("tutorial-drag-phone-top");
+            int bottomCenter = phone.bottom - button.height() / 2 - 16;
+            drag(button.centerX(), button.centerY(), button.centerX(), bottomCenter);
+            scenario.onActivity(a -> {
+                Rect after = new Rect(); control(a).getGlobalVisibleRect(after);
+                assertTrue("Button must also reach the bottom", Math.abs(after.centerY() - bottomCenter) < 8);
+            });
+            tapId(scenario, R.id.tutorial_floating_control);
+            assertMode(scenario, ClickOverlayLayout.Mode.MENU);
+        }
+    }
+
+    private void drag(float fromX, float fromY, float toX, float toY) {
+        android.app.UiAutomation automation = instrumentation.getUiAutomation(
+                android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+        long downTime = SystemClock.uptimeMillis();
+        MotionEvent down = MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, fromX, fromY, 0);
+        automation.injectInputEvent(down, true); down.recycle();
+        SystemClock.sleep(android.view.ViewConfiguration.getLongPressTimeout() + 100);
+        for (int i = 1; i <= 12; i++) {
+            float fraction = i / 12f;
+            MotionEvent move = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_MOVE,
+                    fromX + (toX - fromX) * fraction, fromY + (toY - fromY) * fraction, 0);
+            automation.injectInputEvent(move, true); move.recycle(); SystemClock.sleep(16);
+        }
+        MotionEvent up = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, toX, toY, 0);
+        automation.injectInputEvent(up, true); up.recycle();
+        instrumentation.waitForIdleSync(); SystemClock.sleep(250);
+    }
+
     @Test public void fourStepsUseCurrentPanelsAndReturnHome() throws Exception {
         try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
             scenario.onActivity(a -> {
@@ -121,7 +177,7 @@ public class ClickTutorialFlowTest {
         }
     }
 
-    @Test public void oneSecondVoicePracticeAdvancesOnReleaseWithoutPermissionOrServer() throws Exception {
+    @Test public void voicePracticeAdvancesOnReleaseWithoutTimerPermissionOrServer() throws Exception {
         try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
             tapId(scenario, R.id.tutorial_next);
             tapId(scenario, R.id.tutorial_floating_control);
@@ -135,7 +191,6 @@ public class ClickTutorialFlowTest {
                 assertNotNull(findText(a.getWindow().getDecorView(), "마이크를 꾹 눌러보세요"));
             });
             microphoneTouch(scenario, MotionEvent.ACTION_DOWN);
-            SystemClock.sleep(1200);
             scenario.onActivity(a -> assertTrue(control(a).isVoiceInputActive()));
             microphoneTouch(scenario, MotionEvent.ACTION_UP);
             scenario.onActivity(a -> {
