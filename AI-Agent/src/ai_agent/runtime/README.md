@@ -13,6 +13,8 @@ Backend의 turn API가 사용하는 사용자 작업 실행 경로다. **2026-10
 | `normalizer.py`, `classifier.py` | 화면 정규화·State 판단 |
 | `semantic_state.py` | 규칙으로 분류하지 못한 화면에 주입된 의미 해석기를 적용하고 결과 검증 |
 | `matcher.py`, `targeting.py`, `similarity.py` | 역할·앱/window 필터, 공통 graph selector, 동점 선택 보류 |
+| `screen_resolver` 주입 지점 | Backend의 Jev가 현재 graph 단계와 UI 대상을 함께 결정; 실패 시 재관측 |
+| `ui_selection.py`, `jev_ui.py` | 이전 보조 선택 API의 명시적 주입 호환성; Backend 주 판단 경로에서는 사용하지 않음 |
 | `guide.py`, `contracts.py` | Safety에 따른 안내·확인·허용 Action 계약 |
 | `verification.py`, `state_manager.py` | 새 화면을 이용한 직전 단계 결과 검증 |
 | `recovery.py`, `replanner.py` | 실제 시도 실패·제외 유지·명시된 경로 우선순위·복구 제한·Backend 반환 |
@@ -23,6 +25,8 @@ Backend의 turn API가 사용하는 사용자 작업 실행 경로다. **2026-10
 | `vision.py` | 요청별 동의·개인정보 검사를 통과한 기기 내 OCR 요소를 검증하고 화면 노드로 변환 |
 
 `vision.py`는 외부 LLM/VLM을 호출하지 않는다. 기존 `fallback/llm_vlm_fallback.py`를 이동하고 클래스를 `VisionFallback`으로 명명했다. raw 이미지 차단·지원 provider·confidence 기준은 유지한다. OCR 계약 회귀는 `python scripts/evaluate_vision_fallback.py --output data/local/vision_evaluation.json`으로 실행하며 재생성 가능한 결과는 Git에 저장하지 않는다.
+
+Jev 주 판단은 Backend 환경의 `AI1_UI_SELECTOR_PROVIDER=jev`로 활성화한다. Backend가 `screen_resolver`를 주입하며 자체 화면 LLM이나 보조 선택기를 함께 호출하지 않는다. 최소화된 화면 텍스트·관계·값과 graph를 바탕으로 Jev가 단계와 대상을 결정하고, 완료 판정과 설정 변경 전 확인은 기존 실행 계약을 따른다. 환경변수 생략 시 `rules`이며 예제 배포 설정은 `jev`다. [설정·호출 흐름·검증 방법](../../../docs/jev-ui-selection.md)을 참고한다.
 
 Backend의 기존 guidance adapter가 사용하는 `observation/`, `matching/`, `guide/`, `safety/`와 `schemas.py`는 상위 패키지에 남아 있다. `user_modeling/`은 Backend 개인화에서 사용한다. 각 영역의 책임은 [패키지 구조](../../../README.md)를 참고한다.
 

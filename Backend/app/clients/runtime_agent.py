@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from ai_agent.runtime import (
     AccessibilityNode,
     AgentTurnRequest as RuntimeRequest,
@@ -19,6 +21,8 @@ from app.schemas.guidance import GuideCommandResponse
 from app.repositories.sessions import SessionNotFoundError
 from ai_agent.runtime.progress import graph_progress
 from ai_agent.telemetry.execution_events import produce
+from app.clients.screen_state_llm import LocalScreenStateLlm
+from app.services.screen_jev import JevScreenResolver
 
 
 class RuntimeAgentAdapter:
@@ -30,17 +34,17 @@ class RuntimeAgentAdapter:
             task_graph.definition.task_id: task_graph,
             task_graph.definition.goal_type: task_graph,
         }
-        import os
-        provider = os.getenv("AI1_UI_SELECTOR_PROVIDER", "local").strip().lower()
-        if provider not in {"local", "jev"}:
-            raise ValueError("AI1_UI_SELECTOR_PROVIDER must be local or jev")
-        resolver = None
-        if provider == "jev":
-            from app.services.screen_jev import JevScreenResolver
-            resolver = JevScreenResolver()
+        provider = os.getenv("AI1_UI_SELECTOR_PROVIDER", "rules").strip().lower()
+        if provider not in {"rules", "local", "jev"}:
+            raise ValueError("AI1_UI_SELECTOR_PROVIDER must be rules or jev")
+        # Jev owns step + target selection. Never also call the auxiliary selector
+        # or the private screen-state LLM on this path.
+        resolver = JevScreenResolver() if provider == "jev" else None
+        if resolver:
             resolver.configuration()
         self.runtime = ClickAgentEngine(session_store=session_store, task_graphs=graphs,
-                                        screen_resolver=resolver)
+            screen_resolver=resolver, ui_selector=None,
+            state_resolver=None if resolver else LocalScreenStateLlm())
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
         previous = self.runtime.session_store.get(request.session_id)
