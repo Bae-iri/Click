@@ -9,7 +9,6 @@ from app.clients.runtime_agent import RuntimeAgentAdapter
 from app.clients.turn_executor import execute
 from app.services.safety import validate_confirmation, validate_output
 from app.repositories.agent_sessions import AgentSessionRepository
-from app.repositories.personalization import PersonalizationRepository, UserNotFoundError
 from app.schemas.agent_turn import AgentTurnResponse
 from app.schemas.agent_turn import AgentCommandResponse, CommandResult, GraphReference
 from app.repositories.task_graphs import TaskGraphRepository
@@ -70,7 +69,7 @@ class AgentTurnService:
                 claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] not in compatible_versions
             ):
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
-            return self.narrator.decorate(self.personalize(safe_response(AgentTurnResponse.model_validate(claim["cached"])), request.user_id), graph=selected_graph)
+            return self.narrator.decorate(safe_response(AgentTurnResponse.model_validate(claim["cached"])), graph=selected_graph)
         try:
             if getattr(request, "command_type", None):
                 details = self.repository.typed_details(request.session_id, request.user_id)
@@ -132,8 +131,8 @@ class AgentTurnService:
         except Exception:
             self.repository.release(request.session_id, claim["token"])
             raise
-        # Persist a neutral response; reevaluate consent even on retries.
-        return self.narrator.decorate(self.personalize(response, request.user_id), graph=selected_graph)
+        # All users receive the same graph-based guidance.
+        return self.narrator.decorate(response, graph=selected_graph)
 
     def handle_command(self, request):
         command = request.command_type
@@ -274,37 +273,3 @@ class AgentTurnService:
             step=response.step, guide_command=response.guide_command,
             metadata=response.metadata,
         )
-
-    def personalize(self, response, user_id):
-        if response.task_status == "WAITING_RESULT":
-            return response
-        with self.session_factory() as db:
-            repository = PersonalizationRepository(db)
-            try:
-                repository.lock_user(user_id)
-                consent = repository.latest_consent(user_id, "personalization")
-                if consent is None or not consent.consented:
-                    return response
-                profile = repository.get_profile(user_id)
-            except UserNotFoundError as error:
-                raise HTTPException(401) from error
-            context = {
-                "comprehension_level": profile.comprehension_level,
-                "explanation_depth": profile.explanation_depth,
-                "prefers_step_by_step": profile.prefers_step_by_step,
-                "confidence_score": profile.confidence_score,
-            }
-            from ai_agent.user_modeling import guidance_context
-            difficulty = guidance_context(profile.state_difficulties, response.state_id)
-            context["current_state_difficulty"] = difficulty
-            response.metadata["ui_profile"] = context
-            message = response.guide_command.message
-            if difficulty["needs_extra_guidance"] and response.guide_command.requires_user_action:
-                response.guide_command.message = (
-                    f"천천히 한 단계씩 진행할게요. {message} "
-                    "안내한 항목의 이름과 위치를 먼저 확인한 뒤 진행해 주세요.")
-            elif context["comprehension_level"] == "beginner" or context["explanation_depth"] == "detailed":
-                response.guide_command.message = f"천천히 한 단계씩 진행할게요. {message}"
-            elif context["explanation_depth"] == "concise":
-                response.guide_command.message = message.split(".", 1)[0].strip() + ("." if "." in message else "")
-            return response

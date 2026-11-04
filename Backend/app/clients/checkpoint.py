@@ -59,7 +59,7 @@ def capture(store, session_id, task_graph=None):
 def safe_response(response):
     # These fields can originate in UI content or external-provider diagnostics.
     discarded = {"source_text", "label_sample", "screenshot_base64", "image_base64",
-                 "ocr_text", "elements", "text", "content_description", "reason"}
+                 "ocr_text", "elements", "text", "content_description", "reason", "ui_profile"}
 
     def clean(value):
         if isinstance(value, dict):

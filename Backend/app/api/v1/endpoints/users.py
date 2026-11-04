@@ -4,25 +4,16 @@ from collections.abc import Callable
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
-from app.repositories.personalization import PersonalizationRepository, UserNotFoundError
-from app.schemas.personalization import (
-    ConsentResponse,
-    CreateUIEventRequest,
-    CreateUserRequest,
-    RecordConsentRequest,
-    UIEventResponse,
-    UIProfileResponse,
-    UpdateProfileRequest,
-    UserResponse,
-)
-from app.services.personalization import ConsentRequiredError, PersonalizationService
+from app.repositories.users import UserRepository, UserNotFoundError
+from app.schemas.users import ConsentResponse, RecordConsentRequest, UserResponse
+from app.services.users import UserService
 
 
 def build_router(session_dependency: Callable, principal: Callable) -> APIRouter:
     router = APIRouter(prefix="/users", tags=["users"])
 
-    def service(session=Depends(session_dependency)) -> PersonalizationService:
-        return PersonalizationService(PersonalizationRepository(session))
+    def service(session=Depends(session_dependency)) -> UserService:
+        return UserService(UserRepository(session))
 
     def owner(user_id: str, user=Depends(principal)):
         if user_id != user.user_id:
@@ -40,14 +31,11 @@ def build_router(session_dependency: Callable, principal: Callable) -> APIRouter
         except UserNotFoundError as error:
             raise HTTPException(status_code=404, detail="User not found.") from error
 
-    @router.patch("/{user_id}/profile", response_model=UIProfileResponse, dependencies=[Depends(owner)])
-    def update_profile(
-        user_id: str, request: UpdateProfileRequest, svc=Depends(service)
-    ) -> UIProfileResponse:
-        try:
-            return svc.update_profile(user_id, request)
-        except UserNotFoundError as error:
-            raise HTTPException(status_code=404, detail="User not found.") from error
+    # Old APKs receive an explicit retirement response, without recording data.
+    @router.patch("/{user_id}/profile", dependencies=[Depends(owner)], deprecated=True)
+    @router.post("/{user_id}/events", dependencies=[Depends(owner)], deprecated=True)
+    def retired_personalization(user_id: str):
+        raise HTTPException(410, detail="User personalization has been removed.")
 
     @router.post("/{user_id}/consents", response_model=ConsentResponse, status_code=201, dependencies=[Depends(owner)])
     def record_consent(
@@ -61,19 +49,8 @@ def build_router(session_dependency: Callable, principal: Callable) -> APIRouter
     @router.get("/{user_id}/consents", response_model=list[ConsentResponse], dependencies=[Depends(owner)])
     def current_consents(user_id: str, svc=Depends(service)):
         results = [svc.repository.latest_consent(user_id, purpose) for purpose in
-                   ("personalization", "conversation_storage", "model_training")]
+                   ("conversation_storage", "model_training")]
         return [ConsentResponse.model_validate(row) for row in results if row is not None]
-
-    @router.post("/{user_id}/events", response_model=UIEventResponse, status_code=201, dependencies=[Depends(owner)])
-    def record_event(
-        user_id: str, request: CreateUIEventRequest, svc=Depends(service)
-    ) -> UIEventResponse:
-        try:
-            return svc.record_event(user_id, request)
-        except UserNotFoundError as error:
-            raise HTTPException(status_code=404, detail="User not found.") from error
-        except ConsentRequiredError as error:
-            raise HTTPException(status_code=403, detail=str(error)) from error
 
     @router.delete("/{user_id}", status_code=204, dependencies=[Depends(owner)])
     def delete_user(user_id: str, svc=Depends(service)) -> Response:

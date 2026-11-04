@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.clients.kakao import KakaoTokenVerifier
 from app.main import create_app
 from app.models.auth import Account, AuthSession, KakaoIdentity
-from app.models.personalization import User
+from app.models.user import User
 
 
 @pytest.fixture

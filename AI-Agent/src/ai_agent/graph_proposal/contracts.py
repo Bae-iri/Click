@@ -39,12 +39,22 @@ def finite_number(value):
     return type(value) in (int, float) and math.isfinite(value)
 
 
+def validate_device_cohort(value):
+    if not isinstance(value, str) or not re.fullmatch(
+            r"(?:unknown|samsung|google|xiaomi|oppo|vivo|motorola|sony|lg|oneplus|huawei):android-(?:\d{1,2}|unknown)", value):
+        raise ValueError("Invalid device cohort")
+    return value
+
+
 def validate_event(event):
     """Reject extra fields rather than accidentally carrying raw text into datasets."""
     required = {"schema_version", "event_id", "session_key", "episode_id", "sequence", "created_at",
                 "expires_at", "task_id", "graph_version", "graph_hash", "source_kind", "runtime", "control"}
-    if not isinstance(event, dict) or set(event) != required or event["schema_version"] != EVENT_SCHEMA:
+    if (not isinstance(event, dict) or set(event) - {"device_cohort"} != required
+            or event["schema_version"] != EVENT_SCHEMA):
         raise ValueError("Invalid offline event envelope")
+    if "device_cohort" in event:
+        validate_device_cohort(event["device_cohort"])
     for key in ("event_id", "session_key", "episode_id", "task_id", "graph_version"):
         identifier(event[key], key)
     hash_value(event["graph_hash"])
@@ -59,9 +69,12 @@ def validate_event(event):
     allowed = {"schema_version", "state_id", "before_state_id", "attempt_hash", "previous_guide_hash",
                "attempt_target_hash", "before_observation_hash", "after_observation_hash", "guide_hash",
                "action_type", "command_type", "target", "verification_status", "count_attempt",
-               "task_completed", "reason_code", "before_values", "after_values", "graph_hash"}
+               "task_completed", "reason_code", "before_values", "after_values", "graph_hash", "duration_ms"}
     if not isinstance(runtime, dict) or set(runtime) - allowed:
         raise ValueError("Unexpected runtime evidence fields")
+    if runtime.get("duration_ms") is not None and (type(runtime["duration_ms"]) is not int
+            or not 0 <= runtime["duration_ms"] <= 86_400_000):
+        raise ValueError("Invalid action duration")
     for key in ("attempt_hash", "previous_guide_hash", "attempt_target_hash", "before_observation_hash",
                 "after_observation_hash", "guide_hash", "graph_hash"):
         if runtime.get(key) is not None:

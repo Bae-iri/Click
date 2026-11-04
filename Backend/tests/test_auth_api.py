@@ -6,7 +6,7 @@ from sqlalchemy import select, update
 
 from app.main import create_app
 from app.models.auth import Account, AuthSession
-from app.models.personalization import User
+from app.models.user import User
 from tests.helpers import register
 
 
@@ -63,7 +63,7 @@ def test_every_user_route_rejects_another_owner_and_delete_revokes_tokens():
         path = "/api/v1/users/" + first["user_id"]
         for method, suffix, body in [
             ("GET", "", None), ("PATCH", "/profile", {"explanation_depth": "concise"}),
-            ("POST", "/consents", {"purpose": "personalization", "consented": True, "policy_version": "v1"}),
+            ("POST", "/consents", {"purpose": "model_training", "consented": True, "policy_version": "v1"}),
             ("POST", "/events", {"event_type": "help_opened"}), ("DELETE", "", None),
         ]:
             assert client.request(method, path + suffix, json=body).status_code == 403

@@ -97,9 +97,6 @@ class GuideNarrator:
                 or guide.target_bounds is None or policy.get("vision_derived")
                 or any(k in policy for k in ("recovery_action", "fallback_action", "vision_fallback"))):
             return response
-        # Do not strip a confirmation, warning, recovery instruction or personalized explanation.
-        if response.metadata.get("ui_profile"):
-            return response
         direction = policy.get("direction")
         if guide.action_type == "drag" and policy.get("automatable_setting") != "font_size":
             return response

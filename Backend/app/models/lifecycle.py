@@ -2,7 +2,7 @@ from uuid import uuid4
 from sqlalchemy import BigInteger, ForeignKey, Integer, String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
-from app.models.personalization import JSONType
+from app.models.user import JSONType
 
 
 class SafetyConfirmation(Base):

@@ -34,6 +34,12 @@ def produce(result, before, after, target_role="other", navigation_action=None):
     if navigation:
         reason = "user_home_navigation" if navigation_action == "home_navigated" else "user_back_navigation"
     match = result.match_result
+    pending = after.pending_attempt if after else None
+    bound = pending if pending and pending.get("guide_command_id") == result.guide_command.guide_command_id else None
+    baseline_ms = (before.pending_attempt or {}).get("baseline_captured_at_ms") if before else None
+    after_ms = after.last_snapshot.captured_at_ms if after and after.last_snapshot else None
+    duration = after_ms - baseline_ms if type(baseline_ms) is int and type(after_ms) is int else None
+    duration = duration if duration is not None and 0 <= duration <= 86_400_000 else None
     return {"schema_version": SCHEMA, "state_id": result.current_state_id,
             "before_state_id": before.current_state_id if before else None,
             "attempt_hash": digest((before.pending_attempt or {}).get("attempt_id")) if before else None,
@@ -44,11 +50,12 @@ def produce(result, before, after, target_role="other", navigation_action=None):
             "guide_hash": digest(result.guide_command.guide_command_id),
             "action_type": result.guide_command.action_type.value,
             "command_type": result.guide_command.command_type.value,
-            "target": {"node_hash": digest(match.target_node_id) if match else None,
+            "target": {"node_hash": digest(bound.get("target_key")) if bound else digest(match.target_key) if match else None,
                        "role": target_role if target_role in {"slider", "button", "menu_item", "other"} else "other",
-                       "transition_id": match.transition_id if match else None},
+                       "transition_id": bound.get("transition_id") if bound else match.transition_id if match else None},
             "verification_status": "WAITING_FOR_OBSERVATION" if navigation else verification.status.value if verification else None,
             "count_attempt": False if navigation else bool(verification and verification.count_attempt),
+            "duration_ms": duration if verification and verification.count_attempt else None,
             "task_completed": False if navigation else bool(verification and verification.task_completed),
             "reason_code": reason if reason in REASONS else "other" if reason else None,
             "before_values": values(before.last_snapshot if before else None),

@@ -31,7 +31,7 @@ public class AccountActionsGatewayTest {
         http = mock(AuthenticatedHttpClient.class);
         callback = mock(AuthGateway.Callback.class);
         gateway = new AccountActionsGateway(context, tokens, http, Runnable::run);
-        new LocalAccountStore(context).saveProfile("테스트", "test@example.com", "60", "", "");
+        new LocalAccountStore(context).saveProfile("테스트", "test@example.com");
         new TouchAutomationSettings(context).setEnabled(true);
     }
 

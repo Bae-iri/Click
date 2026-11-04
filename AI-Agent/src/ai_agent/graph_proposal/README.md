@@ -1,6 +1,6 @@
 # AI-Agent 2: 실행 기록 분석과 그래프 개선
 
-갱신: 2026-10-28. 사용자 안내와 독립적으로 실행하는 오프라인 파이프라인입니다. 별도 GPU·LLM은 필수가 아닙니다.
+갱신: 2026-11-04. 사용자 안내와 독립적으로 실행하는 공통 그래프 경로 개선 파이프라인입니다. 사용자별 이해도·선호도 프로필은 사용하지 않으며, 별도 GPU·LLM은 필수가 아닙니다.
 
 ## 폴더 구조와 연결 경계
 
@@ -46,6 +46,7 @@ Backend 디렉터리에서 DATABASE_URL을 설정하고 실행합니다.
 ```powershell
 python scripts/agent2.py process --limit 100
 python scripts/agent2.py audit
+python scripts/agent2.py propose-routes --manifest review-manifest.json --cases device-holdout.json
 python scripts/maintenance.py
 ```
 
@@ -53,7 +54,9 @@ process는 세션별 재구성·분석 결과를 원천 event에 연결된 DB re
 
 audit는 `structural_valid`(구조·참조 무결성), `static_valid`(현재 runtime 실행 조건 포함), `execution_enabled`(승인·활성·검사 통과)를 구분합니다. 미지원 완료 predicate와 담당 영역을 별도 보고하며 `device_validation`은 항상 `NOT_ASSESSED`입니다. 초안의 미지원 기능을 DB 손상과 혼동하지 않습니다. 승인 graph 결함이 있으면 CLI는 실패 종료합니다.
 
-운영 DB 분석은 split/독립 검수가 아직 없는 기록을 자동 학습·배포하지 않습니다. 후보 생성·평가는 별도로 검수한 데이터셋과 manifest를 준비한 뒤 실행합니다. audit는 DB에 등록된 graph 전부를 검사하며 초안의 미지원 predicate와 승인 graph 결함을 구분합니다. 구조 통과는 실기기 통과가 아닙니다.
+`propose-routes`는 동의 이후의 여러 세션을 공통 그래프 기준으로 비교하고, 검수 manifest에 선언된 학습 기록만으로 기존 전이의 우선순위를 제안합니다. 성공률이 같으면 충분한 성공 시도의 소요 시간을 비교하며, 기종 그룹에서 관측한 성공률이 악화되면 제안을 보류합니다. 개인 식별정보 대신 허용된 제조사·Android 주 버전 그룹만 분석합니다. 새 경로는 추측 생성하지 않습니다.
+
+운영 DB 분석은 split/독립 검수가 아직 없는 기록을 자동 학습·배포하지 않습니다. 후보 생성·평가는 별도로 검수한 데이터셋과 manifest를 준비한 뒤 실행합니다. audit는 DB에 등록된 graph 전부를 검사하며 초안의 미지원 predicate와 승인 graph 결함을 구분합니다. 구조 통과는 실기기 통과가 아닙니다. DB 변경, 앱 동의, `publish --run-id`와 Jev 우선순위 반영은 [운영 절차](../../../../Backend/docs/shared-graph-improvement.md)를 참고합니다.
 
 ## 데이터 없이 실행하는 합성 예제
 

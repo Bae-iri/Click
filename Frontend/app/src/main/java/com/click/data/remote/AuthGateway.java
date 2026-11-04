@@ -41,11 +41,11 @@ public final class AuthGateway {
 
     public AuthGateway(Context context) { tokens = new AuthTokenStore(context.getApplicationContext()); }
 
-    public void register(String name, String email, String password, String ageGroup, String occupation, Callback callback) {
+    public void register(String name, String email, String password, Callback callback) {
         executor.execute(() -> {
             try {
                 RegistrationContract contract = registrationContract();
-                JSONObject body = contract.request(name, email, password, ageGroup, occupation);
+                JSONObject body = contract.request(name, email, password);
                 completeAuthentication("/api/v1/auth/register", body, callback);
             } catch (Exception error) {
                 main.post(() -> callback.onFailure(error));

@@ -78,7 +78,7 @@ public class OnboardingFlowTest {
             clickView("이메일로 로그인하기"); shown("다시 만나 반가워요");
         }
     }
-    @Test public void emailReviewPrecedesProfileAndOccupationIsSelectable() throws Exception {
+    @Test public void emailReviewPrecedesOptionalDisplayName() throws Exception {
         try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
             awaitSignupRules(s);
             s.onActivity(a -> {
@@ -94,15 +94,12 @@ public class OnboardingFlowTest {
             shown("이메일을\n확인해 주세요"); screenshot("email-review");
             clickView("이메일 수정");
             s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_action).performClick());
-            clickView("이 이메일로 계속"); shown("안내를 조금 더\n원활히 도와드릴게요");
+            clickView("이 이메일로 계속"); shown("어떻게 불러드릴까요?");
             shown("이름 (선택)");
             s.onActivity(a -> ((EditText) a.findViewById(
                     com.click.designpreview.R.id.signup_name)).setText("김클릭"));
             screenshot("signup-profile-name");
-            s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_occupation).performClick());
-            clickView("서비스업"); screenshot("occupation");
-            s.onActivity(a -> assertTrue(((TextView)a.findViewById(com.click.designpreview.R.id.signup_occupation))
-                    .getText().toString().contains("서비스업")));
+
         }
     }
     @Test public void accessibilityRequirementLinksToInAppGuide() throws Exception {
@@ -137,41 +134,6 @@ public class OnboardingFlowTest {
             Activity guide = opened[0];
             assertNotNull("앱 안의 접근성 설정 안내 화면이 열려야 합니다. 현재 화면: " + resumed, guide);
             instrumentation.runOnMainSync(guide::finish);
-        }
-    }
-    @Test public void occupationExpandsInlineAndSelectsImmediately() throws Exception {
-        try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
-            s.onActivity(a -> {
-                try {
-                    Method showPage = SignupActivity.class.getDeclaredMethod(
-                            "showPage", int.class, boolean.class);
-                    showPage.setAccessible(true);
-                    showPage.invoke(a, 1, false);
-                } catch (Exception error) {
-                    throw new AssertionError(error);
-                }
-                a.findViewById(com.click.designpreview.R.id.signup_occupation).performClick();
-                View options = a.findViewById(com.click.designpreview.R.id.signup_occupation_options);
-                assertEquals(View.VISIBLE, options.getVisibility());
-                assertSame(a.findViewById(com.click.designpreview.R.id.signup_profile_content),
-                        options.getParent());
-            });
-            shown("선택하지 않음"); screenshot("occupation-expanded");
-            clickView("서비스업");
-            s.onActivity(a -> {
-                TextView field = a.findViewById(com.click.designpreview.R.id.signup_occupation);
-                android.widget.RadioGroup options = a.findViewById(
-                        com.click.designpreview.R.id.signup_occupation_options);
-                assertEquals("서비스업", field.getText().toString());
-                assertEquals(View.GONE, options.getVisibility());
-                field.performClick();
-                assertEquals("서비스업", ((TextView) options.findViewById(
-                        options.getCheckedRadioButtonId())).getText().toString());
-            });
-            clickView("서비스업");
-            s.onActivity(a -> assertEquals(View.GONE, a.findViewById(
-                    com.click.designpreview.R.id.signup_occupation_options).getVisibility()));
-            screenshot("occupation-selected");
         }
     }
     @Test public void loginMatchesSignupAndValidatesInline() throws Exception {

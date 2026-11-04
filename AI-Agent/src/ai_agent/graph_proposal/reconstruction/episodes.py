@@ -33,10 +33,11 @@ def reconstruct(events, *, now):
             previous = event["sequence"]
             by_episode[event["episode_id"]].append(event)
         for episode_id, group in by_episode.items():
-            identities = {(e["task_id"], e["graph_version"], e["graph_hash"], e["source_kind"]) for e in group}
+            identities = {(e["task_id"], e["graph_version"], e["graph_hash"], e["source_kind"],
+                           e.get("device_cohort", "unknown:android-unknown")) for e in group}
             if len(identities) != 1:
                 raise ValueError("Graph/source changed within episode")
-            task_id, version, graph_hash, source_kind = identities.pop()
+            task_id, version, graph_hash, source_kind, cohort = identities.pop()
             guides, attempts, steps, issues = {}, set(), [], []
             if episode_id in missing:
                 issues.append("missing_session_events")
@@ -64,15 +65,22 @@ def reconstruct(events, *, now):
                     "transition_id": target.get("transition_id"), "attempt_hash": attempt,
                     "before_observation_hash": before, "after_observation_hash": after,
                     "label": label["label"], "reason_code": label.get("reason_code"),
+                    "duration_ms": runtime.get("duration_ms"),
                     "task_completed": bool(runtime.get("task_completed")),
                     "before_values": runtime.get("before_values", {}), "after_values": runtime.get("after_values", {})})
                 if runtime.get("guide_hash"):
                     if runtime["guide_hash"] in guides:
-                        raise ValueError("Guide ID reused")
+                        # Polling a pending operation legitimately keeps its ID.
+                        # A changed target under that ID remains a binding error.
+                        old_target = guides[runtime["guide_hash"]].get("target") or {}
+                        new_target = runtime.get("target") or {}
+                        if any(old_target.get(k) != new_target.get(k) for k in ("node_hash", "transition_id")):
+                            raise ValueError("Guide ID reused with a different target")
                     guides[runtime["guide_hash"]] = runtime
             episodes.append({"episode_id": episode_id, "session_key": session_key,
                 "task_id": task_id, "graph_version": version, "graph_hash": graph_hash,
-                "source_kind": source_kind, "event_ids": [e["event_id"] for e in group],
+                "source_kind": source_kind, "device_cohort": cohort,
+                "event_ids": [e["event_id"] for e in group],
                 "expires_at": min(e["expires_at"] for e in group), "steps": steps,
                 "issues": sorted(set(issues)), "complete_evidence": not issues,
                 "task_label": "weak_success" if any(s["task_completed"] and s["label"] == "verified_success" for s in steps) else "unknown",

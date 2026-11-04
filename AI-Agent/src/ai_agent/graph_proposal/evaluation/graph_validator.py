@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ai_agent.graph_proposal.schemas import GraphUpdateProposal
-from ai_agent.graph_proposal.contracts import EvidenceRequired, fingerprint, validate_manifest
+from ai_agent.graph_proposal.contracts import EvidenceRequired, fingerprint, validate_manifest, validate_device_cohort
 from ai_agent.graph_proposal.graphs import apply_proposal, graph_errors
 
 
@@ -44,6 +44,7 @@ class GraphValidator:
             report["manifest_hash"] = fingerprint(manifest)
             reviews = {r["episode_id"]: r for r in manifest["records"]}
             used = set()
+            tested_cohorts = set()
             for case in cases:
                 eid = case["episode_id"]
                 if eid in used:
@@ -79,6 +80,10 @@ class GraphValidator:
                     {"episode_id": eid, "failure": failure} for failure in evaluated["failures"])
                 key = "product_case_ids" if review["source_kind"] in {"device_test", "runtime"} else "synthetic_case_ids"
                 report[key].append(eid)
+                if key == "product_case_ids":
+                    tested_cohorts.add(validate_device_cohort(case.get("device_cohort", "unknown:android-unknown")))
+            for cohort in set(proposal.evidence.get("device_cohorts", [])) - tested_cohorts:
+                report["missing"].append("device_holdout:" + validate_device_cohort(cohort))
             if not report["product_case_ids"]:
                 report["missing"].append("independent_device_holdout")
             if not report["checks"]:

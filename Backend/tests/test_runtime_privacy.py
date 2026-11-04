@@ -13,8 +13,6 @@ from app.main import create_app
 from app.clients.runtime_agent import RuntimeAgentAdapter
 from app.clients.turn_executor import execute
 from app.models.agent_session import AgentTurn
-from app.models.personalization import UIEvent
-from app.schemas.personalization import CreateUIEventRequest
 from tests.helpers import register
 from tests.test_agent_sessions import payload, post, session
 from ai_agent.runtime.privacy import sanitize_request
@@ -57,12 +55,6 @@ def test_capacity_rejects_new_work_until_timed_out_worker_exits(monkeypatch):
         semaphore.release()
 
 
-def test_event_screen_name_and_safe_metrics():
-    with pytest.raises(ValidationError):
-        CreateUIEventRequest(event_type="task_completed", screen_name="private title")
-    state = next(iter(next(iter(TASK_GRAPHS.values())).states))
-    assert CreateUIEventRequest(event_type="task_completed", screen_name=state,
-        metadata={"step": 1, "duration_ms": 100, "explanation_depth": "concise"}).metadata["step"] == 1
 
 
 def test_sensitive_input_removed_before_runtime():
@@ -165,11 +157,6 @@ def test_trace_allowlist_capacity_and_expiry():
     assert logger.traces == []
 
 
-@pytest.mark.parametrize("metadata", [{"text": "private"}, {"step": {"text": "private"}},
-                                     {"duration_ms": -1}, {"attempt_count": True}, {"explanation_depth": []}])
-def test_event_rejects_unapproved_data(metadata):
-    with pytest.raises(ValidationError):
-        CreateUIEventRequest(event_type="task_completed", metadata=metadata)
 
 
 def test_timeout_does_not_commit_late_result_and_retry_succeeds(monkeypatch):
@@ -217,18 +204,3 @@ def test_graph_progress_is_independent_of_font_state_names():
         assert graph_progress(graph, key) == graph_progress(renamed, names[key])
     assert graph_progress(None, "unknown") == (0, 0)
     assert graph_progress(renamed, renamed.definition.done_state)[0] > 0
-
-
-def test_event_retention_preserves_recent_records():
-    from scripts.maintenance import cleanup_ui_events as cleanup
-    app = create_app()
-    now = datetime.now(timezone.utc)
-    with TestClient(app) as client:
-        auth = register(client)
-        with app.state.session_factory() as db, db.begin():
-            for hours in (1, 48):
-                db.add(UIEvent(user_id=auth["user_id"], event_type="task_completed",
-                    event_metadata={}, created_at=now - timedelta(hours=hours)))
-        assert cleanup(app.state.session_factory, now=now) == 1
-        with app.state.session_factory() as db:
-            assert len(db.scalars(select(UIEvent)).all()) == 1

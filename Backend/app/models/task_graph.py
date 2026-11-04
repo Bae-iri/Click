@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
-from app.models.personalization import JSONType
+from app.models.user import JSONType
 
 
 class ApprovedTaskGraph(Base):

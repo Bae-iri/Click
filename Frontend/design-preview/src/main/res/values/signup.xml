@@ -7,8 +7,8 @@
 
     <string name="signup_account_title">가입을 시작해볼까요?</string>
     <string name="signup_account_description">로그인할 때 사용할\n이메일과 비밀번호를 입력해 주세요.</string>
-    <string name="signup_profile_title">안내를 조금 더\n원활히 도와드릴게요</string>
-    <string name="signup_profile_description">이름, 나이, 직업은 모두 선택 사항이에요.\n입력하지 않고 가입해도 괜찮아요.</string>
+    <string name="signup_profile_title">어떻게 불러드릴까요?</string>
+    <string name="signup_profile_description">이름은 화면에 표시할 때만 사용해요.\n입력하지 않고 가입해도 괜찮아요.</string>
     <string name="signup_name_label">이름 (선택)</string>
     <string name="signup_name_hint">예) 김클릭</string>
     <string name="signup_email_label">이메일</string>
@@ -48,15 +48,7 @@
     <string name="signup_error_password_maximum">비밀번호는 %1$d글자까지 입력할 수 있어요.</string>
     <string name="signup_password_confirm_label">비밀번호 확인</string>
     <string name="signup_password_confirm_hint">한 번 더 입력해 주세요.</string>
-    <string name="signup_age_label">나이 (선택)</string>
-    <string name="signup_age_hint">선택하지 않아도 괜찮아요</string>
-    <string name="signup_occupation_label">직업 (선택)</string>
-    <string name="signup_occupation_hint">선택하지 않아도 괜찮아요</string>
-    <string name="signup_occupation_expand">직업: %1$s, 눌러서 목록 펼치기</string>
-    <string name="signup_occupation_collapse">직업: %1$s, 눌러서 목록 접기</string>
-    <string name="signup_occupation_title">어떤 일을 하고 계신가요?</string>
-    <string name="signup_occupation_description">지금 나에게 가장 가까운 항목을 골라 주세요.\n선택하지 않고 넘어가셔도 괜찮아요.</string>
-    <string name="signup_profile_helper">입력하신 정보는 더 쉬운 안내를 위해서만 사용해요.</string>
+    <string name="signup_profile_helper">이름을 입력하지 않아도 모든 안내를 이용할 수 있어요.</string>
     <string name="signup_next">다음</string>
     <string name="signup_review">회원가입하기</string>
     <string name="signup_progress">회원가입, 2단계 중 %1$d단계</string>
@@ -65,7 +57,6 @@
     <string name="signup_error_email">이메일 주소를 한 번 더 확인해 주세요.</string>
     <string name="signup_error_name">이름을 입력해 주세요.</string>
     <string name="signup_error_password_confirm">비밀번호가 서로 달라요. 다시 확인해 주세요.</string>
-    <string name="signup_error_age">1세부터 120세 사이의 나이를 입력해 주세요.</string>
     <string name="signup_information_checked">입력하신 내용을 확인했어요.</string>
     <string name="account_exists_title">이미 가입된\n계정이에요</string>
     <string name="account_exists_description">다시 만나 반가워요!\n로그인하고 클릭을 시작해요.</string>
@@ -79,21 +70,6 @@
     <string name="login_action">로그인하기</string>
     <string name="login_signup">다른 방법으로 시작하기</string>
 
-    <string-array name="signup_occupations">
-        <item>선택하지 않음</item>
-        <item>사무·관리</item>
-        <item>서비스업</item>
-        <item>제조업</item>
-        <item>자영업</item>
-        <item>교육·연구</item>
-        <item>의료·보건</item>
-        <item>공무원</item>
-        <item>IT·소프트웨어</item>
-        <item>주부</item>
-        <item>학생</item>
-        <item>현재 일을 쉬고 있어요</item>
-        <item>기타</item>
-    </string-array>
 
     <style name="SignupTitle">
         <item name="android:layout_width">match_parent</item>

@@ -34,7 +34,6 @@ import com.click.domain.goal.LocalGoalResolver;
 import com.click.domain.goal.RequirementReview;
 import com.click.data.remote.ErrorDetails;
 import com.click.data.remote.VoiceQueueGateway;
-import com.click.data.remote.PersonalizationEventGateway;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
 import com.click.service.accessibility.OnDeviceVision;
 import com.click.data.snapshot.ScreenSnapshot;
@@ -98,8 +97,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean panelInterruptedNarration;
     private boolean overTrashTarget;
     private AgentTurnGateway agentGateway;
-    private PersonalizationEventGateway personalizationEvents;
-    private String personalizationStateId;
     private final GuideStepTimer guideStepTimer = new GuideStepTimer();
     private final NavigationRecovery navigationRecovery = new NavigationRecovery();
     private boolean homeSearchRestart;
@@ -239,7 +236,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (taskFlowView != null) taskFlowView.setNarrationState(speaking, unavailable);
         });
         agentGateway = new AgentTurnGateway(this);
-        personalizationEvents = new PersonalizationEventGateway(this);
         queueGateway = new VoiceQueueGateway(this);
         quickHelpSelections = new QuickHelpSelectionStore(this);
         goalClassifier = loadGoalCatalog();
@@ -431,7 +427,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (cloudSpeechRecognizer != null) cloudSpeechRecognizer.close();
         listening = false;
         if (agentGateway != null) agentGateway.close();
-        if (personalizationEvents != null) personalizationEvents.close();
         if (queueGateway != null) queueGateway.close();
         if (collapseReceiverRegistered) {
             unregisterReceiver(collapseReceiver);
@@ -468,12 +463,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     public static void onGuidedViewClicked(String packageName, long eventUptimeMs) {
         ClickOverlayService service = runningService.get();
         if (service == null || service.agentPaused || service.agentSessionId == null) return;
-        GuideStepTimer.Observation observation = service.guideStepTimer.firstTap(
-                packageName, eventUptimeMs);
-        if (observation != null && service.personalizationEvents != null) {
-            service.personalizationEvents.recordFirstTap(observation.sessionId,
-                    observation.stateId, observation.step, observation.durationMs);
-        }
+        service.guideStepTimer.firstTap(packageName, eventUptimeMs);
     }
 
     public static void onGuidedAction(String type, String packageName, int windowId, String nodeId,
@@ -1591,10 +1581,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void repeatLastGuide() {
-        if (personalizationEvents != null && lastSpokenMessage != null
-                && navigationRecovery.hint() == NavigationRecovery.Action.NONE) {
-            personalizationEvents.recordGuideRepeated(agentSessionId, personalizationStateId);
-        }
         String repeated = lastSpokenMessage == null
                 ? "아직 다시 말씀드릴 안내가 없어요." : lastSpokenMessage;
         if (overlayView != null) overlayView.setRecognizedSpeech(repeated);
@@ -1835,7 +1821,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         homeSearchRestart = false;
         guideStepTimer.clear();
         agentSessionId = sessionId;
-        personalizationStateId = null;
         agentSessionVersion = 0;
         restoredStartedSession = false;
         agentConfirmationId = null;
@@ -2494,7 +2479,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 && !"confirmation".equals(command.commandType) && !"blocked".equals(command.commandType));
         // A response refresh must not undo the user's explicit collapse, including confirmations.
         updateFloatingVisibility();
-        personalizationStateId = response.guideCommand.requiresUserAction ? response.stateId : null;
         lastGuideCommandId = command.guideCommandId;
         lastTargetNodeId = command.targetNodeId;
         lastTargetBounds = command.targetBounds;
@@ -2666,8 +2650,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 homeScrollSearch.clear(); homeSearchToken++;
                 lastTargetBounds = null; lastTargetNodeId = lastGuideCommandId = null;
             }
-            if (personalizationEvents != null) personalizationEvents.recordNavigation(agentSessionId,
-                    personalizationStateId, observed == NavigationRecovery.Action.HOME ? "home" : "back");
             forceNextObservation = true;
             return false;
         }
@@ -2868,7 +2850,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         guideStepTimer.clear();
         lastGuideCommandId = lastTargetNodeId = null;
         lastTargetBounds = null;
-        personalizationStateId = null;
         agentConfirmationId = null;
         confirmationExpiresAt = 0;
         clearVisionState();

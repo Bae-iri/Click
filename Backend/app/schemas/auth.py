@@ -1,8 +1,6 @@
 import re
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
-
-from app.schemas.personalization import AgeGroup
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
 
 class Credentials(BaseModel):
@@ -21,8 +19,15 @@ class Credentials(BaseModel):
 
 class RegisterRequest(Credentials):
     name: str | None = Field(default=None, min_length=1, max_length=50)
-    age_group: AgeGroup = "unknown"
-    occupation_category: str | None = Field(default=None, max_length=50)
+
+    @model_validator(mode="before")
+    @classmethod
+    def discard_retired_fields(cls, value):
+        # Old APKs may still send these fields. Accept the account request while
+        # dropping demographics before validation, persistence or response output.
+        if isinstance(value, dict):
+            return {k: v for k, v in value.items() if k not in {"age_group", "occupation_category"}}
+        return value
 
     @field_validator("name")
     @classmethod

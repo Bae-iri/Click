@@ -10,7 +10,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.models.agent_session import AgentGoalResolution, AgentSession
-from app.models.personalization import User
+from app.models.user import User
 from app.schemas.agent_turn import AgentGoalResolutionResponse, TypedGoalRequest
 from app.schemas.goal_preparation import GoalPreparation, InputQuestion
 from app.services.goal_inputs import GoalInputRequirements, normalize, negated
