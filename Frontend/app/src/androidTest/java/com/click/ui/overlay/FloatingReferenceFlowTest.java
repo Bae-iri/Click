@@ -128,7 +128,7 @@ public class FloatingReferenceFlowTest {
                         if (screen == 0) { panel.preparation(question()); find(panel, "휴대폰 전체").performClick(); }
                         else if (screen == 1) panel.preparation(ready());
                         else if (screen == 2) { panel.progress("글자 크기", null, "디스플레이 메뉴를 눌러주세요.", false); panel.setGuidanceProgress(2, 3); panel.setGuidanceTarget("디스플레이"); }
-                        else panel.observationRecovery("글자 크기", "현재 화면에서 다음 항목을 찾지 못했어요. 화면을 이동하셨다면 새로고침을 눌러주세요.", () -> {});
+                        else panel.observationRecovery("글자 크기", "현재 화면에서 다음 항목을 찾지 못했어요. 화면을 이동하셨다면 ‘화면 다시 확인하기’를 눌러주세요.", () -> {});
                         host(activity, panel, 340);
                     } catch (Exception error) { throw new AssertionError(error); }
                 });
@@ -138,7 +138,7 @@ public class FloatingReferenceFlowTest {
                     footerVisible(shown[0]);
                     if (screen == 0) readable(find(shown[0], "휴대폰 전체"));
                     if (screen == 1) readable(find(shown[0], "안내 시작하기"));
-                    if (screen == 3) readable(find(shown[0], "새로고침"));
+                    if (screen == 3) readable(find(shown[0], "화면 다시 확인하기"));
                     save(shown[0], "reference-attached-" + screen + "-" + scale);
                     save((View) shown[0].getParent(), "compact-host-" + screen + "-" + scale);
                 });

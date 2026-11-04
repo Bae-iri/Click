@@ -59,9 +59,9 @@ public class ObservationRecoveryTest {
                 false, true, false, true, false, null, 7);
         return new ScreenSnapshot(pkg, "2026-10-11T06:00:00Z", 1080, 2400, Collections.singletonList(list), 7);
     }
-    @Test public void missingSettingsTargetGuidesManualScrolling() throws Exception {
+    @Test public void missingSettingsTargetUsesTheConciseTargetInstruction() throws Exception {
         String message = ObservationRecovery.message("S1_SETTINGS_HOME", new JSONObject().put("reason", "target_not_found"), settings("com.android.settings"));
-        assertTrue(message.contains("디스플레이")); assertTrue(message.contains("위로 밀어"));
+        assertEquals("디스플레이 항목을 찾아주세요", message);
     }
     @Test public void uncertaintyOrVerificationNeverSuggestsScrolling() throws Exception {
         assertNull(ObservationRecovery.message("S1_SETTINGS_HOME", new JSONObject().put("reason", "ambiguous_target"), settings("com.android.settings")));
