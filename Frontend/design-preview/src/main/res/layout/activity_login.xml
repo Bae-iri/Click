@@ -65,11 +65,11 @@
             <EditText
                 android:id="@+id/login_email"
                 style="@style/SignupInput"
-                android:autofillHints="emailAddress"
+                android:autofillHints="phoneNumber"
                 android:hint="@string/signup_email_hint"
                 android:imeOptions="actionNext"
                 android:importantForAutofill="yes"
-                android:inputType="textEmailAddress" />
+                android:inputType="phone" />
 
             <TextView
                 android:id="@+id/login_email_error"
@@ -94,7 +94,7 @@
                     android:hint="@string/signup_password_hint"
                     android:imeOptions="actionDone"
                     android:importantForAutofill="yes"
-                    android:inputType="textPassword" />
+                    android:inputType="numberPassword" android:maxLength="4" />
 
                 <ImageButton
                     android:id="@+id/login_password_toggle"

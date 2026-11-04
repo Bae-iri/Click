@@ -70,7 +70,7 @@ public final class AuthGateway {
 
     public void login(String email, String password, Callback callback) {
         JSONObject body = new JSONObject();
-        try { body.put("email", email).put("password", password); }
+        try { body.put("phone_number", email).put("password", password); }
         catch (Exception error) { callback.onFailure(error); return; }
         authenticate("/api/v1/auth/login", body, callback);
     }

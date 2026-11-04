@@ -9,7 +9,8 @@ from app.database import Base
 class Account(Base):
     __tablename__ = "accounts"
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    email: Mapped[str] = mapped_column(String(254), unique=True)
+    email: Mapped[str | None] = mapped_column(String(254), unique=True)
+    phone_number: Mapped[str | None] = mapped_column(String(11), unique=True)
     password_hash: Mapped[str] = mapped_column(String(256))
 
 
