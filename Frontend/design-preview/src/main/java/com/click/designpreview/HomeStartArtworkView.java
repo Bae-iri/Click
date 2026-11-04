@@ -1,4 +1,4 @@
-package com.click.ui.home;
+package com.click.designpreview;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
@@ -9,6 +9,7 @@ import android.graphics.Paint;
 import android.graphics.Shader;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 
@@ -26,11 +27,13 @@ public final class HomeStartArtworkView extends View {
 
     public HomeStartArtworkView(Context context) {
         super(context);
-        hand = context.getDrawable(com.click.designpreview.R.drawable.permission_touch_hand);
+        hand = context.getDrawable(R.drawable.permission_touch_hand);
         if (hand instanceof BitmapDrawable) ((BitmapDrawable) hand).setFilterBitmap(true);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         setLayerType(LAYER_TYPE_SOFTWARE, null);
     }
+
+    public HomeStartArtworkView(Context context, AttributeSet attrs) { this(context); }
 
     public void setAnimationActive(boolean active) { animationActive = active; syncAnimation(); }
 

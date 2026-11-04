@@ -45,7 +45,7 @@ import com.click.service.overlay.ClickOverlayService;
 import com.click.ui.common.ClickUi;
 import com.click.ui.common.ClickTextScale;
 import com.click.ui.home.HomeIconView;
-import com.click.ui.home.HomeStartArtworkView;
+import com.click.designpreview.HomeStartArtworkView;
 
 /** Main Click entry screen after accessibility onboarding. */
 public final class HomeActivity extends AppCompatActivity {
