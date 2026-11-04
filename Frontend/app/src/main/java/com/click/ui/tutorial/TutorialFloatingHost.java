@@ -361,15 +361,25 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     }
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
-        // A restored TEXT/VOICE mode can be set before the first layout. Size it before
-        // measuring the child so it is not left with the collapsed button's 64dp bounds.
+        // 튜토리얼의 바깥 ScrollView가 전체 연습을 스크롤한다. 패널을 남은 화면
+        // 높이로 압축하지 않고 실제 내용 높이를 먼저 확보한다.
         int width = MeasureSpec.getSize(widthSpec);
-        int height = MeasureSpec.getSize(heightSpec);
+        int limit = getResources().getDisplayMetrics().heightPixels * 2;
         LayoutParams params = (LayoutParams) control.getLayoutParams();
         params.width = Math.min(width, control.getWindowWidth(control.getMode(), width));
-        params.height = Math.min(height, control.getWindowHeight(control.getMode()));
-        if (review != null) review.setAvailableHeight(height);
-        super.onMeasure(widthSpec, heightSpec);
+        int controlHeight = control.getWindowHeight(control.getMode());
+        int desired = control.getMode() == ClickOverlayLayout.Mode.COLLAPSED ? dp(260) : controlHeight + dp(24);
+        if (review != null) {
+            review.setAvailableHeight(limit);
+            if (review.getVisibility() == VISIBLE) {
+                review.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                        MeasureSpec.makeMeasureSpec(limit, MeasureSpec.AT_MOST));
+                desired = review.getMeasuredHeight() + dp(24);
+            }
+        }
+        int height = resolveSize(desired, heightSpec);
+        params.height = Math.min(height, controlHeight);
+        super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
     }
 
     @Override protected void onSizeChanged(int w, int h, int oldW, int oldH) {

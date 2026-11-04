@@ -18,6 +18,7 @@ final class FloatingPanelStyle {
     static final int TOP_PADDING_DP = 8;
     static final int BOTTOM_PADDING_DP = 12;
     static final int HEADER_GAP_DP = 4;
+    static final int HEADER_DIVIDER_GAP_DP = 5;
     private FloatingPanelStyle() {}
 
     /** Compact visual controls retain a 48dp touch target and grow with system text. */

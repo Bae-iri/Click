@@ -82,7 +82,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private final LinearLayout reviewNavigation;
     private final Button headerReplay;
     private final LinearLayout headerIdentity, headerActions;
-    private final View divider;
+    private final View divider, headerDivider;
     private final LinearLayout controls;
     private final LinearLayout recoveryActions;
     private TextView narrationStatus, narrationText;
@@ -151,12 +151,13 @@ public final class TaskFlowOverlayView extends LinearLayout {
         backButton.setCompoundDrawables(backIcon, null, null, null);
         backButton.setPadding(dp(4), dp(10), dp(10), dp(10));
         backButton.setVisibility(GONE);
-        header.addView(backButton, new LayoutParams(dp(48), dp(48)));
         LinearLayout titles = new LinearLayout(context);
         headerIdentity = titles;
-        titles.setOrientation(VERTICAL);
+        titles.setOrientation(HORIZONTAL);
+        titles.setGravity(Gravity.CENTER_VERTICAL);
+        titles.addView(backButton, new LayoutParams(dp(48), dp(48)));
         brand = new ClickArtworkView(context, ClickArtworkView.Kind.WORDMARK);
-        brand.setContentDescription("클릭 로고");
+        brand.setContentDescription("CLICK");
         brand.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
         titles.addView(brand, new LayoutParams(dp(66), dp(24)));
         heading = ClickUi.title(context, "");
@@ -196,8 +197,14 @@ public final class TaskFlowOverlayView extends LinearLayout {
         headerActions.addView(close, closeParams);
         header.addView(headerActions, new LayoutParams(-2, -2));
         LayoutParams headerParams = new LayoutParams(-1, -2);
-        headerParams.bottomMargin = dp(FloatingPanelStyle.HEADER_GAP_DP);
+        headerParams.bottomMargin = dp(FloatingPanelStyle.HEADER_DIVIDER_GAP_DP);
         addView(header, headerParams);
+        headerDivider = new View(context);
+        headerDivider.setBackgroundColor(0xFFE1E9F5);
+        headerDivider.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LayoutParams headerDividerParams = new LayoutParams(LayoutParams.MATCH_PARENT, dp(1));
+        headerDividerParams.bottomMargin = dp(FloatingPanelStyle.HEADER_DIVIDER_GAP_DP);
+        addView(headerDivider, headerDividerParams);
         content = new LinearLayout(context); content.setOrientation(VERTICAL);
         content.setPadding(0, 0, 0, dp(4));
         scroll = new ScrollView(context); scroll.setFillViewport(false); scroll.addView(content);
@@ -227,8 +234,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         divider = new View(context);
         divider.setBackgroundColor(BORDER);
         LayoutParams dividerParams = new LayoutParams(LayoutParams.MATCH_PARENT, dp(1));
-        dividerParams.topMargin = dp(4);
-        dividerParams.bottomMargin = dp(4);
+        dividerParams.topMargin = dp(5);
+        dividerParams.bottomMargin = dp(5);
         addView(divider, dividerParams);
 
         controls = new LinearLayout(context);
@@ -281,7 +288,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public boolean hasCompactContent() { return !guidanceMessage().trim().isEmpty(); }
     public boolean isMinimizedProgress() { return minimizedProgress; }
     private View[] expandedSections() {
-        return new View[]{header, scroll, controls, divider, reviewConfirm, recoveryActions,
+        return new View[]{header, headerDivider, scroll, controls, divider, reviewConfirm, recoveryActions,
                 reviewNavigation};
     }
     // [UI 수정] 줄이기 상태의 표시 항목/배경. 말풍선 꼬리 모양은 CompactBubbleBackground에서 그린다.
@@ -385,10 +392,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         int available = MeasureSpec.getMode(height) == MeasureSpec.UNSPECIFIED ? maxHeight
                 : Math.min(maxHeight, MeasureSpec.getSize(height));
         boolean compact = available < dp(260) * Math.max(1f, getResources().getConfiguration().fontScale);
-        brand.setVisibility(reviewScreen ? GONE : VISIBLE);
         heading.setTextSize(ClickTextScale.size(getContext(), compact ? 20 : 22));
         int innerWidth = MeasureSpec.getSize(width) - getPaddingLeft() - getPaddingRight();
-        float headerWidth = dp((reviewScreen ? 48 : 66) + 16 + 16 + 14 + 4 + 20 + 4)
+        float headerWidth = dp((backButton.getVisibility() == VISIBLE ? 48 : 0) + 66 + 16 + 16 + 14 + 4 + 20 + 4)
                 + headerReplay.getPaint().measureText("음성 멈춤")
                 + ((TextView) close).getPaint().measureText("줄이기");
         boolean stacked = headerWidth > innerWidth;
@@ -398,7 +404,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             headerActions.setLayoutParams(new LayoutParams(stacked ? -1 : -2, -2));
         }
         LayoutParams headerParams = (LayoutParams) header.getLayoutParams();
-        headerParams.bottomMargin = dp(FloatingPanelStyle.HEADER_GAP_DP);
+        headerParams.bottomMargin = dp(FloatingPanelStyle.HEADER_DIVIDER_GAP_DP);
         super.onMeasure(width, MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST));
     }
     private void clear(String title) {

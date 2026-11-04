@@ -13,7 +13,6 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.click.ui.overlay.ClickOverlayLayout;
-import com.click.service.overlay.SpeechInput;
 import java.io.File;
 import java.io.FileOutputStream;
 import org.junit.Test;
@@ -27,7 +26,8 @@ public class ClickTutorialFlowTest {
     @Test public void fourStepsUseCurrentPanelsAndReturnHome() throws Exception {
         try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
             scenario.onActivity(a -> {
-                assertNotNull(findText(a.getWindow().getDecorView(), "4단계 연습"));
+                assertNull(findText(a.getWindow().getDecorView(), "4단계 연습"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "클릭을 함께 연습해요"));
                 assertFalse(control(a).isShown());
             });
             screenshot("tutorial-short-intro");
@@ -44,11 +44,11 @@ public class ClickTutorialFlowTest {
                     findType(control(a), EditText.class).getHint().toString()));
             scenario.onActivity(a -> control(a).setDraftText("휴대폰 전체 글자 크기 키워줘"));
             tapText(scenario, "↑");
-            scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "2/4")));
+            scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "요청이 맞는지 확인해요")));
             screenshot("tutorial-short-review");
             tapText(scenario, "안내 시작하기");
             scenario.onActivity(a -> {
-                assertNotNull(findText(a.getWindow().getDecorView(), "3/4"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "자동으로 진행해요"));
                 assertNotNull(findText(a.getWindow().getDecorView(), "진행중이에요!"));
                 assertNull(findText(a.getWindow().getDecorView(), "설정 앱을 열어주세요."));
             });
@@ -66,10 +66,10 @@ public class ClickTutorialFlowTest {
             tapText(scenario, "이어서 진행");
             tapId(scenario, R.id.tutorial_next);
             screenshot("tutorial-short-result");
-            tapText(scenario, "조금 더 도와주세요");
+            tapText(scenario, "더 커졌으면 좋겠어");
             scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "진행중이에요!")));
             tapId(scenario, R.id.tutorial_next);
-            tapText(scenario, "네, 좋아요");
+            tapText(scenario, "네, 글씨가 잘 보여요");
             scenario.recreate();
             scenario.onActivity(a -> {
                 for (String label : new String[]{"말이나 글로 요청하기", "요청 내용 확인하기", "안내창 줄이고 멈추기", "결과 확인하기"}) {
@@ -94,7 +94,7 @@ public class ClickTutorialFlowTest {
             tapText(scenario, "글로 입력");
             tapText(scenario, "↑");
             scenario.onActivity(a -> {
-                assertNotNull(findText(a.getWindow().getDecorView(), "1/4"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "요청을 적어주세요"));
                 control(a).setDraftText("글자 크기 키워줘");
             });
             scenario.recreate();
@@ -115,50 +115,36 @@ public class ClickTutorialFlowTest {
             tapText(scenario, "요청 중지");
             assertMode(scenario, ClickOverlayLayout.Mode.MENU);
             scenario.onActivity(a -> {
-                assertNotNull(findText(a.getWindow().getDecorView(), "1/4"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "편한 방법으로 요청해 보세요"));
                 assertNull(findText(a.getWindow().getDecorView(), "요청을 멈췄어요"));
             });
         }
     }
 
-    @Test public void holdAndReleaseVoiceGoesStraightToRequestReview() throws Exception {
-        instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
-                .grantRuntimePermission("com.click", android.Manifest.permission.RECORD_AUDIO);
+    @Test public void oneSecondVoicePracticeAdvancesOnReleaseWithoutPermissionOrServer() throws Exception {
         try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
             tapId(scenario, R.id.tutorial_next);
             tapId(scenario, R.id.tutorial_floating_control);
             tapText(scenario, "말로 입력");
-            FakeSpeech speech = new FakeSpeech();
-            scenario.onActivity(a -> {
-                try {
-                    java.lang.reflect.Field field = TutorialActivity.class.getDeclaredField("speech"); field.setAccessible(true);
-                    ((SpeechInput) field.get(a)).close(); field.set(a, speech);
-                } catch (Exception e) { throw new AssertionError(e); }
-            });
             microphoneTouch(scenario, MotionEvent.ACTION_DOWN);
             scenario.onActivity(a -> assertTrue(control(a).isVoiceInputActive()));
             microphoneTouch(scenario, MotionEvent.ACTION_CANCEL);
-            scenario.onActivity(a -> assertFalse(control(a).isVoiceInputActive()));
+            SystemClock.sleep(1200);
+            scenario.onActivity(a -> {
+                assertFalse(control(a).isVoiceInputActive());
+                assertNotNull(findText(a.getWindow().getDecorView(), "마이크를 꾹 눌러보세요"));
+            });
             microphoneTouch(scenario, MotionEvent.ACTION_DOWN);
+            SystemClock.sleep(1200);
+            scenario.onActivity(a -> assertTrue(control(a).isVoiceInputActive()));
             microphoneTouch(scenario, MotionEvent.ACTION_UP);
             scenario.onActivity(a -> {
-                assertTrue(speech.finished);
                 assertFalse(control(a).isVoiceInputActive());
-                speech.callback.onSuccess("휴대폰 전체 글자 크기 키워줘");
-                assertNotNull(findText(a.getWindow().getDecorView(), "2/4"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "요청이 맞는지 확인해요"));
                 assertNotNull(findText(a.getWindow().getDecorView(), "안내 시작하기"));
             });
+            screenshot("tutorial-offline-voice-review");
         }
-    }
-
-    // Deterministic STT callback checks; live microphone quality is verified separately.
-    private static final class FakeSpeech implements SpeechInput {
-        Callback callback;
-        boolean finished;
-        public void start(Callback callback) { this.callback = callback; finished = false; callback.onReady(); }
-        public void finish() { finished = true; callback.onRecordingFinished(); }
-        public void cancel() { callback = null; }
-        public void close() { cancel(); }
     }
 
     private ClickOverlayLayout control(TutorialActivity a) { return a.findViewById(R.id.tutorial_floating_control); }
@@ -179,19 +165,27 @@ public class ClickTutorialFlowTest {
     }
     private void tapText(ActivityScenario<TutorialActivity> s, String label) {
         View[] view = {null};
-        s.onActivity(a -> {
-            view[0] = findText(a.getWindow().getDecorView(), label);
-            assertNotNull("Missing " + label, view[0]);
-            while (!view[0].isClickable() && view[0].getParent() instanceof View) view[0] = (View) view[0].getParent();
-        });
+        String[] current = {""};
+        for (int attempt = 0; attempt < 30 && view[0] == null; attempt++) {
+            instrumentation.waitForIdleSync();
+            s.onActivity(a -> {
+                current[0] = control(a).getMode() + ": " + ((TextView) a.findViewById(R.id.tutorial_title)).getText();
+                view[0] = findText(a.getWindow().getDecorView(), label);
+                if (view[0] != null) while (!view[0].isClickable() && view[0].getParent() instanceof View)
+                    view[0] = (View) view[0].getParent();
+            });
+            if (view[0] == null) SystemClock.sleep(100);
+        }
+        assertNotNull("Missing " + label + " in " + current[0], view[0]);
         tap(view[0]);
     }
     private void tap(View view) {
+        instrumentation.runOnMainSync(() -> view.requestRectangleOnScreen(new Rect(0, 0, view.getWidth(), view.getHeight()), true));
         Rect bounds = new Rect();
         boolean[] visible = {false};
         for (int attempt = 0; attempt < 30 && !visible[0]; attempt++) {
             instrumentation.waitForIdleSync();
-            instrumentation.runOnMainSync(() -> visible[0] = view.getGlobalVisibleRect(bounds));
+            instrumentation.runOnMainSync(() -> visible[0] = view.isShown() && view.getGlobalVisibleRect(bounds));
             if (!visible[0]) SystemClock.sleep(100);
         }
         assertTrue("Tap target must be on screen: " + view.getContentDescription() + " (" + view.getId() + ")", visible[0]);

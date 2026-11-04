@@ -64,7 +64,7 @@ public final class SplashLayout extends FrameLayout {
                 MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
         int gap = dp(contentHeight < dp(400) ? 12 : 20);
         int availableHeight = Math.max(0, contentHeight - tagline.getMeasuredHeight() - gap * 2 - dp(32));
-        int logoWidth = Math.min(dp(224), Math.round(contentWidth * .50f));
+        int logoWidth = Math.min(dp(250), Math.round(contentWidth * .56f));
         int artWidth = Math.min(dp(180), Math.round(contentWidth * .48f));
         float illustrationHeight = logoWidth * 72f / 222f + artWidth * 210f / 180f;
         float fit = illustrationHeight > 0 ? Math.min(1f, availableHeight / illustrationHeight) : 0f;
@@ -87,7 +87,7 @@ public final class SplashLayout extends FrameLayout {
         View tagline = childOrId(2, R.id.splash_tagline);
         int gap = dp(contentHeight < dp(400) ? 12 : 20);
         int groupHeight = logo.getMeasuredHeight() + artwork.getMeasuredHeight() + gap * 2 + tagline.getMeasuredHeight();
-        int desiredTop = getPaddingTop() + Math.round(contentHeight * .49f) - groupHeight / 2;
+        int desiredTop = getPaddingTop() + Math.round(contentHeight * .51f) - groupHeight / 2;
         int logoTop = Math.max(getPaddingTop() + dp(8), Math.min(desiredTop,
                 bottom - top - getPaddingBottom() - dp(8) - groupHeight));
         placeCentered(logo, centerX, logoTop);

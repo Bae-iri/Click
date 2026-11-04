@@ -1,6 +1,7 @@
 package com.click.ui.tutorial;
 
 import android.app.Application;
+import android.os.Looper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -10,6 +11,7 @@ import com.click.designpreview.TutorialNarrator;
 import com.click.service.overlay.DeviceSpeechInput;
 import com.click.ui.overlay.ClickOverlayLayout;
 import java.lang.reflect.Field;
+import java.time.Duration;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,6 +24,7 @@ import org.robolectric.annotation.Config;
 import org.robolectric.annotation.LooperMode;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
+import static org.robolectric.Shadows.shadowOf;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 34, application = Application.class)
@@ -51,7 +54,7 @@ public class TutorialSpeechScriptTest {
         String script = activity.getString(R.string.tutorial_speech_intro);
         verify(narrator).speak(script);
         TextView title = activity.findViewById(R.id.tutorial_title);
-        assertEquals("핵심만 함께\n연습해 볼까요?", title.getText().toString());
+        assertEquals("클릭을 함께 연습해요", title.getText().toString());
         assertFalse(script.contains("click의 기능은 다음과 같아요"));
         title.setText("화면 제목만 수정한 경우");
         find("안내 다시 듣기").performClick();
@@ -95,6 +98,39 @@ public class TutorialSpeechScriptTest {
         verify(narrator).replay(script);
         activity.onTextSubmitted("휴대폰 전체 글자 크기 키워줘");
         verify(narrator).speak(activity.getString(R.string.tutorial_speech_review_ready));
+    }
+
+    @Test public void holdingForOneSecondAdvancesOnReleaseWithoutRecordingOrServer() {
+        activity.findViewById(R.id.tutorial_next).performClick();
+        ClickOverlayLayout control = activity.findViewById(R.id.tutorial_floating_control);
+        control.openVoice();
+        activity.onMicrophonePressed();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(999));
+        assertTrue(control.isVoiceInputActive());
+        assertEquals("마이크를 꾹 눌러보세요", ((TextView) activity.findViewById(R.id.tutorial_title)).getText());
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1));
+        assertTrue(control.isVoiceInputActive());
+        activity.onMicrophoneReleased();
+        assertFalse(control.isVoiceInputActive());
+        assertNotNull(find("안내 시작하기"));
+        assertTrue("Practice must not create a microphone or STT client", inputs.constructed().isEmpty());
+    }
+
+    @Test public void releaseAndBackgroundCancelThePendingPracticeStep() {
+        activity.findViewById(R.id.tutorial_next).performClick();
+        ClickOverlayLayout control = activity.findViewById(R.id.tutorial_floating_control);
+        control.openVoice();
+        activity.onMicrophonePressed();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
+        activity.onMicrophoneReleased();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(4));
+        assertEquals("마이크를 꾹 눌러보세요", ((TextView) activity.findViewById(R.id.tutorial_title)).getText());
+        activity.onMicrophonePressed();
+        controller.pause().stop();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(4));
+        controller.start().resume();
+        assertFalse(control.isVoiceInputActive());
+        assertEquals("마이크를 꾹 눌러보세요", ((TextView) activity.findViewById(R.id.tutorial_title)).getText());
     }
 
     private void updateCopy() throws Exception {
