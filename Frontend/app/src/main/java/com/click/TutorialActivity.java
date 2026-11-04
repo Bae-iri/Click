@@ -109,6 +109,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
 
         stage = new FrameLayout(this);
         stage.setId(R.id.tutorial_phone_stage);
+        stage.setMinimumHeight(dp(320));
         LinearLayout.LayoutParams stageParams = new LinearLayout.LayoutParams(-1, -2);
         stageParams.setMargins(0, dp(16), 0, dp(8));
         lesson.addView(stage, stageParams);
@@ -133,7 +134,8 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         floating = new TutorialFloatingHost(this, this);
         floating.setId(R.id.tutorial_floating_host);
         floating.getControl().setId(R.id.tutorial_floating_control);
-        FrameLayout.LayoutParams floatingParams = new FrameLayout.LayoutParams(-1, -2);
+        FrameLayout.LayoutParams floatingParams = new FrameLayout.LayoutParams(-1, -2,
+                Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         stage.addView(floating, floatingParams);
         checklist = vertical();
         lesson.addView(checklist, new LinearLayout.LayoutParams(-1, -2));

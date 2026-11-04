@@ -250,6 +250,7 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         refreshTargetHighlight();
         boolean visible = highlightVisible();
         tapHint.setVisibility(visible ? VISIBLE : GONE);
+        if (visible) tapHint.bringToFront();
         positionHint();
         if (visible && isShown() && isAttachedToWindow() && hasWindowFocus() && getWindowVisibility() == VISIBLE
                 && ValueAnimator.areAnimatorsEnabled()) {
@@ -304,10 +305,12 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
 
     private void positionHint() {
         if (tapHint.getVisibility() != VISIBLE) return;
-        float cx = control.getX() + dp(32);
+        float cx = control.getX() + control.getClickCenterX(
+                ClickOverlayLayout.Mode.COLLAPSED, control.getLayoutParams().width);
         tapHint.setX(Math.max(0, Math.min(cx + dp(24) - tapHint.getMeasuredWidth(),
                 getWidth() - tapHint.getMeasuredWidth())));
-        tapHint.setY(Math.max(0, control.getY() - dp(24) - tapHint.getMeasuredHeight()));
+        float buttonTop = control.getY() + control.getClickCenterY(ClickOverlayLayout.Mode.COLLAPSED) - dp(32);
+        tapHint.setY(Math.max(dp(8), buttonTop - dp(20) - tapHint.getMeasuredHeight()));
     }
 
     @Override protected void dispatchDraw(Canvas canvas) {
