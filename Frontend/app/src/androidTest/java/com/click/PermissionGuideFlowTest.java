@@ -27,13 +27,14 @@ public class PermissionGuideFlowTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private PermissionGuideActivity observedActivity;
 
-    @Test public void fourPagesShowEnableAnimationThenConsentAndRetainNavigation() {
+    @Test public void threePagesStartWithPermissionReasonAndRetainNavigation() {
         try (ActivityScenario<PermissionGuideActivity> scenario = ActivityScenario.launch(PermissionGuideActivity.class)) {
             scenario.onActivity(activity -> {
                 observedActivity = activity;
                 assertPage(activity, 1);
+                assertNotNull(find(activity.getWindow().getDecorView(), "접근성 권한이 필요해요"));
+                assertNull(find(activity.getWindow().getDecorView(), "어려운 스마트폰 사용,\n이제 클릭 한 번으로"));
                 next(activity); assertPage(activity, 2);
-                next(activity); assertPage(activity, 3);
                 assertNotNull(activity.findViewById(com.click.designpreview.R.id.guide_enable_animation));
                 assertNull(find(activity.getWindow().getDecorView(), "어떤 도움을\n드릴 수 있나요?"));
                 assertNull(activity.findViewById(com.click.designpreview.R.id.guide_settings_shortcut));
@@ -45,7 +46,7 @@ public class PermissionGuideFlowTest {
             final ValueAnimator[] demo = {null};
             scenario.onActivity(activity -> {
                 demo[0] = animator(activity);
-                next(activity); assertPage(activity, 4);
+                next(activity); assertPage(activity, 3);
                 assertFalse("Leaving the animation page must cancel its loop", demo[0].isStarted());
                 assertNotNull(activity.findViewById(com.click.designpreview.R.id.guide_consent_example));
                 assertEquals("지금 설정하기", activity.findViewById(com.click.designpreview.R.id.guide_action).getContentDescription());
@@ -60,10 +61,10 @@ public class PermissionGuideFlowTest {
             scenario.onActivity(activity -> save(activity, "consent-bottom"));
             scenario.recreate();
             scenario.onActivity(activity -> {
-                assertPage(activity, 4);
+                assertPage(activity, 3);
                 assertNotNull(activity.findViewById(com.click.designpreview.R.id.guide_consent_example));
                 activity.findViewById(com.click.designpreview.R.id.guide_back).performClick();
-                assertPage(activity, 3);
+                assertPage(activity, 2);
                 assertNotNull(activity.findViewById(com.click.designpreview.R.id.guide_enable_animation));
             });
         }
@@ -72,7 +73,7 @@ public class PermissionGuideFlowTest {
     @Test public void animationStopsInBackgroundAndRestartsOnReturn() {
         try (ActivityScenario<PermissionGuideActivity> scenario = ActivityScenario.launch(PermissionGuideActivity.class)) {
             final ValueAnimator[] demo = {null};
-            scenario.onActivity(activity -> { next(activity); next(activity); demo[0] = animator(activity); });
+            scenario.onActivity(activity -> { next(activity); demo[0] = animator(activity); });
             settle();
             scenario.onActivity(activity -> assertTrue(demo[0].isStarted()));
             scenario.moveToState(Lifecycle.State.CREATED);
@@ -123,7 +124,7 @@ public class PermissionGuideFlowTest {
         activity.findViewById(com.click.designpreview.R.id.guide_action).performClick();
     }
     private static void assertPage(PermissionGuideActivity activity, int page) {
-        assertEquals(page + " / 4", ((TextView) activity.findViewById(com.click.designpreview.R.id.guide_step_counter)).getText());
+        assertEquals(page + " / 3", ((TextView) activity.findViewById(com.click.designpreview.R.id.guide_step_counter)).getText());
     }
     private static ValueAnimator animator(PermissionGuideActivity activity) {
         try {
