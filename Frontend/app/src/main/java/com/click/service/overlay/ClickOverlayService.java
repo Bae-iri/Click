@@ -282,6 +282,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     speak("지금은 이 도움을 시작할 수 없어요. 잠시 후 다시 눌러 주세요.");
                 } else {
                     overlayView.post(() -> {
+                        // A home quick-help tap starts a fresh task panel. Do not let a
+                        // previously collapsed input panel swallow the selected request.
+                        initialGoal = selected.requestText;
+                        taskFlowCollapsed = false;
                         overlayView.collapse();
                         enqueueNormalRequest(selected.requestText, selected.goalType);
                     });
