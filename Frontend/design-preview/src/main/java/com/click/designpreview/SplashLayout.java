@@ -59,7 +59,7 @@ public final class SplashLayout extends FrameLayout {
         setMeasuredDimension(width, height);
         int contentWidth = Math.max(0, width - getPaddingLeft() - getPaddingRight());
         int contentHeight = Math.max(0, height - getPaddingTop() - getPaddingBottom());
-        View tagline = findViewById(R.id.splash_tagline);
+        View tagline = childOrId(2, R.id.splash_tagline);
         tagline.measure(MeasureSpec.makeMeasureSpec(Math.max(0, contentWidth - dp(48)), MeasureSpec.AT_MOST),
                 MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
         int gap = dp(contentHeight < dp(400) ? 12 : 20);
@@ -70,10 +70,10 @@ public final class SplashLayout extends FrameLayout {
         float fit = illustrationHeight > 0 ? Math.min(1f, availableHeight / illustrationHeight) : 0f;
         logoWidth = Math.round(logoWidth * fit);
         artWidth = Math.round(artWidth * fit);
-        findViewById(R.id.splash_logo).measure(
+        childOrId(0, R.id.splash_logo).measure(
                 MeasureSpec.makeMeasureSpec(logoWidth, MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(Math.round(logoWidth * 72f / 222f), MeasureSpec.EXACTLY));
-        findViewById(R.id.splash_artwork).measure(
+        childOrId(1, R.id.splash_artwork).measure(
                 MeasureSpec.makeMeasureSpec(artWidth, MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(Math.round(artWidth * 210f / 180f), MeasureSpec.EXACTLY));
     }
@@ -82,9 +82,9 @@ public final class SplashLayout extends FrameLayout {
         int width = right - left;
         int contentHeight = bottom - top - getPaddingTop() - getPaddingBottom();
         int centerX = getPaddingLeft() + (width - getPaddingLeft() - getPaddingRight()) / 2;
-        View logo = findViewById(R.id.splash_logo);
-        View artwork = findViewById(R.id.splash_artwork);
-        View tagline = findViewById(R.id.splash_tagline);
+        View logo = childOrId(0, R.id.splash_logo);
+        View artwork = childOrId(1, R.id.splash_artwork);
+        View tagline = childOrId(2, R.id.splash_tagline);
         int gap = dp(contentHeight < dp(400) ? 12 : 20);
         int groupHeight = logo.getMeasuredHeight() + artwork.getMeasuredHeight() + gap * 2 + tagline.getMeasuredHeight();
         int desiredTop = getPaddingTop() + Math.round(contentHeight * .49f) - groupHeight / 2;
@@ -99,6 +99,11 @@ public final class SplashLayout extends FrameLayout {
     private void placeCentered(View view, int centerX, int top) {
         int left = centerX - view.getMeasuredWidth() / 2;
         view.layout(left, top, left + view.getMeasuredWidth(), top + view.getMeasuredHeight());
+    }
+
+    private View childOrId(int index, int id) {
+        View byId = findViewById(id);
+        return byId != null ? byId : getChildAt(index);
     }
 
     private int dp(int value) {
