@@ -25,8 +25,13 @@ public final class AutomaticAdjustmentApproval {
             while (keys.hasNext()) {
                 String key = keys.next();
                 if (!java.util.Set.of("runtime_strategy", "attempt_id", "step_id",
-                        "avoid_covering_target", "preferred_position", "direction", "automatable_setting").contains(key)) return false;
+                        "avoid_covering_target", "preferred_position", "direction", "automatable_setting",
+                        "ui_selector", "revalidate_before_action").contains(key)) return false;
             }
+            if (command.renderPolicy.has("ui_selector")
+                    && !"jev".equals(command.renderPolicy.optString("ui_selector"))) return false;
+            if (command.renderPolicy.has("revalidate_before_action")
+                    && !Boolean.TRUE.equals(command.renderPolicy.opt("revalidate_before_action"))) return false;
             if (!"continue".equals(command.renderPolicy.optString("runtime_strategy", "continue"))) return false;
             if (command.renderPolicy.has("automatable_setting")
                     && !slots.optString("setting").equals(command.renderPolicy.optString("automatable_setting"))) return false;

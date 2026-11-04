@@ -697,10 +697,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || !selectedCard.requestText.equals(text) ? null : goalClassifier.executableGoal(selectedType);
         requirementReview = RequirementReview.isFontRequest(text)
                 ? RequirementReview.forContext(text, foregroundPackage()) : null;
-        if (selected != null && clarification == null) {
+        final boolean explicitCardSelection = selected != null && clarification == null;
+        if (explicitCardSelection) {
             try { requirementReview = RequirementReview.forGoal(text, selected.toTypedGoalJson(), selected.displayName); }
             catch (org.json.JSONException error) { showQueueError(error); return; }
         }
+        final String preparationSource = explicitCardSelection ? requirementReview.preparationSource() : text;
         ensureTaskFlow(); updateFloatingVisibility(); taskFlowView.waiting("사용자 요청을 처리하고 있어요");
         setTurnInFlight(true);
         final int generation = executionGeneration;
@@ -714,10 +716,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 }
                 if (agentPaused) { taskFlowView.paused(); return; }
                 if (contract.goalPreparation) {
-                    // Retain known requirements if the server cannot return its question.
-                    // Foreground Settings alone must not select a system-wide scope here.
-                    requirementReview = RequirementReview.isFontRequest(text) ? new RequirementReview(text) : null;
-                    resolveGoalOnServer(text, clarification); return;
+                    // A favorite already selects a Settings task. Keep that explicit scope
+                    // through server preparation; ordinary speech still needs a scope question.
+                    if (!explicitCardSelection) {
+                        requirementReview = RequirementReview.isFontRequest(text) ? new RequirementReview(text) : null;
+                    }
+                    resolveGoalOnServer(preparationSource, clarification); return;
                 }
                 if (LocalGoalResolver.needsServerResolution(goalClassifier, contract, text, foregroundPackage(), clarification)) {
                     resolveGoalOnServer(text, clarification); return;
@@ -2446,6 +2450,16 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         boolean canSearchByScrolling = command.targetBounds == null
                 && "observe_only".equals(command.actionType)
                 && ObservationRecovery.canSearchByScrolling(response.stateId, command.renderPolicy, displayedSnapshot);
+        if (command.targetBounds == null && displayedSnapshot != null) {
+            JSONObject recovery = command.renderPolicy == null ? null : command.renderPolicy.optJSONObject("recovery");
+            JSONObject fallback = command.fallbackAction();
+            android.util.Log.i("ClickScroll", "search state=" + response.stateId + " action=" + command.actionType
+                    + " reason=" + (recovery == null ? "none" : recovery.optString("reason_code"))
+                    + " fallback=" + (fallback == null ? "none" : fallback.optString("reason", fallback.optString("reason_code")))
+                    + " visibleLists=" + displayedSnapshot.nodes.stream()
+                            .filter(n -> n.visibleToUser && n.enabled && n.scrollable).count()
+                    + " eligible=" + canSearchByScrolling);
+        }
         // An absent item on a recognized menu needs list search before back/home recovery.
         if (!canSearchByScrolling && showNavigationRecoveryIfNeeded(response, displayedSnapshot)) return;
         if (displayedSnapshot != null && command.targetBounds != null
