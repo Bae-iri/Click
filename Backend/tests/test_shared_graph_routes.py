@@ -90,7 +90,7 @@ def test_database_routes_propose_without_changing_active_graph():
 
 def test_withdrawal_invalidates_cross_user_run_even_when_anchor_has_other_owner():
     app, client, owner, now, manifest = runtime_routes()
-    other = register(client, 'other-routes@example.com')['user_id']
+    other = register(client, '01077778888')['user_id']
     with app.state.session_factory() as db:
         for session in db.scalars(select(AgentSession).where(AgentSession.id.in_(['route-session-2','route-session-3']))):
             session.user_id = other

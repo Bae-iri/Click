@@ -204,8 +204,8 @@ def test_parallel_users_have_independent_queues_and_interrupts(tmp_path):
     url = "sqlite+pysqlite:///" + (tmp_path / "multi-user.db").as_posix()
     app = create_app(url)
     with TestClient(app) as first, TestClient(create_app(url)) as second:
-        first_user = register(first, "first-queue@example.com")["user_id"]
-        second_user = register(second, "second-queue@example.com")["user_id"]
+        first_user = register(first, "01011112222")["user_id"]
+        second_user = register(second, "01033334444")["user_id"]
         first_a = enqueue(first, "first A").json()["request"]
         enqueue(first, "first B")
         second_a = enqueue(second, "second A").json()["request"]
@@ -271,7 +271,7 @@ def test_owner_isolation_and_delete_cascade():
     with TestClient(app) as client:
         auth = register(client)
         row = enqueue(client).json()["request"]
-        register(client, "other@example.com")
+        register(client, "01055556666")
         assert client.get(BASE).json()["queued"] == []
         assert client.get(BASE + "/" + row["id"]).status_code == 404
         assert client.post(BASE + "/" + row["id"] + "/fail", json={"failure_code": "CLIENT_ERROR"}).status_code == 404
