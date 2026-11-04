@@ -5,10 +5,8 @@ import android.graphics.Color;
 import android.widget.ScrollView;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -38,7 +36,6 @@ import java.util.ArrayList;
 public final class TutorialActivity extends AppCompatActivity implements TutorialFloatingHost.Listener {
     public static final String EXTRA_FROM_SIGN_UP = "from_sign_up";
     private static final int INTRO = -1, INPUT = 0, REVIEW = 1, RUNNING = 2, RESULT = 3, COMPLETE = 4, STEP_COUNT = 4;
-    private static final long VOICE_PRACTICE_MS = 1000;
     private static final String PRACTICE_REQUEST = "휴대폰 전체 글자 크기 키워줘";
     private final ArrayList<String> messages = new ArrayList<>();
     private final ArrayList<String> reviewActions = new ArrayList<>();
@@ -47,12 +44,11 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     private ScrollView lessonScroll;
     private FrameLayout stage;
     private View phone;
-    private TextView title, description, feedback;
+    private TextView title, description;
     private Button action, restore;
     private int step = INTRO, completedSteps, displayedStep = Integer.MIN_VALUE;
     private TutorialNarrator narrator;
     private com.click.ui.tutorial.ReviewedTutorialScripts reviewedScripts;
-    private long voicePressStartedAt;
     private boolean paused;
     private String lastCue = "";
     private boolean cuePending;
@@ -118,7 +114,6 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         phone = phoneView;
         phone.setAlpha(.32f);
         FrameLayout.LayoutParams phoneParams = new FrameLayout.LayoutParams(-1, -1);
-        phoneParams.setMargins(dp(5), 0, dp(5), 0);
         stage.addView(phone, phoneParams);
 
         restore = ClickUi.secondaryButton(this, "클릭 버튼 다시 보기");
@@ -134,7 +129,8 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         floating = new TutorialFloatingHost(this, this);
         floating.setId(R.id.tutorial_floating_host);
         floating.getControl().setId(R.id.tutorial_floating_control);
-        FrameLayout.LayoutParams floatingParams = new FrameLayout.LayoutParams(-1, -2,
+        // Match the phone stage so dragging reaches its top as well as its bottom.
+        FrameLayout.LayoutParams floatingParams = new FrameLayout.LayoutParams(-1, -1,
                 Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         stage.addView(floating, floatingParams);
         checklist = vertical();
@@ -146,10 +142,6 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
 
         footer = vertical();
         footer.setPadding(0, dp(10), 0, dp(6));
-        feedback = text("", 13, ClickUi.SUBTEXT, false);
-        feedback.setGravity(Gravity.CENTER);
-        feedback.setPadding(dp(4), dp(4), dp(4), dp(8));
-        lesson.addView(feedback, new LinearLayout.LayoutParams(-1, -2));
         TextView replay = text("안내 다시 듣기", 15, ClickUi.BLUE_DARK, false);
         replay.setGravity(Gravity.CENTER);
         replay.setMinHeight(dp(48));
@@ -168,8 +160,8 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         action.setMinHeight(dp(64));
         action.setPadding(dp(18), dp(15), dp(18), dp(15));
         action.setOnClickListener(view -> advance());
-        footer.addView(action, new LinearLayout.LayoutParams(-1, -2));
         footer.addView(replay, new LinearLayout.LayoutParams(-1, -2));
+        footer.addView(action, new LinearLayout.LayoutParams(-1, -2));
         column.addView(footer, new LinearLayout.LayoutParams(-1, -2));
         setContentView(root);
         ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
@@ -271,28 +263,24 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 || floating.getControl().isVoiceInputActive()) return;
         narrator.stop();
         floating.getControl().setVoiceInputActive(true);
-        voicePressStartedAt = SystemClock.uptimeMillis();
         floating.highlight(null, 0);
-        floating.getControl().setRecognizedSpeech("1초 동안 누른 뒤 떼면 다음 화면으로 넘어가요.");
+        floating.getControl().setRecognizedSpeech("마이크를 누른 채 요청을 말하고, 끝나면 손을 떼세요.");
         // 연습은 실제 녹음·마이크 권한·서버 연결 없이 진행한다.
     }
 
     @Override public void onMicrophoneReleased() {
         if (!floating.getControl().isVoiceInputActive()) return;
-        long heldMillis = voicePressStartedAt == 0L ? 0L : SystemClock.uptimeMillis() - voicePressStartedAt;
         cancelVoicePractice();
-        if (heldMillis >= VOICE_PRACTICE_MS) onTextSubmitted(PRACTICE_REQUEST);
-        else floating.getControl().setRecognizedSpeech("1초 동안 꾹 누른 뒤 떼어 주세요.");
+        onTextSubmitted(PRACTICE_REQUEST);
     }
 
     @Override public void onMicrophoneCancelled() {
         if (step != INPUT || !floating.getControl().isVoiceInputActive()) return;
         cancelVoicePractice();
-        floating.getControl().setRecognizedSpeech("연습을 멈췄어요. 마이크를 다시 꾹 눌러보세요.");
+        floating.getControl().setRecognizedSpeech("입력을 멈췄어요. 마이크를 다시 누른 채 말해 주세요.");
     }
 
     private void cancelVoicePractice() {
-        voicePressStartedAt = 0L;
         if (floating != null) {
             floating.getControl().setVoiceInputActive(false);
             floating.getControl().setVoiceInputProcessing(false);
@@ -406,15 +394,10 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
             lessonScroll.post(() -> lessonScroll.scrollTo(0, 0));
         }
         boolean overviewPage = step == INTRO || step == COMPLETE;
-        // 첫/완료 화면의 버튼은 설명 바로 아래에 둔다. 긴 글씨에서는 함께 스크롤된다.
-        LinearLayout footerParent = overviewPage ? lesson : column;
-        if (footer.getParent() != footerParent) {
-            ((ViewGroup) footer.getParent()).removeView(footer);
-            footerParent.addView(footer, new LinearLayout.LayoutParams(-1, -2));
-        }
-        footer.setPadding(0, dp(overviewPage ? 24 : 10), 0, dp(6));
+        // 하단 버튼은 스크롤 본문 밖에 고정한다. 긴 설명만 스크롤하고 시작 버튼은 아래에 유지한다.
         checklist.setVisibility(overviewPage ? View.VISIBLE : View.GONE);
         stage.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
+        stage.setMinimumHeight(dp(step == INPUT ? 440 : 320));
         phone.setVisibility(step == INPUT ? View.VISIBLE : View.GONE);
         floating.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
         restore.setVisibility(!overviewPage && floating.isHidden() ? View.VISIBLE : View.GONE);
@@ -454,7 +437,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                     floating.highlight("↑", 0);
                 } else if (mode == ClickOverlayLayout.Mode.VOICE) {
                     heading = "마이크를 꾹 눌러보세요";
-                    detail = "1초 동안 누른 뒤 떼면 연습 화면으로 넘어가요.";
+                    detail = "마이크를 누른 채 말하고, 끝나면 손을 떼세요.";
                     speechResource = R.string.tutorial_speech_voice_record;
                     if (!floating.getControl().isVoiceInputActive()) floating.highlight(null, R.id.overlay_microphone);
                 }
@@ -471,7 +454,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 detail = paused ? "‘이어서 진행’을 누르면 계속해요."
                         : "안내창을 줄이거나 잠시 멈춰보세요.";
                 speechResource = paused ? R.string.tutorial_speech_paused : R.string.tutorial_speech_running;
-                button = "결과 확인 연습하기"; enabled = !paused; break;
+                button = "결과 확인하기"; enabled = !paused; break;
             default:
                 heading = "결과를 알려주세요";
                 detail = "아래 버튼으로 결과를 알려주세요.";
@@ -494,8 +477,6 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         action.setVisibility(enabled || step == RUNNING ? View.VISIBLE : View.GONE);
         action.setAlpha(enabled ? 1f : .52f);
         if (restore.getVisibility() == View.VISIBLE) floating.highlight(restore);
-        feedback.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
-        feedback.setText("연습 화면 · 휴대폰 설정은 바뀌지 않아요");
         String cue = reviewedScripts.forSource(getString(speechResource));
         if (!cue.equals(lastCue)) { lastCue = cue; cuePending = true; }
         if (cuePending && !keyboardVisible && !floating.getControl().isVoiceInputActive()) {

@@ -74,7 +74,7 @@ public final class ClickApplication extends Application implements ClickHost {
             @Override public void onFailure(Throwable error) {
                 gateway.close();
                 String message = error instanceof ApiException && ((ApiException) error).status == 401
-                        ? "전화번호이나 비밀번호를 다시 확인해 주세요."
+                        ? "전화번호나 비밀번호를 다시 확인해 주세요."
                         : "로그인하지 못했어요. 연결 상태를 확인하고 다시 시도해 주세요.";
                 if (!activity.isDestroyed()) callback.complete(false, false, message);
             }

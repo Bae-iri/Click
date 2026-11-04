@@ -1296,10 +1296,60 @@ public class ClickOverlayServiceExecutionTest {
         prepareGuideResponse();
         currentScreen = fontScreen(3f, 1.15f, 2000);
         deliverFontConfirmation(1);
+        // Approval is deliberately deferred; do not pretend a reply arrived before its request.
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+        assertEquals("respond_confirmation", requests.get(2).commandType());
         send(null);
         deliver(2, "highlight", "drag", "right");
         assertEquals("request_result", requests.get(3).commandType());
         assertEquals(4, requests.size());
+    }
+
+    @Test public void minimizedClickControlMovesClearOfTheNativeSlider() throws Exception {
+        prepareGuideResponse();
+        ClickOverlayLayout control = (ClickOverlayLayout) get("overlayView");
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+        params.x = 800; params.y = 1000;
+        set("windowParams", params);
+        set("taskFlowCollapsed", true);
+        set("lastTargetBounds", new int[]{100, 1050, 950, 1150});
+        when(control.isAttachedToWindow()).thenReturn(true);
+        when(control.getWindowWidth(eq(ClickOverlayLayout.Mode.COLLAPSED), anyInt())).thenReturn(160);
+        when(control.getWindowHeight(ClickOverlayLayout.Mode.COLLAPSED)).thenReturn(160);
+        doAnswer(call -> { int[] xy = call.getArgument(0); xy[0] = params.x; xy[1] = params.y + 24; return null; })
+                .when(control).getLocationOnScreen(any(int[].class));
+        Method place = ClickOverlayService.class.getDeclaredMethod("avoidTargetWithCollapsedControl");
+        place.setAccessible(true); place.invoke(service);
+        assertTrue("The entire touchable logo window must be above the slider", params.y + 24 + 160 < 1050);
+        int adjusted = params.y;
+        place.invoke(service);
+        assertEquals("Non-overlapping controls keep their position", adjusted, params.y);
+        verify((WindowManager) get("windowManager"), times(1)).updateViewLayout(eq(control), eq(params));
+    }
+
+    @Test public void persistedFontChangeAfterStaleRetryLimitStillReachesResultPrompt() throws Exception {
+        screen = fontScreen(2f, 1f, 1000); currentScreen = screen;
+        prepareGuideResponse();
+        deliver(1, "highlight", "drag", "right");
+        // Settings can finish applying FONT_SCALE after its redraw exhausted guide retries.
+        set("staleGuideDrops", 4);
+        currentScreen = fontScreen(3f, 1.15f, 2000);
+        send(null);
+        assertEquals("A persisted change must not be dropped by the stale-guide limit", 3, requests.size());
+        deliver(2, "highlight", "drag", "right");
+        assertEquals("request_result", requests.get(3).commandType());
+        assertNull(requests.get(3).userActionEvent);
+        assertNull(requests.get(3).userResult);
+    }
+
+    @Test public void staleRetryLimitStillStopsUnchangedOrOppositeFontChanges() throws Exception {
+        screen = fontScreen(2f, 1f, 1000); currentScreen = screen;
+        prepareGuideResponse();
+        deliver(1, "highlight", "drag", "right");
+        set("staleGuideDrops", 4);
+        currentScreen = fontScreen(2f, 1f, 2000); send(null);
+        currentScreen = fontScreen(1f, .85f, 3000); send(null);
+        assertEquals(2, requests.size());
     }
 
     @Test public void persistedFontChangeAdvancesEvenWhenServerRepeatsTheSliderGuide() throws Exception {
@@ -1440,7 +1490,7 @@ public class ClickOverlayServiceExecutionTest {
         accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(false, "com.android.settings", 42), never());
         assertEquals(3, requests.size());
         verify((TaskFlowOverlayView) get("taskFlowView"), never())
-                .scrollRecovery(anyString(), anyString(), any(), any(), any());
+                .targetHelp(anyString(), any());
     }
 
     @Test public void unreasonedJevWaitScrollsAndSendsTheChangedScreenBeforeSelectingAgain() throws Exception {
@@ -1520,7 +1570,7 @@ public class ClickOverlayServiceExecutionTest {
         assertTrue((boolean) get("taskFlowCollapsed"));
     }
 
-    @Test public void automaticSearchStopsAfterFourMovesAndKeepsManualControls() throws Exception {
+    @Test public void automaticSearchStopsAfterFourMovesAndShowsTargetHelp() throws Exception {
         new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
         currentScreen = scrollableScreen("page 0");
         resolve(); confirm();
@@ -1535,8 +1585,101 @@ public class ClickOverlayServiceExecutionTest {
         deliverMissingTarget(5, "TARGET_NOT_VISIBLE");
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
         accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42), times(4));
-        verify((TaskFlowOverlayView) get("taskFlowView")).scrollRecovery(anyString(), anyString(), any(), any(), any());
+        verify((TaskFlowOverlayView) get("taskFlowView")).targetHelp(anyString(), any());
         assertEquals(6, requests.size());
+        assertTrue((boolean) get("taskFlowCollapsed"));
+        org.mockito.ArgumentCaptor<Runnable> notFound = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView) get("taskFlowView")).targetHelp(eq("디스플레이"), notFound.capture());
+        JSONObject confirmedGoal = (JSONObject) get("acceptedGoal");
+        accessibility.when(() -> ClickAccessibilityService.performRecoveryNavigation(false)).thenReturn(true);
+        notFound.getValue().run();
+        notFound.getValue().run();
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(false), times(1));
+        assertSame(confirmedGoal, get("acceptedGoal"));
+        assertEquals(NavigationRecovery.Action.HOME, ((NavigationRecovery) get("navigationRecovery")).awaiting());
+    }
+
+    @Test public void staleTargetHelpCannotNavigateAfterANewRequest() throws Exception {
+        resolve(); confirm();
+        Method show = ClickOverlayService.class.getDeclaredMethod("showTargetHelp", String.class);
+        show.setAccessible(true); show.invoke(service, "S1_SETTINGS_HOME");
+        org.mockito.ArgumentCaptor<Runnable> notFound = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView) get("taskFlowView")).targetHelp(eq("디스플레이"), notFound.capture());
+        set("executionGeneration", (int) get("executionGeneration") + 1);
+        notFound.getValue().run();
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(anyBoolean()), never());
+    }
+
+    @Test public void openingAndCollapsingTargetHelpReplayTheTargetInsteadOfOldGuidance() throws Exception {
+        TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
+        TutorialNarrator narrator = mock(TutorialNarrator.class);
+        set("narrator", narrator);
+        when(panel.isTargetHelp()).thenReturn(true);
+        when(panel.hasOpenedTargetHelp()).thenReturn(true);
+        when(panel.guidanceMessage()).thenReturn("디스플레이 항목을 찾아주세요");
+        set("taskFlowCollapsed", true);
+        assertTrue(service.onOpenRequested());
+        Method collapse = ClickOverlayService.class.getDeclaredMethod("collapseTaskFlow");
+        collapse.setAccessible(true); collapse.invoke(service);
+        verify(narrator, times(2)).replay("디스플레이 항목을 찾아주세요");
+    }
+
+    @Test public void expandedTargetHelpSurvivesSnapshotEventsForcedReadsAndLateGuides() throws Exception {
+        resolve(); confirm();
+        Method show = ClickOverlayService.class.getDeclaredMethod("showTargetHelp", String.class);
+        show.setAccessible(true); show.invoke(service, "S1_SETTINGS_HOME");
+        TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
+        assertTrue(service.onOpenRequested());
+        clearInvocations(panel);
+        set("turnInFlight", false);
+        set("forceNextObservation", true);
+        currentScreen = changedScreen("com.android.settings", 1080, 2400, 42, 200);
+        cachedScreen = currentScreen;
+        ((BroadcastReceiver) get("collapseReceiver")).onReceive(service,
+                new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED));
+        Method observe = ClickOverlayService.class.getDeclaredMethod("sendAgentTurn", String.class, boolean.class);
+        observe.setAccessible(true); observe.invoke(service, null, true);
+        // A response already on its way when help appeared must not overwrite the card.
+        deliverMissingTarget(1, "TARGET_NOT_VISIBLE");
+        callbacks.get(1).onSuccess(new AgentTurnContract.Response(new JSONObject()
+                .put("request_id", requests.get(1).requestId).put("session_version", 2)
+                .put("session_id", "frontend-session").put("episode_id", "episode")
+                .put("task_status", "WAITING_CONFIRMATION").put("state_id", "S1_SETTINGS_HOME")
+                .put("guide_command", new JSONObject().put("guide_command_id", "late-confirmation")
+                        .put("command_type", "confirmation").put("action_type", "observe_only")
+                        .put("message", "이전 화면의 확인 안내")).toString()));
+        show.invoke(service, "S1_SETTINGS_HOME");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10));
+        assertEquals(2, requests.size());
+        assertFalse((boolean) get("taskFlowCollapsed"));
+        verify(panel, never()).targetHelp(anyString(), any());
+        verify(panel, never()).waitingProgress(anyString());
+        verify(panel, never()).progress(anyString(), any(), any(), anyBoolean());
+        verify(panel, never()).confirmation(anyString(), any());
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(anyBoolean(), anyString(), anyInt()), never());
+    }
+
+    @Test public void compactTargetHelpWaitsThroughTransientReadsAndResumesOnChangedNativeScreen() throws Exception {
+        resolve(); confirm(); set("turnInFlight", false);
+        Method show = ClickOverlayService.class.getDeclaredMethod("showTargetHelp", String.class);
+        show.setAccessible(true); show.invoke(service, "S1_SETTINGS_HOME");
+        Method observe = ClickOverlayService.class.getDeclaredMethod("sendAgentTurn", String.class, boolean.class);
+        observe.setAccessible(true);
+        JSONObject confirmedGoal = (JSONObject) get("acceptedGoal");
+        for (ScreenSnapshot transientScreen : new ScreenSnapshot[]{null,
+                new ScreenSnapshot("com.android.settings", Instant.now().toString(), 1080, 2400, List.of(), 42),
+                changedScreen("com.click", 1080, 2400, 43, 200),
+                changedScreen("com.android.settings", 1080, 2400, 42, 100)}) {
+            currentScreen = transientScreen;
+            observe.invoke(service, null, true);
+            assertEquals("Overlay redraws and identical native captures must keep help waiting", 2, requests.size());
+        }
+        currentScreen = changedScreen("com.android.settings", 1080, 2400, 43, 300);
+        observe.invoke(service, null, true);
+        assertEquals(3, requests.size());
+        assertSame(currentScreen, requests.get(2).accessibilityTree);
+        assertSame(confirmedGoal, get("acceptedGoal"));
+        assertEquals(-1, get("targetHelpGeneration"));
     }
 
     @Test public void automaticSearchReversesAtListEndThenStops() throws Exception {
@@ -1599,7 +1742,7 @@ public class ClickOverlayServiceExecutionTest {
 
     @Test public void recoveryRetrySendsUnchangedScreenOnceWithoutWaitingForAnEvent() throws Exception {
         resolve(); confirm();
-        deliverMissingTarget(1, "TARGET_AMBIGUOUS");
+        deliverMissingTarget(1, "ACTION_RESULT_UNOBSERVABLE");
         org.mockito.ArgumentCaptor<Runnable> retry = org.mockito.ArgumentCaptor.forClass(Runnable.class);
         verify((TaskFlowOverlayView) get("taskFlowView"))
                 .observationRecovery(anyString(), anyString(), retry.capture());
@@ -1614,7 +1757,7 @@ public class ClickOverlayServiceExecutionTest {
 
     @Test public void recoveryRetryExplainsUnavailableScreenAndRespectsCancellation() throws Exception {
         resolve(); confirm();
-        deliverMissingTarget(1, "TARGET_AMBIGUOUS");
+        deliverMissingTarget(1, "ACTION_RESULT_UNOBSERVABLE");
         org.mockito.ArgumentCaptor<Runnable> retry = org.mockito.ArgumentCaptor.forClass(Runnable.class);
         TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
         verify(panel).observationRecovery(anyString(), anyString(), retry.capture());
@@ -1629,7 +1772,7 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("A pending stop must not be bypassed by retry", 2, requests.size());
     }
 
-    @Test public void exhaustedFreshObservationsKeepUserCollapseAndAllowRetry() throws Exception {
+    @Test public void exhaustedFreshObservationsOfferTargetHelpWithoutAnotherRetry() throws Exception {
         prepareGuideResponse();
         set("freshObservationRetries", 4);
         set("taskFlowCollapsed", true);
@@ -1643,12 +1786,10 @@ public class ClickOverlayServiceExecutionTest {
                 .put("request_id", requests.get(1).requestId).put("session_id", "frontend-session")
                 .put("session_version", 1).put("episode_id", "episode").put("state_id", "S1_SETTINGS_HOME")
                 .put("task_status", "IN_PROGRESS").put("guide_command", guide).toString()));
-        org.mockito.ArgumentCaptor<Runnable> retry = org.mockito.ArgumentCaptor.forClass(Runnable.class);
-        verify((TaskFlowOverlayView) get("taskFlowView")).observationRecovery(anyString(), retry.capture());
+        verify((TaskFlowOverlayView) get("taskFlowView")).targetHelp(eq("디스플레이"), any());
+        verify((TaskFlowOverlayView) get("taskFlowView"), never()).observationRecovery(anyString(), any());
         assertEquals(true, get("taskFlowCollapsed"));
-        retry.getValue().run();
-        assertEquals(3, requests.size());
-        assertEquals(0, get("freshObservationRetries"));
+        assertEquals("Exhausted observations wait for the user, without another automatic retry", 2, requests.size());
     }
 
     private ScreenSnapshot scrollableScreen(String label) {

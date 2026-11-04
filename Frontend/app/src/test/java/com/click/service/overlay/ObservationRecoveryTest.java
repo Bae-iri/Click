@@ -59,9 +59,17 @@ public class ObservationRecoveryTest {
                 false, true, false, true, false, null, 7);
         return new ScreenSnapshot(pkg, "2026-10-11T06:00:00Z", 1080, 2400, Collections.singletonList(list), 7);
     }
-    @Test public void missingSettingsTargetUsesTheConciseTargetInstruction() throws Exception {
+    @Test public void missingSettingsTargetNeverAsksTheUserToScroll() throws Exception {
         String message = ObservationRecovery.message("S1_SETTINGS_HOME", new JSONObject().put("reason", "target_not_found"), settings("com.android.settings"));
         assertEquals("디스플레이 항목을 찾아주세요", message);
+    }
+    @Test public void targetInstructionFollowsTheConfirmedGoalAndCurrentStep() {
+        assertEquals("디스플레이", ObservationRecovery.targetLabel("S1_SETTINGS_HOME", "settings.font_size.increase"));
+        assertEquals("소리 및 진동", ObservationRecovery.targetLabel("S1_SETTINGS_HOME", "settings.volume.increase"));
+        assertEquals("글자 크기와 스타일", ObservationRecovery.targetLabel("S2_DISPLAY_MENU", "settings.font_size.decrease"));
+        assertEquals("밝기", ObservationRecovery.targetLabel("S2_DISPLAY_MENU", "settings.brightness.decrease"));
+        assertNull(ObservationRecovery.targetLabel("S4_FONT_SIZE_CONTROL", "settings.font_size.increase"));
+        assertNull(ObservationRecovery.targetLabel("S1_SETTINGS_HOME", "unknown"));
     }
     @Test public void uncertaintyOrVerificationNeverSuggestsScrolling() throws Exception {
         assertNull(ObservationRecovery.message("S1_SETTINGS_HOME", new JSONObject().put("reason", "ambiguous_target"), settings("com.android.settings")));

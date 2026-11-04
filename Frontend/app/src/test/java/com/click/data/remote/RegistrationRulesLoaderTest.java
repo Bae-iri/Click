@@ -17,8 +17,8 @@ public class RegistrationRulesLoaderTest {
                 {"paths":{"/api/v1/auth/register":{"post":{"requestBody":{"content":{
                 "application/json":{"schema":{"$ref":"#/components/schemas/RegisterRequest"}}
                 }}}}},"components":{"schemas":{"RegisterRequest":{"properties":{
-                "email":{"type":"string"},"age_group":{"type":"string"},
-                "password":{"type":"string","minLength":%d,"maxLength":128}
+                "phone_number":{"type":"string"},"age_group":{"type":"string"},
+                "password":{"type":"string","minLength":%d,"maxLength":4}
                 }}}}}
                 """.formatted(minimum), null);
     }
@@ -42,8 +42,8 @@ public class RegistrationRulesLoaderTest {
         for (int status : new int[] {408, 502, 503, 504}) {
             AtomicInteger calls = new AtomicInteger();
             RegistrationRulesLoader loader = new RegistrationRulesLoader(() ->
-                    calls.incrementAndGet() == 1 ? new HttpResult(status, "unavailable", null) : rules(12), () -> 0L);
-            assertEquals(12, loader.load().minimumPasswordLength);
+                    calls.incrementAndGet() == 1 ? new HttpResult(status, "unavailable", null) : rules(4), () -> 0L);
+            assertEquals(4, loader.load().minimumPasswordLength);
             assertEquals(2, calls.get());
         }
     }
@@ -64,11 +64,11 @@ public class RegistrationRulesLoaderTest {
         RegistrationRulesLoader loader = new RegistrationRulesLoader(() -> {
             int call = calls.incrementAndGet();
             if (call >= 3) throw new SocketTimeoutException();
-            return rules(call == 1 ? 12 : 4);
+            return rules(4);
         }, time::get);
-        assertEquals(12, loader.load().minimumPasswordLength);
+        assertEquals(4, loader.load().minimumPasswordLength);
         time.set(15 * 60 * 1000L - 1);
-        assertEquals(12, loader.load().minimumPasswordLength);
+        assertEquals(4, loader.load().minimumPasswordLength);
         assertEquals(1, calls.get());
         time.incrementAndGet();
         assertEquals(4, loader.load().minimumPasswordLength);
