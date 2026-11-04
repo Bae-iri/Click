@@ -48,11 +48,38 @@ public final class ObservationRecovery {
         return "S1_SETTINGS_HOME".equals(stateId) || "S2_DISPLAY_MENU".equals(stateId)
                 || "S3_FONT_MENU".equals(stateId) || "S2_SOUND_MENU".equals(stateId);
     }
+    /** Older primary-Jev responses omitted the missing-target reason. A recognized
+     * Settings list can still be explored, but never while an action result is pending.
+     * The caller bounds navigation attempts and sends each new screen back to Jev. */
+    public static boolean canSearchJevWait(String stateId, JSONObject policy, JSONObject metadata,
+                                          ScreenSnapshot screen) {
+        if (policy == null || !"jev".equals(policy.optString("ui_selector"))
+                || !navigationMenu(stateId) || !settingsScreen(screen) || screen.activeWindowId == null
+                || !hasVisibleList(screen) || policy.has("recovery") || policy.has("backend_handoff")
+                || policy.has("vision_fallback") || policy.has("recovery_action")) return false;
+        JSONObject fallback = policy.optJSONObject("fallback_action");
+        if (fallback == null || !"request_fresh_observation".equals(fallback.optString("type"))
+                || !fallback.optString("reason").isEmpty() || !fallback.optString("reason_code").isEmpty()) return false;
+        JSONObject verification = metadata == null ? null : metadata.optJSONObject("verification");
+        JSONObject result = verification == null ? null : verification.optJSONObject("result");
+        if (result != null && !java.util.Set.of("SUCCESS", "WAITING_FOR_ACTION").contains(result.optString("status")))
+            return false;
+        JSONObject debug = metadata == null ? null : metadata.optJSONObject("debug");
+        JSONObject selection = debug == null ? null : debug.optJSONObject("ui_selection");
+        if (selection != null && selection.optInt("grounded_candidate_count", 0) > 0) return false;
+        if (selection != null && java.util.Set.of("provider_error", "not_configured", "timeout", "deadline_exceeded",
+                "invalid_response", "invalid_candidates", "input_too_large", "candidate_limit")
+                .contains(selection.optString("status"))) return false;
+        return true;
+    }
     private static boolean settingsScreen(ScreenSnapshot screen) {
         return screen != null && TouchAutomationPolicy.settingsPackage(screen.packageName);
     }
     private static boolean hasVisibleList(ScreenSnapshot screen) {
-        return screen.nodes.stream().anyMatch(node -> node.visibleToUser && node.scrollable && node.enabled);
+        return screen.nodes.stream().anyMatch(node -> node.visibleToUser && node.scrollable && node.enabled
+                && node.rangeMin == null && node.rangeMax == null
+                && screen.packageName.equals(node.packageName)
+                && screen.activeWindowId != null && node.windowId == screen.activeWindowId);
     }
     public static boolean awaitsUser(JSONObject policy) {
         JSONObject recovery = policy == null ? null : policy.optJSONObject("recovery");

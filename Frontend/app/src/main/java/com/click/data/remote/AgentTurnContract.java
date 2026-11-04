@@ -280,6 +280,11 @@ public final class AgentTurnContract {
             Log.i(tag, "agent.debug.fallback " + debug.opt("fallback"));
             Log.i(tag, "agent.debug.agent_chain " + debug.opt("agent_chain"));
             Log.i(tag, "agent.debug.vision_fallback " + debug.opt("vision_fallback"));
+            Log.i(tag, "agent.debug.ui_selection " + debug.opt("ui_selection"));
+            JSONObject goal = metadata.optJSONObject("typed_goal");
+            Log.i(tag, "agent.selection task=" + (goal == null ? "unknown" : goal.optString("task_id"))
+                    + " state=" + stateId + " action=" + (guideCommand == null ? "none" : guideCommand.actionType)
+                    + " target=" + (guideCommand == null ? "none" : guideCommand.targetNodeId));
         }
     }
 

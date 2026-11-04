@@ -7,7 +7,8 @@ import httpx
 
 from app.services.goal_jev import JevGoalClassifier, _probability
 from app.services.goal_llm import _unique_object
-from ai_agent.runtime.targeting import eligible_nodes, target_key, selector_keywords
+from ai_agent.runtime.targeting import eligible_nodes, target_key, selector_keywords, selector_evidence
+from ai_agent.runtime.matcher import MATCH_THRESHOLD, match_next_ui
 from ai_agent.runtime.keywords import any_keyword_matches
 from ai_agent.runtime.privacy import redact_text
 from ai_agent.runtime.types import MatchResult, SafetyLevel
@@ -48,9 +49,17 @@ class JevScreenResolver(JevGoalClassifier):
                 self.last_diagnostics["status"] = "no_candidates" if not bindings else "candidate_limit"
                 return None
             self.last_diagnostics["candidate_count"] = len(bindings)
+            # Visibility evidence only, never a substitute for Jev's selection.
+            # A low-confidence decision with a visible matching control needs
+            # disambiguation, not scrolling that control off the screen.
+            self.last_diagnostics["grounded_candidate_count"] = sum(
+                selector_evidence(n, t, nodes, graph)[0] >= MATCH_THRESHOLD for t, n in bindings.values())
             relevant = {n.node_id for _, n in bindings.values()}
             words = tuple(w for t in graph.transitions for w in selector_keywords(t, graph))
             relevant.update(n.node_id for n in nodes if any_keyword_matches(n.label, words))
+            # A destination menu label is not the current page title. Keep the
+            # independent screen text even when it is far from candidate controls.
+            relevant.update(n.node_id for n in nodes if n.structure_role == "screen_text")
             # Include siblings, parents and nearby descriptions around controls.
             raw = {n.node_id: n for n in raw_nodes}
             parents = {raw[i].parent_id for i in relevant if i in raw}
@@ -65,13 +74,18 @@ class JevScreenResolver(JevGoalClassifier):
                 return None
             ids = {n.node_id: f"n{i}" for i,n in enumerate(selected_nodes)}
             criteria = {key: {"step": t.from_state, "transition": t.transition_id,
-                "action": t.action_type.value, "node": ids[n.node_id], "route_priority": t.priority}
+                "action": t.action_type.value, "node": ids[n.node_id], "route_priority": t.priority,
+                "current_page": graph.states[t.from_state].name,
+                "destination_page": graph.states[t.to_state].name,
+                "purpose": t.action_name, "target_names": selector_keywords(t, graph)}
                 for key,(t,n) in bindings.items()}
             criteria.update(wait_for_result="Wait for the previous action result without acting.",
                             insufficient_evidence="Screen or target is ambiguous or unrelated; request fresh evidence.")
             previous_action = attempt if attempt is not None else (session.pending_attempt if session else None)
             state = {"goal": {"type": goal.goal_type, "slots": dict(graph.definition.required_slots)},
                 "nodes": [{"id": ids[n.node_id], "label": redact_text(n.label)[:200],
+                    "label_parts": [redact_text(part)[:200] for part in n.label_parts],
+                    "structure_role": n.structure_role, "actionable": n.actionable,
                     "role": n.role, "enabled": n.enabled, "value": n.value,
                     "min": n.range_min, "max": n.range_max, "position": n.position_hint,
                     "parent": ids.get(raw[n.node_id].parent_id) if n.node_id in raw else None}
@@ -92,6 +106,11 @@ class JevScreenResolver(JevGoalClassifier):
                     "If the screen has moved to a different graph step, select that observed step and target, "
                     "even when it skips steps or contradicts the earlier rule-based result. "
                     "Choose wait_for_result only when an action is still settling on the same screen. "
+                    "A candidate is the NEXT navigation action toward the goal, not necessarily the final setting control. "
+                    "Use independent screen_text and the collection of controls to identify the current page. "
+                    "A control_label or description belongs to a menu row, not the page title. "
+                    "For example, a Settings page containing a Display row is still Settings; choose the route into Display. "
+                    "Use label_parts as the menu identity; label can also include a longer secondary description. "
                     "First identify the observed step, then choose its matching target. "
                     "Within that step prefer the lowest route_priority among equally supported routes. "
                     "Priority never supplies missing evidence or overrides the observed current step. "
@@ -126,10 +145,18 @@ class JevScreenResolver(JevGoalClassifier):
             if any(p >= top for k,p in probabilities.items() if k != choice):
                 return None
             confidence = min(answer["confidence"], (top-1/len(criteria))/(1-1/len(criteria)))
+            # Diagnose rejected decisions without logging screen labels or IDs.
+            self.last_diagnostics.update(confidence=confidence, minimum_confidence=minimum,
+                top_probability=top, probability_margin=top-max(p for k,p in probabilities.items() if k != choice))
+            if choice in bindings:
+                selected_transition, _ = bindings[choice]
+                self.last_diagnostics.update(chosen_state=selected_transition.from_state,
+                    chosen_transition=selected_transition.transition_id)
+            else:
+                self.last_diagnostics["chosen_outcome"] = choice
             if confidence < minimum:
                 self.last_diagnostics["status"] = "low_confidence"
                 return None
-            self.last_diagnostics["confidence"] = confidence
             if choice not in bindings:
                 self.last_diagnostics["status"] = "waiting" if choice == "wait_for_result" else "abstained"
                 return None
@@ -139,8 +166,6 @@ class JevScreenResolver(JevGoalClassifier):
                 return None
             self.last_diagnostics["status"] = "selected"
             # Honor reviewed ordering for equally grounded alternatives in this step.
-            from ai_agent.runtime.matcher import match_next_ui, MATCH_THRESHOLD
-            from ai_agent.runtime.targeting import selector_evidence
             preferred = match_next_ui(transition.from_state, nodes, graph,
                                       excluded_target_keys=excluded_target_keys)
             selected_score, _ = selector_evidence(node, transition, nodes, graph)

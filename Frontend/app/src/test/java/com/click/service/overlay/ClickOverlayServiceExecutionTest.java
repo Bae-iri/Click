@@ -1443,6 +1443,35 @@ public class ClickOverlayServiceExecutionTest {
                 .scrollRecovery(anyString(), anyString(), any(), any(), any());
     }
 
+    @Test public void unreasonedJevWaitScrollsAndSendsTheChangedScreenBeforeSelectingAgain() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
+        currentScreen = scrollableScreen("settings page");
+        resolve(); confirm();
+        accessibility.when(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42))
+                .thenAnswer(call -> { currentScreen = screen; return true; });
+        JSONObject guide = new JSONObject().put("guide_command_id", "jev-wait")
+                .put("command_type", "highlight").put("action_type", "observe_only")
+                .put("render_policy", new JSONObject().put("ui_selector", "jev")
+                        .put("runtime_strategy", "wait_for_action").put("revalidate_before_action", true)
+                        .put("fallback_action", new JSONObject().put("type", "request_fresh_observation")));
+        callbacks.get(1).onSuccess(new AgentTurnContract.Response(new JSONObject()
+                .put("request_id", requests.get(1).requestId).put("session_id", "frontend-session")
+                .put("session_version", 1).put("episode_id", "episode").put("state_id", "S1_SETTINGS_HOME")
+                .put("task_status", "IN_PROGRESS").put("guide_command", guide)
+                .put("metadata", new JSONObject().put("verification", new JSONObject().put("result",
+                        new JSONObject().put("status", "SUCCESS").put("evidence", "observed_progress"))))
+                .toString()));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(900));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42));
+        assertEquals(3, requests.size());
+        assertSame(screen, requests.get(2).accessibilityTree);
+        assertTrue(sent.get(2).toString().contains("manual_override"));
+        deliver(2, "highlight", "tap", null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(anyBoolean(), anyString(), anyInt()), times(1));
+        assertEquals("The visible target must stop exploration", 3, requests.size());
+    }
+
     @Test public void legacyMissingTargetAlsoSearchesSettingsWithoutAsking() throws Exception {
         new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
         currentScreen = scrollableScreen("settings page");

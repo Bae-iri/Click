@@ -2449,7 +2449,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         boolean canSearchByScrolling = command.targetBounds == null
                 && "observe_only".equals(command.actionType)
-                && ObservationRecovery.canSearchByScrolling(response.stateId, command.renderPolicy, displayedSnapshot);
+                && (ObservationRecovery.canSearchByScrolling(response.stateId, command.renderPolicy, displayedSnapshot)
+                    || hasConfirmedGoal() && "highlight".equals(command.commandType)
+                        && ObservationRecovery.canSearchJevWait(response.stateId, command.renderPolicy,
+                                response.metadata, displayedSnapshot));
         if (command.targetBounds == null && displayedSnapshot != null) {
             JSONObject recovery = command.renderPolicy == null ? null : command.renderPolicy.optJSONObject("recovery");
             JSONObject fallback = command.fallbackAction();
