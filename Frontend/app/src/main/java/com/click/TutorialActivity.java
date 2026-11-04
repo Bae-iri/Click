@@ -5,10 +5,10 @@ import android.graphics.Color;
 import android.widget.ScrollView;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
+import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
@@ -38,25 +38,21 @@ import java.util.ArrayList;
 public final class TutorialActivity extends AppCompatActivity implements TutorialFloatingHost.Listener {
     public static final String EXTRA_FROM_SIGN_UP = "from_sign_up";
     private static final int INTRO = -1, INPUT = 0, REVIEW = 1, RUNNING = 2, RESULT = 3, COMPLETE = 4, STEP_COUNT = 4;
-    private static final long VOICE_PRACTICE_MS = 3000;
+    private static final long VOICE_PRACTICE_MS = 1000;
     private static final String PRACTICE_REQUEST = "휴대폰 전체 글자 크기 키워줘";
     private final ArrayList<String> messages = new ArrayList<>();
     private final ArrayList<String> reviewActions = new ArrayList<>();
     private TutorialFloatingHost floating;
-    private LinearLayout toolbar, progress, footer, checklist;
+    private LinearLayout column, lesson, toolbar, progress, footer, checklist;
     private ScrollView lessonScroll;
     private FrameLayout stage;
     private View phone;
     private TextView title, description, feedback;
     private Button action, restore;
-    private int step = INTRO, completedSteps;
+    private int step = INTRO, completedSteps, displayedStep = Integer.MIN_VALUE;
     private TutorialNarrator narrator;
     private com.click.ui.tutorial.ReviewedTutorialScripts reviewedScripts;
-    private final Handler practiceHandler = new Handler(Looper.getMainLooper());
-    private final Runnable finishVoicePractice = () -> {
-        if (step == INPUT && floating.getControl().getMode() == ClickOverlayLayout.Mode.VOICE
-                && floating.getControl().isVoiceInputActive()) onTextSubmitted(PRACTICE_REQUEST);
-    };
+    private long voicePressStartedAt;
     private boolean paused;
     private String lastCue = "";
     private boolean cuePending;
@@ -86,7 +82,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
 
         FrameLayout root = new FrameLayout(this);
         root.addView(new TutorialArtworkView(this, TutorialArtworkView.Kind.BACKGROUND), new FrameLayout.LayoutParams(-1, -1));
-        LinearLayout column = vertical();
+        column = vertical();
         root.addView(column, new FrameLayout.LayoutParams(Math.min(getResources().getDisplayMetrics().widthPixels, dp(500)), -1, Gravity.CENTER_HORIZONTAL));
         toolbar = toolbar();
         column.addView(toolbar, new LinearLayout.LayoutParams(-1, -2));
@@ -95,7 +91,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         lessonScroll.setFillViewport(false);
         lessonScroll.setClipToPadding(false);
         lessonScroll.setVerticalScrollBarEnabled(false);
-        LinearLayout lesson = vertical();
+        lesson = vertical();
         lesson.setPadding(0, dp(12), 0, dp(12));
         lessonScroll.addView(lesson, new ScrollView.LayoutParams(-1, -2));
         column.addView(lessonScroll, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -182,11 +178,11 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
             boolean visible = insets.isVisible(WindowInsetsCompat.Type.ime());
             if (keyboardVisible != visible) {
                 keyboardVisible = visible;
-                toolbar.setVisibility(visible ? View.GONE : View.VISIBLE);
+                // 키보드가 열려도 뒤로 가기/나중에 버튼은 같은 자리에 유지한다.
                 progress.setVisibility(visible ? View.GONE : View.VISIBLE);
                 description.setVisibility(visible ? View.GONE : View.VISIBLE);
                 footer.setVisibility(visible ? View.GONE : View.VISIBLE);
-        title.setTextSize(ClickTextScale.size(this, visible ? 20 : 28));
+                title.setTextSize(ClickTextScale.size(this, visible ? 19 : 24));
                 updateCopy();
             }
             return insets;
@@ -245,12 +241,12 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     private View coach() {
         LinearLayout coach = vertical();
         coach.setPadding(dp(2), dp(6), dp(2), dp(8));
-        title = text("", 28, ClickUi.TEXT, true);
+        title = text("", 24, ClickUi.TEXT, true);
         title.setId(R.id.tutorial_title);
         title.setLetterSpacing(-.025f);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         coach.addView(title, new LinearLayout.LayoutParams(-1, -2));
-        description = text("", 17, ClickUi.SUBTEXT, false);
+        description = text("", 16, ClickUi.SUBTEXT, false);
         LinearLayout.LayoutParams descriptionParams = new LinearLayout.LayoutParams(-1, -2);
         descriptionParams.topMargin = dp(9);
         coach.addView(description, descriptionParams);
@@ -273,16 +269,18 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 || floating.getControl().isVoiceInputActive()) return;
         narrator.stop();
         floating.getControl().setVoiceInputActive(true);
+        voicePressStartedAt = SystemClock.uptimeMillis();
         floating.highlight(null, 0);
-        floating.getControl().setRecognizedSpeech("3초 동안 꾹 누르면 연습용 요청이 입력돼요.");
+        floating.getControl().setRecognizedSpeech("1초 동안 누른 뒤 떼면 다음 화면으로 넘어가요.");
         // 연습은 실제 녹음·마이크 권한·서버 연결 없이 진행한다.
-        practiceHandler.postDelayed(finishVoicePractice, VOICE_PRACTICE_MS);
     }
 
     @Override public void onMicrophoneReleased() {
         if (!floating.getControl().isVoiceInputActive()) return;
+        long heldMillis = voicePressStartedAt == 0L ? 0L : SystemClock.uptimeMillis() - voicePressStartedAt;
         cancelVoicePractice();
-        floating.getControl().setRecognizedSpeech("조금 더 길게 눌러보세요. 3초 뒤 다음으로 넘어가요.");
+        if (heldMillis >= VOICE_PRACTICE_MS) onTextSubmitted(PRACTICE_REQUEST);
+        else floating.getControl().setRecognizedSpeech("1초 동안 꾹 누른 뒤 떼어 주세요.");
     }
 
     @Override public void onMicrophoneCancelled() {
@@ -292,7 +290,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     }
 
     private void cancelVoicePractice() {
-        practiceHandler.removeCallbacks(finishVoicePractice);
+        voicePressStartedAt = 0L;
         if (floating != null) {
             floating.getControl().setVoiceInputActive(false);
             floating.getControl().setVoiceInputProcessing(false);
@@ -385,7 +383,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     }
     private void showResultPractice() {
         JSONObject prompt = new JSONObject();
-        try { prompt.put("message", "원하는 결과인지 확인해 주세요."); }
+        try { prompt.put("message", "글씨가 잘 보이나요?"); }
         catch (org.json.JSONException impossible) { throw new IllegalStateException(impossible); }
         newPanel().result(prompt, true);
     }
@@ -401,10 +399,21 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     @Override public void onMoved() { updateCopy(); }
 
     private void updateCopy() {
+        if (displayedStep != step) {
+            displayedStep = step;
+            lessonScroll.post(() -> lessonScroll.scrollTo(0, 0));
+        }
         boolean overviewPage = step == INTRO || step == COMPLETE;
+        // 첫/완료 화면의 버튼은 설명 바로 아래에 둔다. 긴 글씨에서는 함께 스크롤된다.
+        LinearLayout footerParent = overviewPage ? lesson : column;
+        if (footer.getParent() != footerParent) {
+            ((ViewGroup) footer.getParent()).removeView(footer);
+            footerParent.addView(footer, new LinearLayout.LayoutParams(-1, -2));
+        }
+        footer.setPadding(0, dp(overviewPage ? 24 : 10), 0, dp(6));
         checklist.setVisibility(overviewPage ? View.VISIBLE : View.GONE);
         stage.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
-        phone.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
+        phone.setVisibility(step == INPUT ? View.VISIBLE : View.GONE);
         floating.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
         restore.setVisibility(!overviewPage && floating.isHidden() ? View.VISIBLE : View.GONE);
         progress.setVisibility(overviewPage || keyboardVisible ? View.GONE : View.VISIBLE);
@@ -419,8 +428,8 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         floating.setClickHighlighted(false); floating.highlight(null, 0);
         switch (step) {
             case INTRO:
-                heading = "클릭 사용법을 함께 익혀볼까요?";
-                detail = "요청부터 결과 확인까지, 가볍게 연습해요.";
+                heading = "클릭을 함께 연습해요";
+                detail = "요청하고 확인하는 방법을 알아봐요.";
                 speechResource = R.string.tutorial_speech_intro;
                 button = "연습 시작하기"; enabled = true; break;
             case COMPLETE:
@@ -443,14 +452,14 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                     floating.highlight("↑", 0);
                 } else if (mode == ClickOverlayLayout.Mode.VOICE) {
                     heading = "마이크를 꾹 눌러보세요";
-                    detail = "3초 동안 누르면 예시 요청으로 넘어가요. 실제로 녹음하지 않는 연습이에요.";
+                    detail = "1초 동안 누른 뒤 떼면 연습 화면으로 넘어가요.";
                     speechResource = R.string.tutorial_speech_voice_record;
                     if (!floating.getControl().isVoiceInputActive()) floating.highlight(null, R.id.overlay_microphone);
                 }
                 break;
             case REVIEW:
                 heading = "요청이 맞는지 확인해요";
-                detail = "맞으면 ‘안내 시작하기’, 고치고 싶으면 ‘내용 수정’을 눌러요.";
+                detail = "요청을 확인한 뒤 안내를 시작해요.";
                 speechResource = reviewSpeechResource();
                 if (practiceReview != null && (practiceReview.needsTarget() || practiceReview.needsDirection()))
                     detail = "알맞은 항목을 고르고 ‘다음 단계’를 눌러주세요.";
@@ -458,12 +467,12 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
             case RUNNING:
                 heading = paused ? "잠시 쉬어도 괜찮아요" : "자동으로 진행해요";
                 detail = paused ? "‘이어서 진행’을 누르면 계속해요."
-                        : "‘줄이기’로 작게 보고, ‘일시정지’나 ‘요청 중지’로 멈출 수 있어요.";
+                        : "안내창을 줄이거나 잠시 멈춰보세요.";
                 speechResource = paused ? R.string.tutorial_speech_paused : R.string.tutorial_speech_running;
                 button = "결과 확인 연습하기"; enabled = !paused; break;
             default:
                 heading = "결과를 알려주세요";
-                detail = "‘네, 글씨가 잘 보여요’ 또는 ‘더 커졌으면 좋겠어’를 눌러보세요.";
+                detail = "아래 버튼으로 결과를 알려주세요.";
                 speechResource = R.string.tutorial_speech_result;
                 break;
         }
@@ -518,7 +527,11 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
             TextView label = text(labels[i], 17, ClickUi.TEXT, true);
             label.setContentDescription(labels[i] + (done ? ", 완료" : ", 연습 전"));
             copy.addView(label);
-            TextView hint = text(hints[i], 14, ClickUi.SUBTEXT, false); hint.setPadding(0, dp(5), 0, 0); copy.addView(hint);
+            // 큰 글씨에서는 같은 내용을 반복하는 보조 설명을 덜어 시작 버튼까지 쉽게 닿게 한다.
+            if (getResources().getConfiguration().fontScale < 1.5f) {
+                TextView hint = text(hints[i], 14, ClickUi.SUBTEXT, false);
+                hint.setPadding(0, dp(5), 0, 0); copy.addView(hint);
+            }
             checklist.addView(row);
         }
         if (step == COMPLETE) {
@@ -586,9 +599,14 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     private TextView text(String value, int size, int color, boolean strong) {
         TextView text = new TextView(this);
         text.setText(value); text.setTextSize(ClickTextScale.size(this, size)); text.setTextColor(color);
-        text.setTypeface(getResources().getFont(strong ? com.click.designpreview.R.font.pretendard_bold : com.click.designpreview.R.font.pretendard_medium));
+        text.setTypeface(getResources().getFont(strong
+                ? com.click.designpreview.R.font.pretendard_semibold
+                : com.click.designpreview.R.font.pretendard_regular));
         text.setIncludeFontPadding(false); text.setLineSpacing(dp(3), 1.08f);
         text.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
+        text.setTextLocale(java.util.Locale.KOREAN);
+        if (Build.VERSION.SDK_INT >= 33)
+            text.setLineBreakWordStyle(android.graphics.text.LineBreakConfig.LINE_BREAK_WORD_STYLE_PHRASE);
         return text;
     }
     private LinearLayout vertical() { LinearLayout view = new LinearLayout(this); view.setOrientation(LinearLayout.VERTICAL); return view; }
