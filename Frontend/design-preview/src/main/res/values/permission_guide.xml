@@ -6,7 +6,6 @@
     <string name="guide_open">접근성 설정 안내</string>
     <string name="guide_progress">%1$d / %2$d</string>
     <string name="guide_progress_description">접근성 안내, %2$d단계 중 %1$d단계</string>
-    <string name="guide_intro">어려운 스마트폰 사용,\n이제 클릭 한 번으로</string>
     <string name="guide_reason_title">앱을 더 편리하게\n사용하기 위해</string>
     <string name="guide_reason_accent">접근성 권한이 필요해요</string>
     <string name="guide_reason_description">클릭은 접근성 기능을 사용해\n화면의 정보를 이해하고,\n필요할 때 도움을 드려요.</string>

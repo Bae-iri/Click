@@ -28,10 +28,10 @@ import android.window.OnBackInvokedDispatcher;
 
 import static com.click.designpreview.PermissionIconView.Kind;
 
-/** A four-page explanation shown before the user chooses whether to open system settings. */
+/** A three-page explanation shown before the user chooses whether to open system settings. */
 public final class PermissionGuideActivity extends Activity {
-    private static final int PAGE_COUNT = 4;
-    private static final String PAGE_STATE = "permission_guide_page";
+    private static final int PAGE_COUNT = 3;
+    private static final String PAGE_STATE = "permission_guide_page_v2";
     private static final String SETTINGS_OPENED_STATE = "permission_settings_opened";
     private static final int BLUE = 0xFF3478F6;
     private static final int INK = 0xFF101A36;
@@ -181,19 +181,16 @@ public final class PermissionGuideActivity extends Activity {
         body.removeAllViews();
         counter.setText(getString(R.string.guide_progress, page + 1, PAGE_COUNT));
         counter.setContentDescription(getString(R.string.guide_progress_description, page + 1, PAGE_COUNT));
-        int actionText = page == 0 ? R.string.onboarding_start
-                : page == PAGE_COUNT - 1 ? R.string.guide_settings_now : R.string.onboarding_next;
+        int actionText = page == PAGE_COUNT - 1 ? R.string.guide_settings_now : R.string.onboarding_next;
         actionLabel.setText(actionText);
         action.setContentDescription(getString(actionText));
-        later.setVisibility(page == 1 || page == PAGE_COUNT - 1 ? View.VISIBLE : View.GONE);
+        later.setVisibility(page == 0 || page == PAGE_COUNT - 1 ? View.VISIBLE : View.GONE);
         switch (page) {
-            case 0: intro(); break;
-            case 1: reason(); break;
-            case 2: allowStep(); break;
-            case 3: consentStep(); break;
+            case 0: reason(); break;
+            case 1: allowStep(); break;
+            case 2: consentStep(); break;
         }
         String[] cues = {
-            "어려운 스마트폰 사용, 이제 클릭 한 번으로. 다음을 눌러 권한 안내를 확인해 주세요.",
             "클릭은 접근성 기능으로 화면의 정보를 이해하고 다음에 누를 곳을 안내해요. 권한은 직접 선택하고 설정에서 끌 수 있어요.",
             "접근성 설정에서 설치된 앱을 누르고, 클릭 화면 안내를 선택해 주세요. 사용 안 함을 사용함으로 켜주세요. 다음 페이지에서 마지막 확인창을 보여드릴게요.",
             getString(R.string.guide_consent_cue)
@@ -211,24 +208,6 @@ public final class PermissionGuideActivity extends Activity {
             }
             counter.announceForAccessibility(counter.getContentDescription());
         }
-    }
-
-    private void intro() {
-        ClickBrandView logo = new ClickBrandView(this, null);
-        logo.setContentDescription(getString(R.string.splash_logo_description));
-        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(
-                Math.min(dp(222), getResources().getDisplayMetrics().widthPixels - dp(64)), dp(72));
-        logoParams.gravity = Gravity.CENTER_HORIZONTAL;
-        logoParams.topMargin = dp(10);
-        body.addView(logo, logoParams);
-        TextView title = title(R.string.guide_intro, 23);
-        title.setGravity(Gravity.CENTER);
-        add(body, title, 18);
-        PermissionTouchArtworkView art = new PermissionTouchArtworkView(this);
-        LinearLayout.LayoutParams artParams = new LinearLayout.LayoutParams(-1, dp(290));
-        artParams.topMargin = dp(20);
-        artParams.weight = 1;
-        body.addView(art, artParams);
     }
 
     private void reason() {

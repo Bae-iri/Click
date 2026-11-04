@@ -301,7 +301,7 @@ public class OnboardingFlowTest {
                 new Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true);
         try (ActivityScenario<PermissionGuideActivity> s = ActivityScenario.launch(PermissionGuideActivity.class)) {
             s.onActivity(a -> {
-                for (int i = 0; i < 3; i++) {
+                for (int i = 0; i < 2; i++) {
                     a.findViewById(com.click.designpreview.R.id.guide_action).performClick();
                 }
             });
