@@ -4909,13 +4909,14 @@
         }
       }
     },
-    "/api/v1/users/{user_id}/profile": {
-      "patch": {
+    "/api/v1/users/{user_id}/events": {
+      "post": {
         "tags": [
           "users"
         ],
-        "summary": "Update Profile",
-        "operationId": "update_profile_api_v1_users__user_id__profile_patch",
+        "summary": "Retired Personalization",
+        "operationId": "retired_personalization_api_v1_users__user_id__events_post",
+        "deprecated": true,
         "security": [
           {
             "HTTPBearer": []
@@ -4932,24 +4933,178 @@
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateProfileRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UIProfileResponse"
+                  "$ref": "#/components/schemas/ErrorEnvelope"
                 }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        }
+      }
+    },
+    "/api/v1/users/{user_id}/profile": {
+      "patch": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Retired Personalization",
+        "operationId": "retired_personalization_api_v1_users__user_id__profile_patch",
+        "deprecated": true,
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -5295,183 +5450,6 @@
                     "$ref": "#/components/schemas/ConsentResponse"
                   },
                   "title": "Response Current Consents Api V1 Users  User Id  Consents Get"
-                }
-              }
-            }
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Bad Request"
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "410": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Gone"
-          },
-          "413": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Content Too Large"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Unprocessable Content"
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Too Many Requests"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Internal Server Error"
-          },
-          "502": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Bad Gateway"
-          },
-          "503": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Service Unavailable"
-          },
-          "504": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            },
-            "description": "Gateway Timeout"
-          }
-        }
-      }
-    },
-    "/api/v1/users/{user_id}/events": {
-      "post": {
-        "tags": [
-          "users"
-        ],
-        "summary": "Record Event",
-        "operationId": "record_event_api_v1_users__user_id__events_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "user_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "User Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateUIEventRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UIEventResponse"
                 }
               }
             }
@@ -7431,8 +7409,8 @@
           },
           "new_password": {
             "type": "string",
-            "maxLength": 128,
-            "minLength": 8,
+            "maxLength": 4,
+            "minLength": 4,
             "format": "password",
             "title": "New Password",
             "writeOnly": true
@@ -7569,73 +7547,18 @@
         ],
         "title": "ConsentResponse"
       },
-      "CreateUIEventRequest": {
-        "properties": {
-          "session_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Session Id"
-          },
-          "event_type": {
-            "type": "string",
-            "enum": [
-              "guide_step_completed",
-              "guide_step_failed",
-              "help_opened",
-              "guide_repeated",
-              "guide_action_observed",
-              "navigation_recovery",
-              "user_confused",
-              "explanation_changed",
-              "task_completed"
-            ],
-            "title": "Event Type"
-          },
-          "screen_name": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 200
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Screen Name",
-            "description": "Registered task graph state ID; never a screen title or user text"
-          },
-          "metadata": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Metadata",
-            "description": "Only step, duration_ms, attempt_count (nonnegative integers <= 86400000), navigation_action (back/home), and explanation_depth (concise/normal/detailed)"
-          }
-        },
-        "type": "object",
-        "required": [
-          "event_type"
-        ],
-        "title": "CreateUIEventRequest"
-      },
       "Credentials": {
         "properties": {
-          "email": {
+          "phone_number": {
             "type": "string",
-            "maxLength": 254,
-            "minLength": 3,
-            "title": "Email"
+            "maxLength": 20,
+            "minLength": 10,
+            "title": "Phone Number"
           },
           "password": {
             "type": "string",
-            "maxLength": 128,
-            "minLength": 8,
+            "maxLength": 4,
+            "minLength": 4,
             "format": "password",
             "title": "Password",
             "writeOnly": true
@@ -7644,7 +7567,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "email",
+          "phone_number",
           "password"
         ],
         "title": "Credentials"
@@ -8331,7 +8254,6 @@
           "purpose": {
             "type": "string",
             "enum": [
-              "personalization",
               "conversation_storage",
               "model_training"
             ],
@@ -8376,16 +8298,16 @@
       },
       "RegisterRequest": {
         "properties": {
-          "email": {
+          "phone_number": {
             "type": "string",
-            "maxLength": 254,
-            "minLength": 3,
-            "title": "Email"
+            "maxLength": 20,
+            "minLength": 10,
+            "title": "Phone Number"
           },
           "password": {
             "type": "string",
-            "maxLength": 128,
-            "minLength": 8,
+            "maxLength": 4,
+            "minLength": 4,
             "format": "password",
             "title": "Password",
             "writeOnly": true
@@ -8402,39 +8324,12 @@
               }
             ],
             "title": "Name"
-          },
-          "age_group": {
-            "type": "string",
-            "enum": [
-              "under_14",
-              "14_19",
-              "20_29",
-              "30_39",
-              "40_49",
-              "50_59",
-              "60_plus",
-              "unknown"
-            ],
-            "title": "Age Group",
-            "default": "unknown"
-          },
-          "occupation_category": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 50
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Occupation Category"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "email",
+          "phone_number",
           "password"
         ],
         "title": "RegisterRequest"
@@ -8451,8 +8346,8 @@
           },
           "new_password": {
             "type": "string",
-            "maxLength": 128,
-            "minLength": 8,
+            "maxLength": 4,
+            "minLength": 4,
             "format": "password",
             "title": "New Password",
             "writeOnly": true
@@ -8690,141 +8585,6 @@
         ],
         "title": "TypedGoalRequest"
       },
-      "UIEventResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "user_id": {
-            "type": "string",
-            "title": "User Id"
-          },
-          "event_type": {
-            "type": "string",
-            "title": "Event Type"
-          },
-          "profile": {
-            "$ref": "#/components/schemas/UIProfileResponse"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "user_id",
-          "event_type",
-          "profile"
-        ],
-        "title": "UIEventResponse"
-      },
-      "UIProfileResponse": {
-        "properties": {
-          "comprehension_level": {
-            "type": "string",
-            "enum": [
-              "unknown",
-              "beginner",
-              "intermediate",
-              "advanced"
-            ],
-            "title": "Comprehension Level"
-          },
-          "explanation_depth": {
-            "type": "string",
-            "enum": [
-              "concise",
-              "normal",
-              "detailed"
-            ],
-            "title": "Explanation Depth"
-          },
-          "prefers_step_by_step": {
-            "type": "boolean",
-            "title": "Prefers Step By Step"
-          },
-          "confidence_score": {
-            "type": "number",
-            "title": "Confidence Score"
-          },
-          "evidence_count": {
-            "type": "integer",
-            "title": "Evidence Count"
-          },
-          "state_difficulties": {
-            "additionalProperties": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "object",
-            "title": "State Difficulties"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Updated At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "comprehension_level",
-          "explanation_depth",
-          "prefers_step_by_step",
-          "confidence_score",
-          "evidence_count",
-          "updated_at"
-        ],
-        "title": "UIProfileResponse"
-      },
-      "UpdateProfileRequest": {
-        "properties": {
-          "comprehension_level": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "unknown",
-                  "beginner",
-                  "intermediate",
-                  "advanced"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Comprehension Level"
-          },
-          "explanation_depth": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "concise",
-                  "normal",
-                  "detailed"
-                ]
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Explanation Depth"
-          },
-          "prefers_step_by_step": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Prefers Step By Step"
-          }
-        },
-        "type": "object",
-        "title": "UpdateProfileRequest"
-      },
       "UserActionEventRequest": {
         "properties": {
           "session_id": {
@@ -8961,45 +8721,17 @@
             ],
             "title": "Name"
           },
-          "age_group": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Age Group"
-          },
-          "occupation_category": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Occupation Category"
-          },
           "created_at": {
             "type": "string",
             "format": "date-time",
             "title": "Created At"
-          },
-          "profile": {
-            "$ref": "#/components/schemas/UIProfileResponse"
           }
         },
         "type": "object",
         "required": [
           "id",
           "name",
-          "age_group",
-          "occupation_category",
-          "created_at",
-          "profile"
+          "created_at"
         ],
         "title": "UserResponse"
       },

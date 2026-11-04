@@ -34,6 +34,7 @@ public final class RegistrationContract {
     }
 
     public JSONObject request(String name, String email, String password) throws JSONException {
+        if (!password.matches("[0-9]{4}")) throw new PasswordLengthException("비밀번호는 숫자 4자리로 입력해 주세요.");
         int length = password.codePointCount(0, password.length());
         if (length < minimumPasswordLength) {
             throw new PasswordLengthException("비밀번호를 " + minimumPasswordLength + "글자 이상 입력해 주세요.");
@@ -41,7 +42,7 @@ public final class RegistrationContract {
         if (length > maximumPasswordLength) {
             throw new PasswordLengthException("비밀번호는 " + maximumPasswordLength + "글자까지 입력할 수 있어요.");
         }
-        JSONObject body = new JSONObject().put("email", email).put("password", password);
+        JSONObject body = new JSONObject().put("phone_number", email).put("password", password);
         // Older deployments forbid the newly added name field. The app also saves the name locally.
         if (acceptsName && name != null && !name.trim().isEmpty()) body.put("name", name.trim());
         return body;

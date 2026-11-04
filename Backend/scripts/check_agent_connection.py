@@ -32,8 +32,8 @@ def main():
         print("health:", call("/health"))
         print("ready:", call("/ready"))
         auth = call("/api/v1/auth/register", {
-            "email": f"ai1-check-{uuid4().hex}@example.com",
-            "password": secrets.token_urlsafe(24),
+            "phone_number": "010" + str(secrets.randbelow(100000000)).zfill(8),
+            "password": str(secrets.randbelow(10000)).zfill(4),
         })
         token = auth["access_token"]
         user_id = auth["user_id"]

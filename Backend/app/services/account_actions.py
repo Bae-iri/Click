@@ -38,7 +38,7 @@ class AccountActionService:
         with self.factory() as db:
             query = select(Account).where(Account.user_id == user_id) if user_id else select(Account).where(Account.email == email)
             account = db.scalar(query.with_for_update())
-            if account is None:
+            if account is None or not account.email:
                 return
             db.execute(delete(AccountAction).where(AccountAction.expires_at <= now))
             db.execute(delete(AccountAction).where(AccountAction.user_id == account.user_id, AccountAction.purpose == purpose))
