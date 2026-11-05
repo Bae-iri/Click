@@ -29,10 +29,37 @@ python scripts/check_jev_screen.py --env-file .env
 자동 테스트는 실제 API 키나 네트워크 호출을 사용하지 않는다.
 
 `called: true`와 `status: low_confidence` 또는 `abstained`가 함께 나오면
-연결 실패가 아니라 Jev가 응답했지만 선택을 보류한 상태다. `confidence`,
-`minimum_confidence`, `top_probability`, `probability_margin`과
-`chosen_state`/`chosen_transition` 또는 `chosen_outcome`으로 보류 이유를 확인한다.
-낮은 confidence에서도 이 진단값을 남기며 화면 원문이나 실제 노드 ID는 기록하지 않는다.
+연결 실패가 아니라 Jev가 응답했지만 선택을 보류한 상태다.
+API 응답, 재전송 응답, 저장된 진단에는 다음 값이 함께 남는다.
+
+| 값 | 의미 |
+| --- | --- |
+| `choice` | 모델이 고른 `candidate_N`, `wait_for_result`, `insufficient_evidence` |
+| `chosen_transition_hash` | 후보 선택 시 graph transition ID의 SHA-256. 승인된 graph의 ID를 해시하여 대조한다. |
+| `raw_confidence` | Jev 원본 confidence |
+| `top_probability` | 모델이 고른 항목의 확률. UI 후보가 아니라 대기·판단 보류의 확률일 수도 있다. |
+| `choice_count` | UI 후보와 대기·판단 보류 2개를 합한 전체 선택지 수 |
+| `normalized_probability` | `(top_probability - 1/choice_count) / (1 - 1/choice_count)` |
+| `confidence` | 원본 confidence와 보정값 중 작은 최종값 |
+| `minimum_confidence` | 통과 기준 |
+| `hold_reason` | `none`, `raw_confidence_below_minimum`, `normalized_probability_below_minimum`, `both_below_minimum`, `wait_for_result`, `insufficient_evidence` |
+
+`probability_margin`도 유지한다. `choice`와 transition 해시는 모델의 선택을
+나타내며, 실제 클릭·경로 이동 성공의 증거가 아니다. 후보 번호는 해당 호출에서만
+의미가 있다. 로컬 resolver의 `chosen_state`/`chosen_transition`은 원문으로
+저장하지 않는다. 낮은 confidence에서도 허용된 진단값을 남기며 화면 원문이나
+실제 노드 ID는 추가하지 않는다. 잘못된 응답·호출 실패는 `status`로 구별하며
+검증을 통과하지 않은 점수·선택 항목은 기록하지 않는다.
+
+같은 합성 화면을 클릭 없이 반복하며 실제 Jev 응답을 기록하려면:
+
+```sh
+python scripts/diagnose_jev_screen.py --env-file .env --attempts 5 --output jev-diagnostics.json
+```
+
+`--fresh-sessions`를 추가하면 매번 새 작업으로 판단한다. 원본 화면·응답 본문·키는
+저장하지 않고 위 진단과 승인된 graph에서 해시로 찾은 선택 대상만 출력한다.
+이 검사는 로컬 수정본의 실제 모델 호출이며 운영 배포나 기기 조작 검증은 아니다.
 `grounded_candidate_count`는 그래프의 대상 조건에 맞는 후보가 화면에 있는지
 나타낸다. 앱은 이 값이 양수이면 보류된 대상을 스크롤로 지나치지 않는다.
 이 값 자체로 대상을 선택하거나 실행하지는 않는다.

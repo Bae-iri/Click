@@ -246,8 +246,15 @@ def test_jev_diagnostics_retain_only_bounded_status_fields():
 @pytest.mark.parametrize("key, invalid", [
     ("grounded_candidate_count", -1), ("grounded_candidate_count", 251),
     ("grounded_candidate_count", True), ("grounded_candidate_count", 1.5),
-    *[(key, invalid) for key in ("minimum_confidence", "top_probability", "probability_margin")
+    *[(key, invalid) for key in ("minimum_confidence", "top_probability", "probability_margin",
+                               "raw_confidence", "normalized_probability")
       for invalid in (-0.1, 1.1, True, "0.8", float("nan"), float("inf"))],
+    *[("choice_count", invalid) for invalid in (2, 253, True, 3.5, "3")],
+    *[("choice", invalid) for invalid in ("private-node", "candidate_250", "candidate_00",
+                                         "candidate_-1", "candidate_1\n", 1, [])],
+    *[("hold_reason", invalid) for invalid in ("private-text", [], True)],
+    *[("chosen_transition_hash", invalid) for invalid in ("private-transition", "a" * 63,
+                                                         "A" * 64, "a" * 64 + "\n", [])],
 ])
 def test_jev_diagnostics_reject_invalid_visibility_and_probability_values(key, invalid):
     assert diagnostic_payload({"ui_selection": {key: invalid}}) == {"ui_selection": {}}
@@ -255,7 +262,10 @@ def test_jev_diagnostics_reject_invalid_visibility_and_probability_values(key, i
 
 def test_jev_diagnostic_boundaries_survive_repeated_filtering():
     safe = {"grounded_candidate_count": 0, "minimum_confidence": 1,
-            "top_probability": 1, "probability_margin": 0}
+            "top_probability": 1, "probability_margin": 0,
+            "choice": "candidate_249", "choice_count": 252,
+            "raw_confidence": 0, "normalized_probability": 1,
+            "hold_reason": "both_below_minimum", "chosen_transition_hash": "a" * 64}
     filtered = diagnostic_payload({"ui_selection": safe})
     assert filtered == {"ui_selection": safe}
     assert diagnostic_payload(filtered) == filtered

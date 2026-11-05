@@ -1,6 +1,7 @@
 """Primary graph-constrained Jev step + target selection; never generates coordinates."""
 import json
 import math
+from hashlib import sha256
 from time import monotonic
 
 import httpx
@@ -189,14 +190,25 @@ class JevScreenResolver(JevGoalClassifier):
             top = probabilities[choice]
             if any(p >= top for k,p in probabilities.items() if k != choice):
                 return None
-            confidence = min(answer["confidence"], (top-1/len(criteria))/(1-1/len(criteria)))
+            raw_confidence = answer["confidence"]
+            normalized_probability = (top-1/len(criteria))/(1-1/len(criteria))
+            confidence = min(raw_confidence, normalized_probability)
+            raw_low = raw_confidence < minimum
+            normalized_low = normalized_probability < minimum
+            hold_reason = ("both_below_minimum" if raw_low and normalized_low else
+                "raw_confidence_below_minimum" if raw_low else
+                "normalized_probability_below_minimum" if normalized_low else
+                choice if choice not in bindings else "none")
             # Diagnose rejected decisions without logging screen labels or IDs.
             self.last_diagnostics.update(confidence=confidence, minimum_confidence=minimum,
+                choice=choice, choice_count=len(criteria), raw_confidence=raw_confidence,
+                normalized_probability=normalized_probability, hold_reason=hold_reason,
                 top_probability=top, probability_margin=top-max(p for k,p in probabilities.items() if k != choice))
             if choice in bindings:
                 selected_transition, _ = bindings[choice]
                 self.last_diagnostics.update(chosen_state=selected_transition.from_state,
-                    chosen_transition=selected_transition.transition_id)
+                    chosen_transition=selected_transition.transition_id,
+                    chosen_transition_hash=sha256(selected_transition.transition_id.encode()).hexdigest())
             else:
                 self.last_diagnostics["chosen_outcome"] = choice
             if confidence < minimum:
