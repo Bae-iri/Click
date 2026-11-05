@@ -161,6 +161,20 @@ public class ClickOverlayServiceExecutionTest {
         verify(overlay).setVoiceInputProcessing(false);
     }
 
+    @Test public void privacyBlockPausesScreenRequestsAndShowsManualGuidance() throws Exception {
+        resolve();
+        confirm();
+        assertTrue(sent.size() >= 2);
+        int count = sent.size();
+        callbacks.get(callbacks.size() - 1).onFailure(new com.click.data.snapshot.SettingsScreenPrivacy.Blocked());
+        assertTrue((boolean) get("agentPaused"));
+        assertFalse((boolean) get("turnInFlight"));
+        verify((TaskFlowOverlayView) get("taskFlowView")).failed(contains("직접 진행"));
+        send(null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        assertEquals(count, sent.size());
+    }
+
     @Test public void cancelledMicrophoneIgnoresLateRecognitionResult() throws Exception {
         CloudSpeechRecognizer speech = mock(CloudSpeechRecognizer.class);
         ClickOverlayLayout overlay = mock(ClickOverlayLayout.class);

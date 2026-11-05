@@ -20,9 +20,16 @@ public final class AgentTurnGateway {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final AuthenticatedHttpClient http;
     private volatile AgentServerContract contract;
+    private final com.click.data.snapshot.SettingsScreenPrivacy screenPrivacy;
 
     public AgentTurnGateway(Context context) {
         http = new AuthenticatedHttpClient(context);
+        com.click.data.snapshot.SettingsScreenPrivacy loaded = null;
+        try (java.io.InputStream vocabulary = context.getAssets().open("vision_vocabulary.json");
+             java.io.InputStream policy = context.getAssets().open("screen_privacy_policy.json")) {
+            loaded = com.click.data.snapshot.SettingsScreenPrivacy.load(vocabulary, policy);
+        } catch (Exception ignored) { /* Missing policy fails closed before screen HTTP. */ }
+        screenPrivacy = loaded;
     }
 
     public void send(AgentTurnContract.Request request, Callback callback) {
@@ -40,7 +47,17 @@ public final class AgentTurnGateway {
         AgentServerContract server = loadContract();
         if (!server.supports(request.commandType()))
             throw new java.io.IOException("현재 서버에서 이 작업 단계를 지원하지 않아요.");
-        HttpResult result = http.post(AgentTurnContract.PATH, server.encode(request));
+        org.json.JSONObject body = new org.json.JSONObject(server.encode(request));
+        if ("cancel_task".equals(request.commandType()) || "pause_task".equals(request.commandType())) {
+            body.remove("accessibility_tree");
+            body.remove("vision_snapshot");
+        }
+        if (body.has("accessibility_tree") || body.has("vision_snapshot")) {
+            if (screenPrivacy == null || (request.accessibilityTree != null && !request.accessibilityTree.privacyMaskingReady))
+                throw new com.click.data.snapshot.SettingsScreenPrivacy.Blocked();
+            body = screenPrivacy.filter(body);
+        }
+        HttpResult result = http.post(AgentTurnContract.PATH, body.toString());
         AgentTurnContract.Response response = new AgentTurnContract.Response(result.body);
         if (response.metadata != null && result.traceId != null)
             response.metadata.put("backend_trace_id", result.traceId);

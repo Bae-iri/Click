@@ -6,7 +6,9 @@
 
 현재 상태는 **요청 준비**다. TypeSafe에 요청을 발송하거나 계정에 ZDR을 활성화한 상태는 아니다. 실제 고객 요청에는 `GOAL_CLASSIFIER_PROVIDER=self_hosted`를 유지하고, Jev 연결 점검에는 개인정보 없는 합성 문장만 사용한다.
 
-TypeSafe는 [기업 고객용 Zero Data Retention(ZDR)](https://docs.typesafe.ai/legal)을 별도로 제공하며 문의 주소는 `sales@typesafe.ai`다. [고객 데이터 학습 미사용](https://help.typesafe.ai/articles/5974925716-how-is-submitted-data-used-or-retained)과 무보관은 별도 조건이므로 다음 내용을 요청하고 서면 답변을 받는다.
+2026-11-05 공식 안내를 확인했다. [데이터 처리 안내](https://help.typesafe.ai/articles/5974925716)에 따르면 입력·출력을 학습에 사용하지 않지만, 일반 사용의 고정 보관 기간은 공개하지 않으며 미국에서 처리한다. **학습 미사용과 무보관은 별개다.** ZDR에서도 내용 없는 과금·운영 텔레메트리는 남을 수 있다.
+
+[ZDR 공식 설정 안내](https://help.typesafe.ai/articles/9520184411)에 따라 [지원 요청](https://support.typesafe.ai/forms/support-request)에서 `Privacy & data (ZDR, data deletion)` → `Enable zero data retention (ZDR)`를 선택하고 조직 ID를 첨부한다. TypeSafe의 이메일 확인 후 콘솔 `Settings → Organization`에서 활성화 상태를 확인한다. 공식 데이터 처리 안내는 모든 조직에 무료라고 설명한다. **CLICK 계정의 실제 활성화 여부는 미확인**이며 코드나 API 키 존재만으로 활성화되었다고 판단하지 않는다.
 
 - [ ] ZDR 제공 요금제·비용·계약 조건과 신청 절차를 문의한다.
 - [ ] 요청 텍스트, instructions·criteria, 응답 본문에 적용되는 무보관 범위와 처리 종료 후 삭제 시점을 확인한다.
@@ -21,14 +23,14 @@ TypeSafe는 [기업 고객용 Zero Data Retention(ZDR)](https://docs.typesafe.ai
 
 ### 업체 문의 문안
 
-수신: `sales@typesafe.ai`
+제출: [지원 요청 양식](https://support.typesafe.ai/forms/support-request), 위 ZDR 항목 선택. 조직 ID는 접근 제한된 운영 기록에서 확인해 양식에 입력한다.
 
 제목: `Zero Data Retention inquiry for Jev API evaluation — Click`
 
 ```text
 Hello TypeSafe team,
 
-We are evaluating Jev for Korean task-intent classification in Click, an Android assistance application. We would like to request Zero Data Retention for a potential API deployment. Our current policy keeps customer requests within our controlled infrastructure, so this inquiry does not authorize sending live customer data. Evaluation would use synthetic, non-personal examples.
+We are evaluating Jev for Korean task-intent classification and graph-constrained settings screen selection in Click, an Android assistance application. Please enable Zero Data Retention for the organization ID supplied in this support request and confirm by email. Evaluation uses synthetic, non-personal examples.
 
 Please confirm:
 1. ZDR eligibility, pricing, contractual requirements, and activation steps.
@@ -87,7 +89,7 @@ python -m uvicorn app.main:app --env-file .env --reload
 
 ## 데이터 처리 경계
 
-기본값 `self_hosted`는 기존 자체 서버 경계를 유지한다. `jev`를 명시적으로 선택하면 개인정보 패턴을 마스킹한 요청 텍스트와 승인 작업 정의를 TypeSafe 외부 API로 전송한다. 원음·화면·계정/세션 ID는 전송하지 않는다. 패턴 마스킹은 완전 익명화를 보장하지 않으므로 실제 사용자 적용 시 안내·동의와 운영 정책에 이 외부 텍스트 처리를 반영해야 한다. 기존의 ‘전사문도 우리 서버 밖으로 보내지 않는다’는 정책과 동일한 처리가 아니다.
+목표 분류 기본값 `self_hosted`는 기존 자체 서버 경계를 유지한다. `GOAL_CLASSIFIER_PROVIDER=jev`를 명시적으로 선택하면 개인정보 패턴을 마스킹한 요청 텍스트와 승인 작업 정의를 TypeSafe 외부 API로 전송한다. 목표 분류에는 원음·화면·계정/세션 ID를 전송하지 않는다. 별도 `AI1_UI_SELECTOR_PROVIDER=jev` 경로는 [화면 정보 최소화 정책](../docs/jev-screen-privacy.md)에 따라 허용한 메뉴 제목·계층·역할·조절값을 전송하며 화면 이미지·주변 설명·계정 정보는 전송하지 않는다. 두 provider 설정은 독립적이다. 패턴 마스킹은 완전 익명화를 보장하지 않으므로 실제 사용자 적용 시 안내·동의와 운영 정책에 이 외부 처리를 반영해야 한다.
 
 고정 HTTPS 호스트, 리디렉션 금지, 환경 프록시 사용 금지, 8초 요청 timeout을 사용하며 자동 재시도나 요청/응답 로깅을 추가하지 않는다. TypeSafe의 고객 데이터 학습 미사용과 무보관 처리는 다른 조건이다. 무보관은 위 ZDR 요청 절차에 따라 계약과 계정 적용 상태를 확인한다.
 

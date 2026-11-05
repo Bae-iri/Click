@@ -2,7 +2,7 @@
 from hashlib import sha256
 from math import isfinite
 
-from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, target_key
+from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, target_key, control_label
 from ai_agent.runtime.types import VerificationResult, VerificationStatus as Status, SafetyLevel
 
 
@@ -105,6 +105,15 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             return result(Status.UNKNOWN, 'missing_observation_timing')
         candidates = [node for node in eligible_nodes(transition, nodes, graph)
                       if target_key(node) == attempt.get('target_key')
+                      # Removing unknown text must not let a different anonymous
+                      # slider inherit a pending Jev action via page context alone.
+                      and (attempt.get('target_selection_method') != 'jev_choice'
+                           or control_label(node)
+                           or (node.node_id == attempt.get('target_node_id')
+                               and node.resource_id == attempt.get('target_resource_id')
+                               and node.bounds == tuple(attempt.get('target_bounds', ())))
+                           or recreated_font_control(node, attempt, transition, graph,
+                               current_state_id, current_snapshot, observation_time, action_time))
                       and (node.window_id == attempt.get('target_window_id')
                            or recreated_font_control(node, attempt, transition, graph,
                                current_state_id, current_snapshot, observation_time, action_time))

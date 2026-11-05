@@ -2150,6 +2150,24 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     String control = pendingControl; pendingControl = null;
                     recoverControl(control); return;
                 }
+                if (error instanceof com.click.data.snapshot.SettingsScreenPrivacy.Blocked) {
+                    agentPaused = true;
+                    executionGeneration++;
+                    automationGuard.clear();
+                    navigationRecovery.clear();
+                    actionTracker.clear();
+                    pendingVerifiedAction = null;
+                    stopNarration();
+                    clearVisionState();
+                    hideGuideOverlay();
+                    hideConfirmation();
+                    hideSettingsOpenButton();
+                    String message = ErrorDetails.requestMessage(error);
+                    if (taskFlowView != null) taskFlowView.failed(message);
+                    if (overlayView != null) overlayView.setRecognizedSpeech(message);
+                    speak(message);
+                    return;
+                }
                 if (waitingForTargetHelp()) return;
                 failActiveQueueRequest("NETWORK_ERROR");
                 android.util.Log.e("ClickAgent", "Agent turn failed", error);

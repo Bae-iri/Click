@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "settings_packages": ["com.android.settings", "com.samsung.android.settings"],
+  "launcher_packages": ["com.sec.android.app.launcher", "com.google.android.apps.nexuslauncher", "com.android.launcher", "com.android.launcher3", "com.miui.home", "com.huawei.android.launcher", "com.oppo.launcher", "com.vivo.launcher"],
+  "empty_search_resources": ["android:id/search_src_text", "com.android.settings:id/search_src_text", "com.android.settings:id/search"],
+  "blocked_titles": ["삼성 계정", "samsung account", "google 계정", "google account", "계정 관리", "manage accounts", "계정", "accounts", "로그인", "sign in", "비밀번호", "password", "pin", "pin 입력", "enter pin", "패턴 확인", "confirm pattern", "본인 인증", "verify your identity", "알림 기록", "notification history", "메시지", "messages", "결제", "payments"],
+  "description_resources": ["summary", "subtitle", "description", "secondary_text"],
+  "private_resource_tokens": ["account_name", "account_email", "profile_name", "profile_email", "user_name", "username", "email", "phone_number", "notification_text", "big_text", "message_text", "preview_text", "ssid", "device_name"],
+  "roles": ["slider", "button", "switch", "toggle", "checkbox", "radio_button", "radio", "list", "menu_item", "app_icon", "text", "container"],
+  "structure_roles": ["control", "control_label", "screen_text", "container", "unknown"]
+}

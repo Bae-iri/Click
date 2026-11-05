@@ -11,6 +11,8 @@ public final class ErrorDetails {
 
     /** Shared by typed and spoken requests; diagnostic details belong in the app log. */
     public static String requestMessage(Throwable error) {
+        if (error instanceof com.click.data.snapshot.SettingsScreenPrivacy.Blocked)
+            return "개인정보가 있거나 지원하지 않는 화면이라 화면 전송을 멈췄어요. 이 단계는 직접 진행해 주세요.";
         if (error instanceof ApiException) {
             ApiException api = (ApiException) error;
             boolean requestEndpoint = "/api/v1/voice-requests/enqueue".equals(api.path)
