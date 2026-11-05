@@ -273,7 +273,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         narrator.stop();
         floating.getControl().setVoiceInputActive(true);
         floating.highlight(null, 0);
-        floating.getControl().setRecognizedSpeech("마이크를 누른 채 요청을 말하고, 끝나면 손을 떼세요.");
+        floating.getControl().setRecognizedSpeech("마이크를 누른 채 하고 싶은 작업을 말하고, 끝나면 손을 떼세요.");
         // 연습은 실제 녹음·마이크 권한·서버 연결 없이 진행한다.
     }
 
@@ -310,7 +310,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     private TaskFlowOverlayView newPanel() {
         reviewView = new TaskFlowOverlayView(this, new TaskFlowOverlayView.Listener() {
             public void collapse() { floating.collapseReview(); updateCopy(); }
-            public void expand() { reviewView.setMinimizedProgress(false); updateCopy(); }
+            public void expand() { floating.expandReview(); updateCopy(); }
             public void openInput() { returnToInput(true); }
             public void chooseGoal(JSONObject goal) {} public void clarify(String choice) {}
             public void rephrase(String text) { requirementAnswer(text); }
@@ -427,7 +427,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         switch (step) {
             case INTRO:
                 heading = "클릭을 함께 연습해요";
-                detail = "요청하고 확인하는 방법을 알아봐요.";
+                detail = "하고 싶은 작업을 입력하고 확인하는 방법을 알아봐요.";
                 speechResource = R.string.tutorial_speech_intro;
                 button = "연습 시작하기"; enabled = true; break;
             case COMPLETE:
@@ -436,15 +436,14 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 speechResource = R.string.tutorial_speech_complete;
                 button = "홈으로 가기"; enabled = true; break;
             case INPUT:
-                heading = "편한 방법으로 요청해 보세요";
+                heading = "원하시는 방법으로 하고 싶은 작업을 말씀해주세요";
                 speechResource = R.string.tutorial_speech_input;
-                detail = "말이나 글 중 하나를 골라주세요.";
+                detail = "말로도 입력할 수 있고, 글로도 입력할 수 있어요";
                 if (mode == ClickOverlayLayout.Mode.COLLAPSED) {
-                    detail = "아래 클릭 버튼을 눌러 시작해요.";
                     speechResource = R.string.tutorial_speech_open;
                     floating.setClickHighlighted(true);
                 } else if (mode == ClickOverlayLayout.Mode.TEXT) {
-                    heading = "요청을 적어주세요";
+                    heading = "하고 싶은 작업을 적어주세요";
                     detail = "‘휴대폰 전체 글자 크기 키워줘’를 적고 ↑ 버튼을 눌러보세요.";
                     speechResource = R.string.tutorial_speech_write_input;
                     floating.highlight("↑", 0);
@@ -456,8 +455,8 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 }
                 break;
             case REVIEW:
-                heading = "요청이 맞는지 확인해요";
-                detail = "요청을 확인한 뒤 안내를 시작해요.";
+                heading = "입력한 내용이 맞는지 확인해요";
+                detail = "입력한 내용을 확인한 뒤 안내를 시작해요.";
                 speechResource = reviewSpeechResource();
                 if (practiceReview != null && (practiceReview.needsTarget() || practiceReview.needsDirection()))
                     detail = "알맞은 항목을 고르고 ‘입력하기’를 눌러주세요.";
@@ -482,7 +481,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         }
         if (reviewView != null && (reviewView.getVisibility() != View.VISIBLE || reviewView.isMinimizedProgress())) {
             detail = "작아진 안내를 다시 누르면 펼쳐져요.";
-            speechResource = R.string.tutorial_speech_reopen;
+            // Resizing the same step must not replace or restart its narration.
             floating.setClickHighlighted(reviewView.getVisibility() != View.VISIBLE);
         }
         title.setText(heading); description.setText(detail);
@@ -508,7 +507,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         cardParams.topMargin = dp(4);
         checklist.addView(new com.click.ui.tutorial.NotebookBindingView(this),
                 new LinearLayout.LayoutParams(-1, dp(30)));
-        String[] labels = {"말이나 글로 요청하기", "요청 내용 확인하기", "안내창 줄이고 멈추기"};
+        String[] labels = {"말이나 글로 입력하기", "입력한 내용 확인하기", "안내창 줄이고 일시정지하기"};
         String[] hints = {"편한 방법 하나만 고르면 돼요", "맞는지 보고 안내를 시작해요", "창을 줄이거나 잠시 멈출 수 있어요"};
         for (int i = 0; i < labels.length; i++) {
             LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL);

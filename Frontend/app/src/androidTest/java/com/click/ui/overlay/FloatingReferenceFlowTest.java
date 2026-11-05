@@ -99,13 +99,19 @@ public class FloatingReferenceFlowTest {
                         controlsWork(panel, replies);
                         assertNull(find(panel, "1/2")); assertNull(find(panel, "2/2"));
                         readable(find(panel, "안내 시작하기")); readable(find(panel, "내용 수정"));
-                        assertTrue(top(panel, find(panel, "내용 수정")) > top(panel, find(panel, "안내 시작하기")));
+                        ViewGroup summary = panel.findViewWithTag("review_summary_card");
+                        ViewGroup section = panel.findViewWithTag("review_summary_section");
+                        assertSame(section, find(panel, "내용 수정").getParent());
+                        assertTrue(find(panel, "내용 수정").getTop() >= summary.getBottom());
+                        assertFalse(find(panel, "내용 수정") instanceof android.widget.Button);
+                        assertTrue(top(panel, find(panel, "내용 수정")) < top(panel, find(panel, "안내 시작하기")));
                         assertFalse(replies.confirmed);
                         save(panel, "reference-confirm-" + scale);
                         find(panel, "안내 시작하기").performClick(); assertTrue(replies.confirmed);
                         find(panel, "내용 수정").performClick();
                         assertFalse(find(panel, "안내 시작하기").isShown());
                         assertTrue(find(panel, "수정한 내용 확인").isShown());
+                        assertNotNull(description(summary, "입력한 내용 수정"));
                     } catch (Exception error) { throw new AssertionError(error); }
                 });
             }
@@ -185,7 +191,7 @@ public class FloatingReferenceFlowTest {
         }
     }
     private static void footerVisible(TaskFlowOverlayView panel) {
-        for (String label : new String[]{"멈추기", "끝내기"}) {
+        for (String label : new String[]{"일시정지", "끝내기"}) {
             TextView button = find(panel, label);
             readable(button);
             int y = top(panel, button);
@@ -195,7 +201,7 @@ public class FloatingReferenceFlowTest {
     }
     private static void controlsWork(TaskFlowOverlayView panel, Replies replies) {
         footerVisible(panel);
-        find(panel, "멈추기").performClick(); assertEquals("pause_task", replies.command);
+        find(panel, "일시정지").performClick(); assertEquals("pause_task", replies.command);
         find(panel, "끝내기").performClick(); assertEquals("cancel_task", replies.command);
     }
     private static void host(HomeActivity activity, View panel, int width) {

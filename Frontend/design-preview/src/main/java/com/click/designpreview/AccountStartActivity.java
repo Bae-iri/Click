@@ -6,10 +6,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
+import com.click.ui.common.ClickTextScale;
 
 /** A single entry point for both Kakao registration and returning-user login. */
 public final class AccountStartActivity extends Activity {
     private boolean submitting;
+    private boolean textSizeConfirmed;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -17,13 +19,45 @@ public final class AccountStartActivity extends Activity {
         getWindow().setNavigationBarColor(getColor(R.color.account_surface));
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        textSizeConfirmed = state != null && state.getBoolean("text_size_confirmed");
+        if (textSizeConfirmed) showAccountChoices();
+        else showTextSizeSetup();
+        if (Build.VERSION.SDK_INT >= 33) getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::goBack);
+    }
+
+    private void showTextSizeSetup() {
+        setContentView(R.layout.activity_text_size_setup);
+        View root = findViewById(R.id.text_size_setup_screen);
+        root.setBackground(new ClickBackgroundDrawable(getResources()));
+        int side = Math.round(24 * getResources().getDisplayMetrics().density);
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            view.setPadding(side + insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
+                    side + insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
+            return insets;
+        });
+        root.requestApplyInsets();
+        TextSizeControlView control = findViewById(R.id.text_size_setup_control);
+        control.setOnSizeChanged(() -> ClickTextScale.applyTree(root));
+        ClickTextScale.applyTree(root);
+        findViewById(R.id.text_size_setup_back).setOnClickListener(view -> finish());
+        View next = findViewById(R.id.text_size_setup_continue);
+        next.setBackground(OnboardingDrawables.startButton(getResources()));
+        next.setOnClickListener(view -> {
+            textSizeConfirmed = true;
+            showAccountChoices();
+        });
+    }
+
+    private void showAccountChoices() {
         setContentView(R.layout.activity_account_start);
+        ClickTextScale.applyTree(findViewById(R.id.account_start_screen));
         findViewById(R.id.account_start_screen).setBackground(new ClickBackgroundDrawable(getResources()));
         findViewById(R.id.account_start_email).setBackground(OnboardingDrawables.startButton(getResources()));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             findViewById(R.id.account_start_title).setAccessibilityHeading(true);
         }
-        findViewById(R.id.account_start_back).setOnClickListener(view -> finish());
+        findViewById(R.id.account_start_back).setOnClickListener(view -> goBack());
         findViewById(R.id.account_start_kakao).setOnClickListener(view -> loginWithKakao());
         findViewById(R.id.account_start_email).setOnClickListener(view -> {
             if (!submitting) startActivity(new Intent(this, SignupActivity.class));
@@ -31,6 +65,19 @@ public final class AccountStartActivity extends Activity {
         findViewById(R.id.account_start_login).setOnClickListener(view -> {
             if (!submitting) startActivity(new Intent(this, LoginActivity.class));
         });
+    }
+
+    private void goBack() {
+        if (submitting) return;
+        if (textSizeConfirmed) { textSizeConfirmed = false; showTextSizeSetup(); }
+        else finish();
+    }
+
+    @Override public void onBackPressed() { goBack(); }
+
+    @Override protected void onSaveInstanceState(Bundle state) {
+        state.putBoolean("text_size_confirmed", textSizeConfirmed);
+        super.onSaveInstanceState(state);
     }
 
     private void loginWithKakao() {

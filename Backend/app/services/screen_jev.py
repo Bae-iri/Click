@@ -45,6 +45,14 @@ class JevScreenResolver(JevGoalClassifier):
                     if target_key(node) in (excluded_target_keys or {}).get(transition.transition_id, ()):
                         continue
                     bindings[f"candidate_{len(bindings)}"] = (transition, node)
+            # A named menu is not a candidate for every menu edge merely because
+            # its role/package fit. Keep all graph routes matching its identity;
+            # leave unrecognized controls to Jev instead of guessing their identity.
+            identified = {n.node_id for t, n in bindings.values()
+                          if selector_evidence(n, t, nodes, graph)[1] in {"resource_id", "exact_label"}}
+            bindings = {key: (t, n) for key, (t, n) in bindings.items()
+                        if n.node_id not in identified
+                        or selector_evidence(n, t, nodes, graph)[0] >= MATCH_THRESHOLD}
             if not bindings or len(bindings) > 250:
                 self.last_diagnostics["status"] = "no_candidates" if not bindings else "candidate_limit"
                 return None

@@ -48,6 +48,7 @@ final class AccountExistsDialog {
         window.setDimAmount(.38f);
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         dialog.show();
+        com.click.ui.common.ClickTextScale.applyTree(window.getDecorView());
         int width = Math.min(activity.getResources().getDisplayMetrics().widthPixels
                 - AccountUi.dp(activity, 40), AccountUi.dp(activity, 400));
         window.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);

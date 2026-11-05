@@ -103,7 +103,7 @@ public class FloatingSelectionDesignTest {
                     assertNull(responses.answer);
                     phone.performClick();
                     measure(panel, 340, 650);
-                    assertNotNull(description(panel, "CLICK"));
+                    assertNotNull(description(panel, "클릭의 펭귄 친구 클루"));
                     assertNull(find(panel, "클릭 안내"));
                     assertReadable(find(panel, "다시 듣기"));
                     assertReadable(find(panel, "줄이기"));
@@ -111,7 +111,7 @@ public class FloatingSelectionDesignTest {
                     save(panel, "floating-selection-" + scale);
                     // Also exercise a narrow screen while enlarged: actions must reflow.
                     measure(panel, 300, 650);
-                    assertNotNull(description(panel, "CLICK"));
+                    assertNotNull(description(panel, "클릭의 펭귄 친구 클루"));
                     assertNull(find(panel, "클릭 안내"));
                     assertReadable(find(panel, "다시 듣기"));
                     assertReadable(find(panel, "줄이기"));
@@ -173,7 +173,7 @@ public class FloatingSelectionDesignTest {
                 assertNull(find(panel, "화면을 다시 확인 중"));
                 panel.setMinimizedProgress(false);
                 assertNull(find(panel, loading));
-                assertNotNull(description(panel, "CLICK"));
+                assertNotNull(description(panel, "클릭의 펭귄 친구 클루"));
                 assertTrue(find(panel, "디스플레이를 눌러주세요.").isShown());
                 assertNull(find(panel, "현재 진행"));
                 assertNoStatusViews(panel);

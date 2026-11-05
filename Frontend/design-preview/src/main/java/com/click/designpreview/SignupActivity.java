@@ -22,6 +22,7 @@ import android.widget.ImageButton;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
+import com.click.ui.common.ClickTextScale;
 
 /** Two short, high-legibility signup steps for the independent design preview. */
 public final class SignupActivity extends Activity {
@@ -49,6 +50,7 @@ public final class SignupActivity extends Activity {
         configureWindow();
         setContentView(R.layout.activity_sign_up);
         View root = findViewById(R.id.signup_screen);
+        ClickTextScale.applyTree(root);
         root.setBackground(new ClickBackgroundDrawable(getResources()));
         int side = dp(20);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
@@ -207,6 +209,7 @@ public final class SignupActivity extends Activity {
         window.setDimAmount(.38f);
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         dialog.show();
+        ClickTextScale.applyTree(dialog.getWindow().getDecorView());
         window.setLayout(Math.min(getResources().getDisplayMetrics().widthPixels - dp(32), dp(400)),
                 WindowManager.LayoutParams.WRAP_CONTENT);
         window.setGravity(Gravity.CENTER);

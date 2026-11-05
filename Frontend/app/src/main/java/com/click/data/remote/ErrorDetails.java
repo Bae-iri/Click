@@ -11,6 +11,20 @@ public final class ErrorDetails {
 
     /** Shared by typed and spoken requests; diagnostic details belong in the app log. */
     public static String requestMessage(Throwable error) {
+        if (error instanceof com.click.data.snapshot.SettingsScreenPrivacy.Incomplete)
+            return "현재 설정 화면을 아직 읽지 못했어요. 잠시 뒤 다시 시도해 주세요.";
+        if (error instanceof com.click.data.snapshot.SettingsScreenPrivacy.Blocked) {
+            switch (((com.click.data.snapshot.SettingsScreenPrivacy.Blocked) error).reason) {
+                case SENSITIVE_INPUT:
+                    return "비밀번호 등 입력 정보가 있어 화면 전송을 멈췄어요. 이 단계는 직접 진행해 주세요.";
+                case SENSITIVE_SCREEN:
+                    return "계정·인증 등 보호가 필요한 화면이에요. 이 단계는 직접 진행해 주세요.";
+                case UNSUPPORTED_APP:
+                    return "현재 앱 화면은 안내 대상이 아니에요. 휴대폰 설정 화면을 열어주세요.";
+                default:
+                    return "현재 화면 정보를 안전하게 확인하지 못했어요. 이 단계는 직접 진행해 주세요.";
+            }
+        }
         if (error instanceof ApiException) {
             ApiException api = (ApiException) error;
             boolean requestEndpoint = "/api/v1/voice-requests/enqueue".equals(api.path)

@@ -8,15 +8,16 @@ import android.view.View;
 import androidx.annotation.NonNull;
 
 public final class TrashDropView extends View {
+    public static final int BOTTOM_MARGIN_DP = 50;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private boolean active;
     private final android.graphics.drawable.Drawable artwork;
 
     public TrashDropView(Context context) {
         super(context);
-        artwork = context.getDrawable(com.click.designpreview.R.drawable.icon_trashcan_red);
+        artwork = context.getDrawable(com.click.designpreview.R.drawable.icon_clue_home);
         setLayerType(LAYER_TYPE_SOFTWARE, null);
-        setContentDescription("여기에 놓으면 클릭 숨기기");
+        setContentDescription("클루를 집으로 보내 안내 닫기");
     }
 
     public void setActive(boolean active) {
@@ -33,17 +34,17 @@ public final class TrashDropView extends View {
         float cy = getHeight() / 2f;
         float radius = Math.min(dp(32), Math.min(getWidth(), getHeight()) / 2f - dp(10));
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(active ? 0xFFE34D59 : 0xFFFFF2F3);
-        paint.setShadowLayer(dp(6), 0, dp(2), 0x24B73445);
+        paint.setColor(active ? 0xFFD7E8FF : 0xFFF0F6FF);
+        paint.setShadowLayer(dp(6), 0, dp(2), 0x243478F6);
         canvas.drawCircle(cx, cy, radius, paint);
         paint.clearShadowLayer();
         if (!active) {
             paint.setStyle(Paint.Style.STROKE);
             paint.setStrokeWidth(dp(1));
-            paint.setColor(0xFFF5C6CC);
+            paint.setColor(0xFFBED6F6);
             canvas.drawCircle(cx, cy, radius, paint);
         }
-        int half = Math.round(dp(24));
+        int half = Math.round(dp(26));
         artwork.setBounds(Math.round(cx) - half, Math.round(cy) - half,
                 Math.round(cx) + half, Math.round(cy) + half);
         artwork.draw(canvas);

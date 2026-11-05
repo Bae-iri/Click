@@ -12,7 +12,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.ImageView;
+import android.widget.TextView;
 import com.click.R;
 import com.click.ui.common.ClickTextScale;
 
@@ -20,6 +20,7 @@ import com.click.ui.common.ClickTextScale;
 final class FloatingPanelHeader extends LinearLayout {
     final Button replay, collapse;
     final View divider;
+    final TextView title;
     private final LinearLayout row, identity, actions;
 
     FloatingPanelHeader(Context context, Runnable onReplay, Runnable onCollapse) {
@@ -31,12 +32,22 @@ final class FloatingPanelHeader extends LinearLayout {
         identity = new LinearLayout(context);
         identity.setGravity(Gravity.CENTER_VERTICAL);
         identity.setMinimumHeight(dp(48));
-        ImageView brand = new ImageView(context);
-        brand.setImageResource(com.click.designpreview.R.drawable.clue7_floating);
-        brand.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        brand.setTag("floating_logo");
-        brand.setContentDescription("클릭의 펭귄 친구 클루");
-        identity.addView(brand, new LayoutParams(dp(48), dp(48)));
+        title = new TextView(context);
+        title.setTag("floating_title");
+        title.setTextSize(ClickTextScale.size(context, 15));
+        title.setTextColor(0xFF101A36);
+        title.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
+        title.setIncludeFontPadding(false);
+        title.setGravity(Gravity.CENTER_VERTICAL);
+        title.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
+        if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
+        com.click.ui.home.HomeIconView wordmark = new com.click.ui.home.HomeIconView(context,
+                com.click.ui.home.HomeIconView.Kind.WORDMARK);
+        wordmark.setTag("floating_wordmark");
+        wordmark.setContentDescription("CLICK");
+        wordmark.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
+        LayoutParams wordmarkParams = new LayoutParams(dp(66), dp(28));
+        identity.addView(wordmark, wordmarkParams);
         row.addView(identity, new LayoutParams(0, -2, 1));
         actions = new LinearLayout(context);
         actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
@@ -60,6 +71,7 @@ final class FloatingPanelHeader extends LinearLayout {
         LayoutParams line = new LayoutParams(-1, dp(1));
         line.topMargin = line.bottomMargin = dp(FloatingPanelStyle.HEADER_DIVIDER_GAP_DP);
         addView(divider, line);
+        addView(title, new LayoutParams(-1, -2));
     }
 
     private Button button(String label, Runnable action, boolean primary) {
@@ -84,13 +96,15 @@ final class FloatingPanelHeader extends LinearLayout {
     }
 
     @Override protected void onMeasure(int width, int height) {
+        title.setVisibility(title.length() == 0 ? GONE : VISIBLE);
         int natural = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
         replay.measure(natural, natural); collapse.measure(natural, natural);
         int actionHeight = Math.max(dp(48), Math.max(replay.getMeasuredHeight(), collapse.getMeasuredHeight()));
         replay.getLayoutParams().height = collapse.getLayoutParams().height = actionHeight;
-        // Replay keeps its slot when unavailable; the logo always starts at the left edge.
-        boolean stacked = dp(48 + 12 + 8) + replay.getMeasuredWidth() + collapse.getMeasuredWidth()
-                > MeasureSpec.getSize(width);
+        // Keep the CLICK wordmark visible; controls wrap at larger text sizes.
+        int replayWidth = replay.getVisibility() == GONE ? 0 : replay.getMeasuredWidth();
+        boolean stacked = dp(66 + 12 + 8) + replayWidth
+                + collapse.getMeasuredWidth() > MeasureSpec.getSize(width);
         int orientation = stacked ? VERTICAL : HORIZONTAL;
         if (row.getOrientation() != orientation) {
             row.setOrientation(orientation);

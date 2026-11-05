@@ -11,7 +11,6 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,7 +24,6 @@ public final class DisplaySettingsActivity extends AppCompatActivity {
     private static final int SECONDARY = 0xFF7182A4;
 
     private Typeface regular;
-    private Typeface medium;
     private Typeface semibold;
 
     @Override protected void onCreate(Bundle state) {
@@ -38,7 +36,6 @@ public final class DisplaySettingsActivity extends AppCompatActivity {
                             | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
         }
         regular = getResources().getFont(com.click.designpreview.R.font.pretendard_regular);
-        medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
         semibold = getResources().getFont(com.click.designpreview.R.font.pretendard_semibold);
 
         FrameLayout root = new FrameLayout(this);
@@ -89,73 +86,7 @@ public final class DisplaySettingsActivity extends AppCompatActivity {
     }
 
     private View sizeCard() {
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(18), dp(18), dp(18), dp(16));
-        card.setBackground(cardBackground());
-
-        LinearLayout heading = new LinearLayout(this);
-        heading.setGravity(Gravity.CENTER_VERTICAL);
-        heading.addView(text("글자 크기", 16, INK, medium),
-                new LinearLayout.LayoutParams(0, -2, 1));
-        TextView current = text(ClickTextScale.label(this), 13, BLUE, medium);
-        heading.addView(current, new LinearLayout.LayoutParams(-2, -2));
-        card.addView(heading, new LinearLayout.LayoutParams(-1, -2));
-
-        LinearLayout previewRow = new LinearLayout(this);
-        previewRow.setGravity(Gravity.CENTER_VERTICAL);
-        TextView smaller = text("가", 15, SECONDARY, regular);
-        TextView preview = text("가나다라마바사", 17, INK, medium);
-        ClickTextScale.apply(preview, 17);
-        TextView bigger = text("가", 23, BLUE, semibold);
-        previewRow.addView(smaller, new LinearLayout.LayoutParams(-2, dp(48)));
-        LinearLayout.LayoutParams previewParams = new LinearLayout.LayoutParams(0, dp(48), 1);
-        previewParams.setMarginStart(dp(12));
-        previewParams.setMarginEnd(dp(12));
-        previewRow.addView(preview, previewParams);
-        previewRow.addView(bigger, new LinearLayout.LayoutParams(-2, dp(48)));
-        LinearLayout.LayoutParams previewRowParams = new LinearLayout.LayoutParams(-1, -2);
-        previewRowParams.topMargin = dp(14);
-        card.addView(previewRow, previewRowParams);
-
-        SeekBar scale = new SeekBar(this);
-        scale.setMax(3);
-        scale.setProgress(ClickTextScale.level(this));
-        scale.setContentDescription("클릭 글자 크기 조절");
-        scale.setMinHeight(dp(48));
-        scale.setPadding(dp(4), 0, dp(4), 0);
-        scale.setProgressTintList(ColorStateList.valueOf(BLUE));
-        scale.setThumbTintList(ColorStateList.valueOf(BLUE));
-        scale.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
-                if (!fromUser) return;
-                ClickTextScale.saveLevel(DisplaySettingsActivity.this, progress);
-                current.setText(ClickTextScale.label(DisplaySettingsActivity.this));
-                ClickTextScale.apply(preview, 17);
-            }
-            @Override public void onStartTrackingTouch(SeekBar bar) {}
-            @Override public void onStopTrackingTouch(SeekBar bar) {}
-        });
-        LinearLayout.LayoutParams scaleParams = new LinearLayout.LayoutParams(-1, -2);
-        scaleParams.topMargin = dp(8);
-        card.addView(scale, scaleParams);
-
-        LinearLayout labels = new LinearLayout(this);
-        TextView min = text("작게", 12, SECONDARY, regular);
-        TextView max = text("아주 크게", 12, SECONDARY, regular);
-        labels.addView(min, new LinearLayout.LayoutParams(0, -2, 1));
-        max.setGravity(Gravity.END);
-        labels.addView(max, new LinearLayout.LayoutParams(0, -2, 1));
-        card.addView(labels, new LinearLayout.LayoutParams(-1, -2));
-        return card;
-    }
-
-    private GradientDrawable cardBackground() {
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(Color.WHITE);
-        background.setCornerRadius(dp(24));
-        background.setStroke(dp(1), 0xFFF0F3F8);
-        return background;
+        return new com.click.designpreview.TextSizeControlView(this);
     }
 
     private android.graphics.drawable.Drawable ripple(int color, int radius) {

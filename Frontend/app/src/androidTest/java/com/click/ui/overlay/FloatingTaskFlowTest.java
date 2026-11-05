@@ -35,6 +35,86 @@ import static org.junit.Assert.*;
 public class FloatingTaskFlowTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
+    @Test public void actualPauseAndEndButtonsStopWaitingBlockedAndOrphanedPanels() throws Exception {
+        Context app = instrumentation.getTargetContext();
+        UiAutomation automation = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+        // Instrumentation restarts the app process; rebind the already-enabled
+        // service so this test uses the same real overlay WindowManager as the app.
+        String key = Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES;
+        String original = Settings.Secure.getString(app.getContentResolver(), key);
+        String component = "com.click/com.click.service.accessibility.ClickAccessibilityService";
+        assertNotNull(original);
+        assertTrue(java.util.Arrays.asList(original.split(":")).contains(component));
+        automation.adoptShellPermissionIdentity("android.permission.WRITE_SECURE_SETTINGS");
+        try {
+            List<String> others = new ArrayList<>(java.util.Arrays.asList(original.split(":")));
+            others.remove(component);
+            Settings.Secure.putString(app.getContentResolver(), key, String.join(":", others));
+            SystemClock.sleep(250);
+        } finally {
+            Settings.Secure.putString(app.getContentResolver(), key, original);
+            automation.dropShellPermissionIdentity();
+        }
+        Intent serviceIntent = new Intent(app, ClickOverlayService.class);
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            await(() -> ClickAccessibilityService.accessibilityWindowManager() != null);
+            scenario.onActivity(activity -> activity.startService(serviceIntent));
+            await(() -> service() != null && control() != null && control().isAttachedToWindow());
+            final TextView[] stalePause = {null};
+            instrumentation.runOnMainSync(() -> {
+                // Real windows and button listeners, without sending test work to the server.
+                VoiceQueueGateway queue = (VoiceQueueGateway) field(service(), "queueGateway");
+                if (queue != null) queue.close();
+                setField(service(), "queueGateway", null);
+                setField(service(), "agentSessionId", "local-control-check");
+                setField(service(), "requestActive", true);
+                setField(service(), "turnInFlight", true);
+                invoke(service(), "ensureTaskFlow");
+                guide().waiting("응답을 기다리고 있어요");
+                stalePause[0] = findText(guide(), "일시정지");
+                stalePause[0].performClick();
+                assertTrue((Boolean) field(service(), "agentPaused"));
+                assertEquals("pause_task", field(service(), "pendingControl"));
+                assertNotNull(findText(guide(), "이어서 진행"));
+                assertNull(field(service(), "missingScreenRetry"));
+            });
+            screenshot("floating-controls-paused-immediately");
+            instrumentation.runOnMainSync(() -> {
+                findText(guide(), "끝내기").performClick();
+                assertNull(guide()); assertNull(field(service(), "agentSessionId"));
+                assertFalse((Boolean) field(service(), "turnInFlight"));
+                stalePause[0].performClick();
+                assertNull("A removed panel must never restart the task", guide());
+                invoke(service(), "ensureTaskFlow");
+                guide().waiting("남아 있는 안내창");
+                setField(service(), "requestActive", false);
+                findText(guide(), "끝내기").performClick();
+                assertNull("End closes a panel even without an active request", guide());
+                setField(service(), "agentSessionId", "blocked-control-check");
+                try {
+                    Method apply = ClickOverlayService.class.getDeclaredMethod("applyTaskFlowResponse",
+                            com.click.data.remote.AgentTurnContract.Response.class);
+                    apply.setAccessible(true);
+                    apply.invoke(service(), new com.click.data.remote.AgentTurnContract.Response(new org.json.JSONObject()
+                            .put("request_id", "blocked-check").put("session_id", "blocked-control-check")
+                            .put("task_status", "BLOCKED").put("message", "현재 화면을 확인하지 못했어요.").toString()));
+                } catch (Exception error) { throw new AssertionError(error); }
+                assertTrue((Boolean) field(service(), "agentPaused"));
+                assertFalse((Boolean) field(service(), "requestActive"));
+                assertFalse(findText(guide(), "일시정지").isShown());
+                assertTrue(findText(guide(), "끝내기").isShown());
+            });
+            screenshot("floating-controls-blocked-end-only");
+            instrumentation.runOnMainSync(() -> {
+                findText(guide(), "끝내기").performClick();
+                assertNull(guide()); assertNull(field(service(), "agentSessionId"));
+            });
+        } finally {
+            app.stopService(serviceIntent);
+            await(() -> service() == null);
+        }
+    }
+
     @Test public void guidanceAndInputNeverShareTheScreenAndUpdatesPreserveDraft() throws Exception {
         Context app = instrumentation.getTargetContext();
         com.click.data.local.TouchAutomationSettings mode = new com.click.data.local.TouchAutomationSettings(app);

@@ -30,7 +30,7 @@ import com.click.ui.common.ClickTextScale;
  * XML 레이아웃 대신 아래 Java 코드에서 화면을 직접 만든다.
  *
  * 수정 위치 안내 (파일에서 "[UI 수정]"을 검색):
- * - 접힌 클루 버튼: dispatchDraw(). 이미지는 clue7_floating.png.
+ * - 접힌 클릭 버튼: dispatchDraw(). 이미지는 icon_floating_cursor.png.
  * - 창 크기: getWindowWidth(), getWindowHeight().
  * - 펼친 창의 헤더/구분선: FloatingPanelHeader.java. 본문: renderPanel()의 MENU/VOICE/TEXT 분기.
  * - 공통 버튼/글꼴: action(), feature(), label(). 입력창 스타일은 생성자.
@@ -61,7 +61,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         default void onContentSizeChanged() {}
     }
 
-    private final android.graphics.drawable.Drawable collapsedClue;
+    private final android.graphics.drawable.Drawable collapsedIcon;
     private final EditText goalInput;
     private LinearLayout panel;
     private FloatingPanelHeader panelHeader;
@@ -81,6 +81,7 @@ public final class ClickOverlayLayout extends ViewGroup {
     private String requestStatus;
     private Mode mode = Mode.COLLAPSED;
     private Callback callback;
+    private Runnable openLibrary;
     private float downRawX, downRawY, lastRawX, lastRawY;
     private boolean holding, dragging, holdConsumed;
     private final int dragSlop;
@@ -91,7 +92,7 @@ public final class ClickOverlayLayout extends ViewGroup {
 
     public ClickOverlayLayout(Context context) {
         super(context);
-        collapsedClue = context.getDrawable(com.click.designpreview.R.drawable.clue7_floating).mutate();
+        collapsedIcon = context.getDrawable(com.click.designpreview.R.drawable.icon_floating_cursor).mutate();
         setWillNotDraw(false);
         setClipChildren(false);
         setClickable(true);
@@ -133,6 +134,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         setRequestStatus(requestStatus, requestStoppable);
     }
     public void setCallback(Callback callback) { this.callback = callback; }
+    public void setOnLibraryRequested(Runnable action) { openLibrary = action; }
     public Mode getMode() { return mode; }
     public void openMenu() { changeMode(Mode.MENU); }
     public void openText() { changeMode(Mode.TEXT); }
@@ -283,7 +285,9 @@ public final class ClickOverlayLayout extends ViewGroup {
 
         // 요청 확인·진행·결과와 같은 헤더/구분선을 사용한다.
         panelHeader = new FloatingPanelHeader(getContext(), () -> {}, this::collapse);
-        panelHeader.replay.setVisibility(INVISIBLE);
+        panelHeader.replay.setVisibility(GONE);
+        panelHeader.title.setText(mode == Mode.MENU ? "무엇을 도와드릴까요?"
+                : mode == Mode.VOICE ? "말로 입력" : "글로 입력");
         panelHeader.collapse.setId(R.id.overlay_collapse);
         panel.addView(panelHeader, new LinearLayout.LayoutParams(-1, -2));
 
@@ -300,11 +304,17 @@ public final class ClickOverlayLayout extends ViewGroup {
             // 앱과 튜토리얼이 함께 사용하는 입력 메뉴. 예시는 튜토리얼 바깥 설명에만 둔다.
             LinearLayout choices = new LinearLayout(getContext());
             choices.setOrientation(LinearLayout.VERTICAL);
-            TextView welcome = label("무엇을 도와드릴까요?", 22, ClickUi.TEXT, true);
-            welcome.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
-            choices.addView(welcome, spaced(0));
-            choices.addView(feature("말로 입력", true, () -> changeMode(Mode.VOICE)), spaced(12));
+            choices.addView(feature("말로 입력", true, () -> changeMode(Mode.VOICE)), spaced(0));
             choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(8));
+            if (openLibrary != null) {
+                com.click.ui.home.HomeIconView star = new com.click.ui.home.HomeIconView(
+                        getContext(), com.click.ui.home.HomeIconView.Kind.STAR);
+                star.setAccentColor(ClickUi.BLUE);
+                star.setPadding(dp(6), dp(6), dp(6), dp(6));
+                View library = feature("즐겨찾기", star, "즐겨찾기. 앱 보관함 열기", openLibrary);
+                library.setTag("overlay_open_library");
+                choices.addView(library, spaced(8));
+            }
             addScrollableBody(choices, 0);
             // 진행 중인 요청에서 입력 메뉴를 다시 열어도 중지 버튼에 접근할 수 있다.
             panel.addView(requestRow, spaced(4));
@@ -401,6 +411,15 @@ public final class ClickOverlayLayout extends ViewGroup {
 
     // [UI 수정] 메뉴의 음성/글 입력 카드: 배경, 아이콘, 글자, 카드 안 여백.
     private View feature(String title, boolean microphone, Runnable action) {
+        ImageView icon = new ImageView(getContext());
+        icon.setImageResource(microphone ? R.drawable.ic_overlay_microphone : R.drawable.ic_overlay_edit);
+        icon.setImageTintList(ColorStateList.valueOf(ClickUi.BLUE));
+        icon.setPadding(dp(6), dp(6), dp(6), dp(6));
+        return feature(title, icon, microphone ? "말로 시작. 마이크로 말하기"
+                : "글로 입력. 키보드로 입력하기", action);
+    }
+
+    private View feature(String title, View icon, String description, Runnable action) {
         LinearLayout row = new LinearLayout(getContext());
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(12), dp(8), dp(12), dp(8));
@@ -408,10 +427,6 @@ public final class ClickOverlayLayout extends ViewGroup {
         row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x223478F6),
                 ClickUi.rounded(Color.WHITE, dp(18)),
                 ClickUi.rounded(Color.WHITE, dp(20))));
-        ImageView icon = new ImageView(getContext());
-        icon.setImageResource(microphone ? R.drawable.ic_overlay_microphone : R.drawable.ic_overlay_edit);
-        icon.setImageTintList(ColorStateList.valueOf(ClickUi.BLUE));
-        icon.setPadding(dp(6), dp(6), dp(6), dp(6));
         row.setElevation(0);
         icon.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         row.addView(icon, new LinearLayout.LayoutParams(dp(36), dp(36)));
@@ -424,7 +439,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         arrow.setImageResource(R.drawable.ic_review_chevron);
         arrow.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         row.addView(arrow, new LinearLayout.LayoutParams(dp(20), dp(32)));
-        row.setContentDescription(microphone ? "말로 시작. 마이크로 말하기" : "글로 입력. 키보드로 입력하기");
+        row.setContentDescription(description);
         row.setFocusable(true);
         row.setOnClickListener(v -> action.run());
         return row;
@@ -480,8 +495,8 @@ public final class ClickOverlayLayout extends ViewGroup {
             int size = Math.min(getWidth(), dp(64));
             int left = (getWidth() - size) / 2;
             int top = Math.round(getClickCenterY(mode) - size / 2f);
-            collapsedClue.setBounds(left, top, left + size, top + size);
-            collapsedClue.draw(canvas);
+            collapsedIcon.setBounds(left, top, left + size, top + size);
+            collapsedIcon.draw(canvas);
         }
     }
     @Override public boolean onInterceptTouchEvent(MotionEvent event) {
@@ -622,7 +637,7 @@ public final class ClickOverlayLayout extends ViewGroup {
     }
     private void updateDescription() {
         setContentDescription(mode == Mode.COLLAPSED
-                ? "클릭 기능 열기. 꾹 누르면 휴지통이 나타납니다. 끌어서 이동하거나 휴지통에 놓아 숨깁니다."
+                ? "클릭 기능 열기. 꾹 누르면 집 아이콘이 나타납니다. 끌어서 이동하거나 집에 놓아 클루의 안내를 닫습니다."
                 : "클릭 안내 창. 줄이기 버튼을 누르면 작은 CLICK 버튼으로 접습니다.");
     }
     private void submitText() {

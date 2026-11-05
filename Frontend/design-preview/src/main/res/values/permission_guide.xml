@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="guide_blue">#3478F6</color>
+    <string name="guide_card_previous">이전</string>
+    <string name="guide_card_next">다음 단계</string>
+    <string name="guide_card_apps_title">‘설치된 앱’을 눌러주세요</string>
+    <string name="guide_card_apps_body">접근성 설정에서 ‘설치된 앱’을 찾아 눌러주세요.</string>
+    <string name="guide_card_click_title">‘클릭 화면 안내’를 선택해요</string>
+    <string name="guide_card_click_body">설치된 앱 목록에서 ‘클릭 화면 안내’를 눌러주세요.</string>
+    <string name="guide_card_switch_title">위쪽 스위치를 켜주세요</string>
+    <string name="guide_card_switch_body">‘사용 안 함’ 오른쪽 스위치를 눌러주세요. 아래의 ‘바로가기’ 스위치는 켜지 않아도 돼요.</string>
+    <string name="guide_card_reconnect_body">‘사용 중’이라면 위쪽 스위치를 껐다가 다시 켜주세요. 아래의 ‘바로가기’ 스위치는 그대로 두세요.</string>
+    <string name="guide_card_consent_title">확인창에서 ‘허용’을 눌러요</string>
+    <string name="guide_card_consent_body">휴대전화 제어 권한을 허용하는 창이에요. ‘허용’을 눌러야 클릭이 도와드릴 수 있어요.</string>
+    <string name="guide_card_done_title">‘사용 중’이면 설정 완료예요</string>
+    <string name="guide_card_done_body">사용 중으로 표시되면 완료예요.</string>
+    <item name="guide_card_title" type="id" />
+    <item name="guide_screenshot" type="id" />
     <string name="guide_step_number">%1$d</string>
     <string name="guide_name">접근성 안내</string>
     <string name="guide_open">접근성 설정 안내</string>

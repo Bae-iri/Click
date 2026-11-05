@@ -54,6 +54,13 @@ def diagnostic_payload(value, depth=0):
         confidence = selection.get("confidence")
         if type(confidence) in (int, float) and math.isfinite(confidence) and 0 <= confidence <= 1:
             safe["confidence"] = confidence
+        grounded = selection.get("grounded_candidate_count")
+        if type(grounded) is int and 0 <= grounded <= 250:
+            safe["grounded_candidate_count"] = grounded
+        for key in ("minimum_confidence", "top_probability", "probability_margin"):
+            confidence = selection.get(key)
+            if type(confidence) in (int, float) and math.isfinite(confidence) and 0 <= confidence <= 1:
+                safe[key] = confidence
         output["ui_selection"] = safe
     if isinstance(value.get("candidates"), (list, tuple)):
         output["candidates"] = []

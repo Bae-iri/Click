@@ -10,6 +10,7 @@ import com.click.TutorialActivity;
 import com.click.designpreview.TutorialNarrator;
 import com.click.service.overlay.DeviceSpeechInput;
 import com.click.ui.overlay.ClickOverlayLayout;
+import com.click.ui.overlay.TaskFlowOverlayView;
 import java.lang.reflect.Field;
 import java.time.Duration;
 import org.junit.After;
@@ -87,6 +88,54 @@ public class TutorialSpeechScriptTest {
         verify(narrator).speak(activity.getString(R.string.tutorial_speech_review_ready));
     }
 
+    @Test public void inputExplainsBothMethodsWithoutRequestTerminology() {
+        activity.findViewById(R.id.tutorial_next).performClick();
+        assertNotNull(find("원하시는 방법으로 하고 싶은 작업을 말씀해주세요"));
+        assertNotNull(find("말로도 입력할 수 있고, 글로도 입력할 수 있어요"));
+        ((ClickOverlayLayout) activity.findViewById(R.id.tutorial_floating_control)).openMenu();
+        verify(narrator).speak(activity.getString(R.string.tutorial_speech_input));
+    }
+
+    @Test public void minimizingAndReopeningKeepsTheButtonAndNeverRestartsNarration() throws Exception {
+        activity.onTextSubmitted("휴대폰 전체 글자 크기 키워줘");
+        find("안내 시작하기").performClick();
+        TutorialFloatingHost host = activity.findViewById(R.id.tutorial_floating_host);
+        ClickOverlayLayout control = host.getControl();
+        TaskFlowOverlayView panel = (TaskFlowOverlayView) get("reviewView");
+        clearInvocations(narrator);
+        for (int i = 0; i < 2; i++) {
+            layoutHost(host);
+            find("줄이기").performClick();
+            layoutHost(host);
+            assertTrue(panel.isMinimizedProgress());
+            assertEquals(View.VISIBLE, control.getVisibility());
+            assertTrue(panel.getWidth() < host.getWidth());
+            assertTrue(panel.getX() >= 0);
+            assertTrue(panel.getX() + panel.getWidth() <= host.getWidth());
+            assertTrue(panel.getY() + panel.getHeight() <= control.getY()
+                    || panel.getY() >= control.getY() + control.getHeight());
+            if (i == 0) find("진행중이에요!").performClick();
+            else assertTrue(host.onOpenRequested());
+            layoutHost(host);
+            assertFalse(panel.isMinimizedProgress());
+            assertEquals(View.GONE, control.getVisibility());
+            assertEquals(0f, panel.getTranslationX(), 0f);
+            assertEquals(0f, panel.getTranslationY(), 0f);
+        }
+        verify(narrator, never()).speak(anyString());
+        verify(narrator, never()).replay(anyString());
+        verify(narrator, never()).stop();
+        find("일시정지").performClick();
+        verify(narrator).speak(activity.getString(R.string.tutorial_speech_paused));
+    }
+
+    private void layoutHost(TutorialFloatingHost host) {
+        float density = activity.getResources().getDisplayMetrics().density;
+        host.measure(View.MeasureSpec.makeMeasureSpec(Math.round(340 * density), View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(Math.round(600 * density), View.MeasureSpec.EXACTLY));
+        host.layout(0, 0, host.getMeasuredWidth(), host.getMeasuredHeight());
+    }
+
     @Test public void voiceInstructionsTeachHoldingAndReleasingWithoutAddingAStep() throws Exception {
         clearInvocations(narrator);
         set("step", 0);
@@ -140,6 +189,11 @@ public class TutorialSpeechScriptTest {
     private void set(String name, Object value) throws Exception {
         Field field = TutorialActivity.class.getDeclaredField(name);
         field.setAccessible(true); field.set(activity, value);
+    }
+
+    private Object get(String name) throws Exception {
+        Field field = TutorialActivity.class.getDeclaredField(name);
+        field.setAccessible(true); return field.get(activity);
     }
 
     private TextView find(String label) {

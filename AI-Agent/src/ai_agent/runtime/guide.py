@@ -32,7 +32,7 @@ def recovery_command(session_id, plan):
     if plan.next_action == "go_back":
         policy["recovery_action"] = {"type": "navigate_back", "target_app": "android_settings"}
     if plan.next_action == "reobserve":
-        message = "화면이 바뀌었는지 다시 확인하고 있어요. 잠시 기다려 주세요."
+        message = "안내를 준비하고 있어요."
         policy["fallback_action"] = {"type": "request_fresh_observation", "reason_code": plan.reason_code}
     if plan.decision == "handoff":
         policy["backend_handoff"] = {"type": "task_graph_reselection_required", "reason_code": plan.reason_code}
@@ -102,7 +102,7 @@ def build_guide_command(
             guide_command_id=f"guide_{session_id}_{match_result.state_id}_fallback",
             command_type=CommandType.HIGHLIGHT,
             action_type=ActionType.OBSERVE_ONLY,
-            message="현재 화면에서 다음에 누를 항목을 찾지 못했어요.",
+            message="안내를 준비하고 있어요.",
             safety_level=SafetyLevel.LOW_RISK,
             requires_user_action=False,
             render_policy={

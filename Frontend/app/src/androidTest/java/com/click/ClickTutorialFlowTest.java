@@ -100,7 +100,7 @@ public class ClickTutorialFlowTest {
                     findType(control(a), EditText.class).getHint().toString()));
             scenario.onActivity(a -> control(a).setDraftText("휴대폰 전체 글자 크기 키워줘"));
             tapText(scenario, "↑");
-            scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "요청이 맞는지 확인해요")));
+            scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "입력한 내용이 맞는지 확인해요")));
             screenshot("tutorial-short-review");
             tapText(scenario, "안내 시작하기");
             scenario.onActivity(a -> {
@@ -113,7 +113,7 @@ public class ClickTutorialFlowTest {
             scenario.recreate();
             scenario.onActivity(a -> assertTrue(findType(a.getWindow().getDecorView(), com.click.ui.overlay.TaskFlowOverlayView.class).isMinimizedProgress()));
             tapText(scenario, "진행중이에요!");
-            tapText(scenario, "멈추기");
+            tapText(scenario, "일시정지");
             scenario.recreate();
             scenario.onActivity(a -> {
                 assertNotNull(findText(a.getWindow().getDecorView(), "이어서 진행"));
@@ -123,7 +123,7 @@ public class ClickTutorialFlowTest {
             tapId(scenario, R.id.tutorial_next);
             scenario.recreate();
             scenario.onActivity(a -> {
-                for (String label : new String[]{"말이나 글로 요청하기", "요청 내용 확인하기", "안내창 줄이고 멈추기"}) {
+                for (String label : new String[]{"말이나 글로 입력하기", "입력한 내용 확인하기", "안내창 줄이고 일시정지하기"}) {
                     TextView item = findText(a.getWindow().getDecorView(), label);
                     assertNotNull(label, item);
                     assertEquals(label + ", 완료", item.getContentDescription());
@@ -170,7 +170,7 @@ public class ClickTutorialFlowTest {
             tapText(scenario, "끝내기");
             assertMode(scenario, ClickOverlayLayout.Mode.MENU);
             scenario.onActivity(a -> {
-                assertNotNull(findText(a.getWindow().getDecorView(), "편한 방법으로 요청해 보세요"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "원하시는 방법으로 하고 싶은 작업을 말씀해주세요"));
                 assertNull(findText(a.getWindow().getDecorView(), "요청을 멈췄어요"));
             });
         }
@@ -194,7 +194,7 @@ public class ClickTutorialFlowTest {
             microphoneTouch(scenario, MotionEvent.ACTION_UP);
             scenario.onActivity(a -> {
                 assertFalse(control(a).isVoiceInputActive());
-                assertNotNull(findText(a.getWindow().getDecorView(), "요청이 맞는지 확인해요"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "입력한 내용이 맞는지 확인해요"));
                 assertNotNull(findText(a.getWindow().getDecorView(), "안내 시작하기"));
             });
             screenshot("tutorial-offline-voice-review");

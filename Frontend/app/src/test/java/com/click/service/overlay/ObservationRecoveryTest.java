@@ -34,6 +34,14 @@ public class ObservationRecoveryTest {
                 .put("status", "low_confidence").put("grounded_candidate_count", 1)));
         assertFalse(ObservationRecovery.canSearchJevWait("S1_SETTINGS_HOME", jevWait(), metadata, settings("com.android.settings")));
     }
+    @Test public void uncertainSelectionNeverMeansTheMenuIsOffscreenEvenWithOldServerDiagnostics() throws Exception {
+        for (String status : new String[]{"low_confidence", "uncertain", "waiting"}) {
+            JSONObject metadata = new JSONObject().put("debug", new JSONObject().put("ui_selection",
+                    new JSONObject().put("provider", "jev").put("status", status).put("candidate_count", 3)));
+            assertFalse(ObservationRecovery.canSearchJevWait("S1_SETTINGS_HOME", jevWait(), metadata,
+                    settings("com.android.settings")));
+        }
+    }
     @Test public void jevWaitDoesNotOverrideExplicitRecoveryOrUnknownScreens() throws Exception {
         for (String key : new String[]{"recovery", "vision_fallback", "backend_handoff", "recovery_action"})
             assertFalse(ObservationRecovery.canSearchJevWait("S1_SETTINGS_HOME", jevWait().put(key, new JSONObject()), null, settings("com.android.settings")));

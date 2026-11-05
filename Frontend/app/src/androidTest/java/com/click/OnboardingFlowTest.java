@@ -82,6 +82,8 @@ public class OnboardingFlowTest {
             shown("가입하기"); assertNoWindowText("전화번호로 로그인하기");
             screenshot("onboarding-third");
             tap("가입하기");
+            shown("이 정도 글씨 괜찮으세요?");
+            tap("이 크기로 시작하기");
             shown("회원가입");
             shown("카카오로 가입하기"); shown("번호로 가입하기"); shown("로그인하기");
             assertNoWindowText("또는");
@@ -92,8 +94,10 @@ public class OnboardingFlowTest {
 
     @Test public void signupChoicesRemainAboveLoginAfterRecreation() throws Exception {
         try (ActivityScenario<AccountStartActivity> s = ActivityScenario.launch(AccountStartActivity.class)) {
+            shown("이 정도 글씨 괜찮으세요?");
+            tap("이 크기로 시작하기");
             shown("카카오로 가입하기"); shown("번호로 가입하기");
-            shown("안녕하세요! 저는 클루예요!\n환영합니다!");
+            shown("환영합니다!\n저는 클루라고 해요.");
             screenshot("signup-clue-welcome");
             s.recreate();
             shown("회원가입");
@@ -107,6 +111,59 @@ public class OnboardingFlowTest {
             screenshot("email-signup-explicit");
         }
     }
+
+    @Test public void signupFirstFitsTextSizeThenUsesTheSameSettingEverywhere() throws Exception {
+        android.content.Context context = instrumentation.getTargetContext();
+        int original = com.click.ui.common.ClickTextScale.level(context);
+        com.click.ui.common.ClickTextScale.saveLevel(context, 1);
+        try (ActivityScenario<AccountStartActivity> scenario = ActivityScenario.launch(AccountStartActivity.class)) {
+            shown("이 정도 글씨 괜찮으세요?");
+            screenshot("signup-text-size-default");
+            final float[] titleSize = {0};
+            scenario.onActivity(a -> {
+                TextView title = a.findViewById(com.click.designpreview.R.id.text_size_setup_title);
+                titleSize[0] = title.getTextSize();
+                assertNull(a.findViewById(com.click.designpreview.R.id.account_start_kakao));
+                android.os.Bundle args = new android.os.Bundle();
+                args.putFloat(android.view.accessibility.AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE, 3);
+                assertTrue(a.findViewById(com.click.designpreview.R.id.text_size_scale).performAccessibilityAction(
+                        android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(), args));
+                assertEquals(titleSize[0] * 1.3f, title.getTextSize(), .5f);
+            });
+            instrumentation.waitForIdleSync();
+            screenshot("signup-text-size-large");
+            scenario.onActivity(a -> {
+                TextView title = a.findViewById(com.click.designpreview.R.id.text_size_setup_title);
+                TextView preview = a.findViewById(com.click.designpreview.R.id.text_size_preview);
+                for (TextView text : new TextView[]{title, preview}) {
+                    assertTrue(text.getLayout().getHeight() <= text.getHeight() - text.getCompoundPaddingTop() - text.getCompoundPaddingBottom());
+                    for (int line = 0; line < text.getLineCount(); line++) assertEquals(0, text.getLayout().getEllipsisCount(line));
+                }
+                Rect button = new Rect();
+                View next = a.findViewById(com.click.designpreview.R.id.text_size_setup_continue);
+                assertTrue(next.getGlobalVisibleRect(button));
+                assertEquals(next.getHeight(), button.height());
+            });
+            scenario.recreate();
+            scenario.onActivity(a -> assertEquals(3, ((android.widget.SeekBar) a.findViewById(
+                    com.click.designpreview.R.id.text_size_scale)).getProgress()));
+            tap("이 크기로 시작하기");
+            shown("카카오로 가입하기"); shown("번호로 가입하기");
+            scenario.recreate();
+            shown("회원가입");
+            tap("번호로 가입하기");
+            TextView title = shown("전화번호로 가입해요");
+            assertEquals(30 * 1.3f * title.getResources().getDisplayMetrics().scaledDensity, title.getTextSize(), .5f);
+            screenshot("signup-phone-scaled");
+            try (ActivityScenario<DisplaySettingsActivity> settings = ActivityScenario.launch(DisplaySettingsActivity.class)) {
+                settings.onActivity(a -> assertEquals(3, ((android.widget.SeekBar) a.findViewById(
+                        com.click.designpreview.R.id.text_size_scale)).getProgress()));
+                shown("아주 크게");
+                screenshot("signup-shared-display-setting");
+            }
+        } finally { com.click.ui.common.ClickTextScale.saveLevel(context, original); }
+    }
+
     @Test public void phoneReviewPrecedesRequiredDisplayName() throws Exception {
         try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
             awaitSignupRules(s);
@@ -379,7 +436,30 @@ public class OnboardingFlowTest {
                 points[0] = from[0] + row.getWidth() / 2f; points[1] = from[1] + row.getHeight() / 2f;
                 points[2] = points[0]; points[3] = to[1] + 8;
             });
-            swipe(points, true);
+            long down = SystemClock.uptimeMillis();
+            sendTouch(down, MotionEvent.ACTION_DOWN, points[0], points[1]);
+            SystemClock.sleep(android.view.ViewConfiguration.getLongPressTimeout() + 200);
+            float sideways = 48 * instrumentation.getTargetContext().getResources().getDisplayMetrics().density;
+            sendTouch(down, MotionEvent.ACTION_MOVE, points[0] + sideways, points[1]);
+            scenario.onActivity(a -> {
+                View row = a.findViewById(R.id.home_favorites_scroll).findViewWithTag("library_request:" + id);
+                assertEquals("A sideways finger movement must not move the row", 0f, row.getTranslationX(), .5f);
+                assertEquals(0f, row.getTranslationY(), .5f);
+            });
+            for (int step = 1; step <= 20; step++) {
+                float fraction = step / 20f;
+                sendTouch(down, MotionEvent.ACTION_MOVE, points[0] + sideways,
+                        points[1] + (points[3] - points[1]) * fraction);
+                SystemClock.sleep(20);
+            }
+            scenario.onActivity(a -> {
+                View row = a.findViewById(R.id.home_favorites_scroll).findViewWithTag("library_request:" + id);
+                assertEquals(0f, row.getTranslationX(), .5f);
+                assertTrue("A held row must follow vertical movement", row.getTranslationY() < 0);
+            });
+            screenshot("library-reorder-vertical-drag");
+            sendTouch(down, MotionEvent.ACTION_UP, points[0] + sideways, points[3]);
+            SystemClock.sleep(300);
             instrumentation.waitForIdleSync();
             scenario.onActivity(a -> {
                 View page = a.findViewById(R.id.home_favorites_scroll);
@@ -630,6 +710,13 @@ public class OnboardingFlowTest {
             shown("로그아웃");
             shown("회원 탈퇴");
             screenshot("menu-current");
+            s.onActivity(activity -> {
+                TextView logout = (TextView) find(activity.getWindow().getDecorView(), "로그아웃");
+                View ancestor = logout;
+                while (!(ancestor instanceof android.widget.ScrollView)) ancestor = (View) ancestor.getParent();
+                ((android.widget.ScrollView) ancestor).fullScroll(View.FOCUS_DOWN);
+            });
+            screenshot("menu-logout-icon");
         }
     }
     @Test public void finalConsentGuidePageOpensAccessibilitySettings() throws Exception {
@@ -638,12 +725,11 @@ public class OnboardingFlowTest {
                 new Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true);
         try (ActivityScenario<PermissionGuideActivity> s = ActivityScenario.launch(PermissionGuideActivity.class)) {
             s.onActivity(a -> {
-                for (int i = 0; i < 2; i++) {
+                for (int i = 0; i < 4; i++) {
                     a.findViewById(com.click.designpreview.R.id.guide_action).performClick();
                 }
             });
-            shown("이 확인창이 뜨면\n‘허용’을 눌러주세요");
-            shown("클릭 화면 안내에\n휴대전화의 전체 제어 권한 허용");
+            shown("‘사용 중’이면 설정 완료예요");
             screenshot("permission-consent");
             s.onActivity(a -> a.findViewById(
                     com.click.designpreview.R.id.guide_action).performClick());

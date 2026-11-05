@@ -185,12 +185,32 @@ def test_samsung_rows_preserve_menu_identity_and_independent_page_title():
         assert candidate['current_page'] == graph.states[entry.from_state].name
         assert candidate['destination_page'] == graph.states[entry.to_state].name
         assert '디스플레이' in candidate['target_names']
+        # One Display row must not also be offered as Font style or Font size.
+        row_candidates = [c for c in payload['questions']['screen']['criteria'].values()
+                          if isinstance(c, dict) and c['node'] == candidate['node']]
+        assert all('디스플레이' in c['target_names'] for c in row_candidates)
         return sender_for(entry)(payload, **kwargs)
     resolver = JevScreenResolver(send)
     selected = resolver.resolve(nodes=normalize_accessibility_tree(raw), raw_nodes=raw, graph=graph, goal=goal)
     assert selected.target_node_id == 'row'
     assert selected.target_bounds == (0, 200, 400, 400)
     assert resolver.last_diagnostics['grounded_candidate_count'] > 0
+
+
+def test_visible_target_evidence_survives_response_checkpoint():
+    from ai_agent.telemetry.trace_logger import diagnostic_payload
+    graph, transition, node, goal = scene('font_size')
+    node = replace(node, label=transition.target_keywords[0])
+    resolver = JevScreenResolver(sender_for(transition, mutate=lambda r:
+        r['answers']['screen'].update(confidence=0.4)))
+    assert resolver.resolve(nodes=(node,), graph=graph, goal=goal) is None
+    # The response/checkpoint filter previously stripped the very field Android
+    # needs to distinguish a visible-but-uncertain target from an off-screen one.
+    safe = diagnostic_payload({'ui_selection': resolver.last_diagnostics})['ui_selection']
+    assert safe['status'] == 'low_confidence'
+    assert safe['grounded_candidate_count'] > 0
+    assert safe['minimum_confidence'] == 0.8
+    assert 'chosen_transition' not in safe
 
 
 def test_low_confidence_reports_rejected_step_without_screen_text(monkeypatch):

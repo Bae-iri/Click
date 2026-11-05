@@ -45,6 +45,23 @@ public class LiveNativeFontConfirmationTest {
         app.startActivity(new android.content.Intent(Settings.ACTION_DISPLAY_SETTINGS)
                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
         SystemClock.sleep(1200);
+        // Exercise the same final privacy boundary as AgentTurnGateway, using
+        // actual Samsung Display/font trees rather than a simplified mock.
+        com.click.data.snapshot.SettingsScreenPrivacy privacy;
+        try (java.io.InputStream vocabulary = app.getAssets().open("vision_vocabulary.json");
+             java.io.InputStream policy = app.getAssets().open("screen_privacy_policy.json")) {
+            privacy = com.click.data.snapshot.SettingsScreenPrivacy.load(vocabulary, policy);
+        }
+        ScreenSnapshot display = null;
+        for (int i = 0; i < 10; i++) {
+            display = ClickAccessibilityService.freshSnapshot();
+            if (display != null && "com.android.settings".equals(display.packageName)
+                    && display.nodes.stream().anyMatch(n -> "디스플레이".equals(n.text))) break;
+            SystemClock.sleep(200);
+        }
+        assertNotNull(display);
+        assertTrue(privacy.filter(new JSONObject().put("accessibility_tree", new JSONObject(display.toJson())))
+                .toString().contains("디스플레이"));
         boolean opened = false;
         for (int attempt = 0; attempt < 5 && !opened; attempt++) {
             ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
@@ -80,6 +97,8 @@ public class LiveNativeFontConfirmationTest {
         }
         assertNotNull(screen);
         assertEquals("Open Samsung's font-size page before running", "com.android.settings", screen.packageName);
+        assertTrue(privacy.filter(new JSONObject().put("accessibility_tree", new JSONObject(screen.toJson())))
+                .toString().contains("글자 크기"));
         Files.write(new java.io.File(app.getCacheDir(), "native-font-observation.json").toPath(), screen.toJson().getBytes(StandardCharsets.UTF_8));
         AuthenticatedHttpClient http = new AuthenticatedHttpClient(app);
         AgentServerContract contract = AgentServerContract.fromOpenApi(new JSONObject(AuthGateway.get("/openapi.json", null).body));
@@ -109,6 +128,18 @@ public class LiveNativeFontConfirmationTest {
             android.util.Log.i("ClickNativeFont", "approved=" + result);
             assertEquals("highlight", result.getJSONObject("guide_command").getString("command_type"));
             assertEquals("drag", result.getJSONObject("guide_command").getString("action_type"));
+            // Verify real server controls without executing the proposed slider gesture.
+            String beforePause = result.getString("task_status");
+            result = send(http, contract, AgentTurnContract.Request.control(session,
+                    result.getInt("session_version"), result.getString("episode_id"), "pause_task", null));
+            assertEquals("PAUSED", result.getString("task_status"));
+            result = send(http, contract, AgentTurnContract.Request.control(session,
+                    result.getInt("session_version"), result.getString("episode_id"), "resume_task",
+                    ClickAccessibilityService.freshSnapshot()));
+            assertEquals(beforePause, result.getString("task_status"));
+            result = send(http, contract, AgentTurnContract.Request.control(session,
+                    result.getInt("session_version"), result.getString("episode_id"), "cancel_task", null));
+            assertEquals("CANCELLED", result.getString("task_status"));
         } finally {
             try {
                 JSONObject state = new JSONObject(http.get("/api/v1/agent/sessions/" + session).body);
@@ -122,7 +153,14 @@ public class LiveNativeFontConfirmationTest {
                             AgentTurnContract.Request request) throws Exception {
         request.contractVersion = contract.contractVersion;
         request.interactiveWorkflow = contract.interactiveWorkflow;
-        return new JSONObject(http.post(AgentTurnContract.PATH, request.toJson()).body);
+        JSONObject body = new JSONObject(request.toJson());
+        if (body.has("accessibility_tree")) {
+            try (java.io.InputStream vocabulary = InstrumentationRegistry.getInstrumentation().getTargetContext().getAssets().open("vision_vocabulary.json");
+                 java.io.InputStream policy = InstrumentationRegistry.getInstrumentation().getTargetContext().getAssets().open("screen_privacy_policy.json")) {
+                body = com.click.data.snapshot.SettingsScreenPrivacy.load(vocabulary, policy).filter(body);
+            }
+        }
+        return new JSONObject(http.post(AgentTurnContract.PATH, body.toString()).body);
     }
 
     private boolean scroll(android.view.accessibility.AccessibilityNodeInfo node) {

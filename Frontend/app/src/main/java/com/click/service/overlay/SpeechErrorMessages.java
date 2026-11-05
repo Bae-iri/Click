@@ -13,7 +13,11 @@ public final class SpeechErrorMessages {
             if (code == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) return "말로 입력하시려면 마이크 사용을 허용한 뒤 다시 눌러 주세요.";
             if (code == SpeechRecognizer.ERROR_NO_MATCH || code == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
                 return "말씀하신 내용을 잘 듣지 못했어요. 마이크를 꾹 누르고 다시 말씀해 주시겠어요?";
-            return "기기 음성 인식에 연결하지 못했어요. 마이크를 다시 누르면 다른 방식으로 입력해요.";
+            if (code == SpeechRecognizer.ERROR_NETWORK || code == SpeechRecognizer.ERROR_NETWORK_TIMEOUT)
+                return "음성 인식에 연결하지 못했어요. 인터넷 연결을 확인하고 마이크를 다시 눌러 주세요.";
+            if (code == SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED || code == SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE)
+                return "한국어 음성 인식을 사용할 수 없어요. 기기의 음성 인식 언어 설정을 확인하거나 글로 입력해 주세요.";
+            return "기기 음성 인식을 사용할 수 없어요. 음성 인식 서비스 설정을 확인하거나 글로 입력해 주세요.";
         }
         if (error instanceof ApiException) {
             int status = ((ApiException) error).status;
