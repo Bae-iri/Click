@@ -31,7 +31,8 @@ METRICS = {"count_attempt", "task_completed", "state_score", "score_gap", "recov
 METRICS.add("vision_processing_time_ms")
 UI_SELECTION_STATUSES = {"selected", "disabled", "skipped", "ineligible", "no_candidates", "candidate_limit",
     "not_configured", "invalid_candidates", "input_too_large", "deadline_exceeded", "provider_error",
-    "timeout", "invalid_response", "uncertain", "low_confidence", "abstained", "invalid_choice", "waiting"}
+    "timeout", "invalid_response", "uncertain", "low_confidence", "abstained", "invalid_choice", "waiting",
+    "sensitive_screen", "unsupported_screen"}
 
 
 def diagnostic_payload(value, depth=0):
@@ -51,6 +52,11 @@ def diagnostic_payload(value, depth=0):
         count = selection.get("candidate_count")
         if type(count) is int and 0 <= count <= 250:
             safe["candidate_count"] = count
+        for key, maximum in (("payload_bytes", 65536), ("exported_node_count", 160),
+                             ("filter_time_ms", 100_000_000), ("provider_latency_ms", 100_000_000)):
+            metric = selection.get(key)
+            if type(metric) in (int, float) and math.isfinite(metric) and 0 <= metric <= maximum:
+                safe[key] = metric
         confidence = selection.get("confidence")
         if type(confidence) in (int, float) and math.isfinite(confidence) and 0 <= confidence <= 1:
             safe["confidence"] = confidence

@@ -16,6 +16,7 @@ import org.json.JSONObject;
 /** Fail-closed export policy for the current settings graph; no free-form OCR text. */
 public final class VisionPrivacy {
     private final Map<String, Set<String>> groups = new HashMap<>();
+    private final Set<String> settingsLabels = new HashSet<>();
 
     public VisionPrivacy(JSONObject vocabulary) throws JSONException {
         if (vocabulary.getInt("version") != 1) throw new JSONException("Unsupported vocabulary");
@@ -26,6 +27,7 @@ public final class VisionPrivacy {
             String key = keys.next();
             Set<String> allowed = labels(definitions.getJSONArray(key));
             allowed.addAll(common);
+            settingsLabels.addAll(allowed);
             groups.put(key, Collections.unmodifiableSet(allowed));
         }
     }
@@ -53,6 +55,13 @@ public final class VisionPrivacy {
         String label = normalize(text);
         Set<String> allowed = groups.get(vocabularyKey);
         return allowed != null && allowed.contains(label) ? label : null;
+    }
+
+    /** Native AX export uses the finite union; the backend narrows it to the active graph. */
+    public String exportSettingsLabel(String text) {
+        if (text == null) return null;
+        String label = normalize(text);
+        return settingsLabels.contains(label) ? label : null;
     }
 
     private static String normalize(String text) {

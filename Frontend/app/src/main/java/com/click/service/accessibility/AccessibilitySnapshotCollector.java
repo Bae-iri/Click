@@ -55,7 +55,7 @@ final class AccessibilitySnapshotCollector {
                     progress,
                     node.getWindowId(),
                     node.isPassword() || node.isEditable() || "text_field".equals(inferRole(className, node)),
-                    range == null ? null : range.getMin(), range == null ? null : range.getMax()
+                    range == null ? null : range.getMin(), range == null ? null : range.getMax(), node.isPassword()
             ));
         }
         for (int index = 0; index < node.getChildCount(); index++) {

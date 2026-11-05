@@ -95,6 +95,7 @@ class ClickAgentEngine:
         return response
 
     def _handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
+        original_screen = request.accessibility_tree
         request = sanitize_request(request)
         existing_session = self.session_store.get(request.session_id)
         validate_agent_turn_request(request, has_session=existing_session is not None)
@@ -154,6 +155,23 @@ class ClickAgentEngine:
 
         graph = self._task_graph_for(typed_goal)
         vocabulary_key = graph.definition.required_slots.get("setting", "")
+        if self.screen_resolver:
+            from ai_agent.runtime.screen_privacy import screen_status, filter_nodes, MANUAL_MESSAGE
+            context = request.device_context or (request.raw_goal.device_context if request.raw_goal else None)
+            package = (context.foreground_app or context.app_package) if context else None
+            privacy_status = screen_status(original_screen, vocabulary_key, package)
+            if privacy_status:
+                return AgentTurnResponse(request_id=request.request_id, session_id=request.session_id,
+                    task_id=typed_goal.task_id, typed_goal=typed_goal,
+                    current_state_id=existing_session.current_state_id if existing_session else "S0_UNKNOWN",
+                    guide_command=GuideCommand(guide_command_id='guide_' + uuid4().hex,
+                        command_type=CommandType.BLOCKED, action_type=ActionType.OBSERVE_ONLY,
+                        message=MANUAL_MESSAGE, safety_level=SafetyLevel.BLOCKED,
+                        requires_user_action=False, render_policy={"privacy_blocked": True,
+                            "manual_only": True}),
+                    debug={"ui_selection": {"provider": "jev", "mode": "primary", "called": False,
+                                             "status": privacy_status}})
+            request = replace(request, accessibility_tree=filter_nodes(original_screen, vocabulary_key))
         # First pass removes all unapproved text before goal typing. Narrow the
         # verified payload to this goal before classification, matching or traces.
         if request.vision_snapshot and request.vision_snapshot.privacy_status == "verified":
