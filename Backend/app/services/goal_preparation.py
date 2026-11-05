@@ -175,7 +175,7 @@ class GoalPreparationService:
                 message = '이 작업의 입력 조건과 실행 안내는 아직 지원하지 않아요.'
             else:
                 question = InputQuestion(id=identifier + ':request', field='request', label='요청', kind='text',
-                    message='바꾸려는 대상과 원하는 변경을 다시 말씀해 주세요.', placeholder='예: 글자 크기를 키워줘', max_length=200)
+                    message='원하시는 작업을 조금 더 자세히 말해주세요.', placeholder='예: 글자 크기를 키워줘', max_length=200)
                 message = question.message
         elif missing:
             field = missing[0]

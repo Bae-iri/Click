@@ -172,8 +172,8 @@ public final class RequirementReview {
             return question;
         }
         if (needsDirection()) return "글자 크기를 어떻게 바꿀까요? 더 크게, 더 작게 중에서 선택해 주세요.";
-        if (font && !isPhone()) return target + "의 글자 변경 안내는 아직 지원하지 않아요. 내용을 수정하거나 요청을 중지해 주세요.";
-        if (!executable) return "이 요청의 실행 안내는 아직 지원하지 않아요. 내용을 수정할 수 있어요.";
+        if (font && !isPhone()) return target + "의 글자 변경 안내는 아직 지원하지 않아요. 내용을 수정하거나 안내를 끝내주세요.";
+        if (!executable) return "이 작업은 아직 안내해 드리기 어려워요. 내용을 수정할 수 있어요.";
         return font ? "휴대폰 기본 글자를 " + ("increase".equals(direction) ? "더 크게" : "더 작게")
                 + " 바꾸려는 거죠? 앱에 따라 적용되지 않을 수 있어요. 맞으면 안내 시작하기를 눌러주세요."
                 : summary() + ". 원하신 내용이 맞으면 안내 시작하기를 눌러주세요.";

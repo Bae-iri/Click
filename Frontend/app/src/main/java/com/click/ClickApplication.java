@@ -24,6 +24,9 @@ public final class ClickApplication extends Application implements ClickHost {
     }
     @Override public boolean signedIn() { return new AuthTokenStore(this).hasRefreshToken(); }
     @Override public boolean accessibilityEnabled() { return PermissionStatus.isAccessibilityEnabled(this); }
+    @Override public boolean accessibilityConnected() {
+        return accessibilityEnabled() && ClickAccessibilityService.accessibilityWindowManager() != null;
+    }
 
     @Override public void loadRegistrationRules(Activity activity, PasswordRulesCallback callback) {
         AuthGateway gateway = new AuthGateway(this);

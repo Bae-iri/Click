@@ -6,7 +6,6 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
@@ -30,6 +29,7 @@ import static com.click.designpreview.PermissionIconView.Kind;
 
 /** A three-page explanation shown before the user chooses whether to open system settings. */
 public final class PermissionGuideActivity extends Activity {
+    public static final String EXTRA_RECONNECT = "accessibility_reconnect";
     private static final int PAGE_COUNT = 3;
     private static final String PAGE_STATE = "permission_guide_page_v2";
     private static final String SETTINGS_OPENED_STATE = "permission_settings_opened";
@@ -46,7 +46,7 @@ public final class PermissionGuideActivity extends Activity {
     private View[] progressBars;
     private TextView actionLabel;
     private OnboardingStartButton action;
-    private Button later;
+    private Button replay;
     private Typeface medium;
     private Typeface semibold;
     private Typeface regular;
@@ -84,7 +84,7 @@ public final class PermissionGuideActivity extends Activity {
         progress.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         FrameLayout.LayoutParams progressParams = new FrameLayout.LayoutParams(-2, -2,
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        progressParams.topMargin = dp(18);
+        progressParams.topMargin = dp(4);
         header.addView(progress, progressParams);
         progressBars = new View[PAGE_COUNT];
         for (int i = 0; i < PAGE_COUNT; i++) {
@@ -116,7 +116,7 @@ public final class PermissionGuideActivity extends Activity {
         counter.setVisibility(View.GONE);
         counter.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         header.addView(counter, new FrameLayout.LayoutParams(1, 1, Gravity.END));
-        column.addView(header, new LinearLayout.LayoutParams(-1, dp(72)));
+        column.addView(header, new LinearLayout.LayoutParams(-1, dp(60)));
 
         scroll = new ScrollView(this);
         scroll.setId(R.id.guide_scroll);
@@ -125,7 +125,7 @@ public final class PermissionGuideActivity extends Activity {
         scroll.setVerticalScrollBarEnabled(false);
         scroll.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
         body = vertical();
-        body.setPadding(dp(2), dp(22), dp(2), dp(14));
+        body.setPadding(dp(2), dp(8), dp(2), dp(14));
         scroll.addView(body, new ScrollView.LayoutParams(-1, -2));
         column.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
@@ -136,8 +136,8 @@ public final class PermissionGuideActivity extends Activity {
         action.setId(R.id.guide_action);
         action.setGravity(Gravity.CENTER);
         action.setOrientation(LinearLayout.HORIZONTAL);
-        action.setMinimumHeight(dp(66));
-        action.setPadding(dp(20), dp(16), dp(20), dp(16));
+        action.setMinimumHeight(dp(52));
+        action.setPadding(dp(20), dp(14), dp(20), dp(14));
         action.setClickable(true);
         action.setFocusable(true);
         GradientDrawable buttonFill = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
@@ -150,7 +150,7 @@ public final class PermissionGuideActivity extends Activity {
             action.setOutlineAmbientShadowColor(0xFF76ADFF);
             action.setOutlineSpotShadowColor(0xFF76ADFF);
         }
-        actionLabel = text(0, 22, Color.WHITE, semibold);
+        actionLabel = text(0, 17, Color.WHITE, semibold);
         actionLabel.setGravity(Gravity.CENTER);
         actionLabel.setMaxWidth(Math.max(dp(80), width - dp(118)));
         actionLabel.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -165,27 +165,20 @@ public final class PermissionGuideActivity extends Activity {
             if (page < PAGE_COUNT - 1) showPage(page + 1, true);
             else openSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS);
         });
-        Button replay = new Button(this); replay.setText("안내 다시 듣기"); replay.setAllCaps(false);
-        replay.setTypeface(medium); replay.setTextSize(15); replay.setTextColor(BLUE);
-        replay.setBackgroundColor(Color.TRANSPARENT); replay.setMinimumHeight(dp(48));
+        replay = new Button(this); replay.setText("안내 다시 듣기"); replay.setAllCaps(false);
+        replay.setTag("permission_replay");
+        replay.setTypeface(medium); replay.setTextSize(13); replay.setTextColor(BLUE);
+        replay.setSingleLine(true);
+        replay.setMinWidth(0); replay.setMinimumWidth(0);
+        replay.setMinHeight(dp(48)); replay.setMinimumHeight(dp(48));
+        replay.setPadding(dp(12), dp(8), dp(12), dp(8));
+        replay.setBackground(new RippleDrawable(ColorStateList.valueOf(0x183478F6),
+                rounded(0xFFF1F6FF, 16), null));
+        replay.setStateListAnimator(null); replay.setElevation(0);
+        header.addView(replay, new FrameLayout.LayoutParams(-2, -2, Gravity.END | Gravity.BOTTOM));
         replay.setOnClickListener(v -> { if (narrator.isSpeaking()) narrator.stop(); else narrator.replay(spokenPage); });
         narrator.setListener((speaking, unavailable) -> replay.setText(speaking ? "음성 멈춤" : "안내 다시 듣기"));
-        footer.addView(replay, new LinearLayout.LayoutParams(-1, -2));
         footer.addView(action, new LinearLayout.LayoutParams(-1, -2));
-        later = new Button(this);
-        later.setId(R.id.guide_later_action);
-        later.setText(R.string.guide_later);
-        later.setTextColor(BLUE);
-        later.setTypeface(medium);
-        later.setTextSize(16);
-        later.setAllCaps(false);
-        later.setBackgroundColor(Color.TRANSPARENT);
-        later.setPaintFlags(later.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
-        later.setMinimumHeight(dp(48));
-        later.setOnClickListener(view -> startActivity(new Intent(this, AccessibilityHelpActivity.class)));
-        LinearLayout.LayoutParams laterParams = new LinearLayout.LayoutParams(-1, -2);
-        laterParams.topMargin = dp(4);
-        footer.addView(later, laterParams);
         column.addView(footer, new LinearLayout.LayoutParams(-1, -2));
         setContentView(canvas);
         column.requestApplyInsets();
@@ -214,7 +207,6 @@ public final class PermissionGuideActivity extends Activity {
         int actionText = page == PAGE_COUNT - 1 ? R.string.guide_settings_now : R.string.onboarding_next;
         actionLabel.setText(actionText);
         action.setContentDescription(getString(actionText));
-        later.setVisibility(page == 0 || page == PAGE_COUNT - 1 ? View.VISIBLE : View.GONE);
         switch (page) {
             case 0: reason(); break;
             case 1: allowStep(); break;
@@ -225,7 +217,9 @@ public final class PermissionGuideActivity extends Activity {
             "접근성 설정에서 설치된 앱을 누르고, 클릭 화면 안내를 선택해 주세요. 사용 안 함을 사용함으로 켜주세요. 다음 페이지에서 마지막 확인창을 보여드릴게요.",
             getString(R.string.guide_consent_cue)
         };
-        spokenPage = cues[page]; narrator.speak(spokenPage);
+        spokenPage = page == 1 && getIntent().getBooleanExtra(EXTRA_RECONNECT, false)
+                ? getString(R.string.guide_reconnect_description) : cues[page];
+        narrator.speak(spokenPage);
         scroll.scrollTo(0, 0);
         scroll.post(() -> scroll.scrollTo(0, 0));
         body.setAlpha(1f);
@@ -240,12 +234,16 @@ public final class PermissionGuideActivity extends Activity {
         }
     }
 
+    private void addTitle(int resource, int size) {
+        add(body, title(resource, size), 0);
+    }
+
     private void reason() {
-        add(body, title(R.string.guide_reason_title, 29), 0);
-        TextView accent = title(R.string.guide_reason_accent, 28);
+        addTitle(R.string.guide_reason_title, 24);
+        TextView accent = title(R.string.guide_reason_accent, 23);
         accent.setTextColor(BLUE);
         add(body, accent, 4);
-        add(body, text(R.string.guide_reason_description, 19, SECONDARY, regular), 20);
+        add(body, text(R.string.guide_reason_description, 15, SECONDARY, regular), 20);
         FrameLayout scene = new FrameLayout(this);
         scene.setPadding(dp(8), dp(14), dp(8), dp(16));
         scene.setBackground(rounded(0xFFF1F7FF, 140));
@@ -259,12 +257,13 @@ public final class PermissionGuideActivity extends Activity {
         highlight.setElevation(dp(8));
         FrameLayout.LayoutParams highlightParams = new FrameLayout.LayoutParams(-1, -2, Gravity.CENTER);
         scene.addView(highlight, highlightParams);
-        add(body, scene, 34);
+        add(body, scene, 24);
     }
 
     private void allowStep() {
-        add(body, title(R.string.guide_allow_title, 30), 0);
-        add(body, text(R.string.guide_enable_description, 18, SECONDARY, regular), 18);
+        addTitle(R.string.guide_allow_title, 24);
+        add(body, text(getIntent().getBooleanExtra(EXTRA_RECONNECT, false)
+                ? R.string.guide_reconnect_description : R.string.guide_enable_description, 15, SECONDARY, regular), 18);
         enableAnimation = new PermissionEnableAnimationView(this);
         enableAnimation.setId(R.id.guide_enable_animation);
         add(body, enableAnimation, 24);
@@ -275,8 +274,8 @@ public final class PermissionGuideActivity extends Activity {
     }
 
     private void consentStep() {
-        add(body, title(R.string.guide_consent_title, 29), 0);
-        add(body, text(R.string.guide_consent_description, 17, SECONDARY, regular), 18);
+        addTitle(R.string.guide_consent_title, 24);
+        add(body, text(R.string.guide_consent_description, 15, SECONDARY, regular), 18);
 
         LinearLayout example = vertical();
         example.setId(R.id.guide_consent_example);
@@ -287,7 +286,7 @@ public final class PermissionGuideActivity extends Activity {
         LinearLayout dialog = vertical();
         dialog.setPadding(dp(16), dp(18), dp(16), dp(12));
         dialog.setBackground(rounded(Color.WHITE, 20));
-        add(dialog, text(R.string.guide_consent_dialog_title, 19, INK, semibold), 0);
+        add(dialog, text(R.string.guide_consent_dialog_title, 17, INK, semibold), 0);
         add(dialog, text(R.string.guide_consent_dialog_body, 14, SECONDARY, regular), 12);
         LinearLayout choices = new LinearLayout(this);
         choices.setGravity(Gravity.CENTER_VERTICAL);
@@ -311,8 +310,7 @@ public final class PermissionGuideActivity extends Activity {
         caption.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         dialog.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         add(body, example, 22);
-        add(body, text(R.string.guide_consent_purpose, 16, INK, medium), 20);
-        add(body, text(R.string.guide_consent_check, 16, BLUE, semibold), 12);
+        add(body, text(R.string.guide_consent_check, 15, BLUE, semibold), 12);
         add(body, text(R.string.guide_consent_revoke, 14, SECONDARY, regular), 12);
     }
 
@@ -369,7 +367,7 @@ public final class PermissionGuideActivity extends Activity {
         super.onResume();
         narrator.resume();
         if (enableAnimation != null) enableAnimation.setPlaying(true);
-        if (settingsOpened && !tutorialOpened && ClickHost.from(this).accessibilityEnabled()) {
+        if (settingsOpened && !tutorialOpened && ClickHost.from(this).accessibilityConnected()) {
             if (ClickHost.from(this).postPermissionTutorialWasLaunched()) {
                 finish();
                 return;

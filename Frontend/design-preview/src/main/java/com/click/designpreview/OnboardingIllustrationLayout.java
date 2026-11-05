@@ -23,17 +23,16 @@ public final class OnboardingIllustrationLayout extends FrameLayout {
         View bubble = findViewById(R.id.onboarding_bubble);
         bubble.measure(MeasureSpec.makeMeasureSpec(Math.max(0, width - dp(24)), MeasureSpec.AT_MOST),
                 MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-        int characterWidth = Math.min(dp(320), Math.round(width * .9f));
-        int characterHeight = Math.round(characterWidth * 1277f / 1231f);
+        int characterWidth = Math.min(dp(250), Math.round(width * .76f));
+        int characterHeight = characterWidth;
         measureExactly(findViewById(R.id.onboarding_character), characterWidth, characterHeight);
         int blobWidth = Math.min(width, dp(350));
         measureExactly(findViewById(R.id.onboarding_blob), blobWidth,
                 Math.round(blobWidth * .9f));
-        bubbleAboveCharacter = getResources().getConfiguration().fontScale > 1.2f
-                || width < dp(330);
+        bubbleAboveCharacter = true;
         characterTop = bubbleAboveCharacter
                 ? bubble.getMeasuredHeight() + dp(20) : dp(38);
-        sceneHeight = Math.max(dp(380), characterTop + characterHeight + dp(20));
+        sceneHeight = characterTop + characterHeight + dp(12);
         setMeasuredDimension(width, resolveSize(sceneHeight, heightMeasureSpec));
     }
 
@@ -44,14 +43,14 @@ public final class OnboardingIllustrationLayout extends FrameLayout {
         View character = findViewById(R.id.onboarding_character);
         View blob = findViewById(R.id.onboarding_blob);
         // Keep the combined character and right-hand bubble visually balanced.
-        int characterLeft = Math.max(0, (width - character.getMeasuredWidth()) / 2 - dp(10));
+        int characterLeft = Math.max(0, (width - character.getMeasuredWidth()) / 2);
         place(character, characterLeft, offset + characterTop);
         place(blob, (width - blob.getMeasuredWidth()) / 2,
                 offset + characterTop + Math.round(character.getMeasuredHeight() * .08f));
         View bubble = findViewById(R.id.onboarding_bubble);
         int bubbleTop = bubbleAboveCharacter
                 ? dp(4) : characterTop - dp(8);
-        place(bubble, Math.max(0, width - bubble.getMeasuredWidth()), offset + bubbleTop);
+        place(bubble, Math.max(0, (width - bubble.getMeasuredWidth()) / 2), offset + bubbleTop);
     }
 
     private void measureExactly(View view, int width, int height) {

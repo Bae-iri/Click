@@ -81,7 +81,7 @@ public final class OnboardingActivity extends Activity {
         start.setBackground(OnboardingDrawables.startButton(getResources()));
         addShadow(start, 8);
         start.setOnClickListener(view -> {
-            if (page < 2) showPage(page + 1, true);
+            if (page == 0) showPage(2, true);
             else startActivity(new Intent(this, AccountStartActivity.class));
         });
         findViewById(R.id.onboarding_skip).setOnClickListener(view -> showPage(2, true));
@@ -97,7 +97,7 @@ public final class OnboardingActivity extends Activity {
 
     private void showPage(int requestedPage, boolean changedByUser) {
         finishChecklistAnimation();
-        page = Math.max(0, Math.min(2, requestedPage));
+        page = requestedPage <= 0 ? 0 : 2;
         boolean welcome = page == 0;
         boolean feature = page == 1 || page == 2;
         TextView title = findViewById(R.id.onboarding_title);
@@ -127,15 +127,16 @@ public final class OnboardingActivity extends Activity {
                     page == 1 ? Color.WHITE : getColor(R.color.onboarding_blue), .48f, 32f));
             addShadow(bubble, page == 1 ? 4 : 6);
         }
-        int[] bars = {R.id.onboarding_step_one, R.id.onboarding_step_two, R.id.onboarding_step_three};
-        int completed = page + 1;
+        int[] bars = {R.id.onboarding_step_one, R.id.onboarding_step_two};
+        findViewById(R.id.onboarding_step_three).setVisibility(View.GONE);
+        int completed = page == 0 ? 1 : 2;
         for (int i = 0; i < bars.length; i++) {
             findViewById(bars[i]).setBackgroundResource(i < completed
                     ? R.drawable.onboarding_progress_active : R.drawable.onboarding_progress_inactive);
         }
         findViewById(R.id.onboarding_progress).setContentDescription(welcome
                 ? getString(R.string.onboarding_welcome_progress)
-                : getString(R.string.onboarding_step_progress, page + 1));
+                : getString(R.string.onboarding_step_progress, completed));
         int actionText = page == 2 ? R.string.onboarding_signup : welcome ? R.string.onboarding_start : R.string.onboarding_next;
         ((TextView) findViewById(R.id.onboarding_start_label)).setText(actionText);
         View start = findViewById(R.id.onboarding_start);
@@ -236,7 +237,7 @@ public final class OnboardingActivity extends Activity {
     }
 
     private void goBack() {
-        if (page > 0) showPage(page - 1, true);
+        if (page > 0) showPage(0, true);
         else finish();
     }
 

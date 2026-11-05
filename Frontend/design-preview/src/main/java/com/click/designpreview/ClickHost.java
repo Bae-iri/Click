@@ -12,6 +12,7 @@ public interface ClickHost {
     void loadRegistrationRules(Activity activity, PasswordRulesCallback callback);
     boolean signedIn();
     boolean accessibilityEnabled();
+    default boolean accessibilityConnected() { return accessibilityEnabled(); }
     void register(Activity activity, String name, String phone, String password, Callback callback);
     void login(Activity activity, String phone, String password, Callback callback);
     void loginWithKakao(Activity activity, Callback callback);

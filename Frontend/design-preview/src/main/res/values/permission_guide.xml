@@ -28,6 +28,7 @@
     <string name="guide_step_two_description">직접 찾으실 때는 설정 앱에서\n‘접근성’을 눌러주세요.</string>
     <string name="guide_allow_title">접근성을\n허용해 주세요</string>
     <string name="guide_enable_description">설치된 앱 → 클릭 화면 안내를 누르고,\n‘사용 안 함’을 ‘사용함’으로 바꿔주세요.</string>
+    <string name="guide_reconnect_description">설치된 앱 → 클릭 화면 안내를 누르고,\n스위치를 껐다가 다시 켜주세요.</string>
     <string name="guide_enable_example">설정 화면 예시</string>
     <string name="guide_enable_step_apps">1. 설치된 앱을 눌러주세요</string>
     <string name="guide_enable_step_click">2. 클릭 화면 안내를 눌러주세요</string>
@@ -45,7 +46,7 @@
     <string name="guide_consent_purpose">클릭이 화면을 읽고 요청하신 작업에 필요한 버튼을 누르기 위한 권한이에요.</string>
     <string name="guide_consent_check">‘클릭 화면 안내’인지 확인하고\n‘허용’을 눌러주세요.</string>
     <string name="guide_consent_revoke">원하시면 언제든 접근성 설정에서 끌 수 있어요.</string>
-    <string name="guide_consent_cue">휴대전화의 전체 제어 권한 허용이라는 창은 접근성 기능을 켤 때 나오는 정상적인 권한 확인창이에요. 클릭이 화면을 읽고 요청하신 작업에 필요한 버튼을 누르기 위한 권한입니다. 앱 이름이 클릭 화면 안내인지 확인한 뒤 허용을 눌러주세요. 원하시면 언제든 접근성 설정에서 끌 수 있어요. 지금 설정하기 버튼을 누르면 접근성 설정으로 이동해요.</string>
+    <string name="guide_consent_cue">휴대전화의 전체 제어 권한 허용이라는 창은 접근성 기능을 켤 때 나오는 정상적인 권한 확인창이에요. 앱 이름이 클릭 화면 안내인지 확인한 뒤 허용을 눌러주세요. 원하시면 언제든 접근성 설정에서 끌 수 있어요. 지금 설정하기 버튼을 누르면 접근성 설정으로 이동해요.</string>
     <string name="guide_ready">설정이 완료되면\n더 편리하게 사용할 수 있어요!</string>
     <string name="guide_device_note">휴대폰에 따라 메뉴 이름이 다를 수 있어요.</string>
     <string name="guide_later">나중에 설정하기</string>

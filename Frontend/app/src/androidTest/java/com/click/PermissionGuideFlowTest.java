@@ -27,6 +27,26 @@ public class PermissionGuideFlowTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private PermissionGuideActivity observedActivity;
 
+    @Test public void compactHeaderKeepsReplayOnOneLineAcrossPages() {
+        try (ActivityScenario<PermissionGuideActivity> scenario = ActivityScenario.launch(PermissionGuideActivity.class)) {
+            for (int page = 0; page < 3; page++) {
+                settle();
+                final int currentPage = page;
+                scenario.onActivity(activity -> {
+                    TextView replay = activity.getWindow().getDecorView().findViewWithTag("permission_replay");
+                    assertNotNull(replay);
+                    assertEquals(1, replay.getLineCount());
+                    assertTrue(replay.getBackground() != null);
+                    ViewGroup header = (ViewGroup) replay.getParent();
+                    assertEquals(header.getWidth(), replay.getRight());
+                    readable(activity.getWindow().getDecorView());
+                    save(activity, "compact-page-" + currentPage);
+                    if (currentPage < 2) next(activity);
+                });
+            }
+        }
+    }
+
     @Test public void threePagesStartWithPermissionReasonAndRetainNavigation() {
         try (ActivityScenario<PermissionGuideActivity> scenario = ActivityScenario.launch(PermissionGuideActivity.class)) {
             scenario.onActivity(activity -> {

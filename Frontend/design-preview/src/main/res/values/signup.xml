@@ -8,8 +8,8 @@
     <string name="signup_account_title">전화번호로 가입해요</string>
     <string name="signup_account_description">로그인할 때 사용할\n전화번호와 비밀번호를 입력해 주세요.</string>
     <string name="signup_profile_title">어떻게 불러드릴까요?</string>
-    <string name="signup_profile_description">이름은 화면에 표시할 때만 사용해요.\n입력하지 않고 가입해도 괜찮아요.</string>
-    <string name="signup_name_label">이름 (선택)</string>
+    <string name="signup_profile_description">이름은 화면에 표시할 때만 사용해요.</string>
+    <string name="signup_name_label">이름</string>
     <string name="signup_name_hint">예) 김클릭</string>
     <string name="signup_name_helper">이름은 50글자까지 입력할 수 있어요.</string>
     <string name="signup_email_label">전화번호 (필수)</string>
@@ -49,7 +49,7 @@
     <string name="login_description">가입할 때 사용한\n전화번호와 비밀번호를 입력해 주세요.</string>
     <string name="login_password_helper">가입할 때 설정한 숫자 4자리를 입력해 주세요.</string>
     <string name="login_error_password_required">비밀번호는 숫자 4자리로 입력해 주세요.</string>
-    <string name="login_action">전화번호로 로그인</string>
+    <string name="login_action">로그인</string>
     <string name="login_signup">회원가입하기</string>
 
 
@@ -72,7 +72,7 @@
         <item name="android:includeFontPadding">false</item>
         <item name="android:letterSpacing">-0.01</item>
         <item name="android:textColor">@color/onboarding_text_secondary</item>
-        <item name="android:textSize">19sp</item>
+        <item name="android:textSize">15sp</item>
     </style>
 
     <style name="SignupFieldLabel">

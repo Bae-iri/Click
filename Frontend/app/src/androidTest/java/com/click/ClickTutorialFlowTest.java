@@ -79,7 +79,7 @@ public class ClickTutorialFlowTest {
         instrumentation.waitForIdleSync(); SystemClock.sleep(250);
     }
 
-    @Test public void fourStepsUseCurrentPanelsAndReturnHome() throws Exception {
+    @Test public void threeStepsUseCurrentPanelsAndReturnHome() throws Exception {
         try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
             scenario.onActivity(a -> {
                 assertNull(findText(a.getWindow().getDecorView(), "4단계 연습"));
@@ -113,7 +113,7 @@ public class ClickTutorialFlowTest {
             scenario.recreate();
             scenario.onActivity(a -> assertTrue(findType(a.getWindow().getDecorView(), com.click.ui.overlay.TaskFlowOverlayView.class).isMinimizedProgress()));
             tapText(scenario, "진행중이에요!");
-            tapText(scenario, "일시정지");
+            tapText(scenario, "멈추기");
             scenario.recreate();
             scenario.onActivity(a -> {
                 assertNotNull(findText(a.getWindow().getDecorView(), "이어서 진행"));
@@ -121,18 +121,17 @@ public class ClickTutorialFlowTest {
             });
             tapText(scenario, "이어서 진행");
             tapId(scenario, R.id.tutorial_next);
-            screenshot("tutorial-short-result");
-            tapText(scenario, "더 커졌으면 좋겠어");
-            scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "진행중이에요!")));
-            tapId(scenario, R.id.tutorial_next);
-            tapText(scenario, "네, 글씨가 잘 보여요");
             scenario.recreate();
             scenario.onActivity(a -> {
-                for (String label : new String[]{"말이나 글로 요청하기", "요청 내용 확인하기", "안내창 줄이고 멈추기", "결과 확인하기"}) {
+                for (String label : new String[]{"말이나 글로 요청하기", "요청 내용 확인하기", "안내창 줄이고 멈추기"}) {
                     TextView item = findText(a.getWindow().getDecorView(), label);
                     assertNotNull(label, item);
                     assertEquals(label + ", 완료", item.getContentDescription());
                 }
+            });
+            scenario.onActivity(a -> {
+                assertFalse(a.getWindow().getDecorView().findViewWithTag("tutorial_skip").isShown());
+                assertNull(findText(a.getWindow().getDecorView(), "버튼이 가리면 누른 채 옮겨보세요. 홈의 ‘클릭 튜토리얼’에서 다시 연습할 수 있어요."));
             });
             screenshot("tutorial-short-complete");
             Instrumentation.ActivityMonitor home = instrumentation.addMonitor(HomeActivity.class.getName(), null, false);
@@ -158,7 +157,7 @@ public class ClickTutorialFlowTest {
             scenario.onActivity(a -> assertEquals("글자 크기 키워줘", control(a).getDraftText()));
             tapText(scenario, "↑");
             tapText(scenario, "휴대폰 기본 글자");
-            tapText(scenario, "다음 단계");
+            tapText(scenario, "입력하기");
             scenario.recreate();
             scenario.onActivity(a -> assertNotNull(findText(a.getWindow().getDecorView(), "안내 시작하기")));
             tapText(scenario, "내용 수정");
@@ -168,7 +167,7 @@ public class ClickTutorialFlowTest {
             scenario.onActivity(a -> control(a).setDraftText("휴대폰 전체 글자 크기 키워줘"));
             tapText(scenario, "↑");
             tapText(scenario, "안내 시작하기");
-            tapText(scenario, "요청 중지");
+            tapText(scenario, "끝내기");
             assertMode(scenario, ClickOverlayLayout.Mode.MENU);
             scenario.onActivity(a -> {
                 assertNotNull(findText(a.getWindow().getDecorView(), "편한 방법으로 요청해 보세요"));

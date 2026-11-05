@@ -17,7 +17,7 @@ import com.click.R;
 /** Consistent icons for the home cards and navigation. */
 public final class HomeIconView extends View {
     public enum Kind { WORDMARK, CLICK, SETTINGS, FONT, KAKAO, BRIGHTNESS, MEDIA, PHONE,
-        STAR, SEARCH, CHEVRON, HOME, HELP, BOOKMARK, ACCESSIBILITY, MICROPHONE, SEND }
+        STAR, SEARCH, CHEVRON, HOME, HELP, BOX, BOOKMARK, ACCESSIBILITY, MICROPHONE, SEND }
     private final Kind kind;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
@@ -29,10 +29,21 @@ public final class HomeIconView extends View {
     public HomeIconView(Context context, Kind kind) {
         super(context);
         this.kind = kind;
-        artwork = kind == Kind.WORDMARK ? context.getDrawable(com.click.designpreview.R.drawable.click)
-                : kind == Kind.CLICK ? context.getDrawable(com.click.designpreview.R.drawable.ic_click_cursor)
-                : (kind == Kind.SETTINGS || kind == Kind.FONT) ? context.getDrawable(R.drawable.ic_home_settings_button)
-                : kind == Kind.PHONE ? context.getDrawable(R.drawable.ic_home_phone) : null;
+        int resource = 0;
+        switch (kind) {
+            case WORDMARK: resource = com.click.designpreview.R.drawable.click_wordmark; break;
+            case CLICK: resource = com.click.designpreview.R.drawable.ic_click_cursor; break;
+            case SETTINGS: case FONT: resource = com.click.designpreview.R.drawable.icon_setting; break;
+            case PHONE: resource = com.click.designpreview.R.drawable.icon_phone; break;
+            case BRIGHTNESS: resource = com.click.designpreview.R.drawable.icon_sun; break;
+            case MEDIA: resource = com.click.designpreview.R.drawable.icon_sound; break;
+            case SEARCH: resource = com.click.designpreview.R.drawable.icon_magnifier; break;
+            case HELP: resource = com.click.designpreview.R.drawable.icon_message; break;
+            case ACCESSIBILITY: resource = com.click.designpreview.R.drawable.icon_accessibility; break;
+            case MICROPHONE: resource = com.click.designpreview.R.drawable.icon_mic; break;
+            default: break;
+        }
+        artwork = resource == 0 ? null : context.getDrawable(resource);
         if (artwork instanceof BitmapDrawable) ((BitmapDrawable) artwork).setFilterBitmap(true);
         bold = getResources().getFont(com.click.designpreview.R.font.pretendard_bold);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -50,6 +61,13 @@ public final class HomeIconView extends View {
             canvas.scale(scale, scale); canvas.translate(-211, -71);
             artwork.setBounds(0, 0, 2172, 724); artwork.draw(canvas);
             canvas.restore(); return;
+        }
+        if (artwork != null) {
+            int side = Math.min(getWidth(), getHeight());
+            int left = (getWidth() - side) / 2, top = (getHeight() - side) / 2;
+            artwork.setBounds(left, top, left + side, top + side);
+            artwork.draw(canvas);
+            return;
         }
         float size = Math.min(getWidth(), getHeight());
         canvas.save();
@@ -135,6 +153,11 @@ public final class HomeIconView extends View {
                 paint.setStyle(Paint.Style.FILL);
                 for (int i = 0; i < 3; i++) canvas.drawCircle(15 + i * 8, 23, 2, paint);
                 break;
+            case BOX:
+                stroke(accent, 3.2f);
+                canvas.drawRoundRect(7, 16, 41, 41, 4, 4, paint);
+                canvas.drawRoundRect(5, 8, 43, 17, 3, 3, paint);
+                canvas.drawLine(19, 25, 29, 25, paint); break;
             case BOOKMARK:
                 stroke(accent, 3.5f); path.reset(); path.moveTo(12, 42); path.lineTo(12, 11);
                 path.quadTo(12, 7, 16, 7); path.lineTo(32, 7); path.quadTo(36, 7, 36, 11);

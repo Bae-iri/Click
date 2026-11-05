@@ -11,6 +11,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.activity.OnBackPressedCallback;
@@ -19,7 +20,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import com.click.designpreview.PermissionPhoneView;
 import com.click.ui.common.ClickUi;
 import com.click.ui.common.ClickTextScale;
 import com.click.ui.overlay.ClickOverlayLayout;
@@ -35,7 +35,7 @@ import java.util.ArrayList;
 /** A feature tour on the same phone backdrop as the accessibility guide, using the real controls. */
 public final class TutorialActivity extends AppCompatActivity implements TutorialFloatingHost.Listener {
     public static final String EXTRA_FROM_SIGN_UP = "from_sign_up";
-    private static final int INTRO = -1, INPUT = 0, REVIEW = 1, RUNNING = 2, RESULT = 3, COMPLETE = 4, STEP_COUNT = 4;
+    private static final int INTRO = -1, INPUT = 0, REVIEW = 1, RUNNING = 2, RESULT = 3, COMPLETE = 4, STEP_COUNT = 3;
     private static final String PRACTICE_REQUEST = "휴대폰 전체 글자 크기 키워줘";
     private final ArrayList<String> messages = new ArrayList<>();
     private final ArrayList<String> reviewActions = new ArrayList<>();
@@ -44,6 +44,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     private ScrollView lessonScroll;
     private FrameLayout stage;
     private View phone;
+    private ImageView introArtwork;
     private TextView title, description;
     private Button action, restore;
     private int step = INTRO, completedSteps, displayedStep = Integer.MIN_VALUE;
@@ -62,6 +63,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         reviewedScripts = new com.click.ui.tutorial.ReviewedTutorialScripts(this);
         if (savedInstanceState != null) {
             step = Math.max(INTRO, Math.min(COMPLETE, savedInstanceState.getInt("feature_step", INTRO)));
+            if (step == RESULT) step = COMPLETE;
             completedSteps = savedInstanceState.getInt("completed_steps");
             paused = savedInstanceState.getBoolean("paused");
             ArrayList<String> savedMessages = savedInstanceState.getStringArrayList("practice_messages");
@@ -77,7 +79,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
 
         FrameLayout root = new FrameLayout(this);
-        root.addView(new TutorialArtworkView(this, TutorialArtworkView.Kind.BACKGROUND), new FrameLayout.LayoutParams(-1, -1));
+        root.setBackgroundColor(0xFFFAFCFF);
         column = vertical();
         root.addView(column, new FrameLayout.LayoutParams(Math.min(getResources().getDisplayMetrics().widthPixels, dp(500)), -1, Gravity.CENTER_HORIZONTAL));
         toolbar = toolbar();
@@ -103,16 +105,22 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         lesson.addView(progress, new LinearLayout.LayoutParams(-1, dp(20)));
         lesson.addView(coach(), new LinearLayout.LayoutParams(-1, -2));
 
+        introArtwork = new com.click.designpreview.ClueArtworkView(this);
+        introArtwork.setImageResource(com.click.designpreview.R.drawable.clue3_tutorial);
+        introArtwork.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        introArtwork.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LinearLayout.LayoutParams artworkParams = new LinearLayout.LayoutParams(-1,
+                Math.min(dp(180), getResources().getDisplayMetrics().heightPixels / 5));
+        artworkParams.topMargin = dp(12); artworkParams.bottomMargin = dp(8);
+        lesson.addView(introArtwork, artworkParams);
+
         stage = new FrameLayout(this);
         stage.setId(R.id.tutorial_phone_stage);
         stage.setMinimumHeight(dp(320));
         LinearLayout.LayoutParams stageParams = new LinearLayout.LayoutParams(-1, -2);
         stageParams.setMargins(0, dp(16), 0, dp(8));
         lesson.addView(stage, stageParams);
-        PermissionPhoneView phoneView = new PermissionPhoneView(this, true, true);
-        phoneView.fillAvailableHeight();
-        phone = phoneView;
-        phone.setAlpha(.32f);
+        phone = new com.click.ui.tutorial.TutorialPhoneBackgroundView(this);
         FrameLayout.LayoutParams phoneParams = new FrameLayout.LayoutParams(-1, -1);
         stage.addView(phone, phoneParams);
 
@@ -198,7 +206,6 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         restoring = false;
         if (step == REVIEW && !messages.isEmpty()) showRequestReview(lastRequest());
         if (step == RUNNING) showProgressPractice();
-        if (step == RESULT) showResultPractice();
         if (paused && reviewView != null) reviewView.paused();
         if (savedInstanceState != null && savedInstanceState.getBoolean("panel_collapsed") && reviewView != null)
             floating.collapseReview();
@@ -217,11 +224,13 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         back.setBackgroundColor(Color.TRANSPARENT);
         back.setOnClickListener(view -> previous());
         row.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        ClickBrandView brand = new ClickBrandView(this, null);
+        com.click.ui.common.ClickArtworkView brand = new com.click.ui.common.ClickArtworkView(this,
+                com.click.ui.common.ClickArtworkView.Kind.WORDMARK);
         brand.setContentDescription("클릭 사용 방법");
-        row.addView(brand, new LinearLayout.LayoutParams(dp(96), dp(34)));
+        row.addView(brand, new LinearLayout.LayoutParams(dp(82), dp(30)));
         row.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
         Button skip = new Button(this);
+        skip.setTag("tutorial_skip");
         skip.setText("나중에"); skip.setAllCaps(false); skip.setTextColor(ClickUi.SUBTEXT);
         skip.setTextSize(ClickTextScale.size(this, 15)); skip.setBackgroundColor(Color.TRANSPARENT);
         skip.setMinWidth(0); skip.setMinimumWidth(0); skip.setMinHeight(dp(48));
@@ -393,12 +402,16 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
             displayedStep = step;
             lessonScroll.post(() -> lessonScroll.scrollTo(0, 0));
         }
+        toolbar.findViewWithTag("tutorial_skip").setVisibility(step == COMPLETE ? View.GONE : View.VISIBLE);
         boolean overviewPage = step == INTRO || step == COMPLETE;
+        introArtwork.setVisibility(overviewPage ? View.VISIBLE : View.GONE);
+        introArtwork.setImageResource(step == COMPLETE ? com.click.designpreview.R.drawable.clue4_complete
+                : com.click.designpreview.R.drawable.clue3_tutorial);
         // 하단 버튼은 스크롤 본문 밖에 고정한다. 긴 설명만 스크롤하고 시작 버튼은 아래에 유지한다.
         checklist.setVisibility(overviewPage ? View.VISIBLE : View.GONE);
         stage.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
-        stage.setMinimumHeight(dp(step == INPUT ? 440 : 320));
-        phone.setVisibility(step == INPUT ? View.VISIBLE : View.GONE);
+        stage.setMinimumHeight(dp(440));
+        phone.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
         floating.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
         restore.setVisibility(!overviewPage && floating.isHidden() ? View.VISIBLE : View.GONE);
         progress.setVisibility(overviewPage || keyboardVisible ? View.GONE : View.VISIBLE);
@@ -447,14 +460,14 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 detail = "요청을 확인한 뒤 안내를 시작해요.";
                 speechResource = reviewSpeechResource();
                 if (practiceReview != null && (practiceReview.needsTarget() || practiceReview.needsDirection()))
-                    detail = "알맞은 항목을 고르고 ‘다음 단계’를 눌러주세요.";
+                    detail = "알맞은 항목을 고르고 ‘입력하기’를 눌러주세요.";
                 break;
             case RUNNING:
                 heading = paused ? "잠시 쉬어도 괜찮아요" : "자동으로 진행해요";
                 detail = paused ? "‘이어서 진행’을 누르면 계속해요."
                         : "안내창을 줄이거나 잠시 멈춰보세요.";
                 speechResource = paused ? R.string.tutorial_speech_paused : R.string.tutorial_speech_running;
-                button = "결과 확인하기"; enabled = !paused; break;
+                button = "연습 마치기"; enabled = !paused; break;
             default:
                 heading = "결과를 알려주세요";
                 detail = "아래 버튼으로 결과를 알려주세요.";
@@ -488,12 +501,15 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
 
     private void renderChecklist() {
         checklist.removeAllViews();
-        checklist.setPadding(dp(16), dp(10), dp(16), dp(10));
-        checklist.setBackground(ClickUi.rounded(ClickUi.PALE_BLUE, dp(24)));
+        checklist.setBackground(new android.graphics.drawable.InsetDrawable(
+                ClickUi.outlined(Color.WHITE, 0xFFDDE7F4, dp(22), dp(1)), 0, dp(14), 0, 0));
+        checklist.setPadding(dp(16), 0, dp(16), dp(10));
         LinearLayout.LayoutParams cardParams = (LinearLayout.LayoutParams) checklist.getLayoutParams();
-        cardParams.topMargin = dp(20);
-        String[] labels = {"말이나 글로 요청하기", "요청 내용 확인하기", "안내창 줄이고 멈추기", "결과 확인하기"};
-        String[] hints = {"편한 방법 하나만 고르면 돼요", "맞는지 보고 안내를 시작해요", "창을 줄이거나 잠시 멈출 수 있어요", "잘 되었는지 클릭에게 알려주세요"};
+        cardParams.topMargin = dp(4);
+        checklist.addView(new com.click.ui.tutorial.NotebookBindingView(this),
+                new LinearLayout.LayoutParams(-1, dp(30)));
+        String[] labels = {"말이나 글로 요청하기", "요청 내용 확인하기", "안내창 줄이고 멈추기"};
+        String[] hints = {"편한 방법 하나만 고르면 돼요", "맞는지 보고 안내를 시작해요", "창을 줄이거나 잠시 멈출 수 있어요"};
         for (int i = 0; i < labels.length; i++) {
             LinearLayout row = new LinearLayout(this); row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(0, dp(12), 0, dp(12));
@@ -517,17 +533,13 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
             }
             checklist.addView(row);
         }
-        if (step == COMPLETE) {
-            TextView tip = text("버튼이 가리면 누른 채 옮겨보세요. 홈의 ‘클릭 튜토리얼’에서 다시 연습할 수 있어요.", 14, ClickUi.SUBTEXT, false);
-            tip.setPadding(0, dp(16), 0, 0); checklist.addView(tip);
-        }
     }
     private void advance() {
         if (!action.isEnabled()) return;
         cancelVoicePractice(); narrator.stop();
         if (step == COMPLETE) { finishToHome(); return; }
         if (step == INTRO) { step = INPUT; showMode(ClickOverlayLayout.Mode.COLLAPSED); }
-        else if (step == RUNNING) { completeStep(RUNNING); step = RESULT; showResultPractice(); }
+        else if (step == RUNNING) { completeStep(RUNNING); step = COMPLETE; floating.hideReview(); reviewView = null; }
         updateCopy();
     }
     private void previous() {
@@ -538,7 +550,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         else if (step == REVIEW) { returnToInput(true); return; }
         else if (step == RUNNING) { step = REVIEW; showRequestReview(lastRequest()); }
         else if (step == RESULT) { step = RUNNING; paused = false; showProgressPractice(); }
-        else { step = RESULT; showResultPractice(); }
+        else { step = RUNNING; showProgressPractice(); }
         updateCopy();
     }
 

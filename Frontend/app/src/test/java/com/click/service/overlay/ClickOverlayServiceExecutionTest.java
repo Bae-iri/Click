@@ -126,6 +126,7 @@ public class ClickOverlayServiceExecutionTest {
         snapshots = mockStatic(LatestScreenSnapshot.class);
         snapshots.when(LatestScreenSnapshot::get).thenAnswer(call -> cachedScreen);
         accessibility = mockStatic(ClickAccessibilityService.class);
+        accessibility.when(ClickAccessibilityService::accessibilityWindowManager).thenReturn(mock(WindowManager.class));
         accessibility.when(ClickAccessibilityService::freshSnapshot).thenAnswer(call -> {
             if (currentScreen != null) cachedScreen = currentScreen;
             return currentScreen;
@@ -217,15 +218,22 @@ public class ClickOverlayServiceExecutionTest {
     }
 
     @Test public void permanentlyMissingScreenOffersRecoveryAndExplicitRetryKeepsConfirmedGoal() throws Exception {
+        accessibility.when(ClickAccessibilityService::accessibilityWindowManager).thenReturn(null);
         resolve(); currentScreen = null; confirm();
         TaskFlowOverlayView view = (TaskFlowOverlayView) get("taskFlowView");
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10));
         org.mockito.ArgumentCaptor<Runnable> retry = org.mockito.ArgumentCaptor.forClass(Runnable.class);
-        verify(view).observationRecovery(eq(SOURCE), contains("화면 읽기 연결이 끊겼어요"), retry.capture());
+        org.mockito.ArgumentCaptor<Runnable> guide = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify(view).accessibilityRecovery(contains("화면 읽기 연결이 끊겼어요"), guide.capture(), retry.capture());
+        Object session = get("agentSessionId");
+        guide.getValue().run();
+        Intent opened = shadowOf(service).getNextStartedActivity();
+        assertEquals(com.click.designpreview.PermissionGuideActivity.class.getName(), opened.getComponent().getClassName());
+        assertEquals(session, get("agentSessionId"));
         assertEquals(1, requests.size());
         assertFalse((boolean) get("turnInFlight"));
         send(null);
-        verify(view, times(1)).observationRecovery(eq(SOURCE), anyString(), any());
+        verify(view, times(1)).accessibilityRecovery(anyString(), any(), any());
         currentScreen = screen;
         retry.getValue().run();
         assertEquals(2, requests.size());
@@ -249,6 +257,65 @@ public class ClickOverlayServiceExecutionTest {
         set("turnInFlight", false);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10));
         assertEquals(2, requests.size());
+    }
+
+    @Test public void staleDragReleaseCannotMoveOrCloseClickWithoutActiveDrag() throws Exception {
+        ClickOverlayLayout logo = mock(ClickOverlayLayout.class);
+        set("overlayView", logo);
+        WindowManager windows = mock(WindowManager.class);
+        set("windowManager", windows);
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+        params.x = 100; params.y = 300;
+        set("windowParams", params);
+        set("dragTargetX", 400f); set("dragTargetY", 800f);
+        set("overTrashTarget", true);
+        service.onDragEnded();
+        assertEquals(false, get("closing"));
+        assertEquals(100, params.x); assertEquals(300, params.y);
+        verify(windows, never()).updateViewLayout(any(), any());
+    }
+
+    @Test public void minimizingTaskCancelsQueuedDragAndIgnoresItsLateRelease() throws Exception {
+        ClickOverlayLayout logo = mock(ClickOverlayLayout.class);
+        when(logo.getMode()).thenReturn(ClickOverlayLayout.Mode.COLLAPSED);
+        set("overlayView", logo);
+        WindowManager windows = mock(WindowManager.class);
+        set("windowManager", windows);
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+        params.x = 100; params.y = 300;
+        set("windowParams", params);
+        set("dragTargetX", 400f); set("dragTargetY", 800f);
+        set("dragInProgress", true); set("overTrashTarget", true);
+        invoke("collapseTaskFlow");
+        ((Runnable) get("dragFrame")).run();
+        service.onDragBy(40, 80);
+        service.onDragEnded();
+        assertEquals(false, get("closing"));
+        assertEquals(false, get("dragInProgress"));
+        assertEquals(100, params.x); assertEquals(300, params.y);
+        verify(logo).setVisibility(android.view.View.VISIBLE);
+    }
+
+    @Test public void minimizingAndReopeningTaskRepeatedlyKeepsClickAlive() throws Exception {
+        ClickOverlayLayout logo = mock(ClickOverlayLayout.class);
+        when(logo.getMode()).thenReturn(ClickOverlayLayout.Mode.COLLAPSED);
+        set("overlayView", logo);
+        TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
+        when(panel.hasCompactContent()).thenReturn(true);
+        for (int i = 0; i < 5; i++) {
+            clearInvocations(logo, panel);
+            invoke("collapseTaskFlow");
+            verify(logo).setVisibility(android.view.View.VISIBLE);
+            verify(panel).setMinimizedProgress(true);
+            assertEquals(false, get("closing"));
+            assertTrue(service.onOpenRequested());
+            assertEquals(false, get("taskFlowCollapsed"));
+            verify(panel).setMinimizedProgress(false);
+        }
+        invoke("collapseTaskFlow");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(2));
+        assertEquals(false, get("closing"));
+        assertSame(panel, get("taskFlowView"));
     }
 
     @Test public void closingInputRestoresOnlyLatestDeferredGuidanceOnce() throws Exception {
@@ -1305,6 +1372,40 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(4, requests.size());
     }
 
+    @Test @Config(qualifiers = "w411dp-h891dp")
+    public void clueFollowsHighlightWithoutOverlappingAndYieldsToDragging() throws Exception {
+        prepareGuideResponse();
+        ClickOverlayLayout control = (ClickOverlayLayout) get("overlayView");
+        WindowManager.LayoutParams params = new WindowManager.LayoutParams();
+        params.width = params.height = 64; params.x = 300; params.y = 600;
+        set("windowParams", params);
+        when(control.isAttachedToWindow()).thenReturn(true);
+        when(control.getVisibility()).thenReturn(android.view.View.VISIBLE);
+        when(control.getMode()).thenReturn(ClickOverlayLayout.Mode.COLLAPSED);
+        doAnswer(call -> { int[] xy = call.getArgument(0); xy[0] = params.x; xy[1] = params.y + 24; return null; })
+                .when(control).getLocationOnScreen(any(int[].class));
+        int[] target = {20, 200, 380, 260};
+        set("clueFollowBounds", target);
+        Method follow = ClickOverlayService.class.getDeclaredMethod("followGuideWithClue");
+        follow.setAccessible(true);
+        assertEquals(true, follow.invoke(service));
+        ((android.animation.ValueAnimator) get("clueFollowAnimator")).end();
+        android.graphics.Rect placed = new android.graphics.Rect(params.x, params.y + 24, params.x + 64, params.y + 88);
+        assertFalse(android.graphics.Rect.intersects(placed, new android.graphics.Rect(4, 184, 396, 276)));
+        assertTrue("Clue moves near the new guide", params.y < 400);
+        service.onDragStarted();
+        assertArrayEquals(target, (int[]) get("manuallyPlacedGuideBounds"));
+        assertEquals(false, follow.invoke(service));
+        set("dragInProgress", false);
+        assertEquals("Do not undo a user's placement for the same target", false, follow.invoke(service));
+        set("clueFollowBounds", new int[]{20, 450, 380, 510});
+        assertEquals(true, follow.invoke(service));
+        service.onInteractionStarted();
+        assertNull(get("clueFollowAnimator"));
+        when(control.getMode()).thenReturn(ClickOverlayLayout.Mode.TEXT);
+        assertEquals("Never move an open editor", false, follow.invoke(service));
+    }
+
     @Test public void minimizedClickControlMovesClearOfTheNativeSlider() throws Exception {
         prepareGuideResponse();
         ClickOverlayLayout control = (ClickOverlayLayout) get("overlayView");
@@ -1764,7 +1865,7 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen = null;
         retry.getValue().run();
         assertEquals(2, requests.size());
-        verify(panel).observationRecovery(contains("화면 정보를 읽지 못했어요"), any());
+        verify(panel).observationRecovery(contains("현재 화면을 읽지 못했어요"), any());
         assertEquals(false, get("taskFlowCollapsed"));
         currentScreen = screen;
         set("pendingControl", "cancel_task");
@@ -1876,6 +1977,89 @@ public class ClickOverlayServiceExecutionTest {
         assertNull(get("visionGuideScreen"));
         verify(gateway, never()).send(any(), any());
 
+    }
+
+    @Test public void changedScreenCannotReplaceNavigationRecoveryWithEndlessWaiting() throws Exception {
+        prepareGuideResponse();
+        deliver(1, "highlight", "tap", null);
+        NavigationRecovery recovery = (NavigationRecovery) get("navigationRecovery");
+        recovery.forceHome();
+        currentScreen = changedScreen("com.android.settings", 1080, 2400, 43, 400);
+        cachedScreen = currentScreen;
+        TaskFlowOverlayView card = (TaskFlowOverlayView) get("taskFlowView");
+        clearInvocations(card);
+        ((BroadcastReceiver) get("collapseReceiver")).onReceive(service,
+                new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED));
+        verify(card).navigationRecovery(eq(false), anyString(), any());
+        verify(card, never()).waitingProgress(contains("화면이 바뀌었어요"));
+        assertEquals("Keep explicit recovery instead of sending behind its back", 2, requests.size());
+    }
+
+    @Test public void invalidatedGuideReobservesWithoutAnotherAccessibilityBroadcast() throws Exception {
+        prepareGuideResponse();
+        deliver(1, "highlight", "tap", null);
+        currentScreen = changedScreen("com.android.settings", 1080, 2400, 43, 400);
+        cachedScreen = currentScreen;
+        invoke("invalidateStaleGuide");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(800));
+        assertEquals(3, requests.size());
+        assertSame(currentScreen, requests.get(2).accessibilityTree);
+        assertNull("Re-observation must not invent a successful tap", requests.get(2).userActionEvent);
+    }
+
+    @Test public void pausedTaskIsNotReplacedByScreenChangedWaiting() throws Exception {
+        prepareGuideResponse();
+        deliver(1, "highlight", "tap", null);
+        set("agentPaused", true);
+        cachedScreen = changedScreen("com.android.settings", 1080, 2400, 43, 400);
+        TaskFlowOverlayView card = (TaskFlowOverlayView) get("taskFlowView");
+        clearInvocations(card);
+        invoke("invalidateStaleGuide");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        verify(card, never()).waitingProgress(anyString());
+        assertEquals(2, requests.size());
+    }
+
+    @Test public void repeatedManualBackAcrossNewWindowsSendsCurrentScreenAndResumesGuidance() throws Exception {
+        prepareGuideResponse(); deliver(1, "highlight", "tap", null);
+        NavigationRecovery recovery = (NavigationRecovery) get("navigationRecovery");
+        for (int i = 0; i < 2; i++) {
+            ScreenSnapshot child = changedScreen("com.android.settings", 1080, 2400, 50 + i, 500);
+            recovery.observe(child); recovery.requestedByUser(NavigationRecovery.Action.BACK, child);
+            currentScreen = changedScreen("com.android.settings", 1080, 2400, 60 + i, 100);
+            cachedScreen = currentScreen;
+            ((BroadcastReceiver) get("collapseReceiver")).onReceive(service,
+                    new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED));
+            assertEquals(3 + i, requests.size());
+            assertSame(currentScreen, requests.get(2 + i).accessibilityTree);
+            assertEquals("back_navigated", requests.get(2 + i).userActionEvent.getString("action_type"));
+            deliver(2 + i, "highlight", "tap", null);
+            assertEquals(NavigationRecovery.Action.NONE, recovery.hint());
+            assertNotNull(get("nativeGuideScreen"));
+        }
+    }
+
+    @Test public void resyncAtRetryLimitShowsAnActionInsteadOfLeavingWaitingText() throws Exception {
+        prepareGuideResponse(); deliver(1, "highlight", "tap", null);
+        set("staleGuideDrops", 4);
+        currentScreen = changedScreen("com.android.settings", 1080, 2400, 43, 400);
+        cachedScreen = currentScreen;
+        invoke("invalidateStaleGuide");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        verify((TaskFlowOverlayView) get("taskFlowView")).observationRecovery(contains("현재 위치"), any());
+        assertEquals(2, requests.size());
+    }
+
+    @Test public void validReplyCancelsDeferredResyncAndDoesNotSendDuplicateTurns() throws Exception {
+        prepareGuideResponse(); deliver(1, "highlight", "tap", null);
+        currentScreen = changedScreen("com.android.settings", 1080, 2400, 43, 400);
+        cachedScreen = currentScreen;
+        ((BroadcastReceiver) get("collapseReceiver")).onReceive(service,
+                new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED));
+        assertEquals(3, requests.size());
+        deliver(2, "highlight", "tap", null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        assertEquals(3, requests.size());
     }
 
     @Test public void scrollingToAccessibilityClearsNativeGuideBeforePendingServerReply() throws Exception {

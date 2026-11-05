@@ -14,6 +14,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(RobolectricTestRunner.class)
+@org.robolectric.annotation.Config(sdk = 34, application = android.app.Application.class)
 public class FloatingHeaderConsistencyTest {
     @Test public void everyExpandedPanelKeepsTheReviewHeaderGeometryAtLargeFonts() throws Exception {
         for (float scale : new float[]{1f, 1.3f, 2f}) {

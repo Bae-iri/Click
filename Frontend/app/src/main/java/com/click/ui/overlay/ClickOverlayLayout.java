@@ -5,8 +5,6 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.drawable.RippleDrawable;
 import android.text.InputType;
 import android.view.Gravity;
@@ -32,7 +30,7 @@ import com.click.ui.common.ClickTextScale;
  * XML 레이아웃 대신 아래 Java 코드에서 화면을 직접 만든다.
  *
  * 수정 위치 안내 (파일에서 "[UI 수정]"을 검색):
- * - 접힌 원형 버튼: dispatchDraw(). 커서 모양/색/그림자는 ClickIconRenderer.java.
+ * - 접힌 클루 버튼: dispatchDraw(). 이미지는 clue7_floating.png.
  * - 창 크기: getWindowWidth(), getWindowHeight().
  * - 펼친 창의 헤더/구분선: FloatingPanelHeader.java. 본문: renderPanel()의 MENU/VOICE/TEXT 분기.
  * - 공통 버튼/글꼴: action(), feature(), label(). 입력창 스타일은 생성자.
@@ -51,6 +49,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         void onDragBy(float deltaX, float deltaY);
         void onDragEnded();
         default void onDragCancelled() {}
+        default void onInteractionStarted() {}
         void onTextSubmitted(String text);
         void onCloseRequested();
         default boolean onOpenRequested() { return false; }
@@ -62,8 +61,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         default void onContentSizeChanged() {}
     }
 
-    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Path path = new Path();
+    private final android.graphics.drawable.Drawable collapsedClue;
     private final EditText goalInput;
     private LinearLayout panel;
     private FloatingPanelHeader panelHeader;
@@ -93,6 +91,7 @@ public final class ClickOverlayLayout extends ViewGroup {
 
     public ClickOverlayLayout(Context context) {
         super(context);
+        collapsedClue = context.getDrawable(com.click.designpreview.R.drawable.clue7_floating).mutate();
         setWillNotDraw(false);
         setClipChildren(false);
         setClickable(true);
@@ -245,15 +244,9 @@ public final class ClickOverlayLayout extends ViewGroup {
         return panelHeader == null ? new android.graphics.Rect(inner - dp(56), 0, inner, dp(48))
                 : panelHeader.collapseBounds(inner);
     }
-    private int headerHeight() {
-        return panelHeader == null ? dp(48) : panelHeader.collapse.getMeasuredHeight();
-    }
-    private int handleWidth() {
-        return panelHeader == null ? dp(56) : panelHeader.collapse.getMeasuredWidth();
-    }
-
     private void changeMode(Mode next) {
         if (mode == next) return;
+        cancelPendingGesture();
         finishMicrophoneTouch(true);
         Mode old = mode;
         if (old == Mode.TEXT) hideKeyboard();
@@ -297,7 +290,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         // Keep cancellation available without showing transport or task-state copy.
         requestRow = new LinearLayout(getContext());
         requestRow.setGravity(Gravity.CENTER_VERTICAL | Gravity.END);
-        stopRequest = FloatingPanelStyle.compactButton(getContext(), "요청 중지",
+        stopRequest = FloatingPanelStyle.compactButton(getContext(), "끝내기",
                 () -> { if (callback != null) callback.onStopRequested(); });
         stopRequest.setId(R.id.overlay_stop_request);
         requestRow.addView(stopRequest, new LinearLayout.LayoutParams(-2, -2));
@@ -362,7 +355,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             entry.setGravity(Gravity.CENTER_VERTICAL);
             entry.addView(goalInput, new LinearLayout.LayoutParams(0, -2, 1));
             TextView send = action("↑", true, this::submitText);
-            send.setContentDescription("입력한 요청 보내기");
+            send.setContentDescription("입력한 내용 보내기");
             send.setTextSize(android.util.TypedValue.COMPLEX_UNIT_DIP, 26);
             send.setPadding(0, 0, 0, 0);
             LinearLayout.LayoutParams sendParams = new LinearLayout.LayoutParams(dp(48), -2);
@@ -431,7 +424,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         arrow.setImageResource(R.drawable.ic_review_chevron);
         arrow.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         row.addView(arrow, new LinearLayout.LayoutParams(dp(20), dp(32)));
-        row.setContentDescription(microphone ? "말로 시작. 마이크로 요청하기" : "글로 입력. 키보드로 요청하기");
+        row.setContentDescription(microphone ? "말로 시작. 마이크로 말하기" : "글로 입력. 키보드로 입력하기");
         row.setFocusable(true);
         row.setOnClickListener(v -> action.run());
         return row;
@@ -479,13 +472,16 @@ public final class ClickOverlayLayout extends ViewGroup {
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         if (mode != Mode.COLLAPSED && panel != null) panel.layout(0, 0, getWidth(), getHeight());
     }
-    // [UI 수정] 접힌 원형 버튼의 그림 반지름은 28dp, 창/터치 영역은 64dp이다.
+    // [UI 수정] 접힌 클루 이미지와 창/터치 영역은 64dp이다.
     // 창 크기도 바꿀 때는 getWindowWidth/Height, 중심 좌표, hitsHandle과 두 호스트의 초기 64dp를 맞춘다.
     @Override protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
         if (mode == Mode.COLLAPSED) {
-            ClickIconRenderer.draw(this, canvas, paint, path, getWidth() / 2f,
-                    getClickCenterY(mode), dp(28), 0f, false);
+            int size = Math.min(getWidth(), dp(64));
+            int left = (getWidth() - size) / 2;
+            int top = Math.round(getClickCenterY(mode) - size / 2f);
+            collapsedClue.setBounds(left, top, left + size, top + size);
+            collapsedClue.draw(canvas);
         }
     }
     @Override public boolean onInterceptTouchEvent(MotionEvent event) {
@@ -533,17 +529,18 @@ public final class ClickOverlayLayout extends ViewGroup {
         if (target.getParent() != null) target.getParent().requestDisallowInterceptTouchEvent(false);
     }
     private boolean hitsHandle(MotionEvent event) {
-        float cx = getClickCenterX(mode, getWidth());
-        if (mode == Mode.COLLAPSED)
-            return Math.hypot(event.getX() - cx, event.getY() - getClickCenterY(mode)) <= dp(32);
-        return Math.abs(event.getX() - cx) <= handleWidth() / 2f
-                && Math.abs(event.getY() - getClickCenterY(mode)) <= headerHeight() / 2f;
+        // Expanded headers contain ordinary buttons. In particular, a slow or
+        // slightly moving press on "줄이기" must never turn into a trash drag.
+        return mode == Mode.COLLAPSED && Math.hypot(
+                event.getX() - getClickCenterX(mode, getWidth()),
+                event.getY() - getClickCenterY(mode)) <= dp(32);
     }
     @SuppressLint("ClickableViewAccessibility")
     @Override public boolean onTouchEvent(MotionEvent event) {
         float rawX = event.getRawX(), rawY = event.getRawY();
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                if (callback != null) callback.onInteractionStarted();
                 if (!hitsHandle(event)) return false;
                 // Reserve this gesture before a surrounding ScrollView sees the first move.
                 if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
@@ -566,6 +563,9 @@ public final class ClickOverlayLayout extends ViewGroup {
                 lastRawY = rawY;
                 return true;
             case MotionEvent.ACTION_UP:
+                // A release from a removed/replaced panel must not operate the
+                // newly shown CLICK button or complete an old trash drag.
+                if (!holding) return false;
                 removeCallbacks(hideAfterHold);
                 if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
                 holding = false;
@@ -597,6 +597,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         return true;
     }
     @Override public boolean performLongClick() {
+        if (mode != Mode.COLLAPSED) return false;
         removeCallbacks(hideAfterHold);
         dragging = true;
         holdConsumed = false;
@@ -605,10 +606,24 @@ public final class ClickOverlayLayout extends ViewGroup {
         if (callback != null) callback.onDragStarted();
         return true;
     }
+
+    public void cancelPendingGesture() {
+        removeCallbacks(hideAfterHold);
+        boolean wasDragging = dragging;
+        holding = dragging = false;
+        holdConsumed = true;
+        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
+        if (wasDragging && callback != null) callback.onDragCancelled();
+    }
+
+    @Override protected void onVisibilityChanged(View changedView, int visibility) {
+        super.onVisibilityChanged(changedView, visibility);
+        if (visibility != VISIBLE && (holding || dragging)) cancelPendingGesture();
+    }
     private void updateDescription() {
         setContentDescription(mode == Mode.COLLAPSED
                 ? "클릭 기능 열기. 꾹 누르면 휴지통이 나타납니다. 끌어서 이동하거나 휴지통에 놓아 숨깁니다."
-                : "클릭 메뉴 접기. 꾹 누르면 휴지통이 나타납니다. 끌어서 이동하거나 휴지통에 놓아 숨깁니다.");
+                : "클릭 안내 창. 줄이기 버튼을 누르면 작은 CLICK 버튼으로 접습니다.");
     }
     private void submitText() {
         String text = goalInput.getText().toString().trim();

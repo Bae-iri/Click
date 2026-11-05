@@ -53,7 +53,7 @@ public class AdjustmentFlowUiTest {
                     assertNull(find(panel[0], "답하지 않으면 완료로 기록하지 않아요."));
                     String positive = "글자 크기".equals(task) ? "네, 글씨가 잘 보여요" : "네, 좋아요";
                     String help = "글자 크기".equals(task) ? "더 커졌으면 좋겠어" : "조금 더 도와주세요";
-                    for (String label : new String[]{positive, help, "줄이기", "요청 중지"}) {
+                    for (String label : new String[]{positive, help, "줄이기", "끝내기"}) {
                         TextView button = find(panel[0], label); assertNotNull(button); assertTrue(button.isShown());
                         android.graphics.Rect bounds = new android.graphics.Rect(); button.getDrawingRect(bounds);
                         panel[0].offsetDescendantRectToMyCoords(button, bounds);

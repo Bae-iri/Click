@@ -38,7 +38,7 @@ public final class PermissionEnableAnimationView extends LinearLayout {
                 + context.getString(R.string.guide_enable_description));
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
 
-        instruction = text(R.string.guide_enable_step_apps, 16, BLUE, true);
+        instruction = text(R.string.guide_enable_step_apps, 15, BLUE, true);
         instruction.setId(R.id.guide_animation_step);
         addView(instruction, new LayoutParams(-1, -2));
         FrameLayout phone = new FrameLayout(context);
@@ -64,7 +64,7 @@ public final class PermissionEnableAnimationView extends LinearLayout {
         switchRow.setGravity(Gravity.CENTER_VERTICAL);
         switchRow.setPadding(dp(12), dp(16), dp(12), dp(16));
         switchRow.setBackground(rounded(0xFFF0F5FF, 16));
-        switchState = text(R.string.guide_service_off, 18, INK, true);
+        switchState = text(R.string.guide_service_off, 16, INK, true);
         switchState.setId(R.id.guide_demo_switch_state);
         switchRow.addView(switchState, new LayoutParams(0, -2, 1));
         toggle = new SwitchPreview(context);
@@ -137,7 +137,7 @@ public final class PermissionEnableAnimationView extends LinearLayout {
         LinearLayout column = new LinearLayout(getContext());
         column.setOrientation(VERTICAL);
         column.setMinimumHeight(dp(182));
-        TextView heading = text(title, 18, INK, true);
+        TextView heading = text(title, 16, INK, true);
         heading.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.onboarding_back, 0, 0, 0);
         heading.setCompoundDrawablePadding(dp(6));
         add(column, heading, 0);
@@ -150,7 +150,7 @@ public final class PermissionEnableAnimationView extends LinearLayout {
         row.setPadding(dp(12), dp(14), dp(12), dp(14));
         highlights[index] = rounded(0xFFEAF2FF, 14);
         row.setBackground(highlights[index]);
-        row.addView(text(label, 17, INK, true), new LayoutParams(0, -2, 1));
+        row.addView(text(label, 15, INK, true), new LayoutParams(0, -2, 1));
         View cursor = new PermissionIconView(getContext(), PermissionIconView.Kind.CLICK, BLUE);
         LayoutParams icon = new LayoutParams(dp(28), dp(28));
         icon.setMarginStart(dp(8));
