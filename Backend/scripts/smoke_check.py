@@ -76,7 +76,7 @@ def main() -> None:
                 assert fetch("/ready")[1] == {"status": "ready", "database": "ok"}
                 assert "/api/v1/agent/turn" in fetch("/openapi.json")[1]["paths"]
                 status, auth = fetch("/api/v1/auth/register", json.dumps({
-                    "phone_number": "01012345678", "password": "0123",
+                    "name": "Smoke Check", "phone_number": "01012345678", "password": "0123",
                 }).encode())
                 assert status == 201
                 token = auth["access_token"]

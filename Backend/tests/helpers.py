@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 def register(client, email=None, password="1234"):
     response = client.post("/api/v1/auth/register", json={
+        "name": "Test User",
         "phone_number": email or "010" + str(uuid4().int % 100000000).zfill(8), "password": password,
         "age_group": "60_plus", "occupation_category": "retired",
     })

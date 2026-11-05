@@ -25,7 +25,7 @@ class Credentials(BaseModel):
 
 
 class RegisterRequest(Credentials):
-    name: str | None = Field(default=None, min_length=1, max_length=50)
+    name: str = Field(min_length=1, max_length=50)
 
     @model_validator(mode="before")
     @classmethod
@@ -39,8 +39,6 @@ class RegisterRequest(Credentials):
     @field_validator("name")
     @classmethod
     def normalize_name(cls, value):
-        if value is None:
-            return None
         value = value.strip()
         if not value:
             raise ValueError("Name must not be blank")

@@ -98,7 +98,7 @@ public class OnboardingFlowTest {
             screenshot("email-signup-explicit");
         }
     }
-    @Test public void emailReviewPrecedesOptionalDisplayName() throws Exception {
+    @Test public void phoneReviewPrecedesRequiredDisplayName() throws Exception {
         try (ActivityScenario<SignupActivity> s = ActivityScenario.launch(SignupActivity.class)) {
             awaitSignupRules(s);
             s.onActivity(a -> {
@@ -117,7 +117,14 @@ public class OnboardingFlowTest {
             clickView("전화번호 수정");
             s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_action).performClick());
             clickView("이 전화번호로 계속"); shown("어떻게 불러드릴까요?");
-            shown("이름 (선택)");
+            shown("이름 (필수)");
+            s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_action).performClick());
+            shown("이름을 1~50글자로 입력해 주세요.");
+            s.onActivity(a -> {
+                ((EditText) a.findViewById(com.click.designpreview.R.id.signup_name)).setText("   ");
+                a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
+            });
+            shown("이름을 1~50글자로 입력해 주세요.");
             s.onActivity(a -> ((EditText) a.findViewById(
                     com.click.designpreview.R.id.signup_name)).setText("김클릭"));
             screenshot("signup-profile-name");
@@ -230,7 +237,7 @@ public class OnboardingFlowTest {
             });
             shown("01012345678");
             clickView("이 전화번호로 계속");
-            shown("이름 (선택)");
+            shown("이름 (필수)");
             shown("이름은 50글자까지 입력할 수 있어요.");
             screenshot("signup-current-profile");
             s.onActivity(a -> {
@@ -240,7 +247,7 @@ public class OnboardingFlowTest {
                 assertEquals(longName, name.getText().toString());
                 a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
             });
-            shown("이름은 50글자까지 입력할 수 있어요. 줄이거나 비워 두고 가입해 주세요.");
+            shown("이름을 1~50글자로 입력해 주세요.");
             // Stop before submitting: this test must never create a real server account.
         }
     }
