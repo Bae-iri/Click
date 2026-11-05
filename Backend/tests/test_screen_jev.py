@@ -21,7 +21,8 @@ def scene(setting):
                  and g.definition.required_slots.get("direction") == "increase")
     transition = next(t for t in graph.transitions if t.target_role == "slider")
     package = (transition.selector.package_candidates or graph.states[transition.from_state].package_candidates)[0]
-    node = NormalizedNode("real-private-id", "unrecognized control", "slider", bounds=(10,100,300,140),
+    from ai_agent.runtime.keywords import normalize_text
+    node = NormalizedNode("real-private-id", normalize_text(transition.target_keywords[0]), "slider", bounds=(10,100,300,140),
         actionable=True, package_name=package, value=3, range_min=0, range_max=10)
     goal = TypedGoal(goal_type=graph.definition.goal_type, target_app=graph.definition.target_app,
         task_type=graph.definition.task_type, slots=graph.definition.required_slots, source_text="",
@@ -45,7 +46,7 @@ def sender_for(transition, choice_override=None, mutate=None):
 
 
 @pytest.mark.parametrize("setting", ["brightness", "font_size", "volume"])
-def test_unmatched_slider_is_candidate_and_coordinates_are_observed(setting):
+def test_approved_slider_is_candidate_and_coordinates_are_observed(setting):
     graph,t,n,goal=scene(setting)
     match=JevScreenResolver(sender_for(t)).resolve(nodes=(n,),graph=graph,goal=goal)
     assert match.transition_id == t.transition_id
@@ -75,7 +76,7 @@ def test_runtime_reaches_selected_step_and_changed_screen_abstains(setting):
     graph,t,n,goal=scene(setting)
     resolver=JevScreenResolver(sender_for(t))
     engine=ClickAgentEngine(task_graphs={goal.goal_type:graph,goal.task_id:graph},screen_resolver=resolver)
-    node=AccessibilityNode(node_id=n.node_id,role="slider",class_name="android.widget.SeekBar",
+    node=AccessibilityNode(node_id=n.node_id,text=n.label,role="slider",class_name="android.widget.SeekBar",
         package_name=n.package_name,bounds_in_screen=n.bounds,extras={"value":3,"min":0,"max":10})
     request=AgentTurnRequest(request_id="r1",session_id="s",typed_goal=goal,raw_goal=None,
         device_context=DeviceContext(platform="android"),accessibility_tree=(node,),observation_id="o1",captured_at_ms=1000)
@@ -101,7 +102,7 @@ def test_action_waits_and_unchanged_failure_does_not_repeat(setting):
     from ai_agent.runtime import UserActionEvent, UserActionType
     graph,t,n,goal=scene(setting)
     engine=ClickAgentEngine(task_graphs={goal.task_id:graph},screen_resolver=JevScreenResolver(sender_for(t)))
-    node=AccessibilityNode(node_id=n.node_id,role="slider",class_name="android.widget.SeekBar",
+    node=AccessibilityNode(node_id=n.node_id,text=n.label,role="slider",class_name="android.widget.SeekBar",
         package_name=n.package_name,bounds_in_screen=n.bounds,extras={"value":3,"min":0,"max":10})
     request=AgentTurnRequest(request_id="r1",session_id="s",typed_goal=goal,raw_goal=None,
         device_context=DeviceContext(platform="android"),accessibility_tree=(node,),
@@ -175,13 +176,16 @@ def test_samsung_rows_preserve_menu_identity_and_independent_page_title():
         nodes = {n['id']: n for n in payload['state']['nodes']}
         candidate = next(c for c in payload['questions']['screen']['criteria'].values()
                          if isinstance(c, dict) and c['transition'] == entry.transition_id)
+        row_candidates = [c for c in payload['questions']['screen']['criteria'].values()
+                          if isinstance(c, dict) and c['node'] == candidate['node']]
+        assert {c['transition'] for c in row_candidates} == {entry.transition_id}
         row = nodes[candidate['node']]
         assert row['label_parts'] == ['디스플레이']
         assert row['structure_role'] == 'control'
         assert row['actionable'] is True
-        assert '밝기' in row['label']
+        assert row['label'] == '디스플레이'
         assert any(n['label'] == '설정' and n['structure_role'] == 'screen_text' for n in nodes.values())
-        assert any(n['structure_role'] == 'description' for n in nodes.values())
+        assert not any(n['structure_role'] == 'description' for n in nodes.values())
         assert candidate['current_page'] == graph.states[entry.from_state].name
         assert candidate['destination_page'] == graph.states[entry.to_state].name
         assert '디스플레이' in candidate['target_names']
