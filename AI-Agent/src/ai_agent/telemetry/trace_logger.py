@@ -33,6 +33,9 @@ UI_SELECTION_STATUSES = {"selected", "disabled", "skipped", "ineligible", "no_ca
     "not_configured", "invalid_candidates", "input_too_large", "deadline_exceeded", "provider_error",
     "timeout", "invalid_response", "uncertain", "low_confidence", "abstained", "invalid_choice", "waiting",
     "sensitive_screen", "unsupported_screen"}
+UI_SELECTION_HOLD_REASONS = {"none", "raw_confidence_below_minimum",
+    "normalized_probability_below_minimum", "both_below_minimum",
+    "wait_for_result", "insufficient_evidence"}
 
 
 def diagnostic_payload(value, depth=0):
@@ -49,6 +52,20 @@ def diagnostic_payload(value, depth=0):
                 safe[key] = selection[key]
         if type(selection.get("called")) is bool:
             safe["called"] = selection["called"]
+        choice = selection.get("choice")
+        if isinstance(choice, str) and (choice in {"wait_for_result", "insufficient_evidence"}
+                or (re.fullmatch(r"candidate_(0|[1-9][0-9]{0,2})", choice)
+                    and int(choice.removeprefix("candidate_")) < 250)):
+            safe["choice"] = choice
+        hold_reason = selection.get("hold_reason")
+        if isinstance(hold_reason, str) and hold_reason in UI_SELECTION_HOLD_REASONS:
+            safe["hold_reason"] = hold_reason
+        transition_hash = selection.get("chosen_transition_hash")
+        if isinstance(transition_hash, str) and re.fullmatch(r"[0-9a-f]{64}", transition_hash):
+            safe["chosen_transition_hash"] = transition_hash
+        choice_count = selection.get("choice_count")
+        if type(choice_count) is int and 3 <= choice_count <= 252:
+            safe["choice_count"] = choice_count
         for key in ("candidate_count", "grounded_candidate_count"):
             count = selection.get(key)
             if type(count) is int and 0 <= count <= 250:
@@ -58,7 +75,8 @@ def diagnostic_payload(value, depth=0):
             metric = selection.get(key)
             if type(metric) in (int, float) and math.isfinite(metric) and 0 <= metric <= maximum:
                 safe[key] = metric
-        for key in ("confidence", "minimum_confidence", "top_probability", "probability_margin"):
+        for key in ("confidence", "minimum_confidence", "top_probability", "probability_margin",
+                    "raw_confidence", "normalized_probability"):
             confidence = selection.get(key)
             if type(confidence) in (int, float) and math.isfinite(confidence) and 0 <= confidence <= 1:
                 safe[key] = confidence
