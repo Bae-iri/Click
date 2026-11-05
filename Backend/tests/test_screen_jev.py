@@ -176,6 +176,9 @@ def test_samsung_rows_preserve_menu_identity_and_independent_page_title():
         nodes = {n['id']: n for n in payload['state']['nodes']}
         candidate = next(c for c in payload['questions']['screen']['criteria'].values()
                          if isinstance(c, dict) and c['transition'] == entry.transition_id)
+        row_candidates = [c for c in payload['questions']['screen']['criteria'].values()
+                          if isinstance(c, dict) and c['node'] == candidate['node']]
+        assert {c['transition'] for c in row_candidates} == {entry.transition_id}
         row = nodes[candidate['node']]
         assert row['label_parts'] == ['디스플레이']
         assert row['structure_role'] == 'control'

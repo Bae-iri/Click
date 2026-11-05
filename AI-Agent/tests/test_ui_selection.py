@@ -230,10 +230,30 @@ def test_offline_replay_never_calls_jev_even_if_server_env_enables_it(monkeypatc
 
 
 def test_jev_diagnostics_retain_only_bounded_status_fields():
-    safe = {"provider": "jev", "status": "selected", "called": True, "candidate_count": 2, "confidence": 0.96}
+    safe = {"provider": "jev", "status": "selected", "called": True, "candidate_count": 2,
+            "grounded_candidate_count": 1, "confidence": 0.96, "minimum_confidence": 0.8,
+            "top_probability": 0.98, "probability_margin": 0.96}
     private = {**safe, "raw_response": "private", "api_key": "private", "choice": "private-node"}
     assert diagnostic_payload({"ui_selection": private}) == {"ui_selection": safe}
     assert diagnostic_payload({"ui_selection": {
         "provider": "private", "status": "private", "called": "private",
         "candidate_count": 100000, "confidence": float("nan"),
     }}) == {"ui_selection": {}}
+
+
+@pytest.mark.parametrize("key, invalid", [
+    ("grounded_candidate_count", -1), ("grounded_candidate_count", 251),
+    ("grounded_candidate_count", True), ("grounded_candidate_count", 1.5),
+    *[(key, invalid) for key in ("minimum_confidence", "top_probability", "probability_margin")
+      for invalid in (-0.1, 1.1, True, "0.8", float("nan"), float("inf"))],
+])
+def test_jev_diagnostics_reject_invalid_visibility_and_probability_values(key, invalid):
+    assert diagnostic_payload({"ui_selection": {key: invalid}}) == {"ui_selection": {}}
+
+
+def test_jev_diagnostic_boundaries_survive_repeated_filtering():
+    safe = {"grounded_candidate_count": 0, "minimum_confidence": 1,
+            "top_probability": 1, "probability_margin": 0}
+    filtered = diagnostic_payload({"ui_selection": safe})
+    assert filtered == {"ui_selection": safe}
+    assert diagnostic_payload(filtered) == filtered
