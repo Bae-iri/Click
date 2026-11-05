@@ -3,6 +3,7 @@ package com.click;
 import android.app.Activity;
 import android.app.Application;
 import android.app.Dialog;
+import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 import com.click.designpreview.ClickHost;
@@ -22,7 +23,7 @@ import static org.mockito.Mockito.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 34, application = Application.class)
 public class SignupActivityTest {
-    @Test public void phoneReviewAndFinalSignupSubmitNormalizedPhoneAndFourDigitPin() {
+    @Test public void phoneSignupRequiresValidNameAndSubmitsTrimmedNameWithNormalizedCredentials() {
         ClickHost host = mock(ClickHost.class);
         doAnswer(call -> { ((ClickHost.PasswordRulesCallback) call.getArgument(1)).complete(4, 4); return null; })
                 .when(host).loadRegistrationRules(any(), any());
@@ -38,8 +39,21 @@ public class SignupActivityTest {
                 assertNotNull(review);
                 assertEquals("01012345678", ((TextView) review.findViewById(R.id.email_confirmation_address)).getText().toString());
                 review.findViewById(R.id.email_confirmation_continue).performClick();
+                EditText name = a.findViewById(R.id.signup_name);
+                TextView error = a.findViewById(R.id.signup_name_error);
+                for (String invalid : new String[] {"", "   ", "\u3000", "김".repeat(51)}) {
+                    name.setText(invalid);
+                    a.findViewById(R.id.signup_action).performClick();
+                    assertEquals(View.VISIBLE, error.getVisibility());
+                    assertEquals("이름을 1~50글자로 입력해 주세요.", error.getText().toString());
+                    assertEquals(View.VISIBLE, a.findViewById(R.id.signup_profile_content).getVisibility());
+                    assertTrue(a.findViewById(R.id.signup_action).isEnabled());
+                    verify(host, never()).register(any(), anyString(), anyString(), anyString(), any());
+                }
+                name.setText("  김클릭  ");
                 a.findViewById(R.id.signup_action).performClick();
-                verify(host).register(eq(a), eq(""), eq("01012345678"), eq("0123"), any());
+                assertEquals(View.GONE, error.getVisibility());
+                verify(host).register(eq(a), eq("김클릭"), eq("01012345678"), eq("0123"), any());
             }
         }
     }

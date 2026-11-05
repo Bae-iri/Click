@@ -1,6 +1,7 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select, update
 
@@ -43,7 +44,7 @@ def test_missing_tampered_expired_tokens_and_duplicate_registration():
     with TestClient(app) as client:
         assert client.get("/api/v1/users/me").status_code == 401
         tokens = register(client, "01082399437")
-        assert client.post("/api/v1/auth/register", json={"phone_number": "01082399437", "password": "1234"}).status_code == 409
+        assert client.post("/api/v1/auth/register", json={"name": "Test User", "phone_number": "01082399437", "password": "1234"}).status_code == 409
         with app.state.session_factory() as db:
             assert len(db.scalars(select(User)).all()) == 1
             db.execute(update(AuthSession).values(access_expires_at=int(time.time()) - 1,
@@ -122,36 +123,56 @@ def test_rate_limit():
 def test_eight_character_password_registration_login_change_and_duplicate_email():
     with TestClient(create_app()) as client:
         payload = {"phone_number": "01080349856", "password": "1234"}
-        assert client.post("/api/v1/auth/register", json={**payload, "password": "123"}).status_code == 422
-        response = client.post("/api/v1/auth/register", json=payload)
+        registration = {**payload, "name": "Test User"}
+        assert client.post("/api/v1/auth/register", json={**registration, "password": "123"}).status_code == 422
+        response = client.post("/api/v1/auth/register", json=registration)
         assert response.status_code == 201, response.text
-        assert client.post("/api/v1/auth/register", json={**payload, "phone_number": "01080349856"}).status_code == 409
+        assert client.post("/api/v1/auth/register", json=registration).status_code == 409
         assert client.post("/api/v1/auth/login", json=payload).status_code == 200
         client.headers["Authorization"] = "Bearer " + response.json()["access_token"]
         assert client.post("/api/v1/auth/password", json={"current_password": "1234", "new_password": "5678"}).status_code == 204
         assert client.post("/api/v1/auth/login", json={**payload, "password": "5678"}).status_code == 200
 
 
-def test_registration_saves_trimmed_name_in_user_profile():
+@pytest.mark.parametrize("name,expected", [("  김클릭  ", "김클릭"), ("가" * 50, "가" * 50)])
+def test_registration_saves_trimmed_name_in_user_profile(name, expected):
     app = create_app()
     with TestClient(app) as client:
         response = client.post("/api/v1/auth/register", json={
-            "name": "  김클릭  ", "phone_number": "01097905424", "password": "1234"
+            "name": name, "phone_number": "01097905424", "password": "1234"
         })
         assert response.status_code == 201, response.text
         client.headers["Authorization"] = "Bearer " + response.json()["access_token"]
-        assert client.get("/api/v1/users/me").json()["name"] == "김클릭"
+        assert client.get("/api/v1/users/me").json()["name"] == expected
+
+
+@pytest.mark.parametrize("name_fields", [
+    {}, {"name": None}, {"name": ""}, {"name": " \t\n "}, {"name": "\u3000"}, {"name": "가" * 51},
+])
+def test_registration_requires_nonblank_name_and_creates_no_account_on_failure(name_fields):
+    app = create_app()
+    with TestClient(app) as client:
+        response = client.post("/api/v1/auth/register", json={
+            "phone_number": "01012345678", "password": "0123", **name_fields,
+        })
+        assert response.status_code == 422
+        with app.state.session_factory() as db:
+            assert db.scalar(select(User)) is None
+            assert db.scalar(select(Account)) is None
+        schema = client.get("/openapi.json").json()["components"]["schemas"]["RegisterRequest"]
+        assert "name" in schema["required"]
 
 
 def test_phone_normalization_and_four_digit_password_validation():
     with TestClient(create_app()) as client:
         payload = {"phone_number": "010-1234-5678", "password": "0123"}
+        registration = {**payload, "name": "Test User"}
         for invalid in ("123", "12345", "abcd", "１２３４", "12 3"):
-            assert client.post("/api/v1/auth/register", json={**payload, "password": invalid}).status_code == 422
-        result = client.post("/api/v1/auth/register", json=payload)
+            assert client.post("/api/v1/auth/register", json={**registration, "password": invalid}).status_code == 422
+        result = client.post("/api/v1/auth/register", json=registration)
         assert result.status_code == 201
         assert client.post("/api/v1/auth/login", json={**payload, "phone_number": "01012345678"}).status_code == 200
-        assert client.post("/api/v1/auth/register", json={**payload, "phone_number": "01012345678"}).status_code == 409
-        assert client.post("/api/v1/auth/register", json={**payload, "phone_number": "invalid"}).status_code == 422
+        assert client.post("/api/v1/auth/register", json={**registration, "phone_number": "01012345678"}).status_code == 409
+        assert client.post("/api/v1/auth/register", json={**registration, "phone_number": "invalid"}).status_code == 422
         client.headers["Authorization"] = "Bearer " + result.json()["access_token"]
         assert client.post("/api/v1/auth/password", json={"current_password": "0123", "new_password": "abcd"}).status_code == 422

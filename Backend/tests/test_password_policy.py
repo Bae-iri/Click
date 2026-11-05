@@ -12,10 +12,10 @@ def test_four_digit_password_registration_login_change_and_reset():
     email = "01088966910"
     with TestClient(app) as client:
         credentials = {"phone_number": email, "password": "123"}
-        assert client.post("/api/v1/auth/register", json=credentials).status_code == 422
+        assert client.post("/api/v1/auth/register", json={**credentials, "name": "Test User"}).status_code == 422
         assert client.post("/api/v1/auth/login", json=credentials).status_code == 422
         credentials["password"] = "0123"
-        assert client.post("/api/v1/auth/register", json=credentials).status_code == 201
+        assert client.post("/api/v1/auth/register", json={**credentials, "name": "Test User"}).status_code == 201
         login = client.post("/api/v1/auth/login", json=credentials)
         assert login.status_code == 200, login.text
         client.headers["Authorization"] = "Bearer " + login.json()["access_token"]
