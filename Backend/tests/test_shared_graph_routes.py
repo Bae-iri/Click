@@ -138,8 +138,11 @@ def test_actual_runtime_events_link_verified_slider_action_to_original_guide(set
         engine = ClickAgentEngine(task_graphs={goal.task_id:graph}, screen_resolver=JevScreenResolver(sender_for(transition)))
         observed = AccessibilityNode(node_id=node.node_id, role='slider', class_name='android.widget.SeekBar',
             package_name=node.package_name, bounds_in_screen=node.bounds, extras={'value':3,'min':0,'max':10})
+        title = AccessibilityNode(node_id='page-title', package_name=node.package_name,
+            text={'font_size': '글자 크기', 'brightness': '밝기', 'volume': '음량'}[setting],
+            class_name='android.widget.TextView', bounds_in_screen=(10, 0, 300, 80))
         request = AgentTurnRequest(request_id='r1',session_id='s',raw_goal=None,typed_goal=goal,
-            device_context=DeviceContext(platform='android'),accessibility_tree=(observed,),
+            device_context=DeviceContext(platform='android'),accessibility_tree=(observed, title),
             captured_at_ms=1000,observation_id='o1',user_confirmation='accepted',
             applied_settings=applied(3))
         first = engine.handle_turn(request)
@@ -150,7 +153,7 @@ def test_actual_runtime_events_link_verified_slider_action_to_original_guide(set
         if problem == 'different_node': changed = replace(changed, node_id='other')
         if problem == 'different_window': changed = replace(changed, window_id=99)
         second = engine.handle_turn(replace(request, request_id='r2',captured_at_ms=1800,observation_id='o2',
-            accessibility_tree=(changed,), applied_settings=applied(3 if problem == 'setting_unchanged' else 4),
+            accessibility_tree=(changed, title), applied_settings=applied(3 if problem == 'setting_unchanged' else 4),
             user_action_event=UserActionEvent(UserActionType.DRAG_COMPLETED, first.guide_command.guide_command_id,
                 observed.node_id, occurred_at_ms=1100,event_id='e1')))
         second_event = produce(second, before, engine.session_store.get('s'), 'slider')

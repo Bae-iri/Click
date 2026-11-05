@@ -25,11 +25,13 @@ def setup_slider():
     graph, edge, node, goal = scene('font_size')
     resolver = JevScreenResolver(sender_for(edge))
     engine = ClickAgentEngine(task_graphs={goal.task_id: graph}, screen_resolver=resolver)
-    raw = AccessibilityNode(node_id=node.node_id, text=node.label, role='slider',
+    raw = AccessibilityNode(node_id=node.node_id, text='unknown control', role='slider',
         class_name='android.widget.SeekBar', package_name=node.package_name,
         bounds_in_screen=node.bounds, extras={'value': 3, 'min': 0, 'max': 10})
     request = AgentTurnRequest(request_id='r1', session_id='s', typed_goal=goal, raw_goal=None,
-        accessibility_tree=(raw,), device_context=DeviceContext(platform='android'),
+        accessibility_tree=(raw, AccessibilityNode(node_id='page-title', text='글자 크기',
+            package_name=node.package_name, class_name='android.widget.TextView',
+            bounds_in_screen=(10, 0, 300, 80))), device_context=DeviceContext(platform='android'),
         observation_id='o1', captured_at_ms=1000,
         applied_settings={'source': 'android.provider.Settings.System.FONT_SCALE', 'font_scale': 1.0})
     return graph, edge, engine, resolver, request
@@ -69,7 +71,7 @@ def test_primary_preserves_confirmation_and_requires_measured_change():
     # exact stored binding, event, native value and applied system setting.
     changed = replace(request.accessibility_tree[0], extras={'value': 4, 'min': 0, 'max': 10})
     done = engine.handle_turn(replace(request, request_id='r3', observation_id='o3',
-        captured_at_ms=3000, accessibility_tree=(changed,), user_action_event=event,
+        captured_at_ms=3000, accessibility_tree=(changed, *request.accessibility_tree[1:]), user_action_event=event,
         applied_settings={**request.applied_settings, 'font_scale': 1.2}))
     assert done.debug['task_completed'] is True
     assert done.guide_command.command_type == CommandType.DONE
@@ -104,7 +106,7 @@ def test_model_confidence_never_proves_completion(evidence):
     if evidence == 'different_target':
         changed = replace(changed, node_id='different-control')
     result = engine.handle_turn(replace(request, request_id='r2', observation_id='o2',
-        captured_at_ms=2000, accessibility_tree=(changed,),
+        captured_at_ms=2000, accessibility_tree=(changed, *request.accessibility_tree[1:]),
         user_action_event=None if evidence == 'no_event' else event,
         applied_settings={} if evidence == 'no_setting' else {**request.applied_settings, 'font_scale': 1.2}))
     assert not result.debug['task_completed']
@@ -154,6 +156,12 @@ def test_http_path_uses_primary_and_never_falls_back_to_rule_action(monkeypatch,
     assert body['metadata']['debug']['ui_selection']['status'] == {
         'offline': 'provider_error', 'low_confidence': 'low_confidence',
         'abstain': 'abstained', 'success': 'selected'}[failure]
+    selection = body['metadata']['debug']['ui_selection']
+    assert selection['grounded_candidate_count'] > 0
+    if failure != 'offline':
+        assert selection['minimum_confidence'] == 0.8
+        assert selection['top_probability'] == 1
+        assert selection['probability_margin'] == 1
 
 
 def test_primary_provider_configuration(monkeypatch):
@@ -165,6 +173,49 @@ def test_primary_provider_configuration(monkeypatch):
     monkeypatch.delenv('TYPESAFE_API_KEY')
     with pytest.raises(ValueError, match='TYPESAFE_API_KEY'):
         RuntimeAgentAdapter()
+
+
+@pytest.mark.parametrize('outcome', ['selected', 'low_confidence', 'abstained'])
+def test_repeated_visible_menu_observations_preserve_selection_diagnostics(monkeypatch, outcome):
+    from app.main import create_app
+    from tests.helpers import authenticated_client
+    from tests.test_typed_agent_contract import start_payload
+
+    monkeypatch.setenv('AI1_UI_SELECTOR_PROVIDER', 'jev')
+    calls = []
+
+    def post(self, payload, **kwargs):
+        calls.append(payload)
+        options = payload['questions']['screen']['criteria']
+        candidates = [key for key, value in options.items() if isinstance(value, dict)]
+        assert len(candidates) == 1
+        choice = 'insufficient_evidence' if outcome == 'abstained' else candidates[0]
+        return httpx.Response(200, json={'model': payload['model'], 'answers': {'screen': {
+            'type': 'choice', 'choice': choice, 'confidence': 0.4 if outcome == 'low_confidence' else 1,
+            'probabilities': {key: float(key == choice) for key in options}}}})
+
+    monkeypatch.setattr(JevScreenResolver, '_post', post)
+    with authenticated_client(create_app()) as client:
+        payload = start_payload()
+        for turn in range(3):
+            payload['accessibility_tree'].update(observation_id=f'visible-{turn}', captured_at_ms=1000 * (turn + 1))
+            response = client.post('/api/v1/agent/commands', json=payload)
+            assert response.status_code == 200, response.text
+            body = response.json()
+            selection = body['metadata']['debug']['ui_selection']
+            assert selection['status'] == outcome
+            assert selection['grounded_candidate_count'] == 1
+            assert selection['minimum_confidence'] == 0.8
+            assert selection['top_probability'] == 1
+            assert selection['probability_margin'] == 1
+            assert body['guide_command']['action_type'] == ('tap' if outcome == 'selected' else 'observe_only')
+            assert body['guide_command']['target_node_id'] == ('display' if outcome == 'selected' else None)
+            assert client.post('/api/v1/agent/commands', json=payload).json() == body
+            assert len(calls) == turn + 1
+            payload = {'contract_version': payload['contract_version'], 'command_type': 'observe',
+                'request_id': f'visible-observe-{turn + 1}', 'session_id': body['session_id'],
+                'expected_version': body['session_version'], 'episode_id': body['episode_id'],
+                'device_context': payload['device_context'], 'accessibility_tree': payload['accessibility_tree']}
 
 
 @pytest.mark.parametrize('invalid', ['offscreen', 'windows', 'duplicate', 'blocked', 'excluded'])

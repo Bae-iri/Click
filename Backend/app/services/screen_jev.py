@@ -10,7 +10,7 @@ from app.services.goal_llm import _unique_object
 from ai_agent.runtime.targeting import eligible_nodes, target_key, selector_keywords, selector_evidence
 from ai_agent.runtime.matcher import MATCH_THRESHOLD, match_next_ui
 from ai_agent.runtime.keywords import any_keyword_matches
-from ai_agent.runtime.privacy import redact_text
+from ai_agent.runtime.screen_privacy import minimize_nodes, screen_status, finite_number
 from ai_agent.runtime.types import MatchResult, SafetyLevel
 from ai_agent.runtime.budget import remaining
 
@@ -22,20 +22,36 @@ class JevScreenResolver(JevGoalClassifier):
                 verification=None, excluded_target_keys=None, screen_bounds=None, attempt=None):
         self.last_diagnostics = {"provider": "jev", "mode": "primary", "called": False,
                                  "status": "not_configured"}
+        filter_started = monotonic()
         try:
             _, model, minimum = self.configuration()
+            setting = graph.definition.required_slots.get("setting", "")
+            if raw_nodes:
+                status = screen_status(raw_nodes, setting)
+                if status:
+                    self.last_diagnostics["status"] = status
+                    return None
+            nodes = minimize_nodes(nodes, setting)
+            if not any(n.label for n in nodes):
+                self.last_diagnostics["status"] = "unsupported_screen"
+                return None
             self.last_diagnostics["status"] = "invalid_candidates"
             if (len({n.node_id for n in nodes}) != len(nodes)
                     or len({n.window_id for n in nodes}) > 1):
                 return None
-            # All role/geometry/package eligible controls are considered, even if
-            # the local string matcher could not recognize their labels.
+            # Reviewed menu identities and unlabeled sliders are candidates.
+            # Unknown free-form labels never create an export exception.
             bindings = {}
             for transition in sorted(graph.transitions, key=lambda t: (t.from_state, t.priority, t.transition_id)):
                 if (graph.states[transition.from_state].verification_only
                         or transition.safety_level == SafetyLevel.BLOCKED):
                     continue
                 for node in eligible_nodes(transition, nodes, graph):
+                    # An approved menu identity cannot stand for a different
+                    # navigation target. Unlabelled sliders still use context.
+                    if (node.role in {"menu_item", "button", "app_icon"} and node.label
+                            and selector_evidence(node, transition, nodes, graph)[0] < MATCH_THRESHOLD):
+                        continue
                     if screen_bounds:
                         x, y = (node.bounds[0] + node.bounds[2]) / 2, (node.bounds[1] + node.bounds[3]) / 2
                         if not (screen_bounds[0] <= x < screen_bounds[2] and screen_bounds[1] <= y < screen_bounds[3]):
@@ -68,7 +84,8 @@ class JevScreenResolver(JevGoalClassifier):
             # A destination menu label is not the current page title. Keep the
             # independent screen text even when it is far from candidate controls.
             relevant.update(n.node_id for n in nodes if n.structure_role == "screen_text")
-            # Include siblings, parents and nearby descriptions around controls.
+            # Keep hierarchy between approved labels and controls. Descriptions
+            # and unrelated sibling text have already been removed.
             raw = {n.node_id: n for n in raw_nodes}
             parents = {raw[i].parent_id for i in relevant if i in raw}
             relevant.update(n.node_id for n in raw_nodes if n.parent_id in parents and n.parent_id is not None)
@@ -81,31 +98,45 @@ class JevScreenResolver(JevGoalClassifier):
                 self.last_diagnostics["status"] = "candidate_limit"
                 return None
             ids = {n.node_id: f"n{i}" for i,n in enumerate(selected_nodes)}
+            def parent_ref(node_id):
+                seen = {node_id}
+                parent = raw[node_id].parent_id if node_id in raw else None
+                while parent is not None and parent not in seen:
+                    if parent in ids:
+                        return ids[parent]
+                    seen.add(parent)
+                    parent = raw[parent].parent_id if parent in raw else None
+                return None
             criteria = {key: {"step": t.from_state, "transition": t.transition_id,
                 "action": t.action_type.value, "node": ids[n.node_id], "route_priority": t.priority,
                 "current_page": graph.states[t.from_state].name,
                 "destination_page": graph.states[t.to_state].name,
-                "purpose": t.action_name, "target_names": selector_keywords(t, graph)}
+                "target_names": selector_keywords(t, graph)}
                 for key,(t,n) in bindings.items()}
             criteria.update(wait_for_result="Wait for the previous action result without acting.",
                             insufficient_evidence="Screen or target is ambiguous or unrelated; request fresh evidence.")
             previous_action = attempt if attempt is not None else (session.pending_attempt if session else None)
-            state = {"goal": {"type": goal.goal_type, "slots": dict(graph.definition.required_slots)},
-                "nodes": [{"id": ids[n.node_id], "label": redact_text(n.label)[:200],
-                    "label_parts": [redact_text(part)[:200] for part in n.label_parts],
+            state = {"goal": {"type": graph.definition.goal_type,
+                    "slots": {k: v for k, v in graph.definition.required_slots.items()
+                              if k in {"setting", "direction"}}},
+                "nodes": [{"id": ids[n.node_id], "label": n.label,
+                    "label_parts": list(n.label_parts),
                     "structure_role": n.structure_role, "actionable": n.actionable,
-                    "role": n.role, "enabled": n.enabled, "value": n.value,
-                    "min": n.range_min, "max": n.range_max, "position": n.position_hint,
-                    "parent": ids.get(raw[n.node_id].parent_id) if n.node_id in raw else None}
+                    "role": n.role, "enabled": n.enabled, "value": finite_number(n.value),
+                    "min": finite_number(n.range_min), "max": finite_number(n.range_max),
+                    "position": n.position_hint if n.position_hint in {"top", "middle", "bottom", "unknown"} else "unknown",
+                    "parent": parent_ref(n.node_id)}
                     for n in selected_nodes],
-                "graph": {"states": [s.to_dict() for s in graph.states.values()],
-                    "transitions": [t.to_dict() for t in graph.transitions]},
-                "previous_action": ({k: previous_action.get(k) for k in
-                    ("transition_id", "baseline_value", "event_key")} if previous_action else None),
-                "result": {"status": verification.status.value, "evidence": verification.evidence} if verification else None}
-            # Do not transmit event identifiers.
-            if state["previous_action"]:
-                state["previous_action"]["event_key"] = bool(state["previous_action"]["event_key"])
+                "graph": {"states": [{"state_id": s.state_id, "name": s.name,
+                                      "verification_only": s.verification_only} for s in graph.states.values()],
+                    "transitions": [{"transition_id": t.transition_id, "from_state": t.from_state,
+                        "to_state": t.to_state, "action_type": t.action_type.value,
+                        "target_role": t.target_role, "priority": t.priority} for t in graph.transitions]},
+                "previous_action": ({"transition_id": previous_action.get("transition_id")
+                    if previous_action.get("transition_id") in {t.transition_id for t in graph.transitions} else None,
+                    "baseline_value": finite_number(previous_action.get("baseline_value")),
+                    "event_received": bool(previous_action.get("event_key"))} if previous_action else None),
+                "result": {"status": verification.status.value} if verification else None}
             payload = {"model": model, "state": state, "questions": {"screen": {
                 "type": "choice", "criteria": criteria,
                 "instructions": "Choose the current graph step AND the actual UI target from the observed screen. "
@@ -118,18 +149,24 @@ class JevScreenResolver(JevGoalClassifier):
                     "Use independent screen_text and the collection of controls to identify the current page. "
                     "A control_label or description belongs to a menu row, not the page title. "
                     "For example, a Settings page containing a Display row is still Settings; choose the route into Display. "
-                    "Use label_parts as the menu identity; label can also include a longer secondary description. "
+                    "Use label_parts as the approved menu identity. Unknown labels and descriptions are unavailable. "
                     "First identify the observed step, then choose its matching target. "
                     "Within that step prefer the lowest route_priority among equally supported routes. "
                     "Priority never supplies missing evidence or overrides the observed current step. "
                     "Otherwise abstain when uncertain."}}}
-            if len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode()) > 65536:
+            payload_bytes = len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode())
+            self.last_diagnostics.update(payload_bytes=payload_bytes, exported_node_count=len(selected_nodes),
+                filter_time_ms=round((monotonic() - filter_started) * 1000, 3))
+            if payload_bytes > 65536:
                 self.last_diagnostics["status"] = "input_too_large"
                 return None
             timeout = remaining(8.0)
             started = monotonic()
             self.last_diagnostics.update(called=True, status="provider_error")
-            response = (self._sender or self._post)(payload, timeout=timeout)
+            try:
+                response = (self._sender or self._post)(payload, timeout=timeout)
+            finally:
+                self.last_diagnostics["provider_latency_ms"] = round((monotonic() - started) * 1000, 3)
             if monotonic() - started > timeout:
                 self.last_diagnostics["status"] = "timeout"
                 return None
