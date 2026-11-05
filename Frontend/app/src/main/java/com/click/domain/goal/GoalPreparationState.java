@@ -19,7 +19,14 @@ public final class GoalPreparationState {
     public JSONObject question() { return data.optJSONObject("question"); }
     public String guidance() {
         JSONObject current = question();
-        return current == null ? message : current.optString("message", message);
+        String guidance = current == null ? message : current.optString("message", message);
+        // Keep the displayed question and TTS consistent with older server responses too.
+        if ("바꾸려는 대상과 원하는 변경을 다시 말씀해 주세요.".equals(guidance)
+                || "바꾸려는 대상과 원하는 변경을 다시 말씀해주세요.".equals(guidance))
+            return "원하시는 작업을 조금 더 자세히 말해주세요.";
+        if (guidance != null && (guidance.trim().equals("설명 요청") || guidance.trim().equals("추가 설명 요청")))
+            return "원하시는 작업을 조금 더 자세히 말해주세요.";
+        return guidance == null ? null : guidance.replace("요청", "작업");
     }
     public boolean ready() {
         JSONArray missing = data.optJSONArray("missing_fields");

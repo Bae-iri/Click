@@ -12,8 +12,8 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ImageView;
 import com.click.R;
-import com.click.ui.common.ClickArtworkView;
 import com.click.ui.common.ClickTextScale;
 
 /** 요청 확인 기준의 공통 헤더. 입력·진행·결과 화면도 이 규격을 그대로 사용한다. */
@@ -31,10 +31,12 @@ final class FloatingPanelHeader extends LinearLayout {
         identity = new LinearLayout(context);
         identity.setGravity(Gravity.CENTER_VERTICAL);
         identity.setMinimumHeight(dp(48));
-        ClickArtworkView brand = new ClickArtworkView(context, ClickArtworkView.Kind.WORDMARK);
+        ImageView brand = new ImageView(context);
+        brand.setImageResource(com.click.designpreview.R.drawable.clue7_floating);
+        brand.setScaleType(ImageView.ScaleType.FIT_CENTER);
         brand.setTag("floating_logo");
-        brand.setContentDescription("CLICK");
-        identity.addView(brand, new LayoutParams(dp(66), dp(24)));
+        brand.setContentDescription("클릭의 펭귄 친구 클루");
+        identity.addView(brand, new LayoutParams(dp(48), dp(48)));
         row.addView(identity, new LayoutParams(0, -2, 1));
         actions = new LinearLayout(context);
         actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
@@ -87,7 +89,7 @@ final class FloatingPanelHeader extends LinearLayout {
         int actionHeight = Math.max(dp(48), Math.max(replay.getMeasuredHeight(), collapse.getMeasuredHeight()));
         replay.getLayoutParams().height = collapse.getLayoutParams().height = actionHeight;
         // Replay keeps its slot when unavailable; the logo always starts at the left edge.
-        boolean stacked = dp(66 + 12 + 8) + replay.getMeasuredWidth() + collapse.getMeasuredWidth()
+        boolean stacked = dp(48 + 12 + 8) + replay.getMeasuredWidth() + collapse.getMeasuredWidth()
                 > MeasureSpec.getSize(width);
         int orientation = stacked ? VERTICAL : HORIZONTAL;
         if (row.getOrientation() != orientation) {

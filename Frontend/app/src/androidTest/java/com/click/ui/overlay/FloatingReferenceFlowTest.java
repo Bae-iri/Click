@@ -32,6 +32,45 @@ public class FloatingReferenceFlowTest {
                 new JSONObject("{\"goal_type\":\"settings.font_size.increase\"}"), "글자를 키울게요.");
     }
 
+    @Test public void vagueTextQuestionHasOneEditorAndSubmitsOnlyItsAnswer() {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(activity -> {
+                try {
+                    for (float scale : new float[]{1f, 2f}) {
+                        Configuration config = new Configuration(activity.getResources().getConfiguration()); config.fontScale = scale;
+                        Replies replies = new Replies();
+                        TaskFlowOverlayView panel = new TaskFlowOverlayView(activity.createConfigurationContext(config), replies);
+                        host(activity, panel, 340);
+                        JSONObject question = new JSONObject().put("id", "rephrase").put("kind", "text")
+                                .put("message", "바꾸려는 대상과 원하는 변경을 다시 말씀해 주세요.")
+                                .put("placeholder", "예: 글자 크기를 키워줘").put("max_length", 200);
+                        JSONObject data = new JSONObject().put("version", "goal-inputs.v1").put("id", "clarify")
+                                .put("status", "needs_input").put("source_text", "이거 바꿔줘")
+                                .put("values", new JSONObject()).put("question", question);
+                        panel.preparation(new GoalPreparationState(data, null, "다시 확인해 주세요."));
+                        measure(panel, 340, 650);
+                        assertEquals(1, editorCount(panel));
+                        assertNull(find(panel, "직접 입력하기"));
+                        assertFalse(find(panel, "입력하기").isEnabled());
+                        EditText input = (EditText) description(panel, "확인할 내용 입력");
+                        input.setText("   "); assertFalse(find(panel, "입력하기").isEnabled());
+                        input.setText("화면 밝기를 낮춰줘");
+                        find(panel, "입력하기").performClick();
+                        assertEquals("화면 밝기를 낮춰줘", replies.answer);
+                        assertNull(replies.rephrased);
+                        save(panel, "single-clarification-" + scale);
+                    }
+                } catch (Exception error) { throw new AssertionError(error); }
+            });
+        }
+    }
+    private static int editorCount(View view) {
+        int count = view instanceof EditText ? 1 : 0;
+        if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++)
+            count += editorCount(((ViewGroup) view).getChildAt(i));
+        return count;
+    }
+
     @Test public void reviewKeepsSelectionConfirmationAndEditingSeparateAtLargeFonts() {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
             for (float scale : new float[]{1f, 1.5f, 2f}) {
@@ -44,18 +83,18 @@ public class FloatingReferenceFlowTest {
                         host(activity, panel, 340);
                         panel.preparation(question()); measure(panel, 340, 650);
                         controlsWork(panel, replies);
-                        assertFalse(find(panel, "다음 단계").isEnabled());
+                        assertFalse(find(panel, "입력하기").isEnabled());
                         RadioButton phone = (RadioButton) find(panel, "휴대폰 전체");
                         RadioButton app = (RadioButton) find(panel, "특정 앱 안에서만");
                         phone.performClick(); app.performClick();
                         assertFalse(phone.isChecked()); assertTrue(app.isChecked()); assertNull(replies.answer);
-                        find(panel, "다음 단계").performClick(); assertEquals("app", replies.answer);
+                        find(panel, "입력하기").performClick(); assertEquals("app", replies.answer);
                         readable(phone); readable(app);
                         save(panel, "reference-question-" + scale);
                         find(panel, "직접 입력하기").performClick();
-                        assertFalse(app.isChecked()); assertFalse(find(panel, "다음 단계").isShown());
-                        ((EditText) description(panel, "요청 내용 수정")).setText("밝기를 높여줘");
-                        find(panel, "수정한 요청 확인").performClick(); assertEquals("밝기를 높여줘", replies.rephrased);
+                        assertFalse(app.isChecked()); assertFalse(find(panel, "입력하기").isShown());
+                        ((EditText) description(panel, "입력한 내용 수정")).setText("밝기를 높여줘");
+                        find(panel, "수정한 내용 확인").performClick(); assertEquals("밝기를 높여줘", replies.rephrased);
                         panel.preparation(ready()); measure(panel, 340, 650);
                         controlsWork(panel, replies);
                         assertNull(find(panel, "1/2")); assertNull(find(panel, "2/2"));
@@ -66,7 +105,7 @@ public class FloatingReferenceFlowTest {
                         find(panel, "안내 시작하기").performClick(); assertTrue(replies.confirmed);
                         find(panel, "내용 수정").performClick();
                         assertFalse(find(panel, "안내 시작하기").isShown());
-                        assertTrue(find(panel, "수정한 요청 확인").isShown());
+                        assertTrue(find(panel, "수정한 내용 확인").isShown());
                     } catch (Exception error) { throw new AssertionError(error); }
                 });
             }
@@ -105,9 +144,9 @@ public class FloatingReferenceFlowTest {
                         View.MeasureSpec.makeMeasureSpec(panel.getWindowHeight(ClickOverlayLayout.Mode.MENU), View.MeasureSpec.EXACTLY));
                 panel.layout(0, 0, panel.getMeasuredWidth(), panel.getMeasuredHeight()); save(panel, "reference-input");
                 panel.setRequestStatus("요청을 진행하고 있어요", true);
-                assertTrue("Active request can be stopped from the menu", find(panel, "요청 중지").isShown());
+                assertTrue("Active request can be stopped from the menu", find(panel, "끝내기").isShown());
                 panel.setRequestStatus(null, false);
-                assertFalse(find(panel, "요청 중지").isShown());
+                assertFalse(find(panel, "끝내기").isShown());
                 ((View) find(panel, "말로 입력").getParent()).performClick();
                 assertEquals(ClickOverlayLayout.Mode.VOICE, panel.getMode()); assertFalse(panel.isVoiceInputActive());
                 panel.openMenu(); ((View) find(panel, "글로 입력").getParent()).performClick();
@@ -128,7 +167,7 @@ public class FloatingReferenceFlowTest {
                         if (screen == 0) { panel.preparation(question()); find(panel, "휴대폰 전체").performClick(); }
                         else if (screen == 1) panel.preparation(ready());
                         else if (screen == 2) { panel.progress("글자 크기", null, "디스플레이 메뉴를 눌러주세요.", false); panel.setGuidanceProgress(2, 3); panel.setGuidanceTarget("디스플레이"); }
-                        else panel.observationRecovery("글자 크기", "현재 화면에서 다음 항목을 찾지 못했어요. 화면을 이동하셨다면 ‘화면 다시 확인하기’를 눌러주세요.", () -> {});
+                        else panel.observationRecovery("글자 크기", "현재 화면에서 다음 항목을 찾지 못했어요. 화면을 이동하셨다면 ‘다시 시도하기’를 눌러주세요.", () -> {});
                         host(activity, panel, 340);
                     } catch (Exception error) { throw new AssertionError(error); }
                 });
@@ -138,7 +177,7 @@ public class FloatingReferenceFlowTest {
                     footerVisible(shown[0]);
                     if (screen == 0) readable(find(shown[0], "휴대폰 전체"));
                     if (screen == 1) readable(find(shown[0], "안내 시작하기"));
-                    if (screen == 3) readable(find(shown[0], "화면 다시 확인하기"));
+                    if (screen == 3) readable(find(shown[0], "다시 시도하기"));
                     save(shown[0], "reference-attached-" + screen + "-" + scale);
                     save((View) shown[0].getParent(), "compact-host-" + screen + "-" + scale);
                 });
@@ -146,7 +185,7 @@ public class FloatingReferenceFlowTest {
         }
     }
     private static void footerVisible(TaskFlowOverlayView panel) {
-        for (String label : new String[]{"일시정지", "요청 중지"}) {
+        for (String label : new String[]{"멈추기", "끝내기"}) {
             TextView button = find(panel, label);
             readable(button);
             int y = top(panel, button);
@@ -156,8 +195,8 @@ public class FloatingReferenceFlowTest {
     }
     private static void controlsWork(TaskFlowOverlayView panel, Replies replies) {
         footerVisible(panel);
-        find(panel, "일시정지").performClick(); assertEquals("pause_task", replies.command);
-        find(panel, "요청 중지").performClick(); assertEquals("cancel_task", replies.command);
+        find(panel, "멈추기").performClick(); assertEquals("pause_task", replies.command);
+        find(panel, "끝내기").performClick(); assertEquals("cancel_task", replies.command);
     }
     private static void host(HomeActivity activity, View panel, int width) {
         FrameLayout host = new FrameLayout(activity); host.setBackgroundColor(0xFFEAF0FA);

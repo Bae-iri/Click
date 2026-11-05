@@ -95,7 +95,7 @@ public class FloatingSelectionDesignTest {
                     } catch (Exception e) { throw new AssertionError(e); }
                     measure(panel, 340, 650);
                     assertNull(panel.findViewById(R.id.task_flow_input));
-                    assertFalse(find(panel, "다음 단계").isEnabled());
+                    assertFalse(find(panel, "입력하기").isEnabled());
                     RadioButton phone = (RadioButton) find(panel, "휴대폰 전체");
                     RadioButton app = (RadioButton) find(panel, "특정 앱 안에서만");
                     phone.performClick(); app.performClick();
@@ -123,15 +123,15 @@ public class FloatingSelectionDesignTest {
                     panel.setNarrationState(false, false);
                     find(panel, "직접 입력하기").performClick();
                     assertFalse(phone.isChecked()); assertFalse(app.isChecked());
-                    assertFalse(find(panel, "다음 단계").isShown());
-                    assertTrue(find(panel, "수정한 요청 확인").isShown());
+                    assertFalse(find(panel, "입력하기").isShown());
+                    assertTrue(find(panel, "수정한 내용 확인").isShown());
                     phone.performClick();
-                    assertFalse(find(panel, "수정한 요청 확인").isShown());
-                    assertTrue(find(panel, "다음 단계").isShown());
-                    find(panel, "다음 단계").performClick(); assertEquals("system", responses.answer);
+                    assertFalse(find(panel, "수정한 내용 확인").isShown());
+                    assertTrue(find(panel, "입력하기").isShown());
+                    find(panel, "입력하기").performClick(); assertEquals("system", responses.answer);
                     find(panel, "직접 입력하기").performClick();
                     input(panel).setText("화면 밝기를 낮춰줘");
-                    find(panel, "수정한 요청 확인").performClick();
+                    find(panel, "수정한 내용 확인").performClick();
                     assertEquals("화면 밝기를 낮춰줘", responses.rephrased);
                     panel.progress("밝기 낮추기", null, "슬라이더를 왼쪽으로 움직여 주세요.");
                     panel.findViewById(R.id.task_flow_replay).performClick();
@@ -215,7 +215,7 @@ public class FloatingSelectionDesignTest {
                     assertNoStatusViews(surface[0]);
                     for (String status : new String[]{"화면을 분석하고 있어요…", "다음 화면을 확인 중", "요청을 처리하고 있어요", "현재 진행", "2/4"})
                         assertNull(find(surface[0], status));
-                    assertReadable(find(surface[0], "요청 중지"));
+                    assertReadable(find(surface[0], "끝내기"));
                     if (inputMode) {
                         assertEquals("화면 밝기 낮춰줘", input(surface[0]).getText().toString());
                     } else {

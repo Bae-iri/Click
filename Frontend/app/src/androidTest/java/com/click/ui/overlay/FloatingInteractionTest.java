@@ -38,13 +38,14 @@ public class FloatingInteractionTest {
     @Test public void expandedPanelsKeepInputCompactAndFeedbackReadable() {
         instrumentation.runOnMainSync(() -> {
             ClickOverlayLayout control = new ClickOverlayLayout(instrumentation.getTargetContext());
+            render(control, "collapsed-clue");
             control.performClick();
             render(control, "menu");
             control.openVoice();
             control.showRecognizedSpeechResult("글자 크기를 키워줘");
             render(control, "voice");
             findText(control, "취소").performClick();
-            clickAncestor(findText(control, "글로 입력하기"));
+            clickAncestor(findText(control, "글로 입력"));
             assertEquals(ClickOverlayLayout.Mode.TEXT, control.getMode());
             control.setDraftText("글자 크기를 키워줘");
             assertNotNull(findText(control, "글자 크기를 키워줘"));
@@ -82,8 +83,8 @@ public class FloatingInteractionTest {
                 assertNotNull("The host must have a real interactive control", control);
                 control.performClick();
                 assertEquals(ClickOverlayLayout.Mode.MENU, control.getMode());
-                assertNotNull(findText(control, "말로 입력하기"));
-                clickAncestor(findText(control, "글로 입력하기"));
+                assertNotNull(findText(control, "말로 입력"));
+                clickAncestor(findText(control, "글로 입력"));
                 assertEquals(ClickOverlayLayout.Mode.TEXT, control.getMode());
                 assertNotNull(findText(control, "말로 입력하기"));
             });
@@ -149,7 +150,7 @@ public class FloatingInteractionTest {
         }
     }
 
-    @Test public void realTimerStartsDraggingExpandedControlOnce() {
+    @Test public void slowPressOnCollapseButtonNeverStartsDragging() {
         try (ActivityScenario<HomeActivity> scenario = launchHost()) {
             final ClickOverlayLayout[] control = {null};
             final int[] closeCount = {0};
@@ -172,16 +173,32 @@ public class FloatingInteractionTest {
             });
             instrumentation.waitForIdleSync();
             final long down = SystemClock.uptimeMillis();
-            scenario.onActivity(activity -> send(control[0], down, MotionEvent.ACTION_DOWN,
-                    control[0].getClickCenterX(ClickOverlayLayout.Mode.VOICE),
-                    control[0].getClickCenterY(ClickOverlayLayout.Mode.VOICE)));
+            final android.graphics.Rect collapseBounds = new android.graphics.Rect();
+            scenario.onActivity(activity -> {
+                TextView button = findText(control[0], "줄이기");
+                button.getDrawingRect(collapseBounds);
+                control[0].offsetDescendantRectToMyCoords(button, collapseBounds);
+                send(control[0], down, MotionEvent.ACTION_DOWN,
+                        collapseBounds.exactCenterX(), collapseBounds.exactCenterY());
+            });
             SystemClock.sleep(ViewConfiguration.getLongPressTimeout() + 100);
             scenario.onActivity(activity -> {
+                TextView button = findText(control[0], "줄이기");
+                assertTrue("Pressed button bounds=" + collapseBounds + ", control="
+                        + control[0].getWidth() + "x" + control[0].getHeight(), button.isPressed());
+                send(control[0], down, MotionEvent.ACTION_MOVE,
+                        collapseBounds.exactCenterX() + dp(control[0], 14),
+                        collapseBounds.exactCenterY());
                 send(control[0], down, MotionEvent.ACTION_UP,
-                        control[0].getClickCenterX(ClickOverlayLayout.Mode.VOICE),
-                        control[0].getClickCenterY(ClickOverlayLayout.Mode.VOICE));
-                assertEquals(1, closeCount[0]);
-                assertEquals(ClickOverlayLayout.Mode.VOICE, control[0].getMode());
+                        collapseBounds.exactCenterX() + dp(control[0], 14),
+                        collapseBounds.exactCenterY());
+            });
+            // Android buttons post their click after ACTION_UP; verify after that dispatch.
+            instrumentation.waitForIdleSync();
+            scenario.onActivity(activity -> {
+                assertEquals("The collapse button is never a drag handle", 0, closeCount[0]);
+                assertEquals(ClickOverlayLayout.Mode.COLLAPSED, control[0].getMode());
+                assertTrue(control[0].isShown());
             });
         }
     }

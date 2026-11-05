@@ -13,11 +13,16 @@ public final class HomeFavoritesStore {
 
     public HomeFavoritesStore(Context context) {
         preferences = context.getSharedPreferences("home_favorites", Context.MODE_PRIVATE);
+        if (!preferences.getBoolean("accessibility_added_v1", false)) {
+            Set<String> ids = selectedIds();
+            ids.add("accessibility");
+            preferences.edit().putStringSet(KEY, ids).putBoolean("accessibility_added_v1", true).apply();
+        }
     }
 
     public Set<String> selectedIds() {
         Set<String> defaults = new HashSet<>(Arrays.asList(
-                "kakao", "font_size", "brightness", "media_volume", "phone", "tutorial"));
+                "font_size", "brightness", "media_volume", "phone", "tutorial", "accessibility"));
         return new HashSet<>(preferences.getStringSet(KEY, defaults));
     }
 

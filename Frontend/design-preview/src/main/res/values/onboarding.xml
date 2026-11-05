@@ -19,7 +19,7 @@
     <string name="onboarding_question_title">궁금한 화면을\n물어보세요</string>
     <string name="onboarding_question_description">지금 보고 있는 화면을\n클릭이 이해하고 알려드려요.</string>
     <string name="onboarding_question_bubble">이 버튼이\n뭔가요?</string>
-    <string name="onboarding_task_title">원하는 것을\n대신 찾아드려요</string>
+    <string name="onboarding_task_title">혼자 할 수 있도록\n클릭이 도와드려요</string>
     <string name="onboarding_task_quote">“휴대폰 글자를 크게 보고 싶어요”</string>
     <string name="onboarding_task_bubble">클릭이\n도와드릴게요!</string>
     <string name="onboarding_ready_title">이제, 더 편하게\n사용해보세요!</string>
@@ -30,7 +30,7 @@
     <string name="onboarding_next">다음</string>
     <string name="onboarding_previous">이전</string>
     <string name="onboarding_welcome_progress">클릭 소개</string>
-    <string name="onboarding_step_progress">온보딩, 3단계 중 %1$d단계</string>
+    <string name="onboarding_step_progress">온보딩, 2단계 중 %1$d단계</string>
 
     <style name="OnboardingQuietButton" parent="android:style/Widget.Material.Button.Borderless">
         <item name="android:background">@drawable/onboarding_skip_background</item>

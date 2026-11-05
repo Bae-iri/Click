@@ -8,11 +8,15 @@ import android.widget.EditText;
 import com.click.HomeActivity;
 import com.click.R;
 import com.click.core.permission.PermissionStatus;
+import com.click.data.local.AuthTokenStore;
 import com.click.service.accessibility.ClickAccessibilityService;
 import com.click.service.overlay.ClickOverlayService;
 import org.junit.Test;
+import org.junit.Before;
+import org.junit.After;
 import org.junit.runner.RunWith;
 import org.mockito.MockedStatic;
+import org.mockito.MockedConstruction;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
@@ -24,6 +28,17 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 34, application = Application.class)
 public class HomeRequestTest {
+    private MockedConstruction<AuthTokenStore> auth;
+
+    @Before public void mockDeviceTokenStorage() {
+        // Home now opens the account-scoped request library; Android Keystore is device-only.
+        auth = mockConstruction(AuthTokenStore.class);
+    }
+
+    @After public void closeTokenStorageMock() {
+        auth.close();
+    }
+
     @Test public void microphoneOpensVoiceWithoutSubmittingTheDraft() {
         withHome(activity -> {
             ((EditText) activity.findViewById(R.id.home_request_input)).setText("작성 중인 요청");

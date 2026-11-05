@@ -25,15 +25,25 @@
             android:layout_marginTop="28dp" android:textSize="28sp"
             android:textColor="@color/account_ink" android:text="@string/account_start_title" />
         <TextView style="@style/SignupDescription"
-            android:layout_marginTop="12dp" android:textSize="18sp" android:lineSpacingExtra="5dp"
+            android:layout_marginTop="12dp" android:textSize="15sp" android:lineSpacingExtra="5dp"
             android:textColor="@color/account_ink" android:text="@string/account_start_description" />
-        <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:minHeight="244dp" android:layout_weight="1"
-            android:layout_marginVertical="16dp">
-            <com.click.designpreview.HomeStartArtworkView
-                android:layout_width="match_parent" android:layout_height="180dp"
-                android:layout_gravity="center" android:importantForAccessibility="no" />
-        </FrameLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:gravity="center"
+            android:layout_weight="1" android:layout_marginVertical="16dp">
+            <TextView android:id="@+id/account_start_welcome"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:background="@drawable/clue_welcome_bubble"
+                android:paddingHorizontal="20dp" android:paddingVertical="12dp"
+                android:gravity="center" android:text="@string/clue_welcome"
+                android:textColor="@color/account_ink" android:textSize="16sp"
+                android:fontFamily="@font/pretendard_medium" android:lineSpacingExtra="4dp" />
+            <View android:layout_width="22dp" android:layout_height="12dp"
+                android:layout_marginTop="-1dp" android:background="@drawable/clue_welcome_tail"
+                android:importantForAccessibility="no" />
+            <com.click.designpreview.ClueArtworkView android:id="@+id/account_start_artwork"
+                android:layout_width="match_parent" android:layout_height="216dp"
+                android:src="@drawable/clue2_signup" android:importantForAccessibility="no" />
+        </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical">
             <FrameLayout android:id="@+id/account_start_kakao"

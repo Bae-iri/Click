@@ -100,14 +100,17 @@ public final class MenuActivity extends AppCompatActivity {
         addRow(settings, MenuIconView.Kind.AUTOMATION, "자동으로 도와주기", "화면 이동과 설정 조절을 도와드려요", false,
                 view -> showAutomationSettings());
         divider(settings);
-        addRow(settings, MenuIconView.Kind.SHIELD, "클릭 개선 참여", "사용 결과를 바탕으로 클릭을 더 편리하게 만들어요", false,
+        addRow(settings, MenuIconView.Kind.PERSONALIZE, "클릭 개선 참여", "사용 결과를 바탕으로 클릭을 더 편리하게 만들어요", false,
                 view -> showGraphConsent());
         add(page, settings, 10);
 
-        section(page, "화면 설정");
+        section(page, "클릭 설정");
         LinearLayout displaySettings = group();
-        addRow(displaySettings, MenuIconView.Kind.DOCUMENT, "화면 설정", "클릭 앱 글자 크기를 조절해요", false,
+        addRow(displaySettings, MenuIconView.Kind.SETTINGS, "화면 설정", "클릭 앱 글자 크기를 조절해요", false,
                 view -> startActivity(new Intent(this, DisplaySettingsActivity.class)));
+        divider(displaySettings);
+        addRow(displaySettings, MenuIconView.Kind.CLUE, "클루에 대해서", "클릭과 함께하는 펭귄 친구를 소개해요", false,
+                view -> startActivity(new Intent(this, AboutClueActivity.class)));
         add(page, displaySettings, 10);
 
         section(page, "이용 안내");
@@ -308,7 +311,8 @@ public final class MenuActivity extends AppCompatActivity {
     }
 
     private void showPermissionStatus() {
-        boolean accessibility = PermissionStatus.isAccessibilityEnabled(this);
+        boolean accessibility = PermissionStatus.isAccessibilityEnabled(this)
+                && com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() != null;
         boolean overlay = Settings.canDrawOverlays(this);
         boolean microphone = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
                 == PackageManager.PERMISSION_GRANTED;
@@ -316,7 +320,9 @@ public final class MenuActivity extends AppCompatActivity {
         final android.app.Dialog[] dialog = {null};
         add(statuses, permissionRow("접근성", "화면을 읽고 눌러야 할 곳을 안내해요.", accessibility, () -> {
             if (dialog[0] != null) dialog[0].dismiss();
-            startActivity(new Intent(this, com.click.designpreview.AccessibilityHelpActivity.class));
+            startActivity(new Intent(this, com.click.designpreview.PermissionGuideActivity.class)
+                    .putExtra(com.click.designpreview.PermissionGuideActivity.EXTRA_RECONNECT,
+                            !accessibility && PermissionStatus.isAccessibilityEnabled(this)));
         }), 0);
         add(statuses, permissionRow("다른 앱 위 표시", "다른 앱에서도 클릭 안내를 볼 수 있어요.", overlay, () -> {
             if (dialog[0] != null) dialog[0].dismiss();
@@ -409,8 +415,11 @@ public final class MenuActivity extends AppCompatActivity {
 
     private void confirmAccountAction(boolean delete) {
         LinearLayout content = vertical();
-        add(content, dialogNotice(delete ? MenuIconView.Kind.TRASH : MenuIconView.Kind.LOGOUT,
-                delete ? "탈퇴 전에 꼭 확인해 주세요" : "잠시 이용을 마치시나요?"), 0);
+        com.click.designpreview.ClueArtworkView clue = new com.click.designpreview.ClueArtworkView(this);
+        clue.setImageResource(com.click.designpreview.R.drawable.clue6_goodbye);
+        clue.setTag("account_goodbye_clue");
+        content.addView(clue, new LinearLayout.LayoutParams(-1, dp(184)));
+
         if (delete) {
             add(content, dialogSection("삭제되는 정보",
                     "서버에 저장된 계정과 연결된 이용 기록을 삭제해요.",
@@ -428,13 +437,15 @@ public final class MenuActivity extends AppCompatActivity {
         errorMessage.setVisibility(View.GONE);
         add(content, errorMessage, 12);
         Dialog dialog = ClickDialog.show(this, delete ? "회원 탈퇴를 진행할까요?" : "로그아웃할까요?",
-                content, delete ? "회원 탈퇴" : "로그아웃", null, "취소");
+                content, delete ? "회원 탈퇴" : "로그아웃", null, "취소", delete);
         TextView confirm = dialog.findViewById(android.R.id.button1);
         View cancel = dialog.findViewById(android.R.id.button2);
+        View close = dialog.getWindow().getDecorView().findViewWithTag("click_dialog_close");
         confirm.setOnClickListener(view -> {
             if (!confirm.isEnabled()) return;
             confirm.setEnabled(false);
             cancel.setEnabled(false);
+            close.setEnabled(false);
             confirm.setText("처리 중이에요…");
             errorMessage.setVisibility(View.GONE);
             dialog.setCancelable(false);
@@ -447,6 +458,7 @@ public final class MenuActivity extends AppCompatActivity {
                     if (isFinishing() || isDestroyed()) return;
                     confirm.setEnabled(true);
                     cancel.setEnabled(true);
+                    close.setEnabled(true);
                     confirm.setText(delete ? "다시 탈퇴하기" : "다시 로그아웃하기");
                     dialog.setCancelable(true);
                     errorMessage.setText(delete
@@ -551,15 +563,32 @@ public final class MenuActivity extends AppCompatActivity {
 
     /** Rounded, consistently weighted pictograms paired with the home card palette. */
     private final class MenuIconView extends View {
-        enum Kind { SHIELD, PERSONALIZE, AUTOMATION, BOOK, DOCUMENT, LOCK, LOGOUT, TRASH, BACK, NEXT }
+        enum Kind { CLUE, SETTINGS, SHIELD, PERSONALIZE, AUTOMATION, BOOK, DOCUMENT, LOCK, LOGOUT, TRASH, BACK, NEXT }
         private final Kind kind;
         private final boolean danger;
+        private final android.graphics.drawable.Drawable artwork;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path path = new Path();
         MenuIconView(Kind kind, boolean danger) {
             super(MenuActivity.this);
             this.kind = kind;
             this.danger = danger;
+            int resource = 0;
+            switch (kind) {
+                case CLUE: resource = com.click.designpreview.R.drawable.clue2_signup; break;
+                case LOGOUT: resource = com.click.designpreview.R.drawable.icon_logout; break;
+                case SETTINGS: resource = com.click.designpreview.R.drawable.icon_setting; break;
+                case SHIELD: resource = com.click.designpreview.R.drawable.icon_shield; break;
+                case PERSONALIZE: resource = com.click.designpreview.R.drawable.icon_light; break;
+                case AUTOMATION: resource = com.click.designpreview.R.drawable.icon_lightning; break;
+                case BOOK: resource = com.click.designpreview.R.drawable.icon_map; break;
+                case DOCUMENT: resource = com.click.designpreview.R.drawable.icon_checklist; break;
+                case LOCK: resource = com.click.designpreview.R.drawable.icon_lock; break;
+                case TRASH: resource = com.click.designpreview.R.drawable.icon_trashcan_red; break;
+                default: break;
+            }
+            artwork = resource == 0 ? null : getDrawable(resource);
+
             setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         }
         private void stroke(int color) {
@@ -568,6 +597,13 @@ public final class MenuActivity extends AppCompatActivity {
             paint.setStrokeWidth(2.1f);
         }
         @Override protected void onDraw(Canvas canvas) {
+            if (artwork != null) {
+                int side = Math.min(getWidth(), getHeight());
+                int left = (getWidth() - side) / 2, top = (getHeight() - side) / 2;
+                artwork.setBounds(left, top, left + side, top + side);
+                artwork.draw(canvas);
+                return;
+            }
             float size = Math.min(getWidth(), getHeight());
             canvas.save();
             canvas.translate((getWidth() - size) / 2, (getHeight() - size) / 2);

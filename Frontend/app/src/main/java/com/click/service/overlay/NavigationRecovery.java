@@ -12,7 +12,7 @@ public final class NavigationRecovery {
     private final List<String> path = new ArrayList<>();
     private String anchor, anchorPackage, lastKey, lastPackage, requestedFrom;
     private int unplannedTaps;
-    private boolean backTried;
+    private boolean backTried, manualNavigation;
     private Action hint = Action.NONE, awaiting = Action.NONE;
     public static boolean isHome(String pkg) {
         return pkg != null && (pkg.equals("com.android.launcher3")
@@ -48,7 +48,7 @@ public final class NavigationRecovery {
         if (index >= 0) while (path.size() > index + 1) path.remove(path.size() - 1);
         else { path.add(anchor); if (path.size() > 12) path.remove(0); }
         lastKey = anchor; lastPackage = screen.packageName;
-        unplannedTaps = 0; backTried = false; hint = awaiting = Action.NONE;
+        unplannedTaps = 0; backTried = manualNavigation = false; hint = awaiting = Action.NONE;
     }
     public void unplannedTap() { unplannedTaps++; }
     public Action recommend(ScreenSnapshot current) {
@@ -58,8 +58,22 @@ public final class NavigationRecovery {
         return hint;
     }
     public void requested(Action action, ScreenSnapshot before) {
+        manualNavigation = false;
         hint = action; awaiting = action; requestedFrom = key(before);
         if (action == Action.BACK) backTried = true;
+    }
+    /** A physical Back press reports navigation; it does not promise a known graph page. */
+    public void requestedByUser(Action action, ScreenSnapshot before) {
+        if (awaiting == action) return; // Preserve an explicit recovery's stricter check.
+        requested(action, before);
+        manualNavigation = true;
+    }
+    public boolean finishManualWait() {
+        if (!manualNavigation) return false;
+        manualNavigation = false;
+        hint = awaiting = Action.NONE;
+        requestedFrom = null;
+        return true;
     }
     /** NONE means either no navigation, or keep waiting; inspect hint() after calling. */
     public Action observe(ScreenSnapshot screen) {
@@ -69,7 +83,8 @@ public final class NavigationRecovery {
         if (isHomeScreen(screen) && (awaiting == Action.HOME || lastPackage != null && !isHome(lastPackage))) {
             observed = Action.HOME;
         } else if (awaiting == Action.BACK && !Objects.equals(current, requestedFrom)) {
-            if (Objects.equals(current, anchor) || path.contains(current)
+            if (manualNavigation && screen.nodes.stream().noneMatch(n -> n.visibleToUser)) return Action.NONE;
+            if (manualNavigation || Objects.equals(current, anchor) || path.contains(current)
                     && path.indexOf(current) < path.indexOf(anchor)) observed = Action.BACK;
             else { awaiting = Action.NONE; hint = Action.HOME; }
         } else if (!Objects.equals(lastKey, current) && path.contains(current)
@@ -78,16 +93,16 @@ public final class NavigationRecovery {
             observed = Action.BACK;
         }
         if (observed == Action.HOME) { path.clear(); anchor = anchorPackage = null; unplannedTaps = 0; }
-        if (observed != Action.NONE) { hint = awaiting = Action.NONE; requestedFrom = null; }
+        if (observed != Action.NONE) { hint = awaiting = Action.NONE; requestedFrom = null; manualNavigation = false; }
         lastKey = current; lastPackage = screen.packageName;
         return observed;
     }
     public Action hint() { return hint; }
     public Action awaiting() { return awaiting; }
     public boolean backAttempted() { return backTried; }
-    public void forceHome() { hint = Action.HOME; awaiting = Action.NONE; }
+    public void forceHome() { hint = Action.HOME; awaiting = Action.NONE; manualNavigation = false; }
     public void clear() {
         path.clear(); anchor = anchorPackage = lastKey = lastPackage = requestedFrom = null;
-        unplannedTaps = 0; backTried = false; hint = awaiting = Action.NONE;
+        unplannedTaps = 0; backTried = manualNavigation = false; hint = awaiting = Action.NONE;
     }
 }

@@ -33,14 +33,14 @@ import org.json.JSONObject;
 
 
 /**
- * 요청 확인, 단계별 안내, 결과 확인을 보여주는 플로팅 안내창. Java 코드로 레이아웃을 구성한다.
+ * 내용 확인, 단계별 안내, 결과 확인을 보여주는 플로팅 안내창. Java 코드로 레이아웃을 구성한다.
  * 작은 플로팅 버튼/음성·글 입력 메뉴는 ClickOverlayLayout.java에서 수정한다.
  *
  * 수정 위치 안내 (파일에서 "[UI 수정]"을 검색):
  * - 색상: 아래 BLUE/INK/PALE_BLUE 등의 상수. ClickUi의 공통 색상과 별도로 정의되어 있다.
  * - 공통 헤더/구분선: FloatingPanelHeader.java. 창 너비: FloatingPanelStyle.PANEL_WIDTH_DP.
  * - 모드별 안쪽 여백: updateBubblePadding().
- * - 요청 확인 화면: reviewStage(), addRequestBox(), addQuestionNarration(), choiceCards().
+ * - 내용 확인 화면: reviewStage(), addRequestBox(), addQuestionNarration(), choiceCards().
  * - 진행/결과 화면: progress(), result(), completed().
  * - 줄인 안내 말풍선: setMinimizedProgress(), CompactBubbleBackground.
  * - 버튼 스타일: quietButton(), primaryButton(), secondaryButton(), styleReviewButton().
@@ -189,12 +189,12 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
         controls = new LinearLayout(context);
         controls.setGravity(Gravity.CENTER);
-        pause = FloatingPanelStyle.compactButton(context, "일시정지", () -> listener.control("pause_task"));
+        pause = FloatingPanelStyle.compactButton(context, "멈추기", () -> listener.control("pause_task"));
         LayoutParams pauseParams = new LayoutParams(0, -2, 1f);
         pauseParams.rightMargin = dp(6);
         controls.addView(pause, pauseParams);
-        Button stop = FloatingPanelStyle.compactButton(context, "요청 중지", () -> listener.control("cancel_task"));
-        stop.setContentDescription("처리 중인 요청 중지");
+        Button stop = FloatingPanelStyle.compactButton(context, "끝내기", () -> listener.control("cancel_task"));
+        stop.setContentDescription("진행 중인 안내 끝내기");
         stop.setTextColor(0xFF536885);
         LayoutParams stopParams = new LayoutParams(0, -2, 1f);
         stopParams.leftMargin = dp(6);
@@ -267,7 +267,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if (request != null && !request.trim().isEmpty() && !"선택한 작업".equals(request)) requestSummary = request;
     }
     public String phaseLabel() {
-        return reviewScreen ? (reviewStep == 1 ? "상세정보 확인" : "요청 확인")
+        return reviewScreen ? (reviewStep == 1 ? "상세정보 확인" : "내용 확인")
                 : hasProgress() ? "안내 중" : heading.getText().toString();
     }
     // Only execution has a counter. Unknown totals must never imply a made-up plan.
@@ -290,9 +290,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if (label == null || label.trim().isEmpty()) return;
         String target = label.trim();
         LinearLayout section = new LinearLayout(getContext()); section.setOrientation(VERTICAL);
-        TextView help = text("안내를 접고 화면에서 이 항목을 눌러 주세요.", 15);
-        help.setTextColor(SECONDARY);
-        section.addView(help, spaced(8));
         LinearLayout row = new LinearLayout(getContext()); row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(12), dp(10), dp(12), dp(10));
         row.setMinimumHeight(dp(60)); row.setBackground(rippleOutlined(Color.WHITE, BORDER, 0x183478F6, 16));
@@ -336,7 +333,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         compactBackground.above = above; compactBackground.invalidateSelf();
         if (changed && minimizedProgress) { updateBubblePadding(); invalidateOutline(); }
     }
-    // [UI 수정] 줄인 말풍선/요청 확인/일반 안내마다 다른 내부 여백을 적용한다.
+    // [UI 수정] 줄인 말풍선/내용 확인/일반 안내마다 다른 내부 여백을 적용한다.
     private void updateBubblePadding() {
         if (minimizedProgress) setPadding(dp(14), dp(compactBackground.above ? 22 : 10), dp(14), dp(compactBackground.above ? 10 : 22));
         else setPadding(dp(FloatingPanelStyle.HORIZONTAL_PADDING_DP), dp(FloatingPanelStyle.TOP_PADDING_DP),
@@ -383,19 +380,43 @@ public final class TaskFlowOverlayView extends LinearLayout {
         heading.setText(title);
         heading.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
         setNarrationState(false, narrationUnavailable);
-        pause.setText("일시정지"); pause.setOnClickListener(v -> listener.control("pause_task"));
+        pause.setText("멈추기"); pause.setOnClickListener(v -> listener.control("pause_task"));
+    }
+
+    private void addFailureClue() {
+        ImageView clue = new com.click.designpreview.ClueArtworkView(getContext());
+        clue.setImageResource(com.click.designpreview.R.drawable.clue5_failure);
+        clue.setTag("failure_clue");
+        content.addView(clue, new LayoutParams(-1, dp(128)));
+        TextView apology = text("죄송합니다. 아직 배우는 중이라 미숙했어요.", 16);
+        apology.setGravity(Gravity.CENTER);
+        content.addView(apology, spaced(4));
+    }
+
+    public void failed(String message) {
+        clear(getResources().getConfiguration().fontScale >= 1.4f
+                ? "작업을 마치지\n못했어요" : "작업을 마치지 못했어요");
+        narrationMessage = "죄송합니다. 아직 배우는 중이라 미숙했어요. " + message;
+        controls.setVisibility(GONE);
+        divider.setVisibility(GONE);
+        recoveryActions.addView(primaryButton("끝내기", () -> listener.control("cancel_task")), spaced(0));
+        recoveryActions.setVisibility(VISIBLE);
+        addFailureClue();
+        content.addView(text(message, 15), spaced(12));
     }
 
     /** A transport or contract failure is not a request for the user to rephrase. */
     public void resolutionUnavailable(String request, String message, Runnable retry) {
-        clear("요청을 다시 확인할게요");
+        clear("내용을 다시 확인할게요");
+        narrationMessage = "죄송합니다. 아직 배우는 중이라 미숙했어요. " + message;
+        addFailureClue();
         divider.setVisibility(GONE);
         controls.setVisibility(GONE);
         recoveryActions.setVisibility(VISIBLE);
         addRequestBox(request, null);
         content.addView(text(message, 16), spaced(12));
         recoveryActions.addView(primaryButton("다시 확인", retry), spaced(0));
-        recoveryActions.addView(quietButton("요청 중지", () -> listener.control("cancel_task")), spaced(8));
+        recoveryActions.addView(quietButton("끝내기", () -> listener.control("cancel_task")), spaced(8));
     }
 
     /** An unresolved request has no selectable goal or running task to pause. */
@@ -423,13 +444,13 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
         LinearLayout editor = new LinearLayout(getContext());
         editor.setOrientation(VERTICAL);
-        TextView label = text("요청 내용", 14);
+        TextView label = text("입력한 내용", 14);
         label.setTextColor(SECONDARY);
         editor.addView(label);
         EditText input = new EditText(getContext());
         input.setTextSize(ClickTextScale.size(getContext(), 17)); input.setTextColor(INK); input.setHintTextColor(SECONDARY);
         input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
-        input.setContentDescription("요청 내용 수정");
+        input.setContentDescription("입력한 내용 수정");
         input.setHint("예) 휴대폰 글자를 더 크게 해 줘");
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         input.setGravity(Gravity.TOP | Gravity.START);
@@ -453,10 +474,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
         edit.setOnClickListener(v -> {
             if (editor.getVisibility() == VISIBLE) { voice.run(); return; }
             listener.stopGuidance();
-            heading.setText("요청을 수정해 주세요");
+            heading.setText("내용을 수정해 주세요");
             for (int i = 1; i < content.getChildCount(); i++) content.getChildAt(i).setVisibility(GONE);
             editor.setVisibility(VISIBLE);
-            retry.setText("이 내용으로 다시 요청");
+            retry.setText("이 내용으로 시작하기");
             retry.setOnClickListener(submit -> {
                 String revised = input.getText().toString().trim();
                 if (revised.isEmpty()) return;
@@ -480,7 +501,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         });
         edit.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 12));
         alternatives.addView(edit, new LayoutParams(0, -2, 1));
-        Button cancel = quietButton("요청 취소", () -> {
+        Button cancel = quietButton("끝내기", () -> {
             hideKeyboard(input);
             listener.stopGuidance();
             listener.control("cancel_task");
@@ -498,14 +519,14 @@ public final class TaskFlowOverlayView extends LinearLayout {
         input.clearFocus();
     }
 
-    // [UI 수정] 요청 확인 단계에서 공통 헤더/버튼의 표시와 제목을 재설정하는 곳.
+    // [UI 수정] 내용 확인 단계에서 공통 헤더/버튼의 표시와 제목을 재설정하는 곳.
     private void reviewStage(int step, String title, String description) {
         clear(title);
         reviewScreen = true;
         reviewStep = step;
         if (step == 2) heading.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         updateBubblePadding();
-        // 요청 확인 중에도 일시정지/중지를 본문 스크롤 밖의 하단에 유지한다.
+        // 내용 확인 중에도 일시정지/중지를 본문 스크롤 밖의 하단에 유지한다.
         divider.setVisibility(VISIBLE); controls.setVisibility(VISIBLE);
         TextView subtitle = text(description, 15); subtitle.setTextColor(SECONDARY);
         subtitle.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
@@ -518,7 +539,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private Button reviewNext(Runnable next) {
         reviewNavigation.removeAllViews(); reviewNavigation.setOrientation(HORIZONTAL);
         reviewNavigation.setVisibility(VISIBLE);
-        Button forward = primaryButton("다음 단계", next);
+        Button forward = primaryButton("입력하기", next);
         styleReviewButton(forward, true);
         LayoutParams params = new LayoutParams(0, -2, 1); params.topMargin = dp(8);
         reviewNavigation.addView(forward, params);
@@ -578,13 +599,13 @@ public final class TaskFlowOverlayView extends LinearLayout {
         EditText input = new EditText(getContext()); input.setTextSize(ClickTextScale.size(getContext(), 14)); input.setTextColor(INK);
         reviewRequestInput = input;
         input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
-        input.setContentDescription("요청 내용 수정"); input.setHint("원하시는 내용을 적어 주세요");
+        input.setContentDescription("입력한 내용 수정"); input.setHint("원하시는 내용을 적어 주세요");
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         input.setMinLines(2); input.setMaxLines(4); input.setGravity(Gravity.TOP | Gravity.START);
         input.setPadding(dp(12), dp(12), dp(12), dp(12)); input.setBackground(outline(Color.WHITE, BORDER, 14));
         input.setText(request);
         editor.addView(input, spaced(0));
-        Button apply = primaryButton("수정한 요청 확인", () -> {
+        Button apply = primaryButton("수정한 내용 확인", () -> {
             String value = input.getText().toString().trim();
             if (value.isEmpty()) return;
             hideKeyboard(input); listener.rephrase(value);
@@ -699,7 +720,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     public void preparation(com.click.domain.goal.GoalPreparationState state) {
         if (state.ready()) {
-            reviewStage(2, "이렇게 이해했어요", "");
+            reviewStage(2, "", "");
             narrationMessage = state.guidance();
             reviewSummary(preparedSummary(state));
             requestEditor(state.data.optString("source_text"), listener::resetGoalInputs);
@@ -707,9 +728,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
             return;
         }
         JSONObject question = state.question();
-        reviewStage(1, question == null ? "조금 더 확인할게요" : question.optString("message", "어떤 작업을 도와드릴까요?"),
+        reviewStage(1, question == null ? "조금 더 확인할게요" : state.guidance(),
                 question != null && "choice".equals(question.optString("kind"))
-                        ? "필요한 정보를 먼저 확인할게요." : "몇 가지만 더 여쭤볼게요.");
+                        ? "필요한 정보를 먼저 확인할게요." : "");
         narrationMessage = state.guidance();
         if (state.needsInput()) {
             if ("choice".equals(question.optString("kind"))) {
@@ -724,6 +745,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
                 EditText input = new EditText(getContext()); input.setTextSize(ClickTextScale.size(getContext(), 14));
                 input.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
                 input.setHint(question.optString("placeholder", "답변을 입력해 주세요"));
+                input.setContentDescription("확인할 내용 입력");
                 input.setSingleLine(true); input.setMinHeight(dp(48));
                 input.setPadding(dp(12), dp(10), dp(12), dp(10));
                 input.setBackground(outline(Color.WHITE, BORDER, 14));
@@ -740,6 +762,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
                     }
                     public void afterTextChanged(android.text.Editable value) {}
                 });
+                // Text clarification already owns an editor and its submit action.
+                return;
             }
         } else {
             TextView help = text(state.guidance(), 15); help.setTextColor(SECONDARY);
@@ -758,7 +782,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.addView(quietButton("다시 확인", retry), spaced(6));
     }
     public void requirements(RequirementReview review, boolean executable, String spokenGuidance) {
-        reviewStage(executable ? 2 : 1, executable ? "이렇게 이해했어요" : "어떤 작업을 도와드릴까요?",
+        reviewStage(executable ? 2 : 1, executable ? "" : "어떤 작업을 도와드릴까요?",
                 executable ? "" : "원하시는 항목을 선택해 주세요.");
         narrationMessage = spokenGuidance;
         if (executable) {
@@ -823,12 +847,12 @@ public final class TaskFlowOverlayView extends LinearLayout {
         requestCaptionRow.addView(value, new LayoutParams(0, -2, 1));
         if (request.length() > 80) {
             value.setMaxLines(3); value.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            Button expand = quietButton("요청 더 보기", () -> {});
+            Button expand = quietButton("내용 더 보기", () -> {});
             expand.setTextSize(ClickTextScale.size(getContext(), 13)); expand.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 10));
             expand.setOnClickListener(v -> {
                 boolean more = value.getMaxLines() == 3;
                 value.setMaxLines(more ? Integer.MAX_VALUE : 3);
-                expand.setText(more ? "요청 접기" : "요청 더 보기");
+                expand.setText(more ? "내용 접기" : "내용 더 보기");
             });
             copy.addView(expand);
         }
@@ -940,18 +964,18 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     /** Report the user outcome separately from internal execution evidence. */
     public void completed(String message, Runnable onExit) {
-        clear("결과 확인을 마쳤어요");
+        clear("클릭과 함께 해냈어요!");
+        narrationMessage = "클릭과 함께 해냈어요!";
         controls.setVisibility(GONE);
         divider.setVisibility(GONE);
-        TextView completion = text(message == null || message.trim().isEmpty()
-                ? "원하는 결과를 얻었다고 알려주셨어요." : message, 17);
-        completion.setGravity(Gravity.CENTER);
-        completion.setTextColor(BLUE);
-        completion.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
-        completion.setPadding(dp(14), dp(14), dp(14), dp(14));
-        completion.setBackground(round(PALE_BLUE, 18));
-        content.addView(completion, spaced(10));
-        announceForAccessibility(completion.getText());
+        ImageView artwork = new com.click.designpreview.ClueArtworkView(getContext());
+        artwork.setImageResource(com.click.designpreview.R.drawable.clue4_complete);
+        artwork.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        artwork.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        LayoutParams artworkParams = new LayoutParams(-1, dp(176));
+        artworkParams.topMargin = dp(4);
+        content.addView(artwork, artworkParams);
+        announceForAccessibility(narrationMessage);
         Button exit = primaryButton("클릭 종료하기", () -> {});
         exit.setOnClickListener(view -> {
             if (!exit.isEnabled()) return;
@@ -962,11 +986,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
         recoveryActions.setVisibility(VISIBLE);
     }
     public void completedWithNext(String nextRequest, Runnable onNext, Runnable onExit) {
-        completed("현재 요청을 마쳤어요.", onExit);
-        content.addView(text("대기 중인 다음 요청", 13), spaced(14));
+        completed("안내를 마쳤어요.", onExit);
+        content.addView(text("다음에 할 작업", 13), spaced(14));
         content.addView(text(nextRequest, 16), spaced(6));
         recoveryActions.removeAllViews();
-        Button next = primaryButton("다음 요청 시작", () -> {});
+        Button next = primaryButton("다음 작업 시작", () -> {});
         Button exit = secondaryButton("클릭 종료하기", () -> {});
         next.setOnClickListener(view -> {
             if (!next.isEnabled()) return;
@@ -995,11 +1019,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public void expired(Runnable newRequest) {
         clear("안내를 잠시 멈췄어요");
-        content.addView(text("응답을 기다리다가 안내 시간이 지났어요. 원하실 때 새 요청을 시작해 주세요.", 16), spaced(8));
+        content.addView(text("응답을 기다리다가 안내 시간이 지났어요. 원하실 때 다시 시작해 주세요.", 16), spaced(8));
         divider.setVisibility(GONE);
         controls.setVisibility(GONE);
         recoveryActions.setVisibility(VISIBLE);
-        recoveryActions.addView(primaryButton("새 요청하기", newRequest), spaced(8));
+        recoveryActions.addView(primaryButton("다시 시작하기", newRequest), spaced(8));
     }
     public void navigationRecovery(boolean back, String message, Runnable navigate) {
         clear("원래 작업으로 돌아가기");
@@ -1029,9 +1053,23 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public void observationRecovery(String goal, String message, Runnable retry) {
         clear("도움이 필요해요!");
+        boolean pendingAdjustment = message != null && message.startsWith("조절 결과를 아직 확인하지 못했어요");
+        narrationMessage = "죄송합니다. 아직 배우는 중이라 미숙했어요. "
+                + (pendingAdjustment ? "다시 시도하기를 누르면 현재 화면에서 안내를 이어갈게요." : message);
+        addFailureClue();
+        if (!pendingAdjustment) content.addView(text(message, 16), spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
+        Button retryButton = primaryButton("다시 시도하기", retry);
+        retryButton.setContentDescription("다시 시도하기. 현재 화면을 다시 읽고 안내 이어가기");
+        recoveryActions.addView(retryButton, spaced(8));
+    }
+
+    public void accessibilityRecovery(String message, Runnable guide, Runnable retry) {
+        clear("접근성 연결을 확인해 주세요");
         content.addView(text(message, 16), spaced(8));
         recoveryActions.setVisibility(VISIBLE);
-        recoveryActions.addView(primaryButton("화면 다시 확인하기", retry), spaced(8));
+        recoveryActions.addView(primaryButton("접근성 안내 보기", guide), spaced(8));
+        recoveryActions.addView(quietButton("다시 연결 확인", retry), spaced(8));
     }
 
     /** Compatibility for runtime callers that still expose manual list navigation. */
@@ -1043,6 +1081,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     public void targetHelp(String target, Runnable notFound) {
         clear("도움이 필요해요!");
+        addFailureClue();
         targetHelpInstruction = target + " 항목을 찾아주세요";
         content.addView(text(targetHelpInstruction, 20), spaced(8));
         controls.setVisibility(GONE);

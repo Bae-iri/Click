@@ -77,11 +77,6 @@ public final class LoginActivity extends Activity {
         });
         passwordToggle.setOnClickListener(view -> updatePasswordVisibility(!passwordVisible));
         findViewById(R.id.login_back).setOnClickListener(view -> finish());
-        findViewById(R.id.login_signup).setBackgroundResource(R.drawable.account_email_button_background);
-        ((TextView) findViewById(R.id.login_signup)).setTextColor(getColor(R.color.account_blue));
-        findViewById(R.id.login_signup).setOnClickListener(view -> {
-            if (!submitting) startActivity(new Intent(this, SignupActivity.class));
-        });
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
                     OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::finish);
@@ -128,7 +123,7 @@ public final class LoginActivity extends Activity {
     // Both login methods share one in-flight request; switching cannot create duplicate sessions.
     private void setSubmitting(boolean value) {
         submitting = value;
-        for (int id : new int[]{R.id.login_action, R.id.login_kakao, R.id.login_signup}) {
+        for (int id : new int[]{R.id.login_action, R.id.login_kakao}) {
             View button = findViewById(id);
             button.setEnabled(!value);
             button.setAlpha(value ? .62f : 1f);

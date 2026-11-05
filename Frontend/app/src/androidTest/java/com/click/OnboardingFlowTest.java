@@ -71,12 +71,19 @@ public class OnboardingFlowTest {
 
     @Test public void onboardingEndsWithSignupThenOffersSeparateLogin() throws Exception {
         try (ActivityScenario<OnboardingActivity> s = ActivityScenario.launch(OnboardingActivity.class)) {
-            tap("건너뛰기");
+            screenshot("onboarding-clue-welcome");
+            tap("시작하기");
+            shown("혼자 할 수 있도록\n클릭이 도와드려요");
+            s.onActivity(a -> {
+                assertFalse(a.findViewById(com.click.designpreview.R.id.onboarding_step_three).isShown());
+                assertEquals("온보딩, 2단계 중 2단계", a.findViewById(com.click.designpreview.R.id.onboarding_progress).getContentDescription());
+            });
+            tap("이전"); shown("처음이신가요?"); tap("시작하기");
             shown("가입하기"); assertNoWindowText("전화번호로 로그인하기");
             screenshot("onboarding-third");
             tap("가입하기");
             shown("회원가입");
-            shown("카카오로 가입하기"); shown("전화번호로 가입하기"); shown("로그인하기");
+            shown("카카오로 가입하기"); shown("번호로 가입하기"); shown("로그인하기");
             assertNoWindowText("또는");
             screenshot("account-login-options");
             tap("로그인하기"); shown("로그인"); shown("카카오로 로그인");
@@ -85,7 +92,9 @@ public class OnboardingFlowTest {
 
     @Test public void signupChoicesRemainAboveLoginAfterRecreation() throws Exception {
         try (ActivityScenario<AccountStartActivity> s = ActivityScenario.launch(AccountStartActivity.class)) {
-            shown("카카오로 가입하기"); shown("전화번호로 가입하기");
+            shown("카카오로 가입하기"); shown("번호로 가입하기");
+            shown("안녕하세요! 저는 클루예요!\n환영합니다!");
+            screenshot("signup-clue-welcome");
             s.recreate();
             shown("회원가입");
             s.onActivity(a -> {
@@ -93,7 +102,7 @@ public class OnboardingFlowTest {
                 View signup = a.findViewById(com.click.designpreview.R.id.account_start_email);
                 assertTrue("Login follows the signup buttons", login.getTop() > signup.getBottom());
             });
-            tap("전화번호로 가입하기");
+            tap("번호로 가입하기");
             shown("전화번호로 가입해요");
             screenshot("email-signup-explicit");
         }
@@ -113,11 +122,25 @@ public class OnboardingFlowTest {
                 assertEquals(validPassword, password.getText().toString());
                 a.findViewById(com.click.designpreview.R.id.signup_action).performClick();
             });
-            shown("확인해주세요"); screenshot("email-review");
+            shown("확인해주세요");
+            instrumentation.runOnMainSync(() -> {
+                for (View root : WindowInspector.getGlobalWindowViews()) {
+                    View title = root.findViewById(com.click.designpreview.R.id.email_confirmation_title);
+                    if (title == null) continue;
+                    View close = root.findViewById(com.click.designpreview.R.id.email_confirmation_close);
+                    assertSame(title.getParent(), close.getParent());
+                    View confirm = root.findViewById(com.click.designpreview.R.id.email_confirmation_continue);
+                    Rect bounds = new Rect(); assertTrue(confirm.getGlobalVisibleRect(bounds));
+                    assertEquals(confirm.getHeight(), bounds.height());
+                }
+            });
+            screenshot("email-review");
             clickView("전화번호 수정");
             s.onActivity(a -> a.findViewById(com.click.designpreview.R.id.signup_action).performClick());
             clickView("이 전화번호로 계속"); shown("어떻게 불러드릴까요?");
-            shown("이름 (선택)");
+            shown("이름");
+            assertNoWindowText("이름 (선택)");
+            assertNoWindowText("입력하지 않고 가입해도 괜찮아요.");
             s.onActivity(a -> ((EditText) a.findViewById(
                     com.click.designpreview.R.id.signup_name)).setText("김클릭"));
             screenshot("signup-profile-name");
@@ -162,8 +185,11 @@ public class OnboardingFlowTest {
         try (ActivityScenario<LoginActivity> s = ActivityScenario.launch(LoginActivity.class)) {
             shown("로그인");
             shown("가입할 때 사용한\n전화번호와 비밀번호를 입력해 주세요.");
-            shown("전화번호로 로그인"); shown("카카오로 로그인"); shown("회원가입하기");
+            shown("카카오로 로그인"); assertNoWindowText("전화번호로 로그인"); assertNoWindowText("회원가입하기");
             screenshot("login");
+            s.onActivity(a -> assertEquals("Login actions have the same height",
+                    a.findViewById(com.click.designpreview.R.id.login_kakao).getHeight(),
+                    a.findViewById(com.click.designpreview.R.id.login_action).getHeight()));
             s.onActivity(a -> {
                 ((EditText) a.findViewById(com.click.designpreview.R.id.login_email))
                         .setText("not-an-email");
@@ -172,7 +198,7 @@ public class OnboardingFlowTest {
                 a.findViewById(com.click.designpreview.R.id.login_action).performClick();
             });
             shown("전화번호를 한 번 더 확인해 주세요.");
-            shown("가입할 때 설정한 숫자 4자리를 입력해 주세요.");
+            assertNoWindowText("가입할 때 설정한 숫자 4자리를 입력해 주세요.");
             s.onActivity(a -> {
                 ((EditText) a.findViewById(com.click.designpreview.R.id.login_email))
                         .setText("01012345678");
@@ -180,8 +206,7 @@ public class OnboardingFlowTest {
                 a.findViewById(com.click.designpreview.R.id.login_action).performClick();
             });
             shown("비밀번호는 숫자 4자리로 입력해 주세요.");
-            clickView("회원가입하기");
-            shown("전화번호로 가입해요");
+            assertNoWindowText("회원가입하기");
         }
     }
 
@@ -230,8 +255,8 @@ public class OnboardingFlowTest {
             });
             shown("01012345678");
             clickView("이 전화번호로 계속");
-            shown("이름 (선택)");
-            shown("이름은 50글자까지 입력할 수 있어요.");
+            shown("이름");
+            assertNoWindowText("이름은 50글자까지 입력할 수 있어요.");
             screenshot("signup-current-profile");
             s.onActivity(a -> {
                 EditText name = a.findViewById(com.click.designpreview.R.id.signup_name);
@@ -260,11 +285,11 @@ public class OnboardingFlowTest {
     @Test public void homeMatchesStartAndFavoritesReference() throws Exception {
         try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
             shown("안녕하세요!");
-            shown("오늘도\n클릭과 함께\n해볼까요?");
+            shown("오늘도\n클릭과 함께\n해봐요!");
             s.onActivity(a -> assertEquals("궁금한 기능을 적거나 말해보세요!",
                     ((EditText) a.findViewById(R.id.home_request_input)).getHint().toString()));
-            shown("즐겨찾기");
-            shown("카카오톡");
+            shown("보관함");
+            assertNoWindowText("카카오톡");
             shown("글씨 크기");
             shown("화면 밝기");
             shown("동영상·음악 소리");
@@ -279,7 +304,7 @@ public class OnboardingFlowTest {
                 assertTrue(a.findViewById(R.id.home_nav_favorites).isSelected());
                 assertEquals(View.GONE, a.findViewById(R.id.home_scroll).getVisibility());
                 assertTrue(a.findViewById(R.id.home_favorites_scroll).isShown());
-                assertNotNull(a.findViewById(R.id.home_favorites_add));
+                assertNull(a.findViewById(R.id.home_favorites_add));
                 a.findViewById(R.id.home_nav_home).performClick();
             });
             SystemClock.sleep(500);
@@ -289,58 +314,309 @@ public class OnboardingFlowTest {
             });
         }
     }
-    @Test public void favoritesCanBeRemovedAddedAndKeptEmptyAfterRecreation() throws Exception {
-        android.content.SharedPreferences prefs = instrumentation.getTargetContext()
-                .getSharedPreferences("home_favorites", android.content.Context.MODE_PRIVATE);
-        boolean existed = prefs.contains("selected_ids");
-        java.util.Set<String> original = new java.util.HashSet<>(prefs.getStringSet("selected_ids", java.util.Collections.emptySet()));
-        prefs.edit().clear().commit();
+    @Test public void recentQuestionsCanBeSavedAndRemovedAfterRecreation() throws Exception {
+        com.click.data.local.RequestLibraryStore library = new com.click.data.local.RequestLibraryStore(instrumentation.getTargetContext());
+        library.record("테스트: 화면 밝기 낮춰줘", "settings.brightness.decrease");
+        String id = library.entries(false).get(0).id;
+        library.setFavorite(id, false);
         try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
-            s.onActivity(a -> {
-                View home = a.findViewById(R.id.home_scroll);
-                home.findViewWithTag("favorite_font_size").performClick();
-                assertNull(home.findViewWithTag("favorite_font_size"));
-                a.findViewById(R.id.home_nav_favorites).performClick();
-                a.findViewById(R.id.home_favorites_add).performClick();
-                View star = a.findViewById(R.id.home_favorites_scroll).findViewWithTag("favorite_font_size");
-                assertFalse(star.isSelected());
-                star.performClick();
-                assertTrue(a.findViewById(R.id.home_favorites_scroll).findViewWithTag("favorite_font_size").isSelected());
-            });
+            s.onActivity(a -> a.findViewById(R.id.home_nav_favorites).performClick());
+            tap("최근 질문");
+            screenshot("library-recent");
+            s.onActivity(a -> a.findViewById(R.id.home_favorites_scroll).findViewWithTag("saved_" + id).performClick());
+            assertTrue(library.entries(true).stream().anyMatch(entry -> entry.id.equals(id)));
+            tap("즐겨찾기");
+            screenshot("library-saved");
             s.recreate();
             s.onActivity(a -> {
-                assertNotNull(a.findViewById(R.id.home_favorites_done));
-                assertTrue(a.findViewById(R.id.home_favorites_scroll).findViewWithTag("favorite_font_size").isSelected());
-                a.findViewById(R.id.home_favorites_done).performClick();
-                a.findViewById(R.id.home_nav_home).performClick();
-                assertNotNull(a.findViewById(R.id.home_scroll).findViewWithTag("favorite_font_size"));
-                for (com.click.ui.home.HomeHelpItem item : com.click.ui.home.HomeHelpItem.values()) {
-                    View star = a.findViewById(R.id.home_scroll).findViewWithTag("favorite_" + item.id);
-                    if (star != null) star.performClick();
-                }
+                View star = a.findViewById(R.id.home_favorites_scroll).findViewWithTag("saved_" + id);
+                assertNotNull(star); assertTrue(star.isSelected()); star.performClick();
+                assertNull(a.findViewById(R.id.home_favorites_scroll).findViewWithTag("saved_" + id));
+                assertNull(a.findViewById(R.id.home_favorites_add));
             });
-            s.recreate();
-            shown("자주 쓰는 기능을 모아볼까요?");
-            s.onActivity(a -> {
-                assertTrue(new com.click.data.local.HomeFavoritesStore(a).selectedIds().isEmpty());
-                a.findViewById(R.id.home_nav_favorites).performClick();
-                a.findViewById(R.id.home_favorites_add).performClick();
-                a.findViewById(R.id.home_favorites_scroll).findViewWithTag("favorite_accessibility").performClick();
-                a.findViewById(R.id.home_favorites_done).performClick();
-                assertNotNull(a.findViewById(R.id.home_favorites_scroll).findViewWithTag("favorite_accessibility"));
-                a.findViewById(R.id.home_nav_home).performClick();
-                assertNotNull(a.findViewById(R.id.home_scroll).findViewWithTag("favorite_accessibility"));
+            assertFalse(library.entries(true).stream().anyMatch(entry -> entry.id.equals(id)));
+            tap("최근 질문");
+            s.onActivity(a -> assertNotNull(a.findViewById(R.id.home_favorites_scroll).findViewWithTag("saved_" + id)));
+        } finally { library.setFavorite(id, false); }
+    }
+    @Test public void libraryReorderMovesSavedQuestionAboveShortcutsAndPersists() throws Exception {
+        com.click.data.local.RequestLibraryStore library = new com.click.data.local.RequestLibraryStore(instrumentation.getTargetContext());
+        library.record("정렬 테스트 첫 질문", null);
+        String id = library.entries(false).get(0).id;
+        library.setFavorite(id, true);
+        java.util.List<String> available = new java.util.ArrayList<>();
+        com.click.data.local.HomeFavoritesStore favorites = new com.click.data.local.HomeFavoritesStore(instrumentation.getTargetContext());
+        for (com.click.ui.home.HomeHelpItem item : com.click.ui.home.HomeHelpItem.values())
+            if (favorites.contains(item.id)) available.add("help:" + item.id);
+        for (com.click.data.local.RequestLibraryStore.Entry entry : library.entries(true)) available.add("request:" + entry.id);
+        library.moveToPosition("request:" + id, 1, available, false);
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(a -> a.findViewById(R.id.home_nav_favorites).performClick());
+            tap("순서 바꾸기");
+            scenario.onActivity(a -> {
+                View page = a.findViewById(R.id.home_favorites_scroll);
+                assertNull(page.findViewWithTag("saved_" + id));
+                View row = page.findViewWithTag("library_request:" + id);
+                row.requestRectangleOnScreen(new Rect(0, 0, row.getWidth(), row.getHeight()), true);
             });
-        } finally {
-            if (existed) prefs.edit().putStringSet("selected_ids", original).commit();
-            else prefs.edit().remove("selected_ids").commit();
+            instrumentation.waitForIdleSync();
+            final float[] points = new float[4];
+            scenario.onActivity(a -> {
+                View page = a.findViewById(R.id.home_favorites_scroll);
+                View row = page.findViewWithTag("library_request:" + id);
+                ViewGroup notebook = page.findViewWithTag("library_notebook");
+                row.performClick();
+                assertNotEquals("A tap must not reorder", "library_request:" + id, notebook.getChildAt(0).getTag());
+                int[] from = new int[2], to = new int[2];
+                row.getLocationOnScreen(from); notebook.getChildAt(0).getLocationOnScreen(to);
+                points[0] = from[0] + row.getWidth() / 2f; points[1] = from[1] + row.getHeight() / 2f;
+                points[2] = points[0]; points[3] = to[1] + 8;
+            });
+            swipe(points, true);
+            instrumentation.waitForIdleSync();
+            scenario.onActivity(a -> {
+                View page = a.findViewById(R.id.home_favorites_scroll);
+                ViewGroup notebook = page.findViewWithTag("library_notebook");
+                assertEquals("library_request:" + id, notebook.getChildAt(0).getTag());
+            });
+            screenshot("library-reorder");
+            scenario.recreate();
+            shown("완료"); tap("완료");
+            scenario.onActivity(a -> {
+                View page = a.findViewById(R.id.home_favorites_scroll);
+                assertNotNull(page.findViewWithTag("saved_" + id));
+                ViewGroup notebook = page.findViewWithTag("library_notebook");
+                assertEquals("library_request:" + id, notebook.getChildAt(0).getTag());
+                a.findViewById(R.id.home_nav_home).performClick();
+                View homeRow = a.findViewById(R.id.home_scroll).findViewWithTag("library_request:" + id);
+                assertEquals(0, ((ViewGroup) homeRow.getParent()).indexOfChild(homeRow));
+            });
+        } finally { library.setFavorite(id, false); }
+    }
+
+    @Test public void libraryHelpExplainsGesturesAndKeepsActionsVisible() throws Exception {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(a -> a.findViewById(R.id.home_nav_favorites).performClick());
+            for (String tab : new String[]{"즐겨찾기", "최근 질문"}) {
+                tap(tab);
+                scenario.onActivity(a -> {
+                    View help = a.findViewById(R.id.home_favorites_scroll).findViewWithTag("library_help");
+                    Rect bounds = new Rect(); assertTrue(help.getGlobalVisibleRect(bounds));
+                    assertEquals(help.getHeight(), bounds.height());
+                    assertEquals(help.getWidth(), bounds.width());
+                    help.performClick();
+                });
+                shown("보관함 사용 방법"); shown("최근 질문 지우기");
+                screenshot("library-help");
+                instrumentation.runOnMainSync(() -> {
+                    for (View root : WindowInspector.getGlobalWindowViews()) {
+                        if (find(root, "보관함 사용 방법") == null) continue;
+                        View confirm = root.findViewById(android.R.id.button1);
+                        Rect bounds = new Rect(); assertTrue(confirm.getGlobalVisibleRect(bounds));
+                        assertEquals(confirm.getHeight(), bounds.height());
+                        root.findViewWithTag("click_dialog_close").performClick();
+                    }
+                });
+                assertNoWindowText("보관함 사용 방법");
+            }
+            screenshot("library-help-header");
         }
     }
+
+    @Test public void libraryAccessibilityOpensGuide() {
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(a -> a.findViewById(R.id.home_nav_favorites).performClick());
+            TextView label = shown("접근성 설정");
+            instrumentation.runOnMainSync(() -> {
+                View launch = label;
+                while (!launch.isClickable()) launch = (View) launch.getParent();
+                launch.performClick();
+            });
+            shown("접근성 권한이 필요해요");
+        }
+    }
+
+    @Test public void recentSwipeRevealsDeleteAndKeepsSavedFavorite() throws Exception {
+        com.click.data.local.RequestLibraryStore library = new com.click.data.local.RequestLibraryStore(instrumentation.getTargetContext());
+        library.record("밀어서 지울 테스트 질문", null);
+        String id = library.entries(false).get(0).id;
+        library.setFavorite(id, true);
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            scenario.onActivity(a -> a.findViewById(R.id.home_nav_favorites).performClick());
+            tap("최근 질문");
+            final float[] points = new float[4];
+            scenario.onActivity(a -> {
+                View row = a.findViewById(R.id.home_favorites_scroll).findViewWithTag("library_request:" + id);
+                row.requestRectangleOnScreen(new Rect(0, 0, row.getWidth(), row.getHeight()), true);
+            });
+            instrumentation.waitForIdleSync();
+            scenario.onActivity(a -> {
+                View row = a.findViewById(R.id.home_favorites_scroll).findViewWithTag("library_request:" + id);
+                assertNull(find(row, android.text.format.DateFormat.format("M월 d일 · HH:mm", library.entries(false).get(0).timestamp).toString()));
+                int[] location = new int[2]; row.getLocationOnScreen(location);
+                points[0] = location[0] + row.getWidth() * .75f; points[1] = location[1] + row.getHeight() / 2f;
+                points[2] = location[0] + row.getWidth() * .2f; points[3] = points[1];
+            });
+            swipe(points, false);
+            shown("삭제");
+            assertTrue(library.entries(false).stream().anyMatch(entry -> entry.id.equals(id)));
+            screenshot("library-swipe-delete");
+            clickView("삭제");
+            assertFalse(library.entries(false).stream().anyMatch(entry -> entry.id.equals(id)));
+            scenario.recreate();
+            scenario.onActivity(a -> assertNull(a.findViewById(R.id.home_favorites_scroll).findViewWithTag("library_request:" + id)));
+            tap("즐겨찾기");
+            scenario.onActivity(a -> assertNotNull(a.findViewById(R.id.home_favorites_scroll).findViewWithTag("library_request:" + id)));
+        } finally { library.setFavorite(id, false); library.removeRecent(id); }
+    }
+
+    private void swipe(float[] points, boolean longPress) {
+        long down = SystemClock.uptimeMillis();
+        sendTouch(down, MotionEvent.ACTION_DOWN, points[0], points[1]);
+        if (longPress) SystemClock.sleep(android.view.ViewConfiguration.getLongPressTimeout() + 200);
+        for (int step = 1; step <= 20; step++) {
+            float fraction = step / 20f;
+            sendTouch(down, MotionEvent.ACTION_MOVE, points[0] + (points[2] - points[0]) * fraction,
+                    points[1] + (points[3] - points[1]) * fraction);
+            SystemClock.sleep(20);
+        }
+        sendTouch(down, MotionEvent.ACTION_UP, points[2], points[3]);
+        SystemClock.sleep(300);
+    }
+
+    private void sendTouch(long down, int action, float x, float y) {
+        MotionEvent event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0);
+        event.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+        assertTrue(instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
+                .injectInputEvent(event, true));
+        event.recycle();
+    }
+
+    @Test public void accountConfirmationsShowClueAndCancelSafely() throws Exception {
+        try (ActivityScenario<MenuActivity> scenario = ActivityScenario.launch(MenuActivity.class)) {
+            for (String label : new String[]{"로그아웃", "회원 탈퇴"}) {
+                TextView item = shown(label);
+                instrumentation.runOnMainSync(() -> {
+                    View row = item;
+                    while (!row.isClickable()) row = (View) row.getParent();
+                    row.performClick();
+                });
+                String title = label.equals("로그아웃") ? "로그아웃할까요?" : "회원 탈퇴를 진행할까요?";
+                shown(title);
+                instrumentation.runOnMainSync(() -> {
+                    boolean found = false;
+                    for (View root : WindowInspector.getGlobalWindowViews()) {
+                        if (root.findViewWithTag("account_goodbye_clue") == null) continue;
+                        found = true;
+                        assertNotNull(root.findViewWithTag("click_dialog_close"));
+                        View cancel = root.findViewById(android.R.id.button2);
+                        assertEquals(0f, cancel.getElevation(), 0f);
+                        assertNull(cancel.getStateListAnimator());
+                        Rect bounds = new Rect(); assertTrue(cancel.getGlobalVisibleRect(bounds));
+                        assertEquals(cancel.getHeight(), bounds.height());
+                    }
+                    assertTrue(found);
+                });
+                assertNoWindowText("잠시 이용을 마치시나요?");
+                assertNoWindowText("탈퇴 전에 꼭 확인해 주세요");
+                screenshot(label.equals("로그아웃") ? "logout-clue" : "delete-clue");
+                clickView("취소");
+                assertNoWindowText(title);
+                shown("설정");
+            }
+        }
+    }
+
+    @Test public void deleteRequiresReadingToTheEndEveryTime() throws Exception {
+        try (ActivityScenario<MenuActivity> scenario = ActivityScenario.launch(MenuActivity.class)) {
+            for (int attempt = 0; attempt < 2; attempt++) {
+                TextView deleteItem = shown("회원 탈퇴");
+                instrumentation.runOnMainSync(() -> {
+                    View row = deleteItem;
+                    while (!row.isClickable()) row = (View) row.getParent();
+                    row.performClick();
+                });
+                shown("회원 탈퇴를 진행할까요?");
+                instrumentation.waitForIdleSync();
+                instrumentation.runOnMainSync(() -> {
+                    View dialogRoot = null;
+                    for (View root : WindowInspector.getGlobalWindowViews()) {
+                        if (root.findViewWithTag("account_goodbye_clue") != null) dialogRoot = root;
+                    }
+                    assertNotNull(dialogRoot);
+                    View confirm = dialogRoot.findViewById(android.R.id.button1);
+                    android.widget.ScrollView body = dialogRoot.findViewWithTag("click_dialog_body_scroll");
+                    assertFalse(confirm.isEnabled());
+                    assertTrue("The notice must be scrollable", body.canScrollVertically(1));
+                    int end = body.getChildAt(0).getHeight() - body.getHeight();
+                    body.scrollTo(0, end / 2);
+                    assertFalse("Partial reading must not enable deletion", confirm.isEnabled());
+                    body.scrollTo(0, end);
+                    assertTrue("Reaching the end enables deletion", confirm.isEnabled());
+                    body.scrollTo(0, 0);
+                    assertTrue("Reading remains complete", confirm.isEnabled());
+                });
+                if (attempt == 0) screenshot("delete-read-complete");
+                clickView("취소");
+            }
+            TextView logoutItem = shown("로그아웃");
+            instrumentation.runOnMainSync(() -> {
+                View row = logoutItem;
+                while (!row.isClickable()) row = (View) row.getParent();
+                row.performClick();
+            });
+            shown("로그아웃할까요?");
+            instrumentation.runOnMainSync(() -> {
+                for (View root : WindowInspector.getGlobalWindowViews()) {
+                    if (root.findViewWithTag("account_goodbye_clue") != null)
+                        assertTrue(root.findViewById(android.R.id.button1).isEnabled());
+                }
+            });
+            clickView("취소");
+        }
+    }
+
+    @Test public void settingsDialogsHaveCloseAndClueOpensItsOwnPage() throws Exception {
+        try (ActivityScenario<MenuActivity> scenario = ActivityScenario.launch(MenuActivity.class)) {
+            for (String label : new String[]{"앱 권한 확인", "자동으로 도와주기", "클릭 개선 참여", "서비스 이용약관", "개인정보 처리방침"}) {
+                TextView item = shown(label);
+                instrumentation.runOnMainSync(() -> {
+                    View row = item;
+                    while (!row.isClickable()) row = (View) row.getParent();
+                    row.performClick();
+                });
+                instrumentation.waitForIdleSync();
+                instrumentation.runOnMainSync(() -> {
+                    View close = null;
+                    for (View root : WindowInspector.getGlobalWindowViews()) {
+                        View candidate = root.findViewWithTag("click_dialog_close");
+                        if (candidate != null && candidate.isShown()) {
+                            assertNull(find(root, "클릭"));
+                            close = candidate;
+                        }
+                    }
+                    assertNotNull(close);
+                    Rect bounds = new Rect(); assertTrue(close.getGlobalVisibleRect(bounds));
+                    assertEquals(close.getHeight(), bounds.height());
+                    close.performClick();
+                });
+            }
+            TextView about = shown("클루에 대해서");
+            instrumentation.runOnMainSync(() -> {
+                View row = about; while (!row.isClickable()) row = (View) row.getParent(); row.performClick();
+            });
+            shown("안녕하세요, 클루예요!"); shown("3세 · 호기심 많은 펭귄");
+            screenshot("about-clue");
+            instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK);
+            shown("설정");
+        }
+    }
+
     @Test public void menuMatchesProfileCardReference() throws Exception {
         try (ActivityScenario<MenuActivity> s = ActivityScenario.launch(MenuActivity.class)) {
             shown("설정");
             shown("앱 권한 확인");
-            shown("나에게 맞는 안내");
+            shown("클릭 개선 참여");
             shown("클릭 사용법");
             shown("서비스 이용약관");
             shown("개인정보 처리방침");
@@ -382,15 +658,15 @@ public class OnboardingFlowTest {
             screenshot("accessibility-complete");
         }
         try (ActivityScenario<HomeActivity> s = ActivityScenario.launch(HomeActivity.class)) {
-            shown("오늘도\n클릭과 함께\n해볼까요?");
-            shown("즐겨찾기");
+            shown("오늘도\n클릭과 함께\n해봐요!");
+            shown("보관함");
             shown("클릭 튜토리얼");
             screenshot("home");
         }
         try (ActivityScenario<MenuActivity> s = ActivityScenario.launch(MenuActivity.class)) {
             shown("설정");
             shown("앱 권한 확인");
-            shown("나에게 맞는 안내");
+            shown("클릭 개선 참여");
             shown("클릭 사용법");
             shown("로그아웃");
             screenshot("menu");

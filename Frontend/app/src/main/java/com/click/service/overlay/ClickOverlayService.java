@@ -75,6 +75,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private TrashDropView trashDropView;
     private WindowManager.LayoutParams trashDropParams;
     private ValueAnimator snapAnimator;
+    private ValueAnimator clueFollowAnimator;
+    private int[] clueFollowBounds, manuallyPlacedGuideBounds;
+    private String clueFollowAction;
     private CloudSpeechRecognizer cloudSpeechRecognizer;
     private Handler speechHandler;
     private boolean listening;
@@ -163,6 +166,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private long confirmationExpiresAt;
     private int freshObservationRetries;
     private int staleGuideDrops;
+    private Runnable guideResyncRetry;
     private int scrollExecutions;
     private int scrollSearchGeneration = -1;
     private String lastBackRecoveryScreen;
@@ -196,7 +200,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean closing;
     private final Runnable dragFrame = () -> {
         dragFrameScheduled = false;
-        if (windowManager == null || windowParams == null || overlayView == null) return;
+        if (!dragInProgress || closing || windowManager == null || windowParams == null || overlayView == null) return;
         windowParams.x = Math.round(dragTargetX);
         windowParams.y = Math.round(dragTargetY);
         windowManager.updateViewLayout(overlayView, windowParams);
@@ -209,6 +213,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         runningService = new WeakReference<>(this);
         WindowManager accessibilityWindows = ClickAccessibilityService.accessibilityWindowManager();
         if (!PermissionStatus.isAccessibilityEnabled(this) || accessibilityWindows == null) {
+            startActivity(accessibilityGuideIntent());
             stopSelf();
             return;
         }
@@ -309,6 +314,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     @Override
     public void onModeChanged(ClickOverlayLayout.Mode oldMode, ClickOverlayLayout.Mode newMode) {
         if (windowManager == null || windowParams == null) return;
+        cancelDragInteraction();
+        android.util.Log.i("ClickOverlay", "Input panel: " + oldMode + " -> " + newMode);
         // The task card and the input/menu panel share one visible interaction surface.
         updateFloatingVisibility();
         float anchorX = windowParams.x + overlayView.getClickCenterX(oldMode);
@@ -338,8 +345,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     @Override
     public void onDragStarted() {
-        if (windowManager == null || windowParams == null || overlayView == null) return;
+        if (closing || windowManager == null || windowParams == null || overlayView == null
+                || overlayView.getMode() != ClickOverlayLayout.Mode.COLLAPSED
+                || overlayView.getVisibility() != View.VISIBLE) return;
         dragInProgress = true;
+        manuallyPlacedGuideBounds = clueFollowBounds == null ? null : clueFollowBounds.clone();
+        cancelClueFollow();
         if (snapAnimator != null) snapAnimator.cancel();
         int[] location = new int[2];
         overlayView.getLocationOnScreen(location);
@@ -353,7 +364,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     @Override
     public void onDragBy(float deltaX, float deltaY) {
-        if (windowManager == null || windowParams == null) return;
+        if (!dragInProgress || closing || windowManager == null || windowParams == null) return;
         int maxX = Math.max(0, screenWidth() - windowParams.width);
         int maxY = Math.max(0, screenHeight() - windowParams.height);
         dragTargetX = Math.max(0, Math.min(dragTargetX + deltaX, maxX));
@@ -367,7 +378,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     @Override
     public void onDragEnded() {
-        if (overlayView == null || windowManager == null || windowParams == null) return;
+        if (!dragInProgress || closing || overlayView == null || windowManager == null || windowParams == null) return;
         dragInProgress = false;
         overlayView.removeCallbacks(dragFrame);
         dragFrameScheduled = false;
@@ -376,6 +387,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         windowManager.updateViewLayout(overlayView, windowParams);
         updateTrashTargetState();
         if (overTrashTarget) {
+            android.util.Log.i("ClickOverlay", "Closing after CLICK was dropped on trash");
             hideTrashTarget();
             shutdownClick();
             return;
@@ -384,12 +396,20 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         snapToNearestEdge();
     }
 
+    @Override public void onInteractionStarted() { cancelClueFollow(); }
+
     @Override public void onDragCancelled() {
+        cancelDragInteraction();
+        snapToNearestEdge();
+    }
+
+    private void cancelDragInteraction() {
+        cancelClueFollow();
         dragInProgress = false;
         if (overlayView != null) overlayView.removeCallbacks(dragFrame);
         dragFrameScheduled = false;
+        if (snapAnimator != null) snapAnimator.cancel();
         hideTrashTarget();
-        snapToNearestEdge();
     }
 
     @Override
@@ -411,6 +431,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     @Override
     public void onDestroy() {
+        android.util.Log.i("ClickOverlay", "Service destroyed; explicitClose=" + closing);
         closing = true;
         clearMissingScreenWait();
         stopNarration();
@@ -542,6 +563,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void collapseTaskFlow() {
+        android.util.Log.i("ClickOverlay", "Task panel minimized; keeping CLICK visible");
+        if (overlayView != null) overlayView.cancelPendingGesture();
+        cancelDragInteraction();
         taskFlowCollapsed = true;
         stopListening();
         if (taskFlowView != null) {
@@ -550,6 +574,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         if (overlayView != null) overlayView.collapse();
         updateFloatingVisibility();
+        if (overlayView != null) overlayView.post(this::followGuideWithClue);
         if (taskFlowView != null && taskFlowView.hasOpenedTargetHelp()) {
             replayGuidanceMessage(taskFlowView.guidanceMessage());
             ClickAccessibilityService.requestFreshSnapshot();
@@ -558,6 +583,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     @Override public boolean onOpenRequested() {
         if (taskFlowView == null || !taskFlowCollapsed) return false;
+        cancelClueFollow();
         taskFlowCollapsed = false;
         updateFloatingVisibility();
         placeTaskFlow(null, true);
@@ -647,6 +673,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     /** Keep ongoing instructions next to the movable click button, clear of its target. */
     private void avoidTargetWithCollapsedControl() {
+        if (clueFollowAnimator != null && clueFollowAnimator.isRunning()) return;
         if (!taskFlowCollapsed || overlayView == null || windowParams == null || windowManager == null
                 || !overlayView.isAttachedToWindow() || overlayView.getMode() != ClickOverlayLayout.Mode.COLLAPSED
                 || lastTargetBounds == null || lastTargetBounds.length != 4 || dragInProgress || closing) return;
@@ -1301,6 +1328,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void snapToNearestEdge() {
         if (dragInProgress || closing || windowManager == null || windowParams == null) return;
+        if (followGuideWithClue()) return;
         int maxX = Math.max(0, screenWidth() - windowParams.width);
         int maxY = Math.max(0, screenHeight() - windowParams.height);
         int left = windowParams.x;
@@ -1632,6 +1660,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void enqueueNormalRequest(String text, String selectedGoalType) {
         if (closing || text == null || text.trim().isEmpty() || queueGateway == null) return;
+        new com.click.data.local.RequestLibraryStore(this).record(text, selectedGoalType);
         if (agentPaused) {
             replacePausedQueue(text.trim(), selectedGoalType);
             return;
@@ -1697,6 +1726,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void abortActiveRequest() {
+        clearGuideResyncRetry();
         nextQueuedRequest = null;
         silenceVoiceReply();
         executionGeneration++;
@@ -1832,7 +1862,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             overlayView.setRecognizedSpeech(message);
             overlayView.showInputFeedback(message);
         }
-        if (taskFlowView != null) taskFlowView.waiting(message);
+        if (taskFlowView != null) taskFlowView.failed(message);
         speak(message);
     }
 
@@ -2124,7 +2154,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 failActiveQueueRequest("NETWORK_ERROR");
                 android.util.Log.e("ClickAgent", "Agent turn failed", error);
                 String userMessage = ErrorDetails.requestMessage(error);
-                if (taskFlowView != null) taskFlowView.waiting(userMessage);
+                if (taskFlowView != null) taskFlowView.failed(userMessage);
                 if (overlayView != null) overlayView.setRecognizedSpeech(userMessage);
                 speak(userMessage);
                 if (overlayView != null && overlayView.getMode() == ClickOverlayLayout.Mode.TEXT) {
@@ -2134,6 +2164,38 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 }
             }
         });
+    }
+
+    private Intent accessibilityGuideIntent() {
+        return new Intent(this, com.click.designpreview.PermissionGuideActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .putExtra(com.click.designpreview.PermissionGuideActivity.EXTRA_RECONNECT,
+                        PermissionStatus.isAccessibilityEnabled(this));
+    }
+
+    private void openAccessibilityGuide() {
+        stopNarration();
+        hideGuideOverlay();
+        hideConfirmation();
+        hideSettingsOpenButton();
+        taskFlowCollapsed = true;
+        if (overlayView != null) overlayView.collapse();
+        updateFloatingVisibility();
+        startActivity(accessibilityGuideIntent());
+    }
+
+    private void showObservationRecovery(String message, Runnable retry) {
+        if (ClickAccessibilityService.accessibilityWindowManager() == null)
+            showObservationRecovery(initialGoal, message, retry);
+        else taskFlowView.observationRecovery(message, retry);
+    }
+
+    private void showObservationRecovery(String goal, String message, Runnable retry) {
+        if (ClickAccessibilityService.accessibilityWindowManager() == null) {
+            taskFlowView.accessibilityRecovery(
+                    "화면 읽기 연결이 끊겼어요. 접근성 안내를 따라 연결을 다시 설정해 주세요.",
+                    this::openAccessibilityGuide, retry);
+        } else taskFlowView.observationRecovery(goal, message, retry);
     }
 
     private void clearMissingScreenWait() {
@@ -2171,10 +2233,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         missingScreenRecovery = true;
         String message = ClickAccessibilityService.accessibilityWindowManager() == null
-                ? "화면 읽기 연결이 끊겼어요. 휴대폰 접근성 설정에서 클릭을 껐다 켠 뒤 ‘화면 다시 확인하기’를 눌러주세요."
-                : "현재 화면을 읽지 못했어요. 휴대폰 잠금을 풀고 홈이나 설정 화면으로 이동한 뒤 ‘화면 다시 확인하기’를 눌러주세요.";
+                ? "화면 읽기 연결이 끊겼어요. ‘접근성 안내 보기’를 눌러 연결을 다시 설정해 주세요."
+                : "현재 화면을 읽지 못했어요. 휴대폰 잠금을 풀고 홈이나 설정 화면으로 이동한 뒤 ‘다시 시도하기’를 눌러주세요.";
         hideGuideOverlay();
-        taskFlowView.observationRecovery(initialGoal, message, () -> {
+        showObservationRecovery(initialGoal, message, () -> {
             if (generation != executionGeneration || !java.util.Objects.equals(session, agentSessionId)
                     || closing || agentPaused || turnInFlight || pendingControl != null) return;
             clearMissingScreenWait();
@@ -2498,6 +2560,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 return;
             }
         }
+        clearGuideResyncRetry();
         // A HOME_NAVIGATED event must reach the server first. Continue page search from
         // its response as well; an unchanged launcher need not emit another AX event.
         if (displayedSnapshot != null && hasConfirmedGoal() && shouldScanHomeForSettings(displayedSnapshot)) {
@@ -2620,7 +2683,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     showTargetHelp(response.stateId);
                     return;
                 }
-                taskFlowView.observationRecovery(goal, command.message, retry);
+                showObservationRecovery(goal, command.message, retry);
                 speak(command.message);
             }
             placeTaskFlow(null, true);
@@ -2697,7 +2760,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (service == null || service.agentSessionId == null || service.agentPaused) return;
         service.guideStepTimer.clear();
         service.requestRecoveryNavigation(back ? NavigationRecovery.Action.BACK : NavigationRecovery.Action.HOME,
-                LatestScreenSnapshot.get());
+                LatestScreenSnapshot.get(), true);
         ClickAccessibilityService.requestFreshSnapshot();
     }
 
@@ -2767,7 +2830,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void requestRecoveryNavigation(NavigationRecovery.Action action, ScreenSnapshot before) {
-        navigationRecovery.requested(action, before);
+        requestRecoveryNavigation(action, before, false);
+    }
+
+    private void requestRecoveryNavigation(NavigationRecovery.Action action, ScreenSnapshot before, boolean manual) {
+        if (manual) navigationRecovery.requestedByUser(action, before);
+        else navigationRecovery.requested(action, before);
         guideStepTimer.clear();
         if (taskFlowView != null) taskFlowView.setLoadingStatus(null);
         final int generation = executionGeneration;
@@ -2775,6 +2843,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (generation != executionGeneration || agentPaused || navigationRecovery.awaiting() != action) return;
             ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
             if (!handleNavigationSnapshot(current)) { sendAgentTurn(null, true); return; }
+            if (manual && navigationRecovery.finishManualWait()) {
+                // No correlated screen change: re-observe without fabricating BACK_NAVIGATED
+                // or forcing the user home just because Settings recreated its window.
+                forceNextObservation = true;
+                sendAgentTurn(null, true);
+                return;
+            }
             if (action == NavigationRecovery.Action.BACK && navigationRecovery.awaiting() == action) {
                 navigationRecovery.forceHome();
                 showNavigationRecovery(NavigationRecovery.Action.HOME);
@@ -2963,11 +3038,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             forceNextObservation = false;
             final int generation = executionGeneration;
             String message = "조절 결과를 아직 확인하지 못했어요. 현재 화면을 다시 확인해 주세요.";
-            lastSpokenMessage = message;
-            taskFlowView.observationRecovery(message, () -> retryObservation(generation, false));
+            showObservationRecovery(message, () -> retryObservation(generation, false));
+            String guidance = taskFlowView.guidanceMessage();
+            lastSpokenMessage = guidance;
             placeTaskFlow(null, true);
-            if (overlayView != null) overlayView.setRecognizedSpeech(message);
-            speak(message);
+            if (overlayView != null) overlayView.setRecognizedSpeech(guidance);
+            speak(guidance);
             return;
         }
         String message = "현재 화면을 다시 확인하고 있어요. 잠시 기다려 주세요.";
@@ -3008,8 +3084,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             final int generation = executionGeneration;
             String message = recovery != null ? recovery
-                    : "현재 화면에서 다음 항목을 찾지 못했어요. 화면을 확인한 뒤 ‘화면 다시 확인하기’를 눌러주세요.";
-            taskFlowView.observationRecovery(message, () -> retryObservation(generation, true));
+                    : "현재 화면에서 다음 항목을 찾지 못했어요. 화면을 확인한 뒤 ‘다시 시도하기’를 눌러주세요.";
+            showObservationRecovery(message, () -> retryObservation(generation, true));
             // The preceding guide may have been a compact progress bubble. Re-layout the
             // recovery card so its actions are reachable instead of inheriting that size.
             placeTaskFlow(null, true);
@@ -3120,8 +3196,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         // emit another accessibility event for an explicit retry to reach the server.
         sendAgentTurn(null, true);
         if (!turnInFlight && forceNextObservation) {
-            String message = "휴대폰 화면 정보를 읽지 못했어요. 접근성에서 클릭이 켜져 있는지 확인한 뒤 다시 눌러주세요.";
-            taskFlowView.observationRecovery(message, () -> retryObservation(generation, manualOverride));
+            String message = "현재 화면을 읽지 못했어요. 휴대폰 잠금을 풀고 화면을 다시 확인해 주세요.";
+            showObservationRecovery(message, () -> retryObservation(generation, manualOverride));
             placeTaskFlow(null, true);
         }
     }
@@ -3448,6 +3524,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         nativeGuideScreen = lastSubmittedScreen;
         guideOverlayView.showTarget(bounds, actionType, dragDirection);
         guideOverlayView.setVisibility(View.VISIBLE);
+        if (!java.util.Arrays.equals(clueFollowBounds, bounds)) manuallyPlacedGuideBounds = null;
+        clueFollowBounds = bounds.clone();
+        clueFollowAction = actionType;
+        followGuideWithClue();
     }
 
     private void attachGuideOverlay() {
@@ -3465,10 +3545,69 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void hideGuideOverlay() {
+        cancelClueFollow();
+        clueFollowBounds = manuallyPlacedGuideBounds = null;
         visionGuideScreen = null;
         nativeGuideScreen = null;
         // Reattaching on every guide would raise the highlight above the logo.
         if (guideOverlayView != null) guideOverlayView.setVisibility(View.GONE);
+    }
+
+    private void cancelClueFollow() {
+        if (clueFollowAnimator != null) clueFollowAnimator.cancel();
+        clueFollowAnimator = null;
+    }
+
+    /** Move only the minimized companion; never move an open form or fight a user's drag. */
+    private boolean followGuideWithClue() {
+        if (clueFollowBounds == null || clueFollowBounds.length != 4 || closing || agentPaused || dragInProgress
+                || windowManager == null || windowParams == null || overlayView == null
+                || !overlayView.isAttachedToWindow() || overlayView.getVisibility() != View.VISIBLE
+                || overlayView.getMode() != ClickOverlayLayout.Mode.COLLAPSED
+                || java.util.Arrays.equals(clueFollowBounds, manuallyPlacedGuideBounds)) return false;
+        int[] location = new int[2]; overlayView.getLocationOnScreen(location);
+        Rect safe = new Rect(dp(8), dp(24), screenWidth() - dp(8), screenHeight() - dp(24));
+        android.view.WindowInsets insets = overlayView.getRootWindowInsets();
+        if (insets != null) {
+            safe.top = Math.max(safe.top, insets.getSystemWindowInsetTop() + dp(8));
+            safe.bottom = Math.min(safe.bottom, screenHeight() - insets.getSystemWindowInsetBottom() - dp(8));
+        }
+        Rect keyboard = ClickAccessibilityService.keyboardBounds();
+        if (keyboard != null && FloatingPanelPosition.isDockedKeyboard(screenHeight(), keyboard.top, keyboard.bottom, dp(64)))
+            safe.bottom = Math.min(safe.bottom, keyboard.top - dp(8));
+        Rect target = new Rect(clueFollowBounds[0], clueFollowBounds[1], clueFollowBounds[2], clueFollowBounds[3]);
+        if ("drag".equals(clueFollowAction)) {
+            // Keep the slider direction arrow and caption free as well.
+            if (target.bottom + dp(48) <= screenHeight()) target.bottom += dp(52);
+            else target.top -= dp(52);
+        }
+        Rect destination = com.click.ui.overlay.ClueFollowPosition.beside(target, safe,
+                windowParams.width, windowParams.height, dp(16), location[0], location[1]);
+        if (destination == null) { cancelClueFollow(); return false; }
+        int targetX = windowParams.x + destination.left - location[0];
+        int targetY = windowParams.y + destination.top - location[1];
+        if (Math.abs(targetX - windowParams.x) + Math.abs(targetY - windowParams.y) < dp(3)) return true;
+        cancelClueFollow();
+        if (snapAnimator != null) snapAnimator.cancel();
+        int startX = windowParams.x, startY = windowParams.y;
+        ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
+        clueFollowAnimator = animator;
+        animator.setDuration(320L);
+        animator.setInterpolator(new DecelerateInterpolator());
+        animator.addUpdateListener(frame -> {
+            if (clueFollowAnimator != animator || closing || dragInProgress || overlayView == null
+                    || !overlayView.isAttachedToWindow() || overlayView.getVisibility() != View.VISIBLE
+                    || overlayView.getMode() != ClickOverlayLayout.Mode.COLLAPSED) {
+                animator.cancel(); return;
+            }
+            float fraction = (float) frame.getAnimatedValue();
+            windowParams.x = Math.round(startX + (targetX - startX) * fraction);
+            windowParams.y = Math.round(startY + (targetY - startY) * fraction);
+            windowManager.updateViewLayout(overlayView, windowParams);
+            placeProgressBubble();
+        });
+        animator.start();
+        return true;
     }
 
     private void detachGuideOverlay() {
@@ -3479,7 +3618,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void invalidateStaleGuide() {
-        if (waitingForTargetHelp()) return;
+        if (closing || agentPaused || pendingControl != null || resultPrompt != null
+                || followUp != null || waitingForTargetHelp()) return;
         ScreenSnapshot source = visionGuideScreen != null ? visionGuideScreen : nativeGuideScreen;
         ScreenSnapshot latest = LatestScreenSnapshot.get();
         if (source != null && (latest == null || !GuideFreshness.stillValid(source,
@@ -3490,13 +3630,66 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             stopNarration();
             lastNarratedGuideKey = null;
             forceNextObservation = true;
+            // Navigation recovery deliberately blocks ordinary turns. Do not replace
+            // its actionable UI with a waiting message that cannot make progress.
+            if (navigationRecovery.hint() != NavigationRecovery.Action.NONE) {
+                showNavigationRecovery(navigationRecovery.hint());
+                return;
+            }
             if (taskFlowView != null) {
                 taskFlowView.waitingProgress("화면이 바뀌었어요. 현재 위치를 다시 확인하고 있어요.");
                 taskFlowView.setAutomaticProgress(automaticTouchEnabled());
                 updateFloatingVisibility();
                 placeTaskFlow(null, false);
             }
+            scheduleGuideResync();
         }
+    }
+
+    private void clearGuideResyncRetry() {
+        if (guideResyncRetry != null && speechHandler != null) speechHandler.removeCallbacks(guideResyncRetry);
+        guideResyncRetry = null;
+    }
+
+    /** A transient/duplicate AX event must not be the only way out of screen-change waiting. */
+    private void scheduleGuideResync() {
+        clearGuideResyncRetry();
+        final int generation = executionGeneration;
+        final String session = agentSessionId;
+        guideResyncRetry = new Runnable() {
+            private int attempts;
+            @Override public void run() {
+                if (guideResyncRetry != this) return;
+                if (generation != executionGeneration || !java.util.Objects.equals(session, agentSessionId)
+                        || closing || agentPaused || pendingControl != null || resultPrompt != null
+                        || followUp != null || waitingForTargetHelp() || !hasConfirmedGoal()) {
+                    clearGuideResyncRetry(); return;
+                }
+                // Its callback revalidates against the newest screen. Never send parallel turns.
+                if (turnInFlight) { clearGuideResyncRetry(); return; }
+                ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+                if (handleNavigationSnapshot(current)) {
+                    clearGuideResyncRetry();
+                    showNavigationRecovery(navigationRecovery.hint());
+                    return;
+                }
+                sendAgentTurn(null, true);
+                if (guideResyncRetry != this) return;
+                if (turnInFlight || missingScreenRetry != null || missingScreenRecovery) {
+                    clearGuideResyncRetry(); return;
+                }
+                if (++attempts < 3 && staleGuideDrops < 4) {
+                    speechHandler.postDelayed(this, 750L);
+                    return;
+                }
+                clearGuideResyncRetry();
+                forceNextObservation = false;
+                showObservationRecovery("현재 위치를 다시 확인하지 못했어요. 화면 이동을 멈춘 뒤 ‘다시 시도하기’를 눌러주세요.",
+                        () -> retryObservation(generation, false));
+                placeTaskFlow(null, true);
+            }
+        };
+        speechHandler.postDelayed(guideResyncRetry, 750L);
     }
 
     private void showConfirmation(String message) {

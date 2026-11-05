@@ -4,11 +4,14 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.StateListDrawable;
+import android.content.res.ColorStateList;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -27,46 +30,25 @@ public final class ClickDialog {
         return text;
     }
 
+    private static void flatten(Button button) {
+        button.setStateListAnimator(null);
+        button.setElevation(0);
+        button.setTranslationZ(0);
+        button.setOutlineProvider(null);
+    }
+
     public static Dialog show(Activity activity, String title, View body,
                               String positive, Runnable action, String negative) {
+        return show(activity, title, body, positive, action, negative, false);
+    }
+
+    public static Dialog show(Activity activity, String title, View body,
+                              String positive, Runnable action, String negative,
+                              boolean requireScrollToEnd) {
         Dialog dialog = new Dialog(activity);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         int padding = ClickUi.dp(activity, 22);
-        LinearLayout card = new LinearLayout(activity);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(padding, padding, padding, padding);
-        card.setBackground(ClickUi.rounded(Color.WHITE, ClickUi.dp(activity, 26)));
-
-        TextView brand = ClickUi.body(activity, "클릭");
-        brand.setTextSize(16); brand.setTextColor(ClickUi.BLUE);
-        card.addView(brand);
-        TextView heading = ClickUi.title(activity, title);
-        heading.setTextSize(23);
-        if (android.os.Build.VERSION.SDK_INT >= 28) heading.setAccessibilityHeading(true);
-        LinearLayout.LayoutParams headingParams = new LinearLayout.LayoutParams(-1, -2);
-        headingParams.setMargins(0, ClickUi.dp(activity, 10), 0, ClickUi.dp(activity, 18));
-        card.addView(heading, headingParams);
-        card.addView(body, new LinearLayout.LayoutParams(-1, -2));
-
-        Button confirm = ClickUi.primaryButton(activity, positive);
-        confirm.setId(android.R.id.button1);
-        confirm.setTextSize(17); confirm.setMinHeight(ClickUi.dp(activity, 50));
-        confirm.setPadding(padding, ClickUi.dp(activity, 12), padding, ClickUi.dp(activity, 12));
-        confirm.setOnClickListener(view -> { dialog.dismiss(); if (action != null) action.run(); });
-        LinearLayout.LayoutParams confirmParams = new LinearLayout.LayoutParams(-1, -2);
-        confirmParams.topMargin = ClickUi.dp(activity, 20);
-        card.addView(confirm, confirmParams);
-        if (negative != null) {
-            Button cancel = ClickUi.secondaryButton(activity, negative);
-            cancel.setId(android.R.id.button2);
-            cancel.setTextSize(16);
-            cancel.setPadding(padding, ClickUi.dp(activity, 12), padding, ClickUi.dp(activity, 12));
-            cancel.setOnClickListener(view -> dialog.dismiss());
-            LinearLayout.LayoutParams cancelParams = new LinearLayout.LayoutParams(-1, -2);
-            cancelParams.topMargin = ClickUi.dp(activity, 8);
-            card.addView(cancel, cancelParams);
-        }
-        ScrollView scroll = new ScrollView(activity) {
+        LinearLayout card = new LinearLayout(activity) {
             @Override protected void onMeasure(int width, int height) {
                 int limit = Math.round(getResources().getDisplayMetrics().heightPixels * .82f);
                 if (MeasureSpec.getMode(height) != MeasureSpec.UNSPECIFIED)
@@ -74,11 +56,96 @@ public final class ClickDialog {
                 super.onMeasure(width, MeasureSpec.makeMeasureSpec(limit, MeasureSpec.AT_MOST));
             }
         };
-        scroll.setBackground(ClickUi.rounded(Color.WHITE, ClickUi.dp(activity, 26)));
-        scroll.setClipToOutline(true);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(padding, padding, padding, padding);
+        card.setBackground(ClickUi.rounded(Color.WHITE, ClickUi.dp(activity, 26)));
+
+        LinearLayout header = new LinearLayout(activity);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+        TextView heading = ClickUi.title(activity, title);
+        heading.setTextSize(23);
+        if (android.os.Build.VERSION.SDK_INT >= 28) heading.setAccessibilityHeading(true);
+        header.addView(heading, new LinearLayout.LayoutParams(0, -2, 1));
+        ImageButton close = new ImageButton(activity);
+        close.setTag("click_dialog_close");
+        close.setContentDescription("닫기");
+        close.setImageResource(com.click.designpreview.R.drawable.account_dialog_close);
+        close.setBackground(ClickUi.rounded(ClickUi.PALE_BLUE, ClickUi.dp(activity, 24)));
+        close.setPadding(ClickUi.dp(activity, 14), ClickUi.dp(activity, 14),
+                ClickUi.dp(activity, 14), ClickUi.dp(activity, 14));
+        close.setOnClickListener(view -> dialog.dismiss());
+        LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(ClickUi.dp(activity, 48), ClickUi.dp(activity, 48));
+        closeParams.leftMargin = ClickUi.dp(activity, 8);
+        header.addView(close, closeParams);
+        LinearLayout.LayoutParams headingParams = new LinearLayout.LayoutParams(-1, -2);
+        headingParams.bottomMargin = ClickUi.dp(activity, 18);
+        card.addView(header, headingParams);
+
+        ScrollView scroll = new ScrollView(activity) {
+            @Override protected void onMeasure(int width, int height) {
+                if (requireScrollToEnd) {
+                    int limit = ClickUi.dp(activity, 380);
+                    if (MeasureSpec.getMode(height) != MeasureSpec.UNSPECIFIED)
+                        limit = Math.min(limit, MeasureSpec.getSize(height));
+                    height = MeasureSpec.makeMeasureSpec(limit, MeasureSpec.AT_MOST);
+                }
+                super.onMeasure(width, height);
+                if (requireScrollToEnd && getChildCount() > 0) {
+                    int bodyHeight = getChildAt(0).getMeasuredHeight();
+                    if (bodyHeight > 0 && getMeasuredHeight() >= bodyHeight) {
+                        // Even on roomy screens, leave the end of the notice to be revealed by scrolling.
+                        int visibleHeight = Math.max(1, bodyHeight - ClickUi.dp(activity, 24));
+                        super.onMeasure(width, MeasureSpec.makeMeasureSpec(visibleHeight, MeasureSpec.AT_MOST));
+                    }
+                }
+            }
+        };
+        scroll.setTag("click_dialog_body_scroll");
+        scroll.setVerticalScrollBarEnabled(requireScrollToEnd);
         scroll.setFillViewport(false);
-        scroll.addView(card, new ScrollView.LayoutParams(-1, -2));
-        dialog.setContentView(scroll);
+        scroll.addView(body, new ScrollView.LayoutParams(-1, -2));
+        card.addView(scroll, new LinearLayout.LayoutParams(-1, -2, 1));
+
+        Button confirm = ClickUi.primaryButton(activity, positive);
+        confirm.setId(android.R.id.button1);
+        flatten(confirm);
+        confirm.setTextSize(17); confirm.setMinHeight(ClickUi.dp(activity, 50));
+        confirm.setPadding(padding, ClickUi.dp(activity, 12), padding, ClickUi.dp(activity, 12));
+        confirm.setOnClickListener(view -> { dialog.dismiss(); if (action != null) action.run(); });
+        if (requireScrollToEnd) {
+            StateListDrawable background = new StateListDrawable();
+            background.addState(new int[]{-android.R.attr.state_enabled},
+                    ClickUi.rounded(0xFFE5E8ED, ClickUi.dp(activity, 22)));
+            background.addState(new int[]{}, confirm.getBackground());
+            confirm.setBackground(background);
+            confirm.setTextColor(new ColorStateList(new int[][]{
+                    {-android.R.attr.state_enabled}, {}}, new int[]{0xFF737D8C, Color.WHITE}));
+            confirm.setEnabled(false);
+            confirm.setContentDescription(positive);
+            scroll.setOnScrollChangeListener((view, x, y, oldX, oldY) -> {
+                if (y > 0 && !scroll.canScrollVertically(1)) {
+                    confirm.setEnabled(true);
+                    confirm.setContentDescription(null);
+                    // Reading is complete for this dialog; later request states control the button.
+                    scroll.setOnScrollChangeListener(null);
+                }
+            });
+        }
+        LinearLayout.LayoutParams confirmParams = new LinearLayout.LayoutParams(-1, -2);
+        confirmParams.topMargin = ClickUi.dp(activity, 20);
+        card.addView(confirm, confirmParams);
+        if (negative != null) {
+            Button cancel = ClickUi.secondaryButton(activity, negative);
+            cancel.setId(android.R.id.button2);
+            flatten(cancel);
+            cancel.setTextSize(16);
+            cancel.setPadding(padding, ClickUi.dp(activity, 12), padding, ClickUi.dp(activity, 12));
+            cancel.setOnClickListener(view -> dialog.dismiss());
+            LinearLayout.LayoutParams cancelParams = new LinearLayout.LayoutParams(-1, -2);
+            cancelParams.topMargin = ClickUi.dp(activity, 8);
+            card.addView(cancel, cancelParams);
+        }
+        dialog.setContentView(card);
         dialog.show();
         Window window = dialog.getWindow();
         if (window != null) {

@@ -37,7 +37,7 @@ public final class AccessibilityHelpActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        render(ClickHost.from(this).accessibilityEnabled());
+        render(ClickHost.from(this).accessibilityConnected());
     }
 
     private void render(boolean enabled) {
@@ -86,13 +86,17 @@ public final class AccessibilityHelpActivity extends Activity {
     }
 
     private void addRequiredContent(LinearLayout body) {
-        TextView title = text("아직은 보고 계신 화면을\n확인할 수 없어요", 31, INK, semibold);
+        boolean reconnect = ClickHost.from(this).accessibilityEnabled();
+        TextView title = text(reconnect ? "화면 읽기 연결을\n다시 확인해 주세요"
+                : "아직은 보고 계신 화면을\n확인할 수 없어요", 31, INK, semibold);
         title.setLetterSpacing(-.025f);
         title.setLineSpacing(dp(2), 1.04f);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         body.addView(title, new LinearLayout.LayoutParams(-1, -2));
 
-        TextView description = text("지금은 접근성 허용이 되지 않아\n클릭이 도와드릴 수 없어요.\n\n접근성 설정에서 클릭을 허용해 주시면\n바로 도와드릴게요.", 17, SECONDARY, regular);
+        TextView description = text(reconnect
+                ? "접근성은 켜져 있지만\n화면 읽기 연결이 끊겼어요.\n\n접근성 안내를 따라 클릭 화면 안내를\n껐다가 다시 켜주세요."
+                : "지금은 접근성 허용이 되지 않아\n클릭이 도와드릴 수 없어요.\n\n접근성 설정에서 클릭을 허용해 주시면\n바로 도와드릴게요.", 17, SECONDARY, regular);
         description.setLineSpacing(dp(4), 1.16f);
         add(body, description, 18);
 
@@ -143,7 +147,8 @@ public final class AccessibilityHelpActivity extends Activity {
         action.setContentDescription(label.getText());
         action.setOnClickListener(view -> {
             if (enabled) ClickHost.from(this).openHome(this);
-            else ClickHost.from(this).openAccessibilityGuide(this);
+            else startActivity(new android.content.Intent(this, PermissionGuideActivity.class)
+                    .putExtra(PermissionGuideActivity.EXTRA_RECONNECT, ClickHost.from(this).accessibilityEnabled()));
         });
         footer.addView(action, new LinearLayout.LayoutParams(-1, -2));
 

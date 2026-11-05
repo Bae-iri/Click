@@ -15,7 +15,7 @@ public class ClickBrandView extends View {
     public ClickBrandView(Context context, AttributeSet attrs) {
         super(context, attrs);
         cursor = context.getDrawable(R.drawable.ic_click_cursor).mutate();
-        wordmark = context.getDrawable(R.drawable.click).mutate();
+        wordmark = context.getDrawable(R.drawable.click_wordmark).mutate();
         if (wordmark instanceof BitmapDrawable) ((BitmapDrawable) wordmark).setFilterBitmap(true);
         setContentDescription(context.getString(R.string.splash_logo_description));
     }

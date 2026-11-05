@@ -2,21 +2,21 @@
 <resources>
     <!-- 튜토리얼 TTS 전용 대본. 화면의 heading/detail과 독립적으로 수정합니다.
          자동 안내와 다시 듣기는 같은 대본을 사용합니다. 빈 문자열이면 해당 안내는 읽지 않습니다. -->
-    <string name="tutorial_speech_intro">요청부터 결과 확인까지 함께 연습해 볼게요. 연습 시작하기를 눌러주세요.</string>
+    <string name="tutorial_speech_intro">요청하고 안내를 사용하는 방법을 함께 연습해 볼게요. 연습 시작하기를 눌러주세요.</string>
     <string name="tutorial_speech_complete">연습을 마쳤어요. 홈으로 가기를 눌러 클릭을 사용해 보세요.</string>
     <string name="tutorial_speech_input">말이나 글 중 편한 방법을 골라 요청해 주세요.</string>
-    <string name="tutorial_speech_running">자동 모드에서는 클릭이 진행해요. 줄이기로 안내를 작게 볼 수 있고, 일시정지나 요청 중지로 멈출 수 있어요.</string>
+    <string name="tutorial_speech_running">자동 모드에서는 클릭이 진행해요. 줄이기로 안내를 작게 볼 수 있고, 멈추기로 잠시 쉬거나 끝내기로 안내를 끝낼 수 있어요.</string>
     <string name="tutorial_speech_paused">작업을 잠시 멈췄어요. 이어서 진행을 누르면 계속할 수 있어요.</string>
     <string name="tutorial_speech_result">원하는 결과가 나왔는지 확인해 주세요. 괜찮으면 네, 글씨가 잘 보여요를 누르고, 더 도움이 필요하면 더 커졌으면 좋겠어를 눌러요.</string>
     <string name="tutorial_speech_open">화면에 있는 클릭 버튼을 눌러보세요.</string>
-    <string name="tutorial_speech_write_input">요청을 입력한 뒤, 위쪽 화살표가 있는 보내기 버튼을 눌러 보내세요.</string>
+    <string name="tutorial_speech_write_input">내용을 입력한 뒤, 위쪽 화살표가 있는 보내기 버튼을 눌러 보내세요.</string>
 
-    <string name="tutorial_speech_review_intro">입력한 요청을 확인해 볼게요. 원하시는 항목을 골라주세요.</string>
-    <string name="tutorial_speech_review_target">어디의 글자를 바꿀까요? 휴대폰 기본 글자 또는 특정 앱 안에서만 중 하나를 고르고 다음 단계를 눌러주세요.</string>
+    <string name="tutorial_speech_review_intro">입력한 내용을 확인해 볼게요. 원하시는 항목을 골라주세요.</string>
+    <string name="tutorial_speech_review_target">어디의 글자를 바꿀까요? 휴대폰 기본 글자 또는 특정 앱 안에서만 중 하나를 고르고 입력하기를 눌러주세요.</string>
     <string name="tutorial_speech_review_app">앱 이름을 입력해 주세요. 휴대폰 전체 글자를 바꾸려면 휴대폰 전체를 눌러주세요.</string>
     <string name="tutorial_speech_review_direction">글자 크기를 어떻게 바꿀까요? 더 크게, 더 작게 중에서 골라주세요.</string>
-    <string name="tutorial_speech_review_unsupported">이 요청의 실행 안내는 아직 지원하지 않아요. 내용을 수정하거나 요청을 중지할 수 있어요.</string>
-    <string name="tutorial_speech_review_ready">요청 내용이 맞으면 안내 시작하기를 눌러주세요. 고치고 싶으면 내용 수정을 눌러주세요.</string>
+    <string name="tutorial_speech_review_unsupported">이 작업은 아직 안내해 드리기 어려워요. 내용을 수정하거나 안내를 끝낼 수 있어요.</string>
+    <string name="tutorial_speech_review_ready">내용이 맞으면 안내 시작하기를 눌러주세요. 고치고 싶으면 내용 수정을 눌러주세요.</string>
 
     <string name="tutorial_speech_voice_record">마이크 버튼을 누른 채 원하는 작업을 말해 주세요. 말을 마치면 손을 떼세요.</string>
     <string name="tutorial_speech_microphone_ready">준비됐어요. 마이크 버튼을 꾹 누르고 말한 뒤 손을 떼세요.</string>

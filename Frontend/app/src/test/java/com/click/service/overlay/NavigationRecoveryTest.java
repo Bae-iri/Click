@@ -50,4 +50,29 @@ public class NavigationRecoveryTest {
   NavigationRecovery recovery=new NavigationRecovery();recovery.onPath(settings("설정"));
   assertEquals(NONE,recovery.observe(recents));
  }
+ @Test public void manualBackCanReobserveARecreatedSettingsWindowWithoutForcingHome() {
+  NavigationRecovery recovery=new NavigationRecovery();
+  ScreenSnapshot root=settings("설정"), child=settings("디스플레이");
+  recovery.onPath(root); recovery.onPath(child);
+  recovery.requestedByUser(BACK,child);
+  ScreenSnapshot recreated=new ScreenSnapshot(root.packageName,root.capturedAt,1080,2400,root.nodes,8);
+  assertEquals(BACK,recovery.observe(recreated));
+  assertEquals(NONE,recovery.hint());
+  recovery.onPath(recreated); recovery.observe(child); recovery.requestedByUser(BACK,child);
+  assertEquals(BACK,recovery.observe(root));
+  assertEquals(NONE,recovery.hint());
+ }
+ @Test public void manualBackWaitsThroughEmptyTransitionAndCanReleaseWithoutInventingNavigation() {
+  NavigationRecovery recovery=new NavigationRecovery();ScreenSnapshot child=settings("디스플레이");
+  recovery.onPath(child);recovery.requestedByUser(BACK,child);
+  assertEquals(NONE,recovery.observe(new ScreenSnapshot(child.packageName,child.capturedAt,1080,2400,List.of(),8)));
+  assertEquals(BACK,recovery.awaiting());
+  assertTrue(recovery.finishManualWait());assertEquals(NONE,recovery.hint());
+ }
+ @Test public void physicalEventCannotWeakenAnExplicitBackRecovery() {
+  NavigationRecovery recovery=new NavigationRecovery();ScreenSnapshot wrong=settings("모름");
+  recovery.onPath(settings("설정"));recovery.requested(BACK,wrong);recovery.requestedByUser(BACK,wrong);
+  assertEquals(NONE,recovery.observe(settings("다른 화면")));assertEquals(HOME,recovery.hint());
+  assertFalse(recovery.finishManualWait());
+ }
 }

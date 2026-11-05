@@ -207,7 +207,7 @@ public final class SignupActivity extends Activity {
         window.setDimAmount(.38f);
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
         dialog.show();
-        window.setLayout(Math.min(getResources().getDisplayMetrics().widthPixels - dp(40), dp(400)),
+        window.setLayout(Math.min(getResources().getDisplayMetrics().widthPixels - dp(32), dp(400)),
                 WindowManager.LayoutParams.WRAP_CONTENT);
         window.setGravity(Gravity.CENTER);
     }

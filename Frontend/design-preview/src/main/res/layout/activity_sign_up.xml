@@ -206,9 +206,6 @@
                     android:importantForAutofill="yes"
                     android:inputType="textPersonName" />
                 <TextView
-                    style="@style/SignupHelper"
-                    android:text="@string/signup_name_helper" />
-                <TextView
                     android:id="@+id/signup_name_error"
                     style="@style/SignupError"
                     android:visibility="gone" />

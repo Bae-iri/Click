@@ -35,6 +35,7 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.click.core.permission.PermissionStatus;
 import com.click.data.local.HomeFavoritesStore;
+import com.click.data.local.RequestLibraryStore;
 import com.click.ui.home.HomeHelpItem;
 import com.click.domain.goal.QuickHelpTask;
 import com.click.service.overlay.ClickOverlayService;
@@ -42,7 +43,6 @@ import com.click.service.overlay.OverlayActions;
 import com.click.ui.common.ClickUi;
 import com.click.ui.common.ClickTextScale;
 import com.click.ui.home.HomeIconView;
-import com.click.designpreview.HomeStartArtworkView;
 
 /** Main Click entry screen after accessibility onboarding. */
 public final class HomeActivity extends AppCompatActivity {
@@ -50,24 +50,24 @@ public final class HomeActivity extends AppCompatActivity {
     private static final int SECONDARY = 0xFF8190AA;
     private static final int BLUE = 0xFF3478FF;
     private Typeface regular, medium, semibold;
-    private HomeStartArtworkView startArtwork;
     private ScrollView homeScroll;
     private ScrollView favoritesScroll;
     private LinearLayout homeFavorites, favoritesPage;
     private HomeFavoritesStore favorites;
+    private RequestLibraryStore library;
     private EditText requestInput;
     private View sendRequest;
-    private boolean favoritesVisible, addingFavorites, requestLaunching;
+    private boolean favoritesVisible, recentVisible, requestLaunching, reordering;
+    private java.util.List<String> displayedLibraryIds = new java.util.ArrayList<>();
     private OnBackPressedCallback pageBack;
     private LinearLayout homeTab, favoritesTab;
-    private boolean homeResumed;
-    private final Rect visibleArtwork = new Rect();
     private float renderedTextScale;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         renderedTextScale = ClickTextScale.scale(this);
         favorites = new HomeFavoritesStore(this);
+        library = new RequestLibraryStore(this);
         regular = getResources().getFont(com.click.designpreview.R.font.pretendard_regular);
         medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
         semibold = getResources().getFont(com.click.designpreview.R.font.pretendard_semibold);
@@ -116,7 +116,8 @@ public final class HomeActivity extends AppCompatActivity {
         favoritesScroll.setVisibility(View.GONE);
         pageBack = new OnBackPressedCallback(false) {
             @Override public void handleOnBackPressed() {
-                if (addingFavorites) { addingFavorites = false; renderFavoritesPage(); }
+                if (reordering) { reordering = false; renderFavoritesPage(); }
+                else if (recentVisible) { recentVisible = false; renderFavoritesPage(); }
                 else showFavorites(false);
             }
         };
@@ -134,22 +135,20 @@ public final class HomeActivity extends AppCompatActivity {
             favoritesScroll.setPadding(0, bars.top, 0, 0);
             page.setPadding(horizontal + bars.left, dp(16), horizontal + bars.right,
                     keyboard ? dp(24) : dp(92) + bars.bottom);
-            favoritesPage.setPadding(horizontal + bars.left, dp(24), horizontal + bars.right, dp(92) + bars.bottom);
+            favoritesPage.setPadding(dp(12) + bars.left, dp(24), dp(12) + bars.right, dp(92) + bars.bottom);
             navigation.setVisibility(keyboard ? View.GONE : View.VISIBLE);
             navigation.setPadding(bars.left + dp(10), dp(6), bars.right + dp(10), bars.bottom + dp(4));
             if (keyboard && requestInput.hasFocus()) requestInput.post(() -> requestInput.requestRectangleOnScreen(
                     new Rect(0, 0, requestInput.getWidth(), requestInput.getHeight()), false));
             return insets;
         });
-        homeScroll.setOnScrollChangeListener((View view, int x, int y, int oldX, int oldY) -> {
-            updateArtworkAnimation();
-        });
         setContentView(root);
         homeScroll.requestFocus();
         root.requestApplyInsets();
         if (savedInstanceState != null) {
             requestInput.setText(savedInstanceState.getString("request_draft", ""));
-            addingFavorites = savedInstanceState.getBoolean("adding_favorites");
+            recentVisible = savedInstanceState.getBoolean("recent_visible");
+            reordering = savedInstanceState.getBoolean("library_reordering");
             showFavorites(savedInstanceState.getBoolean("favorites_visible"));
         }
     }
@@ -157,12 +156,13 @@ public final class HomeActivity extends AppCompatActivity {
     @Override protected void onSaveInstanceState(Bundle state) {
         state.putString("request_draft", requestInput.getText().toString());
         state.putBoolean("favorites_visible", favoritesVisible);
-        state.putBoolean("adding_favorites", addingFavorites);
+        state.putBoolean("recent_visible", recentVisible);
+        state.putBoolean("library_reordering", reordering);
         super.onSaveInstanceState(state);
     }
 
     @Override protected void onResume() {
-        super.onResume(); homeResumed = true; requestLaunching = false;
+        super.onResume(); requestLaunching = false;
         // Do not let a previously opened input panel intercept taps on home shortcuts.
         sendBroadcast(new Intent(OverlayActions.ACTION_COLLAPSE).setPackage(getPackageName()));
         if (Float.compare(renderedTextScale, ClickTextScale.scale(this)) != 0) {
@@ -170,17 +170,7 @@ public final class HomeActivity extends AppCompatActivity {
             return;
         }
         refreshFavorites();
-        homeScroll.post(this::updateArtworkAnimation);
     }
-    @Override protected void onPause() {
-        homeResumed = false;
-        if (startArtwork != null) startArtwork.setAnimationActive(false);
-        super.onPause();
-    }
-    private void updateArtworkAnimation() {
-        startArtwork.setAnimationActive(homeResumed && startArtwork.getGlobalVisibleRect(visibleArtwork));
-    }
-
     private View header() {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -195,7 +185,7 @@ public final class HomeActivity extends AppCompatActivity {
         settings.setContentDescription(getString(R.string.home_settings_accessibility));
         settings.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         settings.setClickable(true); settings.setFocusable(true);
-        whiteCard(settings, 24, 3);
+        settings.setBackground(null);
         settings.setOnClickListener(view -> {
             startActivity(new Intent(this, MenuActivity.class));
             overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
@@ -206,12 +196,14 @@ public final class HomeActivity extends AppCompatActivity {
 
     private View hero() {
         FrameLayout hero = new FrameLayout(this);
-        hero.setMinimumHeight(dp(180));
+        hero.setMinimumHeight(dp(200));
         hero.setClipChildren(false);
         int contentWidth = Math.min(getResources().getDisplayMetrics().widthPixels, dp(520)) - dp(48);
-        startArtwork = new HomeStartArtworkView(this);
-        hero.addView(startArtwork, new FrameLayout.LayoutParams(Math.round(contentWidth * .54f),
-                dp(180), Gravity.RIGHT | Gravity.BOTTOM));
+        View startArtwork = new com.click.ui.home.ClueHomeArtworkView(this);
+        FrameLayout.LayoutParams artworkParams = new FrameLayout.LayoutParams(Math.round(contentWidth * .58f),
+                dp(200), Gravity.RIGHT | Gravity.BOTTOM);
+        artworkParams.rightMargin = dp(8);
+        hero.addView(startArtwork, artworkParams);
         LinearLayout copy = new LinearLayout(this);
         copy.setOrientation(LinearLayout.VERTICAL);
         copy.addView(text(getString(R.string.home_greeting), 14, SECONDARY, medium));
@@ -224,7 +216,7 @@ public final class HomeActivity extends AppCompatActivity {
         headline.setLineSpacing(dp(2), 1f);
         if (Build.VERSION.SDK_INT >= 28) headline.setAccessibilityHeading(true);
         add(copy, headline, 8);
-        hero.addView(copy, new FrameLayout.LayoutParams(Math.round(contentWidth * .63f), -2, Gravity.LEFT | Gravity.CENTER_VERTICAL));
+        hero.addView(copy, new FrameLayout.LayoutParams(Math.round(contentWidth * .58f), -2, Gravity.LEFT | Gravity.CENTER_VERTICAL));
         return hero;
     }
 
@@ -294,7 +286,7 @@ public final class HomeActivity extends AppCompatActivity {
         TextView more = text("더보기  ›", 14, BLUE, regular);
         more.setGravity(Gravity.CENTER); more.setMinimumHeight(dp(40));
         more.setPadding(dp(12), 0, 0, 0);
-        more.setContentDescription("즐겨찾기 더보기");
+        more.setContentDescription("보관함 더보기");
         more.setClickable(true); more.setFocusable(true);
         more.setBackground(ripple(Color.TRANSPARENT, 14));
         more.setOnClickListener(view -> showFavorites(true));
@@ -302,73 +294,249 @@ public final class HomeActivity extends AppCompatActivity {
         return header;
     }
 
+    private java.util.LinkedHashMap<String, View> libraryRows(boolean recent, boolean rearranging) {
+        java.util.LinkedHashMap<String, View> rows = new java.util.LinkedHashMap<>();
+        if (!recent) for (HomeHelpItem item : HomeHelpItem.values()) if (favorites.contains(item.id)) {
+            String id = "help:" + item.id;
+            LinearLayout row = (LinearLayout) helpRow(item, false);
+            if (rearranging) prepareReorderRow(row, id, item.title);
+            row.setTag("library_" + id);
+            rows.put(id, row);
+        }
+        for (RequestLibraryStore.Entry entry : library.entries(!recent)) {
+            String id = "request:" + entry.id;
+            LinearLayout row = (LinearLayout) requestRow(entry, recent);
+            if (rearranging) prepareReorderRow(row, id, entry.request);
+            row.setTag("library_" + id);
+            if (recent && !rearranging) {
+                com.click.ui.home.SwipeDeleteRow swipe = new com.click.ui.home.SwipeDeleteRow(this, row, entry.request, () -> {
+                    library.removeRecent(entry.id);
+                    refreshFavorites();
+                    favoritesScroll.announceForAccessibility("최근 질문에서 지웠어요.");
+                });
+                row.setTag(null);
+                swipe.setTag("library_" + id);
+                rows.put(id, swipe);
+            } else rows.put(id, row);
+        }
+        return rows;
+    }
+
+    private void prepareReorderRow(LinearLayout row, String id, String label) {
+        View launch = row.getChildAt(0);
+        launch.setOnClickListener(null); launch.setClickable(false); launch.setFocusable(false);
+        row.removeViewAt(row.getChildCount() - 1);
+        TextView move = text("≡", 24, BLUE, semibold);
+        move.setGravity(Gravity.CENTER);
+        move.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.addView(move, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        launch.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+        row.setOnClickListener(null);
+        row.setFocusable(true); row.setContentDescription(label + ", 길게 눌러 원하는 위치로 이동");
+        com.click.ui.home.LibraryDragController.prepare(row, id);
+        ViewCompat.replaceAccessibilityAction(row,
+                androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_SCROLL_BACKWARD,
+                "위로 옮기기", (view, arguments) -> { moveLibraryItem(id, displayedLibraryIds.indexOf(id) - 1); return true; });
+        ViewCompat.replaceAccessibilityAction(row,
+                androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_SCROLL_FORWARD,
+                "아래로 옮기기", (view, arguments) -> { moveLibraryItem(id, displayedLibraryIds.indexOf(id) + 1); return true; });
+    }
+
+    private void moveLibraryItem(String id, int position) {
+        int scrollY = favoritesScroll.getScrollY();
+        library.moveToPosition(id, position, displayedLibraryIds, recentVisible);
+        refreshFavorites();
+        favoritesScroll.post(() -> favoritesScroll.scrollTo(0, scrollY));
+        favoritesScroll.announceForAccessibility("순서를 바꿨어요.");
+    }
+
     private void refreshFavorites() {
         homeFavorites.removeAllViews();
+        java.util.LinkedHashMap<String, View> rows = libraryRows(false, false);
         int count = 0;
-        for (HomeHelpItem item : HomeHelpItem.values()) if (favorites.contains(item.id)) {
-            add(homeFavorites, helpRow(item, false), count++ == 0 ? 0 : 6);
-        }
+        for (String id : library.orderedIds(new java.util.ArrayList<>(rows.keySet()), false))
+            add(homeFavorites, rows.get(id), count++ == 0 ? 0 : 6);
         if (count == 0) add(homeFavorites, emptyFavorites(), 0);
         renderFavoritesPage();
     }
 
     private void renderFavoritesPage() {
         favoritesPage.removeAllViews();
-        LinearLayout heading = new LinearLayout(this);
+        TextView title = text("보관함", 25, INK, semibold);
+        LinearLayout actions = new LinearLayout(this);
+        actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        LinearLayout heading = new LinearLayout(this) {
+            @Override protected void onMeasure(int width, int height) {
+                int natural = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
+                title.measure(natural, natural); actions.measure(natural, natural);
+                boolean stacked = title.getMeasuredWidth() + actions.getMeasuredWidth() + dp(8)
+                        > MeasureSpec.getSize(width);
+                int orientation = stacked ? VERTICAL : HORIZONTAL;
+                if (getOrientation() != orientation) {
+                    setOrientation(orientation);
+                    title.setLayoutParams(new LinearLayout.LayoutParams(stacked ? -1 : 0, -2, stacked ? 0 : 1));
+                    actions.setLayoutParams(new LinearLayout.LayoutParams(stacked ? -1 : -2, -2));
+                }
+                super.onMeasure(width, height);
+            }
+        };
         heading.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = text(addingFavorites ? "즐겨찾기 추가" : "내 즐겨찾기", 23, INK, semibold);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView action = text(addingFavorites ? "완료" : "+ 추가", 15, BLUE, medium);
-        action.setId(addingFavorites ? R.id.home_favorites_done : R.id.home_favorites_add);
-        action.setContentDescription(addingFavorites ? "즐겨찾기 선택 완료" : "즐겨찾기 추가");
-        action.setGravity(Gravity.CENTER); action.setMinimumHeight(dp(48));
-        action.setPadding(dp(12), 0, dp(12), 0);
-        action.setBackground(ripple(0xFFEEF4FF, 16));
-        action.setOnClickListener(view -> {
-            addingFavorites = !addingFavorites; renderFavoritesPage(); favoritesScroll.scrollTo(0, 0);
-        });
-        heading.addView(action, new LinearLayout.LayoutParams(-2, -2));
+        TextView reorder = text(reordering ? "완료" : "순서 바꾸기", 14, Color.WHITE, semibold);
+        if (!reordering) {
+            android.graphics.drawable.Drawable arrows = getDrawable(R.drawable.ic_library_reorder);
+            arrows.setBounds(0, 0, dp(17), dp(17));
+            reorder.setCompoundDrawablesRelative(arrows, null, null, null);
+            reorder.setCompoundDrawablePadding(dp(6));
+        }
+        reorder.setTag("library_reorder"); reorder.setGravity(Gravity.CENTER);
+        reorder.setMinimumHeight(dp(48)); reorder.setPadding(dp(14), dp(8), dp(14), dp(8));
+        reorder.setBackground(ripple(reordering ? 0xFF245BC4 : BLUE, 16));
+        reorder.setFocusable(true); reorder.setSelected(reordering);
+        reorder.setOnClickListener(view -> { reordering = !reordering; renderFavoritesPage(); });
+        actions.addView(reorder, new LinearLayout.LayoutParams(-2, -2));
+        android.widget.ImageButton help = new android.widget.ImageButton(this);
+        help.setTag("library_help"); help.setContentDescription("보관함 사용 방법");
+        help.setImageResource(R.drawable.ic_library_info);
+        help.setBackground(ripple(0xFFEAF2FF, 16));
+        help.setPadding(dp(12), dp(12), dp(12), dp(12));
+        help.setOnClickListener(view -> showLibraryHelp());
+        LinearLayout.LayoutParams helpParams = new LinearLayout.LayoutParams(dp(48), dp(48));
+        helpParams.leftMargin = dp(6);
+        actions.addView(help, helpParams);
+        heading.addView(actions, new LinearLayout.LayoutParams(-2, -2));
         add(favoritesPage, heading, 0);
+        add(favoritesPage, text(reordering ? "항목을 꾹 눌러 원하는 위치로 옮겨주세요."
+                : recentVisible ? "별로 보관하고, 왼쪽으로 밀어 기록을 지워요." : "자주 쓰는 기능과 질문을 모았어요.",
+                14, SECONDARY, regular), 12);
+
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setPadding(dp(36), 0, dp(8), 0);
+        String[] names = {"즐겨찾기", "최근 질문"};
+        for (int i = 0; i < names.length; i++) {
+            final boolean recent = i == 1;
+            boolean selected = recentVisible == recent;
+            TextView tab = text(names[i], 13, selected ? BLUE : SECONDARY, selected ? semibold : medium);
+            tab.setGravity(Gravity.CENTER); tab.setMinimumHeight(dp(48));
+            tab.setSelected(selected); tab.setFocusable(true);
+            tab.setContentDescription(names[i] + (selected ? ", 선택됨" : ""));
+            android.graphics.drawable.GradientDrawable index = new android.graphics.drawable.GradientDrawable();
+            index.setColor(selected ? 0xFFFFFEFC : 0xFFDCE8F8);
+            float radius = dp(14);
+            index.setCornerRadii(new float[]{radius, radius, radius, radius, 0, 0, 0, 0});
+            index.setStroke(dp(1), 0xFFDCE6F3);
+            tab.setBackground(new android.graphics.drawable.InsetDrawable(
+                    new RippleDrawable(ColorStateList.valueOf(0x183478FF), index, null), 0, dp(8), 0, 0));
+            tab.setPadding(dp(14), dp(12), dp(14), dp(4));
+            tab.setOnClickListener(view -> {
+                recentVisible = recent; reordering = false;
+                renderFavoritesPage(); favoritesScroll.scrollTo(0, 0);
+            });
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
+            if (i > 0) params.leftMargin = dp(4);
+            tabs.addView(tab, params);
+        }
+        add(favoritesPage, tabs, 22);
+        LinearLayout notebook = new LinearLayout(this);
+        notebook.setTag("library_notebook"); notebook.setOrientation(LinearLayout.VERTICAL);
+        notebook.setMinimumHeight(dp(260)); notebook.setPadding(dp(32), dp(12), dp(4), dp(16));
+        notebook.setBackground(new com.click.ui.home.LibraryNotebookBackground(getResources().getDisplayMetrics().density));
+        java.util.LinkedHashMap<String, View> rows = libraryRows(recentVisible, reordering);
+        displayedLibraryIds = library.orderedIds(new java.util.ArrayList<>(rows.keySet()), recentVisible);
         int count = 0;
-        for (HomeHelpItem item : HomeHelpItem.values()) if (favorites.contains(item.id)) count++;
-        TextView subtitle = text(addingFavorites ? "자주 쓰는 기능을 별로 표시해 보세요!"
-                : "기능 " + count + "개를 모아뒀어요!\n별을 다시 누르면 목록에서 뺄 수 있어요.", 14, SECONDARY, regular);
-        add(favoritesPage, subtitle, 14);
-        int row = 0;
-        for (HomeHelpItem item : HomeHelpItem.values()) if (addingFavorites || favorites.contains(item.id))
-            add(favoritesPage, helpRow(item, addingFavorites), row++ == 0 ? 24 : 6);
-        if (row == 0) add(favoritesPage, emptyFavorites(), 24);
+        for (String id : displayedLibraryIds) {
+            View row = rows.get(id);
+            row.setElevation(0);
+            row.setBackground(ripple(Color.TRANSPARENT, 12));
+            if (count++ > 0) {
+                View line = new View(this); line.setBackgroundColor(0xFFE7EDF6);
+                notebook.addView(line, new LinearLayout.LayoutParams(-1, dp(1)));
+            }
+            add(notebook, row, 4);
+        }
+        if (rows.isEmpty()) {
+            TextView empty = text(recentVisible ? "아직 질문한 내용이 없어요.\n클릭에게 물어보면 여기에 모아드려요."
+                    : "아직 보관한 즐겨찾기가 없어요.\n최근 질문의 별을 눌러 보관해 보세요.", 15, SECONDARY, regular);
+            empty.setGravity(Gravity.CENTER); empty.setPadding(dp(8), dp(40), dp(8), dp(32));
+            add(notebook, empty, 0);
+        }
+        if (reordering) new com.click.ui.home.LibraryDragController(notebook, favoritesScroll, this::moveLibraryItem);
+        reorder.setEnabled(!rows.isEmpty()); reorder.setAlpha(rows.isEmpty() ? .45f : 1f);
+        favoritesPage.addView(notebook, new LinearLayout.LayoutParams(-1, -2, 1));
+    }
+
+    private void showLibraryHelp() {
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        String[] sections = {
+                "즐겨찾기에 보관하기", "최근 질문에서 별을 누르면 즐겨찾기에 담겨요. 별을 다시 누르면 보관을 해제해요.",
+                "순서 바꾸기", "‘순서 바꾸기’를 누르고 항목을 꾹 누른 채 원하는 위치로 옮겨주세요. 다 옮겼으면 ‘완료’를 눌러주세요.",
+                "최근 질문 지우기", "최근 질문의 항목을 왼쪽으로 밀면 ‘삭제’ 버튼이 보여요. 이 버튼을 누르면 기록이 지워져요. 즐겨찾기에 담아 둔 항목은 그대로 남아요."
+        };
+        for (int index = 0; index < sections.length; index += 2) {
+            TextView label = text(sections[index], 16, INK, semibold);
+            if (Build.VERSION.SDK_INT >= 28) label.setAccessibilityHeading(true);
+            add(content, label, index == 0 ? 0 : 22);
+            add(content, text(sections[index + 1], 15, SECONDARY, regular), 8);
+        }
+        com.click.ui.common.ClickDialog.show(this, "보관함 사용 방법", content, "알겠어요", null, null);
     }
 
     private View emptyFavorites() {
         LinearLayout empty = new LinearLayout(this);
         empty.setOrientation(LinearLayout.VERTICAL); empty.setGravity(Gravity.CENTER);
-        empty.setPadding(dp(20), dp(30), dp(20), dp(30));
+        empty.setPadding(dp(20), dp(20), dp(20), dp(20));
         whiteCard(empty, 22, 2);
-        add(empty, text("자주 쓰는 기능을 모아볼까요?", 17, INK, medium), 0);
-        add(empty, text("별을 눌러 즐겨찾기에 담아보세요!", 14, SECONDARY, regular), 10);
-        TextView button = text("+ 즐겨찾기 추가", 15, BLUE, medium);
-        button.setGravity(Gravity.CENTER); button.setMinimumHeight(dp(48));
-        button.setBackground(ripple(0xFFEEF4FF, 16));
-        button.setOnClickListener(view -> { addingFavorites = true; showFavorites(true); });
-        add(empty, button, 20);
+        add(empty, text("아직 보관한 즐겨찾기가 없어요", 17, INK, medium), 0);
+        add(empty, text("최근 질문의 별을 눌러 보관해 보세요.", 14, SECONDARY, regular), 10);
         return empty;
+    }
+
+    private View requestRow(RequestLibraryStore.Entry entry, boolean recent) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(dp(16), dp(6), dp(8), dp(6));
+        row.setMinimumHeight(dp(60));
+        whiteCard(row, 18, 2);
+        LinearLayout copy = new LinearLayout(this); copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setMinimumHeight(dp(48)); copy.setGravity(Gravity.CENTER_VERTICAL);
+        copy.setFocusable(true); copy.setClickable(true);
+        copy.setContentDescription(entry.request + ", 다시 요청하기");
+        copy.addView(text(entry.request, 16, INK, medium));
+        if (recent && !entry.favorite) {
+            String date = android.text.format.DateFormat.format("M월 d일 · HH:mm", entry.timestamp).toString();
+            add(copy, text(date, 12, SECONDARY, regular), 3);
+        }
+        copy.setOnClickListener(view -> startOverlayWithPermission(entry.request,
+                entry.goalType.isEmpty() ? null : entry.goalType, false));
+        row.addView(copy, new LinearLayout.LayoutParams(0, -2, 1));
+        HomeIconView star = icon(HomeIconView.Kind.STAR);
+        star.setTag("saved_" + entry.id);
+        star.setFavoriteSelected(entry.favorite); star.setSelected(entry.favorite);
+        star.setContentDescription(entry.request + (entry.favorite ? " 즐겨찾기 해제" : " 즐겨찾기 추가"));
+        star.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+        star.setClickable(true); star.setFocusable(true); star.setBackground(ripple(Color.TRANSPARENT, 24));
+        star.setOnClickListener(view -> {
+            library.setFavorite(entry.id, !entry.favorite); refreshFavorites();
+            favoritesScroll.announceForAccessibility(entry.favorite ? "즐겨찾기에서 뺐어요." : "즐겨찾기에 보관했어요.");
+        });
+        row.addView(star, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        return row;
     }
 
     private View helpRow(HomeHelpItem item, boolean selecting) {
         LinearLayout row = new LinearLayout(this);
         row.setTag("help_" + item.id);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(15), dp(10), dp(9), dp(10));
-        row.setMinimumHeight(dp(64));
-        whiteCard(row, 22, 2);
+        row.setPadding(dp(16), dp(6), dp(8), dp(6));
+        row.setMinimumHeight(dp(60));
+        whiteCard(row, 18, 2);
         LinearLayout launch = new LinearLayout(this);
         launch.setGravity(Gravity.CENTER_VERTICAL);
         launch.setMinimumHeight(dp(48)); launch.setClickable(true); launch.setFocusable(true);
         launch.setContentDescription(item.title + ". " + item.subtitle);
         if (item == HomeHelpItem.TUTORIAL && !selecting) launch.setId(R.id.home_tutorial);
-        launch.addView(icon(item.icon), new LinearLayout.LayoutParams(dp(44), dp(44)));
+        launch.addView(icon(item.icon), new LinearLayout.LayoutParams(dp(36), dp(36)));
         LinearLayout labels = new LinearLayout(this);
         labels.setOrientation(LinearLayout.VERTICAL);
         labels.addView(text(item.title, 16, INK, medium));
@@ -410,14 +578,14 @@ public final class HomeActivity extends AppCompatActivity {
     private void showFavorites(boolean visible) {
         hideKeyboard();
         favoritesVisible = visible;
+        if (!visible) reordering = false;
         homeScroll.setVisibility(visible ? View.GONE : View.VISIBLE);
         favoritesScroll.setVisibility(visible ? View.VISIBLE : View.GONE);
         if (!visible) homeScroll.requestFocus();
         pageBack.setEnabled(visible);
         if (visible) renderFavoritesPage();
-        else addingFavorites = false;
+        else recentVisible = false;
         selectNavigation(visible);
-        updateArtworkAnimation();
     }
 
     private LinearLayout bottomNavigation() {
@@ -428,8 +596,8 @@ public final class HomeActivity extends AppCompatActivity {
         shadow(navigation, 8);
         homeTab = navigationItem(HomeIconView.Kind.HOME, "홈", R.id.home_nav_home);
         homeTab.setOnClickListener(view -> { showFavorites(false); homeScroll.smoothScrollTo(0, 0); });
-        favoritesTab = navigationItem(HomeIconView.Kind.BOOKMARK, "내 즐겨찾기", R.id.home_nav_favorites);
-        favoritesTab.setOnClickListener(view -> { addingFavorites = false; showFavorites(true); });
+        favoritesTab = navigationItem(HomeIconView.Kind.BOX, "보관함", R.id.home_nav_favorites);
+        favoritesTab.setOnClickListener(view -> { recentVisible = false; showFavorites(true); });
         for (View tab : new View[]{homeTab, favoritesTab})
             navigation.addView(tab, new LinearLayout.LayoutParams(0, dp(58), 1));
         selectNavigation(false);
@@ -464,7 +632,9 @@ public final class HomeActivity extends AppCompatActivity {
         Toast.makeText(this, feature + "을 준비하고 있어요.\n지금은 글씨 크기·화면 밝기·소리 조절을 도와드릴게요!", Toast.LENGTH_LONG).show();
     }
     private void openPermissionGuide() {
-        startActivity(new Intent(this, com.click.designpreview.AccessibilityHelpActivity.class));
+        startActivity(new Intent(this, com.click.designpreview.PermissionGuideActivity.class)
+                .putExtra(com.click.designpreview.PermissionGuideActivity.EXTRA_RECONNECT,
+                        PermissionStatus.isAccessibilityEnabled(this)));
     }
     private void hideKeyboard() {
         if (requestInput == null) return;
