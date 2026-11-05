@@ -19,7 +19,7 @@ public class RegistrationContractTest {
         try (java.io.InputStream stream = getClass().getResourceAsStream("/auth/phone-registration-openapi.json")) {
             assertNotNull(stream);
             JSONObject document = new JSONObject(new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
-            JSONObject body = RegistrationContract.fromOpenApi(document).request("", "01012345678", "0123");
+            JSONObject body = RegistrationContract.fromOpenApi(document).request("클릭", "01012345678", "0123");
             assertEquals("01012345678", body.getString("phone_number"));
             assertFalse(body.has("email"));
         }
@@ -53,10 +53,11 @@ public class RegistrationContractTest {
         assertThrows(JSONException.class, () -> RegistrationContract.fromOpenApi(document("phone_number", 8, 128)));
     }
 
-    @Test public void optionalNameIsOmittedAndUnicodeLimitIsPreserved() throws Exception {
+    @Test public void nameIsRequiredAndUnicodeLimitIsPreserved() throws Exception {
         RegistrationContract contract = RegistrationContract.fromOpenApi(document("phone_number", 4, 4));
-        for (String name : new String[]{null, "", "   "})
-            assertFalse(contract.request(name, "01012345678", "0123").has("name"));
+        for (String name : new String[]{null, "", "   ", "\u3000"})
+            assertThrows(RegistrationContract.RegistrationInputException.class,
+                    () -> contract.request(name, "01012345678", "0123"));
         assertEquals("😀".repeat(50), contract.request("😀".repeat(50), "01012345678", "0123").getString("name"));
         assertThrows(RegistrationContract.RegistrationInputException.class,
                 () -> contract.request("김".repeat(51), "01012345678", "0123"));

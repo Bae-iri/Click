@@ -17,7 +17,8 @@ Android Studio에서 `Frontend/`를 열고 Gradle Sync 후 `app`을 실행한다
 아래 ‘로그인하기’에서 전화번호 로그인과 카카오 로그인을 선택한다.
 실제 카카오 연결에는 Android `KAKAO_NATIVE_APP_KEY`, Backend `KAKAO_APP_ID`, 카카오디벨로퍼스 Android 플랫폼·키 해시 등록이 필요하다.
 [카카오 연결 설정](../Backend/docs/kakao-login.md)을 따른다. 전화번호는 계정 식별자이며 문자 인증은 사용하지 않는다.
-이름은 선택 입력이며 50자까지 허용한다. 나이·직업은 수집하지 않는다.
+전화번호 가입의 이름은 필수이며, 앞뒤 공백을 제거한 이름을 1~50자로 입력해야 한다. 나이·직업은 수집하지 않는다.
+전화번호 회원가입은 `name`, `phone_number`, `password`를 전송한다.
 
 2026-11-04 배포 서버 `/openapi.json` 및 백엔드 인증 검증 기준은 `phone_number`와 숫자 4자리 `password`다.
 전화번호의 공백·하이픈을 제거한 뒤 국내 휴대전화 형식을 검사하며, PIN의 앞자리 0은 그대로 보존한다.

@@ -32,6 +32,7 @@ def main():
         print("health:", call("/health"))
         print("ready:", call("/ready"))
         auth = call("/api/v1/auth/register", {
+            "name": "AI1 Check",
             "phone_number": "010" + str(secrets.randbelow(100000000)).zfill(8),
             "password": str(secrets.randbelow(10000)).zfill(4),
         })

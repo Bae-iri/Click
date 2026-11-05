@@ -37,11 +37,11 @@ public final class RegistrationContract {
 
     public JSONObject request(String name, String phone, String password) throws JSONException {
         JSONObject body = credentials(phone, password);
-        if (acceptsName && !SignupInputRules.validOptionalName(name)) {
-            throw new RegistrationInputException("이름은 50글자까지 입력할 수 있어요. 줄이거나 비워 두고 가입해 주세요.");
+        if (!SignupInputRules.validName(name)) {
+            throw new RegistrationInputException("이름을 1~50글자로 입력해 주세요.");
         }
         // Older deployments forbid the newly added name field. The app also saves the name locally.
-        if (acceptsName && name != null && !name.trim().isEmpty()) body.put("name", name.trim());
+        if (acceptsName) body.put("name", name.trim());
         return body;
     }
 

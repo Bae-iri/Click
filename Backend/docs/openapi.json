@@ -8313,16 +8313,9 @@
             "writeOnly": true
           },
           "name": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 50,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
             "title": "Name"
           }
         },
@@ -8330,7 +8323,8 @@
         "type": "object",
         "required": [
           "phone_number",
-          "password"
+          "password",
+          "name"
         ],
         "title": "RegisterRequest"
       },

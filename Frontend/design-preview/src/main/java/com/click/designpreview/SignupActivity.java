@@ -156,7 +156,7 @@ public final class SignupActivity extends Activity {
             showPage(0, true); return;
         }
         clearErrors(R.id.signup_name_error);
-        if (!SignupInputRules.validOptionalName(name.getText().toString())) {
+        if (!SignupInputRules.validName(name.getText().toString())) {
             showError(R.id.signup_name_error, R.string.signup_error_name, name);
             return;
         }

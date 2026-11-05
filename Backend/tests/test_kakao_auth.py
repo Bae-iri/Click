@@ -50,7 +50,7 @@ def test_kakao_signup_login_refresh_and_delete(kakao_app):
 def test_phone_accounts_keep_working_and_are_not_automatically_linked(kakao_app):
     with TestClient(kakao_app) as client:
         payload = {"phone_number": "01046191429", "password": "1234"}
-        local = client.post("/api/v1/auth/register", json=payload).json()
+        local = client.post("/api/v1/auth/register", json={**payload, "name": "Test User"}).json()
         social = client.post("/api/v1/auth/kakao", json={"access_token": "valid-kakao-token"}).json()
         assert social["user_id"] != local["user_id"]
         assert client.post("/api/v1/auth/login", json=payload).json()["user_id"] == local["user_id"]

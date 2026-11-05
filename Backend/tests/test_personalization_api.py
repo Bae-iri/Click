@@ -59,7 +59,7 @@ def test_registration_keeps_account_identity_and_discards_legacy_demographics(le
         properties = client.get('/openapi.json').json()['components']['schemas']['RegisterRequest']['properties']
         assert 'age_group' not in properties and 'occupation_category' not in properties
         from app.schemas.auth import RegisterRequest
-        parsed = RegisterRequest(phone_number='01002870585',password='1234',**legacy_fields)
+        parsed = RegisterRequest(name='Account display',phone_number='01002870585',password='1234',**legacy_fields)
         assert 'age_group' not in parsed.model_dump() and 'occupation_category' not in parsed.model_dump()
         assert client.post('/api/v1/auth/login',json={'phone_number':'01002870585',
             'password':'1234'}).status_code == 200

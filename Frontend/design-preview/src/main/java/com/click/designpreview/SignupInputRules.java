@@ -1,7 +1,7 @@
 package com.click.designpreview;
 
 
-/** Phone, PIN and optional-name rules matching the deployed authentication API. */
+/** Phone, PIN and required-name rules matching the authentication API. */
 public final class SignupInputRules {
     public static final int MAXIMUM_NAME_LENGTH = 50;
     private SignupInputRules() {}
@@ -18,8 +18,9 @@ public final class SignupInputRules {
         return pin != null && pin.matches("[0-9]{4}");
     }
 
-    public static boolean validOptionalName(String name) {
+    public static boolean validName(String name) {
         String value = name == null ? "" : name.trim();
-        return value.codePointCount(0, value.length()) <= MAXIMUM_NAME_LENGTH;
+        return value.codePointCount(0, value.length()) <= MAXIMUM_NAME_LENGTH
+                && value.codePoints().anyMatch(c -> !Character.isWhitespace(c) && !Character.isSpaceChar(c));
     }
 }
