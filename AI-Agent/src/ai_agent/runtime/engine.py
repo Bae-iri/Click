@@ -456,8 +456,7 @@ class ClickAgentEngine:
             else:
                 guide_command = GuideCommand(guide_command_id='guide_' + uuid4().hex,
                     command_type=CommandType.HIGHLIGHT, action_type=ActionType.OBSERVE_ONLY,
-                    message='조작 결과를 확인하고 있어요.' if awaiting_observation else
-                        '현재 화면에서 다음 조작을 확정하지 못했어요. 화면을 다시 확인해 주세요.',
+                    message='안내를 준비하고 있어요.',
                     safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
                     render_policy={'fallback_action': {'type': 'request_fresh_observation'}})
             guide_command = replace(guide_command, render_policy={**guide_command.render_policy,

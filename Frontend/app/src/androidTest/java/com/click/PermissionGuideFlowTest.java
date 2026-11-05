@@ -1,10 +1,10 @@
 package com.click;
 
-import android.animation.ValueAnimator;
 import android.app.Instrumentation;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.os.SystemClock;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ScrollView;
@@ -13,11 +13,9 @@ import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
-import com.click.designpreview.PermissionEnableAnimationView;
 import com.click.designpreview.PermissionGuideActivity;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.lang.reflect.Field;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import static org.junit.Assert.*;
@@ -25,141 +23,126 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class PermissionGuideFlowTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
-    private PermissionGuideActivity observedActivity;
 
-    @Test public void compactHeaderKeepsReplayOnOneLineAcrossPages() {
+    @Test public void fiveStaticCardsKeepHeaderProgressAndPreviousNavigation() {
+        instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         try (ActivityScenario<PermissionGuideActivity> scenario = ActivityScenario.launch(PermissionGuideActivity.class)) {
-            for (int page = 0; page < 3; page++) {
+            String[] titles = {"‘설치된 앱’을 눌러주세요", "‘클릭 화면 안내’를 선택해요",
+                    "위쪽 스위치를 켜주세요", "확인창에서 ‘허용’을 눌러요", "‘사용 중’이면 설정 완료예요"};
+            for (int page = 0; page < 5; page++) {
                 settle();
                 final int currentPage = page;
                 scenario.onActivity(activity -> {
+                    assertPage(activity, currentPage + 1);
+                    assertEquals(titles[currentPage], ((TextView) activity.findViewById(
+                            com.click.designpreview.R.id.guide_card_title)).getText().toString());
+                    assertNull(activity.findViewById(com.click.designpreview.R.id.guide_enable_animation));
+                    View screenshot = activity.findViewById(com.click.designpreview.R.id.guide_screenshot);
+                    assertNotNull(screenshot);
+                    assertFalse(screenshot.isClickable());
+                    assertFalse(screenshot.performClick());
+                    assertEquals(5, ((ViewGroup) activity.findViewById(
+                            com.click.designpreview.R.id.guide_progress_bars)).getChildCount());
                     TextView replay = activity.getWindow().getDecorView().findViewWithTag("permission_replay");
-                    assertNotNull(replay);
                     assertEquals(1, replay.getLineCount());
-                    assertTrue(replay.getBackground() != null);
-                    ViewGroup header = (ViewGroup) replay.getParent();
-                    assertEquals(header.getWidth(), replay.getRight());
+                    assertEquals(((ViewGroup) replay.getParent()).getWidth(), replay.getRight());
+                    View previous = activity.findViewById(com.click.designpreview.R.id.guide_back);
+                    assertSame(previous.getParent(), replay.getParent());
+                    assertEquals(0, previous.getLeft());
+                    assertEquals(currentPage > 0, previous.isEnabled());
+                    int[] controlsAt = new int[2], progressAt = new int[2], titleAt = new int[2];
+                    replay.getLocationOnScreen(controlsAt);
+                    View progress = activity.findViewById(com.click.designpreview.R.id.guide_progress_bars);
+                    progress.getLocationOnScreen(progressAt);
+                    activity.findViewById(com.click.designpreview.R.id.guide_card_title).getLocationOnScreen(titleAt);
+                    assertTrue(progressAt[1] >= controlsAt[1] + replay.getHeight());
+                    assertTrue(titleAt[1] > progressAt[1] + progress.getHeight());
+                    assertNull(findText(activity.getWindow().getDecorView(), "사진을 누르면 전체 화면을 크게 볼 수 있어요"));
+                    if (currentPage == 3) assertNotNull(findText(activity.getWindow().getDecorView(),
+                            "휴대전화 제어 권한을 허용하는 창이에요. ‘허용’을 눌러야 클릭이 도와드릴 수 있어요."));
+                    if (currentPage == 4) assertNotNull(findText(activity.getWindow().getDecorView(),
+                            "사용 중으로 표시되면 완료예요."));
                     readable(activity.getWindow().getDecorView());
-                    save(activity, "compact-page-" + currentPage);
-                    if (currentPage < 2) next(activity);
+                    save(activity, "card-" + (currentPage + 1));
+                    if (currentPage < 4) next(activity);
                 });
             }
-        }
-    }
-
-    @Test public void threePagesStartWithPermissionReasonAndRetainNavigation() {
-        try (ActivityScenario<PermissionGuideActivity> scenario = ActivityScenario.launch(PermissionGuideActivity.class)) {
-            scenario.onActivity(activity -> {
-                observedActivity = activity;
-                assertPage(activity, 1);
-                assertNotNull(find(activity.getWindow().getDecorView(), "접근성 권한이 필요해요"));
-                assertNull(find(activity.getWindow().getDecorView(), "어려운 스마트폰 사용,\n이제 클릭 한 번으로"));
-                next(activity); assertPage(activity, 2);
-                assertNotNull(activity.findViewById(com.click.designpreview.R.id.guide_enable_animation));
-                assertNull(find(activity.getWindow().getDecorView(), "어떤 도움을\n드릴 수 있나요?"));
-                assertNull(activity.findViewById(com.click.designpreview.R.id.guide_settings_shortcut));
-            });
-            awaitPhase(scenario, com.click.designpreview.R.string.guide_enable_step_apps, "apps");
-            awaitPhase(scenario, com.click.designpreview.R.string.guide_enable_step_click, "click");
-            awaitPhase(scenario, com.click.designpreview.R.string.guide_enable_step_switch, "off");
-            awaitPhase(scenario, com.click.designpreview.R.string.guide_enable_step_done, "on");
-            final ValueAnimator[] demo = {null};
-            scenario.onActivity(activity -> {
-                demo[0] = animator(activity);
-                next(activity); assertPage(activity, 3);
-                assertFalse("Leaving the animation page must cancel its loop", demo[0].isStarted());
-                assertNotNull(activity.findViewById(com.click.designpreview.R.id.guide_consent_example));
-                assertEquals("지금 설정하기", activity.findViewById(com.click.designpreview.R.id.guide_action).getContentDescription());
-            });
-            settle();
-            scenario.onActivity(activity -> {
-                readable(activity.getWindow().getDecorView());
-                save(activity, "consent");
-                ((ScrollView) activity.findViewById(com.click.designpreview.R.id.guide_scroll)).fullScroll(View.FOCUS_DOWN);
-            });
-            settle();
-            scenario.onActivity(activity -> save(activity, "consent-bottom"));
             scenario.recreate();
             scenario.onActivity(activity -> {
-                assertPage(activity, 3);
-                assertNotNull(activity.findViewById(com.click.designpreview.R.id.guide_consent_example));
+                assertPage(activity, 5);
+                assertEquals("지금 설정하기", activity.findViewById(com.click.designpreview.R.id.guide_action).getContentDescription());
                 activity.findViewById(com.click.designpreview.R.id.guide_back).performClick();
-                assertPage(activity, 2);
-                assertNotNull(activity.findViewById(com.click.designpreview.R.id.guide_enable_animation));
+                assertPage(activity, 4);
             });
-        }
-    }
-
-    @Test public void animationStopsInBackgroundAndRestartsOnReturn() {
-        try (ActivityScenario<PermissionGuideActivity> scenario = ActivityScenario.launch(PermissionGuideActivity.class)) {
-            final ValueAnimator[] demo = {null};
-            scenario.onActivity(activity -> { next(activity); demo[0] = animator(activity); });
-            settle();
-            scenario.onActivity(activity -> assertTrue(demo[0].isStarted()));
             scenario.moveToState(Lifecycle.State.CREATED);
-            instrumentation.runOnMainSync(() -> assertFalse(demo[0].isStarted()));
             scenario.moveToState(Lifecycle.State.RESUMED);
+            SystemClock.sleep(1000);
+            scenario.onActivity(activity -> assertPage(activity, 4));
+        }
+    }
+
+    @Test public void largestAppTextKeepsAllFiveCardsReadable() {
+        android.content.Context context = instrumentation.getTargetContext();
+        int original = com.click.ui.common.ClickTextScale.level(context);
+        try {
+            com.click.ui.common.ClickTextScale.saveLevel(context, 3);
+            fiveStaticCardsKeepHeaderProgressAndPreviousNavigation();
+        } finally {
+            com.click.ui.common.ClickTextScale.saveLevel(context, original);
+        }
+    }
+
+    @Test public void horizontalSwipesTurnCardsButNeverOpenSettingsOrWrapAtEnds() {
+        try (ActivityScenario<PermissionGuideActivity> scenario = ActivityScenario.launch(PermissionGuideActivity.class)) {
             settle();
-            scenario.onActivity(activity -> assertTrue(demo[0].isStarted()));
-        }
-    }
-
-    private void awaitPhase(ActivityScenario<PermissionGuideActivity> scenario, int label, String name) {
-        long deadline = SystemClock.elapsedRealtime() + 11000;
-        boolean[] found = {false};
-        String[] last = {""};
-        PermissionGuideActivity activity = observedActivity;
-        instrumentation.runOnMainSync(() -> {
-            if (activity.getResources().getConfiguration().fontScale > 1.2f) {
-                ScrollView scroll = activity.findViewById(com.click.designpreview.R.id.guide_scroll);
-                View preview = activity.findViewById(com.click.designpreview.R.id.guide_enable_animation);
-                scroll.scrollTo(0, preview.getTop());
-            }
-        });
-        while (SystemClock.elapsedRealtime() < deadline) {
-            instrumentation.runOnMainSync(() -> {
-                last[0] = ((TextView) activity.findViewById(com.click.designpreview.R.id.guide_animation_step)).getText().toString();
-                found[0] = activity.getString(label).equals(last[0]);
+            scenario.onActivity(activity -> {
+                swipe(activity, true); assertPage(activity, 2);
+                swipe(activity, false); assertPage(activity, 1);
+                swipe(activity, false); assertPage(activity, 1);
+                for (int i = 0; i < 4; i++) next(activity);
             });
-            if (found[0]) {
-                settle();
-                instrumentation.runOnMainSync(() -> {
-                    readable(activity.getWindow().getDecorView());
-                    if (name.equals("off")) assertEquals(activity.getString(com.click.designpreview.R.string.guide_service_off),
-                            ((TextView) activity.findViewById(com.click.designpreview.R.id.guide_demo_switch_state)).getText());
-                    if (name.equals("on")) assertEquals(activity.getString(com.click.designpreview.R.string.guide_service_on),
-                            ((TextView) activity.findViewById(com.click.designpreview.R.id.guide_demo_switch_state)).getText());
-                    save(activity, name);
-                });
-                return;
-            }
-            SystemClock.sleep(80);
+            settle();
+            scenario.onActivity(activity -> {
+                swipe(activity, true); assertPage(activity, 5);
+                assertFalse(activity.isFinishing());
+                swipe(activity, false); assertPage(activity, 4);
+            });
         }
-        fail("Animation did not reach " + name + "; last observed: " + last[0]);
     }
 
-    // A looping animation need not make the main queue idle. Allow its next layout frame.
-    private void settle() { SystemClock.sleep(180); }
+    private static void swipe(PermissionGuideActivity activity, boolean forward) {
+        ScrollView view = activity.findViewById(com.click.designpreview.R.id.guide_scroll);
+        float start = view.getWidth() * (forward ? .85f : .15f);
+        float end = view.getWidth() * (forward ? .15f : .85f);
+        float y = Math.min(view.getHeight() * .5f, 300);
+        long at = SystemClock.uptimeMillis();
+        for (int i = 0; i <= 8; i++) {
+            int action = i == 0 ? MotionEvent.ACTION_DOWN : i == 8 ? MotionEvent.ACTION_UP : MotionEvent.ACTION_MOVE;
+            MotionEvent event = MotionEvent.obtain(at, at + i * 25, action, start + (end - start) * i / 8, y, 0);
+            view.dispatchTouchEvent(event);
+            event.recycle();
+        }
+    }
+    private void settle() { instrumentation.waitForIdleSync(); SystemClock.sleep(180); }
     private static void next(PermissionGuideActivity activity) {
         activity.findViewById(com.click.designpreview.R.id.guide_action).performClick();
     }
     private static void assertPage(PermissionGuideActivity activity, int page) {
-        assertEquals(page + " / 3", ((TextView) activity.findViewById(com.click.designpreview.R.id.guide_step_counter)).getText());
+        assertNull(activity.findViewById(com.click.designpreview.R.id.guide_step_counter));
+        View progress = activity.findViewById(com.click.designpreview.R.id.guide_progress_bars);
+        assertEquals("접근성 안내, 5단계 중 " + page + "단계", progress.getContentDescription());
+        assertEquals(View.VISIBLE, progress.getVisibility());
     }
-    private static ValueAnimator animator(PermissionGuideActivity activity) {
-        try {
-            Field field = PermissionEnableAnimationView.class.getDeclaredField("animation");
-            field.setAccessible(true);
-            return (ValueAnimator) field.get(activity.findViewById(com.click.designpreview.R.id.guide_enable_animation));
-        } catch (Exception e) { throw new AssertionError(e); }
-    }
-    private static View find(View view, String text) {
-        if (view instanceof TextView && text.contentEquals(((TextView) view).getText())) return view;
+
+    private static TextView findText(View view, String value) {
+        if (view instanceof TextView && value.contentEquals(((TextView) view).getText())) return (TextView) view;
         if (view instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
-            View result = find(((ViewGroup) view).getChildAt(i), text); if (result != null) return result;
+            TextView found = findText(((ViewGroup) view).getChildAt(i), value);
+            if (found != null) return found;
         }
         return null;
     }
+
     private static void readable(View view) {
         if (!view.isShown()) return;
         if (view instanceof TextView) {
@@ -180,7 +163,8 @@ public class PermissionGuideFlowTest {
         View view = activity.getWindow().getDecorView();
         Bitmap image = Bitmap.createBitmap(view.getWidth(), view.getHeight(), Bitmap.Config.ARGB_8888);
         view.draw(new Canvas(image));
-        String name = "permission-" + activity.getResources().getConfiguration().fontScale + "-" + stage + ".png";
+        String name = "permission-" + activity.getResources().getConfiguration().fontScale + "-text-"
+                + com.click.ui.common.ClickTextScale.level(activity) + "-" + stage + ".png";
         try (FileOutputStream out = new FileOutputStream(new File(activity.getCacheDir(), name))) {
             image.compress(Bitmap.CompressFormat.PNG, 100, out);
         } catch (Exception e) { throw new AssertionError(e); }

@@ -42,13 +42,18 @@ public class AdjustmentFlowUiTest {
                     assertTrue(find(panel[0], "조절 막대를 오른쪽으로 조금 움직여주세요.").isShown());
                     panel[0].progress(task, null, "조절을 마치셨으면 알려주세요.", true);
                     find(panel[0], "다 했어요").performClick(); assertEquals("request_result", response.command);
-                    try { panel[0].result(new JSONObject().put("message", task + " 조절이 편하신가요?"), "글자 크기".equals(task)); }
+                    try { panel[0].result(new JSONObject().put("message", ("글자 크기".equals(task) ? "변경 결과를 확인하지 못했어요. 이제 글자가 보기 편한가요?" : task + " 조절이 편하신가요?")), "글자 크기".equals(task)); }
                     catch (Exception error) { throw new AssertionError(error); }
                 });
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync();
                 scenario.onActivity(activity -> {
-                    assertEquals("원하시는 대로 되었나요?", panel[0].phaseLabel().replace('\n', ' '));
-                    assertTrue(find(panel[0], task + " 조절이 편하신가요?").isShown());
+                    String question = "글자 크기".equals(task) ? "이제 글자가 보기 편한가요?"
+                            : task + " 조절이 편하신가요?";
+                    assertEquals(question, panel[0].phaseLabel());
+                    assertTrue(find(panel[0], question).isShown());
+                    assertEquals(question, panel[0].guidanceMessage());
+                    assertNull(find(panel[0], "원하시는 대로 되었나요?"));
+                    assertNull(find(panel[0], "변경 결과를 확인하지 못했어요."));
                     assertNull(find(panel[0], "글로 보기"));
                     assertNull(find(panel[0], "답하지 않으면 완료로 기록하지 않아요."));
                     String positive = "글자 크기".equals(task) ? "네, 글씨가 잘 보여요" : "네, 좋아요";

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="text_size_setup_title">이 정도 글씨 괜찮으세요?</string>
+    <string name="text_size_setup_description">편하게 읽을 수 있도록 글자 크기를 맞춰주세요.</string>
+    <string name="text_size_setup_continue">이 크기로 시작하기</string>
     <color name="signup_border">#D9E2F2</color>
     <color name="signup_hint">#7A8AA8</color>
     <color name="signup_error">#C33B43</color>
@@ -87,7 +90,9 @@
 
     <style name="SignupInput">
         <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">56dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:paddingVertical">12dp</item>
         <item name="android:background">@drawable/signup_input_background</item>
         <item name="android:fontFamily">@font/pretendard_medium</item>
         <item name="android:gravity">center_vertical</item>
@@ -101,7 +106,9 @@
 
     <style name="SignupInputInsideButton">
         <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:paddingVertical">12dp</item>
         <item name="android:background">@android:color/transparent</item>
         <item name="android:fontFamily">@font/pretendard_medium</item>
         <item name="android:gravity">center_vertical</item>

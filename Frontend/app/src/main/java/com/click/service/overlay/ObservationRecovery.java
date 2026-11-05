@@ -68,7 +68,8 @@ public final class ObservationRecovery {
         JSONObject selection = debug == null ? null : debug.optJSONObject("ui_selection");
         if (selection != null && selection.optInt("grounded_candidate_count", 0) > 0) return false;
         if (selection != null && java.util.Set.of("provider_error", "not_configured", "timeout", "deadline_exceeded",
-                "invalid_response", "invalid_candidates", "input_too_large", "candidate_limit")
+                "invalid_response", "invalid_candidates", "input_too_large", "candidate_limit",
+                "low_confidence", "uncertain", "waiting")
                 .contains(selection.optString("status"))) return false;
         return true;
     }

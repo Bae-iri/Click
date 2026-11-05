@@ -4,6 +4,10 @@ import android.content.Intent;
 import android.app.Application;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.SeekBar;
+import android.os.Bundle;
+import android.view.accessibility.AccessibilityNodeInfo;
+import com.click.ui.common.ClickTextScale;
 
 import com.click.designpreview.AccountStartActivity;
 import com.click.designpreview.ClickHost;
@@ -26,6 +30,48 @@ import static org.mockito.Mockito.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 34, application = Application.class)
 public class AccountStartActivityTest {
+    @Test public void signupStartsWithLiveTextSizingAndSharesTheSettingWithDisplaySettings() {
+        android.content.Context app = org.robolectric.RuntimeEnvironment.getApplication();
+        int original = ClickTextScale.level(app);
+        ClickTextScale.saveLevel(app, 1);
+        try (ActivityController<AccountStartActivity> controller =
+                     Robolectric.buildActivity(AccountStartActivity.class).setup()) {
+            AccountStartActivity activity = controller.get();
+            assertNull(activity.findViewById(R.id.account_start_kakao));
+            TextView title = activity.findViewById(R.id.text_size_setup_title);
+            assertEquals("이 정도 글씨 괜찮으세요?", title.getText().toString());
+            float baseSize = title.getTextSize();
+            setLevel(activity.findViewById(R.id.text_size_scale), 3);
+            assertEquals(3, ClickTextScale.level(app));
+            assertEquals(baseSize * 1.3f, title.getTextSize(), .1f);
+            ClickTextScale.applyTree(activity.findViewById(R.id.text_size_setup_screen));
+            assertEquals("Repeated updates must not compound the selected size", baseSize * 1.3f, title.getTextSize(), .1f);
+            controller.recreate();
+            activity = controller.get();
+            assertEquals(3, ((SeekBar) activity.findViewById(R.id.text_size_scale)).getProgress());
+            activity.findViewById(R.id.text_size_setup_continue).performClick();
+            assertNotNull(activity.findViewById(R.id.account_start_kakao));
+            assertNotNull(activity.findViewById(R.id.account_start_email));
+            controller.recreate();
+            activity = controller.get();
+            assertNull(activity.findViewById(R.id.text_size_setup_screen));
+            activity.findViewById(R.id.account_start_back).performClick();
+            assertNotNull(activity.findViewById(R.id.text_size_setup_screen));
+            assertEquals(3, ((SeekBar) activity.findViewById(R.id.text_size_scale)).getProgress());
+            try (var settings = Robolectric.buildActivity(DisplaySettingsActivity.class).setup()) {
+                assertEquals(3, ((SeekBar) settings.get().findViewById(R.id.text_size_scale)).getProgress());
+                setLevel(settings.get().findViewById(R.id.text_size_scale), 0);
+                assertEquals(0, ClickTextScale.level(app));
+            }
+        } finally { ClickTextScale.saveLevel(app, original); }
+    }
+
+    private static void setLevel(SeekBar bar, int level) {
+        Bundle args = new Bundle();
+        args.putFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE, level);
+        assertTrue(bar.performAccessibilityAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(), args));
+    }
+
     @Test public void kakaoFailureKeepsPhoneRoutesAvailable() {
         ClickHost host = mock(ClickHost.class);
         doAnswer(call -> {
@@ -39,6 +85,7 @@ public class AccountStartActivityTest {
                      Robolectric.buildActivity(AccountStartActivity.class).setup()) {
             AccountStartActivity activity = controller.get();
             bridge.when(() -> ClickHost.from(activity)).thenReturn(host);
+            activity.findViewById(R.id.text_size_setup_continue).performClick();
             activity.findViewById(R.id.account_start_kakao).performClick();
             TextView error = activity.findViewById(R.id.account_start_error);
             assertEquals(View.VISIBLE, error.getVisibility());
@@ -56,6 +103,7 @@ public class AccountStartActivityTest {
         try (ActivityController<AccountStartActivity> controller =
                      Robolectric.buildActivity(AccountStartActivity.class).setup()) {
             AccountStartActivity activity = controller.get();
+            activity.findViewById(R.id.text_size_setup_continue).performClick();
             activity.findViewById(R.id.account_start_login).performClick();
             Intent login = Shadows.shadowOf(activity).getNextStartedActivity();
             assertEquals(LoginActivity.class.getName(), login.getComponent().getClassName());

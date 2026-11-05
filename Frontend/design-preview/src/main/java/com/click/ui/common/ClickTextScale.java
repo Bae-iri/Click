@@ -2,7 +2,11 @@ package com.click.ui.common;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.util.TypedValue;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.TextView;
+import com.click.designpreview.R;
 
 /** App-only text sizing, kept separate from the phone's accessibility setting. */
 public final class ClickTextScale {
@@ -28,6 +32,21 @@ public final class ClickTextScale {
 
     public static void apply(TextView view, float baseSp) {
         view.setTextSize(size(view.getContext(), baseSp));
+    }
+
+    /** Scale inflated account screens without multiplying again on repeated updates. */
+    public static void applyTree(View view) {
+        if (view instanceof TextView) {
+            TextView text = (TextView) view;
+            Object saved = text.getTag(R.id.click_text_base_size);
+            float base = saved instanceof Float ? (Float) saved : text.getTextSize();
+            text.setTag(R.id.click_text_base_size, base);
+            text.setTextSize(TypedValue.COMPLEX_UNIT_PX, base * scale(view.getContext()));
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) applyTree(group.getChildAt(i));
+        }
     }
 
     public static String label(Context context) {

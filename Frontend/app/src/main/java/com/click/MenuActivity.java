@@ -202,18 +202,10 @@ public final class MenuActivity extends AppCompatActivity {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setMinimumHeight(dp(58));
-        View back = new MenuIconView(MenuIconView.Kind.BACK, false);
-        back.setContentDescription("홈으로 돌아가기");
-        back.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
-        back.setClickable(true);
-        back.setFocusable(true);
-        back.setBackground(ripple(Color.WHITE, 24));
-        back.setOnClickListener(view -> closeMenu());
-        row.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
         TextView title = text("설정", 24, INK, semibold);
         title.setLetterSpacing(-.025f);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
-        title.setPadding(dp(12), 0, dp(8), 0);
+        title.setPadding(0, 0, dp(8), 0);
         row.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
 
         automationToggle = new androidx.appcompat.widget.SwitchCompat(this);
@@ -598,7 +590,8 @@ public final class MenuActivity extends AppCompatActivity {
         }
         @Override protected void onDraw(Canvas canvas) {
             if (artwork != null) {
-                int side = Math.min(getWidth(), getHeight());
+                // The logout PNG has more transparent padding than the other menu artwork.
+                int side = Math.round(Math.min(getWidth(), getHeight()) * (kind == Kind.LOGOUT ? 1.35f : 1f));
                 int left = (getWidth() - side) / 2, top = (getHeight() - side) / 2;
                 artwork.setBounds(left, top, left + side, top + side);
                 artwork.draw(canvas);

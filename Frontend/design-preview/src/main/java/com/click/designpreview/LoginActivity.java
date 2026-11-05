@@ -17,6 +17,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
+import com.click.ui.common.ClickTextScale;
 
 /** Login screen using the same typography, fields, and actions as signup. */
 public final class LoginActivity extends Activity {
@@ -34,6 +35,7 @@ public final class LoginActivity extends Activity {
         setContentView(R.layout.activity_login);
 
         View root = findViewById(R.id.login_screen);
+        ClickTextScale.applyTree(root);
         root.setBackground(new ClickBackgroundDrawable(getResources()));
         int side = dp(20);
         root.setOnApplyWindowInsetsListener((view, insets) -> {

@@ -141,9 +141,16 @@ def test_http_path_uses_primary_and_never_falls_back_to_rule_action(monkeypatch,
     assert len(calls) == 1
     assert body['guide_command']['action_type'] == ('tap' if failure == 'success' else 'observe_only')
     assert body['guide_command']['target_node_id'] == ('display' if failure == 'success' else None)
+    if failure != 'success':
+        assert body['guide_command']['message'] == '안내를 준비하고 있어요.'
+        assert body['guide_command']['requires_user_action'] is False
+        assert body['guide_command']['render_policy']['fallback_action']['type'] == 'request_fresh_observation'
     assert 'recovery_action' not in body['guide_command']['render_policy']
     assert body['metadata']['debug']['ui_selection']['mode'] == 'primary'
     assert body['metadata']['debug']['ui_selection']['called'] is True
+    assert body['metadata']['debug']['ui_selection']['grounded_candidate_count'] > 0
+    if failure == 'low_confidence':
+        assert body['metadata']['debug']['ui_selection']['minimum_confidence'] == 0.8
     assert body['metadata']['debug']['ui_selection']['status'] == {
         'offline': 'provider_error', 'low_confidence': 'low_confidence',
         'abstain': 'abstained', 'success': 'selected'}[failure]

@@ -2,10 +2,10 @@
 <resources>
     <!-- 튜토리얼 TTS 전용 대본. 화면의 heading/detail과 독립적으로 수정합니다.
          자동 안내와 다시 듣기는 같은 대본을 사용합니다. 빈 문자열이면 해당 안내는 읽지 않습니다. -->
-    <string name="tutorial_speech_intro">요청하고 안내를 사용하는 방법을 함께 연습해 볼게요. 연습 시작하기를 눌러주세요.</string>
+    <string name="tutorial_speech_intro">하고 싶은 작업을 입력하고 안내를 사용하는 방법을 함께 연습해 볼게요. 연습 시작하기를 눌러주세요.</string>
     <string name="tutorial_speech_complete">연습을 마쳤어요. 홈으로 가기를 눌러 클릭을 사용해 보세요.</string>
-    <string name="tutorial_speech_input">말이나 글 중 편한 방법을 골라 요청해 주세요.</string>
-    <string name="tutorial_speech_running">자동 모드에서는 클릭이 진행해요. 줄이기로 안내를 작게 볼 수 있고, 멈추기로 잠시 쉬거나 끝내기로 안내를 끝낼 수 있어요.</string>
+    <string name="tutorial_speech_input">원하시는 방법으로 하고 싶은 작업을 말씀해주세요. 말로도 입력할 수 있고, 글로도 입력할 수 있어요.</string>
+    <string name="tutorial_speech_running">자동 모드에서는 클릭이 진행해요. 줄이기로 안내를 작게 볼 수 있고, 일시정지로 잠시 쉬거나 끝내기로 안내를 끝낼 수 있어요.</string>
     <string name="tutorial_speech_paused">작업을 잠시 멈췄어요. 이어서 진행을 누르면 계속할 수 있어요.</string>
     <string name="tutorial_speech_result">원하는 결과가 나왔는지 확인해 주세요. 괜찮으면 네, 글씨가 잘 보여요를 누르고, 더 도움이 필요하면 더 커졌으면 좋겠어를 눌러요.</string>
     <string name="tutorial_speech_open">화면에 있는 클릭 버튼을 눌러보세요.</string>

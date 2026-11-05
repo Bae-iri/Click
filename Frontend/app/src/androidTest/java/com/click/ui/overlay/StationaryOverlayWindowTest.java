@@ -19,15 +19,17 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import static org.junit.Assert.*;
 
-/** Uses real application windows and the service's animation without starting a server session. */
+/** Uses real windows to verify that new highlights leave the user's icon position unchanged. */
 @RunWith(AndroidJUnit4.class)
-public class ClueFollowWindowTest {
-    @Test public void companionFollowsTwoHighlightsWithoutCoveringEither() throws Exception {
+public class StationaryOverlayWindowTest {
+    @Test public void collapsedIconAndCaptionStayPutWhenHighlightsChange() throws Exception {
         ClickOverlayService service = new ClickOverlayService();
         ClickOverlayLayout[] control = {null};
         GuideOverlayView[] guide = {null};
+        TaskFlowOverlayView[] bubble = {null};
         WindowManager[] manager = {null};
         int[][] targets = new int[2][];
+        int[] initialPosition = new int[2];
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
             try {
                 scenario.onActivity(activity -> {
@@ -53,18 +55,34 @@ public class ClueFollowWindowTest {
                         manager[0] = activity.getWindowManager(); manager[0].addView(control[0], params);
                         set(service, "overlayView", control[0]); set(service, "windowManager", manager[0]);
                         set(service, "windowParams", params); set(service, "taskFlowCollapsed", true);
+                        bubble[0] = new TaskFlowOverlayView(activity, new TaskFlowOverlayView.Listener() {
+                            public void chooseGoal(org.json.JSONObject goal) {} public void clarify(String value) {}
+                            public void rephrase(String value) {} public void result(String value) {}
+                            public void adjust(String value) {} public void control(String value) {}
+                        });
+                        bubble[0].progress("글자 크기", null, "디스플레이를 눌러주세요.");
+                        bubble[0].setMinimizedProgress(true);
+                        WindowManager.LayoutParams caption = new WindowManager.LayoutParams(
+                                bubble[0].getWindowWidth(width), WindowManager.LayoutParams.WRAP_CONTENT,
+                                WindowManager.LayoutParams.TYPE_APPLICATION_PANEL, params.flags,
+                                android.graphics.PixelFormat.TRANSLUCENT);
+                        caption.gravity = Gravity.TOP | Gravity.LEFT; caption.token = params.token;
+                        manager[0].addView(bubble[0], caption);
+                        set(service, "taskFlowView", bubble[0]); set(service, "taskFlowParams", caption);
+                        invoke(service, "placeProgressBubble");
                     } catch (Exception error) { throw new AssertionError(error); }
                 });
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync();
-                int previousTop = -1;
+                scenario.onActivity(activity -> control[0].getLocationOnScreen(initialPosition));
                 for (int index = 0; index < targets.length; index++) {
                     int[] target = targets[index];
                     scenario.onActivity(activity -> {
                         try {
-                            guide[0].showTarget(target, "tap", 0);
-                            set(service, "clueFollowBounds", target);
-                            set(service, "clueFollowAction", "tap");
-                            assertEquals(true, invoke(service, "followGuideWithClue"));
+                            set(service, "guideOverlayView", guide[0]);
+                            set(service, "lastTargetBounds", target);
+                            Method show = ClickOverlayService.class.getDeclaredMethod("showGuideOverlay", int[].class, String.class, int.class);
+                            show.setAccessible(true); show.invoke(service, target, "tap", 0);
+                            invoke(service, "placeProgressBubble");
                         } catch (Exception error) { throw new AssertionError(error); }
                     });
                     SystemClock.sleep(500);
@@ -72,25 +90,32 @@ public class ClueFollowWindowTest {
                     scenario.onActivity(activity -> {
                         int[] position = new int[2]; control[0].getLocationOnScreen(position);
                         placed[0] = new Rect(position[0], position[1], position[0] + control[0].getWidth(), position[1] + control[0].getHeight());
-                        assertFalse(Rect.intersects(placed[0], new Rect(target[0], target[1], target[2], target[3])));
+                        assertEquals(initialPosition[0], placed[0].left);
+                        assertEquals(initialPosition[1], placed[0].top);
+                        int[] captionPosition = new int[2]; bubble[0].getLocationOnScreen(captionPosition);
+                        Rect caption = new Rect(captionPosition[0], captionPosition[1],
+                                captionPosition[0] + bubble[0].getWidth(), captionPosition[1] + bubble[0].getHeight());
+                        int gap = caption.bottom <= placed[0].top ? placed[0].top - caption.bottom
+                                : caption.top - placed[0].bottom;
+                        assertEquals(10 * activity.getResources().getDisplayMetrics().density, gap, 2f);
+                        assertTrue(caption.left <= placed[0].centerX() && caption.right >= placed[0].centerX());
+                        assertTrue(caption.top >= 0 && caption.bottom <= activity.getResources().getDisplayMetrics().heightPixels);
                         assertTrue(placed[0].top >= 0);
                         assertTrue(placed[0].bottom <= activity.getResources().getDisplayMetrics().heightPixels);
                     });
-                    if (previousTop >= 0) assertNotEquals(previousTop, placed[0].top);
-                    previousTop = placed[0].top;
                     Bitmap shot = InstrumentationRegistry.getInstrumentation().getUiAutomation(
                             android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).takeScreenshot();
                     assertNotNull(shot);
                     try (FileOutputStream out = new FileOutputStream(new File(
-                            InstrumentationRegistry.getInstrumentation().getTargetContext().getCacheDir(), "clue-follow-" + index + ".png"))) {
+                            InstrumentationRegistry.getInstrumentation().getTargetContext().getCacheDir(), "stationary-overlay-" + index + ".png"))) {
                         shot.compress(Bitmap.CompressFormat.PNG, 100, out);
                     }
                     shot.recycle();
                 }
             } finally {
                 scenario.onActivity(activity -> {
-                    try { invoke(service, "cancelClueFollow"); }
-                    catch (Exception error) { throw new AssertionError(error); }
+                    if (manager[0] != null && bubble[0] != null && bubble[0].isAttachedToWindow())
+                        manager[0].removeViewImmediate(bubble[0]);
                     if (manager[0] != null && control[0] != null && control[0].isAttachedToWindow())
                         manager[0].removeViewImmediate(control[0]);
                 });

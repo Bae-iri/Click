@@ -32,10 +32,10 @@ public final class FloatingClickHost extends FrameLayout implements ClickOverlay
         this.listener = listener;
         setClipChildren(false);
         trash = new TrashDropView(context);
-        trash.setContentDescription("여기에 놓으면 클릭 숨기기");
+        trash.setContentDescription("클루를 집으로 보내 안내 닫기");
         trash.setVisibility(GONE);
         LayoutParams trashParams = new LayoutParams(dp(112), dp(112), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        trashParams.bottomMargin = dp(18);
+        trashParams.bottomMargin = dp(TrashDropView.BOTTOM_MARGIN_DP);
         addView(trash, trashParams);
         control = new ClickOverlayLayout(context);
         control.setCallback(this);

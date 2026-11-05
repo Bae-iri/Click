@@ -27,6 +27,8 @@ public final class AccessibilityNodeSnapshot {
     public final boolean sensitiveInput;
     /** Alias used by the vision safety pipeline. */
     public final boolean sensitive;
+    private final boolean passwordInput;
+    private final boolean inputContentPresent;
 
     public AccessibilityNodeSnapshot(
             String nodeId,
@@ -67,6 +69,18 @@ public final class AccessibilityNodeSnapshot {
             String className, String role, int[] bounds, boolean clickable, boolean enabled,
             boolean selected, boolean scrollable, boolean checkable, Float progress,
             int windowId, boolean sensitiveInput, Float rangeMin, Float rangeMax) {
+        this(nodeId, parentId, visibleToUser, packageName, text, contentDescription, resourceId,
+                className, role, bounds, clickable, enabled, selected, scrollable, checkable,
+                progress, windowId, sensitiveInput, rangeMin, rangeMax, sensitiveInput);
+    }
+
+    public AccessibilityNodeSnapshot(String nodeId, String parentId, boolean visibleToUser,
+            String packageName, String text, String contentDescription, String resourceId,
+            String className, String role, int[] bounds, boolean clickable, boolean enabled,
+            boolean selected, boolean scrollable, boolean checkable, Float progress,
+            int windowId, boolean sensitiveInput, Float rangeMin, Float rangeMax, boolean passwordInput) {
+        this.passwordInput = passwordInput;
+        this.inputContentPresent = sensitiveInput && text != null && !text.isEmpty();
         this.rangeMin = sensitiveInput ? null : rangeMin;
         this.rangeMax = sensitiveInput ? null : rangeMax;
         this.sensitiveInput = sensitiveInput;
@@ -110,7 +124,8 @@ public final class AccessibilityNodeSnapshot {
         object.put("checkable", checkable);
         JSONObject extras = new JSONObject();
         if (sensitiveInput) extras.put("editable", true);
-        if (sensitive) extras.put("is_password", true);
+        if (passwordInput) extras.put("is_password", true);
+        if (inputContentPresent) extras.put("input_content_present", true);
         if (progress != null) extras.put("progress", progress);
         if (rangeMin != null) extras.put("min", rangeMin);
         if (rangeMax != null) extras.put("max", rangeMax);

@@ -46,6 +46,7 @@ import com.click.ui.home.HomeIconView;
 
 /** Main Click entry screen after accessibility onboarding. */
 public final class HomeActivity extends AppCompatActivity {
+    public static final String EXTRA_OPEN_LIBRARY = "com.click.extra.OPEN_LIBRARY";
     private static final int INK = 0xFF101A36;
     private static final int SECONDARY = 0xFF8190AA;
     private static final int BLUE = 0xFF3478FF;
@@ -151,6 +152,22 @@ public final class HomeActivity extends AppCompatActivity {
             reordering = savedInstanceState.getBoolean("library_reordering");
             showFavorites(savedInstanceState.getBoolean("favorites_visible"));
         }
+        openLibraryFromIntent(getIntent());
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        openLibraryFromIntent(intent);
+    }
+
+    private void openLibraryFromIntent(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(EXTRA_OPEN_LIBRARY, false)) return;
+        intent.removeExtra(EXTRA_OPEN_LIBRARY);
+        recentVisible = false;
+        reordering = false;
+        showFavorites(true);
+        favoritesScroll.scrollTo(0, 0);
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
@@ -332,8 +349,7 @@ public final class HomeActivity extends AppCompatActivity {
         row.addView(move, new LinearLayout.LayoutParams(dp(48), dp(48)));
         launch.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         row.setOnClickListener(null);
-        row.setFocusable(true); row.setContentDescription(label + ", 길게 눌러 원하는 위치로 이동");
-        com.click.ui.home.LibraryDragController.prepare(row, id);
+        row.setFocusable(true); row.setContentDescription(label + ", 길게 눌러 위아래로 이동");
         ViewCompat.replaceAccessibilityAction(row,
                 androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_SCROLL_BACKWARD,
                 "위로 옮기기", (view, arguments) -> { moveLibraryItem(id, displayedLibraryIds.indexOf(id) - 1); return true; });
@@ -363,18 +379,21 @@ public final class HomeActivity extends AppCompatActivity {
     private void renderFavoritesPage() {
         favoritesPage.removeAllViews();
         TextView title = text("보관함", 25, INK, semibold);
+        LinearLayout identity = new LinearLayout(this);
+        identity.setGravity(Gravity.CENTER_VERTICAL);
+        identity.addView(title, new LinearLayout.LayoutParams(-2, -2));
         LinearLayout actions = new LinearLayout(this);
         actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
         LinearLayout heading = new LinearLayout(this) {
             @Override protected void onMeasure(int width, int height) {
                 int natural = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
-                title.measure(natural, natural); actions.measure(natural, natural);
-                boolean stacked = title.getMeasuredWidth() + actions.getMeasuredWidth() + dp(8)
+                identity.measure(natural, natural); actions.measure(natural, natural);
+                boolean stacked = identity.getMeasuredWidth() + actions.getMeasuredWidth() + dp(8)
                         > MeasureSpec.getSize(width);
                 int orientation = stacked ? VERTICAL : HORIZONTAL;
                 if (getOrientation() != orientation) {
                     setOrientation(orientation);
-                    title.setLayoutParams(new LinearLayout.LayoutParams(stacked ? -1 : 0, -2, stacked ? 0 : 1));
+                    identity.setLayoutParams(new LinearLayout.LayoutParams(stacked ? -1 : 0, -2, stacked ? 0 : 1));
                     actions.setLayoutParams(new LinearLayout.LayoutParams(stacked ? -1 : -2, -2));
                 }
                 super.onMeasure(width, height);
@@ -382,7 +401,7 @@ public final class HomeActivity extends AppCompatActivity {
         };
         heading.setGravity(Gravity.CENTER_VERTICAL);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
-        heading.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+        heading.addView(identity, new LinearLayout.LayoutParams(0, -2, 1));
         TextView reorder = text(reordering ? "완료" : "순서 바꾸기", 14, Color.WHITE, semibold);
         if (!reordering) {
             android.graphics.drawable.Drawable arrows = getDrawable(R.drawable.ic_library_reorder);
@@ -399,17 +418,14 @@ public final class HomeActivity extends AppCompatActivity {
         android.widget.ImageButton help = new android.widget.ImageButton(this);
         help.setTag("library_help"); help.setContentDescription("보관함 사용 방법");
         help.setImageResource(R.drawable.ic_library_info);
-        help.setBackground(ripple(0xFFEAF2FF, 16));
+        help.setBackground(ripple(Color.TRANSPARENT, 16));
         help.setPadding(dp(12), dp(12), dp(12), dp(12));
         help.setOnClickListener(view -> showLibraryHelp());
         LinearLayout.LayoutParams helpParams = new LinearLayout.LayoutParams(dp(48), dp(48));
         helpParams.leftMargin = dp(6);
-        actions.addView(help, helpParams);
+        identity.addView(help, helpParams);
         heading.addView(actions, new LinearLayout.LayoutParams(-2, -2));
         add(favoritesPage, heading, 0);
-        add(favoritesPage, text(reordering ? "항목을 꾹 눌러 원하는 위치로 옮겨주세요."
-                : recentVisible ? "별로 보관하고, 왼쪽으로 밀어 기록을 지워요." : "자주 쓰는 기능과 질문을 모았어요.",
-                14, SECONDARY, regular), 12);
 
         LinearLayout tabs = new LinearLayout(this);
         tabs.setPadding(dp(36), 0, dp(8), 0);
@@ -437,16 +453,19 @@ public final class HomeActivity extends AppCompatActivity {
             if (i > 0) params.leftMargin = dp(4);
             tabs.addView(tab, params);
         }
-        add(favoritesPage, tabs, 22);
+        add(favoritesPage, tabs, 8);
         LinearLayout notebook = new LinearLayout(this);
         notebook.setTag("library_notebook"); notebook.setOrientation(LinearLayout.VERTICAL);
         notebook.setMinimumHeight(dp(260)); notebook.setPadding(dp(32), dp(12), dp(4), dp(16));
         notebook.setBackground(new com.click.ui.home.LibraryNotebookBackground(getResources().getDisplayMetrics().density));
         java.util.LinkedHashMap<String, View> rows = libraryRows(recentVisible, reordering);
         displayedLibraryIds = library.orderedIds(new java.util.ArrayList<>(rows.keySet()), recentVisible);
+        com.click.ui.home.LibraryDragController drag = reordering
+                ? new com.click.ui.home.LibraryDragController(notebook, favoritesScroll, this::moveLibraryItem) : null;
         int count = 0;
         for (String id : displayedLibraryIds) {
             View row = rows.get(id);
+            if (drag != null) drag.prepare(row, id);
             row.setElevation(0);
             row.setBackground(ripple(Color.TRANSPARENT, 12));
             if (count++ > 0) {
@@ -461,7 +480,6 @@ public final class HomeActivity extends AppCompatActivity {
             empty.setGravity(Gravity.CENTER); empty.setPadding(dp(8), dp(40), dp(8), dp(32));
             add(notebook, empty, 0);
         }
-        if (reordering) new com.click.ui.home.LibraryDragController(notebook, favoritesScroll, this::moveLibraryItem);
         reorder.setEnabled(!rows.isEmpty()); reorder.setAlpha(rows.isEmpty() ? .45f : 1f);
         favoritesPage.addView(notebook, new LinearLayout.LayoutParams(-1, -2, 1));
     }
@@ -471,7 +489,7 @@ public final class HomeActivity extends AppCompatActivity {
         content.setOrientation(LinearLayout.VERTICAL);
         String[] sections = {
                 "즐겨찾기에 보관하기", "최근 질문에서 별을 누르면 즐겨찾기에 담겨요. 별을 다시 누르면 보관을 해제해요.",
-                "순서 바꾸기", "‘순서 바꾸기’를 누르고 항목을 꾹 누른 채 원하는 위치로 옮겨주세요. 다 옮겼으면 ‘완료’를 눌러주세요.",
+                "순서 바꾸기", "‘순서 바꾸기’를 누르고 항목을 꾹 누른 채 위아래로 옮겨주세요. 다 옮겼으면 ‘완료’를 눌러주세요.",
                 "최근 질문 지우기", "최근 질문의 항목을 왼쪽으로 밀면 ‘삭제’ 버튼이 보여요. 이 버튼을 누르면 기록이 지워져요. 즐겨찾기에 담아 둔 항목은 그대로 남아요."
         };
         for (int index = 0; index < sections.length; index += 2) {

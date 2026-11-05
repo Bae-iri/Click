@@ -29,10 +29,12 @@ public class FloatingHeaderDeviceTest {
                     config.fontScale = scale;
                     Context context = activity.createConfigurationContext(config);
                     ClickOverlayLayout panel = new ClickOverlayLayout(context); shown[0] = panel;
+                    panel.setOnLibraryRequested(() -> {});
                     if (choice == 0) panel.openMenu();
                     else if (choice == 1) panel.openVoice();
                     else panel.openText();
                     FrameLayout host = new FrameLayout(activity);
+                    host.setBackgroundColor(0xFF7098BB);
                     int width = panel.getWindowWidth(panel.getMode(), context.getResources().getDisplayMetrics().widthPixels);
                     host.addView(panel, new FrameLayout.LayoutParams(width, panel.getWindowHeight(panel.getMode())));
                     activity.setContentView(host);
@@ -43,6 +45,12 @@ public class FloatingHeaderDeviceTest {
                     FloatingPanelHeader header = panel.findViewWithTag("floating_header");
                     TextView collapse = header.collapse;
                     assertTrue(collapse.isShown());
+                    TextView title = header.title;
+                    assertNull(header.findViewWithTag("floating_logo"));
+                    assertTrue(title.getTop() >= header.divider.getBottom());
+                    assertNotNull(header.findViewWithTag("floating_wordmark"));
+                    assertTrue(title.getWidth() > 0);
+                    assertTrue(title.getLayout().getHeight() <= title.getHeight());
                     assertEquals("줄이기", collapse.getText().toString());
                     assertNotNull(collapse.getLayout());
                     assertEquals(1, collapse.getLineCount());
@@ -53,8 +61,10 @@ public class FloatingHeaderDeviceTest {
                     assertEquals(left, header.getLeft()); assertEquals(top, header.getTop());
                     assertNotNull(collapse.getLayout());
                     assertEquals(1, collapse.getLineCount());
-                    Bitmap bitmap = Bitmap.createBitmap(header.getWidth(), header.getHeight(), Bitmap.Config.ARGB_8888);
-                    header.draw(new Canvas(bitmap));
+                    Bitmap bitmap = Bitmap.createBitmap(panel.getWidth(), panel.getHeight(), Bitmap.Config.ARGB_8888);
+                    Canvas canvas = new Canvas(bitmap);
+                    canvas.drawColor(0xFF7098BB);
+                    panel.draw(canvas);
                     try (FileOutputStream out = new FileOutputStream(new File(activity.getCacheDir(),
                             "shared-input-header-" + choice + "-" + scale + ".png"))) {
                         bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);

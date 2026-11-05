@@ -72,9 +72,9 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         setClipChildren(false);
         trash = new TrashDropView(context);
         trash.setVisibility(GONE);
-        trash.setContentDescription("여기에 놓으면 클릭 숨기기");
+        trash.setContentDescription("클루를 집으로 보내 안내 닫기");
         LayoutParams trashParams = new LayoutParams(dp(96), dp(96), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
-        trashParams.bottomMargin = dp(12);
+        trashParams.bottomMargin = dp(TrashDropView.BOTTOM_MARGIN_DP);
         addView(trash, trashParams);
         tapHint = ClickUi.body(context, context.getString(R.string.tutorial_click_hint));
         tapHint.setTextColor(Color.WHITE);
@@ -121,8 +121,10 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     }
     public void collapseReview() {
         if (review == null) return;
-        if (review.hasProgress()) {
+        if (review.hasCompactContent()) {
             review.setMinimizedProgress(true);
+            control.collapse();
+            control.setVisibility(VISIBLE);
             updateHighlight(); requestLayout();
             return;
         }
@@ -131,11 +133,17 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         updateHighlight(); requestLayout();
     }
     @Override public boolean onOpenRequested() {
-        if (review == null || review.getVisibility() != GONE) return false;
-        review.setVisibility(VISIBLE); control.setVisibility(GONE);
+        if (review == null || (review.getVisibility() != GONE && !review.isMinimizedProgress())) return false;
+        expandReview();
         listener.onModeChanged(control.getMode());
-        updateHighlight(); requestLayout();
         return true;
+    }
+    public void expandReview() {
+        if (review == null) return;
+        review.setMinimizedProgress(false);
+        review.setVisibility(VISIBLE);
+        control.setVisibility(GONE);
+        updateHighlight(); requestLayout();
     }
     public void hideReview() {
         if (review != null) removeView(review);
@@ -304,6 +312,7 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         super.onLayout(changed, l, t, r, b);
         refreshTargetHighlight();
         positionHint();
+        positionReview();
     }
 
     private void positionHint() {
@@ -379,14 +388,34 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         if (review != null) {
             review.setAvailableHeight(limit);
             if (review.getVisibility() == VISIBLE) {
-                review.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                int panelWidth = Math.min(width, review.getWindowWidth(getResources().getDisplayMetrics().widthPixels));
+                review.getLayoutParams().width = panelWidth;
+                review.measure(MeasureSpec.makeMeasureSpec(panelWidth, MeasureSpec.EXACTLY),
                         MeasureSpec.makeMeasureSpec(limit, MeasureSpec.AT_MOST));
-                desired = review.getMeasuredHeight() + dp(24);
+                desired = review.getMeasuredHeight() + dp(24)
+                        + (review.isMinimizedProgress() ? controlHeight + dp(10) : 0);
             }
         }
         int height = resolveSize(desired, heightSpec);
         params.height = Math.min(height, controlHeight);
         super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
+    }
+
+    private void positionReview() {
+        if (review == null || review.getVisibility() != VISIBLE) return;
+        if (!review.isMinimizedProgress()) {
+            review.setTranslationX(0); review.setTranslationY(0);
+            return;
+        }
+        float centerX = control.getX() + control.getWidth() / 2f;
+        float bubbleLeft = Math.max(0, Math.min(centerX - review.getWidth() / 2f,
+                getWidth() - review.getWidth()));
+        float bubbleTop = control.getY() - review.getHeight() - dp(10);
+        boolean below = bubbleTop < 0;
+        if (below) bubbleTop = control.getY() + control.getHeight() + dp(10);
+        bubbleTop = Math.max(0, Math.min(bubbleTop, getHeight() - review.getHeight()));
+        review.setCompactAnchor(centerX - bubbleLeft, below);
+        review.setX(bubbleLeft); review.setY(bubbleTop);
     }
 
     @Override protected void onSizeChanged(int w, int h, int oldW, int oldH) {
@@ -459,6 +488,7 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     @Override public void onCloseRequested() {
         hidden = true;
         control.setVisibility(GONE);
+        if (review != null) review.setVisibility(GONE);
         trash.setVisibility(GONE);
         listener.onHidden();
         updateHighlight();
@@ -473,12 +503,12 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     private void constrain(float x, float y) {
         control.setX(Math.max(0, Math.min(x, getWidth() - control.getLayoutParams().width)));
         control.setY(Math.max(0, Math.min(y, getHeight() - control.getLayoutParams().height)));
-        positionHint(); invalidate();
+        positionHint(); positionReview(); invalidate();
     }
     private void snap() {
         float right = Math.max(0, getWidth() - control.getLayoutParams().width);
         control.animate().x(control.getX() < right / 2f ? 0 : right).setDuration(180)
-                .setUpdateListener(animation -> { positionHint(); invalidate(); })
+                .setUpdateListener(animation -> { positionHint(); positionReview(); invalidate(); })
                 .withEndAction(this::positionHint).start();
     }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
