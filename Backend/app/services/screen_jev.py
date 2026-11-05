@@ -47,6 +47,11 @@ class JevScreenResolver(JevGoalClassifier):
                         or transition.safety_level == SafetyLevel.BLOCKED):
                     continue
                 for node in eligible_nodes(transition, nodes, graph):
+                    # An approved menu identity cannot stand for a different
+                    # navigation target. Unlabelled sliders still use context.
+                    if (node.role in {"menu_item", "button", "app_icon"} and node.label
+                            and selector_evidence(node, transition, nodes, graph)[0] < MATCH_THRESHOLD):
+                        continue
                     if screen_bounds:
                         x, y = (node.bounds[0] + node.bounds[2]) / 2, (node.bounds[1] + node.bounds[3]) / 2
                         if not (screen_bounds[0] <= x < screen_bounds[2] and screen_bounds[1] <= y < screen_bounds[3]):
