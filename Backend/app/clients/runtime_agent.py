@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+from hashlib import sha256
+from pathlib import Path
 
 from ai_agent.runtime import (
     AccessibilityNode,
@@ -25,8 +27,30 @@ from app.clients.screen_state_llm import LocalScreenStateLlm
 from app.services.screen_jev import JevScreenResolver
 
 
+def runtime_configuration():
+    """Public execution identity for replay/release checks; never includes credentials."""
+    provider = os.getenv("AI1_UI_SELECTOR_PROVIDER", "rules").strip().lower()
+    if provider not in {"rules", "local", "jev"}:
+        raise ValueError("AI1_UI_SELECTOR_PROVIDER must be rules or jev")
+    configuration = {"provider": "rules" if provider == "local" else provider}
+    import ai_agent.runtime as runtime
+    runtime_root = Path(runtime.__file__).parent
+    sources = sorted(runtime_root.rglob("*.py"))
+    sources += [Path(__file__), Path(__file__).parents[1] / "services/screen_jev.py",
+                Path(__file__).parents[1] / "services/goal_jev.py"]
+    digest = sha256()
+    for source in sources:
+        digest.update(source.name.encode())
+        digest.update(source.read_bytes())
+    configuration["code_hash"] = digest.hexdigest()
+    if provider == "jev":
+        _, model, minimum = JevScreenResolver.configuration()
+        configuration.update(model=model, minimum_confidence=minimum)
+    return configuration
+
+
 class RuntimeAgentAdapter:
-    """Translate the HTTP contract to the single ai_agent L3 runtime."""
+    """Translate the HTTP contract to the graph-constrained runtime."""
 
     def __init__(self, session_store=None, task_graph=None) -> None:
         self.vision_consent_request_id = None

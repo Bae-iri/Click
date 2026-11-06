@@ -434,6 +434,7 @@ class AgentSessionState:
     last_snapshot: ScreenSnapshot | None = None
     last_user_action_event: UserActionEvent | None = None
     pending_attempt: JsonDict | None = None
+    pending_selection: JsonDict | None = None
     failed_target_keys: dict[str, tuple[str, ...]] = field(default_factory=dict)
     processed_event_keys: tuple[str, ...] = ()
     recovery_count: int = 0

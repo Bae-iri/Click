@@ -37,8 +37,17 @@ public class ForegroundWindowReadTest {
         WindowManager[] manager = {null};
         automation.adoptShellPermissionIdentity("android.permission.WRITE_SECURE_SETTINGS");
         try {
+            // Instrumentation can stop an already-enabled service's process. Rebind
+            // it explicitly; writing the same enabled value does not reconnect it.
+            java.util.List<String> services = new java.util.ArrayList<>();
+            android.content.ComponentName component = new android.content.ComponentName(app, ClickAccessibilityService.class);
+            if (original != null) for (String value : original.split(":"))
+                if (!value.isEmpty() && !component.equals(android.content.ComponentName.unflattenFromString(value))) services.add(value);
+            Settings.Secure.putString(app.getContentResolver(), key, String.join(":", services));
+            SystemClock.sleep(400);
+            services.add(component.flattenToString());
             Settings.Secure.putString(app.getContentResolver(), key,
-                    "com.click/com.click.service.accessibility.ClickAccessibilityService");
+                    String.join(":", services));
             Settings.Secure.putInt(app.getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 1);
             await(() -> service() != null);
             app.startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
@@ -72,10 +81,17 @@ public class ForegroundWindowReadTest {
                     finally { active.recycle(); }
                 });
                 // This is the real failure condition: Android reports Click as the active root.
-                // The snapshot must nevertheless come from the currently displayed application.
+                // Window lists can briefly lag the focus event. Require the native
+                // observation to become readable while the guide keeps its focus.
+                await(() -> {
+                    ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+                    return current != null && !current.nodes.isEmpty()
+                            && (launcher ? NavigationRecovery.isHomeScreen(current)
+                                         : "com.android.settings".equals(current.packageName));
+                });
                 ScreenSnapshot snapshot = ClickAccessibilityService.freshSnapshot();
                 assertNotNull("A focused guide must not make the screen unreadable: " + windowState(), snapshot);
-                assertFalse(snapshot.nodes.isEmpty());
+                assertFalse("Unreadable native window: " + windowState(), snapshot.nodes.isEmpty());
                 if (launcher) assertTrue(NavigationRecovery.isHomeScreen(snapshot));
                 else assertEquals("com.android.settings", snapshot.packageName);
                 assertTrue(snapshot.nodes.stream().anyMatch(node -> node.visibleToUser));
@@ -119,6 +135,6 @@ public class ForegroundWindowReadTest {
             if (condition.getAsBoolean()) return;
             SystemClock.sleep(100);
         }
-        fail("Expected accessibility window was not ready");
+        fail("Expected accessibility window was not ready: " + (service() == null ? "service disconnected" : windowState()));
     }
 }

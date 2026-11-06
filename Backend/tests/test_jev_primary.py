@@ -211,7 +211,10 @@ def test_repeated_visible_menu_observations_preserve_selection_diagnostics(monke
             assert body['guide_command']['action_type'] == ('tap' if outcome == 'selected' else 'observe_only')
             assert body['guide_command']['target_node_id'] == ('display' if outcome == 'selected' else None)
             assert client.post('/api/v1/agent/commands', json=payload).json() == body
-            assert len(calls) == turn + 1
+            assert len(calls) == (1 if outcome == 'selected' else turn + 1)
+            assert selection['called'] is (outcome != 'selected' or turn == 0)
+            if outcome == 'selected' and turn:
+                assert selection['retained'] is True
             payload = {'contract_version': payload['contract_version'], 'command_type': 'observe',
                 'request_id': f'visible-observe-{turn + 1}', 'session_id': body['session_id'],
                 'expected_version': body['session_version'], 'episode_id': body['episode_id'],

@@ -128,7 +128,7 @@ class ReplayRecorder:
             "graph_hash": graph_digest(self.graph), "turns": self.turns}))
 
 
-def evaluate_cases(cases, graphs):
+def evaluate_cases(cases, graphs, *, engine_factory=None):
     from ai_agent.runtime.engine import ClickAgentEngine
     from ai_agent.runtime.similarity import KeywordFallbackSimilarityScorer
     metrics = dict(target_checks=0, false_target_count=0, termination_checks=0, false_termination_count=0,
@@ -141,8 +141,9 @@ def evaluate_cases(cases, graphs):
         graph = graphs[case["task_id"]]
         if case.get("graph_hash") and case["graph_hash"] != graph_digest(graph):
             raise ValueError("Replay graph hash mismatch")
-        engine = ClickAgentEngine(task_graphs={graph.definition.task_id: graph},
-                                  similarity_scorer=KeywordFallbackSimilarityScorer(), ui_selector=None)
+        engine = (engine_factory(graph) if engine_factory is not None else
+                  ClickAgentEngine(task_graphs={graph.definition.task_id: graph},
+                      similarity_scorer=KeywordFallbackSimilarityScorer(), ui_selector=None))
         responses, recovery_seen, recovered = [], False, False
         for index, step in enumerate(case["turns"]):
             obs = step["observation"]

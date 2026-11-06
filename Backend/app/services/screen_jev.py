@@ -116,7 +116,13 @@ class JevScreenResolver(JevGoalClassifier):
                 for key,(t,n) in bindings.items()}
             criteria.update(wait_for_result="Wait for the previous action result without acting.",
                             insufficient_evidence="Screen or target is ambiguous or unrelated; request fresh evidence.")
-            previous_action = attempt if attempt is not None else (session.pending_attempt if session else None)
+            pending = attempt if attempt is not None else (session.pending_attempt if session else None)
+            planned = pending or (session.pending_selection if session else None)
+            planned_action = ({"transition_id": planned.get("transition_id")
+                if planned.get("transition_id") in {t.transition_id for t in graph.transitions} else None}
+                if planned else None)
+            # A displayed guide is a plan. Only a correlated event is an executed action.
+            previous_action = pending if pending and pending.get("event_key") else None
             state = {"goal": {"type": graph.definition.goal_type,
                     "slots": {k: v for k, v in graph.definition.required_slots.items()
                               if k in {"setting", "direction"}}},
@@ -133,6 +139,7 @@ class JevScreenResolver(JevGoalClassifier):
                     "transitions": [{"transition_id": t.transition_id, "from_state": t.from_state,
                         "to_state": t.to_state, "action_type": t.action_type.value,
                         "target_role": t.target_role, "priority": t.priority} for t in graph.transitions]},
+                "planned_action": planned_action,
                 "previous_action": ({"transition_id": previous_action.get("transition_id")
                     if previous_action.get("transition_id") in {t.transition_id for t in graph.transitions} else None,
                     "baseline_value": finite_number(previous_action.get("baseline_value")),
@@ -146,6 +153,9 @@ class JevScreenResolver(JevGoalClassifier):
                     "If the screen has moved to a different graph step, select that observed step and target, "
                     "even when it skips steps or contradicts the earlier rule-based result. "
                     "Choose wait_for_result only when an action is still settling on the same screen. "
+                    "planned_action is a displayed guide, not proof of execution. "
+                    "Only previous_action with event_received=true denotes an executed action. "
+                    "Without an executed action, an unchanged screen does not mean failure or a settling result. "
                     "A candidate is the NEXT navigation action toward the goal, not necessarily the final setting control. "
                     "Use independent screen_text and the collection of controls to identify the current page. "
                     "A control_label or description belongs to a menu row, not the page title. "

@@ -281,6 +281,24 @@ def test_release_gate_binds_reviewed_evaluation_and_exact_artifact():
         manager.promote(release)
 
 
+def test_evaluation_records_runtime_identity_and_rejects_different_baseline_candidate_providers():
+    manifest, cases = evaluation_fixture("device_test")
+    configuration = {"provider": "jev", "model": "pinned-test-model", "minimum_confidence": .8}
+    def same_runtime(body, case):
+        return {"checks": 1, "failures": [], "runtime_configuration": configuration}
+    report = GraphValidator().validate(proposed(), base_graph=graph(), cases=cases, manifest=manifest,
+        evaluator=same_runtime, graph_loader=lambda body: body)
+    assert report["decision"] == "PASS"
+    assert report["runtime_configuration"] == configuration
+    providers = iter(("rules", "jev"))
+    def mixed_runtime(body, case):
+        return {"checks": 1, "failures": [], "runtime_configuration": {"provider": next(providers)}}
+    report = GraphValidator().validate(proposed(), base_graph=graph(), cases=cases, manifest=manifest,
+        evaluator=mixed_runtime, graph_loader=lambda body: body)
+    assert report["decision"] == "ERROR"
+    assert "runtime configuration mismatch" in report["errors"][0]
+
+
 def test_registry_persists_immutable_models_and_training_needs_explicit_weak_use(tmp_path):
     events = training_fixture()
     dataset = run_pipeline(events, {}, now=200, manifest=manifest_for(events))["dataset"]

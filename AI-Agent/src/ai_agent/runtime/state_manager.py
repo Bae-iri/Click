@@ -1,5 +1,6 @@
 """Bounded attempt accounting; observation changes alone never count as failures."""
 from hashlib import sha256
+import json
 from ai_agent.runtime.types import ScreenSnapshot, VerificationStatus
 
 RETRY_LIMIT_BEFORE_EXCLUSION = 2
@@ -7,7 +8,10 @@ RETRY_LIMIT_BEFORE_EXCLUSION = 2
 
 def build_screen_snapshot(state_id, nodes, *, observation_id=None, captured_at_ms=None, applied_settings=None):
     parts = sorted('|'.join((node.node_id, node.label, node.role, str(node.bounds),
-                            str(node.selected), str(node.value))) for node in nodes)
+                            str(node.selected), str(node.value), node.package_name or '',
+                            node.resource_id or '', str(node.window_id), str(node.enabled),
+                            str(node.actionable), str(node.range_min), str(node.range_max))) for node in nodes)
+    parts.append(json.dumps(applied_settings or {}, sort_keys=True, separators=(',', ':')))
     return ScreenSnapshot(state_id, sha256('\n'.join(parts).encode()).hexdigest(),
                           {n.node_id: n.value for n in nodes if n.role == 'slider' and n.value is not None},
                           observation_id=observation_id, captured_at_ms=captured_at_ms,

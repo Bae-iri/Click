@@ -85,6 +85,14 @@ python scripts/agent2.py train-baseline --run ../AI-Agent/data/local/example.jso
 
 GraphValidator는 runtime adapter와 graph loader를 주입받습니다. 실제 AI1을 호출하는 adapter는 [Backend CLI](../../../../Backend/scripts/agent2.py)에 있어 Agent 2가 Agent 1을 직접 import하지 않습니다. 결과는 PASS/REJECT/NEEDS_DATA/ERROR이며 데이터 부족을 성공으로 간주하지 않습니다. PASS는 선언된 사례의 판정일 뿐 전체 사용자 성공률이 아닙니다.
 
+Backend replay는 `RuntimeAgentAdapter`로 엔진을 생성하므로 평가 프로세스의
+`AI1_UI_SELECTOR_PROVIDER` 설정을 그대로 사용합니다. 운영과 같은 환경변수로 실행해야
+하며 `jev` 구성의 평가는 실제 provider를 호출할 수 있습니다. 네트워크 없는 회귀에서는
+동일 adapter에 모의 Jev 전송만 주입합니다. 기본 라이브러리 replay는 별도의 규칙 baseline입니다.
+평가 결과의 `runtime_configuration`에는 provider·코드 해시와 Jev 모델·신뢰도 기준을
+기록합니다. baseline/candidate 설정이 다르면 평가 오류이며, Jev 게시 시에는 현재 설정과
+동일한 평가만 허용합니다. 규칙 평가나 이전 모델·코드·기준값의 PASS로 게시할 수 없습니다.
+
 pipeline은 후보의 task에 맞는 holdout을 전달합니다. 실행 집계 상태는 평가 도구 오류가 있으면 ERROR, 그렇지 않고 PASS 후보가 있으면 READY_FOR_REVIEW, 평가가 없거나 추가 증거가 필요하면 NEEDS_DATA, 나머지는 REJECTED입니다. READY_FOR_REVIEW도 개별 후보의 승인 여부를 대신하지 않습니다. fixture CLI는 ERROR/REJECTED에서 종료 코드 1을 반환하며, NEEDS_DATA는 성공 판정이 아니라 정상적인 데이터 부족 보고입니다.
 
 검수 자료를 준비한 운영자가 실행할 명령입니다. publish는 저장된 PASS를 그대로 믿지 않고 replay를 다시 실행합니다.

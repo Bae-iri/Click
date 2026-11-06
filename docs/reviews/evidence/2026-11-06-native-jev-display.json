@@ -1,0 +1,198 @@
+{
+  "schema_version": "click-native-jev-measurement.v1",
+  "date": "2026-11-06",
+  "timezone": "Asia/Seoul",
+  "device": {
+    "manufacturer": "samsung",
+    "model": "SM-N981N",
+    "android": "13"
+  },
+  "server": {
+    "url": "https://click-db.onrender.com",
+    "revision_verified": false,
+    "local_backend_deployed_by_this_run": false
+  },
+  "authorization": {
+    "screen_transmission_explicitly_approved": true,
+    "maximum_screen_posts": 6,
+    "actual_screen_posts": 5
+  },
+  "local_native_checks": {
+    "foreground_window": {
+      "status": "PASS",
+      "seconds": 0.948,
+      "evidence": "physical_settings_and_launcher_with_focused_accessibility_overlay"
+    },
+    "privacy_capture": {
+      "status": "PASS",
+      "seconds": 3.905
+    },
+    "filtered_labels": [
+      "디스플레이",
+      "배경화면 및 스타일",
+      "설정",
+      "소리 및 진동",
+      "알림",
+      "연결"
+    ],
+    "filtered_node_count": 15
+  },
+  "live_probe": {
+    "source": "physical_device_native_settings",
+    "server": "https://click-db.onrender.com",
+    "actual_clicks": false,
+    "mode": "native_live_server",
+    "external_requests": 5,
+    "manufacturer": "samsung",
+    "model": "SM-N981N",
+    "android": "13",
+    "observations": [
+      {
+        "turn": 1,
+        "latency_ms": 586,
+        "same_native_screen": true,
+        "state": "S1_SETTINGS_HOME",
+        "task_status": "IN_PROGRESS",
+        "action_type": "tap",
+        "display_target": true,
+        "ui_selection": {
+          "provider": "jev",
+          "status": "selected",
+          "mode": "primary",
+          "called": true,
+          "candidate_count": 1,
+          "grounded_candidate_count": 1,
+          "payload_bytes": 4621,
+          "exported_node_count": 4,
+          "filter_time_ms": 1.287,
+          "provider_latency_ms": 290.071,
+          "confidence": 0.94,
+          "minimum_confidence": 0.8,
+          "top_probability": 0.96,
+          "probability_margin": 0.9199999999999999
+        }
+      },
+      {
+        "turn": 2,
+        "latency_ms": 441,
+        "same_native_screen": true,
+        "state": "S1_SETTINGS_HOME",
+        "task_status": "IN_PROGRESS",
+        "action_type": "observe_only",
+        "display_target": false,
+        "ui_selection": {
+          "provider": "jev",
+          "status": "low_confidence",
+          "mode": "primary",
+          "called": true,
+          "candidate_count": 1,
+          "grounded_candidate_count": 1,
+          "payload_bytes": 4736,
+          "exported_node_count": 4,
+          "filter_time_ms": 1.287,
+          "provider_latency_ms": 270.571,
+          "confidence": 0.7899999999999998,
+          "minimum_confidence": 0.8,
+          "top_probability": 0.86,
+          "probability_margin": 0.75
+        }
+      },
+      {
+        "turn": 3,
+        "latency_ms": 438,
+        "same_native_screen": true,
+        "state": "S1_SETTINGS_HOME",
+        "task_status": "IN_PROGRESS",
+        "action_type": "observe_only",
+        "display_target": false,
+        "ui_selection": {
+          "provider": "jev",
+          "status": "low_confidence",
+          "mode": "primary",
+          "called": true,
+          "candidate_count": 1,
+          "grounded_candidate_count": 1,
+          "payload_bytes": 4736,
+          "exported_node_count": 4,
+          "filter_time_ms": 1.73,
+          "provider_latency_ms": 275.353,
+          "confidence": 0.77,
+          "minimum_confidence": 0.8,
+          "top_probability": 0.85,
+          "probability_margin": 0.73
+        }
+      },
+      {
+        "turn": 4,
+        "latency_ms": 485,
+        "same_native_screen": true,
+        "state": "S1_SETTINGS_HOME",
+        "task_status": "IN_PROGRESS",
+        "action_type": "observe_only",
+        "display_target": false,
+        "ui_selection": {
+          "provider": "jev",
+          "status": "low_confidence",
+          "mode": "primary",
+          "called": true,
+          "candidate_count": 1,
+          "grounded_candidate_count": 1,
+          "payload_bytes": 4736,
+          "exported_node_count": 4,
+          "filter_time_ms": 1.282,
+          "provider_latency_ms": 277.619,
+          "confidence": 0.77,
+          "minimum_confidence": 0.8,
+          "top_probability": 0.85,
+          "probability_margin": 0.73
+        }
+      },
+      {
+        "turn": 5,
+        "latency_ms": 605,
+        "same_native_screen": true,
+        "state": "S1_SETTINGS_HOME",
+        "task_status": "IN_PROGRESS",
+        "action_type": "observe_only",
+        "display_target": false,
+        "ui_selection": {
+          "provider": "jev",
+          "status": "low_confidence",
+          "mode": "primary",
+          "called": true,
+          "candidate_count": 1,
+          "grounded_candidate_count": 1,
+          "payload_bytes": 4736,
+          "exported_node_count": 4,
+          "filter_time_ms": 1.233,
+          "provider_latency_ms": 252.213,
+          "confidence": 0.7899999999999998,
+          "minimum_confidence": 0.8,
+          "top_probability": 0.86,
+          "probability_margin": 0.76
+        }
+      }
+    ],
+    "font_scale_unchanged": true,
+    "probe_completed": true,
+    "assertions_passed": true,
+    "test_session_cancelled": true
+  },
+  "probe_assertions_scope": "captures_native_screen_and_checks_jev_provider_identity; not a guidance-retention acceptance assertion",
+  "acceptance": {
+    "stable_display_guidance": "FAIL",
+    "all_native_screens_equal": true,
+    "display_guides_returned": 1,
+    "jev_calls": 5,
+    "new_diagnostic_fields_present": false,
+    "retained_guidance_observed": false,
+    "updated_backend_live_validation": "NOT_RUN_ON_VERIFIED_UPDATED_BACKEND"
+  },
+  "font_scale": {
+    "before": 1.1,
+    "after": 1.1,
+    "unchanged": true
+  },
+  "installed_apk_sha256": "ca4e9dfbf9e2df3f1e9fce6af7dfc8baa746ca6fccc33a3cca776cdda43d9dba",
+  "test_apk_sha256": "16ccee4f4cc11ed6ff08d2e1e3204122885af156dbda085a01b8d89dbb94e740"
+}

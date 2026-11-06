@@ -88,7 +88,7 @@ class AgentTurnService:
             previous = store.get(request.session_id)
             authorization = ((previous.pending_attempt or {}).get("authorization") or {}) if previous else {}
             if authorization and authorization.get("expires_at", 0) <= int(self.repository.clock()):
-                store.update(request.session_id, pending_attempt=None, pending_transition_id=None)
+                store.update(request.session_id, pending_attempt=None, pending_selection=None, pending_transition_id=None)
             engine = self.engine_factory(session_store=store, task_graph=selected_graph) \
                 if selected_graph is not None else self.engine_factory(session_store=store)
             # Only the trusted adapter receives BE-validated per-request vision consent.

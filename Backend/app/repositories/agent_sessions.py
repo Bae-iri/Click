@@ -414,7 +414,8 @@ class AgentSessionRepository:
                 checkpoint = db.get(AgentCheckpoint, row.id)
                 if checkpoint:
                     state = deepcopy(checkpoint.state)
-                    state.update(pending_attempt=None, pending_transition_id=None, pending_confirmation_transition_id=None)
+                    state.update(pending_attempt=None, pending_selection=None, pending_transition_id=None,
+                                 pending_confirmation_transition_id=None)
                     checkpoint.state = state
                 if row.workflow:
                     row.workflow = {key: value for key, value in row.workflow.items() if key != "paused_status"}

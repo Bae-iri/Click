@@ -140,6 +140,25 @@ def test_publish_and_rollback_are_atomic_audited_and_preserve_pinned_graphs():
         manager.rollback("MVP-01", "1.0.1", expected_current_hash=release["graph_hash"], reviewer="operator", reviewed_at=301)
 
 
+def test_jev_deployment_rejects_rules_or_stale_runtime_evaluation(monkeypatch):
+    from app.clients.runtime_agent import runtime_configuration
+    monkeypatch.setenv("AI1_UI_SELECTOR_PROVIDER", "jev")
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-only-key")
+    monkeypatch.setenv("JEV_MODEL", "jev-1.14.0")
+    monkeypatch.setenv("JEV_MIN_CONFIDENCE", "0.8")
+    app = create_app()
+    manager, release, _ = release_fixture(app)
+    with pytest.raises(ValueError, match="active runtime configuration"):
+        manager.promote(release)
+    release["evaluation"]["runtime_configuration"] = runtime_configuration()
+    release["evaluation_hash"] = fingerprint(release["evaluation"])
+    monkeypatch.setenv("JEV_MIN_CONFIDENCE", "0.9")
+    with pytest.raises(ValueError, match="active runtime configuration"):
+        manager.promote(release)
+    monkeypatch.setenv("JEV_MIN_CONFIDENCE", "0.8")
+    assert not manager.promote(release)["already_published"]
+
+
 def test_release_rejects_forged_content_and_stale_base_without_side_effects():
     app = create_app()
     manager, release, _ = release_fixture(app)
