@@ -73,8 +73,20 @@ def selector_evidence(node, transition, nodes, graph) -> tuple[float, str]:
     if not control_label(node) and selector.allow_unlabelled_in_context:
         # A page title may name a single unlabelled control, never a named other setting.
         context = ' '.join(n.label for n in nodes if n.package_name == node.package_name
-                           and n.role == 'text' and not n.actionable)
+                           and n.window_id == node.window_id and n.role == 'text'
+                           and not n.actionable
+                           and n.structure_role not in {'control_label', 'description'}
+                           and not any(_contains_control_label(other, n) for other in nodes))
         if any_keyword_matches(context, selector.context_keywords):
             if len(eligible_nodes(transition, nodes, graph)) == 1:
                 return 0.8, 'unique_control_in_context'
     return 0.0, 'none'
+
+
+def _contains_control_label(control, label):
+    """Legacy flat trees still expose bounds: a menu label isn't page context."""
+    return (control.node_id != label.node_id and control.package_name == label.package_name
+            and control.window_id == label.window_id and (control.actionable or control.scrollable)
+            and control.bounds and label.bounds
+            and control.bounds[0] <= label.bounds[0] and control.bounds[1] <= label.bounds[1]
+            and control.bounds[2] >= label.bounds[2] and control.bounds[3] >= label.bounds[3])

@@ -48,6 +48,12 @@ class JevScreenResolver(JevGoalClassifier):
                         or transition.safety_level == SafetyLevel.BLOCKED):
                     continue
                 for node in eligible_nodes(transition, nodes, graph):
+                    # A font-menu row on Display does not name its brightness
+                    # slider. Require reviewed target identity or independent
+                    # page context before offering a setting-changing control.
+                    if (setting == 'font_size' and transition.target_role == 'slider'
+                            and selector_evidence(node, transition, nodes, graph)[0] < MATCH_THRESHOLD):
+                        continue
                     # An approved menu identity cannot stand for a different
                     # navigation target. Unlabelled sliders still use context.
                     if (node.role in {"menu_item", "button", "app_icon"} and node.label
