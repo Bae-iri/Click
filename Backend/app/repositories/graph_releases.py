@@ -19,8 +19,14 @@ class GraphReleaseRepository:
         self.factory = factory
 
     def publish(self, release):
+        from app.clients.runtime_agent import runtime_configuration
+        configuration = runtime_configuration()
         body, graph_hash = canonical_graph(load_graph(release["body"]))
         evaluation = release["evaluation"]
+        evaluated_configuration = evaluation.get("runtime_configuration")
+        if ((evaluated_configuration is not None or configuration["provider"] == "jev")
+                and evaluated_configuration != configuration):
+            raise ValueError("Release evaluation does not match the active runtime configuration")
         if (release.get("schema_version") != "ai2-release.v1" or graph_hash != release["graph_hash"]
                 or digest(evaluation) != release["evaluation_hash"] or evaluation.get("decision") != "PASS"
                 or evaluation.get("candidate_hash") != graph_hash or evaluation.get("base_graph_hash") != release["base_hash"]

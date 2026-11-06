@@ -1,12 +1,13 @@
 """Retire interrupted attempts; navigation is never a failed guided action."""
 from hashlib import sha256
+from dataclasses import replace
 
 LAUNCHERS = {"com.android.launcher3", "com.google.android.apps.nexuslauncher",
              "com.sec.android.app.launcher", "com.miui.home", "com.huawei.android.launcher",
              "com.oppo.launcher", "com.vivo.launcher", "org.lineageos.trebuchet"}
 
 
-def apply_navigation(store, request, session):
+def apply_navigation(store, request, session, *, persist=True):
     event = request.user_action_event
     if not session or not event or event.action_type.value not in {"back_navigated", "home_navigated"}:
         return session
@@ -26,7 +27,7 @@ def apply_navigation(store, request, session):
         if any(any(word in ((node.class_name or '') + ' ' + (node.resource_id or '')).lower()
                    for word in ('overview', 'recents', 'recent_tasks')) for node in visible):
             return session
-    changes = dict(pending_attempt=None, pending_transition_id=None,
+    changes = dict(pending_attempt=None, pending_selection=None, pending_transition_id=None,
                    pending_confirmation_transition_id=None, last_guide_command_id=None,
                    last_target_node_id=None, recovery_state={}, vision_state={}, last_snapshot=None)
     if home:
@@ -35,4 +36,4 @@ def apply_navigation(store, request, session):
                        failed_target_keys={}, transition_attempts={}, total_failed_attempts=0,
                        recovery_count=0)
     changes['processed_event_keys'] = (*session.processed_event_keys, key)[-128:]
-    return store.update(request.session_id, **changes)
+    return store.update(request.session_id, **changes) if persist else replace(session, **changes)

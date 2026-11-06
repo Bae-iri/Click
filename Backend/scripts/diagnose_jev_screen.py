@@ -63,13 +63,15 @@ def main(argv=None):
         if args.fresh_sessions:
             session_id = "synthetic-" + uuid4().hex
         previous = engine.session_store.get(session_id)
-        previous_action = previous.pending_attempt if previous else None
+        pending = previous.pending_attempt if previous else None
+        previous_action = pending if pending and pending.get("event_key") else None
         result = engine.handle_turn(AgentTurnRequest(request_id=uuid4().hex, session_id=session_id,
             typed_goal=goal if previous is None else None, raw_goal=None, accessibility_tree=tuple(nodes),
             device_context=DeviceContext(platform="android"), screen_bounds=(0, 0, 1080, 2400),
             observation_id=uuid4().hex, captured_at_ms=1000 * (turn + 1)))
         selection = diagnostic_payload(result.debug).get("ui_selection", {})
-        observation = {"attempt": turn + 1, "previous_action_present": bool(previous_action),
+        observation = {"attempt": turn + 1, "planned_action_present": bool(pending or (previous and previous.pending_selection)),
+            "previous_action_present": bool(previous_action),
             "previous_action_event_received": bool(previous_action and previous_action.get("event_key")),
             "ui_selection": selection, "action_type": result.guide_command.action_type.value}
         transition = transitions.get(selection.get("chosen_transition_hash"))
@@ -78,6 +80,7 @@ def main(argv=None):
             observation["chosen_transition"] = transition.transition_id
             observation["chosen_target_names"] = list(transition.target_keywords)
         report["observations"].append(observation)
+    report["provider_calls"] = sum(bool(o["ui_selection"].get("called")) for o in report["observations"])
     rendered = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     if args.output is not None:
         args.output.write_text(rendered, encoding="utf-8")

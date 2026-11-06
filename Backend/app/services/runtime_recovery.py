@@ -56,7 +56,7 @@ def prepare(recovery, checkpoint, graph, reference, response, graphs):
               if old_transitions.get(item.transition_id) == item.to_dict()}
     fresh = deepcopy(checkpoint)
     fresh.update(task_id=replacement.definition.task_id, current_state_id="S0_UNKNOWN",
-        pending_transition_id=None, pending_confirmation_transition_id=None, pending_attempt=None,
+        pending_transition_id=None, pending_confirmation_transition_id=None, pending_attempt=None, pending_selection=None,
         last_guide_command_id=None, last_target_node_id=None, last_snapshot=None, last_user_action_event=None,
         recovery_count=0, recovery_state={}, vision_state={}, state_candidates=(), total_failed_attempts=0, task_completed=False,
         observed_path=(), progress_steps=(), technical_outcome={},

@@ -14,6 +14,8 @@ Backend의 turn API가 사용하는 사용자 작업 실행 경로다. **2026-10
 | `semantic_state.py` | 규칙으로 분류하지 못한 화면에 주입된 의미 해석기를 적용하고 결과 검증 |
 | `matcher.py`, `targeting.py`, `similarity.py` | 역할·앱/window 필터, 공통 graph selector, 동점 선택 보류 |
 | `screen_resolver` 주입 지점 | Backend의 Jev가 현재 graph 단계와 UI 대상을 함께 결정; 실패 시 재관측 |
+| `primary.py` | 실행 전 네이티브 안내 재검증·유지, 명시적 재시도, 모델 보류 사유 전달 |
+| `decision.py` | 안전·거절·완료·결과 대기·관측·선택 우선순위에 따른 단일 최종 안내 |
 | `ui_selection.py`, `jev_ui.py` | 이전 보조 선택 API의 명시적 주입 호환성; Backend 주 판단 경로에서는 사용하지 않음 |
 | `guide.py`, `contracts.py` | Safety에 따른 안내·확인·허용 Action 계약 |
 | `verification.py`, `state_manager.py` | 새 화면을 이용한 직전 단계 결과 검증 |

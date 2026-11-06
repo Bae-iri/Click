@@ -20,7 +20,8 @@ ENUMS = {
     "reason_code": {"NONE", "TARGET_NOT_VISIBLE", "STATE_IDENTIFIED", "STATE_AMBIGUOUS", "STATE_UNKNOWN", "TARGET_AMBIGUOUS",
         "TARGET_NOT_FOUND", "OBSERVATION_INSUFFICIENT", "OBSERVATION_STALE", "WAITING_FOR_SETTLE",
         "ACTION_EVENT_MISSING", "ACTION_RESULT_UNOBSERVABLE", "VISION_UNAVAILABLE",
-        "ACTION_BUDGET_EXHAUSTED", "GRAPH_PATH_UNAVAILABLE", "GRAPH_RESELECTED", "APP_NOT_OPEN"},
+        "ACTION_BUDGET_EXHAUSTED", "GRAPH_PATH_UNAVAILABLE", "GRAPH_RESELECTED", "APP_NOT_OPEN",
+        "LOW_CONFIDENCE", "MODEL_ABSTAINED", "MODEL_UNAVAILABLE", "MODEL_WAIT_WITHOUT_ACTION"},
     "next_action": {"none", "reobserve", "manual_navigation", "user_assistance", "reselect_graph", "vision_analysis", "open_settings"},
     "waiting_for": {"none", "user", "consent", "observation"},
 }
@@ -52,6 +53,9 @@ def diagnostic_payload(value, depth=0):
                 safe[key] = selection[key]
         if type(selection.get("called")) is bool:
             safe["called"] = selection["called"]
+        for key in ("retained", "paused"):
+            if type(selection.get(key)) is bool:
+                safe[key] = selection[key]
         choice = selection.get("choice")
         if isinstance(choice, str) and (choice in {"wait_for_result", "insufficient_evidence"}
                 or (re.fullmatch(r"candidate_(0|[1-9][0-9]{0,2})", choice)

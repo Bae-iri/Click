@@ -45,7 +45,8 @@ def manual_navigation_target(graph, match, nodes):
 def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
                     failed_node_ids, total_failed_attempts, state_evidence,
                     awaiting_vision_consent=False, vision_failed=False,
-                    within_settling_interval=False, user_retry=False, completed=False):
+                    within_settling_interval=False, user_retry=False, completed=False,
+                    selection_failure=None):
     base = decide_replan(session=session, verification_result=verification,
         failed_node_ids=failed_node_ids, total_failed_attempts=total_failed_attempts,
         max_failed_attempts=graph.policy.max_failed_attempts, match_result=match)
@@ -77,7 +78,7 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
 
     waiting_result = bool(verification and verification.status in {Status.UNKNOWN, Status.WAITING_FOR_OBSERVATION})
     label = manual_navigation_target(graph, match, nodes)
-    if label and not waiting_result and not (session and session.failed_target_keys):
+    if label and not selection_failure and not waiting_result and not (session and session.failed_target_keys):
         return plan("wait", "TARGET_NOT_VISIBLE", "manual_navigation", "user", label=label)
 
     pending = session.pending_attempt if session else None
@@ -87,17 +88,21 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
             and pending.get("baseline_value") is not None and target.value != pending["baseline_value"]):
         return plan("wait", "ACTION_EVENT_MISSING", "user_assistance", "user")
 
-    if not waiting_result and not match.fallback_reason:
+    if not selection_failure and not waiting_result and not match.fallback_reason:
         return RecoveryPlan(base)
 
-    reason = ("ACTION_RESULT_UNOBSERVABLE" if waiting_result else
+    reason = selection_failure or ("ACTION_RESULT_UNOBSERVABLE" if waiting_result else
               "VISION_UNAVAILABLE" if vision_failed else
               "STATE_AMBIGUOUS" if state_evidence.get("ambiguous") else
               "OBSERVATION_INSUFFICIENT" if not nodes else
               "STATE_UNKNOWN" if match.state_id == "S0_UNKNOWN" else
               "TARGET_AMBIGUOUS" if match.fallback_reason == "ambiguous_target" else
               "GRAPH_PATH_UNAVAILABLE" if match.fallback_reason == "no_transition" else "TARGET_NOT_FOUND")
-    scope = f"{match.state_id}:{match.transition_id}:{'verification' if waiting_result else 'navigation'}"
+    if selection_failure:
+        from ai_agent.runtime.primary import recovery_scope
+        scope = recovery_scope(snapshot)
+    else:
+        scope = f"{match.state_id}:{match.transition_id}:{'verification' if waiting_result else 'navigation'}"
     old = dict(session.recovery_state) if session else {}
     if old.get("scope") != scope or user_retry:
         old = {}

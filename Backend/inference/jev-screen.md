@@ -43,6 +43,8 @@ API 응답, 재전송 응답, 저장된 진단에는 다음 값이 함께 남는
 | `confidence` | 원본 confidence와 보정값 중 작은 최종값 |
 | `minimum_confidence` | 통과 기준 |
 | `hold_reason` | `none`, `raw_confidence_below_minimum`, `normalized_probability_below_minimum`, `both_below_minimum`, `wait_for_result`, `insufficient_evidence` |
+| `retained` | 유효한 이전 네이티브 선택을 유지했는지. 참이면 현재 모델 응답의 새 점수가 아니다. |
+| `paused` | 같은 화면에서 복구 한도에 도달하여 사용자 재시도를 기다리는지 |
 
 `probability_margin`도 유지한다. `choice`와 transition 해시는 모델의 선택을
 나타내며, 실제 클릭·경로 이동 성공의 증거가 아니다. 후보 번호는 해당 호출에서만
@@ -51,12 +53,16 @@ API 응답, 재전송 응답, 저장된 진단에는 다음 값이 함께 남는
 실제 노드 ID는 추가하지 않는다. 잘못된 응답·호출 실패는 `status`로 구별하며
 검증을 통과하지 않은 점수·선택 항목은 기록하지 않는다.
 
-같은 합성 화면을 클릭 없이 반복하며 실제 Jev 응답을 기록하려면:
+같은 합성 화면을 클릭 없이 반복하며 런타임 동작과 Jev 진단을 기록하려면:
 
 ```sh
 python scripts/diagnose_jev_screen.py --env-file .env --attempts 5 --output jev-diagnostics.json
 ```
 
+같은 세션에서 최초 선택이 통과하면 다음 관측에서는 유효한 안내를 유지하므로
+매번 Jev를 호출하지 않는다. 보고서의 `provider_calls`, 관측별 `called`·`retained`로
+호출 횟수와 유지된 결과를 구분한다. `planned_action_present`와
+`previous_action_present`는 각각 안내한 계획과 실제 이벤트 수신 여부다.
 `--fresh-sessions`를 추가하면 매번 새 작업으로 판단한다. 원본 화면·응답 본문·키는
 저장하지 않고 위 진단과 승인된 graph에서 해시로 찾은 선택 대상만 출력한다.
 이 검사는 로컬 수정본의 실제 모델 호출이며 운영 배포나 기기 조작 검증은 아니다.
@@ -71,5 +77,6 @@ python scripts/diagnose_jev_screen.py --env-file .env --attempts 5 --output jev-
 자동 테스트 통과만으로 실제 Jev의 선택 정확도가 검증된 것은 아니다.
 
 설정 변경 전 승인, 행동 이벤트 연결, 실제 설정값 기반 완료 판정은 유지한다.
-Jev 선택 실패 시 규칙이 대신 조작하지 않고 재관측한다.
+Jev 선택 실패 시 규칙이 대신 조작하지 않는다. 동일 화면에서 graph의 복구 한도까지
+재관측한 뒤 사용자 도움으로 전환한다. 원본 confidence와 보정 기준은 유지한다.
 상세 범위·제한은 [AI1 Jev 문서](../../AI-Agent/docs/jev-ui-selection.md)를 참고한다.

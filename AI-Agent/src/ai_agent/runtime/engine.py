@@ -11,10 +11,7 @@ from ai_agent.runtime import diagnostics, observation_context
 from ai_agent.runtime.classifier import classify_screen_state
 from ai_agent.runtime.goal_typing import type_goal
 from ai_agent.runtime.guide import (
-    build_guide_command,
     clarification_command,
-    command_for_vision_analysis,
-    recovery_command,
 )
 from ai_agent.runtime.matcher import match_next_ui
 from ai_agent.runtime.normalizer import normalize_accessibility_tree
@@ -52,6 +49,9 @@ from ai_agent.runtime.privacy import sanitize_request
 from ai_agent.runtime.vision_cycles import decide_vision_cycle
 from ai_agent.runtime.semantic_state import resolve_state
 from ai_agent.runtime.ui_selection import select_ui_target
+from ai_agent.runtime.primary import PrimaryDecision, decide_primary, retry_session, selection_binding
+from ai_agent.runtime.decision import decide_guide
+from ai_agent.telemetry.trace_logger import diagnostic_payload
 
 
 class ClickAgentEngine:
@@ -117,10 +117,15 @@ class ClickAgentEngine:
                 debug={'checklist': list(existing_session.progress_steps), 'recovery': stale_observation_recovery()})
 
         from ai_agent.runtime.navigation import apply_navigation
-        navigated_session = apply_navigation(self.session_store, request, existing_session)
+        navigated_session = apply_navigation(self.session_store, request, existing_session, persist=False)
         if navigated_session is not existing_session:
             previous_snapshot = None
             existing_session = navigated_session
+
+        # Explicit retry starts a new decision, not a new action/failure budget.
+        retried_session = retry_session(request, existing_session) if self.screen_resolver else existing_session
+        user_retry = retried_session is not existing_session
+        existing_session = retried_session
 
         typed_goal = self._resolve_typed_goal(
             request,
@@ -274,48 +279,32 @@ class ClickAgentEngine:
         # verification. Rule classification supplies evidence, never the final UI.
         primary_match = None
         primary_wait = False
+        primary_decision = None
         ui_selection = {"provider": getattr(self.ui_selector, "provider", "rules"),
                         "status": "skipped", "called": False}
         if self.screen_resolver:
-            ui_selection = {"provider": "jev", "mode": "primary", "status": "skipped", "called": False}
-            same_screen = bool(previous_snapshot and
-                previous_snapshot.fingerprint == current_snapshot.fingerprint)
-            repeated_failure = bool(existing_session and existing_session.recovery_state.get(
-                "jev_wait_fingerprint") == current_snapshot.fingerprint)
-            action_at = attempt.get('action_at_ms') if attempt else None
-            settling = bool(action_at is not None and request.captured_at_ms is not None
-                and request.captured_at_ms - action_at < graph.policy.settle_ms)
-            pending_result = bool(attempt and attempt.get('event_key') and verification_result
-                and verification_result.status in {VerificationStatus.WAITING_FOR_OBSERVATION,
-                    VerificationStatus.UNKNOWN, VerificationStatus.NO_CHANGE, VerificationStatus.WRONG_STATE})
-            primary_wait = bool(repeated_failure or settling or (same_screen and pending_result))
-            already_complete = bool((existing_session and existing_session.task_completed)
-                or (verification_result and verification_result.task_completed))
-            if primary_wait:
-                ui_selection['status'] = 'waiting'
-            if (not already_complete and not primary_wait and request.user_confirmation != 'rejected'
-                    and (not existing_session or existing_session.total_failed_attempts < graph.policy.max_failed_attempts)
-                    and not (vision_analysis and vision_analysis.status == 'masking_failed')):
-                primary_match = self.screen_resolver.resolve(nodes=normalized_nodes, graph=graph,
-                    goal=typed_goal, raw_nodes=accessibility_nodes, session=existing_session,
-                    verification=verification_result, excluded_target_keys=previous_exclusions,
-                    screen_bounds=screen_bounds, attempt=attempt)
-                ui_selection.update(getattr(self.screen_resolver, 'last_diagnostics', {}))
-                primary_wait = primary_match is None
-                if primary_match:
-                    current_state_id = primary_match.state_id
-                    current_snapshot = replace(current_snapshot, state_id=current_state_id)
-                    state_evidence = {'state_score': primary_match.confidence, 'ambiguous': False,
-                        'candidates': [{'state_id': current_state_id, 'score': primary_match.confidence}]}
-                    # Re-evaluate navigation progress using the actual model-selected
-                    # screen. Numeric completion still requires correlated before/after evidence.
-                    verification_result = verify_transition(graph=graph, previous_state_id=previous_state_id,
-                        pending_transition_id=existing_session.pending_transition_id if existing_session else None,
-                        current_state_id=current_state_id,
-                        previous_snapshot=existing_session.last_snapshot if existing_session else None,
-                        current_snapshot=current_snapshot, attempt=attempt, nodes=normalized_nodes)
-            elif not already_complete:
-                primary_wait = True
+            if vision_analysis and vision_analysis.status == "masking_failed":
+                primary_decision = PrimaryDecision(None, {
+                    "provider": "jev", "mode": "primary", "status": "skipped", "called": False})
+            else:
+                primary_decision = decide_primary(resolver=self.screen_resolver, request=request,
+                    session=existing_session, snapshot=current_snapshot, nodes=normalized_nodes,
+                    raw_nodes=accessibility_nodes, graph=graph, goal=typed_goal,
+                    verification=verification_result, attempt=attempt, exclusions=previous_exclusions,
+                    screen_bounds=screen_bounds)
+            primary_match = primary_decision.match
+            primary_wait = primary_match is None
+            ui_selection = primary_decision.diagnostics
+            if primary_match:
+                current_state_id = primary_match.state_id
+                current_snapshot = replace(current_snapshot, state_id=current_state_id)
+                state_evidence = {'state_score': primary_match.confidence, 'ambiguous': False,
+                    'candidates': [{'state_id': current_state_id, 'score': primary_match.confidence}]}
+                verification_result = verify_transition(graph=graph, previous_state_id=previous_state_id,
+                    pending_transition_id=existing_session.pending_transition_id if existing_session else None,
+                    current_state_id=current_state_id,
+                    previous_snapshot=existing_session.last_snapshot if existing_session else None,
+                    current_snapshot=current_snapshot, attempt=attempt, nodes=normalized_nodes)
         transition_attempts, failed_node_ids = register_attempt_outcome(
             existing_session,
             pending_transition_id=existing_session.pending_transition_id if existing_session else None,
@@ -344,6 +333,8 @@ class ClickAgentEngine:
         within_settling_interval = bool(awaiting_observation and action_time is not None
             and request.captured_at_ms is not None
             and 0 <= request.captured_at_ms - action_time < graph.policy.settle_ms)
+        if primary_decision and primary_decision.recovery_reason == "WAITING_FOR_SETTLE":
+            within_settling_interval = True
         if (not self.screen_resolver and not task_completed and not awaiting_observation
                 and request.user_confirmation != "rejected"
                 and total_failed_attempts < graph.policy.max_failed_attempts
@@ -351,9 +342,19 @@ class ClickAgentEngine:
                 and not (vision_analysis and vision_analysis.status == "masking_failed")):
             match_result, ui_selection = select_ui_target(match_result, normalized_nodes, graph,
                 self.ui_selector, excluded_target_keys=failed_target_keys, screen_bounds=screen_bounds)
+        if (primary_decision and primary_decision.recovery_reason
+                and ui_selection.get("grounded_candidate_count", 0) > 0
+                and vision_analysis and vision_analysis.status == "not_requested"
+                and vision_analysis.reason == "no_matching_target_node"):
+            # A visible-but-uncertain candidate is not evidence of missing UI.
+            vision_analysis = None
         cycle = decide_vision_cycle(request=request, session=existing_session, graph=graph,
             match=match_result, analysis=vision_analysis, completed=task_completed)
         awaiting_vision_consent = bool(cycle.command and cycle.command.command_type == CommandType.CONFIRMATION)
+        selection_failure = primary_decision.recovery_reason if primary_decision else None
+        # Keep physical absence/ambiguity evidence for bounded Android list search.
+        if selection_failure == "MODEL_ABSTAINED" and match_result.fallback_reason:
+            selection_failure = None
         recovery_plan = decide_recovery(graph=graph, session=existing_session, snapshot=current_snapshot,
             match=match_result, nodes=normalized_nodes, verification=verification_result,
             failed_node_ids=failed_node_ids, total_failed_attempts=total_failed_attempts,
@@ -361,18 +362,23 @@ class ClickAgentEngine:
             vision_failed=bool(vision_analysis and (vision_analysis.status in {"no_signal", "provider_error", "not_configured"}
                 or (vision_analysis.status == "used" and match_result.fallback_reason))),
             within_settling_interval=within_settling_interval, completed=task_completed,
-            user_retry=bool(request.user_action_event and request.user_action_event.action_type.value == "manual_override"))
+            user_retry=user_retry if self.screen_resolver else bool(request.user_action_event
+                and request.user_action_event.action_type.value == "manual_override"),
+            selection_failure=selection_failure)
         if self.screen_resolver:
             if primary_wait and (failed_attempt or (existing_session and
                     existing_session.recovery_state.get('jev_wait_fingerprint') == current_snapshot.fingerprint)):
                 recovery_plan.state['jev_wait_fingerprint'] = current_snapshot.fingerprint
             else:
                 recovery_plan.state.pop('jev_wait_fingerprint', None)
+            if selection_failure:
+                recovery_plan.state['primary_diagnostics'] = diagnostic_payload(
+                    {"ui_selection": ui_selection}).get("ui_selection", {})
         recovery_count = recovery_plan.state.get("attempts", 0)
         replan_decision = recovery_plan.replan
         matched_target = next((node for node in normalized_nodes if node.node_id == match_result.target_node_id), None)
         current_transition = next((t for t in graph.transitions if t.transition_id == match_result.transition_id), None)
-        limit_reached = bool(not task_completed and matched_target
+        limit_reached = bool(not task_completed and not primary_wait and matched_target
             and valid_slider_value(matched_target.value, matched_target.range_min, matched_target.range_max)
             and current_transition and current_transition.completes_task and (
                 (current_transition.verification_predicate == 'target_value_increased'
@@ -399,95 +405,26 @@ class ClickAgentEngine:
         if keep_attempt and same_binding:
             # Already approved this exact pending operation; do not ask again while waiting.
             confirmation = 'accepted'
-        guide_command = build_guide_command(session_id=request.session_id, match_result=match_result,
-            graph=graph, user_confirmation=confirmation, task_completed=task_completed)
-        if match_result.fallback_reason and vision_analysis and not awaiting_observation:
-            transition = next((item for item in graph.transitions
-                               if item.transition_id == match_result.transition_id), None)
-            vision_command = command_for_vision_analysis(request.session_id, vision_analysis,
-                manual_instruction=transition.guide_message if transition else None)
-            if vision_command:
-                guide_command = vision_command
-        if awaiting_observation:
-            guide_command = GuideCommand(
-                guide_command_id=attempt['guide_command_id'], command_type=CommandType.HIGHLIGHT,
-                action_type=ActionType.OBSERVE_ONLY, message='조작 결과를 확인하고 있어요.',
-                safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
-                render_policy={'fallback_action': {'type': 'request_fresh_observation',
-                    'reason': verification_result.evidence,
-                    'expected_next_observation': {'send_fresh_accessibility_tree': True}}})
-        if (not self.screen_resolver and recovery_plan.decision != "continue" and (not awaiting_vision_consent or recovery_plan.next_action == "go_back") and not task_completed
-                and guide_command.safety_level != SafetyLevel.BLOCKED
-                and recovery_plan.next_action != "open_settings"):
-            guide_command = recovery_command(request.session_id, recovery_plan)
-            if recovery_plan.reason_code == "ACTION_EVENT_MISSING" and attempt:
-                keep_attempt = True
-            if recovery_plan.decision == "handoff":
-                keep_attempt = False
-        if not self.screen_resolver and recovery_plan.next_action == "go_back":
-            keep_attempt = False
-        if request.user_confirmation == 'rejected' and not cycle.command:
-            guide_command = build_guide_command(session_id=request.session_id,
-                match_result=match_result, graph=graph, user_confirmation='rejected')
-            keep_attempt = False
-        if vision_analysis and vision_analysis.status == "masking_failed":
-            guide_command = command_for_vision_analysis(request.session_id, vision_analysis)
-            keep_attempt = False
-        if limit_reached:
-            guide_command = GuideCommand(guide_command_id='guide_' + uuid4().hex,
-                command_type=CommandType.HIGHLIGHT, action_type=ActionType.OBSERVE_ONLY,
-                target_node_id=matched_target.node_id, target_bounds=matched_target.bounds,
-                target_label=matched_target.label,
-                message=('표시한 슬라이더가 이미 가장 큰 글자 크기예요. 더 크게 조절할 수 없어요.'
-                    if graph.definition.required_slots.get('direction') == 'increase' else
-                    '표시한 슬라이더가 이미 가장 작은 글자 크기예요. 더 작게 조절할 수 없어요.')
-                    if graph.definition.required_slots.get('setting') == 'font_size' else
-                    ('이미 조절 가능한 최댓값이에요. 더 높일 수 없어요.'
-                    if graph.definition.required_slots.get('direction') == 'increase' else
-                    '이미 조절 가능한 최솟값이에요. 더 낮출 수 없어요.'),
-                safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
-                render_policy={'avoid_covering_target': True, 'adjustment_limit': True})
-            keep_attempt = False
-        if recovery_plan.decision != "continue" and guide_command.command_type != CommandType.BLOCKED:
-            guide_command = replace(guide_command, render_policy={**guide_command.render_policy,
-                "recovery": recovery_plan.to_dict()})
-        if "vision_fallback" in guide_command.render_policy:
-            guide_command.render_policy["vision_fallback"]["vocabulary_key"] = vocabulary_key
-        if (cycle.command and not primary_match and not awaiting_observation and not task_completed):
-            guide_command = cycle.command
-            guide_command.render_policy["vision_cycle"] = cycle.state
-            if "vision_fallback" in guide_command.render_policy:
-                guide_command.render_policy["vision_fallback"]["vocabulary_key"] = vocabulary_key
-                guide_command.render_policy["recovery"] = recovery_plan.to_dict()
-            keep_attempt = False
-        if (self.screen_resolver and primary_wait and not task_completed
-                and request.user_confirmation != 'rejected'
-                and not awaiting_vision_consent
-                and not (cycle.command and not normalized_nodes)
-                and not (vision_analysis and vision_analysis.status == 'masking_failed')):
-            # An abstention must retain why fresh evidence is needed. Otherwise
-            # Android cannot distinguish an off-screen menu from a pending result
-            # and keeps rereading the same page instead of bounded list search.
-            if recovery_plan.decision != 'continue' and recovery_plan.next_action in {
-                    'manual_navigation', 'user_assistance', 'reobserve', 'reselect_graph'}:
-                guide_command = recovery_command(request.session_id, recovery_plan)
-            else:
-                guide_command = GuideCommand(guide_command_id='guide_' + uuid4().hex,
-                    command_type=CommandType.HIGHLIGHT, action_type=ActionType.OBSERVE_ONLY,
-                    message='안내를 준비하고 있어요.',
-                    safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
-                    render_policy={'fallback_action': {'type': 'request_fresh_observation'}})
-            guide_command = replace(guide_command, render_policy={**guide_command.render_policy,
-                'ui_selector': 'jev', 'revalidate_before_action': True})
-            keep_attempt = bool(attempt and not failed_attempt)
-        elif self.screen_resolver:
-            guide_command = replace(guide_command, render_policy={**guide_command.render_policy,
-                'ui_selector': 'jev', 'revalidate_before_action': True})
+        decision = decide_guide(request=request, graph=graph, match=match_result,
+            confirmation=confirmation, completed=task_completed, attempt=attempt,
+            keep_attempt=keep_attempt, awaiting_observation=awaiting_observation,
+            recovery=recovery_plan, cycle=cycle, vision_analysis=vision_analysis,
+            primary=primary_decision, limit_target=matched_target if limit_reached else None,
+            vocabulary_key=vocabulary_key)
+        guide_command, keep_attempt = decision.guide, decision.keep_attempt
+        pending_selection = (selection_binding(primary_match, normalized_nodes,
+            diagnostic_payload({'ui_selection': ui_selection}).get('ui_selection', {}))
+            if primary_match and guide_command.target_node_id == primary_match.target_node_id
+                and guide_command.requires_user_action else None)
         if keep_attempt:
             guide_command = replace(guide_command, guide_command_id=attempt['guide_command_id'])
             pending_transition_id = attempt['transition_id']
         else:
-            guide_command = replace(guide_command, guide_command_id='guide_' + uuid4().hex)
+            retained_confirmation = bool(existing_session and ui_selection.get('retained')
+                and guide_command.command_type == CommandType.CONFIRMATION
+                and existing_session.pending_confirmation_transition_id == match_result.transition_id)
+            guide_command = replace(guide_command, guide_command_id=existing_session.last_guide_command_id
+                if retained_confirmation else 'guide_' + uuid4().hex)
             pending_transition_id = _pending_transition_id(guide_command, match_result.transition_id)
             attempt = None
             if pending_transition_id and match_result.target_node_id:
@@ -508,6 +445,8 @@ class ClickAgentEngine:
                     'baseline_setting_value': applied_value(current_snapshot.applied_settings, graph.definition.required_slots.get('setting', 'font_size')),
                     'baseline_font_scale': font_scale(current_snapshot.applied_settings),
                     'episode_id': request.episode_id,
+                    'selection_diagnostics': diagnostic_payload({'ui_selection': ui_selection}).get('ui_selection', {})
+                        if primary_match else {},
                 }
         pending_confirmation_transition_id = _pending_confirmation_transition_id(
             guide_command.command_type, match_result.transition_id)
@@ -587,19 +526,21 @@ class ClickAgentEngine:
             last_target_node_id=attempt['target_node_id'] if attempt else match_result.target_node_id,
             failed_node_ids=failed_node_ids, transition_attempts=transition_attempts,
             last_snapshot=current_snapshot, last_user_action_event=None,
-            pending_attempt=attempt, processed_event_keys=processed_events,
+            pending_attempt=attempt, pending_selection=pending_selection, processed_event_keys=processed_events,
             failed_target_keys=failed_target_keys, recovery_count=recovery_count,
             total_failed_attempts=total_failed_attempts, task_completed=task_completed,
             observed_path=path, technical_outcome=technical,
             recovery_state=recovery_plan.state, state_candidates=tuple(state_evidence.get("candidates", ())),
             vision_state=cycle.state)
-        if existing_session:
+        from ai_agent.runtime.types import AgentSessionState
+        next_state = (replace(existing_session, **session_changes) if existing_session else
+                      AgentSessionState(session_id=request.session_id, **session_changes))
+        progress_steps = checklist(graph, next_state, match_result)
+        session_changes['progress_steps'] = tuple(progress_steps)
+        if self.session_store.has(request.session_id):
             self.session_store.update(request.session_id, **session_changes)
         else:
             self.session_store.start(session_id=request.session_id, **session_changes)
-
-        progress_steps = checklist(graph, self.session_store.get(request.session_id), match_result)
-        self.session_store.update(request.session_id, progress_steps=tuple(progress_steps))
         response = AgentTurnResponse(
             request_id=request.request_id,
             session_id=request.session_id,

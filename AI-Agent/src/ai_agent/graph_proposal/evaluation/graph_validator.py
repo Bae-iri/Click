@@ -72,6 +72,14 @@ class GraphValidator:
                         raise ValueError("Evaluator returned no scored independent expectations")
                 if baseline["checks"] != evaluated["checks"]:
                     raise ValueError("Evaluation coverage mismatch")
+                configuration = baseline.get("runtime_configuration")
+                if configuration != evaluated.get("runtime_configuration"):
+                    raise ValueError("Baseline/candidate runtime configuration mismatch")
+                if configuration is not None:
+                    if ("runtime_configuration" in report
+                            and report["runtime_configuration"] != configuration):
+                        raise ValueError("Evaluation runtime configuration changed between cases")
+                    report["runtime_configuration"] = configuration
                 report["checks"] += evaluated["checks"]
                 report["case_ids"].append(eid)
                 report["baseline_failures"] += len(baseline["failures"])

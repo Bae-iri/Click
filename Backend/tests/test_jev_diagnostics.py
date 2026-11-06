@@ -77,7 +77,8 @@ def test_decision_evidence_survives_reobservation_retry_and_storage(
             replay = client.post("/api/v1/agent/commands", json=payload)
             assert replay.status_code == 200, replay.text
             assert replay.json() == body
-            assert len(calls) == turn + 1
+            assert len(calls) == (1 if status == "selected" else turn + 1)
+            assert selection["called"] is (status != "selected" or turn == 0)
             payload = {"contract_version": payload["contract_version"], "command_type": "observe",
                 "request_id": f"decision-observe-{turn + 1}", "session_id": body["session_id"],
                 "expected_version": body["session_version"], "episode_id": body["episode_id"],
@@ -117,11 +118,20 @@ def test_synthetic_diagnostic_report_distinguishes_target_wait_and_abstention(
     assert report == json.loads(capsys.readouterr().out)
     assert report["actual_clicks"] is False
     observations = report["observations"]
+    if not fresh_sessions:
+        # Unexecuted, still-valid guides are retained instead of being reclassified.
+        assert len(calls) == 1
+        assert all(o["ui_selection"]["choice"] == calls[0] for o in observations)
+        assert all(o["ui_selection"]["retained"] for o in observations[1:])
+        assert [o["ui_selection"]["called"] for o in observations] == [True, False, False]
+        assert [o["planned_action_present"] for o in observations] == [False, True, True]
+        assert not any(o["previous_action_present"] for o in observations)
+        return
     assert [o["ui_selection"]["choice"] for o in observations] == calls
     assert "디스플레이" in observations[0]["chosen_target_names"]
     assert all("chosen_transition" not in o for o in observations[1:])
     assert observations[0]["ui_selection"]["hold_reason"] == "none"
     assert all(o["ui_selection"]["hold_reason"] == "normalized_probability_below_minimum" for o in observations[1:])
-    assert [o["previous_action_present"] for o in observations] == [False, not fresh_sessions, not fresh_sessions]
+    assert not any(o["previous_action_present"] for o in observations)
     assert all(o["previous_action_event_received"] is False for o in observations)
     assert "test-only-key" not in output.read_text(encoding="utf-8")

@@ -39,13 +39,18 @@ ROUTE_CONSUMER = "ai2-routes.v1"
 
 def replay_evaluator(body, case):
     """Inject online replay through this script; Agent 2 never imports runtime."""
+    from app.clients.runtime_agent import RuntimeAgentAdapter, runtime_configuration
     replay = deepcopy(case["replay"])
     graph = load_graph(body)
     # Provenance binds case to base above. Re-run identical observations with
     # candidate body instead of pretending the captured base hash still applies.
     replay["graph_hash"] = fingerprint(body)
     expected = sum(len(t.get("expected", {})) for t in replay.get("turns", [])) + int(bool(replay.get("expect_recovery")))
-    report = evaluate_cases([replay], {graph.definition.task_id: graph})
+    configuration = runtime_configuration()
+    report = evaluate_cases([replay], {graph.definition.task_id: graph},
+        engine_factory=lambda selected: RuntimeAgentAdapter(task_graph=selected).runtime)
+    if configuration != runtime_configuration():
+        raise ValueError("Runtime configuration changed during replay")
     for index, step in enumerate(replay.get("turns", [])):
         action = step.get("action") or {}
         guide_turn = action.get("guide_turn")
@@ -63,7 +68,8 @@ def replay_evaluator(body, case):
         expected_action = {"tap_completed": "tap", "drag_completed": "drag", "scroll_completed": "scroll"}.get(action.get("type"))
         if expected_action and decision["action_type"] != expected_action:
             raise EvidenceRequired("Candidate changed the captured action type")
-    return {"checks": expected, "failures": report["violations"]}
+    return {"checks": expected, "failures": report["violations"],
+            "runtime_configuration": configuration}
 
 
 def event_envelope(event, graph_row, *, session_key):
