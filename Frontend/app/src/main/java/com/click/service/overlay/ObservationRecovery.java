@@ -26,6 +26,7 @@ public final class ObservationRecovery {
     }
     /** Accept both current recovery codes and older fallback responses for navigation menus. */
     public static boolean canSearchByScrolling(String stateId, JSONObject policy, ScreenSnapshot screen) {
+        if (!navigationMenu(stateId)) return false;
         if (canSearchByScrolling(policy, screen)) return true;
         if (policy == null || !settingsScreen(screen) || screen.activeWindowId == null
                 || screen.nodes.stream().noneMatch(n -> n.visibleToUser && n.enabled && n.scrollable
@@ -46,7 +47,8 @@ public final class ObservationRecovery {
     }
     private static boolean navigationMenu(String stateId) {
         return "S1_SETTINGS_HOME".equals(stateId) || "S2_DISPLAY_MENU".equals(stateId)
-                || "S3_FONT_MENU".equals(stateId) || "S2_SOUND_MENU".equals(stateId);
+                || "S3_FONT_MENU".equals(stateId) || "S2_SOUND_MENU".equals(stateId)
+                || "S2_CATEGORY".equals(stateId);
     }
     /** Older primary-Jev responses omitted the missing-target reason. A recognized
      * Settings list can still be explored, but never while an action result is pending.
@@ -72,6 +74,15 @@ public final class ObservationRecovery {
                 "low_confidence", "uncertain", "waiting")
                 .contains(selection.optString("status"))) return false;
         return true;
+    }
+    /** List navigation keeps the native page/window exact; unrelated persisted values may update. */
+    public static boolean sameNavigationScreen(ScreenSnapshot expected, ScreenSnapshot current) {
+        return settingsScreen(expected) && settingsScreen(current) && expected.activeWindowId != null
+                && expected.activeWindowId.equals(current.activeWindowId)
+                && expected.withAdjustmentValues(null,null).sameNativeContent(current.withAdjustmentValues(null,null));
+    }
+    public static String navigationFingerprint(ScreenSnapshot screen) {
+        return screen.withAdjustmentValues(null,null).observationFingerprint();
     }
     private static boolean settingsScreen(ScreenSnapshot screen) {
         return screen != null && TouchAutomationPolicy.settingsPackage(screen.packageName);
@@ -104,7 +115,8 @@ public final class ObservationRecovery {
         if ("S1_SETTINGS_HOME".equals(stateId)) return volume ? "소리 및 진동" : "디스플레이";
         if ("S2_DISPLAY_MENU".equals(stateId)) return font ? "글자 크기와 스타일" : brightness ? "밝기" : null;
         if ("S3_FONT_MENU".equals(stateId) && font) return "글자 크기";
-        if ("S2_SOUND_MENU".equals(stateId) && volume) return "음량";
+        if (("S2_SOUND_MENU".equals(stateId) || "S2_CATEGORY".equals(stateId)) && volume) return "음량";
+        if ("S2_CATEGORY".equals(stateId) && brightness) return "밝기";
         return null;
     }
     public static String message(String stateId, JSONObject fallback, ScreenSnapshot screen) {

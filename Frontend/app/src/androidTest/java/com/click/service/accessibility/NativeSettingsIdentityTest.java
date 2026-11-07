@@ -117,4 +117,29 @@ public class NativeSettingsIdentityTest {
    fail("Native media slider must be identified");
   }finally{Files.write(new File(app.getCacheDir(),"native-media-identity.json").toPath(),report.toString(2).getBytes(StandardCharsets.UTF_8));}
  }
+ @Test public void captureCurrentSettingsMenuAfterPrivacyFilter() throws Exception {
+  assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("nativeIdentity")));
+  Instrumentation i=InstrumentationRegistry.getInstrumentation();Context app=i.getTargetContext();
+  UiAutomation ui=i.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+  android.accessibilityservice.AccessibilityServiceInfo info=ui.getServiceInfo();
+  info.flags |= android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS | android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;
+  ui.setServiceInfo(info);
+  SettingsScreenPrivacy privacy;
+  try(InputStream v=app.getAssets().open("vision_vocabulary.json");InputStream policy=app.getAssets().open("screen_privacy_policy.json")){privacy=SettingsScreenPrivacy.load(v,policy);}
+  for(int attempt=0;attempt<25;attempt++) {
+   SystemClock.sleep(200);
+   for(AccessibilityWindowInfo w:ui.getWindows()) {AccessibilityNodeInfo root=w.getRoot();if(root==null)continue;
+    try {
+     if(!"com.android.settings".contentEquals(root.getPackageName()==null?"":root.getPackageName()))continue;
+     android.util.DisplayMetrics m=app.getResources().getDisplayMetrics();
+     ScreenSnapshot screen=new AccessibilitySnapshotCollector().collect(root,"com.android.settings",m.widthPixels,m.heightPixels,
+         Settings.System.getFloat(app.getContentResolver(),Settings.System.FONT_SCALE));
+     JSONObject safe=privacy.filter(new JSONObject().put("accessibility_tree",new JSONObject(screen.toJson())));
+     Files.write(new File(app.getCacheDir(),"native-settings-menu-filtered.json").toPath(),safe.toString(2).getBytes(StandardCharsets.UTF_8));
+     return;
+    }finally{root.recycle();}
+   }
+  }
+  fail("Readable native Settings menu");
+ }
 }

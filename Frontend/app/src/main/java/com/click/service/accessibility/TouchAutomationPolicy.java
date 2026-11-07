@@ -18,7 +18,25 @@ public final class TouchAutomationPolicy {
             "Sound & vibration", "Sound and vibration", "Sound", "Volume", "Brightness");
     private static final String[] RISKY = {"결제", "구매", "송금", "전화 걸기", "메시지 보내기", "초기화", "삭제",
             "비밀번호", "payment", "purchase", "send message", "make call", "reset", "delete", "password"};
+    private static final Set<String> SOUND_MODE_CHOICES = Set.of(
+            "com.android.settings:id/low_button", "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button");
     private TouchAutomationPolicy() {}
+
+    private static boolean settingValueControl(ScreenSnapshot screen,AccessibilityNodeSnapshot node) {
+        Set<String> seen=new HashSet<>();
+        for(AccessibilityNodeSnapshot current=node;current!=null && seen.add(current.nodeId);
+                current=find(screen,current.parentId)) {
+            String role=current.role==null?"":current.role;
+            String type=current.className==null?"":current.className.toLowerCase(Locale.ROOT);
+            if(current.sensitiveInput || current.checkable || current.progress!=null
+                    || Set.of("slider","toggle","switch","radio","radio_button","checkbox","text_field","text_input").contains(role)
+                    || type.contains("seekbar") || type.contains("switch") || type.contains("radio")
+                    || type.contains("checkbox") || type.contains("edittext")
+                    || current.resourceId!=null && SOUND_MODE_CHOICES.contains(current.resourceId))return true;
+        }
+        return false;
+    }
 
     public static boolean settingsPackage(String pkg) {
         return "com.android.settings".equals(pkg) || "com.samsung.android.settings".equals(pkg);
@@ -26,7 +44,7 @@ public final class TouchAutomationPolicy {
 
     private static boolean usable(ScreenSnapshot screen, AccessibilityNodeSnapshot node) {
         return node != null && node.visibleToUser && node.enabled && !node.sensitiveInput
-                && !node.checkable && node.progress == null && Objects.equals(screen.packageName, node.packageName)
+                && !settingValueControl(screen,node) && Objects.equals(screen.packageName, node.packageName)
                 && screen.activeWindowId != null && node.windowId == screen.activeWindowId
                 && node.bounds != null && node.bounds.length == 4 && node.bounds[0] >= 0 && node.bounds[1] >= 0
                 && node.bounds[2] <= screen.screenWidth && node.bounds[3] <= screen.screenHeight

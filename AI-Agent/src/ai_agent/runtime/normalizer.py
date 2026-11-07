@@ -210,6 +210,12 @@ def infer_role(node: AccessibilityNode, *, label: str | None = None) -> str:
     resource_id = (node.resource_id or "").lower()
     label = normalize_text(_merge_label(node) if label is None else label)
 
+    # Samsung exposes mutually exclusive sound/vibrate/mute choices as plain
+    # clickable LinearLayouts. Their "Sound" label is not a Settings menu row.
+    if package_name in {"com.android.settings", "com.samsung.android.settings"} and resource_id in {
+            "com.android.settings:id/low_button", "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"}:
+        return "radio"
     if _looks_like_launcher_app_icon(package_name, resource_id, label, node.clickable):
         return "app_icon"
     declared_range = [node.extras.get(key) for key in ("progress", "min", "max")]

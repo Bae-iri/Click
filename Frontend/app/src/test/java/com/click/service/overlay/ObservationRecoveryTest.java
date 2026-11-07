@@ -14,7 +14,7 @@ public class ObservationRecoveryTest {
                 .put("fallback_action", new JSONObject().put("type", "request_fresh_observation"));
     }
     @Test public void unreasonedJevWaitSearchesKnownSettingsLists() throws Exception {
-        for (String state : new String[]{"S1_SETTINGS_HOME", "S2_DISPLAY_MENU", "S3_FONT_MENU", "S2_SOUND_MENU"}) {
+        for (String state : new String[]{"S1_SETTINGS_HOME", "S2_DISPLAY_MENU", "S3_FONT_MENU", "S2_SOUND_MENU", "S2_CATEGORY"}) {
             assertTrue(ObservationRecovery.canSearchJevWait(state, jevWait(), null, settings("com.android.settings")));
         }
         JSONObject metadata = new JSONObject().put("verification", new JSONObject().put("result",
@@ -117,7 +117,7 @@ public class ObservationRecoveryTest {
         JSONObject policy = new JSONObject().put("recovery", new JSONObject()
                 .put("recoverable", true).put("waiting_for", "observation")
                 .put("reason_code", "TARGET_NOT_FOUND").put("next_action", "reobserve"));
-        for (String state : new String[]{"S1_SETTINGS_HOME", "S2_DISPLAY_MENU", "S3_FONT_MENU"})
+        for (String state : new String[]{"S1_SETTINGS_HOME", "S2_DISPLAY_MENU", "S3_FONT_MENU", "S2_CATEGORY"})
             assertTrue(ObservationRecovery.canSearchByScrolling(state, policy, settings("com.android.settings")));
         for (String state : new String[]{"S0_UNKNOWN", "S4_FONT_SIZE_CONTROL", "S5_FONT_SIZE_CHANGED"})
             assertFalse(ObservationRecovery.canSearchByScrolling(state, policy, settings("com.android.settings")));
@@ -134,5 +134,24 @@ public class ObservationRecoveryTest {
         }
         for (String reason : new String[]{"TARGET_AMBIGUOUS", "ACTION_RESULT_UNOBSERVABLE", "STATE_UNKNOWN", "ACTION_EVENT_MISSING"})
             assertFalse(ObservationRecovery.canSearchByScrolling("S1_SETTINGS_HOME", offscreenPolicy(reason), settings("com.android.settings")));
+    }
+    @Test public void categoryRouteUsesTheApprovedSettingInsteadOfTheLegacyStateName() {
+        assertEquals("음량",ObservationRecovery.targetLabel("S2_CATEGORY","settings.volume.decrease"));
+        assertEquals("밝기",ObservationRecovery.targetLabel("S2_CATEGORY","settings.brightness.increase"));
+        assertNull(ObservationRecovery.targetLabel("S2_CATEGORY","settings.font_size.increase"));
+    }
+    @Test public void listFreshnessIgnoresUnrelatedValuesButKeepsNativePageAndWindowExact() {
+        ScreenSnapshot before=settings("com.android.settings").withAdjustmentValues(150,6);
+        ScreenSnapshot drift=before.withAdjustmentValues(151,7);
+        assertTrue(ObservationRecovery.sameNavigationScreen(before,drift));
+        assertEquals(ObservationRecovery.navigationFingerprint(before),ObservationRecovery.navigationFingerprint(drift));
+        assertFalse(ObservationRecovery.sameNavigationScreen(before,settings("com.example.other")));
+        assertFalse(ObservationRecovery.sameNavigationScreen(before,new ScreenSnapshot(before.packageName,before.capturedAt,1080,2400,before.nodes,8)));
+        assertFalse(ObservationRecovery.sameNavigationScreen(before,new ScreenSnapshot(before.packageName,before.capturedAt,800,2400,before.nodes,7)));
+        assertFalse(ObservationRecovery.sameNavigationScreen(before,null));
+        JSONObject policy;
+        try{policy=offscreenPolicy("TARGET_NOT_VISIBLE");}catch(Exception e){throw new AssertionError(e);}
+        assertFalse(ObservationRecovery.canSearchByScrolling("S3_CONTROL",policy,before));
+        assertFalse(ObservationRecovery.canSearchByScrolling("S0_UNKNOWN",policy,before));
     }
 }

@@ -1722,6 +1722,40 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(-1, get("scrollSearchGeneration"));
     }
 
+    @Test public void unrelatedBrightnessChangeDoesNotPreventMissingVolumeMenuSearch() throws Exception {
+        currentScreen=scrollableScreen("settings page").withAdjustmentValues(150,6);
+        resolve();confirm();
+        set("acceptedGoal",new JSONObject().put("target_app","android_settings").put("goal_type","settings.volume.decrease"));
+        currentScreen=currentScreen.withAdjustmentValues(151,6);
+        accessibility.when(() -> ClickAccessibilityService.performSettingsScroll(true,"com.android.settings",42)).thenReturn(true);
+        deliverMissingTarget(1,"TARGET_NOT_VISIBLE");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(900));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true,"com.android.settings",42));
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).targetHelp(anyString(),any());
+    }
+
+    @Test public void duplicateRepliesWhileMenuScrollIsQueuedDoNotConsumeSearchBudget() throws Exception {
+        currentScreen=scrollableScreen("settings page");resolve();confirm();set("turnInFlight",false);
+        Method start=ClickOverlayService.class.getDeclaredMethod("startAutomaticSettingsSearch",String.class,ScreenSnapshot.class);
+        start.setAccessible(true);
+        for(int duplicate=0;duplicate<6;duplicate++)assertEquals(true,start.invoke(service,"S1_SETTINGS_HOME",currentScreen));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(900));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true,"com.android.settings",42),times(1));
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).targetHelp(anyString(),any());
+    }
+
+    @Test public void screenResyncBeforeListScrollDoesNotSpendAnAttempt() throws Exception {
+        currentScreen=scrollableScreen("old page");resolve();confirm();set("turnInFlight",false);
+        ScreenSnapshot expected=currentScreen;
+        Method start=ClickOverlayService.class.getDeclaredMethod("startAutomaticSettingsSearch",String.class,ScreenSnapshot.class);
+        start.setAccessible(true);currentScreen=scrollableScreen("new page");
+        for(int stale=0;stale<6;stale++)assertEquals(true,start.invoke(service,"S1_SETTINGS_HOME",expected));
+        assertEquals(true,start.invoke(service,"S1_SETTINGS_HOME",currentScreen));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(900));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true,"com.android.settings",42),times(1));
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).targetHelp(anyString(),any());
+    }
+
     @Test public void offscreenTargetAutomaticallyScrollsThenStopsWhenTargetAppears() throws Exception {
         // Settings list navigation should not ask the user to enable automatic setting changes.
         new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);

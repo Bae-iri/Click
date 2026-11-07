@@ -37,6 +37,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--base-url', default='https://click-db.onrender.com')
     parser.add_argument('--run-live', action='store_true', help='Run six real native adjustments and restore all three original settings')
+    parser.add_argument('--initial-position',choices=['top','bottom'],default='top',help='Settings home viewport before task start; never pre-position the target')
     parser.add_argument('--goal',choices=[s+'.'+d for s in ('font_size','brightness','volume') for d in ('increase','decrease')],help='Explicitly run only this goal; the report records this filter')
     parser.add_argument('--apk-dir', type=Path, help='Frontend/app/build/outputs/apk containing signed compatible debug APKs')
     parser.add_argument('--report', type=Path, default=Path('/private/tmp/click-native-settings-stability.json'))
@@ -68,7 +69,7 @@ def main():
     result = subprocess.run([adb,'shell','am','instrument','-w','-r',
         '-e','class','com.click.data.remote.LiveNativeSettingsStabilityTest',
         '-e','liveSettingsStability','true','-e','expectedSourceSha256',build['source_sha256'],
-        '-e','validationRunId',run_id,
+        '-e','validationRunId',run_id,'-e','initialPosition',args.initial_position,
         '-e','expectedAppApkSha256',expected_apk,'-e','expectedTestApkSha256',expected_test_apk,
         '-e','expectedBaseUrl',args.base_url.rstrip('/'),
         *focused,'com.click.test/androidx.test.runner.AndroidJUnitRunner'], capture_output=True,text=True)

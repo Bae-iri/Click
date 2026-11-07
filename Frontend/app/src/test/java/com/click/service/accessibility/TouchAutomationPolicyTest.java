@@ -67,4 +67,14 @@ public class TouchAutomationPolicyTest {
   for (String text : Arrays.asList("글꼴 크기", "폰트 크기", "FONT SIZE", "Text size", "글꼴 크기 및 스타일"))
    assertNotNull(TouchAutomationPolicy.clickableTarget(screen("com.android.settings",text,false),"node_0_1",bounds));
  }
+ @Test public void soundVibrateMuteButtonsAndTheirTextCannotBeUsedAsNavigationMenus() {
+  for(String resource:List.of("low_button","mid_button","high_button")) {
+   AccessibilityNodeSnapshot mode=new AccessibilityNodeSnapshot("mode",null,true,"com.android.settings",null,null,
+     "com.android.settings:id/"+resource,"android.widget.LinearLayout","menu_item",new int[]{0,90,600,210},true,true,false,false,false,null,5);
+   AccessibilityNodeSnapshot title=row("title","mode","소리",bounds,false,false);
+   ScreenSnapshot s=new ScreenSnapshot("com.android.settings","2026-10-28T00:00:00Z",1080,2400,List.of(mode,title),5);
+   assertNull(TouchAutomationPolicy.clickableTarget(s,mode.nodeId,mode.bounds));
+   assertNull(TouchAutomationPolicy.clickableTarget(s,title.nodeId,title.bounds));
+  }
+ }
 }
