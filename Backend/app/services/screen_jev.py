@@ -27,6 +27,7 @@ class JevScreenResolver(JevGoalClassifier):
         filter_started = monotonic()
         try:
             _, model, minimum = self.configuration()
+            self.last_diagnostics.update(model=model, minimum_confidence=minimum)
             setting = graph.definition.required_slots.get("setting", "")
             if raw_nodes:
                 status = screen_status(raw_nodes, setting)
@@ -229,10 +230,11 @@ class JevScreenResolver(JevGoalClassifier):
                 normalized_probability=normalized_probability, hold_reason=hold_reason,
                 top_probability=top, probability_margin=top-max(p for k,p in probabilities.items() if k != choice))
             if choice in bindings:
-                selected_transition, _ = bindings[choice]
+                selected_transition, selected_node = bindings[choice]
                 self.last_diagnostics.update(chosen_state=selected_transition.from_state,
                     chosen_transition=selected_transition.transition_id,
-                    chosen_transition_hash=sha256(selected_transition.transition_id.encode()).hexdigest())
+                    chosen_transition_hash=sha256(selected_transition.transition_id.encode()).hexdigest(),
+                    chosen_target_hash=sha256(target_key(selected_node).encode()).hexdigest())
             else:
                 self.last_diagnostics["chosen_outcome"] = choice
             if confidence < minimum:

@@ -10,6 +10,7 @@ from app.core.security import hash_password, new_token, token_hash, verify_passw
 from app.models.auth import Account, AuthSession, KakaoIdentity
 from app.clients.kakao import KakaoTokenVerifier
 from app.models.user import User
+from app.core.data_encryption import cipher_for
 from app.schemas.auth import TokenResponse
 
 ACCESS_TTL = 900
@@ -75,6 +76,7 @@ class AuthService:
     def login_kakao(self, request):
         subject = self.kakao.verify(request.access_token.get_secret_value())
         with self.factory() as db:
+            subject = cipher_for(db.bind.dialect).lookup(subject, "kakao.subject")
             identity = db.get(KakaoIdentity, subject)
             if identity is None:
                 try:
@@ -97,7 +99,8 @@ class AuthService:
 
     def login(self, request):
         with self.factory() as db:
-            account = db.scalar(select(Account).where(Account.phone_number == request.phone_number).with_for_update())
+            lookup = cipher_for(db.bind.dialect).lookup(request.phone_number, "accounts.phone_number")
+            account = db.scalar(select(Account).where(Account.phone_lookup == lookup).with_for_update())
             valid = verify_password(request.password.get_secret_value(), account.password_hash if account else self._dummy)
             if not account or not valid:
                 raise HTTPException(401)

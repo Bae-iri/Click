@@ -69,9 +69,12 @@ def validate_event(event):
     allowed = {"schema_version", "state_id", "before_state_id", "attempt_hash", "previous_guide_hash",
                "attempt_target_hash", "before_observation_hash", "after_observation_hash", "guide_hash",
                "action_type", "command_type", "target", "verification_status", "count_attempt",
-               "task_completed", "reason_code", "before_values", "after_values", "graph_hash", "duration_ms"}
+               "task_completed", "reason_code", "before_values", "after_values", "graph_hash", "duration_ms", "jev_decision"}
     if not isinstance(runtime, dict) or set(runtime) - allowed:
         raise ValueError("Unexpected runtime evidence fields")
+    if "jev_decision" in runtime:
+        from ai_agent.telemetry.jev_decisions import validate_decision
+        validate_decision(runtime["jev_decision"])
     if runtime.get("duration_ms") is not None and (type(runtime["duration_ms"]) is not int
             or not 0 <= runtime["duration_ms"] <= 86_400_000):
         raise ValueError("Invalid action duration")

@@ -9,6 +9,7 @@ from sqlalchemy import select, delete, update
 from app.core.security import new_token, token_hash, hash_password
 from app.models.auth import Account, AuthSession
 from app.models.lifecycle import AccountAction, EmailVerification
+from app.core.data_encryption import cipher_for
 
 
 class SMTPDelivery:
@@ -36,7 +37,8 @@ class AccountActionService:
             raise HTTPException(503)
         now, token = int(self.clock()), new_token()
         with self.factory() as db:
-            query = select(Account).where(Account.user_id == user_id) if user_id else select(Account).where(Account.email == email)
+            lookup = cipher_for(db.bind.dialect).lookup(email, "accounts.email")
+            query = select(Account).where(Account.user_id == user_id) if user_id else select(Account).where(Account.email_lookup == lookup)
             account = db.scalar(query.with_for_update())
             if account is None or not account.email:
                 return
