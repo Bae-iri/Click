@@ -180,6 +180,7 @@ def _label_target(
             if bounds[3] - bounds[1] < height / 2:
                 sliders = [n for n in nodes_by_id.values()
                            if n.visible_to_user and n.enabled and infer_role(n) == 'slider'
+                           and extract_numeric_value(n) is not None
                            and n.package_name == parent.package_name and n.window_id == parent.window_id
                            and _descends_from(n, parent.node_id, nodes_by_id)]
                 if len(sliders) == 1:
@@ -196,7 +197,8 @@ def _descends_from(node, ancestor_id, nodes_by_id):
             return True
         visited.add(parent_id)
         parent = nodes_by_id.get(parent_id)
-        if parent is None or parent.scrollable or _is_control(parent):
+        if (parent is None or parent.scrollable or (_is_control(parent)
+                and not (infer_role(parent) == 'slider' and extract_numeric_value(parent) is None))):
             return False
         parent_id = parent.parent_id
     return False

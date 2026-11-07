@@ -13,6 +13,7 @@ from ai_agent.runtime.matcher import MATCH_THRESHOLD, match_next_ui
 from ai_agent.runtime.keywords import any_keyword_matches
 from ai_agent.runtime.screen_privacy import minimize_nodes, screen_status, finite_number
 from ai_agent.runtime.types import MatchResult, SafetyLevel
+from ai_agent.runtime.verification import valid_slider_value
 from ai_agent.runtime.budget import remaining
 
 
@@ -48,6 +49,8 @@ class JevScreenResolver(JevGoalClassifier):
                         or transition.safety_level == SafetyLevel.BLOCKED):
                     continue
                 for node in eligible_nodes(transition, nodes, graph):
+                    if transition.target_role == 'slider' and not valid_slider_value(node.value, node.range_min, node.range_max):
+                        continue
                     # Model confidence cannot identify a setting by itself.
                     # All adjustment tasks require graph-owned control evidence.
                     if (transition.target_role == 'slider'

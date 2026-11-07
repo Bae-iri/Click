@@ -74,6 +74,7 @@ public class LiveNativeSettingsStabilityTest {
     }
     @Test public void sixTasksFromSettingsHomeToVerifiedDeviceChange() throws Exception {
         assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("liveSettingsStability")));
+        report.put("run_id",InstrumentationRegistry.getArguments().getString("validationRunId"));save();
         automation=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         assertFalse("Unlock the device before validation",app.getSystemService(KeyguardManager.class).isDeviceLocked());
         String originalServices=Settings.Secure.getString(app.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
