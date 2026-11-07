@@ -5,7 +5,7 @@ Only an already accepted selection can be retained on an unchanged observation.
 """
 from dataclasses import dataclass, replace
 
-from ai_agent.runtime.targeting import eligible_nodes, target_key
+from ai_agent.runtime.targeting import eligible_nodes, target_key, selector_evidence
 from ai_agent.runtime.types import MatchResult, SafetyLevel, VerificationStatus as Status
 
 
@@ -20,7 +20,7 @@ def retry_session(request, session):
     """Retire the pending operation on explicit retry, preserving spent budgets."""
     event = request.user_action_event
     if (not session or session.task_completed or not event
-            or event.action_type.value != "manual_override"
+            or event.action_type.value not in {"manual_override", "back_navigated", "home_navigated"}
             or event.session_id not in {None, request.session_id}
             or (event.episode_id is not None and event.episode_id != request.episode_id)):
         return session
@@ -33,8 +33,9 @@ def retry_session(request, session):
 
 
 def recovery_scope(snapshot):
-    # New observation IDs/timestamps are not new evidence when the screen is unchanged.
-    return "selection:" + snapshot.fingerprint
+    # Layout/window churn is not progress. Bound selection retries for the
+    # current graph step, and require explicit retry after exhaustion.
+    return "selection:" + snapshot.state_id
 
 
 def selection_binding(match, nodes, diagnostics):
@@ -70,6 +71,8 @@ def _retained_match(session, attempt, snapshot, nodes, graph, exclusions):
                   and n.bounds == tuple(selection.get("target_bounds", ()))
                   and target_key(n) == selection.get("target_key")
                   and n.value == selection.get("baseline_value")
+                  and (transition.target_role != 'slider'
+                       or selector_evidence(n, transition, nodes, graph)[0] >= 0.7)
                   and n.source_confidence is None]
     if len(candidates) != 1:
         return None
@@ -89,7 +92,7 @@ def decide_primary(*, resolver, request, session, snapshot, nodes, raw_nodes, gr
         return PrimaryDecision(None, info)
 
     recovery = session.recovery_state if session else {}
-    if recovery.get("scope") == recovery_scope(snapshot) and recovery.get("waiting_for_user"):
+    if recovery.get("waiting_for_user"):
         info.update(recovery.get("primary_diagnostics", {}), called=False, paused=True)
         return PrimaryDecision(None, info, recovery["reason_code"])
 

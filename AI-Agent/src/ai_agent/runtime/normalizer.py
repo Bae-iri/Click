@@ -35,7 +35,12 @@ def normalize_accessibility_tree(
     for node in nodes:
         if not node.visible_to_user:
             continue
-        label = _merge_label(node) or " ".join(dict.fromkeys(inherited_labels.get(node.node_id, [])))
+        label = _merge_label(node)
+        # Numeric descriptions describe a slider's changing value, not its setting.
+        if (infer_role(node) == 'slider' and inherited_labels.get(node.node_id)
+                and (not label or _numeric_slider_label(label))):
+            label = " ".join(dict.fromkeys(inherited_labels[node.node_id]))
+        label = label or " ".join(dict.fromkeys(inherited_labels.get(node.node_id, [])))
         role = infer_role(node, label=label)
         if not label and not node.scrollable and role not in {"slider", "toggle", "radio"}:
             continue
@@ -95,6 +100,11 @@ def _label_parts(node, child_titles):
 def _description(node):
     resource = (node.resource_id or "").lower().rsplit("/", 1)[-1]
     return "summary" in resource or resource in {"subtitle", "description", "secondary_text"}
+
+
+def _numeric_slider_label(label):
+    import re
+    return re.fullmatch(r'[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)\s*%?', label.strip()) is not None
 
 
 def _structure_role(node, nodes_by_id):
@@ -162,8 +172,34 @@ def _label_target(
                 if (bounds[2] - bounds[0]) * (bounds[3] - bounds[1]) >= screen_area / 2:
                     return None
             return parent
+        # Volume pages label each SeekBar in a small non-clickable row. Associate
+        # only a real sibling control in that row, never a page/list-wide label.
+        if parent.parent_id is not None and not _description(label_node):
+            height = ((screen_bounds[3] - screen_bounds[1]) if _has_area(screen_bounds)
+                      else max(n.bounds_in_screen[3] for n in nodes_by_id.values()))
+            if bounds[3] - bounds[1] < height / 2:
+                sliders = [n for n in nodes_by_id.values()
+                           if n.visible_to_user and n.enabled and infer_role(n) == 'slider'
+                           and n.package_name == parent.package_name and n.window_id == parent.window_id
+                           and _descends_from(n, parent.node_id, nodes_by_id)]
+                if len(sliders) == 1:
+                    return sliders[0]
         parent_id = parent.parent_id
     return None
+
+
+def _descends_from(node, ancestor_id, nodes_by_id):
+    visited = {node.node_id}
+    parent_id = node.parent_id
+    while parent_id and parent_id not in visited:
+        if parent_id == ancestor_id:
+            return True
+        visited.add(parent_id)
+        parent = nodes_by_id.get(parent_id)
+        if parent is None or parent.scrollable or _is_control(parent):
+            return False
+        parent_id = parent.parent_id
+    return False
 
 
 def infer_role(node: AccessibilityNode, *, label: str | None = None) -> str:

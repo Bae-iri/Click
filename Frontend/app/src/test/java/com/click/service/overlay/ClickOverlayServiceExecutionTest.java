@@ -1076,7 +1076,7 @@ public class ClickOverlayServiceExecutionTest {
         automaticAdjustment("volume");
     }
     private void automaticAdjustment(String setting) throws Exception {
-        screen = fontScreen(2f, 1f, 1000).withAdjustmentValues(100, 5); currentScreen = screen;
+        screen = settingScreen(setting, 2f, 1f, 1000).withAdjustmentValues(100, 5); currentScreen = screen;
         prepareGuideResponse();
         goal = catalog.executableGoal("settings." + setting + ".increase").toTypedGoalJson();
         set("acceptedGoal", goal);
@@ -1087,7 +1087,7 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("accepted", requests.get(2).userConfirmation);
         verify((TaskFlowOverlayView)get("taskFlowView"), never()).confirmation(anyString(), any());
         verify((TaskFlowOverlayView)get("taskFlowView")).progress(anyString(), any(), anyString(), eq(false));
-        accessibility.when(() -> ClickAccessibilityService.performGuidedSlider(any(), eq("display"), any(), eq(1))).thenReturn(true);
+        accessibility.when(() -> ClickAccessibilityService.performGuidedSlider(any(), eq("display"), any(), eq(1), eq(setting))).thenReturn(true);
         JSONObject guide = new JSONObject().put("guide_command_id", "adjust-control")
                 .put("command_type", "highlight").put("action_type", "drag").put("requires_user_action", true)
                 .put("target_node_id", "display").put("target_bounds", new JSONArray(screen.nodes.get(1).bounds))
@@ -1096,15 +1096,15 @@ public class ClickOverlayServiceExecutionTest {
                 .put("request_id", requests.get(2).requestId).put("session_id", "frontend-session")
                 .put("episode_id", "episode").put("session_version", 8).put("task_status", "IN_PROGRESS")
                 .put("guide_command", guide).put("metadata", new JSONObject().put("typed_goal", goal)).toString()));
-        accessibility.verify(() -> ClickAccessibilityService.performGuidedSlider(any(), eq("display"), any(), eq(1)));
+        accessibility.verify(() -> ClickAccessibilityService.performGuidedSlider(any(), eq("display"), any(), eq(1), eq(setting)));
     }
 
     @Test public void movingBrightnessWaitsForASettledValueWithoutStaleScreenRecovery() throws Exception {
-        screen = fontScreen(2f, 1f, 1000).withAdjustmentValues(100, 5); currentScreen = screen;
+        screen = settingScreen("brightness", 2f, 1f, 1000).withAdjustmentValues(100, 5); currentScreen = screen;
         prepareGuideResponse(); goal = catalog.executableGoal("settings.brightness.increase").toTypedGoalJson();
         set("acceptedGoal", goal); deliver(1, "highlight", "drag", "right");
-        currentScreen = fontScreen(3f, 1f, 2000).withAdjustmentValues(120, 5); send(null);
-        currentScreen = fontScreen(4f, 1f, 2100).withAdjustmentValues(140, 5);
+        currentScreen = settingScreen("brightness", 3f, 1f, 2000).withAdjustmentValues(120, 5); send(null);
+        currentScreen = settingScreen("brightness", 4f, 1f, 2100).withAdjustmentValues(140, 5);
         deliver(2, "highlight", "observe_only", null);
         assertEquals(3, requests.size()); assertEquals(0, get("staleGuideDrops"));
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
@@ -1121,12 +1121,12 @@ public class ClickOverlayServiceExecutionTest {
         adjustedSettingRecovery("volume");
     }
     private void adjustedSettingRecovery(String setting) throws Exception {
-        screen = fontScreen(2f, 1f, 1000).withAdjustmentValues(100, 5); currentScreen = screen;
+        screen = settingScreen(setting, 2f, 1f, 1000).withAdjustmentValues(100, 5); currentScreen = screen;
         prepareGuideResponse();
         goal = catalog.executableGoal("settings." + setting + ".increase").toTypedGoalJson();
         set("acceptedGoal", goal);
         deliver(1, "highlight", "drag", "right");
-        currentScreen = fontScreen(3f, 1f, 2000).withAdjustmentValues(setting.equals("brightness") ? 120 : 100,
+        currentScreen = settingScreen(setting, 3f, 1f, 2000).withAdjustmentValues(setting.equals("brightness") ? 120 : 100,
                 setting.equals("volume") ? 6 : 5);
         send(null);
         deliver(2, "highlight", "observe_only", null);
@@ -1173,7 +1173,7 @@ public class ClickOverlayServiceExecutionTest {
                 .put("expires_at", System.currentTimeMillis() / 1000 + 120);
         applyFlow(new JSONObject().put("task_status", "WAITING_RESULT")
                 .put("metadata", new JSONObject().put("result_prompt", prompt)));
-        verify(narrator).speak("이제 글자가 보기 편한가요?");
+        verify(narrator).speak("변경 결과를 확인하지 못했어요. 이제 글자가 보기 편한가요?");
         assertFalse((boolean) get("taskFlowCollapsed"));
     }
 
@@ -1181,17 +1181,42 @@ public class ClickOverlayServiceExecutionTest {
         prepareGuideResponse();
         TaskFlowOverlayView panel = (TaskFlowOverlayView) get("taskFlowView");
         applyFlow(new JSONObject().put("task_status", "COMPLETED").put("message", "보기 편해졌어요.")
-                .put("metadata", new JSONObject()));
+                .put("metadata", new JSONObject().put("user_result","satisfied")));
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
         assertSame(panel, get("taskFlowView"));
         assertTrue((boolean) get("awaitingExitConfirmation"));
         assertFalse((boolean) get("closing"));
         verify((WindowManager) get("windowManager"), never()).removeView(panel);
         org.mockito.ArgumentCaptor<Runnable> exit = org.mockito.ArgumentCaptor.forClass(Runnable.class);
-        verify(panel, atLeastOnce()).completed(anyString(), exit.capture());
+        verify(panel, atLeastOnce()).completed(anyString(), eq(false), exit.capture());
         exit.getValue().run();
         assertTrue((boolean) get("closing"));
         assertNull(get("taskFlowView"));
+    }
+
+    @Test public void duplicateResultDoesNotReopenMinimizedWindowOrRepeatSpeech() throws Exception {
+        prepareGuideResponse();
+        JSONObject prompt=new JSONObject().put("id","stable-result").put("technical_status","UNVERIFIABLE")
+            .put("message","변경 결과를 확인하지 못했어요. 이제 글자가 보기 편한가요?")
+            .put("expires_at",System.currentTimeMillis()/1000+120);
+        JSONObject response=new JSONObject().put("task_status","WAITING_RESULT")
+            .put("metadata",new JSONObject().put("result_prompt",prompt));
+        applyFlow(response);
+        set("taskFlowCollapsed",true);
+        applyFlow(response);
+        assertTrue((boolean)get("taskFlowCollapsed"));
+        verify((TaskFlowOverlayView)get("taskFlowView"),times(1)).result(any(),eq(true));
+        verify((TutorialNarrator)get("narrator"),times(1)).speak("변경 결과를 확인하지 못했어요. 현재 설정이 원하시는 상태인가요?");
+    }
+
+    @Test public void unverifiedDoneCannotCompleteTheQueueOrCelebrate() throws Exception {
+        prepareGuideResponse();
+        TaskFlowOverlayView panel=(TaskFlowOverlayView)get("taskFlowView");
+        applyFlow(new JSONObject().put("task_status","COMPLETED").put("metadata",new JSONObject()));
+        assertTrue((boolean)get("agentPaused"));
+        verify(panel,never()).completed(anyString(),anyBoolean(),any());
+        verify(panel).failed(contains("완료로 처리하지 않고"));
+        assertFalse((boolean)get("awaitingExitConfirmation"));
     }
 
     @Test public void satisfiedResultDoesNotStartQueuedRequestUntilExplicitNext() throws Exception {
@@ -1207,7 +1232,7 @@ public class ClickOverlayServiceExecutionTest {
         callbacks.get(2).onSuccess(new AgentTurnContract.Response(new JSONObject()
                 .put("request_id", answer.requestId).put("session_id", "frontend-session")
                 .put("session_version", 8).put("episode_id", "episode")
-                .put("task_status", "COMPLETED").put("metadata", new JSONObject()).toString()));
+                .put("task_status", "COMPLETED").put("metadata", new JSONObject().put("user_result","satisfied")).toString()));
         org.mockito.ArgumentCaptor<com.click.data.remote.VoiceQueueGateway.Callback> callback =
                 org.mockito.ArgumentCaptor.forClass(com.click.data.remote.VoiceQueueGateway.Callback.class);
         verify(queue).complete(eq("finished-request"), callback.capture());
@@ -1229,7 +1254,7 @@ public class ClickOverlayServiceExecutionTest {
     @Test public void completedQueueResponseCannotRestartSameRequestOrSession() throws Exception {
         for (boolean sameRequest : new boolean[]{true, false}) {
             com.click.data.remote.VoiceQueueGateway queue = prepareResultWithQueue();
-            applyFlow(new JSONObject().put("task_status", "COMPLETED").put("metadata", new JSONObject()));
+            applyFlow(new JSONObject().put("task_status", "COMPLETED").put("metadata", new JSONObject().put("user_result","satisfied")));
             org.mockito.ArgumentCaptor<com.click.data.remote.VoiceQueueGateway.Callback> callback =
                     org.mockito.ArgumentCaptor.forClass(com.click.data.remote.VoiceQueueGateway.Callback.class);
             verify(queue).complete(eq("finished-request"), callback.capture());
@@ -1245,7 +1270,7 @@ public class ClickOverlayServiceExecutionTest {
 
     @Test public void queuedClaimAfterCompletionAlsoWaitsForUser() throws Exception {
         com.click.data.remote.VoiceQueueGateway queue = prepareResultWithQueue();
-        applyFlow(new JSONObject().put("task_status", "COMPLETED").put("metadata", new JSONObject()));
+        applyFlow(new JSONObject().put("task_status", "COMPLETED").put("metadata", new JSONObject().put("user_result","satisfied")));
         org.mockito.ArgumentCaptor<com.click.data.remote.VoiceQueueGateway.Callback> callback =
                 org.mockito.ArgumentCaptor.forClass(com.click.data.remote.VoiceQueueGateway.Callback.class);
         verify(queue).complete(eq("finished-request"), callback.capture());
@@ -1632,6 +1657,15 @@ public class ClickOverlayServiceExecutionTest {
                 .put("request_id", observation.requestId).put("session_id", observation.sessionId)
                 .put("session_version", 8).put("episode_id", "episode").put("task_status", "IN_PROGRESS")
                 .put("state_id", "S4_FONT_SIZE_CONTROL").put("guide_command", guide).toString()));
+    }
+
+    private ScreenSnapshot settingScreen(String setting, float progress, float appliedScale, long time) {
+        String label=setting.equals("volume") ? "미디어" : "밝기";
+        AccessibilityNodeSnapshot title=new AccessibilityNodeSnapshot("title",null,true,"com.android.settings",label,null,null,
+                "android.widget.TextView","text",new int[]{20,20,500,70},false,true,false,false,false,null,42);
+        AccessibilityNodeSnapshot slider=new AccessibilityNodeSnapshot("display",null,true,"com.android.settings",label,null,
+                "settings:id/"+setting,"android.widget.SeekBar","slider",new int[]{20,100,900,180},true,true,false,false,false,progress,42,false,0f,7f);
+        return new ScreenSnapshot("com.android.settings",Instant.ofEpochMilli(time).toString(),1080,2400,List.of(title,slider),42,true,appliedScale);
     }
 
     private ScreenSnapshot fontScreen(float progress, float appliedScale, long time) {
@@ -2424,7 +2458,7 @@ public class ClickOverlayServiceExecutionTest {
         new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
         int[] bounds={20,500,1000,600};
         AccessibilityNodeSnapshot slider=new AccessibilityNodeSnapshot("node_0_1","node_0",true,
-                "com.android.settings",null,null,"font_size","android.widget.SeekBar","slider",bounds,
+                "com.android.settings",null,null,"com.android.settings:id/font_size","android.widget.SeekBar","slider",bounds,
                 false,true,false,false,false,2f,42,false,0f,7f);
         currentScreen=new ScreenSnapshot("com.android.settings",Instant.now().toString(),1080,2400,List.of(slider),42);
         resolve();confirm();
@@ -2443,12 +2477,12 @@ public class ClickOverlayServiceExecutionTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(80));
         assertEquals("respond_confirmation",sent.get(2).getString("command_type"));
         assertEquals("accepted",sent.get(2).getString("user_confirmation"));
-        accessibility.when(()->ClickAccessibilityService.performGuidedSlider(any(),eq("node_0_1"),any(),eq(1))).thenReturn(true);
+        accessibility.when(()->ClickAccessibilityService.performGuidedSlider(any(),eq("node_0_1"),any(),eq(1),eq("font_size"))).thenReturn(true);
         guide.put("guide_command_id","font-drag").put("command_type","highlight").put("action_type","drag");
         metadata.remove("confirmation");
         body.put("request_id",requests.get(2).requestId).put("session_version",2);
         callbacks.get(2).onSuccess(new AgentTurnContract.Response(body.toString()));
-        accessibility.verify(()->ClickAccessibilityService.performGuidedSlider(any(),eq("node_0_1"),any(),eq(1)));
+        accessibility.verify(()->ClickAccessibilityService.performGuidedSlider(any(),eq("node_0_1"),any(),eq(1),eq("font_size")));
     }
 
     @Test public void waitingResponseKeepsOriginalActionBindingForDelayedAutomaticVerification() throws Exception {

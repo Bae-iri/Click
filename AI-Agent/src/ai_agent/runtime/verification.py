@@ -2,7 +2,7 @@
 from hashlib import sha256
 from math import isfinite
 
-from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, target_key, control_label
+from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, target_key
 from ai_agent.runtime.types import VerificationResult, VerificationStatus as Status, SafetyLevel
 
 
@@ -108,7 +108,6 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
                       # Removing unknown text must not let a different anonymous
                       # slider inherit a pending Jev action via page context alone.
                       and (attempt.get('target_selection_method') != 'jev_choice'
-                           or control_label(node)
                            or (node.node_id == attempt.get('target_node_id')
                                and node.resource_id == attempt.get('target_resource_id')
                                and node.bounds == tuple(attempt.get('target_bounds', ())))
@@ -118,12 +117,7 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
                            or recreated_font_control(node, attempt, transition, graph,
                                current_state_id, current_snapshot, observation_time, action_time))
                       and not node.node_id.startswith('vision:')
-                      and (selector_evidence(node, transition, nodes, graph)[0] >= 0.7
-                           or (attempt.get('target_selection_method') == 'jev_choice'
-                               and node.node_id == attempt.get('target_node_id')
-                               and node.window_id == attempt.get('target_window_id')
-                               and node.resource_id == attempt.get('target_resource_id')
-                               and node.bounds == tuple(attempt.get('target_bounds', ()))))]
+                      and selector_evidence(node, transition, nodes, graph)[0] >= 0.7]
         baseline = attempt.get('baseline_value')
         if len(candidates) != 1 or baseline is None or candidates[0].value is None:
             return result(Status.UNKNOWN, 'target_value_unobservable')

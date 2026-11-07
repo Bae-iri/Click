@@ -280,7 +280,11 @@
           "Ring volume",
           "Notification",
           "Alarm",
-          "Call volume"
+          "Call volume",
+          "시스템",
+          "시스템 음량",
+          "System",
+          "System volume"
         ],
         "allow_unlabelled_in_context": false
       },

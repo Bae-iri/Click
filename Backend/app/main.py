@@ -99,6 +99,15 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    @app.get("/version", include_in_schema=False)
+    def version():
+        from app.core.validation import source_digest
+        import re
+        revision = os.getenv("RENDER_GIT_COMMIT", "")
+        return {"schema_version": "click-build.v1", "target_validation": "settings-slider.v1",
+                "source_sha256": source_digest(),
+                "source_revision": revision if re.fullmatch(r"[0-9a-f]{40}", revision) else None}
+
     @app.get("/ops/metrics", tags=["system"])
     def operational_metrics(authorization: str | None = Header(None)):
         token = os.getenv("OPS_TOKEN", "")

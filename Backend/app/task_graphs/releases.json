@@ -29,16 +29,16 @@
   },
   {
     "artifact": "SET-volume-increase.json",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "approved": true,
-    "priority": 100,
+    "priority": 101,
     "status": "settings_slider"
   },
   {
     "artifact": "SET-volume-decrease.json",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "approved": true,
-    "priority": 100,
+    "priority": 101,
     "status": "settings_slider"
   }
 ]

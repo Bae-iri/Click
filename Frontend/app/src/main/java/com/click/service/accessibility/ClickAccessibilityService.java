@@ -252,6 +252,13 @@ public final class ClickAccessibilityService extends AccessibilityService {
 
     /** One increment/decrement of the freshly validated, explicitly guided slider. */
     public static boolean performGuidedSlider(ScreenSnapshot expected, String id, int[] bounds, int direction) {
+        com.click.data.snapshot.AccessibilityNodeSnapshot selected = null;
+        if (expected != null) for (com.click.data.snapshot.AccessibilityNodeSnapshot n : expected.nodes)
+            if (java.util.Objects.equals(id, n.nodeId)) selected = n;
+        return performGuidedSlider(expected, id, bounds, direction, SettingsSliderTarget.identify(expected, selected));
+    }
+
+    public static boolean performGuidedSlider(ScreenSnapshot expected, String id, int[] bounds, int direction, String setting) {
         ClickAccessibilityService service = connectedService.get();
         if (service == null || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()
                 || direction != -1 && direction != 1) return false;
@@ -264,7 +271,8 @@ public final class ClickAccessibilityService extends AccessibilityService {
         for (com.click.data.snapshot.AccessibilityNodeSnapshot n : latest.nodes) {
             if (id.equals(n.nodeId) && java.util.Arrays.equals(bounds, n.bounds)) target = n;
         }
-        if (target == null || target.sensitiveInput || !target.enabled || !target.visibleToUser
+        if (target == null || !SettingsSliderTarget.matches(latest, target, setting)
+                || target.sensitiveInput || !target.enabled || !target.visibleToUser
                 || target.progress == null || target.rangeMin == null || target.rangeMax == null
                 || !("slider".equals(target.role) || target.className != null
                     && (target.className.toLowerCase(java.util.Locale.ROOT).contains("seekbar")

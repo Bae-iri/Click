@@ -95,6 +95,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean ttsUnavailable;
     private String lastSpokenMessage;
     private String lastNarratedGuideKey;
+    private final GuidePresentationGate presentationGate = new GuidePresentationGate();
+    private boolean waitingForExplicitRetry;
     private boolean panelInterruptedNarration;
     private boolean overTrashTarget;
     private AgentTurnGateway agentGateway;
@@ -436,7 +438,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (overlayView != null) overlayView.removeCallbacks(keyboardPlacement);
         clearTaskFlow();
         executionGeneration++;
-        automationGuard.clear();
+        automationGuard.interrupt();
         navigationRecovery.clear();
         homeSearchRestart = false;
         queueGeneration++;
@@ -983,6 +985,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void startSelectedTask() {
+        waitingForExplicitRetry=false;
+        presentationGate.clear();
         clearMissingScreenWait();
         stopNarration();
         ensureTaskFlow(); taskFlowView.waiting("사용자 요청을 처리하고 있어요");
@@ -1100,6 +1104,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void applyTaskFlowResponse(AgentTurnContract.Response response) {
+        if (("COMPLETED".equals(response.taskStatus) || response.guideCommand != null
+                && "done".equals(response.guideCommand.commandType)) && !CompletionEvidence.accepted(response.metadata)) {
+            showStoppedTask("변경 결과를 확인하지 못했어요. 완료로 처리하지 않고 안내를 멈췄어요.");
+            return;
+        }
+        JSONObject prompt = response.metadata == null ? null : response.metadata.optJSONObject("result_prompt");
+        if ("WAITING_RESULT".equals(response.taskStatus) && prompt != null
+                && !presentationGate.accept(agentEpisodeId, "result", prompt.optString("id") + ":" + prompt.optString("message"))) return;
         if ("BLOCKED".equals(response.taskStatus) || response.guideCommand != null
                 && "blocked".equals(response.guideCommand.commandType)) {
             response.logDebug("ClickAgent");
@@ -1134,6 +1146,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         resultPrompt = response.metadata == null ? null : response.metadata.optJSONObject("result_prompt");
         followUp = response.metadata == null ? null : response.metadata.optJSONObject("follow_up");
         if ("WAITING_RESULT".equals(response.taskStatus) && resultPrompt != null) {
+            JSONObject outcome = response.metadata.optJSONObject("task_outcome");
+            JSONObject technical = outcome == null ? null : outcome.optJSONObject("technical");
+            if (technical != null) try { resultPrompt.put("technical_status", technical.optString("status", "UNVERIFIABLE")); }
+            catch (org.json.JSONException invalid) { throw new IllegalStateException(invalid); }
             actionTracker.clear(); pendingVerifiedAction = null;
             adjustmentResultCheck.clear();
             hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
@@ -1168,14 +1184,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             String message = response.message;
             hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
             executionGeneration++;
-        automationGuard.clear();
+        automationGuard.interrupt();
         navigationRecovery.clear();
         homeSearchRestart = false;
             if (satisfied && taskFlowView != null) {
                 // Keep the result visible while the queue is completed and until the user exits.
                 agentPaused = true;
                 actionTracker.clear(); pendingVerifiedAction = null;
-                taskFlowView.completed(message, this::shutdownClick);
+                taskFlowView.completed(message, CompletionEvidence.verified(response.metadata), this::shutdownClick);
                 taskFlowCollapsed = false;
                 if (overlayView != null) overlayView.collapse();
                 placeTaskFlow(null, false);
@@ -1905,7 +1921,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         lastNarratedGuideKey = null;
         updateRequestStatus(true, true);
         executionGeneration++;
-        automationGuard.clear();
+        automationGuard.interrupt();
         navigationRecovery.clear();
         homeSearchRestart = false;
         guideStepTimer.clear();
@@ -2024,7 +2040,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void sendAgentTurn(String confirmation, boolean force, ScreenSnapshot nativeConsentScreen) {
-        if (closing || agentSessionId == null || agentPaused || turnInFlight || agentGateway == null
+        if (closing || waitingForExplicitRetry || agentSessionId == null || agentPaused || turnInFlight || agentGateway == null
                 || scrollSearchGeneration == executionGeneration
                 || SystemClock.uptimeMillis() < adjustmentSettlingUntil
                 || !hasConfirmedGoal() || resultPrompt != null || followUp != null || pendingControl != null) return;
@@ -2414,7 +2430,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void haltLocalExecution() {
         agentPaused = true;
         clearMissingScreenWait(); clearGuideResyncRetry(); clearTargetHelpWait();
-        automationGuard.clear(); navigationRecovery.clear(); guideStepTimer.clear();
+        automationGuard.interrupt(); navigationRecovery.clear(); guideStepTimer.clear();
         homeSearchRestart = false; homeSearchToken++;
         automaticAdjustmentApprovalPending = false;
         forceNextObservation = false;
@@ -2465,6 +2481,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return;
         }
         if ("resume_task".equals(commandType)) {
+            waitingForExplicitRetry=false;
+            presentationGate.clear();
             lastNarratedGuideKey = null;
             if (narrator != null) narrator.reset();
         }
@@ -2508,7 +2526,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             speak("현재 화면 정보를 기다리고 있어요. 다시 이어서 진행을 눌러 주세요."); return;
         }
         executionGeneration++;
-        automationGuard.clear();
+        automationGuard.interrupt();
         navigationRecovery.clear();
         homeSearchRestart = false;
         if ("cancel_task".equals(commandType) || "pause_task".equals(commandType)) agentPaused = true;
@@ -2713,32 +2731,43 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         // text here; never put that text in the panel or its replay narration.
         boolean refreshingObservation = fallbackAction != null
                 && "request_fresh_observation".equals(fallbackAction.optString("type"));
-        taskFlowView.progress(requirementReview != null ? requirementReview.summary() : "선택한 작업",
-                response.metadata == null ? null : response.metadata.optJSONArray("checklist"),
-                refreshingObservation ? "안내를 준비하고 있어요." : command.message,
-                agentGateway.currentContract() != null
-                        && agentGateway.currentContract().supports("request_result")
-                        && !"confirmation".equals(command.commandType)
-                        && (acceptedGoal != null && adjustmentResultCheck.changed(agentEpisodeId,
-                                acceptedGoal.optString("goal_type"), displayedSnapshot)
-                            || command.renderPolicy != null && command.renderPolicy.optBoolean("adjustment_limit")
-                            || SettingsAdjustment.forGoal(acceptedGoal == null ? null : acceptedGoal.optString("goal_type")) == null
-                                && command.requiresUserAction && response.totalSteps > 0 && response.step == response.totalSteps));
-        taskFlowView.setGuidanceProgress(response.step, response.totalSteps);
-        if (displayedSnapshot != null && command.requiresUserAction
-                && "tap".equals(command.actionType) && command.targetNodeId != null) {
-            for (AccessibilityNodeSnapshot node : displayedSnapshot.nodes) {
-                if (!command.targetNodeId.equals(node.nodeId) || !node.visibleToUser
-                        || !node.enabled || node.sensitiveInput) continue;
-                taskFlowView.setGuidanceTarget(node.text != null && !node.text.trim().isEmpty()
-                        ? node.text : node.contentDescription);
-                break;
+        JSONObject recoveryPresentation = command.renderPolicy == null ? null : command.renderPolicy.optJSONObject("recovery");
+        String presentation = response.stateId + ":" + command.commandType + ":" + command.actionType
+                + ":" + java.util.Arrays.toString(command.targetBounds) + ":" + command.message
+                + ":" + command.proposedAction + ":" + command.dragDirection()
+                + (recoveryPresentation == null ? "" : ":" + recoveryPresentation.optString("reason_code")
+                    + ":" + recoveryPresentation.optString("waiting_for") + ":" + recoveryPresentation.optString("next_action"));
+        if (canSearchByScrolling && displayedSnapshot != null) presentation += ":" + displayedSnapshot.contentFingerprint();
+        boolean present = presentationGate.accept(agentEpisodeId, "guide", presentation);
+        if (present) {
+            taskFlowView.progress(requirementReview != null ? requirementReview.summary() : "선택한 작업",
+                    response.metadata == null ? null : response.metadata.optJSONArray("checklist"),
+                    refreshingObservation ? "안내를 준비하고 있어요."
+                            : command.message,
+                    agentGateway.currentContract() != null
+                            && agentGateway.currentContract().supports("request_result")
+                            && !"confirmation".equals(command.commandType)
+                            && (acceptedGoal != null && adjustmentResultCheck.changed(agentEpisodeId,
+                                    acceptedGoal.optString("goal_type"), displayedSnapshot)
+                                || command.renderPolicy != null && command.renderPolicy.optBoolean("adjustment_limit")
+                                || SettingsAdjustment.forGoal(acceptedGoal == null ? null : acceptedGoal.optString("goal_type")) == null
+                                    && command.requiresUserAction && response.totalSteps > 0 && response.step == response.totalSteps));
+            taskFlowView.setGuidanceProgress(response.step, response.totalSteps);
+            if (displayedSnapshot != null && command.requiresUserAction
+                    && "tap".equals(command.actionType) && command.targetNodeId != null) {
+                for (AccessibilityNodeSnapshot node : displayedSnapshot.nodes) {
+                    if (!command.targetNodeId.equals(node.nodeId) || !node.visibleToUser
+                            || !node.enabled || node.sensitiveInput) continue;
+                    taskFlowView.setGuidanceTarget(node.text != null && !node.text.trim().isEmpty()
+                            ? node.text : node.contentDescription);
+                    break;
+                }
             }
+            taskFlowView.setAutomaticProgress(automaticTouchEnabled()
+                    && !"confirmation".equals(command.commandType) && !"blocked".equals(command.commandType));
+            // A response refresh must not undo the user's explicit collapse, including confirmations.
+            updateFloatingVisibility();
         }
-        taskFlowView.setAutomaticProgress(automaticTouchEnabled()
-                && !"confirmation".equals(command.commandType) && !"blocked".equals(command.commandType));
-        // A response refresh must not undo the user's explicit collapse, including confirmations.
-        updateFloatingVisibility();
         lastGuideCommandId = command.guideCommandId;
         lastTargetNodeId = command.targetNodeId;
         lastTargetBounds = command.targetBounds;
@@ -2748,7 +2777,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         } else if (!"observe_only".equals(command.actionType) || !actionTracker.isBoundToGuide(command.guideCommandId)) {
             actionTracker.clear();
         }
-        placeTaskFlow(command.targetBounds, false);
+        if (present) placeTaskFlow(command.targetBounds, false);
         if (command.requiresUserAction && "tap".equals(command.actionType)
                 && displayedSnapshot != null && displayedSnapshot.observationFingerprint().equals(lastSnapshotFingerprint)) {
             guideStepTimer.start(agentSessionId, response.stateId, response.step,
@@ -2767,6 +2796,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         JSONObject recoveryAction = command.recoveryAction();
         JSONObject visionFallback = command.visionFallback();
         if (recoveryAction != null) {
+            if (!present) return;
             hideConfirmation();
             hideGuideOverlay();
             if ("navigate_back".equals(recoveryAction.optString("type"))
@@ -2779,6 +2809,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return;
         }
         if (visionFallback != null) {
+            if (!present) return;
             hideConfirmation();
             hideGuideOverlay();
             speak(command.message);
@@ -2786,6 +2817,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return;
         }
         if (canSearchByScrolling || ObservationRecovery.awaitsUser(command.renderPolicy)) {
+            if (!canSearchByScrolling) waitingForExplicitRetry=true;
+            if (!present) {
+                if (canSearchByScrolling) startAutomaticSettingsSearch(response.stateId, displayedSnapshot);
+                return;
+            }
             hideConfirmation(); hideGuideOverlay(); hideSettingsOpenButton();
             actionTracker.clear();
             final int generation = executionGeneration;
@@ -2817,6 +2853,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
 
         if ("confirmation".equals(command.commandType)) {
+            if (!present && !isAdjustmentConfirmation(command)) return;
             // Show what will be adjusted before asking for permission to continue.
             showGuideOverlay(command.targetBounds, "observe_only", 0);
             if (isAdjustmentConfirmation(command)) {
@@ -2840,6 +2877,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return;
         }
 
+        if (!present) return;
         freshObservationRetries = 0;
         hideSettingsOpenButton();
         if (command.targetNodeId != null && command.requiresUserAction) {
@@ -2888,7 +2926,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (service == null || service.speechHandler == null) return;
         service.speechHandler.post(() -> {
             service.guideStepTimer.clear();
-            service.automationGuard.clear();
+            service.automationGuard.interrupt();
             service.staleGuideDrops = service.freshObservationRetries = service.scrollExecutions = 0;
             if (new com.click.data.local.TouchAutomationSettings(service).isEnabled()
                     && NavigationRecovery.isHomeScreen(LatestScreenSnapshot.get())) {
@@ -2908,7 +2946,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         NavigationRecovery.Action before = navigationRecovery.hint();
         NavigationRecovery.Action observed = navigationRecovery.observe(screen);
         if (observed != NavigationRecovery.Action.NONE) {
-            guideStepTimer.clear(); actionTracker.clear(); automationGuard.clear();
+            waitingForExplicitRetry=false;
+            presentationGate.clear();
+            guideStepTimer.clear(); actionTracker.clear(); automationGuard.interrupt();
             hideGuideOverlay(); hideConfirmation(); clearVisionState();
             pendingVerifiedAction = null;
             refreshLoadingStatus();
@@ -3093,8 +3133,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             automationNeedsHelp("이 항목은 자동으로 누를 수 없어요. 표시된 곳을 직접 눌러주세요.");
             return;
         }
+        AccessibilityNodeSnapshot operationTarget = screen.nodes.stream()
+                .filter(n -> n.nodeId.equals(command.targetNodeId)).findFirst().orElse(null);
+        String operation = command.actionType + ":" + direction + ":" + screen.packageName + ":" + screen.activeWindowId
+                + ":" + java.util.Arrays.toString(command.targetBounds)
+                + (operationTarget == null ? "" : ":" + operationTarget.resourceId + ":" + operationTarget.progress);
         AutomationRunGuard.Decision decision = automationGuard.begin(agentSessionId, agentEpisodeId,
-                command.guideCommandId, screen.contentFingerprint());
+                command.guideCommandId, screen.contentFingerprint(), operation);
         if (decision != AutomationRunGuard.Decision.ALLOW) {
             if (decision == AutomationRunGuard.Decision.DUPLICATE)
                 automationNeedsHelp("이미 시도한 단계예요. 반복해서 누르지 않을게요. 필요하면 직접 조작해 주세요.");
@@ -3107,7 +3152,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         guideStepTimer.clear(); // Machine actions are never human response-time samples.
         boolean performed = tap
                 ? ClickAccessibilityService.performGuidedTap(screen, command.targetNodeId, command.targetBounds)
-                : ClickAccessibilityService.performGuidedSlider(screen, command.targetNodeId, command.targetBounds, direction);
+                : ClickAccessibilityService.performGuidedSlider(screen, command.targetNodeId, command.targetBounds, direction,
+                        SettingsAdjustment.from(acceptedGoal).setting);
         if (!performed) {
             automationGuard.finish(command.guideCommandId);
             automationNeedsHelp("자동 조작을 실행하지 못했어요. 표시된 곳을 직접 조작해 주세요.");
@@ -3275,6 +3321,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private boolean preserveTargetHelp(ScreenSnapshot current) {
         if (!waitingForTargetHelp()) return false;
+        if (waitingForExplicitRetry) return true;
         if (recoveryApologyGeneration == executionGeneration) return true;
         // Opening/reading this card is not a new task observation. In particular,
         // overlay AX events and delayed forced reads must not replace or re-collapse it.
@@ -3301,6 +3348,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             forceNextObservation = true;
             return;
         }
+        waitingForExplicitRetry=false;
+        presentationGate.clear();
+        if (manualOverride) automationGuard.retry();
         staleGuideDrops = freshObservationRetries = 0;
         stopNarration();
         if (manualOverride) {

@@ -18,13 +18,13 @@ public class AdjustmentResultCheckTest {
         for (String setting : List.of("brightness", "volume")) for (String direction : List.of("increase", "decrease")) {
             AdjustmentResultCheck check = new AdjustmentResultCheck();
             String goal = "settings." + setting + "." + direction;
-            ScreenSnapshot before = screen("com.android.settings", 1000, 1f).withAdjustmentValues(100, 5);
+            ScreenSnapshot before = settingScreen(setting, 1000, 1f).withAdjustmentValues(100, 5);
             check.bind("episode", goal, guide("highlight"), before);
             int brightness = setting.equals("brightness") ? (direction.equals("increase") ? 120 : 80) : 100;
             int volume = setting.equals("volume") ? (direction.equals("increase") ? 6 : 4) : 5;
-            assertTrue(check.changed("episode", goal, screen("com.android.settings", 2000, 1f).withAdjustmentValues(brightness, volume)));
-            assertFalse(check.changed("episode", goal, screen("com.android.settings", 2000, 1f).withAdjustmentValues(100, 5)));
-            assertFalse(check.changed("episode", goal, screen("com.android.settings", 2000, 1f)));
+            assertTrue(check.changed("episode", goal, settingScreen(setting, 2000, 1f).withAdjustmentValues(brightness, volume)));
+            assertFalse(check.changed("episode", goal, settingScreen(setting, 2000, 1f).withAdjustmentValues(100, 5)));
+            assertFalse(check.changed("episode", goal, settingScreen(setting, 2000, 1f)));
         }
     }
 
@@ -75,6 +75,14 @@ public class AdjustmentResultCheckTest {
         assertFalse(check.changed("episode", "settings.brightness.increase", screen("com.android.settings", 2000, 1.15f)));
         check.bind("episode", INCREASE, guide("highlight"), screen("com.android.settings", 1000, null));
         assertFalse(check.changed("episode", INCREASE, screen("com.android.settings", 2000, 1.15f)));
+    }
+
+    private ScreenSnapshot settingScreen(String setting, long time, Float scale) {
+        String label = setting.equals("volume") ? "미디어" : "밝기";
+        AccessibilityNodeSnapshot node = new AccessibilityNodeSnapshot("font", null, true, "com.android.settings",
+                label, null, "settings:id/"+setting, "android.widget.SeekBar", "slider", bounds,
+                true, true, false, false, false, 3f, 42);
+        return new ScreenSnapshot("com.android.settings", Instant.ofEpochMilli(time).toString(), 1080,2400,List.of(node),42,true,scale);
     }
 
     private ScreenSnapshot screen(String name, long time, Float scale) {
