@@ -37,7 +37,7 @@ Agent2 알고리즘은 `AI-Agent/src/ai_agent/graph_proposal/`에 둡니다. `sc
 | 작업 | 텍스트/음성 대기열, 목표·필수 입력 확인, 결과 확인·추가 조절 |
 | 세션 | DB/checkpoint 복구, version/lease 동시성, 재전송, 취소·만료·이력·피드백 |
 | AI1 | 승인 graph 선택·고정·복원, 화면 안내·검증, 제한된 대체 graph 재선택 |
-| AI2 | 동의 기반 수집·재구성·분석·데이터 분리·기존 경로 후보·평가·승인/롤백 |
+| AI2 | 동의 기반 Jev 판단/실행 결과 분석·독립 정답 검수·수정 전후 비교; 별도 경로 후보·승인/롤백 |
 | 운영 | 상태·지표·정리·백업/복구·컨테이너/Render 실행 도구 |
 
 구조는 Android → FastAPI → AgentTurnService → DB graph 선택 → RuntimeAgentAdapter → AI1입니다. 결과·checkpoint·응답·실행 이벤트를 원자적으로 저장합니다. AI2는 사용자 응답과 별도 오프라인 명령으로 실행합니다. DB 컬럼은 [모델](../app/models), 변경 이력은 [migration](../migrations/versions)을 기준으로 봅니다.
@@ -103,6 +103,8 @@ CONFIGURED_ONLY는 설정 확인이며 추론 성공이 아닙니다. PASS는 �
 세션 유휴 기본 1800초, lease 60초, AI timeout 20초이며 timeout은 lease보다 짧아야 합니다. SMTP 미설정 시 메일 요청은 503입니다. OPS_TOKEN은 32자 이상의 별도 난수이고 지표·인증 rate limit은 메모리 기반이어서 단일 worker를 유지합니다.
 
 배포는 루트 Compose/render.yaml과 기존 DB를 사용합니다. Dockerfile은 Backend/Dockerfile, build context는 저장소 루트, 시작은 `python scripts/render_start.py`, pre-deploy는 `python scripts/render_start.py --migrate`, health check는 `/ready`입니다. 앱 API 주소·배포 branch/commit·서버 OpenAPI를 함께 확인합니다. 비밀값은 Git·로그·채팅에 넣지 않습니다.
+
+암호화 저장에는 `DATA_ENCRYPTION_KEYS`·`DATA_LOOKUP_KEY`와 `20261107_18` 이전이 필요합니다. [데이터 암호화·유지보수 배포·키 교체](data-encryption.md)를 먼저 따릅니다. 이전 앱 서버를 중단한 뒤 기존 데이터 변환을 적용하며 평문으로 되돌리는 downgrade는 거부합니다.
 
 글자 크기 경로 수정은 MVP-01/02의 `1.0.1` release(우선순위 101)에 포함됩니다. 시작 시 release 목록의 버전을 그대로 seed하며 기존 `1.0.0` 행은 변경하지 않습니다. 새 요청은 디스플레이 경로를 사용하고, 진행 중인 세션은 기존에 고정한 graph를 유지하므로 재배포 후 새 요청으로 검증합니다. 최대·최소값에서는 슬라이더 위치와 한계를 먼저 안내하며 결과 질문으로 자동 전환하지 않습니다.
 

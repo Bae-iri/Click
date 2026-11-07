@@ -64,9 +64,13 @@ def diagnostic_payload(value, depth=0):
         hold_reason = selection.get("hold_reason")
         if isinstance(hold_reason, str) and hold_reason in UI_SELECTION_HOLD_REASONS:
             safe["hold_reason"] = hold_reason
-        transition_hash = selection.get("chosen_transition_hash")
-        if isinstance(transition_hash, str) and re.fullmatch(r"[0-9a-f]{64}", transition_hash):
-            safe["chosen_transition_hash"] = transition_hash
+        for key in ("chosen_transition_hash", "chosen_target_hash", "decision_hash", "screen_hash"):
+            hashed = selection.get(key)
+            if isinstance(hashed, str) and re.fullmatch(r"[0-9a-f]{64}", hashed):
+                safe[key] = hashed
+        model = selection.get("model")
+        if isinstance(model, str) and re.fullmatch(r"jev-[A-Za-z0-9_.-]{1,60}", model):
+            safe["model"] = model
         choice_count = selection.get("choice_count")
         if type(choice_count) is int and 3 <= choice_count <= 252:
             safe["choice_count"] = choice_count

@@ -27,6 +27,7 @@ from ai_agent.graph_proposal.graphs import graph_errors
 from ai_agent.graph_proposal.schemas import GraphUpdateProposal
 from ai_agent.graph_proposal.workflows.pipeline import run_pipeline
 from ai_agent.graph_proposal.reconstruction.episodes import RECONSTRUCTION_POLICY
+from ai_agent.graph_proposal.analysis.jev import POLICY as ASSESSMENT_POLICY, compare_assessments, render_report
 from ai_agent.graph_proposal.evaluation.graph_validator import GraphValidator
 from ai_agent.graph_proposal.releases.versioning import GraphVersionManager
 from ai_agent.graph_proposal.models.model_trainer import ModelTrainer
@@ -126,7 +127,8 @@ def process_sessions(factory, *, limit=100, now=None):
                 receipt = db.scalar(select(RuntimeEventConsumption).where(
                     RuntimeEventConsumption.consumer == CONSUMER, RuntimeEventConsumption.event_id == last.id))
                 input_hash = fingerprint({"events": [e.id for e in events], "consent_id": consent.id,
-                                          "reconstruction_policy": RECONSTRUCTION_POLICY})
+                                          "reconstruction_policy": RECONSTRUCTION_POLICY,
+                                          "assessment_policy": ASSESSMENT_POLICY})
                 if receipt and receipt.result.get("input_hash") == input_hash:
                     summary["unchanged"] += 1
                     continue
@@ -164,6 +166,44 @@ def process_sessions(factory, *, limit=100, now=None):
             # Do not print event contents or turn a corrupt record into success.
             summary["errors"] += 1
     return summary
+
+
+def assess_jev(factory, *, reviews=None, now=None, limit=100):
+    """Read consented, retained evidence; assessment never changes the online model."""
+    if type(limit) is not int or not 1 <= limit <= 1000:
+        raise ValueError("limit must be between 1 and 1000")
+    now = int(time.time()) if now is None else now
+    with factory() as db:
+        sessions = list(db.execute(select(RuntimeEvent.session_id, RuntimeEvent.user_id).where(
+            RuntimeEvent.expires_at > now).distinct().order_by(RuntimeEvent.user_id, RuntimeEvent.session_id).limit(limit + 1)))
+        if len(sessions) > limit:
+            raise ValueError("Assessment exceeds session budget; narrow retained input first")
+        envelopes, graphs = [], {}
+        users = UserRepository(db)
+        for session_id, user_id in sessions:
+            users.lock_user(user_id)
+            consent = users.latest_consent(user_id, "model_training")
+            if not consent or not consent.consented:
+                continue
+            granted = consent.recorded_at.replace(tzinfo=timezone.utc).timestamp()
+            events = list(db.scalars(select(RuntimeEvent).where(RuntimeEvent.session_id == session_id,
+                RuntimeEvent.expires_at > now, RuntimeEvent.created_at >= granted).order_by(RuntimeEvent.sequence).limit(10001)))
+            if len(envelopes) + len(events) > 10000:
+                raise ValueError("Assessment exceeds event budget")
+            for event in events:
+                ref = event.payload.get("graph_reference") or {}
+                query = select(ApprovedTaskGraph).where(ApprovedTaskGraph.graph_hash == event.graph_hash,
+                    ApprovedTaskGraph.approved.is_(True))
+                if ref.get("version"):
+                    query = query.where(ApprovedTaskGraph.graph_version == ref["version"])
+                matches = list(db.scalars(query))
+                if len(matches) != 1 or not event.episode_id:
+                    raise ValueError("Missing immutable graph/episode evidence")
+                row = matches[0]
+                TaskGraphRepository._decode(row)
+                graphs[event.graph_hash] = row.body
+                envelopes.append(event_envelope(event, row, session_key="session-" + fingerprint(session_id)))
+        return run_pipeline(envelopes, graphs, now=now, jev_reviews=reviews)["jev_analysis"]
 
 
 def propose_routes(factory, *, manifest, cases=None, now=None, limit=100, evaluator=None):
@@ -306,6 +346,13 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     process = commands.add_parser("process", help="Process consented DB sessions; no user-data file export")
     process.add_argument("--limit", type=int, default=100)
+    assessment = commands.add_parser("assess-jev", help="Assess Jev choices and observed outcomes from consented sessions")
+    assessment.add_argument("--limit", type=int, default=100)
+    assessment.add_argument("--reviews", help="Independent captured-target review manifest")
+    assessment.add_argument("--format", choices=("text", "json"), default="text")
+    comparison = commands.add_parser("compare-jev", help="Compare identical independently reviewed holdout screens")
+    comparison.add_argument("--before", required=True)
+    comparison.add_argument("--after", required=True)
     propose = commands.add_parser("propose-routes", help="Compare consented DB sessions with explicit reviewed splits; no auto release")
     propose.add_argument("--manifest", required=True)
     propose.add_argument("--cases", help="Independent device replay cases; omitted cases yield NEEDS_DATA")
@@ -316,6 +363,7 @@ def main():
     fixture.add_argument("--graphs", required=True, help="JSON list of graph bodies")
     fixture.add_argument("--manifest", required=True)
     fixture.add_argument("--cases", help="JSON list of independent replay cases")
+    fixture.add_argument("--jev-reviews", help="Independent reviews of captured Jev targets")
     fixture.add_argument("--now", type=int, default=None)
     fixture.add_argument("--output", required=True)
     train = commands.add_parser("train-baseline", help="Fit an offline CPU frequency baseline from curated training split only")
@@ -333,6 +381,11 @@ def main():
     for arg in ("task", "version", "expected-current-hash", "reviewer"):
         rollback.add_argument("--" + arg, required=True)
     args = parser.parse_args()
+    if args.command == "compare-jev":
+        before, after = read_json(args.before), read_json(args.after)
+        result = compare_assessments(before.get("jev_analysis", before), after.get("jev_analysis", after))
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
     if args.command == "train-baseline":
         run = read_json(args.run)
         trained = ModelTrainer().train(run.get("dataset"), allow_weak=args.allow_weak)
@@ -348,7 +401,8 @@ def main():
         graphs = {fingerprint(body): body for body in read_json(args.graphs)}
         result = run_pipeline(events, graphs, now=args.now if args.now is not None else int(time.time()),
             manifest=read_json(args.manifest), cases=read_json(args.cases) if args.cases else None,
-            evaluator=replay_evaluator, graph_loader=load_graph)
+            evaluator=replay_evaluator, graph_loader=load_graph,
+            jev_reviews=read_json(args.jev_reviews) if args.jev_reviews else None)
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
         with output.open("x", encoding="utf-8") as handle:
@@ -361,8 +415,15 @@ def main():
     engine = build_engine(database_url(raw) if raw.startswith(("postgres://", "postgresql://")) else raw)
     factory = build_session_factory(engine)
     try:
+        from app.core.data_encryption import validate_database_keys
+        validate_database_keys(engine)
         if args.command == "process":
             result = process_sessions(factory, limit=args.limit)
+        elif args.command == "assess-jev":
+            result = assess_jev(factory, reviews=read_json(args.reviews) if args.reviews else None, limit=args.limit)
+            if args.format == "text":
+                print(render_report(result))
+                return 0
         elif args.command == "propose-routes":
             result = propose_routes(factory, manifest=read_json(args.manifest),
                 cases=read_json(args.cases) if args.cases else None, limit=args.limit)

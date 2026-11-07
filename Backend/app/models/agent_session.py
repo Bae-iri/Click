@@ -5,6 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
 from app.models.user import JSONType
+from app.core.data_encryption import EncryptedJSON
 
 
 class AgentSession(Base):
@@ -18,21 +19,21 @@ class AgentSession(Base):
     last_guide_command_id: Mapped[str | None] = mapped_column(String(500))
     episode_id: Mapped[str | None] = mapped_column(String(200))
     accepted_goal_type: Mapped[str | None] = mapped_column(String(200))
-    goal: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
-    device_context: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    goal: Mapped[dict | None] = mapped_column(EncryptedJSON("agent_sessions.goal"), nullable=True)
+    device_context: Mapped[dict | None] = mapped_column(EncryptedJSON("agent_sessions.device_context"), nullable=True)
     graph_version: Mapped[str | None] = mapped_column(String(64))
     graph_hash: Mapped[str | None] = mapped_column(String(64))
     result_response: Mapped[str | None] = mapped_column(String(10))
     # These columns were released as JSON in migrations 20261010_11/_12.
-    workflow: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    recovery: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    workflow: Mapped[dict | None] = mapped_column(EncryptedJSON("agent_sessions.workflow"), nullable=True)
+    recovery: Mapped[dict | None] = mapped_column(EncryptedJSON("agent_sessions.recovery"), nullable=True)
     created_at: Mapped[int] = mapped_column(BigInteger)
     updated_at: Mapped[int] = mapped_column(BigInteger)
     expires_at: Mapped[int] = mapped_column(BigInteger, index=True)
     lease_token: Mapped[str | None] = mapped_column(String(36))
     lease_until: Mapped[int | None] = mapped_column(BigInteger)
-    task_outcome: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
-    outcome_history: Mapped[list] = mapped_column(JSONType, default=list)
+    task_outcome: Mapped[dict | None] = mapped_column(EncryptedJSON("agent_sessions.task_outcome"), nullable=True)
+    outcome_history: Mapped[list] = mapped_column(EncryptedJSON("agent_sessions.outcome_history"), default=list)
     paused_from: Mapped[str | None] = mapped_column(String(30))
 
 
@@ -43,8 +44,8 @@ class AgentGoalResolution(Base):
     session_id: Mapped[str] = mapped_column(String(200), index=True)
     request_id: Mapped[str] = mapped_column(String(200))
     request_hash: Mapped[str] = mapped_column(String(64))
-    candidates: Mapped[list] = mapped_column(JSONType)
-    response: Mapped[dict] = mapped_column(JSONType)
+    candidates: Mapped[list] = mapped_column(EncryptedJSON("agent_goal_resolutions.candidates"))
+    response: Mapped[dict] = mapped_column(EncryptedJSON("agent_goal_resolutions.response"))
     selected_goal: Mapped[str | None] = mapped_column(String(200))
     selection_request_id: Mapped[str | None] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(30), default="PENDING")
@@ -57,7 +58,7 @@ class AgentCheckpoint(Base):
     session_id: Mapped[str] = mapped_column(String(200), ForeignKey("agent_sessions.id", ondelete="CASCADE"), primary_key=True)
     schema_version: Mapped[int] = mapped_column(Integer)
     graph_version: Mapped[str] = mapped_column(String(64))
-    state: Mapped[dict] = mapped_column(JSONType)
+    state: Mapped[dict] = mapped_column(EncryptedJSON("agent_checkpoints.state"))
 
 
 class AgentTurn(Base):
@@ -69,5 +70,5 @@ class AgentTurn(Base):
     request_id: Mapped[str] = mapped_column(String(200))
     request_hash: Mapped[str] = mapped_column(String(64))
     version: Mapped[int] = mapped_column(Integer)
-    response: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
+    response: Mapped[dict | None] = mapped_column(EncryptedJSON("agent_turns.response"), nullable=True)
     created_at: Mapped[int] = mapped_column(BigInteger)

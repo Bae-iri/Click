@@ -17,6 +17,10 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
+      - key: DATA_ENCRYPTION_KEYS
+        sync: false
+      - key: DATA_LOOKUP_KEY
+        sync: false
       - key: GEMINI_API_KEY
         value: ""
       - key: AI1_UI_SELECTOR_PROVIDER

@@ -3,6 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 from pathlib import Path
 import sys
+import os
+from cryptography.fernet import Fernet
 from tempfile import TemporaryDirectory
 from time import perf_counter
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -14,6 +16,8 @@ from tests.test_agent_sessions import payload
 
 
 def main():
+    os.environ.setdefault("DATA_ENCRYPTION_KEYS", Fernet.generate_key().decode())
+    os.environ.setdefault("DATA_LOOKUP_KEY", Fernet.generate_key().decode())
     with TemporaryDirectory(prefix="click-load-") as directory:
         app = create_app("sqlite+pysqlite:///" + (Path(directory) / "load.db").as_posix())
         app.state.turn_service.engine_factory = ContractAgent
