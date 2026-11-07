@@ -2683,6 +2683,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (requestChangedAdjustmentResult(displayedSnapshot)) return;
             if (lastSubmittedScreen == null || displayedSnapshot == null
                     || command.targetBounds == null
+                        && !(canSearchSettingsMenu(response,displayedSnapshot)
+                            && ObservationRecovery.sameNavigationScreen(lastSubmittedScreen,displayedSnapshot))
                         && !lastSubmittedScreen.contentFingerprint().equals(displayedSnapshot.contentFingerprint())
                     || !GuideFreshness.stillValid(lastSubmittedScreen, displayedSnapshot,
                             command.targetNodeId, command.targetBounds,
@@ -2698,12 +2700,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             hideConfirmation(); hideGuideOverlay();
             if (startAutomaticHomeSearch(displayedSnapshot)) return;
         }
-        boolean canSearchByScrolling = command.targetBounds == null
-                && "observe_only".equals(command.actionType)
-                && (ObservationRecovery.canSearchByScrolling(response.stateId, command.renderPolicy, displayedSnapshot)
-                    || hasConfirmedGoal() && "highlight".equals(command.commandType)
-                        && ObservationRecovery.canSearchJevWait(response.stateId, command.renderPolicy,
-                                response.metadata, displayedSnapshot));
+        boolean canSearchByScrolling = canSearchSettingsMenu(response,displayedSnapshot);
         if (command.targetBounds == null && displayedSnapshot != null) {
             JSONObject recovery = command.renderPolicy == null ? null : command.renderPolicy.optJSONObject("recovery");
             JSONObject fallback = command.fallbackAction();
@@ -2737,7 +2734,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 + ":" + command.proposedAction + ":" + command.dragDirection()
                 + (recoveryPresentation == null ? "" : ":" + recoveryPresentation.optString("reason_code")
                     + ":" + recoveryPresentation.optString("waiting_for") + ":" + recoveryPresentation.optString("next_action"));
-        if (canSearchByScrolling && displayedSnapshot != null) presentation += ":" + displayedSnapshot.contentFingerprint();
+        if (canSearchByScrolling && displayedSnapshot != null) presentation += ":" + ObservationRecovery.navigationFingerprint(displayedSnapshot);
         boolean present = presentationGate.accept(agentEpisodeId, "guide", presentation);
         if (present) {
             taskFlowView.progress(requirementReview != null ? requirementReview.summary() : "선택한 작업",
@@ -3451,67 +3448,81 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         return true;
     }
 
+    private boolean canSearchSettingsMenu(AgentTurnContract.Response response,ScreenSnapshot screen) {
+        AgentTurnContract.GuideCommand command=response.guideCommand;
+        return command.targetBounds==null && "observe_only".equals(command.actionType)
+                && (ObservationRecovery.canSearchByScrolling(response.stateId,command.renderPolicy,screen)
+                    || hasConfirmedGoal() && "highlight".equals(command.commandType)
+                        && ObservationRecovery.canSearchJevWait(response.stateId,command.renderPolicy,response.metadata,screen));
+    }
+
     /** Finding a Settings item is navigation, independent of automatic button/slider changes. */
     private boolean startAutomaticSettingsSearch(String stateId, ScreenSnapshot screen) {
         if (waitingForTargetHelp()) return false;
-        if (stateId == null || screen == null || screen.activeWindowId == null) return false;
-        Boolean forward = automaticScrollSearch.next(
-                agentEpisodeId + ":" + stateId + ":" + screen.packageName + ":" + screen.activeWindowId,
-                screen.observationFingerprint());
-        if (forward == null) return false;
-        String message = forward ? "설정 목록을 내려서 항목을 찾고 있어요."
-                : "설정 목록을 올려서 항목을 찾고 있어요.";
+        if (stateId==null || screen==null || screen.activeWindowId==null) return false;
+        // A repeated reply joins the queued search instead of spending another page attempt.
+        if (scrollSearchGeneration==executionGeneration || turnInFlight || closing || agentPaused
+                || pendingControl!=null || agentSessionId==null) return true;
+        ScreenSnapshot current=ClickAccessibilityService.freshSnapshot();
+        if (!ObservationRecovery.sameNavigationScreen(screen,current)) {
+            forceNextObservation=true;ClickAccessibilityService.requestFreshSnapshot();return true;
+        }
+        String message="설정 목록에서 항목을 찾고 있어요.";
         taskFlowView.waitingProgress(message);
         taskFlowView.setAutomaticProgress(true);
         stopNarration();
-        panelInterruptedNarration = false;
-        lastSpokenMessage = TaskFlowOverlayView.AUTOMATIC_PROGRESS_MESSAGE;
+        panelInterruptedNarration=false;
+        lastSpokenMessage=TaskFlowOverlayView.AUTOMATIC_PROGRESS_MESSAGE;
         updateFloatingVisibility();
-        if (overlayView != null) overlayView.setRecognizedSpeech(message);
+        if (overlayView!=null) overlayView.setRecognizedSpeech(message);
         collapseTaskFlow();
-        searchSettingsByScrolling(forward, screen, executionGeneration);
+        searchSettingsByScrolling(null,stateId,screen,executionGeneration);
         return true;
     }
 
-    private void searchSettingsByScrolling(boolean forward, ScreenSnapshot expected, int generation) {
-        if (generation != executionGeneration || closing || agentPaused || turnInFlight
-                || scrollSearchGeneration == executionGeneration || pendingControl != null
-                || agentSessionId == null || expected == null || expected.activeWindowId == null) return;
-        ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
-        if (!expected.sameNativeContent(current)) {
-            forceNextObservation = true;
-            ClickAccessibilityService.requestFreshSnapshot();
-            return;
+    private void searchSettingsByScrolling(boolean forward,ScreenSnapshot expected,int generation) {
+        searchSettingsByScrolling(Boolean.valueOf(forward),null,expected,generation);
+    }
+
+    private void searchSettingsByScrolling(Boolean requestedDirection,String stateId,ScreenSnapshot expected,int generation) {
+        if (generation!=executionGeneration || closing || agentPaused || turnInFlight
+                || scrollSearchGeneration==executionGeneration || pendingControl!=null
+                || agentSessionId==null || expected==null || expected.activeWindowId==null) return;
+        if (!ObservationRecovery.sameNavigationScreen(expected,ClickAccessibilityService.freshSnapshot())) {
+            forceNextObservation=true;ClickAccessibilityService.requestFreshSnapshot();return;
         }
-        scrollSearchGeneration = generation;
+        scrollSearchGeneration=generation;
         updateFloatingVisibility();
         speechHandler.postDelayed(() -> {
-            if (generation != executionGeneration) return;
-            if (closing || agentPaused || pendingControl != null || agentSessionId == null || waitingForTargetHelp()) {
-                scrollSearchGeneration = -1;
-                return;
+            if (generation!=executionGeneration) return;
+            if (closing || agentPaused || pendingControl!=null || agentSessionId==null || waitingForTargetHelp()) {
+                scrollSearchGeneration=-1;return;
             }
-            ScreenSnapshot beforeScroll = ClickAccessibilityService.freshSnapshot();
-            boolean sameScreen = expected.sameNativeContent(beforeScroll);
-            boolean moved = sameScreen && ClickAccessibilityService.performSettingsScroll(
-                    forward, expected.packageName, expected.activeWindowId);
-            android.util.Log.i("ClickScroll", "settings forward=" + forward + " sameScreen=" + sameScreen + " dispatched=" + moved);
-            if (sameScreen && !moved) {
-                automaticScrollSearch.reachedEnd(forward);
+            ScreenSnapshot beforeScroll=ClickAccessibilityService.freshSnapshot();
+            if (!ObservationRecovery.sameNavigationScreen(expected,beforeScroll)) {
+                scrollSearchGeneration=-1;forceNextObservation=true;
+                ClickAccessibilityService.requestFreshSnapshot();sendAgentTurn(null,true);return;
             }
+            // Charge the bounded search only when a native scroll can actually be attempted.
+            Boolean direction=requestedDirection!=null ? requestedDirection : automaticScrollSearch.next(
+                    agentEpisodeId+":"+stateId+":"+beforeScroll.packageName+":"+beforeScroll.activeWindowId,
+                    ObservationRecovery.navigationFingerprint(beforeScroll));
+            if (direction==null) {scrollSearchGeneration=-1;showTargetHelp(stateId);return;}
+            boolean forward=direction;
+            boolean moved=ClickAccessibilityService.performSettingsScroll(forward,expected.packageName,expected.activeWindowId);
+            android.util.Log.i("ClickScroll","settings forward="+forward+" dispatched="+moved);
+            if (!moved) automaticScrollSearch.reachedEnd(forward);
             speechHandler.postDelayed(() -> {
-                if (generation != executionGeneration) return;
-                scrollSearchGeneration = -1;
-                if (closing || agentPaused || pendingControl != null || agentSessionId == null) return;
-                // Navigation is not evidence that the graph's tap or setting change succeeded.
-                pendingActionType = AgentActionEvents.MANUAL_OVERRIDE;
-                pendingActionOccurredAtMs = System.currentTimeMillis();
-                freshObservationRetries = 0;
-                forceNextObservation = true;
-                updateFloatingVisibility();
-                sendAgentTurn(null, true);
-            }, moved ? 700L : 100L);
-        }, 200L);
+                if (generation!=executionGeneration) return;
+                scrollSearchGeneration=-1;
+                if (closing || agentPaused || pendingControl!=null || agentSessionId==null) return;
+                // List movement never proves that a requested tap or setting change succeeded.
+                pendingActionType=AgentActionEvents.MANUAL_OVERRIDE;
+                pendingActionOccurredAtMs=System.currentTimeMillis();
+                freshObservationRetries=0;forceNextObservation=true;
+                updateFloatingVisibility();sendAgentTurn(null,true);
+            },moved ? 700L : 100L);
+        },200L);
     }
 
     private void executeScroll(AgentTurnContract.GuideCommand command) {

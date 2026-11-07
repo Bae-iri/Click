@@ -156,16 +156,17 @@ public class LiveNativeSettingsStabilityTest {
                 // Instrumentation has no resumed activity; use the shell for user-equivalent app launch.
                 shell("am start -W -a android.settings.SETTINGS -f "+(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
                 assertNotNull("Readable Settings home before testing",nativeSettings());
-                // Start on Settings home with its first route row visible, not on a pre-opened control page.
                 String firstRow=setting.equals("volume")?"소리 및 진동":"디스플레이";
-                for(int attempt=0;attempt<8;attempt++) {
-                    ScreenSnapshot initial=ClickAccessibilityService.freshSnapshot();
-                    if(initial!=null && initial.nodes.stream().anyMatch(n->n.visibleToUser && firstRow.equals(n.text)))break;
-                    scrollSettings(attempt>=4);SystemClock.sleep(350);
+                String initialPosition=InstrumentationRegistry.getArguments().getString("initialPosition","top");
+                if("bottom".equals(initialPosition))for(int setup=0;setup<8;setup++) {
+                    if(!scrollSettings(true))break;SystemClock.sleep(350);
                 }
+                ScreenSnapshot startScreen=nativeSettings();
+                boolean startTargetVisible=startScreen.nodes.stream().anyMatch(n->n.visibleToUser && firstRow.equals(n.text));
                 String session=UUID.randomUUID().toString();JSONObject last=null,event=null;
-                JSONObject item=new JSONObject().put("goal",setting+"."+direction).put("start","android_settings_home").put("turns",new JSONArray());
+                JSONObject item=new JSONObject().put("goal",setting+"."+direction).put("start","android_settings_home").put("initial_position",initialPosition).put("start_target_visible",startTargetVisible).put("turns",new JSONArray());
                 report.getJSONArray("cases").put(item);save();
+                com.click.service.overlay.NativeSettingsSearchPlanner search=new com.click.service.overlay.NativeSettingsSearchPlanner();
                 ScreenSnapshot consentScreen=null;String consentId=null;
                 float before=value(setting);boolean changed=false,approved=false;int repeat=0,retries=0,actions=0,scrolls=0;
                 try {
@@ -213,7 +214,7 @@ public class LiveNativeSettingsStabilityTest {
                         }
                         item.getJSONArray("turns").put(new JSONObject().put("state",last.optString("state_id")).put("status",last.optString("task_status"))
                             .put("action",guide.optString("action_type")).put("selection",selection).put("technical",technical)
-                            .put("observed_system_value",value(setting)));save();
+                            .put("observed_system_value",value(setting)).put("render_policy",guide.optJSONObject("render_policy")));save();
                         if(technical!=null && "CHANGED".equals(technical.optString("status"))) {
                             float after=value(setting);assertTrue("Persisted system setting must move in the requested direction",direction.equals("increase")?after>before:after<before);
                             assertTrue("The test must have executed a real slider operation",changed);
@@ -223,12 +224,24 @@ public class LiveNativeSettingsStabilityTest {
                         }
                         assertFalse("No unverified completion", "COMPLETED".equals(last.optString("task_status")));
                         JSONObject recovery=guide.optJSONObject("render_policy");recovery=recovery==null?null:recovery.optJSONObject("recovery");
-                        if(recovery!=null && "user".equals(recovery.optString("waiting_for"))) {
+                        boolean searchMenu=!approved && !changed && "observe_only".equals(guide.optString("action_type")) && guide.optJSONArray("target_bounds")==null
+                                && (com.click.service.overlay.ObservationRecovery.canSearchByScrolling(last.optString("state_id"),guide.optJSONObject("render_policy"),screen)
+                                    || com.click.service.overlay.ObservationRecovery.canSearchJevWait(last.optString("state_id"),guide.optJSONObject("render_policy"),metadata,screen));
+                        // Match the overlay: a missing menu is searched before offering user recovery.
+                        if(searchMenu) {
+                            Boolean forward=search.next(session+":"+last.optString("state_id")+":"+screen.packageName+":"+screen.activeWindowId,
+                                    com.click.service.overlay.ObservationRecovery.navigationFingerprint(screen));
+                            if(forward==null){item.put("navigation_limit_reached",true);break;}
+                            assertPreparedApks();
+                            boolean moved=ClickAccessibilityService.performSettingsScroll(forward,screen.packageName,screen.activeWindowId);
+                            if(!moved)search.reachedEnd(forward);
+                            item.put("native_search_scrolls",++scrolls);
+                            JSONArray searches=item.optJSONArray("searches");if(searches==null){searches=new JSONArray();item.put("searches",searches);}
+                            searches.put(new JSONObject().put("state",last.optString("state_id")).put("forward",forward).put("dispatched",moved));
+                            event=AgentActionEvents.of(AgentActionEvents.MANUAL_OVERRIDE,null,null,null);
+                        } else if(recovery!=null && "user".equals(recovery.optString("waiting_for"))) {
                             assertTrue("Only one explicit test retry per task",retries++<1);
                             event=AgentActionEvents.of(AgentActionEvents.MANUAL_OVERRIDE,null,null,null);
-                        } else if(!approved && !changed && selection!=null && "no_candidates".equals(selection.optString("status")) && scrolls<4) {
-                            boolean moved=scrollSettings(scrolls++>=2);item.put("native_search_scrolls",scrolls);
-                            if(moved)event=AgentActionEvents.of(AgentActionEvents.SCROLL_COMPLETED,null,null,null);
                         } else if("tap".equals(guide.optString("action_type"))) {
                             assertPreparedApks();
                             ScreenSnapshot fresh=ClickAccessibilityService.freshSnapshot();AccessibilityNodeSnapshot n=target(fresh,guide);assertNotNull(n);
