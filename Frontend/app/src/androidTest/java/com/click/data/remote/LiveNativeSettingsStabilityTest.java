@@ -94,6 +94,7 @@ public class LiveNativeSettingsStabilityTest {
             report.put("server_build",version);
             report.put("server",BuildConfig.CLICK_API_BASE_URL);
             assertEquals("Deploy the common target policy before the physical suite","settings-slider.v1",version.optString("target_validation"));
+            assertEquals("The real server must use Jev","jev",version.getJSONObject("runtime_configuration").getString("provider"));
             String expected=InstrumentationRegistry.getArguments().getString("expectedSourceSha256");
             assertNotNull("Supply the tested release source SHA256",expected);
             assertEquals("The server must run the exact tested backend/AI sources",expected,version.getString("source_sha256"));
@@ -155,11 +156,17 @@ public class LiveNativeSettingsStabilityTest {
                         JSONObject outcome=metadata.optJSONObject("task_outcome");
                         JSONObject technical=outcome==null?metadata.optJSONObject("technical_outcome"):outcome.optJSONObject("technical");
                         JSONObject selection=metadata.optJSONObject("debug");selection=selection==null?null:selection.optJSONObject("ui_selection");
+                        if(selection!=null && selection.optBoolean("called"))item.put("jev_calls",item.optInt("jev_calls")+1);
+                        if(Set.of("tap","drag").contains(guide.optString("action_type")) || "confirmation".equals(guide.optString("command_type"))) {
+                            assertNotNull("Grounded decisions must expose provider identity",selection);
+                            assertEquals("Rule fallback cannot count as a live Jev result","jev",selection.getString("provider"));
+                        }
                         item.getJSONArray("turns").put(new JSONObject().put("state",last.optString("state_id")).put("status",last.optString("task_status"))
                             .put("action",guide.optString("action_type")).put("selection",selection).put("technical",technical));save();
                         if(technical!=null && "CHANGED".equals(technical.optString("status"))) {
                             float after=value(setting);assertTrue("Persisted system setting must move in the requested direction",direction.equals("increase")?after>before:after<before);
                             assertTrue("The test must have executed a real slider operation",changed);
+                            assertTrue("At least one actual Jev call is required",item.optInt("jev_calls")>0);
                             assertNotNull("A verified change must reach the result question",metadata.optJSONObject("result_prompt"));
                             item.put("before",before).put("after",after).put("passed",true).put("physical_actions",actions);break;
                         }

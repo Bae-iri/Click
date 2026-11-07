@@ -19,6 +19,8 @@ def verify_build(base_url, *, get=httpx.get):
     body = response.json()
     if body.get('target_validation') != 'settings-slider.v1' or body.get('source_sha256') != source_digest():
         raise ValueError('Server is not the tested release; deploy this Backend and AI-Agent before device checks')
+    if body.get('runtime_configuration', {}).get('provider') != 'jev':
+        raise ValueError('Physical Jev verification requires the production Jev provider')
     return body
 
 
