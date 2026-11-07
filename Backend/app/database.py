@@ -12,9 +12,11 @@ class Base(DeclarativeBase):
     pass
 
 
-def build_engine(database_url: str | None = None):
+def build_engine(database_url: str | None = None, *, data_cipher=None):
     url = database_url or os.getenv("DATABASE_URL", "sqlite+pysqlite:///:memory:")
-    kwargs: dict = {"pool_pre_ping": True}
+    from app.core.data_encryption import DataCipher
+    cipher = data_cipher or DataCipher.from_environment(ephemeral=url in {"sqlite+pysqlite:///:memory:", "sqlite:///:memory:"})
+    kwargs: dict = {"pool_pre_ping": True, "hide_parameters": True}
     if url == "sqlite+pysqlite:///:memory:":
         kwargs.update(
             connect_args={"check_same_thread": False},
@@ -23,6 +25,7 @@ def build_engine(database_url: str | None = None):
     elif url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
     engine = create_engine(url, **kwargs)
+    engine.dialect._click_data_cipher = cipher
     if url.startswith("sqlite"):
         @event.listens_for(engine, "connect")
         def enable_sqlite_foreign_keys(dbapi_connection, _connection_record) -> None:

@@ -25,7 +25,7 @@ def values(snapshot):
             if type(value) in (int, float) and math.isfinite(value) and abs(value) <= 1_000_000}
 
 
-def produce(result, before, after, target_role="other", navigation_action=None):
+def produce(result, before, after, target_role="other", navigation_action=None, *, configuration=None):
     verification = result.verification_result
     replan = result.debug.get("replan_decision") or {}
     evidence = verification.evidence if verification else None
@@ -40,7 +40,7 @@ def produce(result, before, after, target_role="other", navigation_action=None):
     after_ms = after.last_snapshot.captured_at_ms if after and after.last_snapshot else None
     duration = after_ms - baseline_ms if type(baseline_ms) is int and type(after_ms) is int else None
     duration = duration if duration is not None and 0 <= duration <= 86_400_000 else None
-    return {"schema_version": SCHEMA, "state_id": result.current_state_id,
+    event = {"schema_version": SCHEMA, "state_id": result.current_state_id,
             "before_state_id": before.current_state_id if before else None,
             "attempt_hash": digest((before.pending_attempt or {}).get("attempt_id")) if before else None,
             "previous_guide_hash": digest(before.last_guide_command_id) if before else None,
@@ -60,3 +60,8 @@ def produce(result, before, after, target_role="other", navigation_action=None):
             "reason_code": reason if reason in REASONS else "other" if reason else None,
             "before_values": values(before.last_snapshot if before else None),
             "after_values": values(after.last_snapshot if after else None)}
+    from ai_agent.telemetry.jev_decisions import decision_evidence
+    decision = decision_evidence(result.debug, configuration)
+    if decision is not None:
+        event["jev_decision"] = decision
+    return event

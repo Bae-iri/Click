@@ -18,6 +18,8 @@ def main():
     if not raw:
         raise RuntimeError("DATABASE_URL is required for deployment")
     os.environ["DATABASE_URL"] = database_url(raw)
+    from app.core.data_encryption import DataCipher
+    DataCipher.from_environment()
     os.chdir(Path(__file__).resolve().parents[1])
     if "--migrate" in sys.argv:
         args = [sys.executable, "-m", "alembic", "upgrade", "head"]

@@ -12,3 +12,4 @@ __all__ = ["Account", "AuthSession", "KakaoIdentity", "AgentSession", "AgentChec
 from app.models.task_graph import ApprovedTaskGraph  # noqa: F401
 from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption  # noqa: F401
 from app.models.graph_release import GraphReleaseAudit  # noqa: F401
+from app.models.data_protection import DataProtectionState
