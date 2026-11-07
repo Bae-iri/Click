@@ -76,6 +76,8 @@ python scripts/agent2.py train-baseline --run ../AI-Agent/data/local/example.jso
 - event는 ai2-event.v1이며 session/episode/sequence·시각·고정 graph version/hash·구조적 runtime 증거를 포함합니다. 임의 텍스트 필드는 거절합니다.
 - manifest는 ai2-dataset.v1이며 dataset/source revision, episode/group, split, source_kind, review_status, reviewer/review_revision, evidence_refs, label/label_method를 포함합니다.
 - weak label이나 episode 결과 검수가 개별 단계의 독립 정답이 되지는 않습니다. 사용자 만족도 기술 성공과 분리합니다.
+- 같은 안내 ID로 대기를 관측해도 최초 안내의 상태·대상·기준 화면과 값은 보존합니다. 이후 관측은 앞뒤 해시가 연결될 때만 근거에 추가하며, 결과가 최초 화면이나 연결된 대기 화면을 참조하면 원래 기준과 비교합니다. 대기는 성공률의 시도 수에 포함하지 않습니다.
+- 분석 결과와 DB 재처리 키에는 `reconstruction_policy`를 기록합니다. 이전 정책의 저장 결과는 원본 이벤트가 남아 있고 동의·보존 조건을 충족하면 다음 `process` 실행에서 다시 계산합니다.
 - 같은 group 또는 세션을 train과 holdout에 나누지 않습니다. holdout은 후보 생성과 baseline fitting에 사용하지 않습니다.
 - 실제 신규 경로를 제안하려면 기기에서 그 행동의 결과를 확인해야 합니다. 다른 행동을 선택한 candidate에 과거 행동 이후 화면을 재사용하지 않습니다.
 
