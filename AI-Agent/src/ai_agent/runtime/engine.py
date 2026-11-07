@@ -342,6 +342,12 @@ class ClickAgentEngine:
                 and not (vision_analysis and vision_analysis.status == "masking_failed")):
             match_result, ui_selection = select_ui_target(match_result, normalized_nodes, graph,
                 self.ui_selector, excluded_target_keys=failed_target_keys, screen_bounds=screen_bounds)
+        if ui_selection.get("provider") == "jev" and ui_selection.get("called"):
+            # Retained guides and confirmation approval must keep the identity of
+            # the original provider call, rather than becoming new model decisions.
+            ui_selection.update(
+                decision_hash=sha256(f"{request.session_id}:{request.request_id}".encode()).hexdigest(),
+                screen_hash=current_snapshot.fingerprint)
         if (primary_decision and primary_decision.recovery_reason
                 and ui_selection.get("grounded_candidate_count", 0) > 0
                 and vision_analysis and vision_analysis.status == "not_requested"

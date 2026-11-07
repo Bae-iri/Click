@@ -3,6 +3,7 @@ from sqlalchemy import BigInteger, Boolean, CheckConstraint, Float, ForeignKey, 
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 from app.models.user import JSONType
+from app.core.data_encryption import EncryptedJSON
 
 
 class GraphProposal(Base):
@@ -12,8 +13,8 @@ class GraphProposal(Base):
     task_id: Mapped[str] = mapped_column(String(100))
     base_graph_version: Mapped[str] = mapped_column(String(50))
     proposal_type: Mapped[str] = mapped_column(String(50))
-    change: Mapped[dict] = mapped_column(JSONType)
-    evidence: Mapped[dict] = mapped_column(JSONType)
+    change: Mapped[dict] = mapped_column(EncryptedJSON("graph_proposals.change"))
+    evidence: Mapped[dict] = mapped_column(EncryptedJSON("graph_proposals.evidence"))
     proposal_confidence: Mapped[float] = mapped_column(Float)
     requires_human_review: Mapped[bool] = mapped_column(Boolean)
     created_at: Mapped[int] = mapped_column(BigInteger)
@@ -30,5 +31,5 @@ class EvaluationReport(Base):
     proposal_id: Mapped[str] = mapped_column(String(64), ForeignKey("graph_proposals.id", ondelete="CASCADE"))
     decision: Mapped[str] = mapped_column(String(20))
     has_regression: Mapped[bool] = mapped_column(Boolean)
-    failed_cases: Mapped[list] = mapped_column(JSONType)
+    failed_cases: Mapped[list] = mapped_column(EncryptedJSON("evaluation_reports.failed_cases"))
     created_at: Mapped[int] = mapped_column(BigInteger)

@@ -27,6 +27,8 @@ def paired(monkeypatch, tmp_path):
     settings = dotenv_values(instance / '.env')
     monkeypatch.setenv('CLICK_VALIDATION_ENVIRONMENT_ID', settings['CLICK_VALIDATION_ENVIRONMENT_ID'])
     monkeypatch.setenv('CLICK_VALIDATION_DIAGNOSTICS', '1')
+    monkeypatch.setenv('DATA_ENCRYPTION_KEYS', settings['DATA_ENCRYPTION_KEYS'])
+    monkeypatch.setenv('DATA_LOOKUP_KEY', settings['DATA_LOOKUP_KEY'])
     app = create_app(settings['DATABASE_URL'])
     return app, instance
 
@@ -47,7 +49,7 @@ def test_prepare_uses_isolated_migrated_db_and_only_current_approved_graphs(pair
         assert {g['task_id'] for g in response.json()['approved_graphs']} == {
             'MVP-01', 'MVP-02', 'SET-brightness-increase', 'SET-brightness-decrease',
             'SET-volume-increase', 'SET-volume-decrease'}
-        assert response.json()['database_migrations'] == ['20261104_17']
+        assert response.json()['database_migrations'] == ['20261107_18']
         assert '/validation/environment' not in client.get('/openapi.json').json()['paths']
     assert (instance / 'validation.db').is_file()
     assert 'PRIVATE_API_KEY' not in response.text + capsys.readouterr().out

@@ -3,6 +3,7 @@ from sqlalchemy import BigInteger, ForeignKey, Integer, String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 from app.models.user import JSONType
+from app.core.data_encryption import EncryptedJSON
 
 
 class SafetyConfirmation(Base):
@@ -12,7 +13,7 @@ class SafetyConfirmation(Base):
     version: Mapped[int] = mapped_column(Integer)
     expires_at: Mapped[int] = mapped_column(BigInteger)
     screen_hash: Mapped[str] = mapped_column(String(64))
-    command: Mapped[dict] = mapped_column(JSONType)
+    command: Mapped[dict] = mapped_column(EncryptedJSON("safety_confirmations.command"))
 
 
 class TaskFeedback(Base):

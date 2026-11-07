@@ -57,23 +57,28 @@ def reconstruct(events, *, now):
                     and before in guide_observations[previous_guide_hash]
                     and previous_guide.get("after_observation_hash") != after
                     and previous_guide.get("target", {}).get("node_hash") == runtime.get("attempt_target_hash"))
-                if label["label"] in {"verified_success", "verified_failure"} and not correlated:
+                duplicate = bool(attempt and attempt in attempts)
+                if label["label"] in {"verified_success", "verified_failure"} and not correlated and not duplicate:
                     label = {**label, "label": "unknown", "reason_code": "missing_linked_evidence"}
                     issues.append("missing_linked_evidence")
-                if attempt and attempt in attempts:
+                if duplicate:
                     label = {**label, "label": "duplicate_attempt"}
-                elif runtime.get("count_attempt") and attempt:
+                elif label["label"] in {"verified_success", "verified_failure"} and attempt:
                     attempts.add(attempt)
                 target = (previous_guide or {}).get("target", {})
                 # A step compares the original guide's screen with its result.
                 # Polling observations prove continuity without replacing that baseline.
                 baseline = previous_guide if correlated else None
+                selection = (baseline or {}).get("jev_decision", {})
                 steps.append({"event_id": event["event_id"], "sequence": event["sequence"],
                     "state_id": (previous_guide or {}).get("state_id"),
                     "transition_id": target.get("transition_id"), "attempt_hash": attempt,
                     "before_observation_hash": baseline["after_observation_hash"] if baseline else before,
                     "after_observation_hash": after,
                     "label": label["label"], "reason_code": label.get("reason_code"),
+                    "decision_hash": selection.get("decision_hash"),
+                    "model_target_executed": (target.get("node_hash") == selection["chosen_target_hash"]
+                                              if selection.get("chosen_target_hash") else None),
                     "duration_ms": runtime.get("duration_ms"),
                     "task_completed": bool(runtime.get("task_completed")),
                     "before_values": baseline.get("after_values", {}) if baseline else runtime.get("before_values", {}),
