@@ -116,7 +116,7 @@ public final class SettingsScreenPrivacy {
             else if ("radio_button".equals(role) || "radio".equals(role)) safe.put("class_name", "android.widget.RadioButton");
             else if ("button".equals(role)) safe.put("class_name", "android.widget.Button");
             else if ("list".equals(role)) safe.put("class_name", "android.widget.ListView");
-            safe.put("clickable", !sensitive && !description && node.optBoolean("clickable"))
+            safe.put("clickable", !sensitive && !description && !soundModeChoice(node,byId) && node.optBoolean("clickable"))
                     .put("enabled", !sensitive && !description && node.optBoolean("enabled", true));
             JSONObject numeric = new JSONObject();
             if (!sensitive && !description && extras != null) {
@@ -190,6 +190,15 @@ public final class SettingsScreenPrivacy {
     private String approved(String value, String pkg) {
         String text = vocabulary.exportSettingsLabel(value);
         return launchers.contains(pkg) && !"설정".equals(text) && !"settings".equals(text) ? null : text;
+    }
+
+    private static boolean soundModeChoice(JSONObject node,Map<String,JSONObject> byId) {
+        Set<String> seen=new HashSet<>();
+        for(JSONObject current=node;current!=null && seen.add(current.optString("node_id"));
+                current=byId.get(current.optString("parent_id"))) {
+            if(SettingsControlResources.soundModeChoice(current.optString("resource_id",null)))return true;
+        }
+        return false;
     }
 
     private static boolean independent(JSONObject node, Map<String, JSONObject> byId) {

@@ -82,8 +82,17 @@ def main():
     report['test_apk_sha256_before'] = before_test_apk
     report['test_apk_sha256_after'] = installed_app_hash(adb,'com.click.test')
     report['app_build_stable'] = before_apk == report['app_apk_sha256_after'] and before_test_apk == report['test_apk_sha256_after']
+    try:
+        after = httpx.get(args.base_url.rstrip('/')+'/version',timeout=25)
+        after.raise_for_status()
+        body = after.json()
+        report['server_build_after'] = body
+        report['server_build_stable'] = (body.get('source_sha256') == build.get('source_sha256')
+            and body.get('runtime_configuration') == build.get('runtime_configuration'))
+    except (httpx.HTTPError,ValueError):
+        report['server_build_stable'] = False
     report['instrumentation_ok'] = 'OK (1 test)' in result.stdout and result.returncode == 0
-    report['passed'] = bool(report.get('passed')) and report['instrumentation_ok'] and report['app_build_stable']
+    report['passed'] = bool(report.get('passed')) and report['instrumentation_ok'] and report['app_build_stable'] and report['server_build_stable']
     args.report.parent.mkdir(parents=True,exist_ok=True)
     args.report.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps({'passed':report.get('passed',False),'report':str(args.report)},ensure_ascii=False))
