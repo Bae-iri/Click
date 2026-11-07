@@ -43,6 +43,25 @@ def begin(setting, direction='increase', value=40, extra_slider=False):
     return flow, body
 
 
+def test_normalized_high_resolution_brightness_reaches_result_with_device_evidence():
+    def samsung(value, applied, at):
+        tree = control('brightness', value=value / 255, applied=applied, at=at)
+        tree['nodes'][1]['extras']['max'] = 1
+        return tree
+
+    flow = Flow()
+    first = start_native(flow, 'brightness', samsung(149, 149, 1000))
+    assert first['task_status'] == 'WAITING_CONFIRMATION'
+    accepted = flow.send('respond_confirmation', user_confirmation='accepted',
+        confirmation_id=first['metadata']['confirmation']['id'],
+        accessibility_tree=samsung(149, 149, 1100))
+    assert accepted['guide_command']['action_type'] == 'drag'
+    result = flow.send('observe', accessibility_tree=samsung(174, 174, 1800), user_action_event=flow.event())
+    assert result['task_status'] == 'WAITING_RESULT'
+    assert result['metadata']['task_outcome']['technical']['status'] == 'CHANGED'
+    assert result['metadata']['result_prompt']
+
+
 @pytest.mark.parametrize('setting', ['brightness', 'volume'])
 @pytest.mark.parametrize('direction', ['increase', 'decrease'])
 def test_expanded_task_is_verified_and_followup_keeps_same_setting(setting, direction):

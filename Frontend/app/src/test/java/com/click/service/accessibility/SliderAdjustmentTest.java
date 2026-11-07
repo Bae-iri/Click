@@ -36,4 +36,16 @@ public class SliderAdjustmentTest {
   assertNotNull(points);assertTrue(points[2]>points[0]);
   assertNull(SliderAdjustment.dragPoints(new int[]{0,0,50,500},2,3,0,7));
  }
+ @Test public void samsungMediaTicksMapToOneActualVolumeLevelInBothDirections() {
+  assertEquals(700f,SliderAdjustment.nextMediaValue(600,0,1500,1,6,0,15),0f);
+  assertEquals(500f,SliderAdjustment.nextMediaValue(600,0,1500,-1,6,0,15),0f);
+  assertEquals(5f,SliderAdjustment.nextMediaValue(6,0,15,-1,6,0,15),0f);
+  assertEquals(500f,SliderAdjustment.nextMediaValue(585,0,1500,-1,6,0,15),0f);
+ }
+ @Test public void mediaMappingRejectsWrongStreamRangeOrLimits() {
+  assertTrue(Float.isNaN(SliderAdjustment.nextMediaValue(300,0,1500,-1,6,0,15)));
+  assertTrue(Float.isNaN(SliderAdjustment.nextMediaValue(0,0,1500,-1,0,0,15)));
+  assertTrue(Float.isNaN(SliderAdjustment.nextMediaValue(1500,0,1500,1,15,0,15)));
+  assertTrue(Float.isNaN(SliderAdjustment.nextMediaValue(600,0,1500,1,6,0,0)));
+ }
 }

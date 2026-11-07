@@ -31,6 +31,30 @@ public class SettingsScreenPrivacyTest {
                 new JSONObject().put("package_name", "com.android.settings").put("nodes", values));
     }
 
+    @Test public void highResolutionSamsungBrightnessSurvivesPrivacyAsAStableRatio() throws Exception {
+        AccessibilityNodeSnapshot slider = new AccessibilityNodeSnapshot("brightness", "title", true,
+                "com.android.settings", null, "156237824", "com.android.settings:id/brightness_seekbar",
+                "android.widget.SeekBar", "slider", new int[]{158, 1218, 1012, 1308},
+                false, true, false, false, false, 156237824f, 7, false, 0f, 267386880f);
+        JSONObject exported = privacy.filter(request(node("title", "디스플레이"), slider.toJson()));
+        JSONObject result = exported.getJSONObject("accessibility_tree").getJSONArray("nodes").getJSONObject(1);
+        JSONObject range = result.getJSONObject("extras");
+        assertEquals(3, range.length());
+        assertEquals(0, range.getInt("min")); assertEquals(1, range.getInt("max"));
+        assertEquals(149d / 255d, range.getDouble("progress"), .000001);
+        assertTrue(result.isNull("content_description"));
+        assertEquals(156237824f, slider.progress, 0f);
+        assertEquals(267386880f, slider.rangeMax, 0f);
+        AccessibilityNodeSnapshot changed = new AccessibilityNodeSnapshot("brightness", "title", true,
+                "com.android.settings", null, null, "com.android.settings:id/brightness_seekbar",
+                "android.widget.SeekBar", "slider", new int[]{158, 1218, 1012, 1308},
+                false, true, false, false, false, 182976512f, 7, false, 0f, 267386880f);
+        JSONObject next = changed.toJson().getJSONObject("extras");
+        assertEquals(range.getDouble("min"), next.getDouble("min"), 0);
+        assertEquals(range.getDouble("max"), next.getDouble("max"), 0);
+        assertTrue(next.getDouble("progress") > range.getDouble("progress"));
+    }
+
     @Test public void dropsAccountNamesEmailsNotificationsAndSummariesFromActualJson() throws Exception {
         JSONObject input = request(node("title", "설정"), node("name", "김민수"),
                 node("email", "owner@example.com"), node("alert", "친구에게서 새 메시지가 왔습니다"),
