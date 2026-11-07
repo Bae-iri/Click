@@ -18,9 +18,6 @@ public final class TouchAutomationPolicy {
             "Sound & vibration", "Sound and vibration", "Sound", "Volume", "Brightness");
     private static final String[] RISKY = {"결제", "구매", "송금", "전화 걸기", "메시지 보내기", "초기화", "삭제",
             "비밀번호", "payment", "purchase", "send message", "make call", "reset", "delete", "password"};
-    private static final Set<String> SOUND_MODE_CHOICES = Set.of(
-            "com.android.settings:id/low_button", "com.android.settings:id/mid_button",
-            "com.android.settings:id/high_button");
     private TouchAutomationPolicy() {}
 
     private static boolean settingValueControl(ScreenSnapshot screen,AccessibilityNodeSnapshot node) {
@@ -33,7 +30,7 @@ public final class TouchAutomationPolicy {
                     || Set.of("slider","toggle","switch","radio","radio_button","checkbox","text_field","text_input").contains(role)
                     || type.contains("seekbar") || type.contains("switch") || type.contains("radio")
                     || type.contains("checkbox") || type.contains("edittext")
-                    || current.resourceId!=null && SOUND_MODE_CHOICES.contains(current.resourceId))return true;
+                    || com.click.data.snapshot.SettingsControlResources.soundModeChoice(current.resourceId))return true;
         }
         return false;
     }
