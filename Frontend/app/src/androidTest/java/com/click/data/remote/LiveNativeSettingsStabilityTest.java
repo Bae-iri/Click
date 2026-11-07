@@ -76,6 +76,10 @@ public class LiveNativeSettingsStabilityTest {
         assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("liveSettingsStability")));
         report.put("run_id",InstrumentationRegistry.getArguments().getString("validationRunId"));save();
         automation=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+        android.accessibilityservice.AccessibilityServiceInfo testInfo=automation.getServiceInfo();
+        testInfo.flags |= android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+                | android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;
+        automation.setServiceInfo(testInfo);
         assertFalse("Unlock the device before validation",app.getSystemService(KeyguardManager.class).isDeviceLocked());
         String originalServices=Settings.Secure.getString(app.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
         int originalEnabled=Settings.Secure.getInt(app.getContentResolver(),Settings.Secure.ACCESSIBILITY_ENABLED,0);
@@ -99,6 +103,9 @@ public class LiveNativeSettingsStabilityTest {
             String expected=InstrumentationRegistry.getArguments().getString("expectedSourceSha256");
             assertNotNull("Supply the tested release source SHA256",expected);
             assertEquals("The server must run the exact tested backend/AI sources",expected,version.getString("source_sha256"));
+            report.put("stage","authentication");save();
+            http.get("/api/v1/users/me"); // Discard the private response; never include it in diagnostics.
+            report.put("authentication","ready");
             automation.adoptShellPermissionIdentity("android.permission.WRITE_SECURE_SETTINGS");
             ComponentName component=new ComponentName(app,ClickAccessibilityService.class);
             List<String> enabled=new ArrayList<>();
@@ -114,9 +121,10 @@ public class LiveNativeSettingsStabilityTest {
             JSONObject catalog;
             try(InputStream in=app.getAssets().open("mvp_goals.json")){catalog=new JSONObject(new String(in.readAllBytes(),StandardCharsets.UTF_8));}
             for(String setting:List.of("font_size","brightness","volume"))for(String direction:List.of("increase","decrease")) {
+                report.put("stage","native_start:"+setting+"."+direction);
                 restoreValues();
                 if(setting.equals("brightness"))shell("settings put system screen_brightness_mode 0");
-                app.startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                app.startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
                 SystemClock.sleep(1200);
                 // Start on Settings home with its first route row visible, not on a pre-opened control page.
                 String firstRow=setting.equals("volume")?"소리 및 진동":"디스플레이";
@@ -152,6 +160,7 @@ public class LiveNativeSettingsStabilityTest {
                             }
                         }
                         if(event!=null){request.put("user_action_event",event);event=null;}
+                        report.put("stage","agent_turn:"+setting+"."+direction);save();
                         last=new JSONObject(http.post(AgentTurnContract.PATH,privacy.filter(request).toString()).body);
                         JSONObject guide=last.getJSONObject("guide_command"),metadata=last.getJSONObject("metadata");
                         JSONObject outcome=metadata.optJSONObject("task_outcome");
@@ -207,7 +216,14 @@ public class LiveNativeSettingsStabilityTest {
                 }
             }
             report.put("passed",true);
-        } catch(Throwable failure) { report.put("error_type",failure.getClass().getSimpleName());throw failure; }
+        } catch(Throwable failure) {
+            report.put("error_type",failure.getClass().getSimpleName());
+            // Only fixed non-sensitive error codes may leave the device.
+            if("AUTH_REQUIRED".equals(failure.getMessage()))report.put("error_code","AUTH_REQUIRED");
+            if(failure instanceof SettingsScreenPrivacy.Blocked)report.put("error_code","SCREEN_PRIVACY_BLOCKED");
+            if(failure instanceof SettingsScreenPrivacy.Incomplete)report.put("error_code","SCREEN_OBSERVATION_INCOMPLETE");
+            throw failure;
+        }
         finally {
             restoreValues();touch.setEnabled(originalTouch);
             automation.adoptShellPermissionIdentity("android.permission.WRITE_SECURE_SETTINGS");
