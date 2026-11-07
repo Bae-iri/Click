@@ -199,4 +199,20 @@ public class SettingsScreenPrivacyTest {
         assertFalse(safe.toString().contains("글자 크기"));
         assertFalse(safe.toString().contains("account_name"));
     }
+    @Test public void soundModesRemainContextAndNeverBecomeClickableNavigationCandidates() throws Exception {
+        for(String resource:new String[]{"low_button","mid_button","high_button"}) {
+            JSONObject mode=node("mode",null).put("resource_id","com.android.settings:id/"+resource)
+                    .put("class_name","android.widget.LinearLayout").put("role","menu_item").put("clickable",true);
+            JSONObject title=node("mode-label","소리").put("parent_id","mode").put("clickable",true);
+            JSONObject menu=node("volume-menu","음량").put("role","menu_item").put("clickable",true);
+            JSONArray safe=privacy.filter(request(node("title","소리 및 진동"),mode,title,menu))
+                    .getJSONObject("accessibility_tree").getJSONArray("nodes");
+            for(int n=0;n<safe.length();n++) {
+                JSONObject value=safe.getJSONObject(n);String id=value.getString("node_id");
+                if(id.equals("mode") || id.equals("mode-label"))assertFalse(value.getBoolean("clickable"));
+                if(id.equals("mode-label"))assertEquals("소리",value.getString("text"));
+                if(id.equals("volume-menu"))assertTrue(value.getBoolean("clickable"));
+            }
+        }
+    }
 }
