@@ -48,10 +48,9 @@ class JevScreenResolver(JevGoalClassifier):
                         or transition.safety_level == SafetyLevel.BLOCKED):
                     continue
                 for node in eligible_nodes(transition, nodes, graph):
-                    # A font-menu row on Display does not name its brightness
-                    # slider. Require reviewed target identity or independent
-                    # page context before offering a setting-changing control.
-                    if (setting == 'font_size' and transition.target_role == 'slider'
+                    # Model confidence cannot identify a setting by itself.
+                    # All adjustment tasks require graph-owned control evidence.
+                    if (transition.target_role == 'slider'
                             and selector_evidence(node, transition, nodes, graph)[0] < MATCH_THRESHOLD):
                         continue
                     # An approved menu identity cannot stand for a different
@@ -76,6 +75,12 @@ class JevScreenResolver(JevGoalClassifier):
             bindings = {key: (t, n) for key, (t, n) in bindings.items()
                         if n.node_id not in identified
                         or selector_evidence(n, t, nodes, graph)[0] >= MATCH_THRESHOLD}
+            # Two native controls with the same reviewed identity are ambiguous;
+            # model confidence cannot turn one into the uniquely intended target.
+            from collections import Counter
+            identities = Counter((t.transition_id, target_key(n)) for t,n in bindings.values())
+            bindings = {key:(t,n) for key,(t,n) in bindings.items()
+                        if identities[t.transition_id,target_key(n)] == 1}
             if not bindings or len(bindings) > 250:
                 self.last_diagnostics["status"] = "no_candidates" if not bindings else "candidate_limit"
                 return None

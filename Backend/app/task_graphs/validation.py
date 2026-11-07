@@ -59,6 +59,15 @@ def load_graph(body, *, executable=True):
                 raise ValueError("Setting mutation requires confirmation")
         if transition.requires_user_action and not transition.target_keywords:
             raise ValueError("Action has no target keywords")
+        if executable and transition.target_role == 'slider':
+            direction = definition.required_slots.get('direction')
+            expected = {'increase': 'target_value_increased', 'decrease': 'target_value_decreased'}.get(direction)
+            if expected is not None and (transition.action_type != ActionType.DRAG or transition.verification_predicate != expected
+                    or transition.safety_level != SafetyLevel.CONFIRM_REQUIRED):
+                raise ValueError('Slider requires directional device verification and confirmation')
+            if definition.required_slots.get('setting') == 'volume':
+                if transition.selector.allow_unlabelled_in_context:
+                    raise ValueError('Media volume requires an identified channel control')
     reachable = set(definition.start_states)
     for _ in graph.states:
         reachable.update(t.to_state for t in graph.transitions if t.from_state in reachable)

@@ -103,6 +103,8 @@ dependencies {
 
 // Replay the service's serialized requests against the backend in CI.
 tasks.withType(Test).configureEach {
+    maxHeapSize = "1536m"
+    forkEvery = 10
     def contractOutput = layout.buildDirectory.dir("contract/${name}")
     systemProperty "click.contractOutput", contractOutput.get().asFile.absolutePath
     outputs.dir(contractOutput)

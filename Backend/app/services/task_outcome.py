@@ -28,7 +28,7 @@ def make_outcome(technical, now, direction="increase", *, previous=None, setting
         question = '화면이 보기 편한가요?' if setting == 'brightness' else '동영상·음악 소리가 듣기 편한가요?'
     return {"setting": setting, "technical": technical, "user": {"status": None, "confirmed_at": None},
         "final": None, "prompt": {"id": str(uuid4()), "expires_at": now + 180,
-        "message": message + " " + question},
+        "message": message + " " + question, "technical_status": technical["status"]},
         "checklist": deepcopy((previous or {}).get("checklist", []))}
 
 

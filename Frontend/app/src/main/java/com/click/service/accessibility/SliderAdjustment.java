@@ -10,7 +10,10 @@ public final class SliderAdjustment {
     /** Discrete Android range indices move by one. Continuous ranges move by a bounded tenth. */
     public static float nextValue(float current, float min, float max, int direction, boolean integerRange) {
         if (!canMove(current, min, max, direction)) return Float.NaN;
-        float step = integerRange ? 1f : (max - min) / 10f;
+        // Samsung brightness exposes millions of integer ticks. One tick may
+        // not change the persisted setting at all; use a bounded 1% step there.
+        float step = integerRange ? (max-min > 1000 ? Math.max(1f, Math.round((max-min)/100f)) : 1f)
+                                  : (max - min) / 10f;
         return Math.max(min, Math.min(max, current + direction * step));
     }
     /** A bounded horizontal drag within the freshly verified slider; never a guessed screen point. */

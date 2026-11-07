@@ -58,6 +58,10 @@ def test_registered_graph_is_deduplicated_selected_and_forwarded(monkeypatch, go
     # Synthetic graph only; no production brightness or dark mode graph or runtime changes.
     graph = replace(MVP_01_TASK_GRAPH, definition=replace(MVP_01_TASK_GRAPH.definition,
         task_id="TEST-DISPLAY-TOGGLE", goal_type=goal_type, required_slots=slots))
+    # Dispatch fixtures must still satisfy executable slider invariants.
+    if slots.get("direction") == "decrease":
+        graph = replace(graph, transitions=tuple(replace(t, verification_predicate="target_value_decreased")
+            if t.target_role == "slider" else t for t in graph.transitions))
     monkeypatch.setattr(task_graphs, "releases", lambda: [
         ({"version": "1.0.0", "approved": True, "priority": 100}, graph)])
     app = create_app()

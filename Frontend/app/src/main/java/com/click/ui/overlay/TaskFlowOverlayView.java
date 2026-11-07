@@ -969,19 +969,20 @@ public final class TaskFlowOverlayView extends LinearLayout {
         clear(question);
         addOutcomeMessage(resultDetails(prompt, question));
         narrationMessage = resultNarration(prompt, fontSize);
-        content.addView(primaryButton(fontSize ? "네, 글씨가 잘 보여요" : "네, 좋아요",
+        boolean verified = "CHANGED".equals(prompt.optString("technical_status"));
+        content.addView(primaryButton(!verified ? "네, 원하는 상태예요" : fontSize ? "네, 글씨가 잘 보여요" : "네, 좋아요",
                 () -> listener.result("satisfied")), spaced(12));
         content.addView(secondaryButton(fontSize ? "더 커졌으면 좋겠어" : "조금 더 도와주세요",
                 () -> listener.result("needs_help")), spaced(8));
     }
 
     private static String resultMessage(JSONObject prompt) {
-        return prompt.optString("message").replace("변경 결과를 확인하지 못했어요.", "")
-                .replace("변경 결과를 확인하지 못했어요", "")
-                .replace("원하시는 대로 되었나요?", "").trim();
+        return prompt.optString("message").trim();
     }
 
     private static String resultQuestion(JSONObject prompt, boolean fontSize) {
+        if (prompt.has("technical_status") && !"CHANGED".equals(prompt.optString("technical_status")))
+            return "현재 설정이 원하시는 상태인가요?";
         if (fontSize) return "이제 글자가 보기 편한가요?";
         String[] sentences = resultMessage(prompt).split("(?<=[.!?])\\s+");
         for (int i = sentences.length - 1; i >= 0; i--)
@@ -990,7 +991,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     private static String resultDetails(JSONObject prompt, String question) {
-        return resultMessage(prompt).replace(question, "").trim();
+        String message = resultMessage(prompt);
+        int start = message.lastIndexOf(". ");
+        if (message.endsWith("?") && start >= 0) return message.substring(0, start + 1).trim();
+        return message.replace(question, "").trim();
     }
 
     public static String resultNarration(JSONObject prompt, boolean fontSize) {
@@ -1011,8 +1015,13 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     /** Report the user outcome separately from internal execution evidence. */
     public void completed(String message, Runnable onExit) {
-        clear("클릭과 함께 해냈어요!");
-        narrationMessage = "클릭과 함께 해냈어요!";
+        completed(message, false, onExit);
+    }
+    public void completed(String message, boolean verifiedChange, Runnable onExit) {
+        String title = verifiedChange ? "변경을 확인했어요." : "요청을 마쳤어요.";
+        clear(title);
+        narrationMessage = title + (message == null || message.isBlank() ? "" : " " + message);
+        if (message != null && !message.isBlank()) addOutcomeMessage(message);
         controls.setVisibility(GONE);
         divider.setVisibility(GONE);
         ImageView artwork = new com.click.designpreview.ClueArtworkView(getContext());

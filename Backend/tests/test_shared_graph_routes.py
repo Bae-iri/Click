@@ -136,7 +136,8 @@ def test_actual_runtime_events_link_verified_slider_action_to_original_guide(set
         return {'media_volume_source':'android.media.AudioManager.STREAM_MUSIC','media_volume':value}
     with patch.dict(os.environ, {'TYPESAFE_API_KEY':'test-only-key','JEV_MODEL':'jev-1.14.0'}):
         engine = ClickAgentEngine(task_graphs={goal.task_id:graph}, screen_resolver=JevScreenResolver(sender_for(transition)))
-        observed = AccessibilityNode(node_id=node.node_id, role='slider', class_name='android.widget.SeekBar',
+        observed = AccessibilityNode(node_id=node.node_id, text='미디어' if setting == 'volume' else None,
+            role='slider', class_name='android.widget.SeekBar',
             package_name=node.package_name, bounds_in_screen=node.bounds, extras={'value':3,'min':0,'max':10})
         title = AccessibilityNode(node_id='page-title', package_name=node.package_name,
             text={'font_size': '글자 크기', 'brightness': '밝기', 'volume': '음량'}[setting],

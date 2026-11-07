@@ -25,6 +25,7 @@ final class AdjustmentResultCheck {
                     && screen.activeWindowId != null && node.windowId == screen.activeWindowId
                     && Objects.equals(node.packageName, screen.packageName)
                     && "slider".equals(node.role) && Objects.equals(node.nodeId, guide.targetNodeId)
+                    && com.click.service.accessibility.SettingsSliderTarget.matches(screen, node, task.setting)
                     && java.util.Arrays.equals(node.bounds, guide.targetBounds))) return;
         long time = time(screen);
         if (time <= 0) return;

@@ -13,6 +13,8 @@ public final class SliderResultEvidence {
         if (before == null || after == null || original == null || !after.privacyMaskingReady
                 || !Objects.equals(before.packageName, after.packageName)
                 || after.activeWindowId == null || !valid(original)) return false;
+        String setting = SettingsSliderTarget.identify(before, original);
+        if (setting == null) return false;
         try {
             if (java.time.Instant.parse(after.capturedAt).toEpochMilli() <= actionAt) return false;
         } catch (RuntimeException invalidTime) { return false; }
@@ -29,6 +31,7 @@ public final class SliderResultEvidence {
                         && java.util.Arrays.equals(original.bounds, node.bounds);
             if (!identity || node.windowId != after.activeWindowId || !Objects.equals(node.packageName, original.packageName)
                     || !Objects.equals(node.className, original.className) || !valid(node)
+                    || !SettingsSliderTarget.matches(after, node, setting)
                     || !Objects.equals(original.rangeMin, node.rangeMin) || !Objects.equals(original.rangeMax, node.rangeMax)) continue;
             if (found != null) return false;
             found = node;

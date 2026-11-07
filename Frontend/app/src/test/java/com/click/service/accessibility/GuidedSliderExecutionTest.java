@@ -38,12 +38,12 @@ public class GuidedSliderExecutionTest {
   doReturn(root).when(service).getRootInActiveWindow();when(root.getChild(1)).thenReturn(node);
   when(node.getPackageName()).thenReturn("com.android.settings");
   when(node.getClassName()).thenReturn("android.widget.SeekBar");
-  when(node.getViewIdResourceName()).thenReturn("font_size");
+  when(node.getViewIdResourceName()).thenReturn("com.android.settings:id/font_size");
   when(node.getWindowId()).thenReturn(5);when(node.isEnabled()).thenReturn(true);when(node.isVisibleToUser()).thenReturn(true);
   doAnswer(i->{ ((Rect)i.getArgument(0)).set(0,100,500,200);return null; }).when(node).getBoundsInScreen(any());
   when(node.getRangeInfo()).thenReturn(AccessibilityNodeInfo.RangeInfo.obtain(0,0,7,2));
   when(node.getActionList()).thenReturn(Arrays.asList(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD));
-  AccessibilityNodeSnapshot target=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,"font_size","android.widget.SeekBar","slider",bounds,false,true,false,false,false,2f,5,false,0f,7f);
+  AccessibilityNodeSnapshot target=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,"com.android.settings:id/font_size","android.widget.SeekBar","slider",bounds,false,true,false,false,false,2f,5,false,0f,7f);
   screen=new ScreenSnapshot("com.android.settings","2026-10-28T00:00:00Z",1080,2400,Arrays.asList(target),5);
   calls=mockStatic(ClickAccessibilityService.class,CALLS_REAL_METHODS);
   calls.when(ClickAccessibilityService::freshSnapshot).thenAnswer(i -> screen);
@@ -115,7 +115,7 @@ public class GuidedSliderExecutionTest {
   verify(node,never()).performAction(anyInt());
  }
  @Test public void customSliderWithOnlySetProgressActuallyReceivesNextValue() {
-  AccessibilityNodeSnapshot n=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,"font_size","android.widget.SemSeekBar","slider",bounds,false,true,false,false,false,2f,5,false,0f,7f);
+  AccessibilityNodeSnapshot n=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,"com.android.settings:id/font_size","android.widget.SemSeekBar","slider",bounds,false,true,false,false,false,2f,5,false,0f,7f);
   screen=new ScreenSnapshot("com.android.settings","2026-10-28T00:00:00Z",1080,2400,Arrays.asList(n),5);
   when(node.getClassName()).thenReturn("android.widget.SemSeekBar");
   when(node.getActionList()).thenReturn(Arrays.asList(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS));
@@ -144,10 +144,10 @@ public class GuidedSliderExecutionTest {
    assertTrue(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,1));
    org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));
    overlay.verifyNoInteractions();
-   AccessibilityNodeSnapshot changed=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,"font_size","android.widget.SeekBar","slider",bounds,false,true,false,false,false,3f,5,false,0f,7f);
+   AccessibilityNodeSnapshot changed=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,"com.android.settings:id/font_size","android.widget.SeekBar","slider",bounds,false,true,false,false,false,3f,5,false,0f,7f);
    screen=new ScreenSnapshot("com.android.settings",java.time.Instant.now().toString(),1080,2400,Arrays.asList(changed),5);
    org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(600));
-   overlay.verify(()->com.click.service.overlay.ClickOverlayService.onVerifiedAutomaticAction(eq("drag_completed"),eq("com.android.settings"),eq(5),eq("node_0_1"),eq("font_size"),any(),anyLong()));
+   overlay.verify(()->com.click.service.overlay.ClickOverlayService.onVerifiedAutomaticAction(eq("drag_completed"),eq("com.android.settings"),eq(5),eq("node_0_1"),eq("com.android.settings:id/font_size"),any(),anyLong()));
   }
  }
 }

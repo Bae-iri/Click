@@ -104,6 +104,9 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
     else:
         scope = f"{match.state_id}:{match.transition_id}:{'verification' if waiting_result else 'navigation'}"
     old = dict(session.recovery_state) if session else {}
+    if selection_failure and old.get('waiting_for_user') and not user_retry:
+        return plan(old.get("decision", "wait"), old.get("reason_code", reason),
+                    old.get("next_action", "user_assistance"), "user", old)
     if old.get("scope") != scope or user_retry:
         old = {}
     if old.get("waiting_for_user"):

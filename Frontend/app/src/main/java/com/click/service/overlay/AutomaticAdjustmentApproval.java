@@ -42,6 +42,7 @@ public final class AutomaticAdjustmentApproval {
                     && !node.checkable && screen.activeWindowId != null && node.windowId == screen.activeWindowId
                     && java.util.Objects.equals(node.packageName, screen.packageName)
                     && Arrays.equals(command.targetBounds, node.bounds)
+                    && com.click.service.accessibility.SettingsSliderTarget.matches(screen, node, slots.optString("setting"))
                     && node.progress != null && node.rangeMin != null && node.rangeMax != null
                     && ("slider".equals(node.role) || node.className != null
                         && node.className.toLowerCase(java.util.Locale.ROOT).contains("seekbar"))

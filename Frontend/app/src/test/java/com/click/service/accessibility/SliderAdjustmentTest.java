@@ -2,6 +2,13 @@ package com.click.service.accessibility;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public class SliderAdjustmentTest {
+ @Test public void largeSamsungBrightnessRangeUsesASmallEffectiveStep() {
+  float before=58720256f,max=67108864f;
+  float after=SliderAdjustment.nextValue(before,0,max,1,true);
+  assertTrue(after-before>=max*.009f);
+  assertTrue(after-before<=max*.011f);
+  assertEquals(max,SliderAdjustment.nextValue(Math.nextDown(max),0,max,1,true),0f);
+ }
  @Test public void allowsOneDirectionWithinRange() {
   assertTrue(SliderAdjustment.canMove(2,0,7,1));
   assertTrue(SliderAdjustment.canMove(2,0,7,-1));
