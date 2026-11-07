@@ -49,6 +49,9 @@ public final class SettingsScreenPrivacy {
     }
 
     public JSONObject filter(JSONObject request) throws JSONException, Blocked, Incomplete {
+        return filter(request,null);
+    }
+    public JSONObject filter(JSONObject request,String setting) throws JSONException, Blocked, Incomplete {
         JSONObject result = new JSONObject(request.toString());
         JSONObject tree = result.optJSONObject("accessibility_tree");
         JSONObject vision = result.optJSONObject("vision_snapshot");
@@ -80,6 +83,7 @@ public final class SettingsScreenPrivacy {
             if (independent(node, byId) && (blockedTitles.contains(normalize(node.optString("text")))
                     || blockedTitles.contains(normalize(node.optString("content_description")))))
                 throw new Blocked(Blocked.Reason.SENSITIVE_SCREEN);
+            if(otherSettingControl(node,byId,setting))continue;
             String resource = node.optString("resource_id");
             String resourceName = resource.substring(resource.lastIndexOf('/') + 1);
             boolean description = descriptions.contains(resourceName);
@@ -190,6 +194,17 @@ public final class SettingsScreenPrivacy {
     private String approved(String value, String pkg) {
         String text = vocabulary.exportSettingsLabel(value);
         return launchers.contains(pkg) && !"설정".equals(text) && !"settings".equals(text) ? null : text;
+    }
+
+    private static boolean otherSettingControl(JSONObject node,Map<String,JSONObject> byId,String setting) {
+        if(setting==null || !Set.of("font_size","brightness","volume").contains(setting))return false;
+        Set<String> seen=new HashSet<>();
+        for(JSONObject current=node;current!=null && seen.add(current.optString("node_id"));
+                current=byId.get(current.optString("parent_id"))) {
+            String identity=SettingsControlResources.sliderSetting(current.optString("resource_id",null));
+            if(identity!=null && !identity.equals(setting))return true;
+        }
+        return false;
     }
 
     private static boolean soundModeChoice(JSONObject node,Map<String,JSONObject> byId) {

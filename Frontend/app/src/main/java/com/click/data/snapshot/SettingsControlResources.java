@@ -10,4 +10,10 @@ public final class SettingsControlResources {
     public static boolean soundModeChoice(String resourceId) {
         return resourceId!=null && SOUND_MODES.contains(resourceId);
     }
+    public static String sliderSetting(String resourceId) {
+        if("com.android.settings:id/brightness_seekbar".equals(resourceId))return "brightness";
+        if("com.android.settings:id/seekBarForFontSize".equals(resourceId)
+                || "com.android.settings:id/font_size".equals(resourceId))return "font_size";
+        return null;
+    }
 }
