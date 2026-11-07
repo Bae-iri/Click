@@ -3,6 +3,8 @@ from collections import defaultdict
 from ai_agent.graph_proposal.contracts import fingerprint, validate_event
 from ai_agent.graph_proposal.ingestion.runtime_events import label_event
 
+RECONSTRUCTION_POLICY = "guide-evidence.v2"
+
 
 def reconstruct(events, *, now):
     sessions, ids, positions = defaultdict(list), {}, {}
@@ -39,6 +41,7 @@ def reconstruct(events, *, now):
                 raise ValueError("Graph/source changed within episode")
             task_id, version, graph_hash, source_kind, cohort = identities.pop()
             guides, attempts, steps, issues = {}, set(), [], []
+            guide_observations = defaultdict(set)
             if episode_id in missing:
                 issues.append("missing_session_events")
             for event in group:
@@ -46,11 +49,13 @@ def reconstruct(events, *, now):
                 if not runtime:
                     continue
                 label = label_event({"runtime": runtime})
-                previous_guide = guides.get(runtime.get("previous_guide_hash"))
+                previous_guide_hash = runtime.get("previous_guide_hash")
+                previous_guide = guides.get(previous_guide_hash)
                 attempt = runtime.get("attempt_hash")
                 before, after = runtime.get("before_observation_hash"), runtime.get("after_observation_hash")
                 correlated = bool(attempt and previous_guide and before and after and before != after
-                    and previous_guide.get("after_observation_hash") == before
+                    and before in guide_observations[previous_guide_hash]
+                    and previous_guide.get("after_observation_hash") != after
                     and previous_guide.get("target", {}).get("node_hash") == runtime.get("attempt_target_hash"))
                 if label["label"] in {"verified_success", "verified_failure"} and not correlated:
                     label = {**label, "label": "unknown", "reason_code": "missing_linked_evidence"}
@@ -60,23 +65,34 @@ def reconstruct(events, *, now):
                 elif runtime.get("count_attempt") and attempt:
                     attempts.add(attempt)
                 target = (previous_guide or {}).get("target", {})
+                # A step compares the original guide's screen with its result.
+                # Polling observations prove continuity without replacing that baseline.
+                baseline = previous_guide if correlated else None
                 steps.append({"event_id": event["event_id"], "sequence": event["sequence"],
                     "state_id": (previous_guide or {}).get("state_id"),
                     "transition_id": target.get("transition_id"), "attempt_hash": attempt,
-                    "before_observation_hash": before, "after_observation_hash": after,
+                    "before_observation_hash": baseline["after_observation_hash"] if baseline else before,
+                    "after_observation_hash": after,
                     "label": label["label"], "reason_code": label.get("reason_code"),
                     "duration_ms": runtime.get("duration_ms"),
                     "task_completed": bool(runtime.get("task_completed")),
-                    "before_values": runtime.get("before_values", {}), "after_values": runtime.get("after_values", {})})
+                    "before_values": baseline.get("after_values", {}) if baseline else runtime.get("before_values", {}),
+                    "after_values": runtime.get("after_values", {})})
                 if runtime.get("guide_hash"):
-                    if runtime["guide_hash"] in guides:
+                    guide_hash = runtime["guide_hash"]
+                    if guide_hash in guides:
                         # Polling a pending operation legitimately keeps its ID.
                         # A changed target under that ID remains a binding error.
-                        old_target = guides[runtime["guide_hash"]].get("target") or {}
+                        old_target = guides[guide_hash].get("target") or {}
                         new_target = runtime.get("target") or {}
                         if any(old_target.get(k) != new_target.get(k) for k in ("node_hash", "transition_id")):
                             raise ValueError("Guide ID reused with a different target")
-                    guides[runtime["guide_hash"]] = runtime
+                        if before in guide_observations[guide_hash] and after:
+                            guide_observations[guide_hash].add(after)
+                    else:
+                        guides[guide_hash] = runtime
+                        if after:
+                            guide_observations[guide_hash].add(after)
             episodes.append({"episode_id": episode_id, "session_key": session_key,
                 "task_id": task_id, "graph_version": version, "graph_hash": graph_hash,
                 "source_kind": source_kind, "device_cohort": cohort,

@@ -159,6 +159,7 @@ def test_repeated_pending_guide_id_preserves_target_and_links_fresh_observation(
     pair = events_for('polling', 'B', 'SUCCESS')
     waiting = deepcopy(pair[0])
     waiting.update(event_id='polling-wait', sequence=2)
+    waiting['runtime']['before_observation_hash'] = pair[0]['runtime']['after_observation_hash']
     waiting['runtime']['after_observation_hash'] = fingerprint('waiting-observation')
     pair[1]['sequence'] = 3
     pair[1]['runtime']['before_observation_hash'] = waiting['runtime']['after_observation_hash']
@@ -166,6 +167,64 @@ def test_repeated_pending_guide_id_preserves_target_and_links_fresh_observation(
     waiting['runtime']['target']['node_hash'] = fingerprint('different-target')
     with pytest.raises(ValueError, match='different target'):
         reconstruct([pair[0], waiting, pair[1]], now=200)
+
+
+@pytest.mark.parametrize("status", ["SUCCESS", "NO_CHANGE"])
+@pytest.mark.parametrize("result_before", ["baseline", "latest"])
+@pytest.mark.parametrize("wait_count", [1, 3])
+def test_polling_preserves_original_guide_evidence(status, result_before, wait_count):
+    pair = events_for("polling-baseline", "B", status)
+    original = pair[0]["runtime"]
+    original["after_values"] = {fingerprint("slider"): 3}
+    observations = [pair[0]]
+    previous = original["after_observation_hash"]
+    for index in range(wait_count):
+        waiting = deepcopy(pair[0])
+        waiting.update(event_id=f"polling-wait-{index}", sequence=index + 2)
+        waiting["runtime"].update(
+            state_id="SETTLING", verification_status="WAITING_FOR_OBSERVATION",
+            previous_guide_hash=original["guide_hash"],
+            before_observation_hash=previous,
+            after_observation_hash=fingerprint(f"waiting-{index}"),
+            after_values={fingerprint("slider"): 4})
+        previous = waiting["runtime"]["after_observation_hash"]
+        observations.append(waiting)
+    pair[1]["sequence"] = wait_count + 2
+    pair[1]["runtime"].update(
+        before_observation_hash=original["after_observation_hash"] if result_before == "baseline" else previous,
+        before_values={fingerprint("slider"): 4},
+        after_values={fingerprint("slider"): 5})
+    observations.append(pair[1])
+
+    episode = reconstruct(observations, now=200)[0]
+    outcome = episode["steps"][-1]
+    assert episode["complete_evidence"] is True
+    assert outcome["label"] == ("verified_success" if status == "SUCCESS" else "verified_failure")
+    assert outcome["state_id"] == "START"
+    assert outcome["before_observation_hash"] == original["after_observation_hash"]
+    assert outcome["before_values"] == original["after_values"]
+    assert outcome["after_values"] == pair[1]["runtime"]["after_values"]
+    result = run_pipeline(observations, {fingerprint(graph()): graph()}, now=200,
+                          manifest=manifest_for(observations))
+    assert result["analysis"]["counts"]["waiting"] == wait_count
+    assert sum(cluster["attempts"] for cluster in result["analysis"]["clusters"]) == 1
+    assert len(result["dataset"]["splits"]["train"]) == 1
+
+
+def test_disconnected_polling_observation_cannot_link_a_verified_result():
+    pair = events_for("disconnected", "B", "SUCCESS")
+    waiting = deepcopy(pair[0])
+    waiting.update(event_id="disconnected-wait", sequence=2)
+    waiting["runtime"].update(
+        verification_status="WAITING_FOR_OBSERVATION",
+        before_observation_hash=fingerprint("unrelated-observation"),
+        after_observation_hash=fingerprint("disconnected-observation"))
+    pair[1]["sequence"] = 3
+    pair[1]["runtime"]["before_observation_hash"] = waiting["runtime"]["after_observation_hash"]
+    episode = reconstruct([pair[0], waiting, pair[1]], now=200)[0]
+    assert episode["steps"][-1]["label"] == "unknown"
+    assert episode["steps"][-1]["reason_code"] == "missing_linked_evidence"
+    assert episode["complete_evidence"] is False
 
 
 def test_dataset_split_and_source_leakage_are_blocked():

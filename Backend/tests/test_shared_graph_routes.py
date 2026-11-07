@@ -115,7 +115,7 @@ def test_operational_cohort_rejects_demographics_and_arbitrary_text():
 
 
 @pytest.mark.parametrize('setting', ['font_size', 'brightness', 'volume'])
-@pytest.mark.parametrize('problem', [None, 'moved', 'different_node', 'different_window', 'range_changed', 'setting_unchanged'])
+@pytest.mark.parametrize('problem', [None, 'waiting', 'moved', 'different_node', 'different_window', 'range_changed', 'setting_unchanged'])
 def test_actual_runtime_events_link_verified_slider_action_to_original_guide(setting, problem):
     from dataclasses import replace
     from tests.test_screen_jev import scene, sender_for
@@ -148,27 +148,43 @@ def test_actual_runtime_events_link_verified_slider_action_to_original_guide(set
         first = engine.handle_turn(request)
         before = engine.session_store.get('s')
         first_event = produce(first, None, before, 'slider')
+        runtime_events = [first_event]
         changed = replace(observed, extras={'value':4,'min':0,'max':11 if problem == 'range_changed' else 10})
         if problem == 'moved': changed = replace(changed, bounds_in_screen=(20,200,300,240))
         if problem == 'different_node': changed = replace(changed, node_id='other')
         if problem == 'different_window': changed = replace(changed, window_id=99)
+        action = UserActionEvent(UserActionType.DRAG_COMPLETED, first.guide_command.guide_command_id,
+            observed.node_id, occurred_at_ms=1100, event_id='e1')
+        if problem == 'waiting':
+            # The control moves before Android reports the applied setting.
+            for index, at in enumerate((1200, 1300)):
+                waiting = engine.handle_turn(replace(request, request_id=f'wait-{index}',
+                    captured_at_ms=at, observation_id=f'wait-{index}',
+                    accessibility_tree=(changed, title), user_action_event=action if index == 0 else None))
+                after = engine.session_store.get('s')
+                runtime_events.append(produce(waiting, before, after, 'slider'))
+                assert not waiting.verification_result.count_attempt
+                assert waiting.guide_command.guide_command_id == first.guide_command.guide_command_id
+                before = after
         second = engine.handle_turn(replace(request, request_id='r2',captured_at_ms=1800,observation_id='o2',
             accessibility_tree=(changed, title), applied_settings=applied(3 if problem == 'setting_unchanged' else 4),
-            user_action_event=UserActionEvent(UserActionType.DRAG_COMPLETED, first.guide_command.guide_command_id,
-                observed.node_id, occurred_at_ms=1100,event_id='e1')))
-        second_event = produce(second, before, engine.session_store.get('s'), 'slider')
+            user_action_event=None if problem == 'waiting' else action))
+        runtime_events.append(produce(second, before, engine.session_store.get('s'), 'slider'))
     base = {'schema_version':EVENT_SCHEMA,'session_key':'session','episode_id':'episode',
         'created_at':100,'expires_at':1000,'task_id':goal.task_id,'graph_hash':fingerprint(graph.to_dict()),
         'graph_version':'test','source_kind':'synthetic','control':{}}
-    result = reconstruct([{**base,'event_id':'e1','sequence':1,'runtime':first_event},
-                          {**base,'event_id':'e2','sequence':2,'runtime':second_event}],now=200)
+    result = reconstruct([{**base, 'event_id':f'e{index}', 'sequence':index, 'runtime':runtime}
+                          for index, runtime in enumerate(runtime_events, 1)], now=200)
     assert result[0]['complete_evidence']
-    if problem is None:
+    if problem in {None, 'waiting'}:
         assert result[0]['steps'][-1]['label'] == 'verified_success'
         assert result[0]['steps'][-1]['duration_ms'] == 800
+        assert result[0]['steps'][-1]['before_observation_hash'] == first_event['after_observation_hash']
+        assert list(result[0]['steps'][-1]['before_values'].values()) == [3]
+        assert list(result[0]['steps'][-1]['after_values'].values()) == [4]
     else:
         assert result[0]['steps'][-1]['label'] != 'verified_success'
-        assert not second_event['task_completed']
+        assert not runtime_events[-1]['task_completed']
 
 
 @pytest.mark.parametrize('problem', [None, 'withdrawn', 'expired', 'changed_patch'])

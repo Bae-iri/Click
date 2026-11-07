@@ -55,6 +55,32 @@ def test_pipeline_uses_persisted_graph_references_and_is_idempotent():
         assert db.scalar(select(func.count()).select_from(RuntimeEventConsumption)) == 0
 
 
+def test_old_reconstruction_receipt_is_recomputed_once_without_new_events():
+    from app.repositories.users import UserRepository
+    from ai_agent.graph_proposal.reconstruction.episodes import RECONSTRUCTION_POLICY
+
+    app, _, user, _ = started_with_consent()
+    factory = app.state.session_factory
+    assert process_sessions(factory)["processed"] == 1
+    with factory() as db:
+        events = list(db.scalars(select(RuntimeEvent).order_by(RuntimeEvent.sequence)))
+        consent = UserRepository(db).latest_consent(user, "model_training")
+        legacy_hash = fingerprint({"events": [e.id for e in events], "consent_id": consent.id})
+        receipt = db.scalar(select(RuntimeEventConsumption).where(RuntimeEventConsumption.consumer == CONSUMER))
+        receipt_id = receipt.id
+        receipt.result = {**receipt.result, "input_hash": legacy_hash, "reconstruction_policy": "legacy"}
+        db.commit()
+
+    assert process_sessions(factory)["processed"] == 1
+    assert process_sessions(factory)["unchanged"] == 1
+    with factory() as db:
+        receipt = db.get(RuntimeEventConsumption, receipt_id)
+        assert receipt.result["input_hash"] != legacy_hash
+        assert receipt.result["reconstruction_policy"] == RECONSTRUCTION_POLICY
+        assert db.scalar(select(func.count()).select_from(RuntimeEventConsumption)) == 1
+        assert db.scalar(select(func.count()).select_from(RuntimeEvent)) == len(events)
+
+
 def test_preconsent_expired_and_corrupt_events_cannot_enter_analysis():
     app = create_app()
     client = authenticated_client(app)

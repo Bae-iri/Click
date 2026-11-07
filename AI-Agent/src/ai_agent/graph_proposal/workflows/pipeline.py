@@ -5,7 +5,7 @@ from ai_agent.graph_proposal.contracts import fingerprint, validate_manifest
 from ai_agent.graph_proposal.datasets.dataset_builder import TrainingDatasetBuilder
 from ai_agent.graph_proposal.evaluation.graph_validator import GraphValidator
 from ai_agent.graph_proposal.proposals.graph_learner import GraphLearner
-from ai_agent.graph_proposal.reconstruction.episodes import reconstruct
+from ai_agent.graph_proposal.reconstruction.episodes import RECONSTRUCTION_POLICY, reconstruct
 
 
 def run_pipeline(events, graphs, *, now, manifest=None, cases=None, evaluator=None, graph_loader=None):
@@ -33,7 +33,7 @@ def run_pipeline(events, graphs, *, now, manifest=None, cases=None, evaluator=No
     status = ("ERROR" if "ERROR" in decisions else
               "READY_FOR_REVIEW" if "PASS" in decisions else
               "NEEDS_DATA" if not decisions or "NEEDS_DATA" in decisions else "REJECTED")
-    result = {"schema_version": "ai2-run.v1", "episodes": episodes,
+    result = {"schema_version": "ai2-run.v1", "reconstruction_policy": RECONSTRUCTION_POLICY, "episodes": episodes,
         "analysis": analyze(episodes), "dataset": datasets,
         "proposals": [asdict(proposal) for proposal in proposals], "evaluations": evaluations,
         "status": status}

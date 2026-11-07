@@ -117,6 +117,36 @@ def test_provider_holds_have_bounded_recovery_and_explicit_retry(outcome, reason
     assert resumed.debug["recovery"]["decision"] == "continue"
 
 
+@pytest.mark.parametrize("outcome,hold_reason", [
+    ((.72, .95), "raw_confidence_below_minimum"),
+    ((.95, .81), "normalized_probability_below_minimum"),
+    ((.72, .81), "both_below_minimum"),
+])
+def test_low_confidence_after_revalidation_stays_bounded_across_checkpoint_restore(outcome, hold_reason):
+    scenario = Scenario(["selected", outcome])
+    first = scenario.observe()
+    assert first.guide_command.target_node_id == "display"
+    # A moved target requires revalidation instead of retaining the first guide.
+    nodes = (scenario.nodes[0], replace(scenario.nodes[1], bounds_in_screen=(10, 300, 1000, 400)))
+    for turn in range(1, 11):
+        state = capture(scenario.engine.session_store, "s", scenario.graph)
+        scenario.engine = ClickAgentEngine(session_store=restore(state),
+            task_graphs={scenario.goal.task_id: scenario.graph}, screen_resolver=scenario.resolver)
+        result = scenario.observe(nodes=nodes)
+        recovery = result.guide_command.render_policy["recovery"]
+        assert result.guide_command.target_node_id is None
+        assert recovery["reason_code"] == "LOW_CONFIDENCE"
+        assert recovery["attempts"] == min(turn, scenario.graph.policy.recovery_limit)
+        assert result.debug["ui_selection"]["hold_reason"] == hold_reason
+        assert scenario.engine.session_store.get("s").total_failed_attempts == 0
+        if turn >= scenario.graph.policy.recovery_limit:
+            assert recovery["waiting_for"] == "user"
+            assert "fallback_action" not in result.guide_command.render_policy
+        if turn > scenario.graph.policy.recovery_limit:
+            assert result.debug["ui_selection"]["called"] is False
+    assert len(scenario.calls) == 1 + scenario.graph.policy.recovery_limit
+
+
 def test_retry_releases_failed_action_fingerprint_without_resetting_spent_action_budget():
     scenario = Scenario(["selected"])
     first = scenario.observe()

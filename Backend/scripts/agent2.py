@@ -26,6 +26,7 @@ from ai_agent.graph_proposal.contracts import EVENT_SCHEMA, EvidenceRequired, fi
 from ai_agent.graph_proposal.graphs import graph_errors
 from ai_agent.graph_proposal.schemas import GraphUpdateProposal
 from ai_agent.graph_proposal.workflows.pipeline import run_pipeline
+from ai_agent.graph_proposal.reconstruction.episodes import RECONSTRUCTION_POLICY
 from ai_agent.graph_proposal.evaluation.graph_validator import GraphValidator
 from ai_agent.graph_proposal.releases.versioning import GraphVersionManager
 from ai_agent.graph_proposal.models.model_trainer import ModelTrainer
@@ -124,7 +125,8 @@ def process_sessions(factory, *, limit=100, now=None):
                 last = events[-1]
                 receipt = db.scalar(select(RuntimeEventConsumption).where(
                     RuntimeEventConsumption.consumer == CONSUMER, RuntimeEventConsumption.event_id == last.id))
-                input_hash = fingerprint({"events": [e.id for e in events], "consent_id": consent.id})
+                input_hash = fingerprint({"events": [e.id for e in events], "consent_id": consent.id,
+                                          "reconstruction_policy": RECONSTRUCTION_POLICY})
                 if receipt and receipt.result.get("input_hash") == input_hash:
                     summary["unchanged"] += 1
                     continue
