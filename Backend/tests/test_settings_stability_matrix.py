@@ -140,3 +140,39 @@ def test_layout_churn_does_not_refund_recovery_budget_or_unlock_a_paused_task(se
     result=run.observe((run.control[0],replace(run.control[1],bounds_in_screen=(20,350,900,420))))
     assert len(run.calls)==calls
     assert result.debug['ui_selection']['paused']
+
+
+@pytest.mark.parametrize('setting,direction',GOALS)
+def test_each_task_pauses_resumes_from_persisted_state_and_cannot_restart_after_cancel(setting,direction,monkeypatch):
+    from uuid import uuid4
+    from app.main import create_app
+    from tests.helpers import authenticated_client
+    monkeypatch.setenv('AI1_UI_SELECTOR_PROVIDER','jev')
+    run=Run(setting,direction)
+    monkeypatch.setattr(JevScreenResolver,'_post',lambda self,payload,**kw:sender_for(run.home_edge)(payload,**kw))
+    client=authenticated_client(create_app())
+    session=str(uuid4());version=0;episode=None
+    tree={'package_name':PACKAGE,'screen_width':1080,'screen_height':2400,'active_window_id':7,
+          'nodes':[n.to_dict() for n in run.home],'captured_at_ms':1000,'observation_id':'start'}
+    def command(kind,expected=200,**kw):
+        nonlocal version,episode
+        body={'contract_version':'agent-fe-contract.v0.3','session_id':session,'request_id':str(uuid4()),
+              'expected_version':version,'command_type':kind,**kw}
+        if episode:body['episode_id']=episode
+        response=client.post('/api/v1/agent/commands',json=body)
+        assert response.status_code==expected,response.text
+        data=response.json()
+        if expected==200:version=data['session_version'];episode=data['episode_id']
+        return data
+    started=command('start_task',goal={'catalog_version':'2.1.0','goal_type':run.goal.goal_type,
+        'target_app':'android_settings','slots':run.graph.definition.required_slots},device_context={'platform':'android','locale':'ko-KR'},accessibility_tree=tree)
+    assert started['guide_command']['action_type']=='tap'
+    paused=command('pause_task');assert paused['task_status']=='PAUSED'
+    command('observe',expected=409,accessibility_tree={**tree,'captured_at_ms':2000,'observation_id':'paused'})
+    resumed=command('resume_task',accessibility_tree={**tree,'captured_at_ms':3000,'observation_id':'resumed'})
+    assert resumed['task_status'] in {'IN_PROGRESS','WAITING_CONFIRMATION'}
+    assert resumed['task_status']!='COMPLETED'
+    fresh=command('observe',accessibility_tree={**tree,'captured_at_ms':4000,'observation_id':'after-resume'})
+    assert fresh['guide_command']['target_node_id']=='menu'
+    stopped=command('cancel_task');assert stopped['task_status']=='CANCELLED'
+    command('observe',expected=409,accessibility_tree={**tree,'captured_at_ms':5000,'observation_id':'cancelled'})
