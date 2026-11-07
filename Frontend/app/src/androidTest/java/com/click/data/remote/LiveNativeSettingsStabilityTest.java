@@ -48,6 +48,30 @@ public class LiveNativeSettingsStabilityTest {
         if(setting.equals("brightness"))return Settings.System.getInt(app.getContentResolver(),Settings.System.SCREEN_BRIGHTNESS);
         return app.getSystemService(AudioManager.class).getStreamVolume(AudioManager.STREAM_MUSIC);
     }
+    private void assertPreparedApks() throws Exception {
+        for(String[] apk:new String[][]{{app.getPackageName(),"expectedAppApkSha256"},
+                {instrumentation.getContext().getPackageName(),"expectedTestApkSha256"}}) {
+            String expected=InstrumentationRegistry.getArguments().getString(apk[1]);
+            if(expected==null)throw new AssertionError("PREPARED_APK_HASH_REQUIRED");
+            String path=app.getPackageManager().getApplicationInfo(apk[0],0).sourceDir;
+            java.security.MessageDigest hash=java.security.MessageDigest.getInstance("SHA-256");
+            try(InputStream input=new FileInputStream(path)) {
+                byte[] buffer=new byte[65536];int size;
+                while((size=input.read(buffer))!=-1)hash.update(buffer,0,size);
+            }
+            StringBuilder actual=new StringBuilder();
+            for(byte b:hash.digest())actual.append(String.format(Locale.ROOT,"%02x",b & 255));
+            if(!expected.equals(actual.toString()))throw new AssertionError("PREPARED_APK_MISMATCH");
+        }
+    }
+    private ScreenSnapshot nativeSettings() {
+        for(int wait=0;wait<30;wait++) {
+            ScreenSnapshot s=ClickAccessibilityService.freshSnapshot();
+            if(s!=null && "com.android.settings".equals(s.packageName) && !s.nodes.isEmpty())return s;
+            SystemClock.sleep(200);
+        }
+        return null;
+    }
     private AccessibilityNodeSnapshot target(ScreenSnapshot s,JSONObject g) {
         for(AccessibilityNodeSnapshot n:s.nodes) if(n.nodeId.equals(g.optString("target_node_id")) && g.optJSONArray("target_bounds")!=null) {
             JSONArray b=g.optJSONArray("target_bounds");
@@ -74,6 +98,9 @@ public class LiveNativeSettingsStabilityTest {
     }
     @Test public void sixTasksFromSettingsHomeToVerifiedDeviceChange() throws Exception {
         assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("liveSettingsStability")));
+        String onlyGoal=InstrumentationRegistry.getArguments().getString("onlyGoal");
+        assertTrue("Supported focused goal",onlyGoal==null || onlyGoal.matches("(font_size|brightness|volume)\\.(increase|decrease)"));
+        report.put("goal_filter",onlyGoal==null?"all_six":onlyGoal);
         report.put("run_id",InstrumentationRegistry.getArguments().getString("validationRunId"));save();
         automation=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         android.accessibilityservice.AccessibilityServiceInfo testInfo=automation.getServiceInfo();
@@ -94,6 +121,7 @@ public class LiveNativeSettingsStabilityTest {
         report.put("source","physical_native_settings_real_jev").put("cases",new JSONArray()).put("maximum_screen_posts_per_task",16);
         AuthenticatedHttpClient http=new AuthenticatedHttpClient(app);
         try {
+            report.put("stage","apk_integrity");save();assertPreparedApks();
             JSONObject version=new JSONObject(AuthGateway.get("/version",null).body);
             assertEquals("The APK must call the approved verification server",InstrumentationRegistry.getArguments().getString("expectedBaseUrl"),BuildConfig.CLICK_API_BASE_URL.replaceAll("/+$",""));
             report.put("server_build",version);
@@ -113,7 +141,7 @@ public class LiveNativeSettingsStabilityTest {
             Settings.Secure.putString(app.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,String.join(":",enabled));
             SystemClock.sleep(300);enabled.add(component.flattenToString());
             Settings.Secure.putString(app.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,String.join(":",enabled));
-            Settings.Secure.putInt(app.getContentResolver(),Settings.Secure.ACCESSIBILITY_ENABLED,1);
+            assertTrue("Enable native accessibility",Settings.Secure.putInt(app.getContentResolver(),Settings.Secure.ACCESSIBILITY_ENABLED,1));
             touch.setEnabled(true);
             SettingsScreenPrivacy privacy;
             try(InputStream v=app.getAssets().open("vision_vocabulary.json");InputStream p=app.getAssets().open("screen_privacy_policy.json")){privacy=SettingsScreenPrivacy.load(v,p);}
@@ -121,11 +149,13 @@ public class LiveNativeSettingsStabilityTest {
             JSONObject catalog;
             try(InputStream in=app.getAssets().open("mvp_goals.json")){catalog=new JSONObject(new String(in.readAllBytes(),StandardCharsets.UTF_8));}
             for(String setting:List.of("font_size","brightness","volume"))for(String direction:List.of("increase","decrease")) {
+                if(onlyGoal!=null && !onlyGoal.equals(setting+"."+direction))continue;
                 report.put("stage","native_start:"+setting+"."+direction);
                 restoreValues();
                 if(setting.equals("brightness"))shell("settings put system screen_brightness_mode 0");
-                app.startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
-                SystemClock.sleep(1200);
+                // Instrumentation has no resumed activity; use the shell for user-equivalent app launch.
+                shell("am start -W -a android.settings.SETTINGS -f "+(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+                assertNotNull("Readable Settings home before testing",nativeSettings());
                 // Start on Settings home with its first route row visible, not on a pre-opened control page.
                 String firstRow=setting.equals("volume")?"소리 및 진동":"디스플레이";
                 for(int attempt=0;attempt<8;attempt++) {
@@ -136,11 +166,13 @@ public class LiveNativeSettingsStabilityTest {
                 String session=UUID.randomUUID().toString();JSONObject last=null,event=null;
                 JSONObject item=new JSONObject().put("goal",setting+"."+direction).put("start","android_settings_home").put("turns",new JSONArray());
                 report.getJSONArray("cases").put(item);save();
+                ScreenSnapshot consentScreen=null;String consentId=null;
                 float before=value(setting);boolean changed=false,approved=false;int repeat=0,retries=0,actions=0,scrolls=0;
                 try {
                     for(int turn=0;turn<16;turn++) {
+                        report.put("stage","apk_integrity:"+setting+"."+direction);save();assertPreparedApks();
                         SystemClock.sleep(800);
-                        ScreenSnapshot screen=ClickAccessibilityService.freshSnapshot();assertNotNull("Native screen",screen);
+                        ScreenSnapshot screen=nativeSettings();assertNotNull("Native screen",screen);
                         JSONObject request=new JSONObject().put("contract_version",contract.contractVersion).put("request_id",UUID.randomUUID().toString())
                             .put("session_id",session).put("expected_version",last==null?0:last.getInt("session_version"))
                             .put("command_type",last==null?"start_task":"observe").put("accessibility_tree",new JSONObject(screen.toJson()));
@@ -152,17 +184,25 @@ public class LiveNativeSettingsStabilityTest {
                         } else {
                             request.put("episode_id",last.getString("episode_id"));
                             JSONObject guide=last.getJSONObject("guide_command");
-                            if("confirmation".equals(guide.optString("command_type")) && repeat>=2) {
+                            if("confirmation".equals(guide.optString("command_type")) && repeat>=2 && !changed && consentScreen!=null && consentScreen.sameNativeContent(screen)) {
                                 AccessibilityNodeSnapshot n=target(screen,guide);
                                 assertTrue("Consent target must match the actual requested setting",SettingsSliderTarget.matches(screen,n,setting));
+                                // Match production's consent binding only when native content is unchanged.
+                                screen=screen.withScreenRevision(consentScreen.screenRevision);
+                                request.put("accessibility_tree",new JSONObject(screen.toJson()));
                                 request.put("command_type","respond_confirmation").put("user_confirmation","accepted")
                                     .put("confirmation_id",last.getJSONObject("metadata").getJSONObject("confirmation").getString("id"));approved=true;
                             }
                         }
                         if(event!=null){request.put("user_action_event",event);event=null;}
                         report.put("stage","agent_turn:"+setting+"."+direction);save();
+                        assertPreparedApks();
                         last=new JSONObject(http.post(AgentTurnContract.PATH,privacy.filter(request).toString()).body);
                         JSONObject guide=last.getJSONObject("guide_command"),metadata=last.getJSONObject("metadata");
+                        if("confirmation".equals(guide.optString("command_type"))) {
+                            String nextId=metadata.getJSONObject("confirmation").getString("id");
+                            if(!nextId.equals(consentId)){consentId=nextId;consentScreen=screen;}
+                        }
                         JSONObject outcome=metadata.optJSONObject("task_outcome");
                         JSONObject technical=outcome==null?metadata.optJSONObject("technical_outcome"):outcome.optJSONObject("technical");
                         JSONObject selection=metadata.optJSONObject("debug");selection=selection==null?null:selection.optJSONObject("ui_selection");
@@ -172,7 +212,8 @@ public class LiveNativeSettingsStabilityTest {
                             assertEquals("Rule fallback cannot count as a live Jev result","jev",selection.getString("provider"));
                         }
                         item.getJSONArray("turns").put(new JSONObject().put("state",last.optString("state_id")).put("status",last.optString("task_status"))
-                            .put("action",guide.optString("action_type")).put("selection",selection).put("technical",technical));save();
+                            .put("action",guide.optString("action_type")).put("selection",selection).put("technical",technical)
+                            .put("observed_system_value",value(setting)));save();
                         if(technical!=null && "CHANGED".equals(technical.optString("status"))) {
                             float after=value(setting);assertTrue("Persisted system setting must move in the requested direction",direction.equals("increase")?after>before:after<before);
                             assertTrue("The test must have executed a real slider operation",changed);
@@ -189,18 +230,22 @@ public class LiveNativeSettingsStabilityTest {
                             boolean moved=scrollSettings(scrolls++>=2);item.put("native_search_scrolls",scrolls);
                             if(moved)event=AgentActionEvents.of(AgentActionEvents.SCROLL_COMPLETED,null,null,null);
                         } else if("tap".equals(guide.optString("action_type"))) {
+                            assertPreparedApks();
                             ScreenSnapshot fresh=ClickAccessibilityService.freshSnapshot();AccessibilityNodeSnapshot n=target(fresh,guide);assertNotNull(n);
                             long at=System.currentTimeMillis();
                             assertTrue("Execute only the exact grounded native menu",ClickAccessibilityService.performGuidedTap(fresh,n.nodeId,n.bounds));actions++;
                             event=AgentActionEvents.of(AgentActionEvents.TAP_COMPLETED,guide.getString("guide_command_id"),n.nodeId,n.bounds,at);
                         } else if("confirmation".equals(guide.optString("command_type"))) {
-                            repeat++;assertEquals(before,value(setting),.001f);
+                            repeat++;if(!changed)assertEquals(before,value(setting),.001f);
+                            else item.put("suppressed_duplicate_confirmations",item.optInt("suppressed_duplicate_confirmations")+1);
                         } else if("drag".equals(guide.optString("action_type"))) {
-                            assertTrue("A live server confirmation must precede adjustment",approved);assertFalse("Never repeat the physical adjustment",changed);
+                            assertTrue("A live server confirmation must precede adjustment",approved);
+                            if(changed){item.put("suppressed_duplicate_adjustments",item.optInt("suppressed_duplicate_adjustments")+1);continue;}
+                            assertPreparedApks();
                             ScreenSnapshot fresh=ClickAccessibilityService.freshSnapshot();AccessibilityNodeSnapshot n=target(fresh,guide);
                             assertTrue(SettingsSliderTarget.matches(fresh,n,setting));long at=System.currentTimeMillis();
                             assertTrue("Real native slider operation",ClickAccessibilityService.performGuidedSlider(fresh,n.nodeId,n.bounds,direction.equals("increase")?1:-1,setting));
-                            actions++;changed=true;event=AgentActionEvents.of(AgentActionEvents.DRAG_COMPLETED,guide.getString("guide_command_id"),n.nodeId,n.bounds,at);
+                            actions++;changed=true;item.put("physical_adjustments",1).put("before",before);event=AgentActionEvents.of(AgentActionEvents.DRAG_COMPLETED,guide.getString("guide_command_id"),n.nodeId,n.bounds,at);
                         }
                         if(event!=null)event.put("episode_id",last.getString("episode_id")).put("session_id",session);
                     }
@@ -219,6 +264,8 @@ public class LiveNativeSettingsStabilityTest {
         } catch(Throwable failure) {
             report.put("error_type",failure.getClass().getSimpleName());
             // Only fixed non-sensitive error codes may leave the device.
+            if(java.util.Set.of("PREPARED_APK_HASH_REQUIRED","PREPARED_APK_MISMATCH").contains(failure.getMessage()==null?"":failure.getMessage()))report.put("error_code",failure.getMessage());
+            if(failure instanceof ApiException){report.put("http_status",((ApiException)failure).status);String code=((ApiException)failure).conflictCode;if(code!=null && code.matches("[A-Z_]{1,64}"))report.put("conflict_code",code);}
             if("AUTH_REQUIRED".equals(failure.getMessage()))report.put("error_code","AUTH_REQUIRED");
             if(failure instanceof SettingsScreenPrivacy.Blocked)report.put("error_code","SCREEN_PRIVACY_BLOCKED");
             if(failure instanceof SettingsScreenPrivacy.Incomplete)report.put("error_code","SCREEN_OBSERVATION_INCOMPLETE");

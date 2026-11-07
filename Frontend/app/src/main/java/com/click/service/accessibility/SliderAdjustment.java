@@ -16,6 +16,19 @@ public final class SliderAdjustment {
                                   : (max - min) / 10f;
         return Math.max(min, Math.min(max, current + direction * step));
     }
+    /** Map one persisted media-volume level into this control's native range units. */
+    public static float nextMediaValue(float current, float min, float max, int direction,
+                                       int applied, int appliedMin, int appliedMax) {
+        if (!canMove(current,min,max,direction) || appliedMin>=appliedMax
+                || applied<appliedMin || applied>appliedMax
+                || direction>0 && applied>=appliedMax || direction<0 && applied<=appliedMin) return Float.NaN;
+        double step=((double)max-min)/(appliedMax-appliedMin);
+        double expected=min+step*(applied-appliedMin);
+        // Reject a control whose current value cannot represent the actual media stream.
+        if (Math.abs(current-expected)>step/2) return Float.NaN;
+        float next=(float)(min+step*(applied+direction-appliedMin));
+        return moved(current,next,direction) ? Math.max(min,Math.min(max,next)) : Float.NaN;
+    }
     /** A bounded horizontal drag within the freshly verified slider; never a guessed screen point. */
     public static float[] dragPoints(int[] bounds, float before, float after, float min, float max) {
         if (bounds == null || bounds.length != 4 || !Float.isFinite(after) || before == after

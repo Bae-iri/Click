@@ -79,3 +79,31 @@ def test_compound_media_seekbar_labels_the_ranged_child_and_never_selects_its_tr
         AccessibilityNode('thumb',package_name=package,parent_id='track',class_name='android.widget.SeekBar',bounds_in_screen=(20,350,900,450),extras={'progress':4,'min':0,'max':15}))
     result=JevScreenResolver(sender_for(edge)).resolve(nodes=normalize_accessibility_tree(raw,screen_bounds=(0,0,1080,2400)),raw_nodes=raw,graph=graph,goal=goal)
     assert result.target_node_id=='thumb'
+
+
+@pytest.mark.parametrize('changed_package',['com.click','com.click.test'])
+def test_device_runner_rejects_either_wrong_apk_before_launch_or_instrumentation(tmp_path,monkeypatch,changed_package):
+    import hashlib
+    import sys
+    from scripts import native_settings_check as runner
+    files={'com.click':tmp_path/'debug/app-debug.apk',
+           'com.click.test':tmp_path/'androidTest/debug/app-debug-androidTest.apk'}
+    for package,path in files.items():
+        path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_bytes(package.encode())
+    commands=[]
+    monkeypatch.setattr(sys,'argv',['native_settings_check.py','--run-live','--apk-dir',str(tmp_path)])
+    monkeypatch.setattr(runner,'verify_build',lambda base_url:{'source_sha256':'source'})
+    monkeypatch.setattr(runner.shutil,'which',lambda name:'adb')
+    def output(command,**kwargs):
+        if command[-1]=='devices':return 'List of devices attached\nfixture-device\tdevice\n'
+        if 'path' in command:return 'package:/data/app/'+command[-1]+'/base.apk\n'
+        package=command[-1].split('/')[-2]
+        digest='0'*64 if package==changed_package else hashlib.sha256(files[package].read_bytes()).hexdigest()
+        return digest+'  base.apk\n'
+    monkeypatch.setattr(runner.subprocess,'check_output',output)
+    monkeypatch.setattr(runner.subprocess,'run',lambda command,**kwargs:commands.append(command))
+    with pytest.raises(ValueError,match='not the prepared build'):
+        runner.main()
+    assert len(commands)==2 # Fake replacement only: no activity, native action or screen request.
+    assert all(command[1:3]==['install','-r'] for command in commands)

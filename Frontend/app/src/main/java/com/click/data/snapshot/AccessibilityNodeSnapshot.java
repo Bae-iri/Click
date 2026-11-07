@@ -126,9 +126,20 @@ public final class AccessibilityNodeSnapshot {
         if (sensitiveInput) extras.put("editable", true);
         if (passwordInput) extras.put("is_password", true);
         if (inputContentPresent) extras.put("input_content_present", true);
-        if (progress != null) extras.put("progress", progress);
-        if (rangeMin != null) extras.put("min", rangeMin);
-        if (rangeMax != null) extras.put("max", rangeMax);
+        // Keep native units locally for action validation. Oversized OEM ranges
+        // travel as a ratio so the finite numeric privacy boundary keeps all three values.
+        boolean normalizedRange = "slider".equals(role) && progress != null && rangeMin != null && rangeMax != null
+                && Float.isFinite(progress) && Float.isFinite(rangeMin) && Float.isFinite(rangeMax)
+                && rangeMin < rangeMax && progress >= rangeMin && progress <= rangeMax
+                && (Math.abs((double) rangeMin) > 100_000_000 || Math.abs((double) rangeMax) > 100_000_000);
+        if (normalizedRange) {
+            extras.put("progress", ((double) progress - rangeMin) / ((double) rangeMax - rangeMin));
+            extras.put("min", 0); extras.put("max", 1);
+        } else {
+            if (progress != null) extras.put("progress", progress);
+            if (rangeMin != null) extras.put("min", rangeMin);
+            if (rangeMax != null) extras.put("max", rangeMax);
+        }
         object.put("extras", extras);
         return object;
     }

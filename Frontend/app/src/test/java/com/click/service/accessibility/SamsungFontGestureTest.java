@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(RobolectricTestRunner.class)
+@org.robolectric.annotation.Config(sdk = 34, application = android.app.Application.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class SamsungFontGestureTest {
     private ClickAccessibilityService service;
@@ -67,6 +68,31 @@ public class SamsungFontGestureTest {
         verify(service).dispatchGesture(any(GestureDescription.class), any(), any());
         verify(slider, never()).performAction(anyInt());
     }
+    @Test public void samsungBrightnessCommitsAPerceptibleGestureInsteadOfItsPreviewOnlyApi() {
+        String resource = "com.android.settings:id/brightness_seekbar";
+        when(slider.getViewIdResourceName()).thenReturn(resource);
+        when(slider.getRangeInfo()).thenReturn(AccessibilityNodeInfo.RangeInfo.obtain(0, 0, 267386880, 156237824));
+        when(slider.getActionList()).thenReturn(java.util.List.of(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS));
+        when(slider.performAction(eq(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId()), any(android.os.Bundle.class))).thenReturn(true);
+        AccessibilityNodeSnapshot node = new AccessibilityNodeSnapshot("node_0_0", "node_0", true,
+                "com.android.settings", null, "156237824", resource, "android.widget.SeekBar", "slider", bounds,
+                false, true, false, false, false, 156237824f, 5, false, 0f, 267386880f);
+        screen = new ScreenSnapshot("com.android.settings", "2026-10-30T00:00:00Z", 1080, 2400,
+                Collections.singletonList(node), 5, true, 1.1f);
+        calls.when(ClickAccessibilityService::freshSnapshot).thenReturn(screen);
+        assertTrue(ClickAccessibilityService.performGuidedSlider(screen, "node_0_0", bounds, 1));
+        org.mockito.ArgumentCaptor<GestureDescription> gestures = org.mockito.ArgumentCaptor.forClass(GestureDescription.class);
+        verify(service).dispatchGesture(gestures.capture(), any(), any());
+        android.graphics.PathMeasure path = new android.graphics.PathMeasure(gestures.getValue().getStroke(0).getPath(), false);
+        assertTrue(path.getLength() > 10);
+        android.graphics.RectF gestureBounds = new android.graphics.RectF();
+        gestures.getValue().getStroke(0).getPath().computeBounds(gestureBounds, true);
+        assertTrue(gestureBounds.toString(), gestureBounds.left >= bounds[0] && gestureBounds.right <= bounds[2]);
+        assertTrue(gestureBounds.width() > 10);
+        verify(slider, never()).performAction(anyInt(), any(android.os.Bundle.class));
+        verify(slider, never()).performAction(anyInt());
+    }
+
     @Test public void replacedControlOrDisabledAutomationNeverTouchesScreen() {
         when(slider.getViewIdResourceName()).thenReturn("settings:id/brightness");
         assertFalse(ClickAccessibilityService.performGuidedSlider(screen, "node_0_0", bounds, 1));

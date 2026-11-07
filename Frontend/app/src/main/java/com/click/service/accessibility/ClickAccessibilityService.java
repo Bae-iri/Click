@@ -140,15 +140,25 @@ public final class ClickAccessibilityService extends AccessibilityService {
 
     @Override
     public void onDestroy() {
-        if (connectedService.get() == this) {
-            connectedService.clear();
-            ClickOverlayService.onAccessibilityOverlayLost();
-        }
+        disconnect();
         if (visionOcrEngine != null) {
             visionOcrEngine.close();
             visionOcrEngine = null;
         }
         super.onDestroy();
+    }
+
+    @Override public boolean onUnbind(Intent intent) {
+        disconnect();
+        return super.onUnbind(intent);
+    }
+
+    private void disconnect() {
+        if (mainHandler != null) mainHandler.removeCallbacks(captureRunnable);
+        if (connectedService.get() == this) {
+            connectedService.clear();
+            ClickOverlayService.onAccessibilityOverlayLost();
+        }
     }
 
     /** Collect a new observation; resending LatestScreenSnapshot is not a fresh read. */
@@ -328,18 +338,30 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 }, service.mainHandler);
             }
             float before = range.getCurrent();
+            // Samsung's brightness SET_PROGRESS/SCROLL actions update its preview only.
+            // A bounded drag also commits the persisted device brightness.
+            boolean commitByTouch = "com.android.settings:id/brightness_seekbar".equals(target.resourceId);
+            boolean discreteRange = range.getType() == AccessibilityNodeInfo.RangeInfo.RANGE_TYPE_INT && !commitByTouch;
+            float next = SliderAdjustment.nextValue(before, range.getMin(), range.getMax(), direction, discreteRange);
+            if ("volume".equals(setting)) {
+                android.media.AudioManager audio = service.getSystemService(android.media.AudioManager.class);
+                if (audio == null) return false;
+                int stream = android.media.AudioManager.STREAM_MUSIC;
+                int minimum = android.os.Build.VERSION.SDK_INT >= 28 ? audio.getStreamMinVolume(stream) : 0;
+                next = SliderAdjustment.nextMediaValue(before, range.getMin(), range.getMax(), direction,
+                        audio.getStreamVolume(stream), minimum, audio.getStreamMaxVolume(stream));
+            }
+            if (!Float.isFinite(next)) return false;
             boolean performed = false;
             // SET_PROGRESS is exposed by Samsung/custom controls even when native scroll is absent.
-            if (node.getActionList().contains(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS)) {
-                float next = SliderAdjustment.nextValue(before, range.getMin(), range.getMax(), direction,
-                        range.getType() == AccessibilityNodeInfo.RangeInfo.RANGE_TYPE_INT);
+            if (!commitByTouch && node.getActionList().contains(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS)) {
                 if (Float.isFinite(next) && next != before) {
                     android.os.Bundle arguments = new android.os.Bundle();
                     arguments.putFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE, next);
                     performed = node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(), arguments);
                 }
             }
-            if (!performed) {
+            if (!performed && !commitByTouch) {
                 int action = direction > 0 ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
                 AccessibilityNodeInfo.AccessibilityAction nativeAction = direction > 0
                         ? AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD
@@ -351,8 +373,6 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 ScreenSnapshot current = freshSnapshot();
                 if (!TouchAutomationPolicy.sameTarget(latest, current, id, bounds)
                         || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()) return false;
-                float next = SliderAdjustment.nextValue(before, range.getMin(), range.getMax(), direction,
-                        range.getType() == AccessibilityNodeInfo.RangeInfo.RANGE_TYPE_INT);
                 float[] points = SliderAdjustment.dragPoints(bounds, before, next, range.getMin(), range.getMax());
                 if (points == null) return false;
                 Path drag = new Path(); drag.moveTo(points[0], points[1]); drag.lineTo(points[2], points[3]);
