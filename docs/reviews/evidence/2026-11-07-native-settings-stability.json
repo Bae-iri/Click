@@ -1,0 +1,42 @@
+{
+  "run_id": "8e6847bf-43e4-474b-a8e6-bdfabfe04039",
+  "source": "physical_native_settings_real_jev",
+  "cases": [
+    {
+      "goal": "font_size.increase",
+      "start": "android_settings_home",
+      "turns": []
+    }
+  ],
+  "maximum_screen_posts_per_task": 16,
+  "server_build": {
+    "schema_version": "click-build.v1",
+    "target_validation": "settings-slider.v1",
+    "source_sha256": "af682c322e0014a7f9bee6a15934807ebb1557363a9eb1dbc1d9353cc59974ef",
+    "runtime_configuration": {
+      "provider": "jev",
+      "code_hash": "7f076198a31f15c8f2d4b8339776ef2a3c34f727be09f878f4e9c14966397e27",
+      "model": "jev-1.14.0",
+      "minimum_confidence": 0.8
+    },
+    "source_revision": "15bc78612efd4861a02437b570bea4b8925534e0"
+  },
+  "server": "https://click-db.onrender.com",
+  "error_type": "IOException",
+  "restored_font": 1.100000023841858,
+  "restored_brightness": 153,
+  "restored_media_volume": 6,
+  "instrumentation_ok": false,
+  "passed": false,
+  "error_code": "AUTH_REQUIRED",
+  "error_code_evidence": "device exception fixed code confirmed; no credentials read",
+  "completion_status": "NOT_VERIFIED_AUTH_REQUIRED",
+  "unverified_goals": [
+    "font_size.increase",
+    "font_size.decrease",
+    "brightness.increase",
+    "brightness.decrease",
+    "volume.increase",
+    "volume.decrease"
+  ]
+}
