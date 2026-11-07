@@ -68,7 +68,7 @@ public final class AgentTurnGateway {
         if (body.has("accessibility_tree") || body.has("vision_snapshot")) {
             if (screenPrivacy == null || (request.accessibilityTree != null && !request.accessibilityTree.privacyMaskingReady))
                 throw new com.click.data.snapshot.SettingsScreenPrivacy.Blocked();
-            body = screenPrivacy.filter(body);
+            body = screenPrivacy.filter(body,request.observationSetting);
         }
         HttpResult result = http.post(AgentTurnContract.PATH, body.toString());
         AgentTurnContract.Response response = new AgentTurnContract.Response(result.body);

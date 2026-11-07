@@ -30,6 +30,8 @@ public final class AgentTurnContract {
         public String episodeId;
         public String confirmationId;
         public JSONObject acceptedGoal;
+        /** Local privacy scope from the confirmed goal; not serialized. */
+        public String observationSetting;
         public String goalResolutionId;
         public String preparationVersion;
         public JSONObject clarificationAnswer;
