@@ -34,7 +34,7 @@ public final class SettingsSliderTarget {
         for (String id = n.parentId; id != null && seen.add(id);) {
             if (id.equals(ancestor)) return true;
             AccessibilityNodeSnapshot p = find(s, id);
-            if (p == null || p.scrollable || p.clickable) return false;
+            if (p == null || p.scrollable || p.clickable && !(slider(p) && p.progress == null)) return false;
             id = p.parentId;
         }
         return false;
@@ -49,7 +49,8 @@ public final class SettingsSliderTarget {
     }
     private static boolean evidence(ScreenSnapshot s, AccessibilityNodeSnapshot n, String setting) {
         if (s == null || n == null || setting == null || !NAMES.containsKey(setting) || !s.privacyMaskingReady
-                || !TouchAutomationPolicy.settingsPackage(s.packageName) || !sameWindow(s,n) || !slider(n)) return false;
+                || !TouchAutomationPolicy.settingsPackage(s.packageName) || !sameWindow(s,n) || !slider(n)
+                || n.progress == null) return false;
         // A named different setting cannot be overridden by a resource ID or page title.
         for (String other : NAMES.keySet()) if (!other.equals(setting) && named(n, other)) return false;
         if ("volume".equals(setting)) for (String label : labels(n))
@@ -62,7 +63,7 @@ public final class SettingsSliderTarget {
                     || parent.bounds[3]-parent.bounds[1] >= s.screenHeight/2) break;
             int count=0; boolean identity=false;
             for (AccessibilityNodeSnapshot child : s.nodes) if (sameWindow(s,child) && below(s,child,parent.nodeId)) {
-                if (slider(child)) count++;
+                if (slider(child) && child.progress != null) count++;
                 if (!child.clickable && !slider(child) && named(child,setting)
                         && (child.resourceId == null || !child.resourceId.endsWith("/summary"))) identity=true;
             }
@@ -70,7 +71,7 @@ public final class SettingsSliderTarget {
         }
         // General Volume titles never distinguish media from ring/alarm channels.
         if ("volume".equals(setting)) return false;
-        long controls=s.nodes.stream().filter(c->sameWindow(s,c) && slider(c)).count();
+        long controls=s.nodes.stream().filter(c->sameWindow(s,c) && slider(c) && c.progress != null).count();
         if (controls!=1) return false;
         for (AccessibilityNodeSnapshot label : s.nodes) {
             if (!sameWindow(s,label) || label.clickable || !named(label,setting) || slider(label)) continue;

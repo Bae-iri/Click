@@ -67,3 +67,15 @@ def test_device_runner_stops_before_adb_if_server_is_not_the_tested_release():
         json={'target_validation':'settings-slider.v1','source_sha256':'0'*64})
     with pytest.raises(ValueError,match='not the tested release'):
         verify_build('https://example.invalid',get=lambda *a,**kw:wrong)
+
+
+def test_compound_media_seekbar_labels_the_ranged_child_and_never_selects_its_track(monkeypatch):
+    monkeypatch.setenv('TYPESAFE_API_KEY','test-only-key')
+    graph,edge,_,goal=scene('volume');package='com.android.settings'
+    raw=(AccessibilityNode('root',package_name=package,bounds_in_screen=(0,0,1080,2400)),
+        AccessibilityNode('row',package_name=package,parent_id='root',bounds_in_screen=(0,200,1080,600)),
+        AccessibilityNode('label',package_name=package,parent_id='row',text='미디어',class_name='android.widget.TextView',bounds_in_screen=(20,220,400,280)),
+        AccessibilityNode('track',package_name=package,parent_id='row',class_name='android.widget.SeekBar',bounds_in_screen=(20,350,900,450)),
+        AccessibilityNode('thumb',package_name=package,parent_id='track',class_name='android.widget.SeekBar',bounds_in_screen=(20,350,900,450),extras={'progress':4,'min':0,'max':15}))
+    result=JevScreenResolver(sender_for(edge)).resolve(nodes=normalize_accessibility_tree(raw,screen_bounds=(0,0,1080,2400)),raw_nodes=raw,graph=graph,goal=goal)
+    assert result.target_node_id=='thumb'

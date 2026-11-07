@@ -6,6 +6,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+from uuid import uuid4
 import httpx
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -43,14 +44,19 @@ def main():
         for apk in (args.apk_dir/'debug/app-debug.apk', args.apk_dir/'androidTest/debug/app-debug-androidTest.apk'):
             if not apk.is_file():raise ValueError('Build both debug and androidTest APKs first')
             subprocess.run([adb, 'install', '-r', str(apk)], check=True)
+    run_id = str(uuid4())
     result = subprocess.run([adb,'shell','am','instrument','-w','-r',
         '-e','class','com.click.data.remote.LiveNativeSettingsStabilityTest',
         '-e','liveSettingsStability','true','-e','expectedSourceSha256',build['source_sha256'],
+        '-e','validationRunId',run_id,
         '-e','expectedBaseUrl',args.base_url.rstrip('/'),
         'com.click.test/androidx.test.runner.AndroidJUnitRunner'], capture_output=True,text=True)
     raw = subprocess.check_output([adb,'exec-out','run-as','com.click','cat','cache/native-settings-stability-result.json'])
     report = json.loads(raw)
+    if report.get('run_id') != run_id:
+        raise SystemExit('Device returned a stale report; this run did not pass')
     report['instrumentation_ok'] = 'OK (1 test)' in result.stdout and result.returncode == 0
+    report['passed'] = bool(report.get('passed')) and report['instrumentation_ok']
     args.report.parent.mkdir(parents=True,exist_ok=True)
     args.report.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps({'passed':report.get('passed',False),'report':str(args.report)},ensure_ascii=False))

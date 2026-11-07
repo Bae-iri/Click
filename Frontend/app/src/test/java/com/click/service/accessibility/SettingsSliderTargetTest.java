@@ -37,4 +37,13 @@ public class SettingsSliderTargetTest {
         AccessibilityNodeSnapshot second=node("second","row",null,null,"slider",400);
         assertFalse(SettingsSliderTarget.matches(screen(row,node("label","row","미디어",null,"text",220),media,second),media,"volume"));
     }
+    @Test public void decorativeSeekbarTrackDoesNotHideTheSingleRangedChild() {
+        AccessibilityNodeSnapshot row=new AccessibilityNodeSnapshot("row","root",true,"com.android.settings",null,null,null,
+            "android.widget.LinearLayout","container",new int[]{0,200,1080,500},false,true,false,false,false,null,7);
+        AccessibilityNodeSnapshot track=new AccessibilityNodeSnapshot("track","row",true,"com.android.settings",null,null,null,
+            "android.widget.SeekBar","slider",new int[]{20,350,900,410},false,true,false,false,false,null,7);
+        AccessibilityNodeSnapshot thumb=node("thumb","track",null,null,"slider",350);
+        assertTrue(SettingsSliderTarget.matches(screen(row,track,thumb,node("label","row","미디어",null,"text",220)),thumb,"volume"));
+        assertFalse(SettingsSliderTarget.matches(screen(row,track,thumb,node("label","row","미디어",null,"text",220)),track,"volume"));
+    }
 }
