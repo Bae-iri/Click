@@ -15,8 +15,8 @@ def test_catalog_settings_have_reviewed_vocabulary_without_approving_graphs():
     settings = {goal["slots"]["setting"] for goal in catalog["goals"]
                 if goal["target_app"] == "android_settings"}
     assert settings <= GROUPS.keys()
-    wifi = next(g for g in catalog["goals"] if g["goal_type"] == "settings.wifi.enable")
-    assert wifi["execution_status"] == "catalog_only"
+    bluetooth = next(g for g in catalog["goals"] if g["goal_type"] == "settings.bluetooth.enable")
+    assert bluetooth["execution_status"] == "approved"
 
 
 def test_goal_scoped_vocabulary_drops_other_families_and_dynamic_labels():

@@ -7376,6 +7376,31 @@
               }
             ],
             "title": "Media Volume"
+          },
+          "wifi_state": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 4.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wifi State"
+          },
+          "wifi_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "android.net.wifi.WifiManager.getWifiState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wifi Source"
           }
         },
         "additionalProperties": false,
@@ -8457,7 +8482,9 @@
               "1.0.0",
               "1.1.0",
               "2.0.0",
-              "2.1.0"
+              "2.1.0",
+              "2.2.0",
+              "2.3.0"
             ],
             "title": "Catalog Version"
           },
@@ -8552,7 +8579,28 @@
               "settings.backup.disable",
               "settings.software_update.check",
               "settings.factory_reset",
-              "settings.device_name.change"
+              "settings.device_name.change",
+              "settings.navigation.settings",
+              "settings.navigation.display",
+              "settings.navigation.sound",
+              "settings.navigation.connections",
+              "settings.navigation.accessibility",
+              "settings.navigation.wifi",
+              "settings.navigation.bluetooth",
+              "settings.navigation.font_size",
+              "settings.navigation.screen_timeout",
+              "settings.navigation.display_size",
+              "settings.navigation.volume",
+              "settings.navigation.ringtone",
+              "settings.navigation.notification_sound",
+              "settings.navigation.do_not_disturb",
+              "settings.navigation.visibility",
+              "settings.navigation.hearing",
+              "settings.navigation.interaction",
+              "settings.navigation.talkback",
+              "settings.navigation.magnification",
+              "settings.navigation.captions",
+              "settings.navigation.eye_comfort"
             ],
             "title": "Goal Type"
           },

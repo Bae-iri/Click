@@ -215,4 +215,22 @@ public class SettingsScreenPrivacyTest {
             }
         }
     }
+    @Test public void confirmedSettingScopeHidesOnlyKnownOtherSliders() throws Exception {
+        JSONObject brightness=node("brightness",null).put("role","slider").put("resource_id","com.android.settings:id/brightness_seekbar")
+            .put("extras",new JSONObject().put("progress",.6).put("min",0).put("max",1));
+        JSONObject font=node("font",null).put("role","slider").put("resource_id","com.android.settings:id/seekBarForFontSize")
+            .put("extras",new JSONObject().put("progress",3).put("min",0).put("max",7));
+        JSONObject media=node("media","미디어").put("role","slider").put("resource_id","android:id/seekbar")
+            .put("extras",new JSONObject().put("progress",3).put("min",0).put("max",15));
+        JSONObject input=request(node("title","디스플레이"),brightness,font,media);
+        for(String setting:new String[]{"font_size","brightness","volume"}) {
+            String safe=privacy.filter(input,setting).toString();
+            assertEquals(setting.equals("brightness"),safe.contains("brightness_seekbar"));
+            assertEquals(setting.equals("font_size"),safe.contains("seekBarForFontSize"));
+            assertTrue("Unknown channel identities must remain available for grounding",safe.contains("android:id/seekbar"));
+            assertTrue(safe.contains("디스플레이"));
+        }
+        assertTrue(privacy.filter(input).toString().contains("brightness_seekbar"));
+        assertTrue(input.toString().contains("brightness_seekbar"));
+    }
 }

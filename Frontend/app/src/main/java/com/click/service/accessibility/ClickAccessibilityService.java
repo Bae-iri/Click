@@ -47,10 +47,12 @@ public final class ClickAccessibilityService extends AccessibilityService {
         ClickOverlayService.onAccessibilityOverlayAvailable();
         AccessibilityOnboardingState onboarding = new AccessibilityOnboardingState(this);
         if (onboarding.isPending()) {
-            onboarding.markTutorialLaunched();
-            Intent tutorial = new Intent(this, TutorialReadyActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startActivity(tutorial);
+            boolean returnToSettings = onboarding.returnsToSettings();
+            if (returnToSettings) onboarding.markSettingsReturned();
+            else onboarding.markTutorialLaunched();
+            Intent destination = new Intent(this, returnToSettings ? com.click.MenuActivity.class : TutorialReadyActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(destination);
         }
         mainHandler.postDelayed(captureRunnable, SNAPSHOT_DEBOUNCE_MS);
     }
@@ -578,8 +580,14 @@ public final class ClickAccessibilityService extends AccessibilityService {
             android.media.AudioManager audio = getSystemService(android.media.AudioManager.class);
             if (audio != null) mediaVolume = audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC);
         } catch (SecurityException ignored) { }
+        Integer wifiState = null;
+        try {
+            android.net.wifi.WifiManager wifi = getApplicationContext().getSystemService(android.net.wifi.WifiManager.class);
+            if (wifi != null) wifiState = wifi.getWifiState();
+        } catch (SecurityException ignored) { }
         return collector.collect(root, packageName, width, height, appliedScale)
                 .withAdjustmentValues(brightness, mediaVolume)
+                .withWifiState(wifiState)
                 .withScreenRevision(screenRevisions.revision());
     }
 

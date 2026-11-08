@@ -35,6 +35,25 @@ def decide_guide(*, request, graph, match, confirmation, completed, attempt, kee
     primary_wait = primary is not None and primary.match is None
     masking_failed = vision_analysis and vision_analysis.status == "masking_failed"
     transition = next((t for t in graph.transitions if t.transition_id == match.transition_id), None)
+    from ai_agent.runtime.wifi import adapter_state
+    wifi_value = adapter_state(request.applied_settings)
+    native_target = next((n for n in request.accessibility_tree if n.node_id == match.target_node_id), None)
+    wifi_conflict = bool(transition and graph.definition.required_slots.get('setting') == 'wifi'
+        and transition.verification_predicate in {'target_checked_on', 'target_checked_off'}
+        and match.target_node_id and wifi_value not in {0, 2}
+        and (wifi_value not in {1, 3} or not native_target
+            or type(native_target.extras.get('checked')) is not bool
+            or native_target.extras['checked'] is not (wifi_value == 3)))
+    wifi_desired_visible = bool(transition and graph.definition.required_slots.get('setting') == 'wifi'
+        and transition.verification_predicate in {'target_checked_on', 'target_checked_off'}
+        and native_target and type(native_target.extras.get('checked')) is bool
+        and native_target.extras['checked'] is (graph.definition.required_slots.get('state') == 'on')
+        and wifi_value == (3 if graph.definition.required_slots.get('state') == 'on' else 1))
+    from ai_agent.runtime.settings_controls import CONTROLS, CHECKED_PREDICATES
+    native_desired_visible = bool(transition and graph.definition.required_slots.get('setting') in CONTROLS
+        and transition.verification_predicate in CHECKED_PREDICATES and native_target
+        and native_target.checkable and type(native_target.extras.get('checked')) is bool
+        and native_target.extras['checked'] is (graph.definition.required_slots.get('state') == 'on'))
     if masking_failed:
         guide = command_for_vision_analysis(request.session_id, vision_analysis)
         keep = False
@@ -49,6 +68,21 @@ def decide_guide(*, request, graph, match, confirmation, completed, attempt, kee
         guide = build_guide_command(session_id=request.session_id, match_result=match,
             graph=graph, task_completed=True)
         keep = False
+    elif wifi_desired_visible or native_desired_visible:
+        guide = GuideCommand('wifi-observed', CommandType.HIGHLIGHT, ActionType.OBSERVE_ONLY,
+            '원하신 설정 상태로 보여요. 조작 결과를 확인하고 있어요.', SafetyLevel.LOW_RISK, False,
+            render_policy={'fallback_action': {'type': 'request_fresh_observation'}})
+        keep = keep_attempt
+    elif wifi_conflict and not awaiting_observation:
+        guide = GuideCommand('wifi-state-unavailable', CommandType.BLOCKED, ActionType.OBSERVE_ONLY,
+            '와이파이의 실제 상태를 확인할 수 없어요. 설정에서 직접 확인해 주세요.', SafetyLevel.LOW_RISK, False)
+        keep = False
+    elif (graph.definition.required_slots.get('setting') == 'wifi'
+            and request.applied_settings.get('wifi_state') in {0, 2} and recovery.waiting_for != 'user'):
+        guide = GuideCommand('wifi-wait', CommandType.HIGHLIGHT, ActionType.OBSERVE_ONLY,
+            '와이파이 상태가 바뀌고 있어요. 잠시 기다려 주세요.', SafetyLevel.LOW_RISK, False,
+            render_policy={'fallback_action': {'type': 'request_fresh_observation'}})
+        keep = keep_attempt
     elif limit_target is not None:
         guide = _limit_command(graph, limit_target)
         keep = False

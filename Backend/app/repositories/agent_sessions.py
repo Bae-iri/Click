@@ -170,6 +170,7 @@ class AgentSessionRepository:
             response.episode_id = (recovery_plan or {}).get("episode_id", row.episode_id)
             technical = response.metadata.get("technical_outcome") or {"status": "UNVERIFIABLE", "reason": "insufficient_evidence"}
             outcome = {"setting": ((row.goal or {}).get("slots") or {}).get("setting", "font_size"),
+                       "requested_state": ((row.goal or {}).get("slots") or {}).get("state"),
                        "technical": deepcopy(technical), "user": {"status": None, "confirmed_at": None},
                        "final": None, "checklist": response.metadata.get("checklist", [])}
             if response.task_status == "WAITING_RESULT":
@@ -519,10 +520,12 @@ class AgentSessionRepository:
             history = list(row.outcome_history or [])
             message = None
             if request.command_type == "request_result":
+                if ((row.goal or {}).get("slots") or {}).get("action") == "open":
+                    self.conflict("NAVIGATION_REQUIRES_PAGE_OBSERVATION")
                 if row.status not in {"IN_PROGRESS", "WAITING_CONFIRMATION"}:
                     self.conflict("COMMAND_NOT_ALLOWED")
                 outcome = make_outcome(outcome["technical"], now,
-                    row.goal["slots"]["direction"] if row.goal else "increase", previous=outcome)
+                    (row.goal or {}).get("slots", {}).get("direction", "increase"), previous=outcome)
                 status = "WAITING_RESULT"
             elif request.command_type == "respond_result":
                 prompt = outcome.get("prompt") or {}
@@ -541,7 +544,11 @@ class AgentSessionRepository:
                     self.conflict("COMMAND_NOT_ALLOWED")
                 reason = request.adjustment_reason
                 if reason in {"other", "unsure"}:
-                    message = "현재 작업을 더 높이거나 낮출지 선택해 주세요. 다른 설정을 바꾸려면 작업을 끝내고 새 요청을 입력할 수 있어요."
+                    message = ("와이파이가 켜진 것과 인터넷에 연결된 것은 달라요. 네트워크 연결이 필요하면 설정에서 직접 선택해 주세요. 다른 요청은 현재 작업을 끝낸 뒤 입력할 수 있어요."
+                        if outcome.get('setting') == 'wifi' else
+                        "기기에서 선택한 항목과 현재 설정 상태를 확인해 주세요. 다른 설정을 바꾸려면 작업을 끝내고 새 요청을 입력할 수 있어요."
+                        if outcome.get('setting') not in {'font_size', 'brightness', 'volume'} else
+                        "현재 작업을 더 높이거나 낮출지 선택해 주세요. 다른 설정을 바꾸려면 작업을 끝내고 새 요청을 입력할 수 있어요.")
                 else:
                     direction = goal.slots["direction"]
                     if outcome["technical"].get("limit_direction") == direction:

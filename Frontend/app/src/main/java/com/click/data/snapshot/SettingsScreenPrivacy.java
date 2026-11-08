@@ -49,6 +49,9 @@ public final class SettingsScreenPrivacy {
     }
 
     public JSONObject filter(JSONObject request) throws JSONException, Blocked, Incomplete {
+        return filter(request,null);
+    }
+    public JSONObject filter(JSONObject request,String setting) throws JSONException, Blocked, Incomplete {
         JSONObject result = new JSONObject(request.toString());
         JSONObject tree = result.optJSONObject("accessibility_tree");
         JSONObject vision = result.optJSONObject("vision_snapshot");
@@ -80,6 +83,7 @@ public final class SettingsScreenPrivacy {
             if (independent(node, byId) && (blockedTitles.contains(normalize(node.optString("text")))
                     || blockedTitles.contains(normalize(node.optString("content_description")))))
                 throw new Blocked(Blocked.Reason.SENSITIVE_SCREEN);
+            if(otherSettingControl(node,byId,setting))continue;
             String resource = node.optString("resource_id");
             String resourceName = resource.substring(resource.lastIndexOf('/') + 1);
             boolean description = descriptions.contains(resourceName);
@@ -126,6 +130,8 @@ public final class SettingsScreenPrivacy {
                             && Math.abs(((Number) value).doubleValue()) <= 100_000_000) numeric.put(key, value);
                 }
             }
+            if (!sensitive && !description && node.optBoolean("checkable") && extras != null
+                    && extras.opt("checked") instanceof Boolean) numeric.put("checked", extras.getBoolean("checked"));
             safe.put("extras", numeric);
             safeNodes.put(safe);
         }
@@ -180,6 +186,10 @@ public final class SettingsScreenPrivacy {
                         && Math.abs(((Number) value).doubleValue()) <= 100_000_000)
                     safeApplied.put(field[0], value).put(field[1], field[2]);
             }
+            Object wifiState = applied.opt("wifi_state");
+            if ("android.net.wifi.WifiManager.getWifiState".equals(applied.optString("wifi_source"))
+                    && wifiState instanceof Integer && ((Integer) wifiState) >= 0 && ((Integer) wifiState) <= 4)
+                safeApplied.put("wifi_source", "android.net.wifi.WifiManager.getWifiState").put("wifi_state", wifiState);
             if (safeApplied.length() > 0) safeTree.put("applied_settings", safeApplied);
         }
         safeTree.put("nodes", relevantNodes);
@@ -190,6 +200,17 @@ public final class SettingsScreenPrivacy {
     private String approved(String value, String pkg) {
         String text = vocabulary.exportSettingsLabel(value);
         return launchers.contains(pkg) && !"설정".equals(text) && !"settings".equals(text) ? null : text;
+    }
+
+    private static boolean otherSettingControl(JSONObject node,Map<String,JSONObject> byId,String setting) {
+        if(setting==null || !Set.of("font_size","brightness","volume").contains(setting))return false;
+        Set<String> seen=new HashSet<>();
+        for(JSONObject current=node;current!=null && seen.add(current.optString("node_id"));
+                current=byId.get(current.optString("parent_id"))) {
+            String identity=SettingsControlResources.sliderSetting(current.optString("resource_id",null));
+            if(identity!=null && !identity.equals(setting))return true;
+        }
+        return false;
     }
 
     private static boolean soundModeChoice(JSONObject node,Map<String,JSONObject> byId) {

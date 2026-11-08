@@ -33,6 +33,9 @@ CATEGORY_ALIASES = {
 def draft_releases():
     specifications = json.loads((Path(__file__).parent / "drafts.json").read_text(encoding="utf-8"))
     for spec in specifications:
+        from ai_agent.runtime.settings_controls import DOCUMENT
+        if spec['goal_type'] in DOCUMENT['goals']:
+            continue  # Superseded by explicit switch or assisted releases with separate result semantics.
         task_id = spec["task_id"]
         home, category, control, changed, done = (
             f"{task_id}:{name}" for name in ("home", "category", "control", "changed", "done"))

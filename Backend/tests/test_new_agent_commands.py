@@ -47,7 +47,7 @@ def test_resolution_does_not_execute_then_confirmed_goal_starts():
 
 
 def test_resolution_negation_and_unapproved_goal_do_not_start():
-    for text, expected in [("글자 크기 키우지 마", "needs_clarification"), ("와이파이 켜줘", "unsupported")]:
+    for text, expected in [("글자 크기 키우지 마", "needs_clarification"), ("쿠팡 상품 주문해줘", "unsupported")]:
         with TestClient(create_app()) as client:
             register(client)
             _, response = resolution(client, text)

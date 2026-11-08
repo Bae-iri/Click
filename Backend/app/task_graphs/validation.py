@@ -9,7 +9,9 @@ from ai_agent.runtime.types import (
 )
 
 ADAPTER = TypeAdapter(TaskGraph)
-PREDICATES = {"state_reached", "target_value_increased", "target_value_decreased"}
+from ai_agent.runtime.settings_controls import CONTROLS
+
+PREDICATES = {"state_reached", "target_value_increased", "target_value_decreased", "settings_page_visible"}
 
 
 def _fields(body, contract):
@@ -50,8 +52,39 @@ def load_graph(body, *, executable=True):
             raise ValueError("Dangling transition")
         if transition.from_state == definition.done_state:
             raise ValueError("Terminal state has outgoing transitions")
-        if executable and transition.verification_predicate not in PREDICATES:
+        supported = PREDICATES | ({'target_checked_on', 'target_checked_off'}
+            if definition.required_slots.get('setting') in {*CONTROLS, 'wifi'} else set())
+        if definition.task_type == 'settings_assisted':
+            supported |= {'manual_result_required'}
+        if executable and transition.verification_predicate not in supported:
             raise ValueError("Unsupported completion predicate")
+        if executable and transition.verification_predicate in {'target_checked_on', 'target_checked_off'} and (
+                transition.action_type != ActionType.TAP or transition.target_role != 'toggle'
+                or transition.safety_level != SafetyLevel.CONFIRM_REQUIRED or not transition.completes_task
+                or transition.verification_predicate != 'target_checked_' + definition.required_slots.get('state', '')):
+            raise ValueError('Switch requires a confirmed native action and exact checked-state verification')
+        if transition.verification_predicate == 'manual_result_required' and (
+                definition.task_type != 'settings_assisted' or transition.action_type != ActionType.OBSERVE_ONLY
+                or transition.requires_user_action or transition.target_role is not None
+                or transition.safety_level != SafetyLevel.LOW_RISK or not transition.completes_task
+                or not graph.states[transition.from_state].required_keyword_groups):
+            raise ValueError('Manual handoff cannot mutate a setting or prove completion')
+        if definition.task_type == 'settings_assisted' and (
+                transition.action_type not in {ActionType.TAP, ActionType.OBSERVE_ONLY}
+                or transition.target_role not in {None, 'menu_item', 'app_icon'}
+                or (transition.completes_task and transition.verification_predicate != 'manual_result_required')):
+            raise ValueError('Assisted routes stop before setting changes')
+        if transition.verification_predicate == 'settings_page_visible'  and (
+                definition.task_type != 'settings_navigation'
+                or definition.required_slots.get('action') != 'open'
+                or transition.action_type != ActionType.OBSERVE_ONLY or transition.requires_user_action
+                or transition.safety_level != SafetyLevel.LOW_RISK or not transition.completes_task
+                or not graph.states[transition.from_state].required_keyword_groups):
+            raise ValueError('Page visibility is restricted to read-only navigation')
+        if definition.task_type == 'settings_navigation' and transition.action_type not in {ActionType.TAP, ActionType.OBSERVE_ONLY}:
+            raise ValueError('Navigation cannot modify controls')
+        if definition.task_type == 'settings_navigation' and transition.target_role not in {None, 'menu_item', 'app_icon'}:
+            raise ValueError('Navigation targets menus, never setting controls')
         if transition.safety_level == SafetyLevel.CONFIRM_REQUIRED and not transition.confirmation_message:
             raise ValueError("Missing confirmation message")
         if transition.completes_task and transition.action_type != ActionType.OBSERVE_ONLY:

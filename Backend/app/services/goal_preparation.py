@@ -184,7 +184,7 @@ class GoalPreparationService:
                 placeholder=field.get('placeholder'), max_length=field.get('max_length', 100))
             message = question.message
         else:
-            candidates = [g for g in self.catalog['goals'] if g['goal_type'].startswith(family['goal_prefix'])
+            candidates = [g for g in self.catalog['goals'] if g['goal_type'].startswith(family['goal_prefix']) and g.get('execution_status') == 'approved'
                 and all(not f.get('goal_slot') or g['slots'].get(f['goal_slot']) == values[f['id']] for f in fields)]
             try:
                 route = next((r for r in family['routes'] if all(values.get(k) == v for k, v in r['when'].items())), None)
@@ -198,6 +198,11 @@ class GoalPreparationService:
                 display_name = selected['display_name']
                 status, resolution_status = 'ready', 'confirmation_required'
                 message = f'{display_name} 안내를 시작할까요?'
+                if selected['task_type'] == 'settings_assisted':
+                    display_name += ' · 직접 진행 안내'
+                    message = '설정 화면까지 안내할게요. 항목 선택·입력·최종 변경은 직접 진행하고 결과를 확인해 주세요.'
+                    if selected.get('risk_level') == 'high':
+                        message += ' 데이터 삭제나 보안 변경이 포함될 수 있으니 기기의 경고를 확인해 주세요.'
             except ValueError:
                 goal = None
                 status, resolution_status = 'unsupported', 'unsupported'

@@ -18,6 +18,12 @@ def control_label(node: NormalizedNode) -> str:
                            and node.label_parts else node.label)
     if node.role == 'slider' and re.fullmatch(r'[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)\s*%?', label):
         return ''
+    if node.role == 'toggle':
+        from ai_agent.runtime.wifi import WIFI_NAMES, STATUS_NAMES, MASTER_IDS
+        if any(normalize_text(w) in WIFI_NAMES for w in node.label_parts or (node.label,)):
+            return 'wifi'
+        if node.resource_id in MASTER_IDS and label in STATUS_NAMES:
+            return ''
     return label
 
 
@@ -50,6 +56,14 @@ def eligible_nodes(transition: Transition, nodes: tuple[NormalizedNode, ...], gr
         if not node.bounds or node.bounds[2] <= node.bounds[0] or node.bounds[3] <= node.bounds[1]:
             continue
         if any_keyword_matches(node.label, transition.selector.excluded_keywords):
+            continue
+        from ai_agent.runtime.wifi import is_wifi_transition, target_allowed
+        if is_wifi_transition(transition, graph) and not target_allowed(node, nodes):
+            continue
+        from ai_agent.runtime.settings_controls import CONTROLS, CHECKED_PREDICATES, target_allowed as setting_target
+        setting = graph.definition.required_slots.get('setting')
+        if (setting in CONTROLS and transition.verification_predicate in CHECKED_PREDICATES
+                and not setting_target(node, nodes, setting)):
             continue
         eligible.append(node)
     return tuple(eligible)

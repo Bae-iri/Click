@@ -42,7 +42,7 @@ def checklist(graph, session, match):
         done = session.task_completed and (edge.transition_id == verified or not edge.requires_user_action)
         rows.append({"id": edge.transition_id, "label": edge.action_name,
                      "status": "completed" if done else "current" if index == 0 else "pending",
-                     "evidence": "setting_change_verified" if done else None})
+                     "evidence": ("settings_page_visible" if graph.definition.task_type == "settings_navigation" else "setting_change_verified") if done else None})
     return rows
 
 

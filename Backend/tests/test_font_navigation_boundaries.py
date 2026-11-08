@@ -1,5 +1,7 @@
 """A Display menu row must not identify the neighboring brightness slider as font size."""
 from dataclasses import replace
+import json
+from pathlib import Path
 import pytest
 
 from ai_agent.runtime.classifier import classify_screen_state
@@ -15,6 +17,33 @@ from tests.test_screen_jev import scene, sender_for
 def config(monkeypatch):
     monkeypatch.setenv('TYPESAFE_API_KEY', 'test-only-key')
     monkeypatch.setenv('JEV_MODEL', 'jev-1.14.0')
+
+
+def test_actual_samsung_display_capture_offers_only_the_visible_font_menu():
+    screen = json.loads((Path(__file__).parent / 'fixtures/expanded_settings/samsung-display-font-menu.json').read_text())
+    fields = AccessibilityNode.__dataclass_fields__
+    raw = tuple(AccessibilityNode(**{key: tuple(value) if key == 'bounds_in_screen' else value
+                                    for key, value in node.items() if key in fields}) for node in screen['nodes'])
+    # The task-specific privacy filter intentionally removes brightness text.
+    # Its unnamed slider must still not borrow the font menu's label.
+    raw = filter_nodes(raw, 'font_size')
+    nodes = normalize_accessibility_tree(raw, screen_bounds=(0, 0, screen['screen_width'], screen['screen_height']),
+                                         active_window_id=screen['active_window_id'])
+    graph, _, _, goal = scene('font_size')
+    assert classify_screen_state(nodes, graph) == 'S2_DISPLAY_MENU'
+    route = next(t for t in graph.transitions if t.from_state == 'S2_DISPLAY_MENU')
+
+    def send(payload, **kwargs):
+        choices = [value for value in payload['questions']['screen']['criteria'].values() if isinstance(value, dict)]
+        assert len(choices) == 1
+        assert choices[0]['transition'] == route.transition_id
+        assert choices[0]['action'] == 'tap'
+        return sender_for(route)(payload, **kwargs)
+
+    result = JevScreenResolver(send).resolve(nodes=nodes, raw_nodes=raw, graph=graph, goal=goal)
+    assert result.state_id == 'S2_DISPLAY_MENU'
+    assert result.target_node_id == 'node_0_0_2_6'
+    assert result.target_bounds == (0, 2002, 1080, 2160)
 
 
 def display_screen(*, brightness_label=None, hierarchy=True):

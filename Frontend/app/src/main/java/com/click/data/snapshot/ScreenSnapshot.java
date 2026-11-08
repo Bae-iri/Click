@@ -18,6 +18,7 @@ public final class ScreenSnapshot {
     public final boolean privacyMaskingReady;
     public final Float appliedFontScale;
     public final Integer appliedBrightness, appliedMediaVolume;
+    public final Integer appliedWifiState;
     public final String screenRevision;
 
     public ScreenSnapshot(
@@ -44,12 +45,13 @@ public final class ScreenSnapshot {
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
                           Float appliedFontScale) {
         this(packageName, capturedAt, screenWidth, screenHeight, nodes, activeWindowId,
-                privacyMaskingReady, appliedFontScale, null, null, null);
+                privacyMaskingReady, appliedFontScale, null, null, null, null);
     }
 
     private ScreenSnapshot(String packageName, String capturedAt, int screenWidth, int screenHeight,
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
-                          Float appliedFontScale, String screenRevision, Integer brightness, Integer mediaVolume) {
+                          Float appliedFontScale, String screenRevision, Integer brightness, Integer mediaVolume, Integer wifiState) {
+        this.appliedWifiState = wifiState;
         this.screenRevision = screenRevision;
         this.appliedFontScale = appliedFontScale;
         this.appliedBrightness = brightness;
@@ -65,12 +67,18 @@ public final class ScreenSnapshot {
 
     public ScreenSnapshot withScreenRevision(String revision) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
-                activeWindowId, privacyMaskingReady, appliedFontScale, revision, appliedBrightness, appliedMediaVolume);
+                activeWindowId, privacyMaskingReady, appliedFontScale, revision, appliedBrightness, appliedMediaVolume, appliedWifiState);
     }
 
     public ScreenSnapshot withAdjustmentValues(Integer brightness, Integer mediaVolume) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
-                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision, brightness, mediaVolume);
+                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision, brightness, mediaVolume, appliedWifiState);
+    }
+
+    public ScreenSnapshot withWifiState(Integer state) {
+        return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
+                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision,
+                appliedBrightness, appliedMediaVolume, state);
     }
 
     public String toJson() {
@@ -91,6 +99,9 @@ public final class ScreenSnapshot {
             if (appliedMediaVolume != null && appliedMediaVolume >= 0 && appliedMediaVolume <= 1000)
                 applied.put("media_volume_source", "android.media.AudioManager.STREAM_MUSIC")
                         .put("media_volume", appliedMediaVolume);
+            if (appliedWifiState != null && appliedWifiState >= 0 && appliedWifiState <= 4)
+                applied.put("wifi_source", "android.net.wifi.WifiManager.getWifiState")
+                        .put("wifi_state", appliedWifiState);
             if (applied.length() > 0) object.put("applied_settings", applied);
             object.put("screen_width", screenWidth);
             object.put("screen_height", screenHeight);
@@ -139,7 +150,7 @@ public final class ScreenSnapshot {
         StringBuilder value = new StringBuilder(packageName).append('|').append(screenWidth)
                 .append('x').append(screenHeight).append('|').append(activeWindowId);
         value.append('|').append(privacyMaskingReady).append('|').append(appliedFontScale);
-        value.append('|').append(appliedBrightness).append('|').append(appliedMediaVolume);
+        value.append('|').append(appliedBrightness).append('|').append(appliedMediaVolume).append('|').append(appliedWifiState);
         if (includeRevision) value.append('|').append(screenRevision);
         for (AccessibilityNodeSnapshot node : nodes) {
             value.append('|').append(node.nodeId).append(':').append(node.text)
@@ -151,7 +162,7 @@ public final class ScreenSnapshot {
                     .append(':').append(node.parentId).append(':').append(node.visibleToUser)
                     .append(':').append(node.clickable).append(':').append(node.enabled)
                     .append(':').append(node.scrollable).append(':').append(node.checkable)
-                    .append(':').append(node.selected).append(':').append(node.progress);
+                    .append(':').append(node.selected).append(':').append(node.progress).append(':').append(node.checked);
         }
         return Integer.toHexString(value.toString().hashCode());
     }

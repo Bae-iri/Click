@@ -210,13 +210,10 @@ def test_catalog_audit_reports_each_registered_release_without_claiming_device_p
     assert report["total"] > 0
     assert all(row["device_validation"] == "NOT_ASSESSED" for row in report["graphs"])
     assert all(row["static_valid"] for row in report["graphs"] if row["approved"])
-    assert report["structural_valid"] == report["total"] == 89
-    assert report["execution_enabled"] == 6
-    assert report["unsupported_predicates"]["target_checked_on"]["task_count"] == 26
+    assert report["structural_valid"] == report["total"] == 110
+    assert report["execution_enabled"] == 110
+    assert report["unsupported_predicates"] == {}
     assert all(not row["execution_enabled"] for row in report["graphs"] if not row["approved"])
-    draft = next(row for row in report["graphs"] if row["unsupported_predicates"])
-    assert draft["structural_valid"] and not draft["static_valid"]
-    assert any(b["owner"] == "ai_agent1" for b in draft["blockers"])
 
 
 def test_catalog_audit_distinguishes_tampered_reference_from_missing_runtime_support():
