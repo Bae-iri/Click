@@ -1,0 +1,57 @@
+{
+  "locked": false,
+  "server_source_sha256": "7dc15f9f975fad338444f207c8e32a59c9dc2e1aa151a082fe4fc37667e12437",
+  "installed_policy_hashes": {
+    "screen_privacy_policy.json": "f8528595478657e32d7e1abad2fdc97136914f13e1e32bc5bfb12123aff7f4c8",
+    "vision_vocabulary.json": "ce11d74ea56e6a54453d9ddcfc89a28b4b3d62edf6fc3213297c7296cf655e06"
+  },
+  "restarted_existing_service": true,
+  "service": {
+    "available": true,
+    "package": "com.android.settings",
+    "mask_ready": true,
+    "nodes": 23,
+    "inputs": 0,
+    "passwords": 0,
+    "mixed_packages": 0,
+    "switches": 1,
+    "invisible": 1,
+    "input_shapes": [],
+    "privacy": "allowed",
+    "exported_nodes": 7,
+    "exported_checked_controls": 1
+  },
+  "native": {
+    "available": true,
+    "package": "com.android.settings",
+    "mask_ready": true,
+    "nodes": 63,
+    "inputs": 0,
+    "passwords": 0,
+    "mixed_packages": 0,
+    "switches": 1,
+    "invisible": 3,
+    "input_shapes": [],
+    "privacy": "allowed",
+    "exported_nodes": 20,
+    "exported_checked_controls": 1
+  },
+  "local_backend_result": {
+    "task_status": "WAITING_RESULT",
+    "technical_status": "ALREADY_SET",
+    "guide_action": "observe_only",
+    "source": "physical_service_snapshot_to_current_local_backend",
+    "wifi_switch_modified": false,
+    "production_backend_tested": false
+  },
+  "before_control_retention_fix": {
+    "service": {
+      "collected_checked_controls": 1,
+      "exported_checked_controls": 0
+    },
+    "native": {
+      "collected_checked_controls": 1,
+      "exported_checked_controls": 0
+    }
+  }
+}

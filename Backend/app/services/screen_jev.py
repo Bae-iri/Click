@@ -11,7 +11,7 @@ from app.services.goal_llm import _unique_object
 from ai_agent.runtime.targeting import eligible_nodes, target_key, selector_keywords, selector_evidence
 from ai_agent.runtime.matcher import MATCH_THRESHOLD, match_next_ui
 from ai_agent.runtime.keywords import any_keyword_matches
-from ai_agent.runtime.screen_privacy import minimize_nodes, screen_status, finite_number
+from ai_agent.runtime.screen_privacy import minimize_nodes, assess_screen, private_node_ids, finite_number
 from ai_agent.runtime.types import MatchResult, SafetyLevel
 from ai_agent.runtime.verification import valid_slider_value
 from ai_agent.runtime.budget import remaining
@@ -30,10 +30,13 @@ class JevScreenResolver(JevGoalClassifier):
             self.last_diagnostics.update(model=model, minimum_confidence=minimum)
             setting = graph.definition.required_slots.get("setting", "")
             if raw_nodes:
-                status = screen_status(raw_nodes, setting)
-                if status:
-                    self.last_diagnostics["status"] = status
+                assessment = assess_screen(raw_nodes, setting)
+                if assessment.status:
+                    self.last_diagnostics["status"] = assessment.status
+                    self.last_diagnostics["observation_reason"] = assessment.reason
                     return None
+                hidden = private_node_ids(raw_nodes)
+                nodes = tuple(node for node in nodes if node.node_id not in hidden)
             nodes = minimize_nodes(nodes, setting)
             if not any(n.label for n in nodes):
                 self.last_diagnostics["status"] = "unsupported_screen"
@@ -140,11 +143,13 @@ class JevScreenResolver(JevGoalClassifier):
             previous_action = pending if pending and pending.get("event_key") else None
             state = {"goal": {"type": graph.definition.goal_type,
                     "slots": {k: v for k, v in graph.definition.required_slots.items()
-                              if k in {"setting", "direction"}}},
+                              if k in {"setting", "direction", "state"}}},
                 "nodes": [{"id": ids[n.node_id], "label": n.label,
                     "label_parts": list(n.label_parts),
                     "structure_role": n.structure_role, "actionable": n.actionable,
-                    "role": n.role, "enabled": n.enabled, "value": finite_number(n.value),
+                    "role": n.role, "enabled": n.enabled,
+                    "checked": n.checked if n.checkable and n.source_confidence is None and not n.node_id.startswith("vision:") else None,
+                    "value": finite_number(n.value),
                     "min": finite_number(n.range_min), "max": finite_number(n.range_max),
                     "position": n.position_hint if n.position_hint in {"top", "middle", "bottom", "unknown"} else "unknown",
                     "parent": parent_ref(n.node_id)}

@@ -1,0 +1,2599 @@
+[
+  {
+    "name": "wifi_private_identity_is_not_a_screen_title",
+    "setting": "wifi",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "private-row",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "menu_item",
+        "clickable": true,
+        "resource_id": "com.android.settings:id/wifi_entry"
+      },
+      {
+        "node_id": "private-label",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "private-row",
+        "role": "text"
+      },
+      {
+        "node_id": "private-public-label",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "private-row",
+        "role": "text"
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "wifi_description_is_not_authentication",
+    "setting": "wifi",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "private-summary",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text",
+        "resource_id": "android:id/summary"
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "wifi_empty_search_is_not_private_input",
+    "setting": "wifi",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "resource_id": "com.android.settings:id/switch_widget",
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "private-search",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text_field",
+        "class_name": "android.widget.EditText",
+        "resource_id": "android:id/search_src_text",
+        "extras": {
+          "editable": true
+        }
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "wifi_entered_search_still_stops",
+    "setting": "wifi",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "private-search",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text_field",
+        "class_name": "android.widget.EditText",
+        "resource_id": "android:id/search_src_text",
+        "extras": {
+          "editable": true,
+          "input_content_present": true
+        }
+      }
+    ],
+    "expected": "sensitive_input"
+  },
+  {
+    "name": "wifi_password_even_in_private_row_still_stops",
+    "setting": "wifi",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "private-password",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "resource_id": "com.android.settings:id/account_row",
+        "role": "text_field",
+        "extras": {
+          "editable": true,
+          "is_password": true
+        }
+      }
+    ],
+    "expected": "sensitive_input"
+  },
+  {
+    "name": "wifi_actual_auth_heading_still_stops",
+    "setting": "wifi",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "auth-heading",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text"
+      }
+    ],
+    "expected": "sensitive_screen"
+  },
+  {
+    "name": "bluetooth_private_identity_is_not_a_screen_title",
+    "setting": "bluetooth",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "private-row",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "menu_item",
+        "clickable": true,
+        "resource_id": "com.android.settings:id/paired_device"
+      },
+      {
+        "node_id": "private-label",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "private-row",
+        "role": "text"
+      },
+      {
+        "node_id": "private-public-label",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "private-row",
+        "role": "text"
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "bluetooth_description_is_not_authentication",
+    "setting": "bluetooth",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "private-summary",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text",
+        "resource_id": "android:id/summary"
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "bluetooth_empty_search_is_not_private_input",
+    "setting": "bluetooth",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "resource_id": "com.android.settings:id/switch_widget",
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "private-search",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text_field",
+        "class_name": "android.widget.EditText",
+        "resource_id": "android:id/search_src_text",
+        "extras": {
+          "editable": true
+        }
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "bluetooth_entered_search_still_stops",
+    "setting": "bluetooth",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "private-search",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text_field",
+        "class_name": "android.widget.EditText",
+        "resource_id": "android:id/search_src_text",
+        "extras": {
+          "editable": true,
+          "input_content_present": true
+        }
+      }
+    ],
+    "expected": "sensitive_input"
+  },
+  {
+    "name": "bluetooth_password_even_in_private_row_still_stops",
+    "setting": "bluetooth",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "private-password",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "resource_id": "com.android.settings:id/account_row",
+        "role": "text_field",
+        "extras": {
+          "editable": true,
+          "is_password": true
+        }
+      }
+    ],
+    "expected": "sensitive_input"
+  },
+  {
+    "name": "bluetooth_actual_auth_heading_still_stops",
+    "setting": "bluetooth",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "class_name": "android.widget.Switch"
+      },
+      {
+        "node_id": "auth-heading",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text"
+      }
+    ],
+    "expected": "sensitive_screen"
+  },
+  {
+    "name": "brightness_private_identity_is_not_a_screen_title",
+    "setting": "brightness",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "디스플레이",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "밝기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-row",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "menu_item",
+        "clickable": true,
+        "resource_id": "com.android.settings:id/account_row"
+      },
+      {
+        "node_id": "private-label",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "private-row",
+        "role": "text"
+      },
+      {
+        "node_id": "private-public-label",
+        "text": "디스플레이",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "private-row",
+        "role": "text"
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "brightness_description_is_not_authentication",
+    "setting": "brightness",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "디스플레이",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "밝기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-summary",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text",
+        "resource_id": "android:id/summary"
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "brightness_empty_search_is_not_private_input",
+    "setting": "brightness",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "디스플레이",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "resource_id": "android:id/seekbar",
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-search",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text_field",
+        "class_name": "android.widget.EditText",
+        "resource_id": "android:id/search_src_text",
+        "extras": {
+          "editable": true
+        }
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "brightness_entered_search_still_stops",
+    "setting": "brightness",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "디스플레이",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "밝기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-search",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text_field",
+        "class_name": "android.widget.EditText",
+        "resource_id": "android:id/search_src_text",
+        "extras": {
+          "editable": true,
+          "input_content_present": true
+        }
+      }
+    ],
+    "expected": "sensitive_input"
+  },
+  {
+    "name": "brightness_password_even_in_private_row_still_stops",
+    "setting": "brightness",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "디스플레이",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "밝기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-password",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "resource_id": "com.android.settings:id/account_row",
+        "role": "text_field",
+        "extras": {
+          "editable": true,
+          "is_password": true
+        }
+      }
+    ],
+    "expected": "sensitive_input"
+  },
+  {
+    "name": "brightness_actual_auth_heading_still_stops",
+    "setting": "brightness",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "디스플레이",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "밝기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "auth-heading",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text"
+      }
+    ],
+    "expected": "sensitive_screen"
+  },
+  {
+    "name": "font_size_private_identity_is_not_a_screen_title",
+    "setting": "font_size",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-row",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "menu_item",
+        "clickable": true,
+        "resource_id": "com.android.settings:id/account_row"
+      },
+      {
+        "node_id": "private-label",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "private-row",
+        "role": "text"
+      },
+      {
+        "node_id": "private-public-label",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "private-row",
+        "role": "text"
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "font_size_description_is_not_authentication",
+    "setting": "font_size",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-summary",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text",
+        "resource_id": "android:id/summary"
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "font_size_empty_search_is_not_private_input",
+    "setting": "font_size",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "resource_id": "android:id/seekbar",
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-search",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text_field",
+        "class_name": "android.widget.EditText",
+        "resource_id": "android:id/search_src_text",
+        "extras": {
+          "editable": true
+        }
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "font_size_entered_search_still_stops",
+    "setting": "font_size",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-search",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text_field",
+        "class_name": "android.widget.EditText",
+        "resource_id": "android:id/search_src_text",
+        "extras": {
+          "editable": true,
+          "input_content_present": true
+        }
+      }
+    ],
+    "expected": "sensitive_input"
+  },
+  {
+    "name": "font_size_password_even_in_private_row_still_stops",
+    "setting": "font_size",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-password",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "resource_id": "com.android.settings:id/account_row",
+        "role": "text_field",
+        "extras": {
+          "editable": true,
+          "is_password": true
+        }
+      }
+    ],
+    "expected": "sensitive_input"
+  },
+  {
+    "name": "font_size_actual_auth_heading_still_stops",
+    "setting": "font_size",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "auth-heading",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text"
+      }
+    ],
+    "expected": "sensitive_screen"
+  },
+  {
+    "name": "volume_private_identity_is_not_a_screen_title",
+    "setting": "volume",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "음량",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "미디어",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-row",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "menu_item",
+        "clickable": true,
+        "resource_id": "com.android.settings:id/account_row"
+      },
+      {
+        "node_id": "private-label",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "private-row",
+        "role": "text"
+      },
+      {
+        "node_id": "private-public-label",
+        "text": "음량",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "private-row",
+        "role": "text"
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "volume_description_is_not_authentication",
+    "setting": "volume",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "음량",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "미디어",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-summary",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text",
+        "resource_id": "android:id/summary"
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "volume_empty_search_is_not_private_input",
+    "setting": "volume",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "음량",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "resource_id": "android:id/seekbar",
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-search",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text_field",
+        "class_name": "android.widget.EditText",
+        "resource_id": "android:id/search_src_text",
+        "extras": {
+          "editable": true
+        }
+      }
+    ],
+    "expected": "allowed"
+  },
+  {
+    "name": "volume_entered_search_still_stops",
+    "setting": "volume",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "음량",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "미디어",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-search",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text_field",
+        "class_name": "android.widget.EditText",
+        "resource_id": "android:id/search_src_text",
+        "extras": {
+          "editable": true,
+          "input_content_present": true
+        }
+      }
+    ],
+    "expected": "sensitive_input"
+  },
+  {
+    "name": "volume_password_even_in_private_row_still_stops",
+    "setting": "volume",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "음량",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "미디어",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "private-password",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "resource_id": "com.android.settings:id/account_row",
+        "role": "text_field",
+        "extras": {
+          "editable": true,
+          "is_password": true
+        }
+      }
+    ],
+    "expected": "sensitive_input"
+  },
+  {
+    "name": "volume_actual_auth_heading_still_stops",
+    "setting": "volume",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "음량",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": "미디어",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "class_name": "android.widget.SeekBar"
+      },
+      {
+        "node_id": "auth-heading",
+        "text": "비밀번호",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "text"
+      }
+    ],
+    "expected": "sensitive_screen"
+  },
+  {
+    "name": "wifi_unlabelled_native_control_survives",
+    "setting": "wifi",
+    "expected": "allowed",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "Wi-Fi",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "resource_id": "com.android.settings:id/switch_widget",
+        "class_name": "android.widget.Switch"
+      }
+    ]
+  },
+  {
+    "name": "bluetooth_unlabelled_native_control_survives",
+    "setting": "bluetooth",
+    "expected": "allowed",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "블루투스",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "switch",
+        "checkable": true,
+        "clickable": true,
+        "extras": {
+          "checked": false
+        },
+        "resource_id": "com.android.settings:id/switch_widget",
+        "class_name": "android.widget.Switch"
+      }
+    ]
+  },
+  {
+    "name": "brightness_unlabelled_native_control_survives",
+    "setting": "brightness",
+    "expected": "allowed",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "디스플레이",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "resource_id": "android:id/seekbar",
+        "class_name": "android.widget.SeekBar"
+      }
+    ]
+  },
+  {
+    "name": "font_size_unlabelled_native_control_survives",
+    "setting": "font_size",
+    "expected": "allowed",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "글자 크기",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "resource_id": "android:id/seekbar",
+        "class_name": "android.widget.SeekBar"
+      }
+    ]
+  },
+  {
+    "name": "volume_unlabelled_native_control_survives",
+    "setting": "volume",
+    "expected": "allowed",
+    "nodes": [
+      {
+        "node_id": "root",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          0,
+          0,
+          1080,
+          2400
+        ],
+        "role": "container"
+      },
+      {
+        "node_id": "heading",
+        "text": "음량",
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          80,
+          1000,
+          180
+        ],
+        "parent_id": "root",
+        "role": "text"
+      },
+      {
+        "node_id": "control",
+        "text": null,
+        "package_name": "com.android.settings",
+        "visible_to_user": true,
+        "bounds_in_screen": [
+          30,
+          300,
+          900,
+          400
+        ],
+        "parent_id": "root",
+        "role": "slider",
+        "checkable": false,
+        "clickable": true,
+        "extras": {
+          "progress": 3,
+          "min": 0,
+          "max": 10
+        },
+        "resource_id": "android:id/seekbar",
+        "class_name": "android.widget.SeekBar"
+      }
+    ]
+  }
+]

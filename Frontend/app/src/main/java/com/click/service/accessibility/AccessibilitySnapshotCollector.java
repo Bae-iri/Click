@@ -41,7 +41,7 @@ final class AccessibilitySnapshotCollector {
                     parentId,
                     node.isVisibleToUser(),
                     string(node.getPackageName()) == null ? packageName : string(node.getPackageName()),
-                    string(node.getText()),
+                    node.isShowingHintText() ? null : string(node.getText()),
                     string(node.getContentDescription()),
                     node.getViewIdResourceName(),
                     className,

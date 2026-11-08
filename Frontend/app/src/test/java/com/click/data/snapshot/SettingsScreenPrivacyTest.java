@@ -233,4 +233,43 @@ public class SettingsScreenPrivacyTest {
         assertTrue(privacy.filter(input).toString().contains("brightness_seekbar"));
         assertTrue(input.toString().contains("brightness_seekbar"));
     }
+    @Test public void sharedObservationCasesMatchBackendAcrossTaskFamilies() throws Exception {
+        JSONArray cases;
+        try (java.io.InputStream in = getClass().getResourceAsStream("/fixtures/observation-privacy-cases.json")) {
+            assertNotNull(in);
+            cases = new JSONArray(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+        for (int i = 0; i < cases.length(); i++) {
+            JSONObject value = cases.getJSONObject(i);
+            JSONObject body = new JSONObject().put("accessibility_tree", new JSONObject()
+                    .put("package_name", "com.android.settings").put("nodes", value.getJSONArray("nodes")));
+            String expected = value.getString("expected");
+            try {
+                JSONObject safe = privacy.filter(body, value.getString("setting"));
+                assertEquals(value.getString("name"), "allowed", expected);
+                JSONArray nodes = safe.getJSONObject("accessibility_tree").getJSONArray("nodes");
+                boolean control = false;
+                for (int j = 0; j < nodes.length(); j++) {
+                    JSONObject node = nodes.getJSONObject(j);
+                    assertFalse(value.getString("name"), node.optString("node_id").startsWith("private"));
+                    control |= "control".equals(node.optString("node_id"));
+                }
+                assertTrue(value.getString("name"), control);
+            } catch (SettingsScreenPrivacy.Blocked blocked) {
+                assertNotEquals(value.getString("name"), "allowed", expected);
+                assertEquals(value.getString("name"), expected.equals("sensitive_input")
+                        ? SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_INPUT : SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_SCREEN,
+                        blocked.reason);
+            }
+        }
+    }
+
+    @Test public void nativeTextNeedsNoScreenshotMaskButImagesStillNeedProof() throws Exception {
+        JSONObject body = request(node("title", "디스플레이"), node("brightness", "밝기").put("role", "slider"));
+        assertNotNull(privacy.filter(body, "brightness", false));
+        body.put("vision_snapshot", new JSONObject().put("package_name", "com.android.settings").put("redaction_applied", true));
+        try { privacy.filter(body, "brightness", false); fail("Unproven image masking must remain blocked"); }
+        catch (SettingsScreenPrivacy.Blocked blocked) { assertEquals(SettingsScreenPrivacy.Blocked.Reason.VISION_MASK_UNAVAILABLE, blocked.reason); }
+    }
+
 }

@@ -55,4 +55,19 @@ public class ErrorDetailsTest {
         assertFalse(message.contains("internal-details"));
         assertNotNull(ErrorDetails.requestMessage(null));
     }
+    @Test public void legacyPrivacyMessageNeverInventsPersonalInformationOrAPopup() throws Exception {
+        for (String reason : new String[]{"", "unrecognized_settings_screen", "unsupported_app"}) {
+            org.json.JSONObject policy = new org.json.JSONObject().put("privacy_blocked", true)
+                    .put("observation_reason", reason);
+            AgentTurnContract.Response response = new AgentTurnContract.Response(new org.json.JSONObject()
+                    .put("request_id", "r").put("session_id", "s").put("task_status", "BLOCKED")
+                    .put("guide_command", new org.json.JSONObject().put("command_type", "blocked")
+                        .put("action_type", "observe_only").put("guide_command_id", "g")
+                        .put("message", "개인정보가 있거나 지원하지 않는 화면이에요.").put("render_policy", policy)).toString());
+            String message = ErrorDetails.guideFailureMessage(response);
+            assertFalse(message.contains("개인정보")); assertFalse(message.contains("팝업"));
+            assertFalse(message.contains("잠금")); assertTrue(message.contains("다시 시도"));
+        }
+    }
+
 }

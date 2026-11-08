@@ -2,6 +2,7 @@ package com.click.service.overlay;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -11,7 +12,7 @@ import android.speech.SpeechRecognizer;
 import java.io.IOException;
 import java.util.ArrayList;
 
-/** One Korean utterance through Android's configured recognition service. */
+/** One Korean utterance through Android's on-device recognizer; no remote fallback. */
 public final class DeviceSpeechInput implements SpeechInput {
     private static final long MAX_LISTENING_MS = 16_000L;
     private static final long RESULT_TIMEOUT_MS = 15_000L;
@@ -29,15 +30,17 @@ public final class DeviceSpeechInput implements SpeechInput {
             Session next = new Session(callback);
             session = next;
             try {
-                if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-                    next.fail(new DeviceError(SpeechRecognizer.ERROR_CLIENT));
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+                        || !SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) {
+                    next.fail(new DeviceError(DeviceError.ON_DEVICE_UNAVAILABLE));
                     return;
                 }
-                next.recognizer = SpeechRecognizer.createSpeechRecognizer(context);
+                next.recognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(context);
                 next.recognizer.setRecognitionListener(next);
                 Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
                         .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                         .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")
+                        .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
                         .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                         .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                         .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, MAX_LISTENING_MS)
@@ -139,6 +142,7 @@ public final class DeviceSpeechInput implements SpeechInput {
     }
 
     public static final class DeviceError extends IOException {
+        static final int ON_DEVICE_UNAVAILABLE = -1;
         public final int code;
         DeviceError(int code) { super("DEVICE_SPEECH_" + code); this.code = code; }
     }

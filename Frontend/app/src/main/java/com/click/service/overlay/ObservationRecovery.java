@@ -7,6 +7,11 @@ import org.json.JSONObject;
 /** Settings navigation recovery using fresh, visible screen evidence. */
 public final class ObservationRecovery {
     private ObservationRecovery() {}
+    public static String missingScreenMessage(boolean connected, boolean locked) {
+        if (!connected) return "화면 읽기 연결이 끊겼어요. ‘접근성 안내 보기’를 눌러 연결을 다시 설정해 주세요.";
+        if (locked) return "휴대폰 잠금을 푼 뒤 ‘다시 시도하기’를 눌러주세요.";
+        return "현재 화면 정보를 충분히 읽지 못했어요. 설정 화면에서 ‘다시 시도하기’를 눌러주세요.";
+    }
     public static boolean canReturnFromSettings(ScreenSnapshot screen) {
         if (!settingsScreen(screen) || screen.activeWindowId == null) return false;
         return screen.nodes.stream().anyMatch(node -> node.visibleToUser && node.enabled && node.clickable

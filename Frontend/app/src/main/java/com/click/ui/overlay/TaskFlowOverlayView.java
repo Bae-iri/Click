@@ -969,7 +969,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         clear(question);
         addOutcomeMessage(resultDetails(prompt, question));
         narrationMessage = resultNarration(prompt, fontSize);
-        boolean verified = "CHANGED".equals(prompt.optString("technical_status"));
+        boolean verified = "CHANGED".equals(prompt.optString("technical_status"))
+                || "ALREADY_SET".equals(prompt.optString("technical_status"));
         content.addView(primaryButton(!verified ? "네, 원하는 상태예요" : fontSize ? "네, 글씨가 잘 보여요" : "네, 좋아요",
                 () -> listener.result("satisfied")), spaced(12));
         content.addView(secondaryButton(fontSize ? "더 커졌으면 좋겠어" : "조금 더 도와주세요",
@@ -981,7 +982,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     private static String resultQuestion(JSONObject prompt, boolean fontSize) {
-        if (prompt.has("technical_status") && !"CHANGED".equals(prompt.optString("technical_status")))
+        if (prompt.has("technical_status") && !"CHANGED".equals(prompt.optString("technical_status"))
+                && !"ALREADY_SET".equals(prompt.optString("technical_status")))
             return "현재 설정이 원하시는 상태인가요?";
         if (fontSize) return "이제 글자가 보기 편한가요?";
         String[] sentences = resultMessage(prompt).split("(?<=[.!?])\\s+");
@@ -1110,7 +1112,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void observationRecovery(String goal, String message, Runnable retry) {
         clear("");
         compactSummary = "도움이 필요해요!";
-        narrationMessage = "휴대폰 잠금을 풀고, 열려 있는 팝업을 닫은 뒤 ‘다시 시도하기’를 눌러주세요.";
+        narrationMessage = "‘다시 시도하기’를 눌러 안내를 이어가 주세요.";
         content.addView(text(narrationMessage, 17), spaced(8));
         addRecoveryRetry(retry);
     }

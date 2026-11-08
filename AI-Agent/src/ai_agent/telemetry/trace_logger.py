@@ -47,6 +47,10 @@ def diagnostic_payload(value, depth=0):
     selection = value.get("ui_selection")
     if isinstance(selection, Mapping):
         safe = {}
+        OBSERVATION_REASONS = {'unsupported_scope', 'unsupported_app', 'input_present', 'credential_input',
+            'protected_screen', 'unrecognized_settings_screen', 'safe_native_labels', 'empty_observation'}
+        if selection.get('observation_reason') in OBSERVATION_REASONS:
+            safe['observation_reason'] = selection['observation_reason']
         for key, allowed in (("provider", {"rules", "jev"}), ("status", UI_SELECTION_STATUSES),
                              ("mode", {"primary", "auxiliary"})):
             if isinstance(selection.get(key), str) and selection[key] in allowed:
