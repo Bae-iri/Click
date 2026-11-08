@@ -47,12 +47,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
         ClickOverlayService.onAccessibilityOverlayAvailable();
         AccessibilityOnboardingState onboarding = new AccessibilityOnboardingState(this);
         if (onboarding.isPending()) {
-            boolean returnToSettings = onboarding.returnsToSettings();
-            if (returnToSettings) onboarding.markSettingsReturned();
-            else onboarding.markTutorialLaunched();
-            Intent destination = new Intent(this, returnToSettings ? com.click.MenuActivity.class : TutorialReadyActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            startActivity(destination);
+            onboarding.markTutorialLaunched();
+            Intent tutorial = new Intent(this, TutorialReadyActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(tutorial);
         }
         mainHandler.postDelayed(captureRunnable, SNAPSHOT_DEBOUNCE_MS);
     }

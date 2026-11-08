@@ -79,7 +79,7 @@ public class GoalCommandInterpreterTest {
 
     @Test public void classifiesApprovedAndCatalogOnlyGoalsFromSharedCatalog() throws Exception {
         GoalCatalogClassifier catalog = loadCatalog();
-        assertEquals(160, catalog.size());
+        assertEquals(181, catalog.size());
 
         GoalCommandInterpreter.Result font = GoalCommandInterpreter.interpret(
                 "글씨가 너무 커서 좀 작게 해 줘", false, false, false, catalog, "com.android.settings");
@@ -89,7 +89,8 @@ public class GoalCommandInterpreterTest {
 
         GoalCommandInterpreter.Result wifi = GoalCommandInterpreter.interpret(
                 "와이파이 좀 켜 줘", false, false, false, catalog, "com.android.settings");
-        assertEquals(GoalCommandInterpreter.Kind.CATALOGUED_UNAVAILABLE, wifi.kind);
+        assertEquals(GoalCommandInterpreter.Kind.START_TASK, wifi.kind);
+        assertTrue(wifi.canStart());
         assertNotNull(wifi.goal);
         assertEquals("settings.wifi.enable", wifi.goal.goalType);
 

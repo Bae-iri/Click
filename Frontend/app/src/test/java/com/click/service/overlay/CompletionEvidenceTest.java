@@ -12,4 +12,14 @@ public class CompletionEvidenceTest {
   JSONObject verified=new JSONObject().put("technical_outcome",new JSONObject().put("status","CHANGED"));
   assertTrue(CompletionEvidence.accepted(verified));assertTrue(CompletionEvidence.verified(verified));
  }
+ @Test public void nativePageEvidenceCompletesOnlyItsMatchingNavigationGoal() throws Exception {
+  JSONObject proof=new JSONObject().put("status","OPENED").put("reason","settings_page_visible").put("setting","navigation_volume");
+  JSONObject metadata=new JSONObject().put("task_outcome",new JSONObject().put("technical",proof));
+  assertTrue(CompletionEvidence.accepted(metadata,"settings.navigation.volume"));
+  assertFalse(CompletionEvidence.verified(metadata));
+  for(String goal:new String[]{null,"settings.volume.increase","settings.dark_mode.enable","settings.navigation.font_size"})
+   assertFalse(CompletionEvidence.accepted(metadata,goal));
+  proof.put("reason","insufficient_evidence");
+  assertFalse(CompletionEvidence.accepted(metadata,"settings.navigation.volume"));
+ }
 }
