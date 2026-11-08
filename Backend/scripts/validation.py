@@ -15,6 +15,8 @@ INSTANCE = BACKEND / 'instance/validation'
 
 def prepare(env_file, port):
     from dotenv import dotenv_values, set_key
+    from cryptography.fernet import Fernet
+    from app.core.data_encryption import DataCipher
     if not 1 <= port <= 65535:
         raise ValueError('Invalid validation port')
     INSTANCE.mkdir(parents=True, exist_ok=True)
@@ -24,7 +26,9 @@ def prepare(env_file, port):
     values.update(DATABASE_URL='sqlite+pysqlite:///' + (INSTANCE / 'validation.db').as_posix(),
         CLICK_VALIDATION_ENVIRONMENT_ID=previous.get('CLICK_VALIDATION_ENVIRONMENT_ID') or secrets.token_hex(16),
         CLICK_VALIDATION_DIAGNOSTICS='1',
-        OPS_TOKEN=previous.get('OPS_TOKEN') or secrets.token_urlsafe(48))
+        OPS_TOKEN=previous.get('OPS_TOKEN') or secrets.token_urlsafe(48),
+        DATA_ENCRYPTION_KEYS=previous.get('DATA_ENCRYPTION_KEYS') or Fernet.generate_key().decode(),
+        DATA_LOOKUP_KEY=previous.get('DATA_LOOKUP_KEY') or Fernet.generate_key().decode())
     if not target.exists():
         target.touch()
     for key, value in values.items():
@@ -39,7 +43,7 @@ def prepare(env_file, port):
     from app.task_graphs import approved_graphs
     from app.core.validation import environment_manifest
     from scripts.agent2 import audit_catalog
-    engine = build_engine(values['DATABASE_URL'])
+    engine = build_engine(values['DATABASE_URL'], data_cipher=DataCipher(values['DATA_ENCRYPTION_KEYS'].split(','), values['DATA_LOOKUP_KEY']))
     try:
         factory = build_session_factory(engine)
         TaskGraphRepository(factory).seed_mvp()

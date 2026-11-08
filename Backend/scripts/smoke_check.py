@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from cryptography.fernet import Fernet
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -28,8 +29,11 @@ def stop_server(server):
 def main() -> None:
     with tempfile.TemporaryDirectory(prefix="click-smoke-") as temporary:
         env = {**os.environ, "DATABASE_URL": f"sqlite+pysqlite:///{Path(temporary).as_posix()}/test.db",
-               "GEMINI_API_KEY": ""}
-        for args in (("upgrade", "head"), ("downgrade", "base"), ("upgrade", "head"), ("check",)):
+               "GEMINI_API_KEY": "", "DATA_ENCRYPTION_KEYS": Fernet.generate_key().decode(),
+               "DATA_LOOKUP_KEY": Fernet.generate_key().decode()}
+        # Only the historical plaintext schema is reversible. The final step
+        # verifies the encrypted schema without ever downgrading user ciphertext.
+        for args in (("upgrade", "20261104_17"), ("downgrade", "base"), ("upgrade", "head"), ("check",)):
             subprocess.run([sys.executable, "-m", "alembic", *args], cwd=BACKEND, env=env, check=True)
         with socket.socket() as reserved:
             reserved.bind(("127.0.0.1", 0))

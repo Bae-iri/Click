@@ -39,6 +39,7 @@ def main():
     parser.add_argument('--run-live', action='store_true', help='Run six real native adjustments and restore all three original settings')
     parser.add_argument('--initial-position',choices=['top','bottom'],default='top',help='Settings home viewport before task start; never pre-position the target')
     parser.add_argument('--goal',choices=[s+'.'+d for s in ('font_size','brightness','volume') for d in ('increase','decrease')],help='Explicitly run only this goal; the report records this filter')
+    parser.add_argument('--reuse-installed',action='store_true',help='Reuse only when both installed APK hashes exactly match --apk-dir')
     parser.add_argument('--apk-dir', type=Path, help='Frontend/app/build/outputs/apk containing signed compatible debug APKs')
     parser.add_argument('--report', type=Path, default=Path('/private/tmp/click-native-settings-stability.json'))
     args = parser.parse_args()
@@ -54,7 +55,7 @@ def main():
     if args.apk_dir:
         for apk in (args.apk_dir/'debug/app-debug.apk', args.apk_dir/'androidTest/debug/app-debug-androidTest.apk'):
             if not apk.is_file():raise ValueError('Build both debug and androidTest APKs first')
-            subprocess.run([adb, 'install', '-r', str(apk)], check=True)
+            if not args.reuse_installed:subprocess.run([adb, 'install', '-r', str(apk)], check=True)
     before_apk = installed_app_hash(adb)
     before_test_apk = installed_app_hash(adb,"com.click.test")
     expected_test_apk = hashlib.sha256((args.apk_dir/'androidTest/debug/app-debug-androidTest.apk').read_bytes()).hexdigest()

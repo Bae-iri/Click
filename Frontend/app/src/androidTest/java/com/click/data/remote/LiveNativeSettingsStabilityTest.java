@@ -158,14 +158,20 @@ public class LiveNativeSettingsStabilityTest {
                 assertNotNull("Readable Settings home before testing",nativeSettings());
                 String firstRow=setting.equals("volume")?"소리 및 진동":"디스플레이";
                 String initialPosition=InstrumentationRegistry.getArguments().getString("initialPosition","top");
-                if("bottom".equals(initialPosition))for(int setup=0;setup<8;setup++) {
-                    if(!scrollSettings(true))break;SystemClock.sleep(350);
+                int setupScrolls=0;
+                if("bottom".equals(initialPosition))for(int setup=0;setup<10;setup++) {
+                    ScreenSnapshot position=nativeSettings();
+                    boolean moved=ClickAccessibilityService.performSettingsScroll(true,position.packageName,position.activeWindowId);
+                    if(moved)setupScrolls++;
+                    SystemClock.sleep(450);
+                    if(!moved)break;
                 }
                 ScreenSnapshot startScreen=nativeSettings();
                 boolean startTargetVisible=startScreen.nodes.stream().anyMatch(n->n.visibleToUser && firstRow.equals(n.text));
                 String session=UUID.randomUUID().toString();JSONObject last=null,event=null;
-                JSONObject item=new JSONObject().put("goal",setting+"."+direction).put("start","android_settings_home").put("initial_position",initialPosition).put("start_target_visible",startTargetVisible).put("turns",new JSONArray());
+                JSONObject item=new JSONObject().put("goal",setting+"."+direction).put("start","android_settings_home").put("initial_position",initialPosition).put("setup_scrolls",setupScrolls).put("start_target_visible",startTargetVisible).put("turns",new JSONArray());
                 report.getJSONArray("cases").put(item);save();
+                if("bottom".equals(initialPosition))assertFalse("Offscreen fixture must actually hide the next route menu",startTargetVisible);
                 com.click.service.overlay.NativeSettingsSearchPlanner search=new com.click.service.overlay.NativeSettingsSearchPlanner();
                 ScreenSnapshot consentScreen=null;String consentId=null;
                 float before=value(setting);boolean changed=false,approved=false;int repeat=0,retries=0,actions=0,scrolls=0;
@@ -198,7 +204,7 @@ public class LiveNativeSettingsStabilityTest {
                         if(event!=null){request.put("user_action_event",event);event=null;}
                         report.put("stage","agent_turn:"+setting+"."+direction);save();
                         assertPreparedApks();
-                        last=new JSONObject(http.post(AgentTurnContract.PATH,privacy.filter(request).toString()).body);
+                        last=new JSONObject(http.post(AgentTurnContract.PATH,privacy.filter(request,setting).toString()).body);
                         JSONObject guide=last.getJSONObject("guide_command"),metadata=last.getJSONObject("metadata");
                         if("confirmation".equals(guide.optString("command_type"))) {
                             String nextId=metadata.getJSONObject("confirmation").getString("id");

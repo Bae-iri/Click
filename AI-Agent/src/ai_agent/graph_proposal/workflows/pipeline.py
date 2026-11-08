@@ -6,9 +6,11 @@ from ai_agent.graph_proposal.datasets.dataset_builder import TrainingDatasetBuil
 from ai_agent.graph_proposal.evaluation.graph_validator import GraphValidator
 from ai_agent.graph_proposal.proposals.graph_learner import GraphLearner
 from ai_agent.graph_proposal.reconstruction.episodes import RECONSTRUCTION_POLICY, reconstruct
+from ai_agent.graph_proposal.analysis.jev import analyze_jev, POLICY as ASSESSMENT_POLICY
 
 
-def run_pipeline(events, graphs, *, now, manifest=None, cases=None, evaluator=None, graph_loader=None):
+def run_pipeline(events, graphs, *, now, manifest=None, cases=None, evaluator=None, graph_loader=None, jev_reviews=None):
+    events = list(events)
     episodes = reconstruct(events, now=now)
     reviews = {}
     if manifest is not None:
@@ -33,8 +35,9 @@ def run_pipeline(events, graphs, *, now, manifest=None, cases=None, evaluator=No
     status = ("ERROR" if "ERROR" in decisions else
               "READY_FOR_REVIEW" if "PASS" in decisions else
               "NEEDS_DATA" if not decisions or "NEEDS_DATA" in decisions else "REJECTED")
-    result = {"schema_version": "ai2-run.v1", "reconstruction_policy": RECONSTRUCTION_POLICY, "episodes": episodes,
-        "analysis": analyze(episodes), "dataset": datasets,
+    result = {"schema_version": "ai2-run.v1", "reconstruction_policy": RECONSTRUCTION_POLICY,
+        "assessment_policy": ASSESSMENT_POLICY, "episodes": episodes,
+        "analysis": analyze(episodes), "jev_analysis": analyze_jev(events, episodes, now=now, reviews=jev_reviews), "dataset": datasets,
         "proposals": [asdict(proposal) for proposal in proposals], "evaluations": evaluations,
         "status": status}
     result["run_hash"] = fingerprint(result)
