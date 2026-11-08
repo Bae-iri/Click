@@ -1,6 +1,7 @@
 """Task-specific result confirmation. This is independent of safety consent and ratings."""
 from copy import deepcopy
 from uuid import uuid4
+from ai_agent.runtime.settings_controls import DOCUMENT, CONTROLS
 
 
 def make_outcome(technical, now, direction="increase", *, previous=None, setting=None):
@@ -26,7 +27,30 @@ def make_outcome(technical, now, direction="increase", *, previous=None, setting
         elif technical['status'] == 'NOT_ACHIEVED':
             message = f'{subject_label} 요청한 방향으로 바뀌지 않았어요.'
         question = '화면이 보기 편한가요?' if setting == 'brightness' else '동영상·음악 소리가 듣기 편한가요?'
-    return {"setting": setting, "technical": technical, "user": {"status": None, "confirmed_at": None},
+    if setting == 'wifi':
+        requested = technical.get('requested_state') or (previous or {}).get('requested_state', 'on')
+        state_label = '켜져' if requested == 'on' else '꺼져'
+        if technical['status'] == 'CHANGED':
+            message = '와이파이를 켰어요.' if requested == 'on' else '와이파이를 껐어요.'
+        elif technical['status'] == 'ALREADY_SET':
+            message = f'와이파이가 이미 {state_label} 있어요.'
+        else:
+            message = '와이파이 상태 변경을 확인하지 못했어요.'
+        question = '원하신 상태로 설정되었나요?'
+    if setting in CONTROLS:
+        label = next(v['name'].rsplit(' ', 1)[0] for v in DOCUMENT['goals'].values() if v['setting'] == setting)
+        requested = technical.get('requested_state') or (previous or {}).get('requested_state')
+        if technical['status'] == 'CHANGED':
+            message = f'{label}: 요청한 {"켜짐" if requested == "on" else "꺼짐"} 스위치 상태를 확인했어요.'
+        elif technical['status'] == 'ALREADY_SET':
+            message = f'{label}: 이미 요청한 상태예요.'
+        else:
+            message = f'{label} 변경 결과를 확인하지 못했어요.'
+        question = '원하신 상태로 설정되었나요?'
+    if technical.get('reason') == 'manual_result_required' or setting not in {'font_size', 'brightness', 'volume', 'wifi', *CONTROLS}:
+        message = '직접 진행한 작업 결과를 확인해 주세요. 앱에서 변경 성공을 검증하지는 못했어요.'
+        question = '원하시는 결과를 얻었나요?'
+    return {"setting": setting, "requested_state": (previous or {}).get('requested_state'), "technical": technical, "user": {"status": None, "confirmed_at": None},
         "final": None, "prompt": {"id": str(uuid4()), "expires_at": now + 180,
         "message": message + " " + question, "technical_status": technical["status"]},
         "checklist": deepcopy((previous or {}).get("checklist", []))}
@@ -35,13 +59,19 @@ def make_outcome(technical, now, direction="increase", *, previous=None, setting
 def answer_outcome(outcome, answer, now):
     result = deepcopy(outcome)
     result["user"] = {"status": answer, "confirmed_at": now}
-    result["final"] = {"satisfied": "ACHIEVED" if result["technical"]["status"] == "CHANGED"
+    result["final"] = {"satisfied": "ACHIEVED" if result["technical"]["status"] in {"CHANGED", "ALREADY_SET"}
                         else "USER_REPORTED_RESOLVED", "needs_help": "ADDITIONAL_HELP",
                         "stopped": "USER_STOPPED", "no_response": "NO_RESPONSE"}[answer]
     return result
 
 
 def follow_up(outcome):
+    if outcome.get('setting') not in {'font_size', 'brightness', 'volume', 'wifi'}:
+        return {'message': '기기에서 선택한 항목과 현재 설정 상태를 확인해 주세요. 어떤 도움이 더 필요한가요?',
+            'choices': [{'id': 'other', 'label': '다른 도움이 필요해요'}, {'id': 'unsure', 'label': '잘 모르겠어요'}]}
+    if outcome.get('setting') == 'wifi':
+        return {'message': '와이파이 켜짐 상태와 네트워크 연결은 별개예요. 어떤 도움이 더 필요한가요?',
+            'choices': [{'id': 'other', 'label': '다른 도움이 필요해요'}, {'id': 'unsure', 'label': '잘 모르겠어요'}]}
     direction = outcome.get("technical", {}).get("limit_direction")
     choices = [{"id": "too_small", "label": "글자가 아직 작아요"},
                {"id": "too_large", "label": "글자가 너무 커요"},

@@ -1,5 +1,6 @@
 """JSON graph checks/patching without importing or executing Agent 1."""
 from copy import deepcopy
+from ai_agent.task_graph.settings import CONTROLS
 from ai_agent.graph_proposal.contracts import canonical, fingerprint, identifier, finite_number
 
 
@@ -48,8 +49,39 @@ def graph_errors(body):
             errors.append("invalid_action_type")
         if transition.get("safety_level") not in ("LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"):
             errors.append("invalid_safety_level")
-        if transition.get("verification_predicate", "state_reached") not in ("state_reached", "target_value_increased", "target_value_decreased"):
+        if transition.get("verification_predicate", "state_reached") not in ("state_reached", "target_value_increased", "target_value_decreased", "settings_page_visible",
+                *({'target_checked_on', 'target_checked_off'} if definition.get('required_slots', {}).get('setting') in {*CONTROLS, 'wifi'} else set()),
+                *({'manual_result_required'} if definition.get('task_type') == 'settings_assisted' else set())):
             errors.append("unsupported_verification_predicate")
+        if transition.get('verification_predicate') in ('target_checked_on', 'target_checked_off') and (
+                transition.get('action_type') != 'tap' or transition.get('target_role') != 'toggle'
+                or transition.get('safety_level') != 'CONFIRM_REQUIRED' or not transition.get('completes_task')
+                or transition.get('verification_predicate') != 'target_checked_' + definition.get('required_slots', {}).get('state', '')):
+            errors.append('invalid_wifi_verifier')
+        if transition.get('verification_predicate') == 'manual_result_required' and (
+                definition.get('task_type') != 'settings_assisted' or transition.get('action_type') != 'observe_only'
+                or transition.get('requires_user_action', True) or transition.get('target_role') is not None
+                or transition.get('safety_level') != 'LOW_RISK' or not transition.get('completes_task')
+                or not states.get(source, {}).get('required_keyword_groups')):
+            errors.append('invalid_manual_handoff')
+        if definition.get('task_type') == 'settings_assisted' and (
+                transition.get('action_type') not in {'tap', 'observe_only'}
+                or transition.get('target_role') not in {None, 'menu_item', 'app_icon'}
+                or (transition.get('completes_task') and transition.get('verification_predicate') != 'manual_result_required')):
+            errors.append('invalid_assisted_action')
+        if transition.get('verification_predicate') == 'settings_page_visible'  and (
+                definition.get('task_type') != 'settings_navigation'
+                or definition.get('required_slots', {}).get('action') != 'open'
+                or transition.get('action_type') != 'observe_only'
+                or transition.get('requires_user_action', True)
+                or transition.get('safety_level') != 'LOW_RISK'
+                or not transition.get('completes_task')
+                or not states.get(source, {}).get('required_keyword_groups')):
+            errors.append('invalid_navigation_completion')
+        if definition.get('task_type') == 'settings_navigation' and (
+                transition.get('action_type') not in {'tap', 'observe_only'}
+                or transition.get('target_role') not in {None, 'menu_item', 'app_icon'}):
+            errors.append('invalid_navigation_action')
         if transition.get("safety_level") == "CONFIRM_REQUIRED" and not transition.get("confirmation_message"):
             errors.append("missing_confirmation")
         if transition.get("completes_task") and transition.get("action_type") != "observe_only" and transition.get("safety_level") != "CONFIRM_REQUIRED":

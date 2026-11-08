@@ -18,7 +18,7 @@ def recovery_command(session_id, plan):
     messages = {
         "TARGET_NOT_VISIBLE": f"{plan.target_label or '다음'} 항목이 현재 화면에 보이지 않아요. 안내 창을 접고 목록을 위로 밀어 아래 항목을 살펴보세요. 화면이 바뀌면 이어서 안내할게요.",
         "STATE_AMBIGUOUS": "현재 화면을 정확히 구분하지 못했어요. 화면 제목을 확인하거나 이전 화면으로 돌아간 뒤 다시 확인해 주세요.",
-        "STATE_UNKNOWN": "현재 화면을 작업 경로와 연결하지 못했어요. 팝업이 있다면 닫거나 설정 화면으로 이동한 뒤 다시 확인해 주세요.",
+        "STATE_UNKNOWN": "‘다시 시도하기’를 눌러 안내를 이어가 주세요.",
         "TARGET_AMBIGUOUS": "비슷한 항목이 여러 개라 누를 곳을 확정하지 못했어요. 직접 원하는 메뉴로 이동하거나 화면을 다시 확인해 주세요.",
         "LOW_CONFIDENCE": "현재 화면에서 누를 항목을 확실히 판단하지 못했어요. ‘다시 시도하기’를 누르거나 직접 메뉴로 이동해 주세요.",
         "MODEL_ABSTAINED": "현재 화면의 안내를 확정하지 못했어요. ‘다시 시도하기’를 누르거나 직접 메뉴로 이동해 주세요.",
@@ -77,7 +77,7 @@ def build_guide_command(
                 guide_command_id=f"guide_{session_id}_{match_result.state_id}_open_settings_recovery",
                 command_type=CommandType.HIGHLIGHT,
                 action_type=ActionType.OBSERVE_ONLY,
-                message="설정 앱을 현재 화면에서 찾지 못했어요. 설정 앱을 열 수 있는 화면으로 이동해 주세요.",
+                message="설정 앱을 열어주세요.",
                 safety_level=SafetyLevel.LOW_RISK,
                 requires_user_action=True,
                 render_policy={

@@ -253,6 +253,19 @@ class ClickAgentEngine:
         current_state_id = classify_screen_state(normalized_nodes, graph,
             device_context=observation_context.device_context(request),
             previous_state_id=previous_state_id, evidence=state_evidence)
+        from ai_agent.runtime.settings_navigation import page_arrival
+        arrival = page_arrival(graph, normalized_nodes, original_screen)
+        from ai_agent.runtime.settings_controls import already_satisfied, CONTROLS, manual_handoff
+        from ai_agent.runtime.screen_privacy import screen_status
+        already_setting = (already_satisfied(graph, normalized_nodes, request.applied_settings)
+            if graph.definition.required_slots.get('setting') in {*CONTROLS, 'wifi'}
+                and request.user_confirmation != 'rejected' and not screen_status(original_screen, vocabulary_key)
+                and (not existing_session or not existing_session.pending_attempt or request.user_action_event is None) else None)
+        handoff = manual_handoff(graph, normalized_nodes, original_screen)
+        if handoff is not None:
+            current_state_id = handoff.from_state
+        if arrival is not None or already_setting is not None:
+            current_state_id = (arrival or already_setting).current_state_id
         if current_state_id == 'S0_UNKNOWN' and not self.screen_resolver:
             current_state_id = resolve_state(normalized_nodes, graph, self.state_resolver,
                 previous_state_id=previous_state_id, evidence=state_evidence,
@@ -275,6 +288,8 @@ class ClickAgentEngine:
             current_state_id=current_state_id,
             previous_snapshot=existing_session.last_snapshot if existing_session else None,
             current_snapshot=current_snapshot, attempt=attempt, nodes=normalized_nodes)
+        if arrival is not None or already_setting is not None:
+            verification_result = arrival or already_setting
         # In primary mode Jev chooses across graph steps, before final transition
         # verification. Rule classification supplies evidence, never the final UI.
         primary_match = None
@@ -282,7 +297,7 @@ class ClickAgentEngine:
         primary_decision = None
         ui_selection = {"provider": getattr(self.ui_selector, "provider", "rules"),
                         "status": "skipped", "called": False}
-        if self.screen_resolver:
+        if self.screen_resolver and handoff is None:
             if vision_analysis and vision_analysis.status == "masking_failed":
                 primary_decision = PrimaryDecision(None, {
                     "provider": "jev", "mode": "primary", "status": "skipped", "called": False})
@@ -412,6 +427,10 @@ class ClickAgentEngine:
             primary=primary_decision, limit_target=matched_target if limit_reached else None,
             vocabulary_key=vocabulary_key)
         guide_command, keep_attempt = decision.guide, decision.keep_attempt
+        if arrival is not None:
+            guide_command = replace(guide_command,
+                message=graph.states[arrival.current_state_id].name + ' 설정 화면을 열었어요.',
+                render_policy={**guide_command.render_policy, 'settings_navigation': True})
         pending_selection = (selection_binding(primary_match, normalized_nodes,
             diagnostic_payload({'ui_selection': ui_selection}).get('ui_selection', {}))
             if primary_match and guide_command.target_node_id == primary_match.target_node_id
@@ -437,7 +456,7 @@ class ClickAgentEngine:
                     'target_window_id': target.window_id,
                     'target_resource_id': target.resource_id,
                     'target_selection_method': match_result.match_method,
-                    'target_bounds': target.bounds, 'baseline_value': target.value,
+                    'target_bounds': target.bounds, 'baseline_value': target.value, 'baseline_checked': target.checked,
                     'baseline_range_min': target.range_min, 'baseline_range_max': target.range_max,
                     'baseline_observation_id': request.observation_id,
                     'baseline_captured_at_ms': current_snapshot.captured_at_ms,
@@ -474,8 +493,30 @@ class ClickAgentEngine:
             guide_command=guide_command,
         )
 
+        if handoff is not None and request.user_confirmation != 'rejected':
+            guide_command = replace(guide_command, command_type=CommandType.HIGHLIGHT,
+                action_type=ActionType.OBSERVE_ONLY, message=handoff.guide_message,
+                safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
+                target_node_id=None, target_bounds=None, target_label=None,
+                render_policy={'manual_handoff': True, 'allow_result_check': True})
+            pending_transition_id = None
+            attempt = None
         technical = dict(existing_session.technical_outcome) if existing_session else {}
-        if verification_result and verification_result.task_completed:
+        if handoff is not None:
+            technical = {'status': 'UNVERIFIABLE', 'reason': 'manual_result_required',
+                'setting': vocabulary_key, 'verified_at_ms': request.captured_at_ms}
+        if arrival is not None:
+            technical = {'status': 'OPENED', 'reason': 'settings_page_visible',
+                'verified_at_ms': request.captured_at_ms, 'observation_id': request.observation_id,
+                'transition_id': 'PAGE_VISIBLE', 'setting': graph.definition.required_slots['setting']}
+        elif already_setting is not None:
+            technical = {'status': 'ALREADY_SET', 'reason': already_setting.evidence, 'setting': vocabulary_key,
+                'requested_state': graph.definition.required_slots['state'],
+                'transition_id': next(edge.transition_id for edge in graph.transitions
+                    if edge.from_state == already_setting.current_state_id and edge.completes_task),
+                'verified_at_ms': request.captured_at_ms, 'observation_id': request.observation_id,
+                'setting_value': applied_value(request.applied_settings, vocabulary_key)}
+        elif verification_result and verification_result.task_completed:
             technical = {'status': 'CHANGED', 'reason': verification_result.evidence,
                 'verified_at_ms': request.captured_at_ms, 'transition_id': previous_transition.transition_id,
                 'attempt_id': verified_attempt['attempt_id'], 'guide_command_id': verified_attempt['guide_command_id'],
@@ -491,6 +532,10 @@ class ClickAgentEngine:
                 'setting_value': applied_value(request.applied_settings, graph.definition.required_slots.get('setting', 'font_size')),
                 'baseline_font_scale': verified_attempt.get('baseline_font_scale'),
                 'font_scale': font_scale(request.applied_settings), 'observation_id': request.observation_id}
+            if graph.definition.required_slots.get('setting') in {*CONTROLS, 'wifi'}:
+                technical.update(requested_state=graph.definition.required_slots['state'],
+                    baseline_checked=verified_attempt.get('baseline_checked'),
+                    after_checked=next((n.checked for n in normalized_nodes if target_key(n) == verified_attempt['target_key']), None))
             verified_node = next((n for n in normalized_nodes if target_key(n) == verified_attempt['target_key']), None)
             if verified_node:
                 direction = graph.definition.required_slots.get('direction')

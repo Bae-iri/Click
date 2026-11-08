@@ -50,7 +50,7 @@ def classify_screen_state(
         # control. A uniquely grounded slider is stronger evidence than a broad
         # menu title such as Samsung's "글자 크기와 스타일".
         control_match = any(
-            transition.target_role == 'slider' and transition.action_type.value == 'drag'
+            transition.target_role in {'slider', 'toggle'} and transition.action_type.value in {'drag', 'tap'}
             and transition.completes_task
             and sum(selector_evidence(node, transition, relevant, graph)[0] >= 0.7
                     for node in eligible_nodes(transition, relevant, graph)) == 1

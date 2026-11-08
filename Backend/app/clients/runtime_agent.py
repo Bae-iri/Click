@@ -218,7 +218,7 @@ class RuntimeAgentAdapter:
             command_type = "highlight"
             status = "IN_PROGRESS"
         result_check = runtime_session is not None and not recovering and command_type == "done"
-        if result_check:
+        if result_check and graph.definition.task_type != "settings_navigation":
             status = "WAITING_RESULT"
         target = next((node for node in tree.nodes if result.match_result and node.node_id == result.match_result.target_node_id), None) if tree else None
         name = (target.class_name or "").lower() if target else ""
@@ -255,7 +255,7 @@ class RuntimeAgentAdapter:
             metadata={
                 "technical_outcome": technical,
                 "checklist": result.debug.get("checklist", []),
-                "goal_label": "글자를 작게 보기" if result.typed_goal and result.typed_goal.slots.get("direction") == "decrease" else "글자를 크게 보기",
+                "goal_label": graph.definition.name if graph else "선택한 작업",
                 "runtime": "ai_agent.runtime",
                 "runtime_decision": result.debug.get("replan_decision"),
                 "recovery": recovery,

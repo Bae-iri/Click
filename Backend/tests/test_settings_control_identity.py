@@ -82,7 +82,8 @@ def test_compound_media_seekbar_labels_the_ranged_child_and_never_selects_its_tr
 
 
 @pytest.mark.parametrize('changed_package',['com.click','com.click.test'])
-def test_device_runner_rejects_either_wrong_apk_before_launch_or_instrumentation(tmp_path,monkeypatch,changed_package):
+@pytest.mark.parametrize('reuse_installed',[False,True])
+def test_device_runner_rejects_either_wrong_apk_before_launch_or_instrumentation(tmp_path,monkeypatch,changed_package,reuse_installed):
     import hashlib
     import sys
     from scripts import native_settings_check as runner
@@ -92,7 +93,7 @@ def test_device_runner_rejects_either_wrong_apk_before_launch_or_instrumentation
         path.parent.mkdir(parents=True,exist_ok=True)
         path.write_bytes(package.encode())
     commands=[]
-    monkeypatch.setattr(sys,'argv',['native_settings_check.py','--run-live','--apk-dir',str(tmp_path)])
+    monkeypatch.setattr(sys,'argv',['native_settings_check.py','--run-live','--apk-dir',str(tmp_path)]+(['--reuse-installed'] if reuse_installed else []))
     monkeypatch.setattr(runner,'verify_build',lambda base_url:{'source_sha256':'source'})
     monkeypatch.setattr(runner.shutil,'which',lambda name:'adb')
     def output(command,**kwargs):
@@ -105,5 +106,5 @@ def test_device_runner_rejects_either_wrong_apk_before_launch_or_instrumentation
     monkeypatch.setattr(runner.subprocess,'run',lambda command,**kwargs:commands.append(command))
     with pytest.raises(ValueError,match='not the prepared build'):
         runner.main()
-    assert len(commands)==2 # Fake replacement only: no activity, native action or screen request.
+    assert len(commands)==(0 if reuse_installed else 2) # No activity, native action or screen request.
     assert all(command[1:3]==['install','-r'] for command in commands)

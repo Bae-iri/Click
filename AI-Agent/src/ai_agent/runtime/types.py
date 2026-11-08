@@ -190,6 +190,7 @@ class NormalizedNode:
     label_parts: tuple[str, ...] = ()
     structure_role: str = "unknown"
     source_confidence: float | None = None
+    checked: bool | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -402,6 +403,7 @@ class ScreenSnapshot:
     observation_id: str | None = None
     captured_at_ms: int | None = None
     applied_settings: JsonDict = field(default_factory=dict)
+    checked_values: dict[str, bool] = field(default_factory=dict)
 
     def to_dict(self) -> JsonDict:
         return asdict(self)

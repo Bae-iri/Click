@@ -36,6 +36,15 @@ public final class LocalGoalResolver {
     public static JSONObject resolve(GoalCatalogClassifier catalog, AgentServerContract server,
                                      String text, String foregroundPackage, String clarification) throws JSONException {
         JSONArray candidates = new JSONArray();
+        if (catalog != null && clarification == null && !GoalCatalogClassifier.normalize(text).matches(".*(하지마|하지말|지마|지말|지않|안해|말아|취소).*")) {
+            GoalCatalogClassifier.Classification selection = catalog.classify(text, foregroundPackage);
+            if (selection.matched() && selection.match.goalType.startsWith("settings.navigation.")) {
+                add(candidates, selection.match, server);
+                return new JSONObject().put("message", candidates.length() > 0
+                        ? "요청한 설정 화면으로 안내할까요?" : "설정 화면 안내를 지원하는 서버로 업데이트해 주세요.")
+                        .put("candidates", candidates);
+            }
+        }
         if (RequirementReview.isFontRequest(text)) {
             RequirementReview review = new RequirementReview(text);
             JSONObject goal = clarification == null ? review.proposedGoal(catalog, server) : null;

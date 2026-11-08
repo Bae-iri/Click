@@ -42,9 +42,12 @@ def redact_text(value):
 
 
 def safe_extras(extras):
-    return {key: value for key, value in extras.items()
+    safe = {key: value for key, value in extras.items()
             if key in NUMERIC_EXTRAS and type(value) in (int, float)
             and abs(value) <= 100_000_000 and math.isfinite(value)}
+    if type(extras.get('checked')) is bool:
+        safe['checked'] = extras['checked']
+    return safe
 
 
 def sensitive_node(node):

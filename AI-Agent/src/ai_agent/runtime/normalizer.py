@@ -70,6 +70,7 @@ def normalize_accessibility_tree(
             label_parts=_label_parts(node, inherited_titles.get(node.node_id, ())),
             structure_role=_structure_role(node, nodes_by_id),
             source_confidence=extract_confidence(node),
+            checked=node.extras.get("checked") if node.checkable and type(node.extras.get("checked")) is bool else None,
         )
         dedupe_key = (
             normalized_node.label,

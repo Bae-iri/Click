@@ -59,11 +59,13 @@ class AppliedSettings(BaseModel):
     screen_brightness: int | None = Field(default=None, ge=0, le=65535)
     media_volume_source: Literal["android.media.AudioManager.STREAM_MUSIC"] | None = None
     media_volume: int | None = Field(default=None, ge=0, le=1000)
+    wifi_state: int | None = Field(default=None, strict=True, ge=0, le=4)
+    wifi_source: Literal["android.net.wifi.WifiManager.getWifiState"] | None = None
 
     @model_validator(mode="after")
     def require_value_sources(self):
         for value, source in ((self.font_scale, self.source), (self.screen_brightness, self.brightness_source),
-                              (self.media_volume, self.media_volume_source)):
+                              (self.media_volume, self.media_volume_source), (self.wifi_state, self.wifi_source)):
             if (value is None) != (source is None):
                 raise ValueError("Applied setting value and source must be supplied together")
         return self
@@ -206,7 +208,7 @@ class AgentTurnResponse(BaseModel):
 
 class TypedGoalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    catalog_version: Literal["1.0.0", "1.1.0", "2.0.0", "2.1.0"]
+    catalog_version: Literal["1.0.0", "1.1.0", "2.0.0", "2.1.0", "2.2.0", "2.3.0"]
     goal_type: Literal["settings.font_size.increase", "settings.font_size.decrease",
                        "settings.wifi.enable", "settings.wifi.disable", "settings.wifi.connect",
                        "settings.bluetooth.enable", "settings.bluetooth.disable", "settings.bluetooth.connect",
@@ -275,7 +277,8 @@ class TypedGoalRequest(BaseModel):
                        "settings.backup.disable",
                        "settings.software_update.check",
                        "settings.factory_reset",
-                       "settings.device_name.change"]
+                       "settings.device_name.change",
+                       "settings.navigation.settings", "settings.navigation.display", "settings.navigation.sound", "settings.navigation.connections", "settings.navigation.accessibility", "settings.navigation.wifi", "settings.navigation.bluetooth", "settings.navigation.font_size", "settings.navigation.screen_timeout", "settings.navigation.display_size", "settings.navigation.volume", "settings.navigation.ringtone", "settings.navigation.notification_sound", "settings.navigation.do_not_disturb", "settings.navigation.visibility", "settings.navigation.hearing", "settings.navigation.interaction", "settings.navigation.talkback", "settings.navigation.magnification", "settings.navigation.captions", "settings.navigation.eye_comfort"]
     target_app: Literal["android_settings"]
     slots: dict[str, str]
 
@@ -373,35 +376,60 @@ class TypedGoalRequest(BaseModel):
             "settings.factory_reset": {"setting": "factory_reset", "action": "reset"},
             "settings.device_name.change": {"setting": "device_name", "action": "change"},
         }
+        expected_slots.update({
+            "settings.navigation.settings": {"setting": "navigation_settings", "action": "open"},
+            "settings.navigation.display": {"setting": "navigation_display", "action": "open"},
+            "settings.navigation.sound": {"setting": "navigation_sound", "action": "open"},
+            "settings.navigation.connections": {"setting": "navigation_connections", "action": "open"},
+            "settings.navigation.accessibility": {"setting": "navigation_accessibility", "action": "open"},
+            "settings.navigation.wifi": {"setting": "navigation_wifi", "action": "open"},
+            "settings.navigation.bluetooth": {"setting": "navigation_bluetooth", "action": "open"},
+            "settings.navigation.font_size": {"setting": "navigation_font_size", "action": "open"},
+            "settings.navigation.screen_timeout": {"setting": "navigation_screen_timeout", "action": "open"},
+            "settings.navigation.display_size": {"setting": "navigation_display_size", "action": "open"},
+            "settings.navigation.volume": {"setting": "navigation_volume", "action": "open"},
+            "settings.navigation.ringtone": {"setting": "navigation_ringtone", "action": "open"},
+            "settings.navigation.notification_sound": {"setting": "navigation_notification_sound", "action": "open"},
+            "settings.navigation.do_not_disturb": {"setting": "navigation_do_not_disturb", "action": "open"},
+            "settings.navigation.visibility": {"setting": "navigation_visibility", "action": "open"},
+            "settings.navigation.hearing": {"setting": "navigation_hearing", "action": "open"},
+            "settings.navigation.interaction": {"setting": "navigation_interaction", "action": "open"},
+            "settings.navigation.talkback": {"setting": "navigation_talkback", "action": "open"},
+            "settings.navigation.magnification": {"setting": "navigation_magnification", "action": "open"},
+            "settings.navigation.captions": {"setting": "navigation_captions", "action": "open"},
+            "settings.navigation.eye_comfort": {"setting": "navigation_eye_comfort", "action": "open"},
+        })
+        if self.goal_type.startswith("settings.navigation.") and self.catalog_version not in {"2.2.0", "2.3.0"}:
+            raise ValueError("Settings navigation requires catalog version 2.2.0")
         if self.slots != expected_slots[self.goal_type]:
             raise ValueError("goal_type and slots must match")
         if self.goal_type == "settings.font_size.decrease" and self.catalog_version == "1.0.0":
             raise ValueError("font-size decrease requires catalog version 1.1.0 or newer")
-        if self.goal_type.startswith("settings.wifi.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith("settings.wifi.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Wi-Fi goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith("settings.bluetooth.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith("settings.bluetooth.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Bluetooth goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith("settings.mobile_data.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith("settings.mobile_data.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Mobile data goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.airplane_mode.", "settings.hotspot.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.airplane_mode.", "settings.hotspot.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Airplane mode and hotspot goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.brightness.", "settings.dark_mode.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.brightness.", "settings.dark_mode.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Brightness and dark mode goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.screen_timeout.", "settings.display_size.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.screen_timeout.", "settings.display_size.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Screen timeout and display size goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.volume.", "settings.mute.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.volume.", "settings.mute.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Volume and mute goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.ringtone.", "settings.vibrate.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.ringtone.", "settings.vibrate.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Ringtone and vibrate goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.notifications.", "settings.location.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.notifications.", "settings.location.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Notifications and location goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.power_saving.", "settings.screen_lock.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.power_saving.", "settings.screen_lock.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Power saving and screen lock goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.biometric.", "settings.apps.", "settings.app_permissions.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.biometric.", "settings.apps.", "settings.app_permissions.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Biometric and app management goals require catalog version 2.0.0 or newer")
-        if self.goal_type == "settings.storage.cleanup" and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type == "settings.storage.cleanup" and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Storage cleanup requires catalog version 2.0.0 or newer")
-        if self.goal_type.startswith("settings.talkback.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith("settings.talkback.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("TalkBack goals require catalog version 2.0.0 or newer")
         remaining_settings = {
             "settings.magnification.enable",
@@ -453,7 +481,7 @@ class TypedGoalRequest(BaseModel):
             "settings.factory_reset",
             "settings.device_name.change",
         }
-        if self.goal_type in remaining_settings and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type in remaining_settings and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0"}:
             raise ValueError("Remaining settings goals require catalog version 2.0.0 or newer")
         return self
 

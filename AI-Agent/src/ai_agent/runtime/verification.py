@@ -1,6 +1,8 @@
 """Verify one correlated attempt against its original target and baseline."""
 from hashlib import sha256
 from math import isfinite
+from ai_agent.runtime.wifi import adapter_state
+from ai_agent.runtime.settings_controls import CHECKED_PREDICATES
 
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, target_key
 from ai_agent.runtime.types import VerificationResult, VerificationStatus as Status, SafetyLevel
@@ -34,14 +36,17 @@ def correlate_action(session, request, transition):
     # already observed before that action. Retire this guide rather than letting
     # the same event become valid after another observation overwrites the evidence.
     previous = session.last_snapshot
-    if (transition.verification_predicate in {'target_value_increased', 'target_value_decreased'}
+    if (transition.verification_predicate in {'target_value_increased', 'target_value_decreased', *CHECKED_PREDICATES}
             and previous and previous.captured_at_ms is not None
             and baseline_time < previous.captured_at_ms <= event.occurred_at_ms):
         observed_value = previous.slider_values.get(attempt['target_node_id'])
         setting = attempt.get('setting', 'font_size')
         observed_scale = applied_value(previous.applied_settings, setting)
         baseline_setting = attempt.get('baseline_setting_value', attempt.get('baseline_font_scale'))
-        if ((observed_value is not None and attempt.get('baseline_value') is not None
+        observed_checked = previous.checked_values.get(attempt['target_node_id'])
+        checked_changed = (transition.verification_predicate in CHECKED_PREDICATES
+            and type(observed_checked) is bool and observed_checked != attempt.get('baseline_checked'))
+        if (checked_changed or (observed_value is not None and attempt.get('baseline_value') is not None
                 and observed_value != attempt['baseline_value'])
                 or (observed_scale is not None and baseline_setting is not None
                     and observed_scale != baseline_setting)):
@@ -62,7 +67,7 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
         return VerificationResult(status, current_state_id, transition.to_state, message,
                                   attempt_id=attempt.get('attempt_id') if attempt else None,
                                   count_attempt=count, task_completed=completed, evidence=evidence)
-    if transition.verification_predicate not in {'state_reached', 'target_value_increased', 'target_value_decreased'}:
+    if transition.verification_predicate not in {'state_reached', 'target_value_increased', 'target_value_decreased', *CHECKED_PREDICATES}:
         return result(Status.UNKNOWN, 'unsupported_verification_predicate')
     correlated = bool(attempt and attempt.get('event_key')
                       and attempt.get('transition_id') == pending_transition_id)
@@ -98,6 +103,38 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
                                   evidence='observed_progress', count_attempt=False)
     if not correlated:
         return result(Status.WAITING_FOR_ACTION, 'no_correlated_action')
+
+    if transition.verification_predicate in CHECKED_PREDICATES:
+        if (not current_snapshot or not current_snapshot.observation_id or not baseline_id
+                or observation_time is None or action_time is None):
+            return result(Status.UNKNOWN, 'missing_observation_timing')
+        candidates = [n for n in eligible_nodes(transition, nodes, graph)
+            if target_key(n) == attempt.get('target_key') and n.window_id == attempt.get('target_window_id')
+            and selector_evidence(n, transition, nodes, graph)[0] >= 0.7
+            and (attempt.get('target_selection_method') != 'jev_choice' or (
+                n.node_id == attempt.get('target_node_id') and n.resource_id == attempt.get('target_resource_id')
+                and n.bounds == tuple(attempt.get('target_bounds', ()))))]
+        before = attempt.get('baseline_checked')
+        if len(candidates) != 1 or type(before) is not bool:
+            return result(Status.UNKNOWN, 'native_switch_unobservable')
+        if graph.definition.required_slots.get('setting') != 'wifi':
+            expected = transition.verification_predicate == 'target_checked_on'
+            target = candidates[0]
+            if (target.node_id != attempt.get('target_node_id')
+                    or target.resource_id != attempt.get('target_resource_id')):
+                return result(Status.UNKNOWN, 'setting_switch_identity_changed')
+            if before is not expected and target.checked is expected:
+                return result(Status.SUCCESS, transition.verification_predicate, count=True,
+                    completed=transition.completes_task, message='The native setting switch reached the requested checked state.')
+        state = adapter_state(current_snapshot.applied_settings) if graph.definition.required_slots.get('setting') == 'wifi' else None
+        expected = transition.verification_predicate == 'target_checked_on'
+        if state in {0, 2, 4}:
+            return result(Status.WAITING_FOR_OBSERVATION, 'wifi_state_transition')
+        if graph.definition.required_slots.get('setting') == 'wifi' and (state is None or attempt.get('baseline_setting_value') not in {1, 3}):
+            return result(Status.UNKNOWN, 'wifi_state_unobservable')
+        if before is not expected and candidates[0].checked is expected and state == (3 if expected else 1):
+            return result(Status.SUCCESS, transition.verification_predicate, count=True,
+                completed=transition.completes_task, message='Wi-Fi adapter and master switch agree with the requested state.')
 
     if transition.verification_predicate in {'target_value_increased', 'target_value_decreased'}:
         if (not current_snapshot or not current_snapshot.observation_id or not baseline_id
@@ -235,6 +272,8 @@ def applied_value(settings, setting):
     """Read only the device value and provenance for the requested setting."""
     if setting == 'font_size':
         return font_scale(settings)
+    if setting == 'wifi':
+        return adapter_state(settings)
     fields = {
         'brightness': ('screen_brightness', 'brightness_source', 'android.provider.Settings.System.SCREEN_BRIGHTNESS', 65535),
         'volume': ('media_volume', 'media_volume_source', 'android.media.AudioManager.STREAM_MUSIC', 1000),

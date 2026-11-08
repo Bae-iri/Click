@@ -21,6 +21,7 @@ public final class AccessibilityNodeSnapshot {
     public final boolean selected;
     public final boolean scrollable;
     public final boolean checkable;
+    public final Boolean checked;
     public final Float progress;
     public final Float rangeMin;
     public final Float rangeMax;
@@ -79,6 +80,18 @@ public final class AccessibilityNodeSnapshot {
             String className, String role, int[] bounds, boolean clickable, boolean enabled,
             boolean selected, boolean scrollable, boolean checkable, Float progress,
             int windowId, boolean sensitiveInput, Float rangeMin, Float rangeMax, boolean passwordInput) {
+        this(nodeId, parentId, visibleToUser, packageName, text, contentDescription, resourceId,
+                className, role, bounds, clickable, enabled, selected, scrollable, checkable,
+                progress, windowId, sensitiveInput, rangeMin, rangeMax, passwordInput, null);
+    }
+
+    public AccessibilityNodeSnapshot(String nodeId, String parentId, boolean visibleToUser,
+            String packageName, String text, String contentDescription, String resourceId,
+            String className, String role, int[] bounds, boolean clickable, boolean enabled,
+            boolean selected, boolean scrollable, boolean checkable, Float progress,
+            int windowId, boolean sensitiveInput, Float rangeMin, Float rangeMax, boolean passwordInput,
+            Boolean checked) {
+        this.checked = !sensitiveInput && checkable ? checked : null;
         this.passwordInput = passwordInput;
         this.inputContentPresent = sensitiveInput && text != null && !text.isEmpty();
         this.rangeMin = sensitiveInput ? null : rangeMin;
@@ -123,6 +136,7 @@ public final class AccessibilityNodeSnapshot {
         object.put("scrollable", scrollable);
         object.put("checkable", checkable);
         JSONObject extras = new JSONObject();
+        if (checked != null) extras.put("checked", checked);
         if (sensitiveInput) extras.put("editable", true);
         if (passwordInput) extras.put("is_password", true);
         if (inputContentPresent) extras.put("input_content_present", true);

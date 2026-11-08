@@ -1,3 +1,4 @@
+from app.task_graphs.settings_navigation import PAGES
 """Disposable paired environments and trace correlation; no device quality claim."""
 import json
 import logging
@@ -46,7 +47,12 @@ def test_prepare_uses_isolated_migrated_db_and_only_current_approved_graphs(pair
         assert response.json()['fingerprint'] == prepared['fingerprint']
         assert {g['task_id'] for g in response.json()['approved_graphs']} == {
             'MVP-01', 'MVP-02', 'SET-brightness-increase', 'SET-brightness-decrease',
-            'SET-volume-increase', 'SET-volume-decrease'}
+            'SET-volume-increase', 'SET-volume-decrease', 'SET-wifi-enable', 'SET-wifi-disable'} | {
+                'NAV-' + page['key'].replace('_', '-')
+                for page in PAGES} | {
+                spec['task_id'] for spec in json.loads((Path(__file__).parents[1]
+                    / 'app/task_graphs/drafts.json').read_text())}
+        assert len(response.json()['approved_graphs']) == 110
         assert response.json()['database_migrations'] == ['20261104_17']
         assert '/validation/environment' not in client.get('/openapi.json').json()['paths']
     assert (instance / 'validation.db').is_file()
