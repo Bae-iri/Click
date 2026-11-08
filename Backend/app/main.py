@@ -57,8 +57,22 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
         description="Android 설정 앱 위 오버레이 안내를 위한 MVP API",
     )
     engine = build_engine(database_url)
+    initialize_encryption = False
     if engine.dialect.name == "sqlite":
+        inspector = inspect(engine)
+        existing_tables = set(inspector.get_table_names())
+        initialize_encryption = "users" not in existing_tables
+        if "users" in existing_tables and "data_protection_state" not in existing_tables:
+            from app.core.data_encryption import DataEncryptionError
+            engine.dispose()
+            raise DataEncryptionError("Run the data encryption migration before opening an existing database")
         Base.metadata.create_all(engine)
+    from app.core.data_encryption import validate_database_keys
+    try:
+        validate_database_keys(engine, initialize=initialize_encryption)
+    except Exception:
+        engine.dispose()
+        raise
     session_factory = build_session_factory(engine)
     sessions = InMemorySessionRepository()
     guidance_service = GuidanceService(sessions, AgentClient(REPOSITORY_ROOT))

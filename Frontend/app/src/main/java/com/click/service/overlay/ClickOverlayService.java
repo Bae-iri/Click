@@ -2114,6 +2114,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 firstTurnSent ? null : activeGoalMatch)
                 .withSessionState(agentSessionVersion, agentEpisodeId,
                         confirmation == null ? null : agentConfirmationId);
+        SettingsAdjustment scope=acceptedGoal==null?null:SettingsAdjustment.forGoal(acceptedGoal.optString("goal_type"));
+        request.observationSetting=scope==null?null:scope.setting;
         if (!firstTurnSent) {
             request.acceptedGoal = acceptedGoal;
             request.goalResolutionId = goalResolutionId;

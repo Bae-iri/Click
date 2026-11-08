@@ -1,6 +1,8 @@
-# AI-Agent 2: 실행 기록 분석과 그래프 개선
+# AI-Agent 2: Jev 판단과 실행 결과 분석
 
-갱신: 2026-11-04. 사용자 안내와 독립적으로 실행하는 공통 그래프 경로 개선 파이프라인입니다. 사용자별 이해도·선호도 프로필은 사용하지 않으며, 별도 GPU·LLM은 필수가 아닙니다.
+갱신: 2026-11-07. Jev가 어떤 대상을 얼마나 확신하고 골랐는지, 그 안내 뒤 실제 조작이 성공했는지를 분석합니다. 같은 검수 화면에서 수정 전후도 비교합니다. 기존 대체 경로 순서 변경은 별도의 선택 기능으로 유지합니다. 사용자별 이해도·선호도 프로필과 별도 GPU·LLM은 필요하지 않습니다.
+
+팀 공유용 설명·지표의 분모·검수 방법·실행 명령은 [Jev 평가 안내](../../../../docs/ai2-jev-assessment.md)를 참고합니다. 저장되는 개인 내용과 실행·분석 JSON은 [암호화 저장 절차](../../../../Backend/docs/data-encryption.md)를 따릅니다.
 
 ## 폴더 구조와 연결 경계
 
@@ -45,6 +47,8 @@ Backend 디렉터리에서 DATABASE_URL을 설정하고 실행합니다.
 
 ```powershell
 python scripts/agent2.py process --limit 100
+python scripts/agent2.py assess-jev --limit 100
+python scripts/agent2.py assess-jev --reviews target-reviews.json --format json
 python scripts/agent2.py audit
 python scripts/agent2.py propose-routes --manifest review-manifest.json --cases device-holdout.json
 python scripts/maintenance.py

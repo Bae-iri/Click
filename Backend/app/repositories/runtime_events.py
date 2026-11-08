@@ -34,7 +34,7 @@ def cleanup(factory, now=None):
         # A session summary may refer to events older than its final receipt FK.
         # Remove it at the earliest contributing event's expiry, not the last one's.
         db.execute(delete(RuntimeEventConsumption).where(
-            RuntimeEventConsumption.result["expires_at"].as_integer() <= now))
+            RuntimeEventConsumption.expires_at <= now))
         removed = db.execute(delete(RuntimeEvent).where(RuntimeEvent.expires_at <= now)).rowcount
         db.commit()
         return removed
