@@ -2533,6 +2533,25 @@ public class ClickOverlayServiceExecutionTest {
         assertTrue(tracker.isBoundToGuide("returned-guide"));
     }
 
+    @Test public void manualSettingsHandoffOffersResultCheckAndStopsFurtherScreenUploads() throws Exception {
+        prepareGuideResponse();
+        AgentTurnContract.Request request = requests.get(1);
+        JSONObject guide = new JSONObject().put("guide_command_id", "manual-settings")
+                .put("command_type", "highlight").put("action_type", "observe_only")
+                .put("requires_user_action", false).put("message", "원하는 항목을 직접 선택하세요.")
+                .put("render_policy", new JSONObject().put("manual_handoff", true).put("allow_result_check", true));
+        JSONObject body = new JSONObject().put("request_id", request.requestId).put("session_id", request.sessionId)
+                .put("session_version", 7).put("episode_id", "episode").put("task_status", "IN_PROGRESS")
+                .put("state_id", "S_TARGET").put("guide_command", guide).put("metadata", new JSONObject());
+        callbacks.get(1).onSuccess(new AgentTurnContract.Response(body.toString()));
+        assertEquals(true, get("manualSettingsHandoff"));
+        verify((TaskFlowOverlayView) get("taskFlowView")).progress(any(), any(), any(), eq(true));
+        int count = requests.size();
+        // Even a forced snapshot refresh must not resume exporting personal inputs.
+        send(null);
+        assertEquals(count, requests.size());
+    }
+
     private void resolve() throws Exception {
         Method method = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
         method.setAccessible(true);

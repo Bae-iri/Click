@@ -141,6 +141,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean firstTurnSent;
     private boolean turnInFlight;
     private boolean agentPaused;
+    private boolean manualSettingsHandoff;
     private boolean awaitingExitConfirmation;
     private String lastSnapshotFingerprint;
     private final AutomaticScrollSearch homeScrollSearch = new AutomaticScrollSearch(8);
@@ -626,6 +627,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             @Override public void resetGoalInputs() {
                 if (turnInFlight || agentPaused) return;
                 acceptedGoal = null;
+                manualSettingsHandoff = false;
                 resolveGoalOnServer(initialGoal, null, null, true);
             }
             @Override public void result(String answer) { sendResult(answer); }
@@ -1105,7 +1107,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void applyTaskFlowResponse(AgentTurnContract.Response response) {
         if (("COMPLETED".equals(response.taskStatus) || response.guideCommand != null
-                && "done".equals(response.guideCommand.commandType)) && !CompletionEvidence.accepted(response.metadata)) {
+                && "done".equals(response.guideCommand.commandType)) && !CompletionEvidence.accepted(response.metadata, acceptedGoal == null ? null : acceptedGoal.optString("goal_type"))) {
             showStoppedTask("변경 결과를 확인하지 못했어요. 완료로 처리하지 않고 안내를 멈췄어요.");
             return;
         }
@@ -1935,6 +1937,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         awaitingExitConfirmation = false;
         activeGoalMatch = null;
         acceptedGoal = null;
+        manualSettingsHandoff = false;
         goalSelection = resultPrompt = followUp = null;
         requirementReview = null;
         goalResolutionId = null;
@@ -2040,7 +2043,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void sendAgentTurn(String confirmation, boolean force, ScreenSnapshot nativeConsentScreen) {
-        if (closing || waitingForExplicitRetry || agentSessionId == null || agentPaused || turnInFlight || agentGateway == null
+        if (closing || manualSettingsHandoff || waitingForExplicitRetry || agentSessionId == null || agentPaused || turnInFlight || agentGateway == null
                 || scrollSearchGeneration == executionGeneration
                 || SystemClock.uptimeMillis() < adjustmentSettlingUntil
                 || !hasConfirmedGoal() || resultPrompt != null || followUp != null || pendingControl != null) return;
@@ -2669,6 +2672,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || AgentActionEvents.HOME_NAVIGATED.equals(pendingActionType)) return;
         ensureTaskFlow();
         AgentTurnContract.GuideCommand command = response.guideCommand;
+        if (command.renderPolicy != null && command.renderPolicy.optBoolean("manual_handoff")) {
+            // Subsequent personal choices and inputs stay on the device. The
+            // explicit result button submits no accessibility tree.
+            manualSettingsHandoff = true;
+            actionTracker.clear(); pendingVerifiedAction = null;
+            automationGuard.interrupt(); clearVisionState();
+            forceNextObservation = false;
+        }
         // Preserve the device value from the observation that produced this slider guide,
         // including when the user moves it while the server response is in flight.
         adjustmentResultCheck.bind(agentEpisodeId, acceptedGoal == null ? null : acceptedGoal.optString("goal_type"),
@@ -2746,7 +2757,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     agentGateway.currentContract() != null
                             && agentGateway.currentContract().supports("request_result")
                             && !"confirmation".equals(command.commandType)
-                            && (acceptedGoal != null && adjustmentResultCheck.changed(agentEpisodeId,
+                            && (command.renderPolicy != null && command.renderPolicy.optBoolean("allow_result_check")
+                                || acceptedGoal != null && adjustmentResultCheck.changed(agentEpisodeId,
                                     acceptedGoal.optString("goal_type"), displayedSnapshot)
                                 || command.renderPolicy != null && command.renderPolicy.optBoolean("adjustment_limit")
                                 || SettingsAdjustment.forGoal(acceptedGoal == null ? null : acceptedGoal.optString("goal_type")) == null

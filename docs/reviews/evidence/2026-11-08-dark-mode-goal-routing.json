@@ -1,0 +1,97 @@
+{
+  "date": "2026-11-08",
+  "scope": "Input-to-approved-graph regression and release integration; no physical dark mode success claim",
+  "observed_production_revision": "3893b4616da27f255e4179a18b60a4125a4416f2",
+  "observed_installed_apk_sha256": "d2c5577bb431f76f5fe1a2dae140af2f36468c199bb6f7a5d3e4a3b58622cc18",
+  "installed_apk_matches_previous_six_task_validation": true,
+  "previous_published_revision": "4bf3470b0888551a68549532778d936fa10bdfd4",
+  "previous_published_revision_includes_expanded_routes": false,
+  "before": [
+    {
+      "text": "다크모드 키고 싶어",
+      "production_source_response": "needs_clarification",
+      "message": "원하시는 작업을 조금 더 자세히 말해주세요."
+    },
+    {
+      "text": "다크모드 켜줘",
+      "production_source_response": "unsupported",
+      "message": "이 작업의 입력 조건과 실행 안내는 아직 지원하지 않아요."
+    }
+  ],
+  "fixed_catalog_version": "2.3.0",
+  "settings_goals": 110,
+  "catalog_only_commerce_goals": 71,
+  "utterance_routes": [
+    {
+      "text": "다크모드 키고 싶어",
+      "goal_type": "settings.dark_mode.enable",
+      "task_id": "SET-dark_mode-enable",
+      "resolution_status": "confirmation_required",
+      "runtime_status": "WAITING_CONFIRMATION"
+    },
+    {
+      "text": "다크 모드를 켜고 싶어",
+      "goal_type": "settings.dark_mode.enable",
+      "task_id": "SET-dark_mode-enable",
+      "resolution_status": "confirmation_required",
+      "runtime_status": "WAITING_CONFIRMATION"
+    },
+    {
+      "text": "다크모드 켜줘",
+      "goal_type": "settings.dark_mode.enable",
+      "task_id": "SET-dark_mode-enable",
+      "resolution_status": "confirmation_required",
+      "runtime_status": "WAITING_CONFIRMATION"
+    }
+  ],
+  "tests": {
+    "spoken_goal_cases": 58,
+    "paired_switch_utterances": 52,
+    "backend_focused": {
+      "passed": 386
+    },
+    "backend_full_initial": {
+      "passed": 1695,
+      "failed": 1,
+      "failure": "test_catalog_audit_reports_each_registered_release_without_claiming_device_pass: release packaging omitted supported predicates from agent2 audit script"
+    },
+    "backend_failed_test_after_correction": {
+      "passed": 1
+    },
+    "backend_agent2_after_correction": {
+      "passed": 10
+    },
+    "ai_agent_full": {
+      "passed": 410
+    },
+    "android_full": {
+      "passed": 510,
+      "failed": 0
+    },
+    "apk_builds": [
+      "debug",
+      "debugAndroidTest"
+    ],
+    "openapi_matches": true
+  },
+  "runtime_source_sha256": "62a5e9e00fda0ede93f04b91c253ce2b8c720ead55ddf359677e1caea2b199fc",
+  "new_apks": {
+    "app": {
+      "sha256": "f89fe54600a7d5c0b8e175a778aeed0d779cb66725d4dc0063787a08c6451387"
+    },
+    "test": {
+      "sha256": "664357f34c484f3bdbfef93e653db1da8b5f00d7b51df8ad1c7c9d71c1784e36"
+    }
+  },
+  "deployment": {
+    "server_deployment_performed": false,
+    "new_apk_installed": false,
+    "requires": "Deploy this combined Backend/AI release, verify /version revision, then update compatible APK. Persistent DB rollout must follow Backend/docs/data-encryption.md."
+  },
+  "limits": [
+    "Jev and native screen inputs are controlled in regression tests.",
+    "No six-task physical matrix for expanded goals has been completed.",
+    "OEM radio/button dark-mode controls may require additional grounding support; reaching a graph does not establish physical execution support.",
+    "The local UI work remains separate and was preserved."
+  ]
+}
