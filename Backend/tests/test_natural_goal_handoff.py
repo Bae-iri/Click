@@ -88,15 +88,14 @@ def test_public_goal_configuration_exposes_only_provider_and_configuration_state
     assert 'private-test-key' not in encoded and 'private-provider-value' not in encoded
 
 
-def test_deployment_requires_an_explicit_goal_interpreter_choice():
+def test_approved_deployment_uses_jev_for_goal_interpretation():
     from pathlib import Path
     import yaml
     root=Path(__file__).parents[2]
-    assert 'GOAL_CLASSIFIER_PROVIDER=jev' not in (root/'Backend/Dockerfile').read_text()
+    assert 'GOAL_CLASSIFIER_PROVIDER=jev' in (root/'Backend/Dockerfile').read_text()
     service=yaml.safe_load((root/'render.yaml').read_text())['services'][0]
     env={entry['key']:entry.get('value') for entry in service['envVars']}
-    assert env['GOAL_CLASSIFIER_PROVIDER'] is None
-    assert next(e for e in service['envVars'] if e['key']=='GOAL_CLASSIFIER_PROVIDER')['sync'] is False
+    assert env['GOAL_CLASSIFIER_PROVIDER']=='jev'
     assert env['AI1_UI_SELECTOR_PROVIDER']=='jev'
 
 
