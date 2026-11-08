@@ -98,3 +98,22 @@ python -m uvicorn app.main:app --env-file .env --reload
 자동 테스트는 가짜 TypeSafe HTTP 응답으로 프로토콜, 마스킹, 오류/보류, 명시적 값 검증, 인증된 목표 준비 API와 시작 확인 경계를 검사한다. 실제 계정 인증·유료 API 응답·한국어 품질·실기기 동작을 대신하지 않는다. 실제 API 연결은 위 합성 점검을 해당 계정으로 실행한 뒤 확인한다.
 
 공식 근거: [API](https://docs.typesafe.ai/api/system-one), [Choice](https://docs.typesafe.ai/primitives/choice), [모델·버전](https://docs.typesafe.ai/models), [Confidence](https://docs.typesafe.ai/confidence), [데이터 처리](https://help.typesafe.ai/articles/5974925716-how-is-submitted-data-used-or-retained).
+
+
+## 전체 자연어 입력 연결 점검
+
+화면 선택용 Jev만 설정해서는 요청 문장 해석이 활성화되지 않는다. 배포 환경의 `GOAL_CLASSIFIER_PROVIDER`를 명시하고 위의 데이터 처리 경계를 따른다. `self_hosted`에는 별도 모델 서버의 `SELF_HOSTED_LLM_URL/TOKEN/MODEL`이 필요하다. Jev를 선택한 경우에는 `TYPESAFE_API_KEY`, 고정 모델과 confidence 설정을 사용한다. provider 간 자동 전환은 없다.
+
+`GET /version`의 `goal_interpretation`은 실제 프로세스의 provider와 설정 유효 여부만 반환한다. 주소·키·원문을 노출하지 않는다. `configured`는 모델 서버가 응답하거나 한국어를 정확히 해석한다는 뜻이 아니다.
+
+```sh
+cd Backend
+python scripts/check_natural_goal_flow.py
+python scripts/check_natural_goal_flow.py --run-live
+```
+
+첫 명령은 설정만 확인한다. 두 번째 명령은 개인정보 없는 고정 문장 8개를 선택한 실제 모델로 해석하고 목표 준비 API와 그래프 선택까지 확인한다. 프로덕션 `DATABASE_URL` 대신 명시적인 인메모리 SQLite를 사용한다. 실제 계정·화면·운영 DB에 접근하지 않고 기기를 조작하지 않는다. 키·원문·모델 응답을 출력하지 않는다. 키워드 밖의 밝기·미디어 음량·테마 문장, 글자 범위 누락과 부정 요청을 포함한다. 전송 동의·ZDR 계정 활성화를 이 명령이 대신 확인하지 않는다.
+
+모델이 새 목표를 선택하면 해당 목표의 입력 계약으로 원래 문장의 명시적 범위·채널을 다시 계산한다. 목표의 고정 방향·켜짐 상태는 제안으로 사용하되 사용자 시작 및 변경 동의를 유지한다. 글자 범위를 추측하거나 앱 안의 변경을 시스템 전체 변경으로 대체하지 않는다. 알려진 키워드로 목표 계열이 확정됐다면 다른 계열을 모델 후보로 주지 않는다. 입력 계열이 없는 문장에 서로 충돌하는 전체 필드 정의를 한꺼번에 전송하지 않는다.
+
+자동 회귀 검사의 가짜 모델 응답은 이 연결의 검사다. 실제 한국어 정확도·지연·모델 보류율은 운영과 같은 provider에서 위 합성 점검과 별도의 평가 문장으로 측정해야 한다. 키워드 몇 개 추가 또는 회귀 검사 통과만으로 자연어 품질을 입증했다고 보고하지 않는다.

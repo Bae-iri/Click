@@ -139,24 +139,32 @@ class GoalPreparationService:
             if not negated(source) and len(matches) < 2 and (match is None or family is not None) and (
                     family is None or self.requirements.missing(family, values)):
                 candidates = [{k: g[k] for k in ('goal_type', 'display_name', 'target_app', 'slots')}
-                    for g in self.catalog['goals'] if g.get('execution_status') == 'approved']
-                fields = family['fields'] if family else [f for fam in self.requirements.document['families'] for f in fam['fields']]
+                    for g in self.catalog['goals'] if g.get('execution_status') == 'approved'
+                    and (not match or not family or g['goal_type'].startswith(family['goal_prefix']))]
+                # Unknown intent needs one goal choice, not a union of unrelated
+                # families' conflicting field definitions. Its fields are derived
+                # from the chosen goal and the original request below.
+                fields = family['fields'] if family else []
                 inferred = self.llm.interpret_inputs(source, candidates, fields)
                 if inferred:
-                    suggested = next((g for g in self.catalog['goals'] if g['goal_type'] == inferred['goal_type']), None)
-                    if family is None and suggested:
-                        family = self.requirements.family(suggested['goal_type'])
-                    if family:
+                    suggested = next((g for g in candidates if g['goal_type'] == inferred['goal_type']), None)
+                    selected_family = self.requirements.family(suggested['goal_type']) if suggested else None
+                    directions = self.requirements.directions(source, selected_family) if selected_family else set()
+                    contradictory = suggested and 'direction' in suggested['slots'] and directions and (
+                        suggested['slots']['direction'] not in directions or len(directions) > 1)
+                    if selected_family and not contradictory:
+                        family = selected_family
+                        # Scope/audio identity comes only from deterministic rules
+                        # over the original text under this family's contract.
+                        # In particular, brightness/media and app-local font requests
+                        # have different rules and cannot reuse the old values.
+                        values = self.requirements.explicit_values(source, family)
                         for field in family['fields']:
-                            key = field['id']
-                            # Scope is never invented from an LLM guess or the foreground app.
-                            # A model's supported direction may be proposed, then confirmed by the user.
-                            if key in values or key in {'scope', 'audio_stream'} or key not in inferred['inputs']:
+                            key, slot = field['id'], field.get('goal_slot')
+                            if key in values or key in {'scope', 'audio_stream'}:
                                 continue
-                            if key == 'direction' and ambiguous_direction:
-                                continue
-                            candidate = inferred['inputs'][key]
-                            if key == 'app_name' and normalize(candidate) not in normalize(source):
+                            candidate = suggested['slots'].get(slot) if slot else inferred['inputs'].get(key)
+                            if candidate is None or key == 'app_name' and normalize(candidate) not in normalize(source):
                                 continue
                             try:
                                 values[key] = self.requirements.answer(field, candidate)
