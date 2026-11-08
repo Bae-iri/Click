@@ -2189,6 +2189,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             @Override public void onFailure(Throwable error) {
                 if (requestGeneration != executionGeneration) return;
                 setTurnInFlight(false);
+                if (pendingVerifiedAction == null && request.userActionEvent != null)
+                    pendingVerifiedAction = request.userActionEvent;
                 if (pendingControl != null) {
                     String control = pendingControl; pendingControl = null;
                     recoverControl(control); return;
@@ -2197,8 +2199,33 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     showStoppedTask(ErrorDetails.requestMessage(error));
                     return;
                 }
+                boolean recoverable = error instanceof com.click.data.remote.ApiException
+                        ? ((com.click.data.remote.ApiException) error).status == 401
+                            || ((com.click.data.remote.ApiException) error).status == 408
+                            || ((com.click.data.remote.ApiException) error).status == 409
+                            || ((com.click.data.remote.ApiException) error).status == 429
+                            || ((com.click.data.remote.ApiException) error).status >= 500
+                        : error instanceof java.io.IOException;
+                if (recoverable) {
+                    automationGuard.interrupt();
+                    waitingForExplicitRetry = true;
+                    forceNextObservation = true;
+                    hideGuideOverlay(); hideConfirmation(); stopNarration();
+                    String message = ErrorDetails.requestMessage(error)
+                            + " 진행 상태를 다시 확인한 뒤 이어갈게요.";
+                    final String session = agentSessionId;
+                    taskFlowView.observationRecovery(message, () -> {
+                        if (requestGeneration != executionGeneration || closing || agentPaused || turnInFlight
+                                || pendingControl != null || !java.util.Objects.equals(session, agentSessionId)) return;
+                        waitingForExplicitRetry = false;
+                        restoreQueuedSession(true);
+                    });
+                    taskFlowCollapsed = false; updateFloatingVisibility(); placeTaskFlow(null, true);
+                    speak(message);
+                    return;
+                }
                 if (waitingForTargetHelp()) return;
-                failActiveQueueRequest("NETWORK_ERROR");
+                failActiveQueueRequest("AGENT_ERROR");
                 android.util.Log.e("ClickAgent", "Agent turn failed", error);
                 String userMessage = ErrorDetails.requestMessage(error);
                 if (taskFlowView != null) taskFlowView.failed(userMessage);
@@ -3392,8 +3419,19 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         // Keep the backend's technical outcome intact; only the user can report satisfaction.
         if (!adjustmentResultCheck.changed(agentEpisodeId, goalType, lastSubmittedScreen)
                 || !adjustmentResultCheck.changed(agentEpisodeId, goalType, current)) return false;
+        if (pendingVerifiedAction != null) {
+            // An event may arrive while the prior observation is in flight.
+            // Let the server consume that original event with a fresh observation
+            // before a result request that intentionally contains no screen/action.
+            forceNextObservation = true;
+            final int generation = executionGeneration;
+            speechHandler.post(() -> {
+                if (generation == executionGeneration && !closing) sendAgentTurn(null, true);
+            });
+            return true;
+        }
         hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
-        taskFlowView.waiting("조절한 결과를 확인하고 있어요.");
+        taskFlowView.waiting("조절한 결과를확인하고 있어요.");
         if (automaticTouchEnabled()) {
             taskFlowView.waitingProgress(TaskFlowOverlayView.AUTOMATIC_PROGRESS_MESSAGE);
             taskFlowView.setAutomaticProgress(true);

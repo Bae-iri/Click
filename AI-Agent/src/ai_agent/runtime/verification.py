@@ -136,6 +136,7 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             return result(Status.SUCCESS, transition.verification_predicate, count=True,
                 completed=transition.completes_task, message='Wi-Fi adapter and master switch agree with the requested state.')
 
+    opposite_direction = False
     if transition.verification_predicate in {'target_value_increased', 'target_value_decreased'}:
         if (not current_snapshot or not current_snapshot.observation_id or not baseline_id
                 or observation_time is None or action_time is None):
@@ -176,6 +177,8 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             return result(Status.UNKNOWN, 'applied_setting_unobservable')
         applied_changed = (applied_after > applied_before if transition.verification_predicate.endswith('increased')
                            else applied_after < applied_before)
+        opposite_direction = (value != baseline and applied_after != applied_before
+            and not changed and not applied_changed)
         if changed and applied_changed:
             return result(Status.SUCCESS, transition.verification_predicate, count=True,
                           completed=transition.completes_task,
@@ -192,7 +195,8 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
         and current_snapshot.fingerprint == previous_snapshot.fingerprint)
     if settled:
         if current_state_id == transition.from_state:
-            return result(Status.NO_CHANGE, 'settled_postcondition_not_met', count=True)
+            return result(Status.NO_CHANGE, 'target_value_changed_opposite_direction' if opposite_direction
+                else 'settled_postcondition_not_met', count=True)
         if current_state_id != 'S0_UNKNOWN':
             return result(Status.WRONG_STATE, 'settled_wrong_state', count=True)
     if (observation_time is not None and action_time is not None

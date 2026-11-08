@@ -63,4 +63,19 @@ public class SettingsExecutionGoalTest {
         assertEquals(0,LocalGoalResolver.resolve(catalog,server,"다크모드 키고 싶지 않아",null,null)
             .getJSONArray("candidates").length());
     }
+    @Test public void everyApprovedGoalCanResumeFromItsExactServerGraphIdentity() throws Exception {
+        String source=resource("mvp_goals.json");
+        GoalCatalogClassifier catalog=GoalCatalogClassifier.fromJson(source);
+        JSONArray entries=new JSONObject(source).getJSONArray("goals");int checked=0;
+        for(int i=0;i<entries.length();i++) {
+            JSONObject entry=entries.getJSONObject(i);
+            if(!"approved".equals(entry.optString("execution_status")))continue;
+            String task=entry.getString("graph_id");
+            GoalCatalogClassifier.Match resumed=catalog.executableGraph(task);
+            assertNotNull(task,resumed);
+            assertEquals(task,entry.getString("goal_type"),resumed.goalType);
+            checked++;
+        }
+        assertEquals(110,checked);
+    }
 }
