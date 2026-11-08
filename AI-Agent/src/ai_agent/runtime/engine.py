@@ -560,6 +560,19 @@ class ClickAgentEngine:
         elif verification_result and verification_result.status == VerificationStatus.NO_CHANGE:
             technical = {'status': 'NOT_ACHIEVED', 'reason': verification_result.evidence,
                          'verified_at_ms': request.captured_at_ms}
+        elif (verification_result and previous_transition and previous_transition.completes_task
+                and not task_completed and verification_result.status != VerificationStatus.SUCCESS):
+            # Keep the actual verification reason through request_result/reconnect.
+            # This is an observation diagnostic, never proof of a completed change.
+            source_attempt = verified_attempt or {}
+            setting = graph.definition.required_slots.get('setting', 'font_size')
+            technical = {'status': 'UNVERIFIABLE', 'reason': verification_result.evidence,
+                'verification_status': verification_result.status.value, 'setting': setting,
+                'requested_direction': graph.definition.required_slots.get('direction'),
+                'requested_state': graph.definition.required_slots.get('state'),
+                'observed_at_ms': request.captured_at_ms, 'observation_id': request.observation_id,
+                'baseline_setting_value': source_attempt.get('baseline_setting_value'),
+                'setting_value': applied_value(request.applied_settings, setting)}
         elif not task_completed and guide_command.command_type == CommandType.BLOCKED:
             technical = {'status': 'UNVERIFIABLE', 'reason': verification_result.evidence
                 if verification_result else 'observation_unavailable', 'verified_at_ms': request.captured_at_ms}

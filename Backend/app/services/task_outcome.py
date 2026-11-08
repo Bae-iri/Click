@@ -50,6 +50,14 @@ def make_outcome(technical, now, direction="increase", *, previous=None, setting
     if technical.get('reason') == 'manual_result_required' or setting not in {'font_size', 'brightness', 'volume', 'wifi', *CONTROLS}:
         message = '직접 진행한 작업 결과를 확인해 주세요. 앱에서 변경 성공을 검증하지는 못했어요.'
         question = '원하시는 결과를 얻었나요?'
+    if technical.get('reason') == 'target_value_changed_opposite_direction':
+        message = '요청한 방향과 반대로 바뀌었어요. 원하는 변경 방향을 다시 확인해 주세요.'
+    elif technical.get('reason') == 'no_correlated_action':
+        message = '조작 기록과 변경 값을 연결하지 못해 결과를 확인하지 못했어요.'
+    elif technical.get('reason') in {'target_value_unobservable', 'native_switch_unobservable'}:
+        message = '원래 조절하던 대상을 다시 확인하지 못해 변경 결과를 확인하지 못했어요.'
+    elif technical.get('reason') == 'applied_setting_unobservable':
+        message = '기기에 적용된 설정 값을 읽지 못해 변경 결과를 확인하지 못했어요.'
     return {"setting": setting, "requested_state": (previous or {}).get('requested_state'), "technical": technical, "user": {"status": None, "confirmed_at": None},
         "final": None, "prompt": {"id": str(uuid4()), "expires_at": now + 180,
         "message": message + " " + question, "technical_status": technical["status"]},

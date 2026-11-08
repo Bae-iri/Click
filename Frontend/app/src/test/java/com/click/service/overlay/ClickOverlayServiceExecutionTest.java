@@ -2552,6 +2552,36 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(count, requests.size());
     }
 
+    @Test public void transientTurnFailureRetainsExactActionEvidenceAndWaitsForExplicitRecovery() throws Exception {
+        prepareGuideResponse(); deliver(1, "highlight", "drag", "right");
+        JSONObject event = new JSONObject().put("event_id", "original-event")
+                .put("action_type", "drag_completed").put("guide_command_id", "original-guide")
+                .put("occurred_at_ms", 1234L).put("episode_id", "episode");
+        set("pendingVerifiedAction", event); send(null);
+        int index = requests.size() - 1;
+        assertSame(event, requests.get(index).userActionEvent);
+        callbacks.get(index).onFailure(new java.net.SocketTimeoutException("timeout"));
+        assertSame("A lost response must not erase the performed action", event, get("pendingVerifiedAction"));
+        assertEquals(true, get("waitingForExplicitRetry"));
+        int count = requests.size(); send(null);
+        assertEquals("Do not send or repeat an operation before explicit recovery", count, requests.size());
+    }
+
+    @Test public void newUnsentEvidenceIsObservedBeforeRequestingAResult() throws Exception {
+        screen = fontScreen(2f, 1f, 1000); currentScreen = screen;
+        prepareGuideResponse(); deliver(1, "highlight", "drag", "right");
+        currentScreen = fontScreen(3f, 1.15f, 2000); send(null);
+        JSONObject event = new JSONObject().put("event_id", "late-action")
+                .put("action_type", "drag_completed").put("guide_command_id", "original-guide")
+                .put("occurred_at_ms", 1500L).put("episode_id", "episode");
+        set("pendingVerifiedAction", event);
+        deliver(2, "highlight", "observe_only", null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1));
+        AgentTurnContract.Request next = requests.get(3);
+        assertEquals("observe", next.commandType());
+        assertSame("Send the original action before a tree-less result request", event, next.userActionEvent);
+    }
+
     private void resolve() throws Exception {
         Method method = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
         method.setAccessible(true);
