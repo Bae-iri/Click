@@ -139,7 +139,7 @@ public class FloatingHeaderConsistencyTest {
             flow.observationRecovery("화면을 확인해 주세요.", () -> {});
             geometry(flow, width);
             assertEquals(0, ((FloatingPanelHeader) flow.findViewWithTag("floating_header")).title.length());
-            assertNotNull(findText(flow, "휴대폰 잠금을 풀고, 열려 있는 팝업을 닫은 뒤 ‘다시 시도하기’를 눌러주세요."));
+            assertNotNull(findText(flow, "‘다시 시도하기’를 눌러 안내를 이어가 주세요."));
             assertNull(findText(flow, "죄송합니다. 클릭이 아직 배우는 중이라 많이 미숙합니다."));
             flow.recoveryApology(() -> {});
             geometry(flow, width);

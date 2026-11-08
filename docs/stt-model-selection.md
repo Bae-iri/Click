@@ -1,17 +1,19 @@
 # STT 모델 선택과 평가 이력
 
-2026-11-05 사용자 요청으로 메인 오버레이를 **Android 기본 `SpeechRecognizer`**로 전환했다. `DeviceSpeechInput`은 한국어와 중간 결과를 요청하고, 버튼을 놓으면 인식을 마친다. 취소·종료·시간 초과 시 인식기를 해제하고 해당 세션의 지연 콜백을 무시한다. 실제 발화 품질과 기기별 종료 동작은 실기기 검증 대상이다.
+2026-11-07 사용자 요청으로 메인 오버레이를 **Android 온디바이스 전용 STT**로 전환했다. Android 12(API 31) 이상에서 `isOnDeviceRecognitionAvailable()`을 확인하고 `createOnDeviceSpeechRecognizer()`만 생성한다. 지원 불가·한국어 모델 미준비·오류 시 일반 시스템 STT나 원격 서버로 전환하지 않고 글 입력을 안내한다. 앱은 모델 다운로드를 자동 요청하지 않는다. 2026-11-05에 적용했던 일반 `createSpeechRecognizer()` 경로는 제거했다. `DeviceSpeechInput`은 한국어와 중간 결과를 요청하고, 버튼을 놓으면 인식을 마친다. 취소·종료·시간 초과 시 인식기를 해제하고 해당 세션의 지연 콜백을 무시한다. 실제 발화 품질과 기기별 종료 동작은 실기기 검증 대상이다.
 
 ## 1. 현재 입력 경로
 
 | 구간 | 현재 구현 | 확인할 점 |
 | --- | --- | --- |
-| 메인 오버레이 | `DeviceSpeechInput` → Android에 설정된 기본 음성 인식 서비스 | 한국어 `ko-KR`, 중간·최종 결과, 마이크 권한 필요 |
-| 원음 처리 | Android 음성 인식 서비스가 관리 | 기본 API는 온디바이스 처리를 보장하지 않으며, 공급자·설정에 따라 네트워크를 사용할 수 있음 |
+| 메인 오버레이 | `DeviceSpeechInput` → Android 온디바이스 전용 음성 인식 서비스 | 한국어 `ko-KR`, 중간·최종 결과, 마이크 권한 필요 |
+| 원음 처리 | 온디바이스 인식 서비스가 기기 내부에서 처리 | 일반 시스템 인식·원격 STT fallback 없음; 한국어 로컬 모델 준비 필요 |
 | 튜토리얼 | 마이크 누르기·놓기 후 고정 예시로 진행 | 실제 녹음·권한 요청·STT 클라이언트를 생성하지 않음 |
 | 기존 서버 STT | Backend·Whisper worker·`CloudSpeechRecognizer` 코드는 유지 | 앱 입력에서 사용하거나 자동 fallback하지 않음 |
 
-이번 Android 기본 STT 전환은 아래의 과거 자체 서버 한정 선택을 대체한다. 2026-10-27에는 Whisper large-v3 + faster-whisper 자체 서버를 선택했으며, 서버 경로의 설정은 [서버 문서](../Backend/inference/README.md)를 참고한다. 아래 후보 비교와 자체 처리 경계는 2026-10 검토 이력이다.
+이번 Android 온디바이스 STT 전환은 아래의 과거 자체 서버 한정 선택을 대체한다. 2026-10-27에는 Whisper large-v3 + faster-whisper 자체 서버를 선택했으며, 서버 경로의 설정은 [서버 문서](../Backend/inference/README.md)를 참고한다. 아래 후보 비교와 자체 처리 경계는 2026-10 검토 이력이다.
+
+API 기준: [Android SpeechRecognizer 공식 문서](https://developer.android.com/reference/android/speech/SpeechRecognizer#createOnDeviceSpeechRecognizer(android.content.Context)).
 
 ## 2. 선정 방식
 

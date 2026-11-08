@@ -2,6 +2,7 @@ package com.click.service.overlay;
 
 import android.app.Application;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
 import android.speech.RecognitionListener;
@@ -38,12 +39,18 @@ public class DeviceSpeechInputTest {
         recognizer = mock(SpeechRecognizer.class);
         callback = mock(SpeechInput.Callback.class);
         platform = mockStatic(SpeechRecognizer.class);
-        platform.when(() -> SpeechRecognizer.isRecognitionAvailable(any())).thenReturn(true);
-        platform.when(() -> SpeechRecognizer.createSpeechRecognizer(any())).thenReturn(recognizer);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            platform.when(() -> SpeechRecognizer.isOnDeviceRecognitionAvailable(any())).thenReturn(true);
+            platform.when(() -> SpeechRecognizer.createOnDeviceSpeechRecognizer(any())).thenReturn(recognizer);
+        }
         input = new DeviceSpeechInput(RuntimeEnvironment.getApplication());
     }
 
-    @After public void cleanup() { input.close(); platform.close(); }
+    @After public void cleanup() {
+        input.close();
+        platform.verify(() -> SpeechRecognizer.createSpeechRecognizer(any()), never());
+        platform.close();
+    }
 
     private RecognitionListener start() {
         input.start(callback);
@@ -58,12 +65,13 @@ public class DeviceSpeechInputTest {
         return bundle;
     }
 
-    @Test public void koreanPartialAndFinalResultsUseAndroidService() {
+    @Test public void koreanPartialAndFinalResultsUseOnDeviceService() {
         RecognitionListener listener = start();
         ArgumentCaptor<Intent> intent = ArgumentCaptor.forClass(Intent.class);
         verify(recognizer).startListening(intent.capture());
         assertEquals(RecognizerIntent.ACTION_RECOGNIZE_SPEECH, intent.getValue().getAction());
         assertEquals("ko-KR", intent.getValue().getStringExtra(RecognizerIntent.EXTRA_LANGUAGE));
+        assertTrue(intent.getValue().getBooleanExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false));
         assertTrue(intent.getValue().getBooleanExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false));
         listener.onReadyForSpeech(new Bundle());
         listener.onPartialResults(words(" 글자 크기 "));
@@ -110,7 +118,7 @@ public class DeviceSpeechInputTest {
     @Test public void newSessionIgnoresPreviousSessionResults() {
         RecognitionListener old = start();
         SpeechRecognizer next = mock(SpeechRecognizer.class);
-        platform.when(() -> SpeechRecognizer.createSpeechRecognizer(any())).thenReturn(next);
+        platform.when(() -> SpeechRecognizer.createOnDeviceSpeechRecognizer(any())).thenReturn(next);
         input.start(callback);
         old.onResults(words("old"));
         old.onError(SpeechRecognizer.ERROR_CLIENT);
@@ -133,9 +141,45 @@ public class DeviceSpeechInputTest {
     }
 
     @Test public void missingRecognitionServiceFailsWithoutStartingMicrophone() {
-        platform.when(() -> SpeechRecognizer.isRecognitionAvailable(any())).thenReturn(false);
+        platform.when(() -> SpeechRecognizer.isOnDeviceRecognitionAvailable(any())).thenReturn(false);
         input.start(callback);
         verify(callback).onFailure(isA(DeviceSpeechInput.DeviceError.class));
+        verifyNoInteractions(recognizer);
+    }
+
+    @Test @Config(sdk = {26, 30}) public void olderAndroidFailsWithoutCallingOnDeviceApiOrRemoteService() {
+        input.start(callback);
+        ArgumentCaptor<Throwable> error = ArgumentCaptor.forClass(Throwable.class);
+        verify(callback).onFailure(error.capture());
+        assertEquals(DeviceSpeechInput.DeviceError.ON_DEVICE_UNAVAILABLE,
+                ((DeviceSpeechInput.DeviceError) error.getValue()).code);
+        assertTrue(SpeechErrorMessages.message(error.getValue()).contains("글로 입력"));
+        verifyNoInteractions(recognizer);
+    }
+
+    @Test public void unavailableKoreanModelDoesNotFallBackOrRetry() {
+        RecognitionListener listener = start();
+        listener.onError(SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE);
+        ArgumentCaptor<Throwable> error = ArgumentCaptor.forClass(Throwable.class);
+        verify(callback).onFailure(error.capture());
+        assertTrue(SpeechErrorMessages.message(error.getValue()).contains("한국어 음성 모델"));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(40));
+        verify(recognizer, times(1)).startListening(any());
+        verify(recognizer).destroy();
+    }
+
+    @Test public void unsupportedKoreanOffersTextInput() {
+        start().onError(SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED);
+        ArgumentCaptor<Throwable> error = ArgumentCaptor.forClass(Throwable.class);
+        verify(callback).onFailure(error.capture());
+        assertTrue(SpeechErrorMessages.message(error.getValue()).contains("글로 입력"));
+    }
+
+    @Test public void onDeviceCreationFailureDoesNotFallBack() {
+        platform.when(() -> SpeechRecognizer.createOnDeviceSpeechRecognizer(any()))
+                .thenThrow(new UnsupportedOperationException());
+        input.start(callback);
+        verify(callback).onFailure(isA(UnsupportedOperationException.class));
         verifyNoInteractions(recognizer);
     }
 

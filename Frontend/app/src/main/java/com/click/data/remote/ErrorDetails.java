@@ -9,6 +9,23 @@ import java.net.UnknownHostException;
 public final class ErrorDetails {
     private ErrorDetails() {}
 
+    /** Older servers merged unknown screens and real secrets into one message.
+     * Only a concrete observation reason may identify input/authentication here. */
+    public static String guideFailureMessage(AgentTurnContract.Response response) {
+        AgentTurnContract.GuideCommand guide = response.guideCommand;
+        String message = guide == null ? response.message : guide.message;
+        org.json.JSONObject policy = guide == null ? null : guide.renderPolicy;
+        if (policy == null || !policy.optBoolean("privacy_blocked")) return message;
+        switch (policy.optString("observation_reason")) {
+            case "credential_input": case "input_present":
+                return "입력 중인 내용을 보호하기 위해 화면 전송을 멈췄어요. 이 단계는 직접 진행해 주세요.";
+            case "protected_screen":
+                return "계정·인증 등 보호가 필요한 화면이에요. 이 단계는 직접 진행해 주세요.";
+            default:
+                return "현재 화면에서 안내할 항목을 안전하게 확인하지 못했어요. 설정 화면에서 다시 시도해 주세요.";
+        }
+    }
+
     /** Shared by typed and spoken requests; diagnostic details belong in the app log. */
     public static String requestMessage(Throwable error) {
         if (error instanceof com.click.data.snapshot.SettingsScreenPrivacy.Incomplete)
@@ -19,6 +36,8 @@ public final class ErrorDetails {
                     return "비밀번호 등 입력 정보가 있어 화면 전송을 멈췄어요. 이 단계는 직접 진행해 주세요.";
                 case SENSITIVE_SCREEN:
                     return "계정·인증 등 보호가 필요한 화면이에요. 이 단계는 직접 진행해 주세요.";
+                case VISION_MASK_UNAVAILABLE:
+                    return "화면 이미지 보호 처리를 확인하지 못했어요. 화면을 다시 읽어 주세요.";
                 case UNSUPPORTED_APP:
                     return "현재 앱 화면은 안내 대상이 아니에요. 휴대폰 설정 화면을 열어주세요.";
                 default:

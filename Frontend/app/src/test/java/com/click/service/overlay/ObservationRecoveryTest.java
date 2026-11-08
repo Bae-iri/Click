@@ -154,4 +154,13 @@ public class ObservationRecoveryTest {
         assertFalse(ObservationRecovery.canSearchByScrolling("S3_CONTROL",policy,before));
         assertFalse(ObservationRecovery.canSearchByScrolling("S0_UNKNOWN",policy,before));
     }
+    @Test public void recoveryOnlyMentionsADeviceLockWhenItIsActuallyLocked() {
+        String unreadable = ObservationRecovery.missingScreenMessage(true, false);
+        assertFalse(unreadable.contains("팝업"));
+        assertFalse(unreadable.contains("잠금"));
+        assertFalse(unreadable.contains("개인정보"));
+        assertTrue(ObservationRecovery.missingScreenMessage(true, true).contains("잠금"));
+        assertTrue(ObservationRecovery.missingScreenMessage(false, false).contains("접근성"));
+    }
+
 }

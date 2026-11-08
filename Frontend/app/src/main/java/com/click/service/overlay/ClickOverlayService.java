@@ -1117,7 +1117,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if ("BLOCKED".equals(response.taskStatus) || response.guideCommand != null
                 && "blocked".equals(response.guideCommand.commandType)) {
             response.logDebug("ClickAgent");
-            showStoppedTask(response.guideCommand == null ? response.message : response.guideCommand.message);
+            showStoppedTask(ErrorDetails.guideFailureMessage(response));
             return;
         }
         if (!"IN_PROGRESS".equals(response.taskStatus)
@@ -2333,9 +2333,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return;
         }
         missingScreenRecovery = true;
-        String message = ClickAccessibilityService.accessibilityWindowManager() == null
-                ? "화면 읽기 연결이 끊겼어요. ‘접근성 안내 보기’를 눌러 연결을 다시 설정해 주세요."
-                : "현재 화면을 읽지 못했어요. 휴대폰 잠금을 풀고 홈이나 설정 화면으로 이동한 뒤 ‘다시 시도하기’를 눌러주세요.";
+        android.app.KeyguardManager keyguard = getSystemService(android.app.KeyguardManager.class);
+        String message = ObservationRecovery.missingScreenMessage(
+                ClickAccessibilityService.accessibilityWindowManager() != null,
+                keyguard != null && keyguard.isDeviceLocked());
         hideGuideOverlay();
         showObservationRecovery(initialGoal, message, () -> {
             if (generation != executionGeneration || !java.util.Objects.equals(session, agentSessionId)
@@ -2692,7 +2693,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         response.logDebug("ClickAgent");
         if (response.guideCommand == null) return;
         if ("blocked".equals(response.guideCommand.commandType) || "BLOCKED".equals(response.taskStatus)) {
-            showStoppedTask(response.guideCommand.message); return;
+            showStoppedTask(ErrorDetails.guideFailureMessage(response)); return;
         }
         if (waitingForTargetHelp()) return;
         if (AgentActionEvents.BACK_NAVIGATED.equals(pendingActionType)
@@ -3404,7 +3405,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         // emit another accessibility event for an explicit retry to reach the server.
         sendAgentTurn(null, true);
         if (!turnInFlight && forceNextObservation) {
-            String message = "현재 화면을 읽지 못했어요. 휴대폰 잠금을 풀고 화면을 다시 확인해 주세요.";
+            android.app.KeyguardManager keyguard = getSystemService(android.app.KeyguardManager.class);
+            String message = ObservationRecovery.missingScreenMessage(
+                    ClickAccessibilityService.accessibilityWindowManager() != null,
+                    keyguard != null && keyguard.isDeviceLocked());
             showObservationRecovery(message, () -> retryObservation(generation, manualOverride));
             placeTaskFlow(null, true);
         }

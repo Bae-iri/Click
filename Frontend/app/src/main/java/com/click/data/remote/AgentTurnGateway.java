@@ -34,7 +34,7 @@ public final class AgentTurnGateway {
 
     /** Run before action events or one-use approvals are consumed by a request. */
     public boolean needsFreshObservation(com.click.data.snapshot.ScreenSnapshot screen) {
-        if (screenPrivacy == null || screen == null || !screen.privacyMaskingReady) return false;
+        if (screenPrivacy == null || screen == null) return false;
         try {
             screenPrivacy.filter(new org.json.JSONObject().put("accessibility_tree", new org.json.JSONObject(screen.toJson())));
         } catch (com.click.data.snapshot.SettingsScreenPrivacy.Incomplete incomplete) {
@@ -66,9 +66,10 @@ public final class AgentTurnGateway {
             body.remove("vision_snapshot");
         }
         if (body.has("accessibility_tree") || body.has("vision_snapshot")) {
-            if (screenPrivacy == null || (request.accessibilityTree != null && !request.accessibilityTree.privacyMaskingReady))
+            if (screenPrivacy == null)
                 throw new com.click.data.snapshot.SettingsScreenPrivacy.Blocked();
-            body = screenPrivacy.filter(body,request.observationSetting);
+            body = screenPrivacy.filter(body, request.observationSetting,
+                    request.accessibilityTree == null || request.accessibilityTree.privacyMaskingReady);
         }
         HttpResult result = http.post(AgentTurnContract.PATH, body.toString());
         AgentTurnContract.Response response = new AgentTurnContract.Response(result.body);
