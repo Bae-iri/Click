@@ -26,7 +26,7 @@ services:
       - key: AI1_UI_SELECTOR_PROVIDER
         value: jev
       - key: GOAL_CLASSIFIER_PROVIDER
-        sync: false
+        value: jev
       - key: TYPESAFE_API_KEY
         sync: false
       - key: JEV_MODEL
