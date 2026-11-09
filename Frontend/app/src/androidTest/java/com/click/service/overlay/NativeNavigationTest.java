@@ -22,19 +22,54 @@ public class NativeNavigationTest {
   context=InstrumentationRegistry.getInstrumentation().getTargetContext();
   UiAutomation automation=InstrumentationRegistry.getInstrumentation().getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
   String original=Settings.Secure.getString(context.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+  int originalGlobal=Settings.Secure.getInt(context.getContentResolver(),Settings.Secure.ACCESSIBILITY_ENABLED,0);
+  assertEquals("Existing global accessibility must already be enabled",1,originalGlobal);
   ComponentName click=new ComponentName(context,ClickAccessibilityService.class);List<String> others=new ArrayList<>();boolean enabled=false;
   if(original!=null)for(String entry:original.split(":")){if(click.equals(ComponentName.unflattenFromString(entry)))enabled=true;else others.add(entry);}
   assertTrue("Click accessibility must already be enabled",enabled);
   automation.adoptShellPermissionIdentity(android.Manifest.permission.WRITE_SECURE_SETTINGS);
-  try{Settings.Secure.putString(context.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,String.join(":",others));SystemClock.sleep(300);}
-  finally{Settings.Secure.putString(context.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,original);automation.dropShellPermissionIdentity();}
+  try{Settings.Secure.putString(context.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,String.join(":",others));SystemClock.sleep(1500);}
+  finally{
+   Settings.Secure.putString(context.getContentResolver(),Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,original);
+   // Android may disable its global flag when disconnecting the last service.
+   // Restore the exact pre-test ON state, never grant a new service.
+   Settings.Secure.putInt(context.getContentResolver(),Settings.Secure.ACCESSIBILITY_ENABLED,originalGlobal);
+   automation.dropShellPermissionIdentity();
+  }
+  for(int i=0;i<50 && connected()==null;i++)SystemClock.sleep(200);
+  assertNotNull("Existing accessibility service must rebind before navigation",connected());
+ }
+ private ClickAccessibilityService connected() {
+  try {
+   java.lang.reflect.Field field=ClickAccessibilityService.class.getDeclaredField("connectedService");field.setAccessible(true);
+   return (ClickAccessibilityService)((java.lang.ref.WeakReference<?>)field.get(null)).get();
+  }catch(ReflectiveOperationException error){throw new AssertionError(error);}
+ }
+ private void launch(boolean settings) {
+  UiAutomation automation=InstrumentationRegistry.getInstrumentation().getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+  String command=settings?"am start -W -a android.settings.SETTINGS -f 0x10008000"
+    :"am start -W -a android.intent.action.MAIN -c android.intent.category.HOME -f 0x10000000";
+  try(android.os.ParcelFileDescriptor fd=automation.executeShellCommand(command);
+      java.io.InputStream in=new android.os.ParcelFileDescriptor.AutoCloseInputStream(fd)) {
+   byte[] buffer=new byte[1024];while(in.read(buffer)!=-1) { }
+  }catch(java.io.IOException error){throw new AssertionError(error);}
  }
  private ScreenSnapshot screen(boolean settings) {
+  ScreenSnapshot latest=null;
   for(int i=0;i<40;i++){
-   SystemClock.sleep(200);ScreenSnapshot s=ClickAccessibilityService.freshSnapshot();
+   SystemClock.sleep(200);ScreenSnapshot s=ClickAccessibilityService.freshSnapshot();latest=s;
    if(s!=null && s.activeWindowId!=null && s.navigation!=null && (settings?TouchAutomationPolicy.settingsPackage(s.packageName):NavigationRecovery.isHomeScreen(s)))return s;
   }
-  throw new AssertionError("No fresh native navigation screen");
+  boolean locked=context.getSystemService(android.app.KeyguardManager.class).isKeyguardLocked();
+  ClickAccessibilityService service=connected();
+  String foreground="unavailable";
+  if(service!=null){
+   android.view.accessibility.AccessibilityNodeInfo root=service.getRootInActiveWindow();
+   if(root!=null)try{String pkg=String.valueOf(root.getPackageName());foreground=pkg.equals("com.click")?"click":TouchAutomationPolicy.settingsPackage(pkg)?"settings":NavigationRecovery.isHome(pkg)?"launcher":"other";}finally{root.recycle();}
+  }
+  throw new AssertionError("No fresh native navigation screen: snapshot="+(latest!=null)
+    +" navigation="+(latest!=null && latest.navigation!=null)+" settings="+(latest!=null && TouchAutomationPolicy.settingsPackage(latest.packageName))
+    +" launcher="+NavigationRecovery.isHomeScreen(latest)+" keyguard="+locked+" connected="+(service!=null)+" foreground="+foreground);
  }
  private boolean hasDisplay(ScreenSnapshot s) {
   return s.nodes.stream().anyMatch(n->n.visibleToUser && "디스플레이".equals(n.text)
@@ -42,15 +77,28 @@ public class NativeNavigationTest {
  }
  @Test public void settingsFromMiddleSearchesUpAndFindsDisplay() {
   assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("liveScroll")));connect();
-  context.startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+  launch(true);
   ScreenSnapshot s=screen(true);
   try {
-   // Establish the start using native endpoint evidence, then deliberately begin at a lower page.
-   for(int i=0;i<20 && !s.navigation.atStart();i++){
-    assertTrue(ClickAccessibilityService.performSettingsScroll(false,s.packageName,s.activeWindowId));SystemClock.sleep(700);s=screen(true);
+   // With a large system font, Display may be below the first viewport.
+   // Use the production planner to establish a real target, then begin the
+   // tested search below it instead of assuming a fixed row/page position.
+   AutomaticScrollSearch setupSearch=new AutomaticScrollSearch();
+   for(int i=0;i<30 && !hasDisplay(s);i++){
+    AutomaticScrollSearch.Plan plan=setupSearch.plan("device-fixture",s.navigation);
+    assertNotEquals("Display fixture must be discoverable",AutomaticScrollSearch.Status.FINISHED,plan.status);
+    if(plan.status==AutomaticScrollSearch.Status.MOVE)
+      ClickAccessibilityService.performSettingsScroll(plan.forward,s.packageName,s.activeWindowId);
+    SystemClock.sleep(700);s=screen(true);
    }
-   assertTrue("Observe actual Settings beginning",s.navigation.atStart());
-   for(int i=0;i<2;i++){assertTrue(ClickAccessibilityService.performSettingsScroll(true,s.packageName,s.activeWindowId));SystemClock.sleep(700);s=screen(true);}
+   assertTrue("Establish actual Display row before moving it offscreen",hasDisplay(s));
+   for(int i=0;i<6 && hasDisplay(s);i++){
+    assertTrue(ClickAccessibilityService.performSettingsScroll(true,s.packageName,s.activeWindowId));
+    SystemClock.sleep(700);s=screen(true);
+   }
+   android.util.Log.i("ClickNavigationTest","settings fixture first="+s.navigation.firstIndex
+     +" last="+s.navigation.lastIndex+" count="+s.navigation.itemCount
+     +" backward="+s.navigation.backwardAvailable+" forward="+s.navigation.forwardAvailable);
    assertFalse("Start search in middle",s.navigation.atStart());assertFalse("Display is initially offscreen",hasDisplay(s));
    AutomaticScrollSearch search=new AutomaticScrollSearch();boolean found=false;int moves=0;
    for(int i=0;i<30;i++){
@@ -63,15 +111,15 @@ public class NativeNavigationTest {
    }
    assertTrue("Find and approve the actual Display row",found);
    android.util.Log.i("ClickNavigationTest","settings middle_to_display=true moves="+moves+" axis="+s.navigation.axis);
-  } finally {context.startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));}
+  } finally {launch(false);}
  }
  @Test public void launcherSettingsTargetAndAxisAreUsable() {
   assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("liveScroll")));connect();
-  context.startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+  launch(false);
   ScreenSnapshot s=screen(false);Set<String> seen=new HashSet<>();boolean found=false;int moves=0;
   try {
    for(int i=0;i<12;i++){
-    for(AccessibilityNodeSnapshot n:s.nodes)if(n.visibleToUser && ("설정".equals(n.text)||"설정".equals(n.contentDescription)||"Settings".equals(n.text))){
+    for(AccessibilityNodeSnapshot n:s.nodes)if(n.visibleToUser && (TouchAutomationPolicy.isSettingsAppLabel(n.text)||TouchAutomationPolicy.isSettingsAppLabel(n.contentDescription))){
      if(TouchAutomationPolicy.clickableTarget(s,n.nodeId,n.bounds)!=null){found=true;break;}
     }
     if(found)break;
