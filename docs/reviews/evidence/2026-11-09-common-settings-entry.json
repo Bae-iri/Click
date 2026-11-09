@@ -144,8 +144,19 @@
     },
     "debug_and_test_apks_built": true,
     "device_apk_sha256": "e50b61961611a396f49604a456537b52752ed26b66090c33f0ddb53ea0df0b1f",
-    "device_installation": "Not completed: USB disconnected during install; no device was listed by adb afterwards.",
+    "device_installation": "Completed after USB reconnection, using adb install -r; app data was not cleared. Installed main APK hash matches the verified integration build.",
     "post_patch_physical_highlight_and_entry_validation": false,
-    "server_redeployment_performed": false
+    "server_redeployment_performed": false,
+    "installed_app_matches_prepared_apk": true,
+    "post_install_home_observation": {
+      "existing_service_reconnected": true,
+      "service_available": true,
+      "service_privacy": "allowed",
+      "native_privacy": "allowed",
+      "mask_ready": true,
+      "settings_icon_visible_to_service": true,
+      "settings_icon_visible_to_native_probe": true,
+      "wifi_changes_attempted": 0
+    }
   }
 }
