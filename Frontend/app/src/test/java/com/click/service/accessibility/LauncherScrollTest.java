@@ -103,16 +103,17 @@ public class LauncherScrollTest {
         AccessibilityNodeInfo list = mock(AccessibilityNodeInfo.class);
         when(root.getChildCount()).thenReturn(1); when(root.getChild(0)).thenReturn(list);
         when(list.isScrollable()).thenReturn(true);
+        when(list.isVisibleToUser()).thenReturn(true); when(list.isEnabled()).thenReturn(true);
         when(list.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)).thenReturn(true);
         assertTrue(ClickAccessibilityService.performScroll(true));
-        verify(root).recycle(); verify(list).recycle();
+        verify(root).recycle(); verify(list, atLeastOnce()).recycle();
     }
 
     @Test public void unsuccessfulSearchReleasesAllVisitedNodes() {
         AccessibilityNodeInfo child = mock(AccessibilityNodeInfo.class);
         when(root.getChildCount()).thenReturn(1); when(root.getChild(0)).thenReturn(child);
         assertFalse(ClickAccessibilityService.performScroll(false));
-        verify(root).recycle(); verify(child).recycle();
+        verify(root).recycle(); verify(child, atLeastOnce()).recycle();
         verify(child, never()).performAction(anyInt());
     }
 }

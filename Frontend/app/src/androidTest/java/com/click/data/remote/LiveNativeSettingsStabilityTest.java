@@ -235,13 +235,13 @@ public class LiveNativeSettingsStabilityTest {
                                     || com.click.service.overlay.ObservationRecovery.canSearchJevWait(last.optString("state_id"),guide.optJSONObject("render_policy"),metadata,screen));
                         // Match the overlay: a missing menu is searched before offering user recovery.
                         if(searchMenu) {
-                            Boolean forward=search.next(session+":"+last.optString("state_id")+":"+screen.packageName+":"+screen.activeWindowId,
-                                    com.click.service.overlay.ObservationRecovery.navigationFingerprint(screen));
-                            if(forward==null){item.put("navigation_limit_reached",true);break;}
+                            com.click.service.overlay.NativeSettingsSearchPlanner.Plan plan=search.next(
+                                    session+":"+last.optString("state_id")+":"+screen.packageName+":"+screen.activeWindowId,screen);
+                            if(plan.finished){item.put("navigation_stop_reason",plan.reason);break;}
                             assertPreparedApks();
-                            boolean moved=ClickAccessibilityService.performSettingsScroll(forward,screen.packageName,screen.activeWindowId);
-                            if(!moved)search.reachedEnd(forward);
-                            item.put("native_search_scrolls",++scrolls);
+                            boolean forward=plan.forward;
+                            boolean moved=plan.move && ClickAccessibilityService.performSettingsScroll(forward,screen.packageName,screen.activeWindowId);
+                            if(plan.move)item.put("native_search_scrolls",++scrolls);
                             JSONArray searches=item.optJSONArray("searches");if(searches==null){searches=new JSONArray();item.put("searches",searches);}
                             searches.put(new JSONObject().put("state",last.optString("state_id")).put("forward",forward).put("dispatched",moved));
                             event=AgentActionEvents.of(AgentActionEvents.MANUAL_OVERRIDE,null,null,null);
