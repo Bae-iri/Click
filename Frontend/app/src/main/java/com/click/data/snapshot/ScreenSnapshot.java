@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 public final class ScreenSnapshot {
+    public final NavigationState navigation;
     public final String packageName;
     public final Integer activeWindowId;
     public final String capturedAt;
@@ -45,12 +46,13 @@ public final class ScreenSnapshot {
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
                           Float appliedFontScale) {
         this(packageName, capturedAt, screenWidth, screenHeight, nodes, activeWindowId,
-                privacyMaskingReady, appliedFontScale, null, null, null, null);
+                privacyMaskingReady, appliedFontScale, null, null, null, null, null);
     }
 
     private ScreenSnapshot(String packageName, String capturedAt, int screenWidth, int screenHeight,
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
-                          Float appliedFontScale, String screenRevision, Integer brightness, Integer mediaVolume, Integer wifiState) {
+                          Float appliedFontScale, String screenRevision, Integer brightness, Integer mediaVolume, Integer wifiState, NavigationState navigation) {
+        this.navigation = navigation;
         this.appliedWifiState = wifiState;
         this.screenRevision = screenRevision;
         this.appliedFontScale = appliedFontScale;
@@ -67,18 +69,24 @@ public final class ScreenSnapshot {
 
     public ScreenSnapshot withScreenRevision(String revision) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
-                activeWindowId, privacyMaskingReady, appliedFontScale, revision, appliedBrightness, appliedMediaVolume, appliedWifiState);
+                activeWindowId, privacyMaskingReady, appliedFontScale, revision, appliedBrightness, appliedMediaVolume, appliedWifiState, navigation);
     }
 
     public ScreenSnapshot withAdjustmentValues(Integer brightness, Integer mediaVolume) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
-                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision, brightness, mediaVolume, appliedWifiState);
+                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision, brightness, mediaVolume, appliedWifiState, navigation);
     }
 
     public ScreenSnapshot withWifiState(Integer state) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
                 activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision,
-                appliedBrightness, appliedMediaVolume, state);
+                appliedBrightness, appliedMediaVolume, state, navigation);
+    }
+
+    public ScreenSnapshot withNavigation(NavigationState navigation) {
+        return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
+                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision,
+                appliedBrightness, appliedMediaVolume, appliedWifiState, navigation);
     }
 
     public String toJson() {

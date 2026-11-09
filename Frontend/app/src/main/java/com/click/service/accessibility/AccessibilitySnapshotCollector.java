@@ -15,7 +15,7 @@ final class AccessibilitySnapshotCollector {
         List<AccessibilityNodeSnapshot> nodes = new ArrayList<>();
         boolean[] maskReady = {true};
         visit(root, "node_0", null, packageName, width, height, nodes, maskReady);
-        return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId(), maskReady[0], fontScale);
+        return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId(), maskReady[0], fontScale).withNavigation(NativeNavigationReader.read(root));
     }
 
     private void visit(AccessibilityNodeInfo node, String nodeId, String parentId, String packageName,
