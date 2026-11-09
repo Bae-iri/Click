@@ -1484,6 +1484,26 @@ public class ClickOverlayServiceExecutionTest {
         service.getSystemService(AudioManager.class).setStreamVolume(AudioManager.STREAM_MUSIC, 5, 0);
     }
 
+    @Test public void settingsRecoveryUsesExistingPanelWithoutAnExtraWindow() throws Exception {
+        prepareGuideResponse();
+        JSONObject guide = new JSONObject().put("guide_command_id", "open-settings")
+                .put("command_type", "highlight").put("action_type", "observe_only")
+                .put("requires_user_action", true).put("message", "설정 앱을 현재 화면에서 찾지 못했어요.")
+                .put("render_policy", new JSONObject().put("recovery_action", new JSONObject()
+                        .put("type", "open_android_settings_or_show_app_drawer")
+                        .put("android_intent_action", "android.settings.SETTINGS")));
+        callbacks.get(1).onSuccess(new AgentTurnContract.Response(new JSONObject()
+                .put("request_id", requests.get(1).requestId).put("session_id", "frontend-session")
+                .put("session_version", 1).put("episode_id", "episode").put("state_id", "S0_UNKNOWN")
+                .put("task_status", "IN_PROGRESS").put("guide_command", guide).toString()));
+        verify((TaskFlowOverlayView) get("taskFlowView"))
+                .progress(any(), any(), eq("설정 앱을 현재 화면에서 찾지 못했어요."), anyBoolean());
+        verify((WindowManager) get("windowManager"), never()).addView(isA(android.widget.Button.class), any());
+        verify((TaskFlowOverlayView) get("taskFlowView")).settingsEntryRecovery(any());
+        verify((ClickOverlayLayout) get("overlayView")).setRecognizedSpeech("‘설정 열기’를 눌러주세요. 설정 화면에서 이어서 안내할게요.");
+        verify((TutorialNarrator) get("narrator")).speak("‘설정 열기’를 눌러주세요. 설정 화면에서 이어서 안내할게요.");
+    }
+
     @Test public void observationRetryHidesLegacyDiagnosticsAndRefreshesSilently() throws Exception {
         prepareGuideResponse();
         String diagnostic = "현재 화면에서 다음 조작을 확정하지 못했어요. 화면을 다시 확인해 주세요.";
@@ -2324,6 +2344,67 @@ public class ClickOverlayServiceExecutionTest {
                 pkg + ":id/home_icon", "android.widget.TextView", "menu_item", new int[]{40, 1200, 260, 1400},
                 true, true, false, false, false, null, 43);
         return new ScreenSnapshot(pkg, Instant.now().toString(), 1080, 2400, List.of(folder, settings), 43);
+    }
+
+    @Test public void olderServerWaitCanOfferSettingsEntryOnlyAtTheLauncher() throws Exception {
+        prepareGuideResponse();
+        Method method=ClickOverlayService.class.getDeclaredMethod("canOfferSettingsEntry",AgentTurnContract.Response.class,ScreenSnapshot.class);
+        method.setAccessible(true);
+        for (String reason : new String[]{"LOW_CONFIDENCE","MODEL_ABSTAINED","MODEL_WAIT_WITHOUT_ACTION","MODEL_UNAVAILABLE","APP_NOT_OPEN","ACTION_BUDGET_EXHAUSTED"}) {
+            JSONObject body=new JSONObject().put("request_id","old-server").put("session_id","frontend-session")
+                .put("state_id","S0_UNKNOWN").put("task_status","IN_PROGRESS")
+                .put("guide_command",new JSONObject().put("guide_command_id","old-wait").put("command_type","highlight")
+                    .put("action_type","observe_only").put("message","다시 시도해 주세요.").put("render_policy",new JSONObject()
+                        .put("recovery",new JSONObject().put("waiting_for","user").put("reason_code",reason))));
+            AgentTurnContract.Response response=new AgentTurnContract.Response(body.toString());
+            assertEquals(!"ACTION_BUDGET_EXHAUSTED".equals(reason),method.invoke(service,response,launcher(true)));
+            assertEquals(false,method.invoke(service,response,screen));
+            body.getJSONObject("guide_command").getJSONObject("render_policy").getJSONObject("recovery").put("waiting_for","observation");
+            assertEquals(false,method.invoke(service,new AgentTurnContract.Response(body.toString()),launcher(true)));
+        }
+    }
+
+    @Test public void explicitSettingsEntryRecoveryTakesPriorityOverGenericHomeRecovery() throws Exception {
+        prepareGuideResponse(); set("turnInFlight", false);
+        JSONObject body = new JSONObject().put("request_id", "entry-recovery").put("session_id", "frontend-session")
+                .put("state_id", "S0_UNKNOWN").put("task_status", "IN_PROGRESS")
+                .put("guide_command", new JSONObject().put("guide_command_id", "settings-entry")
+                    .put("command_type", "highlight").put("action_type", "observe_only")
+                    .put("message", "설정 열기").put("render_policy", new JSONObject()
+                        .put("recovery", new JSONObject().put("waiting_for", "user").put("reason_code", "APP_NOT_OPEN"))
+                        .put("recovery_action", new JSONObject().put("type", "open_android_settings_or_show_app_drawer")
+                            .put("android_intent_action", android.provider.Settings.ACTION_SETTINGS))));
+        Method method = ClickOverlayService.class.getDeclaredMethod("showNavigationRecoveryIfNeeded",
+                AgentTurnContract.Response.class, ScreenSnapshot.class);
+        method.setAccessible(true);
+        ScreenSnapshot other = new ScreenSnapshot("com.click", Instant.now().toString(),1080,2400,List.of(),42);
+        assertEquals(false, method.invoke(service, new AgentTurnContract.Response(body.toString()), other));
+        verify((TaskFlowOverlayView)get("taskFlowView"), never()).navigationRecovery(anyBoolean(),anyString(),any());
+    }
+
+    @Test public void settingsEntryButtonClearsPriorWaitAndLaunchesOnlyOnUserActivation() throws Exception {
+        prepareGuideResponse(); set("turnInFlight", false);
+        Method show = ClickOverlayService.class.getDeclaredMethod("showSettingsEntryRecovery");
+        show.setAccessible(true); show.invoke(service);
+        org.mockito.ArgumentCaptor<Runnable> click=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(click.capture());
+        assertNull(shadowOf(service).getNextStartedActivity());
+        assertEquals(true,get("waitingForExplicitRetry"));
+        click.getValue().run();
+        assertEquals(android.provider.Settings.ACTION_SETTINGS,shadowOf(service).getNextStartedActivity().getAction());
+        assertEquals(false,get("waitingForExplicitRetry"));
+        assertEquals(AgentActionEvents.MANUAL_OVERRIDE,get("pendingActionType"));
+    }
+
+    @Test public void obsoleteSettingsEntryActionCannotLaunchAfterTheTaskChanges() throws Exception {
+        prepareGuideResponse(); set("turnInFlight", false);
+        Method show = ClickOverlayService.class.getDeclaredMethod("showSettingsEntryRecovery");
+        show.setAccessible(true); show.invoke(service);
+        org.mockito.ArgumentCaptor<Runnable> click=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(click.capture());
+        set("executionGeneration",(Integer)get("executionGeneration")+1);
+        click.getValue().run();
+        assertNull(shadowOf(service).getNextStartedActivity());
     }
 
     @Test public void launcherSearchContinuesAfterFirstTurnAndIgnoresHiddenSettingsEvenWithAutomationOff() throws Exception {

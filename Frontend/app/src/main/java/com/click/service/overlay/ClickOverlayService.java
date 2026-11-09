@@ -20,7 +20,6 @@ import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.Toast;
-import android.widget.Button;
 
 import androidx.annotation.Nullable;
 
@@ -179,8 +178,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private WindowManager.LayoutParams guideOverlayParams;
     private ConfirmationOverlayView confirmationView;
     private WindowManager.LayoutParams confirmationParams;
-    private Button settingsOpenButton;
-    private WindowManager.LayoutParams settingsOpenParams;
     private boolean collapseReceiverRegistered;
     private final BroadcastReceiver collapseReceiver = new BroadcastReceiver() {
         @Override
@@ -458,7 +455,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         detachGuideOverlay();
         hideConfirmation();
-        hideSettingsOpenButton();
+
         hideTrashTarget();
         if (windowManager != null && overlayView != null && overlayView.isAttachedToWindow()) {
             windowManager.removeView(overlayView);
@@ -1154,7 +1151,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             catch (org.json.JSONException invalid) { throw new IllegalStateException(invalid); }
             actionTracker.clear(); pendingVerifiedAction = null;
             adjustmentResultCheck.clear();
-            hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
+            hideGuideOverlay(); hideConfirmation();
             taskFlowView.setChecklist(response.metadata.optJSONArray("checklist"));
             boolean fontSize = acceptedGoal != null && SettingsAdjustment.forGoal(
                     acceptedGoal.optString("goal_type")) == SettingsAdjustment.FONT_SIZE;
@@ -1184,7 +1181,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             updateRequestStatus(false, false);
             boolean satisfied = "COMPLETED".equals(response.taskStatus);
             String message = response.message;
-            hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
+            hideGuideOverlay(); hideConfirmation();
             executionGeneration++;
         automationGuard.interrupt();
         navigationRecovery.clear();
@@ -1318,7 +1315,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         detachGuideOverlay();
         hideConfirmation();
-        hideSettingsOpenButton();
+
         hideTrashTarget();
         if (snapAnimator != null) snapAnimator.cancel();
         if (windowManager != null && overlayView.isAttachedToWindow()) {
@@ -1789,7 +1786,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         stopNarration();
         hideGuideOverlay();
         hideConfirmation();
-        hideSettingsOpenButton();
+
     }
 
     private void claimNextQueuedRequest() { claimNextQueuedRequest(false); }
@@ -2105,10 +2102,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 && !AgentActionEvents.HOME_NAVIGATED.equals(pendingActionType)) {
             if (startAutomaticHomeSearch(snapshot)) return;
             homeSearchRestart = false;
-            showSettingsOpenButton();
         } else if (hasSettingsTarget(snapshot)) {
             homeSearchRestart = false;
-            hideSettingsOpenButton();
+
         }
         String fingerprint = snapshot.observationFingerprint();
         if (!force && pendingVerifiedAction == null && firstTurnSent && confirmation == null && fingerprint.equals(lastSnapshotFingerprint)) return;
@@ -2251,7 +2247,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         stopNarration();
         hideGuideOverlay();
         hideConfirmation();
-        hideSettingsOpenButton();
+
         taskFlowCollapsed = true;
         if (overlayView != null) overlayView.collapse();
         updateFloatingVisibility();
@@ -2289,7 +2285,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void showRecoveryApology(Runnable retry) {
         clearMissingScreenWait();
         stopNarration();
-        hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
+        hideGuideOverlay(); hideConfirmation();
         guideStepTimer.clear(); actionTracker.clear();
         forceNextObservation = false;
         targetHelpGeneration = recoveryApologyGeneration = executionGeneration;
@@ -2469,7 +2465,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         forceNextObservation = false;
         pendingActionType = null; pendingVerifiedAction = null;
         stopListening(); stopNarration(); clearVisionState(); actionTracker.clear();
-        hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
+        hideGuideOverlay(); hideConfirmation();
         if (resultTimeout != null) speechHandler.removeCallbacks(resultTimeout);
         resultTimeout = null;
     }
@@ -2527,7 +2523,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             pendingControl = commandType;
             agentPaused = true;
             actionTracker.clear(); pendingVerifiedAction = null;
-            hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
+            hideGuideOverlay(); hideConfirmation();
             if (!"pause_task".equals(commandType)) {
                 ensureTaskFlow(); taskFlowView.waiting("요청한 중단을 처리하고 있어요…");
             }
@@ -2564,7 +2560,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         homeSearchRestart = false;
         if ("cancel_task".equals(commandType) || "pause_task".equals(commandType)) agentPaused = true;
         clearVisionState(); actionTracker.clear(); pendingVerifiedAction = null;
-        hideConfirmation(); hideGuideOverlay(); hideSettingsOpenButton();
+        hideConfirmation(); hideGuideOverlay();
         if (resultTimeout != null) speechHandler.removeCallbacks(resultTimeout);
         sendFlowRequest(AgentTurnContract.Request.control(agentSessionId,
                 agentSessionVersion, agentEpisodeId, commandType, snapshot));
@@ -2626,67 +2622,54 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || normalized.startsWith("설정,") || normalized.startsWith("settings,");
     }
 
-    private void showSettingsOpenButton() {
-        showRecoveryButton("설정 열기", Settings.ACTION_SETTINGS);
+    private boolean canOfferSettingsEntry(AgentTurnContract.Response response, ScreenSnapshot screen) {
+        if (screen == null || !NavigationRecovery.isHomeScreen(screen) || acceptedGoal == null
+                || !"android_settings".equals(acceptedGoal.optString("target_app"))
+                || !"S0_UNKNOWN".equals(response.stateId) || response.guideCommand == null
+                || response.guideCommand.targetBounds != null
+                || !"observe_only".equals(response.guideCommand.actionType)) return false;
+        JSONObject policy = response.guideCommand.renderPolicy;
+        JSONObject recovery = policy == null ? null : policy.optJSONObject("recovery");
+        if (recovery == null || !"user".equals(recovery.optString("waiting_for"))) return false;
+        String reason = recovery.optString("reason_code");
+        return "APP_NOT_OPEN".equals(reason) || "LOW_CONFIDENCE".equals(reason)
+                || "MODEL_ABSTAINED".equals(reason) || "MODEL_WAIT_WITHOUT_ACTION".equals(reason)
+                || "MODEL_UNAVAILABLE".equals(reason) || "TARGET_NOT_FOUND".equals(reason)
+                || "STATE_UNKNOWN".equals(reason);
     }
 
-    /** Renders the recovery button described by {@code render_policy.recovery_action}. */
-    private void showRecoveryButton(JSONObject recoveryAction) {
-        String intentAction = recoveryAction == null ? Settings.ACTION_SETTINGS
-                : recoveryAction.optString("android_intent_action", Settings.ACTION_SETTINGS);
-        showRecoveryButton("설정 열기", intentAction);
-    }
-
-    private void showRecoveryButton(String label, String intentAction) {
-        if (windowManager == null || overlayView == null || settingsOpenButton != null) return;
-        final String action = intentAction == null ? Settings.ACTION_SETTINGS : intentAction;
-        settingsOpenButton = new Button(this);
-        settingsOpenButton.setText(label);
-        settingsOpenButton.setTextSize(17f);
-        settingsOpenButton.setTextColor(android.graphics.Color.WHITE);
-        settingsOpenButton.setAllCaps(false);
-        android.graphics.drawable.GradientDrawable background =
-                new android.graphics.drawable.GradientDrawable();
-        background.setColor(0xFF3478F6);
-        background.setCornerRadius(dp(22));
-        settingsOpenButton.setBackground(background);
-        settingsOpenButton.setOnClickListener(view -> {
-            ScreenSnapshot current = LatestScreenSnapshot.get();
+    private void showSettingsEntryRecovery() {
+        ensureTaskFlow();
+        final int generation = executionGeneration;
+        final String session = agentSessionId;
+        waitingForExplicitRetry = true;
+        taskFlowView.setAutomaticProgress(false);
+        String message = "‘설정 열기’를 눌러주세요. 설정 화면에서 이어서 안내할게요.";
+        if (overlayView != null) overlayView.setRecognizedSpeech(message);
+        speak(message);
+        taskFlowView.settingsEntryRecovery(() -> {
+            if (generation != executionGeneration || !java.util.Objects.equals(session, agentSessionId)
+                    || closing || agentPaused || turnInFlight || pendingControl != null) return;
             guideStepTimer.clear();
-            hideSettingsOpenButton();
-            // After a manual recovery the contract wants a fresh tree + manual_override.
+            waitingForExplicitRetry = false;
+            pendingVerifiedAction = null;
             pendingActionOccurredAtMs = System.currentTimeMillis();
             pendingActionType = AgentActionEvents.MANUAL_OVERRIDE;
             try {
-                startActivity(new Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-            } catch (RuntimeException error) {
-                startActivity(new Intent(Settings.ACTION_SETTINGS)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (RuntimeException unavailable) {
+                waitingForExplicitRetry = true;
+                showObservationRecovery(initialGoal, "설정 앱을 직접 열고 다시 시도해 주세요.",
+                        () -> retryObservation(generation, true));
+                return;
             }
-            speechHandler.postDelayed(() -> sendAgentTurn(null, true), 1200L);
+            speechHandler.postDelayed(() -> {
+                if (generation == executionGeneration && java.util.Objects.equals(session, agentSessionId))
+                    sendAgentTurn(null, true);
+            }, 1200L);
         });
-
-        int width = dp(124);
-        int height = dp(50);
-        int clickCenterX = windowParams.x + Math.round(overlayView.getClickCenterX(overlayView.getMode()));
-        int clickCenterY = windowParams.y + Math.round(overlayView.getClickCenterY(overlayView.getMode()));
-        settingsOpenParams = new WindowManager.LayoutParams(
-                width, height, overlayWindowType,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                        | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-                PixelFormat.TRANSLUCENT);
-        settingsOpenParams.gravity = Gravity.START | Gravity.TOP;
-        settingsOpenParams.x = Math.max(dp(8), Math.min(clickCenterX - width / 2, screenWidth() - width - dp(8)));
-        settingsOpenParams.y = Math.max(dp(8), Math.min(clickCenterY + dp(40), screenHeight() - height - dp(24)));
-        windowManager.addView(settingsOpenButton, settingsOpenParams);
-    }
-
-    private void hideSettingsOpenButton() {
-        if (settingsOpenButton != null && windowManager != null && settingsOpenButton.isAttachedToWindow()) {
-            windowManager.removeView(settingsOpenButton);
-        }
-        settingsOpenButton = null;
-        settingsOpenParams = null;
+        taskFlowCollapsed = false;
+        placeTaskFlow(null, true);
     }
 
     private void renderGuide(AgentTurnContract.Response response) {
@@ -2843,8 +2826,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 recoverSettingsBack(displayedSnapshot);
                 return;
             }
-            speak(command.message);
-            showRecoveryButton(recoveryAction);
+            showSettingsEntryRecovery();
             return;
         }
         if (visionFallback != null) {
@@ -2855,13 +2837,23 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             handleVisionFallback(command, visionFallback);
             return;
         }
+        // Older servers may omit open-settings recovery on a primary-model wait.
+        // Offer the same user-activated OS entry after their bounded retries;
+        // never turn a model abstention into an automatic icon tap.
+        if (canOfferSettingsEntry(response, displayedSnapshot)) {
+            if (present) {
+                hideConfirmation(); hideGuideOverlay();
+                showSettingsEntryRecovery();
+            }
+            return;
+        }
         if (canSearchByScrolling || ObservationRecovery.awaitsUser(command.renderPolicy)) {
             if (!canSearchByScrolling) waitingForExplicitRetry=true;
             if (!present) {
                 if (canSearchByScrolling) startAutomaticSettingsSearch(response.stateId, displayedSnapshot);
                 return;
             }
-            hideConfirmation(); hideGuideOverlay(); hideSettingsOpenButton();
+            hideConfirmation(); hideGuideOverlay();
             actionTracker.clear();
             final int generation = executionGeneration;
             Runnable retry = () -> retryObservation(generation, true);
@@ -2909,7 +2901,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if ("done".equals(command.commandType) || "blocked".equals(command.commandType)
                 || "COMPLETED".equals(response.taskStatus) || "BLOCKED".equals(response.taskStatus)) {
             hideGuideOverlay();
-            hideSettingsOpenButton();
+
             boolean completed = "done".equals(command.commandType)
                     || "COMPLETED".equals(response.taskStatus);
             finishActiveQueueRequest(completed ? null : "AGENT_ERROR");
@@ -2918,7 +2910,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
         if (!present) return;
         freshObservationRetries = 0;
-        hideSettingsOpenButton();
+
         if (command.targetNodeId != null && command.requiresUserAction) {
             assistedRecoveryGeneration = -1;
             lastBackRecoveryScreen = null; settingsBackRecoveries = 0;
@@ -3017,6 +3009,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private boolean showNavigationRecoveryIfNeeded(AgentTurnContract.Response response, ScreenSnapshot screen) {
         AgentTurnContract.GuideCommand command = response.guideCommand;
+        JSONObject action = command.recoveryAction();
+        if (action != null && "open_android_settings_or_show_app_drawer".equals(action.optString("type")))
+            return false;
         JSONObject recovery = command.renderPolicy == null ? null : command.renderPolicy.optJSONObject("recovery");
         if (screen == null || NavigationRecovery.isHome(screen.packageName) || recovery == null
                 || !"user".equals(recovery.optString("waiting_for"))) return false;
@@ -3061,7 +3056,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void showNavigationRecovery(NavigationRecovery.Action action) {
         guideStepTimer.clear(); actionTracker.clear();
-        hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
+        hideGuideOverlay(); hideConfirmation();
         ensureTaskFlow();
         taskFlowCollapsed = false;
         if (overlayView != null) overlayView.collapse();
@@ -3235,7 +3230,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         clearVisionState();
         hideGuideOverlay();
         hideConfirmation();
-        hideSettingsOpenButton();
+
         stopNarration();
         if (++staleGuideDrops >= 4) {
             if (requestChangedAdjustmentResult(ClickAccessibilityService.freshSnapshot())) return;
@@ -3330,7 +3325,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         clearMissingScreenWait();
         forceNextObservation = false;
         staleGuideDrops = freshObservationRetries = 0;
-        hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
+        hideGuideOverlay(); hideConfirmation();
         guideStepTimer.clear(); actionTracker.clear();
         taskFlowView.targetHelp(target, () -> {
             if (generation != executionGeneration || closing || agentPaused || pendingControl != null
@@ -3434,7 +3429,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             });
             return true;
         }
-        hideGuideOverlay(); hideConfirmation(); hideSettingsOpenButton();
+        hideGuideOverlay(); hideConfirmation();
         taskFlowView.waiting("조절한 결과를확인하고 있어요.");
         if (automaticTouchEnabled()) {
             taskFlowView.waitingProgress(TaskFlowOverlayView.AUTOMATIC_PROGRESS_MESSAGE);
@@ -3625,7 +3620,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             visionImageCaptured = false;
             refreshLoadingStatus();
             hideGuideOverlay();
-            hideSettingsOpenButton();
+
             updateFloatingVisibility();
             // Wait for our consent/guide overlays to leave the display before capturing once.
             speechHandler.postDelayed(() -> {

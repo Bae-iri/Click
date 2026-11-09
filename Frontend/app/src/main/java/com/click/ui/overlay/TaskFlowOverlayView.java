@@ -1102,6 +1102,20 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.addView(text("강조한 버튼을 누르거나 휴대폰의 내비게이션 버튼·제스처를 사용해 주세요.", 14), spaced(10));
     }
 
+    public void settingsEntryRecovery(Runnable open) {
+        clear("설정 앱에서 이어갈게요");
+        narrationMessage = "‘설정 열기’를 눌러주세요. 설정 화면에서 이어서 안내할게요.";
+        content.addView(text(narrationMessage, 17), spaced(8));
+        Button action = primaryButton("설정 열기", () -> {});
+        action.setOnClickListener(view -> {
+            if (!action.isEnabled()) return;
+            action.setEnabled(false);
+            open.run();
+        });
+        recoveryActions.setVisibility(VISIBLE);
+        recoveryActions.addView(action, spaced(8));
+    }
+
     public void waiting(String message) { clear(message); }
     public void waitingProgress(String message) {
         progress(null, null, message, false);
