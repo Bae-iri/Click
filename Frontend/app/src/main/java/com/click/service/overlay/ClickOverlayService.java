@@ -172,6 +172,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int staleGuideDrops;
     private Runnable guideResyncRetry;
     private int scrollSearchGeneration = -1;
+    private String targetRevealScope;
+    private int targetRevealAttempts;
     private String lastBackRecoveryScreen;
     private int settingsBackRecoveries;
     private final AutomaticScrollSearch automaticScrollSearch = new AutomaticScrollSearch();
@@ -2719,6 +2721,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 return;
             }
         }
+        if (revealClippedTarget(response, displayedSnapshot)) return;
         clearGuideResyncRetry();
         // A HOME_NAVIGATED event must reach the server first. Continue page search from
         // its response as well; an unchanged launcher need not emit another AX event.
@@ -3531,6 +3534,44 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 sendAgentTurn(null, true);
             }, moved ? 700L : 250L);
         }, 200L);
+        return true;
+    }
+
+    private boolean revealClippedTarget(AgentTurnContract.Response response, ScreenSnapshot screen) {
+        AgentTurnContract.GuideCommand command=response.guideCommand;
+        boolean tap="tap".equals(command.actionType) || "confirmation".equals(command.commandType)
+                && "tap".equals(command.proposedAction);
+        if(!tap || !hasConfirmedGoal() || command.renderPolicy!=null && command.renderPolicy.optBoolean("vision_derived")
+                || com.click.service.accessibility.TargetVisibility.plan(screen,command.targetNodeId,command.targetBounds,
+                        getResources().getDisplayMetrics().density)==null) return false;
+        if(closing || agentPaused || pendingControl!=null || resultPrompt!=null) return true;
+        hideGuideOverlay();hideConfirmation();stopNarration();actionTracker.clear();guideStepTimer.clear();
+        if(scrollSearchGeneration==executionGeneration) return true;
+        String scope=agentSessionId+":"+agentEpisodeId+":"+response.stateId;
+        if(!scope.equals(targetRevealScope)) {targetRevealScope=scope;targetRevealAttempts=0;}
+        final int generation=executionGeneration;
+        if(targetRevealAttempts++>=2) {
+            waitingForExplicitRetry=true;
+            showObservationRecovery("항목이 화면 끝에 걸려 있어요. 조금 스크롤한 뒤 다시 시도해 주세요.",
+                    () -> {targetRevealScope=null;retryObservation(generation,true);});
+            placeTaskFlow(null,true);return true;
+        }
+        scrollSearchGeneration=generation;
+        taskFlowView.waitingProgress("항목이 잘 보이도록 화면을 조금 이동하고 있어요.");
+        collapseTaskFlow();
+        boolean dispatched=ClickAccessibilityService.revealSettingsTarget(command.targetNodeId,command.targetBounds,
+                screen.packageName,screen.activeWindowId);
+        android.util.Log.i("ClickScroll","revealing_target dispatched="+dispatched);
+        speechHandler.postDelayed(() -> {
+            if(generation!=executionGeneration) return;
+            scrollSearchGeneration=-1;
+            if(closing || agentPaused || pendingControl!=null || resultPrompt!=null || waitingForTargetHelp()) return;
+            // Positions and guide IDs from before the scroll are never reused.
+            pendingActionType=AgentActionEvents.MANUAL_OVERRIDE;
+            pendingActionOccurredAtMs=System.currentTimeMillis();
+            freshObservationRetries=0;forceNextObservation=true;
+            updateFloatingVisibility();sendAgentTurn(null,true);
+        },dispatched?750L:200L);
         return true;
     }
 
