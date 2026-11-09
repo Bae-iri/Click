@@ -1,0 +1,50 @@
+{
+  "release_unit_tests": {
+    "tests": 554,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "current_app_integration": {
+    "tests": 630,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "jvm_login_provider_initialization": "disabled_for_unit_tests_only",
+    "shared_fixtures": "included",
+    "main_and_instrumentation_apk_builds": "passed",
+    "installed_build_login_configuration": "preserved"
+  },
+  "physical_probe": {
+    "passed": true,
+    "forward": false,
+    "before_top": 317,
+    "before_bottom": 369,
+    "after_top": 727,
+    "after_bottom": 785,
+    "server_posts": 0,
+    "setting_writes": 0,
+    "target_clicked": false,
+    "scope": "native_scroll_via_actual_app_observation_boundary; top-edge Display row",
+    "bottom_edge_physical_probe": "not_run; direction covered by unit regression",
+    "initial_probe": "rejected when using a separate UiAutomation observation; final probe uses the application observation boundary"
+  },
+  "backend_redeployment_required": false,
+  "installation": {
+    "status": "installed_hash_verified",
+    "apk_sha256": "90331ce174ee447f3af80931e50acc61d9c27b491a45f883a25e5875e63f2413",
+    "account_data": "preserved"
+  },
+  "release_final_focused": {
+    "tests": 165,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "current_app_final_focused": {
+    "tests": 190,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

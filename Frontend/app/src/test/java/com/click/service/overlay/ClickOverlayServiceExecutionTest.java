@@ -2172,6 +2172,47 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("Exhausted observations wait for the user, without another automatic retry", 2, requests.size());
     }
 
+    @Test public void clippedMenuTargetScrollsBeforeHighlightAndUsesFreshCoordinates() throws Exception {
+        screen=revealScreen(2150);currentScreen=screen;prepareGuideResponse();
+        accessibility.when(() -> ClickAccessibilityService.revealSettingsTarget(eq("display"),any(),eq("com.android.settings"),eq(42))).thenReturn(true);
+        deliver(1,"highlight","tap",null);
+        verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),any(),anyInt());
+        accessibility.verify(() -> ClickAccessibilityService.performGuidedTap(any(),any(),any()),never());
+        currentScreen=revealScreen(1700);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(800));
+        assertEquals(3,requests.size());assertSame(currentScreen,requests.get(2).accessibilityTree);
+        assertEquals(AgentActionEvents.MANUAL_OVERRIDE,requests.get(2).userActionEvent.getString("action_type"));
+        deliver(2,"highlight","tap",null);
+        verify((GuideOverlayView)get("guideOverlayView")).showTarget(eq(currentScreen.nodes.get(1).bounds),eq("tap"),anyInt());
+    }
+
+    @Test public void failedRevealIsBoundedAndNeverHighlightsTheClippedRow() throws Exception {
+        screen=revealScreen(2150);currentScreen=screen;prepareGuideResponse();
+        deliver(1,"highlight","tap",null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(250));
+        deliver(2,"highlight","tap",null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(250));
+        deliver(3,"highlight","tap",null);
+        accessibility.verify(() -> ClickAccessibilityService.revealSettingsTarget(any(),any(),anyString(),anyInt()),times(2));
+        verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),any(),anyInt());
+        assertEquals(true,get("waitingForExplicitRetry"));
+    }
+
+    @Test public void pausingDuringRevealCannotSendAnotherTurn() throws Exception {
+        screen=revealScreen(2150);currentScreen=screen;prepareGuideResponse();
+        accessibility.when(() -> ClickAccessibilityService.revealSettingsTarget(any(),any(),anyString(),anyInt())).thenReturn(true);
+        deliver(1,"highlight","tap",null);set("agentPaused",true);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        assertEquals(2,requests.size());
+    }
+
+    private ScreenSnapshot revealScreen(int top) {
+        var list=scrollableScreen("settings").nodes.get(0);
+        var row=new AccessibilityNodeSnapshot("display","list",true,"com.android.settings","디스플레이",null,null,
+                "android.view.ViewGroup","button",new int[]{0,top,1080,top+180},true,true,false,false,false,null,42);
+        return new ScreenSnapshot("com.android.settings",Instant.now().toString(),1080,2400,List.of(list,row),42);
+    }
+
     private ScreenSnapshot scrollableScreen(String label) {
         AccessibilityNodeSnapshot list = new AccessibilityNodeSnapshot("list", null, true,
                 "com.android.settings", label, null, null, "androidx.recyclerview.widget.RecyclerView", "list",

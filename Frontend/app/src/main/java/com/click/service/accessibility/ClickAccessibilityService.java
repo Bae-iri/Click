@@ -524,6 +524,12 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 .performSettingsScroll(forward, expectedPackage, expectedWindow);
     }
 
+    public static boolean revealSettingsTarget(String nodeId, int[] bounds, String expectedPackage, int expectedWindow) {
+        ClickAccessibilityService service=connectedService.get();
+        return service!=null && new NativeScrollExecutor(service,service.mainHandler,service.captureRunnable)
+                .revealSettingsTarget(nodeId,bounds,expectedPackage,expectedWindow);
+    }
+
     /** Return only while the same Settings window is still in front. */
     public static boolean performSettingsBack(String expectedPackage, int expectedWindow) {
         if (!"com.android.settings".equals(expectedPackage)
