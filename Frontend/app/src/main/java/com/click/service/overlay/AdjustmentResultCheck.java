@@ -10,6 +10,7 @@ final class AdjustmentResultCheck {
     private String episode, goalType, packageName;
     private Float baseline;
     private long capturedAt;
+    private Long evidenceDeadline;
 
     void bind(String episode, String goalType, AgentTurnContract.GuideCommand guide, ScreenSnapshot screen) {
         if (!Objects.equals(this.episode, episode) || !Objects.equals(this.goalType, goalType)) clear();
@@ -41,7 +42,13 @@ final class AdjustmentResultCheck {
         return goalType.endsWith(".increase") ? task.value(screen) > baseline : task.value(screen) < baseline;
     }
 
-    void clear() { episode = goalType = packageName = null; baseline = null; capturedAt = 0; }
+    long actionEvidenceDelay(String episode, String goalType, ScreenSnapshot screen, long uptime) {
+        if (!changed(episode, goalType, screen)) return 0;
+        if (evidenceDeadline == null) evidenceDeadline = uptime + 1500L;
+        return Math.max(0L, evidenceDeadline - uptime);
+    }
+
+    void clear() { episode = goalType = packageName = null; baseline = null; capturedAt = 0; evidenceDeadline = null; }
 
     private static boolean settings(String name) {
         return "com.android.settings".equals(name) || "com.samsung.android.settings".equals(name);

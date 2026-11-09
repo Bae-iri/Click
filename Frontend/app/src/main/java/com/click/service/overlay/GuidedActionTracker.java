@@ -97,6 +97,12 @@ public final class GuidedActionTracker {
             // unchanged native range remain mandatory in record() and above.
             bounds = target.bounds;
         }
+        // A font redraw can detach the real event source from the current tree.
+        // Keep the issued target ID only when the native resource is present;
+        // record() still requires its original package/window/bounds/time, and
+        // the range checks above remain mandatory. Never replace a different ID.
+        if (nodeId == null && resourceId != null && !resourceId.isEmpty()
+                && resourceId.equals(target.resourceId)) nodeId = target.nodeId;
         return record(AgentActionEvents.DRAG_COMPLETED, packageName, window, nodeId,
                 resourceId, bounds, occurredAt);
     }

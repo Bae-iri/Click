@@ -151,6 +151,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private long pendingActionOccurredAtMs;
     private boolean forceNextObservation;
     private Runnable missingScreenRetry;
+    private Runnable actionEvidenceWait;
     private int missingScreenAttempts;
     private boolean missingScreenRecovery;
     private String lastGuideCommandId;
@@ -716,7 +717,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (resultTimeout != null) speechHandler.removeCallbacks(resultTimeout);
         resultTimeout = null;
         actionTracker.clear(); pendingVerifiedAction = null;
-        adjustmentResultCheck.clear();
+        adjustmentResultCheck.clear(); clearActionEvidenceWait();
         resultPrompt = followUp = goalSelection = acceptedGoal = null;
         requirementReview = null;
         goalResolutionId = null; goalPreparation = null; restoredStartedSession = false; pendingControl = null;
@@ -1150,7 +1151,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (technical != null) try { resultPrompt.put("technical_status", technical.optString("status", "UNVERIFIABLE")); }
             catch (org.json.JSONException invalid) { throw new IllegalStateException(invalid); }
             actionTracker.clear(); pendingVerifiedAction = null;
-            adjustmentResultCheck.clear();
+            adjustmentResultCheck.clear(); clearActionEvidenceWait();
             hideGuideOverlay(); hideConfirmation();
             taskFlowView.setChecklist(response.metadata.optJSONArray("checklist"));
             boolean fontSize = acceptedGoal != null && SettingsAdjustment.forGoal(
@@ -1944,7 +1945,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         resumeAfterPause = false;
         pendingVerifiedAction = null;
         actionTracker.clear();
-        adjustmentResultCheck.clear();
+        adjustmentResultCheck.clear(); clearActionEvidenceWait();
         firstTurnSent = false;
         lastSnapshotFingerprint = null;
         homeScrollSearch.clear();
@@ -2097,6 +2098,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             snapshot = snapshot.withScreenRevision(nativeConsentScreen.screenRevision);
         }
+        // A changed value can beat the accessibility action event during redraw.
+        // Retain the original guide briefly instead of sending that value first.
+        if (confirmation == null && awaitNativeActionEvidence(snapshot)) return;
         if (shouldScanHomeForSettings(snapshot)
                 && !AgentActionEvents.HOME_NAVIGATED.equals(pendingActionType)) {
             if (startAutomaticHomeSearch(snapshot)) return;
@@ -2981,7 +2985,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             freshObservationRetries = staleGuideDrops = 0;
             scrollSearchGeneration = -1;
             if (observed == NavigationRecovery.Action.HOME) {
-                adjustmentResultCheck.clear(); automaticScrollSearch.clear();
+                adjustmentResultCheck.clear(); clearActionEvidenceWait(); automaticScrollSearch.clear();
                 homeSearchRestart = true;
                 homeScrollSearch.clear(); homeSearchToken++;
                 lastTargetBounds = null; lastTargetNodeId = lastGuideCommandId = null;
@@ -3398,6 +3402,38 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             showObservationRecovery(message, () -> retryObservation(generation, manualOverride));
             placeTaskFlow(null, true);
         }
+    }
+
+    private void clearActionEvidenceWait() {
+        if (actionEvidenceWait != null && speechHandler != null) speechHandler.removeCallbacks(actionEvidenceWait);
+        actionEvidenceWait = null;
+    }
+
+    private boolean awaitNativeActionEvidence(ScreenSnapshot screen) {
+        if (pendingVerifiedAction != null || acceptedGoal == null || !actionTracker.hasSliderBinding()) {
+            clearActionEvidenceWait(); return false;
+        }
+        long delay = adjustmentResultCheck.actionEvidenceDelay(agentEpisodeId,
+                acceptedGoal.optString("goal_type"), screen, SystemClock.uptimeMillis());
+        if (delay <= 0) { clearActionEvidenceWait(); return false; }
+        if (actionEvidenceWait != null) return true;
+        final int generation = executionGeneration;
+        final String session = agentSessionId;
+        hideGuideOverlay(); hideConfirmation();
+        ensureTaskFlow(); taskFlowView.waitingProgress("변경 결과를 확인하고 있어요.");
+        placeTaskFlow(null, false);
+        android.util.Log.i("ClickSlider", "waiting_native_action_evidence");
+        actionEvidenceWait = new Runnable() {
+            @Override public void run() {
+                if (actionEvidenceWait != this) return;
+                actionEvidenceWait = null;
+                if (generation != executionGeneration || !java.util.Objects.equals(session, agentSessionId)
+                        || closing || agentPaused || pendingControl != null || resultPrompt != null) return;
+                sendAgentTurn(null, true);
+            }
+        };
+        speechHandler.postDelayed(actionEvidenceWait, delay);
+        return true;
     }
 
     private boolean requestChangedAdjustmentResult(ScreenSnapshot current) {
