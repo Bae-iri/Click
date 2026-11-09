@@ -88,6 +88,31 @@ def test_model_cannot_override_direction_or_app_scope(source):
     assert JevGoalClassifier(success).interpret_inputs(source, CANDIDATES, FIELDS) is None
 
 
+@pytest.mark.parametrize('source,accepted', [
+    ('유튜브 재생이 잘 안 들려. 더 우렁차게 들려줘', True),
+    ('음악을 더 크게 듣고 싶어', True),
+    ('유튜브 앱에서만 재생 소리를 크게 해줘', False),
+    ('카카오톡 앱에서만 동영상 소리를 크게 해줘', False),
+    ('유튜브 소리를 줄이고 음악 소리를 키워줘', False),
+])
+def test_media_context_does_not_authorize_app_only_or_conflicting_volume_requests(source, accepted):
+    from pathlib import Path
+    catalog = json.loads((Path(__file__).parents[1] / 'app/task_graphs/goal_catalog.json').read_text(encoding='utf-8'))
+    candidates = [goal for goal in catalog['goals'] if goal['execution_status'] == 'approved']
+    fields = GoalInputRequirements().family('settings.volume.increase')['fields']
+    def send(payload, **kwargs):
+        criteria = payload['questions']['goal']['criteria']
+        choice = next(key for key, value in criteria.items()
+            if isinstance(value, dict) and value['goal_type'] == 'settings.volume.increase')
+        return httpx.Response(200, json=response_for(payload, choice))
+    result = JevGoalClassifier(send).interpret_inputs(source, candidates, fields)
+    if accepted:
+        assert result['goal_type'] == 'settings.volume.increase'
+        assert result['inputs']['audio_stream'] == 'media'
+    else:
+        assert result is None
+
+
 @pytest.mark.parametrize('source', ['', ' ', 'a' * 2001, '비밀번호는 private', '글씨 키우지 마', '글씨 키워줘 취소'])
 def test_rejected_input_never_reaches_provider(source):
     assert JevGoalClassifier(lambda *a, **kw: pytest.fail('unexpected call')).select(source, CANDIDATES) is None

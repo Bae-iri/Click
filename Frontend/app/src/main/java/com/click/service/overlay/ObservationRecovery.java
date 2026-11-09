@@ -87,7 +87,7 @@ public final class ObservationRecovery {
                 && expected.withAdjustmentValues(null,null).sameNativeContent(current.withAdjustmentValues(null,null));
     }
     public static String navigationFingerprint(ScreenSnapshot screen) {
-        return screen.withAdjustmentValues(null,null).observationFingerprint();
+        return screen.navigation != null ? screen.navigation.fingerprint : screen.withAdjustmentValues(null,null).observationFingerprint();
     }
     private static boolean settingsScreen(ScreenSnapshot screen) {
         return screen != null && TouchAutomationPolicy.settingsPackage(screen.packageName);
