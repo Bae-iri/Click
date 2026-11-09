@@ -604,7 +604,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
         AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(this);
         String nodeId = findNodeId(root, source, "node_0");
         if (root != null) root.recycle();
-        if (nodeId == null || source.getPackageName() == null) return;
+        if (source.getPackageName() == null) return;
+        if (nodeId == null && range == null) return;
+        if (range != null && nodeId == null)
+            Log.i("ClickSlider", "native_range_source_detached_from_current_root");
         android.graphics.Rect rect = new android.graphics.Rect();
         source.getBoundsInScreen(rect);
         long wallTime = System.currentTimeMillis() - (android.os.SystemClock.uptimeMillis() - eventUptime);

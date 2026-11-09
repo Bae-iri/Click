@@ -1105,6 +1105,7 @@ public class ClickOverlayServiceExecutionTest {
         prepareGuideResponse(); goal = catalog.executableGoal("settings.brightness.increase").toTypedGoalJson();
         set("acceptedGoal", goal); deliver(1, "highlight", "drag", "right");
         currentScreen = settingScreen("brightness", 3f, 1f, 2000).withAdjustmentValues(120, 5); send(null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
         currentScreen = settingScreen("brightness", 4f, 1f, 2100).withAdjustmentValues(140, 5);
         deliver(2, "highlight", "observe_only", null);
         assertEquals(3, requests.size()); assertEquals(0, get("staleGuideDrops"));
@@ -1130,6 +1131,7 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen = settingScreen(setting, 3f, 1f, 2000).withAdjustmentValues(setting.equals("brightness") ? 120 : 100,
                 setting.equals("volume") ? 6 : 5);
         send(null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
         deliver(2, "highlight", "observe_only", null);
         assertEquals(4, requests.size());
         assertEquals("request_result", requests.get(3).commandType());
@@ -1528,6 +1530,33 @@ public class ClickOverlayServiceExecutionTest {
         accessibility.verify(ClickAccessibilityService::requestFreshSnapshot);
     }
 
+    @Test public void changedValueWaitsBrieflyForTheRealActionBeforePostingAnObservation() throws Exception {
+        screen=fontScreen(2f,1f,1000);currentScreen=screen;
+        prepareGuideResponse();deliver(1,"highlight","drag","right");
+        currentScreen=fontScreen(3f,1.15f,2000);send(null);
+        assertEquals("Do not send the changed frame ahead of the native action",2,requests.size());
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
+        JSONObject event=new JSONObject().put("event_id","actual-delayed-event").put("action_type","drag_completed")
+            .put("guide_command_id",get("lastGuideCommandId")).put("occurred_at_ms",1500L).put("episode_id","episode");
+        set("pendingVerifiedAction",event);send(null);
+        assertEquals(3,requests.size());
+        assertSame(event,requests.get(2).userActionEvent);
+        assertEquals("observe",requests.get(2).commandType());
+    }
+
+    @Test public void missingActionEvidenceWaitIsBoundedAndCannotResumeAPausedTask() throws Exception {
+        screen=fontScreen(2f,1f,1000);currentScreen=screen;
+        prepareGuideResponse();deliver(1,"highlight","drag","right");
+        currentScreen=fontScreen(3f,1.15f,2000);send(null);
+        assertEquals(2,requests.size());
+        set("agentPaused",true);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        assertEquals(2,requests.size());
+        set("agentPaused",false);send(null);
+        assertEquals(3,requests.size());
+        assertNull(requests.get(2).userActionEvent);
+    }
+
     @Test public void changedFontWithoutDragEventAsksResultAndReopensCollapsedPanel() throws Exception {
         prepareFontRecovery(1.15f);
         assertEquals(4, requests.size());
@@ -1602,6 +1631,7 @@ public class ClickOverlayServiceExecutionTest {
         set("staleGuideDrops", 4);
         currentScreen = fontScreen(3f, 1.15f, 2000);
         send(null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
         assertEquals("A persisted change must not be dropped by the stale-guide limit", 3, requests.size());
         deliver(2, "highlight", "drag", "right");
         assertEquals("request_result", requests.get(3).commandType());
@@ -1627,6 +1657,7 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen = new ScreenSnapshot(changed.packageName, changed.capturedAt, 1080, 2400,
                 changed.nodes, 99, true, changed.appliedFontScale);
         send(null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
         deliver(2, "highlight", "drag", "right");
         assertEquals("request_result", requests.get(3).commandType());
         assertNull(requests.get(3).userActionEvent);
@@ -1643,6 +1674,7 @@ public class ClickOverlayServiceExecutionTest {
         deliver(2, "highlight", "drag", "right");
         // The reply predates the change, so first send a fresh observation.
         send(null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
         int observation = requests.size() - 1;
         deliver(observation, "confirmation", "observe_only", null);
         assertEquals("request_result", requests.get(requests.size() - 1).commandType());
@@ -1666,6 +1698,7 @@ public class ClickOverlayServiceExecutionTest {
         deliver(1, "highlight", "drag", "right");
         currentScreen = fontScreen(3f, appliedScale, 2000);
         send(null);
+        if (appliedScale > 1f) shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
         AgentTurnContract.Request observation = requests.get(2);
         if (eventWhileWaiting) currentScreen = currentScreen.withScreenRevision("same-screen-new-event");
         JSONObject recovery = new JSONObject().put("recoverable", true).put("waiting_for", "user")
@@ -2668,6 +2701,7 @@ public class ClickOverlayServiceExecutionTest {
         screen = fontScreen(2f, 1f, 1000); currentScreen = screen;
         prepareGuideResponse(); deliver(1, "highlight", "drag", "right");
         currentScreen = fontScreen(3f, 1.15f, 2000); send(null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
         JSONObject event = new JSONObject().put("event_id", "late-action")
                 .put("action_type", "drag_completed").put("guide_command_id", "original-guide")
                 .put("occurred_at_ms", 1500L).put("episode_id", "episode");

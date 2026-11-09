@@ -9,6 +9,36 @@ import static org.junit.Assert.*;
 
 public class GuidedActionTrackerTest {
     private final int[] bounds = {20, 100, 900, 180};
+    private GuidedActionTracker rangedTracker() {
+        AccessibilityNodeSnapshot target=new AccessibilityNodeSnapshot("slider",null,true,"com.android.settings",
+            "글자 크기",null,"settings:id/font","android.widget.SeekBar","slider",bounds,
+            true,true,false,false,false,2f,5,false,0f,7f);
+        GuidedActionTracker t=new GuidedActionTracker();
+        t.bind("session","episode","guide","drag","slider",bounds,
+            new ScreenSnapshot("com.android.settings","2026-11-09T00:00:00Z",1080,2400,java.util.List.of(target),5),1000);
+        return t;
+    }
+    @Test public void detachedRealRangeEventRetainsTheOriginalGuideIdentity() throws Exception {
+        JSONObject event=rangedTracker().recordRangeChange("com.android.settings",5,null,"settings:id/font",bounds,1200,3,0,7);
+        assertNotNull(event);
+        assertEquals("slider",event.getString("target_node_id"));
+        assertEquals("guide",event.getString("guide_command_id"));
+        assertEquals("episode",event.getString("episode_id"));
+    }
+    @Test public void detachedRangeEvidenceStillRequiresEveryOriginalNativeAttribute() {
+        GuidedActionTracker t=rangedTracker();
+        assertNull(t.recordRangeChange("other",5,null,"settings:id/font",bounds,1200,3,0,7));
+        assertNull(t.recordRangeChange("com.android.settings",6,null,"settings:id/font",bounds,1200,3,0,7));
+        assertNull(t.recordRangeChange("com.android.settings",5,null,"settings:id/brightness",bounds,1200,3,0,7));
+        assertNull(t.recordRangeChange("com.android.settings",5,null,null,bounds,1200,3,0,7));
+        assertNull(t.recordRangeChange("com.android.settings",5,"other-slider","settings:id/font",bounds,1200,3,0,7));
+        assertNull(t.recordRangeChange("com.android.settings",5,null,"settings:id/font",new int[]{0,0,10,10},1200,3,0,7));
+        assertNull(t.recordRangeChange("com.android.settings",5,null,"settings:id/font",bounds,1200,3,0,8));
+        assertNull(t.recordRangeChange("com.android.settings",5,null,"settings:id/font",bounds,1200,2,0,7));
+        assertNull(t.recordRangeChange("com.android.settings",5,null,"settings:id/font",bounds,999,3,0,7));
+        assertNotNull(t.recordRangeChange("com.android.settings",5,null,"settings:id/font",bounds,1200,3,0,7));
+        assertNull(t.recordRangeChange("com.android.settings",5,null,"settings:id/font",bounds,1300,4,0,7));
+    }
     private GuidedActionTracker tracker() {
         AccessibilityNodeSnapshot target = new AccessibilityNodeSnapshot("slider", null, true,
                 "com.android.settings", "Font size", null, "settings:id/font", "android.widget.SeekBar",
