@@ -19,7 +19,7 @@ from app.database import build_engine, build_session_factory
 from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
 from app.models.task_graph import ApprovedTaskGraph
 from app.repositories.users import UserRepository, UserNotFoundError
-from app.repositories.task_graphs import TaskGraphRepository
+from app.repositories.task_graphs import TaskGraphRepository, NoCompatibleGraphError, AmbiguousGraphError
 from app.repositories.graph_releases import GraphReleaseRepository
 from app.task_graphs.validation import load_graph
 from ai_agent.graph_proposal.contracts import EVENT_SCHEMA, EvidenceRequired, fingerprint, validate_manifest
@@ -287,6 +287,55 @@ def stored_proposal(factory, run_id, proposal_id, *, now=None):
         return GraphUpdateProposal(**proposals[0])
 
 
+def audit_goal_coverage(factory):
+    """Check the same catalog goals and graph selection used by new requests."""
+    from app.schemas.agent_turn import TypedGoalRequest
+
+    catalog = read_json(BACKEND / "app/task_graphs/goal_catalog.json")
+    approved = [goal for goal in catalog["goals"] if goal["execution_status"] == "approved"]
+    expected = {(goal["goal_type"], goal["target_app"]) for goal in approved}
+    repository = TaskGraphRepository(factory)
+    reports = []
+    for entry in approved:
+        report = {"goal_type": entry["goal_type"], "target_app": entry["target_app"],
+                  "task_type": entry["task_type"], "status": "READY"}
+        try:
+            goal = TypedGoalRequest(catalog_version=catalog["version"], goal_type=entry["goal_type"],
+                                   target_app=entry["target_app"], slots=entry["slots"])
+        except ValueError:
+            report["status"] = "INVALID_GOAL_CONTRACT"
+        else:
+            try:
+                graph, reference = repository.select(goal)
+            except NoCompatibleGraphError:
+                report["status"] = "MISSING_GRAPH"
+            except AmbiguousGraphError:
+                report["status"] = "AMBIGUOUS_GRAPH"
+            except (ValueError, TypeError, KeyError):
+                report["status"] = "INVALID_GRAPH"
+            else:
+                report["graph_reference"] = reference
+                if (graph.definition.required_slots != entry["slots"]
+                        or graph.definition.task_type != entry["task_type"]):
+                    report["status"] = "GRAPH_CONTRACT_MISMATCH"
+        reports.append(report)
+    with factory() as db:
+        actual = set(db.execute(select(ApprovedTaskGraph.goal_type, ApprovedTaskGraph.target_app).where(
+            ApprovedTaskGraph.approved.is_(True), ApprovedTaskGraph.active.is_(True))).tuples())
+    return {"catalog_version": catalog["version"], "total_goals": len(catalog["goals"]),
+        "approved_goals": len(approved),
+        "catalog_only_goals": sum(goal["execution_status"] == "catalog_only" for goal in catalog["goals"]),
+        "selectable_goals": sum(report["status"] == "READY" for report in reports),
+        "blocked_goals": [report for report in reports if report["status"] != "READY"],
+        "unexpected_executable_goals": [{"goal_type": goal, "target_app": app}
+                                        for goal, app in sorted(actual - expected)],
+        "by_task_type": {kind: {
+            "approved": sum(report["task_type"] == kind for report in reports),
+            "selectable": sum(report["task_type"] == kind and report["status"] == "READY" for report in reports)}
+            for kind in sorted({entry["task_type"] for entry in approved})},
+        "goals": reports}
+
+
 def audit_catalog(factory):
     reports = []
     unsupported_tasks = {}
@@ -335,7 +384,11 @@ def audit_catalog(factory):
                 "unsupported_predicates": predicates, "blockers": blockers,
                 "execution_enabled": row.approved and row.active and not errors,
                 "device_validation": "NOT_ASSESSED"})
-    return {"total": len(reports), "static_valid": sum(r["static_valid"] for r in reports),
+    coverage = audit_goal_coverage(factory)
+    blocked = (coverage["blocked_goals"] or coverage["unexpected_executable_goals"]
+               or any(not report["static_valid"] for report in reports if report["approved"]))
+    return {"status": "BLOCKED" if blocked else "PASS", "catalog_coverage": coverage,
+        "total": len(reports), "static_valid": sum(r["static_valid"] for r in reports),
         "structural_valid": sum(r["structural_valid"] for r in reports),
         "execution_enabled": sum(r["execution_enabled"] for r in reports),
         "unsupported_predicates": {key: {"task_ids": sorted(ids), "task_count": len(ids), "owner": "ai_agent1"}
@@ -452,7 +505,7 @@ def main():
                 expected_current_hash=args.expected_current_hash, reviewer=args.reviewer, reviewed_at=int(time.time()))
         print(json.dumps(result, ensure_ascii=False))
         if args.command == "audit":
-            return int(any(not row["static_valid"] for row in result["graphs"] if row["approved"]))
+            return int(result["status"] != "PASS")
         return int(bool(result.get("errors"))) if args.command == "process" else 0
     finally:
         engine.dispose()

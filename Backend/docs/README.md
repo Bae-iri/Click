@@ -104,6 +104,8 @@ CONFIGURED_ONLY는 설정 확인이며 추론 성공이 아닙니다. PASS는 �
 
 배포는 루트 Compose/render.yaml과 기존 DB를 사용합니다. Dockerfile은 Backend/Dockerfile, build context는 저장소 루트, 시작은 `python scripts/render_start.py`, pre-deploy는 `python scripts/render_start.py --migrate`, health check는 `/ready`입니다. 앱 API 주소·배포 branch/commit·서버 OpenAPI를 함께 확인합니다. 비밀값은 Git·로그·채팅에 넣지 않습니다.
 
+Goal 카탈로그 v2.3.0의 실행 범위는 Android 설정 110개(변경 검증 50개·화면 이동 21개·직접 진행 안내 39개)입니다. 쿠팡 71개는 분류 전용입니다. 서버 시작 시 승인 seed를 DB에 등록하며 기존 episode의 고정 version/hash는 유지합니다. 배포 후 `python scripts/agent2.py audit`의 `status=PASS`, `catalog_coverage.selectable_goals=110`, 빈 `blocked_goals`·`unexpected_executable_goals`를 확인합니다. 등록 그래프 수만으로 목표 누락을 판단하지 않습니다. 자세한 상태와 실패 종료 조건은 [AI2 감사 안내](../../AI-Agent/src/ai_agent/graph_proposal/README.md#db-기록-처리)를 따릅니다.
+
 암호화 저장에는 `DATA_ENCRYPTION_KEYS`·`DATA_LOOKUP_KEY`와 `20261107_18` 이전이 필요합니다. [데이터 암호화·유지보수 배포·키 교체](data-encryption.md)를 먼저 따릅니다. 이전 앱 서버를 중단한 뒤 기존 데이터 변환을 적용하며 평문으로 되돌리는 downgrade는 거부합니다.
 
 글자 크기 경로 수정은 MVP-01/02의 `1.0.1` release(우선순위 101)에 포함됩니다. 시작 시 release 목록의 버전을 그대로 seed하며 기존 `1.0.0` 행은 변경하지 않습니다. 새 요청은 디스플레이 경로를 사용하고, 진행 중인 세션은 기존에 고정한 graph를 유지하므로 재배포 후 새 요청으로 검증합니다. 최대·최소값에서는 슬라이더 위치와 한계를 먼저 안내하며 결과 질문으로 자동 전환하지 않습니다.
