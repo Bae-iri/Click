@@ -143,7 +143,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean manualSettingsHandoff;
     private boolean awaitingExitConfirmation;
     private String lastSnapshotFingerprint;
-    private final AutomaticScrollSearch homeScrollSearch = new AutomaticScrollSearch(8);
+    private final AutomaticScrollSearch homeScrollSearch = new AutomaticScrollSearch(AutomaticScrollSearch.Mode.LAUNCHER);
     private int homeSearchToken;
     private long adjustmentSettlingUntil;
     private String pendingActionType;
@@ -169,7 +169,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int freshObservationRetries;
     private int staleGuideDrops;
     private Runnable guideResyncRetry;
-    private int scrollExecutions;
     private int scrollSearchGeneration = -1;
     private String lastBackRecoveryScreen;
     private int settingsBackRecoveries;
@@ -1958,7 +1957,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         clearVisionState();
         freshObservationRetries = 0;
         staleGuideDrops = 0;
-        scrollExecutions = 0;
         scrollSearchGeneration = -1;
         automaticScrollSearch.clear();
         lastBackRecoveryScreen = null; settingsBackRecoveries = 0;
@@ -2580,7 +2578,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     || node.bounds[2] <= 0 || node.bounds[3] <= 0
                     || node.bounds[0] >= snapshot.screenWidth || node.bounds[1] >= snapshot.screenHeight
                     || node.bounds[0] >= node.bounds[2] || node.bounds[1] >= node.bounds[3]) continue;
-            if (containsSettingsLabel(node.text) || containsSettingsLabel(node.contentDescription)) return true;
+            if ((containsSettingsLabel(node.text) || containsSettingsLabel(node.contentDescription))
+                    && com.click.service.accessibility.TouchAutomationPolicy.clickableTarget(snapshot,node.nodeId,node.bounds)!=null) return true;
         }
         return false;
     }
@@ -2616,10 +2615,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private boolean containsSettingsLabel(String value) {
-        if (value == null) return false;
-        String normalized = value.trim().toLowerCase(java.util.Locale.ROOT);
-        return normalized.equals("설정") || normalized.equals("settings")
-                || normalized.startsWith("설정,") || normalized.startsWith("settings,");
+        return com.click.service.accessibility.TouchAutomationPolicy.isSettingsAppLabel(value);
     }
 
     private boolean canOfferSettingsEntry(AgentTurnContract.Response response, ScreenSnapshot screen) {
@@ -2919,11 +2915,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 GuideDragDirection.resolve(command.renderPolicy, response.metadata));
         if ("scroll".equals(command.actionType) && displayedSnapshot != null
                 && com.click.service.accessibility.TouchAutomationPolicy.settingsPackage(displayedSnapshot.packageName)) {
-            if (scrollExecutions >= 4 && ObservationRecovery.targetLabel(response.stateId,
-                    acceptedGoal == null ? null : acceptedGoal.optString("goal_type")) != null) {
-                showTargetHelp(response.stateId);
-                return;
-            }
             hideGuideOverlay(); stopNarration();
             taskFlowView.waitingProgress("필요한 항목을 찾고 있어요.");
             taskFlowView.setAutomaticProgress(true);
@@ -2938,8 +2929,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         executeAutomaticAction(command, response.metadata, displayedSnapshot);
         if ("scroll".equals(command.actionType)) {
             executeScroll(command);
-        } else {
-            scrollExecutions = 0;
         }
     }
 
@@ -2958,7 +2947,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         service.speechHandler.post(() -> {
             service.guideStepTimer.clear();
             service.automationGuard.interrupt();
-            service.staleGuideDrops = service.freshObservationRetries = service.scrollExecutions = 0;
+            service.staleGuideDrops = service.freshObservationRetries = 0;
             if (new com.click.data.local.TouchAutomationSettings(service).isEnabled()
                     && NavigationRecovery.isHomeScreen(LatestScreenSnapshot.get())) {
                 service.homeSearchRestart = true;
@@ -2987,7 +2976,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     ? AgentActionEvents.HOME_NAVIGATED : AgentActionEvents.BACK_NAVIGATED;
             pendingActionOccurredAtMs = System.currentTimeMillis();
             agentConfirmationId = null; confirmationExpiresAt = 0;
-            freshObservationRetries = staleGuideDrops = scrollExecutions = 0;
+            freshObservationRetries = staleGuideDrops = 0;
             scrollSearchGeneration = -1;
             if (observed == NavigationRecovery.Action.HOME) {
                 adjustmentResultCheck.clear(); automaticScrollSearch.clear();
@@ -3456,12 +3445,20 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         return true;
     }
 
+    private com.click.data.snapshot.NavigationState navigationFrame(ScreenSnapshot screen) {
+        if(screen.navigation!=null)return screen.navigation;
+        return new com.click.data.snapshot.NavigationState("unknown",com.click.data.snapshot.NavigationState.Axis.UNKNOWN,
+                null,null,-1,-1,-1,ObservationRecovery.navigationFingerprint(screen));
+    }
+
     /** Navigation searches do not authorize taps or setting changes. Keep the logo visible. */
     private boolean startAutomaticHomeSearch(ScreenSnapshot expected) {
         if (expected.activeWindowId == null || expected.nodes.isEmpty()) return false;
-        Boolean forward = homeScrollSearch.next(agentSessionId + ":" + expected.packageName + ":" + expected.activeWindowId,
-                expected.contentFingerprint());
-        if (forward == null) return false;
+        com.click.data.snapshot.NavigationState frame = navigationFrame(expected);
+        AutomaticScrollSearch.Plan plan = homeScrollSearch.plan(agentSessionId + ":" + expected.packageName
+                + ":" + expected.activeWindowId + ":" + frame.containerId, frame);
+        if (plan.status == AutomaticScrollSearch.Status.FINISHED) return false;
+        boolean forward = plan.forward;
         final int generation = executionGeneration;
         final int token = ++homeSearchToken;
         scrollSearchGeneration = generation;
@@ -3482,9 +3479,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     && expected.packageName.equals(current.packageName)
                     && java.util.Objects.equals(expected.activeWindowId, current.activeWindowId)
                     && !current.nodes.isEmpty() && !hasSettingsTarget(current);
-            boolean moved = searchable && ClickAccessibilityService.swipeHomePage(
+            boolean moved = plan.status == AutomaticScrollSearch.Status.MOVE && searchable && ClickAccessibilityService.swipeHomePage(
                     forward, expected.packageName, expected.activeWindowId);
-            if (searchable && !moved) homeScrollSearch.reachedEnd(forward);
+            // A rejected/unchanged dispatch is observed again before deciding it is an endpoint.
             android.util.Log.i("ClickScroll", "home forward=" + forward + " eligible=" + searchable + " dispatched=" + moved);
             speechHandler.postDelayed(() -> {
                 if (generation != executionGeneration || token != homeSearchToken) return;
@@ -3494,7 +3491,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 pendingActionOccurredAtMs = System.currentTimeMillis();
                 forceNextObservation = true;
                 sendAgentTurn(null, true);
-            }, moved ? 700L : 100L);
+            }, moved ? 700L : 250L);
         }, 200L);
         return true;
     }
@@ -3554,15 +3551,17 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 scrollSearchGeneration=-1;forceNextObservation=true;
                 ClickAccessibilityService.requestFreshSnapshot();sendAgentTurn(null,true);return;
             }
-            // Charge the bounded search only when a native scroll can actually be attempted.
-            Boolean direction=requestedDirection!=null ? requestedDirection : automaticScrollSearch.next(
-                    agentEpisodeId+":"+stateId+":"+beforeScroll.packageName+":"+beforeScroll.activeWindowId,
-                    ObservationRecovery.navigationFingerprint(beforeScroll));
-            if (direction==null) {scrollSearchGeneration=-1;showTargetHelp(stateId);return;}
-            boolean forward=direction;
-            boolean moved=ClickAccessibilityService.performSettingsScroll(forward,expected.packageName,expected.activeWindowId);
+            com.click.data.snapshot.NavigationState frame=navigationFrame(beforeScroll);
+            AutomaticScrollSearch.Plan plan=automaticScrollSearch.plan(agentEpisodeId+":"+stateId+":"
+                    +beforeScroll.packageName+":"+beforeScroll.activeWindowId+":"+frame.containerId,frame);
+            if(requestedDirection==null && plan.status==AutomaticScrollSearch.Status.FINISHED) {
+                scrollSearchGeneration=-1;showTargetHelp(stateId);return;
+            }
+            boolean forward=requestedDirection!=null?requestedDirection:plan.forward;
+            boolean moved=(requestedDirection!=null || plan.status==AutomaticScrollSearch.Status.MOVE)
+                    && ClickAccessibilityService.performSettingsScroll(forward,expected.packageName,expected.activeWindowId);
             android.util.Log.i("ClickScroll","settings forward="+forward+" dispatched="+moved);
-            if (!moved) automaticScrollSearch.reachedEnd(forward);
+            // Dispatch success/failure never proves that the list ended.
             speechHandler.postDelayed(() -> {
                 if (generation!=executionGeneration) return;
                 scrollSearchGeneration=-1;
@@ -3572,7 +3571,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 pendingActionOccurredAtMs=System.currentTimeMillis();
                 freshObservationRetries=0;forceNextObservation=true;
                 updateFloatingVisibility();sendAgentTurn(null,true);
-            },moved ? 700L : 100L);
+            },moved ? 700L : 250L);
         },200L);
     }
 
@@ -3584,13 +3583,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 && screen.nodes.stream().anyMatch(node -> node.visibleToUser && node.scrollable && node.enabled);
         if (!settingsList && !new com.click.data.local.TouchAutomationSettings(this).isEnabled()) return;
         guideStepTimer.clear();
-        if (++scrollExecutions > 4) return;
+        if (settingsList) {
+            searchSettingsByScrolling(null, "guided_navigation", screen, executionGeneration);
+            return;
+        }
         String direction = command.renderPolicy == null
                 ? "down" : command.renderPolicy.optString("direction", "down");
         boolean forward = !"up".equalsIgnoreCase(direction) && !"backward".equalsIgnoreCase(direction);
-        boolean performed = settingsList
-                ? ClickAccessibilityService.performSettingsScroll(forward, screen.packageName, screen.activeWindowId)
-                : ClickAccessibilityService.performScroll(forward);
+        boolean performed = ClickAccessibilityService.performScroll(forward);
         pendingActionOccurredAtMs = System.currentTimeMillis();
         pendingActionType = performed
                 ? AgentActionEvents.SCROLL_COMPLETED : AgentActionEvents.SCROLL_FAILED;

@@ -77,4 +77,28 @@ public class TouchAutomationPolicyTest {
    assertNull(TouchAutomationPolicy.clickableTarget(s,title.nodeId,title.bounds));
   }
  }
+ @Test public void launcherIconDecorationDoesNotHideSettingsButFolderStaysAmbiguous() {
+  String pkg="com.sec.android.app.launcher";
+  AccessibilityNodeSnapshot icon=new AccessibilityNodeSnapshot("icon",null,true,pkg,"설정",null,null,
+    "android.widget.LinearLayout",null,bounds,true,true,false,false,false,null,5);
+  AccessibilityNodeSnapshot image=new AccessibilityNodeSnapshot("image","icon",true,pkg,null,null,null,
+    "android.widget.ImageView",null,bounds,true,true,false,false,false,null,5);
+  ScreenSnapshot s=new ScreenSnapshot(pkg,"2026-11-09T00:00:00Z",1080,2400,List.of(icon,image),5);
+  assertEquals(icon,TouchAutomationPolicy.clickableTarget(s,"icon",bounds));
+  AccessibilityNodeSnapshot another=new AccessibilityNodeSnapshot("another","icon",true,pkg,"다른 앱",null,null,
+    "android.widget.TextView",null,bounds,true,true,false,false,false,null,5);
+  s=new ScreenSnapshot(pkg,"2026-11-09T00:00:00Z",1080,2400,List.of(icon,image,another),5);
+  assertNull(TouchAutomationPolicy.clickableTarget(s,"icon",bounds));
+ }
+ @Test public void launcherAccessibilitySuffixUsesTheSameSettingsIdentityAsItsTitle() {
+  for(String name:List.of("설정, 앱", "Settings, App", "Settings, 1 notification")) {
+   ScreenSnapshot original=screen("com.sec.android.app.launcher",name,false);
+   AccessibilityNodeSnapshot title=new AccessibilityNodeSnapshot("title","node_0_1",true,original.packageName,
+     "설정",null,null,"android.widget.TextView",null,bounds,false,true,false,false,false,null,5);
+   ScreenSnapshot s=new ScreenSnapshot(original.packageName,original.capturedAt,1080,2400,
+     List.of(original.nodes.get(0),title),5);
+   assertNotNull(name,TouchAutomationPolicy.clickableTarget(s,"node_0_1",bounds));
+  }
+  assertNull(TouchAutomationPolicy.clickableTarget(screen("com.android.launcher3","설정 도우미",false),"node_0_1",bounds));
+ }
 }

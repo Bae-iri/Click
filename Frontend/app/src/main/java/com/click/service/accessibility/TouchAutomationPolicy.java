@@ -70,9 +70,21 @@ public final class TouchAutomationPolicy {
             default: return normalized;
         }
     }
+    public static boolean isSettingsAppLabel(String text) {
+        if (text == null) return false;
+        String name = text.trim().toLowerCase(Locale.ROOT);
+        return name.equals("설정") || name.equals("settings")
+                || name.startsWith("설정,") || name.startsWith("settings,");
+    }
+
+    private static String titleIdentity(ScreenSnapshot screen, String text) {
+        return NavigationRecovery.isHome(screen.packageName) && isSettingsAppLabel(text)
+                ? "설정" : canonical(text);
+    }
+
     private static boolean allowedTitle(ScreenSnapshot screen, String text) {
-        String name = canonical(text);
-        return NavigationRecovery.isHome(screen.packageName) ? name.equals("설정") : LABELS.contains(name);
+        return NavigationRecovery.isHome(screen.packageName)
+                ? isSettingsAppLabel(text) : LABELS.contains(canonical(text));
     }
 
     private static boolean risky(AccessibilityNodeSnapshot node) {
@@ -93,6 +105,12 @@ public final class TouchAutomationPolicy {
         return false;
     }
 
+    private static boolean launcherDecoration(AccessibilityNodeSnapshot node) {
+        String type=node.className==null?"":node.className.toLowerCase(Locale.ROOT);
+        return label(node).isEmpty() && type.contains("image") && !node.checkable
+                && !node.sensitiveInput && node.progress==null;
+    }
+
     /** Subtitles and row descriptions are context, not the menu's identity. */
     private static boolean approvedRow(ScreenSnapshot screen, AccessibilityNodeSnapshot row) {
         if (!usable(screen, row) || row.scrollable || risky(row)) return false;
@@ -100,15 +118,16 @@ public final class TouchAutomationPolicy {
         for (AccessibilityNodeSnapshot child : screen.nodes) {
             if (!child.visibleToUser || !descendant(screen, child, row.nodeId)) continue;
             if (child.sensitiveInput || child.checkable || child.progress != null || risky(child)
-                    || child.clickable && !allowedTitle(screen, label(child))) return false;
+                    || child.clickable && !allowedTitle(screen, label(child))
+                        && !(NavigationRecovery.isHome(screen.packageName) && launcherDecoration(child))) return false;
             String resource = child.resourceId == null ? "" : child.resourceId.substring(child.resourceId.lastIndexOf('/') + 1);
             if (Set.of("summary", "subtitle", "description", "secondary_text").contains(resource)) continue;
             if (allowedTitle(screen, label(child))) {
-                otherLabels.add(canonical(label(child)));
-                if (child.resourceId != null && child.resourceId.endsWith(":id/title")) titles.add(canonical(label(child)));
+                otherLabels.add(titleIdentity(screen, label(child)));
+                if (child.resourceId != null && child.resourceId.endsWith(":id/title")) titles.add(titleIdentity(screen, label(child)));
             }
         }
-        if (otherLabels.isEmpty() && allowedTitle(screen, label(row))) otherLabels.add(canonical(label(row)));
+        if (otherLabels.isEmpty() && allowedTitle(screen, label(row))) otherLabels.add(titleIdentity(screen, label(row)));
         // Multiple independently named menu controls in a parent are ambiguous, not one row.
         return otherLabels.size() == 1 && titles.size() <= 1;
     }

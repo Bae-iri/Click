@@ -15,6 +15,7 @@ import com.click.data.remote.AgentTurnGateway;
 import com.click.data.local.QuickHelpSelectionStore;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
 import com.click.data.snapshot.ScreenSnapshot;
+import com.click.data.snapshot.NavigationState;
 import com.click.domain.goal.GoalCatalogClassifier;
 import com.click.domain.goal.RequirementReview;
 import com.click.domain.goal.QuickHelpTask;
@@ -1879,23 +1880,29 @@ public class ClickOverlayServiceExecutionTest {
         assertTrue((boolean) get("taskFlowCollapsed"));
     }
 
-    @Test public void automaticSearchStopsAfterFourMovesAndShowsTargetHelp() throws Exception {
+    @Test public void automaticSearchContinuesBeyondEightPagesAndStopsAtObservedEnd() throws Exception {
         new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
         currentScreen = scrollableScreen("page 0");
         resolve(); confirm();
         int[] page = {0};
         accessibility.when(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42))
-                .thenAnswer(call -> { currentScreen = scrollableScreen("page " + ++page[0]); return true; });
-        for (int i = 1; i <= 4; i++) {
+                .thenAnswer(call -> {
+                    int index = ++page[0];
+                    currentScreen = scrollableScreen("page " + index).withNavigation(new NavigationState(
+                            "list", NavigationState.Axis.VERTICAL, true, index < 12,
+                            index * 6, index * 6 + 5, 78, "page " + index));
+                    return true;
+                });
+        for (int i = 1; i <= 12; i++) {
             deliverMissingTarget(i, "TARGET_NOT_VISIBLE");
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(900));
             assertEquals(i + 2, requests.size());
+            verify((TaskFlowOverlayView) get("taskFlowView"), never()).targetHelp(anyString(), any());
         }
-        deliverMissingTarget(5, "TARGET_NOT_VISIBLE");
+        deliverMissingTarget(13, "TARGET_NOT_VISIBLE");
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
-        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42), times(4));
-        verify((TaskFlowOverlayView) get("taskFlowView")).targetHelp(anyString(), any());
-        assertEquals(6, requests.size());
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42), times(12));
+        assertEquals(14, requests.size());
         assertTrue((boolean) get("taskFlowCollapsed"));
         org.mockito.ArgumentCaptor<Runnable> notFound = org.mockito.ArgumentCaptor.forClass(Runnable.class);
         verify((TaskFlowOverlayView) get("taskFlowView")).targetHelp(eq("디스플레이"), notFound.capture());
@@ -1993,19 +2000,27 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(-1, get("targetHelpGeneration"));
     }
 
-    @Test public void automaticSearchReversesAtListEndThenStops() throws Exception {
-        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
-        currentScreen = scrollableScreen("only page");
+    @Test public void middleOfSettingsSearchesTowardBeginningBeforeSweepingForward() throws Exception {
+        currentScreen = scrollableScreen("middle").withNavigation(new NavigationState(
+                "list", NavigationState.Axis.VERTICAL, true, true, 20, 25, 40, "middle"));
         resolve(); confirm();
-        // Both directions return false when the list cannot move.
+        accessibility.when(() -> ClickAccessibilityService.performSettingsScroll(false, "com.android.settings", 42))
+                .thenAnswer(call -> { currentScreen = scrollableScreen("beginning"); return true; });
+        accessibility.when(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42))
+                .thenAnswer(call -> {
+                    currentScreen = scrollableScreen("end").withNavigation(new NavigationState(
+                            "list", NavigationState.Axis.VERTICAL, true, false, 34, 39, 40, "end"));
+                    return true;
+                });
         deliverMissingTarget(1, "TARGET_NOT_VISIBLE");
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(900));
         deliverMissingTarget(2, "TARGET_NOT_VISIBLE");
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(900));
         deliverMissingTarget(3, "TARGET_NOT_VISIBLE");
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
-        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42), times(1));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(900));
         accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(false, "com.android.settings", 42), times(1));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsScroll(true, "com.android.settings", 42), times(1));
+        verify((TaskFlowOverlayView) get("taskFlowView")).targetHelp(anyString(), any());
         assertEquals(4, requests.size());
     }
 
@@ -2129,7 +2144,8 @@ public class ClickOverlayServiceExecutionTest {
                 "com.android.settings", label, null, null, "androidx.recyclerview.widget.RecyclerView", "list",
                 new int[]{0, 200, 1080, 2200}, false, true, false, true, false, null, 42);
         return new ScreenSnapshot("com.android.settings", Instant.now().toString(),
-                1080, 2400, List.of(list), 42);
+                1080, 2400, List.of(list), 42).withNavigation(new NavigationState(
+                        "list", NavigationState.Axis.VERTICAL, false, true, 0, 5, 100, label));
     }
 
     private void deliverMissingTarget(int index, String reason) throws Exception {

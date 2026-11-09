@@ -56,6 +56,8 @@ python scripts/agent2.py assess-jev --reviews target-reviews.json --format json
 python scripts/agent2.py compare-jev --before before-report.json --after after-report.json
 ```
 
+배포 후 목표별 실행 구성을 확인하려면 `python scripts/agent2.py audit`를 실행합니다. 카탈로그의 승인 목표 110개를 Backend 선택기로 대조하고 누락·비활성·최상위 우선순위 중복·슬롯 불일치를 보고합니다. `status=PASS`와 `catalog_coverage.selectable_goals=110`이 정상 seed의 기대값이며, 쿠팡 71개는 분류 전용으로 따로 집계합니다. 이 감사는 DB를 변경하지 않고 Jev 호출이나 실기기 조작도 수행하지 않습니다. 세부 결과는 [AI2 감사 안내](../AI-Agent/src/ai_agent/graph_proposal/README.md#db-기록-처리)를 따릅니다.
+
 `process`는 세션별 분석을 암호화된 DB 결과에 저장합니다. `assess-jev`는 여러 세션을 읽어 최신 보고서를 계산하며, 기본 출력은 쉬운 한국어입니다. `--format json`은 점수 구간·기준값별 표와 검수 대기 목록을 포함합니다. 자동 파일 저장은 하지 않습니다. 파일을 보관할 때도 근거의 동의·보존 기간을 따릅니다.
 
 검수 파일 형식은 `ai2-jev-reviews.v1`입니다. 아래 `...`에는 보고서 `review_queue`가 준 해시를 그대로 넣습니다. 그대로 실행하는 fixture가 아닌 형식 설명입니다.
