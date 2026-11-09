@@ -14,3 +14,6 @@ Validation and physical limits are recorded in the accompanying evidence JSON. T
 
 
 The approved mode-card route is a guided, confirmed native action; this change does not add the cards to the generic automatic-navigation tap allowlist. Physical automatic mode-card execution is not claimed. The matching user tap and system-value change still have to be observed for CHANGED.
+
+
+After the user unlocked the phone, the service and native probes both read the current Display page with privacy filtering allowed, the Light/Dark card pair, and system mode 1. The new local contract selected the exact Dark card (`item2`, bounds `[540, 317, 1080, 873]`) from both observations. This is native observation plus local matching, not a real Jev selection or completed mode change. The server remained at `9bd993d`, before `c88274f`, on two checks. No card was tapped. The initial implicit Display intent resumed Bluetooth; the capture used the explicit Display Activity with NEW_TASK|CLEAR_TOP, so this setup is not evidence of agent navigation success.

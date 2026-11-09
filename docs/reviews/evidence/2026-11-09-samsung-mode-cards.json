@@ -63,5 +63,51 @@
     "No real Jev call against the new card graph was performed locally.",
     "The earlier TTS logs contain muted pending; later media volume was 7/15 and real Korean utterance completion passed twice. Current missing task narration was not independently reproduced.",
     "No raw screen, user input or microphone audio was sent externally for these checks."
-  ]
+  ],
+  "followup_unlocked_display": {
+    "device_locked": false,
+    "service_privacy": "allowed",
+    "native_privacy": "allowed",
+    "system_mode": 1,
+    "observed_ui": "native Light/Dark cards, checkable=false",
+    "target_contract": {
+      "source": "local_contract_check_on_current_filtered_device_observation",
+      "real_jev_called": false,
+      "physical_actions": 0,
+      "cases": [
+        {
+          "collector": "service",
+          "state": "S_TARGET",
+          "transition": "APPLY_MODE_CHOICE",
+          "resource_id": "com.android.settings:id/item2",
+          "target_bounds": [
+            540,
+            317,
+            1080,
+            873
+          ],
+          "requires_confirmation": true,
+          "system_mode": 1
+        },
+        {
+          "collector": "native",
+          "state": "S_TARGET",
+          "transition": "APPLY_MODE_CHOICE",
+          "resource_id": "com.android.settings:id/item2",
+          "target_bounds": [
+            540,
+            317,
+            1080,
+            873
+          ],
+          "requires_confirmation": true,
+          "system_mode": 1
+        }
+      ]
+    },
+    "observed_server_revision": "9bd993d6173cf0e14e421369285325f0969b6dcc",
+    "real_jev_new_graph_test": "Not run: server still predates c88274f.",
+    "physical_mode_changes": 0,
+    "setup_navigation": "The implicit DISPLAY_SETTINGS launch resumed Bluetooth. The read-only capture used the explicit Display activity with NEW_TASK|CLEAR_TOP."
+  }
 }
