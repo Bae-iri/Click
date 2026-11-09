@@ -92,6 +92,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     // Set only by a submitted request or explicit replay, never by simply opening Click.
     private boolean voiceReplyEnabled;
     private boolean ttsUnavailable;
+    private String lastNarrationSuppression;
     private String lastSpokenMessage;
     private String lastNarratedGuideKey;
     private final GuidePresentationGate presentationGate = new GuidePresentationGate();
@@ -2112,7 +2113,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 .withSessionState(agentSessionVersion, agentEpisodeId,
                         confirmation == null ? null : agentConfirmationId);
         SettingsAdjustment scope=acceptedGoal==null?null:SettingsAdjustment.forGoal(acceptedGoal.optString("goal_type"));
-        request.observationSetting=scope==null?null:scope.setting;
+        JSONObject goalSlots=acceptedGoal==null?null:acceptedGoal.optJSONObject("slots");
+        request.observationSetting=scope==null?(goalSlots==null?null:goalSlots.optString("setting",null)):scope.setting;
         if (!firstTurnSent) {
             request.acceptedGoal = acceptedGoal;
             request.goalResolutionId = goalResolutionId;
@@ -3701,15 +3703,25 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (narrator != null) narrator.replay(lastSpokenMessage);
     }
 
+    private void noteNarrationSuppressed(String reason) {
+        if (!reason.equals(lastNarrationSuppression)) android.util.Log.i("ClickNarration", "skip " + reason);
+        lastNarrationSuppression = reason;
+    }
+
     private void speak(String message) {
-        if (message == null || message.trim().isEmpty() || closing || !voiceReplyEnabled || acceptingVoiceCommand) return;
+        if (message == null || message.trim().isEmpty()) return;
+        if (closing) { noteNarrationSuppressed("closing"); return; }
+        if (!voiceReplyEnabled) { noteNarrationSuppressed("voice_reply_disabled"); return; }
+        if (acceptingVoiceCommand) { noteNarrationSuppressed("input_active"); return; }
         lastSpokenMessage = message.trim();
         if (overlayView != null && overlayView.getMode() != ClickOverlayLayout.Mode.COLLAPSED) {
             panelInterruptedNarration = true;
+            noteNarrationSuppressed("input_panel_open");
             if (overlayView.getMode() == ClickOverlayLayout.Mode.TEXT) overlayView.showInputFeedback(message);
             return;
         }
-        if (narrator == null) return;
+        if (narrator == null) { noteNarrationSuppressed("narrator_missing"); return; }
+        lastNarrationSuppression = null;
         narrator.speak(lastSpokenMessage);
     }
 
@@ -3728,6 +3740,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 && !"blocked".equals(command.commandType) && !"done".equals(command.commandType)) {
             panelInterruptedNarration = false;
             lastSpokenMessage = TaskFlowOverlayView.AUTOMATIC_PROGRESS_MESSAGE;
+            noteNarrationSuppressed("automatic_progress");
             stopNarration();
             return;
         }

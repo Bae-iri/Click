@@ -353,12 +353,8 @@ def audit_catalog(factory):
                         or (graph.definition.task_id, graph.definition.goal_type, graph.definition.target_app)
                         != (row.task_id, row.goal_type, row.target_app)):
                     structural_errors.append("graph_reference_mismatch")
-                from app.task_graphs.validation import PREDICATES
-                from ai_agent.runtime.settings_controls import CONTROLS
-                supported = PREDICATES | ({'target_checked_on', 'target_checked_off'}
-                    if graph.definition.required_slots.get('setting') in {*CONTROLS, 'wifi'} else set())
-                if graph.definition.task_type == 'settings_assisted':
-                    supported |= {'manual_result_required'}
+                from ai_agent.task_graph.settings import supported_predicates
+                supported = supported_predicates(graph.definition.required_slots, graph.definition.task_type)
                 predicates = sorted({t.verification_predicate for t in graph.transitions
                                      if t.verification_predicate not in supported})
             except (ValueError, TypeError, KeyError):

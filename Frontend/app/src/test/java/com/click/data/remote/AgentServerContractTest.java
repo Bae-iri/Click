@@ -8,6 +8,21 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.*;
 
 public class AgentServerContractTest {
+    @Test public void oldServersNeverReceiveNewSystemModeFields() throws Exception {
+        JSONObject api;
+        try(var in=getClass().getResourceAsStream("/openapi.json")) {
+            api=new JSONObject(new String(in.readAllBytes(),StandardCharsets.UTF_8));
+        }
+        var snapshot=new com.click.data.snapshot.ScreenSnapshot("com.android.settings","2026-11-09T00:00:00Z",
+            1080,2400,java.util.Collections.emptyList(),42).withNightMode(2);
+        var request=AgentTurnContract.Request.control("s",1,"e","observe",snapshot);
+        assertEquals(2,new JSONObject(AgentServerContract.fromOpenApi(api).encode(request))
+            .getJSONObject("accessibility_tree").getJSONObject("applied_settings").getInt("night_mode"));
+        JSONObject fields=api.getJSONObject("components").getJSONObject("schemas").getJSONObject("AppliedSettings").getJSONObject("properties");
+        fields.remove("night_mode");fields.remove("night_mode_source");
+        assertFalse(new JSONObject(AgentServerContract.fromOpenApi(api).encode(request))
+            .getJSONObject("accessibility_tree").has("applied_settings"));
+    }
     @Test public void deviceEvidenceUsesOnlyFieldsAcceptedByTheConnectedBackend() throws Exception {
         JSONObject current;
         try (java.io.InputStream in = getClass().getResourceAsStream("/openapi.json")) {

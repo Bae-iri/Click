@@ -7401,6 +7401,31 @@
               }
             ],
             "title": "Wifi Source"
+          },
+          "night_mode": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Night Mode"
+          },
+          "night_mode_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "android.app.UiModeManager.getNightMode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Night Mode Source"
           }
         },
         "additionalProperties": false,

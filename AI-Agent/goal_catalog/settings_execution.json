@@ -115,7 +115,27 @@
         "디스플레이",
         "Display"
       ],
-      "intermediate": []
+      "intermediate": [],
+      "choices": {
+        "on": {
+          "labels": [
+            "다크",
+            "Dark"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/item2"
+          ]
+        },
+        "off": {
+          "labels": [
+            "라이트",
+            "Light"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/item1"
+          ]
+        }
+      }
     },
     "location": {
       "pages": [
