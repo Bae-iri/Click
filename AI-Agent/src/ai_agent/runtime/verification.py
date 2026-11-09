@@ -3,6 +3,7 @@ from hashlib import sha256
 from math import isfinite
 from ai_agent.runtime.wifi import adapter_state
 from ai_agent.runtime.settings_controls import CHECKED_PREDICATES
+from ai_agent.runtime.setting_choices import PREDICATES as CHOICE_PREDICATES, expected_value as choice_value, system_value
 
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, target_key
 from ai_agent.runtime.types import VerificationResult, VerificationStatus as Status, SafetyLevel
@@ -36,7 +37,7 @@ def correlate_action(session, request, transition):
     # already observed before that action. Retire this guide rather than letting
     # the same event become valid after another observation overwrites the evidence.
     previous = session.last_snapshot
-    if (transition.verification_predicate in {'target_value_increased', 'target_value_decreased', *CHECKED_PREDICATES}
+    if (transition.verification_predicate in {'target_value_increased', 'target_value_decreased', *CHECKED_PREDICATES, *CHOICE_PREDICATES}
             and previous and previous.captured_at_ms is not None
             and baseline_time < previous.captured_at_ms <= event.occurred_at_ms):
         observed_value = previous.slider_values.get(attempt['target_node_id'])
@@ -67,7 +68,7 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
         return VerificationResult(status, current_state_id, transition.to_state, message,
                                   attempt_id=attempt.get('attempt_id') if attempt else None,
                                   count_attempt=count, task_completed=completed, evidence=evidence)
-    if transition.verification_predicate not in {'state_reached', 'target_value_increased', 'target_value_decreased', *CHECKED_PREDICATES}:
+    if transition.verification_predicate not in {'state_reached', 'target_value_increased', 'target_value_decreased', *CHECKED_PREDICATES, *CHOICE_PREDICATES}:
         return result(Status.UNKNOWN, 'unsupported_verification_predicate')
     correlated = bool(attempt and attempt.get('event_key')
                       and attempt.get('transition_id') == pending_transition_id)
@@ -103,6 +104,25 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
                                   evidence='observed_progress', count_attempt=False)
     if not correlated:
         return result(Status.WAITING_FOR_ACTION, 'no_correlated_action')
+
+    if transition.verification_predicate in CHOICE_PREDICATES:
+        if (not current_snapshot or not current_snapshot.observation_id or not baseline_id
+                or observation_time is None or action_time is None):
+            return result(Status.UNKNOWN, 'missing_observation_timing')
+        candidates = [n for n in eligible_nodes(transition, nodes, graph)
+            if target_key(n) == attempt.get('target_key') and n.node_id == attempt.get('target_node_id')
+            and n.window_id == attempt.get('target_window_id') and n.resource_id == attempt.get('target_resource_id')
+            and n.bounds == tuple(attempt.get('target_bounds', ()))
+            and selector_evidence(n, transition, nodes, graph)[0] >= .7]
+        if len(candidates) != 1:
+            return result(Status.UNKNOWN, 'mode_choice_unobservable')
+        before = attempt.get('baseline_setting_value')
+        after = system_value(current_snapshot.applied_settings)
+        if type(before) is not int or before not in {1, 2} or after is None:
+            return result(Status.UNKNOWN, 'system_mode_unobservable')
+        if before != choice_value(graph) and after == choice_value(graph):
+            return result(Status.SUCCESS, transition.verification_predicate, count=True,
+                completed=transition.completes_task, message='The correlated native choice changed the system mode.')
 
     if transition.verification_predicate in CHECKED_PREDICATES:
         if (not current_snapshot or not current_snapshot.observation_id or not baseline_id
@@ -278,6 +298,8 @@ def applied_value(settings, setting):
         return font_scale(settings)
     if setting == 'wifi':
         return adapter_state(settings)
+    if setting == 'dark_mode':
+        return system_value(settings)
     fields = {
         'brightness': ('screen_brightness', 'brightness_source', 'android.provider.Settings.System.SCREEN_BRIGHTNESS', 65535),
         'volume': ('media_volume', 'media_volume_source', 'android.media.AudioManager.STREAM_MUSIC', 1000),

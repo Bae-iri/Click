@@ -1,0 +1,67 @@
+{
+  "date": "2026-11-09",
+  "reported_issue": "Dark mode reaches Display, then cannot identify a control; missing spoken guidance was also reported.",
+  "confirmed_control_gap": {
+    "evidence": "Previously recorded filtered native Samsung Display hierarchy",
+    "light_resource": "com.android.settings:id/item1",
+    "dark_resource": "com.android.settings:id/item2",
+    "checkable": false,
+    "previous_required_role": "toggle",
+    "current_incident_frame_recovered": false,
+    "current_frame_limitation": "Device was locked during follow-up capture."
+  },
+  "changes": [
+    "Authored paired native mode-card transition with user confirmation",
+    "Independent system night-mode value required for completion",
+    "Original action binding, target identity, timing and native page evidence remain required",
+    "Finite system value exported only for dark-mode observations; older servers strip unsupported fields",
+    "Immutable 1.1.0 graph release priority 110 supersedes 1.0.0 priority 100 without rewriting pinned sessions",
+    "Shared supported predicates for execution, proposals and rollout audit",
+    "Text-free, deduplicated narration suppression diagnostics; device volume unchanged"
+  ],
+  "validation": {
+    "backend_first_full": {
+      "passed": 2040,
+      "failed": 9,
+      "failure_reason": "AI2/proposal and rollout audits had separate capability lists without the new mode predicates; corrected by the shared contract."
+    },
+    "backend_mode_and_privacy_focused": 539,
+    "backend_final_card_identity_and_selector_checks": 53,
+    "backend_final_rollout_checks": 43,
+    "backend_final_full": {
+      "passed": 2052,
+      "warnings": 14
+    },
+    "ai_final_full": {
+      "passed": 410
+    },
+    "android_full_before_last_diagnostic_change": 540,
+    "android_final_release_focused": 173,
+    "android_final_workspace_integration": 181,
+    "installed_build": {
+      "installed_apk_sha256": "6b4e4437c0866152cb218d4e6b0ba1902349c042445ba8f87f63bef559f4c59b",
+      "matches_prepared_apk": true,
+      "mode_observation": {
+        "source": "android.app.UiModeManager.getNightMode",
+        "value": 1,
+        "actions": 0,
+        "explicit_mode": true
+      },
+      "tts_fixed_sentence_completed": true,
+      "physical_mode_changes": 0
+    },
+    "ai_first_shared_contract_full": {
+      "passed": 409,
+      "failed": 1,
+      "reason": "An unhashable malformed predicate reached a new set-membership check; restored explicit string validation."
+    },
+    "server_redeployment_performed": false
+  },
+  "limits": [
+    "No physical card tap or dark-mode value change was performed.",
+    "A new backend deployment and new task episode are required; restart Click after deployment to refresh cached server capabilities.",
+    "No real Jev call against the new card graph was performed locally.",
+    "The earlier TTS logs contain muted pending; later media volume was 7/15 and real Korean utterance completion passed twice. Current missing task narration was not independently reproduced.",
+    "No raw screen, user input or microphone audio was sent externally for these checks."
+  ]
+}

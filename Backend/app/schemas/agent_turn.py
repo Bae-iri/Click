@@ -61,11 +61,14 @@ class AppliedSettings(BaseModel):
     media_volume: int | None = Field(default=None, ge=0, le=1000)
     wifi_state: int | None = Field(default=None, strict=True, ge=0, le=4)
     wifi_source: Literal["android.net.wifi.WifiManager.getWifiState"] | None = None
+    night_mode: int | None = Field(default=None, strict=True, ge=0, le=3)
+    night_mode_source: Literal["android.app.UiModeManager.getNightMode"] | None = None
 
     @model_validator(mode="after")
     def require_value_sources(self):
         for value, source in ((self.font_scale, self.source), (self.screen_brightness, self.brightness_source),
-                              (self.media_volume, self.media_volume_source), (self.wifi_state, self.wifi_source)):
+                              (self.media_volume, self.media_volume_source), (self.wifi_state, self.wifi_source),
+                              (self.night_mode, self.night_mode_source)):
             if (value is None) != (source is None):
                 raise ValueError("Applied setting value and source must be supplied together")
         return self

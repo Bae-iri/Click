@@ -10,8 +10,9 @@ from ai_agent.runtime.types import (
 
 ADAPTER = TypeAdapter(TaskGraph)
 from ai_agent.runtime.settings_controls import CONTROLS
+from ai_agent.task_graph.settings import BASE_PREDICATES, supported_predicates
 
-PREDICATES = {"state_reached", "target_value_increased", "target_value_decreased", "settings_page_visible"}
+PREDICATES = BASE_PREDICATES
 
 
 def _fields(body, contract):
@@ -52,12 +53,17 @@ def load_graph(body, *, executable=True):
             raise ValueError("Dangling transition")
         if transition.from_state == definition.done_state:
             raise ValueError("Terminal state has outgoing transitions")
-        supported = PREDICATES | ({'target_checked_on', 'target_checked_off'}
-            if definition.required_slots.get('setting') in {*CONTROLS, 'wifi'} else set())
-        if definition.task_type == 'settings_assisted':
-            supported |= {'manual_result_required'}
+        supported = supported_predicates(definition.required_slots, definition.task_type)
         if executable and transition.verification_predicate not in supported:
             raise ValueError("Unsupported completion predicate")
+        if transition.verification_predicate in {'system_night_mode_on', 'system_night_mode_off'}:
+            choice = CONTROLS.get('dark_mode', {}).get('choices', {}).get(definition.required_slots.get('state'))
+            if (definition.required_slots.get('setting') != 'dark_mode' or not choice
+                    or transition.action_type != ActionType.TAP or transition.target_role != 'menu_item'
+                    or transition.safety_level != SafetyLevel.CONFIRM_REQUIRED or not transition.completes_task
+                    or transition.verification_predicate != 'system_night_mode_' + definition.required_slots.get('state', '')
+                    or set(transition.target_keywords) != set(choice['labels'])):
+                raise ValueError('Mode choice requires an authored target, confirmation and system-value verification')
         if executable and transition.verification_predicate in {'target_checked_on', 'target_checked_off'} and (
                 transition.action_type != ActionType.TAP or transition.target_role != 'toggle'
                 or transition.safety_level != SafetyLevel.CONFIRM_REQUIRED or not transition.completes_task

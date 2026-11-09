@@ -204,6 +204,11 @@ public final class SettingsScreenPrivacy {
             if ("android.net.wifi.WifiManager.getWifiState".equals(applied.optString("wifi_source"))
                     && wifiState instanceof Integer && ((Integer) wifiState) >= 0 && ((Integer) wifiState) <= 4)
                 safeApplied.put("wifi_source", "android.net.wifi.WifiManager.getWifiState").put("wifi_state", wifiState);
+            Object nightMode = applied.opt("night_mode");
+            if ("dark_mode".equals(setting)
+                    && "android.app.UiModeManager.getNightMode".equals(applied.optString("night_mode_source"))
+                    && nightMode instanceof Integer && ((Integer) nightMode) >= 0 && ((Integer) nightMode) <= 3)
+                safeApplied.put("night_mode_source", "android.app.UiModeManager.getNightMode").put("night_mode", nightMode);
             if (safeApplied.length() > 0) safeTree.put("applied_settings", safeApplied);
         }
         safeTree.put("nodes", relevantNodes);

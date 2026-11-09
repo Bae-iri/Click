@@ -523,7 +523,9 @@ class ClickAgentEngine:
             technical = {'status': 'ALREADY_SET', 'reason': already_setting.evidence, 'setting': vocabulary_key,
                 'requested_state': graph.definition.required_slots['state'],
                 'transition_id': next(edge.transition_id for edge in graph.transitions
-                    if edge.from_state == already_setting.current_state_id and edge.completes_task),
+                    if edge.from_state == already_setting.current_state_id and edge.completes_task
+                    and (already_setting.evidence != 'system_mode_already_set'
+                        or edge.verification_predicate in {'system_night_mode_on', 'system_night_mode_off'})),
                 'verified_at_ms': request.captured_at_ms, 'observation_id': request.observation_id,
                 'setting_value': applied_value(request.applied_settings, vocabulary_key)}
         elif verification_result and verification_result.task_completed:

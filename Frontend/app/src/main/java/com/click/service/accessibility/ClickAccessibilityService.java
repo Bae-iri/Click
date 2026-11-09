@@ -583,9 +583,15 @@ public final class ClickAccessibilityService extends AccessibilityService {
             android.net.wifi.WifiManager wifi = getApplicationContext().getSystemService(android.net.wifi.WifiManager.class);
             if (wifi != null) wifiState = wifi.getWifiState();
         } catch (SecurityException ignored) { }
+        Integer nightMode = null;
+        try {
+            android.app.UiModeManager mode = getSystemService(android.app.UiModeManager.class);
+            if (mode != null) nightMode = mode.getNightMode();
+        } catch (SecurityException ignored) { }
         return collector.collect(root, packageName, width, height, appliedScale)
                 .withAdjustmentValues(brightness, mediaVolume)
                 .withWifiState(wifiState)
+                .withNightMode(nightMode)
                 .withScreenRevision(screenRevisions.revision());
     }
 

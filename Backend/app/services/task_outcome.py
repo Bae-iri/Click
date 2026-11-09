@@ -42,6 +42,8 @@ def make_outcome(technical, now, direction="increase", *, previous=None, setting
         requested = technical.get('requested_state') or (previous or {}).get('requested_state')
         if technical['status'] == 'CHANGED':
             message = f'{label}: 요청한 {"켜짐" if requested == "on" else "꺼짐"} 스위치 상태를 확인했어요.'
+            if technical.get('reason') in {'system_night_mode_on', 'system_night_mode_off'}:
+                message = f'{label}: 요청한 {"다크" if requested == "on" else "라이트"} 모드 적용을 확인했어요.'
         elif technical['status'] == 'ALREADY_SET':
             message = f'{label}: 이미 요청한 상태예요.'
         else:

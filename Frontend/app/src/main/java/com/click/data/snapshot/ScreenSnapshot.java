@@ -20,6 +20,7 @@ public final class ScreenSnapshot {
     public final Float appliedFontScale;
     public final Integer appliedBrightness, appliedMediaVolume;
     public final Integer appliedWifiState;
+    public final Integer appliedNightMode;
     public final String screenRevision;
 
     public ScreenSnapshot(
@@ -46,13 +47,14 @@ public final class ScreenSnapshot {
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
                           Float appliedFontScale) {
         this(packageName, capturedAt, screenWidth, screenHeight, nodes, activeWindowId,
-                privacyMaskingReady, appliedFontScale, null, null, null, null, null);
+                privacyMaskingReady, appliedFontScale, null, null, null, null, null, null);
     }
 
     private ScreenSnapshot(String packageName, String capturedAt, int screenWidth, int screenHeight,
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
-                          Float appliedFontScale, String screenRevision, Integer brightness, Integer mediaVolume, Integer wifiState, NavigationState navigation) {
+                          Float appliedFontScale, String screenRevision, Integer brightness, Integer mediaVolume, Integer wifiState, NavigationState navigation, Integer nightMode) {
         this.navigation = navigation;
+        this.appliedNightMode = nightMode;
         this.appliedWifiState = wifiState;
         this.screenRevision = screenRevision;
         this.appliedFontScale = appliedFontScale;
@@ -69,24 +71,30 @@ public final class ScreenSnapshot {
 
     public ScreenSnapshot withScreenRevision(String revision) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
-                activeWindowId, privacyMaskingReady, appliedFontScale, revision, appliedBrightness, appliedMediaVolume, appliedWifiState, navigation);
+                activeWindowId, privacyMaskingReady, appliedFontScale, revision, appliedBrightness, appliedMediaVolume, appliedWifiState, navigation, appliedNightMode);
     }
 
     public ScreenSnapshot withAdjustmentValues(Integer brightness, Integer mediaVolume) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
-                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision, brightness, mediaVolume, appliedWifiState, navigation);
+                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision, brightness, mediaVolume, appliedWifiState, navigation, appliedNightMode);
     }
 
     public ScreenSnapshot withWifiState(Integer state) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
                 activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision,
-                appliedBrightness, appliedMediaVolume, state, navigation);
+                appliedBrightness, appliedMediaVolume, state, navigation, appliedNightMode);
+    }
+
+    public ScreenSnapshot withNightMode(Integer mode) {
+        return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
+                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision,
+                appliedBrightness, appliedMediaVolume, appliedWifiState, navigation, mode);
     }
 
     public ScreenSnapshot withNavigation(NavigationState navigation) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
                 activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision,
-                appliedBrightness, appliedMediaVolume, appliedWifiState, navigation);
+                appliedBrightness, appliedMediaVolume, appliedWifiState, navigation, appliedNightMode);
     }
 
     public String toJson() {
@@ -110,6 +118,8 @@ public final class ScreenSnapshot {
             if (appliedWifiState != null && appliedWifiState >= 0 && appliedWifiState <= 4)
                 applied.put("wifi_source", "android.net.wifi.WifiManager.getWifiState")
                         .put("wifi_state", appliedWifiState);
+            if (appliedNightMode != null && appliedNightMode >= 0 && appliedNightMode <= 3)
+                applied.put("night_mode_source", "android.app.UiModeManager.getNightMode").put("night_mode", appliedNightMode);
             if (applied.length() > 0) object.put("applied_settings", applied);
             object.put("screen_width", screenWidth);
             object.put("screen_height", screenHeight);
@@ -158,7 +168,7 @@ public final class ScreenSnapshot {
         StringBuilder value = new StringBuilder(packageName).append('|').append(screenWidth)
                 .append('x').append(screenHeight).append('|').append(activeWindowId);
         value.append('|').append(privacyMaskingReady).append('|').append(appliedFontScale);
-        value.append('|').append(appliedBrightness).append('|').append(appliedMediaVolume).append('|').append(appliedWifiState);
+        value.append('|').append(appliedBrightness).append('|').append(appliedMediaVolume).append('|').append(appliedWifiState).append('|').append(appliedNightMode);
         if (includeRevision) value.append('|').append(screenRevision);
         for (AccessibilityNodeSnapshot node : nodes) {
             value.append('|').append(node.nodeId).append(':').append(node.text)

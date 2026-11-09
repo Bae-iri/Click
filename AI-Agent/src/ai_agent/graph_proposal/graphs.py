@@ -1,6 +1,6 @@
 """JSON graph checks/patching without importing or executing Agent 1."""
 from copy import deepcopy
-from ai_agent.task_graph.settings import CONTROLS
+from ai_agent.task_graph.settings import CONTROLS, supported_predicates
 from ai_agent.graph_proposal.contracts import canonical, fingerprint, identifier, finite_number
 
 
@@ -49,10 +49,21 @@ def graph_errors(body):
             errors.append("invalid_action_type")
         if transition.get("safety_level") not in ("LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"):
             errors.append("invalid_safety_level")
-        if transition.get("verification_predicate", "state_reached") not in ("state_reached", "target_value_increased", "target_value_decreased", "settings_page_visible",
-                *({'target_checked_on', 'target_checked_off'} if definition.get('required_slots', {}).get('setting') in {*CONTROLS, 'wifi'} else set()),
-                *({'manual_result_required'} if definition.get('task_type') == 'settings_assisted' else set())):
+        predicate = transition.get("verification_predicate", "state_reached")
+        if not isinstance(predicate, str) or predicate not in supported_predicates(
+                definition.get('required_slots', {}), definition.get('task_type')):
             errors.append("unsupported_verification_predicate")
+        if transition.get('verification_predicate') in ('system_night_mode_on', 'system_night_mode_off'):
+            slots = definition.get('required_slots', {})
+            choice = CONTROLS.get('dark_mode', {}).get('choices', {}).get(slots.get('state'))
+            if (slots.get('setting') != 'dark_mode' or not choice or transition.get('action_type') != 'tap'
+                    or transition.get('target_role') != 'menu_item' or transition.get('safety_level') != 'CONFIRM_REQUIRED'
+                    or not transition.get('completes_task')
+                    or transition.get('verification_predicate') != 'system_night_mode_' + slots.get('state', '')
+                    or not isinstance(transition.get('target_keywords'), (list, tuple))
+                    or not all(isinstance(word, str) for word in transition['target_keywords'])
+                    or set(transition['target_keywords']) != set(choice['labels'])):
+                errors.append('invalid_system_mode_verifier')
         if transition.get('verification_predicate') in ('target_checked_on', 'target_checked_off') and (
                 transition.get('action_type') != 'tap' or transition.get('target_role') != 'toggle'
                 or transition.get('safety_level') != 'CONFIRM_REQUIRED' or not transition.get('completes_task')

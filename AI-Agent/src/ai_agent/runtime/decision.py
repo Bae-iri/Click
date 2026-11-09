@@ -54,6 +54,8 @@ def decide_guide(*, request, graph, match, confirmation, completed, attempt, kee
         and transition.verification_predicate in CHECKED_PREDICATES and native_target
         and native_target.checkable and type(native_target.extras.get('checked')) is bool
         and native_target.extras['checked'] is (graph.definition.required_slots.get('state') == 'on'))
+    from ai_agent.runtime.setting_choices import is_choice, system_value, expected_value
+    mode_choice = bool(transition and is_choice(transition, graph))
     if masking_failed:
         guide = command_for_vision_analysis(request.session_id, vision_analysis)
         keep = False
@@ -67,6 +69,16 @@ def decide_guide(*, request, graph, match, confirmation, completed, attempt, kee
     elif completed:
         guide = build_guide_command(session_id=request.session_id, match_result=match,
             graph=graph, task_completed=True)
+        keep = False
+    elif mode_choice and system_value(request.applied_settings) == expected_value(graph):
+        guide = GuideCommand('mode-observed', CommandType.HIGHLIGHT, ActionType.OBSERVE_ONLY,
+            '원하신 화면 모드로 보여요. 조작 결과를 확인하고 있어요.', SafetyLevel.LOW_RISK, False,
+            render_policy={'fallback_action': {'type': 'request_fresh_observation'}})
+        keep = keep_attempt
+    elif mode_choice and system_value(request.applied_settings) is None:
+        guide = GuideCommand('mode-value-unavailable', CommandType.HIGHLIGHT, ActionType.OBSERVE_ONLY,
+            '기기의 실제 화면 모드 값을 확인하지 못했어요. 다크 모드 설정을 직접 확인해 주세요.',
+            SafetyLevel.LOW_RISK, False, render_policy={'system_mode_unobservable': True})
         keep = False
     elif wifi_desired_visible or native_desired_visible:
         guide = GuideCommand('wifi-observed', CommandType.HIGHLIGHT, ActionType.OBSERVE_ONLY,

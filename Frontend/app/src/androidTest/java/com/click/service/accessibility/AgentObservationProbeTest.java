@@ -41,7 +41,8 @@ public class AgentObservationProbeTest {
             .put("nodes",screen.nodes.size()).put("inputs",inputs).put("passwords",passwords)
             .put("mixed_packages",mixed).put("switches",switches).put("invisible",invisible).put("input_shapes",inputShapes);
         try {
-            JSONObject safe=policy.filter(new JSONObject().put("accessibility_tree",tree));
+            JSONObject safe=policy.filter(new JSONObject().put("accessibility_tree",tree),
+                    InstrumentationRegistry.getArguments().getString("observationSetting"));
             JSONArray exported=safe.getJSONObject("accessibility_tree").getJSONArray("nodes");int checkedControls=0;
             for(int i=0;i<exported.length();i++)if(exported.getJSONObject(i).optBoolean("checkable"))checkedControls++;
             result.put("privacy","allowed").put("exported_nodes",exported.length()).put("exported_checked_controls",checkedControls);
@@ -116,7 +117,8 @@ public class AgentObservationProbeTest {
         if(root!=null)try {
             android.util.DisplayMetrics metrics=app.getResources().getDisplayMetrics();
             ScreenSnapshot nativeScreen=new AccessibilitySnapshotCollector().collect(root,String.valueOf(root.getPackageName()),metrics.widthPixels,metrics.heightPixels,null)
-                .withWifiState(app.getSystemService(android.net.wifi.WifiManager.class).getWifiState());
+                .withWifiState(app.getSystemService(android.net.wifi.WifiManager.class).getWifiState())
+                .withNightMode(app.getSystemService(android.app.UiModeManager.class).getNightMode());
             report.put("native",assess(nativeScreen,policy));
         } finally {root.recycle();}
         try(FileOutputStream output=new FileOutputStream(new File(app.getCacheDir(),"agent-observation-probe.json"))){output.write(report.toString().getBytes(StandardCharsets.UTF_8));}

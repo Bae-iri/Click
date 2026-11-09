@@ -65,6 +65,9 @@ def eligible_nodes(transition: Transition, nodes: tuple[NormalizedNode, ...], gr
         if (setting in CONTROLS and transition.verification_predicate in CHECKED_PREDICATES
                 and not setting_target(node, nodes, setting)):
             continue
+        from ai_agent.runtime.setting_choices import is_choice, target_allowed as choice_target
+        if is_choice(transition, graph) and not choice_target(node, nodes, graph):
+            continue
         eligible.append(node)
     return tuple(eligible)
 

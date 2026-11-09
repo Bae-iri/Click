@@ -58,6 +58,14 @@ def action_releases():
                 confirmation_message=f"{capability['name']}를 진행할까요?",
                 selector=TargetSelector(package_candidates=SETTINGS, context_keywords=tuple(pages), allow_unlabelled_in_context=True),
                 verification_predicate='target_checked_' + spec['slots']['state'], completes_task=True))
+            choice = contract.get('choices', {}).get(spec['slots']['state'])
+            if choice:
+                edges.append(Transition('APPLY_MODE_CHOICE', 'S_TARGET', 'S_CHANGED', ActionType.TAP,
+                    capability['name'], tuple(choice['labels']), 'menu_item', SafetyLevel.CONFIRM_REQUIRED,
+                    f"표시한 {choice['labels'][0]} 항목을 눌러주세요.",
+                    confirmation_message=f"{capability['name']}를 진행할까요?",
+                    selector=TargetSelector(package_candidates=SETTINGS),
+                    verification_predicate='system_night_mode_' + spec['slots']['state'], completes_task=True))
             edges.append(Transition('VERIFIED', 'S_CHANGED', 'S_DONE', ActionType.OBSERVE_ONLY,
                 '결과 확인', (), None, SafetyLevel.LOW_RISK, '스위치 상태를 확인했어요.', requires_user_action=False))
         else:
@@ -68,5 +76,6 @@ def action_releases():
         graph = TaskGraph(TaskDefinition(spec['task_id'], goal_type, capability['name'], 'android_settings',
             'settings_change' if mode == 'native_checked' else 'settings_assisted',
             ('S0_UNKNOWN', 'S1_SETTINGS_HOME'), 'S_DONE', spec['slots']), states, tuple(edges), {})
-        yield {'version': '1.0.0', 'approved': True, 'priority': 100,
+        has_choices = mode == 'native_checked' and bool(contract.get('choices'))
+        yield {'version': '1.1.0' if has_choices else '1.0.0', 'approved': True, 'priority': 110 if has_choices else 100,
             'status': mode + '_device_validation_pending'}, graph
