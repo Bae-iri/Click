@@ -73,7 +73,8 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
 
     graph_packages = {package for state in graph.states.values() for package in state.package_candidates}
     if (match.state_id == "S0_UNKNOWN" and match.transition_id == "S0_TO_S1_OPEN_SETTINGS"
-            and match.fallback_reason and nodes and not any(n.package_name in graph_packages for n in nodes)):
+            and (match.fallback_reason or selection_failure) and nodes
+            and not any(n.package_name in graph_packages for n in nodes)):
         return plan("wait", "APP_NOT_OPEN", "open_settings", "user")
 
     waiting_result = bool(verification and verification.status in {Status.UNKNOWN, Status.WAITING_FOR_OBSERVATION})

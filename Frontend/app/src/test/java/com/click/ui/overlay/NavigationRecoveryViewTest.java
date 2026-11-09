@@ -19,6 +19,12 @@ public class NavigationRecoveryViewTest {
   }
   return null;
  }
+ @Test public void settingsEntryUsesOneUserActivatedActionInTheExistingPanel() {
+  TaskFlowOverlayView view=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
+  int[] clicks={0};view.settingsEntryRecovery(()->clicks[0]++);
+  Button open=find(view,"설정 열기");assertNotNull(open);assertEquals(0,clicks[0]);
+  open.performClick();open.performClick();assertEquals(1,clicks[0]);
+ }
  @Test public void highlightedNavigationActionRequiresUserAndRunsOnlyOnce() {
   TaskFlowOverlayView view=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
   int[] clicks={0};
