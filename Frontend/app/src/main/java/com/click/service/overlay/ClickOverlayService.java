@@ -1589,6 +1589,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         listening = true;
         refreshLoadingStatus();
         overlayView.setRecognizedSpeech("마이크를 준비하고 있어요…");
+        final TaskFlowOverlayView editOwner = taskFlowView;
+        final java.util.function.Function<String, Boolean> editTarget = editOwner == null
+                ? null : editOwner.requestEditSpeechTarget();
         speechInput.start(new SpeechInput.Callback() {
             @Override public void onReady() {
                 if (acceptsSpeech(generation) && listening)
@@ -1609,7 +1612,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             @Override public void onSuccess(String text) {
                 if (!acceptsSpeech(generation)) return;
                 stopListening();
-                submitRecognizedSpeech(text);
+                submitRecognizedSpeech(text, editTarget == null ? null
+                        : value -> taskFlowView == editOwner && editTarget.apply(value));
             }
             @Override public void onFailure(Throwable error) {
                 if (!acceptsSpeech(generation)) return;
@@ -1621,7 +1625,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         });
     }
 
-    private void submitRecognizedSpeech(String text) {
+    private void submitRecognizedSpeech(String text, java.util.function.Function<String, Boolean> editTarget) {
         if (text == null || text.trim().isEmpty()) {
             overlayView.showVoiceInputError("마이크를 꾹 눌러 다시 말씀해 주세요.");
             return;
@@ -1629,6 +1633,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         voiceReplyEnabled = true;
         overlayView.setRecognizedSpeech(text);
         overlayView.collapse();
+        if (editTarget != null) {
+            if (editTarget.apply(text)) {
+                taskFlowCollapsed = false;
+                updateFloatingVisibility(); placeTaskFlow(null, true);
+            }
+            return;
+        }
         handleRecognizedCommand(text);
     }
 

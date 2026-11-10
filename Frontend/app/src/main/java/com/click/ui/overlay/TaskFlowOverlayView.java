@@ -20,6 +20,7 @@ import android.widget.Button;
 import com.click.R;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -599,7 +600,24 @@ public final class TaskFlowOverlayView extends LinearLayout {
         input.setMinLines(2); input.setMaxLines(4); input.setGravity(Gravity.TOP | Gravity.START);
         input.setPadding(dp(12), dp(12), dp(12), dp(12)); input.setBackground(outline(Color.WHITE, BORDER, 14));
         input.setText(request);
-        editor.addView(input, spaced(0));
+        input.setBackgroundColor(Color.TRANSPARENT);
+        LinearLayout field = new LinearLayout(getContext());
+        field.setGravity(Gravity.CENTER_VERTICAL);
+        field.setBackground(outline(Color.WHITE, BORDER, 14));
+        field.addView(input, new LayoutParams(0, -2, 1));
+        ImageButton microphone = new ImageButton(getContext());
+        microphone.setImageResource(com.click.designpreview.R.drawable.icon_mic);
+        microphone.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        microphone.setTag("request_edit_microphone");
+        microphone.setContentDescription("말로 내용 수정");
+        microphone.setFocusable(true);
+        microphone.setPadding(dp(10), dp(10), dp(10), dp(10));
+        microphone.setBackground(ripple(Color.TRANSPARENT, 0x183478F6, 14));
+        microphone.setOnClickListener(view -> {
+            hideKeyboard(input); listener.stopGuidance(); listener.openInput();
+        });
+        field.addView(microphone, new LayoutParams(dp(48), dp(48)));
+        editor.addView(field, spaced(0));
         Button apply = primaryButton("수정한 내용 확인", () -> {
             String value = input.getText().toString().trim();
             if (value.isEmpty()) return;
@@ -650,6 +668,19 @@ public final class TaskFlowOverlayView extends LinearLayout {
             content.addView(edit, spaced(10));
             content.addView(editor, spaced(8));
         }
+    }
+
+    /** Binds this recording to this editor; closing/replacing it discards a late transcript. */
+    public java.util.function.Function<String, Boolean> requestEditSpeechTarget() {
+        final LinearLayout editor = reviewEditor;
+        final EditText input = reviewRequestInput;
+        if (!reviewScreen || editor == null || input == null || editor.getVisibility() != VISIBLE) return null;
+        return value -> {
+            if (reviewEditor != editor || reviewRequestInput != input || editor.getVisibility() != VISIBLE
+                    || value == null || value.trim().isEmpty()) return false;
+            input.setText(value.trim()); input.setSelection(input.length());
+            return true;
+        };
     }
 
     private void styleInputChoice(boolean selected) {
