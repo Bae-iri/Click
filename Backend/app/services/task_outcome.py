@@ -15,7 +15,7 @@ def make_outcome(technical, now, direction="increase", *, previous=None, setting
     if spec or requested_state is not None:
         previous = {**(previous or {}), 'requested_state': requested_state}
     technical = normalize_technical(technical, goal_type)
-    label = {'font_size': '글자 크기', 'brightness': '화면 밝기', 'volume': '미디어 음량'}.get(setting, '설정')
+    label = {'font_size': '글자 크기', 'brightness': '화면 밝기', 'volume': '미디어 음량', 'display_size': '화면 요소 크기'}.get(setting, '설정')
     if technical["status"] == "CHANGED":
         message = "글자 크기를 키웠어요." if direction == "increase" else "글자 크기를 줄였어요."
     elif technical.get("reason") == "limit_reached":
@@ -57,7 +57,7 @@ def make_outcome(technical, now, direction="increase", *, previous=None, setting
         else:
             message = f'{label} 변경 결과를 확인하지 못했어요.'
         question = '원하신 상태로 설정되었나요?'
-    if technical.get('reason') == 'manual_result_required' or setting not in {'font_size', 'brightness', 'volume', 'wifi', *CONTROLS, 'mute', 'vibrate'}:
+    if technical.get('reason') == 'manual_result_required' or setting not in {'font_size', 'brightness', 'volume', 'wifi', 'display_size', *CONTROLS, 'mute', 'vibrate'}:
         message = '직접 진행한 작업 결과를 확인해 주세요. 앱에서 변경 성공을 검증하지는 못했어요.'
         question = '원하시는 결과를 얻었나요?'
     if setting in {'mute', 'vibrate'}:

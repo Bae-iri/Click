@@ -42,10 +42,13 @@ def build():
         slots=graph.definition.required_slots
         mode=execution.get(graph.definition.goal_type,{}).get('mode')
         kind='page_opened' if slots.get('action')=='open' else {
-            'device_value':'persisted_value','device_wifi':'adapter_power','native_checked':'native_checked',
+            'device_value':'persisted_value','native_slider':'persisted_value','device_wifi':'adapter_power','native_checked':'native_checked',
             'system_choice':'system_choice','assisted':'user_report'}.get(mode,'user_report')
         success={'kind':kind,'setting':slots.get('setting'),'direction':slots.get('direction'),
             'requested_state':slots.get('state')}
+        domain = execution.get(graph.definition.goal_type, {}).get('value_domain')
+        if domain:
+            success['value_domain'] = domain
         option = choice_spec(slots)
         if option:
             contract = CHOICES[slots['setting']]

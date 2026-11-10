@@ -39,6 +39,10 @@ def technical_success(proof, goal_type):
         return False
     if kind=='persisted_value':
         before=proof.get('baseline_setting_value'); after=proof.get('setting_value')
+        domain = spec.get('value_domain')
+        if domain and not all(numeric(v) and (not domain.get('integer') or type(v) is int)
+                and domain['minimum'] <= v <= domain['maximum'] for v in (before, after)):
+            return False
         expected='target_value_increased' if spec['direction']=='increase' else 'target_value_decreased'
         return bool(status=='CHANGED' and reason==expected and numeric(before) and numeric(after)
             and (after>before if spec['direction']=='increase' else after<before))

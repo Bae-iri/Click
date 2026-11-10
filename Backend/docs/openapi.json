@@ -7451,6 +7451,31 @@
               }
             ],
             "title": "Ringer Mode Source"
+          },
+          "display_density_dpi": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2000.0,
+                "minimum": 72.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Density Dpi"
+          },
+          "display_density_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "android.content.res.Configuration.densityDpi"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Density Source"
           }
         },
         "additionalProperties": false,
@@ -8535,7 +8560,8 @@
               "2.1.0",
               "2.2.0",
               "2.3.0",
-              "2.3.1"
+              "2.3.1",
+              "2.3.2"
             ],
             "title": "Catalog Version"
           },

@@ -1,0 +1,57 @@
+{
+  "catalog_version": "2.3.2",
+  "existing_settings_goals": 89,
+  "separate_navigation_goals": 21,
+  "verified_routes": 56,
+  "assisted_routes": 33,
+  "expanded_goals": [
+    "settings.display_size.increase",
+    "settings.display_size.decrease",
+    "settings.wifi.saved_networks.view",
+    "settings.vpn.connect",
+    "settings.vpn.disconnect",
+    "settings.private_dns.change",
+    "settings.hotspot.password.change",
+    "settings.language.change",
+    "settings.keyboard.change",
+    "settings.screen_lock.change",
+    "settings.notifications.enable",
+    "settings.notifications.disable",
+    "settings.notification_history.view"
+  ],
+  "tests": {
+    "backend_full_before_final_range_filter": 2248,
+    "android_full": 559,
+    "android_shared_contract_after_domain_change": 72,
+    "device_read_only_probe": 1,
+    "final_agent_backend_regression": 991
+  },
+  "device": "SM_N981N",
+  "native_tick_nodes": 5,
+  "device_display_density_changed": false,
+  "live_jev_evaluation": false,
+  "device_bindings": [
+    {
+      "goal": "settings.display_size.increase",
+      "status": "WAITING_CONFIRMATION",
+      "native_range_selected": true,
+      "target": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_1_1_0_1_1"
+    },
+    {
+      "goal": "settings.display_size.decrease",
+      "status": "WAITING_CONFIRMATION",
+      "native_range_selected": true,
+      "target": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_1_1_0_1_1"
+    }
+  ],
+  "device_final": {
+    "read_only_probe_passed": true,
+    "accessibility_restored": true,
+    "apk_unchanged": true
+  },
+  "apk_sha256": {
+    "com.click": "87d4217df20f5a4a668c51b01b28c91fda090f76937bd1cafbab46170a59273f",
+    "com.click.settings89probe": "f4aa9a691ee225ee81625c3027d83b1822f4b81c69ec7832ce3ab29aa6eb2236"
+  },
+  "native_normalized_ranges": 1
+}

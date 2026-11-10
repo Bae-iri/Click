@@ -214,6 +214,11 @@ public final class SettingsScreenPrivacy {
                     && "android.media.AudioManager.getRingerMode".equals(applied.optString("ringer_mode_source"))
                     && ringerMode instanceof Integer && ((Integer) ringerMode) >= 0 && ((Integer) ringerMode) <= 2)
                 safeApplied.put("ringer_mode_source", "android.media.AudioManager.getRingerMode").put("ringer_mode", ringerMode);
+            Object density = applied.opt("display_density_dpi");
+            if ("display_size".equals(setting)
+                    && "android.content.res.Configuration.densityDpi".equals(applied.optString("display_density_source"))
+                    && density instanceof Integer && ((Integer)density) >= 72 && ((Integer)density) <= 2000)
+                safeApplied.put("display_density_source", "android.content.res.Configuration.densityDpi").put("display_density_dpi", density);
             if (safeApplied.length() > 0) safeTree.put("applied_settings", safeApplied);
         }
         safeTree.put("nodes", relevantNodes);

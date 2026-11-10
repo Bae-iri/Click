@@ -599,11 +599,22 @@ public final class ClickAccessibilityService extends AccessibilityService {
             android.app.UiModeManager mode = getSystemService(android.app.UiModeManager.class);
             if (mode != null) nightMode = mode.getNightMode();
         } catch (SecurityException ignored) { }
+        Integer displayDensity = null;
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            android.view.accessibility.AccessibilityWindowInfo nativeWindow = root.getWindow();
+            if (nativeWindow != null) {
+                try {
+                    if (nativeWindow.getDisplayId() == android.view.Display.DEFAULT_DISPLAY)
+                        displayDensity = getResources().getConfiguration().densityDpi;
+                } finally { nativeWindow.recycle(); }
+            }
+        }
         return collector.collect(root, packageName, width, height, appliedScale)
                 .withAdjustmentValues(brightness, mediaVolume)
                 .withWifiState(wifiState)
                 .withNightMode(nightMode)
                 .withRingerMode(ringerMode)
+                .withDisplayDensity(displayDensity)
                 .withScreenRevision(screenRevisions.revision());
     }
 
