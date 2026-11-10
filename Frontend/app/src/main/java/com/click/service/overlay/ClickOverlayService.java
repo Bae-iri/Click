@@ -1694,6 +1694,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 .matches("다음요청시작|다음요청시작해|다음요청시작해주세요|다음작업시작")) {
             nextQueuedRequest.run(); return;
         }
+        boolean explicitRequest = GoalCommandInterpreter.explicitTaskRequest(command, goalClassifier, foregroundPackage());
+        boolean contextualAnswer = resultPrompt != null && TaskFlowAnswers.result(command) != null
+                || followUp != null && !explicitRequest && TaskFlowAnswers.adjustment(command) != null
+                || goalPreparation != null && goalPreparation.needsInput() && goalPreparation.exactSpokenChoice(command) != null;
+        if (!contextualAnswer && explicitRequest) {
+            enqueueNormalRequest(command);
+            return;
+        }
         if (handleTaskFlowAnswer(command)) return;
         if (handleExitConfirmation(command)) {
             return;
@@ -1736,9 +1744,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void enqueueNormalRequest(String text, String selectedGoalType) {
         if (closing || text == null || text.trim().isEmpty() || queueGateway == null) return;
         new com.click.data.local.RequestLibraryStore(this).record(text, selectedGoalType);
-        if (agentPaused) {
-            replacePausedQueue(text.trim(), selectedGoalType);
-            return;
+        if (agentSessionId == null && awaitingExitConfirmation) {
+            awaitingExitConfirmation = false; agentPaused = false;
         }
         updateRequestStatus(true, true);
         if (agentSessionId == null) {
@@ -1753,6 +1760,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         queueGateway.enqueue(requestId, text.trim(), new VoiceQueueGateway.Callback() {
             @Override public void onSuccess(VoiceQueueGateway.Response response) {
                 if (queuedGeneration != queueGeneration) return;
+                presentQueueSnapshot(response);
                 awaitingReplacement = response.awaitingReplacement;
                 if (overlayView != null && agentSessionId != null) {
                     overlayView.setRecognizedSpeech("요청을 대기열에 추가했어요. 대기 요청 "
@@ -1807,6 +1815,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void abortActiveRequest() {
+        queueClaimToken++; queueClaimInFlight = false;
         clearGuideResyncRetry();
         nextQueuedRequest = null;
         silenceVoiceReply();
@@ -1835,20 +1844,40 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     }
 
+    private boolean queueClaimInFlight;
+    private long queueClaimToken;
+    private long queueSnapshotVersion = -1;
+    private java.util.List<String> queuedRequestTexts = java.util.Collections.emptyList();
+
+    private void presentQueueSnapshot(VoiceQueueGateway.Response response) {
+        if (response.queueVersion < queueSnapshotVersion) return;
+        queueSnapshotVersion = response.queueVersion;
+        java.util.List<String> text = new java.util.ArrayList<>();
+        for (VoiceQueueGateway.Request request : response.queued)
+            if (request.rawGoal != null) text.add(request.rawGoal);
+        queuedRequestTexts = java.util.Collections.unmodifiableList(text);
+        if (taskFlowView != null) taskFlowView.setQueuedRequests(queuedRequestTexts);
+    }
+
     private void claimNextQueuedRequest() { claimNextQueuedRequest(false); }
 
     private void claimNextQueuedRequest(boolean afterCompletion) {
         if (closing || queueGateway == null || agentSessionId != null || turnInFlight || awaitingReplacement
-                || agentPaused && !afterCompletion) return;
+                || queueClaimInFlight || agentPaused && !afterCompletion) return;
+        queueClaimInFlight = true;
+        final long claimToken = ++queueClaimToken;
         final long generation = executionGeneration;
         queueGateway.claim(new VoiceQueueGateway.Callback() {
             @Override public void onSuccess(VoiceQueueGateway.Response response) {
+                if (claimToken != queueClaimToken) return;
+                queueClaimInFlight = false;
                 if (generation != executionGeneration || agentPaused && !afterCompletion) return;
+                presentQueueSnapshot(response);
                 awaitingReplacement = response.awaitingReplacement;
                 if (response.running != null && response.running.agentSessionId != null
                         && response.running.rawGoal != null) {
                     if (isCompletedQueueRequest(response.running)) { askToExitAfterQueueCompleted(); return; }
-                    if (afterCompletion) offerNextQueuedRequest(response.running, response.claimed);
+                    if (afterCompletion) startNextQueuedRequest(response.running, response.claimed);
                     else {
                         activeVoiceRequestId = response.running.id;
                         beginAgentSession(response.running.rawGoal, response.running.agentSessionId, response.claimed);
@@ -1856,7 +1885,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 } else if (afterCompletion) askToExitAfterQueueCompleted();
             }
 
-            @Override public void onFailure(Throwable error) { if (generation == executionGeneration) showQueueError(error); }
+            @Override public void onFailure(Throwable error) { if (claimToken != queueClaimToken) return; queueClaimInFlight = false; if (generation == executionGeneration) showQueueError(error); }
         });
     }
 
@@ -1865,24 +1894,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 || lastCompletedAgentSessionId != null && lastCompletedAgentSessionId.equals(request.agentSessionId));
     }
 
-    /** Completion is a stopping point; queued work needs a separate, explicit start. */
-    private void offerNextQueuedRequest(VoiceQueueGateway.Request request, boolean newlyClaimed) {
+    /** Continue FIFO after completion; every new task still gets fresh preparation and consent. */
+    private void startNextQueuedRequest(VoiceQueueGateway.Request request, boolean newlyClaimed) {
         if (isCompletedQueueRequest(request)) { askToExitAfterQueueCompleted(); return; }
-        agentPaused = true;
-        awaitingExitConfirmation = false;
-        final int generation = executionGeneration;
-        nextQueuedRequest = () -> {
-            if (generation != executionGeneration || closing || nextQueuedRequest == null) return;
-            nextQueuedRequest = null;
-            activeVoiceRequestId = request.id;
-            beginAgentSession(request.rawGoal, request.agentSessionId, newlyClaimed);
-        };
-        ensureTaskFlow();
-        taskFlowView.completedWithNext(request.rawGoal, nextQueuedRequest, this::shutdownClick);
-        taskFlowCollapsed = false;
-        updateFloatingVisibility();
-        placeTaskFlow(null, true);
-        speak("현재 요청은 마쳤어요. 대기 중인 다음 요청은 다음 요청 시작을 눌러야 진행해요.");
+        nextQueuedRequest = null;
+        activeVoiceRequestId = request.id;
+        beginAgentSession(request.rawGoal, request.agentSessionId, newlyClaimed);
     }
 
     private void finishActiveQueueRequest(String failureCode) {
@@ -1904,6 +1921,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         VoiceQueueGateway.Callback callback = new VoiceQueueGateway.Callback() {
             @Override public void onSuccess(VoiceQueueGateway.Response response) {
                 if (generation != executionGeneration) return;
+                presentQueueSnapshot(response);
                 quickHelpSelections.remove(finishedId);
                 activeVoiceRequestId = null;
                 agentSessionId = null;
@@ -1912,7 +1930,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if (response.running != null && response.running.agentSessionId != null
                         && response.running.rawGoal != null) {
                     if (isCompletedQueueRequest(response.running)) { askToExitAfterQueueCompleted(); return; }
-                    if (completedSuccessfully) offerNextQueuedRequest(response.running, response.claimed);
+                    if (completedSuccessfully) startNextQueuedRequest(response.running, response.claimed);
                     else {
                         activeVoiceRequestId = response.running.id;
                         beginAgentSession(response.running.rawGoal, response.running.agentSessionId, response.claimed);
@@ -1959,6 +1977,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void beginAgentSession(String goal, String sessionId, boolean newlyClaimed) {
         if (closing || goal == null || goal.trim().isEmpty()) return;
+        ensureTaskFlow(); taskFlowView.setQueuedRequests(queuedRequestTexts);
         nextQueuedRequest = null;
         clearMissingScreenWait();
         if (narrator != null) narrator.reset();
@@ -2417,23 +2436,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             return false;
         }
         return !hasSettingsTarget(snapshot);
-    }
-
-    private void replacePausedQueue(String replacement, String selectedGoalType) {
-        final int queuedGeneration = queueGeneration;
-        queueGateway.interrupt("새 요청으로 교체", true, new VoiceQueueGateway.Callback() {
-            @Override public void onSuccess(VoiceQueueGateway.Response response) {
-                if (queuedGeneration != queueGeneration || closing) return;
-                abortActiveRequest();
-                quickHelpSelections.clear();
-                activeVoiceRequestId = null;
-                awaitingReplacement = response.awaitingReplacement;
-                enqueueNormalRequest(replacement, selectedGoalType);
-            }
-            @Override public void onFailure(Throwable error) {
-                if (queuedGeneration == queueGeneration && !closing) showQueueError(error);
-            }
-        });
     }
 
     private void shutdownClick() {

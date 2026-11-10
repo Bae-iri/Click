@@ -38,6 +38,7 @@ public final class VoiceQueueGateway {
         public final Request request;
         public final Request running;
         public final int queuedCount;
+        public final java.util.List<Request> queued;
 
         Response(String body) throws Exception {
             JSONObject json = new JSONObject(body);
@@ -47,7 +48,10 @@ public final class VoiceQueueGateway {
             request = json.optJSONObject("request") == null ? null : new Request(json.getJSONObject("request"));
             running = json.optJSONObject("running") == null ? null : new Request(json.getJSONObject("running"));
             JSONArray queued = json.optJSONArray("queued");
-            queuedCount = queued == null ? 0 : queued.length();
+            java.util.List<Request> items = new java.util.ArrayList<>();
+            if (queued != null) for (int i = 0; i < queued.length(); i++) items.add(new Request(queued.getJSONObject(i)));
+            this.queued = java.util.Collections.unmodifiableList(items);
+            queuedCount = items.size();
         }
     }
 

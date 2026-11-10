@@ -1263,7 +1263,7 @@ public class ClickOverlayServiceExecutionTest {
         assertFalse((boolean)get("awaitingExitConfirmation"));
     }
 
-    @Test public void satisfiedResultDoesNotStartQueuedRequestUntilExplicitNext() throws Exception {
+    @Test public void satisfiedResultAutomaticallyPreparesNextQueuedRequestWithFreshConsent() throws Exception {
         com.click.data.remote.VoiceQueueGateway queue = prepareResultWithQueue();
         Method result = ClickOverlayService.class.getDeclaredMethod("sendResult", String.class);
         result.setAccessible(true);
@@ -1282,17 +1282,64 @@ public class ClickOverlayServiceExecutionTest {
         verify(queue).complete(eq("finished-request"), callback.capture());
         callback.getValue().onSuccess(queueResponse("next-request", "next-session", true));
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
-        assertEquals("Completing one request must not resolve the next request", 3, requests.size());
-        assertNull(get("agentSessionId"));
-        assertTrue((boolean) get("agentPaused"));
-        org.mockito.ArgumentCaptor<Runnable> next = org.mockito.ArgumentCaptor.forClass(Runnable.class);
-        verify((TaskFlowOverlayView) get("taskFlowView")).completedWithNext(eq(SOURCE), next.capture(), any());
-        next.getValue().run();
+        assertEquals("Completion prepares the next queued task exactly once", 4, requests.size());
         assertEquals("next-session", get("agentSessionId"));
-        assertEquals(4, requests.size());
+        assertFalse((boolean) get("agentPaused"));
         assertEquals("resolve_goal", requests.get(3).commandType());
-        next.getValue().run();
-        assertEquals("A repeated click must not start the request twice", 4, requests.size());
+        assertNull(get("agentEpisodeId"));
+        assertNull(get("agentConfirmationId"));
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).completedWithNext(anyString(),any(),any());
+        callback.getValue().onSuccess(queueResponse("next-request", "next-session", true));
+        assertEquals("Duplicate completion cannot start the next task twice", 4, requests.size());
+    }
+
+    @Test public void newRequestDuringResultQuestionIsQueuedWithoutReplacingTheCurrentTask() throws Exception {
+        try (var library=mockConstruction(com.click.data.local.RequestLibraryStore.class)) {
+        com.click.data.remote.VoiceQueueGateway queue = prepareResultWithQueue();
+        int count = requests.size(); Object session=get("agentSessionId"), accepted=get("acceptedGoal");
+        Method method=ClickOverlayService.class.getDeclaredMethod("handleRecognizedCommand",String.class);method.setAccessible(true);
+        method.invoke(service,"와이파이 켜줘");
+        verify(queue).enqueue(anyString(),eq("와이파이 켜줘"),any());
+        verify(queue,never()).interrupt(anyString(),any());
+        verify(queue,never()).interrupt(anyString(),anyBoolean(),any());
+        assertEquals(session,get("agentSessionId"));assertSame(accepted,get("acceptedGoal"));
+        assertNotNull(get("resultPrompt"));assertEquals(count,requests.size());
+        }
+    }
+
+    @Test public void pausedTaskAndItsPendingRequestsArePreservedWhenAnotherRequestArrives() throws Exception {
+        try (var library=mockConstruction(com.click.data.local.RequestLibraryStore.class)) {
+        com.click.data.remote.VoiceQueueGateway queue = prepareResultWithQueue();set("agentPaused",true);
+        Object session=get("agentSessionId");
+        Method method=ClickOverlayService.class.getDeclaredMethod("handleRecognizedCommand",String.class);method.setAccessible(true);
+        method.invoke(service,"블루투스 꺼줘");
+        verify(queue).enqueue(anyString(),eq("블루투스 꺼줘"),any());
+        verify(queue,never()).interrupt(anyString(),anyBoolean(),any());
+        assertEquals(session,get("agentSessionId"));assertTrue((boolean)get("agentPaused"));
+        }
+    }
+
+    @Test public void twoFastEnqueuesShareOneQueueClaim() throws Exception {
+        try (var library=mockConstruction(com.click.data.local.RequestLibraryStore.class)) {
+        com.click.data.remote.VoiceQueueGateway queue=mock(com.click.data.remote.VoiceQueueGateway.class);set("queueGateway",queue);
+        set("agentSessionId",null);set("turnInFlight",false);set("agentPaused",false);
+        Method enqueue=ClickOverlayService.class.getDeclaredMethod("enqueueNormalRequest",String.class);enqueue.setAccessible(true);
+        enqueue.invoke(service,"와이파이 켜줘");enqueue.invoke(service,"블루투스 꺼줘");
+        org.mockito.ArgumentCaptor<com.click.data.remote.VoiceQueueGateway.Callback> callback=org.mockito.ArgumentCaptor.forClass(com.click.data.remote.VoiceQueueGateway.Callback.class);
+        verify(queue,times(2)).enqueue(anyString(),anyString(),callback.capture());
+        var response=queueResponseBody(new JSONObject().put("queue_version",1).put("queued",new JSONArray()));
+        callback.getAllValues().get(0).onSuccess(response);callback.getAllValues().get(1).onSuccess(response);
+        verify(queue,times(1)).claim(any());
+        }
+    }
+
+    @Test public void staleQueueSnapshotCannotEraseNewerPendingRequests() throws Exception {
+        Method method=ClickOverlayService.class.getDeclaredMethod("presentQueueSnapshot", com.click.data.remote.VoiceQueueGateway.Response.class);method.setAccessible(true);
+        var latest=queueResponseBody(new JSONObject().put("queue_version",3).put("queued",new JSONArray().put(new JSONObject().put("raw_goal","밝기 낮춰줘"))));
+        var stale=queueResponseBody(new JSONObject().put("queue_version",2).put("queued",new JSONArray()));
+        method.invoke(service,latest);method.invoke(service,stale);
+        verify((TaskFlowOverlayView)get("taskFlowView"),times(1)).setQueuedRequests(eq(java.util.List.of("밝기 낮춰줘")));
+        assertEquals(java.util.List.of("밝기 낮춰줘"),get("queuedRequestTexts"));
     }
 
     @Test public void completedQueueResponseCannotRestartSameRequestOrSession() throws Exception {
@@ -1312,7 +1359,7 @@ public class ClickOverlayServiceExecutionTest {
         }
     }
 
-    @Test public void queuedClaimAfterCompletionAlsoWaitsForUser() throws Exception {
+    @Test public void queuedClaimAfterCompletionAutomaticallyPreparesNext() throws Exception {
         com.click.data.remote.VoiceQueueGateway queue = prepareResultWithQueue();
         applyFlow(new JSONObject().put("task_status", "COMPLETED").put("metadata", new JSONObject().put("user_result","satisfied")));
         org.mockito.ArgumentCaptor<com.click.data.remote.VoiceQueueGateway.Callback> callback =
@@ -1325,8 +1372,8 @@ public class ClickOverlayServiceExecutionTest {
         int count = requests.size();
         claim.getValue().onSuccess(queueResponse("next-request", "next-session", false));
         assertEquals(count, requests.size());
-        assertNotNull(get("nextQueuedRequest"));
-        verify(gateway, never()).synchronize(eq("next-session"), any());
+        assertNull(get("nextQueuedRequest"));
+        verify(gateway).synchronize(eq("next-session"), any());
     }
 
     private com.click.data.remote.VoiceQueueGateway prepareResultWithQueue() throws Exception {
