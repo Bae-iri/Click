@@ -10,7 +10,7 @@ from ai_agent.runtime.types import (
 
 ADAPTER = TypeAdapter(TaskGraph)
 from ai_agent.runtime.settings_controls import CONTROLS
-from ai_agent.task_graph.settings import BASE_PREDICATES, supported_predicates
+from ai_agent.task_graph.settings import BASE_PREDICATES, supported_predicates, CHOICE_PREDICATES, choice_spec, choice_predicate
 
 PREDICATES = BASE_PREDICATES
 
@@ -56,12 +56,12 @@ def load_graph(body, *, executable=True):
         supported = supported_predicates(definition.required_slots, definition.task_type)
         if executable and transition.verification_predicate not in supported:
             raise ValueError("Unsupported completion predicate")
-        if transition.verification_predicate in {'system_night_mode_on', 'system_night_mode_off'}:
-            choice = CONTROLS.get('dark_mode', {}).get('choices', {}).get(definition.required_slots.get('state'))
-            if (definition.required_slots.get('setting') != 'dark_mode' or not choice
+        if transition.verification_predicate in CHOICE_PREDICATES:
+            choice = choice_spec(definition.required_slots)
+            if (not choice
                     or transition.action_type != ActionType.TAP or transition.target_role != 'menu_item'
                     or transition.safety_level != SafetyLevel.CONFIRM_REQUIRED or not transition.completes_task
-                    or transition.verification_predicate != 'system_night_mode_' + definition.required_slots.get('state', '')
+                    or transition.verification_predicate != choice_predicate(definition.required_slots)
                     or set(transition.target_keywords) != set(choice['labels'])):
                 raise ValueError('Mode choice requires an authored target, confirmation and system-value verification')
         if executable and transition.verification_predicate in {'target_checked_on', 'target_checked_off'} and (

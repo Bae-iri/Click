@@ -7426,6 +7426,31 @@
               }
             ],
             "title": "Night Mode Source"
+          },
+          "ringer_mode": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 2.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ringer Mode"
+          },
+          "ringer_mode_source": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "android.media.AudioManager.getRingerMode"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ringer Mode Source"
           }
         },
         "additionalProperties": false,
@@ -8509,7 +8534,8 @@
               "2.0.0",
               "2.1.0",
               "2.2.0",
-              "2.3.0"
+              "2.3.0",
+              "2.3.1"
             ],
             "title": "Catalog Version"
           },

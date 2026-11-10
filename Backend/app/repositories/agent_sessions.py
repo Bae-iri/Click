@@ -14,6 +14,7 @@ from app.models.lifecycle import SafetyConfirmation
 from app.models.voice_queue import VoiceRequest
 from app.models.user import User
 from app.services.task_outcome import make_outcome, answer_outcome, follow_up
+from ai_agent.runtime.task_success import normalize_technical
 
 ACTIVE = ("IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "WAITING_ADJUSTMENT")
 
@@ -169,7 +170,9 @@ class AgentSessionRepository:
             row = self.owned(db, request.session_id, request.user_id)
             response.episode_id = (recovery_plan or {}).get("episode_id", row.episode_id)
             technical = response.metadata.get("technical_outcome") or {"status": "UNVERIFIABLE", "reason": "insufficient_evidence"}
-            outcome = {"setting": ((row.goal or {}).get("slots") or {}).get("setting", "font_size"),
+            technical = normalize_technical(technical, row.accepted_goal_type)
+            response.metadata["technical_outcome"] = technical
+            outcome = {"goal_type": row.accepted_goal_type, "setting": ((row.goal or {}).get("slots") or {}).get("setting", "font_size"),
                        "requested_state": ((row.goal or {}).get("slots") or {}).get("state"),
                        "technical": deepcopy(technical), "user": {"status": None, "confirmed_at": None},
                        "final": None, "checklist": response.metadata.get("checklist", [])}
@@ -515,7 +518,7 @@ class AgentSessionRepository:
             if row.status not in ACTIVE:
                 self.conflict("SESSION_CLOSED")
             outcome = deepcopy(row.task_outcome) or make_outcome({}, now,
-                setting=((row.goal or {}).get('slots') or {}).get('setting', 'font_size'))
+                setting=((row.goal or {}).get('slots') or {}).get('setting', 'font_size'), goal_type=row.accepted_goal_type)
             status, episode = row.status, row.episode_id
             history = list(row.outcome_history or [])
             message = None

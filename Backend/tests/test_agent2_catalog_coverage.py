@@ -33,14 +33,14 @@ def test_catalog_coverage_counts_goals_separately_from_release_versions(app):
     coverage = report["catalog_coverage"]
     assert report["status"] == "PASS"
     assert report["total"] == 111
-    assert coverage["catalog_version"] == "2.3.0"
+    assert coverage["catalog_version"] == "2.3.1"
     assert coverage["total_goals"] == 181
     assert coverage["approved_goals"] == coverage["selectable_goals"] == 110
     assert coverage["catalog_only_goals"] == 71
     assert coverage["by_task_type"] == {
-        "settings_change": {"approved": 50, "selectable": 50},
+        "settings_change": {"approved": 54, "selectable": 54},
         "settings_navigation": {"approved": 21, "selectable": 21},
-        "settings_assisted": {"approved": 39, "selectable": 39},
+        "settings_assisted": {"approved": 35, "selectable": 35},
     }
     assert coverage["blocked_goals"] == coverage["unexpected_executable_goals"] == []
     goal = next(goal for goal in coverage["goals"] if goal["goal_type"] == "settings.font_size.increase")

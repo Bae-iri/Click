@@ -50,7 +50,8 @@ def already_satisfied(graph, nodes, settings):
     setting = graph.definition.required_slots.get('setting')
     if setting == 'wifi':
         return wifi_already(graph, nodes, settings)
-    if setting == 'dark_mode':
+    from ai_agent.task_graph.settings import CHOICES
+    if setting in CHOICES:
         from ai_agent.runtime.setting_choices import already_satisfied as choice_already
         found = choice_already(graph, nodes, settings)
         if found is not None:

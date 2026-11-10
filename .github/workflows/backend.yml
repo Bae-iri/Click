@@ -52,6 +52,9 @@ jobs:
         working-directory: Backend
       - run: python -m pytest -q
         working-directory: AI-Agent
+      - name: Check shared settings execution contract
+        run: PYTHONPATH=.:../AI-Agent/src python scripts/export_settings_capabilities.py --check
+        working-directory: Backend
       - run: python scripts/smoke_check.py
         working-directory: Backend
       - run: python scripts/load_check.py

@@ -77,6 +77,7 @@ android {
         main.assets.srcDir "../../AI-Agent/goal_catalog"
         test.resources.srcDir "../../Backend/docs"
         test.resources.srcDir "../../AI-Agent/goal_catalog"
+        test.resources.srcDir "../../AI-Agent/tests/fixtures"
     }
 
     testOptions {
@@ -109,3 +110,24 @@ tasks.withType(Test).configureEach {
     systemProperty "click.contractOutput", contractOutput.get().asFile.absolutePath
     outputs.dir(contractOutput)
 }
+
+// One reviewed JSON is consumed by Python, Android assets and native policy code.
+def settingsCapabilities = rootProject.file("../AI-Agent/goal_catalog/settings_capabilities.json")
+def generatedCapabilities = layout.buildDirectory.dir("generated/settingsCapabilities/java")
+def generateSettingsCapabilities = tasks.register("generateSettingsCapabilities") {
+    inputs.file(settingsCapabilities)
+    outputs.dir(generatedCapabilities)
+    doLast {
+        def json = settingsCapabilities.getText("UTF-8")
+        def parsed = new groovy.json.JsonSlurper().parseText(json)
+        if (parsed.schema_version != "settings-capabilities.v1") throw new GradleException("Unsupported settings capability contract")
+        def target = new File(generatedCapabilities.get().asFile, "com/click/generated/SettingsCapabilitiesData.java")
+        target.parentFile.mkdirs()
+        def body = new StringBuilder("package com.click.generated;\npublic final class SettingsCapabilitiesData {\npublic static String json() { StringBuilder value=new StringBuilder();\n")
+        for (int i=0;i<json.length();i+=2048) body.append("value.append(").append(groovy.json.JsonOutput.toJson(json.substring(i, Math.min(i+2048,json.length())))).append(");\n")
+        body.append("return value.toString(); }\n}\n")
+        target.setText(body.toString(), "UTF-8")
+    }
+}
+android.sourceSets.main.java.srcDir(generatedCapabilities)
+tasks.named("preBuild").configure { dependsOn(generateSettingsCapabilities) }

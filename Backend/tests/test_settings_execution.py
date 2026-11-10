@@ -126,7 +126,7 @@ def test_changed_state_requires_the_original_target_and_fresh_correlated_tap(pro
 
 def test_assisted_graphs_never_target_destructive_or_personal_controls():
     graphs=[g for _,g in releases() if g.definition.task_type=='settings_assisted']
-    assert len(graphs)==39
+    assert len(graphs)==35
     for g in graphs:
         assert not any(t.target_role in {'toggle','slider','radio'} for t in g.transitions)
         assert all(t.action_type.value in {'tap','observe_only'} for t in g.transitions)

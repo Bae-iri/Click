@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ai_agent.task_graph.settings import CHOICE_PREDICATES
+
 from ai_agent.runtime.keywords import any_keyword_matches, any_phrase_matches, normalize_text
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence
 from ai_agent.runtime.types import DeviceContext, NormalizedNode, TaskGraph, TaskState
@@ -51,7 +53,7 @@ def classify_screen_state(
         # menu title such as Samsung's "글자 크기와 스타일".
         control_match = any(
             (transition.target_role in {'slider', 'toggle'}
-                or transition.verification_predicate in {'system_night_mode_on', 'system_night_mode_off'})
+                or transition.verification_predicate in CHOICE_PREDICATES)
             and transition.action_type.value in {'drag', 'tap'}
             and transition.completes_task
             and sum(selector_evidence(node, transition, relevant, graph)[0] >= 0.7

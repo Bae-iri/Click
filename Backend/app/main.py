@@ -123,12 +123,14 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
         from app.clients.runtime_agent import runtime_configuration
         from app.services.goal_classifier import goal_classifier_configuration
         from ai_agent.runtime.screen_privacy import observation_contract
+        from ai_agent.runtime.capabilities import identity as capability_identity
         import re
         revision = os.getenv("RENDER_GIT_COMMIT", "")
         return {"schema_version": "click-build.v1", "target_validation": "settings-slider.v1",
                 "source_sha256": source_digest(), "runtime_configuration": runtime_configuration(),
                 "goal_interpretation": goal_classifier_configuration(),
                 "observation_contract": observation_contract(),
+                "capability_contract": capability_identity(),
                 "source_revision": revision if re.fullmatch(r"[0-9a-f]{40}", revision) else None}
 
     @app.get("/ops/metrics", tags=["system"])

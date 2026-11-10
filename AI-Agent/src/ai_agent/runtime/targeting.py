@@ -42,6 +42,9 @@ def eligible_nodes(transition: Transition, nodes: tuple[NormalizedNode, ...], gr
     roles = {'menu_item': {'menu_item', 'button'}, 'slider': {'slider'},
              'app_icon': {'app_icon'}, 'toggle': {'toggle'}, 'radio': {'radio'}}
     allowed_roles = roles.get(transition.target_role, {transition.target_role})
+    from ai_agent.runtime.setting_choices import is_choice
+    if is_choice(transition, graph):
+        allowed_roles = allowed_roles | {'radio'}
     packages = transition.selector.package_candidates or state.package_candidates
     eligible = []
     for node in nodes:

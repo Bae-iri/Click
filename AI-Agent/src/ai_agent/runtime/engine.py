@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ai_agent.task_graph.settings import CHOICE_PREDICATES, CHOICES
+
 from dataclasses import replace
 from uuid import uuid4
 from hashlib import sha256
@@ -262,7 +264,7 @@ class ClickAgentEngine:
         from ai_agent.runtime.settings_controls import already_satisfied, CONTROLS, manual_handoff
         from ai_agent.runtime.screen_privacy import screen_status
         already_setting = (already_satisfied(graph, normalized_nodes, request.applied_settings)
-            if graph.definition.required_slots.get('setting') in {*CONTROLS, 'wifi'}
+            if graph.definition.required_slots.get('setting') in {*CONTROLS, *CHOICES, 'wifi'}
                 and request.user_confirmation != 'rejected' and not screen_status(original_screen, vocabulary_key)
                 and (not existing_session or not existing_session.pending_attempt or request.user_action_event is None) else None)
         handoff = manual_handoff(graph, normalized_nodes, original_screen)
@@ -525,9 +527,15 @@ class ClickAgentEngine:
                 'transition_id': next(edge.transition_id for edge in graph.transitions
                     if edge.from_state == already_setting.current_state_id and edge.completes_task
                     and (already_setting.evidence != 'system_mode_already_set'
-                        or edge.verification_predicate in {'system_night_mode_on', 'system_night_mode_off'})),
+                        or edge.verification_predicate in CHOICE_PREDICATES)),
                 'verified_at_ms': request.captured_at_ms, 'observation_id': request.observation_id,
                 'setting_value': applied_value(request.applied_settings, vocabulary_key)}
+            if already_setting.evidence in {'native_switch_already_set', 'wifi_already_set'}:
+                from ai_agent.runtime.targeting import eligible_nodes, selector_evidence
+                edge=next(e for e in graph.transitions if e.transition_id==technical['transition_id'])
+                targets=[n for n in eligible_nodes(edge,normalized_nodes,graph)
+                    if selector_evidence(n,edge,normalized_nodes,graph)[0]>=0.7]
+                technical['after_checked']=targets[0].checked if len(targets)==1 else None
         elif verification_result and verification_result.task_completed:
             technical = {'status': 'CHANGED', 'reason': verification_result.evidence,
                 'verified_at_ms': request.captured_at_ms, 'transition_id': previous_transition.transition_id,
@@ -544,7 +552,7 @@ class ClickAgentEngine:
                 'setting_value': applied_value(request.applied_settings, graph.definition.required_slots.get('setting', 'font_size')),
                 'baseline_font_scale': verified_attempt.get('baseline_font_scale'),
                 'font_scale': font_scale(request.applied_settings), 'observation_id': request.observation_id}
-            if graph.definition.required_slots.get('setting') in {*CONTROLS, 'wifi'}:
+            if graph.definition.required_slots.get('setting') in {*CONTROLS, *CHOICES, 'wifi'}:
                 technical.update(requested_state=graph.definition.required_slots['state'],
                     baseline_checked=verified_attempt.get('baseline_checked'),
                     after_checked=next((n.checked for n in normalized_nodes if target_key(n) == verified_attempt['target_key']), None))

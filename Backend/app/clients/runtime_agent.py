@@ -25,6 +25,7 @@ from ai_agent.runtime.progress import graph_progress
 from ai_agent.telemetry.execution_events import produce
 from app.clients.screen_state_llm import LocalScreenStateLlm
 from app.services.screen_jev import JevScreenResolver
+from ai_agent.runtime.capabilities import identity as capability_identity
 
 
 def runtime_configuration():
@@ -42,6 +43,9 @@ def runtime_configuration():
     for source in sources:
         digest.update(source.name.encode())
         digest.update(source.read_bytes())
+    # Runtime decisions also depend on shared execution data, not only Python sources.
+    for source in sorted((runtime_root.parents[2]/"goal_catalog").glob("*.json")):
+        digest.update(source.name.encode());digest.update(source.read_bytes())
     configuration["code_hash"] = digest.hexdigest()
     if provider == "jev":
         _, model, minimum = JevScreenResolver.configuration()
@@ -258,6 +262,7 @@ class RuntimeAgentAdapter:
                 "checklist": result.debug.get("checklist", []),
                 "goal_label": graph.definition.name if graph else "선택한 작업",
                 "runtime": "ai_agent.runtime",
+                "capability_contract": capability_identity(),
                 "runtime_decision": result.debug.get("replan_decision"),
                 "recovery": recovery,
                 "score_semantics": "heuristic_scores_not_probabilities",

@@ -705,7 +705,7 @@
     "settings.mute.enable": {
       "name": "무음 모드 켜기",
       "setting": "mute",
-      "mode": "assisted",
+      "mode": "system_choice",
       "device_validated": false,
       "page_name": "소리 및 진동",
       "pages": [
@@ -721,7 +721,7 @@
     "settings.mute.disable": {
       "name": "무음 모드 끄기",
       "setting": "mute",
-      "mode": "assisted",
+      "mode": "system_choice",
       "device_validated": false,
       "page_name": "소리 및 진동",
       "pages": [
@@ -755,7 +755,7 @@
     "settings.vibrate.enable": {
       "name": "진동 모드 켜기",
       "setting": "vibrate",
-      "mode": "assisted",
+      "mode": "system_choice",
       "device_validated": false,
       "page_name": "소리 및 진동",
       "pages": [
@@ -771,7 +771,7 @@
     "settings.vibrate.disable": {
       "name": "진동 모드 끄기",
       "setting": "vibrate",
-      "mode": "assisted",
+      "mode": "system_choice",
       "device_validated": false,
       "page_name": "소리 및 진동",
       "pages": [
@@ -1462,6 +1462,124 @@
       ],
       "categories": [],
       "instruction": "기기 이름에서 새 이름을 직접 입력하고 저장하세요. 입력한 이름은 전송하지 않아요."
+    }
+  },
+  "mode_choices": {
+    "mute": {
+      "pages": [
+        "소리 및 진동",
+        "소리 모드",
+        "Sound & vibration",
+        "Sounds and vibration",
+        "Sound mode"
+      ],
+      "categories": [],
+      "options": {
+        "sound": {
+          "labels": [
+            "소리",
+            "Sound"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 2
+        },
+        "vibrate": {
+          "labels": [
+            "진동",
+            "Vibrate"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 1
+        },
+        "mute": {
+          "labels": [
+            "무음",
+            "Mute",
+            "Silent"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 0
+        }
+      },
+      "state_options": {
+        "on": "mute",
+        "off": "sound"
+      },
+      "system": {
+        "key": "ringer_mode",
+        "source": "android.media.AudioManager.getRingerMode",
+        "predicate_prefix": "system_ringer_mode"
+      }
+    },
+    "vibrate": {
+      "pages": [
+        "소리 및 진동",
+        "소리 모드",
+        "Sound & vibration",
+        "Sounds and vibration",
+        "Sound mode"
+      ],
+      "categories": [],
+      "options": {
+        "sound": {
+          "labels": [
+            "소리",
+            "Sound"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 2
+        },
+        "vibrate": {
+          "labels": [
+            "진동",
+            "Vibrate"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 1
+        },
+        "mute": {
+          "labels": [
+            "무음",
+            "Mute",
+            "Silent"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 0
+        }
+      },
+      "state_options": {
+        "on": "vibrate",
+        "off": "sound"
+      },
+      "system": {
+        "key": "ringer_mode",
+        "source": "android.media.AudioManager.getRingerMode",
+        "predicate_prefix": "system_ringer_mode"
+      }
     }
   }
 }

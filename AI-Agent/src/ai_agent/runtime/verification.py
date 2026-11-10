@@ -2,8 +2,9 @@
 from hashlib import sha256
 from math import isfinite
 from ai_agent.runtime.wifi import adapter_state
+from ai_agent.task_graph.settings import CHOICES
 from ai_agent.runtime.settings_controls import CHECKED_PREDICATES
-from ai_agent.runtime.setting_choices import PREDICATES as CHOICE_PREDICATES, expected_value as choice_value, system_value
+from ai_agent.runtime.setting_choices import PREDICATES as CHOICE_PREDICATES, expected_value as choice_value, system_value, allowed_values
 
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence, target_key
 from ai_agent.runtime.types import VerificationResult, VerificationStatus as Status, SafetyLevel
@@ -117,8 +118,8 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
         if len(candidates) != 1:
             return result(Status.UNKNOWN, 'mode_choice_unobservable')
         before = attempt.get('baseline_setting_value')
-        after = system_value(current_snapshot.applied_settings)
-        if type(before) is not int or before not in {1, 2} or after is None:
+        after = system_value(current_snapshot.applied_settings, graph)
+        if type(before) is not int or before not in allowed_values(graph.definition.required_slots.get('setting')) or after is None:
             return result(Status.UNKNOWN, 'system_mode_unobservable')
         if before != choice_value(graph) and after == choice_value(graph):
             return result(Status.SUCCESS, transition.verification_predicate, count=True,
@@ -298,8 +299,8 @@ def applied_value(settings, setting):
         return font_scale(settings)
     if setting == 'wifi':
         return adapter_state(settings)
-    if setting == 'dark_mode':
-        return system_value(settings)
+    if setting in CHOICES:
+        return system_value(settings, setting=setting)
     fields = {
         'brightness': ('screen_brightness', 'brightness_source', 'android.provider.Settings.System.SCREEN_BRIGHTNESS', 65535),
         'volume': ('media_volume', 'media_volume_source', 'android.media.AudioManager.STREAM_MUSIC', 1000),
