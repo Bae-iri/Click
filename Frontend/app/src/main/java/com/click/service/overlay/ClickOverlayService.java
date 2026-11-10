@@ -3766,8 +3766,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 });
             }, Math.max(250L, Math.min(1500L, policy.optLong("retry_delay_ms", 250L))));
         });
+        confirmationView.setMaximumHeight(screenHeight() - dp(56));
         confirmationParams = new WindowManager.LayoutParams(
-                screenWidth() - dp(28), Math.min(dp(300), screenHeight() - dp(56)), overlayWindowType,
+                screenWidth() - dp(28), WindowManager.LayoutParams.WRAP_CONTENT, overlayWindowType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
         confirmationParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;

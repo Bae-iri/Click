@@ -400,3 +400,24 @@ def test_malformed_policy_values_are_reported_without_crashing_audit(field, valu
     body = graph()
     body.setdefault('policy', {})[field] = value
     assert 'invalid_runtime_policy' in graph_errors(body)
+
+
+def test_pending_polls_preserve_original_attempt_baseline_for_offline_labels():
+    pair = events_for('baseline', 'B', 'SUCCESS')
+    waiting = deepcopy(pair[0])
+    waiting.update(event_id='baseline-wait', sequence=2)
+    waiting['runtime']['after_observation_hash'] = fingerprint('intermediate-observation')
+    waiting['runtime']['verification_status'] = 'WAITING_FOR_OBSERVATION'
+    pair[1]['sequence'] = 3
+    # The real attempt still refers to the original baseline, before the poll.
+    episode = reconstruct([pair[0], waiting, pair[1]], now=200)[0]
+    assert episode['steps'][-1]['label'] == 'verified_success'
+    assert episode['complete_evidence']
+    from ai_agent.graph_proposal.analysis.failures import analyze
+    report = analyze([episode])
+    assert sum(cluster['attempts'] for cluster in report['clusters']) == 1
+    assert report['counts']['waiting'] == 1
+    pair[1]['runtime']['before_observation_hash'] = fingerprint('unseen-observation')
+    invalid = reconstruct([pair[0], waiting, pair[1]], now=200)[0]
+    assert invalid['steps'][-1]['label'] == 'unknown'
+    assert 'missing_linked_evidence' in invalid['issues']

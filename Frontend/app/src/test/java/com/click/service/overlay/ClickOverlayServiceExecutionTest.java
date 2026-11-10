@@ -2019,7 +2019,7 @@ public class ClickOverlayServiceExecutionTest {
         JSONObject confirmedGoal = (JSONObject) get("acceptedGoal");
         for (ScreenSnapshot transientScreen : new ScreenSnapshot[]{null,
                 new ScreenSnapshot("com.android.settings", Instant.now().toString(), 1080, 2400, List.of(), 42),
-                changedScreen("com.click", 1080, 2400, 43, 200),
+                changedScreen(service.getPackageName(), 1080, 2400, 43, 200),
                 changedScreen("com.android.settings", 1080, 2400, 42, 100)}) {
             currentScreen = transientScreen;
             observe.invoke(service, null, true);
@@ -2467,7 +2467,7 @@ public class ClickOverlayServiceExecutionTest {
         Method method = ClickOverlayService.class.getDeclaredMethod("showNavigationRecoveryIfNeeded",
                 AgentTurnContract.Response.class, ScreenSnapshot.class);
         method.setAccessible(true);
-        ScreenSnapshot other = new ScreenSnapshot("com.click", Instant.now().toString(),1080,2400,List.of(),42);
+        ScreenSnapshot other = new ScreenSnapshot(service.getPackageName(), Instant.now().toString(),1080,2400,List.of(),42);
         assertEquals(false, method.invoke(service, new AgentTurnContract.Response(body.toString()), other));
         verify((TaskFlowOverlayView)get("taskFlowView"), never()).navigationRecovery(anyBoolean(),anyString(),any());
     }
