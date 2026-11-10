@@ -41,6 +41,8 @@ def test_real_connections_geometry_preserves_model_abstention(confidence):
         assert c['transition']==e.transition_id and c['navigation']['route_description']=='연결 → 기타 연결 설정 → VPN'
         assert 'not whether the final goal control is visible' in c['description']
         assert 'private-' not in str(payload)
+        assert payload['state']['immediate_request']['open_menu'][0]=='기타 연결 설정'
+        assert payload['state']['goal']['type']=='settings.vpn.connect'
         return sender_for(e,mutate=lambda r:r['answers']['screen'].update(confidence=confidence))(payload,**kwargs)
     resolver=JevScreenResolver(send);selected=resolver.resolve(nodes=normalize_accessibility_tree(raw),raw_nodes=raw,graph=g,goal=typed)
     if confidence<0.8:assert selected is None and resolver.last_diagnostics['status']=='low_confidence'
@@ -56,3 +58,14 @@ def test_all_approved_menu_routes_are_finite_and_stop_before_value_actions():
                 assert len(context['remaining_page_titles'])<=6
                 assert 'source_text' not in context and 'coordinates' not in context
                 assert not edge.completes_task and not edge.confirmation_message
+
+
+def test_immediate_request_requires_one_menu_and_an_independent_matching_title():
+    from app.services.navigation_context import immediate_menu_request
+    from ai_agent.runtime.types import NormalizedNode
+    g=approved_graphs()['settings.vpn.connect'];e=next(t for t in g.transitions if t.transition_id=='OPEN_INTERMEDIATE')
+    unrelated=NormalizedNode('title','디스플레이','text',bounds=(0,0,100,50),package_name='com.android.settings')
+    assert immediate_menu_request({'one':(e,None)},(unrelated,),g) is None
+    assert immediate_menu_request({'one':(e,None),'two':(e,None)},(),g) is None
+    mutation=next(t for t in approved_graphs()['settings.wifi.enable'].transitions if t.completes_task)
+    assert immediate_menu_request({'one':(mutation,None)},(),approved_graphs()['settings.wifi.enable']) is None

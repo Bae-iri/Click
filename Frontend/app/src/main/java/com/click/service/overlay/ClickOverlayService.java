@@ -1149,7 +1149,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if ("BLOCKED".equals(response.taskStatus) || response.guideCommand != null
                 && "blocked".equals(response.guideCommand.commandType)) {
             response.logDebug("ClickAgent");
-            showStoppedTask(ErrorDetails.guideFailureMessage(response));
+            showStoppedGuide(response);
             return;
         }
         if (!"IN_PROGRESS".equals(response.taskStatus)
@@ -2241,7 +2241,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     recoverControl(control); return;
                 }
                 if (error instanceof com.click.data.snapshot.SettingsScreenPrivacy.Blocked) {
-                    showStoppedTask(ErrorDetails.requestMessage(error));
+                    com.click.data.snapshot.SettingsScreenPrivacy.Blocked blocked =
+                            (com.click.data.snapshot.SettingsScreenPrivacy.Blocked) error;
+                    boolean sensitive = blocked.reason == com.click.data.snapshot.SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_INPUT
+                            || blocked.reason == com.click.data.snapshot.SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_SCREEN;
+                    showStoppedTask(goalAwarePrivacyMessage(ErrorDetails.requestMessage(error), sensitive),
+                            sensitive && hasAssistedSettingsGoal());
                     return;
                 }
                 boolean recoverable = error instanceof com.click.data.remote.ApiException
@@ -2519,7 +2524,43 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         resultTimeout = null;
     }
 
-    private void showStoppedTask(String message) {
+    private com.click.data.snapshot.AssistedSettingsGuidance assistedSettingsGuidance;
+
+    private String goalAwarePrivacyMessage(String message, boolean sensitive) {
+        if (!sensitive || acceptedGoal == null) return message;
+        if (assistedSettingsGuidance == null) {
+            try (java.io.InputStream input = getAssets().open("manual_guidance.json")) {
+                assistedSettingsGuidance = com.click.data.snapshot.AssistedSettingsGuidance.load(input);
+            } catch (Exception unavailable) { return message; }
+        }
+        return assistedSettingsGuidance.privacyMessage(acceptedGoal.optString("goal_type", null), message);
+    }
+
+    private String stoppedGuideMessage(AgentTurnContract.Response response) {
+        org.json.JSONObject policy = response.guideCommand == null ? null : response.guideCommand.renderPolicy;
+        String reason = policy == null ? "" : policy.optString("observation_reason");
+        boolean sensitive = policy != null && policy.optBoolean("privacy_blocked")
+                && java.util.Set.of("credential_input", "input_present", "protected_screen").contains(reason);
+        return goalAwarePrivacyMessage(ErrorDetails.guideFailureMessage(response), sensitive);
+    }
+
+    private boolean hasAssistedSettingsGoal() {
+        return assistedSettingsGuidance != null && acceptedGoal != null
+                && assistedSettingsGuidance.supports(acceptedGoal.optString("goal_type", null));
+    }
+
+    private void showStoppedGuide(AgentTurnContract.Response response) {
+        String message = stoppedGuideMessage(response);
+        org.json.JSONObject policy = response.guideCommand == null ? null : response.guideCommand.renderPolicy;
+        String reason = policy == null ? "" : policy.optString("observation_reason");
+        boolean sensitive = policy != null && policy.optBoolean("privacy_blocked")
+                && java.util.Set.of("credential_input", "input_present", "protected_screen").contains(reason);
+        showStoppedTask(message, sensitive && hasAssistedSettingsGoal());
+    }
+
+    private void showStoppedTask(String message) { showStoppedTask(message, false); }
+
+    private void showStoppedTask(String message, boolean manualPrivateStep) {
         executionGeneration++;
         pendingControl = null; resumeAfterPause = false;
         haltLocalExecution();
@@ -2527,7 +2568,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         ensureTaskFlow();
         String explanation = message == null || message.trim().isEmpty()
                 ? "작업이 중단됐어요. 원하시면 새로 요청해 주세요." : message;
-        taskFlowView.failed(explanation);
+        if (manualPrivateStep) taskFlowView.privateSettingsStep(explanation);
+        else taskFlowView.failed(explanation);
         taskFlowCollapsed = false;
         if (overlayView != null) { overlayView.collapse(); overlayView.setRecognizedSpeech(explanation); }
         updateFloatingVisibility(); placeTaskFlow(null, true);
@@ -2723,7 +2765,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         response.logDebug("ClickAgent");
         if (response.guideCommand == null) return;
         if ("blocked".equals(response.guideCommand.commandType) || "BLOCKED".equals(response.taskStatus)) {
-            showStoppedTask(ErrorDetails.guideFailureMessage(response)); return;
+            showStoppedGuide(response); return;
         }
         if (waitingForTargetHelp()) return;
         if (AgentActionEvents.BACK_NAVIGATED.equals(pendingActionType)

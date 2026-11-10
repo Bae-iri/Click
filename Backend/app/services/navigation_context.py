@@ -31,3 +31,20 @@ def next_menu_context(edge, graph):
     names=[groups[0][0] for groups in [current,*remaining] if groups]
     return {'scope':'open_next_menu_only','current_page_titles':current,'next_page_titles':titles(edge.to_state),
         'remaining_page_titles':remaining,'route_description':' → '.join(names),'completes_goal':False}
+
+
+def immediate_menu_request(bindings, nodes, graph):
+    """Frame one grounded menu action only when its independent source title agrees."""
+    if len(bindings)!=1:
+        return None
+    edge,_=next(iter(bindings.values()))
+    context=next_menu_context(edge,graph)
+    if not context or not context['current_page_titles']:
+        return None
+    from ai_agent.runtime.classifier import _screen_titles
+    if not any(title.source_confidence is None and not title.node_id.startswith('vision:')
+            and all(any(normalize_text(title.label)==normalize_text(word) for word in group)
+                for group in context['current_page_titles']) for title in _screen_titles(nodes)):
+        return None
+    return {'current_page':context['current_page_titles'],'open_menu':list(edge.target_keywords),
+        'next_page':context['next_page_titles'],'scope':'immediate_menu_opening'}
