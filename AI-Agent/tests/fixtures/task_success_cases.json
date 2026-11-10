@@ -1198,5 +1198,173 @@
       "setting_value": 2
     },
     "verified": false
+  },
+  {
+    "name": "display_density_increase",
+    "goal_type": "settings.display_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "display_size",
+      "baseline_setting_value": 420,
+      "setting_value": 480,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": true
+  },
+  {
+    "name": "display_density_decrease",
+    "goal_type": "settings.display_size.decrease",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_decreased",
+      "setting": "display_size",
+      "baseline_setting_value": 420,
+      "setting_value": 360,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": true
+  },
+  {
+    "name": "invalid_display_density_too_small",
+    "goal_type": "settings.display_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "display_size",
+      "baseline_setting_value": 0,
+      "setting_value": 480,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "invalid_display_density_too_large",
+    "goal_type": "settings.display_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "display_size",
+      "baseline_setting_value": 420,
+      "setting_value": 2001,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "invalid_display_density_fraction",
+    "goal_type": "settings.display_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "display_size",
+      "baseline_setting_value": 420,
+      "setting_value": 480.5,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "invalid_display_density_bool",
+    "goal_type": "settings.display_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "display_size",
+      "baseline_setting_value": true,
+      "setting_value": 480,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "invalid_display_density_unchanged",
+    "goal_type": "settings.display_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "display_size",
+      "baseline_setting_value": 420,
+      "setting_value": 420,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "invalid_display_density_opposite",
+    "goal_type": "settings.display_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "display_size",
+      "baseline_setting_value": 420,
+      "setting_value": 360,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
   }
 ]

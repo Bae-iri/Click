@@ -15,7 +15,7 @@ def action_releases():
     specs = {s['goal_type']: s for s in json.loads((Path(__file__).parent / 'drafts.json').read_text())}
     for goal_type, capability in DOCUMENT['goals'].items():
         mode = capability['mode']
-        if mode not in {'native_checked', 'assisted', 'system_choice'}:
+        if mode not in {'native_checked', 'assisted', 'system_choice', 'native_slider'}:
             continue
         spec = specs[goal_type]
         setting = capability['setting']
@@ -45,10 +45,15 @@ def action_releases():
             states['S_CATEGORY'] = state('S_CATEGORY', categories[0], categories)
             edge('OPEN_CATEGORY', 'S1_SETTINGS_HOME', 'S_CATEGORY', categories)
             edge('OPEN_PAGE', 'S_CATEGORY', 'S_TARGET', pages)
-            if intermediate:
-                states['S_INTERMEDIATE'] = state('S_INTERMEDIATE', intermediate[0], intermediate)
-                edge('OPEN_INTERMEDIATE', 'S_CATEGORY', 'S_INTERMEDIATE', intermediate, 1)
-                edge('OPEN_PAGE_FROM_INTERMEDIATE', 'S_INTERMEDIATE', 'S_TARGET', pages)
+            path = contract.get('intermediate_path', [intermediate] if intermediate else [])
+            previous = 'S_CATEGORY'
+            for index, words in enumerate(path):
+                key = 'S_INTERMEDIATE' if index == 0 else f'S_INTERMEDIATE_{index + 1}'
+                suffix = '' if index == 0 else f'_{index + 1}'
+                states[key] = state(key, words[0], words)
+                edge('OPEN_INTERMEDIATE' + suffix, previous, key, words, 1)
+                edge('OPEN_PAGE_FROM_INTERMEDIATE' + suffix, key, 'S_TARGET', pages)
+                previous = key
         edge('OPEN_PAGE_FROM_HOME', 'S1_SETTINGS_HOME', 'S_TARGET', pages, 10)
         if mode == 'native_checked':
             # Some devices place this switch directly on the category page.
@@ -70,6 +75,20 @@ def action_releases():
                     verification_predicate='system_night_mode_' + spec['slots']['state'], completes_task=True))
             edges.append(Transition('VERIFIED', 'S_CHANGED', 'S_DONE', ActionType.OBSERVE_ONLY,
                 '결과 확인', (), None, SafetyLevel.LOW_RISK, '스위치 상태를 확인했어요.', requires_user_action=False))
+        elif mode == 'native_slider':
+            direction = spec['slots']['direction']
+            verb, movement = ('크게', '오른쪽') if direction == 'increase' else ('작게', '왼쪽')
+            edges.append(Transition('ADJUST_DISPLAY_SIZE', 'S_TARGET', 'S_CHANGED', ActionType.DRAG,
+                capability['name'], tuple(contract['labels']), 'slider', SafetyLevel.CONFIRM_REQUIRED,
+                f'화면 크기 조절 막대를 {movement}으로 조금 움직여주세요.',
+                confirmation_message=f'화면 요소를 {verb} 조절할까요?',
+                selector=TargetSelector(package_candidates=SETTINGS, resource_ids=tuple(contract['resource_ids']),
+                    context_keywords=tuple(pages), excluded_keywords=('글자 크기','Font size','밝기','Brightness'),
+                    allow_unlabelled_in_context=True),
+                verification_predicate='target_value_' + ('increased' if direction == 'increase' else 'decreased'),
+                completes_task=True))
+            edges.append(Transition('VERIFIED', 'S_CHANGED', 'S_DONE', ActionType.OBSERVE_ONLY,
+                '화면 크기 적용 확인', (), None, SafetyLevel.LOW_RISK, '화면 크기 변경을 확인했어요.', requires_user_action=False))
         elif mode == 'system_choice':
             choice = choice_spec(spec['slots'])
             edges.append(Transition('APPLY_MODE_CHOICE', 'S_TARGET', 'S_CHANGED', ActionType.TAP,
@@ -86,8 +105,9 @@ def action_releases():
                 capability['instruction'] + ' 직접 진행한 뒤 완료 확인을 눌러주세요.',
                 requires_user_action=False, verification_predicate='manual_result_required', completes_task=True))
         graph = TaskGraph(TaskDefinition(spec['task_id'], goal_type, capability['name'], 'android_settings',
-            'settings_change' if mode in {'native_checked', 'system_choice'} else 'settings_assisted',
+            'settings_change' if mode in {'native_checked', 'system_choice', 'native_slider'} else 'settings_assisted',
             ('S0_UNKNOWN', 'S1_SETTINGS_HOME'), 'S_DONE', spec['slots']), states, tuple(edges), {})
         has_choices = mode == 'system_choice' or mode == 'native_checked' and bool(contract.get('choices'))
-        yield {'version': '1.1.0' if has_choices else '1.0.0', 'approved': True, 'priority': 110 if has_choices else 100,
+        yield {'version': capability.get('graph_version', '1.1.0' if has_choices else '1.0.0'),
+            'approved': True, 'priority': 110 if has_choices or capability.get('graph_version') else 100,
             'status': mode + '_device_validation_pending'}, graph

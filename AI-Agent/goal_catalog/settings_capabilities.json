@@ -3668,8 +3668,10 @@
           {
             "label": "디스플레이",
             "labels": [
+              "accessibility",
               "display",
-              "디스플레이"
+              "디스플레이",
+              "접근성"
             ],
             "packages": [
               "com.android.settings",
@@ -3679,12 +3681,14 @@
             "transition_id": "OPEN_CATEGORY"
           },
           {
-            "label": "화면 크기",
+            "label": "화면 크게/작게",
             "labels": [
               "display size",
               "display size and text",
+              "screen zoom",
               "화면 크게/작게",
-              "화면 크기"
+              "화면 크기",
+              "화면 확대"
             ],
             "packages": [
               "com.android.settings",
@@ -3696,12 +3700,14 @@
         ],
         "S_CATEGORY": [
           {
-            "label": "화면 크기",
+            "label": "화면 크게/작게",
             "labels": [
               "display size",
               "display size and text",
+              "screen zoom",
               "화면 크게/작게",
-              "화면 크기"
+              "화면 크기",
+              "화면 확대"
             ],
             "packages": [
               "com.android.settings",
@@ -3723,18 +3729,25 @@
         "S_CATEGORY": [
           [
             "디스플레이",
-            "Display"
+            "Display",
+            "접근성",
+            "Accessibility"
           ]
         ]
       },
       "success": {
         "direction": "decrease",
-        "kind": "user_report",
+        "kind": "persisted_value",
         "requested_state": null,
-        "setting": "display_size"
+        "setting": "display_size",
+        "value_domain": {
+          "integer": true,
+          "maximum": 2000,
+          "minimum": 72
+        }
       },
       "task_id": "SET-display_size-decrease",
-      "task_type": "settings_assisted"
+      "task_type": "settings_change"
     },
     "settings.display_size.increase": {
       "navigation": {
@@ -3762,8 +3775,10 @@
           {
             "label": "디스플레이",
             "labels": [
+              "accessibility",
               "display",
-              "디스플레이"
+              "디스플레이",
+              "접근성"
             ],
             "packages": [
               "com.android.settings",
@@ -3773,12 +3788,14 @@
             "transition_id": "OPEN_CATEGORY"
           },
           {
-            "label": "화면 크기",
+            "label": "화면 크게/작게",
             "labels": [
               "display size",
               "display size and text",
+              "screen zoom",
               "화면 크게/작게",
-              "화면 크기"
+              "화면 크기",
+              "화면 확대"
             ],
             "packages": [
               "com.android.settings",
@@ -3790,12 +3807,14 @@
         ],
         "S_CATEGORY": [
           {
-            "label": "화면 크기",
+            "label": "화면 크게/작게",
             "labels": [
               "display size",
               "display size and text",
+              "screen zoom",
               "화면 크게/작게",
-              "화면 크기"
+              "화면 크기",
+              "화면 확대"
             ],
             "packages": [
               "com.android.settings",
@@ -3817,18 +3836,25 @@
         "S_CATEGORY": [
           [
             "디스플레이",
-            "Display"
+            "Display",
+            "접근성",
+            "Accessibility"
           ]
         ]
       },
       "success": {
         "direction": "increase",
-        "kind": "user_report",
+        "kind": "persisted_value",
         "requested_state": null,
-        "setting": "display_size"
+        "setting": "display_size",
+        "value_domain": {
+          "integer": true,
+          "maximum": 2000,
+          "minimum": 72
+        }
       },
       "task_id": "SET-display_size-increase",
-      "task_type": "settings_assisted"
+      "task_type": "settings_change"
     },
     "settings.do_not_disturb.disable": {
       "navigation": {
@@ -4853,6 +4879,37 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_PAGE"
+          },
+          {
+            "label": "모바일 핫스팟 및 테더링",
+            "labels": [
+              "hotspot & tethering",
+              "mobile hotspot and tethering",
+              "모바일 핫스팟 및 테더링",
+              "핫스팟 및 테더링"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_INTERMEDIATE"
+          }
+        ],
+        "S_INTERMEDIATE": [
+          {
+            "label": "모바일 핫스팟",
+            "labels": [
+              "mobile hotspot",
+              "wi-fi hotspot",
+              "모바일 핫스팟"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
           }
         ]
       },
@@ -4868,6 +4925,14 @@
           [
             "연결",
             "Connections"
+          ]
+        ],
+        "S_INTERMEDIATE": [
+          [
+            "모바일 핫스팟 및 테더링",
+            "Mobile Hotspot and Tethering",
+            "핫스팟 및 테더링",
+            "Hotspot & tethering"
           ]
         ]
       },
@@ -4954,6 +5019,38 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_PAGE"
+          },
+          {
+            "label": "언어 및 입력",
+            "labels": [
+              "languages & input",
+              "언어 및 입력"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_INTERMEDIATE"
+          }
+        ],
+        "S_INTERMEDIATE": [
+          {
+            "label": "키보드 목록 및 기본",
+            "labels": [
+              "default keyboard",
+              "keyboard list and default",
+              "on-screen keyboard",
+              "기본 키보드",
+              "키보드 목록 및 기본",
+              "화면 키보드"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
           }
         ]
       },
@@ -4972,6 +5069,12 @@
             "General management",
             "시스템",
             "System"
+          ]
+        ],
+        "S_INTERMEDIATE": [
+          [
+            "언어 및 입력",
+            "Languages & input"
           ]
         ]
       },
@@ -5052,6 +5155,35 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_PAGE"
+          },
+          {
+            "label": "언어 및 입력",
+            "labels": [
+              "languages & input",
+              "언어 및 입력"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_INTERMEDIATE"
+          }
+        ],
+        "S_INTERMEDIATE": [
+          {
+            "label": "언어",
+            "labels": [
+              "language",
+              "languages",
+              "언어"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
           }
         ]
       },
@@ -5070,6 +5202,12 @@
             "General management",
             "시스템",
             "System"
+          ]
+        ],
+        "S_INTERMEDIATE": [
+          [
+            "언어 및 입력",
+            "Languages & input"
           ]
         ]
       },
@@ -8556,7 +8694,35 @@
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
+            "transition_id": "OPEN_CATEGORY"
+          },
+          {
+            "label": "고급 설정",
+            "labels": [
+              "advanced settings",
+              "고급 설정"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
             "transition_id": "OPEN_PAGE_FROM_HOME"
+          }
+        ],
+        "S_CATEGORY": [
+          {
+            "label": "고급 설정",
+            "labels": [
+              "advanced settings",
+              "고급 설정"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE"
           }
         ]
       },
@@ -8566,6 +8732,12 @@
           [
             "설정",
             "Settings"
+          ]
+        ],
+        "S_CATEGORY": [
+          [
+            "알림",
+            "Notifications"
           ]
         ]
       },
@@ -8706,7 +8878,35 @@
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
+            "transition_id": "OPEN_CATEGORY"
+          },
+          {
+            "label": "앱 알림",
+            "labels": [
+              "app notifications",
+              "앱 알림"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
             "transition_id": "OPEN_PAGE_FROM_HOME"
+          }
+        ],
+        "S_CATEGORY": [
+          {
+            "label": "앱 알림",
+            "labels": [
+              "app notifications",
+              "앱 알림"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE"
           }
         ]
       },
@@ -8716,6 +8916,12 @@
           [
             "설정",
             "Settings"
+          ]
+        ],
+        "S_CATEGORY": [
+          [
+            "알림",
+            "Notifications"
           ]
         ]
       },
@@ -8762,7 +8968,35 @@
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
+            "transition_id": "OPEN_CATEGORY"
+          },
+          {
+            "label": "앱 알림",
+            "labels": [
+              "app notifications",
+              "앱 알림"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
             "transition_id": "OPEN_PAGE_FROM_HOME"
+          }
+        ],
+        "S_CATEGORY": [
+          {
+            "label": "앱 알림",
+            "labels": [
+              "app notifications",
+              "앱 알림"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE"
           }
         ]
       },
@@ -8772,6 +9006,12 @@
           [
             "설정",
             "Settings"
+          ]
+        ],
+        "S_CATEGORY": [
+          [
+            "알림",
+            "Notifications"
           ]
         ]
       },
@@ -9053,6 +9293,36 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_PAGE"
+          },
+          {
+            "label": "기타 연결 설정",
+            "labels": [
+              "advanced",
+              "more connection settings",
+              "고급",
+              "기타 연결 설정"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_INTERMEDIATE"
+          }
+        ],
+        "S_INTERMEDIATE": [
+          {
+            "label": "프라이빗 DNS",
+            "labels": [
+              "private dns",
+              "프라이빗 dns"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
           }
         ]
       },
@@ -9070,6 +9340,14 @@
             "Connections",
             "네트워크 및 인터넷",
             "Network & internet"
+          ]
+        ],
+        "S_INTERMEDIATE": [
+          [
+            "기타 연결 설정",
+            "More connection settings",
+            "고급",
+            "Advanced"
           ]
         ]
       },
@@ -9200,7 +9478,7 @@
         ],
         "S1_SETTINGS_HOME": [
           {
-            "label": "보안 및 개인정보 보호",
+            "label": "잠금화면",
             "labels": [
               "lock screen",
               "security",
@@ -9214,7 +9492,39 @@
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
+            "transition_id": "OPEN_CATEGORY"
+          },
+          {
+            "label": "화면 잠금 방식",
+            "labels": [
+              "screen lock",
+              "screen lock type",
+              "화면 잠금",
+              "화면 잠금 방식"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
             "transition_id": "OPEN_PAGE_FROM_HOME"
+          }
+        ],
+        "S_CATEGORY": [
+          {
+            "label": "화면 잠금 방식",
+            "labels": [
+              "screen lock",
+              "screen lock type",
+              "화면 잠금",
+              "화면 잠금 방식"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE"
           }
         ]
       },
@@ -9224,6 +9534,16 @@
           [
             "설정",
             "Settings"
+          ]
+        ],
+        "S_CATEGORY": [
+          [
+            "잠금화면",
+            "Lock screen",
+            "보안 및 개인정보 보호",
+            "Security & privacy",
+            "보안",
+            "Security"
           ]
         ]
       },
@@ -10163,6 +10483,35 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_PAGE"
+          },
+          {
+            "label": "기타 연결 설정",
+            "labels": [
+              "advanced",
+              "more connection settings",
+              "고급",
+              "기타 연결 설정"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_INTERMEDIATE"
+          }
+        ],
+        "S_INTERMEDIATE": [
+          {
+            "label": "VPN",
+            "labels": [
+              "vpn"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
           }
         ]
       },
@@ -10180,6 +10529,14 @@
             "Connections",
             "네트워크 및 인터넷",
             "Network & internet"
+          ]
+        ],
+        "S_INTERMEDIATE": [
+          [
+            "기타 연결 설정",
+            "More connection settings",
+            "고급",
+            "Advanced"
           ]
         ]
       },
@@ -10255,6 +10612,35 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_PAGE"
+          },
+          {
+            "label": "기타 연결 설정",
+            "labels": [
+              "advanced",
+              "more connection settings",
+              "고급",
+              "기타 연결 설정"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_INTERMEDIATE"
+          }
+        ],
+        "S_INTERMEDIATE": [
+          {
+            "label": "VPN",
+            "labels": [
+              "vpn"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
           }
         ]
       },
@@ -10272,6 +10658,14 @@
             "Connections",
             "네트워크 및 인터넷",
             "Network & internet"
+          ]
+        ],
+        "S_INTERMEDIATE": [
+          [
+            "기타 연결 설정",
+            "More connection settings",
+            "고급",
+            "Advanced"
           ]
         ]
       },
@@ -10679,10 +11073,12 @@
             "transition_id": "OPEN_CATEGORY"
           },
           {
-            "label": "Wi-Fi",
+            "label": "네트워크 관리",
             "labels": [
-              "wi-fi",
-              "와이파이"
+              "manage networks",
+              "saved networks",
+              "네트워크 관리",
+              "저장된 네트워크"
             ],
             "packages": [
               "com.android.settings",
@@ -10694,6 +11090,21 @@
         ],
         "S_CATEGORY": [
           {
+            "label": "네트워크 관리",
+            "labels": [
+              "manage networks",
+              "saved networks",
+              "네트워크 관리",
+              "저장된 네트워크"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE"
+          },
+          {
             "label": "Wi-Fi",
             "labels": [
               "wi-fi",
@@ -10704,7 +11115,56 @@
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
-            "transition_id": "OPEN_PAGE"
+            "transition_id": "OPEN_INTERMEDIATE"
+          }
+        ],
+        "S_INTERMEDIATE": [
+          {
+            "label": "네트워크 관리",
+            "labels": [
+              "manage networks",
+              "saved networks",
+              "네트워크 관리",
+              "저장된 네트워크"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
+          },
+          {
+            "label": "고급 설정",
+            "labels": [
+              "advanced",
+              "advanced settings",
+              "고급",
+              "고급 설정"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_INTERMEDIATE_2"
+          }
+        ],
+        "S_INTERMEDIATE_2": [
+          {
+            "label": "네트워크 관리",
+            "labels": [
+              "manage networks",
+              "saved networks",
+              "네트워크 관리",
+              "저장된 네트워크"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE_2"
           }
         ]
       },
@@ -10722,6 +11182,20 @@
             "Connections",
             "네트워크 및 인터넷",
             "Network & internet"
+          ]
+        ],
+        "S_INTERMEDIATE": [
+          [
+            "Wi-Fi",
+            "와이파이"
+          ]
+        ],
+        "S_INTERMEDIATE_2": [
+          [
+            "고급 설정",
+            "Advanced settings",
+            "고급",
+            "Advanced"
           ]
         ]
       },
@@ -10868,7 +11342,9 @@
     "accessibility",
     "accounts and backup",
     "adaptive brightness",
+    "advanced",
     "advanced settings",
+    "app notifications",
     "apps",
     "audio adjustment",
     "auto rotate",
@@ -10915,13 +11391,16 @@
     "keyboard list and default",
     "language",
     "languages",
+    "languages & input",
     "live caption",
     "location",
     "lock screen",
     "magnification",
+    "manage networks",
     "mobile hotspot",
     "mobile hotspot and tethering",
     "mobile networks",
+    "more connection settings",
     "network & internet",
     "nfc",
     "night light",
@@ -10932,8 +11411,12 @@
     "power saving",
     "private dns",
     "ringtone",
+    "saved networks",
     "screen",
+    "screen lock",
+    "screen lock type",
     "screen timeout",
+    "screen zoom",
     "security",
     "security & privacy",
     "sim",
@@ -10963,6 +11446,7 @@
     "wi-fi",
     "wi-fi hotspot",
     "계정 및 백업",
+    "고급",
     "고급 설정",
     "글꼴 크기",
     "글꼴 크기 및 스타일",
@@ -10972,7 +11456,9 @@
     "기본 앱",
     "기본 앱 선택",
     "기본 키보드",
+    "기타 연결 설정",
     "날짜 및 시간",
+    "네트워크 관리",
     "네트워크 및 인터넷",
     "다크 모드",
     "데이터 사용",
@@ -11014,9 +11500,11 @@
     "알림 소리",
     "애플리케이션",
     "앱",
+    "앱 알림",
     "야간 조명",
     "어두운 테마",
     "언어",
+    "언어 및 입력",
     "연결",
     "연결 환경설정",
     "연결된 기기",
@@ -11035,6 +11523,7 @@
     "재설정 옵션",
     "저장 공간",
     "저장공간",
+    "저장된 네트워크",
     "절전 모드",
     "접근성",
     "청각 보조",
@@ -11049,6 +11538,8 @@
     "화면 시간 제한",
     "화면 자동 꺼짐 시간",
     "화면 자동 회전",
+    "화면 잠금",
+    "화면 잠금 방식",
     "화면 크게/작게",
     "화면 크기",
     "화면 키보드",
@@ -11063,7 +11554,8 @@
     "S2_DISPLAY_MENU",
     "S3_FONT_MENU",
     "S_CATEGORY",
-    "S_INTERMEDIATE"
+    "S_INTERMEDIATE",
+    "S_INTERMEDIATE_2"
   ],
   "private_identity_tokens": [
     "access_point",

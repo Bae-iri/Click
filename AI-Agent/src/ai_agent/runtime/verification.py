@@ -252,21 +252,23 @@ def navigation_reachable(graph, start, destination):
 
 
 def recreated_font_control(node, attempt, transition, graph, state, snapshot, observed_at, action_at):
-    """FONT_SCALE can recreate Settings' window while preserving the exact native control.
+    """Font scale or display density can recreate Settings while preserving the native control.
 
     The caller still requires one matching stable target key, a correlated action,
     valid unchanged range, and movement in the requested direction. A new window
     alone, a text-only match, or preview-only movement never qualifies.
     """
-    if (graph.definition.goal_type not in {'settings.font_size.increase', 'settings.font_size.decrease'}
+    if (graph.definition.goal_type not in {'settings.font_size.increase', 'settings.font_size.decrease',
+            'settings.display_size.increase', 'settings.display_size.decrease'}
             or state != transition.from_state
             or node.window_id is None or attempt.get('target_window_id') is None
             or not node.resource_id or node.resource_id != attempt.get('target_resource_id')
             or observed_at is None or action_at is None
             or not 0 < observed_at - action_at <= graph.policy.observation_timeout_ms):
         return False
-    before = attempt.get('baseline_font_scale')
-    after = font_scale(snapshot.applied_settings)
+    setting = graph.definition.required_slots['setting']
+    before = attempt.get('baseline_setting_value') if setting == 'display_size' else attempt.get('baseline_font_scale')
+    after = applied_value(snapshot.applied_settings, setting)
     if before is None or after is None:
         return False
     return after > before if transition.verification_predicate.endswith('increased') else after < before
@@ -302,6 +304,7 @@ def applied_value(settings, setting):
     if setting in CHOICES:
         return system_value(settings, setting=setting)
     fields = {
+        'display_size': ('display_density_dpi', 'display_density_source', 'android.content.res.Configuration.densityDpi', 2000),
         'brightness': ('screen_brightness', 'brightness_source', 'android.provider.Settings.System.SCREEN_BRIGHTNESS', 65535),
         'volume': ('media_volume', 'media_volume_source', 'android.media.AudioManager.STREAM_MUSIC', 1000),
     }.get(setting)
@@ -309,6 +312,6 @@ def applied_value(settings, setting):
         return None
     key, source_key, source, maximum = fields
     value = (settings or {}).get(key)
-    if (settings or {}).get(source_key) != source or type(value) is not int or not 0 <= value <= maximum:
+    if (settings or {}).get(source_key) != source or type(value) is not int or not (72 if setting == 'display_size' else 0) <= value <= maximum:
         return None
     return value

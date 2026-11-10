@@ -25,6 +25,12 @@ public final class TaskSuccess {
         if("CHANGED".equals(status) && !correlatedChange(proof))return false;
         if("persisted_value".equals(kind)) {
             Object before=proof.opt("baseline_setting_value"),after=proof.opt("setting_value");
+            JSONObject domain=spec.optJSONObject("value_domain");
+            if(domain!=null)for(Object value:new Object[]{before,after}) {
+                if(!number(value) || domain.optBoolean("integer") && !(value instanceof Integer || value instanceof Long)
+                        || ((Number)value).doubleValue()<domain.optDouble("minimum")
+                        || ((Number)value).doubleValue()>domain.optDouble("maximum"))return false;
+            }
             boolean increase="increase".equals(spec.optString("direction"));
             return "CHANGED".equals(status) && (increase?"target_value_increased":"target_value_decreased").equals(reason)
                 && number(before) && number(after) && (increase?((Number)after).doubleValue()>((Number)before).doubleValue():((Number)after).doubleValue()<((Number)before).doubleValue());
