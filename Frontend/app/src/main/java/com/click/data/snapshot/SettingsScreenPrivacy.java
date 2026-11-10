@@ -209,6 +209,11 @@ public final class SettingsScreenPrivacy {
                     && "android.app.UiModeManager.getNightMode".equals(applied.optString("night_mode_source"))
                     && nightMode instanceof Integer && ((Integer) nightMode) >= 0 && ((Integer) nightMode) <= 3)
                 safeApplied.put("night_mode_source", "android.app.UiModeManager.getNightMode").put("night_mode", nightMode);
+            Object ringerMode = applied.opt("ringer_mode");
+            if (("mute".equals(setting) || "vibrate".equals(setting))
+                    && "android.media.AudioManager.getRingerMode".equals(applied.optString("ringer_mode_source"))
+                    && ringerMode instanceof Integer && ((Integer) ringerMode) >= 0 && ((Integer) ringerMode) <= 2)
+                safeApplied.put("ringer_mode_source", "android.media.AudioManager.getRingerMode").put("ringer_mode", ringerMode);
             if (safeApplied.length() > 0) safeTree.put("applied_settings", safeApplied);
         }
         safeTree.put("nodes", relevantNodes);

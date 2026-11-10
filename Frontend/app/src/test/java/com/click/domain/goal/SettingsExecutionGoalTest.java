@@ -33,11 +33,11 @@ public class SettingsExecutionGoalTest {
             assertEquals(goalType, GoalCommandInterpreter.Kind.START_TASK, result.kind);
             assertEquals(goalType, result.goal.goalType);
             assertTrue(goalType, server.supportsGoal(goalType));
-            assertEquals("2.3.0", result.goal.toTypedGoalJson().getString("catalog_version"));
+            assertEquals("2.3.1", result.goal.toTypedGoalJson().getString("catalog_version"));
             if ("settings_assisted".equals(result.goal.taskType)) assisted++; else changes++;
         }
-        assertEquals(50, changes);
-        assertEquals(39, assisted);
+        assertEquals(54, changes);
+        assertEquals(35, assisted);
     }
     @Test public void conversationalSwitchRequestsReachTheSameTypedGoal() throws Exception {
         String source=resource("mvp_goals.json");

@@ -1,0 +1,1202 @@
+[
+  {
+    "name": "persisted_font_increase",
+    "goal_type": "settings.font_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "font_size",
+      "baseline_setting_value": 1,
+      "setting_value": 1.15,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": true
+  },
+  {
+    "name": "generic_changed_is_insufficient",
+    "goal_type": "settings.font_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "wrong_goal_setting",
+    "goal_type": "settings.brightness.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "font_size",
+      "baseline_setting_value": 1,
+      "setting_value": 1.15,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "wrong_goal_direction",
+    "goal_type": "settings.font_size.decrease",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "font_size",
+      "baseline_setting_value": 1,
+      "setting_value": 1.15,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "unchanged_persisted_value",
+    "goal_type": "settings.font_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "font_size",
+      "baseline_setting_value": 1,
+      "setting_value": 1,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "boolean_is_not_a_value",
+    "goal_type": "settings.font_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "font_size",
+      "baseline_setting_value": false,
+      "setting_value": 1.15,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "missing_persisted_value",
+    "goal_type": "settings.font_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "font_size",
+      "baseline_setting_value": 1,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "bluetooth_power_on",
+    "goal_type": "settings.bluetooth.enable",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_checked_on",
+      "setting": "bluetooth",
+      "requested_state": "on",
+      "baseline_checked": false,
+      "after_checked": true,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": true
+  },
+  {
+    "name": "power_is_not_device_connection",
+    "goal_type": "settings.bluetooth.connect",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_checked_on",
+      "setting": "bluetooth",
+      "requested_state": "on",
+      "baseline_checked": false,
+      "after_checked": true,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "checked_state_cannot_be_selected_flag",
+    "goal_type": "settings.bluetooth.enable",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_checked_on",
+      "setting": "bluetooth",
+      "requested_state": "on",
+      "baseline_checked": false,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "bluetooth_wrong_power_direction",
+    "goal_type": "settings.bluetooth.disable",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_checked_on",
+      "setting": "bluetooth",
+      "requested_state": "on",
+      "baseline_checked": false,
+      "after_checked": true,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "bluetooth_already_on",
+    "goal_type": "settings.bluetooth.enable",
+    "technical": {
+      "status": "ALREADY_SET",
+      "reason": "native_switch_already_set",
+      "setting": "bluetooth",
+      "requested_state": "on",
+      "baseline_checked": false,
+      "after_checked": true
+    },
+    "verified": true
+  },
+  {
+    "name": "already_on_is_not_connected",
+    "goal_type": "settings.bluetooth.connect",
+    "technical": {
+      "status": "ALREADY_SET",
+      "reason": "native_switch_already_set",
+      "setting": "bluetooth",
+      "requested_state": "on",
+      "baseline_checked": false,
+      "after_checked": true
+    },
+    "verified": false
+  },
+  {
+    "name": "wrong_bound_goal",
+    "goal_type": "settings.bluetooth.enable",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_checked_on",
+      "setting": "bluetooth",
+      "requested_state": "on",
+      "baseline_checked": false,
+      "after_checked": true,
+      "goal_type": "settings.bluetooth.connect",
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "wifi_adapter_enabled",
+    "goal_type": "settings.wifi.enable",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_checked_on",
+      "setting": "wifi",
+      "requested_state": "on",
+      "baseline_checked": false,
+      "after_checked": true,
+      "setting_value": 3,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": true
+  },
+  {
+    "name": "wifi_adapter_still_transitioning",
+    "goal_type": "settings.wifi.enable",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_checked_on",
+      "setting": "wifi",
+      "requested_state": "on",
+      "baseline_checked": false,
+      "after_checked": true,
+      "setting_value": 2,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "wifi_checked_without_adapter",
+    "goal_type": "settings.wifi.enable",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_checked_on",
+      "setting": "wifi",
+      "requested_state": "on",
+      "baseline_checked": false,
+      "after_checked": true,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "wifi_already_on",
+    "goal_type": "settings.wifi.enable",
+    "technical": {
+      "status": "ALREADY_SET",
+      "reason": "wifi_already_set",
+      "setting": "wifi",
+      "requested_state": "on",
+      "baseline_checked": false,
+      "after_checked": true,
+      "setting_value": 3
+    },
+    "verified": true
+  },
+  {
+    "name": "requested_page_arrived",
+    "goal_type": "settings.navigation.volume",
+    "technical": {
+      "status": "OPENED",
+      "reason": "settings_page_visible",
+      "setting": "navigation_volume",
+      "observation_id": "page-1"
+    },
+    "verified": true
+  },
+  {
+    "name": "page_is_not_value_change",
+    "goal_type": "settings.volume.increase",
+    "technical": {
+      "status": "OPENED",
+      "reason": "settings_page_visible",
+      "setting": "navigation_volume",
+      "observation_id": "page-1"
+    },
+    "verified": false
+  },
+  {
+    "name": "other_page",
+    "goal_type": "settings.navigation.font_size",
+    "technical": {
+      "status": "OPENED",
+      "reason": "settings_page_visible",
+      "setting": "navigation_volume",
+      "observation_id": "page-1"
+    },
+    "verified": false
+  },
+  {
+    "name": "page_without_observation",
+    "goal_type": "settings.navigation.volume",
+    "technical": {
+      "status": "OPENED",
+      "reason": "settings_page_visible",
+      "setting": "navigation_volume"
+    },
+    "verified": false
+  },
+  {
+    "name": "wallpaper_tap_is_not_applied",
+    "goal_type": "settings.wallpaper.change",
+    "technical": {
+      "status": "CHANGED",
+      "setting": "wallpaper",
+      "reason": "clicked",
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "dark_mode_persisted",
+    "goal_type": "settings.dark_mode.enable",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "system_night_mode_on",
+      "setting": "dark_mode",
+      "requested_state": "on",
+      "baseline_setting_value": 1,
+      "setting_value": 2,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": true
+  },
+  {
+    "name": "dark_mode_schedule_is_not_on",
+    "goal_type": "settings.dark_mode.enable",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "system_night_mode_on",
+      "setting": "dark_mode",
+      "requested_state": "on",
+      "baseline_setting_value": 1,
+      "setting_value": 0,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "dark_mode_already_on",
+    "goal_type": "settings.dark_mode.enable",
+    "technical": {
+      "status": "ALREADY_SET",
+      "reason": "system_mode_already_set",
+      "setting": "dark_mode",
+      "requested_state": "on",
+      "baseline_setting_value": 1,
+      "setting_value": 2
+    },
+    "verified": true
+  },
+  {
+    "name": "unknown_goal",
+    "goal_type": "settings.future.magic",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "font_size",
+      "baseline_setting_value": 1,
+      "setting_value": 1.15,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "change_without_action",
+    "goal_type": "settings.font_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "font_size",
+      "baseline_setting_value": 1,
+      "setting_value": 1.15,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": null,
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "same_observation_is_not_result",
+    "goal_type": "settings.font_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "font_size",
+      "baseline_setting_value": 1,
+      "setting_value": 1.15,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "before",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "value_before_action",
+    "goal_type": "settings.font_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "font_size",
+      "baseline_setting_value": 1,
+      "setting_value": 1.15,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1100
+    },
+    "verified": false
+  },
+  {
+    "name": "missing_timing",
+    "goal_type": "settings.font_size.increase",
+    "technical": {
+      "status": "CHANGED",
+      "reason": "target_value_increased",
+      "setting": "font_size",
+      "baseline_setting_value": 1,
+      "setting_value": 1.15,
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": null,
+      "verified_at_ms": 1800
+    },
+    "verified": false
+  },
+  {
+    "name": "mute_on_native_system_change",
+    "goal_type": "settings.mute.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "mute",
+      "requested_state": "on",
+      "baseline_setting_value": 2,
+      "setting_value": 0
+    },
+    "verified": true
+  },
+  {
+    "name": "mute_on_already_correct",
+    "goal_type": "settings.mute.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "ALREADY_SET",
+      "reason": "system_mode_already_set",
+      "setting": "mute",
+      "requested_state": "on",
+      "baseline_setting_value": 2,
+      "setting_value": 0
+    },
+    "verified": true
+  },
+  {
+    "name": "mute_on_wrong_mode",
+    "goal_type": "settings.mute.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "mute",
+      "requested_state": "on",
+      "baseline_setting_value": 2,
+      "setting_value": 1
+    },
+    "verified": false
+  },
+  {
+    "name": "mute_on_untrusted_float",
+    "goal_type": "settings.mute.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "mute",
+      "requested_state": "on",
+      "baseline_setting_value": 2.0,
+      "setting_value": 0
+    },
+    "verified": false
+  },
+  {
+    "name": "mute_on_missing_action",
+    "goal_type": "settings.mute.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "mute",
+      "requested_state": "on",
+      "baseline_setting_value": 2,
+      "setting_value": 0
+    },
+    "verified": false
+  },
+  {
+    "name": "mute_on_wrong_state",
+    "goal_type": "settings.mute.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "mute",
+      "requested_state": "off",
+      "baseline_setting_value": 2,
+      "setting_value": 0
+    },
+    "verified": false
+  },
+  {
+    "name": "mute_on_wrong_domain",
+    "goal_type": "settings.mute.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "mute",
+      "requested_state": "on",
+      "baseline_setting_value": 3,
+      "setting_value": 0
+    },
+    "verified": false
+  },
+  {
+    "name": "mute_off_native_system_change",
+    "goal_type": "settings.mute.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "mute",
+      "requested_state": "off",
+      "baseline_setting_value": 1,
+      "setting_value": 2
+    },
+    "verified": true
+  },
+  {
+    "name": "mute_off_already_correct",
+    "goal_type": "settings.mute.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "ALREADY_SET",
+      "reason": "system_mode_already_set",
+      "setting": "mute",
+      "requested_state": "off",
+      "baseline_setting_value": 1,
+      "setting_value": 2
+    },
+    "verified": true
+  },
+  {
+    "name": "mute_off_wrong_mode",
+    "goal_type": "settings.mute.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "mute",
+      "requested_state": "off",
+      "baseline_setting_value": 1,
+      "setting_value": 0
+    },
+    "verified": false
+  },
+  {
+    "name": "mute_off_untrusted_float",
+    "goal_type": "settings.mute.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "mute",
+      "requested_state": "off",
+      "baseline_setting_value": 1.0,
+      "setting_value": 2
+    },
+    "verified": false
+  },
+  {
+    "name": "mute_off_missing_action",
+    "goal_type": "settings.mute.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "mute",
+      "requested_state": "off",
+      "baseline_setting_value": 1,
+      "setting_value": 2
+    },
+    "verified": false
+  },
+  {
+    "name": "mute_off_wrong_state",
+    "goal_type": "settings.mute.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "mute",
+      "requested_state": "on",
+      "baseline_setting_value": 1,
+      "setting_value": 2
+    },
+    "verified": false
+  },
+  {
+    "name": "mute_off_wrong_domain",
+    "goal_type": "settings.mute.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "mute",
+      "requested_state": "off",
+      "baseline_setting_value": 3,
+      "setting_value": 2
+    },
+    "verified": false
+  },
+  {
+    "name": "vibrate_on_native_system_change",
+    "goal_type": "settings.vibrate.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "vibrate",
+      "requested_state": "on",
+      "baseline_setting_value": 0,
+      "setting_value": 1
+    },
+    "verified": true
+  },
+  {
+    "name": "vibrate_on_already_correct",
+    "goal_type": "settings.vibrate.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "ALREADY_SET",
+      "reason": "system_mode_already_set",
+      "setting": "vibrate",
+      "requested_state": "on",
+      "baseline_setting_value": 0,
+      "setting_value": 1
+    },
+    "verified": true
+  },
+  {
+    "name": "vibrate_on_wrong_mode",
+    "goal_type": "settings.vibrate.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "vibrate",
+      "requested_state": "on",
+      "baseline_setting_value": 0,
+      "setting_value": 2
+    },
+    "verified": false
+  },
+  {
+    "name": "vibrate_on_untrusted_float",
+    "goal_type": "settings.vibrate.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "vibrate",
+      "requested_state": "on",
+      "baseline_setting_value": 0.0,
+      "setting_value": 1
+    },
+    "verified": false
+  },
+  {
+    "name": "vibrate_on_missing_action",
+    "goal_type": "settings.vibrate.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "vibrate",
+      "requested_state": "on",
+      "baseline_setting_value": 0,
+      "setting_value": 1
+    },
+    "verified": false
+  },
+  {
+    "name": "vibrate_on_wrong_state",
+    "goal_type": "settings.vibrate.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "vibrate",
+      "requested_state": "off",
+      "baseline_setting_value": 0,
+      "setting_value": 1
+    },
+    "verified": false
+  },
+  {
+    "name": "vibrate_on_wrong_domain",
+    "goal_type": "settings.vibrate.enable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_on",
+      "setting": "vibrate",
+      "requested_state": "on",
+      "baseline_setting_value": 3,
+      "setting_value": 1
+    },
+    "verified": false
+  },
+  {
+    "name": "vibrate_off_native_system_change",
+    "goal_type": "settings.vibrate.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "vibrate",
+      "requested_state": "off",
+      "baseline_setting_value": 1,
+      "setting_value": 2
+    },
+    "verified": true
+  },
+  {
+    "name": "vibrate_off_already_correct",
+    "goal_type": "settings.vibrate.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "ALREADY_SET",
+      "reason": "system_mode_already_set",
+      "setting": "vibrate",
+      "requested_state": "off",
+      "baseline_setting_value": 1,
+      "setting_value": 2
+    },
+    "verified": true
+  },
+  {
+    "name": "vibrate_off_wrong_mode",
+    "goal_type": "settings.vibrate.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "vibrate",
+      "requested_state": "off",
+      "baseline_setting_value": 1,
+      "setting_value": 0
+    },
+    "verified": false
+  },
+  {
+    "name": "vibrate_off_untrusted_float",
+    "goal_type": "settings.vibrate.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "vibrate",
+      "requested_state": "off",
+      "baseline_setting_value": 1.0,
+      "setting_value": 2
+    },
+    "verified": false
+  },
+  {
+    "name": "vibrate_off_missing_action",
+    "goal_type": "settings.vibrate.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "vibrate",
+      "requested_state": "off",
+      "baseline_setting_value": 1,
+      "setting_value": 2
+    },
+    "verified": false
+  },
+  {
+    "name": "vibrate_off_wrong_state",
+    "goal_type": "settings.vibrate.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "vibrate",
+      "requested_state": "on",
+      "baseline_setting_value": 1,
+      "setting_value": 2
+    },
+    "verified": false
+  },
+  {
+    "name": "vibrate_off_wrong_domain",
+    "goal_type": "settings.vibrate.disable",
+    "technical": {
+      "attempt_id": "attempt",
+      "guide_command_id": "guide",
+      "target_key": "target",
+      "event_key": "event",
+      "baseline_observation_id": "before",
+      "observation_id": "after",
+      "baseline_captured_at_ms": 1000,
+      "action_at_ms": 1200,
+      "verified_at_ms": 1800,
+      "status": "CHANGED",
+      "reason": "system_ringer_mode_off",
+      "setting": "vibrate",
+      "requested_state": "off",
+      "baseline_setting_value": 3,
+      "setting_value": 2
+    },
+    "verified": false
+  }
+]

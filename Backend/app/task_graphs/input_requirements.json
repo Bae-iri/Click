@@ -1192,7 +1192,25 @@
       "id": "settings_mute_enable",
       "goal_prefix": "settings.mute.enable",
       "keywords": [],
-      "fields": [],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "무음 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "무음 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
       "routes": [
         {
           "when": {},
@@ -1204,7 +1222,25 @@
       "id": "settings_mute_disable",
       "goal_prefix": "settings.mute.disable",
       "keywords": [],
-      "fields": [],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "무음 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "무음 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
       "routes": [
         {
           "when": {},
@@ -1228,7 +1264,25 @@
       "id": "settings_vibrate_enable",
       "goal_prefix": "settings.vibrate.enable",
       "keywords": [],
-      "fields": [],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "진동 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "진동 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
       "routes": [
         {
           "when": {},
@@ -1240,7 +1294,25 @@
       "id": "settings_vibrate_disable",
       "goal_prefix": "settings.vibrate.disable",
       "keywords": [],
-      "fields": [],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "진동 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "진동 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
       "routes": [
         {
           "when": {},
@@ -1589,6 +1661,73 @@
       "goal_prefix": "settings.device_name.change",
       "keywords": [],
       "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "mute_mode",
+      "goal_prefix": "settings.mute.",
+      "keywords": [
+        "무음",
+        "mute",
+        "silent"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "무음 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "무음 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "vibrate_mode",
+      "goal_prefix": "settings.vibrate.",
+      "keywords": [
+        "진동",
+        "vibrate"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "진동 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "진동 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
       "routes": [
         {
           "when": {},
