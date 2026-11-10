@@ -21,6 +21,33 @@ import static org.mockito.Mockito.*;
 @RunWith(RobolectricTestRunner.class)
 @org.robolectric.annotation.Config(sdk = 34, application = android.app.Application.class)
 public class FloatingHeaderConsistencyTest {
+    @Test public void requestEditMicrophoneFillsDraftAndStillRequiresApply() throws Exception {
+        TaskFlowOverlayView.Listener listener=mock(TaskFlowOverlayView.Listener.class);
+        TaskFlowOverlayView flow=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),listener);
+        flow.requirements(new RequirementReview("휴대폰 전체 글자를 크게 해줘"),true);
+        assertNull(flow.requestEditSpeechTarget());
+        findText(flow,"내용 수정").performClick();
+        View microphone=flow.findViewWithTag("request_edit_microphone");assertNotNull(microphone);
+        assertEquals("말로 내용 수정",microphone.getContentDescription());
+        microphone.performClick();verify(listener).openInput();verify(listener,atLeastOnce()).stopGuidance();
+        var target=flow.requestEditSpeechTarget();assertNotNull(target);
+        assertTrue(target.apply("  화면 밝기를 높여줘  "));
+        assertEquals("화면 밝기를 높여줘",findEditor(flow).getText().toString());
+        verify(listener,never()).rephrase(anyString());verify(listener,never()).confirmRequirements();
+        findText(flow,"수정한 내용 확인").performClick();verify(listener).rephrase("화면 밝기를 높여줘");
+    }
+
+    @Test public void closedOrReplacedEditorDiscardsItsPendingVoiceText() throws Exception {
+        TaskFlowOverlayView.Listener listener=mock(TaskFlowOverlayView.Listener.class);
+        TaskFlowOverlayView flow=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),listener);
+        flow.requirements(new RequirementReview("휴대폰 전체 글자를 크게 해줘"),true);
+        findText(flow,"내용 수정").performClick();var old=flow.requestEditSpeechTarget();
+        assertFalse(old.apply("  "));
+        flow.requirements(new RequirementReview("휴대폰 전체 글자를 작게 해줘"),true);
+        assertFalse(old.apply("지연된 이전 음성"));assertNull(flow.requestEditSpeechTarget());
+        verify(listener,never()).rephrase(anyString());
+    }
+
     @Test public void everyConfirmationKeepsEditBelowItsBalancedSummaryBox() throws Exception {
         for (float scale : new float[]{1f, 1.5f, 2f}) {
             Context app = RuntimeEnvironment.getApplication();

@@ -139,6 +139,33 @@ public class ClickOverlayServiceExecutionTest {
         if (snapshots != null) snapshots.close();
     }
 
+    @Test public void spokenEditorCorrectionIsDraftEvenWhenItSoundsLikeConfirmation() throws Exception {
+        checkEditorSpeech(false,false);
+    }
+    @Test public void replacedEditorCannotTurnALateTranscriptIntoANewTask() throws Exception {
+        checkEditorSpeech(true,false);
+    }
+    @Test public void cancelledEditorRecordingIgnoresLateTranscript() throws Exception {
+        checkEditorSpeech(false,true);
+    }
+    @SuppressWarnings("unchecked")
+    private void checkEditorSpeech(boolean replace,boolean cancel) throws Exception {
+        SpeechInput speech=mock(SpeechInput.class);ClickOverlayLayout overlay=mock(ClickOverlayLayout.class);
+        when(overlay.getMode()).thenReturn(ClickOverlayLayout.Mode.VOICE);
+        set("speechInput",speech);set("overlayView",overlay);
+        TaskFlowOverlayView owner=(TaskFlowOverlayView)get("taskFlowView");
+        java.util.function.Function<String,Boolean> target=mock(java.util.function.Function.class);
+        when(target.apply(anyString())).thenReturn(true);when(owner.requestEditSpeechTarget()).thenReturn(target);
+        shadowOf(org.robolectric.RuntimeEnvironment.getApplication()).grantPermissions(android.Manifest.permission.RECORD_AUDIO);
+        service.onMicrophonePressed();
+        var callback=org.mockito.ArgumentCaptor.forClass(SpeechInput.Callback.class);verify(speech).start(callback.capture());
+        if(replace)set("taskFlowView",mock(TaskFlowOverlayView.class));
+        if(cancel)service.onMicrophoneCancelled();
+        callback.getValue().onSuccess("네");
+        verify(target,replace||cancel?never():times(1)).apply("네");
+        verify(gateway,never()).send(any(),any());assertTrue(requests.isEmpty());
+    }
+
     @Test public void microphoneReleaseFinishesRecordingWithoutCancellingRecognition() throws Exception {
         SpeechInput speech = mock(SpeechInput.class);
         ClickOverlayLayout overlay = mock(ClickOverlayLayout.class);
