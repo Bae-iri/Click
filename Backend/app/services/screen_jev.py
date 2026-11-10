@@ -15,6 +15,7 @@ from ai_agent.runtime.screen_privacy import minimize_nodes, assess_screen, priva
 from ai_agent.runtime.types import MatchResult, SafetyLevel
 from ai_agent.runtime.verification import valid_slider_value
 from ai_agent.runtime.budget import remaining
+from app.services.navigation_context import next_menu_context
 
 
 class JevScreenResolver(JevGoalClassifier):
@@ -132,6 +133,15 @@ class JevScreenResolver(JevGoalClassifier):
                 "destination_page": graph.states[t.to_state].name,
                 "target_names": selector_keywords(t, graph)}
                 for key,(t,n) in bindings.items()}
+            for key, (transition, _) in bindings.items():
+                navigation = next_menu_context(transition, graph)
+                if navigation:
+                    criteria[key]['navigation'] = navigation
+                    criteria[key]['description'] = (
+                        'Open the visible next menu on this approved route: '
+                        + navigation['route_description']
+                        + '. Judge the next menu opening, not whether the final goal control is visible. '
+                        'This candidate does not apply the final setting or complete the goal.')
             criteria.update(wait_for_result="Wait for the previous action result without acting.",
                             insufficient_evidence="Screen or target is ambiguous or unrelated; request fresh evidence.")
             pending = attempt if attempt is not None else (session.pending_attempt if session else None)
@@ -177,6 +187,9 @@ class JevScreenResolver(JevGoalClassifier):
                     "Only previous_action with event_received=true denotes an executed action. "
                     "Without an executed action, an unchanged screen does not mean failure or a settling result. "
                     "A candidate is the NEXT navigation action toward the goal, not necessarily the final setting control. "
+                    "For a navigation candidate, navigation.next_page_titles identifies the page opened NOW; "
+                    "navigation.remaining_page_titles explains later steps. Do not reject an intermediate menu "
+                    "because the final control is on a later page. Opening that menu does not perform the final goal. "
                     "Use independent screen_text and the collection of controls to identify the current page. "
                     "A control_label or description belongs to a menu row, not the page title. "
                     "For example, a Settings page containing a Display row is still Settings; choose the route into Display. "
