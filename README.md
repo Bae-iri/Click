@@ -2,6 +2,55 @@
 
 익숙하지 않은 모바일 앱에서 사용자의 목적과 현재 화면을 이해하고, 다음 행동을 실시간으로 안내하는 모바일 사용 지원 AI Agent입니다.
 
+Click은 대신 눌러주지 않습니다. 사용자가 말로 원하는 것을 요청하면 지금 화면에서 눌러야 할 곳을 하이라이트하고 음성으로 알려주며, 사용자가 직접 누른 결과를 확인해 다음 단계로 이끕니다.
+
+## 시연 영상
+
+[![Click 시연 영상](https://img.youtube.com/vi/Xqq0O440Lsg/hqdefault.jpg)](https://youtu.be/Xqq0O440Lsg)
+
+▶ [YouTube에서 보기](https://youtu.be/Xqq0O440Lsg)
+
+## 주요 기능
+
+- **음성·텍스트 요청**: "글자 크게 해줘"처럼 말하면 목표(Goal)와 필요한 값(slots)을 확정합니다.
+- **실시간 화면 안내**: Accessibility Tree로 현재 화면을 읽고, 다음에 누를 UI 요소를 오버레이로 하이라이트하고 TTS로 안내합니다.
+- **행동 검증과 복구**: 사용자 행동 후 화면을 다시 관찰해 성공 여부를 확인하고, 다른 화면으로 벗어나면 승인된 Task Graph 안에서 경로를 다시 잡습니다(Re-plan).
+- **Vision/OCR fallback**: Accessibility 정보만으로 대상을 찾지 못하면 사용자 동의를 받아 기기 안에서 OCR을 수행합니다(ML Kit 한국어 모델). 원본 이미지는 외부로 전송하지 않으며, 같은 단계에서 3회 실패하면 수동 안내로 돌아갑니다.
+- **안전 장치**: 결제·비밀번호 화면 차단, 개인정보 마스킹, 위험 행동은 사용자 확인 후 진행합니다.
+- **Task Graph 개선 파이프라인(AI-Agent 2)**: 실제 실행 데이터를 단계별로 재구성·라벨링하고 새 graph 후보를 평가해 승인 후 배포합니다.
+
+## 기술 스택
+
+| 영역 | 사용 기술 |
+| --- | --- |
+| Frontend | Android (Java, minSdk 26 / targetSdk 34), AccessibilityService, Overlay, ML Kit Text Recognition (Korean), Kakao 로그인 |
+| Backend | Python 3.11+, FastAPI, SQLAlchemy, Alembic, PostgreSQL |
+| AI-Agent | Python, Task Graph 기반 런타임(Observe → Guide → Verify → Re-plan), Graph Proposal 파이프라인 |
+| Infra | Docker Compose, Render |
+
+## 빠른 시작
+
+```bash
+# 1. DB (PostgreSQL)
+docker compose up -d
+
+# 2. Backend
+cd Backend
+python -m pip install -e ".[test]"
+cp .env.example .env   # 필요한 값 입력
+# 실행 방법은 Backend/README.md 참고
+
+# 3. AI-Agent 테스트
+cd ../AI-Agent
+python -m pytest -q
+
+# 4. Android 앱 빌드
+cd ../Frontend
+sh ./gradlew :app:assembleDebug
+```
+
+영역별 상세 안내: [Frontend](Frontend/README.md) · [Backend](Backend/README.md) · [AI-Agent](AI-Agent/README.md)
+
 ## Repository Structure
 
 ```text
