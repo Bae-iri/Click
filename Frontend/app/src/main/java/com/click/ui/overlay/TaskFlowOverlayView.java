@@ -77,6 +77,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         default void openInput() {}
     }
     private final Listener listener;
+    private final TextView queuedRequests;
     private final LinearLayout content;
     private final Button pause;
     private final Button reviewConfirm;
@@ -151,6 +152,12 @@ public final class TaskFlowOverlayView extends LinearLayout {
         header.collapse.setId(R.id.task_flow_collapse);
         addView(header, new LayoutParams(-1, -2));
         heading = header.title;
+        queuedRequests = text("", 13);
+        queuedRequests.setTextColor(SECONDARY);
+        queuedRequests.setMaxLines(5);
+        queuedRequests.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        queuedRequests.setVisibility(GONE);
+        addView(queuedRequests, spaced(6));
         content = new LinearLayout(context); content.setOrientation(VERTICAL);
         content.setPadding(0, 0, 0, dp(4));
         scroll = new ScrollView(context); scroll.setFillViewport(false); scroll.addView(content);
@@ -389,6 +396,17 @@ public final class TaskFlowOverlayView extends LinearLayout {
         TextView apology = text(explanation, 16);
         apology.setGravity(Gravity.CENTER);
         content.addView(apology, spaced(4));
+    }
+
+    /** Pending requests stay visible while the current task changes stages. */
+    public void setQueuedRequests(java.util.List<String> requests) {
+        if (requests == null || requests.isEmpty()) {
+            queuedRequests.setText(""); queuedRequests.setVisibility(GONE); return;
+        }
+        StringBuilder value = new StringBuilder("대기 요청 ").append(requests.size()).append("개");
+        for (int i=0; i<Math.min(3,requests.size()); i++) value.append("\n").append(i+1).append(". ").append(requests.get(i));
+        if (requests.size()>3) value.append("\n외 ").append(requests.size()-3).append("개");
+        queuedRequests.setText(value.toString()); queuedRequests.setVisibility(VISIBLE);
     }
 
     /** Sensitive input stays local; the requested task can continue on the device. */
