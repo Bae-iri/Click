@@ -15,7 +15,10 @@ def guidance(goal_type):
 
 def start_message(goal_type):
     record=guidance(goal_type)
-    return (record['intent']+' 마지막 선택·입력·변경은 기기에서 직접 진행해 주세요.') if record else None
+    if not record:
+        return None
+    notice = record.get('privacy_notice', '마지막 선택·입력·변경은 기기에서 직접 진행해 주세요.')
+    return record['intent']+' '+notice
 
 
 def handoff_message(goal_type,page_title,fallback):
