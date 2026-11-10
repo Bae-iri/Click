@@ -21,7 +21,48 @@ public final class ClickApplication extends Application implements ClickHost {
     @Override public void onCreate() {
         super.onCreate();
         KakaoSignIn.initialize(this);
+        registerActivityLifecycleCallbacks(new AppVisibilityCallbacks());
     }
+    private int startedActivities;
+    private boolean appForeground;
+    private final android.os.Handler visibilityHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable appStopped = () -> {
+        if (startedActivities != 0) return;
+        appForeground = false;
+        com.click.service.overlay.ClickOverlayService.onAppVisibilityChanged(false);
+        ensureOverlayRunning();
+    };
+
+    public boolean isAppForeground() { return appForeground; }
+
+    private void ensureOverlayRunning() {
+        if (accessibilityConnected() && !com.click.service.overlay.ClickOverlayService.isRunning()) {
+            startService(new Intent(this, com.click.service.overlay.ClickOverlayService.class));
+        }
+    }
+
+    private final class AppVisibilityCallbacks implements ActivityLifecycleCallbacks {
+        @Override public void onActivityStarted(Activity activity) {
+            visibilityHandler.removeCallbacks(appStopped);
+            startedActivities++;
+            appForeground = true;
+            com.click.service.overlay.ClickOverlayService.onAppVisibilityChanged(true);
+            ensureOverlayRunning();
+        }
+        @Override public void onActivityStopped(Activity activity) {
+            startedActivities--;
+            // The replacement activity owns visibility during a configuration change.
+            if (startedActivities == 0 && !activity.isChangingConfigurations()) {
+                visibilityHandler.post(appStopped);
+            }
+        }
+        @Override public void onActivityCreated(Activity activity, android.os.Bundle state) { }
+        @Override public void onActivityResumed(Activity activity) { }
+        @Override public void onActivityPaused(Activity activity) { }
+        @Override public void onActivitySaveInstanceState(Activity activity, android.os.Bundle state) { }
+        @Override public void onActivityDestroyed(Activity activity) { }
+    }
+
     @Override public boolean signedIn() { return new AuthTokenStore(this).hasRefreshToken(); }
     @Override public boolean accessibilityEnabled() { return PermissionStatus.isAccessibilityEnabled(this); }
     @Override public boolean accessibilityConnected() {
