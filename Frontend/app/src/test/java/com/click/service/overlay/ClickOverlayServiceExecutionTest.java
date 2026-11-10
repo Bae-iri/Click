@@ -203,6 +203,20 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(count, sent.size());
     }
 
+    @Test public void sensitiveVpnStepKeepsPurposeWithoutFailingOrResendingTheScreen() throws Exception {
+        resolve(); confirm();
+        set("acceptedGoal", new JSONObject().put("goal_type", "settings.vpn.connect").put("target_app", "android_settings"));
+        int count = sent.size();
+        callbacks.get(callbacks.size() - 1).onFailure(new com.click.data.snapshot.SettingsScreenPrivacy.Blocked(
+                com.click.data.snapshot.SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_INPUT));
+        assertTrue((boolean) get("agentPaused"));
+        TaskFlowOverlayView view = (TaskFlowOverlayView) get("taskFlowView");
+        verify(view).privateSettingsStep(contains("VPN 설정"));
+        verify(view, never()).failed(any());
+        send(null); shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        assertEquals(count, sent.size());
+    }
+
     @Test public void cancelledMicrophoneIgnoresLateRecognitionResult() throws Exception {
         SpeechInput speech = mock(SpeechInput.class);
         ClickOverlayLayout overlay = mock(ClickOverlayLayout.class);

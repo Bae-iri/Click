@@ -391,6 +391,18 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.addView(apology, spaced(4));
     }
 
+    /** Sensitive input stays local; the requested task can continue on the device. */
+    public void privateSettingsStep(String message) {
+        clear("설정을 직접 이어가 주세요");
+        narrationMessage = message;
+        controls.setVisibility(GONE);
+        divider.setVisibility(GONE);
+        content.addView(text(message, 16), spaced(0));
+        recoveryActions.addView(primaryButton("설정에서 직접 진행하기", () -> listener.collapse()), spaced(0));
+        recoveryActions.addView(quietButton("안내 끝내기", () -> listener.control("cancel_task")), spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
+    }
+
     public void failed(String message) {
         clear(getResources().getConfiguration().fontScale >= 1.4f
                 ? "작업을 마치지\n못했어요" : "작업을 마치지 못했어요");

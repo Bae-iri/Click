@@ -15,7 +15,7 @@ from ai_agent.runtime.screen_privacy import minimize_nodes, assess_screen, priva
 from ai_agent.runtime.types import MatchResult, SafetyLevel
 from ai_agent.runtime.verification import valid_slider_value
 from ai_agent.runtime.budget import remaining
-from app.services.navigation_context import next_menu_context
+from app.services.navigation_context import next_menu_context, immediate_menu_request
 
 
 class JevScreenResolver(JevGoalClassifier):
@@ -175,6 +175,9 @@ class JevScreenResolver(JevGoalClassifier):
                     "baseline_value": finite_number(previous_action.get("baseline_value")),
                     "event_received": bool(previous_action.get("event_key"))} if previous_action else None),
                 "result": {"status": verification.status.value} if verification else None}
+            immediate = immediate_menu_request(bindings,nodes,graph)
+            if immediate:
+                state['immediate_request'] = immediate
             payload = {"model": model, "state": state, "questions": {"screen": {
                 "type": "choice", "criteria": criteria,
                 "instructions": "Choose the current graph step AND the actual UI target from the observed screen. "
@@ -198,6 +201,12 @@ class JevScreenResolver(JevGoalClassifier):
                     "Within that step prefer the lowest route_priority among equally supported routes. "
                     "Priority never supplies missing evidence or overrides the observed current step. "
                     "Otherwise abstain when uncertain."}}}
+            if immediate:
+                payload['questions']['screen']['instructions'] = (
+                    'Identify the visible control for this immediate menu-opening request: '
+                    + immediate['open_menu'][0]
+                    + '. The overall task goal is context for later steps, not the button requested now. '
+                    + payload['questions']['screen']['instructions'])
             payload_bytes = len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode())
             self.last_diagnostics.update(payload_bytes=payload_bytes, exported_node_count=len(selected_nodes),
                 filter_time_ms=round((monotonic() - filter_started) * 1000, 3))

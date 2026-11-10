@@ -174,12 +174,16 @@ class ClickAgentEngine:
         if assessment.status and (self.screen_resolver or assessment.status == 'sensitive_screen'):
             if navigation_changed:
                 self.session_store.update(request.session_id, **session_fields(existing_session))
+            message = assessment.message
+            if assessment.status == 'sensitive_screen' and graph.definition.task_type == 'settings_assisted':
+                from ai_agent.task_graph.assisted_guidance import privacy_message
+                message = privacy_message(graph.definition.goal_type,message)
             return AgentTurnResponse(request_id=request.request_id, session_id=request.session_id,
                 task_id=typed_goal.task_id, typed_goal=typed_goal,
                 current_state_id=existing_session.current_state_id if existing_session else "S0_UNKNOWN",
                 guide_command=GuideCommand(guide_command_id='guide_' + uuid4().hex,
                     command_type=CommandType.BLOCKED, action_type=ActionType.OBSERVE_ONLY,
-                    message=assessment.message, safety_level=SafetyLevel.BLOCKED,
+                    message=message, safety_level=SafetyLevel.BLOCKED,
                     requires_user_action=False, render_policy={"privacy_blocked": assessment.status == 'sensitive_screen',
                         "manual_only": True, "observation_reason": assessment.reason}),
                 debug={"ui_selection": {"provider": "jev" if self.screen_resolver else "rules",

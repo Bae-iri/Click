@@ -77,6 +77,12 @@ def make_outcome(technical, now, direction="increase", *, previous=None, setting
     elif technical.get('reason') == 'applied_setting_unobservable':
         message = '기기에 적용된 설정 값을 읽지 못해 변경 결과를 확인하지 못했어요.'
     kind=success_contract(goal_type).get('kind')
+    if kind=='user_report':
+        from ai_agent.task_graph.assisted_guidance import guidance, result_question
+        authored=guidance(goal_type)
+        if authored:
+            message=f'‘{authored["name"]}’ 결과를 기기에서 확인해 주세요. 앱에서 변경 성공을 검증한 것은 아니에요.'
+            question=result_question(goal_type)
     if kind=='page_opened':
         message='요청하신 설정 화면을 열었어요.' if technical_success(technical,goal_type) else '요청하신 설정 화면을 확인하지 못했어요.'
         question='원하신 화면인가요?'
