@@ -40,3 +40,19 @@ def test_unknown_or_automatic_tasks_never_inherit_manual_private_instructions():
         assert privacy_message(goal,'base')=='base'
     assert '연결 해제' not in guidance('settings.vpn.connect')['manual']
     assert '비밀번호' not in guidance('settings.vpn.disconnect')['manual']
+
+
+@pytest.mark.parametrize('goal',['settings.vpn.connect','settings.wifi.connect','settings.screen_lock.change','settings.notification_history.view','settings.hotspot.password.change'])
+def test_privacy_pause_is_explained_before_the_sensitive_step(goal):
+    _,ready=prepare(goal);record=guidance(goal);message=ready['message']
+    assert message.index(record['name'])<message.index('다만,')
+    assert record['privacy_stage'] in message
+    assert '가 나오면' in message and '개인정보 보호' in message
+    assert '클릭의 화면 읽기와 자동 조작을 잠시 멈출게요' in message
+    assert '이미' not in message
+
+@pytest.mark.parametrize('goal',['settings.screen_timeout.set','settings.language.change','settings.ringtone.change','settings.software_update.check'])
+def test_nonprivate_manual_choices_do_not_get_a_personal_data_warning(goal):
+    _,ready=prepare(goal)
+    assert '개인정보' not in ready['message'] and '다만,' not in ready['message']
+    assert '직접' in ready['message']
