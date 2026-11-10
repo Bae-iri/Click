@@ -1,6 +1,6 @@
 """Retire interrupted attempts; navigation is never a failed guided action."""
+from dataclasses import fields, replace
 from hashlib import sha256
-from dataclasses import replace
 
 LAUNCHERS = {"com.android.launcher3", "com.google.android.apps.nexuslauncher",
              "com.sec.android.app.launcher", "com.miui.home", "com.huawei.android.launcher",
@@ -8,6 +8,20 @@ LAUNCHERS = {"com.android.launcher3", "com.google.android.apps.nexuslauncher",
 
 
 def apply_navigation(store, request, session, *, persist=True):
+    """Compatibility wrapper for callers that explicitly commit navigation alone."""
+    updated = navigation_result(request, session)
+    if updated is session or not persist:
+        return updated
+    return store.update(request.session_id, **session_fields(updated))
+
+
+def session_fields(session):
+    return {field.name: getattr(session, field.name) for field in fields(session)
+            if field.name != "session_id"}
+
+
+def navigation_result(request, session):
+    """Compute interruption state without exposing a partially committed turn."""
     event = request.user_action_event
     if not session or not event or event.action_type.value not in {"back_navigated", "home_navigated"}:
         return session
@@ -36,4 +50,4 @@ def apply_navigation(store, request, session, *, persist=True):
                        failed_target_keys={}, transition_attempts={}, total_failed_attempts=0,
                        recovery_count=0)
     changes['processed_event_keys'] = (*session.processed_event_keys, key)[-128:]
-    return store.update(request.session_id, **changes) if persist else replace(session, **changes)
+    return replace(session, **changes)

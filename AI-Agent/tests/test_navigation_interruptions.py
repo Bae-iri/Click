@@ -65,3 +65,17 @@ def test_recents_launcher_window_is_not_home_evidence():
     node=replace(_node('overview','최근 앱'),package_name='com.android.launcher3',class_name='RecentsView')
     request=AgentTurnRequest('recents','s',raw_goal=None,accessibility_tree=(node,),user_action_event=event)
     assert apply_navigation(turns.engine.session_store,request,turns.session) is turns.session
+
+
+def test_navigation_can_be_computed_without_committing_partial_turn():
+    from ai_agent.runtime.navigation import apply_navigation
+    from ai_agent.runtime.types import AgentTurnRequest
+    turns = Turns()
+    first = turns.send(at=1000)
+    before = turns.session
+    event = turns.event(first, at=1200, action=UserActionType.BACK_NAVIGATED)
+    request = AgentTurnRequest('nav', 's', raw_goal=None, accessibility_tree=(), user_action_event=event)
+    updated = apply_navigation(turns.engine.session_store, request, before, persist=False)
+    assert updated is not before
+    assert updated.pending_attempt is None
+    assert turns.session is before

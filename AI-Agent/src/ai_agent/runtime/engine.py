@@ -118,9 +118,10 @@ class ClickAgentEngine:
                         'recovery': stale_observation_recovery()}),
                 debug={'checklist': list(existing_session.progress_steps), 'recovery': stale_observation_recovery()})
 
-        from ai_agent.runtime.navigation import apply_navigation
-        navigated_session = apply_navigation(self.session_store, request, existing_session, persist=False)
-        if navigated_session is not existing_session:
+        from ai_agent.runtime.navigation import navigation_result, session_fields
+        navigated_session = navigation_result(request, existing_session)
+        navigation_changed = navigated_session is not existing_session
+        if navigation_changed:
             previous_snapshot = None
             existing_session = navigated_session
 
@@ -134,6 +135,8 @@ class ClickAgentEngine:
             existing_session.typed_goal if existing_session else None,
         )
         if typed_goal.needs_clarification or not typed_goal.is_supported:
+            if navigation_changed:
+                self.session_store.update(request.session_id, **session_fields(existing_session))
             guide_command = clarification_command(
                 session_id=request.session_id,
                 message=typed_goal.clarification_message
@@ -169,6 +172,8 @@ class ClickAgentEngine:
         # Credential/authentication boundaries apply to every selector, including
         # local rules. An unknown screen is an observation failure, not proof of PII.
         if assessment.status and (self.screen_resolver or assessment.status == 'sensitive_screen'):
+            if navigation_changed:
+                self.session_store.update(request.session_id, **session_fields(existing_session))
             return AgentTurnResponse(request_id=request.request_id, session_id=request.session_id,
                 task_id=typed_goal.task_id, typed_goal=typed_goal,
                 current_state_id=existing_session.current_state_id if existing_session else "S0_UNKNOWN",
@@ -645,6 +650,7 @@ class ClickAgentEngine:
                 "session_stateful": True,
                 "similarity_provider": getattr(self.similarity_scorer, "provider", "custom"),
                 "ui_selection": ui_selection,
+                "guide_policy": decision.source,
                 "observation": observation_debug,
                 "fallback": fallback_debug,
                 "agent_chain": agent_chain_debug,
