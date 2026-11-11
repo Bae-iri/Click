@@ -79,7 +79,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             service.stopNarration();
         }
         for (java.util.Map.Entry<View, Integer> entry : service.overlayVisibility.entrySet()) {
-            entry.getKey().setVisibility(foreground ? View.GONE : entry.getValue());
+            entry.getKey().setVisibility(foreground && entry.getKey() != service.feedbackView ? View.GONE : entry.getValue());
         }
     }
 
@@ -90,7 +90,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void addOverlayView(View view, WindowManager.LayoutParams params) {
         int desired = overlayVisibility.computeIfAbsent(view, key -> key.getVisibility());
-        int actual = appForeground ? View.GONE : desired;
+        int actual = appForeground && view != feedbackView ? View.GONE : desired;
         if (view.getVisibility() != actual) view.setVisibility(actual);
         windowManager.addView(view, params);
     }
@@ -281,6 +281,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         });
         agentGateway = new AgentTurnGateway(this);
         queueGateway = new VoiceQueueGateway(this);
+        interactionGateway = new com.click.data.remote.InteractionGateway(this);
         quickHelpSelections = new QuickHelpSelectionStore(this);
         goalClassifier = loadGoalCatalog();
         speechInput = new DeviceSpeechInput(this);
@@ -484,6 +485,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         listening = false;
         if (agentGateway != null) agentGateway.close();
         if (queueGateway != null) queueGateway.close();
+        if (interactionGateway != null) interactionGateway.close();
+        clearFeedback();
         if (collapseReceiverRegistered) {
             unregisterReceiver(collapseReceiver);
             collapseReceiverRegistered = false;
@@ -1345,7 +1348,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (target == null || overlayView == null || windowParams == null
                 || target == windowManager && overlayWindowType == windowType
                     && overlayView.isAttachedToWindow()
-                    && (taskFlowView == null || taskFlowView.isAttachedToWindow())) {
+                    && (taskFlowView == null || taskFlowView.isAttachedToWindow())
+                    && (feedbackView == null || feedbackView.isAttachedToWindow())) {
             return;
         }
         detachGuideOverlay();
@@ -1363,6 +1367,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             try { windowManager.removeViewImmediate(taskFlowView); }
             catch (IllegalArgumentException ignored) { }
         }
+        if (windowManager != null && feedbackView != null && feedbackView.isAttachedToWindow()) {
+            try { windowManager.removeViewImmediate(feedbackView); }
+            catch (IllegalArgumentException ignored) { }
+        }
         windowManager = target;
         overlayWindowType = windowType;
         windowParams.type = windowType;
@@ -1373,6 +1381,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (taskFlowView != null && taskFlowParams != null) {
                 taskFlowParams.type = windowType;
                 addOverlayView(taskFlowView, taskFlowParams);
+            }
+            if (feedbackView != null && feedbackParams != null) {
+                feedbackParams.type = windowType;
+                addOverlayView(feedbackView, feedbackParams);
             }
             updateFloatingVisibility();
         } catch (RuntimeException error) {
@@ -1685,7 +1697,105 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         processVipRequest("멈춰");
     }
 
+    private com.click.data.remote.InteractionGateway interactionGateway;
+    private com.click.ui.overlay.FeedbackOverlayView feedbackView;
+    private WindowManager.LayoutParams feedbackParams;
+    private final java.util.ArrayDeque<com.click.data.remote.InteractionGateway.Response> pendingFeedback = new java.util.ArrayDeque<>();
+
     private void handleRecognizedCommand(String text) {
+        String command = text == null ? "" : text.trim();
+        if (command.isEmpty()) return;
+        GoalCommandInterpreter.Result control = GoalCommandInterpreter.interpret(command,
+                agentSessionId != null, agentPaused, agentConfirmationId != null, null, foregroundPackage());
+        boolean contextual = resultPrompt != null && TaskFlowAnswers.result(command) != null
+                || followUp != null && TaskFlowAnswers.adjustment(command) != null
+                || goalPreparation != null && goalPreparation.needsInput() && goalPreparation.exactSpokenChoice(command) != null
+                || GoalCatalogClassifier.normalize(command).matches("네|예|맞아|맞아요|이대로시작|이내용으로시작|시작해|시작해주세요|다음요청시작|다음작업시작");
+        boolean directControl = control.kind == GoalCommandInterpreter.Kind.EXIT_APPLICATION
+                || control.kind == GoalCommandInterpreter.Kind.PAUSE_TASK || control.kind == GoalCommandInterpreter.Kind.RESUME_TASK
+                || control.kind == GoalCommandInterpreter.Kind.CANCEL_TASK || control.kind == GoalCommandInterpreter.Kind.CONFIRM_ACCEPTED
+                || control.kind == GoalCommandInterpreter.Kind.CONFIRM_REJECTED;
+        if (interactionGateway == null || RepeatRequest.matches(command) || contextual
+                || directControl || isInterruptCommand(command)
+                || TaskFlowAnswers.stop(command)) {
+            handleTaskCommand(command);
+            return;
+        }
+        final int generation = queueGeneration;
+        interactionGateway.classify(java.util.UUID.randomUUID().toString(), command, agentSessionId,
+                new com.click.data.remote.InteractionGateway.Callback() {
+            @Override public void onSuccess(com.click.data.remote.InteractionGateway.Response response) {
+                if (closing || generation != queueGeneration) return;
+                if (response.isFeedback()) showFeedback(response);
+                else handleTaskCommand(command);
+            }
+            @Override public void onFailure(Throwable error) {
+                if (closing || generation != queueGeneration) return;
+                // Keep the entered text available; do not claim a save or silently
+                // turn an unclassified complaint into an executable request.
+                if (overlayView != null) {
+                    overlayView.openText();
+                    overlayView.setDraftText(command);
+                    overlayView.showInputFeedback("말씀하신 내용을 확인하지 못했어요. 잠시 후 다시 보내주세요.");
+                }
+            }
+        });
+    }
+
+    private void showFeedback(com.click.data.remote.InteractionGateway.Response response) {
+        if (closing || windowManager == null) return;
+        pendingFeedback.add(response);
+        presentNextFeedback();
+    }
+
+    private void presentNextFeedback() {
+        if (closing || feedbackView != null || pendingFeedback.isEmpty() || windowManager == null) return;
+        com.click.data.remote.InteractionGateway.Response response = pendingFeedback.removeFirst();
+        final com.click.ui.overlay.FeedbackOverlayView[] owner = {null};
+        feedbackView = new com.click.ui.overlay.FeedbackOverlayView(this,
+                "positive_feedback".equals(response.intent), response.message, response.detail,
+                new com.click.ui.overlay.FeedbackOverlayView.Listener() {
+            @Override public void dismiss() { if (feedbackView == owner[0]) dismissFeedback(); }
+            @Override public void submit(String detail) {
+                if (closing || feedbackView != owner[0] || interactionGateway == null) return;
+                owner[0].setSaving(true);
+                interactionGateway.submit(response.feedbackId, detail, new com.click.data.remote.InteractionGateway.SaveCallback() {
+                    @Override public void onSaved() {
+                        if (closing || feedbackView != owner[0]) return;
+                        dismissFeedback();
+                        Toast.makeText(ClickOverlayService.this, "피드백을 저장했어요. 알려주셔서 고마워요.", Toast.LENGTH_LONG).show();
+                    }
+                    @Override public void onFailure(Throwable error) {
+                        if (!closing && feedbackView == owner[0])
+                            owner[0].showError("아직 저장하지 못했어요. 적어주신 내용은 그대로 있으니 다시 보내주세요.");
+                    }
+                });
+            }
+        });
+        owner[0] = feedbackView;
+        feedbackParams = new WindowManager.LayoutParams(Math.min(dp(380), screenWidth() - dp(24)),
+                WindowManager.LayoutParams.WRAP_CONTENT, overlayWindowType,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT);
+        feedbackParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        feedbackParams.y = dp(20);
+        feedbackParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
+        addOverlayView(feedbackView, feedbackParams);
+        speak(response.message);
+    }
+
+    private void dismissFeedback() {
+        if (feedbackView != null) {
+            android.view.inputmethod.InputMethodManager ime = getSystemService(android.view.inputmethod.InputMethodManager.class);
+            if (ime != null) ime.hideSoftInputFromWindow(feedbackView.getWindowToken(), 0);
+            if (feedbackView.isAttachedToWindow() && windowManager != null) windowManager.removeView(feedbackView);
+        }
+        feedbackView = null; feedbackParams = null;
+        presentNextFeedback();
+    }
+
+    private void clearFeedback() { pendingFeedback.clear(); dismissFeedback(); }
+
+    private void handleTaskCommand(String text) {
         String command = text == null ? "" : text.trim();
         if (command.isEmpty()) return;
         // Before contextual answers: "네?" / "응?" must not accept a confirmation or result prompt.
@@ -2439,6 +2549,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void shutdownClick() {
+        clearFeedback();
         if (closing) return;
         closing = true;
         queueGeneration++;

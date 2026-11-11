@@ -2891,4 +2891,123 @@ public class ClickOverlayServiceExecutionTest {
         Files.createDirectories(directory);
         Files.write(directory.resolve(name + ".json"), request.toString(2).getBytes(StandardCharsets.UTF_8));
     }
+    private void recognized(String text) throws Exception {
+        Method method = ClickOverlayService.class.getDeclaredMethod("handleRecognizedCommand", String.class);
+        method.setAccessible(true); method.invoke(service, text);
+    }
+
+    private com.click.data.remote.InteractionGateway.Response feedbackResponse(boolean positive, String id) throws Exception {
+        return new com.click.data.remote.InteractionGateway.Response(new JSONObject()
+                .put("intent", positive ? "positive_feedback" : "negative_feedback")
+                .put("message", positive ? "고마워요! 좋았던 점도 알려주세요." : "죄송합니다. 클릭이 아직 성장 중이라 부족한 점이 있어요. 불편했던 점을 적어주세요.")
+                .put("feedback", new JSONObject().put("id", id).put("sentiment", positive ? "positive" : "negative")).toString());
+    }
+
+    private <T extends android.view.View> T feedbackChild(android.view.View root, Class<T> type, String label) {
+        if (type.isInstance(root) && (label == null || root instanceof android.widget.TextView
+                && ((android.widget.TextView)root).getText().toString().equals(label))) return type.cast(root);
+        if (root instanceof android.view.ViewGroup) for (int i=0; i<((android.view.ViewGroup)root).getChildCount(); i++) {
+            T found = feedbackChild(((android.view.ViewGroup)root).getChildAt(i), type, label);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    @Test public void negativeFeedbackPreservesCurrentTaskAndDoesNotEnterQueue() throws Exception {
+        var queue = prepareResultWithQueue();
+        var interactions = mock(com.click.data.remote.InteractionGateway.class);set("interactionGateway", interactions);
+        Object session=get("agentSessionId"), goal=get("acceptedGoal"), prompt=get("resultPrompt"), panel=get("taskFlowView");
+        int turns=requests.size();
+        recognized("야 이상한 색기야");
+        var callback=org.mockito.ArgumentCaptor.forClass(com.click.data.remote.InteractionGateway.Callback.class);
+        verify(interactions).classify(anyString(),eq("야 이상한 색기야"),eq((String)session),callback.capture());
+        callback.getValue().onSuccess(feedbackResponse(false,"negative-1"));
+        assertNotNull(get("feedbackView"));
+        assertEquals(session,get("agentSessionId"));assertSame(goal,get("acceptedGoal"));
+        assertSame(prompt,get("resultPrompt"));assertSame(panel,get("taskFlowView"));assertEquals(turns,requests.size());
+        verify(queue,never()).enqueue(anyString(),anyString(),any());verify(queue,never()).complete(anyString(),any());
+        Method dismiss=ClickOverlayService.class.getDeclaredMethod("dismissFeedback");dismiss.setAccessible(true);dismiss.invoke(service);
+        assertNull(get("feedbackView"));assertSame(prompt,get("resultPrompt"));
+    }
+
+    @Test public void thanksIsFeedbackAndNeverImplicitlyCompletesTheTask() throws Exception {
+        var queue = prepareResultWithQueue();var interactions=mock(com.click.data.remote.InteractionGateway.class);
+        set("interactionGateway",interactions);int turns=requests.size();
+        recognized("폰트 키워줘서 고마워");
+        var callback=org.mockito.ArgumentCaptor.forClass(com.click.data.remote.InteractionGateway.Callback.class);
+        verify(interactions).classify(anyString(),eq("폰트 키워줘서 고마워"),any(),callback.capture());
+        callback.getValue().onSuccess(feedbackResponse(true,"positive-1"));
+        assertNotNull(get("feedbackView"));assertNotNull(get("resultPrompt"));assertEquals(turns,requests.size());
+        verify(queue,never()).complete(anyString(),any());
+    }
+
+    @Test public void explicitResultAnswerSkipsSocialClassification() throws Exception {
+        prepareResultWithQueue();var interactions=mock(com.click.data.remote.InteractionGateway.class);
+        set("interactionGateway",interactions);
+        recognized("좋아요");
+        verifyNoInteractions(interactions);assertEquals("respond_result",requests.get(requests.size()-1).commandType());
+        assertNull(get("feedbackView"));
+    }
+
+    @Test public void failedDetailSaveKeepsDraftAndRetryClosesOnlyFeedback() throws Exception {
+        prepareResultWithQueue();var interactions=mock(com.click.data.remote.InteractionGateway.class);
+        set("interactionGateway",interactions);Object session=get("agentSessionId"),panel=get("taskFlowView");
+        Method show=ClickOverlayService.class.getDeclaredMethod("showFeedback",com.click.data.remote.InteractionGateway.Response.class);
+        show.setAccessible(true);show.invoke(service,feedbackResponse(false,"feedback-1"));
+        android.view.View form=(android.view.View)get("feedbackView");
+        var text=feedbackChild(form,android.widget.EditText.class,null);text.setText("설정 화면을 못 찾아요");
+        var button=feedbackChild(form,android.widget.Button.class,"피드백 보내기");button.performClick();button.performClick();
+        var callback=org.mockito.ArgumentCaptor.forClass(com.click.data.remote.InteractionGateway.SaveCallback.class);
+        verify(interactions,times(1)).submit(eq("feedback-1"),eq("설정 화면을 못 찾아요"),callback.capture());
+        callback.getValue().onFailure(new java.io.IOException("offline"));
+        assertEquals("설정 화면을 못 찾아요",text.getText().toString());assertTrue(button.isEnabled());
+        button.performClick();verify(interactions,times(2)).submit(eq("feedback-1"),eq("설정 화면을 못 찾아요"),callback.capture());
+        callback.getValue().onSaved();
+        assertNull(get("feedbackView"));assertEquals(session,get("agentSessionId"));assertSame(panel,get("taskFlowView"));
+    }
+
+    @Test public void laterFeedbackCannotOverwriteAnOpenDraft() throws Exception {
+        prepareResultWithQueue();
+        Method show=ClickOverlayService.class.getDeclaredMethod("showFeedback",com.click.data.remote.InteractionGateway.Response.class);
+        show.setAccessible(true);show.invoke(service,feedbackResponse(false,"first"));
+        android.view.View first=(android.view.View)get("feedbackView");
+        feedbackChild(first,android.widget.EditText.class,null).setText("작성 중인 의견");
+        show.invoke(service,feedbackResponse(true,"second"));
+        assertSame(first,get("feedbackView"));
+        assertEquals("작성 중인 의견",feedbackChild(first,android.widget.EditText.class,null).getText().toString());
+        feedbackChild(first,android.widget.Button.class,"나중에").performClick();
+        assertNotSame(first,get("feedbackView"));
+        assertNotNull(feedbackChild((android.view.View)get("feedbackView"),android.widget.Button.class,"닫기"));
+    }
+
+    @Test public void failedClassificationKeepsTheOriginalInputAndNeverQueuesIt() throws Exception {
+        var queue=prepareResultWithQueue();var interactions=mock(com.click.data.remote.InteractionGateway.class);
+        set("interactionGateway",interactions);recognized("클릭 왜 이렇게 답답해");
+        var callback=org.mockito.ArgumentCaptor.forClass(com.click.data.remote.InteractionGateway.Callback.class);
+        verify(interactions).classify(anyString(),anyString(),any(),callback.capture());
+        callback.getValue().onFailure(new java.io.IOException("offline"));
+        verify((ClickOverlayLayout)get("overlayView")).setDraftText("클릭 왜 이렇게 답답해");
+        verify(queue,never()).enqueue(anyString(),anyString(),any());assertNull(get("feedbackView"));
+    }
+
+    @Test public void feedbackRemainsVisibleInsideClickAsWellAsAboveOtherApps() throws Exception {
+        prepareResultWithQueue();set("appForeground",true);
+        Method show=ClickOverlayService.class.getDeclaredMethod("showFeedback",com.click.data.remote.InteractionGateway.Response.class);
+        show.setAccessible(true);show.invoke(service,feedbackResponse(false,"inside-app"));
+        assertEquals(android.view.View.VISIBLE,((android.view.View)get("feedbackView")).getVisibility());
+    }
+
+    @Test public void classifiedTaskStillUsesTheFifoQueue() throws Exception {
+        try(var library=mockConstruction(com.click.data.local.RequestLibraryStore.class)) {
+            var queue=prepareResultWithQueue();var interactions=mock(com.click.data.remote.InteractionGateway.class);
+            set("interactionGateway",interactions);Object session=get("agentSessionId");
+            recognized("고마워 와이파이 켜줘");
+            var callback=org.mockito.ArgumentCaptor.forClass(com.click.data.remote.InteractionGateway.Callback.class);
+            verify(interactions).classify(anyString(),eq("고마워 와이파이 켜줘"),any(),callback.capture());
+            callback.getValue().onSuccess(new com.click.data.remote.InteractionGateway.Response("{\"intent\":\"task\"}"));
+            verify(queue).enqueue(anyString(),eq("고마워 와이파이 켜줘"),any());
+            assertEquals(session,get("agentSessionId"));assertNull(get("feedbackView"));
+        }
+    }
+
 }

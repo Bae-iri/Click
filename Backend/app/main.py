@@ -32,6 +32,8 @@ from app.services.agent_turn import AgentTurnService  # noqa: E402
 from app.api.v1.endpoints.history import build_router as build_history_router
 from app.api.v1.endpoints.account_actions import build_router as build_account_actions
 from app.services.account_actions import AccountActionService
+from app.services.interaction import InteractionService
+from app.api.v1.endpoints.interactions import build_router as build_interactions_router
 from app.services.voice_queue import VoiceQueueService
 from app.api.v1.endpoints.voice_queue import build_router as build_voice_queue_router
 from app.api.v1.endpoints.transcription import build_router as build_transcription_router
@@ -85,6 +87,7 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
     app.state.turn_service = turn_service
     voice_queue = VoiceQueueService(session_factory, turn_service.repository.idle_seconds)
     app.state.voice_queue = voice_queue
+    app.state.interactions = InteractionService(session_factory)
     speech = transcription_service or TranscriptionService()
     app.state.transcription_service = speech
     app.state.engine = engine
@@ -110,6 +113,7 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
     app.include_router(build_agent_router(turn_service, principal), prefix="/api/v1")
     app.include_router(build_history_router(turn_service, principal), prefix="/api/v1")
     app.include_router(build_voice_queue_router(voice_queue, principal), prefix="/api/v1")
+    app.include_router(build_interactions_router(app.state.interactions, principal), prefix="/api/v1")
     app.include_router(build_transcription_router(speech, principal), prefix="/api/v1")
     app.include_router(build_users_router(get_db, principal), prefix="/api/v1")
 
