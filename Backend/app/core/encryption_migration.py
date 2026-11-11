@@ -11,6 +11,7 @@ TEXT_COLUMNS = {
     "users": ("id", ("name",)),
     "accounts": ("user_id", ("email", "phone_number")),
     "voice_requests": ("id", ("raw_goal",)),
+    "product_feedback": ("id", ("source_text", "detail")),
     "graph_release_audits": ("id", ("reviewer",)),
 }
 JSON_COLUMNS = {
@@ -29,8 +30,12 @@ JSON_COLUMNS = {
 
 def protect_data(connection, cipher, *, check_only=False, rotate=False):
     counts = defaultdict(int)
+    # Revision 18 also calls this helper before revision 19 creates feedback.
+    feedback_exists = "product_feedback" in sa.inspect(connection).get_table_names()
     for json_mode, definitions in ((False, TEXT_COLUMNS), (True, JSON_COLUMNS)):
         for name, (primary_key, columns) in definitions.items():
+            if name == "product_feedback" and not feedback_exists:
+                continue
             table = sa.table(name, sa.column(primary_key, sa.String()),
                 *(sa.column(key, sa.JSON() if json_mode else sa.Text()) for key in columns))
             cursor = connection.execute(sa.select(table))
