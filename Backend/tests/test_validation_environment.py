@@ -28,6 +28,8 @@ def paired(monkeypatch, tmp_path):
     settings = dotenv_values(instance / '.env')
     monkeypatch.setenv('CLICK_VALIDATION_ENVIRONMENT_ID', settings['CLICK_VALIDATION_ENVIRONMENT_ID'])
     monkeypatch.setenv('CLICK_VALIDATION_DIAGNOSTICS', '1')
+    monkeypatch.setenv('DATA_ENCRYPTION_KEYS', settings['DATA_ENCRYPTION_KEYS'])
+    monkeypatch.setenv('DATA_LOOKUP_KEY', settings['DATA_LOOKUP_KEY'])
     app = create_app(settings['DATABASE_URL'])
     return app, instance
 

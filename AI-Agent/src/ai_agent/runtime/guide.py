@@ -36,6 +36,8 @@ def recovery_command(session_id, plan):
     for reason in ('OTHER_APP','RECENTS_VISIBLE','KEYBOARD_VISIBLE','DIALOG_VISIBLE','SYSTEM_PANEL_VISIBLE','SYSTEM_DIALOG_VISIBLE','MANUAL_EXTERNAL_CHOICE'):
         messages[reason]=recovery_rule(reason).get('message','원래 화면으로 돌아가 주세요.')
     message = messages.get(plan.reason_code, "다음 항목을 확인하지 못했어요. 직접 메뉴로 이동하거나 화면을 다시 확인해 주세요.")
+    if plan.failure and plan.failure.cause == "network_error":
+        message = "네트워크에 연결하지 못했어요. 인터넷 연결을 복구한 뒤 다시 확인해 주세요."
     policy = {"avoid_covering_target": False, "recovery": plan.to_dict()}
     if plan.next_action == "go_back":
         policy["recovery_action"] = {"type": "navigate_back", "target_app": "android_settings"}

@@ -19,7 +19,7 @@ from app.database import build_engine, build_session_factory
 from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
 from app.models.task_graph import ApprovedTaskGraph
 from app.repositories.users import UserRepository, UserNotFoundError
-from app.repositories.task_graphs import TaskGraphRepository
+from app.repositories.task_graphs import TaskGraphRepository, NoCompatibleGraphError, AmbiguousGraphError
 from app.repositories.graph_releases import GraphReleaseRepository
 from app.task_graphs.validation import load_graph
 from ai_agent.graph_proposal.contracts import EVENT_SCHEMA, EvidenceRequired, fingerprint, validate_manifest
@@ -27,6 +27,7 @@ from ai_agent.graph_proposal.graphs import graph_errors
 from ai_agent.graph_proposal.schemas import GraphUpdateProposal
 from ai_agent.graph_proposal.workflows.pipeline import run_pipeline
 from ai_agent.graph_proposal.reconstruction.episodes import RECONSTRUCTION_POLICY
+from ai_agent.graph_proposal.analysis.jev import POLICY as ASSESSMENT_POLICY, compare_assessments, render_report
 from ai_agent.graph_proposal.evaluation.graph_validator import GraphValidator
 from ai_agent.graph_proposal.releases.versioning import GraphVersionManager
 from ai_agent.graph_proposal.models.model_trainer import ModelTrainer
@@ -126,7 +127,8 @@ def process_sessions(factory, *, limit=100, now=None):
                 receipt = db.scalar(select(RuntimeEventConsumption).where(
                     RuntimeEventConsumption.consumer == CONSUMER, RuntimeEventConsumption.event_id == last.id))
                 input_hash = fingerprint({"events": [e.id for e in events], "consent_id": consent.id,
-                                          "reconstruction_policy": RECONSTRUCTION_POLICY})
+                                          "reconstruction_policy": RECONSTRUCTION_POLICY,
+                                          "assessment_policy": ASSESSMENT_POLICY})
                 if receipt and receipt.result.get("input_hash") == input_hash:
                     summary["unchanged"] += 1
                     continue
@@ -164,6 +166,44 @@ def process_sessions(factory, *, limit=100, now=None):
             # Do not print event contents or turn a corrupt record into success.
             summary["errors"] += 1
     return summary
+
+
+def assess_jev(factory, *, reviews=None, now=None, limit=100):
+    """Read consented, retained evidence; assessment never changes the online model."""
+    if type(limit) is not int or not 1 <= limit <= 1000:
+        raise ValueError("limit must be between 1 and 1000")
+    now = int(time.time()) if now is None else now
+    with factory() as db:
+        sessions = list(db.execute(select(RuntimeEvent.session_id, RuntimeEvent.user_id).where(
+            RuntimeEvent.expires_at > now).distinct().order_by(RuntimeEvent.user_id, RuntimeEvent.session_id).limit(limit + 1)))
+        if len(sessions) > limit:
+            raise ValueError("Assessment exceeds session budget; narrow retained input first")
+        envelopes, graphs = [], {}
+        users = UserRepository(db)
+        for session_id, user_id in sessions:
+            users.lock_user(user_id)
+            consent = users.latest_consent(user_id, "model_training")
+            if not consent or not consent.consented:
+                continue
+            granted = consent.recorded_at.replace(tzinfo=timezone.utc).timestamp()
+            events = list(db.scalars(select(RuntimeEvent).where(RuntimeEvent.session_id == session_id,
+                RuntimeEvent.expires_at > now, RuntimeEvent.created_at >= granted).order_by(RuntimeEvent.sequence).limit(10001)))
+            if len(envelopes) + len(events) > 10000:
+                raise ValueError("Assessment exceeds event budget")
+            for event in events:
+                ref = event.payload.get("graph_reference") or {}
+                query = select(ApprovedTaskGraph).where(ApprovedTaskGraph.graph_hash == event.graph_hash,
+                    ApprovedTaskGraph.approved.is_(True))
+                if ref.get("version"):
+                    query = query.where(ApprovedTaskGraph.graph_version == ref["version"])
+                matches = list(db.scalars(query))
+                if len(matches) != 1 or not event.episode_id:
+                    raise ValueError("Missing immutable graph/episode evidence")
+                row = matches[0]
+                TaskGraphRepository._decode(row)
+                graphs[event.graph_hash] = row.body
+                envelopes.append(event_envelope(event, row, session_key="session-" + fingerprint(session_id)))
+        return run_pipeline(envelopes, graphs, now=now, jev_reviews=reviews)["jev_analysis"]
 
 
 def propose_routes(factory, *, manifest, cases=None, now=None, limit=100, evaluator=None):
@@ -247,6 +287,55 @@ def stored_proposal(factory, run_id, proposal_id, *, now=None):
         return GraphUpdateProposal(**proposals[0])
 
 
+def audit_goal_coverage(factory):
+    """Check the same catalog goals and graph selection used by new requests."""
+    from app.schemas.agent_turn import TypedGoalRequest
+
+    catalog = read_json(BACKEND / "app/task_graphs/goal_catalog.json")
+    approved = [goal for goal in catalog["goals"] if goal["execution_status"] == "approved"]
+    expected = {(goal["goal_type"], goal["target_app"]) for goal in approved}
+    repository = TaskGraphRepository(factory)
+    reports = []
+    for entry in approved:
+        report = {"goal_type": entry["goal_type"], "target_app": entry["target_app"],
+                  "task_type": entry["task_type"], "status": "READY"}
+        try:
+            goal = TypedGoalRequest(catalog_version=catalog["version"], goal_type=entry["goal_type"],
+                                   target_app=entry["target_app"], slots=entry["slots"])
+        except ValueError:
+            report["status"] = "INVALID_GOAL_CONTRACT"
+        else:
+            try:
+                graph, reference = repository.select(goal)
+            except NoCompatibleGraphError:
+                report["status"] = "MISSING_GRAPH"
+            except AmbiguousGraphError:
+                report["status"] = "AMBIGUOUS_GRAPH"
+            except (ValueError, TypeError, KeyError):
+                report["status"] = "INVALID_GRAPH"
+            else:
+                report["graph_reference"] = reference
+                if (graph.definition.required_slots != entry["slots"]
+                        or graph.definition.task_type != entry["task_type"]):
+                    report["status"] = "GRAPH_CONTRACT_MISMATCH"
+        reports.append(report)
+    with factory() as db:
+        actual = set(db.execute(select(ApprovedTaskGraph.goal_type, ApprovedTaskGraph.target_app).where(
+            ApprovedTaskGraph.approved.is_(True), ApprovedTaskGraph.active.is_(True))).tuples())
+    return {"catalog_version": catalog["version"], "total_goals": len(catalog["goals"]),
+        "approved_goals": len(approved),
+        "catalog_only_goals": sum(goal["execution_status"] == "catalog_only" for goal in catalog["goals"]),
+        "selectable_goals": sum(report["status"] == "READY" for report in reports),
+        "blocked_goals": [report for report in reports if report["status"] != "READY"],
+        "unexpected_executable_goals": [{"goal_type": goal, "target_app": app}
+                                        for goal, app in sorted(actual - expected)],
+        "by_task_type": {kind: {
+            "approved": sum(report["task_type"] == kind for report in reports),
+            "selectable": sum(report["task_type"] == kind and report["status"] == "READY" for report in reports)}
+            for kind in sorted({entry["task_type"] for entry in approved})},
+        "goals": reports}
+
+
 def audit_catalog(factory):
     reports = []
     unsupported_tasks = {}
@@ -291,7 +380,11 @@ def audit_catalog(factory):
                 "unsupported_predicates": predicates, "blockers": blockers,
                 "execution_enabled": row.approved and row.active and not errors,
                 "device_validation": "NOT_ASSESSED"})
-    return {"total": len(reports), "static_valid": sum(r["static_valid"] for r in reports),
+    coverage = audit_goal_coverage(factory)
+    blocked = (coverage["blocked_goals"] or coverage["unexpected_executable_goals"]
+               or any(not report["static_valid"] for report in reports if report["approved"]))
+    return {"status": "BLOCKED" if blocked else "PASS", "catalog_coverage": coverage,
+        "total": len(reports), "static_valid": sum(r["static_valid"] for r in reports),
         "structural_valid": sum(r["structural_valid"] for r in reports),
         "execution_enabled": sum(r["execution_enabled"] for r in reports),
         "unsupported_predicates": {key: {"task_ids": sorted(ids), "task_count": len(ids), "owner": "ai_agent1"}
@@ -307,6 +400,13 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     process = commands.add_parser("process", help="Process consented DB sessions; no user-data file export")
     process.add_argument("--limit", type=int, default=100)
+    assessment = commands.add_parser("assess-jev", help="Assess Jev choices and observed outcomes from consented sessions")
+    assessment.add_argument("--limit", type=int, default=100)
+    assessment.add_argument("--reviews", help="Independent captured-target review manifest")
+    assessment.add_argument("--format", choices=("text", "json"), default="text")
+    comparison = commands.add_parser("compare-jev", help="Compare identical independently reviewed holdout screens")
+    comparison.add_argument("--before", required=True)
+    comparison.add_argument("--after", required=True)
     propose = commands.add_parser("propose-routes", help="Compare consented DB sessions with explicit reviewed splits; no auto release")
     propose.add_argument("--manifest", required=True)
     propose.add_argument("--cases", help="Independent device replay cases; omitted cases yield NEEDS_DATA")
@@ -317,6 +417,7 @@ def main():
     fixture.add_argument("--graphs", required=True, help="JSON list of graph bodies")
     fixture.add_argument("--manifest", required=True)
     fixture.add_argument("--cases", help="JSON list of independent replay cases")
+    fixture.add_argument("--jev-reviews", help="Independent reviews of captured Jev targets")
     fixture.add_argument("--now", type=int, default=None)
     fixture.add_argument("--output", required=True)
     train = commands.add_parser("train-baseline", help="Fit an offline CPU frequency baseline from curated training split only")
@@ -334,6 +435,11 @@ def main():
     for arg in ("task", "version", "expected-current-hash", "reviewer"):
         rollback.add_argument("--" + arg, required=True)
     args = parser.parse_args()
+    if args.command == "compare-jev":
+        before, after = read_json(args.before), read_json(args.after)
+        result = compare_assessments(before.get("jev_analysis", before), after.get("jev_analysis", after))
+        print(json.dumps(result, ensure_ascii=False))
+        return 0
     if args.command == "train-baseline":
         run = read_json(args.run)
         trained = ModelTrainer().train(run.get("dataset"), allow_weak=args.allow_weak)
@@ -349,7 +455,8 @@ def main():
         graphs = {fingerprint(body): body for body in read_json(args.graphs)}
         result = run_pipeline(events, graphs, now=args.now if args.now is not None else int(time.time()),
             manifest=read_json(args.manifest), cases=read_json(args.cases) if args.cases else None,
-            evaluator=replay_evaluator, graph_loader=load_graph)
+            evaluator=replay_evaluator, graph_loader=load_graph,
+            jev_reviews=read_json(args.jev_reviews) if args.jev_reviews else None)
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
         with output.open("x", encoding="utf-8") as handle:
@@ -362,8 +469,15 @@ def main():
     engine = build_engine(database_url(raw) if raw.startswith(("postgres://", "postgresql://")) else raw)
     factory = build_session_factory(engine)
     try:
+        from app.core.data_encryption import validate_database_keys
+        validate_database_keys(engine)
         if args.command == "process":
             result = process_sessions(factory, limit=args.limit)
+        elif args.command == "assess-jev":
+            result = assess_jev(factory, reviews=read_json(args.reviews) if args.reviews else None, limit=args.limit)
+            if args.format == "text":
+                print(render_report(result))
+                return 0
         elif args.command == "propose-routes":
             result = propose_routes(factory, manifest=read_json(args.manifest),
                 cases=read_json(args.cases) if args.cases else None, limit=args.limit)
@@ -387,7 +501,7 @@ def main():
                 expected_current_hash=args.expected_current_hash, reviewer=args.reviewer, reviewed_at=int(time.time()))
         print(json.dumps(result, ensure_ascii=False))
         if args.command == "audit":
-            return int(any(not row["static_valid"] for row in result["graphs"] if row["approved"]))
+            return int(result["status"] != "PASS")
         return int(bool(result.get("errors"))) if args.command == "process" else 0
     finally:
         engine.dispose()

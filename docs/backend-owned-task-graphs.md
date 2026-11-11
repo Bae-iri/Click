@@ -16,6 +16,16 @@ Android 설정 89개 Goal 모두에 그래프가 있다. 기존 두 개는 승�
 
 `TaskGraphRepository.register(body, version=..., approved=False)`로 새 후보를 등록한다. 같은 task ID·버전의 본문·승인 여부·우선순위는 불변이며, 바꾸려면 새 버전으로 등록한다. `approved=True` 등록은 지원되는 완료 조건과 확인 메시지·유효한 화면/전이를 갖춰야 한다. 이 메서드는 서버 내부 등록 API이며 외부 사용자가 호출할 수 있는 endpoint는 추가하지 않았다.
 
+### 기존 DB에 새 graph 배포
+
+본문을 변경하면 반드시 task ID는 유지하고 version을 올린다. JSON artifact는 `releases.json`, 생성형 graph는 `settings_navigation.py` 또는 `settings_actions.py`의 release version을 변경한다. 생성 코드나 공유 데이터 변경으로 본문이 달라지는 경우에도 버전을 올린다. `priority`를 높이는 것으로 버전 변경을 대신하지 않는다.
+
+서버 시작의 `seed_mvp()`는 전체 묶음의 graph 구조·실행 조건·Goal 계약을 먼저 검증한다. 검토를 마쳐 소스에서 `approved=true`로 지정한 새 버전만 활성화하며, 같은 task의 이전 버전 비활성화와 새 버전 등록을 한 트랜잭션에서 처리한다. 새 버전의 priority가 이전 버전과 같거나 낮아도 새 요청은 새 버전을 선택한다. `approved=false` 후보는 기존 활성 버전을 유지한다. 구조 검증은 OEM 실기기 검증을 대신하지 않으므로, 승인 표시는 별도의 기기 검증과 검토 후에 변경한다.
+
+같은 task·버전이 이미 있으면 저장된 본문·SHA-256·메타데이터를 비교한다. 다른 내용은 `GRAPH_RELEASE_IMMUTABLE` 오류와 task·버전·양쪽 본문 해시를 남기고 시작을 중단한다. 일부 graph만 등록하거나 기존 DB 본문을 덮어쓰지 않는다. 이 오류는 새 버전으로 재배포해 해결하며, 기존 행 삭제나 hash만 수정하는 방식으로 우회하지 않는다.
+
+이전 버전의 본문과 승인 상태는 보존하므로 진행 중 세션은 원래 version/hash를 계속 사용한다. 이미 등록된 동일 버전은 재시작해도 활성 상태를 바꾸지 않아 검토된 승격·롤백을 되돌리지 않는다. AI2의 검토 release 게시·재게시도 저장 본문을 다시 검사한다.
+
 ## 새 초안을 실행 가능하게 만들기
 
 1. 실제 Android 화면 관측으로 제조사·OS별 분류와 버튼·스위치 selector를 확정한다.

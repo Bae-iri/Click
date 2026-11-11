@@ -35,6 +35,8 @@ if __name__ == "__main__":
         raise SystemExit("DATABASE_URL is required")
     engine = build_engine()
     try:
+        from app.core.data_encryption import validate_database_keys
+        validate_database_keys(engine)
         print(run(build_session_factory(engine), int(os.getenv("DATA_RETENTION_SECONDS", "86400"))))
     finally:
         engine.dispose()

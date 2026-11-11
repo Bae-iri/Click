@@ -19,6 +19,9 @@ jobs:
         with:
           packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
+      - name: Download Gradle with retries
+        run: bash scripts/prepare-gradle-ci.sh
+        working-directory: Frontend
       - run: bash gradlew :app:testDebugUnitTest :app:assembleDebug
         working-directory: Frontend
   backend:
@@ -52,6 +55,9 @@ jobs:
         working-directory: Backend
       - run: python -m pytest -q
         working-directory: AI-Agent
+      - name: Check shared settings execution contract
+        run: PYTHONPATH=.:../AI-Agent/src python scripts/export_settings_capabilities.py --check
+        working-directory: Backend
       - run: python scripts/smoke_check.py
         working-directory: Backend
       - run: python scripts/load_check.py
@@ -74,6 +80,10 @@ jobs:
         with:
           packages: platform-tools
       - run: sdkmanager "platforms;android-34" "build-tools;34.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Download Gradle with retries
+        run: bash scripts/prepare-gradle-ci.sh
+        working-directory: Frontend
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12.12"

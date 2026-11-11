@@ -20,7 +20,6 @@ import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.Toast;
-import android.widget.Button;
 
 import androidx.annotation.Nullable;
 
@@ -66,6 +65,36 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     public static final String EXTRA_OPEN_MENU = "com.click.extra.OPEN_MENU";
     public static final String EXTRA_SELECTED_GOAL_TYPE = "com.click.extra.SELECTED_GOAL_TYPE";
     private static WeakReference<ClickOverlayService> runningService = new WeakReference<>(null);
+    private boolean appForeground;
+    private final java.util.Map<View, Integer> overlayVisibility = new java.util.WeakHashMap<>();
+
+    public static void onAppVisibilityChanged(boolean foreground) {
+        ClickOverlayService service = runningService.get();
+        if (service == null || service.closing) return;
+        service.appForeground = foreground;
+        if (foreground) {
+            service.cancelDragInteraction();
+            service.stopListening();
+            if (service.overlayView != null) service.overlayView.collapse();
+            service.stopNarration();
+        }
+        for (java.util.Map.Entry<View, Integer> entry : service.overlayVisibility.entrySet()) {
+            entry.getKey().setVisibility(foreground && entry.getKey() != service.feedbackView ? View.GONE : entry.getValue());
+        }
+    }
+
+    private void setOverlayVisibility(View view, int visibility) {
+        overlayVisibility.put(view, visibility);
+        view.setVisibility(appForeground ? View.GONE : visibility);
+    }
+
+    private void addOverlayView(View view, WindowManager.LayoutParams params) {
+        int desired = overlayVisibility.computeIfAbsent(view, key -> key.getVisibility());
+        int actual = appForeground && view != feedbackView ? View.GONE : desired;
+        if (view.getVisibility() != actual) view.setVisibility(actual);
+        windowManager.addView(view, params);
+    }
+
     private WindowManager windowManager;
     private int overlayWindowType;
     private WindowManager.LayoutParams windowParams;
@@ -219,6 +248,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     public void onCreate() {
         super.onCreate();
         runningService = new WeakReference<>(this);
+        appForeground = getApplication() instanceof com.click.ClickApplication
+                && ((com.click.ClickApplication) getApplication()).isAppForeground();
         WindowManager accessibilityWindows = ClickAccessibilityService.accessibilityWindowManager();
         if (!PermissionStatus.isAccessibilityEnabled(this) || accessibilityWindows == null) {
             startActivity(accessibilityGuideIntent());
@@ -577,8 +608,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         boolean showTask = taskFlowView != null && !taskFlowCollapsed
                 && overlayView.getMode() == ClickOverlayLayout.Mode.COLLAPSED;
         boolean hideForCapture = visionCaptureInFlight && !visionImageCaptured;
-        overlayView.setVisibility(hideForCapture || showTask ? View.GONE : View.VISIBLE);
-        if (taskFlowView != null) taskFlowView.setVisibility(!hideForCapture
+        setOverlayVisibility(overlayView, hideForCapture || showTask ? View.GONE : View.VISIBLE);
+        if (taskFlowView != null) setOverlayVisibility(taskFlowView, !hideForCapture
                 && (showTask || bubble && overlayView.getMode() == ClickOverlayLayout.Mode.COLLAPSED)
                 ? View.VISIBLE : View.GONE);
         if (bubble) placeProgressBubble();
@@ -671,7 +702,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING;
         taskFlowParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
         taskFlowParams.y = dp(30);
-        windowManager.addView(taskFlowView, taskFlowParams);
+        addOverlayView(taskFlowView, taskFlowParams);
         updateFloatingVisibility();
     }
 
@@ -1463,7 +1494,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             windowManager.addView(overlayView, windowParams);
             if (taskFlowView != null && taskFlowParams != null) {
                 taskFlowParams.type = windowType;
-                windowManager.addView(taskFlowView, taskFlowParams);
+                addOverlayView(taskFlowView, taskFlowParams);
+            }
+            if (feedbackView != null && feedbackParams != null) {
+                feedbackParams.type = windowType;
+                addOverlayView(feedbackView, feedbackParams);
             }
             if (feedbackView != null && feedbackParams != null) {
                 feedbackParams.type = windowType;
@@ -1474,7 +1509,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             android.util.Log.e("ClickOverlay", "Failed to rebind overlay window", error);
             // Do not leave a successfully restored logo hidden behind a missing task window.
             taskFlowCollapsed = true;
-            if (overlayView.isAttachedToWindow()) overlayView.setVisibility(View.VISIBLE);
+            if (overlayView.isAttachedToWindow()) setOverlayVisibility(overlayView, View.VISIBLE);
         }
     }
 
@@ -2743,7 +2778,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (snapAnimator != null) snapAnimator.cancel();
         if (overlayView != null) {
             overlayView.removeCallbacks(dragFrame);
-            overlayView.setVisibility(android.view.View.GONE);
+            setOverlayVisibility(overlayView, android.view.View.GONE);
         }
         awaitingReplacement = true;
         final long generation = execution.generation();
@@ -3384,12 +3419,19 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 showTargetHelp(response.stateId);
                 return;
             } else {
+                JSONObject recovery = command.renderPolicy.optJSONObject("recovery");
+                JSONObject failure = recovery == null ? null : recovery.optJSONObject("failure");
+                if (failure != null) {
+                    taskFlowView.selectionRecovery(command.message, failure.optString("required_change"), retry);
+                    speak(taskFlowView.guidanceMessage());
+                    placeTaskFlow(null, true);
+                    return;
+                }
                 if (targetSelectionHelp) {
                     showTargetHelp(response.stateId);
                     return;
                 }
-                JSONObject failure=command.renderPolicy==null?null:command.renderPolicy.optJSONObject("recovery");
-                showTypedRecovery(failure==null?null:failure.optString("reason_code"),retry);
+                showTypedRecovery(recovery==null?null:recovery.optString("reason_code"),retry);
                 speak(taskFlowView.guidanceMessage());
             }
             placeTaskFlow(null, true);
@@ -4599,13 +4641,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 });
             }, Math.max(250L, Math.min(1500L, policy.optLong("retry_delay_ms", 250L))));
         });
+        confirmationView.setMaximumHeight(screenHeight() - dp(56));
         confirmationParams = new WindowManager.LayoutParams(
-                screenWidth() - dp(28), Math.min(dp(300), screenHeight() - dp(56)), overlayWindowType,
+                screenWidth() - dp(28), WindowManager.LayoutParams.WRAP_CONTENT, overlayWindowType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                 PixelFormat.TRANSLUCENT);
         confirmationParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
         confirmationParams.y = dp(28);
-        windowManager.addView(confirmationView, confirmationParams);
+        addOverlayView(confirmationView, confirmationParams);
         speechHandler.postDelayed(() -> {
             if (generation == execution.generation() && consentId.equals(agentConfirmationId)
                     && (visionConsentRequested || visionCaptureInFlight)) {
@@ -4710,13 +4753,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         visionGuideScreen = null;
         nativeGuideScreen = lastSubmittedScreen;
         guideOverlayView.showTarget(bounds, actionType, dragDirection);
-        guideOverlayView.setVisibility(View.VISIBLE);
+        setOverlayVisibility(guideOverlayView, View.VISIBLE);
     }
 
     private void attachGuideOverlay() {
         if (guideOverlayView == null) guideOverlayView = new GuideOverlayView(this);
         if (guideOverlayView.isAttachedToWindow()) return;
-        guideOverlayView.setVisibility(View.GONE);
+        setOverlayVisibility(guideOverlayView, View.GONE);
         guideOverlayParams = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 overlayWindowType,
@@ -4724,14 +4767,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                         | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
         guideOverlayParams.gravity = Gravity.START | Gravity.TOP;
-        windowManager.addView(guideOverlayView, guideOverlayParams);
+        addOverlayView(guideOverlayView, guideOverlayParams);
     }
 
     private void hideGuideOverlay() {
         visionGuideScreen = null;
         nativeGuideScreen = null;
         // Reattaching on every guide would raise the highlight above the logo.
-        if (guideOverlayView != null) guideOverlayView.setVisibility(View.GONE);
+        if (guideOverlayView != null) setOverlayVisibility(guideOverlayView, View.GONE);
     }
 
     private void detachGuideOverlay() {
