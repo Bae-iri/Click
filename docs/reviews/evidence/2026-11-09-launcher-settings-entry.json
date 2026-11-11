@@ -1,0 +1,96 @@
+{
+  "date": "2026-11-09",
+  "agreed_order": [
+    "highlight_actionable_visible_settings_icon",
+    "search_launcher_pages_if_absent",
+    "offer_user_activated_open_settings_when_search_exhausted"
+  ],
+  "root_causes": [
+    "Samsung PagedView was not recognized as horizontal, including when not marked scrollable",
+    "ambiguous generic forward/back scroll could precede horizontal gesture",
+    "window/container path churn reset launcher search",
+    "nested app-icon indices and animated bounds could misrepresent page progress"
+  ],
+  "implementation": {
+    "launcher_move_budget": 8,
+    "generic_horizontal_scroll_fallback": false,
+    "native_visible_icon_recovery": "user_activated_highlight_only_no_fabricated_model_choice",
+    "settings_list_search_unchanged": true
+  },
+  "regression": {
+    "initial_new_cases_failed_before_fix": 8,
+    "android_jvm_tests": 574,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "targeted_final_cases": 182
+  },
+  "physical": {
+    "initial_metadata": {
+      "container_class": "com.android.launcher3.PagedView",
+      "axis": "UNKNOWN"
+    },
+    "first_patch_recheck": {
+      "container_class": "android.widget.FrameLayout",
+      "axis": "UNKNOWN",
+      "gesture_executed": false,
+      "result": "failed_axis_assertion"
+    },
+    "refinement": "recognize non-scrollable PagedView and exclude only AppWidget classes rather than generic apps_and_widgets wrapper",
+    "final_metadata": {
+      "package": "com.sec.android.app.launcher",
+      "physical_scrolls": 0,
+      "axis": "HORIZONTAL",
+      "container_id": "node_0_0_0_0_2_1",
+      "first": -1,
+      "last": -1,
+      "count": -1,
+      "at_start": false,
+      "at_end": false,
+      "container_class": "com.android.launcher3.PagedView",
+      "container_resource": "com.sec.android.app.launcher:id/workspace",
+      "action_ids": [
+        4,
+        8,
+        64,
+        4096,
+        8192,
+        16908342,
+        16908360,
+        16908361,
+        16908348
+      ],
+      "service_available": true,
+      "settings_matches": []
+    },
+    "final_page_execution": {
+      "setting_adjustment_actions": 0,
+      "automatic_icon_taps": 0,
+      "visible_settings_before": 0,
+      "scroll_attempts": 1,
+      "dispatch_accepted": true,
+      "axis": "HORIZONTAL",
+      "launcher_unchanged": true,
+      "page_content_changed": true,
+      "axis_after": "HORIZONTAL",
+      "visible_settings_after": 1
+    },
+    "instrumentation_tests_passed": 3,
+    "accessibility_after_cleanup": {
+      "bound": true,
+      "enabled": true,
+      "crashed_services": false
+    }
+  },
+  "artifact": {
+    "path": "Frontend/app/build/outputs/apk/debug/app-launcher-entry-debug.apk",
+    "sha256": "2e924351f1532c1c0819980851f7c8986c9347bfc348c992992709e2408ea9e9",
+    "installed_sha256": "2e924351f1532c1c0819980851f7c8986c9347bfc348c992992709e2408ea9e9",
+    "installation": "adb install -r; app data preserved"
+  },
+  "limits": [
+    "Visible-icon highlight and bounded fallback were verified with service tests; physical probe verified page movement and actionable icon detection, not a full font-size task.",
+    "No setting values were changed; no screen or voice payload was sent to Click server. The diagnostic probe performs a public /version GET.",
+    "No backend or AI deployment was performed in this launcher fix."
+  ]
+}

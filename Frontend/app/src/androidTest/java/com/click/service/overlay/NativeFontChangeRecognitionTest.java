@@ -126,6 +126,9 @@ public class NativeFontChangeRecognitionTest {
         assertNotNull(service);
         final ClickOverlayService active = service;
         boolean freshRequest = "true".equals(InstrumentationRegistry.getArguments().getString("freshFontBackendFlow"));
+        boolean strictDrag = "true".equals(InstrumentationRegistry.getArguments().getString("fontEvidenceDrag"));
+        JSONObject evidence = new JSONObject().put("scope", "live_font_drag_evidence")
+                .put("original_font_scale", original);
         com.click.data.local.TouchAutomationSettings automatic = new com.click.data.local.TouchAutomationSettings(app);
         boolean originalAutomatic = automatic.isEnabled();
         boolean startedFresh = false;
@@ -175,12 +178,13 @@ public class NativeFontChangeRecognitionTest {
             ScreenSnapshot current = waitForFontScreen(); assertNotNull(current);
             AccessibilityNodeSnapshot slider = slider(current); assertNotNull(slider);
             assertTrue("A larger step must exist", slider.progress < slider.rangeMax);
-            tapValue(automation, slider, slider.progress + 1);
+            if (strictDrag) dragValue(automation, current, slider, slider.progress + 1);
+            else tapValue(automation, slider, slider.progress + 1);
             SystemClock.sleep(700);
             android.util.Log.i("ClickBackendFontFlow", "nativeStep before=" + current.appliedFontScale
                     + " after=" + Settings.System.getFloat(app.getContentResolver(), Settings.System.FONT_SCALE)
                     + " target=" + java.util.Arrays.toString(slider.bounds));
-            android.graphics.Bitmap diagnostic = automation.takeScreenshot();
+            android.graphics.Bitmap diagnostic = strictDrag ? null : automation.takeScreenshot();
             if (diagnostic != null) {
                 try (java.io.FileOutputStream out = new java.io.FileOutputStream(new java.io.File(app.getCacheDir(), "native-font-after-tap.png"))) {
                     diagnostic.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
@@ -195,11 +199,20 @@ public class NativeFontChangeRecognitionTest {
             }
             assertTrue("A real persisted slider change must reach the server result prompt", result);
             SystemClock.sleep(500);
-            android.graphics.Bitmap image = automation.takeScreenshot();
-            assertNotNull(image);
-            try (java.io.FileOutputStream out = new java.io.FileOutputStream(new java.io.File(app.getCacheDir(), "native-font-result.png"))) {
-                image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
-            } finally { image.recycle(); }
+            if (strictDrag) {
+                String[] status = {null};
+                instrumentation.runOnMainSync(() -> status[0] = ((JSONObject) field(active, "resultPrompt"))
+                        .optString("technical_status"));
+                evidence.put("technical_status", status[0]).put("after_font_scale",
+                        Settings.System.getFloat(app.getContentResolver(), Settings.System.FONT_SCALE));
+                assertEquals("A result prompt alone cannot verify the drag", "CHANGED", status[0]);
+            } else {
+                android.graphics.Bitmap image = automation.takeScreenshot();
+                assertNotNull(image);
+                try (java.io.FileOutputStream out = new java.io.FileOutputStream(new java.io.File(app.getCacheDir(), "native-font-result.png"))) {
+                    image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
+                } finally { image.recycle(); }
+            }
             android.util.Log.i("ClickBackendFontFlow", "confirmationAccepted=true minimizedRetained=true resultPrompt=true");
         } finally {
             if (startedFresh) {
@@ -211,14 +224,19 @@ public class NativeFontChangeRecognitionTest {
             try (android.os.ParcelFileDescriptor fd = automation.executeShellCommand("settings put system font_scale " + Float.toString(original));
                  FileInputStream in = new FileInputStream(fd.getFileDescriptor())) { in.readAllBytes(); }
             SystemClock.sleep(500);
-            assertEquals(original, Settings.System.getFloat(app.getContentResolver(), Settings.System.FONT_SCALE), .001f);
+            float restored = Settings.System.getFloat(app.getContentResolver(), Settings.System.FONT_SCALE);
+            if (strictDrag) {
+                evidence.put("restored_font_scale", restored);
+                java.nio.file.Files.write(new java.io.File(app.getCacheDir(), "live-font-drag-evidence.json").toPath(),
+                        evidence.toString(2).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+            assertEquals(original, restored, .001f);
             android.util.Log.i("ClickBackendFontFlow", "restored=true fontScale=" + original);
         }
     }
 
     private static Object field(Object target, String name) {
-        try { java.lang.reflect.Field f = target.getClass().getDeclaredField(name); f.setAccessible(true); return f.get(target); }
-        catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+        return com.click.testutil.ServiceStateAccess.get(target,name);
     }
     private static void call(Object target, String name) {
         try { java.lang.reflect.Method m = target.getClass().getDeclaredMethod(name); m.setAccessible(true); m.invoke(target); }
@@ -285,6 +303,26 @@ public class NativeFontChangeRecognitionTest {
             if ("com.android.settings:id/seekBarForFontSize".equals(node.resourceId) && node.visibleToUser
                     && node.enabled && node.progress != null && node.rangeMin != null && node.rangeMax != null) return node;
         return null;
+    }
+
+    private void dragValue(UiAutomation automation, ScreenSnapshot screen, AccessibilityNodeSnapshot slider, float value) {
+        int[] track = slider.bounds;
+        for (AccessibilityNodeSnapshot parent : screen.nodes)
+            if (parent.nodeId.equals(slider.parentId) && "slider".equals(parent.role)
+                    && parent.bounds[0] <= track[0] && parent.bounds[2] >= track[2]) track = parent.bounds;
+        float width = track[2] - track[0] - 32;
+        float from = track[0] + 16 + (slider.progress - slider.rangeMin) / (slider.rangeMax - slider.rangeMin) * width;
+        float to = track[0] + 16 + (value - slider.rangeMin) / (slider.rangeMax - slider.rangeMin) * width;
+        float y = (track[1] + track[3]) / 2f;
+        long down = SystemClock.uptimeMillis();
+        for (int step = 0; step <= 9; step++) {
+            int action = step == 0 ? MotionEvent.ACTION_DOWN : step == 9 ? MotionEvent.ACTION_UP : MotionEvent.ACTION_MOVE;
+            float x = step == 9 ? to : from + (to - from) * step / 8f;
+            MotionEvent event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, x, y, 0);
+            event.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+            try { assertTrue(automation.injectInputEvent(event, true)); } finally { event.recycle(); }
+            SystemClock.sleep(45);
+        }
     }
 
     private void tapValue(UiAutomation automation, AccessibilityNodeSnapshot slider, float value) {

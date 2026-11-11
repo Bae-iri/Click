@@ -15,19 +15,13 @@ public final class NavigationRecovery {
     private boolean backTried, manualNavigation;
     private Action hint = Action.NONE, awaiting = Action.NONE;
     public static boolean isHome(String pkg) {
-        return pkg != null && (pkg.equals("com.android.launcher3")
-                || pkg.equals("com.google.android.apps.nexuslauncher")
-                || pkg.equals("com.sec.android.app.launcher") || pkg.equals("com.miui.home")
-                || pkg.equals("com.huawei.android.launcher") || pkg.equals("com.oppo.launcher")
-                || pkg.equals("com.vivo.launcher") || pkg.equals("org.lineageos.trebuchet"));
+        return com.click.data.snapshot.ScreenEnvironmentPolicy.contains("launcher_packages",pkg);
     }
     public static boolean isHomeScreen(ScreenSnapshot screen) {
-        if (screen == null || !isHome(screen.packageName)) return false;
-        return screen.nodes.stream().filter(n -> n.visibleToUser).noneMatch(n -> {
-            String identity = ((n.className == null ? "" : n.className) + " "
-                    + (n.resourceId == null ? "" : n.resourceId)).toLowerCase(java.util.Locale.ROOT);
-            return identity.contains("overview") || identity.contains("recents") || identity.contains("recent_tasks");
-        });
+        var environment=com.click.data.snapshot.ScreenEnvironment.classify(screen,true,false,"com.click");
+        return environment.kind()==com.click.data.snapshot.ScreenEnvironment.Kind.HOME
+            || environment.kind()==com.click.data.snapshot.ScreenEnvironment.Kind.APP_DRAWER
+            || environment.kind()==com.click.data.snapshot.ScreenEnvironment.Kind.LAUNCHER;
     }
     static String key(ScreenSnapshot screen) {
         if (screen == null) return null;
@@ -49,6 +43,12 @@ public final class NavigationRecovery {
         else { path.add(anchor); if (path.size() > 12) path.remove(0); }
         lastKey = anchor; lastPackage = screen.packageName;
         unplannedTaps = 0; backTried = manualNavigation = false; hint = awaiting = Action.NONE;
+    }
+    /** A different native Settings page provides a direct, local reason to offer Back.
+     * No server/model target is fabricated and no navigation happens before user activation. */
+    public void offPathPage(ScreenSnapshot before) {
+        if(anchor==null && before!=null)onPath(before);
+        hint=Action.BACK;awaiting=Action.NONE;requestedFrom=null;manualNavigation=false;
     }
     public void unplannedTap() { unplannedTaps++; }
     public Action recommend(ScreenSnapshot current) {

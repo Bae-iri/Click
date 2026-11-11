@@ -5,6 +5,8 @@ import math
 SCHEMA = "agent-execution-event.v1"
 REASONS = {
     "target_value_increased", "target_value_decreased", "target_value_unchanged",
+    "target_checked_on", "target_checked_off", "wifi_already_set",
+    "wifi_switch_unobservable", "wifi_state_unobservable", "wifi_state_transition",
     "expected_state_observed", "no_correlated_action", "verified_attempt_failed",
     "failed_attempt_budget_exhausted", "observation_recovery_exhausted",
     "target_not_found", "ambiguous_target", "waiting_for_fresh_observation",

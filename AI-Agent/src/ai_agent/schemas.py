@@ -13,7 +13,7 @@ from typing import Any, Literal
 
 SafetyLevel = Literal["LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"]
 ActionType = Literal["tap", "drag", "scroll", "observe_only"]
-GuideCommandType = Literal["highlight", "gesture_hint", "confirmation", "done", "blocked"]
+GuideCommandType = Literal["highlight", "gesture_hint", "confirmation", "done", "cancelled", "blocked"]
 
 
 @dataclass(frozen=True)

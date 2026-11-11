@@ -1,0 +1,193 @@
+[
+  {
+    "name": "home_native_activity",
+    "package": "com.android.settings",
+    "title": "설정",
+    "kind": "SETTINGS_HOME",
+    "hints": {
+      "settings_activity": "HOME"
+    }
+  },
+  {
+    "name": "generic_settings_title_is_not_proof_of_home",
+    "package": "com.android.settings",
+    "title": "설정",
+    "kind": "SETTINGS_UNKNOWN"
+  },
+  {
+    "name": "vpn_first_entry",
+    "package": "com.android.settings",
+    "title": "VPN",
+    "kind": "SETTINGS_SUBPAGE"
+  },
+  {
+    "name": "vpn_generic_toolbar",
+    "package": "com.android.settings",
+    "title": "설정",
+    "kind": "SETTINGS_SUBPAGE",
+    "hints": {
+      "settings_activity": "SUBPAGE"
+    }
+  },
+  {
+    "name": "title_overrules_forged_home_hint",
+    "package": "com.android.settings",
+    "title": "VPN",
+    "kind": "SETTINGS_SUBPAGE",
+    "hints": {
+      "settings_activity": "HOME"
+    }
+  },
+  {
+    "name": "display_page",
+    "package": "com.android.settings",
+    "title": "디스플레이",
+    "kind": "SETTINGS_SUBPAGE"
+  },
+  {
+    "name": "calendar",
+    "package": "com.samsung.android.calendar",
+    "title": "개인 일정 내용",
+    "kind": "OTHER_APP"
+  },
+  {
+    "name": "browser",
+    "package": "com.android.chrome",
+    "title": "개인 검색 내용",
+    "kind": "OTHER_APP"
+  },
+  {
+    "name": "calendar_cannot_become_settings_with_client_hint",
+    "package": "com.samsung.android.calendar",
+    "title": "설정",
+    "kind": "OTHER_APP",
+    "hints": {
+      "settings_activity": "HOME"
+    }
+  },
+  {
+    "name": "launcher_workspace",
+    "package": "com.sec.android.app.launcher",
+    "title": null,
+    "kind": "HOME",
+    "resource": "com.sec.android.app.launcher:id/workspace"
+  },
+  {
+    "name": "launcher_drawer",
+    "package": "com.sec.android.app.launcher",
+    "title": null,
+    "kind": "APP_DRAWER",
+    "resource": "com.sec.android.app.launcher:id/apps_container"
+  },
+  {
+    "name": "launcher_recents",
+    "package": "com.sec.android.app.launcher",
+    "title": null,
+    "kind": "RECENTS",
+    "resource": "com.sec.android.app.launcher:id/overview_panel"
+  },
+  {
+    "name": "launcher_without_evidence",
+    "package": "com.sec.android.app.launcher",
+    "title": null,
+    "kind": "LAUNCHER"
+  },
+  {
+    "name": "system_notifications",
+    "package": "com.android.systemui",
+    "title": null,
+    "kind": "SYSTEM_PANEL"
+  },
+  {
+    "name": "keyboard_over_settings",
+    "package": "com.android.settings",
+    "title": "설정",
+    "kind": "KEYBOARD",
+    "hints": {
+      "keyboard_visible": true
+    }
+  },
+  {
+    "name": "dialog_over_settings",
+    "package": "com.android.settings",
+    "title": "디스플레이",
+    "kind": "DIALOG",
+    "hints": {
+      "window_kind": "DIALOG"
+    }
+  },
+  {
+    "name": "sensitive_input_before_keyboard",
+    "package": "com.android.settings",
+    "title": "비밀번호",
+    "kind": "SENSITIVE",
+    "sensitive": true,
+    "hints": {
+      "keyboard_visible": true
+    }
+  },
+  {
+    "name": "empty_search_is_not_private_input",
+    "package": "com.android.settings",
+    "title": "설정",
+    "kind": "SETTINGS_HOME",
+    "empty_search": true,
+    "hints": {
+      "settings_activity": "HOME"
+    }
+  },
+  {
+    "name": "locked_phone",
+    "package": "com.android.settings",
+    "title": "설정",
+    "kind": "LOCKED",
+    "locked": true,
+    "runtime": false
+  },
+  {
+    "name": "disconnected_with_stale_settings",
+    "package": "com.android.settings",
+    "title": "설정",
+    "kind": "DISCONNECTED",
+    "connected": false,
+    "runtime": false
+  },
+  {
+    "name": "self_overlay",
+    "package": "com.click",
+    "title": "도움이 필요해요",
+    "kind": "SELF",
+    "runtime": false
+  },
+  {
+    "name": "unexpected_dialog",
+    "package": "com.android.settings",
+    "title": "알림",
+    "kind": "DIALOG",
+    "hints": {
+      "window_kind": "DIALOG"
+    }
+  },
+  {
+    "name": "system_permission_choice",
+    "package": "com.android.permissioncontroller",
+    "title": null,
+    "kind": "SYSTEM_DIALOG"
+  },
+  {
+    "name": "native_brightness_surface",
+    "package": "com.android.systemui",
+    "title": null,
+    "kind": "CONTROL_SURFACE",
+    "control": true
+  },
+  {
+    "name": "sensitive_heading_overrules_subpage_activity",
+    "package": "com.android.settings",
+    "title": "삼성 계정",
+    "kind": "SENSITIVE",
+    "hints": {
+      "settings_activity": "SUBPAGE"
+    }
+  }
+]

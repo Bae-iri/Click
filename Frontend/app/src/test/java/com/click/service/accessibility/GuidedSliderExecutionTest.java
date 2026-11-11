@@ -61,6 +61,23 @@ public class GuidedSliderExecutionTest {
   assertFalse(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,1));
   verify(node,never()).performAction(anyInt());
  }
+ @Test public void delegatedAdjustmentRejectsNonFiniteAndTooSmallAllowances() {
+  for(float allowance:new float[]{Float.NaN,Float.POSITIVE_INFINITY,0f,-1f,0.1f})
+   assertFalse(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,1,"font_size",allowance));
+  verify(node,never()).performAction(anyInt());
+  verify(node,never()).performAction(anyInt(),any());
+  verify(service,never()).dispatchGesture(any(),any(),any());
+ }
+ @Test public void delegatedAdjustmentSetsABoundedValueWithoutUnboundedScrollFallback() {
+  when(node.getActionList()).thenReturn(Arrays.asList(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS,
+      AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD));
+  when(node.performAction(eq(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId()),any())).thenReturn(true);
+  assertTrue(ClickAccessibilityService.performGuidedSlider(screen,"node_0_1",bounds,1,"font_size",0.2f));
+  var args=org.mockito.ArgumentCaptor.forClass(android.os.Bundle.class);
+  verify(node).performAction(eq(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId()),args.capture());
+  assertEquals(3f,args.getValue().getFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE),0f);
+  verify(node,never()).performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+ }
  @Test public void resultPollingSurvivesMissingRootAndRecreatedWindow() {
   AccessibilityNodeSnapshot original=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,
       "com.android.settings:id/font_size","android.widget.SeekBar","slider",bounds,false,true,false,false,false,2f,5,false,0f,7f);
@@ -150,4 +167,34 @@ public class GuidedSliderExecutionTest {
    overlay.verify(()->com.click.service.overlay.ClickOverlayService.onVerifiedAutomaticAction(eq("drag_completed"),eq("com.android.settings"),eq(5),eq("node_0_1"),eq("com.android.settings:id/font_size"),any(),anyLong()));
   }
  }
+ private void splitNavigation(int switchLeft) {
+  int[] rowBounds={0,100,1080,300};int[] textBounds={30,140,700,220};
+  var page=new AccessibilityNodeSnapshot("node_0_0","node_0",true,"com.android.settings","연결",null,null,"android.widget.TextView","text",new int[]{0,0,900,80},false,true,false,false,false,null,5);
+  var row=new AccessibilityNodeSnapshot("node_0_1","node_0",true,"com.android.settings",null,null,null,"android.widget.LinearLayout","menu_item",rowBounds,true,true,false,false,false,null,5);
+  var title=new AccessibilityNodeSnapshot("node_0_1_0","node_0_1",true,"com.android.settings","블루투스",null,"android:id/title","android.widget.TextView","text",textBounds,false,true,false,false,false,null,5);
+  var toggle=new AccessibilityNodeSnapshot("node_0_1_1","node_0_1",true,"com.android.settings",null,null,"android:id/switch_widget","android.widget.Switch","switch",new int[]{switchLeft,140,1040,220},true,true,false,false,true,null,5);
+  var rootSnapshot=new AccessibilityNodeSnapshot("node_0",null,true,"com.android.settings",null,null,null,"android.widget.FrameLayout","container",new int[]{0,0,1080,2400},false,true,false,false,false,null,5);
+  screen=new ScreenSnapshot("com.android.settings","now",1080,2400,List.of(page,row,title,toggle,rootSnapshot),5);
+  AccessibilityNodeInfo titleNode=mock(AccessibilityNodeInfo.class);when(node.getChild(0)).thenReturn(titleNode);
+  when(titleNode.getPackageName()).thenReturn("com.android.settings");when(titleNode.getWindowId()).thenReturn(5);
+  when(titleNode.getText()).thenReturn("블루투스");when(titleNode.getClassName()).thenReturn("android.widget.TextView");
+  when(titleNode.getViewIdResourceName()).thenReturn("android:id/title");when(titleNode.isEnabled()).thenReturn(true);when(titleNode.isVisibleToUser()).thenReturn(true);
+  doAnswer(c->{((Rect)c.getArgument(0)).set(30,140,700,220);return null;}).when(titleNode).getBoundsInScreen(any());
+  doReturn(true).when(service).dispatchGesture(any(),any(),any());
+ }
+ @Test public void mixedMenuGestureHitsTheNativeTitleAndNeverClicksTheParentOrSwitch() {
+  splitNavigation(850);
+  assertTrue(ClickAccessibilityService.performGuidedNavigationTap(screen,"node_0_1",screen.nodes.get(1).bounds,"settings.bluetooth.enable","S_CATEGORY"));
+  org.mockito.ArgumentCaptor<android.accessibilityservice.GestureDescription> gesture=org.mockito.ArgumentCaptor.forClass(android.accessibilityservice.GestureDescription.class);
+  verify(service).dispatchGesture(gesture.capture(),any(),any());
+  android.graphics.RectF hit=new android.graphics.RectF();gesture.getValue().getStroke(0).getPath().computeBounds(hit,true);
+  assertEquals(365f,hit.left,.1f);assertEquals(180f,hit.top,.1f);assertTrue(hit.right<850);
+  verify(node,never()).performAction(anyInt());
+ }
+ @Test public void mixedMenuCannotDispatchWhenTheSwitchOverlapsTheTitle() {
+  splitNavigation(400);
+  assertFalse(ClickAccessibilityService.performGuidedNavigationTap(screen,"node_0_1",screen.nodes.get(1).bounds,"settings.bluetooth.enable","S_CATEGORY"));
+  verify(service,never()).dispatchGesture(any(),any(),any());verify(node,never()).performAction(anyInt());
+ }
+
 }

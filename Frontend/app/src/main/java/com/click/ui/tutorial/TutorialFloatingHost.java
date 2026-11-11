@@ -5,8 +5,8 @@ import android.animation.ValueAnimator;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.Outline;
+import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.Drawable;
@@ -17,15 +17,12 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.TextView;
-import com.click.R;
-import com.click.ui.common.ClickUi;
 import com.click.ui.overlay.ClickOverlayLayout;
 import com.click.ui.overlay.TrashDropView;
 
 /** Hosts the production floating UI locally so tutorial input never starts the agent service. */
 public final class TutorialFloatingHost extends FrameLayout implements ClickOverlayLayout.Callback {
     public static final int HIGHLIGHT = 0xFF3478F6;
-    private static final int HINT_BACKGROUND = 0xFF2868E8;
     public interface Listener {
         void onModeChanged(ClickOverlayLayout.Mode mode);
         void onTextSubmitted(String text);
@@ -40,13 +37,12 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     private final ClickOverlayLayout control;
     private final TrashDropView trash;
     private final Listener listener;
-    private final TextView tapHint;
     private final Paint highlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Path hintPointer = new Path();
     private ValueAnimator highlightPulse, outlinePulse;
-    private boolean clickHighlighted, dragging, hintBelow;
+    private boolean clickHighlighted, dragging;
     private float pulseProgress;
     private boolean positioned;
+    private boolean exampleAtBottom;
     private float dragStartX, dragStartY;
     private boolean hidden;
     private String highlightedLabel;
@@ -59,8 +55,9 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     private final LayerDrawable targetOutline = new LayerDrawable(new Drawable[]{contrastOutline, accentOutline});
     private View outlineHost;
     private ViewTreeObserver outlineObserver;
-    private final int[] targetPosition = new int[2], hostPosition = new int[2];
+    private final int[] hostPosition = new int[2];
     private final Outline buttonOutline = new Outline();
+    private final Rect visibleTarget = new Rect();
     private final ViewTreeObserver.OnPreDrawListener outlinePosition = () -> {
         updateOutlineBounds();
         return true;
@@ -69,30 +66,24 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     public TutorialFloatingHost(Context context, Listener listener) {
         super(context);
         this.listener = listener;
-        setClipChildren(false);
+        setClipChildren(true);
+        setClipToPadding(true);
+        setPadding(dp(12), dp(12), dp(12), dp(12));
         trash = new TrashDropView(context);
         trash.setVisibility(GONE);
         trash.setContentDescription("클루를 집으로 보내 안내 닫기");
         LayoutParams trashParams = new LayoutParams(dp(96), dp(96), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
         trashParams.bottomMargin = dp(TrashDropView.BOTTOM_MARGIN_DP);
         addView(trash, trashParams);
-        tapHint = ClickUi.body(context, context.getString(R.string.tutorial_click_hint));
-        tapHint.setTextColor(Color.WHITE);
-        tapHint.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
-        tapHint.setGravity(Gravity.CENTER);
-        tapHint.setPadding(dp(16), dp(11), dp(16), dp(11));
-        tapHint.setBackground(ClickUi.rounded(HINT_BACKGROUND, dp(18)));
-        tapHint.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-        tapHint.setVisibility(GONE);
-        addView(tapHint, new LayoutParams(-2, -2));
         control = new ClickOverlayLayout(context);
         control.setCallback(this);
-        addView(control, new LayoutParams(dp(64), dp(64)));
+        addView(control, new LayoutParams(control.getWindowWidth(ClickOverlayLayout.Mode.COLLAPSED,
+                getResources().getDisplayMetrics().widthPixels), dp(64)));
     }
 
     public ClickOverlayLayout getControl() { return control; }
     public boolean isHidden() { return hidden; }
-    public void setHint(String hint) { tapHint.setText(hint); }
+    public void positionExampleAtBottom() { exampleAtBottom = true; requestLayout(); }
     public void setClickHighlighted(boolean highlighted) {
         if (clickHighlighted == highlighted) return;
         clickHighlighted = highlighted;
@@ -114,7 +105,7 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         if (review != null) removeView(review);
         review = view; review.setVisibility(VISIBLE); control.setVisibility(GONE);
         int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        int availableWidth = getWidth() > 0 ? getWidth() : screenWidth - dp(44);
+        int availableWidth = getWidth() > 0 ? contentWidth() : screenWidth - dp(68);
         int panelWidth = Math.min(availableWidth, view.getWindowWidth(screenWidth));
         addView(view, new LayoutParams(panelWidth, -2, Gravity.CENTER));
         updateHighlight(); requestLayout();
@@ -181,9 +172,8 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
                 accentOutline.setColor(Color.TRANSPARENT);
                 accentOutline.setStroke(dp(4), HIGHLIGHT);
                 targetOutline.setLayerInset(1, dp(2), dp(2), dp(2), dp(2));
-                // The window overlay lets the ring extend beyond the button and its
-                // clipped parents, including targets outside this floating host.
-                outlineHost = target.getRootView();
+                // Practice highlights stay inside the phone screen as panels move.
+                outlineHost = this;
                 outlineHost.getOverlay().add(targetOutline);
                 outlineObserver = outlineHost.getViewTreeObserver();
                 outlineObserver.addOnPreDrawListener(outlinePosition);
@@ -229,22 +219,26 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         if (outlinedTarget == null || outlineHost == null) return;
         int width = outlinedTarget.getWidth(), height = outlinedTarget.getHeight();
         boolean visible = outlinedTarget.isShown() && outlinedTarget.isEnabled()
-                && width > dp(2) && height > dp(2) && !dragging;
+                && width > dp(2) && height > dp(2) && !dragging
+                && outlinedTarget.getGlobalVisibleRect(visibleTarget);
         targetOutline.setVisible(visible, false);
         if (!visible) return;
         // Recompute before drawing so parent scrolling, translations and keyboard
         // relayout all move the external ring with the target in the same frame.
-        outlinedTarget.getLocationOnScreen(targetPosition);
         outlineHost.getLocationOnScreen(hostPosition);
-        int left = targetPosition[0] - hostPosition[0];
-        int top = targetPosition[1] - hostPosition[1];
+        int left = visibleTarget.left - hostPosition[0];
+        int top = visibleTarget.top - hostPosition[1];
+        width = visibleTarget.width(); height = visibleTarget.height();
         int outset = dp(10);
-        targetOutline.setBounds(left - outset, top - outset, left + width + outset, top + height + outset);
+        targetOutline.setBounds(Math.max(0, left - outset), Math.max(0, top - outset),
+                Math.min(getWidth(), left + width + outset), Math.min(getHeight(), top + height + outset));
         buttonOutline.setEmpty();
         if (outlinedTarget.getOutlineProvider() != null) {
             outlinedTarget.getOutlineProvider().getOutline(outlinedTarget, buttonOutline);
         }
         float radius = buttonOutline.getRadius() >= 0 ? buttonOutline.getRadius() : dp(18);
+        if (outlinedTarget instanceof com.click.ui.overlay.VoiceCaptureIndicator)
+            radius = Math.min(width, height) / 2f;
         // Transparent fills and an outer stroke leave the button's content intact.
         if (contrastOutline.getCornerRadius() != radius + outset) {
             contrastOutline.setCornerRadius(radius + outset);
@@ -260,9 +254,6 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     private void updateHighlight() {
         refreshTargetHighlight();
         boolean visible = highlightVisible();
-        tapHint.setVisibility(visible ? VISIBLE : GONE);
-        if (visible) tapHint.bringToFront();
-        positionHint();
         if (visible && isShown() && isAttachedToWindow() && hasWindowFocus() && getWindowVisibility() == VISIBLE
                 && ValueAnimator.areAnimatorsEnabled()) {
             if (highlightPulse == null) {
@@ -310,22 +301,14 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
 
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
+        if (exampleAtBottom && getHeight() > 0) {
+            control.setX(Math.max(getPaddingLeft(), getWidth() - control.getWidth() - getPaddingRight()));
+            control.setY(Math.max(getPaddingTop(), getHeight() - control.getHeight() - getPaddingBottom()));
+            exampleAtBottom = false;
+        }
         refreshTargetHighlight();
-        positionHint();
+        constrain(control.getX(), control.getY());
         positionReview();
-    }
-
-    private void positionHint() {
-        if (tapHint.getVisibility() != VISIBLE) return;
-        float cx = control.getX() + control.getClickCenterX(
-                ClickOverlayLayout.Mode.COLLAPSED, control.getLayoutParams().width);
-        tapHint.setX(Math.max(0, Math.min(cx + dp(24) - tapHint.getMeasuredWidth(),
-                getWidth() - tapHint.getMeasuredWidth())));
-        float buttonTop = control.getY() + control.getClickCenterY(ClickOverlayLayout.Mode.COLLAPSED) - dp(32);
-        float above = buttonTop - dp(20) - tapHint.getMeasuredHeight();
-        hintBelow = above < dp(8);
-        float desired = hintBelow ? buttonTop + dp(64) + dp(20) : above;
-        tapHint.setY(Math.max(dp(8), Math.min(desired, getHeight() - tapHint.getMeasuredHeight() - dp(8))));
     }
 
     @Override protected void dispatchDraw(Canvas canvas) {
@@ -348,18 +331,6 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
             highlightPaint.setAlpha(Math.round(180 + 75 * brightness));
             highlightPaint.setStrokeWidth(dp(3) + dp(2) * brightness);
             canvas.drawCircle(cx, cy, dp(35), highlightPaint);
-            highlightPaint.setStyle(Paint.Style.FILL);
-            highlightPaint.setColor(HINT_BACKGROUND);
-            float tailX = Math.max(tapHint.getX() + dp(14),
-                    Math.min(cx, tapHint.getX() + tapHint.getWidth() - dp(14)));
-            float edge = hintBelow ? tapHint.getY() : tapHint.getY() + tapHint.getHeight();
-            float base = edge + (hintBelow ? dp(1) : -dp(1));
-            hintPointer.reset();
-            hintPointer.moveTo(tailX - dp(8), base);
-            hintPointer.lineTo(tailX, edge + (hintBelow ? -dp(9) : dp(9)));
-            hintPointer.lineTo(tailX + dp(8), base);
-            hintPointer.close();
-            canvas.drawPath(hintPointer, highlightPaint);
         }
         super.dispatchDraw(canvas);
     }
@@ -377,27 +348,24 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     }
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
-        // 튜토리얼의 바깥 ScrollView가 전체 연습을 스크롤한다. 패널을 남은 화면
-        // 높이로 압축하지 않고 실제 내용 높이를 먼저 확보한다.
         int width = MeasureSpec.getSize(widthSpec);
-        int limit = getResources().getDisplayMetrics().heightPixels * 2;
+        int height = MeasureSpec.getMode(heightSpec) == MeasureSpec.UNSPECIFIED
+                ? 0 : MeasureSpec.getSize(heightSpec);
+        int availableWidth = Math.max(0, width - getPaddingLeft() - getPaddingRight());
+        int availableHeight = Math.max(0, height - getPaddingTop() - getPaddingBottom());
         LayoutParams params = (LayoutParams) control.getLayoutParams();
-        params.width = Math.min(width, control.getWindowWidth(control.getMode(), width));
-        int controlHeight = control.getWindowHeight(control.getMode());
-        int desired = control.getMode() == ClickOverlayLayout.Mode.COLLAPSED ? dp(260) : controlHeight + dp(24);
+        params.width = Math.max(0, Math.min(availableWidth, control.getWindowWidth(control.getMode(), width)));
+        params.height = Math.min(availableHeight,
+                control.getWindowHeight(control.getMode(), params.width, availableHeight));
         if (review != null) {
-            review.setAvailableHeight(limit);
+            review.setAvailableHeight(availableHeight);
             if (review.getVisibility() == VISIBLE) {
-                int panelWidth = Math.min(width, review.getWindowWidth(getResources().getDisplayMetrics().widthPixels));
+                int panelWidth = Math.min(availableWidth, review.getWindowWidth(width));
                 review.getLayoutParams().width = panelWidth;
                 review.measure(MeasureSpec.makeMeasureSpec(panelWidth, MeasureSpec.EXACTLY),
-                        MeasureSpec.makeMeasureSpec(limit, MeasureSpec.AT_MOST));
-                desired = review.getMeasuredHeight() + dp(24)
-                        + (review.isMinimizedProgress() ? controlHeight + dp(10) : 0);
+                        MeasureSpec.makeMeasureSpec(availableHeight, MeasureSpec.AT_MOST));
             }
         }
-        int height = resolveSize(desired, heightSpec);
-        params.height = Math.min(height, controlHeight);
         super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
     }
 
@@ -407,22 +375,23 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
             review.setTranslationX(0); review.setTranslationY(0);
             return;
         }
-        float centerX = control.getX() + control.getWidth() / 2f;
-        float bubbleLeft = Math.max(0, Math.min(centerX - review.getWidth() / 2f,
-                getWidth() - review.getWidth()));
+        float centerX = control.getX() + control.getClickCenterX(control.getMode(), control.getWidth());
+        float bubbleLeft = Math.max(getPaddingLeft(), Math.min(centerX - review.getWidth() / 2f,
+                getWidth() - getPaddingRight() - review.getWidth()));
         float bubbleTop = control.getY() - review.getHeight() - dp(10);
-        boolean below = bubbleTop < 0;
+        boolean below = bubbleTop < getPaddingTop();
         if (below) bubbleTop = control.getY() + control.getHeight() + dp(10);
-        bubbleTop = Math.max(0, Math.min(bubbleTop, getHeight() - review.getHeight()));
+        bubbleTop = Math.max(getPaddingTop(), Math.min(bubbleTop, getHeight() - getPaddingBottom() - review.getHeight()));
         review.setCompactAnchor(centerX - bubbleLeft, below);
         review.setX(bubbleLeft); review.setY(bubbleTop);
     }
 
     @Override protected void onSizeChanged(int w, int h, int oldW, int oldH) {
         super.onSizeChanged(w, h, oldW, oldH);
+        setClipBounds(new Rect(0, 0, w, h));
         if (!positioned && w > 0 && h > 0) {
-            control.setX(Math.max(0, w - control.getLayoutParams().width - dp(24)));
-            control.setY(Math.max(0, h - control.getLayoutParams().height - dp(12)));
+            control.setX(Math.max(getPaddingLeft(), w - control.getLayoutParams().width - getPaddingRight()));
+            control.setY(Math.max(getPaddingTop(), h - control.getLayoutParams().height - getPaddingBottom()));
             positioned = true;
         } else constrain(control.getX(), control.getY());
     }
@@ -430,8 +399,8 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
     private void resize() {
         if (getWidth() <= 0 || getHeight() <= 0) return;
         LayoutParams params = (LayoutParams) control.getLayoutParams();
-        params.width = Math.min(getWidth(), control.getWindowWidth(control.getMode(), getWidth()));
-        params.height = Math.min(getHeight(), control.getWindowHeight(control.getMode()));
+        params.width = Math.max(0, Math.min(contentWidth(), control.getWindowWidth(control.getMode(), getWidth())));
+        params.height = Math.min(contentHeight(), control.getWindowHeight(control.getMode(), params.width, contentHeight()));
         control.setLayoutParams(params);
     }
 
@@ -463,6 +432,7 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
         dragStartX = control.getX(); dragStartY = control.getY();
         trash.setActive(false);
         trash.setVisibility(VISIBLE);
+        control.bringToFront();
     }
     @Override public void onDragBy(float x, float y) {
         constrain(control.getX() + x, control.getY() + y);
@@ -501,15 +471,16 @@ public final class TutorialFloatingHost extends FrameLayout implements ClickOver
                 cy - (trash.getY() + trash.getHeight() / 2f)) < dp(62);
     }
     private void constrain(float x, float y) {
-        control.setX(Math.max(0, Math.min(x, getWidth() - control.getLayoutParams().width)));
-        control.setY(Math.max(0, Math.min(y, getHeight() - control.getLayoutParams().height)));
-        positionHint(); positionReview(); invalidate();
+        control.setX(Math.max(getPaddingLeft(), Math.min(x, getWidth() - getPaddingRight() - control.getLayoutParams().width)));
+        control.setY(Math.max(getPaddingTop(), Math.min(y, getHeight() - getPaddingBottom() - control.getLayoutParams().height)));
+        positionReview(); invalidate();
     }
     private void snap() {
-        float right = Math.max(0, getWidth() - control.getLayoutParams().width);
-        control.animate().x(control.getX() < right / 2f ? 0 : right).setDuration(180)
-                .setUpdateListener(animation -> { positionHint(); positionReview(); invalidate(); })
-                .withEndAction(this::positionHint).start();
+        float right = Math.max(getPaddingLeft(), getWidth() - getPaddingRight() - control.getLayoutParams().width);
+        control.animate().x(control.getX() < getWidth() / 2f ? getPaddingLeft() : right).setDuration(180)
+                .setUpdateListener(animation -> { positionReview(); invalidate(); }).start();
     }
+    private int contentWidth() { return Math.max(0, getWidth() - getPaddingLeft() - getPaddingRight()); }
+    private int contentHeight() { return Math.max(0, getHeight() - getPaddingTop() - getPaddingBottom()); }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
 }

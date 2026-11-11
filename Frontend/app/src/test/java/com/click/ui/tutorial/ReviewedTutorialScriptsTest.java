@@ -5,6 +5,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
+@org.robolectric.annotation.Config(sdk = 34, application = android.app.Application.class)
 public class ReviewedTutorialScriptsTest {
  @Test public void usesReviewedCopyOnlyForExactSource() {
   ReviewedTutorialScripts scripts=new ReviewedTutorialScripts(RuntimeEnvironment.getApplication());

@@ -1,0 +1,541 @@
+{
+  "package_name": "com.android.settings",
+  "screen_width": 1080,
+  "screen_height": 2400,
+  "nodes": [
+    {
+      "node_id": "node_0",
+      "parent_id": null,
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        0,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.FrameLayout",
+      "role": "container",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0",
+      "parent_id": "node_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        0,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0",
+      "parent_id": "node_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        92,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.FrameLayout",
+      "role": "container",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0",
+      "parent_id": "node_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        92,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "resource_id": "com.android.settings:id/action_bar_root",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0",
+      "parent_id": "node_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        92,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.FrameLayout",
+      "role": "container",
+      "resource_id": "android:id/content",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0",
+      "parent_id": "node_0_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        92,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "resource_id": "com.android.settings:id/content_parent",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0",
+      "parent_id": "node_0_0_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        92,
+        1080,
+        2173
+      ],
+      "role": "container",
+      "resource_id": "com.android.settings:id/coordinator",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_0",
+      "parent_id": "node_0_0_0_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        92,
+        1080,
+        317
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "resource_id": "com.android.settings:id/app_bar",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_0_0",
+      "parent_id": "node_0_0_0_0_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        92,
+        1080,
+        317
+      ],
+      "class_name": "android.widget.FrameLayout",
+      "role": "container",
+      "resource_id": "com.android.settings:id/collapsing_app_bar",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_0_0_1",
+      "parent_id": "node_0_0_0_0_0_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        92,
+        1080,
+        317
+      ],
+      "role": "container",
+      "resource_id": "com.android.settings:id/action_bar",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_0_0_1_1",
+      "parent_id": "node_0_0_0_0_0_0_0_0_0_1",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        158,
+        183,
+        443,
+        270
+      ],
+      "class_name": "android.widget.TextView",
+      "role": "text",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings",
+      "text": "디스플레이"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2",
+      "parent_id": "node_0_0_0_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        317,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "resource_id": "com.android.settings:id/content_layout",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0",
+      "parent_id": "node_0_0_0_0_0_0_0_2",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        317,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.FrameLayout",
+      "role": "container",
+      "resource_id": "com.android.settings:id/content_frame",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        317,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        317,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        317,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.FrameLayout",
+      "role": "container",
+      "resource_id": "com.android.settings:id/main_content",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0_1",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        317,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "resource_id": "com.android.settings:id/container_material",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        317,
+        1080,
+        2173
+      ],
+      "class_name": "android.widget.FrameLayout",
+      "role": "container",
+      "resource_id": "android:id/list_container",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        317,
+        1080,
+        2173
+      ],
+      "class_name": "androidx.recyclerview.widget.RecyclerView",
+      "role": "list",
+      "resource_id": "com.android.settings:id/recycler_view",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        317,
+        1080,
+        733
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        317,
+        1080,
+        733
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "resource_id": "com.android.settings:id/sec_radio_layout",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0_0",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        0,
+        317,
+        540,
+        733
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "menu_item",
+      "resource_id": "com.android.settings:id/item1",
+      "clickable": true,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0_0_0",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        22,
+        317,
+        529,
+        565
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "resource_id": "com.android.settings:id/image_frame",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0_0_0_1",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        22,
+        503,
+        529,
+        565
+      ],
+      "class_name": "android.widget.TextView",
+      "role": "text",
+      "resource_id": "com.android.settings:id/icon_title",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": true,
+      "package_name": "com.android.settings",
+      "text": "라이트"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0_1",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        540,
+        317,
+        1080,
+        733
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "menu_item",
+      "resource_id": "com.android.settings:id/item2",
+      "clickable": true,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0_1_0",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0_1",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        551,
+        317,
+        1058,
+        565
+      ],
+      "class_name": "android.widget.LinearLayout",
+      "role": "container",
+      "resource_id": "com.android.settings:id/image_frame",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings"
+    },
+    {
+      "node_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0_1_0_1",
+      "parent_id": "node_0_0_0_0_0_0_0_2_0_0_0_1_0_0_0_0_0_1_0",
+      "window_id": 11697,
+      "bounds_in_screen": [
+        551,
+        503,
+        1058,
+        565
+      ],
+      "class_name": "android.widget.TextView",
+      "role": "text",
+      "resource_id": "com.android.settings:id/icon_title",
+      "clickable": false,
+      "enabled": true,
+      "visible_to_user": true,
+      "checkable": false,
+      "selected": false,
+      "package_name": "com.android.settings",
+      "text": "다크"
+    }
+  ]
+}

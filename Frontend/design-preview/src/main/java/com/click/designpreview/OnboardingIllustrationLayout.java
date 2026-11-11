@@ -8,7 +8,6 @@ import android.widget.FrameLayout;
 /** Keeps the speech bubble clear of the face, including with enlarged system text. */
 public final class OnboardingIllustrationLayout extends FrameLayout {
     private int characterTop;
-    private boolean bubbleAboveCharacter;
     private int sceneHeight;
 
     public OnboardingIllustrationLayout(Context context, AttributeSet attrs) {
@@ -23,16 +22,16 @@ public final class OnboardingIllustrationLayout extends FrameLayout {
         View bubble = findViewById(R.id.onboarding_bubble);
         bubble.measure(MeasureSpec.makeMeasureSpec(Math.max(0, width - dp(24)), MeasureSpec.AT_MOST),
                 MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-        int characterWidth = Math.min(dp(250), Math.round(width * .76f));
+        characterTop = bubble.getMeasuredHeight() + dp(8);
+        int available = MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.UNSPECIFIED
+                ? Integer.MAX_VALUE : Math.max(0, MeasureSpec.getSize(heightMeasureSpec) - characterTop - dp(8));
+        int characterWidth = Math.min(available, Math.min(dp(250), Math.round(width * .76f)));
         int characterHeight = characterWidth;
         measureExactly(findViewById(R.id.onboarding_character), characterWidth, characterHeight);
         int blobWidth = Math.min(width, dp(350));
         measureExactly(findViewById(R.id.onboarding_blob), blobWidth,
                 Math.round(blobWidth * .9f));
-        bubbleAboveCharacter = true;
-        characterTop = bubbleAboveCharacter
-                ? bubble.getMeasuredHeight() + dp(20) : dp(38);
-        sceneHeight = characterTop + characterHeight + dp(12);
+        sceneHeight = characterTop + characterHeight + dp(8);
         setMeasuredDimension(width, resolveSize(sceneHeight, heightMeasureSpec));
     }
 
@@ -48,8 +47,7 @@ public final class OnboardingIllustrationLayout extends FrameLayout {
         place(blob, (width - blob.getMeasuredWidth()) / 2,
                 offset + characterTop + Math.round(character.getMeasuredHeight() * .08f));
         View bubble = findViewById(R.id.onboarding_bubble);
-        int bubbleTop = bubbleAboveCharacter
-                ? dp(4) : characterTop - dp(8);
+        int bubbleTop = 0;
         place(bubble, Math.max(0, (width - bubble.getMeasuredWidth()) / 2), offset + bubbleTop);
     }
 

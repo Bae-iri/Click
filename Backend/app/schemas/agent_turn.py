@@ -6,11 +6,21 @@ from typing import Any, Literal
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.guidance import GuideCommandResponse
+from app.schemas.execution import ExecutionContext, ExecutionState
+from ai_agent.runtime.execution_contract import validate_context
 
 VisionFailureCode = Literal["masking_failed", "capture_failed", "ocr_failed", "screen_changed", "unsupported"]
 
 
 def validate_vision_failure(request):
+    context=getattr(request,"execution_context",None)
+    if context is not None:
+        validate_context(context.model_dump(), session_id=request.session_id,request_id=request.request_id,
+            episode_id=getattr(request,"episode_id",None),version=request.expected_version or 0,
+            observation_id=request.accessibility_tree.observation_id if request.accessibility_tree else None)
+    provenance=getattr(request,"approval_provenance",None)
+    if provenance is not None and (request.user_confirmation!="accepted" or request.confirmation_id is None):
+        raise ValueError("Approval provenance requires an accepted confirmation")
     if request.vision_failure is not None and (request.user_confirmation != "rejected" or request.vision_snapshot is not None):
         raise ValueError("vision_failure requires rejected confirmation and no vision payload")
 
@@ -59,14 +69,33 @@ class AppliedSettings(BaseModel):
     screen_brightness: int | None = Field(default=None, ge=0, le=65535)
     media_volume_source: Literal["android.media.AudioManager.STREAM_MUSIC"] | None = None
     media_volume: int | None = Field(default=None, ge=0, le=1000)
+    wifi_state: int | None = Field(default=None, strict=True, ge=0, le=4)
+    wifi_source: Literal["android.net.wifi.WifiManager.getWifiState"] | None = None
+    night_mode: int | None = Field(default=None, strict=True, ge=0, le=3)
+    night_mode_source: Literal["android.app.UiModeManager.getNightMode"] | None = None
+
+    ringer_mode: int | None = Field(default=None, strict=True, ge=0, le=2)
+    ringer_mode_source: Literal["android.media.AudioManager.getRingerMode"] | None = None
+
+    display_density_dpi: int | None = Field(default=None, strict=True, ge=72, le=2000)
+    display_density_source: Literal["android.content.res.Configuration.densityDpi"] | None = None
 
     @model_validator(mode="after")
     def require_value_sources(self):
         for value, source in ((self.font_scale, self.source), (self.screen_brightness, self.brightness_source),
-                              (self.media_volume, self.media_volume_source)):
+                              (self.media_volume, self.media_volume_source), (self.wifi_state, self.wifi_source),
+                              (self.night_mode, self.night_mode_source), (self.ringer_mode, self.ringer_mode_source),
+                              (self.display_density_dpi, self.display_density_source)):
             if (value is None) != (source is None):
                 raise ValueError("Applied setting value and source must be supplied together")
         return self
+
+
+class NativeWindowContext(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    settings_activity: Literal["UNKNOWN", "HOME", "SUBPAGE"] = "UNKNOWN"
+    window_kind: Literal["UNKNOWN", "APPLICATION", "INPUT_METHOD", "SYSTEM", "OVERLAY", "DIALOG"] = "UNKNOWN"
+    keyboard_visible: bool = Field(default=False, strict=True)
 
 
 class AccessibilityTree(BaseModel):
@@ -74,6 +103,7 @@ class AccessibilityTree(BaseModel):
 
     package_name: str | None = None
     active_window_id: int | None = None
+    window_context: NativeWindowContext | None = None
     screen_revision: str | None = Field(default=None, min_length=1, max_length=100)
     captured_at: datetime | None = None
     observation_id: str | None = Field(default=None, min_length=1, max_length=200)
@@ -146,6 +176,26 @@ class VisionSnapshot(BaseModel):
         return self
 
 
+class ApprovalProvenance(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source: Literal["user", "delegated_goal"]
+    goal_type: str | None = Field(default=None, max_length=100)
+    granted_at_ms: int | None = Field(default=None, ge=0)
+    expires_at_ms: int | None = Field(default=None, ge=0)
+    max_actions: int | None = Field(default=None, strict=True, ge=1, le=1)
+    max_delta_fraction: float | None = Field(default=None, gt=0, le=0.2, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def bounded(self):
+        values=(self.goal_type,self.granted_at_ms,self.expires_at_ms,self.max_actions,self.max_delta_fraction)
+        if self.source=="delegated_goal":
+            if any(v is None for v in values) or not 0<self.expires_at_ms-self.granted_at_ms<=300000:
+                raise ValueError("Delegation requires a single bounded five-minute grant")
+        elif any(v is not None for v in values):
+            raise ValueError("Direct approval does not carry delegation")
+        return self
+
+
 class AgentTurnRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -159,12 +209,15 @@ class AgentTurnRequest(BaseModel):
     vision_failure: VisionFailureCode | None = None
     user_confirmation: Literal["accepted", "rejected"] | None = None
     confirmation_id: str | None = Field(default=None, min_length=36, max_length=36)
+    approval_provenance: ApprovalProvenance | None = None
+    execution_context: ExecutionContext | None = None
     user_action_event: "UserActionEventRequest | None" = None
 
     @model_validator(mode="after")
     def require_screen_observation(self) -> "AgentTurnRequest":
         validate_vision_failure(self)
-        if self.accessibility_tree is None and self.vision_snapshot is None:
+        if (self.accessibility_tree is None and self.vision_snapshot is None
+                and not (self.user_confirmation == "rejected" and self.vision_failure is None)):
             raise ValueError("accessibility_tree or vision_snapshot is required")
         return self
 
@@ -190,6 +243,7 @@ class UserActionEventRequest(BaseModel):
 
 
 class AgentTurnResponse(BaseModel):
+    execution_state: ExecutionState | None = None
     request_id: str
     session_id: str
     episode_id: str | None = None
@@ -199,14 +253,14 @@ class AgentTurnResponse(BaseModel):
     total_steps: int
     state_id: str
     state_confidence: float
-    task_status: Literal["IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "COMPLETED", "BLOCKED"]
+    task_status: Literal["IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "COMPLETED", "CANCELLED", "BLOCKED"]
     guide_command: GuideCommandResponse
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class TypedGoalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    catalog_version: Literal["1.0.0", "1.1.0", "2.0.0", "2.1.0"]
+    catalog_version: Literal["1.0.0", "1.1.0", "2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"]
     goal_type: Literal["settings.font_size.increase", "settings.font_size.decrease",
                        "settings.wifi.enable", "settings.wifi.disable", "settings.wifi.connect",
                        "settings.bluetooth.enable", "settings.bluetooth.disable", "settings.bluetooth.connect",
@@ -275,7 +329,8 @@ class TypedGoalRequest(BaseModel):
                        "settings.backup.disable",
                        "settings.software_update.check",
                        "settings.factory_reset",
-                       "settings.device_name.change"]
+                       "settings.device_name.change",
+                       "settings.navigation.settings", "settings.navigation.display", "settings.navigation.sound", "settings.navigation.connections", "settings.navigation.accessibility", "settings.navigation.wifi", "settings.navigation.bluetooth", "settings.navigation.font_size", "settings.navigation.screen_timeout", "settings.navigation.display_size", "settings.navigation.volume", "settings.navigation.ringtone", "settings.navigation.notification_sound", "settings.navigation.do_not_disturb", "settings.navigation.visibility", "settings.navigation.hearing", "settings.navigation.interaction", "settings.navigation.talkback", "settings.navigation.magnification", "settings.navigation.captions", "settings.navigation.eye_comfort"]
     target_app: Literal["android_settings"]
     slots: dict[str, str]
 
@@ -373,35 +428,60 @@ class TypedGoalRequest(BaseModel):
             "settings.factory_reset": {"setting": "factory_reset", "action": "reset"},
             "settings.device_name.change": {"setting": "device_name", "action": "change"},
         }
+        expected_slots.update({
+            "settings.navigation.settings": {"setting": "navigation_settings", "action": "open"},
+            "settings.navigation.display": {"setting": "navigation_display", "action": "open"},
+            "settings.navigation.sound": {"setting": "navigation_sound", "action": "open"},
+            "settings.navigation.connections": {"setting": "navigation_connections", "action": "open"},
+            "settings.navigation.accessibility": {"setting": "navigation_accessibility", "action": "open"},
+            "settings.navigation.wifi": {"setting": "navigation_wifi", "action": "open"},
+            "settings.navigation.bluetooth": {"setting": "navigation_bluetooth", "action": "open"},
+            "settings.navigation.font_size": {"setting": "navigation_font_size", "action": "open"},
+            "settings.navigation.screen_timeout": {"setting": "navigation_screen_timeout", "action": "open"},
+            "settings.navigation.display_size": {"setting": "navigation_display_size", "action": "open"},
+            "settings.navigation.volume": {"setting": "navigation_volume", "action": "open"},
+            "settings.navigation.ringtone": {"setting": "navigation_ringtone", "action": "open"},
+            "settings.navigation.notification_sound": {"setting": "navigation_notification_sound", "action": "open"},
+            "settings.navigation.do_not_disturb": {"setting": "navigation_do_not_disturb", "action": "open"},
+            "settings.navigation.visibility": {"setting": "navigation_visibility", "action": "open"},
+            "settings.navigation.hearing": {"setting": "navigation_hearing", "action": "open"},
+            "settings.navigation.interaction": {"setting": "navigation_interaction", "action": "open"},
+            "settings.navigation.talkback": {"setting": "navigation_talkback", "action": "open"},
+            "settings.navigation.magnification": {"setting": "navigation_magnification", "action": "open"},
+            "settings.navigation.captions": {"setting": "navigation_captions", "action": "open"},
+            "settings.navigation.eye_comfort": {"setting": "navigation_eye_comfort", "action": "open"},
+        })
+        if self.goal_type.startswith("settings.navigation.") and self.catalog_version not in {"2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
+            raise ValueError("Settings navigation requires catalog version 2.2.0")
         if self.slots != expected_slots[self.goal_type]:
             raise ValueError("goal_type and slots must match")
         if self.goal_type == "settings.font_size.decrease" and self.catalog_version == "1.0.0":
             raise ValueError("font-size decrease requires catalog version 1.1.0 or newer")
-        if self.goal_type.startswith("settings.wifi.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith("settings.wifi.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Wi-Fi goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith("settings.bluetooth.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith("settings.bluetooth.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Bluetooth goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith("settings.mobile_data.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith("settings.mobile_data.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Mobile data goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.airplane_mode.", "settings.hotspot.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.airplane_mode.", "settings.hotspot.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Airplane mode and hotspot goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.brightness.", "settings.dark_mode.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.brightness.", "settings.dark_mode.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Brightness and dark mode goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.screen_timeout.", "settings.display_size.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.screen_timeout.", "settings.display_size.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Screen timeout and display size goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.volume.", "settings.mute.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.volume.", "settings.mute.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Volume and mute goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.ringtone.", "settings.vibrate.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.ringtone.", "settings.vibrate.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Ringtone and vibrate goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.notifications.", "settings.location.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.notifications.", "settings.location.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Notifications and location goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.power_saving.", "settings.screen_lock.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.power_saving.", "settings.screen_lock.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Power saving and screen lock goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.biometric.", "settings.apps.", "settings.app_permissions.")) and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith(("settings.biometric.", "settings.apps.", "settings.app_permissions.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Biometric and app management goals require catalog version 2.0.0 or newer")
-        if self.goal_type == "settings.storage.cleanup" and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type == "settings.storage.cleanup" and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Storage cleanup requires catalog version 2.0.0 or newer")
-        if self.goal_type.startswith("settings.talkback.") and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type.startswith("settings.talkback.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("TalkBack goals require catalog version 2.0.0 or newer")
         remaining_settings = {
             "settings.magnification.enable",
@@ -453,7 +533,7 @@ class TypedGoalRequest(BaseModel):
             "settings.factory_reset",
             "settings.device_name.change",
         }
-        if self.goal_type in remaining_settings and self.catalog_version not in {"2.0.0", "2.1.0"}:
+        if self.goal_type in remaining_settings and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2"}:
             raise ValueError("Remaining settings goals require catalog version 2.0.0 or newer")
         return self
 
@@ -511,6 +591,8 @@ class AgentCommandRequest(BaseModel):
     user_action_event: UserActionEventRequest | None = None
     user_confirmation: Literal["accepted", "rejected"] | None = None
     confirmation_id: str | None = Field(default=None, min_length=36, max_length=36)
+    approval_provenance: ApprovalProvenance | None = None
+    execution_context: ExecutionContext | None = None
     source_text: str | None = Field(default=None, max_length=500)
     classification: ClassificationMetadata | None = None
     result_response: Literal["accepted", "rejected"] | None = Field(default=None, exclude=True)
@@ -572,7 +654,9 @@ class AgentCommandRequest(BaseModel):
             raise ValueError("episode_id must be omitted before starting")
         if self.command_type != "start_task" and self.episode_id is None:
             raise ValueError("episode_id is required after start_task")
-        needs_screen = starts or self.command_type in {"resume_task", "observe", "respond_confirmation"}
+        needs_screen = starts or self.command_type in {"resume_task", "observe"} or (
+            self.command_type == "respond_confirmation" and not (
+                self.user_confirmation == "rejected" and self.vision_failure is None))
         if needs_screen and self.accessibility_tree is None and self.vision_snapshot is None:
             raise ValueError("a screen observation is required")
         if self.command_type == "respond_confirmation":
@@ -595,6 +679,7 @@ class GraphReference(BaseModel):
 
 
 class AgentCommandResponse(BaseModel):
+    execution_state: ExecutionState | None = None
     contract_version: Literal["agent-fe-contract.v0.2", "agent-fe-contract.v0.3"] = "agent-fe-contract.v0.2"
     request_id: str
     session_id: str
@@ -614,6 +699,7 @@ class AgentCommandResponse(BaseModel):
 
 
 class AgentGoalResolutionResponse(BaseModel):
+    execution_state: ExecutionState | None = None
     contract_version: Literal["agent-fe-contract.v0.3"] = "agent-fe-contract.v0.3"
     request_id: str
     session_id: str

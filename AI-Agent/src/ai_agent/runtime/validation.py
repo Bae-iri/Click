@@ -3,6 +3,16 @@
 from __future__ import annotations
 
 from ai_agent.runtime.types import AgentTurnRequest, TurnPhase
+from functools import lru_cache
+import json
+from pathlib import Path
+
+
+@lru_cache(maxsize=1)
+def _approved_settings_slots():
+    catalog = json.loads((Path(__file__).resolve().parents[3] / 'goal_catalog/mvp_goals.json').read_text())
+    return {entry['goal_type']: entry['slots'] for entry in catalog['goals']
+        if entry.get('execution_status') == 'approved' and entry.get('target_app') == 'android_settings'}
 
 
 class ContractViolationError(ValueError):
@@ -20,6 +30,12 @@ def validate_agent_turn_request(
     *,
     has_session: bool = False,
 ) -> TurnPhase:
+    from ai_agent.runtime.execution_contract import validate_context
+    try:
+        validate_context(request.execution_context,session_id=request.session_id,request_id=request.request_id,
+            episode_id=request.episode_id,observation_id=request.observation_id)
+    except ValueError as invalid:
+        raise ContractViolationError(str(invalid)) from invalid
     if not request.request_id:
         raise ContractViolationError("request_id is required.")
     if not request.session_id:
@@ -33,9 +49,7 @@ def validate_agent_turn_request(
 
     if request.typed_goal is not None:
         goal = request.typed_goal
-        supported = {f"settings.{setting}.{direction}": {"setting": setting, "direction": direction}
-                     for setting in ("font_size", "brightness", "volume")
-                     for direction in ("increase", "decrease")}
+        supported = _approved_settings_slots()
         if goal.goal_type not in supported:
             raise ContractViolationError("Unsupported typed goal.")
         if goal.target_app != "android_settings":

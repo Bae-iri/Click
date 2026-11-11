@@ -20,7 +20,7 @@ public final class TutorialNarrator {
     private final Engine engine;
     private final boolean foregroundScreen;
     private boolean active = true, closed, speaking, unavailable;
-    private String lastMessage;
+    private String lastMessage, suppression;
     private Listener listener;
 
     public TutorialNarrator(Context context) { this(context, true); }
@@ -51,6 +51,10 @@ public final class TutorialNarrator {
         closed = true; active = false; stop(); listener = null;
         engine.clients.remove(this);
         if (engine.clients.isEmpty()) { engine.close(); if (shared == engine) shared = null; }
+    }
+    private void noteSuppression(String reason) {
+        if (!reason.equals(suppression)) Log.i("ClickNarration", "skip " + reason);
+        suppression = reason;
     }
     private void state(boolean speaking, boolean unavailable) {
         this.speaking = speaking; this.unavailable = unavailable; notifyState();
@@ -106,9 +110,14 @@ public final class TutorialNarrator {
         }
         void submit(TutorialNarrator client, String text, boolean replay) {
             if (closed || client.closed || !client.active || text == null || text.trim().isEmpty()) return;
-            if (!client.foregroundScreen && clients.stream().anyMatch(c -> c.active && !c.closed && c.foregroundScreen)) return;
+            if (!client.foregroundScreen && clients.stream().anyMatch(c -> c.active && !c.closed && c.foregroundScreen)) {
+                client.noteSuppression("foreground_screen_owner"); return;
+            }
             String next = text.trim();
-            if (!replay && next.equals(client.lastMessage)) { client.notifyState(); return; }
+            if (!replay && next.equals(client.lastMessage)) {
+                client.noteSuppression("duplicate_sentence"); client.notifyState(); return;
+            }
+            client.suppression = null;
             cancel();
             if (replay && failed) { if (tts != null) tts.shutdown(); initialize(); }
             owner = client; message = next;

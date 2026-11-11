@@ -107,14 +107,24 @@ def test_timeout_does_not_record_satisfaction():
 
 
 def test_pause_resume_restores_result_question_instead_of_runtime():
-    client = authenticated_client(create_app())
+    app = create_app()
+    client = authenticated_client(app)
+    repository = app.state.turn_service.repository
+    clock = [int(repository.clock())]
+    repository.clock = lambda: clock[0]
     previous = waiting_result(client)
+    clock[0] += 10
     paused = client.post("/api/v1/agent/commands", json=command(previous, "pause_task")).json()
     assert paused["task_status"] == "PAUSED"
+    clock[0] += 20
     resumed = client.post("/api/v1/agent/commands", json=command(paused, "resume_task", accessibility_tree=slider_tree(4)))
     assert resumed.status_code == 200, resumed.text
     assert resumed.json()["task_status"] == "WAITING_RESULT"
-    assert resumed.json()["metadata"]["result_prompt"] == previous["metadata"]["result_prompt"]
+    # Resume preserves the same question and renews its existing 180-second answer window.
+    # Comparing the old timestamp only passed when every request landed in one wall-clock second.
+    expected = {**previous["metadata"]["result_prompt"], "expires_at": clock[0] + 180}
+    assert resumed.json()["metadata"]["result_prompt"] == expected
+    assert expected["expires_at"] > previous["metadata"]["result_prompt"]["expires_at"]
 
 
 def test_queue_keeps_result_question_running():

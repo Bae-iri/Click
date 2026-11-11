@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-08",
+  "scope": "Repair classifier-to-prepared-graph routing; not a natural-language accuracy claim",
+  "findings": [
+    "UI selector provider and goal classifier provider are independent.",
+    "Render blueprint previously did not declare the goal classifier provider; process environment of the production service was not inspected.",
+    "Unknown requests were passed conflicting family field definitions.",
+    "Selected model goals did not cause explicit scope and media inputs to be recomputed for their own family."
+  ],
+  "implementation": [
+    "Classify unknown goals before supplying family-specific fields.",
+    "Limit keyword-bound model candidates to that goal family.",
+    "Recompute explicit values from the original request after a model selects the goal; derive only approved task slots.",
+    "Expose only provider and configured boolean at /version.goal_interpretation.",
+    "Add an explicit deployment provider setting without switching customer text to an external provider.",
+    "Add an opt-in live-model check using eight fixed synthetic utterances and disposable in-memory databases."
+  ],
+  "validation": {
+    "targeted_regression_passed": 219,
+    "live_type_safe_requests_performed": 0,
+    "local_live_probe_preflight": "CONFIG_ERROR: self_hosted not configured; no request sent",
+    "model_responses_in_tests": "controlled HTTP responses, not actual model inference",
+    "permission_pending": "Customer request text external processing choice; current default remains self_hosted",
+    "expanded_family_compatibility_passed": 315
+  },
+  "limits": [
+    "Production goal interpreter environment not verified.",
+    "No real Korean intent accuracy/latency/abstention rate measured.",
+    "No device adjustment or production DB access performed.",
+    "ZDR organization configuration was not verified."
+  ]
+}

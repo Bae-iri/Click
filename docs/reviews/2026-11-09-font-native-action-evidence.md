@@ -1,0 +1,21 @@
+# Preserve native slider evidence through Settings redraw
+
+The user directly dragged the font slider. The captured decrease episode observed FONT_SCALE 1.1 before the drag and 0.9 afterward, with the Settings window changing from 13742 to 13746. Both requests carried no action event. Jev selected the font slider with confidence 0.98. The resulting `UNVERIFIABLE / no_correlated_action` is therefore an action-evidence failure, not evidence that the setting failed to change or that Jev rejected the target. An earlier increase episode also recorded a changed value without a correlated action.
+
+The incident log has no native-range callback. It cannot distinguish an unavailable native event source from a source that was discarded because it was absent from the newly read root. The latter loss path is present in the previous code and is reproduced by regression tests. These observations do not recover the missing historical event.
+
+The accessibility service now forwards a real native range event even when its source is detached from the current root. The tracker may preserve the issued node identity only when the event's nonempty resource ID matches. Original package, window, bounds or retained thumb track, range, changed native value, timestamp, and single consumption remain mandatory. Explicitly different node IDs and events from the recreated window still fail validation. Ordinary taps continue to require an identifiable current-root node.
+
+The service notification timeout is zero so native action sources are read promptly; screen capture retains its separate debounce. A changed setting observation waits at most 1.5 seconds for a real action event before being sent without one. The original guide binding remains available during that interval. Pause, cancellation and session replacement cannot be resumed by its callback. Missing events still produce unverified results; changed values never manufacture actions. The bounded wait applies to the shared font, brightness and media-volume adjustment path.
+
+Validation: five relevant regressions failed before the change. The release Android suite passes all 545 tests; the current workspace UI integration passes all 183 selected tests. Main and instrumentation APK builds succeed. The instrumentation probe is opt-in, generates real touchscreen input, delays root lookup by 150 ms, binds the native event locally, exports only numeric/boolean diagnostics, posts nothing to the server, and restores the starting FONT_SCALE in `finally`. This probe does not execute an app/Jev episode and cannot establish end-to-end task completion.
+
+Physical verification and installation status are recorded in the accompanying evidence JSON. This is an Android change; it does not require backend redeployment. A task with a missing historical event must not be retroactively marked verified.
+
+## Device verification
+
+The installed current-UI APK hash matches the prepared APK: `bcdd42330c0144c926684cb8ca7cdd91c3fa3d310d21fdc8fd59a13832e045a4`.
+
+The native probe passed after navigating through the exported Display menu. It changed FONT_SCALE 0.9 to 1.0 and restored 0.9. Two real range callbacks arrived; one matched the issued guide and the duplicate was rejected. The source remained in the current root in this physical run, so detached-root handling is established by regressions, not by this particular native observation. Initial probe setup attempts used an unsupported intent and a nonexported Samsung Activity; neither moved the slider. The final probe uses menu navigation.
+
+A separate opt-in test started a fresh font-increase episode through the real overlay and authenticated gateway, completed requirement review and confirmation, retained the minimized UI, physically dragged the native slider, and required the returned result prompt's technical status to be `CHANGED`. It passed in 11.34 seconds with FONT_SCALE 0.9 to 1.0, then cancelled only its own test request and restored 0.9. It did not invent a user satisfaction answer. This verifies the current font-page-to-result path against the actual Jev server, whose source hash was `3b754d8eea20b78f671d2eb296901ccbd040e4c756e1d30cb6284bdc759e9f78`. Starting from the launcher and other slider tasks were not physically remeasured in this probe.

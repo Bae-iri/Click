@@ -54,4 +54,15 @@ public class AutomaticAdjustmentApprovalTest {
   policy.put("revalidate_before_action", true).put("ui_selector", "unknown");
   assertFalse(AutomaticAdjustmentApproval.eligible(command("drag", policy), metadata("font_size"), screen()));
  }
+ @Test public void registeredSystemBrightnessReusesDirectionWithoutAuthorizingAutomaticTouch() throws Exception {
+  String pkg="com.android.systemui";
+  var wrapper=new AccessibilityNodeSnapshot("wrapper",null,true,pkg,null,null,pkg+":id/brightness_dialog_slider","android.view.View","container",new int[]{0,0,1080,400},false,true,false,false,false,null,5);
+  var slider=new AccessibilityNodeSnapshot("node_0_1","wrapper",true,pkg,null,null,pkg+":id/slider","android.widget.SeekBar","slider",bounds,false,true,false,false,false,2f,5,false,0f,7f);
+  var nativeScreen=new ScreenSnapshot(pkg,"2026-11-10T00:00:00Z",1080,2400,List.of(wrapper,slider),5);
+  assertTrue(AutomaticAdjustmentApproval.eligible(command("drag",new JSONObject()),metadata("brightness"),nativeScreen));
+  assertFalse(AutomaticAdjustmentApproval.eligible(command("drag",new JSONObject()),metadata("font_size"),nativeScreen));
+  assertFalse(com.click.service.accessibility.TouchAutomationPolicy.settingsPackage(pkg));
+  var noWrapper=new ScreenSnapshot(pkg,"2026-11-10T00:00:00Z",1080,2400,List.of(slider),5);
+  assertFalse(AutomaticAdjustmentApproval.eligible(command("drag",new JSONObject()),metadata("brightness"),noWrapper));
+ }
 }

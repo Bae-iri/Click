@@ -15,7 +15,7 @@ public final class AutomaticAdjustmentApproval {
     public static boolean eligible(AgentTurnContract.GuideCommand command, JSONObject metadata, ScreenSnapshot screen) {
         if (!"confirmation".equals(command.commandType) || !"drag".equals(command.proposedAction)
                 || !"observe_only".equals(command.actionType) || !command.requiresUserAction
-                || screen == null || !screen.privacyMaskingReady || !TouchAutomationPolicy.settingsPackage(screen.packageName)
+                || screen == null || !screen.privacyMaskingReady
                 || command.targetNodeId == null || command.targetBounds == null) return false;
         JSONObject goal = metadata == null ? null : metadata.optJSONObject("typed_goal");
         JSONObject slots = goal == null ? null : goal.optJSONObject("slots");

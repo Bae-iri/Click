@@ -10,6 +10,8 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import com.click.ui.common.ClickTextScale;
 
 import com.click.designpreview.AccountStartActivity;
+import com.click.designpreview.TextSizeSetupActivity;
+import com.click.designpreview.OnboardingActivity;
 import com.click.designpreview.ClickHost;
 import com.click.designpreview.LoginActivity;
 import com.click.designpreview.SignupActivity;
@@ -30,19 +32,18 @@ import static org.mockito.Mockito.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 34, application = Application.class)
 public class AccountStartActivityTest {
-    @Test public void signupStartsWithLiveTextSizingAndSharesTheSettingWithDisplaySettings() {
+    @Test public void textSizingPrecedesOnboardingAndRegistrationDoesNotRepeatIt() {
         android.content.Context app = org.robolectric.RuntimeEnvironment.getApplication();
         int original = ClickTextScale.level(app);
         ClickTextScale.saveLevel(app, 1);
-        try (ActivityController<AccountStartActivity> controller =
-                     Robolectric.buildActivity(AccountStartActivity.class).setup()) {
-            AccountStartActivity activity = controller.get();
+        try (ActivityController<TextSizeSetupActivity> controller =
+                     Robolectric.buildActivity(TextSizeSetupActivity.class).setup()) {
+            TextSizeSetupActivity activity = controller.get();
             assertNull(activity.findViewById(R.id.account_start_kakao));
             TextView title = activity.findViewById(R.id.text_size_setup_title);
             assertEquals("이 정도 글씨 괜찮으세요?", title.getText().toString());
             float baseSize = title.getTextSize();
             setLevel(activity.findViewById(R.id.text_size_scale), 3);
-            assertEquals(3, ClickTextScale.level(app));
             assertEquals(baseSize * 1.3f, title.getTextSize(), .1f);
             ClickTextScale.applyTree(activity.findViewById(R.id.text_size_setup_screen));
             assertEquals("Repeated updates must not compound the selected size", baseSize * 1.3f, title.getTextSize(), .1f);
@@ -50,14 +51,25 @@ public class AccountStartActivityTest {
             activity = controller.get();
             assertEquals(3, ((SeekBar) activity.findViewById(R.id.text_size_scale)).getProgress());
             activity.findViewById(R.id.text_size_setup_continue).performClick();
-            assertNotNull(activity.findViewById(R.id.account_start_kakao));
-            assertNotNull(activity.findViewById(R.id.account_start_email));
-            controller.recreate();
-            activity = controller.get();
-            assertNull(activity.findViewById(R.id.text_size_setup_screen));
-            activity.findViewById(R.id.account_start_back).performClick();
-            assertNotNull(activity.findViewById(R.id.text_size_setup_screen));
-            assertEquals(3, ((SeekBar) activity.findViewById(R.id.text_size_scale)).getProgress());
+            Intent introduction = Shadows.shadowOf(activity).getNextStartedActivity();
+            assertEquals(OnboardingActivity.class.getName(), introduction.getComponent().getClassName());
+            try (var onboarding = Robolectric.buildActivity(OnboardingActivity.class, introduction).setup()) {
+                onboarding.get().findViewById(R.id.onboarding_start).performClick();
+                TextView exampleTitle = onboarding.get().findViewById(R.id.onboarding_title);
+                assertEquals(24 * 1.3f * exampleTitle.getResources().getDisplayMetrics().scaledDensity,
+                        exampleTitle.getTextSize(), .1f);
+                onboarding.get().findViewById(R.id.onboarding_start).performClick();
+                Intent account = Shadows.shadowOf(onboarding.get()).getNextStartedActivity();
+                assertEquals(AccountStartActivity.class.getName(), account.getComponent().getClassName());
+                try (var choices = Robolectric.buildActivity(AccountStartActivity.class, account).setup()) {
+                    assertNull(choices.get().findViewById(R.id.text_size_setup_screen));
+                    assertNotNull(choices.get().findViewById(R.id.account_start_kakao));
+                    choices.recreate();
+                    assertNull(choices.get().findViewById(R.id.text_size_setup_screen));
+                    choices.get().findViewById(R.id.account_start_back).performClick();
+                    assertTrue(choices.get().isFinishing());
+                }
+            }
             try (var settings = Robolectric.buildActivity(DisplaySettingsActivity.class).setup()) {
                 assertEquals(3, ((SeekBar) settings.get().findViewById(R.id.text_size_scale)).getProgress());
                 setLevel(settings.get().findViewById(R.id.text_size_scale), 0);
@@ -85,7 +97,6 @@ public class AccountStartActivityTest {
                      Robolectric.buildActivity(AccountStartActivity.class).setup()) {
             AccountStartActivity activity = controller.get();
             bridge.when(() -> ClickHost.from(activity)).thenReturn(host);
-            activity.findViewById(R.id.text_size_setup_continue).performClick();
             activity.findViewById(R.id.account_start_kakao).performClick();
             TextView error = activity.findViewById(R.id.account_start_error);
             assertEquals(View.VISIBLE, error.getVisibility());
@@ -103,7 +114,6 @@ public class AccountStartActivityTest {
         try (ActivityController<AccountStartActivity> controller =
                      Robolectric.buildActivity(AccountStartActivity.class).setup()) {
             AccountStartActivity activity = controller.get();
-            activity.findViewById(R.id.text_size_setup_continue).performClick();
             activity.findViewById(R.id.account_start_login).performClick();
             Intent login = Shadows.shadowOf(activity).getNextStartedActivity();
             assertEquals(LoginActivity.class.getName(), login.getComponent().getClassName());

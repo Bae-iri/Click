@@ -9,9 +9,9 @@
     <color name="onboarding_bubble_text">#17213A</color>
     <color name="onboarding_inactive">#DCE4F1</color>
 
-    <string name="onboarding_title">처음이신가요?</string>
-    <string name="onboarding_description">클릭이 휴대폰 사용을\n더 쉽고, 더 편하게 도와드릴게요.</string>
-    <string name="onboarding_bubble">이제\n어렵지 않아요!</string>
+    <string name="onboarding_title">핸드폰 사용을 위해\n누군가에게 도움을\n구한 적이 있나요?</string>
+    <string name="onboarding_description">설정을 바꾸거나 낯선 앱을 사용할 때\n어떻게 해야 할지 모르겠다면\n클릭을 사용해봐요!</string>
+    <string name="onboarding_bubble">클릭은 그런 작업을\n쉽게 따라 할 수 있도록 안내해요!</string>
     <string name="onboarding_skip">건너뛰기</string>
     <string name="onboarding_signup">가입하기</string>
     <string name="onboarding_login">전화번호로 로그인하기</string>
@@ -19,9 +19,20 @@
     <string name="onboarding_question_title">궁금한 화면을\n물어보세요</string>
     <string name="onboarding_question_description">지금 보고 있는 화면을\n클릭이 이해하고 알려드려요.</string>
     <string name="onboarding_question_bubble">이 버튼이\n뭔가요?</string>
-    <string name="onboarding_task_title">혼자 할 수 있도록\n클릭이 도와드려요</string>
+    <string name="onboarding_task_title">글자 크기\n어떻게 키우더라?</string>
     <string name="onboarding_task_quote">“휴대폰 글자를 크게 보고 싶어요”</string>
-    <string name="onboarding_task_bubble">클릭이\n도와드릴게요!</string>
+    <string name="onboarding_task_bubble">글자 크기 키워줘</string>
+    <string name="onboarding_guide_bubble">클릭이 이렇게\n안내해드려요!</string>
+    <string name="onboarding_task_description">묻지 말고 클릭과 함께해요.</string>
+    <string name="onboarding_phone_description">안내 예시: 디스플레이 화면의 글자 크기와 스타일 항목을 파란색으로 알려드려요.</string>
+    <string name="onboarding_phone_display">디스플레이</string>
+    <string name="onboarding_phone_brightness">밝기</string>
+    <string name="onboarding_phone_adaptive">밝기 최적화</string>
+    <string name="onboarding_phone_mode">화면 모드</string>
+    <string name="onboarding_phone_mode_value">선명한 화면</string>
+    <string name="onboarding_phone_font">글자 크기와 스타일</string>
+    <string name="onboarding_phone_font_hint">글자 크기 조절</string>
+    <string name="onboarding_phone_zoom">화면 크게 / 작게</string>
     <string name="onboarding_ready_title">이제, 더 편하게\n사용해보세요!</string>
     <string name="onboarding_ready_description">언제 어디서든\n클릭이 함께 할게요.</string>
     <string name="onboarding_feature_explain">화면 설명</string>

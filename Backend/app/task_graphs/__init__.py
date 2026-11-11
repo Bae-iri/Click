@@ -15,6 +15,14 @@ def releases():
         body = json.loads((ROOT / "artifacts" / name).read_text(encoding="utf-8"))
         graph = load_graph(body, executable=release["approved"])
         yield release, graph
+    from .settings_navigation import navigation_releases
+    for release, graph in navigation_releases():
+        load_graph(json.loads(json.dumps(graph.to_dict())))
+        yield release, graph
+    from .settings_actions import action_releases
+    for release, graph in action_releases():
+        load_graph(json.loads(json.dumps(graph.to_dict())))
+        yield release, graph
     from .drafts import draft_releases
     for release, graph in draft_releases():
         # Drafts use future task-specific predicates and cannot be executed yet.

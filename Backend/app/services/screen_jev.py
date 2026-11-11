@@ -11,10 +11,11 @@ from app.services.goal_llm import _unique_object
 from ai_agent.runtime.targeting import eligible_nodes, target_key, selector_keywords, selector_evidence
 from ai_agent.runtime.matcher import MATCH_THRESHOLD, match_next_ui
 from ai_agent.runtime.keywords import any_keyword_matches
-from ai_agent.runtime.screen_privacy import minimize_nodes, screen_status, finite_number
+from ai_agent.runtime.screen_privacy import minimize_nodes, assess_screen, private_node_ids, finite_number
 from ai_agent.runtime.types import MatchResult, SafetyLevel
 from ai_agent.runtime.verification import valid_slider_value
 from ai_agent.runtime.budget import remaining
+from app.services.navigation_context import next_menu_context, immediate_menu_request
 
 
 class JevScreenResolver(JevGoalClassifier):
@@ -29,12 +30,17 @@ class JevScreenResolver(JevGoalClassifier):
             _, model, minimum = self.configuration()
             setting = graph.definition.required_slots.get("setting", "")
             if raw_nodes:
-                status = screen_status(raw_nodes, setting)
-                if status:
-                    self.last_diagnostics["status"] = status
+                assessment = assess_screen(raw_nodes, setting)
+                if assessment.status:
+                    self.last_diagnostics["status"] = assessment.status
+                    self.last_diagnostics["observation_reason"] = assessment.reason
                     return None
-            nodes = minimize_nodes(nodes, setting)
-            if not any(n.label for n in nodes):
+                hidden = private_node_ids(raw_nodes)
+                nodes = tuple(node for node in nodes if node.node_id not in hidden)
+            from ai_agent.runtime.environment import native_control_surface
+            surface=native_control_surface(raw_nodes) if raw_nodes else None
+            nodes = minimize_nodes(nodes, setting, raw_nodes=raw_nodes)
+            if not any(n.label for n in nodes) and not (surface and surface['setting']==setting):
                 self.last_diagnostics["status"] = "unsupported_screen"
                 return None
             self.last_diagnostics["status"] = "invalid_candidates"
@@ -128,6 +134,15 @@ class JevScreenResolver(JevGoalClassifier):
                 "destination_page": graph.states[t.to_state].name,
                 "target_names": selector_keywords(t, graph)}
                 for key,(t,n) in bindings.items()}
+            for key, (transition, _) in bindings.items():
+                navigation = next_menu_context(transition, graph)
+                if navigation:
+                    criteria[key]['navigation'] = navigation
+                    criteria[key]['description'] = (
+                        'Open the visible next menu on this approved route: '
+                        + navigation['route_description']
+                        + '. Judge the next menu opening, not whether the final goal control is visible. '
+                        'This candidate does not apply the final setting or complete the goal.')
             criteria.update(wait_for_result="Wait for the previous action result without acting.",
                             insufficient_evidence="Screen or target is ambiguous or unrelated; request fresh evidence.")
             pending = attempt if attempt is not None else (session.pending_attempt if session else None)
@@ -139,11 +154,13 @@ class JevScreenResolver(JevGoalClassifier):
             previous_action = pending if pending and pending.get("event_key") else None
             state = {"goal": {"type": graph.definition.goal_type,
                     "slots": {k: v for k, v in graph.definition.required_slots.items()
-                              if k in {"setting", "direction"}}},
+                              if k in {"setting", "direction", "state"}}},
                 "nodes": [{"id": ids[n.node_id], "label": n.label,
                     "label_parts": list(n.label_parts),
                     "structure_role": n.structure_role, "actionable": n.actionable,
-                    "role": n.role, "enabled": n.enabled, "value": finite_number(n.value),
+                    "role": n.role, "enabled": n.enabled,
+                    "checked": n.checked if n.checkable and n.source_confidence is None and not n.node_id.startswith("vision:") else None,
+                    "value": finite_number(n.value),
                     "min": finite_number(n.range_min), "max": finite_number(n.range_max),
                     "position": n.position_hint if n.position_hint in {"top", "middle", "bottom", "unknown"} else "unknown",
                     "parent": parent_ref(n.node_id)}
@@ -159,6 +176,9 @@ class JevScreenResolver(JevGoalClassifier):
                     "baseline_value": finite_number(previous_action.get("baseline_value")),
                     "event_received": bool(previous_action.get("event_key"))} if previous_action else None),
                 "result": {"status": verification.status.value} if verification else None}
+            immediate = immediate_menu_request(bindings,nodes,graph)
+            if immediate:
+                state['immediate_request'] = immediate
             payload = {"model": model, "state": state, "questions": {"screen": {
                 "type": "choice", "criteria": criteria,
                 "instructions": "Choose the current graph step AND the actual UI target from the observed screen. "
@@ -171,6 +191,9 @@ class JevScreenResolver(JevGoalClassifier):
                     "Only previous_action with event_received=true denotes an executed action. "
                     "Without an executed action, an unchanged screen does not mean failure or a settling result. "
                     "A candidate is the NEXT navigation action toward the goal, not necessarily the final setting control. "
+                    "For a navigation candidate, navigation.next_page_titles identifies the page opened NOW; "
+                    "navigation.remaining_page_titles explains later steps. Do not reject an intermediate menu "
+                    "because the final control is on a later page. Opening that menu does not perform the final goal. "
                     "Use independent screen_text and the collection of controls to identify the current page. "
                     "A control_label or description belongs to a menu row, not the page title. "
                     "For example, a Settings page containing a Display row is still Settings; choose the route into Display. "
@@ -179,6 +202,12 @@ class JevScreenResolver(JevGoalClassifier):
                     "Within that step prefer the lowest route_priority among equally supported routes. "
                     "Priority never supplies missing evidence or overrides the observed current step. "
                     "Otherwise abstain when uncertain."}}}
+            if immediate:
+                payload['questions']['screen']['instructions'] = (
+                    'Identify the visible control for this immediate menu-opening request: '
+                    + immediate['open_menu'][0]
+                    + '. The overall task goal is context for later steps, not the button requested now. '
+                    + payload['questions']['screen']['instructions'])
             payload_bytes = len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode())
             self.last_diagnostics.update(payload_bytes=payload_bytes, exported_node_count=len(selected_nodes),
                 filter_time_ms=round((monotonic() - filter_started) * 1000, 3))

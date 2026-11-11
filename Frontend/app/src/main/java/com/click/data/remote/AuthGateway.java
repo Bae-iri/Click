@@ -118,22 +118,26 @@ public final class AuthGateway {
     static HttpResult post(String path, String body, String bearer, int readTimeout) throws IOException {
         requireValidationEnvironment(path);
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
-        connection.setRequestMethod("POST");
-        connection.setConnectTimeout(6000);
-        connection.setReadTimeout(readTimeout);
-        connection.setDoOutput(true);
-        connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-        if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
-        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
-        connection.setFixedLengthStreamingMode(bytes.length);
-        try (OutputStream output = connection.getOutputStream()) { output.write(bytes); }
-        int status = connection.getResponseCode();
-        InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
-        String response = read(stream);
-        String conflict = connection.getHeaderField("X-Conflict-Code");
-        String traceId = connection.getHeaderField("X-Request-ID");
-        connection.disconnect();
-        return new HttpResult(status, response, conflict, traceId);
+        java.util.concurrent.ScheduledFuture<?> watchdog=null;
+        try {
+            connection.setRequestMethod("POST");
+            RequestBudget.configure(connection,readTimeout);
+            watchdog=RequestBudget.watch(connection);
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+            if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            connection.setFixedLengthStreamingMode(bytes.length);
+            try (OutputStream output = connection.getOutputStream()) { output.write(bytes); }
+            connection.setReadTimeout(RequestBudget.remaining(readTimeout));
+            int status = connection.getResponseCode();
+            InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
+            return new HttpResult(status, read(stream), connection.getHeaderField("X-Conflict-Code"),
+                    connection.getHeaderField("X-Request-ID"));
+        } finally {
+            if(watchdog!=null)watchdog.cancel(false);
+            connection.disconnect();
+        }
     }
 
     static HttpResult get(String path, String bearer) throws IOException {
@@ -151,10 +155,11 @@ public final class AuthGateway {
     private static HttpResult requestWithoutBody(String method, String path, String bearer, int readTimeout) throws IOException {
         requireValidationEnvironment(path);
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
+        java.util.concurrent.ScheduledFuture<?> watchdog=null;
         try {
             connection.setRequestMethod(method);
-            connection.setConnectTimeout(6000);
-            connection.setReadTimeout(readTimeout);
+            RequestBudget.configure(connection,readTimeout);
+            watchdog=RequestBudget.watch(connection);
             if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
             int status = connection.getResponseCode();
             InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
@@ -162,6 +167,7 @@ public final class AuthGateway {
             String conflict = connection.getHeaderField("X-Conflict-Code");
             return new HttpResult(status, response, conflict, connection.getHeaderField("X-Request-ID"));
         } finally {
+            if(watchdog!=null)watchdog.cancel(false);
             connection.disconnect();
         }
     }
@@ -186,8 +192,12 @@ public final class AuthGateway {
         if (stream == null) return "";
         StringBuilder result = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) result.append(line);
+            char[] chunk=new char[4096];int count;
+            while ((count=reader.read(chunk))!=-1) {
+                RequestBudget.remaining(Integer.MAX_VALUE);
+                result.append(chunk,0,count);
+                if(result.length()>4*1024*1024)throw new IOException("RESPONSE_TOO_LARGE");
+            }
         }
         return result.toString();
     }

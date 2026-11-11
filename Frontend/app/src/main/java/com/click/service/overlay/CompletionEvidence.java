@@ -1,18 +1,34 @@
 package com.click.service.overlay;
 
 import org.json.JSONObject;
+import com.click.data.snapshot.TaskSuccess;
 
-/** A done command/status alone is not device evidence or a user's answer. */
+/** Device success is goal-bound; an explicit user report remains a separate completion path. */
 final class CompletionEvidence {
     private CompletionEvidence() {}
-    static boolean verified(JSONObject metadata) {
-        if(metadata==null)return false;
+    static JSONObject technical(JSONObject metadata) {
+        if(metadata==null)return null;
         JSONObject outcome=metadata.optJSONObject("task_outcome");
-        JSONObject technical=outcome==null?metadata.optJSONObject("technical_outcome"):outcome.optJSONObject("technical");
-        return technical!=null && "CHANGED".equals(technical.optString("status"));
+        return outcome==null?metadata.optJSONObject("technical_outcome"):outcome.optJSONObject("technical");
     }
-    static boolean accepted(JSONObject metadata) {
-        if(verified(metadata))return true;
+    static String boundGoal(JSONObject metadata) {
+        if(metadata==null)return null;
+        JSONObject outcome=metadata.optJSONObject("task_outcome"),typed=metadata.optJSONObject("typed_goal");
+        return outcome!=null && !outcome.optString("goal_type").isEmpty()?outcome.optString("goal_type")
+            :typed==null?null:typed.optString("goal_type",null);
+    }
+    static boolean verified(JSONObject metadata,String goal) {
+        JSONObject technical=technical(metadata);
+        return technical!=null && "CHANGED".equals(technical.optString("status")) && TaskSuccess.verified(technical,goal);
+    }
+    static boolean verified(JSONObject metadata){return verified(metadata,boundGoal(metadata));}
+    static boolean accepted(JSONObject metadata,String goal) {
+        String bound=boundGoal(metadata);
+        if(bound!=null && goal!=null && !bound.equals(goal))return false;
+        return TaskSuccess.verified(technical(metadata),goal) || userSatisfied(metadata);
+    }
+    static boolean accepted(JSONObject metadata){return accepted(metadata,boundGoal(metadata));}
+    private static boolean userSatisfied(JSONObject metadata) {
         if(metadata==null)return false;
         JSONObject outcome=metadata.optJSONObject("task_outcome");
         JSONObject user=outcome==null?null:outcome.optJSONObject("user");

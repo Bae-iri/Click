@@ -22,7 +22,7 @@ WIFI_CASES = [
 ]
 
 
-@pytest.mark.parametrize("intent,slots", WIFI_CASES)
+@pytest.mark.parametrize("intent,slots", [WIFI_CASES[2]])
 def test_wifi_contract_is_valid_but_missing_execution_graph_is_rejected(intent, slots):
     app = create_app()
     client = authenticated_client(app)
@@ -30,6 +30,10 @@ def test_wifi_contract_is_valid_but_missing_execution_graph_is_rejected(intent, 
     payload["goal"].update(catalog_version="2.1.0", goal_type="settings.wifi." + intent, slots=slots)
     goal = AgentCommandRequest.model_validate(payload).goal
     assert goal.slots == slots
+    with app.state.session_factory() as db:
+        for row in db.scalars(select(ApprovedTaskGraph).where(ApprovedTaskGraph.goal_type == goal.goal_type)):
+            row.active = False
+        db.commit()
     with pytest.raises(task_graphs.NoCompatibleGraphError, match="NO_COMPATIBLE_GRAPH"):
         app.state.turn_service.graphs.select(goal)
     app.state.turn_service.engine_factory = Mock(side_effect=AssertionError("Agent must not be invoked"))

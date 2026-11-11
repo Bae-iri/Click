@@ -32,6 +32,30 @@ def retry_session(request, session):
                    pending_confirmation_transition_id=None, recovery_state={})
 
 
+def observe_page_navigation(session, snapshot, nodes, graph):
+    """Retire stale guidance on an actual native page change, preserving all action budgets."""
+    previous=session.last_snapshot if session else None
+    if (not previous or session.task_completed or session.total_failed_attempts>=graph.policy.max_failed_attempts
+            or not previous.page_fingerprint or not snapshot.page_fingerprint
+            or previous.page_fingerprint==snapshot.page_fingerprint
+            or previous.captured_at_ms is None or snapshot.captured_at_ms is None
+            or snapshot.captured_at_ms<=previous.captured_at_ms):
+        return session
+    edge=next((edge for edge in graph.transitions if edge.transition_id==session.pending_transition_id),None)
+    if edge and edge.verification_predicate=='state_reached' and not session.recovery_state.get('waiting_for_user'):
+        from ai_agent.runtime.verification import navigation_reachable
+        if snapshot.state_id==edge.to_state or navigation_reachable(graph,edge.to_state,snapshot.state_id):
+            return session  # Normal/skipped forward progress retains the original navigation verifier.
+    from ai_agent.runtime.classifier import _screen_titles
+    from ai_agent.runtime.capabilities import document
+    allowed=set(document()['settings_packages'])
+    titles=_screen_titles(nodes)
+    if len(titles)!=1 or titles[0].package_name not in allowed or titles[0].source_confidence is not None:
+        return session
+    return replace(session,pending_attempt=None,pending_selection=None,pending_transition_id=None,
+        pending_confirmation_transition_id=None,recovery_state={},vision_state={})
+
+
 def recovery_scope(snapshot):
     # Layout/window churn is not progress. Bound selection retries for the
     # current graph step, and require explicit retry after exhaustion.
@@ -53,8 +77,6 @@ def _retained_match(session, attempt, snapshot, nodes, graph, exclusions):
         return None
     selection = attempt or session.pending_selection
     if (not selection or not session.last_snapshot
-            or session.last_snapshot.fingerprint != snapshot.fingerprint
-            or session.last_snapshot.applied_settings != snapshot.applied_settings
             or selection.get("target_selection_method") != "jev_choice"
             or not isinstance(selection.get("selection_diagnostics", {}).get("confidence"), (int, float))):
         return None
@@ -63,6 +85,23 @@ def _retained_match(session, attempt, snapshot, nodes, graph, exclusions):
     if (transition is None or transition.safety_level == SafetyLevel.BLOCKED
             or graph.states[transition.from_state].verification_only
             or selection.get("target_key") in exclusions.get(transition.transition_id, ())):
+        return None
+    previous = session.last_snapshot
+    same_observation = (previous.fingerprint == snapshot.fingerprint
+                        and previous.applied_settings == snapshot.applied_settings
+                        and (previous.native_fingerprint is None
+                             or previous.native_fingerprint == snapshot.native_fingerprint))
+    stable_menu = (transition.action_type.value == "tap"
+        and transition.verification_predicate == "state_reached"
+        and transition.safety_level == SafetyLevel.LOW_RISK
+        and not transition.confirmation_message and not transition.completes_task
+        and not graph.states[transition.to_state].verification_only
+        and previous.native_fingerprint is not None
+        and ((previous.navigation_fingerprint is not None
+              and previous.navigation_fingerprint == snapshot.navigation_fingerprint)
+             or previous.navigation_fingerprint is None and previous.native_fingerprint is not None
+              and previous.native_fingerprint == snapshot.native_fingerprint))
+    if not same_observation and not stable_menu:
         return None
     candidates = [n for n in eligible_nodes(transition, nodes, graph)
                   if n.node_id == selection.get("target_node_id")

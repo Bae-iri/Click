@@ -158,14 +158,20 @@ public class LiveNativeSettingsStabilityTest {
                 assertNotNull("Readable Settings home before testing",nativeSettings());
                 String firstRow=setting.equals("volume")?"소리 및 진동":"디스플레이";
                 String initialPosition=InstrumentationRegistry.getArguments().getString("initialPosition","top");
-                if("bottom".equals(initialPosition))for(int setup=0;setup<8;setup++) {
-                    if(!scrollSettings(true))break;SystemClock.sleep(350);
+                int setupScrolls=0;
+                if("bottom".equals(initialPosition))for(int setup=0;setup<10;setup++) {
+                    ScreenSnapshot position=nativeSettings();
+                    boolean moved=ClickAccessibilityService.performSettingsScroll(true,position.packageName,position.activeWindowId);
+                    if(moved)setupScrolls++;
+                    SystemClock.sleep(450);
+                    if(!moved)break;
                 }
                 ScreenSnapshot startScreen=nativeSettings();
                 boolean startTargetVisible=startScreen.nodes.stream().anyMatch(n->n.visibleToUser && firstRow.equals(n.text));
                 String session=UUID.randomUUID().toString();JSONObject last=null,event=null;
-                JSONObject item=new JSONObject().put("goal",setting+"."+direction).put("start","android_settings_home").put("initial_position",initialPosition).put("start_target_visible",startTargetVisible).put("turns",new JSONArray());
+                JSONObject item=new JSONObject().put("goal",setting+"."+direction).put("start","android_settings_home").put("initial_position",initialPosition).put("setup_scrolls",setupScrolls).put("start_target_visible",startTargetVisible).put("turns",new JSONArray());
                 report.getJSONArray("cases").put(item);save();
+                if("bottom".equals(initialPosition))assertFalse("Offscreen fixture must actually hide the next route menu",startTargetVisible);
                 com.click.service.overlay.NativeSettingsSearchPlanner search=new com.click.service.overlay.NativeSettingsSearchPlanner();
                 ScreenSnapshot consentScreen=null;String consentId=null;
                 float before=value(setting);boolean changed=false,approved=false;int repeat=0,retries=0,actions=0,scrolls=0;
@@ -198,7 +204,7 @@ public class LiveNativeSettingsStabilityTest {
                         if(event!=null){request.put("user_action_event",event);event=null;}
                         report.put("stage","agent_turn:"+setting+"."+direction);save();
                         assertPreparedApks();
-                        last=new JSONObject(http.post(AgentTurnContract.PATH,privacy.filter(request).toString()).body);
+                        last=new JSONObject(http.post(AgentTurnContract.PATH,privacy.filter(request,setting).toString()).body);
                         JSONObject guide=last.getJSONObject("guide_command"),metadata=last.getJSONObject("metadata");
                         if("confirmation".equals(guide.optString("command_type"))) {
                             String nextId=metadata.getJSONObject("confirmation").getString("id");
@@ -229,13 +235,13 @@ public class LiveNativeSettingsStabilityTest {
                                     || com.click.service.overlay.ObservationRecovery.canSearchJevWait(last.optString("state_id"),guide.optJSONObject("render_policy"),metadata,screen));
                         // Match the overlay: a missing menu is searched before offering user recovery.
                         if(searchMenu) {
-                            Boolean forward=search.next(session+":"+last.optString("state_id")+":"+screen.packageName+":"+screen.activeWindowId,
-                                    com.click.service.overlay.ObservationRecovery.navigationFingerprint(screen));
-                            if(forward==null){item.put("navigation_limit_reached",true);break;}
+                            com.click.service.overlay.NativeSettingsSearchPlanner.Plan plan=search.next(
+                                    session+":"+last.optString("state_id")+":"+screen.packageName+":"+screen.activeWindowId,screen);
+                            if(plan.finished){item.put("navigation_stop_reason",plan.reason);break;}
                             assertPreparedApks();
-                            boolean moved=ClickAccessibilityService.performSettingsScroll(forward,screen.packageName,screen.activeWindowId);
-                            if(!moved)search.reachedEnd(forward);
-                            item.put("native_search_scrolls",++scrolls);
+                            boolean forward=plan.forward;
+                            boolean moved=plan.move && ClickAccessibilityService.performSettingsScroll(forward,screen.packageName,screen.activeWindowId);
+                            if(plan.move)item.put("native_search_scrolls",++scrolls);
                             JSONArray searches=item.optJSONArray("searches");if(searches==null){searches=new JSONArray();item.put("searches",searches);}
                             searches.put(new JSONObject().put("state",last.optString("state_id")).put("forward",forward).put("dispatched",moved));
                             event=AgentActionEvents.of(AgentActionEvents.MANUAL_OVERRIDE,null,null,null);

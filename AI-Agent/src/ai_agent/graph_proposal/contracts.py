@@ -97,7 +97,7 @@ def validate_event(event):
         raise ValueError("Unknown verification status")
     if runtime.get("action_type") not in {None, "tap", "drag", "scroll", "observe_only"}:
         raise ValueError("Unknown action")
-    if runtime.get("command_type") not in {None, "highlight", "gesture_hint", "confirmation", "done", "blocked"}:
+    if runtime.get("command_type") not in {None, "highlight", "gesture_hint", "confirmation", "done", "cancelled", "blocked"}:
         raise ValueError("Unknown command")
     target = runtime.get("target") or {}
     if not isinstance(target, dict) or set(target) - {"node_hash", "role", "transition_id"}:

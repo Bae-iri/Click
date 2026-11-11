@@ -77,4 +77,65 @@ public class TouchAutomationPolicyTest {
    assertNull(TouchAutomationPolicy.clickableTarget(s,title.nodeId,title.bounds));
   }
  }
+ @Test public void launcherIconDecorationDoesNotHideSettingsButFolderStaysAmbiguous() {
+  String pkg="com.sec.android.app.launcher";
+  AccessibilityNodeSnapshot icon=new AccessibilityNodeSnapshot("icon",null,true,pkg,"설정",null,null,
+    "android.widget.LinearLayout",null,bounds,true,true,false,false,false,null,5);
+  AccessibilityNodeSnapshot image=new AccessibilityNodeSnapshot("image","icon",true,pkg,null,null,null,
+    "android.widget.ImageView",null,bounds,true,true,false,false,false,null,5);
+  ScreenSnapshot s=new ScreenSnapshot(pkg,"2026-11-09T00:00:00Z",1080,2400,List.of(icon,image),5);
+  assertEquals(icon,TouchAutomationPolicy.clickableTarget(s,"icon",bounds));
+  AccessibilityNodeSnapshot another=new AccessibilityNodeSnapshot("another","icon",true,pkg,"다른 앱",null,null,
+    "android.widget.TextView",null,bounds,true,true,false,false,false,null,5);
+  s=new ScreenSnapshot(pkg,"2026-11-09T00:00:00Z",1080,2400,List.of(icon,image,another),5);
+  assertNull(TouchAutomationPolicy.clickableTarget(s,"icon",bounds));
+ }
+ @Test public void launcherAccessibilitySuffixUsesTheSameSettingsIdentityAsItsTitle() {
+  for(String name:List.of("설정, 앱", "Settings, App", "Settings, 1 notification")) {
+   ScreenSnapshot original=screen("com.sec.android.app.launcher",name,false);
+   AccessibilityNodeSnapshot title=new AccessibilityNodeSnapshot("title","node_0_1",true,original.packageName,
+     "설정",null,null,"android.widget.TextView",null,bounds,false,true,false,false,false,null,5);
+   ScreenSnapshot s=new ScreenSnapshot(original.packageName,original.capturedAt,1080,2400,
+     List.of(original.nodes.get(0),title),5);
+   assertNotNull(name,TouchAutomationPolicy.clickableTarget(s,"node_0_1",bounds));
+  }
+  assertNull(TouchAutomationPolicy.clickableTarget(screen("com.android.launcher3","설정 도우미",false),"node_0_1",bounds));
+ }
+ @Test public void acceptsApprovedExpandedMenusWhileRefusingDeviceIdentityRowsAndValues() {
+  for(String label:List.of("연결","블루투스","Wi-Fi","배터리","알림"))
+   assertNotNull(label,TouchAutomationPolicy.clickableTarget(screen("com.android.settings",label,false),"node_0_1",bounds));
+  assertNull(TouchAutomationPolicy.clickableTarget(screen("com.android.settings","블루투스",true),"node_0_1",bounds));
+  AccessibilityNodeSnapshot privateRow=new AccessibilityNodeSnapshot("device","root",true,"com.android.settings","알림",null,
+   "com.android.settings:id/bluetooth_device","android.widget.TextView","menu_item",bounds,true,true,false,false,false,null,5);
+  ScreenSnapshot privateScreen=new ScreenSnapshot("com.android.settings","now",1080,2400,List.of(privateRow),5);
+  assertNull(TouchAutomationPolicy.clickableTarget(privateScreen,"device",bounds));
+ }
+
+ @Test public void expandedMenuMustBelongToTheAcceptedGoalAndState() {
+  ScreenSnapshot connection=screen("com.android.settings","블루투스",false);
+  assertNotNull(TouchAutomationPolicy.clickableTarget(connection,"node_0_1",bounds,"settings.bluetooth.enable","S_CATEGORY"));
+  assertNull(TouchAutomationPolicy.clickableTarget(connection,"node_0_1",bounds,"settings.font_size.increase","S2_DISPLAY_MENU"));
+  assertNull(TouchAutomationPolicy.clickableTarget(connection,"node_0_1",bounds,"settings.bluetooth.enable","S_DONE"));
+ }
+
+ private ScreenSnapshot splitRow(String heading,int switchLeft,String rowLabel) {
+  AccessibilityNodeSnapshot page=row("heading",null,heading,new int[]{0,0,900,80},false,false);
+  AccessibilityNodeSnapshot parent=row("parent",null,null,new int[]{0,100,1080,300},true,false);
+  AccessibilityNodeSnapshot title=new AccessibilityNodeSnapshot("label","parent",true,"com.android.settings",rowLabel,null,"android:id/title",
+    "android.widget.TextView","text",new int[]{30,140,700,220},false,true,false,false,false,null,5);
+  AccessibilityNodeSnapshot sw=new AccessibilityNodeSnapshot("switch","parent",true,"com.android.settings",null,null,"android:id/switch_widget",
+    "android.widget.Switch","switch",new int[]{switchLeft,140,1040,220},true,true,false,false,true,null,5);
+  return new ScreenSnapshot("com.android.settings","now",1080,2400,List.of(page,parent,title,sw),5);
+ }
+ @Test public void splitSwitchMenuUsesOnlyItsProvenDisjointTitleRegion() {
+  ScreenSnapshot safe=splitRow("연결",850,"블루투스");
+  assertNull(TouchAutomationPolicy.clickableTarget(safe,"parent",safe.nodes.get(1).bounds));
+  assertEquals("label",TouchAutomationPolicy.clickableTarget(safe,"parent",safe.nodes.get(1).bounds,"settings.bluetooth.enable","S_CATEGORY").nodeId);
+  ScreenSnapshot overlap=splitRow("연결",400,"블루투스");
+  assertNull(TouchAutomationPolicy.clickableTarget(overlap,"parent",overlap.nodes.get(1).bounds,"settings.bluetooth.enable","S_CATEGORY"));
+  ScreenSnapshot wrongPage=splitRow("알림",850,"블루투스");
+  assertNull(TouchAutomationPolicy.clickableTarget(wrongPage,"parent",wrongPage.nodes.get(1).bounds,"settings.bluetooth.enable","S_CATEGORY"));
+  assertNull(TouchAutomationPolicy.clickableTarget(safe,"parent",safe.nodes.get(1).bounds,"settings.font_size.increase","S2_DISPLAY_MENU"));
+ }
+
 }

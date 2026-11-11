@@ -9,6 +9,7 @@ import android.graphics.drawable.InsetDrawable;
 import android.content.Context;
 import android.view.Gravity;
 import android.widget.Button;
+import android.widget.TextView;
 import com.click.ui.common.ClickTextScale;
 
 /** Shared surfaces for the input, review and guidance panels. */
@@ -19,7 +20,19 @@ final class FloatingPanelStyle {
     static final int BOTTOM_PADDING_DP = 12;
     static final int PANEL_WIDTH_DP = 340;
     static final int HEADER_DIVIDER_GAP_DP = 5;
+    static final int TITLE_SIZE_SP = 22;
     private FloatingPanelStyle() {}
+
+    static void styleTitle(TextView title) {
+        Context context = title.getContext();
+        title.setTextSize(ClickTextScale.size(context, TITLE_SIZE_SP));
+        title.setTypeface(context.getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
+        title.setIncludeFontPadding(false);
+        title.setPadding(0, 0, 0, 0);
+        title.setLineSpacing(2 * context.getResources().getDisplayMetrics().density, 1.05f);
+        title.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
+        if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
+    }
 
     /** Compact visual controls retain a 48dp touch target and grow with system text. */
     static Button compactButton(Context context, String label, Runnable action) {

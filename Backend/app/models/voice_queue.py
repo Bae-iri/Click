@@ -1,6 +1,7 @@
 from sqlalchemy import BigInteger, Boolean, CheckConstraint, ForeignKey, Index, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
+from app.core.data_encryption import EncryptedText
 
 
 class VoiceQueueState(Base):
@@ -23,7 +24,7 @@ class VoiceRequest(Base):
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"))
-    raw_goal: Mapped[str | None] = mapped_column(String(500))
+    raw_goal: Mapped[str | None] = mapped_column(EncryptedText("voice_requests.raw_goal"))
     priority: Mapped[str] = mapped_column(String(10))
     status: Mapped[str] = mapped_column(String(12))
     agent_session_id: Mapped[str | None] = mapped_column(String(200), ForeignKey("agent_sessions.id", ondelete="SET NULL"), unique=True)

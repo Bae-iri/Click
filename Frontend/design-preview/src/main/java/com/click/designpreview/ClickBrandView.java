@@ -11,13 +11,19 @@ import android.view.View;
 public class ClickBrandView extends View {
     private final Drawable cursor;
     private final Drawable wordmark;
+    private boolean cursorVisible = true;
 
     public ClickBrandView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        cursor = context.getDrawable(R.drawable.ic_click_cursor).mutate();
+        cursor = context.getDrawable(R.drawable.icon_floating_cursor).mutate();
         wordmark = context.getDrawable(R.drawable.click_wordmark).mutate();
         if (wordmark instanceof BitmapDrawable) ((BitmapDrawable) wordmark).setFilterBitmap(true);
         setContentDescription(context.getString(R.string.splash_logo_description));
+    }
+
+    public void setCursorVisible(boolean visible) {
+        cursorVisible = visible;
+        invalidate();
     }
 
     @Override protected void onDraw(Canvas canvas) {
@@ -26,13 +32,15 @@ public class ClickBrandView extends View {
         float height = Math.max(0, getHeight() - getPaddingTop() - getPaddingBottom());
         float scale = Math.min(width / 222f, height / 72f);
         canvas.save();
-        canvas.translate(getPaddingLeft() + (width - 222 * scale) / 2,
+        canvas.translate(getPaddingLeft() + (width - (cursorVisible ? 222 : 144) * scale) / 2,
                 getPaddingTop() + (height - 72 * scale) / 2);
         canvas.scale(scale, scale);
-        cursor.setBounds(0, 0, 72, 72);
-        cursor.draw(canvas);
+        if (cursorVisible) {
+            cursor.setBounds(0, 0, 72, 72);
+            cursor.draw(canvas);
+        }
         // Match the home header's crop of the source artwork's transparent margins.
-        canvas.translate(78, 11);
+        canvas.translate(cursorVisible ? 78 : 0, 11);
         canvas.scale(144f / 1741f, 50f / 611f);
         canvas.clipRect(0, 0, 1741, 611);
         canvas.translate(-211, -71);

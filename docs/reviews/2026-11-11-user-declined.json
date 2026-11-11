@@ -1,0 +1,130 @@
+{
+  "date": "2026-11-11",
+  "change": "Normal user decline is independent of technical failure and result dissatisfaction",
+  "behavior": {
+    "approval_no": {
+      "status": "CANCELLED",
+      "category": "USER_CHOICE",
+      "code": "USER_DECLINED",
+      "counts_as_failure": false,
+      "apology": false,
+      "native_actions": false,
+      "requires_screen": false,
+      "next_task": "Only after explicit End and separate next-task acceptance"
+    },
+    "result_no": "WAITING_ADJUSTMENT / needs_help",
+    "vision_failures": "Preserve finite technical cause; never USER_DECLINED",
+    "unknown_stop": "Neutral explanation; no unconditional target-not-found apology"
+  },
+  "validation": {
+    "android_full": {
+      "tests": 811,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "agent_full": {
+      "passed": 399
+    },
+    "backend_affected_final": {
+      "passed": 89
+    },
+    "production_worker_decline_no_screen": {
+      "passed": 1
+    },
+    "android_backend_contract": {
+      "passed": 6
+    },
+    "backend_full_initial": {
+      "passed": 2447,
+      "failed": 3,
+      "seconds": 441.52,
+      "failures": [
+        {
+          "test": "test_primary_recovery.py::test_rejection_overrides_a_retained_target_and_stale_retries_do_not_unlock_recovery",
+          "resolution": "Obsolete blocked assertion updated to cancelled / USER_DECLINED; affected suite subsequently passed"
+        },
+        {
+          "test": "test_kakao_migration.py::test_upgrade_preserves_email_sessions_and_downgrade_protects_kakao_users",
+          "resolution": "Unrelated baseline failure reproduced in original unmodified sources: initial encryption migration requires DATA_ENCRYPTION_MAINTENANCE=1"
+        },
+        {
+          "test": "test_remove_personalization_migration.py::test_migration_drops_only_user_modeling_and_downgrade_creates_neutral_profiles",
+          "resolution": "Same unrelated baseline encryption-migration failure, reproduced in original sources"
+        }
+      ]
+    },
+    "rendered_ui": "Frontend/app/build/reports/user-declined-ui/04-declined.png",
+    "local_apk_schema_preflight": "compatible"
+  },
+  "rollout": {
+    "server_deployed_by_this_task": false,
+    "apk_installed_by_this_task": false,
+    "live_preflight": {
+      "compatible": false,
+      "installed": false,
+      "reason": "Server upgrade is not deployed: APK requires execution-state.v1"
+    },
+    "required_server_features": [
+      "execution-state.v1",
+      "cancelled guide command",
+      "/api/v1/voice-requests/{request_id}/cancel",
+      "USER_DECLINED reason"
+    ],
+    "user_handles_render_deployment": true
+  },
+  "artifacts": {
+    "apk": {
+      "path": "Frontend/app/build/outputs/apk/debug/app-user-declined-debug.apk",
+      "sha256": "d9faa4a427bc5397a0589e747bfd2e6c78b12187b3470d33672b5f53c18503c5"
+    },
+    "test_apk": {
+      "path": "Frontend/app/build/outputs/apk/androidTest/debug/app-user-declined-debug-androidTest.apk",
+      "sha256": "ade6d17e63a313613f227bad8bb3dc438b9d3df63cc9196389e564fd0fc64517"
+    }
+  },
+  "limitations": [
+    "No physical slider changes or new APK installation performed",
+    "Existing DB column failure_code retains legacy cancellation reason internally; API exposes termination_reason and counts_as_failure=false; raw database failure aggregation must filter status=FAILED",
+    "Full server suite has two independently reproduced baseline migration failures; no unrelated migration changes made"
+  ],
+  "source_hashes": {
+    "Backend/tests/test_vision_consent.py": "e4806da16972d0e4b9d8c87422c274a408d55ba0718ab1f4296d25d8ff7cea61",
+    "Backend/tests/test_primary_recovery.py": "1fc913edd0440217932b366c62edcb696ef117e49eaa1156d80a28c2d86d534b",
+    "Backend/tests/test_android_install_gate.py": "a1e430782db8ccc6039f0102cf18f9f60cd3ee25e67a1f9100245c2a794db2d4",
+    "Backend/tests/test_user_declined.py": "e9fb5d93df0ea290d9130ab7fd859edcd19712a5d3cd1a2c6ee435537047c2af",
+    "Backend/tests/test_agent_turn_api.py": "1df8952709fba50aa20acda6ac1d35d3eea4c05f0b58453fee705aa6944b3e74",
+    "Backend/docs/openapi.json": "39c36e5f9a1897543e9e92f7884968b76d746012c9974c112ff13ac997db190e",
+    "Backend/app/clients/runtime_agent.py": "655e9d2219da7d48cb77c41d60ad19cb57215fb041a9169cab51f179453ac098",
+    "Backend/app/repositories/agent_sessions.py": "070d46a7d45709cd6f0d98110d3213b63517f1e6bcfb74c3e76fe944cf957065",
+    "Backend/app/schemas/voice_queue.py": "c9953057ccfe61f8753510068c10add4a304bb7a1aa8292bf2b6a668ac3df4cb",
+    "Backend/app/schemas/guidance.py": "55e844fc12614900c40bb5e413f9c2e638220b88b5f59f80d40c9ea90484896a",
+    "Backend/app/schemas/agent_turn.py": "31750932a259c4b24d11b9006b1d70b9a2d25dc13b5e8e20ace969981f1bb4d1",
+    "Backend/app/services/safety.py": "207da8dec840b0de90faf82bcbe382356335e1f455d3e7729c733b985d0be2cd",
+    "Backend/app/services/voice_queue.py": "a4b3ba1a2a1fa0502664b56b4d2c46b6d7a8871b9820ad78703a18affd4c8d02",
+    "Backend/app/api/v1/endpoints/voice_queue.py": "160436b1d081870263b7f458a6f5b2d770030949e1642f2ed999fb2bbe86ccd7",
+    "AI-Agent/tests/test_user_declined.py": "206782951fa13a4cb381cddb948cf4eca681ad791a6f2114393eaf858fc0a0fc",
+    "AI-Agent/src/ai_agent/schemas.py": "71a051a358afa05d44fff471aa7cb47603e12a63432a3502d72aaa1372a33365",
+    "AI-Agent/src/ai_agent/graph_proposal/contracts.py": "38509d90d2b061a72173f50a12c0b0b191b545f251abfcbf72c2e350716c470b",
+    "AI-Agent/src/ai_agent/runtime/guide.py": "f24ea3fb74b9350ddf2c88561d54f3b9938c6a57102cd4506dc36ce04aca6dbb",
+    "AI-Agent/src/ai_agent/runtime/termination.py": "6676cbe2151c2eecf26cdb4930f8d949cdae2e257dc6b355d0c6fb44413caaf2",
+    "AI-Agent/src/ai_agent/runtime/types.py": "3fdeae44974cf597929247a4a01086a59f8319e6fd3e278c515efdafdf4e4f03",
+    "AI-Agent/src/ai_agent/runtime/decision.py": "bacd9d2f795a8fec6b7459fc704747fc08f48cf3edb5606ec8c4147dfd6cdf7e",
+    "AI-Agent/src/ai_agent/runtime/engine.py": "8e70ac5c2badd6299c3ef9137836aa23ba56e1e921716fb1fd9ca253006dd811",
+    "AI-Agent/src/ai_agent/runtime/replay.py": "13ea920b86752debeb48da93ea4837a590aaf23cf2976aaa3e755f6f74ce3ab3",
+    "AI-Agent/src/ai_agent/runtime/vision_cycles.py": "30c8f8912271c21ee8b8d3ce75fba11f42be668772b07ac5c128d8d34d423811",
+    "AI-Agent/src/ai_agent/telemetry/trace_logger.py": "e05678e9c90e3ec297e9adcd8033e5625d1420cdc469e5c42d94c83cfcd1f7e7",
+    "Frontend/app/build.gradle": "a996a98d12ea2f65cd3147aa84e4499ec448bad42108939ebb4d053c430ed75e",
+    "Frontend/scripts/install_verified_debug.py": "f615c208fb915fab76404208f882f94c657ea6673b87abf42dcadf644b0382fe",
+    "Frontend/app/src/main/java/com/click/data/remote/VoiceQueueGateway.java": "955cf5df25badf47f1ed83a4e8ec6e609f59ec94b2f0f5cbaef925f9a5c3ff6e",
+    "Frontend/app/src/main/java/com/click/data/remote/AgentTurnGateway.java": "0ea0bbcf62fd81a58e94b4090bc35728e2a1a67c277061059b6d9f7b18902d75",
+    "Frontend/app/src/main/java/com/click/data/remote/AgentServerContract.java": "d483a616d943c06d10d1a176fbbdf8040b595fb3ca7314e6a8375a8335853be6",
+    "Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java": "16800140280a9641506b880a916b59d6df90ccb8df13b67c7c1e661be30c0daf",
+    "Frontend/app/src/main/java/com/click/ui/overlay/TaskFlowOverlayView.java": "09b1ce3feed032a2b7bf683c86d49f46ad1555c85516ddee78c6ea366ea64e36",
+    "Frontend/app/src/test/java/com/click/data/remote/AgentTurnGatewayUpgradeTest.java": "369b26221f3342707ce03ea012ec5c55bff5ed7c49b3afe1571242d096ebc3bd",
+    "Frontend/app/src/test/java/com/click/service/overlay/ClickOverlayServiceExecutionTest.java": "b7cb555a3fc8718b388a5290452b05b6edf9f3b9c4b16d801014d81d0cf239cf",
+    "Frontend/app/src/test/java/com/click/ui/overlay/SequentialTaskPreviewTest.java": "3076fd32456381dc8c5cf5a25c0ad522c7377db2849a7a22d381bac9b9528cce",
+    "Frontend/app/src/test/java/com/click/ui/overlay/SequentialTaskPresentationTest.java": "95d3919babcc25f3e501573b68b89bb2b9a90dfc2338f535d113dfc2dc339d16",
+    "docs/failure-recovery-contract.md": "75ad7550cd30ab691c56deffce8208fcad47d284aac52cd955b1eb4e0d40ac4a"
+  }
+}

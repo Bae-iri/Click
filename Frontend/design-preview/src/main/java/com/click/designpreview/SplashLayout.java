@@ -62,8 +62,12 @@ public final class SplashLayout extends FrameLayout {
         View tagline = childOrId(2, R.id.splash_tagline);
         tagline.measure(MeasureSpec.makeMeasureSpec(Math.max(0, contentWidth - dp(48)), MeasureSpec.AT_MOST),
                 MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+        View notice = childOrId(3, R.id.splash_test_notice);
+        notice.measure(MeasureSpec.makeMeasureSpec(Math.max(0, contentWidth - dp(48)), MeasureSpec.AT_MOST),
+                MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
         int gap = dp(contentHeight < dp(400) ? 12 : 20);
-        int availableHeight = Math.max(0, contentHeight - tagline.getMeasuredHeight() - gap * 2 - dp(32));
+        int noticeSpace = notice.getMeasuredHeight() + dp(40);
+        int availableHeight = Math.max(0, contentHeight - noticeSpace - tagline.getMeasuredHeight() - gap * 2 - dp(32));
         int logoWidth = Math.min(dp(250), Math.round(contentWidth * .56f));
         int artWidth = Math.min(dp(180), Math.round(contentWidth * .48f));
         float illustrationHeight = logoWidth * 72f / 222f + artWidth * 210f / 180f;
@@ -87,13 +91,18 @@ public final class SplashLayout extends FrameLayout {
         View tagline = childOrId(2, R.id.splash_tagline);
         int gap = dp(contentHeight < dp(400) ? 12 : 20);
         int groupHeight = logo.getMeasuredHeight() + artwork.getMeasuredHeight() + gap * 2 + tagline.getMeasuredHeight();
-        int desiredTop = getPaddingTop() + Math.round(contentHeight * .51f) - groupHeight / 2;
+        View notice = childOrId(3, R.id.splash_test_notice);
+        int noticeTop = Math.max(getPaddingTop() + dp(8),
+                bottom - top - getPaddingBottom() - dp(24) - notice.getMeasuredHeight());
+        int groupBottom = noticeTop - dp(16);
+        int desiredTop = getPaddingTop() + Math.round(Math.max(0, groupBottom - getPaddingTop()) * .51f) - groupHeight / 2;
         int logoTop = Math.max(getPaddingTop() + dp(8), Math.min(desiredTop,
-                bottom - top - getPaddingBottom() - dp(8) - groupHeight));
+                groupBottom - dp(8) - groupHeight));
         placeCentered(logo, centerX, logoTop);
         int artworkTop = logoTop + logo.getMeasuredHeight() + gap;
         placeCentered(artwork, centerX, artworkTop);
         placeCentered(tagline, centerX, artworkTop + artwork.getMeasuredHeight() + gap);
+        placeCentered(notice, centerX, noticeTop);
     }
 
     private void placeCentered(View view, int centerX, int top) {

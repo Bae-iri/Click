@@ -10,10 +10,11 @@
         android:layout_height="wrap_content"
         android:contentDescription="@string/splash_logo_description" />
 
-    <com.click.designpreview.HomeStartArtworkView
+    <com.click.designpreview.ClueArtworkView
         android:id="@+id/splash_artwork"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:src="@drawable/clue1_home"
         android:importantForAccessibility="no" />
 
     <TextView
@@ -27,4 +28,15 @@
         android:text="@string/splash_tagline"
         android:textColor="#627196"
         android:textSize="16sp" />
+    <TextView
+        android:id="@+id/splash_test_notice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/pretendard_regular"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:lineSpacingExtra="2dp"
+        android:text="@string/splash_test_notice"
+        android:textColor="#627196"
+        android:textSize="13sp" />
 </com.click.designpreview.SplashLayout>

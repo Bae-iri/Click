@@ -39,7 +39,8 @@ public final class FloatingClickHost extends FrameLayout implements ClickOverlay
         addView(trash, trashParams);
         control = new ClickOverlayLayout(context);
         control.setCallback(this);
-        addView(control, new LayoutParams(dp(64), dp(64), Gravity.TOP | Gravity.LEFT));
+        addView(control, new LayoutParams(control.getWindowWidth(ClickOverlayLayout.Mode.COLLAPSED,
+                getResources().getDisplayMetrics().widthPixels), dp(64), Gravity.TOP | Gravity.LEFT));
         ViewCompat.setOnApplyWindowInsetsListener(this, (view, insets) -> {
             keyboardVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
             post(this::fitTextAboveKeyboard);
@@ -61,7 +62,7 @@ public final class FloatingClickHost extends FrameLayout implements ClickOverlay
     @Override protected void onSizeChanged(int w, int h, int oldW, int oldH) {
         super.onSizeChanged(w, h, oldW, oldH);
         if (!positioned) {
-            control.setX(Math.max(0, w - dp(80)));
+            control.setX(Math.max(0, w - control.getLayoutParams().width - dp(16)));
             control.setY(Math.max(0, h - dp(96)));
             positioned = true;
         } else if (control.getMode() == ClickOverlayLayout.Mode.TEXT) {
@@ -119,6 +120,7 @@ public final class FloatingClickHost extends FrameLayout implements ClickOverlay
         control.collapse();
         trash.setActive(false);
         trash.setVisibility(VISIBLE);
+        control.bringToFront();
     }
     @Override public void onDragBy(float x, float y) {
         constrain(control.getX() + x, control.getY() + y);

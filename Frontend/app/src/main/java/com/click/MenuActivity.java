@@ -117,6 +117,13 @@ public final class MenuActivity extends AppCompatActivity {
         LinearLayout tutorial = group();
         addRow(tutorial, MenuIconView.Kind.BOOK, "클릭 사용법", "직접 따라 하며 익혀보세요", false,
                 view -> startActivity(new Intent(this, TutorialActivity.class)));
+        divider(tutorial);
+        addRow(tutorial, MenuIconView.Kind.ACCESSIBILITY, "접근성 설정", "접근성 설정 방법을 확인해요", false,
+                view -> startActivity(new Intent(this, com.click.designpreview.PermissionGuideActivity.class)
+                        .putExtra(com.click.designpreview.PermissionGuideActivity.EXTRA_RETURN_TO_SETTINGS, true)
+                        .putExtra(com.click.designpreview.PermissionGuideActivity.EXTRA_RECONNECT,
+                                PermissionStatus.isAccessibilityEnabled(this)
+                                        && com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() == null)));
         add(page, tutorial, 10);
 
         LinearLayout policies = group();
@@ -145,27 +152,38 @@ public final class MenuActivity extends AppCompatActivity {
         LinearLayout content = vertical();
         add(content, dialogNotice(MenuIconView.Kind.AUTOMATION,
                 enabled ? "지금은 자동 모드가 켜져 있어요" : "지금은 자동 모드가 꺼져 있어요"), 0);
+        if (!enabled) add(content, text("안내를 끝까지 읽고 자동 모드를 켜주세요.", 13, SECONDARY, regular), 14);
         add(content, dialogSection("자동 모드를 켜면",
                 "요청을 확인하고 시작하면 지원되는 앱 열기, 메뉴 이동, 스크롤과 설정 조절을 도와드려요.",
                 "직접 조작이 필요한 단계는 따로 안내해요."), 22);
         add(content, dialogSection("자동 모드를 끄면",
                 "눌러야 할 곳을 안내해 드려요. 안내에 따라 직접 조작해 주세요."), 22);
+        add(content, dialogSection("개인정보를 보호해요",
+                "화면 속 비밀번호·인증번호 같은 민감한 입력 내용은 서버로 보내지 않아요.",
+                "화면을 확인할 때는 작업 안내에 필요한 버튼·메뉴 이름과 위치 등을 사용해요.",
+                "말하거나 쓰는 내용에도 비밀번호·인증번호·결제정보를 넣지 말아주세요."), 22);
+        add(content, dialogSection("위험한 작업 앞에서는 멈춰요",
+                "결제·송금·삭제·초기화처럼 중요한 작업은 자동으로 누르지 않아요.",
+                "개인정보 입력이 필요하거나 안전하게 진행할 수 없는 화면에서는 자동 조작을 멈추고 알려드려요."), 22);
         add(content, dialogSection("기억해 주세요",
                 "진행 중에도 설정 화면 위의 스위치로 끌 수 있어요.",
                 "결제·전화 걸기·메시지 보내기는 자동으로 실행하지 않아요."), 22);
         ClickDialog.show(this, "자동으로 도와주기", content,
                 enabled ? "자동 모드 끄기" : "자동 모드 켜기",
-                () -> automationToggle.setChecked(!enabled), "닫기");
+                () -> applyAutomationSetting(!enabled), "닫기", !enabled);
     }
 
-    private void showAutomationSummary() {
-        LinearLayout content = vertical();
-        add(content, dialogSection("이렇게 도와드려요",
-                "앱 열기·화면 이동·스크롤·설정 조절을 자동으로 도와드려요.",
-                "언제든 자동 모드를 끄거나 작업을 멈출 수 있어요."), 0);
-        add(content, dialogNotice(MenuIconView.Kind.AUTOMATION,
-                "결제·전화 걸기·메시지 보내기는 자동으로 실행하지 않아요."), 16);
-        ClickDialog.show(this, "자동 모드를 켰어요", content, "알겠어요", null, null);
+    private void applyAutomationSetting(boolean enabled) {
+        boolean changed = automationSettings.isEnabled() != enabled;
+        automationSettings.setEnabled(enabled);
+        syncAutomationToggle();
+        if (changed) ClickOverlayService.onAutomationSettingChanged();
+    }
+
+    private void syncAutomationToggle() {
+        syncingAutomationToggle = true;
+        automationToggle.setChecked(automationSettings.isEnabled());
+        syncingAutomationToggle = false;
     }
 
     /** Short sections leave breathing room without putting all copy in one box. */
@@ -229,10 +247,10 @@ public final class MenuActivity extends AppCompatActivity {
         automationToggle.setContentDescription("자동 모드");
         automationToggle.setOnCheckedChangeListener((button, enabled) -> {
             if (syncingAutomationToggle) return;
-            automationToggle.setText("자동 모드");
-            automationSettings.setEnabled(enabled);
-            ClickOverlayService.onAutomationSettingChanged();
-            if (enabled) showAutomationSummary();
+            if (enabled) {
+                syncAutomationToggle();
+                showAutomationSettings();
+            } else applyAutomationSetting(false);
         });
         row.addView(automationToggle, new LinearLayout.LayoutParams(-2, -2));
         return row;
@@ -466,9 +484,7 @@ public final class MenuActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume();
-        syncingAutomationToggle = true;
-        automationToggle.setChecked(automationSettings.isEnabled());
-        syncingAutomationToggle = false;
+        syncAutomationToggle();
         graphConsent.read(new GraphImprovementConsentGateway.Callback() {
             @Override public void onResult(boolean consented) { graphConsented = consented; }
             @Override public void onFailure() { }
@@ -555,7 +571,7 @@ public final class MenuActivity extends AppCompatActivity {
 
     /** Rounded, consistently weighted pictograms paired with the home card palette. */
     private final class MenuIconView extends View {
-        enum Kind { CLUE, SETTINGS, SHIELD, PERSONALIZE, AUTOMATION, BOOK, DOCUMENT, LOCK, LOGOUT, TRASH, BACK, NEXT }
+        enum Kind { CLUE, SETTINGS, SHIELD, PERSONALIZE, AUTOMATION, BOOK, ACCESSIBILITY, DOCUMENT, LOCK, LOGOUT, TRASH, BACK, NEXT }
         private final Kind kind;
         private final boolean danger;
         private final android.graphics.drawable.Drawable artwork;
@@ -574,6 +590,7 @@ public final class MenuActivity extends AppCompatActivity {
                 case PERSONALIZE: resource = com.click.designpreview.R.drawable.icon_light; break;
                 case AUTOMATION: resource = com.click.designpreview.R.drawable.icon_lightning; break;
                 case BOOK: resource = com.click.designpreview.R.drawable.icon_map; break;
+                case ACCESSIBILITY: resource = com.click.designpreview.R.drawable.icon_accessibility; break;
                 case DOCUMENT: resource = com.click.designpreview.R.drawable.icon_checklist; break;
                 case LOCK: resource = com.click.designpreview.R.drawable.icon_lock; break;
                 case TRASH: resource = com.click.designpreview.R.drawable.icon_trashcan_red; break;

@@ -27,20 +27,22 @@ public class ClickTutorialFlowTest {
         try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
             tapId(scenario, R.id.tutorial_next);
             Rect phone = new Rect(), button = new Rect();
+            int[] gutter = {0};
             scenario.onActivity(a -> {
                 View stage = a.findViewById(R.id.tutorial_phone_stage);
                 View host = a.findViewById(R.id.tutorial_floating_host);
-                assertEquals("The drag area must fill the phone", stage.getHeight(), host.getHeight());
-                assertEquals(0, host.getTop());
-                assertTrue(stage.getGlobalVisibleRect(phone));
+                gutter[0] = host.getPaddingTop();
+                assertTrue("The drag area stays inside the phone", host.getHeight() < stage.getHeight());
+                assertTrue(host.getTop() > 0);
+                assertTrue(host.getGlobalVisibleRect(phone));
                 assertTrue(control(a).getGlobalVisibleRect(button));
             });
-            int topCenter = phone.top + button.height() / 2 + 16;
+            int topCenter = phone.top + button.height() / 2 + gutter[0] + 16;
             drag(button.centerX(), button.centerY(), button.centerX(), topCenter);
             scenario.onActivity(a -> {
                 Rect after = new Rect(), currentPhone = new Rect();
                 control(a).getGlobalVisibleRect(after);
-                a.findViewById(R.id.tutorial_phone_stage).getGlobalVisibleRect(currentPhone);
+                a.findViewById(R.id.tutorial_floating_host).getGlobalVisibleRect(currentPhone);
                 assertEquals("Dragging must not scroll the lesson", phone.top, currentPhone.top);
                 assertTrue("Button must reach above the accessibility rows", Math.abs(after.centerY() - topCenter) < 8);
                 Rect hint = new Rect();
@@ -50,7 +52,7 @@ public class ClickTutorialFlowTest {
                 button.set(after);
             });
             screenshot("tutorial-drag-phone-top");
-            int bottomCenter = phone.bottom - button.height() / 2 - 16;
+            int bottomCenter = phone.bottom - button.height() / 2 - gutter[0] - 16;
             drag(button.centerX(), button.centerY(), button.centerX(), bottomCenter);
             scenario.onActivity(a -> {
                 Rect after = new Rect(); control(a).getGlobalVisibleRect(after);
@@ -104,15 +106,21 @@ public class ClickTutorialFlowTest {
             screenshot("tutorial-short-review");
             tapText(scenario, "안내 시작하기");
             scenario.onActivity(a -> {
-                assertNotNull(findText(a.getWindow().getDecorView(), "자동으로 진행해요"));
-                assertNotNull(findText(a.getWindow().getDecorView(), "진행중이에요!"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "클릭이 이렇게 알려드려요!"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "설치된 앱 항목을 눌러주세요."));
                 assertNull(findText(a.getWindow().getDecorView(), "설정 앱을 열어주세요."));
+                Rect target = new Rect(), bubble = new Rect();
+                assertTrue(a.getWindow().getDecorView().findViewWithTag("tutorial_highlight_target").getGlobalVisibleRect(target));
+                assertTrue(findType(a.getWindow().getDecorView(), com.click.ui.overlay.TaskFlowOverlayView.class)
+                        .getGlobalVisibleRect(bubble));
+                assertFalse("Guidance must not cover the highlighted example", Rect.intersects(target, bubble));
             });
             screenshot("tutorial-short-running");
+            tapText(scenario, "설치된 앱 항목을 눌러주세요.");
             tapText(scenario, "줄이기");
             scenario.recreate();
             scenario.onActivity(a -> assertTrue(findType(a.getWindow().getDecorView(), com.click.ui.overlay.TaskFlowOverlayView.class).isMinimizedProgress()));
-            tapText(scenario, "진행중이에요!");
+            tapText(scenario, "설치된 앱 항목을 눌러주세요.");
             tapText(scenario, "일시정지");
             scenario.recreate();
             scenario.onActivity(a -> {
@@ -149,7 +157,7 @@ public class ClickTutorialFlowTest {
             tapText(scenario, "글로 입력");
             tapText(scenario, "↑");
             scenario.onActivity(a -> {
-                assertNotNull(findText(a.getWindow().getDecorView(), "요청을 적어주세요"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "하고 싶은 작업을 적어주세요"));
                 control(a).setDraftText("글자 크기 키워줘");
             });
             scenario.recreate();
@@ -167,10 +175,11 @@ public class ClickTutorialFlowTest {
             scenario.onActivity(a -> control(a).setDraftText("휴대폰 전체 글자 크기 키워줘"));
             tapText(scenario, "↑");
             tapText(scenario, "안내 시작하기");
+            tapText(scenario, "설치된 앱 항목을 눌러주세요.");
             tapText(scenario, "끝내기");
             assertMode(scenario, ClickOverlayLayout.Mode.MENU);
             scenario.onActivity(a -> {
-                assertNotNull(findText(a.getWindow().getDecorView(), "원하시는 방법으로 하고 싶은 작업을 말씀해주세요"));
+                assertNotNull(findText(a.getWindow().getDecorView(), "말이나 글로 입력할 수 있어요."));
                 assertNull(findText(a.getWindow().getDecorView(), "요청을 멈췄어요"));
             });
         }
@@ -199,6 +208,42 @@ public class ClickTutorialFlowTest {
             });
             screenshot("tutorial-offline-voice-review");
         }
+    }
+
+    @Test public void voiceAndTextPanelsStayInsideThePracticePhone() throws Exception {
+        try (ActivityScenario<TutorialActivity> scenario = ActivityScenario.launch(TutorialActivity.class)) {
+            tapId(scenario, R.id.tutorial_next);
+            tapId(scenario, R.id.tutorial_floating_control);
+            tapText(scenario, "말로 입력");
+            screenshot("tutorial-voice-bounds");
+            scenario.onActivity(a -> assertInsidePhone(a, control(a)));
+            scenario.onActivity(a -> assertInsidePhone(a, a.findViewById(R.id.overlay_microphone)));
+            scenario.onActivity(a -> {
+                assertFullyVisible(((ViewGroup) a.findViewById(R.id.overlay_microphone)).getChildAt(0));
+                assertFullyVisible(findText(control(a), "손을 떼면 말씀하신 내용을 확인할게요."));
+                assertFullyVisible(findText(control(a), "취소"));
+            });
+            scenario.onActivity(a -> control(a).openText());
+            screenshot("tutorial-text-bounds");
+            scenario.onActivity(a -> assertInsidePhone(a, control(a)));
+        }
+    }
+
+    private void assertInsidePhone(TutorialActivity activity, View view) {
+        View host = activity.findViewById(R.id.tutorial_floating_host);
+        Rect screen = new Rect(), actual = new Rect();
+        assertTrue(host.getGlobalVisibleRect(screen));
+        int[] point = new int[2]; view.getLocationOnScreen(point);
+        actual.set(point[0], point[1], point[0] + view.getWidth(), point[1] + view.getHeight());
+        assertTrue(view.getContentDescription() + ": " + actual + " outside " + screen, screen.contains(actual));
+    }
+
+    private void assertFullyVisible(View view) {
+        assertNotNull(view);
+        Rect visible = new Rect();
+        assertTrue(view.getGlobalVisibleRect(visible));
+        assertEquals("Element must not be clipped vertically", view.getHeight(), visible.height());
+        assertEquals("Element must not be clipped horizontally", view.getWidth(), visible.width());
     }
 
     private ClickOverlayLayout control(TutorialActivity a) { return a.findViewById(R.id.tutorial_floating_control); }

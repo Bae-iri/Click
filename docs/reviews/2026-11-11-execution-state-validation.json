@@ -1,0 +1,91 @@
+{
+  "schema_version": "click-execution-state-validation.v1",
+  "completed_at": "2026-11-11T15:59:28.384954+09:00",
+  "execution_contract": "execution-state.v1",
+  "backend_ai_source_sha256": "eae1437a68f0f46a667303464cc718c5e78b5c720e433fc09e5917a4cce0d49e",
+  "tests": {
+    "backend": {
+      "passed": 2399,
+      "failed": 0
+    },
+    "android_jvm": {
+      "passed": 782,
+      "failed": 0
+    },
+    "ai_agent": {
+      "passed": 396,
+      "failed": 0
+    },
+    "frontend_backend_contract": {
+      "passed": 6,
+      "failed": 0
+    }
+  },
+  "device": {
+    "model": "SM-N981N",
+    "android": "13",
+    "recovery": {
+      "scope": "encrypted_device_journal_and_local_controller",
+      "server_events_sent": false,
+      "production_end_to_end": false,
+      "steps": [
+        {
+          "phase": "stage",
+          "passed": true
+        },
+        {
+          "phase": "verify",
+          "passed": true
+        },
+        {
+          "phase": "cleanup",
+          "passed": true
+        }
+      ],
+      "wifi_before": "1",
+      "click_accessibility_before": true,
+      "process_restarted": true,
+      "passed": true,
+      "wifi_after": "1",
+      "click_accessibility_after": true,
+      "restored": true
+    },
+    "native_font": {
+      "scope": "physical_Samsung_font_change_recognition",
+      "passed": true,
+      "tests": 1,
+      "font_scale_before": "1.3",
+      "font_scale_after": "1.3",
+      "restored": true,
+      "server_requests": false
+    },
+    "installed_state": {
+      "installed_matches_final_build": true,
+      "app_sha256": "91ef9aa947b97f27a614583c776dbddfcddea28fda781c1eca6161ac4ec18ba0",
+      "wifi_on": "1",
+      "font_scale": "1.3",
+      "click_accessibility_enabled": true
+    },
+    "user_data_cleared": false
+  },
+  "artifacts": {
+    "Frontend/app/build/outputs/apk/debug/app-execution-state-debug.apk": "91ef9aa947b97f27a614583c776dbddfcddea28fda781c1eca6161ac4ec18ba0",
+    "Frontend/app/build/outputs/apk/androidTest/debug/app-execution-state-debug-androidTest.apk": "9ed9e6ce2b5ea7ecc137fc4fefbfdac6e6b430585dcd26353161bddacdd6760d"
+  },
+  "logs_directory": "Frontend/app/build/reports/execution-state-validation",
+  "deployment": {
+    "owner": "user",
+    "production_deployed_by_agent": false,
+    "production_end_to_end_verified": false,
+    "branch": "develop",
+    "source_committed_or_pushed_by_agent": false,
+    "required_environment": {
+      "CLICK_REQUIRE_EXECUTION_CONTEXT": "1"
+    }
+  },
+  "limits": [
+    "The device recovery probe uses isolated encrypted fixture records; no fixture action event is sent to the server.",
+    "The physical font test checks native observation and persisted setting change, not production Jev decisions.",
+    "Deploy the current local source changes before production end-to-end verification; the new app stops on an incompatible server."
+  ]
+}

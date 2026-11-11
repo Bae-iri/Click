@@ -1,0 +1,61 @@
+{
+  "recorded_at": "2026-11-10T00:05:20.843953+09:00",
+  "source_sha256": "94ac2adefff355e91122b15d40c53dad90dc4244927e6046ad34a92934a4a1ad",
+  "capability_contract": {
+    "schema_version": "settings-capabilities.v1",
+    "sha256": "441a3e64c7077729d9bd27bd9ba8a19aa360733def06cc1677778bf2ec4e37a0"
+  },
+  "source_files": {
+    "Frontend/app/src/main/java/com/click/service/overlay/TaskExecutionController.java": "1f68fa09585c6ebbc6f4f69caf9d7f465cec9c4e7d9f6cab837f41ac2576f2d3",
+    "Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java": "f4eeb165f08367f990b501408aa1a5b85e1ac42885e64e5d729b0901692be289",
+    "Frontend/app/src/main/java/com/click/data/snapshot/ScreenSnapshot.java": "d64148b33e9631d069e6557ae605e09194c3b3ac4b0b5e797cf39260203b78ff",
+    "Frontend/app/src/main/java/com/click/data/snapshot/ScreenIdentity.java": "7abb2a3526e49e2937f183bf106d110fb78cb909a20318f02e48a8670a32d50a",
+    "Frontend/app/src/main/java/com/click/data/snapshot/TaskSuccess.java": "b62e83cfdc18d696467d2ab15ec7d454ddf389c0f58dfba7886c9fcc5162a5b6",
+    "AI-Agent/src/ai_agent/runtime/task_success.py": "c63ffdfa82b919f102ff01c270653c74da577130d011d482bda663a5c9a1332c",
+    "AI-Agent/src/ai_agent/runtime/state_manager.py": "0997171ce0f8027424e18b235c8f331df2d0c536db2ed45537849aec7a1cf0e5",
+    "AI-Agent/src/ai_agent/runtime/primary.py": "b320bfdc3c60b62b0963f47af8f796b436c89ccd6924224816a20b667198d587",
+    "AI-Agent/src/ai_agent/runtime/engine.py": "d11ade9c558ba2e91f9607eed6cbabf852ff5cea17daf23e187e8d9eda5c4334",
+    "Backend/app/services/task_outcome.py": "774f94b9da8579d8b30b38ef15fc75b6db054d2d6fff7ed428353cedb22ba4f3",
+    "Backend/app/repositories/agent_sessions.py": "fedb13193c03fb97949b7705c798f4a61816fb548c507c6ee10591d9d657c515",
+    "AI-Agent/goal_catalog/settings_capabilities.json": "441a3e64c7077729d9bd27bd9ba8a19aa360733def06cc1677778bf2ec4e37a0"
+  },
+  "tests": {
+    "android_full": {
+      "tests": 621,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "backend_full": {
+      "passed": 2104,
+      "failed": 0
+    },
+    "backend_final_context": {
+      "passed": 120,
+      "failed": 0,
+      "note": "최종 목표 컨텍스트 우선순위 수정과 신규 3개 사례를 포함한 결과 흐름 재검증"
+    },
+    "agent_full": {
+      "passed": 396,
+      "failed": 0
+    }
+  },
+  "shared_success_cases": 31,
+  "apk": {
+    "serial": "R3CN8157M2Z",
+    "installed_apk_sha256": "fa31b12cb1325982d2dedb589e316f4d42d8627c1d748b8882402736cd976a50",
+    "built_apk_sha256": "fa31b12cb1325982d2dedb589e316f4d42d8627c1d748b8882402736cd976a50",
+    "artifact": "Frontend/app/build/outputs/apk/debug/app-task-contract-debug.apk",
+    "installed_matches_build": true
+  },
+  "server_deployed": false,
+  "physical_end_to_end_performed": false,
+  "physical_note": "개발 기기 업데이트 설치 후 설치 APK와 검증 APK의 SHA-256 일치만 확인. 실제 사용자 설정 변경 및 외부 모델 호출 없음.",
+  "logs": {
+    "android_full": "/private/tmp/click-task-contract-android-final.log",
+    "backend_full": "/private/tmp/click-task-contract-backend-final.log",
+    "backend_final_context": "/private/tmp/click-bound-context-verified.log",
+    "agent_full": "/private/tmp/click-task-contract-agent-final.log",
+    "apk_build": "/private/tmp/click-task-contract-apk.log"
+  }
+}

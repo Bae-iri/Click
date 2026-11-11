@@ -18,7 +18,7 @@ class GoalInputRequirements:
 
     def family(self, goal_type=None, source_text=""):
         if goal_type:
-            return next((f for f in self.document["families"] if goal_type.startswith(f["goal_prefix"])), None)
+            return next((f for f in sorted(self.document["families"], key=lambda f: len(f["goal_prefix"]), reverse=True) if goal_type.startswith(f["goal_prefix"])), None)
         matches = [f for f in self.document["families"] if any(normalize(k) in normalize(source_text) for k in f["keywords"])]
         return matches[0] if len(matches) == 1 else None
 

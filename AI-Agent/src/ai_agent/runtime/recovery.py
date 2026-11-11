@@ -18,17 +18,22 @@ class RecoveryPlan:
     target_label: str | None = None
 
     def to_dict(self):
+        from ai_agent.runtime.environment import recovery_rule
+        rule=recovery_rule(self.reason_code)
         return {"schema_version": "ai1-recovery.v1", "decision": self.decision,
                 "reason_code": self.reason_code, "next_action": self.next_action,
                 "waiting_for": self.waiting_for, "recoverable": self.decision != "continue",
                 "attempts": self.state.get("attempts", 0),
                 "retry_after_ms": self.state.get("retry_after_ms", 0),
-                "options": ["retry", "manual_navigation", "cancel"] if self.waiting_for == "user" else []}
+                "options": ["retry", "manual_navigation", "cancel"] if self.waiting_for == "user" else [],
+                "failure": {"reason":self.reason_code,**rule} if rule else {"reason":self.reason_code}}
 
 
 def manual_navigation_target(graph, match, nodes):
     if match.fallback_reason != "target_not_found" or match.state_id == "S0_UNKNOWN":
         return None
+    from ai_agent.runtime.capabilities import navigation_state
+    if not navigation_state(graph, match.state_id):return None
     edge = next((t for t in graph.transitions if t.transition_id == match.transition_id), None)
     if not edge or edge.completes_task or edge.action_type.value != "tap":
         return None
@@ -73,7 +78,8 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
 
     graph_packages = {package for state in graph.states.values() for package in state.package_candidates}
     if (match.state_id == "S0_UNKNOWN" and match.transition_id == "S0_TO_S1_OPEN_SETTINGS"
-            and match.fallback_reason and nodes and not any(n.package_name in graph_packages for n in nodes)):
+            and (match.fallback_reason or selection_failure) and nodes
+            and not any(n.package_name in graph_packages for n in nodes)):
         return plan("wait", "APP_NOT_OPEN", "open_settings", "user")
 
     waiting_result = bool(verification and verification.status in {Status.UNKNOWN, Status.WAITING_FOR_OBSERVATION})

@@ -11,11 +11,13 @@ import org.mockito.MockedStatic;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.LooperMode;
+import org.robolectric.annotation.Config;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.AdditionalMatchers.aryEq;
 
 @RunWith(RobolectricTestRunner.class)
+@Config(application = android.app.Application.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class ManualSliderEventTest {
     @Test public void nativeRangeEventsReachGuideTrackerWithoutTouchExplorationEvents() {
@@ -24,12 +26,18 @@ public class ManualSliderEventTest {
     @Test public void genericSetProgressControlAlsoReportsNativeRangeEvents() {
         checkNativeRangeEvents("android.view.View");
     }
+    @Test public void aRealRangeSourceDetachedByRedrawStillReachesBindingValidation() {
+        checkNativeRangeEvents("android.widget.SeekBar", false);
+    }
     private void checkNativeRangeEvents(String className) {
+        checkNativeRangeEvents(className, true);
+    }
+    private void checkNativeRangeEvents(String className, boolean attached) {
         ClickAccessibilityService service = spy(Robolectric.buildService(ClickAccessibilityService.class).create().get());
         AccessibilityNodeInfo root = mock(AccessibilityNodeInfo.class);
         AccessibilityNodeInfo slider = mock(AccessibilityNodeInfo.class);
         doReturn(root).when(service).getRootInActiveWindow();
-        when(root.getChildCount()).thenReturn(1);
+        when(root.getChildCount()).thenReturn(attached ? 1 : 0);
         when(root.getChild(0)).thenReturn(slider);
         when(slider.getPackageName()).thenReturn("com.android.settings");
         when(slider.getClassName()).thenReturn(className);
@@ -51,7 +59,7 @@ public class ManualSliderEventTest {
                 service.onAccessibilityEvent(event);
             }
             overlay.verify(() -> ClickOverlayService.onGuidedRangeChanged(eq("com.android.settings"),
-                    eq(5), eq("node_0_0"), eq("settings:id/font"), aryEq(new int[]{135, 2009, 945, 2071}),
+                    eq(5), eq(attached ? "node_0_0" : null), eq("settings:id/font"), aryEq(new int[]{135, 2009, 945, 2071}),
                     anyLong(), eq(3f), eq(0f), eq(7f)), times(3));
         }
     }

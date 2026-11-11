@@ -40,5 +40,19 @@
     "approved": true,
     "priority": 101,
     "status": "settings_slider"
+  },
+  {
+    "artifact": "SET-wifi-enable.json",
+    "version": "1.0.0",
+    "approved": true,
+    "priority": 100,
+    "status": "wifi_master_switch_device_validation_pending"
+  },
+  {
+    "artifact": "SET-wifi-disable.json",
+    "version": "1.0.0",
+    "approved": true,
+    "priority": 100,
+    "status": "wifi_master_switch_device_validation_pending"
   }
 ]

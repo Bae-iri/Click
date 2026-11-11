@@ -1,0 +1,1700 @@
+{
+  "version": 1,
+  "toggles": {
+    "bluetooth": {
+      "pages": [
+        "블루투스",
+        "Bluetooth"
+      ],
+      "labels": [
+        "블루투스",
+        "Bluetooth",
+        "블루투스 사용",
+        "Use Bluetooth"
+      ],
+      "categories": [
+        "연결",
+        "연결된 기기",
+        "Connections",
+        "Connected devices"
+      ],
+      "intermediate": [
+        "연결 환경설정",
+        "Connection preferences"
+      ]
+    },
+    "mobile_data": {
+      "pages": [
+        "모바일 네트워크",
+        "Mobile networks",
+        "데이터 사용",
+        "Data usage",
+        "인터넷",
+        "Internet"
+      ],
+      "labels": [
+        "모바일 데이터",
+        "Mobile data"
+      ],
+      "categories": [
+        "연결",
+        "네트워크 및 인터넷",
+        "Connections",
+        "Network & internet"
+      ],
+      "intermediate": [
+        "모바일 네트워크",
+        "Mobile networks",
+        "데이터 사용",
+        "Data usage"
+      ]
+    },
+    "airplane_mode": {
+      "pages": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "labels": [
+        "비행기 탑승 모드",
+        "비행기 모드",
+        "Airplane mode",
+        "Flight mode"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "intermediate": []
+    },
+    "hotspot": {
+      "pages": [
+        "모바일 핫스팟",
+        "Mobile hotspot",
+        "Wi-Fi hotspot"
+      ],
+      "labels": [
+        "모바일 핫스팟",
+        "Mobile hotspot",
+        "Wi-Fi hotspot",
+        "핫스팟 사용",
+        "Use Wi-Fi hotspot"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "intermediate": [
+        "모바일 핫스팟 및 테더링",
+        "Mobile hotspot and tethering",
+        "핫스팟 및 테더링",
+        "Hotspot & tethering"
+      ]
+    },
+    "dark_mode": {
+      "pages": [
+        "디스플레이",
+        "Display",
+        "다크 모드",
+        "Dark mode",
+        "어두운 테마",
+        "Dark theme"
+      ],
+      "labels": [
+        "다크 모드",
+        "Dark mode",
+        "어두운 테마",
+        "Dark theme"
+      ],
+      "categories": [
+        "디스플레이",
+        "Display"
+      ],
+      "intermediate": [],
+      "choices": {
+        "on": {
+          "labels": [
+            "다크",
+            "Dark"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/item2"
+          ]
+        },
+        "off": {
+          "labels": [
+            "라이트",
+            "Light"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/item1"
+          ]
+        }
+      }
+    },
+    "location": {
+      "pages": [
+        "위치",
+        "Location"
+      ],
+      "labels": [
+        "위치",
+        "Location",
+        "위치 사용",
+        "Use location"
+      ],
+      "categories": [
+        "위치",
+        "Location"
+      ],
+      "intermediate": []
+    },
+    "power_saving": {
+      "pages": [
+        "배터리",
+        "Battery",
+        "절전 모드",
+        "Power saving",
+        "배터리 절약 모드",
+        "Battery saver"
+      ],
+      "labels": [
+        "절전 모드",
+        "Power saving",
+        "배터리 절약 모드",
+        "Battery saver",
+        "배터리 절약 모드 사용",
+        "Use Battery Saver"
+      ],
+      "categories": [
+        "배터리",
+        "Battery",
+        "배터리 및 디바이스 케어",
+        "Battery and device care"
+      ],
+      "intermediate": []
+    },
+    "talkback": {
+      "pages": [
+        "TalkBack",
+        "톡백"
+      ],
+      "labels": [
+        "TalkBack",
+        "톡백",
+        "TalkBack 사용",
+        "Use TalkBack"
+      ],
+      "categories": [
+        "접근성",
+        "Accessibility"
+      ],
+      "intermediate": []
+    },
+    "magnification": {
+      "pages": [
+        "확대",
+        "Magnification"
+      ],
+      "labels": [
+        "확대",
+        "Magnification",
+        "확대 사용",
+        "Use magnification"
+      ],
+      "categories": [
+        "접근성",
+        "Accessibility"
+      ],
+      "intermediate": [
+        "시인성 향상",
+        "Visibility enhancements",
+        "텍스트 및 디스플레이",
+        "Text and display"
+      ]
+    },
+    "automatic_date_time": {
+      "pages": [
+        "날짜 및 시간",
+        "Date and time",
+        "Date & time"
+      ],
+      "labels": [
+        "날짜 및 시간 자동 설정",
+        "Automatic date and time",
+        "자동으로 시간 설정",
+        "Set time automatically",
+        "자동 날짜 및 시간",
+        "Automatic date & time"
+      ],
+      "categories": [
+        "일반",
+        "일반 관리",
+        "General management",
+        "시스템",
+        "System"
+      ],
+      "intermediate": [
+        "날짜 및 시간",
+        "Date and time",
+        "Date & time"
+      ]
+    },
+    "nfc": {
+      "pages": [
+        "연결",
+        "Connections",
+        "NFC",
+        "NFC 및 비접촉 결제",
+        "NFC and contactless payments",
+        "Connection preferences",
+        "연결 환경설정"
+      ],
+      "labels": [
+        "NFC",
+        "NFC 및 비접촉 결제",
+        "NFC and contactless payments",
+        "NFC 사용",
+        "Use NFC"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "연결된 기기",
+        "Connected devices"
+      ],
+      "intermediate": [
+        "연결 환경설정",
+        "Connection preferences"
+      ]
+    },
+    "do_not_disturb": {
+      "pages": [
+        "방해 금지",
+        "Do not disturb"
+      ],
+      "labels": [
+        "방해 금지",
+        "Do not disturb",
+        "지금 켜기",
+        "Turn on now"
+      ],
+      "categories": [
+        "알림",
+        "Notifications",
+        "소리 및 진동",
+        "Sound & vibration"
+      ],
+      "intermediate": []
+    },
+    "auto_rotate": {
+      "pages": [
+        "디스플레이",
+        "Display",
+        "화면 자동 회전",
+        "Auto-rotate screen",
+        "자동 회전",
+        "Auto rotate"
+      ],
+      "labels": [
+        "화면 자동 회전",
+        "Auto-rotate screen",
+        "자동 회전",
+        "Auto rotate"
+      ],
+      "categories": [
+        "디스플레이",
+        "Display",
+        "접근성",
+        "Accessibility"
+      ],
+      "intermediate": []
+    },
+    "eye_comfort": {
+      "pages": [
+        "디스플레이",
+        "Display",
+        "편안하게 화면 보기",
+        "Eye comfort shield",
+        "야간 조명",
+        "Night light"
+      ],
+      "labels": [
+        "편안하게 화면 보기",
+        "Eye comfort shield",
+        "야간 조명",
+        "Night light",
+        "지금 사용",
+        "Use now"
+      ],
+      "categories": [
+        "디스플레이",
+        "Display"
+      ],
+      "intermediate": []
+    },
+    "adaptive_brightness": {
+      "pages": [
+        "디스플레이",
+        "Display",
+        "밝기 최적화",
+        "Adaptive brightness"
+      ],
+      "labels": [
+        "밝기 최적화",
+        "Adaptive brightness",
+        "자동 밝기",
+        "Automatic brightness"
+      ],
+      "categories": [
+        "디스플레이",
+        "Display"
+      ],
+      "intermediate": []
+    },
+    "data_saver": {
+      "pages": [
+        "데이터 절약 모드",
+        "Data saver"
+      ],
+      "labels": [
+        "데이터 절약 모드",
+        "Data saver",
+        "지금 사용",
+        "Use now",
+        "데이터 절약 모드 사용",
+        "Use Data Saver"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "intermediate": [
+        "데이터 사용",
+        "Data usage"
+      ]
+    },
+    "data_roaming": {
+      "pages": [
+        "모바일 네트워크",
+        "Mobile networks",
+        "SIMs",
+        "SIM"
+      ],
+      "labels": [
+        "데이터 로밍",
+        "Data roaming",
+        "로밍",
+        "Roaming"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "intermediate": [
+        "모바일 네트워크",
+        "Mobile networks",
+        "SIMs",
+        "SIM"
+      ]
+    },
+    "battery_percentage": {
+      "pages": [
+        "배터리",
+        "Battery",
+        "고급 설정",
+        "Advanced settings"
+      ],
+      "labels": [
+        "배터리 잔량 표시",
+        "Show battery percentage",
+        "배터리 비율",
+        "Battery percentage"
+      ],
+      "categories": [
+        "알림",
+        "Notifications",
+        "배터리",
+        "Battery"
+      ],
+      "intermediate": [
+        "고급 설정",
+        "Advanced settings"
+      ]
+    },
+    "color_inversion": {
+      "pages": [
+        "색상 반전",
+        "Color inversion",
+        "시인성 향상",
+        "Visibility enhancements",
+        "텍스트 및 디스플레이",
+        "Text and display"
+      ],
+      "labels": [
+        "색상 반전",
+        "Color inversion",
+        "색상 반전 사용",
+        "Use color inversion"
+      ],
+      "categories": [
+        "접근성",
+        "Accessibility"
+      ],
+      "intermediate": [
+        "시인성 향상",
+        "Visibility enhancements",
+        "텍스트 및 디스플레이",
+        "Text and display",
+        "색상 및 움직임",
+        "Color and motion"
+      ]
+    },
+    "captions": {
+      "pages": [
+        "실시간 자막",
+        "Live Caption"
+      ],
+      "labels": [
+        "실시간 자막",
+        "Live Caption",
+        "실시간 자막 사용",
+        "Use Live Caption"
+      ],
+      "categories": [
+        "접근성",
+        "Accessibility"
+      ],
+      "intermediate": [
+        "청각 보조",
+        "Hearing enhancements",
+        "자막 설정",
+        "Caption preferences"
+      ]
+    },
+    "mono_audio": {
+      "pages": [
+        "청각 보조",
+        "Hearing enhancements",
+        "오디오 조정",
+        "Audio adjustment"
+      ],
+      "labels": [
+        "모노 오디오",
+        "Mono audio"
+      ],
+      "categories": [
+        "접근성",
+        "Accessibility"
+      ],
+      "intermediate": [
+        "청각 보조",
+        "Hearing enhancements",
+        "오디오 조정",
+        "Audio adjustment"
+      ]
+    }
+  },
+  "goals": {
+    "settings.font_size.increase": {
+      "name": "글자 크기 키우기",
+      "setting": "font_size",
+      "mode": "device_value",
+      "device_validated": false
+    },
+    "settings.font_size.decrease": {
+      "name": "글자 크기 줄이기",
+      "setting": "font_size",
+      "mode": "device_value",
+      "device_validated": false
+    },
+    "settings.wifi.enable": {
+      "name": "와이파이 켜기",
+      "setting": "wifi",
+      "mode": "device_wifi",
+      "device_validated": false
+    },
+    "settings.wifi.disable": {
+      "name": "와이파이 끄기",
+      "setting": "wifi",
+      "mode": "device_wifi",
+      "device_validated": false
+    },
+    "settings.wifi.connect": {
+      "name": "와이파이 연결",
+      "setting": "wifi",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "와이파이",
+      "pages": [
+        "Wi-Fi",
+        "와이파이"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "instruction": "원하는 네트워크를 직접 선택하세요. 연결은 비밀번호 입력 후 상태 표시에서 확인하세요. 공유는 선택한 네트워크의 공유 메뉴에서 진행하세요. 비밀번호·QR 코드를 전송하지 않아요."
+    },
+    "settings.bluetooth.enable": {
+      "name": "블루투스 켜기",
+      "setting": "bluetooth",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.bluetooth.disable": {
+      "name": "블루투스 끄기",
+      "setting": "bluetooth",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.bluetooth.connect": {
+      "name": "블루투스 기기 연결",
+      "setting": "bluetooth",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "블루투스",
+      "pages": [
+        "블루투스",
+        "Bluetooth"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "연결된 기기",
+        "Connected devices"
+      ],
+      "instruction": "연결할 기기가 보이지 않으면 기기의 전원과 페어링 모드를 켜고, 휴대폰 가까이에 둔 뒤 검색될 때까지 잠시 기다려주세요. 기기가 나타나면 직접 선택하고, 양쪽 기기의 연결 코드가 같은지 확인한 뒤 페어링하세요."
+    },
+    "settings.mobile_data.enable": {
+      "name": "모바일 데이터 켜기",
+      "setting": "mobile_data",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.mobile_data.disable": {
+      "name": "모바일 데이터 끄기",
+      "setting": "mobile_data",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.airplane_mode.enable": {
+      "name": "비행기 모드 켜기",
+      "setting": "airplane_mode",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.airplane_mode.disable": {
+      "name": "비행기 모드 끄기",
+      "setting": "airplane_mode",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.hotspot.enable": {
+      "name": "모바일 핫스팟 켜기",
+      "setting": "hotspot",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.hotspot.disable": {
+      "name": "모바일 핫스팟 끄기",
+      "setting": "hotspot",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.brightness.increase": {
+      "name": "화면 밝기 높이기",
+      "setting": "brightness",
+      "mode": "device_value",
+      "device_validated": false
+    },
+    "settings.brightness.decrease": {
+      "name": "화면 밝기 낮추기",
+      "setting": "brightness",
+      "mode": "device_value",
+      "device_validated": false
+    },
+    "settings.dark_mode.enable": {
+      "name": "다크 모드 켜기",
+      "setting": "dark_mode",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.dark_mode.disable": {
+      "name": "다크 모드 끄기",
+      "setting": "dark_mode",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.screen_timeout.set": {
+      "name": "화면 자동 꺼짐 시간 변경",
+      "setting": "screen_timeout",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "화면 자동 꺼짐 시간",
+      "pages": [
+        "화면 자동 꺼짐 시간",
+        "Screen timeout",
+        "화면 시간 제한"
+      ],
+      "categories": [
+        "디스플레이",
+        "Display"
+      ],
+      "instruction": "원하는 시간을 직접 선택하세요. 이전 화면에 선택한 시간이 표시되는지 확인하세요."
+    },
+    "settings.display_size.increase": {
+      "name": "화면 요소 크게 하기",
+      "setting": "display_size",
+      "mode": "native_slider",
+      "device_validated": false,
+      "page_name": "화면 크기",
+      "pages": [
+        "화면 크게/작게",
+        "화면 확대",
+        "화면 크기",
+        "Screen zoom",
+        "Display size",
+        "Display size and text"
+      ],
+      "categories": [
+        "디스플레이",
+        "Display",
+        "접근성",
+        "Accessibility"
+      ],
+      "instruction": "화면 크기 조절 막대를 요청한 방향으로 움직이고 미리보기와 실제 화면 크기를 확인하세요.",
+      "graph_version": "1.1.0",
+      "labels": [
+        "화면 크게/작게",
+        "화면 확대",
+        "화면 크기",
+        "Screen zoom",
+        "Display size"
+      ],
+      "resource_ids": [
+        "com.android.settings:id/seek_bar"
+      ],
+      "value_domain": {
+        "minimum": 72,
+        "maximum": 2000,
+        "integer": true
+      }
+    },
+    "settings.display_size.decrease": {
+      "name": "화면 요소 작게 하기",
+      "setting": "display_size",
+      "mode": "native_slider",
+      "device_validated": false,
+      "page_name": "화면 크기",
+      "pages": [
+        "화면 크게/작게",
+        "화면 확대",
+        "화면 크기",
+        "Screen zoom",
+        "Display size",
+        "Display size and text"
+      ],
+      "categories": [
+        "디스플레이",
+        "Display",
+        "접근성",
+        "Accessibility"
+      ],
+      "instruction": "화면 크기 조절 막대를 요청한 방향으로 움직이고 미리보기와 실제 화면 크기를 확인하세요.",
+      "graph_version": "1.1.0",
+      "labels": [
+        "화면 크게/작게",
+        "화면 확대",
+        "화면 크기",
+        "Screen zoom",
+        "Display size"
+      ],
+      "resource_ids": [
+        "com.android.settings:id/seek_bar"
+      ],
+      "value_domain": {
+        "minimum": 72,
+        "maximum": 2000,
+        "integer": true
+      }
+    },
+    "settings.volume.increase": {
+      "name": "미디어 음량 높이기",
+      "setting": "volume",
+      "mode": "device_value",
+      "device_validated": false
+    },
+    "settings.volume.decrease": {
+      "name": "미디어 음량 낮추기",
+      "setting": "volume",
+      "mode": "device_value",
+      "device_validated": false
+    },
+    "settings.mute.enable": {
+      "name": "무음 모드 켜기",
+      "setting": "mute",
+      "mode": "system_choice",
+      "device_validated": false,
+      "page_name": "소리 및 진동",
+      "pages": [
+        "소리 및 진동",
+        "소리 모드",
+        "Sound & vibration",
+        "Sounds and vibration",
+        "Sound mode"
+      ],
+      "categories": [],
+      "instruction": "무음 켜기는 무음을, 무음 끄기는 소리를 직접 선택하세요. 진동 모드와는 별도예요."
+    },
+    "settings.mute.disable": {
+      "name": "무음 모드 끄기",
+      "setting": "mute",
+      "mode": "system_choice",
+      "device_validated": false,
+      "page_name": "소리 및 진동",
+      "pages": [
+        "소리 및 진동",
+        "소리 모드",
+        "Sound & vibration",
+        "Sounds and vibration",
+        "Sound mode"
+      ],
+      "categories": [],
+      "instruction": "무음 켜기는 무음을, 무음 끄기는 소리를 직접 선택하세요. 진동 모드와는 별도예요."
+    },
+    "settings.ringtone.change": {
+      "name": "벨소리 변경",
+      "setting": "ringtone",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "벨소리",
+      "pages": [
+        "벨소리",
+        "Ringtone",
+        "Phone ringtone"
+      ],
+      "categories": [
+        "소리 및 진동",
+        "Sound & vibration",
+        "Sounds and vibration"
+      ],
+      "instruction": "원하는 벨소리를 직접 고르고 적용하세요. SIM별 벨소리는 원하는 SIM도 선택하세요."
+    },
+    "settings.vibrate.enable": {
+      "name": "진동 모드 켜기",
+      "setting": "vibrate",
+      "mode": "system_choice",
+      "device_validated": false,
+      "page_name": "소리 및 진동",
+      "pages": [
+        "소리 및 진동",
+        "소리 모드",
+        "Sound & vibration",
+        "Sounds and vibration",
+        "Sound mode"
+      ],
+      "categories": [],
+      "instruction": "진동 켜기는 진동을, 진동 끄기는 소리를 직접 선택하세요. 선택된 소리 모드를 확인하세요."
+    },
+    "settings.vibrate.disable": {
+      "name": "진동 모드 끄기",
+      "setting": "vibrate",
+      "mode": "system_choice",
+      "device_validated": false,
+      "page_name": "소리 및 진동",
+      "pages": [
+        "소리 및 진동",
+        "소리 모드",
+        "Sound & vibration",
+        "Sounds and vibration",
+        "Sound mode"
+      ],
+      "categories": [],
+      "instruction": "진동 켜기는 진동을, 진동 끄기는 소리를 직접 선택하세요. 선택된 소리 모드를 확인하세요."
+    },
+    "settings.notifications.enable": {
+      "name": "앱 알림 켜기",
+      "setting": "notifications",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "알림",
+      "pages": [
+        "앱 알림",
+        "App notifications"
+      ],
+      "categories": [
+        "알림",
+        "Notifications"
+      ],
+      "instruction": "알림을 바꿀 앱을 직접 선택하고 알림 허용을 요청한 상태로 바꾸세요. 휴대폰 전체 알림에는 공통 스위치가 없을 수 있어요.",
+      "graph_version": "1.1.0"
+    },
+    "settings.notifications.disable": {
+      "name": "앱 알림 끄기",
+      "setting": "notifications",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "알림",
+      "pages": [
+        "앱 알림",
+        "App notifications"
+      ],
+      "categories": [
+        "알림",
+        "Notifications"
+      ],
+      "instruction": "알림을 바꿀 앱을 직접 선택하고 알림 허용을 요청한 상태로 바꾸세요. 휴대폰 전체 알림에는 공통 스위치가 없을 수 있어요.",
+      "graph_version": "1.1.0"
+    },
+    "settings.location.enable": {
+      "name": "위치 서비스 켜기",
+      "setting": "location",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.location.disable": {
+      "name": "위치 서비스 끄기",
+      "setting": "location",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.power_saving.enable": {
+      "name": "절전 모드 켜기",
+      "setting": "power_saving",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.power_saving.disable": {
+      "name": "절전 모드 끄기",
+      "setting": "power_saving",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.screen_lock.change": {
+      "name": "화면 잠금 방식 변경",
+      "setting": "screen_lock",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "보안",
+      "pages": [
+        "화면 잠금 방식",
+        "Screen lock type",
+        "화면 잠금",
+        "Screen lock"
+      ],
+      "categories": [
+        "잠금화면",
+        "Lock screen",
+        "보안 및 개인정보 보호",
+        "Security & privacy",
+        "보안",
+        "Security"
+      ],
+      "instruction": "화면 잠금 방식을 직접 선택하세요. 현재 잠금 인증과 새 PIN·패턴·비밀번호 입력은 직접 진행하세요.",
+      "graph_version": "1.1.0"
+    },
+    "settings.biometric.setup": {
+      "name": "생체 인식 등록",
+      "setting": "biometric",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "보안",
+      "pages": [
+        "보안 및 개인정보 보호",
+        "Security & privacy",
+        "생체 인식 및 보안",
+        "Biometrics and security",
+        "보안",
+        "Security"
+      ],
+      "categories": [],
+      "instruction": "생체 인식에서 지문 또는 얼굴을 선택하고 기기 안내에 따라 직접 등록하세요. 잠금 인증 정보는 전송하지 않아요."
+    },
+    "settings.apps.uninstall": {
+      "name": "앱 삭제",
+      "setting": "apps",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "앱",
+      "pages": [
+        "애플리케이션",
+        "앱",
+        "Apps"
+      ],
+      "categories": [],
+      "instruction": "삭제할 앱을 직접 선택하세요. 앱과 저장 데이터가 삭제될 수 있으니 앱 이름을 확인한 뒤 삭제를 결정하세요."
+    },
+    "settings.app_permissions.manage": {
+      "name": "앱 권한 관리",
+      "setting": "app_permissions",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "앱",
+      "pages": [
+        "애플리케이션",
+        "앱",
+        "Apps"
+      ],
+      "categories": [],
+      "instruction": "앱을 직접 선택한 뒤 권한에서 바꿀 권한과 허용 범위를 직접 선택하세요."
+    },
+    "settings.storage.cleanup": {
+      "name": "저장 공간 정리",
+      "setting": "storage",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "저장 공간",
+      "pages": [
+        "저장 공간",
+        "저장공간",
+        "Storage"
+      ],
+      "categories": [
+        "배터리 및 디바이스 케어",
+        "Battery and device care"
+      ],
+      "instruction": "항목과 파일을 직접 확인하세요. 필요한 파일을 보관한 뒤 삭제할 항목만 선택하세요."
+    },
+    "settings.talkback.enable": {
+      "name": "TalkBack 켜기",
+      "setting": "talkback",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.talkback.disable": {
+      "name": "TalkBack 끄기",
+      "setting": "talkback",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.magnification.enable": {
+      "name": "화면 확대 기능 켜기",
+      "setting": "magnification",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.magnification.disable": {
+      "name": "화면 확대 기능 끄기",
+      "setting": "magnification",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.language.change": {
+      "name": "기기 언어 변경",
+      "setting": "language",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "언어",
+      "pages": [
+        "언어",
+        "Language",
+        "Languages"
+      ],
+      "categories": [
+        "일반",
+        "일반 관리",
+        "General management",
+        "시스템",
+        "System"
+      ],
+      "instruction": "원하는 언어를 직접 추가하거나 선택하고 기본 언어로 적용하세요. 메뉴 언어가 바뀌는지 확인하세요.",
+      "intermediate": [
+        "언어 및 입력",
+        "Languages & input"
+      ],
+      "graph_version": "1.1.0"
+    },
+    "settings.date_time.automatic.enable": {
+      "name": "날짜와 시간 자동 설정 켜기",
+      "setting": "automatic_date_time",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.date_time.automatic.disable": {
+      "name": "날짜와 시간 자동 설정 끄기",
+      "setting": "automatic_date_time",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.keyboard.change": {
+      "name": "기본 키보드 변경",
+      "setting": "keyboard",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "키보드",
+      "pages": [
+        "키보드 목록 및 기본",
+        "Keyboard list and default",
+        "화면 키보드",
+        "On-screen keyboard",
+        "기본 키보드",
+        "Default keyboard"
+      ],
+      "categories": [
+        "일반",
+        "일반 관리",
+        "General management",
+        "시스템",
+        "System"
+      ],
+      "instruction": "기본 키보드에서 사용할 키보드를 직접 선택하세요. 키보드가 입력 내용을 처리하므로 신뢰하는 앱을 선택하세요.",
+      "intermediate": [
+        "언어 및 입력",
+        "Languages & input"
+      ],
+      "graph_version": "1.1.0"
+    },
+    "settings.default_apps.change": {
+      "name": "기본 앱 변경",
+      "setting": "default_apps",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "기본 앱",
+      "pages": [
+        "기본 앱 선택",
+        "Choose default apps",
+        "기본 앱",
+        "Default apps"
+      ],
+      "categories": [
+        "애플리케이션",
+        "앱",
+        "Apps"
+      ],
+      "instruction": "바꿀 기본 앱 종류를 고른 다음 사용할 앱을 직접 선택하세요."
+    },
+    "settings.wifi.share": {
+      "name": "와이파이 공유",
+      "setting": "wifi",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "와이파이",
+      "pages": [
+        "Wi-Fi",
+        "와이파이"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "instruction": "원하는 네트워크를 직접 선택하세요. 연결은 비밀번호 입력 후 상태 표시에서 확인하세요. 공유는 선택한 네트워크의 공유 메뉴에서 진행하세요. 비밀번호·QR 코드를 전송하지 않아요."
+    },
+    "settings.wifi.saved_networks.view": {
+      "name": "저장된 와이파이 보기",
+      "setting": "wifi_saved_networks",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "와이파이",
+      "pages": [
+        "네트워크 관리",
+        "저장된 네트워크",
+        "Manage networks",
+        "Saved networks"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "instruction": "저장된 네트워크 목록을 직접 확인하세요. 네트워크 이름과 비밀번호는 전송하지 않아요.",
+      "intermediate": [
+        "Wi-Fi",
+        "와이파이"
+      ],
+      "graph_version": "1.1.0",
+      "intermediate_path": [
+        [
+          "Wi-Fi",
+          "와이파이"
+        ],
+        [
+          "고급 설정",
+          "Advanced settings",
+          "고급",
+          "Advanced"
+        ]
+      ]
+    },
+    "settings.nfc.enable": {
+      "name": "NFC 켜기",
+      "setting": "nfc",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.nfc.disable": {
+      "name": "NFC 끄기",
+      "setting": "nfc",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.do_not_disturb.enable": {
+      "name": "방해 금지 모드 켜기",
+      "setting": "do_not_disturb",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.do_not_disturb.disable": {
+      "name": "방해 금지 모드 끄기",
+      "setting": "do_not_disturb",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.auto_rotate.enable": {
+      "name": "화면 자동 회전 켜기",
+      "setting": "auto_rotate",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.auto_rotate.disable": {
+      "name": "화면 자동 회전 끄기",
+      "setting": "auto_rotate",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.eye_comfort.enable": {
+      "name": "편안하게 화면 보기 켜기",
+      "setting": "eye_comfort",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.eye_comfort.disable": {
+      "name": "편안하게 화면 보기 끄기",
+      "setting": "eye_comfort",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.adaptive_brightness.enable": {
+      "name": "자동 밝기 켜기",
+      "setting": "adaptive_brightness",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.adaptive_brightness.disable": {
+      "name": "자동 밝기 끄기",
+      "setting": "adaptive_brightness",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.data_saver.enable": {
+      "name": "데이터 절약 모드 켜기",
+      "setting": "data_saver",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.data_saver.disable": {
+      "name": "데이터 절약 모드 끄기",
+      "setting": "data_saver",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.data_roaming.enable": {
+      "name": "데이터 로밍 켜기",
+      "setting": "data_roaming",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.data_roaming.disable": {
+      "name": "데이터 로밍 끄기",
+      "setting": "data_roaming",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.vpn.connect": {
+      "name": "VPN 연결",
+      "setting": "vpn",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "VPN",
+      "pages": [
+        "VPN"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "instruction": "원하는 VPN 프로필을 직접 선택해 연결하거나 연결 해제하세요. 인증 정보는 직접 입력하고 기기의 연결 표시를 확인하세요.",
+      "intermediate": [
+        "기타 연결 설정",
+        "More connection settings",
+        "고급",
+        "Advanced"
+      ],
+      "graph_version": "1.1.0"
+    },
+    "settings.vpn.disconnect": {
+      "name": "VPN 연결 해제",
+      "setting": "vpn",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "VPN",
+      "pages": [
+        "VPN"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "instruction": "원하는 VPN 프로필을 직접 선택해 연결하거나 연결 해제하세요. 인증 정보는 직접 입력하고 기기의 연결 표시를 확인하세요.",
+      "intermediate": [
+        "기타 연결 설정",
+        "More connection settings",
+        "고급",
+        "Advanced"
+      ],
+      "graph_version": "1.1.0"
+    },
+    "settings.private_dns.change": {
+      "name": "프라이빗 DNS 변경",
+      "setting": "private_dns",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "프라이빗 DNS",
+      "pages": [
+        "프라이빗 DNS",
+        "Private DNS"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "instruction": "원하는 모드를 직접 선택하세요. 공급자 호스트 이름이 필요하면 직접 입력하고 저장하세요.",
+      "intermediate": [
+        "기타 연결 설정",
+        "More connection settings",
+        "고급",
+        "Advanced"
+      ],
+      "graph_version": "1.1.0"
+    },
+    "settings.sim.manage": {
+      "name": "SIM 관리",
+      "setting": "sim",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "SIM 관리자",
+      "pages": [
+        "SIM 관리자",
+        "SIM manager",
+        "SIMs",
+        "SIM"
+      ],
+      "categories": [
+        "연결",
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
+      ],
+      "instruction": "원하는 SIM을 직접 선택한 뒤 통화·문자·데이터 설정을 확인하고 변경하세요."
+    },
+    "settings.hotspot.password.change": {
+      "name": "핫스팟 비밀번호 변경",
+      "setting": "hotspot_password",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "모바일 핫스팟",
+      "pages": [
+        "모바일 핫스팟",
+        "Mobile hotspot",
+        "Wi-Fi hotspot"
+      ],
+      "categories": [
+        "연결",
+        "Connections"
+      ],
+      "instruction": "설정 또는 구성에서 새 비밀번호를 직접 입력하고 저장하세요. 비밀번호는 전송하지 않아요.",
+      "intermediate": [
+        "모바일 핫스팟 및 테더링",
+        "Mobile Hotspot and Tethering",
+        "핫스팟 및 테더링",
+        "Hotspot & tethering"
+      ],
+      "graph_version": "1.1.0"
+    },
+    "settings.wallpaper.change": {
+      "name": "배경 화면 변경",
+      "setting": "wallpaper",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "배경화면",
+      "pages": [
+        "배경화면 및 스타일",
+        "Wallpaper & style",
+        "배경화면",
+        "Wallpaper"
+      ],
+      "categories": [],
+      "instruction": "사진이나 배경화면을 직접 선택하고 홈 화면·잠금화면 중 적용할 위치를 선택하세요."
+    },
+    "settings.notification_sound.change": {
+      "name": "알림 소리 변경",
+      "setting": "notification_sound",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "알림 소리",
+      "pages": [
+        "알림 소리",
+        "Notification sound",
+        "Default notification sound"
+      ],
+      "categories": [
+        "소리 및 진동",
+        "Sound & vibration",
+        "Sounds and vibration"
+      ],
+      "instruction": "원하는 알림 소리를 직접 선택하고 적용하세요. 앱별 알림 소리는 해당 앱에서도 확인하세요."
+    },
+    "settings.battery_percentage.enable": {
+      "name": "배터리 잔량 표시 켜기",
+      "setting": "battery_percentage",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.battery_percentage.disable": {
+      "name": "배터리 잔량 표시 끄기",
+      "setting": "battery_percentage",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.battery_status.view": {
+      "name": "배터리 사용량 보기",
+      "setting": "battery_status",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "배터리",
+      "pages": [
+        "배터리",
+        "Battery",
+        "배터리 및 디바이스 케어",
+        "Battery and device care"
+      ],
+      "categories": [],
+      "instruction": "배터리 사용량과 상태를 직접 확인하세요. 앱별 사용량은 전송하지 않아요."
+    },
+    "settings.app_cache.clear": {
+      "name": "앱 캐시 삭제",
+      "setting": "app_cache",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "앱",
+      "pages": [
+        "애플리케이션",
+        "앱",
+        "Apps"
+      ],
+      "categories": [],
+      "instruction": "앱을 직접 선택한 뒤 저장공간에서 캐시 삭제를 누르세요. 데이터 삭제와 구분해 선택하세요."
+    },
+    "settings.app_data.clear": {
+      "name": "앱 데이터 삭제",
+      "setting": "app_data",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "앱",
+      "pages": [
+        "애플리케이션",
+        "앱",
+        "Apps"
+      ],
+      "categories": [],
+      "instruction": "앱을 직접 선택한 뒤 저장공간을 여세요. 데이터 삭제는 로그인·저장 정보가 지워질 수 있으니 대상을 확인하고 직접 결정하세요."
+    },
+    "settings.notification_history.view": {
+      "name": "알림 기록 보기",
+      "setting": "notification_history",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "알림",
+      "pages": [
+        "고급 설정",
+        "Advanced settings"
+      ],
+      "categories": [
+        "알림",
+        "Notifications"
+      ],
+      "instruction": "알림 기록을 직접 열어 확인하세요. 알림 내용이 있는 화면은 전송하지 않아요.",
+      "graph_version": "1.1.0"
+    },
+    "settings.lockscreen_notifications.manage": {
+      "name": "잠금 화면 알림 관리",
+      "setting": "lockscreen_notifications",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "알림",
+      "pages": [
+        "알림",
+        "Notifications",
+        "잠금화면",
+        "Lock screen"
+      ],
+      "categories": [],
+      "instruction": "잠금화면 알림에서 표시 여부와 내용 숨김을 직접 선택하세요. 표시할 개인정보 범위를 확인하세요."
+    },
+    "settings.color_inversion.enable": {
+      "name": "색상 반전 켜기",
+      "setting": "color_inversion",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.color_inversion.disable": {
+      "name": "색상 반전 끄기",
+      "setting": "color_inversion",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.captions.enable": {
+      "name": "실시간 자막 켜기",
+      "setting": "captions",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.captions.disable": {
+      "name": "실시간 자막 끄기",
+      "setting": "captions",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.mono_audio.enable": {
+      "name": "모노 오디오 켜기",
+      "setting": "mono_audio",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.mono_audio.disable": {
+      "name": "모노 오디오 끄기",
+      "setting": "mono_audio",
+      "mode": "native_checked",
+      "device_validated": false
+    },
+    "settings.backup.enable": {
+      "name": "기기 백업 켜기",
+      "setting": "backup",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "백업",
+      "pages": [
+        "계정 및 백업",
+        "Accounts and backup",
+        "백업",
+        "Backup"
+      ],
+      "categories": [
+        "시스템",
+        "System"
+      ],
+      "instruction": "백업할 계정과 데이터 항목을 직접 확인한 뒤 요청한 상태로 바꾸세요. 계정·인증 화면은 전송하지 않아요."
+    },
+    "settings.backup.disable": {
+      "name": "기기 백업 끄기",
+      "setting": "backup",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "백업",
+      "pages": [
+        "계정 및 백업",
+        "Accounts and backup",
+        "백업",
+        "Backup"
+      ],
+      "categories": [
+        "시스템",
+        "System"
+      ],
+      "instruction": "백업할 계정과 데이터 항목을 직접 확인한 뒤 요청한 상태로 바꾸세요. 계정·인증 화면은 전송하지 않아요."
+    },
+    "settings.software_update.check": {
+      "name": "소프트웨어 업데이트 확인",
+      "setting": "software_update",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "소프트웨어 업데이트",
+      "pages": [
+        "소프트웨어 업데이트",
+        "Software update",
+        "시스템 업데이트",
+        "System update"
+      ],
+      "categories": [
+        "시스템",
+        "System"
+      ],
+      "instruction": "업데이트 확인을 직접 실행하세요. 다운로드·설치는 배터리와 연결 상태를 확인하고 따로 결정하세요."
+    },
+    "settings.factory_reset": {
+      "name": "기기 초기화",
+      "setting": "factory_reset",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "초기화",
+      "pages": [
+        "초기화",
+        "Reset",
+        "재설정 옵션",
+        "Reset options"
+      ],
+      "categories": [
+        "일반",
+        "일반 관리",
+        "General management",
+        "시스템",
+        "System"
+      ],
+      "instruction": "전체 초기화는 계정·앱·사진 등 기기 데이터를 삭제해요. 백업을 확인한 뒤 기기의 경고와 인증 단계를 읽고 직접 결정하세요. 앱은 초기화 버튼을 누르지 않아요."
+    },
+    "settings.device_name.change": {
+      "name": "기기 이름 변경",
+      "setting": "device_name",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "휴대전화 정보",
+      "pages": [
+        "휴대전화 정보",
+        "휴대폰 정보",
+        "About phone",
+        "디바이스 정보",
+        "About device"
+      ],
+      "categories": [],
+      "instruction": "기기 이름에서 새 이름을 직접 입력하고 저장하세요. 입력한 이름은 전송하지 않아요."
+    }
+  },
+  "mode_choices": {
+    "mute": {
+      "pages": [
+        "소리 및 진동",
+        "소리 모드",
+        "Sound & vibration",
+        "Sounds and vibration",
+        "Sound mode"
+      ],
+      "categories": [],
+      "options": {
+        "sound": {
+          "labels": [
+            "소리",
+            "Sound"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 2
+        },
+        "vibrate": {
+          "labels": [
+            "진동",
+            "Vibrate"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 1
+        },
+        "mute": {
+          "labels": [
+            "무음",
+            "Mute",
+            "Silent"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 0
+        }
+      },
+      "state_options": {
+        "on": "mute",
+        "off": "sound"
+      },
+      "system": {
+        "key": "ringer_mode",
+        "source": "android.media.AudioManager.getRingerMode",
+        "predicate_prefix": "system_ringer_mode"
+      }
+    },
+    "vibrate": {
+      "pages": [
+        "소리 및 진동",
+        "소리 모드",
+        "Sound & vibration",
+        "Sounds and vibration",
+        "Sound mode"
+      ],
+      "categories": [],
+      "options": {
+        "sound": {
+          "labels": [
+            "소리",
+            "Sound"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 2
+        },
+        "vibrate": {
+          "labels": [
+            "진동",
+            "Vibrate"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 1
+        },
+        "mute": {
+          "labels": [
+            "무음",
+            "Mute",
+            "Silent"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 0
+        }
+      },
+      "state_options": {
+        "on": "vibrate",
+        "off": "sound"
+      },
+      "system": {
+        "key": "ringer_mode",
+        "source": "android.media.AudioManager.getRingerMode",
+        "predicate_prefix": "system_ringer_mode"
+      }
+    }
+  }
+}

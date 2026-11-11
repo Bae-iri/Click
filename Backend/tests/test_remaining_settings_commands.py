@@ -99,19 +99,26 @@ def test_versions_slots_and_catalog_coverage(goal_type, slots):
 
 def test_exact_remaining_range_matches_shared_catalog():
     catalog = json.loads((Path(__file__).parents[2] / "AI-Agent/goal_catalog/mvp_goals.json").read_text(encoding="utf-8"))
-    settings = [g for g in catalog["goals"] if g["goal_type"].startswith("settings.")]
+    settings = [g for g in catalog["goals"] if g["goal_type"].startswith("settings.")
+                and g.get("task_type") != "settings_navigation"]
     start = next(i for i, g in enumerate(settings) if g["goal_type"] == "settings.magnification.enable")
     assert [(g["goal_type"], g["slots"]) for g in settings[start:]] == CASES
     assert len(CASES) == 48
     assert CASES[-1][0] == "settings.device_name.change"
     for entry in settings[start:]:
         assert entry["target_app"] == "android_settings"
-        assert entry["execution_status"] == "catalog_only"
+        assert entry["execution_status"] == "approved"
 
 
 @pytest.mark.parametrize("goal_type,slots", CASES)
 def test_http_validation_and_missing_graph_never_call_agent(service_client, monkeypatch, goal_type, slots):
     app, client = service_client
+    # Explicitly simulate a missing/deactivated graph rather than relying on
+    # the production catalog to remain unimplemented.
+    with app.state.session_factory() as db:
+        for row in db.scalars(select(ApprovedTaskGraph).where(ApprovedTaskGraph.goal_type == goal_type)):
+            row.active = False
+        db.commit()
     engine = Mock(side_effect=AssertionError("No graph must not call Agent 1"))
     monkeypatch.setattr(app.state.turn_service, "engine_factory", engine)
     payload = payload_for(goal_type, slots)

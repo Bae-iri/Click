@@ -1,0 +1,376 @@
+{
+  "definition": {
+    "task_id": "SET-wifi-enable",
+    "goal_type": "settings.wifi.enable",
+    "name": "와이파이 켜기",
+    "target_app": "android_settings",
+    "task_type": "settings_change",
+    "start_states": [
+      "S0_UNKNOWN",
+      "S1_SETTINGS_HOME"
+    ],
+    "done_state": "S_DONE",
+    "required_slots": {
+      "setting": "wifi",
+      "state": "on"
+    }
+  },
+  "states": {
+    "S0_UNKNOWN": {
+      "state_id": "S0_UNKNOWN",
+      "name": "알 수 없는 화면",
+      "required_keywords": [],
+      "required_keyword_groups": [],
+      "optional_keywords": [],
+      "package_candidates": [],
+      "role_hints": [
+        "text",
+        "menu_item",
+        "list"
+      ],
+      "confidence_threshold": 0,
+      "verification_only": false
+    },
+    "S1_SETTINGS_HOME": {
+      "state_id": "S1_SETTINGS_HOME",
+      "name": "설정",
+      "required_keywords": [],
+      "required_keyword_groups": [
+        [
+          "설정",
+          "Settings"
+        ]
+      ],
+      "optional_keywords": [
+        "설정",
+        "Settings"
+      ],
+      "package_candidates": [
+        "com.android.settings",
+        "com.samsung.android.settings"
+      ],
+      "role_hints": [
+        "text",
+        "menu_item",
+        "list"
+      ],
+      "confidence_threshold": 0.7,
+      "verification_only": false
+    },
+    "S_TARGET": {
+      "state_id": "S_TARGET",
+      "name": "와이파이",
+      "required_keywords": [],
+      "required_keyword_groups": [
+        [
+          "Wi-Fi",
+          "와이파이",
+          "인터넷",
+          "Internet"
+        ]
+      ],
+      "optional_keywords": [
+        "Wi-Fi",
+        "와이파이",
+        "인터넷",
+        "Internet"
+      ],
+      "package_candidates": [
+        "com.android.settings",
+        "com.samsung.android.settings"
+      ],
+      "role_hints": [
+        "text",
+        "toggle",
+        "menu_item"
+      ],
+      "confidence_threshold": 0.7,
+      "verification_only": false
+    },
+    "S_DONE": {
+      "state_id": "S_DONE",
+      "name": "설정 화면 도착",
+      "required_keywords": [],
+      "required_keyword_groups": [],
+      "optional_keywords": [],
+      "package_candidates": [],
+      "role_hints": [
+        "text",
+        "menu_item",
+        "list"
+      ],
+      "confidence_threshold": 0,
+      "verification_only": true
+    },
+    "S_CATEGORY": {
+      "state_id": "S_CATEGORY",
+      "name": "연결",
+      "required_keywords": [],
+      "required_keyword_groups": [
+        [
+          "연결",
+          "네트워크 및 인터넷",
+          "연결된 기기",
+          "Connections",
+          "Network & internet",
+          "Connected devices"
+        ]
+      ],
+      "optional_keywords": [
+        "연결",
+        "네트워크 및 인터넷",
+        "연결된 기기",
+        "Connections",
+        "Network & internet",
+        "Connected devices"
+      ],
+      "package_candidates": [
+        "com.android.settings",
+        "com.samsung.android.settings"
+      ],
+      "role_hints": [
+        "text",
+        "menu_item",
+        "list"
+      ],
+      "confidence_threshold": 0.7,
+      "verification_only": false
+    },
+    "S_CHANGED": {
+      "state_id": "S_CHANGED",
+      "name": "와이파이 상태 변경 확인",
+      "required_keywords": [],
+      "required_keyword_groups": [],
+      "optional_keywords": [],
+      "package_candidates": [],
+      "role_hints": [
+        "text",
+        "menu_item",
+        "list"
+      ],
+      "confidence_threshold": 0,
+      "verification_only": true
+    }
+  },
+  "transitions": [
+    {
+      "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+      "from_state": "S0_UNKNOWN",
+      "to_state": "S1_SETTINGS_HOME",
+      "action_type": "tap",
+      "action_name": "설정 앱 열기",
+      "target_keywords": [
+        "설정",
+        "Settings"
+      ],
+      "target_role": "app_icon",
+      "safety_level": "LOW_RISK",
+      "guide_message": "설정 앱을 열어주세요.",
+      "allow_scroll": false,
+      "requires_user_action": true,
+      "confirmation_message": null,
+      "selector": {
+        "synonym_keys": [],
+        "package_candidates": [
+          "com.android.launcher3",
+          "com.google.android.apps.nexuslauncher",
+          "com.sec.android.app.launcher",
+          "com.miui.home",
+          "com.huawei.android.launcher",
+          "com.oppo.launcher",
+          "com.vivo.launcher",
+          "org.lineageos.trebuchet"
+        ],
+        "resource_ids": [],
+        "context_keywords": [],
+        "excluded_keywords": [],
+        "allow_unlabelled_in_context": false
+      },
+      "priority": 0,
+      "verification_predicate": "state_reached",
+      "completes_task": false
+    },
+    {
+      "transition_id": "OPEN_CATEGORY",
+      "from_state": "S1_SETTINGS_HOME",
+      "to_state": "S_CATEGORY",
+      "action_type": "tap",
+      "action_name": "연결 열기",
+      "target_keywords": [
+        "연결",
+        "네트워크 및 인터넷",
+        "연결된 기기",
+        "Connections",
+        "Network & internet",
+        "Connected devices"
+      ],
+      "target_role": "menu_item",
+      "safety_level": "LOW_RISK",
+      "guide_message": "연결 항목을 눌러주세요.",
+      "allow_scroll": true,
+      "requires_user_action": true,
+      "confirmation_message": null,
+      "selector": {
+        "synonym_keys": [],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "resource_ids": [],
+        "context_keywords": [],
+        "excluded_keywords": [],
+        "allow_unlabelled_in_context": false
+      },
+      "priority": 0,
+      "verification_predicate": "state_reached",
+      "completes_task": false
+    },
+    {
+      "transition_id": "OPEN_PAGE",
+      "from_state": "S_CATEGORY",
+      "to_state": "S_TARGET",
+      "action_type": "tap",
+      "action_name": "와이파이 열기",
+      "target_keywords": [
+        "Wi-Fi",
+        "와이파이",
+        "인터넷",
+        "Internet"
+      ],
+      "target_role": "menu_item",
+      "safety_level": "LOW_RISK",
+      "guide_message": "와이파이 항목을 눌러주세요.",
+      "allow_scroll": true,
+      "requires_user_action": true,
+      "confirmation_message": null,
+      "selector": {
+        "synonym_keys": [],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "resource_ids": [],
+        "context_keywords": [],
+        "excluded_keywords": [],
+        "allow_unlabelled_in_context": false
+      },
+      "priority": 0,
+      "verification_predicate": "state_reached",
+      "completes_task": false
+    },
+    {
+      "transition_id": "OPEN_PAGE_FROM_HOME",
+      "from_state": "S1_SETTINGS_HOME",
+      "to_state": "S_TARGET",
+      "action_type": "tap",
+      "action_name": "와이파이 열기",
+      "target_keywords": [
+        "Wi-Fi",
+        "와이파이",
+        "인터넷",
+        "Internet"
+      ],
+      "target_role": "menu_item",
+      "safety_level": "LOW_RISK",
+      "guide_message": "와이파이 항목을 눌러주세요.",
+      "allow_scroll": true,
+      "requires_user_action": true,
+      "confirmation_message": null,
+      "selector": {
+        "synonym_keys": [],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "resource_ids": [],
+        "context_keywords": [],
+        "excluded_keywords": [],
+        "allow_unlabelled_in_context": false
+      },
+      "priority": 10,
+      "verification_predicate": "state_reached",
+      "completes_task": false
+    },
+    {
+      "transition_id": "SET_WIFI",
+      "from_state": "S_TARGET",
+      "to_state": "S_CHANGED",
+      "action_type": "tap",
+      "action_name": "와이파이 켜기",
+      "target_keywords": [
+        "Wi-Fi",
+        "와이파이",
+        "Wi-Fi 사용",
+        "와이파이 사용",
+        "Use Wi-Fi",
+        "사용 중",
+        "사용 안 함",
+        "사용",
+        "켜짐",
+        "꺼짐",
+        "On",
+        "Off"
+      ],
+      "target_role": "toggle",
+      "safety_level": "CONFIRM_REQUIRED",
+      "guide_message": "와이파이 스위치를 눌러 켜주세요.",
+      "allow_scroll": false,
+      "requires_user_action": true,
+      "confirmation_message": "와이파이를 켤까요?",
+      "selector": {
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "resource_ids": [
+          "com.android.settings:id/switch_widget",
+          "android:id/switch_widget",
+          "com.android.settings:id/switch_bar",
+          "com.android.settings:id/switchbar",
+          "com.android.settings:id/switch_main",
+          "com.samsung.android.settings:id/switch_widget"
+        ],
+        "context_keywords": [
+          "Wi-Fi",
+          "와이파이"
+        ],
+        "excluded_keywords": [
+          "Wi-Fi calling",
+          "와이파이 통화",
+          "Wi-Fi scanning",
+          "와이파이 자동 켜기",
+          "모바일 데이터",
+          "Mobile data"
+        ],
+        "allow_unlabelled_in_context": true
+      },
+      "priority": 0,
+      "verification_predicate": "target_checked_on",
+      "completes_task": true
+    },
+    {
+      "transition_id": "VERIFY_WIFI",
+      "from_state": "S_CHANGED",
+      "to_state": "S_DONE",
+      "action_type": "observe_only",
+      "action_name": "와이파이 상태 확인",
+      "target_keywords": [],
+      "target_role": null,
+      "safety_level": "LOW_RISK",
+      "guide_message": "와이파이 상태를 확인했어요.",
+      "requires_user_action": false,
+      "selector": {},
+      "priority": 0,
+      "verification_predicate": "state_reached",
+      "completes_task": false
+    }
+  ],
+  "synonyms": {},
+  "policy": {
+    "retry_limit": 2,
+    "settle_ms": 500,
+    "observation_timeout_ms": 5000,
+    "recovery_limit": 3,
+    "max_failed_attempts": 6
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-08",
+  "production_revision_at_reproduction": "5c544b79b436861955520311d9c3c27f86a6dda2",
+  "production_health": 200,
+  "before": {
+    "input": "지금 화면 어둡게 하고싶어",
+    "response": "needs_clarification",
+    "question": "원하시는 작업을 조금 더 자세히 말해주세요.",
+    "cause": "brightness family matched 화면 어두 but not the Korean stem 화면 어둡"
+  },
+  "after": {
+    "goal_type": "settings.brightness.decrease",
+    "graph": "SET-brightness-decrease",
+    "preparation": "ready",
+    "runtime_status": "WAITING_CONFIRMATION"
+  },
+  "changes": [
+    "Add bounded brightness phrase variants to backend input requirements.",
+    "Keep explicit dark theme requests mapped to dark mode.",
+    "Preserve negation and app-specific scope restrictions."
+  ],
+  "verification": {
+    "new_phrase_and_guard_cases": 17,
+    "related_backend_tests_passed": 72,
+    "physical_device_adjustment_performed": false,
+    "production_deployment_performed": false
+  },
+  "rollout": "Backend data-only change; existing 2.3.0 APK is compatible and does not require reinstallation."
+}
