@@ -1192,6 +1192,18 @@ public final class TaskFlowOverlayView extends LinearLayout {
         addRecoveryRetry(retry);
     }
 
+    public void selectionRecovery(String message, String requiredChange, Runnable retry) {
+        clear("");
+        compactSummary = "도움이 필요해요!";
+        narrationMessage = message;
+        content.addView(text(message, 17), spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
+        String label = "connection_restored".equals(requiredChange) ? "연결 복구 후 확인"
+                : java.util.Set.of("provider_available", "provider_configuration", "fresh_time_budget",
+                    "valid_model_response").contains(requiredChange) ? "서비스 복구 후 확인" : "화면 변경 후 확인";
+        recoveryActions.addView(primaryButton(label, retry), spaced(8));
+    }
+
     public void recoveryApology(Runnable retry) {
         clear("");
         compactSummary = "죄송합니다.";

@@ -77,8 +77,13 @@ def test_decision_evidence_survives_reobservation_retry_and_storage(
             replay = client.post("/api/v1/agent/commands", json=payload)
             assert replay.status_code == 200, replay.text
             assert replay.json() == body
-            assert len(calls) == (1 if status == "selected" else turn + 1)
-            assert selection["called"] is (status != "selected" or turn == 0)
+            assert len(calls) == 1
+            assert selection["called"] is (turn == 0)
+            if status != "selected":
+                failure = selection["failure"]
+                assert failure["stage"] == "model_selection"
+                assert failure["required_change"] == "user_clarification"
+                assert body["metadata"]["debug"]["recovery"]["failure"] == failure
             payload = {"contract_version": payload["contract_version"], "command_type": "observe",
                 "request_id": f"decision-observe-{turn + 1}", "session_id": body["session_id"],
                 "expected_version": body["session_version"], "episode_id": body["episode_id"],
