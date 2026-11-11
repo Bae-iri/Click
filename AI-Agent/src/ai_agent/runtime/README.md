@@ -6,7 +6,8 @@ Backend의 turn API가 사용하는 사용자 작업 실행 경로다. **2026-10
 
 | 파일 | 실행 책임 |
 | --- | --- |
-| `engine.py` | turn 조율 |
+| `engine.py` | 관측·검증·선택·정책 결과 조율, 안내/시도/진행도 최종 상태 한 번 저장 |
+| `decision.py` | 차단·거절·완료·결과 대기·OCR 재시도·주 판단 보류·규칙 복구의 우선순위 확정 |
 | `observation_context.py` | 요청·기기·OCR 관측에서 화면 크기와 앱 문맥 해석 |
 | `diagnostics.py` | 응답·실행 기록의 관측/복구/처리 단계 진단 정보 생성 |
 | `goal_typing.py` | legacy raw goal → Typed Goal; typed 경로의 목표 확정은 FE/Backend 담당 |
@@ -30,7 +31,7 @@ Backend의 turn API가 사용하는 사용자 작업 실행 경로다. **2026-10
 
 Jev 주 판단은 Backend 환경의 `AI1_UI_SELECTOR_PROVIDER=jev`로 활성화한다. Backend가 `screen_resolver`를 주입하며 자체 화면 LLM이나 보조 선택기를 함께 호출하지 않는다. 최소화된 화면 텍스트·관계·값과 graph를 바탕으로 Jev가 단계와 대상을 결정하고, 완료 판정과 설정 변경 전 확인은 기존 실행 계약을 따른다. 환경변수 생략 시 `rules`이며 예제 배포 설정은 `jev`다. [설정·호출 흐름·검증 방법](../../../docs/jev-ui-selection.md)을 참고한다.
 
-Backend의 기존 guidance adapter가 사용하는 `observation/`, `matching/`, `guide/`, `safety/`와 `schemas.py`는 상위 패키지에 남아 있다. `user_modeling/`은 Backend 개인화에서 사용한다. 각 영역의 책임은 [패키지 구조](../../../README.md)를 참고한다.
+Backend의 기존 guidance adapter가 사용하는 `observation/`, `matching/`, `guide/`, `safety/`와 `schemas.py`는 상위 패키지에 남아 있다. 각 영역의 책임은 [패키지 구조](../../../README.md)를 참고한다.
 
 이 패키지는 `ai_agent.graph_proposal`을 import하지 않는다. dataset 생성, success/fail 학습 라벨 확정, graph 후보 생성·검증·승격·rollback은 [AI-Agent(2)](../graph_proposal/README.md)의 책임이다.
 
@@ -43,3 +44,23 @@ Backend의 기존 guidance adapter가 사용하는 `observation/`, `matching/`, 
 평가 데이터는 [정답 데이터·개발 계획](../../../../docs/task-graph-data-plan.md)을 따른다. ColorBench의 경로·MobiFlow의 규칙은 검수한 보조 자료이며, 우리 완료 정확도는 실제 대상 환경의 독립 gold로 평가한다. Backend graph 선택과 AI1 내부 경로 선택을 구분하고 weak label·graph candidate를 runtime 입력으로 소비하지 않는다.
 
 현재 검증 상태·행동/관측 ID·완료 predicate·FE 연결 제한: [AI1 실행 정책](../../../../docs/ai-agent-1-runtime-policy.md).
+
+## 안내와 상태 확정 순서 (2026-11-06)
+
+Jev는 화면의 의미와 다음 단계·대상을 선택한다. 시간·재시도·동의·차단·완료는
+일반 코드가 관리한다. 규칙 모드는 명시적으로 유지하며 Jev 보류 시 규칙 대상 선택으로
+우회하지 않는다. 관측과 직전 조작 검증을 마치고 후보를 정한 뒤 `decision.decide_guide`가
+아래 순서에서 처음 해당하는 결과 하나를 선택한다.
+
+1. 개인정보/OCR 안전 차단, 사용자 거절, graph의 차단된 전이
+2. 증거로 검증된 작업 완료
+3. 실제 기기 모드·스위치 상태의 관측 및 조절 한도
+4. 규칙 모드에서 확인된 잘못된 설정 하위 화면의 뒤로 복구
+5. 기존 조작의 새 결과 관측 대기
+6. OCR 재동의 또는 최종 수동 안내 반환
+7. Jev 판단 보류, 규칙 복구, 선택된 대상 안내
+
+결과 선택 후 새 guide/attempt binding과 checklist를 계산하고 세션을 한 번 저장한다.
+뒤로/홈 이벤트도 먼저 메모리에서만 반영한다. 안전 차단과 OCR 최종 수동 대기의
+정책을 일반 복구 메타데이터로 덮어쓰지 않는다. 선택 근거는 `debug.guide_policy`에서
+확인한다. `test_decision.py`는 차단/한도/거절/보류 충돌과 저장 횟수를 검증한다.

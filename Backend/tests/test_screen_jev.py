@@ -87,7 +87,10 @@ def test_runtime_reaches_selected_step_and_changed_screen_abstains(setting):
         accessibility_tree=(replace(node,enabled=False),)))
     assert result.guide_command.action_type == ActionType.OBSERVE_ONLY
     assert result.guide_command.target_node_id is None
-    assert result.guide_command.render_policy["fallback_action"]["type"] == "request_fresh_observation"
+    assert "fallback_action" not in result.guide_command.render_policy
+    recovery = result.guide_command.render_policy["recovery"]
+    assert recovery["failure"]["cause"] == "no_candidates"
+    assert recovery["failure"]["required_change"] == "new_target_evidence"
 
 
 def test_provider_is_independent(monkeypatch):

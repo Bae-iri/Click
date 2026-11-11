@@ -28,6 +28,7 @@ class JevScreenResolver(JevGoalClassifier):
         filter_started = monotonic()
         try:
             _, model, minimum = self.configuration()
+            self.last_diagnostics.update(model=model, minimum_confidence=minimum)
             setting = graph.definition.required_slots.get("setting", "")
             if raw_nodes:
                 assessment = assess_screen(raw_nodes, setting)
@@ -40,6 +41,9 @@ class JevScreenResolver(JevGoalClassifier):
             from ai_agent.runtime.environment import native_control_surface
             surface=native_control_surface(raw_nodes) if raw_nodes else None
             nodes = minimize_nodes(nodes, setting, raw_nodes=raw_nodes)
+            if not nodes and not (surface and surface['setting']==setting):
+                self.last_diagnostics["status"] = "empty_observation"
+                return None
             if not any(n.label for n in nodes) and not (surface and surface['setting']==setting):
                 self.last_diagnostics["status"] = "unsupported_screen"
                 return None
@@ -88,12 +92,15 @@ class JevScreenResolver(JevGoalClassifier):
             # model confidence cannot turn one into the uniquely intended target.
             from collections import Counter
             identities = Counter((t.transition_id, target_key(n)) for t,n in bindings.values())
+            ambiguous = any(count > 1 for count in identities.values())
             bindings = {key:(t,n) for key,(t,n) in bindings.items()
                         if identities[t.transition_id,target_key(n)] == 1}
-            if not bindings or len(bindings) > 250:
-                self.last_diagnostics["status"] = "no_candidates" if not bindings else "candidate_limit"
-                return None
             self.last_diagnostics["candidate_count"] = len(bindings)
+            if not bindings or len(bindings) > 250:
+                self.last_diagnostics["status"] = ("ambiguous_candidates" if ambiguous else "no_candidates") if not bindings else "candidate_limit"
+                if bindings:
+                    self.last_diagnostics.update(limit_kind="candidates", limit=250)
+                return None
             # Visibility evidence only, never a substitute for Jev's selection.
             # A low-confidence decision with a visible matching control needs
             # disambiguation, not scrolling that control off the screen.
@@ -115,8 +122,10 @@ class JevScreenResolver(JevGoalClassifier):
                 if node.node_id in {n.node_id for _, n in bindings.values()}:
                     relevant.update(n.node_id for n in nodes[max(0,index-2):index+3])
             selected_nodes = [n for n in nodes if n.node_id in relevant]
+            self.last_diagnostics["exported_node_count"] = len(selected_nodes)
             if len(selected_nodes) > 160:
                 self.last_diagnostics["status"] = "candidate_limit"
+                self.last_diagnostics.update(limit_kind="observation_nodes", limit=160)
                 return None
             ids = {n.node_id: f"n{i}" for i,n in enumerate(selected_nodes)}
             def parent_ref(node_id):
@@ -213,6 +222,7 @@ class JevScreenResolver(JevGoalClassifier):
                 filter_time_ms=round((monotonic() - filter_started) * 1000, 3))
             if payload_bytes > 65536:
                 self.last_diagnostics["status"] = "input_too_large"
+                self.last_diagnostics.update(limit_kind="payload_bytes", limit=65536)
                 return None
             timeout = remaining(8.0)
             started = monotonic()
@@ -258,10 +268,11 @@ class JevScreenResolver(JevGoalClassifier):
                 normalized_probability=normalized_probability, hold_reason=hold_reason,
                 top_probability=top, probability_margin=top-max(p for k,p in probabilities.items() if k != choice))
             if choice in bindings:
-                selected_transition, _ = bindings[choice]
+                selected_transition, selected_node = bindings[choice]
                 self.last_diagnostics.update(chosen_state=selected_transition.from_state,
                     chosen_transition=selected_transition.transition_id,
-                    chosen_transition_hash=sha256(selected_transition.transition_id.encode()).hexdigest())
+                    chosen_transition_hash=sha256(selected_transition.transition_id.encode()).hexdigest(),
+                    chosen_target_hash=sha256(target_key(selected_node).encode()).hexdigest())
             else:
                 self.last_diagnostics["chosen_outcome"] = choice
             if confidence < minimum:
@@ -296,6 +307,9 @@ class JevScreenResolver(JevGoalClassifier):
             return None
         except httpx.TimeoutException:
             self.last_diagnostics["status"] = "timeout"
+            return None
+        except httpx.TransportError:
+            self.last_diagnostics["status"] = "network_error"
             return None
         except (ValueError, KeyError, TypeError, AttributeError, RecursionError, httpx.HTTPError):
             return None

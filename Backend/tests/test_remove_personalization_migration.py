@@ -21,7 +21,7 @@ def test_migration_drops_only_user_modeling_and_downgrade_creates_neutral_profil
         for purpose in ('personalization', 'model_training', 'conversation_storage'):
             db.execute(text("""INSERT INTO consents (id,user_id,purpose,consented,policy_version)
                 VALUES (:id,'existing-user',:purpose,true,'1')"""), {'id':purpose,'purpose':purpose})
-    command.upgrade(config, 'head')
+    command.upgrade(config, '20261104_16')
     with engine.connect() as db:
         tables = inspect(db).get_table_names()
         assert 'user_ui_profiles' not in tables and 'ui_events' not in tables
@@ -34,5 +34,5 @@ def test_migration_drops_only_user_modeling_and_downgrade_creates_neutral_profil
     with engine.connect() as db:
         assert db.execute(text('SELECT comprehension_level, evidence_count FROM user_ui_profiles')).one() == ('unknown', 0)
         assert db.execute(text('SELECT COUNT(*) FROM ui_events')).scalar_one() == 0
-    command.upgrade(config, 'head')
+    command.upgrade(config, '20261104_16')
     engine.dispose()

@@ -21,7 +21,8 @@ class GraphReleaseRepository:
     def publish(self, release):
         from app.clients.runtime_agent import runtime_configuration
         configuration = runtime_configuration()
-        body, graph_hash = canonical_graph(load_graph(release["body"]))
+        graph = load_graph(release["body"])
+        body, graph_hash = canonical_graph(graph)
         evaluation = release["evaluation"]
         evaluated_configuration = evaluation.get("runtime_configuration")
         if ((evaluated_configuration is not None or configuration["provider"] == "jev")
@@ -84,6 +85,9 @@ class GraphReleaseRepository:
             if digest(normalized) != base.graph_hash:
                 raise ValueError("Unsupported release change")
             existing = db.get(ApprovedTaskGraph, identifier)
+            if existing is not None:
+                TaskGraphRepository._check_release(existing, graph, graph_hash,
+                    approved=existing.approved, priority=existing.priority)
             audit = db.scalar(select(GraphReleaseAudit).where(GraphReleaseAudit.release_id == identifier,
                 GraphReleaseAudit.action == "promote"))
             if audit:

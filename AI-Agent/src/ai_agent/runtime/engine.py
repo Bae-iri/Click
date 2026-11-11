@@ -51,7 +51,8 @@ from ai_agent.runtime.privacy import sanitize_request
 from ai_agent.runtime.vision_cycles import decide_vision_cycle
 from ai_agent.runtime.semantic_state import resolve_state
 from ai_agent.runtime.ui_selection import select_ui_target
-from ai_agent.runtime.primary import PrimaryDecision, decide_primary, retry_session, selection_binding, observe_page_navigation
+from ai_agent.runtime.primary import PrimaryDecision, decide_primary, retry_session, selection_binding, observe_page_navigation, selection_fingerprint
+from ai_agent.runtime.failures import selection_failure as classify_selection_failure
 from ai_agent.runtime.decision import decide_guide
 from ai_agent.telemetry.trace_logger import diagnostic_payload
 
@@ -127,7 +128,7 @@ class ClickAgentEngine:
             return AgentTurnResponse(request_id=request.request_id, session_id=request.session_id,
                 task_id=typed_goal.task_id, typed_goal=typed_goal,
                 current_state_id=existing_session.current_state_id if existing_session else "S0_UNKNOWN",
-                guide_command=guide, debug={"termination": termination})
+                guide_command=guide, debug={"termination": termination, "guide_policy": "rejected"})
         previous_snapshot = existing_session.last_snapshot if existing_session else None
         if previous_snapshot and request.observation_id and (
                 request.observation_id == previous_snapshot.observation_id
@@ -145,9 +146,10 @@ class ClickAgentEngine:
                         'recovery': stale_observation_recovery()}),
                 debug={'checklist': list(existing_session.progress_steps), 'recovery': stale_observation_recovery()})
 
-        from ai_agent.runtime.navigation import apply_navigation
-        navigated_session = apply_navigation(self.session_store, request, existing_session, persist=False)
-        if navigated_session is not existing_session:
+        from ai_agent.runtime.navigation import navigation_result, session_fields
+        navigated_session = navigation_result(request, existing_session)
+        navigation_changed = navigated_session is not existing_session
+        if navigation_changed:
             previous_snapshot = None
             existing_session = navigated_session
 
@@ -161,6 +163,8 @@ class ClickAgentEngine:
             existing_session.typed_goal if existing_session else None,
         )
         if typed_goal.needs_clarification or not typed_goal.is_supported:
+            if navigation_changed:
+                self.session_store.update(request.session_id, **session_fields(existing_session))
             guide_command = clarification_command(
                 session_id=request.session_id,
                 message=typed_goal.clarification_message
@@ -223,10 +227,20 @@ class ClickAgentEngine:
         # Credential/authentication boundaries apply to every selector, including
         # local rules. An unknown screen is an observation failure, not proof of PII.
         if assessment.status and (self.screen_resolver or assessment.status == 'sensitive_screen'):
+            if navigation_changed:
+                self.session_store.update(request.session_id, **session_fields(existing_session))
             message = assessment.message
             if assessment.status == 'sensitive_screen' and graph.definition.task_type == 'settings_assisted':
                 from ai_agent.task_graph.assisted_guidance import privacy_message
                 message = privacy_message(graph.definition.goal_type,message)
+            failure = classify_selection_failure({"status": assessment.status, "called": False},
+                outcome_uncertain=bool(existing_session and existing_session.pending_attempt
+                    and existing_session.pending_attempt.get("event_key")))
+            recovery = {"schema_version": "ai1-recovery.v1", "decision": "wait",
+                "reason_code": failure.reason_code, "next_action": failure.next_action,
+                "waiting_for": "user", "recoverable": failure.retryable, "attempts": 0,
+                "retry_after_ms": 0, "options": ["manual_navigation", "cancel"],
+                "failure": failure.to_dict()}
             return AgentTurnResponse(request_id=request.request_id, session_id=request.session_id,
                 task_id=typed_goal.task_id, typed_goal=typed_goal,
                 current_state_id=existing_session.current_state_id if existing_session else "S0_UNKNOWN",
@@ -234,10 +248,11 @@ class ClickAgentEngine:
                     command_type=CommandType.BLOCKED, action_type=ActionType.OBSERVE_ONLY,
                     message=message, safety_level=SafetyLevel.BLOCKED,
                     requires_user_action=False, render_policy={"privacy_blocked": assessment.status == 'sensitive_screen',
-                        "manual_only": True, "observation_reason": assessment.reason}),
+                        "manual_only": True, "observation_reason": assessment.reason, "recovery": recovery}),
                 debug={"ui_selection": {"provider": "jev" if self.screen_resolver else "rules",
                     "mode": "primary" if self.screen_resolver else "local", "called": False,
-                    "status": assessment.status, "observation_reason": assessment.reason}})
+                    "status": assessment.status, "observation_reason": assessment.reason,
+                    "failure": failure.to_dict()}, "recovery": recovery})
         request = replace(request, accessibility_tree=filter_nodes(
             original_screen if self.screen_resolver else request.accessibility_tree, vocabulary_key,
             finite_labels=bool(self.screen_resolver)))
@@ -424,8 +439,15 @@ class ClickAgentEngine:
                 and not (vision_analysis and vision_analysis.status == "masking_failed")):
             match_result, ui_selection = select_ui_target(match_result, normalized_nodes, graph,
                 self.ui_selector, excluded_target_keys=failed_target_keys, screen_bounds=screen_bounds)
+        if ui_selection.get("provider") == "jev" and ui_selection.get("called"):
+            # Retained guides and confirmation approval must keep the identity of
+            # the original provider call, rather than becoming new model decisions.
+            ui_selection.update(
+                decision_hash=sha256(f"{request.session_id}:{request.request_id}".encode()).hexdigest(),
+                screen_hash=current_snapshot.fingerprint)
         if (primary_decision and primary_decision.recovery_reason
-                and ui_selection.get("grounded_candidate_count", 0) > 0
+                and (ui_selection.get("grounded_candidate_count", 0) > 0
+                     or (primary_decision.failure and primary_decision.failure.next_action != "reobserve"))
                 and vision_analysis and vision_analysis.status == "not_requested"
                 and vision_analysis.reason == "no_matching_target_node"):
             # A visible-but-uncertain candidate is not evidence of missing UI.
@@ -434,9 +456,6 @@ class ClickAgentEngine:
             match=match_result, analysis=vision_analysis, completed=task_completed)
         awaiting_vision_consent = bool(cycle.command and cycle.command.command_type == CommandType.CONFIRMATION)
         selection_failure = primary_decision.recovery_reason if primary_decision else None
-        # Keep physical absence/ambiguity evidence for bounded Android list search.
-        if selection_failure == "MODEL_ABSTAINED" and match_result.fallback_reason:
-            selection_failure = None
         recovery_plan = decide_recovery(graph=graph, session=existing_session, snapshot=current_snapshot,
             match=match_result, nodes=normalized_nodes, verification=verification_result,
             failed_node_ids=failed_node_ids, total_failed_attempts=total_failed_attempts,
@@ -446,7 +465,11 @@ class ClickAgentEngine:
             within_settling_interval=within_settling_interval, completed=task_completed,
             user_retry=user_retry if self.screen_resolver else bool(request.user_action_event
                 and request.user_action_event.action_type.value == "manual_override"),
-            selection_failure=selection_failure)
+            selection_failure=selection_failure,
+            primary_failure=primary_decision.failure if primary_decision else None,
+            selection_fingerprint=selection_fingerprint(current_snapshot, accessibility_nodes, screen_bounds,
+                previous_exclusions) if primary_decision else None,
+            selection_paused=bool(ui_selection.get("paused")))
         if self.screen_resolver:
             if primary_wait and (failed_attempt or (existing_session and
                     existing_session.recovery_state.get('jev_wait_fingerprint') == current_snapshot.fingerprint)):
@@ -711,6 +734,7 @@ class ClickAgentEngine:
                 "session_stateful": True,
                 "similarity_provider": getattr(self.similarity_scorer, "provider", "custom"),
                 "ui_selection": ui_selection,
+                "guide_policy": decision.source,
                 "observation": observation_debug,
                 "fallback": fallback_debug,
                 "agent_chain": agent_chain_debug,

@@ -9,6 +9,7 @@ from ai_agent.runtime.types import ActionType, CommandType, GuideCommand, Safety
 class GuideDecision:
     guide: GuideCommand
     keep_attempt: bool
+    source: str
 
 
 def _limit_command(graph, target):
@@ -57,51 +58,67 @@ def decide_guide(*, request, graph, match, confirmation, completed, attempt, kee
     from ai_agent.runtime.setting_choices import is_choice, system_value, expected_value
     mode_choice = bool(transition and is_choice(transition, graph))
     if masking_failed:
+        source = "privacy_blocked"
         guide = command_for_vision_analysis(request.session_id, vision_analysis)
         keep = False
+    elif cycle.command and cycle.command.command_type == CommandType.BLOCKED:
+        source = "vision_blocked"
+        guide = replace(cycle.command, render_policy={**cycle.command.render_policy, "vision_cycle": cycle.state})
+        keep = False
     elif request.user_confirmation == "rejected" and not request.vision_failure and not cycle.command:
+        source = "rejected"
         guide = build_guide_command(session_id=request.session_id, match_result=match,
             graph=graph, user_confirmation="rejected")
         keep = False
     elif transition and transition.safety_level == SafetyLevel.BLOCKED:
+        source = "graph_blocked"
         guide = build_guide_command(session_id=request.session_id, match_result=match, graph=graph)
         keep = False
     elif completed:
+        source = "completed"
         guide = build_guide_command(session_id=request.session_id, match_result=match,
             graph=graph, task_completed=True)
         keep = False
     elif mode_choice and system_value(request.applied_settings, graph) == expected_value(graph):
+        source = "mode_observation"
         guide = GuideCommand('mode-observed', CommandType.HIGHLIGHT, ActionType.OBSERVE_ONLY,
             '원하신 설정 모드로 보여요. 조작 결과를 확인하고 있어요.', SafetyLevel.LOW_RISK, False,
             render_policy={'fallback_action': {'type': 'request_fresh_observation'}})
         keep = keep_attempt
     elif mode_choice and system_value(request.applied_settings, graph) is None:
+        source = "mode_observation"
         guide = GuideCommand('mode-value-unavailable', CommandType.HIGHLIGHT, ActionType.OBSERVE_ONLY,
             '기기에 적용된 모드 값을 확인하지 못했어요. 해당 설정을 직접 확인해 주세요.',
             SafetyLevel.LOW_RISK, False, render_policy={'system_mode_unobservable': True})
         keep = False
     elif wifi_desired_visible or native_desired_visible:
+        source = "native_observation"
         guide = GuideCommand('wifi-observed', CommandType.HIGHLIGHT, ActionType.OBSERVE_ONLY,
             '원하신 설정 상태로 보여요. 조작 결과를 확인하고 있어요.', SafetyLevel.LOW_RISK, False,
             render_policy={'fallback_action': {'type': 'request_fresh_observation'}})
         keep = keep_attempt
     elif wifi_conflict and not awaiting_observation:
+        source = "wifi_unavailable"
         guide = GuideCommand('wifi-state-unavailable', CommandType.BLOCKED, ActionType.OBSERVE_ONLY,
             '와이파이의 실제 상태를 확인할 수 없어요. 설정에서 직접 확인해 주세요.', SafetyLevel.LOW_RISK, False)
         keep = False
     elif (graph.definition.required_slots.get('setting') == 'wifi'
             and request.applied_settings.get('wifi_state') in {0, 2} and recovery.waiting_for != 'user'):
+        source = "wifi_wait"
         guide = GuideCommand('wifi-wait', CommandType.HIGHLIGHT, ActionType.OBSERVE_ONLY,
             '와이파이 상태가 바뀌고 있어요. 잠시 기다려 주세요.', SafetyLevel.LOW_RISK, False,
             render_policy={'fallback_action': {'type': 'request_fresh_observation'}})
         keep = keep_attempt
     elif limit_target is not None:
+        source = "adjustment_limit"
         guide = _limit_command(graph, limit_target)
         keep = False
     elif primary is None and recovery.next_action == "go_back":
+        source = "recovery_back"
         guide = recovery_command(request.session_id, recovery)
         keep = False
     elif awaiting_observation:
+        source = "pending_result"
         if recovery.decision != "continue" and recovery.waiting_for == "user":
             guide = recovery_command(request.session_id, recovery)
         else:
@@ -111,16 +128,20 @@ def decide_guide(*, request, graph, match, confirmation, completed, attempt, kee
                     "expected_next_observation": {"send_fresh_accessibility_tree": True}}})
         keep = keep_attempt
     elif cycle.command and (primary is None or primary_wait):
+        source = "vision_cycle"
         guide = replace(cycle.command, render_policy={**cycle.command.render_policy, "vision_cycle": cycle.state})
         keep = False
     elif primary_wait:
+        source = "primary_wait"
         guide = recovery_command(request.session_id, recovery)
         keep = False
     elif (primary is None and recovery.decision != "continue"
             and recovery.next_action != "open_settings"):
+        source = "recovery"
         guide = recovery_command(request.session_id, recovery)
         keep = bool(attempt and recovery.reason_code == "ACTION_EVENT_MISSING")
     else:
+        source = "matched_target"
         guide = build_guide_command(session_id=request.session_id, match_result=match,
             graph=graph, user_confirmation=confirmation)
         keep = keep_attempt
@@ -130,10 +151,12 @@ def decide_guide(*, request, graph, match, confirmation, completed, attempt, kee
                 manual_instruction=transition.guide_message if transition else None) or guide
 
     policy = dict(guide.render_policy)
+    if source in {"privacy_blocked", "vision_blocked", "vision_cycle"}:
+        policy["vision_cycle"] = cycle.state
     if recovery.decision != "continue" and guide.command_type != CommandType.BLOCKED:
         policy.setdefault("recovery", recovery.to_dict())
     if "vision_fallback" in policy:
         policy["vision_fallback"] = {**policy["vision_fallback"], "vocabulary_key": vocabulary_key}
     if primary is not None:
         policy.update(ui_selector="jev", revalidate_before_action=True)
-    return GuideDecision(replace(guide, render_policy=policy), keep)
+    return GuideDecision(replace(guide, render_policy=policy), keep, source)

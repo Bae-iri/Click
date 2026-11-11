@@ -22,4 +22,5 @@ public class CompletionEvidenceTest {
   proof.put("reason","insufficient_evidence");
   assertFalse(CompletionEvidence.accepted(metadata,"settings.navigation.volume"));
  }
+
 }

@@ -12,6 +12,8 @@ import android.widget.ScrollView;
 import com.click.ui.common.ClickUi;
 
 public final class ConfirmationOverlayView extends LinearLayout {
+    private int maximumHeight = Integer.MAX_VALUE;
+
     public interface Callback { void onDecision(boolean accepted); }
 
     public ConfirmationOverlayView(Context context, String message, Callback callback) {
@@ -33,7 +35,7 @@ public final class ConfirmationOverlayView extends LinearLayout {
         text.setGravity(Gravity.CENTER);
         ScrollView disclosure = new ScrollView(context);
         disclosure.addView(text, new ScrollView.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-        addView(disclosure, new LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f));
+        addView(disclosure, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, 1f));
 
         LinearLayout actions = new LinearLayout(context);
         Button reject = ClickUi.secondaryButton(context, "아니요");
@@ -45,6 +47,19 @@ public final class ConfirmationOverlayView extends LinearLayout {
         acceptParams.leftMargin = dp(8);
         actions.addView(accept, acceptParams);
         addView(actions, new LayoutParams(LayoutParams.MATCH_PARENT, dp(52)));
+    }
+
+    public void setMaximumHeight(int heightPixels) {
+        maximumHeight = Math.max(1, heightPixels);
+        requestLayout();
+    }
+
+    @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int mode = MeasureSpec.getMode(heightMeasureSpec);
+        int size = MeasureSpec.getSize(heightMeasureSpec);
+        int limit = mode == MeasureSpec.UNSPECIFIED ? maximumHeight : Math.min(size, maximumHeight);
+        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(limit,
+                mode == MeasureSpec.EXACTLY ? MeasureSpec.EXACTLY : MeasureSpec.AT_MOST));
     }
 
     private int dp(int value) {

@@ -77,6 +77,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         default void openInput() {}
     }
     private final Listener listener;
+    private final TextView queuedRequests;
     private final LinearLayout content;
     private final Button pause;
     private final Button reviewConfirm;
@@ -153,6 +154,12 @@ public final class TaskFlowOverlayView extends LinearLayout {
         header.collapse.setId(R.id.task_flow_collapse);
         addView(header, new LayoutParams(-1, -2));
         heading = header.title;
+        queuedRequests = text("", 13);
+        queuedRequests.setTextColor(SECONDARY);
+        queuedRequests.setMaxLines(5);
+        queuedRequests.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        queuedRequests.setVisibility(GONE);
+        addView(queuedRequests, spaced(6));
         content = new LinearLayout(context); content.setOrientation(VERTICAL);
         content.setPadding(0, 0, 0, dp(4));
         scroll = new ScrollView(context); scroll.setFillViewport(false); scroll.addView(content);
@@ -1205,6 +1212,18 @@ public final class TaskFlowOverlayView extends LinearLayout {
         narrationMessage = "‘다시 시도하기’를 눌러 안내를 이어가 주세요.";
         content.addView(text(narrationMessage, 17), spaced(8));
         addRecoveryRetry(retry);
+    }
+
+    public void selectionRecovery(String message, String requiredChange, Runnable retry) {
+        clear("");
+        compactSummary = "도움이 필요해요!";
+        narrationMessage = message;
+        content.addView(text(message, 17), spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
+        String label = "connection_restored".equals(requiredChange) ? "연결 복구 후 확인"
+                : java.util.Set.of("provider_available", "provider_configuration", "fresh_time_budget",
+                    "valid_model_response").contains(requiredChange) ? "서비스 복구 후 확인" : "화면 변경 후 확인";
+        recoveryActions.addView(primaryButton(label, retry), spaced(8));
     }
 
     public void recoveryApology(Runnable retry) {

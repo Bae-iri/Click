@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 from uuid import uuid4
+from cryptography.fernet import Fernet
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
@@ -24,8 +25,9 @@ def main():
         with engine.begin() as connection:
             connection.execute(text(f'CREATE SCHEMA "{schema}"'))
         test_url = url.update_query_dict({"options": f"-csearch_path={schema}"})
-        env = {**os.environ, "DATABASE_URL": test_url.render_as_string(hide_password=False), "GEMINI_API_KEY": ""}
-        for args in (("upgrade", "head"), ("check",), ("downgrade", "base"), ("upgrade", "head"), ("check",)):
+        env = {**os.environ, "DATABASE_URL": test_url.render_as_string(hide_password=False), "GEMINI_API_KEY": "",
+               "DATA_ENCRYPTION_KEYS": Fernet.generate_key().decode(), "DATA_LOOKUP_KEY": Fernet.generate_key().decode()}
+        for args in (("upgrade", "20261104_17"), ("downgrade", "base"), ("upgrade", "head"), ("check",)):
             subprocess.run([sys.executable, "-m", "alembic", *args], cwd=BACKEND, env=env, check=True)
         subprocess.run([sys.executable, "scripts/postgres_check.py", "--http"], cwd=BACKEND, env=env, check=True)
         print("PASS: PostgreSQL migration, auth, agent restart/replay/cancellation fencing")

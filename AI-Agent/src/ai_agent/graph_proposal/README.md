@@ -1,6 +1,8 @@
-# AI-Agent 2: 실행 기록 분석과 그래프 개선
+# AI-Agent 2: Jev 판단과 실행 결과 분석
 
-갱신: 2026-11-04. 사용자 안내와 독립적으로 실행하는 공통 그래프 경로 개선 파이프라인입니다. 사용자별 이해도·선호도 프로필은 사용하지 않으며, 별도 GPU·LLM은 필수가 아닙니다.
+갱신: 2026-11-09. Jev가 어떤 대상을 얼마나 확신하고 골랐는지, 그 안내 뒤 실제 조작이 성공했는지를 분석합니다. 같은 검수 화면에서 수정 전후도 비교합니다. 기존 대체 경로 순서 변경은 별도의 선택 기능으로 유지합니다. 사용자별 이해도·선호도 프로필과 별도 GPU·LLM은 필요하지 않습니다.
+
+팀 공유용 설명·지표의 분모·검수 방법·실행 명령은 [Jev 평가 안내](../../../../docs/ai2-jev-assessment.md)를 참고합니다. 저장되는 개인 내용과 실행·분석 JSON은 [암호화 저장 절차](../../../../Backend/docs/data-encryption.md)를 따릅니다.
 
 ## 폴더 구조와 연결 경계
 
@@ -37,6 +39,11 @@ DB·사용자 동의·삭제 연계와 실제 AI1 replay adapter는 `Backend/scr
 | 승인·반영 | 정확한 평가·본문 hash에 검토자/시각 결합, DB 활성 version과 audit 원자 반영, stale-base 차단·rollback |
 | 모델 | 명시적으로 weak label을 허용한 train split의 CPU 빈도 baseline, 불변 로컬 artifact registry |
 
+같은 pending guide의 대기 관측이 여러 번 들어와도 조작 전 원래 기준 관측을
+보존합니다. 결과는 해당 guide에서 실제 관측된 before hash와 연결하며, 대기 polling은
+시도 분모에 넣지 않습니다. 알려지지 않은 before hash와 변경된 target binding은
+기존처럼 증거 부족·계약 오류로 처리합니다.
+
 실제 제품 gold·독립 holdout은 아직 없습니다. 합성·공개 참고 자료만으로 평가 PASS나 운영 release를 만들지 않습니다. 새 selector·UI 경로·작업을 추측 생성하지 않습니다. 실제 실패에서 필요한 새로운 변환 규칙·모델 개선은 후속 데이터에 따라 추가합니다.
 
 ## DB 기록 처리
@@ -45,6 +52,8 @@ Backend 디렉터리에서 DATABASE_URL을 설정하고 실행합니다.
 
 ```powershell
 python scripts/agent2.py process --limit 100
+python scripts/agent2.py assess-jev --limit 100
+python scripts/agent2.py assess-jev --reviews target-reviews.json --format json
 python scripts/agent2.py audit
 python scripts/agent2.py propose-routes --manifest review-manifest.json --cases device-holdout.json
 python scripts/maintenance.py
@@ -52,7 +61,11 @@ python scripts/maintenance.py
 
 process는 세션별 재구성·분석 결과를 원천 event에 연결된 DB receipt로 저장합니다. 같은 입력은 중복 처리하지 않고, 최신 세션 결과 하나를 유지합니다. 원문 화면·목표·토큰을 출력하거나 사용자 데이터를 파일로 반출하지 않습니다. 동의 전 기록을 소급 사용하지 않으며 철회·탈퇴·세션 삭제·가장 오래된 근거 만료 시 결과를 삭제합니다.
 
-audit는 `structural_valid`(구조·참조 무결성), `static_valid`(현재 runtime 실행 조건 포함), `execution_enabled`(승인·활성·검사 통과)를 구분합니다. 미지원 완료 predicate와 담당 영역을 별도 보고하며 `device_validation`은 항상 `NOT_ASSESSED`입니다. 초안의 미지원 기능을 DB 손상과 혼동하지 않습니다. 승인 graph 결함이 있으면 CLI는 실패 종료합니다.
+audit는 `structural_valid`(구조·참조 무결성), `static_valid`(현재 runtime 실행 조건 포함), `execution_enabled`(승인·활성·검사 통과)를 구분합니다. 미지원 완료 predicate와 담당 영역을 별도 보고하며 `device_validation`은 항상 `NOT_ASSESSED`입니다. 초안의 미지원 기능을 DB 손상과 혼동하지 않습니다.
+
+`catalog_coverage`는 카탈로그의 승인 목표를 실제 Backend 선택기로 조회합니다. 현재 v2.3.0은 설정 변경 50개·화면 이동 21개·직접 진행 안내 39개, 총 110개이며 쿠팡 71개는 분류 전용입니다. 그래프 누락·비활성·승인 해제는 `MISSING_GRAPH`, 같은 최상위 우선순위 중복은 `AMBIGUOUS_GRAPH`, 본문/해시 손상은 `INVALID_GRAPH`, 카탈로그와 슬롯·작업 종류가 다르면 `GRAPH_CONTRACT_MISMATCH`로 표시합니다. 승인 목표 밖의 활성·승인 그래프도 별도 보고합니다. 여러 release version은 목표 하나로 집계하며 선택된 version/hash를 보여줍니다.
+
+승인 graph 결함이나 목표 누락·불일치가 있으면 `status=BLOCKED`, 종료 코드 1입니다. 모두 통과하면 `status=PASS`, 종료 코드 0입니다. 감사는 누락된 그래프를 생성하거나 활성화하지 않으므로 배포 후 DB 반영 확인에도 사용할 수 있습니다. PASS는 정적 구성·선택 검사 결과이며 실기기 실행 성공 판정이 아닙니다.
 
 `propose-routes`는 동의 이후의 여러 세션을 공통 그래프 기준으로 비교하고, 검수 manifest에 선언된 학습 기록만으로 기존 전이의 우선순위를 제안합니다. 성공률이 같으면 충분한 성공 시도의 소요 시간을 비교하며, 기종 그룹에서 관측한 성공률이 악화되면 제안을 보류합니다. 개인 식별정보 대신 허용된 제조사·Android 주 버전 그룹만 분석합니다. 새 경로는 추측 생성하지 않습니다.
 
