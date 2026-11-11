@@ -26,7 +26,6 @@ import com.click.ui.overlay.ClickOverlayLayout;
 import com.click.ui.overlay.TaskFlowOverlayView;
 import com.click.domain.goal.RequirementReview;
 import com.click.designpreview.TutorialNarrator;
-import com.click.designpreview.ClickBrandView;
 import org.json.JSONObject;
 import com.click.ui.tutorial.TutorialArtworkView;
 import com.click.ui.tutorial.TutorialFloatingHost;
@@ -44,6 +43,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     private ScrollView lessonScroll;
     private FrameLayout stage;
     private View phone;
+    private com.click.ui.tutorial.TutorialSettingsExampleView settingsExample;
     private ImageView introArtwork;
     private TextView title, description;
     private Button action, restore;
@@ -86,11 +86,11 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         column.addView(toolbar, new LinearLayout.LayoutParams(-1, -2));
         // 제목과 연습창을 한 흐름으로 스크롤한다. 큰 글씨가 연습창 높이를 빼앗지 않게 한다.
         lessonScroll = new ScrollView(this);
-        lessonScroll.setFillViewport(false);
-        lessonScroll.setClipToPadding(false);
+        lessonScroll.setFillViewport(true);
+        lessonScroll.setClipToPadding(true);
         lessonScroll.setVerticalScrollBarEnabled(false);
         lesson = vertical();
-        lesson.setPadding(0, dp(12), 0, dp(12));
+        lesson.setPadding(0, dp(4), 0, 0);
         lessonScroll.addView(lesson, new ScrollView.LayoutParams(-1, -2));
         column.addView(lessonScroll, new LinearLayout.LayoutParams(-1, 0, 1));
         progress = new LinearLayout(this);
@@ -116,13 +116,17 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
 
         stage = new FrameLayout(this);
         stage.setId(R.id.tutorial_phone_stage);
-        stage.setMinimumHeight(dp(320));
-        LinearLayout.LayoutParams stageParams = new LinearLayout.LayoutParams(-1, -2);
-        stageParams.setMargins(0, dp(16), 0, dp(8));
+        stage.setMinimumHeight(dp(240));
+        LinearLayout.LayoutParams stageParams = new LinearLayout.LayoutParams(-1, 0, 1);
+        stageParams.setMargins(0, dp(8), 0, 0);
         lesson.addView(stage, stageParams);
         phone = new com.click.ui.tutorial.TutorialPhoneBackgroundView(this);
         FrameLayout.LayoutParams phoneParams = new FrameLayout.LayoutParams(-1, -1);
         stage.addView(phone, phoneParams);
+        settingsExample = new com.click.ui.tutorial.TutorialSettingsExampleView(this);
+        FrameLayout.LayoutParams exampleParams = new FrameLayout.LayoutParams(-1, -1);
+        exampleParams.setMargins(dp(16), dp(30), dp(16), dp(26));
+        stage.addView(settingsExample, exampleParams);
 
         restore = ClickUi.secondaryButton(this, "클릭 버튼 다시 보기");
         restore.setId(R.id.tutorial_restore);
@@ -137,9 +141,10 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         floating = new TutorialFloatingHost(this, this);
         floating.setId(R.id.tutorial_floating_host);
         floating.getControl().setId(R.id.tutorial_floating_control);
-        // Match the phone stage so dragging reaches its top as well as its bottom.
+        // Keep every floating panel inside the practice phone's screen and bezel.
         FrameLayout.LayoutParams floatingParams = new FrameLayout.LayoutParams(-1, -1,
                 Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        floatingParams.setMargins(dp(12), dp(26), dp(12), dp(26));
         stage.addView(floating, floatingParams);
         checklist = vertical();
         lesson.addView(checklist, new LinearLayout.LayoutParams(-1, -2));
@@ -151,6 +156,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         footer = vertical();
         footer.setPadding(0, dp(10), 0, dp(6));
         TextView replay = text("안내 다시 듣기", 15, ClickUi.BLUE_DARK, false);
+        replay.setBackground(null);
         replay.setGravity(Gravity.CENTER);
         replay.setMinHeight(dp(48));
         replay.setPadding(dp(12), dp(12), dp(12), dp(12));
@@ -224,10 +230,10 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         back.setBackgroundColor(Color.TRANSPARENT);
         back.setOnClickListener(view -> previous());
         row.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        com.click.ui.common.ClickArtworkView brand = new com.click.ui.common.ClickArtworkView(this,
-                com.click.ui.common.ClickArtworkView.Kind.WORDMARK);
+        ImageView brand = new ImageView(this);
+        brand.setImageResource(com.click.designpreview.R.drawable.icon_floating_cursor);
         brand.setContentDescription("클릭 사용 방법");
-        row.addView(brand, new LinearLayout.LayoutParams(dp(82), dp(30)));
+        row.addView(brand, new LinearLayout.LayoutParams(dp(40), dp(40)));
         row.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
         Button skip = new Button(this);
         skip.setTag("tutorial_skip");
@@ -376,8 +382,9 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         TaskFlowOverlayView panel = newPanel();
         if (paused) panel.paused();
         else {
-            panel.progress(lastRequest(), null, "설정 앱을 열어주세요.", false);
-            panel.setAutomaticProgress(true);
+            panel.progress(lastRequest(), null, "설치된 앱 항목을 눌러주세요.", false);
+            floating.collapseReview();
+            floating.positionExampleAtBottom();
         }
     }
     private void showResultPractice() {
@@ -410,8 +417,8 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         // 하단 버튼은 스크롤 본문 밖에 고정한다. 긴 설명만 스크롤하고 시작 버튼은 아래에 유지한다.
         checklist.setVisibility(overviewPage ? View.VISIBLE : View.GONE);
         stage.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
-        stage.setMinimumHeight(dp(440));
         phone.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
+        settingsExample.setVisibility(step == RUNNING && !paused ? View.VISIBLE : View.GONE);
         floating.setVisibility(overviewPage ? View.GONE : View.VISIBLE);
         restore.setVisibility(!overviewPage && floating.isHidden() ? View.VISIBLE : View.GONE);
         progress.setVisibility(overviewPage || keyboardVisible ? View.GONE : View.VISIBLE);
@@ -422,7 +429,6 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
         int speechResource;
         boolean enabled = false;
         ClickOverlayLayout.Mode mode = floating.getControl().getMode();
-        floating.setHint("클릭 버튼을 눌러보세요");
         floating.setClickHighlighted(false); floating.highlight(null, 0);
         switch (step) {
             case INTRO:
@@ -436,10 +442,12 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                 speechResource = R.string.tutorial_speech_complete;
                 button = "홈으로 가기"; enabled = true; break;
             case INPUT:
-                heading = "원하시는 방법으로 하고 싶은 작업을 말씀해주세요";
+                heading = "말이나 글로 입력할 수 있어요.";
                 speechResource = R.string.tutorial_speech_input;
-                detail = "말로도 입력할 수 있고, 글로도 입력할 수 있어요";
+                detail = "원하시는 작업을 말하거나 써주세요";
                 if (mode == ClickOverlayLayout.Mode.COLLAPSED) {
+                    heading = "클릭 버튼을 눌러보세요";
+                    detail = "꾹 누르면 없앨 수도 있어요.";
                     speechResource = R.string.tutorial_speech_open;
                     floating.setClickHighlighted(true);
                 } else if (mode == ClickOverlayLayout.Mode.TEXT) {
@@ -451,7 +459,10 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                     heading = "마이크를 꾹 눌러보세요";
                     detail = "마이크를 누른 채 말하고, 끝나면 손을 떼세요.";
                     speechResource = R.string.tutorial_speech_voice_record;
-                    if (!floating.getControl().isVoiceInputActive()) floating.highlight(null, R.id.overlay_microphone);
+                    if (!floating.getControl().isVoiceInputActive()) {
+                        android.view.ViewGroup microphone = floating.getControl().findViewById(R.id.overlay_microphone);
+                        if (microphone != null) floating.highlight(microphone.getChildAt(0));
+                    }
                 }
                 break;
             case REVIEW:
@@ -462,9 +473,9 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
                     detail = "알맞은 항목을 고르고 ‘입력하기’를 눌러주세요.";
                 break;
             case RUNNING:
-                heading = paused ? "잠시 쉬어도 괜찮아요" : "자동으로 진행해요";
+                heading = paused ? "잠시 쉬어도 괜찮아요" : "클릭이 이렇게 알려드려요!";
                 detail = paused ? "‘이어서 진행’을 누르면 계속해요."
-                        : "안내창을 줄이거나 잠시 멈춰보세요.";
+                        : "자동 모드를 키시면, 클릭이 자동으로 해드려요.";
                 speechResource = paused ? R.string.tutorial_speech_paused : R.string.tutorial_speech_running;
                 button = "연습 마치기"; enabled = !paused; break;
             default:
@@ -480,7 +491,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
             enabled = false;
         }
         if (reviewView != null && (reviewView.getVisibility() != View.VISIBLE || reviewView.isMinimizedProgress())) {
-            detail = "작아진 안내를 다시 누르면 펼쳐져요.";
+            if (step != RUNNING) detail = "작아진 안내를 다시 누르면 펼쳐져요.";
             // Resizing the same step must not replace or restart its narration.
             floating.setClickHighlighted(reviewView.getVisibility() != View.VISIBLE);
         }

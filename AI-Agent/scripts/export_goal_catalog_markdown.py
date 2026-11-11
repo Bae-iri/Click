@@ -22,6 +22,7 @@ def render(catalog: dict) -> str:
     goals = catalog["goals"]
     apps = Counter(goal["target_app"] for goal in goals)
     statuses = Counter(goal["execution_status"] for goal in goals)
+    modes = Counter(g["task_type"] for g in goals if g["execution_status"] == "approved")
     lines = [
         "# Goal Type·키워드 전체 표",
         "",
@@ -32,7 +33,9 @@ def render(catalog: dict) -> str:
         f"- 실행 승인: **{statuses['approved']}개**, 분류 전용: **{statuses['catalog_only']}개**",
         "- `키워드 그룹`의 각 괄호에서는 하나 이상, 괄호와 괄호 사이는 모두 충족해야 분류 후보가 된다.",
         "- `catalog_only`는 Goal 추출만 가능하다는 뜻이다. 승인 Task Graph가 없으므로 실제 작업은 시작하지 않는다.",
-        "- 이전 v2.0은 82개였고, 현재 v2.1은 보편 설정·쿠팡 기능을 추가한 160개다.",
+        f"- 설정 변경 상태 검증 경로: **{modes['settings_change']}개**, 직접 진행 안내: **{modes['settings_assisted']}개**. 승인 표시는 실행 안내를 시작할 수 있다는 뜻이며 실기기 검증 완료를 뜻하지 않는다.",
+        "- `settings_assisted`는 화면 안내 뒤 사용자가 직접 선택·입력한다. 사용자 완료 응답은 기술 검증과 별도 기록한다.",
+        "- 이전 v2.0은 82개였고, v2.1은 160개였고, v2.2는 설정 화면 열기 경로를 추가했다.",
         "",
     ]
     number = 0
@@ -52,6 +55,8 @@ def render(catalog: dict) -> str:
                 for group in goal["keyword_groups"]
             )
             status = escape(goal["execution_status"])
+            if goal["task_type"] == "settings_assisted":
+                status += " · 직접 진행"
             if goal.get("graph_id"):
                 status += f" (`{escape(goal['graph_id'])}`)"
             lines.append(

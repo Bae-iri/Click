@@ -3,7 +3,7 @@ package com.click.service.overlay;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-/** Front-end priority/FIFO queue; backend persistence can mirror these transitions later. */
+/** Lightweight FIFO helper; the production request queue is persisted by VoiceQueueService. */
 final class VoiceRequestQueue {
     enum Priority { VIP, NORMAL }
 

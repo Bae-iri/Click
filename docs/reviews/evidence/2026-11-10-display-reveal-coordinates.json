@@ -1,0 +1,113 @@
+{
+  "recorded_at": "2026-11-10T16:18:15.419004+09:00",
+  "incident": {
+    "observed_at": "2026-11-10T15:47:21+09:00",
+    "task_id": "MVP-01",
+    "state_id": "S1_SETTINGS_HOME",
+    "model_selection": "selected; same actionable row repeatedly; confidence 1.0",
+    "native_rejection": "target_or_viewport_changed",
+    "observation_screen_height": 2400,
+    "execution_resource_height": 2173,
+    "row_bounds": [
+      0,
+      2000,
+      1080,
+      2203
+    ],
+    "cause": "Observation used WindowMetrics while reveal execution clipped the same native row using inset resource DisplayMetrics."
+  },
+  "change": "Use the same Context-based snapshot collector dimensions for both current-screen observation and native reveal execution. Existing target/window/bounds/gesture-lane checks remain enforced.",
+  "regression_gap": "Previous physical test used a top-edge text label; it did not exercise the bottom-edge clickable row selected in production.",
+  "tests": {
+    "before_fix_geometry_regression": {
+      "tests": 3,
+      "failures": 1,
+      "failed": "bottomRowUsesTheSameWindowCoordinatesAsObservation"
+    },
+    "current_source_full": {
+      "tests": 744,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "installed_baseline_full": {
+      "tests": 719,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "physical_before_fix": {
+    "dispatched": false,
+    "before_top": 2000,
+    "before_bottom": 2203,
+    "forward": true
+  },
+  "physical_after_fix": {
+    "bottom": {
+      "passed": true,
+      "forward": true,
+      "edge": "bottom",
+      "target_kind": "clickable_row",
+      "before_top": 2000,
+      "before_bottom": 2203,
+      "after_top": 1596,
+      "after_bottom": 1799,
+      "server_posts": 0,
+      "setting_writes": 0,
+      "target_clicked": false
+    },
+    "top": {
+      "passed": true,
+      "forward": false,
+      "edge": "top",
+      "target_kind": "clickable_row",
+      "before_top": 317,
+      "before_bottom": 442,
+      "after_top": 652,
+      "after_bottom": 855,
+      "server_posts": 0,
+      "setting_writes": 0,
+      "target_clicked": false
+    }
+  },
+  "installation": {
+    "installed_apk_sha256": "e1d91d81fe5496916ab9275b75e684627859422550560028fcbe7d901370844b",
+    "hash_matches_build": true,
+    "accessibility_bound": true,
+    "previous_apk_sha256": "ef30e2d1df311065e09c32c3531fe2bb971d9a16b5875f1ba17b732818164438",
+    "scope": "Installed baseline with only three production Java files patched; unrelated pending environment/onboarding work excluded.",
+    "artifact": "Frontend/app/build/outputs/apk/debug/app-display-reveal-debug.apk"
+  },
+  "source_files": {
+    "Frontend/app/src/main/java/com/click/service/accessibility/AccessibilitySnapshotCollector.java": "bfac4950a34bbd82bb74d9c12522d45165024e31f79259a91b6b79dfe06031ba",
+    "Frontend/app/src/main/java/com/click/service/accessibility/NativeScrollExecutor.java": "31fb7da09142fe9f02bf3beadb9cf645d72ba409c6565f9485d5252ac79253bf",
+    "Frontend/app/src/main/java/com/click/service/accessibility/ClickAccessibilityService.java": "bf2b71f705af805c86a958dde665eaae3ef9c04d5e83967f434ec18192195458",
+    "Frontend/app/src/androidTest/java/com/click/service/accessibility/NativeTargetRevealTest.java": "6ea473cdd1c46e7c4b2c3dda9e4a7a91eb7808627797bae4c50ac616741dbfde",
+    "Frontend/app/src/test/java/com/click/service/accessibility/NativeTargetRevealGeometryTest.java": "ca15be5a016f4d218ca650de8bf7e01cf234afcbdec6cb0f02294b77f2881432"
+  },
+  "installed_source_files": {
+    "Frontend/app/src/main/java/com/click/service/accessibility/AccessibilitySnapshotCollector.java": "bfac4950a34bbd82bb74d9c12522d45165024e31f79259a91b6b79dfe06031ba",
+    "Frontend/app/src/main/java/com/click/service/accessibility/NativeScrollExecutor.java": "31fb7da09142fe9f02bf3beadb9cf645d72ba409c6565f9485d5252ac79253bf",
+    "Frontend/app/src/main/java/com/click/service/accessibility/ClickAccessibilityService.java": "48b3a2c99269c8bc99e3663c4e8694480e5539f499a1f099e6759ca8c5f16716",
+    "Frontend/app/src/androidTest/java/com/click/service/accessibility/NativeTargetRevealTest.java": "6ea473cdd1c46e7c4b2c3dda9e4a7a91eb7808627797bae4c50ac616741dbfde",
+    "Frontend/app/src/test/java/com/click/service/accessibility/NativeTargetRevealGeometryTest.java": "ca15be5a016f4d218ca650de8bf7e01cf234afcbdec6cb0f02294b77f2881432"
+  },
+  "instrumentation_setup": "Immediate instrumentation after first update interrupted accessibility binding. Re-registering the same APK and waiting for bound service restored it; final top and bottom probes passed. Final bound state verified.",
+  "limitations": {
+    "server_deployed": false,
+    "server_redeployment_required": false,
+    "production_model_called_during_probes": false,
+    "new_end_to_end_task_completion_tested": false,
+    "setting_values_changed": false
+  },
+  "logs": {
+    "incident": "/private/tmp/click-display-incident-logcat.txt",
+    "before_tests": "/private/tmp/click-display-reveal-before-tests.log",
+    "current_full": "/private/tmp/click-display-reveal-all-tests.log",
+    "installed_baseline_full": "/private/tmp/click-display-reveal-release-tests.log",
+    "native_before": "/private/tmp/click-display-reveal-native-before.log",
+    "native_bottom": "/private/tmp/click-display-reveal-native-bottom.log",
+    "native_top": "/private/tmp/click-display-reveal-native-top.log"
+  }
+}

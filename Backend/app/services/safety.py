@@ -4,6 +4,7 @@ import json
 from uuid import uuid4
 from fastapi import HTTPException
 from app.models.lifecycle import SafetyConfirmation
+from app.models.agent_session import AgentSession
 
 
 def screen_hash(request, *, include_vision=True):
@@ -51,7 +52,22 @@ def validate_confirmation(factory, request, now):
             validate_vision_snapshot(request, row, now)
         elif request.vision_snapshot is not None:
             conflict()
-        return {**row.command, "approval_expires_at": row.expires_at}
+        provenance=getattr(request,"approval_provenance",None)
+        audit={"source":"legacy_unspecified"} if provenance is None else provenance.model_dump(exclude_none=True)
+        if provenance is not None and provenance.source=="delegated_goal":
+            session=db.get(AgentSession,request.session_id)
+            goal=(session.goal or {}) if session else {}
+            slots=goal.get("slots",{})
+            if (vision_consent or session is None or goal.get("goal_type")!=provenance.goal_type
+                    or slots.get("setting") not in {"font_size","brightness","volume"}
+                    or slots.get("direction") not in {"increase","decrease"}
+                    or row.command.get("proposed_action")!="drag"
+                    or (session.workflow or {}).get("delegated_actions",0)>=1
+                    or not provenance.granted_at_ms<=now*1000+5000
+                    or provenance.expires_at_ms<=now*1000
+                    or provenance.granted_at_ms<session.created_at*1000-5000):
+                conflict()
+        return {**row.command,"approval_expires_at":row.expires_at,"provenance":audit}
 
 
 def validate_vision_snapshot(request, row, now):
@@ -80,21 +96,35 @@ def validate_output(request, response, approved, *, checkpoint=None, now=0):
     if approved and approved.get("purpose") == "vision":
         approved = None
     guide = response.guide_command
+    if approved and approved.get("provenance"):
+        response.metadata["approval_provenance"]=dict(approved["provenance"])
     if vision_failure_report:
         response.metadata["vision_failure"] = request.vision_failure
-    if request.user_confirmation == "rejected" and not vision_response:
-        response.task_status = "BLOCKED"
-        guide.command_type, guide.action_type = "blocked", "observe_only"
+    failure = getattr(request, "vision_failure", None)
+    if request.user_confirmation == "rejected" and not failure:
+        from ai_agent.runtime.termination import user_declined
+        goal = response.metadata.get("typed_goal") or {}
+        previous = response.metadata.get("technical_outcome") or {}
+        termination = user_declined((goal.get("slots") or {}).get("setting"),
+            previously_changed=previous.get("status") == "CHANGED",
+            scope="vision" if vision_response else "action")
+        response.task_status = "CANCELLED"
+        guide.command_type, guide.action_type = "cancelled", "observe_only"
+        guide.proposed_action = None
         guide.requires_user_action = False
         guide.target_node_id = guide.target_bounds = guide.target_label = None
-        guide.safety_level, guide.message = "BLOCKED", "사용자가 안내를 중단했어요."
-        failure = getattr(request, "vision_failure", None)
-        if failure:
-            response.metadata["vision_failure"] = failure
-            guide.message = ("개인정보를 안전하게 가렸는지 확인하지 못해 화면 분석을 중단했어요. 다시 요청하면 새로 허용을 확인할게요."
-                if failure == "masking_failed" else "화면 분석을 완료하지 못해 안내를 중단했어요. 다시 요청하면 새로 허용을 확인할게요.")
-        guide.render_policy = {}
+        guide.safety_level, guide.message = "LOW_RISK", termination["message"]
+        guide.render_policy = {"termination": termination}
+        response.metadata["termination"] = termination
+        # No old recovery/result prompt may schedule another turn after refusal.
+        for key in ("recovery", "result_prompt", "follow_up", "approval_provenance"):
+            response.metadata.pop(key, None)
         return
+    if failure:
+        response.metadata["failure_classification"] = {
+            "category": "PRIVACY_PROTECTION" if failure == "masking_failed" else "ENVIRONMENT",
+            "code": "VISION_" + failure.upper(),
+            "counts_as_failure": failure in {"capture_failed", "ocr_failed", "masking_failed"}}
     if guide.command_type == "result_confirmation" and not guide.requires_user_action:
         return
     if approved and (guide.target_node_id != approved.get("target_node_id") or guide.action_type != approved.get("proposed_action")):
@@ -112,6 +142,8 @@ def validate_output(request, response, approved, *, checkpoint=None, now=0):
         expected = {"guide_command_id": guide.guide_command_id, "action_type": guide.action_type,
                     "target_node_id": guide.target_node_id, "target_bounds": list(guide.target_bounds or ()),
                     "task_id": response.task_id, "state_id": response.state_id}
+        if authorization.get("provenance"):
+            response.metadata["approval_provenance"]=dict(authorization["provenance"])
         if (authorization.get("expires_at", 0) <= now
                 or any(authorization.get(key) != value for key, value in expected.items())):
             raise HTTPException(502)

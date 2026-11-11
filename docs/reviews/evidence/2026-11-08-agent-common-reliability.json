@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-08",
+  "scope": "Shared execution, reconnection and verification across approved agent tasks",
+  "observed_incident": {
+    "user_report": "Slider changed but result was unverifiable.",
+    "brightness_history": {
+      "task_id": "SET-brightness-decrease",
+      "state": "S3_CONTROL",
+      "status": "COMPLETED",
+      "technical_status": "UNVERIFIABLE",
+      "reason": "insufficient_evidence"
+    },
+    "font_history": {
+      "technical_status": "CHANGED",
+      "before": 1.1,
+      "after": 1.3
+    },
+    "read_only_device_state": {
+      "automatic_brightness_enabled": true,
+      "brightness_samples": [
+        204,
+        204,
+        204
+      ]
+    },
+    "limits": [
+      "The user described an increase while the latest stored brightness task was decrease; the exact action direction and event delivery cannot be reconstructed from this record.",
+      "Automatic brightness being enabled is a test-condition difference, not a proven cause.",
+      "History diagnostics read state/reason/numeric proof only; no request text, account data, tokens or screen data were exported."
+    ]
+  },
+  "changes": [
+    "Preserve original action event after a failed turn; freeze further execution and synchronize server state on explicit retry.",
+    "Send newly arrived action evidence with a fresh observation before a screen-less result request.",
+    "Attach missing-correlated-action and target/setting-unobservable reasons to incomplete verification without inventing success.",
+    "Distinguish a settled reverse-direction change from unchanged values.",
+    "Fill exact registered graph IDs for 81 approved goal entries; verify resume mapping for all 110."
+  ],
+  "validation": {
+    "android_unit": {
+      "passed": 513,
+      "failed": 0
+    },
+    "ai_unit": {
+      "passed": 410,
+      "failed": 0
+    },
+    "backend_targeted_diagnostics": {
+      "passed": 14
+    },
+    "android_service_regressions": {
+      "passed": 145
+    },
+    "readonly_device_diagnostic": {
+      "passed": 1
+    },
+    "physical_task_matrix_after_this_change": false,
+    "backend_all": {
+      "passed": 1745,
+      "failed": 0
+    }
+  },
+  "installation": {
+    "app_installed": true,
+    "data_cleared": false,
+    "app_launch_verified": true,
+    "sha256": "6fcb2927646fce66de7f2c2a3274185d8b6bd44170e5767abaf97d0e5785137f"
+  },
+  "deployment": {
+    "performed": false,
+    "last_observed_revision": "f5a1cea644eead55457304359e10d71629221aae",
+    "last_observed_goal_interpretation": {
+      "provider": "self_hosted",
+      "configured": false
+    }
+  },
+  "limits": [
+    "All 110 goals were checked for resume identity, not physical OEM completion.",
+    "No confidence threshold was lowered and no setting was directly forced.",
+    "The unchanged original brightness incident remains unverifiable."
+  ]
+}

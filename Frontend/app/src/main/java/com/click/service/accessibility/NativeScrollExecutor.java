@@ -25,122 +25,156 @@ final class NativeScrollExecutor {
     boolean swipeHomePage(boolean towardNextPage, String expectedPackage, Integer expectedWindow) {
         AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(service);
         if (root == null) return false;
+        String capturedPackage; int capturedWindow;
         try {
             String pkg = root.getPackageName() == null ? "" : root.getPackageName().toString();
-            if (!(pkg.contains("launcher") || pkg.equals("com.miui.home"))
+            capturedPackage=pkg;capturedWindow=root.getWindowId();
+            if (!com.click.service.overlay.NavigationRecovery.isHome(pkg)
                     || expectedPackage != null && !expectedPackage.equals(pkg)
                     || expectedWindow != null && root.getWindowId() != expectedWindow) return false;
-            int action = towardNextPage ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
-                    : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
-            // Native containers determine their own axis: home pages move sideways,
-            // while an app drawer's RecyclerView moves vertically.
-            if (scrollVisibleList(root, action)) {
-                if (handler != null) handler.postDelayed(captureSnapshot, 650L);
+            com.click.data.snapshot.NavigationState navigation=NativeNavigationReader.read(root);
+            // Samsung PagedView advertises generic forward/back and page-up/
+            // down actions without an axis. For horizontal pages, use only an
+            // explicit left/right native action; otherwise use the observed
+            // collection's horizontal gesture instead of an ambiguous action.
+            AccessibilityNodeInfo container=navigation==null?null:NativeNavigationReader.nodeAt(root,navigation.containerId);
+            boolean nativeDirection=true;
+            if(container!=null)try {
+                if(navigation.axis==com.click.data.snapshot.NavigationState.Axis.HORIZONTAL) {
+                    int action=towardNextPage?AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId()
+                            :AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.getId();
+                    nativeDirection=container.getActionList().stream().anyMatch(a->a.getId()==action);
+                }
+            }finally{if(container!=root && container!=null)container.recycle();}
+            if (nativeDirection && scrollCollection(root,navigation,towardNextPage, navigation==null || navigation.axis!=com.click.data.snapshot.NavigationState.Axis.HORIZONTAL)) {
+                if(handler!=null)handler.postDelayed(captureSnapshot,650L);
                 return true;
             }
+            if(navigation!=null && (towardNextPage?navigation.atEnd():navigation.atStart()))return false;
         } finally { root.recycle(); }
-        int width = service.getResources().getDisplayMetrics().widthPixels;
-        int height = service.getResources().getDisplayMetrics().heightPixels;
-        float y = uncoveredSwipeY(height);
-        if (y < 0) return false;
-        Path path = new Path();
-        path.moveTo(towardNextPage ? width * .82f : width * .18f, y);
-        path.lineTo(towardNextPage ? width * .18f : width * .82f, y);
-        android.accessibilityservice.GestureDescription gesture =
-                new android.accessibilityservice.GestureDescription.Builder()
-                        .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(path, 0L, 420L))
-                        .build();
-        return service.dispatchGesture(gesture, new GestureResultCallback() {
-            @Override public void onCompleted(android.accessibilityservice.GestureDescription description) {
-                if (handler != null) handler.postDelayed(captureSnapshot, 450L);
-            }
-            @Override public void onCancelled(android.accessibilityservice.GestureDescription description) {
-                if (handler != null) handler.post(captureSnapshot);
-            }
-        }, handler);
+        AccessibilityNodeInfo fresh=ForegroundWindowReader.readRoot(service);
+        if(fresh==null)return false;
+        Rect viewport=new Rect();com.click.data.snapshot.NavigationState.Axis axis;
+        try {
+            String pkg=String.valueOf(fresh.getPackageName());
+            if(!pkg.equals(capturedPackage) || fresh.getWindowId()!=capturedWindow)return false;
+            com.click.data.snapshot.NavigationState navigation=NativeNavigationReader.read(fresh);
+            axis=navigation==null?com.click.data.snapshot.NavigationState.Axis.HORIZONTAL:navigation.axis;
+            if(axis==com.click.data.snapshot.NavigationState.Axis.UNKNOWN)axis=com.click.data.snapshot.NavigationState.Axis.HORIZONTAL;
+            AccessibilityNodeInfo list=navigation==null?fresh:NativeNavigationReader.nodeAt(fresh,navigation.containerId);
+            if(list==null)return false;
+            try{list.getBoundsInScreen(viewport);}finally{if(list!=fresh)list.recycle();}
+        } finally{fresh.recycle();}
+        if(viewport.isEmpty())viewport.set(0,0,service.getResources().getDisplayMetrics().widthPixels,
+                service.getResources().getDisplayMetrics().heightPixels);
+        Path path=new Path();
+        if(axis==com.click.data.snapshot.NavigationState.Axis.VERTICAL) {
+            float x=uncoveredLine(viewport,true);if(x<0)return false;
+            path.moveTo(x,viewport.top+viewport.height()*(towardNextPage?.82f:.18f));
+            path.lineTo(x,viewport.top+viewport.height()*(towardNextPage?.18f:.82f));
+        } else {
+            float y=uncoveredLine(viewport,false);if(y<0)return false;
+            path.moveTo(viewport.left+viewport.width()*(towardNextPage?.82f:.18f),y);
+            path.lineTo(viewport.left+viewport.width()*(towardNextPage?.18f:.82f),y);
+        }
+        android.accessibilityservice.GestureDescription gesture = new android.accessibilityservice.GestureDescription.Builder()
+                .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(path,0L,420L)).build();
+        return service.dispatchGesture(gesture,new GestureResultCallback(){
+            @Override public void onCompleted(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.postDelayed(captureSnapshot,450L);}
+            @Override public void onCancelled(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.post(captureSnapshot);}
+        },handler);
     }
 
     boolean performScroll(boolean forward) {
-        AccessibilityNodeInfo pager = findScrollableNode(ForegroundWindowReader.readRoot(service));
-        if (pager == null) return false;
-        int action = forward
-                ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
-                : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
-        try {
-            boolean performed = pager.performAction(action);
-            Log.i(TAG, "Active window scroll forward=" + forward + " performed=" + performed);
-            if (performed && handler != null) {
-                handler.postDelayed(captureSnapshot, 550L);
-            }
-            return performed;
-        } finally {
-            pager.recycle();
-        }
+        AccessibilityNodeInfo root=ForegroundWindowReader.readRoot(service);if(root==null)return false;
+        try{return scrollCollection(root,NativeNavigationReader.read(root),forward);}finally{root.recycle();}
     }
 
-    boolean performSettingsScroll(boolean forward, String expectedPackage, int expectedWindow) {
-        if (!"com.android.settings".equals(expectedPackage)
-                && !"com.samsung.android.settings".equals(expectedPackage)) return false;
-        AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(service);
-        if (root == null) return false;
+    boolean performSettingsScroll(boolean forward,String expectedPackage,int expectedWindow) {
+        if(!TouchAutomationPolicy.settingsPackage(expectedPackage))return false;
+        AccessibilityNodeInfo root=ForegroundWindowReader.readRoot(service);if(root==null)return false;
         try {
-            if (root.getWindowId() != expectedWindow || root.getPackageName() == null
-                    || !expectedPackage.contentEquals(root.getPackageName())) return false;
-            return scrollVisibleList(root, forward ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
-                    : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
-        } finally { root.recycle(); }
+            if(root.getWindowId()!=expectedWindow || !expectedPackage.equals(String.valueOf(root.getPackageName())))return false;
+            return scrollCollection(root,NativeNavigationReader.read(root),forward);
+        }finally{root.recycle();}
     }
 
-    private float uncoveredSwipeY(int height) {
-        java.util.List<Rect> covered = new java.util.ArrayList<>();
-        for (AccessibilityWindowInfo window : service.getWindows()) {
-            try {
-                if (window.getType() != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY) continue;
-                AccessibilityNodeInfo root = window.getRoot();
-                if (root == null) continue;
-                try {
-                    if (!root.isVisibleToUser() || root.getPackageName() == null
-                            || !service.getPackageName().contentEquals(root.getPackageName())) continue;
-                    Rect bounds = new Rect(); window.getBoundsInScreen(bounds); covered.add(bounds);
-                } finally { root.recycle(); }
-            } finally { window.recycle(); }
-        }
-        for (float fraction : new float[]{.52f, .68f, .36f, .78f}) {
-            float y = height * fraction;
-            boolean clear = true;
-            for (Rect bounds : covered) if (y >= bounds.top - 24 && y <= bounds.bottom + 24) { clear = false; break; }
-            if (clear) return y;
+    boolean revealSettingsTarget(String nodeId,int[] bounds,String expectedPackage,int expectedWindow) {
+        if(!TouchAutomationPolicy.settingsPackage(expectedPackage))return false;
+        AccessibilityNodeInfo root=ForegroundWindowReader.readRoot(service);if(root==null)return revealSkipped("root_unavailable");
+        TargetVisibility.Plan plan;
+        java.util.List<Rect> controls=new java.util.ArrayList<>();
+        try {
+            if(root.getWindowId()!=expectedWindow || !expectedPackage.equals(String.valueOf(root.getPackageName())))return revealSkipped("window_changed");
+            android.util.DisplayMetrics metrics=service.getResources().getDisplayMetrics();
+            var screen=new AccessibilitySnapshotCollector().collect(root,expectedPackage,service,null);
+            plan=TargetVisibility.plan(screen,nodeId,bounds,metrics.density);
+            for(var node:screen.nodes) if(node.visibleToUser && node.bounds!=null
+                    && ("slider".equals(node.role) || "text_field".equals(node.role) || node.checkable))
+                controls.add(new Rect(node.bounds[0],node.bounds[1],node.bounds[2],node.bounds[3]));
+        }finally{root.recycle();}
+        if(plan==null)return revealSkipped("target_or_viewport_changed");
+        Rect viewport=new Rect(plan.viewport[0],plan.viewport[1],plan.viewport[2],plan.viewport[3]);
+        float x=uncoveredLine(viewport,true,controls);if(x<0)return revealSkipped("blocked_gesture_lane");
+        float y=viewport.exactCenterY(), delta=plan.forward?-plan.distance:plan.distance;
+        Path path=new Path();path.moveTo(x,y-delta/2);path.lineTo(x,y+delta/2);
+        var gesture=new android.accessibilityservice.GestureDescription.Builder().addStroke(
+                new android.accessibilityservice.GestureDescription.StrokeDescription(path,0L,300L)).build();
+        boolean dispatched=service.dispatchGesture(gesture,new GestureResultCallback(){
+            @Override public void onCompleted(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.postDelayed(captureSnapshot,350L);}
+            @Override public void onCancelled(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.post(captureSnapshot);}
+        },handler);
+        return dispatched || revealSkipped("gesture_rejected");
+    }
+
+    private static boolean revealSkipped(String reason) {
+        Log.i("ClickScroll","target_reveal_skipped reason="+reason);return false;
+    }
+
+    private static boolean scrollCollection(AccessibilityNodeInfo root,com.click.data.snapshot.NavigationState navigation,boolean forward) {
+        return scrollCollection(root,navigation,forward,true);
+    }
+    private static boolean scrollCollection(AccessibilityNodeInfo root,com.click.data.snapshot.NavigationState navigation,boolean forward,boolean allowGeneric) {
+        if(navigation==null)return false;
+        AccessibilityNodeInfo list=NativeNavigationReader.nodeAt(root,navigation.containerId);if(list==null)return false;
+        try {
+            if(!NativeNavigationReader.collection(list))return false;
+            int generic=forward?AccessibilityNodeInfo.ACTION_SCROLL_FORWARD:AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
+            int directional=navigation.axis==com.click.data.snapshot.NavigationState.Axis.HORIZONTAL
+                ? (forward?AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId():AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.getId())
+                : navigation.axis==com.click.data.snapshot.NavigationState.Axis.VERTICAL
+                    ? (forward?AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.getId():AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.getId()):generic;
+            boolean advertised=list.getActionList().stream().anyMatch(action->action.getId()==directional);
+            if(directional==generic)return list.performAction(generic);
+            if(advertised && list.performAction(directional))return true;
+            return allowGeneric && list.getActionList().stream().anyMatch(action->action.getId()==generic) && list.performAction(generic);
+        }finally{if(list!=root)list.recycle();}
+    }
+
+    private float uncoveredLine(Rect viewport,boolean vertical) {
+        return uncoveredLine(viewport,vertical,java.util.Collections.emptyList(),new float[]{.5f,.3f,.7f,.2f,.8f});
+    }
+
+    private float uncoveredLine(Rect viewport,boolean vertical,java.util.List<Rect> controls) {
+        return uncoveredLine(viewport,vertical,controls,new float[]{.5f,.3f,.7f,.2f,.8f,.1f,.9f,.05f,.95f});
+    }
+
+    private float uncoveredLine(Rect viewport,boolean vertical,java.util.List<Rect> controls,float[] fractions) {
+        java.util.List<Rect> covered=new java.util.ArrayList<>(controls);
+        for(AccessibilityWindowInfo window:service.getWindows())try {
+            if(window.getType()!=AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY)continue;
+            AccessibilityNodeInfo root=window.getRoot();if(root==null)continue;
+            try{if(root.isVisibleToUser() && service.getPackageName().equals(String.valueOf(root.getPackageName()))) {
+                Rect bounds=new Rect();window.getBoundsInScreen(bounds);covered.add(bounds);
+            }}finally{root.recycle();}
+        }finally{window.recycle();}
+        for(float fraction:fractions) {
+            float position=vertical?viewport.left+viewport.width()*fraction:viewport.top+viewport.height()*fraction;
+            boolean clear=true;
+            for(Rect rect:covered)if(vertical?position>=rect.left-24 && position<=rect.right+24:position>=rect.top-24 && position<=rect.bottom+24){clear=false;break;}
+            if(clear)return position;
         }
         return -1;
     }
 
-    private static boolean scrollVisibleList(AccessibilityNodeInfo node, int action) {
-        if (!node.isVisibleToUser() || !node.isEnabled()) return false;
-        // SeekBars also expose scroll actions; those change settings, not list position.
-        if (node.isScrollable() && node.getRangeInfo() == null
-                && !String.valueOf(node.getClassName()).toLowerCase(java.util.Locale.ROOT).contains("seekbar")
-                && node.performAction(action)) return true;
-        for (int index = 0; index < node.getChildCount(); index++) {
-            AccessibilityNodeInfo child = node.getChild(index);
-            if (child == null) continue;
-            try { if (scrollVisibleList(child, action)) return true; }
-            finally { child.recycle(); }
-        }
-        return false;
-    }
-
-    private static AccessibilityNodeInfo findScrollableNode(AccessibilityNodeInfo node) {
-        if (node == null) return null;
-        // Ownership of the selected node passes to performScroll; release the rest here.
-        if (node.isScrollable()) return node;
-        try {
-            for (int index = 0; index < node.getChildCount(); index++) {
-                AccessibilityNodeInfo result = findScrollableNode(node.getChild(index));
-                if (result != null) return result;
-            }
-            return null;
-        } finally {
-            node.recycle();
-        }
-    }
 }

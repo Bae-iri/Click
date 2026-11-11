@@ -12,7 +12,7 @@ ENUMS = {
     "strategy": {"continue", "wait_for_action", "reobserve", "retry_target", "alternate_transition", "backend_reselection"},
     "status": VISION | {"SUCCESS", "DONE", "NO_CHANGE", "WRONG_STATE", "UNKNOWN", "WAITING_FOR_ACTION", "WAITING_FOR_OBSERVATION"},
     "vision_status": VISION,
-    "command_type": {"highlight", "gesture_hint", "confirmation", "done", "blocked"},
+    "command_type": {"highlight", "gesture_hint", "confirmation", "done", "cancelled", "blocked"},
     "action_type": {"tap", "drag", "scroll", "observe_only"},
     "safety_level": {"LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"},
     "type": {"none", "settings_app_recovery", "vision_fallback", "vision_augmented_match", "target_match_fallback", "replan"},
@@ -47,6 +47,10 @@ def diagnostic_payload(value, depth=0):
     selection = value.get("ui_selection")
     if isinstance(selection, Mapping):
         safe = {}
+        OBSERVATION_REASONS = {'unsupported_scope', 'unsupported_app', 'input_present', 'credential_input',
+            'protected_screen', 'unrecognized_settings_screen', 'safe_native_labels', 'empty_observation'}
+        if selection.get('observation_reason') in OBSERVATION_REASONS:
+            safe['observation_reason'] = selection['observation_reason']
         for key, allowed in (("provider", {"rules", "jev"}), ("status", UI_SELECTION_STATUSES),
                              ("mode", {"primary", "auxiliary"})):
             if isinstance(selection.get(key), str) and selection[key] in allowed:

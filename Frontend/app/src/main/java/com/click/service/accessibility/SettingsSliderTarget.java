@@ -49,8 +49,12 @@ public final class SettingsSliderTarget {
     }
     private static boolean evidence(ScreenSnapshot s, AccessibilityNodeSnapshot n, String setting) {
         if (s == null || n == null || setting == null || !NAMES.containsKey(setting) || !s.privacyMaskingReady
-                || !TouchAutomationPolicy.settingsPackage(s.packageName) || !sameWindow(s,n) || !slider(n)
+                || !sameWindow(s,n) || !slider(n)
                 || n.progress == null) return false;
+        if (!TouchAutomationPolicy.settingsPackage(s.packageName)) {
+            var surface=com.click.data.snapshot.NativeControlSurface.identify(s);
+            if(surface==null || !setting.equals(surface.setting()) || !surface.nodeIds().contains(n.nodeId))return false;
+        }
         // A named different setting cannot be overridden by a resource ID or page title.
         for (String other : NAMES.keySet()) if (!other.equals(setting) && named(n, other)) return false;
         if ("volume".equals(setting)) for (String label : labels(n))

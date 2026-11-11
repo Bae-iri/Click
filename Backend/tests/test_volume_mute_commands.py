@@ -44,6 +44,10 @@ def test_valid_audio_toggle_request_cannot_execute_without_graph(goal_type, slot
     payload = payload_for(goal_type, slots, version)
     goal = AgentCommandRequest.model_validate(payload).goal
     assert goal.slots == slots
+    with app.state.session_factory() as db:
+        for row in db.scalars(select(ApprovedTaskGraph).where(ApprovedTaskGraph.goal_type == goal.goal_type)):
+            row.active = False
+        db.commit()
     with pytest.raises(task_graphs.NoCompatibleGraphError, match="NO_COMPATIBLE_GRAPH"):
         app.state.turn_service.graphs.select(goal)
     app.state.turn_service.engine_factory = Mock(side_effect=AssertionError("Do not invoke Agent 1"))

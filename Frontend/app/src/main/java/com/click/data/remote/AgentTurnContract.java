@@ -29,7 +29,11 @@ public final class AgentTurnContract {
         public Integer expectedVersion;
         public String episodeId;
         public String confirmationId;
+        public JSONObject approvalProvenance;
+        public boolean executionContextEnabled;
         public JSONObject acceptedGoal;
+        /** Local privacy scope from the confirmed goal; not serialized. */
+        public String observationSetting;
         public String goalResolutionId;
         public String preparationVersion;
         public JSONObject clarificationAnswer;
@@ -150,6 +154,7 @@ public final class AgentTurnContract {
             if (userConfirmation != null) object.put("user_confirmation", userConfirmation);
             if (expectedVersion != null) object.put("expected_version", expectedVersion);
             if (confirmationId != null) object.put("confirmation_id", confirmationId);
+            if (approvalProvenance != null) object.put("approval_provenance",approvalProvenance);
             if (userActionEvent != null) object.put("user_action_event", userActionEvent);
             if (visionSnapshot != null) object.put("vision_snapshot", visionSnapshot);
             if (visionFailureCode != null) object.put("vision_failure", visionFailureCode);
@@ -167,6 +172,7 @@ public final class AgentTurnContract {
             if (resultPromptId != null) object.put("result_prompt_id", resultPromptId);
             if (userResult != null) object.put("user_result", userResult);
             if (adjustmentReason != null) object.put("adjustment_reason", adjustmentReason);
+            if(executionContextEnabled)object.put("execution_context",ExecutionState.context(this));
             return object.toString();
         }
     }
@@ -242,6 +248,8 @@ public final class AgentTurnContract {
         public final String episodeId;
         public final String taskStatus;
         public final String responseType;
+        public final String commandResultStatus;
+        public final String acceptedGoalType,graphHash;
         public final String message;
         public final String stateId;
         public final String resolutionStatus;
@@ -251,14 +259,19 @@ public final class AgentTurnContract {
         public final int totalSteps;
         public final GuideCommand guideCommand;
         public final JSONObject metadata;
+        public final ExecutionState executionState;
 
         public Response(String json) throws JSONException {
             JSONObject object = new JSONObject(json);
+            executionState=object.optJSONObject("execution_state")==null?null:new ExecutionState(object.getJSONObject("execution_state"));
             requestId = object.getString("request_id");
             sessionId = object.getString("session_id");
             sessionVersion = object.optInt("session_version", 0);
             episodeId = optNullableString(object, "episode_id");
             responseType = object.optString("response_type", "guidance");
+            acceptedGoalType=optNullableString(object,"accepted_goal_type");
+            graphHash=object.optJSONObject("graph_reference")==null?null:optNullableString(object.optJSONObject("graph_reference"),"sha256");
+            commandResultStatus=object.optJSONObject("command_result")==null?null:object.optJSONObject("command_result").optString("status");
             message = optNullableString(object, "message");
             resolutionStatus = optNullableString(object, "resolution_status");
             resolvedGoal = object.optJSONObject("goal");

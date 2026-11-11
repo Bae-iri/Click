@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from hashlib import sha256
 import json
 import time
-from uuid import uuid4
+from uuid import uuid4, uuid5
 from fastapi import HTTPException
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -116,6 +116,8 @@ class VoiceQueueService:
     def enqueue(self, user_id, request, *, interrupt=False):
         data = request.model_dump(mode="json")
         digest = sha256(json.dumps({"operation": "interrupt" if interrupt else "enqueue", **data}, sort_keys=True).encode()).hexdigest()
+        from app.services.request_plan import split_requests
+        goals = (request.raw_goal,) if interrupt or request.priority == "VIP" else split_requests(request.raw_goal)
         with self.transaction(user_id) as (db, state, now):
             self.expire(db, state, now)
             existing = db.get(VoiceRequest, str(request.id))
@@ -132,13 +134,20 @@ class VoiceQueueService:
             count = len(db.scalars(select(VoiceRequest.id).where(VoiceRequest.user_id == user_id,
                 VoiceRequest.status.in_(("QUEUED", "RUNNING")))).all())
             # An interrupt must remain possible when the normal queue is full.
-            if count >= 100 and not interrupt:
+            if count + len(goals) > 100 and not interrupt:
                 raise HTTPException(429, headers={"Retry-After": "5"})
-            state.last_sequence += 1
-            row = VoiceRequest(id=str(request.id), user_id=user_id, raw_goal=request.raw_goal, priority=priority,
-                status="QUEUED", sequence=state.last_sequence, payload_hash=digest,
-                created_at=now, updated_at=now, expires_at=now + 86400)
-            db.add(row)
+            row = None
+            for index, goal in enumerate(goals):
+                identifier = str(request.id if index == 0 else uuid5(request.id, f"queue-part:{index}"))
+                part_hash = digest if index == 0 else sha256(json.dumps({
+                    "parent": str(request.id), "part": index, "raw_goal": goal}, sort_keys=True).encode()).hexdigest()
+                state.last_sequence += 1
+                item = VoiceRequest(id=identifier, user_id=user_id, raw_goal=goal, priority=priority,
+                    status="QUEUED", sequence=state.last_sequence, payload_hash=part_hash,
+                    created_at=now, updated_at=now, expires_at=now + 86400)
+                db.add(item)
+                if row is None:
+                    row = item
             db.flush()
             if interrupt:
                 self.process_vips(db, state, now, request.clear_queued)
@@ -192,7 +201,7 @@ class VoiceQueueService:
             return self.snapshot(db, state, claimed=claimed)
 
     def finish(self, user_id, request_id, *, failure=None):
-        desired = "FAILED" if failure else "COMPLETED"
+        desired = "CANCELLED" if failure in {"USER_ABORTED", "USER_DECLINED"} else "FAILED" if failure else "COMPLETED"
         with self.transaction(user_id) as (db, state, now):
             self.expire(db, state, now)
             row = self.owned(db, user_id, request_id)

@@ -215,4 +215,83 @@ public class SettingsScreenPrivacyTest {
             }
         }
     }
+    @Test public void confirmedSettingScopeHidesOnlyKnownOtherSliders() throws Exception {
+        JSONObject brightness=node("brightness",null).put("role","slider").put("resource_id","com.android.settings:id/brightness_seekbar")
+            .put("extras",new JSONObject().put("progress",.6).put("min",0).put("max",1));
+        JSONObject font=node("font",null).put("role","slider").put("resource_id","com.android.settings:id/seekBarForFontSize")
+            .put("extras",new JSONObject().put("progress",3).put("min",0).put("max",7));
+        JSONObject media=node("media","미디어").put("role","slider").put("resource_id","android:id/seekbar")
+            .put("extras",new JSONObject().put("progress",3).put("min",0).put("max",15));
+        JSONObject input=request(node("title","디스플레이"),brightness,font,media);
+        for(String setting:new String[]{"font_size","brightness","volume"}) {
+            String safe=privacy.filter(input,setting).toString();
+            assertEquals(setting.equals("brightness"),safe.contains("brightness_seekbar"));
+            assertEquals(setting.equals("font_size"),safe.contains("seekBarForFontSize"));
+            assertTrue("Unknown channel identities must remain available for grounding",safe.contains("android:id/seekbar"));
+            assertTrue(safe.contains("디스플레이"));
+        }
+        assertTrue(privacy.filter(input).toString().contains("brightness_seekbar"));
+        assertTrue(input.toString().contains("brightness_seekbar"));
+    }
+    @Test public void sharedObservationCasesMatchBackendAcrossTaskFamilies() throws Exception {
+        JSONArray cases;
+        try (java.io.InputStream in = getClass().getResourceAsStream("/fixtures/observation-privacy-cases.json")) {
+            assertNotNull(in);
+            cases = new JSONArray(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+        for (int i = 0; i < cases.length(); i++) {
+            JSONObject value = cases.getJSONObject(i);
+            JSONObject body = new JSONObject().put("accessibility_tree", new JSONObject()
+                    .put("package_name", "com.android.settings").put("nodes", value.getJSONArray("nodes")));
+            String expected = value.getString("expected");
+            try {
+                JSONObject safe = privacy.filter(body, value.getString("setting"));
+                assertEquals(value.getString("name"), "allowed", expected);
+                JSONArray nodes = safe.getJSONObject("accessibility_tree").getJSONArray("nodes");
+                boolean control = false;
+                for (int j = 0; j < nodes.length(); j++) {
+                    JSONObject node = nodes.getJSONObject(j);
+                    assertFalse(value.getString("name"), node.optString("node_id").startsWith("private"));
+                    control |= "control".equals(node.optString("node_id"));
+                }
+                assertTrue(value.getString("name"), control);
+            } catch (SettingsScreenPrivacy.Blocked blocked) {
+                assertNotEquals(value.getString("name"), "allowed", expected);
+                assertEquals(value.getString("name"), expected.equals("sensitive_input")
+                        ? SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_INPUT : SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_SCREEN,
+                        blocked.reason);
+            }
+        }
+    }
+
+    @Test public void nativeTextNeedsNoScreenshotMaskButImagesStillNeedProof() throws Exception {
+        JSONObject body = request(node("title", "디스플레이"), node("brightness", "밝기").put("role", "slider"));
+        assertNotNull(privacy.filter(body, "brightness", false));
+        body.put("vision_snapshot", new JSONObject().put("package_name", "com.android.settings").put("redaction_applied", true));
+        try { privacy.filter(body, "brightness", false); fail("Unproven image masking must remain blocked"); }
+        catch (SettingsScreenPrivacy.Blocked blocked) { assertEquals(SettingsScreenPrivacy.Blocked.Reason.VISION_MASK_UNAVAILABLE, blocked.reason); }
+    }
+
+    @Test public void onlyFiniteWindowContextCanReachHttpBoundary() throws Exception {
+        JSONObject input=request(node("title","설정"));
+        input.getJSONObject("accessibility_tree").put("window_context",new JSONObject().put("settings_activity","SUBPAGE").put("window_kind","APPLICATION").put("keyboard_visible",false));
+        assertEquals("SUBPAGE",privacy.filter(input).getJSONObject("accessibility_tree").getJSONObject("window_context").getString("settings_activity"));
+        input.getJSONObject("accessibility_tree").getJSONObject("window_context").put("activity_class","private");
+        assertThrows(SettingsScreenPrivacy.Blocked.class,()->privacy.filter(input));
+    }
+
+ @Test public void unlabeledNativeBrightnessExportsOnlyRegisteredControlAndAncestors() throws Exception {
+  String pkg="com.android.systemui";
+  JSONObject wrapper=node("wrapper",null).put("package_name",pkg).put("resource_id",pkg+":id/brightness_dialog_slider");
+  JSONObject slider=node("slider",null).put("package_name",pkg).put("parent_id","wrapper").put("resource_id",pkg+":id/slider")
+    .put("class_name","android.widget.SeekBar").put("role","slider").put("extras",new JSONObject().put("progress",0.4).put("min",0).put("max",1));
+  JSONObject input=request(wrapper,slider,node("private","private notification").put("package_name",pkg));
+  input.getJSONObject("accessibility_tree").put("package_name",pkg);
+  JSONObject exported=privacy.filter(input,"brightness");
+  assertEquals(2,exported.getJSONObject("accessibility_tree").getJSONArray("nodes").length());
+  assertFalse(exported.toString().contains("private notification"));
+  assertThrows(SettingsScreenPrivacy.Blocked.class,()->privacy.filter(input,"font_size"));
+  slider.remove("parent_id");
+  assertThrows(SettingsScreenPrivacy.Blocked.class,()->privacy.filter(input,"brightness"));
+ }
 }

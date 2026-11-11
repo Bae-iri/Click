@@ -46,6 +46,22 @@ final class GuideFreshness {
         return true;
     }
 
+    /** Device-list changes do not invalidate read-only instructions on the same native page. */
+    static boolean sameManualSettingsPage(ScreenSnapshot requested, ScreenSnapshot latest, java.util.Set<String> approvedTitles) {
+        if (requested == null || latest == null || approvedTitles == null || approvedTitles.isEmpty()
+                || !java.util.Set.of("com.android.settings", "com.samsung.android.settings").contains(requested.packageName)
+                || !Objects.equals(requested.packageName, latest.packageName)
+                || !Objects.equals(requested.activeWindowId, latest.activeWindowId)
+                || requested.screenWidth != latest.screenWidth || requested.screenHeight != latest.screenHeight) return false;
+        String before = independentPageTitle(requested, approvedTitles);
+        return before != null && before.equals(independentPageTitle(latest, approvedTitles));
+    }
+
+    private static String independentPageTitle(ScreenSnapshot screen, java.util.Set<String> approvedTitles) {
+        String title=com.click.data.snapshot.ScreenIdentity.pageTitle(screen);
+        return title!=null && approvedTitles.stream().anyMatch(t -> com.click.data.snapshot.SettingsCapabilities.canonical(t).equals(title)) ? title : null;
+    }
+
     private static boolean sameTarget(AccessibilityNodeSnapshot before, AccessibilityNodeSnapshot now) {
         return before.visibleToUser == now.visibleToUser && before.enabled == now.enabled
                 && before.clickable == now.clickable && Arrays.equals(before.bounds, now.bounds)

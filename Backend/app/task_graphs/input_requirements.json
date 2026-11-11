@@ -93,7 +93,18 @@
         "화면이 어두",
         "화면을 밝",
         "화면 어두",
-        "화면 밝"
+        "화면 밝",
+        "화면 어둡",
+        "화면을 어둡",
+        "화면이 어둡",
+        "화면 좀 어둡",
+        "화면을 좀 어둡",
+        "화면이 너무 밝",
+        "화면이 너무 어두",
+        "화면 좀 밝",
+        "화면을 좀 밝",
+        "화면을 조금 더 밝",
+        "화면을 조금 더 어둡"
       ],
       "direction_terms": {
         "increase": [
@@ -228,6 +239,1498 @@
             "audio_stream": "media",
             "scope": "system"
           },
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_navigation",
+      "goal_prefix": "settings.navigation.",
+      "keywords": [
+        "설정 화면 열",
+        "설정으로 이동",
+        "설정 열어"
+      ],
+      "fields": [
+        {
+          "id": "page",
+          "label": "설정 화면",
+          "kind": "choice",
+          "goal_slot": "setting",
+          "question": "어떤 설정 화면을 열까요?",
+          "choices": [
+            {
+              "value": "navigation_settings",
+              "label": "설정"
+            },
+            {
+              "value": "navigation_display",
+              "label": "디스플레이"
+            },
+            {
+              "value": "navigation_sound",
+              "label": "소리 및 진동"
+            },
+            {
+              "value": "navigation_connections",
+              "label": "연결"
+            },
+            {
+              "value": "navigation_accessibility",
+              "label": "접근성"
+            },
+            {
+              "value": "navigation_wifi",
+              "label": "와이파이"
+            },
+            {
+              "value": "navigation_bluetooth",
+              "label": "블루투스"
+            },
+            {
+              "value": "navigation_font_size",
+              "label": "글자 크기"
+            },
+            {
+              "value": "navigation_screen_timeout",
+              "label": "화면 자동 꺼짐 시간"
+            },
+            {
+              "value": "navigation_display_size",
+              "label": "화면 크기"
+            },
+            {
+              "value": "navigation_volume",
+              "label": "음량"
+            },
+            {
+              "value": "navigation_ringtone",
+              "label": "벨소리"
+            },
+            {
+              "value": "navigation_notification_sound",
+              "label": "알림 소리"
+            },
+            {
+              "value": "navigation_do_not_disturb",
+              "label": "방해 금지"
+            },
+            {
+              "value": "navigation_visibility",
+              "label": "시인성 향상"
+            },
+            {
+              "value": "navigation_hearing",
+              "label": "청각 보조"
+            },
+            {
+              "value": "navigation_interaction",
+              "label": "입력 및 동작"
+            },
+            {
+              "value": "navigation_talkback",
+              "label": "TalkBack"
+            },
+            {
+              "value": "navigation_magnification",
+              "label": "확대"
+            },
+            {
+              "value": "navigation_captions",
+              "label": "자막"
+            },
+            {
+              "value": "navigation_eye_comfort",
+              "label": "편안하게 화면 보기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "wifi",
+      "goal_prefix": "settings.wifi.",
+      "keywords": [
+        "와이파이",
+        "wifi",
+        "wi-fi"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "와이파이 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "와이파이를 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "bluetooth",
+      "goal_prefix": "settings.bluetooth.",
+      "keywords": [
+        "블루투스",
+        "Bluetooth",
+        "블루투스 사용",
+        "Use Bluetooth"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "블루투스 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "mobile_data",
+      "goal_prefix": "settings.mobile_data.",
+      "keywords": [
+        "모바일 데이터",
+        "Mobile data"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "모바일 데이터 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "airplane_mode",
+      "goal_prefix": "settings.airplane_mode.",
+      "keywords": [
+        "비행기 탑승 모드",
+        "비행기 모드",
+        "Airplane mode",
+        "Flight mode"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "비행기 모드 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "hotspot",
+      "goal_prefix": "settings.hotspot.",
+      "keywords": [
+        "모바일 핫스팟",
+        "Mobile hotspot",
+        "Wi-Fi hotspot",
+        "핫스팟 사용",
+        "Use Wi-Fi hotspot"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "모바일 핫스팟 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "dark_mode",
+      "goal_prefix": "settings.dark_mode.",
+      "keywords": [
+        "다크 모드",
+        "Dark mode",
+        "어두운 테마",
+        "Dark theme"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "다크 모드 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "location",
+      "goal_prefix": "settings.location.",
+      "keywords": [
+        "위치",
+        "Location",
+        "위치 사용",
+        "Use location"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "위치 서비스 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "power_saving",
+      "goal_prefix": "settings.power_saving.",
+      "keywords": [
+        "절전 모드",
+        "Power saving",
+        "배터리 절약 모드",
+        "Battery saver",
+        "배터리 절약 모드 사용",
+        "Use Battery Saver"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "절전 모드 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "talkback",
+      "goal_prefix": "settings.talkback.",
+      "keywords": [
+        "TalkBack",
+        "톡백",
+        "TalkBack 사용",
+        "Use TalkBack"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "TalkBack 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "magnification",
+      "goal_prefix": "settings.magnification.",
+      "keywords": [
+        "확대 바로가기",
+        "Magnification shortcut",
+        "확대",
+        "Magnification"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "화면 확대 기능 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "automatic_date_time",
+      "goal_prefix": "settings.date_time.automatic.",
+      "keywords": [
+        "날짜 및 시간 자동 설정",
+        "Automatic date and time",
+        "자동으로 시간 설정",
+        "Set time automatically",
+        "자동 날짜 및 시간",
+        "Automatic date & time"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "날짜와 시간 자동 설정 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "nfc",
+      "goal_prefix": "settings.nfc.",
+      "keywords": [
+        "NFC",
+        "NFC 및 비접촉 결제",
+        "NFC and contactless payments",
+        "NFC 사용",
+        "Use NFC"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "NFC 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "do_not_disturb",
+      "goal_prefix": "settings.do_not_disturb.",
+      "keywords": [
+        "방해 금지",
+        "Do not disturb",
+        "지금 켜기",
+        "Turn on now"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "방해 금지 모드 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "auto_rotate",
+      "goal_prefix": "settings.auto_rotate.",
+      "keywords": [
+        "화면 자동 회전",
+        "Auto-rotate screen",
+        "자동 회전",
+        "Auto rotate"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "화면 자동 회전 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "eye_comfort",
+      "goal_prefix": "settings.eye_comfort.",
+      "keywords": [
+        "편안하게 화면 보기",
+        "Eye comfort shield",
+        "야간 조명",
+        "Night light",
+        "지금 사용",
+        "Use now"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "편안하게 화면 보기 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "adaptive_brightness",
+      "goal_prefix": "settings.adaptive_brightness.",
+      "keywords": [
+        "밝기 최적화",
+        "Adaptive brightness",
+        "자동 밝기",
+        "Automatic brightness"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "자동 밝기 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "data_saver",
+      "goal_prefix": "settings.data_saver.",
+      "keywords": [
+        "데이터 절약 모드",
+        "Data saver",
+        "지금 사용",
+        "Use now",
+        "데이터 절약 모드 사용",
+        "Use Data Saver"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "데이터 절약 모드 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "data_roaming",
+      "goal_prefix": "settings.data_roaming.",
+      "keywords": [
+        "데이터 로밍",
+        "Data roaming",
+        "로밍",
+        "Roaming"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "데이터 로밍 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "battery_percentage",
+      "goal_prefix": "settings.battery_percentage.",
+      "keywords": [
+        "배터리 잔량 표시",
+        "Show battery percentage",
+        "배터리 비율",
+        "Battery percentage"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "배터리 잔량 표시 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "color_inversion",
+      "goal_prefix": "settings.color_inversion.",
+      "keywords": [
+        "색상 반전",
+        "Color inversion",
+        "색상 반전 사용",
+        "Use color inversion"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "색상 반전 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "captions",
+      "goal_prefix": "settings.captions.",
+      "keywords": [
+        "실시간 자막",
+        "Live Caption",
+        "실시간 자막 사용",
+        "Use Live Caption"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "실시간 자막 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "mono_audio",
+      "goal_prefix": "settings.mono_audio.",
+      "keywords": [
+        "모노 오디오",
+        "Mono audio"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "변경 상태",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "모노 오디오 설정을 켤까요, 끌까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "켜기"
+            },
+            {
+              "value": "off",
+              "label": "끄기"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_wifi_connect",
+      "goal_prefix": "settings.wifi.connect",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_bluetooth_connect",
+      "goal_prefix": "settings.bluetooth.connect",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_screen_timeout_set",
+      "goal_prefix": "settings.screen_timeout.set",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_display_size_increase",
+      "goal_prefix": "settings.display_size.increase",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_display_size_decrease",
+      "goal_prefix": "settings.display_size.decrease",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_mute_enable",
+      "goal_prefix": "settings.mute.enable",
+      "keywords": [],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "무음 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "무음 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_mute_disable",
+      "goal_prefix": "settings.mute.disable",
+      "keywords": [],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "무음 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "무음 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_ringtone_change",
+      "goal_prefix": "settings.ringtone.change",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_vibrate_enable",
+      "goal_prefix": "settings.vibrate.enable",
+      "keywords": [],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "진동 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "진동 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_vibrate_disable",
+      "goal_prefix": "settings.vibrate.disable",
+      "keywords": [],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "진동 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "진동 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_notifications_enable",
+      "goal_prefix": "settings.notifications.enable",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_notifications_disable",
+      "goal_prefix": "settings.notifications.disable",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_screen_lock_change",
+      "goal_prefix": "settings.screen_lock.change",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_biometric_setup",
+      "goal_prefix": "settings.biometric.setup",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_apps_uninstall",
+      "goal_prefix": "settings.apps.uninstall",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_app_permissions_manage",
+      "goal_prefix": "settings.app_permissions.manage",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_storage_cleanup",
+      "goal_prefix": "settings.storage.cleanup",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_language_change",
+      "goal_prefix": "settings.language.change",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_keyboard_change",
+      "goal_prefix": "settings.keyboard.change",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_default_apps_change",
+      "goal_prefix": "settings.default_apps.change",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_wifi_share",
+      "goal_prefix": "settings.wifi.share",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_wifi_saved_networks_view",
+      "goal_prefix": "settings.wifi.saved_networks.view",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_vpn_connect",
+      "goal_prefix": "settings.vpn.connect",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_vpn_disconnect",
+      "goal_prefix": "settings.vpn.disconnect",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_private_dns_change",
+      "goal_prefix": "settings.private_dns.change",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_sim_manage",
+      "goal_prefix": "settings.sim.manage",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_hotspot_password_change",
+      "goal_prefix": "settings.hotspot.password.change",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_wallpaper_change",
+      "goal_prefix": "settings.wallpaper.change",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_notification_sound_change",
+      "goal_prefix": "settings.notification_sound.change",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_battery_status_view",
+      "goal_prefix": "settings.battery_status.view",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_app_cache_clear",
+      "goal_prefix": "settings.app_cache.clear",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_app_data_clear",
+      "goal_prefix": "settings.app_data.clear",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_notification_history_view",
+      "goal_prefix": "settings.notification_history.view",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_lockscreen_notifications_manage",
+      "goal_prefix": "settings.lockscreen_notifications.manage",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_backup_enable",
+      "goal_prefix": "settings.backup.enable",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_backup_disable",
+      "goal_prefix": "settings.backup.disable",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_software_update_check",
+      "goal_prefix": "settings.software_update.check",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_factory_reset",
+      "goal_prefix": "settings.factory_reset",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "settings_device_name_change",
+      "goal_prefix": "settings.device_name.change",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "mute_mode",
+      "goal_prefix": "settings.mute.",
+      "keywords": [
+        "무음",
+        "mute",
+        "silent"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "무음 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "무음 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
+    },
+    {
+      "id": "vibrate_mode",
+      "goal_prefix": "settings.vibrate.",
+      "keywords": [
+        "진동",
+        "vibrate"
+      ],
+      "fields": [
+        {
+          "id": "state",
+          "label": "소리 모드 변경",
+          "kind": "choice",
+          "goal_slot": "state",
+          "question": "진동 모드로 바꿀까요, 소리 모드로 돌아갈까요?",
+          "choices": [
+            {
+              "value": "on",
+              "label": "진동 모드로 변경"
+            },
+            {
+              "value": "off",
+              "label": "소리 모드로 변경"
+            }
+          ]
+        }
+      ],
+      "routes": [
+        {
+          "when": {},
           "target_app": "android_settings"
         }
       ]

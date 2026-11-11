@@ -10,6 +10,7 @@ import org.robolectric.RuntimeEnvironment;
 import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class)
+@org.robolectric.annotation.Config(sdk = 34, application = android.app.Application.class)
 public class LoadingStatusViewTest {
  @Test public void showsIndeterminateSpinnerAndStatusAndHidesWhenFinished() {
   LoadingStatusView view = new LoadingStatusView(RuntimeEnvironment.getApplication());

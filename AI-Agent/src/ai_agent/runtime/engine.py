@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ai_agent.task_graph.settings import CHOICE_PREDICATES, CHOICES
+
 from dataclasses import replace
 from uuid import uuid4
 from hashlib import sha256
@@ -49,7 +51,7 @@ from ai_agent.runtime.privacy import sanitize_request
 from ai_agent.runtime.vision_cycles import decide_vision_cycle
 from ai_agent.runtime.semantic_state import resolve_state
 from ai_agent.runtime.ui_selection import select_ui_target
-from ai_agent.runtime.primary import PrimaryDecision, decide_primary, retry_session, selection_binding
+from ai_agent.runtime.primary import PrimaryDecision, decide_primary, retry_session, selection_binding, observe_page_navigation
 from ai_agent.runtime.decision import decide_guide
 from ai_agent.telemetry.trace_logger import diagnostic_payload
 
@@ -85,7 +87,13 @@ class ClickAgentEngine:
         return self.trace_logger.traces
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
-        response = self._handle_turn(request)
+        from ai_agent.runtime.execution_contract import validate_context
+        validate_context(request.execution_context,session_id=request.session_id,request_id=request.request_id,
+            episode_id=request.episode_id,observation_id=request.observation_id)
+        from ai_agent.runtime.environment import classify_environment
+        environment=classify_environment(request)
+        response = self._handle_turn(request,environment=environment)
+        response.debug['environment_context']=environment.public()
         if self.replay_recorder is not None:
             try:
                 self.replay_recorder.record(request, response)
@@ -94,11 +102,32 @@ class ClickAgentEngine:
                 pass
         return response
 
-    def _handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
+    def _handle_turn(self, request: AgentTurnRequest, environment=None) -> AgentTurnResponse:
         original_screen = request.accessibility_tree
         request = sanitize_request(request)
         existing_session = self.session_store.get(request.session_id)
         validate_agent_turn_request(request, has_session=existing_session is not None)
+        if request.user_confirmation == "rejected" and not request.vision_failure:
+            from ai_agent.runtime.termination import user_declined
+            typed_goal = existing_session.typed_goal if existing_session else self._resolve_typed_goal(request, None)
+            slots = typed_goal.slots
+            previous = existing_session.technical_outcome if existing_session else {}
+            vision = bool(existing_session and existing_session.vision_state.get("status") == "retrying")
+            termination = user_declined(slots.get("setting"),
+                previously_changed=previous.get("status") == "CHANGED",
+                scope="vision" if vision else "action")
+            guide = GuideCommand("guide_" + uuid4().hex, CommandType.CANCELLED,
+                ActionType.OBSERVE_ONLY, termination["message"], SafetyLevel.LOW_RISK, False,
+                render_policy={"termination": termination})
+            if existing_session:
+                self.session_store.update(request.session_id, pending_attempt=None,
+                    pending_selection=None, pending_transition_id=None,
+                    pending_confirmation_transition_id=None, last_target_node_id=None,
+                    last_guide_command_id=guide.guide_command_id)
+            return AgentTurnResponse(request_id=request.request_id, session_id=request.session_id,
+                task_id=typed_goal.task_id, typed_goal=typed_goal,
+                current_state_id=existing_session.current_state_id if existing_session else "S0_UNKNOWN",
+                guide_command=guide, debug={"termination": termination})
         previous_snapshot = existing_session.last_snapshot if existing_session else None
         if previous_snapshot and request.observation_id and (
                 request.observation_id == previous_snapshot.observation_id
@@ -160,23 +189,58 @@ class ClickAgentEngine:
 
         graph = self._task_graph_for(typed_goal)
         vocabulary_key = graph.definition.required_slots.get("setting", "")
-        if self.screen_resolver:
-            from ai_agent.runtime.screen_privacy import screen_status, filter_nodes, MANUAL_MESSAGE
-            context = request.device_context or (request.raw_goal.device_context if request.raw_goal else None)
-            package = (context.foreground_app or context.app_package) if context else None
-            privacy_status = screen_status(original_screen, vocabulary_key, package)
-            if privacy_status:
-                return AgentTurnResponse(request_id=request.request_id, session_id=request.session_id,
-                    task_id=typed_goal.task_id, typed_goal=typed_goal,
-                    current_state_id=existing_session.current_state_id if existing_session else "S0_UNKNOWN",
-                    guide_command=GuideCommand(guide_command_id='guide_' + uuid4().hex,
-                        command_type=CommandType.BLOCKED, action_type=ActionType.OBSERVE_ONLY,
-                        message=MANUAL_MESSAGE, safety_level=SafetyLevel.BLOCKED,
-                        requires_user_action=False, render_policy={"privacy_blocked": True,
-                            "manual_only": True}),
-                    debug={"ui_selection": {"provider": "jev", "mode": "primary", "called": False,
-                                             "status": privacy_status}})
-            request = replace(request, accessibility_tree=filter_nodes(original_screen, vocabulary_key))
+        from ai_agent.runtime.screen_privacy import assess_screen, filter_nodes
+        context = request.device_context or (request.raw_goal.device_context if request.raw_goal else None)
+        package = (context.foreground_app or context.app_package) if context else None
+        assessment = assess_screen(original_screen, vocabulary_key, package)
+        from ai_agent.runtime.environment import classify_environment,environment_recovery
+        environment=environment or classify_environment(request)
+        interrupted=environment_recovery(environment,vocabulary_key)
+        if interrupted and environment.kind!='SENSITIVE' and assessment.status!='sensitive_screen':
+            from ai_agent.runtime.recovery import RecoveryPlan
+            from ai_agent.runtime.guide import recovery_command
+            from ai_agent.runtime.types import ReplanDecision
+            reason,action=interrupted
+            plan=RecoveryPlan(ReplanDecision(True,reason,strategy='environment_recovery'),
+                'wait',reason,action,'user',{'environment_wait':environment.kind})
+            # Retire stale bindings without spending or refunding execution/search budgets.
+            updates=dict(pending_attempt=None,pending_selection=None,pending_transition_id=None,
+                pending_confirmation_transition_id=None,last_guide_command_id=None,last_target_node_id=None,
+                recovery_state=plan.state,vision_state={})
+            if existing_session:self.session_store.update(request.session_id,**updates)
+            else:self.session_store.start(session_id=request.session_id,task_id=typed_goal.task_id,
+                typed_goal=typed_goal,current_state_id='S0_UNKNOWN',**updates)
+            return AgentTurnResponse(request_id=request.request_id,session_id=request.session_id,
+                task_id=typed_goal.task_id,typed_goal=typed_goal,
+                current_state_id=existing_session.current_state_id if existing_session else 'S0_UNKNOWN',
+                guide_command=recovery_command(request.session_id,plan),
+                debug={'recovery':plan.to_dict(),'task_completed':False,
+                       'fallback':{'type':'settings_app_recovery' if action=='open_settings' else 'environment_recovery'},
+                       'observation':{**diagnostics.raw_observation_debug(request),'observed_packages':sorted({n.package_name for n in request.accessibility_tree if n.package_name})},
+                       'ui_selection':{'provider':'jev' if self.screen_resolver else 'rules',
+                                       'called':False,'status':'environment_recovery'}})
+
+        # Credential/authentication boundaries apply to every selector, including
+        # local rules. An unknown screen is an observation failure, not proof of PII.
+        if assessment.status and (self.screen_resolver or assessment.status == 'sensitive_screen'):
+            message = assessment.message
+            if assessment.status == 'sensitive_screen' and graph.definition.task_type == 'settings_assisted':
+                from ai_agent.task_graph.assisted_guidance import privacy_message
+                message = privacy_message(graph.definition.goal_type,message)
+            return AgentTurnResponse(request_id=request.request_id, session_id=request.session_id,
+                task_id=typed_goal.task_id, typed_goal=typed_goal,
+                current_state_id=existing_session.current_state_id if existing_session else "S0_UNKNOWN",
+                guide_command=GuideCommand(guide_command_id='guide_' + uuid4().hex,
+                    command_type=CommandType.BLOCKED, action_type=ActionType.OBSERVE_ONLY,
+                    message=message, safety_level=SafetyLevel.BLOCKED,
+                    requires_user_action=False, render_policy={"privacy_blocked": assessment.status == 'sensitive_screen',
+                        "manual_only": True, "observation_reason": assessment.reason}),
+                debug={"ui_selection": {"provider": "jev" if self.screen_resolver else "rules",
+                    "mode": "primary" if self.screen_resolver else "local", "called": False,
+                    "status": assessment.status, "observation_reason": assessment.reason}})
+        request = replace(request, accessibility_tree=filter_nodes(
+            original_screen if self.screen_resolver else request.accessibility_tree, vocabulary_key,
+            finite_labels=bool(self.screen_resolver)))
         # First pass removes all unapproved text before goal typing. Narrow the
         # verified payload to this goal before classification, matching or traces.
         if request.vision_snapshot and request.vision_snapshot.privacy_status == "verified":
@@ -253,6 +317,19 @@ class ClickAgentEngine:
         current_state_id = classify_screen_state(normalized_nodes, graph,
             device_context=observation_context.device_context(request),
             previous_state_id=previous_state_id, evidence=state_evidence)
+        from ai_agent.runtime.settings_navigation import page_arrival
+        arrival = page_arrival(graph, normalized_nodes, original_screen)
+        from ai_agent.runtime.settings_controls import already_satisfied, CONTROLS, manual_handoff
+        from ai_agent.runtime.screen_privacy import screen_status
+        already_setting = (already_satisfied(graph, normalized_nodes, request.applied_settings)
+            if graph.definition.required_slots.get('setting') in {*CONTROLS, *CHOICES, 'wifi'}
+                and request.user_confirmation != 'rejected' and not screen_status(original_screen, vocabulary_key)
+                and (not existing_session or not existing_session.pending_attempt or request.user_action_event is None) else None)
+        handoff = manual_handoff(graph, normalized_nodes, original_screen)
+        if handoff is not None:
+            current_state_id = handoff.from_state
+        if arrival is not None or already_setting is not None:
+            current_state_id = (arrival or already_setting).current_state_id
         if current_state_id == 'S0_UNKNOWN' and not self.screen_resolver:
             current_state_id = resolve_state(normalized_nodes, graph, self.state_resolver,
                 previous_state_id=previous_state_id, evidence=state_evidence,
@@ -260,6 +337,9 @@ class ClickAgentEngine:
         current_snapshot = build_screen_snapshot(current_state_id, normalized_nodes,
             observation_id=request.observation_id or request.request_id,
             captured_at_ms=request.captured_at_ms, applied_settings=request.applied_settings)
+        relocated_session = observe_page_navigation(existing_session,current_snapshot,normalized_nodes,graph)
+        user_retry = user_retry or relocated_session is not existing_session
+        existing_session = relocated_session
         previous_transition = next((t for t in graph.transitions if existing_session
             and t.transition_id == existing_session.pending_transition_id), None)
         attempt, processed_events = correlate_action(existing_session, request, previous_transition)
@@ -275,6 +355,8 @@ class ClickAgentEngine:
             current_state_id=current_state_id,
             previous_snapshot=existing_session.last_snapshot if existing_session else None,
             current_snapshot=current_snapshot, attempt=attempt, nodes=normalized_nodes)
+        if arrival is not None or already_setting is not None:
+            verification_result = arrival or already_setting
         # In primary mode Jev chooses across graph steps, before final transition
         # verification. Rule classification supplies evidence, never the final UI.
         primary_match = None
@@ -282,7 +364,7 @@ class ClickAgentEngine:
         primary_decision = None
         ui_selection = {"provider": getattr(self.ui_selector, "provider", "rules"),
                         "status": "skipped", "called": False}
-        if self.screen_resolver:
+        if self.screen_resolver and handoff is None:
             if vision_analysis and vision_analysis.status == "masking_failed":
                 primary_decision = PrimaryDecision(None, {
                     "provider": "jev", "mode": "primary", "status": "skipped", "called": False})
@@ -412,6 +494,10 @@ class ClickAgentEngine:
             primary=primary_decision, limit_target=matched_target if limit_reached else None,
             vocabulary_key=vocabulary_key)
         guide_command, keep_attempt = decision.guide, decision.keep_attempt
+        if arrival is not None:
+            guide_command = replace(guide_command,
+                message=graph.states[arrival.current_state_id].name + ' 설정 화면을 열었어요.',
+                render_policy={**guide_command.render_policy, 'settings_navigation': True})
         pending_selection = (selection_binding(primary_match, normalized_nodes,
             diagnostic_payload({'ui_selection': ui_selection}).get('ui_selection', {}))
             if primary_match and guide_command.target_node_id == primary_match.target_node_id
@@ -437,7 +523,7 @@ class ClickAgentEngine:
                     'target_window_id': target.window_id,
                     'target_resource_id': target.resource_id,
                     'target_selection_method': match_result.match_method,
-                    'target_bounds': target.bounds, 'baseline_value': target.value,
+                    'target_bounds': target.bounds, 'baseline_value': target.value, 'baseline_checked': target.checked,
                     'baseline_range_min': target.range_min, 'baseline_range_max': target.range_max,
                     'baseline_observation_id': request.observation_id,
                     'baseline_captured_at_ms': current_snapshot.captured_at_ms,
@@ -474,8 +560,47 @@ class ClickAgentEngine:
             guide_command=guide_command,
         )
 
+        if handoff is not None and request.user_confirmation != 'rejected':
+            from ai_agent.runtime.settings_controls import DOCUMENT
+            record=DOCUMENT['goals'].get(typed_goal.goal_type,{})
+            # Keep purpose-specific authored directions (e.g. VPN connect vs disconnect).
+            # Bluetooth discovery can be empty; use its current empty-list instruction
+            # rather than the older instruction embedded in an approved graph artifact.
+            from ai_agent.task_graph.assisted_guidance import handoff_message
+            manual_message=handoff_message(typed_goal.goal_type,record.get('page_name','설정'),handoff.guide_message)
+            if typed_goal.goal_type=='settings.bluetooth.connect' and record.get('instruction'):
+                manual_message=f"‘{record['page_name']}’ 화면이에요. "+record['instruction']+' 직접 진행한 뒤 완료 확인을 눌러주세요.'
+            guide_command = replace(guide_command, command_type=CommandType.HIGHLIGHT,
+                action_type=ActionType.OBSERVE_ONLY, message=manual_message,
+                safety_level=SafetyLevel.LOW_RISK, requires_user_action=False,
+                target_node_id=None, target_bounds=None, target_label=None,
+                render_policy={'manual_handoff': True, 'allow_result_check': True})
+            pending_transition_id = None
+            attempt = None
         technical = dict(existing_session.technical_outcome) if existing_session else {}
-        if verification_result and verification_result.task_completed:
+        if handoff is not None:
+            technical = {'status': 'UNVERIFIABLE', 'reason': 'manual_result_required',
+                'setting': vocabulary_key, 'verified_at_ms': request.captured_at_ms}
+        if arrival is not None:
+            technical = {'status': 'OPENED', 'reason': 'settings_page_visible',
+                'verified_at_ms': request.captured_at_ms, 'observation_id': request.observation_id,
+                'transition_id': 'PAGE_VISIBLE', 'setting': graph.definition.required_slots['setting']}
+        elif already_setting is not None:
+            technical = {'status': 'ALREADY_SET', 'reason': already_setting.evidence, 'setting': vocabulary_key,
+                'requested_state': graph.definition.required_slots['state'],
+                'transition_id': next(edge.transition_id for edge in graph.transitions
+                    if edge.from_state == already_setting.current_state_id and edge.completes_task
+                    and (already_setting.evidence != 'system_mode_already_set'
+                        or edge.verification_predicate in CHOICE_PREDICATES)),
+                'verified_at_ms': request.captured_at_ms, 'observation_id': request.observation_id,
+                'setting_value': applied_value(request.applied_settings, vocabulary_key)}
+            if already_setting.evidence in {'native_switch_already_set', 'wifi_already_set'}:
+                from ai_agent.runtime.targeting import eligible_nodes, selector_evidence
+                edge=next(e for e in graph.transitions if e.transition_id==technical['transition_id'])
+                targets=[n for n in eligible_nodes(edge,normalized_nodes,graph)
+                    if selector_evidence(n,edge,normalized_nodes,graph)[0]>=0.7]
+                technical['after_checked']=targets[0].checked if len(targets)==1 else None
+        elif verification_result and verification_result.task_completed:
             technical = {'status': 'CHANGED', 'reason': verification_result.evidence,
                 'verified_at_ms': request.captured_at_ms, 'transition_id': previous_transition.transition_id,
                 'attempt_id': verified_attempt['attempt_id'], 'guide_command_id': verified_attempt['guide_command_id'],
@@ -491,6 +616,10 @@ class ClickAgentEngine:
                 'setting_value': applied_value(request.applied_settings, graph.definition.required_slots.get('setting', 'font_size')),
                 'baseline_font_scale': verified_attempt.get('baseline_font_scale'),
                 'font_scale': font_scale(request.applied_settings), 'observation_id': request.observation_id}
+            if graph.definition.required_slots.get('setting') in {*CONTROLS, *CHOICES, 'wifi'}:
+                technical.update(requested_state=graph.definition.required_slots['state'],
+                    baseline_checked=verified_attempt.get('baseline_checked'),
+                    after_checked=next((n.checked for n in normalized_nodes if target_key(n) == verified_attempt['target_key']), None))
             verified_node = next((n for n in normalized_nodes if target_key(n) == verified_attempt['target_key']), None)
             if verified_node:
                 direction = graph.definition.required_slots.get('direction')
@@ -509,9 +638,24 @@ class ClickAgentEngine:
         elif verification_result and verification_result.status == VerificationStatus.NO_CHANGE:
             technical = {'status': 'NOT_ACHIEVED', 'reason': verification_result.evidence,
                          'verified_at_ms': request.captured_at_ms}
+        elif (verification_result and previous_transition and previous_transition.completes_task
+                and not task_completed and verification_result.status != VerificationStatus.SUCCESS):
+            # Keep the actual verification reason through request_result/reconnect.
+            # This is an observation diagnostic, never proof of a completed change.
+            source_attempt = verified_attempt or {}
+            setting = graph.definition.required_slots.get('setting', 'font_size')
+            technical = {'status': 'UNVERIFIABLE', 'reason': verification_result.evidence,
+                'verification_status': verification_result.status.value, 'setting': setting,
+                'requested_direction': graph.definition.required_slots.get('direction'),
+                'requested_state': graph.definition.required_slots.get('state'),
+                'observed_at_ms': request.captured_at_ms, 'observation_id': request.observation_id,
+                'baseline_setting_value': source_attempt.get('baseline_setting_value'),
+                'setting_value': applied_value(request.applied_settings, setting)}
         elif not task_completed and guide_command.command_type == CommandType.BLOCKED:
             technical = {'status': 'UNVERIFIABLE', 'reason': verification_result.evidence
                 if verification_result else 'observation_unavailable', 'verified_at_ms': request.captured_at_ms}
+        if technical:
+            technical.update(goal_type=graph.definition.goal_type, episode_id=request.episode_id)
         path = observed_path(existing_session.observed_path if existing_session else (), current_state_id, graph)
         if (existing_session and existing_session.last_snapshot and
                 (current_snapshot.observation_id == existing_session.last_snapshot.observation_id

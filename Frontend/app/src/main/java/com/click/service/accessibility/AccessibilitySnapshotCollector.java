@@ -11,11 +11,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class AccessibilitySnapshotCollector {
+    /** Observation and execution must clip native bounds to the same window. */
+    ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, android.content.Context context, Float fontScale) {
+        android.util.DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+        int width = metrics.widthPixels, height = metrics.heightPixels;
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            Rect window = context.getSystemService(android.view.WindowManager.class)
+                    .getCurrentWindowMetrics().getBounds();
+            width = window.width();
+            height = window.height();
+        }
+        return collect(root, packageName, width, height, fontScale);
+    }
+
     ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, int width, int height, Float fontScale) {
         List<AccessibilityNodeSnapshot> nodes = new ArrayList<>();
         boolean[] maskReady = {true};
         visit(root, "node_0", null, packageName, width, height, nodes, maskReady);
-        return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId(), maskReady[0], fontScale);
+        return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId(), maskReady[0], fontScale).withNavigation(NativeNavigationReader.read(root));
     }
 
     private void visit(AccessibilityNodeInfo node, String nodeId, String parentId, String packageName,
@@ -41,7 +54,7 @@ final class AccessibilitySnapshotCollector {
                     parentId,
                     node.isVisibleToUser(),
                     string(node.getPackageName()) == null ? packageName : string(node.getPackageName()),
-                    string(node.getText()),
+                    node.isShowingHintText() ? null : string(node.getText()),
                     string(node.getContentDescription()),
                     node.getViewIdResourceName(),
                     className,
@@ -55,7 +68,8 @@ final class AccessibilitySnapshotCollector {
                     progress,
                     node.getWindowId(),
                     node.isPassword() || node.isEditable() || "text_field".equals(inferRole(className, node)),
-                    range == null ? null : range.getMin(), range == null ? null : range.getMax(), node.isPassword()
+                    range == null ? null : range.getMin(), range == null ? null : range.getMax(), node.isPassword(),
+                    node.isCheckable() ? node.isChecked() : null
             ));
         }
         for (int index = 0; index < node.getChildCount(); index++) {

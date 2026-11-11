@@ -39,7 +39,6 @@ import com.click.data.local.RequestLibraryStore;
 import com.click.ui.home.HomeHelpItem;
 import com.click.domain.goal.QuickHelpTask;
 import com.click.service.overlay.ClickOverlayService;
-import com.click.service.overlay.OverlayActions;
 import com.click.ui.common.ClickUi;
 import com.click.ui.common.ClickTextScale;
 import com.click.ui.home.HomeIconView;
@@ -63,9 +62,11 @@ public final class HomeActivity extends AppCompatActivity {
     private OnBackPressedCallback pageBack;
     private LinearLayout homeTab, favoritesTab;
     private float renderedTextScale;
+    private com.click.designpreview.AccessibilityConnectionWatcher connectionWatcher;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        connectionWatcher = new com.click.designpreview.AccessibilityConnectionWatcher(this);
         renderedTextScale = ClickTextScale.scale(this);
         favorites = new HomeFavoritesStore(this);
         library = new RequestLibraryStore(this);
@@ -180,13 +181,16 @@ public final class HomeActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume(); requestLaunching = false;
-        // Do not let a previously opened input panel intercept taps on home shortcuts.
-        sendBroadcast(new Intent(OverlayActions.ACTION_COLLAPSE).setPackage(getPackageName()));
         if (Float.compare(renderedTextScale, ClickTextScale.scale(this)) != 0) {
             recreate();
             return;
         }
         refreshFavorites();
+    }
+
+    @Override protected void onPause() {
+        connectionWatcher.stop();
+        super.onPause();
     }
     private View header() {
         LinearLayout row = new LinearLayout(this);
@@ -410,7 +414,7 @@ public final class HomeActivity extends AppCompatActivity {
             reorder.setCompoundDrawablePadding(dp(6));
         }
         reorder.setTag("library_reorder"); reorder.setGravity(Gravity.CENTER);
-        reorder.setMinimumHeight(dp(48)); reorder.setPadding(dp(14), dp(8), dp(14), dp(8));
+        reorder.setMinimumHeight(dp(44)); reorder.setPadding(dp(14), dp(6), dp(14), dp(6));
         reorder.setBackground(ripple(reordering ? 0xFF245BC4 : BLUE, 16));
         reorder.setFocusable(true); reorder.setSelected(reordering);
         reorder.setOnClickListener(view -> { reordering = !reordering; renderFavoritesPage(); });
@@ -664,9 +668,18 @@ public final class HomeActivity extends AppCompatActivity {
         if (requestLaunching) return false;
         if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return false; }
         if (com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() == null) {
-            Toast.makeText(this, "클릭을 다시 연결해 주세요.\n설정에서 클릭을 껐다 켜면 이어서 도와드릴게요.", Toast.LENGTH_LONG).show();
-            openPermissionGuide(); return false;
+            requestLaunching = true;
+            Toast.makeText(this, "클릭을 준비하고 있어요.", Toast.LENGTH_SHORT).show();
+            connectionWatcher.start(() -> {
+                if (goal != null && goal.equals(requestInput.getText().toString().trim())) requestInput.setText("");
+                launchOverlay(goal, selectedGoalType, voice);
+            }, () -> { requestLaunching = false; openPermissionGuide(); });
+            return false;
         }
+        launchOverlay(goal, selectedGoalType, voice);
+        return true;
+    }
+    private void launchOverlay(String goal, String selectedGoalType, boolean voice) {
         Intent service = new Intent(this, ClickOverlayService.class);
         if (goal != null) service.putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL, goal);
         if (selectedGoalType != null) service.putExtra(ClickOverlayService.EXTRA_SELECTED_GOAL_TYPE, selectedGoalType);
@@ -674,7 +687,6 @@ public final class HomeActivity extends AppCompatActivity {
         requestLaunching = true;
         hideKeyboard();
         startService(service); moveTaskToBack(true);
-        return true;
     }
     private HomeIconView icon(HomeIconView.Kind kind) { return new HomeIconView(this, kind); }
     private TextView text(String value, float size, int color, Typeface typeface) {

@@ -18,7 +18,7 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import com.click.ui.common.ClickUi;
-import com.click.ui.tutorial.TutorialArtworkView;
+import com.click.ui.common.ClickTextScale;
 
 /** Welcomes the user after accessibility is enabled, before starting the hands-on tour. */
 public final class TutorialReadyActivity extends AppCompatActivity {
@@ -26,7 +26,7 @@ public final class TutorialReadyActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         narrator = new com.click.designpreview.TutorialNarrator(this);
-        narrator.speak("이제 준비됐어요. 시작하기를 눌러 클릭 버튼과 마이크 사용법을 함께 알아볼까요?");
+        narrator.speak("이제 클릭이 도와드릴 수 있어요! 시작하기를 눌러 클릭 사용법을 알아보세요.");
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.WHITE);
@@ -34,8 +34,7 @@ public final class TutorialReadyActivity extends AppCompatActivity {
                 | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
 
         FrameLayout root = new FrameLayout(this);
-        root.addView(new TutorialArtworkView(this, TutorialArtworkView.Kind.BACKGROUND),
-                new FrameLayout.LayoutParams(-1, -1));
+        root.setBackground(new com.click.designpreview.ClickBackgroundDrawable(getResources()));
         LinearLayout column = vertical();
         root.addView(column, new FrameLayout.LayoutParams(
                 Math.min(getResources().getDisplayMetrics().widthPixels, dp(480)), -1,
@@ -43,14 +42,10 @@ public final class TutorialReadyActivity extends AppCompatActivity {
 
         LinearLayout brand = new LinearLayout(this);
         brand.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView mark = new ImageView(this);
-        mark.setImageResource(com.click.designpreview.R.drawable.ic_click_cursor);
-        mark.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        brand.addView(mark, new LinearLayout.LayoutParams(dp(36), dp(36)));
-        TextView wordmark = ClickUi.title(this, "클릭");
-        LinearLayout.LayoutParams wordmarkParams = new LinearLayout.LayoutParams(-2, -2);
-        wordmarkParams.setMarginStart(dp(5));
-        brand.addView(wordmark, wordmarkParams);
+        ImageView cursor = new ImageView(this);
+        cursor.setImageResource(com.click.designpreview.R.drawable.icon_floating_cursor);
+        cursor.setContentDescription("클릭");
+        brand.addView(cursor, new LinearLayout.LayoutParams(dp(44), dp(44)));
         column.addView(brand, new LinearLayout.LayoutParams(-1, dp(60)));
 
         ScrollView scroll = new ScrollView(this);
@@ -62,23 +57,25 @@ public final class TutorialReadyActivity extends AppCompatActivity {
         scroll.addView(content, new ScrollView.LayoutParams(-1, -2));
         column.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        content.addView(new TutorialArtworkView(this, TutorialArtworkView.Kind.SUCCESS),
-                new LinearLayout.LayoutParams(dp(210), dp(210)));
+        ImageView clue = new com.click.designpreview.ClueArtworkView(this);
+        clue.setImageResource(com.click.designpreview.R.drawable.clue4_complete);
+        content.addView(clue, new LinearLayout.LayoutParams(dp(210), dp(210)));
         TextView title = ClickUi.title(this, getString(R.string.tutorial_ready_title));
         title.setId(R.id.tutorial_ready_title);
-        title.setTextSize(28);
+        title.setTextSize(ClickTextScale.size(this, 24));
         title.setGravity(Gravity.CENTER);
         title.setLineSpacing(dp(4), 1.1f);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         content.addView(title, ClickUi.wrap(dp(28)));
         TextView description = ClickUi.body(this, getString(R.string.tutorial_ready_description));
-        description.setTextSize(21);
+        description.setTextSize(ClickTextScale.size(this, 16));
         description.setGravity(Gravity.CENTER);
         content.addView(description, ClickUi.wrap(dp(18)));
 
         Button start = ClickUi.primaryButton(this, getString(R.string.tutorial_ready_start));
         start.setId(R.id.tutorial_ready_start);
         start.setMinHeight(dp(64));
+        start.setTextSize(ClickTextScale.size(this, 20));
         start.setPadding(dp(16), dp(14), dp(16), dp(14));
         start.setOnClickListener(view -> {
             start.setEnabled(false);

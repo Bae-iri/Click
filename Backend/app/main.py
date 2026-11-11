@@ -32,6 +32,8 @@ from app.services.agent_turn import AgentTurnService  # noqa: E402
 from app.api.v1.endpoints.history import build_router as build_history_router
 from app.api.v1.endpoints.account_actions import build_router as build_account_actions
 from app.services.account_actions import AccountActionService
+from app.services.interaction import InteractionService
+from app.api.v1.endpoints.interactions import build_router as build_interactions_router
 from app.services.voice_queue import VoiceQueueService
 from app.api.v1.endpoints.voice_queue import build_router as build_voice_queue_router
 from app.api.v1.endpoints.transcription import build_router as build_transcription_router
@@ -57,16 +59,35 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
         description="Android 설정 앱 위 오버레이 안내를 위한 MVP API",
     )
     engine = build_engine(database_url)
+    initialize_encryption = False
     if engine.dialect.name == "sqlite":
+        inspector = inspect(engine)
+        existing_tables = set(inspector.get_table_names())
+        initialize_encryption = "users" not in existing_tables
+        if "users" in existing_tables and "data_protection_state" not in existing_tables:
+            from app.core.data_encryption import DataEncryptionError
+            engine.dispose()
+            raise DataEncryptionError("Run the data encryption migration before opening an existing database")
         Base.metadata.create_all(engine)
+    from app.core.data_encryption import validate_database_keys
+    try:
+        validate_database_keys(engine, initialize=initialize_encryption)
+    except Exception:
+        engine.dispose()
+        raise
     session_factory = build_session_factory(engine)
     sessions = InMemorySessionRepository()
     guidance_service = GuidanceService(sessions, AgentClient(REPOSITORY_ROOT))
     turn_service = AgentTurnService(session_factory)
-    turn_service.graphs.seed_mvp()
+    try:
+        turn_service.graphs.seed_mvp()
+    except Exception:
+        engine.dispose()
+        raise
     app.state.turn_service = turn_service
     voice_queue = VoiceQueueService(session_factory, turn_service.repository.idle_seconds)
     app.state.voice_queue = voice_queue
+    app.state.interactions = InteractionService(session_factory)
     speech = transcription_service or TranscriptionService()
     app.state.transcription_service = speech
     app.state.engine = engine
@@ -92,6 +113,7 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
     app.include_router(build_agent_router(turn_service, principal), prefix="/api/v1")
     app.include_router(build_history_router(turn_service, principal), prefix="/api/v1")
     app.include_router(build_voice_queue_router(voice_queue, principal), prefix="/api/v1")
+    app.include_router(build_interactions_router(app.state.interactions, principal), prefix="/api/v1")
     app.include_router(build_transcription_router(speech, principal), prefix="/api/v1")
     app.include_router(build_users_router(get_db, principal), prefix="/api/v1")
 
@@ -103,10 +125,16 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
     def version():
         from app.core.validation import source_digest
         from app.clients.runtime_agent import runtime_configuration
+        from app.services.goal_classifier import goal_classifier_configuration
+        from ai_agent.runtime.screen_privacy import observation_contract
+        from ai_agent.runtime.capabilities import identity as capability_identity
         import re
         revision = os.getenv("RENDER_GIT_COMMIT", "")
         return {"schema_version": "click-build.v1", "target_validation": "settings-slider.v1",
                 "source_sha256": source_digest(), "runtime_configuration": runtime_configuration(),
+                "goal_interpretation": goal_classifier_configuration(),
+                "observation_contract": observation_contract(),
+                "capability_contract": capability_identity(),
                 "source_revision": revision if re.fullmatch(r"[0-9a-f]{40}", revision) else None}
 
     @app.get("/ops/metrics", tags=["system"])

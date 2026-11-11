@@ -6,7 +6,7 @@
     <string name="account_start_back">뒤로</string>
     <string name="account_start_title">회원가입</string>
     <string name="account_start_close">회원가입 닫기</string>
-    <string name="account_start_description">나에게 편한 방법으로 가입하고,\n클릭과 함께 시작해요.</string>
+    <string name="account_start_description">회원가입을 통해 클릭과 함께해요</string>
     <string name="account_start_kakao">카카오로 가입하기</string>
     <string name="account_start_email">번호로 가입하기</string>
     <string name="account_start_login">로그인하기</string>

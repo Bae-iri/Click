@@ -7,6 +7,9 @@ from fastapi import HTTPException
 from app.clients.checkpoint import SCHEMA_VERSION, capture, graph_version, restore, safe_response
 from app.clients.runtime_agent import RuntimeAgentAdapter
 from app.clients.turn_executor import execute
+from app.clients.runtime_process import run_runtime
+from app.clients.runtime_work import RuntimeWork
+from ai_agent.runtime.budget import remaining
 from app.services.safety import validate_confirmation, validate_output
 from app.repositories.agent_sessions import AgentSessionRepository
 from app.schemas.agent_turn import AgentTurnResponse
@@ -17,6 +20,16 @@ from app.services.goal_preparation import GoalPreparationService
 from app.services.task_outcome import follow_up
 from app.services.guide_narration import GuideNarrator
 from uuid import uuid4
+
+
+def request_identity(request):
+    payload = request.model_dump(mode="json")
+    # Adding optional approval metadata must not change pre-upgrade request IDs.
+    if payload.get("approval_provenance") is None:
+        payload.pop("approval_provenance", None)
+    if payload.get("execution_context") is None:
+        payload.pop("execution_context",None)
+    return payload
 
 
 class AgentTurnService:
@@ -58,7 +71,7 @@ class AgentTurnService:
         # Existing font sessions used the whole bundled registry hash before DB loading.
         if selected_graph and selected_graph.definition.task_id in {"MVP-01", "MVP-02"}:
             compatible_versions.add(graph_version())
-        canonical = json.dumps(request.model_dump(mode="json"), sort_keys=True,
+        canonical = json.dumps(request_identity(request), sort_keys=True,
                                separators=(",", ":"), ensure_ascii=False)
         if command_context is not None:
             canonical += "|" + command_context
@@ -89,12 +102,29 @@ class AgentTurnService:
             authorization = ((previous.pending_attempt or {}).get("authorization") or {}) if previous else {}
             if authorization and authorization.get("expires_at", 0) <= int(self.repository.clock()):
                 store.update(request.session_id, pending_attempt=None, pending_selection=None, pending_transition_id=None)
-            engine = self.engine_factory(session_store=store, task_graph=selected_graph) \
-                if selected_graph is not None else self.engine_factory(session_store=store)
-            # Only the trusted adapter receives BE-validated per-request vision consent.
-            if isinstance(engine, RuntimeAgentAdapter):
-                engine.vision_consent_request_id = request.request_id if approved and approved.get("purpose") == "vision" else None
-            response = safe_response(execute(lambda: engine.handle_turn(request), self.timeout_seconds))
+            # Production work runs in a spawned process with no DB/session factory.
+            # Injected engines are controlled in-process simulations used by unit tests.
+            timeout = remaining(self.timeout_seconds)
+            if self.engine_factory is RuntimeAgentAdapter:
+                result = run_runtime(RuntimeWork(request, selected_graph,
+                    capture(store, request.session_id, selected_graph),
+                    request.request_id if approved and approved.get("purpose") == "vision" else None), timeout)
+                response = safe_response(AgentTurnResponse.model_validate(result["response"]))
+                checkpoint = result["checkpoint"]
+                execution_event = result["execution_event"]
+            else:
+                engine = self.engine_factory(session_store=store, task_graph=selected_graph) \
+                    if selected_graph is not None else self.engine_factory(session_store=store)
+                if isinstance(engine, RuntimeAgentAdapter):
+                    engine.vision_consent_request_id = request.request_id if approved and approved.get("purpose") == "vision" else None
+                response = safe_response(execute(lambda: engine.handle_turn(request), timeout))
+                checkpoint = capture(store, request.session_id, selected_graph)
+                execution_event = getattr(engine, "execution_event", None)
+            if (response.request_id!=request.request_id or response.session_id!=request.session_id
+                    or selected_graph is not None and response.task_id!=selected_graph.definition.task_id
+                    or checkpoint and (checkpoint.get("session_id")!=request.session_id
+                        or checkpoint.get("task_id")!=response.task_id)):
+                raise HTTPException(502,detail="RUNTIME_CONTEXT_MISMATCH")
             validate_output(request, response, approved, checkpoint=claim["checkpoint"],
                             now=int(self.repository.clock()))
             response.session_version = claim["version"] + 1
@@ -103,7 +133,6 @@ class AgentTurnService:
                 response.task_status = "WAITING_RESULT"
                 response.metadata["result_prompt"] = {"id": str(uuid4()),
                     "message": "원하는 결과가 되었나요?", "expires_at": int(self.repository.clock()) + 120}
-            checkpoint = capture(store, request.session_id, selected_graph)
             if approved and approved.get("purpose") != "vision" and checkpoint and checkpoint.get("pending_attempt"):
                 guide = response.guide_command
                 checkpoint["pending_attempt"]["authorization"] = {
@@ -111,9 +140,9 @@ class AgentTurnService:
                     "guide_command_id": guide.guide_command_id, "action_type": guide.action_type,
                     "target_node_id": guide.target_node_id, "target_bounds": list(guide.target_bounds or ()),
                     "task_id": response.task_id, "state_id": response.state_id,
+                    "provenance": approved.get("provenance",{"source":"legacy_unspecified"}),
                 }
             recovery_plan = None
-            execution_event = getattr(engine, "execution_event", None)
             execution_reference = selected_reference
             if execution_event and selected_reference:
                 execution_event = {**execution_event, "graph_hash": selected_reference["sha256"]}
@@ -182,7 +211,7 @@ class AgentTurnService:
                 goal = TypedGoalRequest(catalog_version="2.1.0", goal_type="settings." + setting + "." + direction,
                     target_app="android_settings", slots={"setting": setting, "direction": direction})
                 _, reference = self.graphs.select(goal)
-            digest = sha256(json.dumps(request.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
+            digest = sha256(json.dumps(request_identity(request), sort_keys=True).encode()).hexdigest()
             details = self.repository.outcome_command(request, digest, goal=goal, reference=reference)
             outcome = details["task_outcome"]
             return AgentCommandResponse(contract_version=request.contract_version, request_id=request.request_id,
@@ -219,7 +248,7 @@ class AgentTurnService:
         if command in {"pause_task", "resume_task", "cancel_task"}:
             pinned = self.repository.typed_details(request.session_id, request.user_id)
             graph_hash = pinned["graph_hash"] or graph_hash
-            canonical = json.dumps(request.model_dump(mode="json"), sort_keys=True,
+            canonical = json.dumps(request_identity(request), sort_keys=True,
                 separators=(",", ":"), ensure_ascii=False)
             details = self.repository.apply_typed_control(request, graph_hash,
                 sha256(canonical.encode()).hexdigest())
@@ -259,16 +288,21 @@ class AgentTurnService:
             request = request.model_copy(update={"episode_id": new_episode, "command_type": "observe"})
         response = self.handle_turn(request, command_context="adjust_task" if command == "adjust_task" else None,
             prepared_reference=prepared_reference)
-        details = self.repository.typed_details(request.session_id, request.user_id)
+        reference=response.metadata.get("execution_graph_reference")
+        goal_type=response.metadata.get("execution_goal_type")
+        if reference is None:
+            details=self.repository.typed_details(request.session_id,request.user_id)
+            if details["version"]!=response.session_version:self.repository.conflict("STALE_REPLAY")
+            reference=dict(task_id=response.task_id,version=details["graph_version"],sha256=details["graph_hash"] or graph_hash)
+            goal_type=details["goal_type"]
         return AgentCommandResponse(
             contract_version=request.contract_version,
             request_id=request.request_id, session_id=request.session_id,
             session_version=response.session_version,
-            episode_id=details["episode_id"], response_type="guidance",
+            episode_id=response.episode_id, response_type="guidance",
             command_result=CommandResult(command_type=command, status="applied"),
-            accepted_goal_type=details["goal_type"], task_id=response.task_id,
-            graph_reference=GraphReference(task_id=response.task_id,
-                version=details["graph_version"], sha256=details["graph_hash"] or graph_hash),
+            accepted_goal_type=goal_type, task_id=response.task_id,
+            graph_reference=GraphReference(**reference),
             task_status=response.task_status, state_id=response.state_id,
             step=response.step, guide_command=response.guide_command,
             metadata=response.metadata,

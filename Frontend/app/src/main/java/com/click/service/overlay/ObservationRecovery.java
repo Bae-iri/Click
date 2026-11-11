@@ -7,6 +7,11 @@ import org.json.JSONObject;
 /** Settings navigation recovery using fresh, visible screen evidence. */
 public final class ObservationRecovery {
     private ObservationRecovery() {}
+    public static String missingScreenMessage(boolean connected, boolean locked) {
+        if (!connected) return "화면 읽기 연결이 끊겼어요. ‘접근성 안내 보기’를 눌러 연결을 다시 설정해 주세요.";
+        if (locked) return "휴대폰 잠금을 푼 뒤 ‘다시 시도하기’를 눌러주세요.";
+        return "현재 화면 정보를 충분히 읽지 못했어요. 설정 화면에서 ‘다시 시도하기’를 눌러주세요.";
+    }
     public static boolean canReturnFromSettings(ScreenSnapshot screen) {
         if (!settingsScreen(screen) || screen.activeWindowId == null) return false;
         return screen.nodes.stream().anyMatch(node -> node.visibleToUser && node.enabled && node.clickable
@@ -46,9 +51,7 @@ public final class ObservationRecovery {
                     || "TARGET_NOT_FOUND".equals(fallback.optString("reason_code")));
     }
     private static boolean navigationMenu(String stateId) {
-        return "S1_SETTINGS_HOME".equals(stateId) || "S2_DISPLAY_MENU".equals(stateId)
-                || "S3_FONT_MENU".equals(stateId) || "S2_SOUND_MENU".equals(stateId)
-                || "S2_CATEGORY".equals(stateId);
+        return com.click.data.snapshot.SettingsCapabilities.navigationState(stateId);
     }
     /** Older primary-Jev responses omitted the missing-target reason. A recognized
      * Settings list can still be explored, but never while an action result is pending.
@@ -79,10 +82,12 @@ public final class ObservationRecovery {
     public static boolean sameNavigationScreen(ScreenSnapshot expected, ScreenSnapshot current) {
         return settingsScreen(expected) && settingsScreen(current) && expected.activeWindowId != null
                 && expected.activeWindowId.equals(current.activeWindowId)
-                && expected.withAdjustmentValues(null,null).sameNativeContent(current.withAdjustmentValues(null,null));
+                && !expected.nodes.isEmpty() && expected.privacyMaskingReady && current.privacyMaskingReady
+                && com.click.data.snapshot.ScreenIdentity.navigationFingerprint(expected).equals(
+                    com.click.data.snapshot.ScreenIdentity.navigationFingerprint(current));
     }
     public static String navigationFingerprint(ScreenSnapshot screen) {
-        return screen.withAdjustmentValues(null,null).observationFingerprint();
+        return screen.navigation != null ? screen.navigation.fingerprint : com.click.data.snapshot.ScreenIdentity.navigationFingerprint(screen);
     }
     private static boolean settingsScreen(ScreenSnapshot screen) {
         return screen != null && TouchAutomationPolicy.settingsPackage(screen.packageName);
@@ -110,7 +115,7 @@ public final class ObservationRecovery {
         boolean font = goalType.startsWith("settings.font_size.");
         boolean brightness = goalType.startsWith("settings.brightness.");
         boolean volume = goalType.startsWith("settings.volume.");
-        if (!font && !brightness && !volume) return null;
+        if (!font && !brightness && !volume) return com.click.data.snapshot.SettingsCapabilities.targetLabel(goalType,stateId);
         if ("S0_UNKNOWN".equals(stateId)) return "설정";
         if ("S1_SETTINGS_HOME".equals(stateId)) return volume ? "소리 및 진동" : "디스플레이";
         if ("S2_DISPLAY_MENU".equals(stateId)) return font ? "글자 크기와 스타일" : brightness ? "밝기" : null;

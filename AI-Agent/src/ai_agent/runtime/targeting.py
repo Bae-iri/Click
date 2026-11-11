@@ -18,6 +18,12 @@ def control_label(node: NormalizedNode) -> str:
                            and node.label_parts else node.label)
     if node.role == 'slider' and re.fullmatch(r'[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)\s*%?', label):
         return ''
+    if node.role == 'toggle':
+        from ai_agent.runtime.wifi import WIFI_NAMES, STATUS_NAMES, MASTER_IDS
+        if any(normalize_text(w) in WIFI_NAMES for w in node.label_parts or (node.label,)):
+            return 'wifi'
+        if node.resource_id in MASTER_IDS and label in STATUS_NAMES:
+            return ''
     return label
 
 
@@ -36,6 +42,9 @@ def eligible_nodes(transition: Transition, nodes: tuple[NormalizedNode, ...], gr
     roles = {'menu_item': {'menu_item', 'button'}, 'slider': {'slider'},
              'app_icon': {'app_icon'}, 'toggle': {'toggle'}, 'radio': {'radio'}}
     allowed_roles = roles.get(transition.target_role, {transition.target_role})
+    from ai_agent.runtime.setting_choices import is_choice
+    if is_choice(transition, graph):
+        allowed_roles = allowed_roles | {'radio'}
     packages = transition.selector.package_candidates or state.package_candidates
     eligible = []
     for node in nodes:
@@ -47,9 +56,30 @@ def eligible_nodes(transition: Transition, nodes: tuple[NormalizedNode, ...], gr
             continue
         if transition.action_type == ActionType.DRAG and node.role != 'slider':
             continue
+        if (graph.definition.required_slots.get('setting') == 'display_size' and transition.target_role == 'slider'):
+            from ai_agent.runtime.classifier import _screen_titles
+            from ai_agent.task_graph.settings import DOCUMENT
+            pages = DOCUMENT['goals'][graph.definition.goal_type]['pages']
+            if (node.value is None or node.source_confidence is not None or node.node_id.startswith('vision:')
+                    or not any(title.package_name == node.package_name and title.window_id == node.window_id
+                        and title.source_confidence is None and not title.node_id.startswith('vision:')
+                        and normalize_text(title.label) in {normalize_text(p) for p in pages}
+                        for title in _screen_titles(nodes))):
+                continue
         if not node.bounds or node.bounds[2] <= node.bounds[0] or node.bounds[3] <= node.bounds[1]:
             continue
         if any_keyword_matches(node.label, transition.selector.excluded_keywords):
+            continue
+        from ai_agent.runtime.wifi import is_wifi_transition, target_allowed
+        if is_wifi_transition(transition, graph) and not target_allowed(node, nodes):
+            continue
+        from ai_agent.runtime.settings_controls import CONTROLS, CHECKED_PREDICATES, target_allowed as setting_target
+        setting = graph.definition.required_slots.get('setting')
+        if (setting in CONTROLS and transition.verification_predicate in CHECKED_PREDICATES
+                and not setting_target(node, nodes, setting)):
+            continue
+        from ai_agent.runtime.setting_choices import is_choice, target_allowed as choice_target
+        if is_choice(transition, graph) and not choice_target(node, nodes, graph):
             continue
         eligible.append(node)
     return tuple(eligible)

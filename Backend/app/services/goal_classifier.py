@@ -12,3 +12,15 @@ def configured_goal_classifier():
     if provider == "jev":
         return JevGoalClassifier()
     raise ValueError("GOAL_CLASSIFIER_PROVIDER must be self_hosted or jev")
+
+
+def goal_classifier_configuration():
+    """Public configuration state only; no endpoint, credentials or user text."""
+    provider = os.getenv("GOAL_CLASSIFIER_PROVIDER", "self_hosted").strip()
+    state = {"provider": provider if provider in {"self_hosted", "jev"} else "invalid", "configured": False}
+    try:
+        configured_goal_classifier().configuration()
+        state["configured"] = True
+    except ValueError:
+        pass
+    return state

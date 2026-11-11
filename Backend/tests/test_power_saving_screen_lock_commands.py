@@ -43,6 +43,10 @@ def test_valid_settings_request_cannot_execute_without_graph(goal_type, slots, v
     payload = payload_for(goal_type, slots, version)
     goal = AgentCommandRequest.model_validate(payload).goal
     assert goal.slots == slots
+    with app.state.session_factory() as db:
+        for row in db.scalars(select(ApprovedTaskGraph).where(ApprovedTaskGraph.goal_type == goal.goal_type)):
+            row.active = False
+        db.commit()
     with pytest.raises(task_graphs.NoCompatibleGraphError, match="NO_COMPATIBLE_GRAPH"):
         app.state.turn_service.graphs.select(goal)
     app.state.turn_service.engine_factory = Mock(side_effect=AssertionError("Do not invoke Agent 1"))
@@ -114,4 +118,4 @@ def test_contract_matches_shared_catalog(goal_type, slots):
     request = AgentCommandRequest.model_validate(payload_for(goal_type, slots, catalog["version"]))
     assert request.goal.slots == entry["slots"]
     assert request.goal.target_app == entry["target_app"]
-    assert entry["execution_status"] == "catalog_only"
+    assert entry["execution_status"] == "approved"

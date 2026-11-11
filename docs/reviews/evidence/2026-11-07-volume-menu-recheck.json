@@ -1,0 +1,72 @@
+{
+  "date": "2026-11-07",
+  "status": "FIX_IMPLEMENTED_FINAL_DEVICE_CHECK_PENDING_USB",
+  "confirmed_causes": [
+    "Search attempts consumed before a native scroll, including duplicate replies and screen resynchronization.",
+    "Unrelated applied brightness changes invalidated the unchanged Settings list.",
+    "S2_CATEGORY was missing from legacy menu-search states.",
+    "Sound mode low_button was offered as the Settings-home Sound menu while Volume was offscreen."
+  ],
+  "native_navigation_evidence": {
+    "run_id": "9a272e4a-5b31-43b8-9b91-26abe77ae432",
+    "server_build": {
+      "schema_version": "click-build.v1",
+      "target_validation": "settings-slider.v1",
+      "source_sha256": "af682c322e0014a7f9bee6a15934807ebb1557363a9eb1dbc1d9353cc59974ef",
+      "runtime_configuration": {
+        "provider": "jev",
+        "code_hash": "7f076198a31f15c8f2d4b8339776ef2a3c34f727be09f878f4e9c14966397e27",
+        "model": "jev-1.14.0",
+        "minimum_confidence": 0.8
+      },
+      "source_revision": "3893b4616da27f255e4179a18b60a4125a4416f2"
+    },
+    "start_target_visible": false,
+    "searches": [
+      {
+        "state": "S1_SETTINGS_HOME",
+        "forward": true,
+        "dispatched": false
+      },
+      {
+        "state": "S1_SETTINGS_HOME",
+        "forward": false,
+        "dispatched": true
+      },
+      {
+        "state": "S1_SETTINGS_HOME",
+        "forward": false,
+        "dispatched": true
+      },
+      {
+        "state": "S1_SETTINGS_HOME",
+        "forward": false,
+        "dispatched": true
+      }
+    ],
+    "reached_sound_menu": true,
+    "apks_stable": true,
+    "completion_verified": false,
+    "restored_media_volume": 11,
+    "qualification": "After navigation correction, before sound-mode candidate correction. Proves navigation only."
+  },
+  "fixes": [
+    "Spend search budget only immediately before a native attempt; coalesce pending searches.",
+    "Keep native page/window identity while ignoring unrelated persisted values for list navigation only.",
+    "Treat sound/vibrate/mute choices as radio controls and block navigation taps on them and their descendants.",
+    "Export sound modes as non-clickable context for older servers.",
+    "Use the production search planner and never pre-position a missing menu in device checks.",
+    "Verify both APKs and server source/configuration before and after the check."
+  ],
+  "local_validation": {
+    "backend": 1314,
+    "ai_agent": 410,
+    "android": 499,
+    "failures": 0
+  },
+  "remaining": [
+    "Reconnect and unlock the phone; final compatibility run stopped before any installation or mutation because ADB reported no devices.",
+    "Verify final volume adjustment and all six tasks to completion.",
+    "Physical negative-scenario matrix remains incomplete."
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "date": "2026-11-09",
+  "problem": "Bluetooth device discovery empty or changing can prevent manual guidance from displaying.",
+  "causes": [
+    "manualSettingsHandoff stopped future observations before guide freshness validation; a rejected stale response could leave no way to refresh",
+    "targetless guidance compared the entire native screen, so device-discovery updates invalidated otherwise current instructions",
+    "Bluetooth connect instruction omitted what to do when no device appears"
+  ],
+  "changes": [
+    "verify independent native page heading on same package/window/size for targetless assisted guidance",
+    "move handoff suspension until freshness checks pass; stale/unreadable responses retain observation retry",
+    "dedicated manual-guidance presentation stops automatic progress and preserves explicit result check",
+    "Bluetooth authored instructions include conditional power/pairing/proximity/wait help, bundled in app for existing-server compatibility"
+  ],
+  "tests": {
+    "android_full": {
+      "tests": 582,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "android_related_passed": 179,
+    "initial_android_regressions_failed_before_fix": 4,
+    "ai_full_passed": 393,
+    "backend_related_passed": 261,
+    "backend_bluetooth_with_native_fixture_passed": 7
+  },
+  "physical": {
+    "device": "Samsung SM-N981N",
+    "first_immediate_observation": "INCOMPLETE during loading; not treated as device absence",
+    "settled_page": {
+      "service": {
+        "available": true,
+        "package": "com.android.settings",
+        "mask_ready": true,
+        "nodes": 23,
+        "inputs": 0,
+        "passwords": 0,
+        "mixed_packages": 0,
+        "switches": 1,
+        "invisible": 1,
+        "privacy": "allowed",
+        "exported_nodes": 9,
+        "exported_checked_controls": 1
+      },
+      "native": {
+        "available": true,
+        "package": "com.android.settings",
+        "mask_ready": true,
+        "nodes": 46,
+        "inputs": 0,
+        "passwords": 0,
+        "mixed_packages": 0,
+        "switches": 1,
+        "invisible": 3,
+        "privacy": "allowed",
+        "exported_nodes": 25,
+        "exported_checked_controls": 1
+      }
+    },
+    "fixture_replay": "Local backend tests recognize Bluetooth manual handoff and already-enabled switch without device identities",
+    "installed": {
+      "installed_sha256": "5898a6058a8520475c95e85d7acebd63471387f47e5822806f09fef6f7fc6596",
+      "bound": true,
+      "enabled": true,
+      "crashed_services": false,
+      "app_data_preserved": true
+    },
+    "limits": "No live pairing, no switch changes, and no complete app-to-production-server Bluetooth task was executed."
+  },
+  "privacy": {
+    "screen_payloads_sent_externally": 0,
+    "device_names_saved": false,
+    "numeric_applied_settings_removed_from_fixture": true,
+    "probe_public_version_get": true
+  },
+  "artifact": {
+    "path": "Frontend/app/build/outputs/apk/debug/app-bluetooth-guidance-debug.apk",
+    "sha256": "5898a6058a8520475c95e85d7acebd63471387f47e5822806f09fef6f7fc6596"
+  },
+  "deployment": "No server deployment; app uses bundled Bluetooth instructions with existing manual-handoff server responses."
+}

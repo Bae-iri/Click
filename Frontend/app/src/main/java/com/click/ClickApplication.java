@@ -20,6 +20,7 @@ import com.click.service.accessibility.ClickAccessibilityService;
 public final class ClickApplication extends Application implements ClickHost {
     @Override public void onCreate() {
         super.onCreate();
+        registerActivityLifecycleCallbacks(new com.click.service.overlay.AppOverlayLifecycle());
         KakaoSignIn.initialize(this);
     }
     @Override public boolean signedIn() { return new AuthTokenStore(this).hasRefreshToken(); }
@@ -121,7 +122,8 @@ public final class ClickApplication extends Application implements ClickHost {
     }
 
     @Override public void openAccessibilitySettings(Activity activity) {
-        new AccessibilityOnboardingState(this).begin();
+        new AccessibilityOnboardingState(this).begin(activity.getIntent().getBooleanExtra(
+                com.click.designpreview.PermissionGuideActivity.EXTRA_RETURN_TO_SETTINGS, false));
         Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                 .putExtra(Intent.EXTRA_COMPONENT_NAME, new ComponentName(this, ClickAccessibilityService.class).flattenToString());
         try { activity.startActivity(intent); }
@@ -133,6 +135,12 @@ public final class ClickApplication extends Application implements ClickHost {
     @Override public void openPostPermissionTutorial(Activity activity) {
         new AccessibilityOnboardingState(this).markTutorialLaunched();
         activity.startActivity(new Intent(activity, TutorialReadyActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+    }
+
+    @Override public void returnToSettingsAfterAccessibility(Activity activity) {
+        new AccessibilityOnboardingState(this).markSettingsReturned();
+        activity.startActivity(new Intent(activity, MenuActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
     }
 

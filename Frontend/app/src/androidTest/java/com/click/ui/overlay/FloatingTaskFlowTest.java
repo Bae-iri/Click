@@ -366,12 +366,10 @@ public class FloatingTaskFlowTest {
         return null;
     }
     private Object field(Object target, String name) {
-        try { Field f = ClickOverlayService.class.getDeclaredField(name); f.setAccessible(true); return f.get(target); }
-        catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+        return com.click.testutil.ServiceStateAccess.get(target,name);
     }
     private void setField(Object target, String name, Object value) {
-        try { Field f = ClickOverlayService.class.getDeclaredField(name); f.setAccessible(true); f.set(target, value); }
-        catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+        com.click.testutil.ServiceStateAccess.set(target,name,value);
     }
     private void invoke(Object target, String name) {
         try { Method m = ClickOverlayService.class.getDeclaredMethod(name); m.setAccessible(true); m.invoke(target); }

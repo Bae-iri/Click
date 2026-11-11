@@ -4,6 +4,7 @@ from sqlalchemy import BigInteger, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 from app.models.user import JSONType
+from app.core.data_encryption import EncryptedJSON, EncryptedText
 
 
 class GraphReleaseAudit(Base):
@@ -13,6 +14,6 @@ class GraphReleaseAudit(Base):
     previous_hash: Mapped[str] = mapped_column(String(64))
     graph_hash: Mapped[str] = mapped_column(String(64))
     action: Mapped[str] = mapped_column(String(20))
-    reviewer: Mapped[str] = mapped_column(String(200))
+    reviewer: Mapped[str] = mapped_column(EncryptedText("graph_release_audits.reviewer"))
     reviewed_at: Mapped[int] = mapped_column(BigInteger)
-    details: Mapped[dict] = mapped_column(JSONType)
+    details: Mapped[dict] = mapped_column(EncryptedJSON("graph_release_audits.details"))

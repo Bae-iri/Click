@@ -8,10 +8,18 @@ import android.graphics.drawable.Drawable;
 import android.view.View;
 
 /** Static viewport into the original screenshot; no animation or modified image files. */
-final class PermissionScreenshotView extends View {
+public final class PermissionScreenshotView extends View {
     private final Drawable screenshot;
     private final RectF crop, target;
     private final Paint outline = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint highlightFill = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private boolean highlightFilled;
+
+    /** The same image, viewport and highlighted row used by accessibility page one. */
+    public static PermissionScreenshotView accessibilityFirstPage(Context context) {
+        return new PermissionScreenshotView(context, R.drawable.permission_01_accessibility,
+                new RectF(0, 1280, 1080, 2160), new RectF(24, 1680, 1056, 1890));
+    }
 
     PermissionScreenshotView(Context context, int image, RectF crop, RectF target) {
         super(context);
@@ -21,7 +29,13 @@ final class PermissionScreenshotView extends View {
         outline.setColor(0xFF3478F6);
         outline.setStyle(Paint.Style.STROKE);
         outline.setStrokeWidth(3 * getResources().getDisplayMetrics().density);
+        highlightFill.setColor(0x2A3478F6);
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
+    }
+
+    public void setHighlightFilled(boolean filled) {
+        highlightFilled = filled;
+        invalidate();
     }
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
@@ -39,9 +53,16 @@ final class PermissionScreenshotView extends View {
         screenshot.setBounds(0, 0, 1080, 2400);
         screenshot.draw(canvas);
         canvas.restoreToCount(save);
-        RectF highlight = new RectF((target.left - crop.left) * scale, (target.top - crop.top) * scale,
-                (target.right - crop.left) * scale, (target.bottom - crop.top) * scale);
+        RectF highlight = getTargetBounds();
+        if (highlightFilled) canvas.drawRoundRect(highlight, 12 * getResources().getDisplayMetrics().density,
+                12 * getResources().getDisplayMetrics().density, highlightFill);
         canvas.drawRoundRect(highlight, 12 * getResources().getDisplayMetrics().density,
                 12 * getResources().getDisplayMetrics().density, outline);
+    }
+
+    public RectF getTargetBounds() {
+        float scale = getWidth() / crop.width();
+        return new RectF((target.left - crop.left) * scale, (target.top - crop.top) * scale,
+                (target.right - crop.left) * scale, (target.bottom - crop.top) * scale);
     }
 }

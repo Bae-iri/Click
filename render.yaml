@@ -15,11 +15,15 @@ services:
     numInstances: 1
     autoDeployTrigger: checksPass
     envVars:
+      - key: CLICK_REQUIRE_EXECUTION_CONTEXT
+        value: "1"
       - key: DATABASE_URL
         sync: false
       - key: GEMINI_API_KEY
         value: ""
       - key: AI1_UI_SELECTOR_PROVIDER
+        value: jev
+      - key: GOAL_CLASSIFIER_PROVIDER
         value: jev
       - key: TYPESAFE_API_KEY
         sync: false

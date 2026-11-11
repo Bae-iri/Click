@@ -42,9 +42,12 @@ def redact_text(value):
 
 
 def safe_extras(extras):
-    return {key: value for key, value in extras.items()
+    safe = {key: value for key, value in extras.items()
             if key in NUMERIC_EXTRAS and type(value) in (int, float)
             and abs(value) <= 100_000_000 and math.isfinite(value)}
+    if type(extras.get('checked')) is bool:
+        safe['checked'] = extras['checked']
+    return safe
 
 
 def sensitive_node(node):
@@ -53,6 +56,8 @@ def sensitive_node(node):
 
 
 def sanitize_request(request, *, vision_vocabulary_key=None):
+    from ai_agent.runtime.environment import safe_window_context
+    request = replace(request, window_context=safe_window_context(request.window_context))
     nodes = tuple(replace(node,
         text=None if sensitive_node(node) else redact_text(node.text),
         content_description=None if sensitive_node(node) else redact_text(node.content_description),

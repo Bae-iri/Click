@@ -90,7 +90,10 @@ def test_sensitive_screen_data_not_in_http_or_persistent_payloads():
         with app.state.session_factory() as db:
             checkpoint = db.scalar(select(AgentCheckpoint))
             stored = db.scalar(select(AgentTurn)).response
-            encoded = response.text + json.dumps(stored) + str(checkpoint.state)
+            encoded = response.text + json.dumps(stored) + str(checkpoint.state if checkpoint else None)
+            assert checkpoint is None, "Credential screens must stop every provider before creating an execution checkpoint"
+            assert response.json()['guide_command']['action_type'] == 'observe_only'
+            assert response.json()['guide_command']['target_node_id'] is None
         for secret in ("test@example.com", "010-1234-5678", "arbitrary_private_value", "private_description", "private_extra"):
             assert secret not in encoded
 

@@ -93,7 +93,7 @@ def test_request_id_cannot_be_reused_across_sessions() -> None:
     assert client.post("/api/v1/agent/turn", json=second).status_code == 409
 
 
-def test_rejected_confirmation_blocks_without_automatic_action() -> None:
+def test_rejected_confirmation_cancels_without_automatic_action() -> None:
     client = TestClient(create_app())
     response = client.post(
         "/api/v1/agent/turn",
@@ -107,8 +107,9 @@ def test_rejected_confirmation_blocks_without_automatic_action() -> None:
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["task_status"] == "BLOCKED"
-    assert body["guide_command"]["command_type"] == "blocked"
+    assert body["task_status"] == "CANCELLED"
+    assert body["guide_command"]["command_type"] == "cancelled"
+    assert body["metadata"]["termination"]["code"] == "USER_DECLINED"
     assert body["guide_command"]["action_type"] == "observe_only"
 
 

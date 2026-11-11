@@ -163,11 +163,12 @@ public class TaskFlowOverlayTest {
                         start.getDrawingRect(startBounds); panel.offsetDescendantRectToMyCoords(start, startBounds);
                         ViewGroup summary = panel.findViewWithTag("review_summary_card");
                         ViewGroup section = panel.findViewWithTag("review_summary_section");
-                        assertSame("Editing belongs above the summary box", section, edit.getParent());
-                        assertTrue(edit.getBottom() <= summary.getTop());
-                        View summaryRow = summary.getChildAt(0);
-                        assertEquals(summaryRow.getTop(), summary.getHeight() - summaryRow.getBottom());
-                        assertFalse("Editing uses an inline text action", edit instanceof android.widget.Button);
+                        FloatingPanelHeader header = panel.findViewWithTag("floating_header");
+                        assertSame(header.edit, edit);
+                        assertEquals(View.GONE, header.replay.getVisibility());
+                        assertTrue(edit.isShown());
+                        assertTrue(edit instanceof android.widget.Button);
+                        assertAbove(panel, edit, summary);
                         assertTrue(editBounds.width() < startBounds.width());
                         assertAbove(panel, edit, start);
                         assertFalse(confirmed[0]);
@@ -407,7 +408,7 @@ public class TaskFlowOverlayTest {
                     assertEquals("디스플레이 항목을 찾아주세요", panel.guidanceMessage());
                     assertTrue(panel.hasOpenedTargetHelp());
                     assertNull(find(panel, "도움이 필요해요!"));
-                    assertNull(find(panel, "죄송합니다. 클릭이 아직 배우는 중이라 많이 미숙합니다."));
+                    assertNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
                     assertTrue(find(panel, "디스플레이 항목을 찾아주세요").isShown());
                     assertFullyInside(panel, find(panel, "못 찾겠어요"));
                     assertNull(find(panel, "다시 시도"));
@@ -441,7 +442,7 @@ public class TaskFlowOverlayTest {
                 assertEquals(1, actions[0]);
                 panel.failed("인터넷 연결을 확인해 주세요.");
                 assertNotNull(panel.findViewWithTag("failure_clue"));
-                assertNotNull(find(panel, "죄송합니다. 아직 배우는 중이라 미숙했어요."));
+                assertNotNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
                 assertTrue(panel.guidanceMessage().contains("인터넷 연결을 확인해 주세요."));
                 snapshot(panel, "failure-clue");
                 assertFullyInside(panel, find(panel, "끝내기"));
@@ -487,8 +488,8 @@ public class TaskFlowOverlayTest {
                 assertNull(find(panel, "직접 이동하기"));
                 assertNull(find(panel, "화면 다시 확인"));
                 assertNull(find(panel, "도움이 필요해요!"));
-                assertNull(find(panel, "죄송합니다. 클릭이 아직 배우는 중이라 많이 미숙합니다."));
-                assertNotNull(find(panel, "휴대폰 잠금을 풀고, 열려 있는 팝업을 닫은 뒤 ‘다시 시도하기’를 눌러주세요."));
+                assertNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
+                assertNotNull(find(panel, "‘다시 시도하기’를 눌러 안내를 이어가 주세요."));
                 assertFullyInside(panel, find(panel, "다시 시도하기"));
                 assertFullyInside(panel, find(panel, "줄이기"));
                 assertFullyInside(panel, find(panel, "일시정지"));
@@ -540,7 +541,7 @@ public class TaskFlowOverlayTest {
                 assertNull(find(panel, "화면을 확인하고 있어요."));
                 panel.completed("원하는 밝기로 바뀌었어요.", () -> {});
                 panel.setLoadingStatus("화면을 확인하고 있어요.");
-                assertNotNull(find(panel, "클릭 종료하기"));
+                assertNotNull(panel.findViewWithTag("task_completion_end"));
                 assertNull(find(panel, "화면을 확인하고 있어요."));
             });
         }
@@ -628,31 +629,39 @@ public class TaskFlowOverlayTest {
             saveDisplay("completion-attached");
             scenario.onActivity(activity -> {
                 assertEquals(0, exits[0]);
-                assertFullyInside(panel[0], find(panel[0], "클릭 종료하기"));
+                assertFullyInside(panel[0], panel[0].findViewWithTag("task_completion_end"));
                 assertFalse(find(panel[0], "일시정지").isShown());
-                find(panel[0], "클릭 종료하기").performClick();
-                find(panel[0], "클릭 종료하기").performClick();
+                panel[0].findViewWithTag("task_completion_end").performClick();
+                panel[0].findViewWithTag("task_completion_end").performClick();
                 assertEquals(1, exits[0]);
             });
         }
     }
 
-    @Test public void completedQueueOffersExplicitNextWithoutReopeningRequirements() {
+    @Test public void endOpensTheNextBrightnessQuestionWithoutStartingIt() {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
             scenario.onActivity(activity -> {
-                TaskFlowOverlayView panel = new TaskFlowOverlayView(activity, new Answers());
+                int[] actions={0,0};
+                TaskFlowOverlayView panel=new TaskFlowOverlayView(activity,new Answers(){
+                    @Override public void confirmRequirements(){actions[1]++;}
+                });
                 activity.setContentView(panel);
-                int[] actions = {0, 0};
-                panel.completedWithNext("글자 크기 키워줘", () -> actions[0]++, () -> actions[1]++);
-                assertNotNull(find(panel, "클릭과 함께 해냈어요!"));
-                assertNotNull(find(panel, "대기 중인 다음 요청"));
-                assertNull(find(panel, "어디의 글자를 키울까요?"));
-                assertEquals(0, actions[0]);
-                snapshot(panel, "completed-queue-choice");
-                find(panel, "다음 요청 시작").performClick();
-                find(panel, "다음 요청 시작").performClick();
-                find(panel, "클릭 종료하기").performClick();
-                assertEquals(1, actions[0]); assertEquals(0, actions[1]);
+                panel.completed("글자 크기 안내를 마쳤어요.",true,()->{
+                    actions[0]++;
+                    try {
+                        panel.setPreparationMessage("디스플레이 밝기를 높일까요?");
+                        panel.preparation(new com.click.domain.goal.GoalPreparationState(
+                            json("{\"version\":\"goal-inputs.v1\",\"id\":\"next\",\"source_text\":\"디스플레이 밝기를 높여줘\",\"status\":\"ready\",\"missing_fields\":[],\"graph_reference\":{\"task_id\":\"fixture\"}}"),
+                            json("{\"goal_type\":\"settings.brightness.increase\"}"),"이 내용으로 시작할까요?"));
+                    } catch(Exception failed){throw new AssertionError(failed);}
+                });
+                assertNull(find(panel,"디스플레이 밝기를 높일까요?"));
+                View end=panel.findViewWithTag("task_completion_end");end.performClick();end.performClick();
+                assertEquals(1,actions[0]);assertEquals(0,actions[1]);
+                assertNotNull(find(panel,"디스플레이 밝기를 높일까요?"));
+                assertNull(find(panel,"대기 중인 다음 요청"));
+                snapshot(panel,"brightness-after-end");
+                find(panel,"안내 시작하기").performClick();assertEquals(1,actions[1]);
             });
         }
     }

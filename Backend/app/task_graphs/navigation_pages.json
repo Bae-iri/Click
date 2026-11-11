@@ -1,0 +1,343 @@
+[
+  {
+    "key": "settings",
+    "name": "설정",
+    "titles": [
+      "설정",
+      "Settings"
+    ],
+    "categories": [],
+    "intermediate": []
+  },
+  {
+    "key": "display",
+    "name": "디스플레이",
+    "titles": [
+      "디스플레이",
+      "화면",
+      "Display",
+      "Display & touch"
+    ],
+    "categories": [],
+    "intermediate": []
+  },
+  {
+    "key": "sound",
+    "name": "소리 및 진동",
+    "titles": [
+      "소리 및 진동",
+      "소리",
+      "Sound & vibration",
+      "Sound"
+    ],
+    "categories": [],
+    "intermediate": []
+  },
+  {
+    "key": "connections",
+    "name": "연결",
+    "titles": [
+      "연결",
+      "네트워크 및 인터넷",
+      "연결된 기기",
+      "Connections",
+      "Network & internet",
+      "Connected devices"
+    ],
+    "categories": [],
+    "intermediate": []
+  },
+  {
+    "key": "accessibility",
+    "name": "접근성",
+    "titles": [
+      "접근성",
+      "Accessibility"
+    ],
+    "categories": [],
+    "intermediate": []
+  },
+  {
+    "key": "wifi",
+    "name": "와이파이",
+    "titles": [
+      "Wi-Fi",
+      "와이파이",
+      "인터넷",
+      "Internet"
+    ],
+    "categories": [
+      "연결",
+      "네트워크 및 인터넷",
+      "연결된 기기",
+      "Connections",
+      "Network & internet",
+      "Connected devices"
+    ],
+    "intermediate": []
+  },
+  {
+    "key": "bluetooth",
+    "name": "블루투스",
+    "titles": [
+      "블루투스",
+      "Bluetooth"
+    ],
+    "categories": [
+      "연결",
+      "네트워크 및 인터넷",
+      "연결된 기기",
+      "Connections",
+      "Network & internet",
+      "Connected devices"
+    ],
+    "intermediate": []
+  },
+  {
+    "key": "font_size",
+    "name": "글자 크기",
+    "titles": [
+      "글자 크기와 스타일",
+      "글자 크기",
+      "Font size",
+      "Font size and style",
+      "Display size and text"
+    ],
+    "categories": [
+      "디스플레이",
+      "화면",
+      "Display",
+      "Display & touch",
+      "접근성",
+      "Accessibility"
+    ],
+    "intermediate": [
+      "시인성 향상",
+      "텍스트 및 디스플레이",
+      "Visibility enhancements",
+      "Color and motion",
+      "Text and display"
+    ]
+  },
+  {
+    "key": "screen_timeout",
+    "name": "화면 자동 꺼짐 시간",
+    "titles": [
+      "화면 자동 꺼짐 시간",
+      "Screen timeout",
+      "Sleep"
+    ],
+    "categories": [
+      "디스플레이",
+      "화면",
+      "Display",
+      "Display & touch"
+    ],
+    "intermediate": []
+  },
+  {
+    "key": "display_size",
+    "name": "화면 크기",
+    "titles": [
+      "화면 크게/작게",
+      "화면 크기",
+      "Display size",
+      "Display size and text"
+    ],
+    "categories": [
+      "디스플레이",
+      "화면",
+      "Display",
+      "Display & touch",
+      "접근성",
+      "Accessibility"
+    ],
+    "intermediate": [
+      "시인성 향상",
+      "텍스트 및 디스플레이",
+      "Visibility enhancements",
+      "Color and motion",
+      "Text and display"
+    ]
+  },
+  {
+    "key": "volume",
+    "name": "음량",
+    "titles": [
+      "음량",
+      "볼륨",
+      "Volume"
+    ],
+    "categories": [
+      "소리 및 진동",
+      "소리",
+      "Sound & vibration",
+      "Sound"
+    ],
+    "intermediate": []
+  },
+  {
+    "key": "ringtone",
+    "name": "벨소리",
+    "titles": [
+      "벨소리",
+      "Ringtone",
+      "Phone ringtone"
+    ],
+    "categories": [
+      "소리 및 진동",
+      "소리",
+      "Sound & vibration",
+      "Sound"
+    ],
+    "intermediate": []
+  },
+  {
+    "key": "notification_sound",
+    "name": "알림 소리",
+    "titles": [
+      "알림 소리",
+      "Notification sound",
+      "Default notification sound"
+    ],
+    "categories": [
+      "소리 및 진동",
+      "소리",
+      "Sound & vibration",
+      "Sound"
+    ],
+    "intermediate": []
+  },
+  {
+    "key": "do_not_disturb",
+    "name": "방해 금지",
+    "titles": [
+      "방해 금지",
+      "Do not disturb"
+    ],
+    "categories": [
+      "소리 및 진동",
+      "소리",
+      "Sound & vibration",
+      "Sound",
+      "알림",
+      "Notifications"
+    ],
+    "intermediate": []
+  },
+  {
+    "key": "visibility",
+    "name": "시인성 향상",
+    "titles": [
+      "시인성 향상",
+      "텍스트 및 디스플레이",
+      "Visibility enhancements",
+      "Color and motion",
+      "Text and display"
+    ],
+    "categories": [
+      "접근성",
+      "Accessibility"
+    ],
+    "intermediate": []
+  },
+  {
+    "key": "hearing",
+    "name": "청각 보조",
+    "titles": [
+      "청각 보조",
+      "Hearing enhancements",
+      "Audio adjustment"
+    ],
+    "categories": [
+      "접근성",
+      "Accessibility"
+    ],
+    "intermediate": []
+  },
+  {
+    "key": "interaction",
+    "name": "입력 및 동작",
+    "titles": [
+      "입력 및 동작",
+      "Interaction and dexterity",
+      "Timing controls"
+    ],
+    "categories": [
+      "접근성",
+      "Accessibility"
+    ],
+    "intermediate": []
+  },
+  {
+    "key": "talkback",
+    "name": "TalkBack",
+    "titles": [
+      "TalkBack",
+      "톡백"
+    ],
+    "categories": [
+      "접근성",
+      "Accessibility"
+    ],
+    "intermediate": []
+  },
+  {
+    "key": "magnification",
+    "name": "확대",
+    "titles": [
+      "확대",
+      "화면 확대",
+      "Magnification"
+    ],
+    "categories": [
+      "접근성",
+      "Accessibility"
+    ],
+    "intermediate": [
+      "시인성 향상",
+      "텍스트 및 디스플레이",
+      "Visibility enhancements",
+      "Color and motion",
+      "Text and display"
+    ]
+  },
+  {
+    "key": "captions",
+    "name": "자막",
+    "titles": [
+      "자막 설정",
+      "자막",
+      "Caption preferences",
+      "Captions",
+      "Live Caption"
+    ],
+    "categories": [
+      "접근성",
+      "Accessibility"
+    ],
+    "intermediate": [
+      "청각 보조",
+      "Hearing enhancements",
+      "Audio adjustment"
+    ]
+  },
+  {
+    "key": "eye_comfort",
+    "name": "편안하게 화면 보기",
+    "titles": [
+      "편안하게 화면 보기",
+      "블루라이트 필터",
+      "Eye comfort shield",
+      "Night Light",
+      "Night light"
+    ],
+    "categories": [
+      "디스플레이",
+      "화면",
+      "Display",
+      "Display & touch"
+    ],
+    "intermediate": []
+  }
+]

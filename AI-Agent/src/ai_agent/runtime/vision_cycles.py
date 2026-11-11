@@ -44,7 +44,7 @@ def decide_vision_cycle(*, request, session, graph, match, analysis, completed=F
         state.update(status="blocked", last_cycle_reason="masking_failed")
     elif failure == "unsupported" or (analysis and analysis.status == "not_configured"):
         state.update(status="unsupported", last_cycle_reason=failure or analysis.reason)
-    elif request.user_confirmation == "rejected":
+    elif request.user_confirmation == "rejected" and not failure:
         state.update(status="declined", last_cycle_reason="user_declined")
     elif failure == "screen_changed":
         state.update(status="waiting_for_stable_screen", last_cycle_reason="screen_changed")
