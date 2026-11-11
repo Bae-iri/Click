@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from hashlib import sha256
 
 from ai_agent.runtime.replanner import decide_replan
+from ai_agent.runtime.failures import EXTERNAL_CHANGES, SelectionFailure
 from ai_agent.runtime.targeting import selector_evidence
 from ai_agent.runtime.types import ReplanDecision, VerificationStatus as Status
 
@@ -16,14 +17,22 @@ class RecoveryPlan:
     waiting_for: str = "none"
     state: dict = field(default_factory=dict)
     target_label: str | None = None
+    failure: SelectionFailure | None = None
 
     def to_dict(self):
-        return {"schema_version": "ai1-recovery.v1", "decision": self.decision,
+        result = {"schema_version": "ai1-recovery.v1", "decision": self.decision,
                 "reason_code": self.reason_code, "next_action": self.next_action,
                 "waiting_for": self.waiting_for, "recoverable": self.decision != "continue",
                 "attempts": self.state.get("attempts", 0),
                 "retry_after_ms": self.state.get("retry_after_ms", 0),
                 "options": ["retry", "manual_navigation", "cancel"] if self.waiting_for == "user" else []}
+        if self.failure:
+            result["failure"] = self.failure.to_dict()
+            if self.waiting_for == "user":
+                result["options"] = (["retry_after_change", "manual_navigation", "cancel"]
+                    if self.failure.required_change in EXTERNAL_CHANGES else
+                    ["manual_navigation", "cancel"])
+        return result
 
 
 def manual_navigation_target(graph, match, nodes):
@@ -46,7 +55,8 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
                     failed_node_ids, total_failed_attempts, state_evidence,
                     awaiting_vision_consent=False, vision_failed=False,
                     within_settling_interval=False, user_retry=False, completed=False,
-                    selection_failure=None):
+                    selection_failure=None, primary_failure=None,
+                    selection_fingerprint=None, selection_paused=False):
     base = decide_replan(session=session, verification_result=verification,
         failed_node_ids=failed_node_ids, total_failed_attempts=total_failed_attempts,
         max_failed_attempts=graph.policy.max_failed_attempts, match_result=match)
@@ -55,13 +65,15 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
 
     def plan(decision, reason, action, waiting, state=None, label=None, strategy=None):
         state = dict(state or {})
+        if primary_failure:
+            state.update(failure=primary_failure.to_dict(), selection_fingerprint=selection_fingerprint)
         if waiting == "user":
             state.update(waiting_for_user=True, decision=decision,
                          reason_code=reason, next_action=action)
         return RecoveryPlan(ReplanDecision(True, reason, failed_node_ids,
             strategy=strategy or ("backend_reselection" if decision == "handoff" else
                                   "wait_for_action" if waiting == "user" else "reobserve")),
-            decision, reason, action, waiting, state, label)
+            decision, reason, action, waiting, state, label, primary_failure)
 
     if total_failed_attempts >= graph.policy.max_failed_attempts:
         return plan("handoff", "ACTION_BUDGET_EXHAUSTED", "reselect_graph", "user")
@@ -79,6 +91,22 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
 
     waiting_result = bool(verification and verification.status in {Status.UNKNOWN, Status.WAITING_FOR_OBSERVATION})
     label = manual_navigation_target(graph, match, nodes)
+    if primary_failure and primary_failure.next_action != "reobserve":
+        old = dict(session.recovery_state) if session else {}
+        if old.get("selection_fingerprint") != selection_fingerprint or user_retry:
+            old = {}
+        state = {**old, "failure": primary_failure.to_dict(),
+                 "selection_fingerprint": selection_fingerprint,
+                 "attempts": old.get("attempts", 0) + int(not selection_paused),
+                 "retry_after_ms": 0}
+        reason, action = primary_failure.reason_code, primary_failure.next_action
+        # Keep native list-search evidence without discarding the original cause.
+        if primary_failure.cause in {"no_candidates", "abstained"}:
+            if label and not waiting_result:
+                reason, action = "TARGET_NOT_VISIBLE", "manual_navigation"
+            elif match.fallback_reason == "ambiguous_target":
+                reason, action = "TARGET_AMBIGUOUS", "ask_user"
+        return plan("wait", reason, action, "user", state, label=label)
     if label and not selection_failure and not waiting_result and not (session and session.failed_target_keys):
         return plan("wait", "TARGET_NOT_VISIBLE", "manual_navigation", "user", label=label)
 

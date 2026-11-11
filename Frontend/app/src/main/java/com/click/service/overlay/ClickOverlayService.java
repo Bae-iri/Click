@@ -2956,6 +2956,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 showTargetHelp(response.stateId);
                 return;
             } else {
+                JSONObject recovery = command.renderPolicy.optJSONObject("recovery");
+                JSONObject failure = recovery == null ? null : recovery.optJSONObject("failure");
+                if (failure != null) {
+                    taskFlowView.selectionRecovery(command.message, failure.optString("required_change"), retry);
+                    speak(taskFlowView.guidanceMessage());
+                    placeTaskFlow(null, true);
+                    return;
+                }
                 if (targetSelectionHelp) {
                     showTargetHelp(response.stateId);
                     return;

@@ -39,6 +39,9 @@ class JevScreenResolver(JevGoalClassifier):
                 hidden = private_node_ids(raw_nodes)
                 nodes = tuple(node for node in nodes if node.node_id not in hidden)
             nodes = minimize_nodes(nodes, setting)
+            if not nodes:
+                self.last_diagnostics["status"] = "empty_observation"
+                return None
             if not any(n.label for n in nodes):
                 self.last_diagnostics["status"] = "unsupported_screen"
                 return None
@@ -87,12 +90,15 @@ class JevScreenResolver(JevGoalClassifier):
             # model confidence cannot turn one into the uniquely intended target.
             from collections import Counter
             identities = Counter((t.transition_id, target_key(n)) for t,n in bindings.values())
+            ambiguous = any(count > 1 for count in identities.values())
             bindings = {key:(t,n) for key,(t,n) in bindings.items()
                         if identities[t.transition_id,target_key(n)] == 1}
-            if not bindings or len(bindings) > 250:
-                self.last_diagnostics["status"] = "no_candidates" if not bindings else "candidate_limit"
-                return None
             self.last_diagnostics["candidate_count"] = len(bindings)
+            if not bindings or len(bindings) > 250:
+                self.last_diagnostics["status"] = ("ambiguous_candidates" if ambiguous else "no_candidates") if not bindings else "candidate_limit"
+                if bindings:
+                    self.last_diagnostics.update(limit_kind="candidates", limit=250)
+                return None
             # Visibility evidence only, never a substitute for Jev's selection.
             # A low-confidence decision with a visible matching control needs
             # disambiguation, not scrolling that control off the screen.
@@ -114,8 +120,10 @@ class JevScreenResolver(JevGoalClassifier):
                 if node.node_id in {n.node_id for _, n in bindings.values()}:
                     relevant.update(n.node_id for n in nodes[max(0,index-2):index+3])
             selected_nodes = [n for n in nodes if n.node_id in relevant]
+            self.last_diagnostics["exported_node_count"] = len(selected_nodes)
             if len(selected_nodes) > 160:
                 self.last_diagnostics["status"] = "candidate_limit"
+                self.last_diagnostics.update(limit_kind="observation_nodes", limit=160)
                 return None
             ids = {n.node_id: f"n{i}" for i,n in enumerate(selected_nodes)}
             def parent_ref(node_id):
@@ -212,6 +220,7 @@ class JevScreenResolver(JevGoalClassifier):
                 filter_time_ms=round((monotonic() - filter_started) * 1000, 3))
             if payload_bytes > 65536:
                 self.last_diagnostics["status"] = "input_too_large"
+                self.last_diagnostics.update(limit_kind="payload_bytes", limit=65536)
                 return None
             timeout = remaining(8.0)
             started = monotonic()
@@ -296,6 +305,9 @@ class JevScreenResolver(JevGoalClassifier):
             return None
         except httpx.TimeoutException:
             self.last_diagnostics["status"] = "timeout"
+            return None
+        except httpx.TransportError:
+            self.last_diagnostics["status"] = "network_error"
             return None
         except (ValueError, KeyError, TypeError, AttributeError, RecursionError, httpx.HTTPError):
             return None
