@@ -8,6 +8,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -21,11 +22,13 @@ public final class FeedbackOverlayView extends ScrollView {
     private final TextView status;
     private final Button submit, later;
     private final Listener listener;
+    private final String guidanceMessage;
     private boolean saving;
 
     public FeedbackOverlayView(Context context, boolean positive, String message, String draft, Listener listener) {
         super(context);
         this.listener = listener;
+        guidanceMessage = positive ? message : "불편했던 점을\n알려주세요.";
         setFillViewport(false);
         setBackground(ClickUi.outlined(0xFFFFFFFF, ClickUi.BORDER, dp(22), dp(1)));
         setElevation(dp(12));
@@ -36,11 +39,48 @@ public final class FeedbackOverlayView extends ScrollView {
         TextView title = ClickUi.sectionTitle(context, positive ? "고마워요!" : "의견을 들려주세요");
         title.setTextSize(ClickTextScale.size(context, 20));
         title.setAccessibilityHeading(true);
-        body.addView(title);
-        TextView prompt = ClickUi.body(context, message);
-        prompt.setTextSize(ClickTextScale.size(context, 16));
-        body.addView(prompt, ClickUi.wrap(dp(12)));
-        detail = ClickUi.input(context, positive ? "좋았던 점을 적어주세요 (선택)" : "어떤 점이 불편하셨나요?",
+        later = ClickUi.secondaryButton(context, positive ? "닫기" : "나중에");
+        later.setOnClickListener(v -> { if (!saving) listener.dismiss(); });
+        if (positive) {
+            body.addView(title);
+            TextView prompt = ClickUi.body(context, guidanceMessage);
+            prompt.setTextSize(ClickTextScale.size(context, 16));
+            body.addView(prompt, ClickUi.wrap(dp(12)));
+        } else {
+            LinearLayout header = new LinearLayout(context);
+            header.setGravity(Gravity.CENTER_VERTICAL);
+            header.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+            later.setTextSize(ClickTextScale.size(context, 13));
+            later.setTextColor(ClickUi.SUBTEXT);
+            later.setMinWidth(0); later.setMinimumWidth(0);
+            later.setMinHeight(dp(48));
+            later.setPadding(dp(8), 0, dp(8), 0);
+            later.setBackground(new android.graphics.drawable.RippleDrawable(
+                    android.content.res.ColorStateList.valueOf(0x183478F6),
+                    ClickUi.rounded(android.graphics.Color.TRANSPARENT, dp(12)), null));
+            LinearLayout.LayoutParams laterParams = new LinearLayout.LayoutParams(-2, -2);
+            laterParams.leftMargin = dp(8);
+            header.addView(later, laterParams);
+            body.addView(header, ClickUi.wrap(0));
+
+            LinearLayout conversation = new LinearLayout(context);
+            conversation.setGravity(Gravity.CENTER_VERTICAL);
+            ImageView clue = new com.click.designpreview.ClueArtworkView(context);
+            clue.setImageResource(com.click.designpreview.R.drawable.clue5_failure);
+            clue.setTag("feedback_failure_clue");
+            conversation.addView(clue, new LinearLayout.LayoutParams(dp(96), dp(124)));
+            TextView bubble = ClickUi.body(context, guidanceMessage);
+            bubble.setTextSize(ClickTextScale.size(context, 15));
+            bubble.setTextColor(ClickUi.TEXT);
+            bubble.setPadding(dp(14), dp(12), dp(14), dp(18));
+            bubble.setBackground(new SpeechBubbleDrawable(ClickUi.PALE_BLUE,
+                    getResources().getDisplayMetrics().density, false));
+            LinearLayout.LayoutParams bubbleParams = new LinearLayout.LayoutParams(0, -2, 1);
+            bubbleParams.leftMargin = dp(8);
+            conversation.addView(bubble, bubbleParams);
+            body.addView(conversation, ClickUi.wrap(dp(8)));
+        }
+        detail = ClickUi.input(context, positive ? "좋았던 점을 적어주세요 (선택)" : "의견을 적어주세요",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         detail.setTextSize(ClickTextScale.size(context, 17));
         detail.setSingleLine(false);
@@ -49,11 +89,8 @@ public final class FeedbackOverlayView extends ScrollView {
         detail.setGravity(Gravity.TOP | Gravity.START);
         detail.setFilters(new InputFilter[]{new InputFilter.LengthFilter(2000)});
         detail.setContentDescription("클릭에 전할 피드백");
-        if (draft != null) detail.setText(draft);
+        if (draft != null && !"null".equalsIgnoreCase(draft.trim())) detail.setText(draft);
         body.addView(detail, ClickUi.wrap(dp(14)));
-        TextView purpose = ClickUi.body(context, "보내주신 의견은 클릭을 개선하기 위해 저장해요.");
-        purpose.setTextSize(ClickTextScale.size(context, 13));
-        body.addView(purpose, ClickUi.wrap(dp(8)));
         status = ClickUi.body(context, "");
         status.setTextSize(ClickTextScale.size(context, 14));
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
@@ -68,11 +105,12 @@ public final class FeedbackOverlayView extends ScrollView {
             listener.submit(text);
         });
         body.addView(submit, ClickUi.fullWidth(context, 48, 12));
-        later = ClickUi.secondaryButton(context, positive ? "닫기" : "나중에");
-        later.setTextSize(ClickTextScale.size(context, 16));
-        later.setOnClickListener(v -> { if (!saving) listener.dismiss(); });
-        body.addView(later, ClickUi.fullWidth(context, 44, 8));
+        if (positive) {
+            later.setTextSize(ClickTextScale.size(context, 16));
+            body.addView(later, ClickUi.fullWidth(context, 44, 8));
+        }
     }
+    public String guidanceMessage() { return guidanceMessage; }
     public void setSaving(boolean value) {
         saving = value;
         detail.setEnabled(!value); submit.setEnabled(!value); later.setEnabled(!value);

@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-12",
+  "changes": [
+    "Existing Clue failure artwork beside a short speech bubble on negative feedback.",
+    "Small later action at the right of the title; 48dp minimum button height.",
+    "Removed the explanatory text below the input.",
+    "Treat absent, JSON null and legacy literal null drafts as empty while preserving real text.",
+    "Narration uses the same concise text as the displayed bubble."
+  ],
+  "validation": {
+    "unit_tests": 231,
+    "failures": 0,
+    "errors": 0,
+    "visual_previews": [
+      "evidence/2026-11-12-negative-feedback.png",
+      "evidence/2026-11-12-negative-feedback-large-text.png"
+    ],
+    "large_system_font_scale": 1.5,
+    "apk_build": "passed",
+    "server_contract_preflight": "passed",
+    "data_preserving_install": "passed",
+    "installed_package": "com.click",
+    "apk_sha256": "d4f809120342c12cfa6881e1f72666e47b3b32ef16541869381ebbaa659589b4"
+  },
+  "integration": {
+    "backend_change": false,
+    "render_redeploy_required": false,
+    "concurrent_source_edits": "Applied only the feedback patch to the active working tree; other ongoing changes preserved."
+  }
+}
