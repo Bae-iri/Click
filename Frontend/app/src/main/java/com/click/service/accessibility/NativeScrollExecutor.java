@@ -115,9 +115,10 @@ final class NativeScrollExecutor {
         }finally{root.recycle();}
         if(plan==null)return revealSkipped("target_or_viewport_changed");
         Rect viewport=new Rect(plan.viewport[0],plan.viewport[1],plan.viewport[2],plan.viewport[3]);
-        float x=uncoveredLine(viewport,true,controls);if(x<0)return revealSkipped("blocked_gesture_lane");
-        float y=viewport.exactCenterY(), delta=plan.forward?-plan.distance:plan.distance;
-        Path path=new Path();path.moveTo(x,y-delta/2);path.lineTo(x,y+delta/2);
+        controls.addAll(overlayBounds());
+        float[] segment=ScrollGesturePath.vertical(viewport,plan.distance,plan.forward,controls,24);
+        if(segment==null)return revealSkipped("blocked_gesture_lane");
+        Path path=new Path();path.moveTo(segment[0],segment[1]);path.lineTo(segment[2],segment[3]);
         var gesture=new android.accessibilityservice.GestureDescription.Builder().addStroke(
                 new android.accessibilityservice.GestureDescription.StrokeDescription(path,0L,300L)).build();
         boolean dispatched=service.dispatchGesture(gesture,new GestureResultCallback(){
@@ -155,19 +156,9 @@ final class NativeScrollExecutor {
         return uncoveredLine(viewport,vertical,java.util.Collections.emptyList(),new float[]{.5f,.3f,.7f,.2f,.8f});
     }
 
-    private float uncoveredLine(Rect viewport,boolean vertical,java.util.List<Rect> controls) {
-        return uncoveredLine(viewport,vertical,controls,new float[]{.5f,.3f,.7f,.2f,.8f,.1f,.9f,.05f,.95f});
-    }
-
     private float uncoveredLine(Rect viewport,boolean vertical,java.util.List<Rect> controls,float[] fractions) {
         java.util.List<Rect> covered=new java.util.ArrayList<>(controls);
-        for(AccessibilityWindowInfo window:service.getWindows())try {
-            if(window.getType()!=AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY)continue;
-            AccessibilityNodeInfo root=window.getRoot();if(root==null)continue;
-            try{if(root.isVisibleToUser() && service.getPackageName().equals(String.valueOf(root.getPackageName()))) {
-                Rect bounds=new Rect();window.getBoundsInScreen(bounds);covered.add(bounds);
-            }}finally{root.recycle();}
-        }finally{window.recycle();}
+        covered.addAll(overlayBounds());
         for(float fraction:fractions) {
             float position=vertical?viewport.left+viewport.width()*fraction:viewport.top+viewport.height()*fraction;
             boolean clear=true;
@@ -175,6 +166,18 @@ final class NativeScrollExecutor {
             if(clear)return position;
         }
         return -1;
+    }
+
+    private java.util.List<Rect> overlayBounds() {
+        java.util.List<Rect> covered=new java.util.ArrayList<>();
+        for(AccessibilityWindowInfo window:service.getWindows())try {
+            if(window.getType()!=AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY)continue;
+            AccessibilityNodeInfo root=window.getRoot();if(root==null)continue;
+            try{if(root.isVisibleToUser() && service.getPackageName().equals(String.valueOf(root.getPackageName()))) {
+                Rect bounds=new Rect();window.getBoundsInScreen(bounds);covered.add(bounds);
+            }}finally{root.recycle();}
+        }finally{window.recycle();}
+        return covered;
     }
 
 }
