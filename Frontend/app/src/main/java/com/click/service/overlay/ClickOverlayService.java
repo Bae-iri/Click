@@ -1910,7 +1910,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         feedbackParams.y = dp(20);
         feedbackParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
         windowManager.addView(feedbackView, feedbackParams);
-        speak(response.message);
+        speak(feedbackView.guidanceMessage());
     }
 
     private void dismissFeedback() {

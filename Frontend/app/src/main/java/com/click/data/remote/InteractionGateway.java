@@ -19,11 +19,18 @@ public class InteractionGateway {
             if (!intent.equals("task") && !intent.equals("negative_feedback") && !intent.equals("positive_feedback"))
                 throw new IllegalArgumentException("Unknown interaction intent");
             JSONObject feedback = json.optJSONObject("feedback");
-            message = json.optString("message", null);
-            feedbackId = feedback == null ? null : feedback.getString("id");
-            detail = feedback == null ? null : feedback.optString("detail", null);
+            message = nullableString(json, "message");
+            feedbackId = feedback == null ? null : nullableString(feedback, "id");
+            detail = feedback == null ? null : nullableString(feedback, "detail");
             if (!intent.equals("task") && (feedbackId == null || message == null))
                 throw new IllegalArgumentException("Feedback response is incomplete");
+        }
+        private static String nullableString(JSONObject object, String key) throws Exception {
+            if (object.isNull(key)) return null;
+            Object value = object.get(key);
+            if (!(value instanceof String)) throw new IllegalArgumentException("Expected text: " + key);
+            String text = (String) value;
+            return text.isBlank() || "null".equalsIgnoreCase(text.trim()) ? null : text;
         }
         public boolean isFeedback() { return !"task".equals(intent); }
     }
