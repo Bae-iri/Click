@@ -20,11 +20,13 @@
     "server_contract_preflight": "passed",
     "data_preserving_install": "passed",
     "installed_package": "com.click",
-    "apk_sha256": "d4f809120342c12cfa6881e1f72666e47b3b32ef16541869381ebbaa659589b4"
+    "apk_sha256": "f34eb5b7294ab81752937a2e66fd82db39a4f743f691f47b367ec459f68f0faf",
+    "apology_visual_previews": 2
   },
   "integration": {
     "backend_change": false,
     "render_redeploy_required": false,
     "concurrent_source_edits": "Applied only the feedback patch to the active working tree; other ongoing changes preserved."
-  }
+  },
+  "negative_message": "죄송합니다.\n불편했던 점을\n알려주세요."
 }
