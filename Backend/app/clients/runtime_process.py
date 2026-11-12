@@ -9,6 +9,11 @@ from ai_agent.runtime.budget import deadline
 
 _slots = BoundedSemaphore(4)
 _MAX_RESULT = 4 * 1024 * 1024
+# Fork from a clean, database-free server rather than re-importing the entire
+# runtime on every screen. Each turn still receives its own killable process.
+_START_METHOD = "forkserver" if "forkserver" in multiprocessing.get_all_start_methods() else "spawn"
+if _START_METHOD == "forkserver":
+    multiprocessing.set_forkserver_preload(["app.clients.runtime_work"])
 
 def _run(connection, operation, end):
     token = deadline.set(end)
@@ -37,7 +42,7 @@ def run_runtime(operation, timeout):
     receive=send=process=None
     started = False
     try:
-        context = multiprocessing.get_context("spawn")
+        context = multiprocessing.get_context(_START_METHOD)
         receive, send = context.Pipe(duplex=False)
         process = context.Process(target=_run, args=(send, operation, end), daemon=True,name="click-runtime")
         process.start(); started = True; send.close()

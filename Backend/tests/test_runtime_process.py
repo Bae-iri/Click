@@ -53,3 +53,21 @@ def test_ipc_startup_failure_does_not_leak_capacity(monkeypatch):
     with pytest.raises(OSError):run_runtime(Work(),1)
     assert capacity.acquire(blocking=False)
     capacity.release()
+
+
+def test_runtime_processes_do_not_share_mutated_worker_state():
+    import os
+    first=run_runtime(ProcessIdentity(),10)
+    second=run_runtime(ProcessIdentity(),10)
+    assert first["pid"] != os.getpid()
+    assert first["pid"] != second["pid"]
+    assert first["initial"] == second["initial"] == "unset"
+
+
+@dataclass
+class ProcessIdentity:
+    def __call__(self):
+        import os
+        initial=os.environ.get("CLICK_WORKER_ISOLATION_PROBE","unset")
+        os.environ["CLICK_WORKER_ISOLATION_PROBE"]="changed"
+        return {"pid":os.getpid(),"initial":initial}
