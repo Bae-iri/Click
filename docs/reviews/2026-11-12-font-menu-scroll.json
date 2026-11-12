@@ -26,12 +26,29 @@
     "installed_package": "com.click",
     "data_preserving_install": "passed",
     "apk_sha256": "3f55e64154597c689b6931d21848191ae30bd3368f6a09b222fb3ab81a195dd4",
-    "device_font_reveal": "blocked: device locked; actual movement has not been verified",
-    "initial_device_attempt": "test preparation input injection was rejected before the reveal; preparation now uses native accessibility gestures"
+    "device_font_reveal": {
+      "status": "passed",
+      "tests": 1,
+      "duration_seconds": 7.376,
+      "test": "NativeTargetRevealTest#fontMenuIsRevealedPastDisplayControlsWithoutChangingSettings",
+      "test_package": "com.click.scrollrevealtest",
+      "target_label": "글자 크기와 스타일",
+      "before_top_px": 317,
+      "after_top_px": 691,
+      "fresh_target_visibility_plan": "no further reveal needed",
+      "brightness_unchanged": true,
+      "font_scale_unchanged": true,
+      "setting_writes": 0,
+      "target_clicked": false,
+      "preparation": "Move toward the top edge within the observed list; await native gesture completion callbacks. The bottom edge cannot be prepared by backward scrolling when the list is already at its start."
+    },
+    "installed_apk_hash_verified": true
   },
   "deployment": {
     "backend_change": false,
     "render_redeploy_required": false,
-    "compatibility_build": "Temporary Gradle finalizeDsl override retained installed com.click identity; repository default com.clueclick.app unchanged."
+    "compatibility_build": "Temporary Gradle finalizeDsl override retained installed com.click identity; repository default com.clueclick.app unchanged.",
+    "verification_isolation": "Independent test package avoids replacing the other ongoing task's test APK; no production app reinstall during the unlocked-device verification.",
+    "source_fix_commit": "69ddd929486afc691d3f54411852df464a992c75"
   }
 }

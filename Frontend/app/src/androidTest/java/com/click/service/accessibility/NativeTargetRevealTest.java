@@ -147,6 +147,8 @@ public class NativeTargetRevealTest {
             if(target!=null) {
                 plan=TargetVisibility.plan(before,target.nodeId,target.bounds,density);
                 if(plan!=null)break;
+                android.util.Log.i("ClickScrollTest","font_prepare attempt="+attempt+" row="+Arrays.toString(target.bounds)
+                        +" start="+(before.navigation!=null && before.navigation.atStart())+" end="+(before.navigation!=null && before.navigation.atEnd()));
             }
             if(target==null) {
                 assertTrue(ClickAccessibilityService.performSettingsScroll(true,before.packageName,before.activeWindowId));
@@ -155,7 +157,7 @@ public class NativeTargetRevealTest {
                 AccessibilityNodeSnapshot list=null;
                 for(var node:before.nodes)if(node.scrollable && node.visibleToUser){list=node;break;}
                 assertNotNull(list);
-                float desired=list.bounds[3]-(target.bounds[3]-target.bounds[1])*.5f;
+                float desired=list.bounds[1]+(target.bounds[3]-target.bounds[1])*.5f;
                 float delta=(target.bounds[1]+target.bounds[3])*.5f-desired;
                 float limit=Math.min(96*density,(list.bounds[3]-list.bounds[1])*.25f);
                 swipeDisplaySafely(before,list.bounds,Math.max(-limit,Math.min(limit,delta)));
@@ -194,9 +196,17 @@ public class NativeTargetRevealTest {
                 new android.accessibilityservice.GestureDescription.StrokeDescription(path,0,400)).build();
         ClickAccessibilityService service=newService();
         java.util.concurrent.atomic.AtomicBoolean dispatched=new java.util.concurrent.atomic.AtomicBoolean();
-        instrumentation.runOnMainSync(()->dispatched.set(service.dispatchGesture(gesture,null,null)));
+        java.util.concurrent.CountDownLatch done=new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicBoolean completed=new java.util.concurrent.atomic.AtomicBoolean();
+        instrumentation.runOnMainSync(()->dispatched.set(service.dispatchGesture(gesture,
+                new android.accessibilityservice.AccessibilityService.GestureResultCallback() {
+                    @Override public void onCompleted(android.accessibilityservice.GestureDescription value){completed.set(true);done.countDown();}
+                    @Override public void onCancelled(android.accessibilityservice.GestureDescription value){done.countDown();}
+                },new Handler(Looper.getMainLooper()))));
         assertTrue("Native preparation gesture accepted",dispatched.get());
-        SystemClock.sleep(900);
+        assertTrue("Native preparation gesture callback",done.await(3,java.util.concurrent.TimeUnit.SECONDS));
+        assertTrue("Native preparation gesture completed without cancellation",completed.get());
+        SystemClock.sleep(500);
     }
     private ClickAccessibilityService newService() throws Exception {
         var field=ClickAccessibilityService.class.getDeclaredField("connectedService");field.setAccessible(true);
