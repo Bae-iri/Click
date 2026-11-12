@@ -68,11 +68,13 @@ public final class FeedbackOverlayView extends ScrollView {
             ImageView clue = new com.click.designpreview.ClueArtworkView(context);
             clue.setImageResource(com.click.designpreview.R.drawable.clue5_failure);
             clue.setTag("feedback_failure_clue");
-            conversation.addView(clue, new LinearLayout.LayoutParams(dp(96), dp(124)));
+            conversation.addView(clue, new LinearLayout.LayoutParams(dp(108), dp(148)));
             TextView bubble = ClickUi.body(context, guidanceMessage);
             bubble.setTextSize(ClickTextScale.size(context, 15));
             bubble.setTextColor(ClickUi.TEXT);
-            bubble.setPadding(dp(14), dp(12), dp(14), dp(18));
+            bubble.setMinHeight(dp(124));
+            bubble.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
+            bubble.setPadding(dp(12 + SpeechBubbleDrawable.TAIL_DP), dp(12), dp(12), dp(12));
             bubble.setBackground(new SpeechBubbleDrawable(ClickUi.PALE_BLUE,
                     getResources().getDisplayMetrics().density, false));
             LinearLayout.LayoutParams bubbleParams = new LinearLayout.LayoutParams(0, -2, 1);
@@ -84,7 +86,7 @@ public final class FeedbackOverlayView extends ScrollView {
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         detail.setTextSize(ClickTextScale.size(context, 17));
         detail.setSingleLine(false);
-        detail.setMinLines(3); detail.setMaxLines(5);
+        detail.setMinLines(positive ? 3 : 2); detail.setMaxLines(positive ? 5 : 3);
         detail.setPadding(dp(12), dp(10), dp(12), dp(10));
         detail.setGravity(Gravity.TOP | Gravity.START);
         detail.setFilters(new InputFilter[]{new InputFilter.LengthFilter(2000)});
