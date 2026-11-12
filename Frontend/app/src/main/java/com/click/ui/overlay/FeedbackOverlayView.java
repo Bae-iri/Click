@@ -28,7 +28,7 @@ public final class FeedbackOverlayView extends ScrollView {
     public FeedbackOverlayView(Context context, boolean positive, String message, String draft, Listener listener) {
         super(context);
         this.listener = listener;
-        guidanceMessage = positive ? message : "불편했던 점을\n알려주세요.";
+        guidanceMessage = positive ? message : "죄송합니다.\n불편했던 점을\n알려주세요.";
         setFillViewport(false);
         setBackground(ClickUi.outlined(0xFFFFFFFF, ClickUi.BORDER, dp(22), dp(1)));
         setElevation(dp(12));
