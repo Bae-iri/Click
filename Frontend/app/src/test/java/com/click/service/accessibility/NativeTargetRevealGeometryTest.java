@@ -72,6 +72,16 @@ public class NativeTargetRevealGeometryTest {
         assertFalse(executor.revealSettingsTarget("node_0_0",new int[]{0,1990,1080,2193},"com.android.settings",42));
         verify(service,never()).dispatchGesture(any(),any(),any());
     }
+    @Test public void fullWidthSliderElsewhereInDisplayMenuDoesNotBlockReveal() {
+        var slider=node("android.widget.SeekBar",500,800);
+        when(slider.getRangeInfo()).thenReturn(AccessibilityNodeInfo.RangeInfo.obtain(
+                AccessibilityNodeInfo.RangeInfo.RANGE_TYPE_FLOAT,0,100,50));
+        when(root.getChildCount()).thenReturn(2);when(root.getChild(1)).thenReturn(slider);
+        assertTrue(executor.revealSettingsTarget("node_0_0",bounds,"com.android.settings",42));
+        verify(service).dispatchGesture(any(),any(),any());
+        verify(slider,never()).performAction(anyInt(),any());
+        verify(slider,never()).performAction(anyInt());
+    }
     @Test public void changedWindowStillRejectsTheGesture() {
         assertFalse(executor.revealSettingsTarget("node_0_0",bounds,"com.android.settings",43));
         verify(service,never()).dispatchGesture(any(),any(),any());

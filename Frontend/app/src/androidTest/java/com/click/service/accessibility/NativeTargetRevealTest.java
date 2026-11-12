@@ -57,8 +57,7 @@ public class NativeTargetRevealTest {
         }
         SystemClock.sleep(550);
     }
-    @Test public void clippedDisplayRowIsRevealedWithoutClickingIt() throws Exception {
-        assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("targetReveal")));
+    private void prepareWithExistingGrant() {
         assertFalse("Unlock the phone",app.getSystemService(KeyguardManager.class).isDeviceLocked());
         ui=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         var info=ui.getServiceInfo();info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;ui.setServiceInfo(info);
@@ -73,6 +72,10 @@ public class NativeTargetRevealTest {
         ui.adoptShellPermissionIdentity("android.permission.WRITE_SECURE_SETTINGS");
         try {Settings.Secure.putString(app.getContentResolver(),key,String.join(":",others));SystemClock.sleep(200);}
         finally {Settings.Secure.putString(app.getContentResolver(),key,original);ui.dropShellPermissionIdentity();}
+    }
+    @Test public void clippedDisplayRowIsRevealedWithoutClickingIt() throws Exception {
+        assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("targetReveal")));
+        prepareWithExistingGrant();
         Intent settings=new Intent(Settings.ACTION_SETTINGS);
         app.startActivity(settings.setComponent(settings.resolveActivity(app.getPackageManager()))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_ACTIVITY_CLEAR_TOP));
@@ -121,6 +124,79 @@ public class NativeTargetRevealTest {
                 .put("after_top",revealed.bounds[1]).put("after_bottom",revealed.bounds[3])
                 .put("server_posts",0).put("setting_writes",0).put("target_clicked",false);
         Files.write(new File(app.getCacheDir(),"native-target-reveal.json").toPath(),report.toString(2).getBytes(StandardCharsets.UTF_8));
+    }
+    @Test public void fontMenuIsRevealedPastDisplayControlsWithoutChangingSettings() throws Exception {
+        assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("fontReveal")));
+        prepareWithExistingGrant();
+        String brightness=Settings.System.getString(app.getContentResolver(),Settings.System.SCREEN_BRIGHTNESS);
+        String font=Settings.System.getString(app.getContentResolver(),Settings.System.FONT_SCALE);
+        app.startActivity(new Intent(Settings.ACTION_DISPLAY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        SystemClock.sleep(1200);
+        float density=app.getResources().getDisplayMetrics().density;
+        ScreenSnapshot before=null;AccessibilityNodeSnapshot target=null;TargetVisibility.Plan plan=null;
+        for(int attempt=0;attempt<12;attempt++) {
+            before=read();
+            if(before==null){SystemClock.sleep(500);continue;}
+            target=null;
+            for(var node:before.nodes)if(node.visibleToUser && "글자 크기와 스타일".equals(node.text)) {
+                target=node;
+                for(var parent:before.nodes)if(node.parentId!=null && node.parentId.equals(parent.nodeId)
+                        && parent.clickable && !parent.checkable)target=parent;
+                break;
+            }
+            if(target!=null) {
+                plan=TargetVisibility.plan(before,target.nodeId,target.bounds,density);
+                if(plan!=null)break;
+            }
+            if(target==null) {
+                assertTrue(ClickAccessibilityService.performSettingsScroll(true,before.packageName,before.activeWindowId));
+                SystemClock.sleep(650);
+            } else {
+                AccessibilityNodeSnapshot list=null;
+                for(var node:before.nodes)if(node.scrollable && node.visibleToUser){list=node;break;}
+                assertNotNull(list);
+                float desired=list.bounds[3]-(target.bounds[3]-target.bounds[1])*.5f;
+                float delta=(target.bounds[1]+target.bounds[3])*.5f-desired;
+                float limit=Math.min(96*density,(list.bounds[3]-list.bounds[1])*.25f);
+                swipeDisplaySafely(before,list.bounds,Math.max(-limit,Math.min(limit,delta)));
+            }
+        }
+        assertNotNull("Font menu must be found and prepared at a viewport edge",plan);
+        int[] oldBounds=target.bounds.clone();
+        assertTrue("Display controls must not block a safe reveal segment",
+                ClickAccessibilityService.revealSettingsTarget(target.nodeId,target.bounds,before.packageName,before.activeWindowId));
+        SystemClock.sleep(1100);
+        ScreenSnapshot after=read();assertNotNull(after);
+        AccessibilityNodeSnapshot moved=null;
+        for(var node:after.nodes)if(node.visibleToUser && "글자 크기와 스타일".equals(node.text)) {
+            moved=node;
+            for(var parent:after.nodes)if(node.parentId!=null && node.parentId.equals(parent.nodeId)
+                    && parent.clickable && !parent.checkable)moved=parent;
+            break;
+        }
+        assertNotNull("Font menu remains visible after reveal",moved);
+        assertFalse("The font row must actually move",Arrays.equals(oldBounds,moved.bounds));
+        assertNull("Fresh font row is comfortable to highlight",TargetVisibility.plan(after,moved.nodeId,moved.bounds,density));
+        assertEquals("Brightness must stay unchanged",brightness,Settings.System.getString(app.getContentResolver(),Settings.System.SCREEN_BRIGHTNESS));
+        assertEquals("Font scale must stay unchanged",font,Settings.System.getString(app.getContentResolver(),Settings.System.FONT_SCALE));
+        android.util.Log.i("ClickScrollTest","font_reveal_passed before_top="+oldBounds[1]+" after_top="+moved.bounds[1]+" setting_writes=0");
+    }
+    private void swipeDisplaySafely(ScreenSnapshot screen,int[] area,float distance) throws Exception {
+        List<android.graphics.Rect> controls=new ArrayList<>();
+        for(var node:screen.nodes)if(node.visibleToUser && node.bounds!=null
+                && ("slider".equals(node.role) || "text_field".equals(node.role) || node.checkable))
+            controls.add(new android.graphics.Rect(node.bounds[0],node.bounds[1],node.bounds[2],node.bounds[3]));
+        float[] segment=ScrollGesturePath.vertical(new android.graphics.Rect(area[0],area[1],area[2],area[3]),
+                Math.max(1,Math.round(Math.abs(distance))),distance>0,controls,24);
+        assertNotNull("Safe list preparation path",segment);
+        android.graphics.Path path=new android.graphics.Path();path.moveTo(segment[0],segment[1]);path.lineTo(segment[2],segment[3]);
+        var gesture=new android.accessibilityservice.GestureDescription.Builder().addStroke(
+                new android.accessibilityservice.GestureDescription.StrokeDescription(path,0,400)).build();
+        ClickAccessibilityService service=newService();
+        java.util.concurrent.atomic.AtomicBoolean dispatched=new java.util.concurrent.atomic.AtomicBoolean();
+        instrumentation.runOnMainSync(()->dispatched.set(service.dispatchGesture(gesture,null,null)));
+        assertTrue("Native preparation gesture accepted",dispatched.get());
+        SystemClock.sleep(900);
     }
     private ClickAccessibilityService newService() throws Exception {
         var field=ClickAccessibilityService.class.getDeclaredField("connectedService");field.setAccessible(true);
