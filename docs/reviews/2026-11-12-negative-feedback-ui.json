@@ -20,7 +20,7 @@
     "server_contract_preflight": "passed",
     "data_preserving_install": "passed",
     "installed_package": "com.click",
-    "apk_sha256": "f34eb5b7294ab81752937a2e66fd82db39a4f743f691f47b367ec459f68f0faf",
+    "apk_sha256": "1cc44807883a8e0c6a0dd510df2e5acc7d0f8e6771ecba96d3b76100ab6d50d5",
     "apology_visual_previews": 2
   },
   "integration": {
@@ -28,5 +28,16 @@
     "render_redeploy_required": false,
     "concurrent_source_edits": "Applied only the feedback patch to the active working tree; other ongoing changes preserved."
   },
-  "negative_message": "죄송합니다.\n불편했던 점을\n알려주세요."
+  "negative_message": "죄송합니다.\n불편했던 점을\n알려주세요.",
+  "layout_followup": {
+    "negative_input_min_lines": 2,
+    "negative_input_max_lines": 3,
+    "clue_size_dp": [
+      108,
+      148
+    ],
+    "bubble_min_height_dp": 124,
+    "tail": "14dp side tail pointing left toward Clue; text padding reserves the tail area",
+    "visual_previews_passed": 2
+  }
 }
