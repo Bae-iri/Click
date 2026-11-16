@@ -82,13 +82,10 @@
     "schema_changes": false,
     "model_confidence_or_graph_changes": false,
     "publication": {
-      "pushed": false,
-      "blocked_by": "automatic approval review",
-      "reason": "Explicit user authorization to upload code and performance report to the external GitHub repository was not established.",
-      "user_approval_required": [
-        "Upload reviewed commit to GitHub",
-        "Merge and deploy server changes"
-      ]
+      "pushed": true,
+      "uploaded_code_commit": "73fb1b5fb30ec53ed2fa7491adaed244c9d928d9",
+      "user_authorization": "User explicitly requested GitHub upload after reviewing the prepared change.",
+      "deployment_performed": false
     }
   },
   "same_baseline_runtime_benchmark": {
