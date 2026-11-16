@@ -4262,172 +4262,6 @@
         }
       }
     },
-    "/api/v1/speech/transcriptions": {
-      "post": {
-        "tags": [
-          "speech"
-        ],
-        "summary": "Transcribe",
-        "operationId": "transcribe_api_v1_speech_transcriptions_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/TranscriptionRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TranscriptionResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "Gone",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "Content Too Large",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "INVALID_REQUEST for invalid audio; NO_SPEECH for no recognizable speech (error.code).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too Many Requests",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "Bad Gateway",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Service Unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "504": {
-            "description": "Gateway Timeout",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/api/v1/users/me": {
       "get": {
         "tags": [
@@ -8443,62 +8277,6 @@
         ],
         "title": "TokenResponse"
       },
-      "TranscriptionRequest": {
-        "properties": {
-          "audio_base64": {
-            "type": "string",
-            "maxLength": 900000,
-            "minLength": 4,
-            "title": "Audio Base64"
-          },
-          "mime_type": {
-            "type": "string",
-            "enum": [
-              "audio/wav",
-              "audio/x-wav"
-            ],
-            "title": "Mime Type",
-            "default": "audio/wav"
-          },
-          "language": {
-            "type": "string",
-            "const": "ko",
-            "title": "Language",
-            "default": "ko"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "audio_base64"
-        ],
-        "title": "TranscriptionRequest"
-      },
-      "TranscriptionResponse": {
-        "properties": {
-          "text": {
-            "type": "string",
-            "title": "Text"
-          },
-          "model": {
-            "type": "string",
-            "const": "openai/whisper-large-v3",
-            "title": "Model",
-            "default": "openai/whisper-large-v3"
-          },
-          "provider": {
-            "type": "string",
-            "const": "self_hosted",
-            "title": "Provider",
-            "default": "self_hosted"
-          }
-        },
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "title": "TranscriptionResponse"
-      },
       "TypedGoalRequest": {
         "properties": {
           "catalog_version": {
@@ -8509,7 +8287,8 @@
               "2.0.0",
               "2.1.0",
               "2.2.0",
-              "2.3.0"
+              "2.3.0",
+              "2.4.0"
             ],
             "title": "Catalog Version"
           },
@@ -8625,13 +8404,87 @@
               "settings.navigation.talkback",
               "settings.navigation.magnification",
               "settings.navigation.captions",
-              "settings.navigation.eye_comfort"
+              "settings.navigation.eye_comfort",
+              "coupang.product.search",
+              "coupang.product.details",
+              "coupang.cart.add",
+              "coupang.cart.view",
+              "coupang.cart.remove",
+              "coupang.order.checkout",
+              "coupang.order.list",
+              "coupang.order.track",
+              "coupang.order.cancel",
+              "coupang.order.return",
+              "coupang.order.exchange",
+              "coupang.review.write",
+              "coupang.review.view",
+              "coupang.wishlist.add",
+              "coupang.wishlist.remove",
+              "coupang.wishlist.view",
+              "coupang.address.add",
+              "coupang.address.change",
+              "coupang.payment_method.add",
+              "coupang.payment_method.change",
+              "coupang.coupon.view",
+              "coupang.coupon.apply",
+              "coupang.rocket_delivery.filter",
+              "coupang.category.browse",
+              "coupang.seller.info",
+              "coupang.customer_service.open",
+              "coupang.rocket_wow.manage",
+              "coupang.order.reorder",
+              "coupang.receipt.view",
+              "coupang.search.filter",
+              "coupang.search.sort",
+              "coupang.delivery_date.check",
+              "coupang.order.gift",
+              "coupang.cash_receipt.manage",
+              "coupang.product.price.check",
+              "coupang.product.stock.check",
+              "coupang.product.compare",
+              "coupang.product.share",
+              "coupang.product.option.select",
+              "coupang.product.restock_notification",
+              "coupang.product.inquiry.write",
+              "coupang.product.inquiry.view",
+              "coupang.cart.quantity.increase",
+              "coupang.cart.quantity.decrease",
+              "coupang.cart.select",
+              "coupang.cart.unselect",
+              "coupang.order.details",
+              "coupang.order.address.change",
+              "coupang.delivery.instructions.change",
+              "coupang.order.cancel_status",
+              "coupang.order.refund_status",
+              "coupang.order.return_status",
+              "coupang.order.exchange_status",
+              "coupang.order.return_pickup.track",
+              "coupang.review.edit",
+              "coupang.review.delete",
+              "coupang.review.helpful",
+              "coupang.address.remove",
+              "coupang.payment_method.remove",
+              "coupang.coupon.download",
+              "coupang.search.recent.view",
+              "coupang.search.recent.clear",
+              "coupang.account.login",
+              "coupang.account.logout",
+              "coupang.profile.change",
+              "coupang.rocket_wow.benefits",
+              "coupang.recurring_delivery.manage",
+              "coupang.rocket_fresh.filter",
+              "coupang.coupay.balance.view",
+              "coupang.coupay.money.add",
+              "coupang.points.view"
             ],
             "title": "Goal Type"
           },
           "target_app": {
             "type": "string",
-            "const": "android_settings",
+            "enum": [
+              "android_settings",
+              "coupang"
+            ],
             "title": "Target App"
           },
           "slots": {

@@ -66,6 +66,10 @@ class GoalPreparationService:
 
     def _keywords(self, source):
         text = normalize(source)
+        exact = [g for g in self.catalog['goals'] if g['target_app'] == 'coupang'
+            and text == normalize(g['display_name'])]
+        if exact:
+            return exact
         scored = []
         for goal in self.catalog['goals']:
             lengths = [max((len(normalize(w)) for w in group if normalize(w) and normalize(w) in text), default=0)
@@ -206,6 +210,8 @@ class GoalPreparationService:
                 display_name = selected['display_name']
                 status, resolution_status = 'ready', 'confirmation_required'
                 message = f'{display_name} 안내를 시작할까요?'
+                if selected['target_app'] == 'coupang':
+                    message = f"{display_name} 화면을 찾고 진행 방법을 안내할게요. 상품·주문 선택과 입력은 쿠팡에서 직접 해주세요."
                 if selected['task_type'] == 'settings_assisted':
                     display_name += ' · 직접 진행 안내'
                     message = '설정 화면까지 안내할게요. 항목 선택·입력·최종 변경은 직접 진행하고 결과를 확인해 주세요.'

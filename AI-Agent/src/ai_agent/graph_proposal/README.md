@@ -58,7 +58,7 @@ process는 세션별 재구성·분석 결과를 원천 event에 연결된 DB re
 
 audit는 `structural_valid`(구조·참조 무결성), `static_valid`(현재 runtime 실행 조건 포함), `execution_enabled`(승인·활성·검사 통과)를 구분합니다. 미지원 완료 predicate와 담당 영역을 별도 보고하며 `device_validation`은 항상 `NOT_ASSESSED`입니다. 초안의 미지원 기능을 DB 손상과 혼동하지 않습니다.
 
-`catalog_coverage`는 카탈로그의 승인 목표를 실제 Backend 선택기로 조회합니다. 현재 v2.3.0은 설정 변경 50개·화면 이동 21개·직접 진행 안내 39개, 총 110개이며 쿠팡 71개는 분류 전용입니다. 그래프 누락·비활성·승인 해제는 `MISSING_GRAPH`, 같은 최상위 우선순위 중복은 `AMBIGUOUS_GRAPH`, 본문/해시 손상은 `INVALID_GRAPH`, 카탈로그와 슬롯·작업 종류가 다르면 `GRAPH_CONTRACT_MISMATCH`로 표시합니다. 승인 목표 밖의 활성·승인 그래프도 별도 보고합니다. 여러 release version은 목표 하나로 집계하며 선택된 version/hash를 보여줍니다.
+`catalog_coverage`는 카탈로그의 승인 목표를 실제 Backend 선택기로 조회합니다. 현재 v2.4.0은 설정 110개와 쿠팡 71개, 총 181개입니다. 쿠팡의 화면 이동·확인 후 조작·직접 진행 안내는 [실행 문서](../../../../docs/tasks/coupang.md)를 따르며 실기기 검수는 별도입니다. 그래프 누락·비활성·승인 해제는 `MISSING_GRAPH`, 같은 최상위 우선순위 중복은 `AMBIGUOUS_GRAPH`, 본문/해시 손상은 `INVALID_GRAPH`, 카탈로그와 슬롯·작업 종류가 다르면 `GRAPH_CONTRACT_MISMATCH`로 표시합니다. 승인 목표 밖의 활성·승인 그래프도 별도 보고합니다. 여러 release version은 목표 하나로 집계하며 선택된 version/hash를 보여줍니다.
 
 승인 graph 결함이나 목표 누락·불일치가 있으면 `status=BLOCKED`, 종료 코드 1입니다. 모두 통과하면 `status=PASS`, 종료 코드 0입니다. 감사는 누락된 그래프를 생성하거나 활성화하지 않으므로 배포 후 DB 반영 확인에도 사용할 수 있습니다. PASS는 정적 구성·선택 검사 결과이며 실기기 실행 성공 판정이 아닙니다.
 

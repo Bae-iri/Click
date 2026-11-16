@@ -1,6 +1,0 @@
-# Install only in the separate Python 3.12 inference environment.
-# Local Whisper large-v3 inference; no hosted transcription API or PyTorch runtime.
-faster-whisper==1.2.1
-numpy>=1.26,<3
-fastapi>=0.115,<1
-uvicorn[standard]>=0.30,<1

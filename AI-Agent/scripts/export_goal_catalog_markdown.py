@@ -23,6 +23,8 @@ def render(catalog: dict) -> str:
     apps = Counter(goal["target_app"] for goal in goals)
     statuses = Counter(goal["execution_status"] for goal in goals)
     modes = Counter(g["task_type"] for g in goals if g["execution_status"] == "approved")
+    commerce = json.loads((AI_AGENT / 'goal_catalog/commerce_execution.json').read_text(encoding='utf-8'))['tasks']
+    commerce_modes = Counter(spec.get('mode', 'assisted') for spec in commerce.values())
     lines = [
         "# Goal Type·키워드 전체 표",
         "",
@@ -35,6 +37,7 @@ def render(catalog: dict) -> str:
         "- `catalog_only`는 Goal 추출만 가능하다는 뜻이다. 승인 Task Graph가 없으므로 실제 작업은 시작하지 않는다.",
         f"- 설정 변경 상태 검증 경로: **{modes['settings_change']}개**, 직접 진행 안내: **{modes['settings_assisted']}개**. 승인 표시는 실행 안내를 시작할 수 있다는 뜻이며 실기기 검증 완료를 뜻하지 않는다.",
         "- `settings_assisted`는 화면 안내 뒤 사용자가 직접 선택·입력한다. 사용자 완료 응답은 기술 검증과 별도 기록한다.",
+        f"- 쿠팡: 화면 이동 **{commerce_modes['navigation']}개**, 확인 후 조작·반영 검사 **{commerce_modes['action']}개**, 직접 진행 안내 **{commerce_modes['assisted']}개**. 실기기 검증은 별도이며 로그인·개인정보 입력·거래 확정은 사용자가 진행한다.",
         "- 이전 v2.0은 82개였고, v2.1은 160개였고, v2.2는 설정 화면 열기 경로를 추가했다.",
         "",
     ]
@@ -57,6 +60,9 @@ def render(catalog: dict) -> str:
             status = escape(goal["execution_status"])
             if goal["task_type"] == "settings_assisted":
                 status += " · 직접 진행"
+            if goal['target_app'] == 'coupang':
+                mode = commerce[goal['goal_type'].removeprefix('coupang.')].get('mode', 'assisted')
+                status += ' · ' + {'navigation': '화면 이동', 'action': '확인 후 조작', 'assisted': '직접 진행'}[mode]
             if goal.get("graph_id"):
                 status += f" (`{escape(goal['graph_id'])}`)"
             lines.append(

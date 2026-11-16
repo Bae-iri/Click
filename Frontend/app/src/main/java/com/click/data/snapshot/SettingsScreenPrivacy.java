@@ -26,6 +26,7 @@ public final class SettingsScreenPrivacy {
 
     private final VisionPrivacy vocabulary;
     private final Set<String> settings, launchers, blockedTitles, descriptions, privateResources, privateRegions, emptySearch, roles;
+    private final Set<String> commerce, commerceLabels, commercePrivate;
 
     public SettingsScreenPrivacy(VisionPrivacy vocabulary, JSONObject policy) throws JSONException {
         if (policy.getInt("version") != 1) throw new JSONException("Unsupported screen policy");
@@ -39,6 +40,9 @@ public final class SettingsScreenPrivacy {
                 ? new JSONArray() : policy.getJSONArray("private_region_tokens"));
         emptySearch = strings(policy.getJSONArray("empty_search_resources"));
         roles = strings(policy.getJSONArray("roles"));
+        commerce = strings(policy.optJSONArray("commerce_packages") == null ? new JSONArray() : policy.getJSONArray("commerce_packages"));
+        commerceLabels = strings(policy.optJSONArray("commerce_labels") == null ? new JSONArray() : policy.getJSONArray("commerce_labels"));
+        commercePrivate = strings(policy.optJSONArray("commerce_private_resource_tokens") == null ? new JSONArray() : policy.getJSONArray("commerce_private_resource_tokens"));
     }
 
     public static SettingsScreenPrivacy load(InputStream vocabulary, InputStream policy) throws IOException, JSONException {
@@ -69,7 +73,12 @@ public final class SettingsScreenPrivacy {
             return result;
         }
         String pkg = tree.optString("package_name");
-        if (!settings.contains(pkg) && !launchers.contains(pkg)) throw new Blocked(Blocked.Reason.UNSUPPORTED_APP);
+        boolean commerceScope = "commerce".equals(setting);
+        if (!settings.contains(pkg) && !launchers.contains(pkg) && !(commerceScope && commerce.contains(pkg)))
+            throw new Blocked(Blocked.Reason.UNSUPPORTED_APP);
+        if (commerceScope && !commerce.contains(pkg) && !launchers.contains(pkg))
+            throw new Blocked(Blocked.Reason.UNSUPPORTED_APP);
+        if (commerceScope && vision != null) throw new Blocked(Blocked.Reason.VISION_MASK_UNAVAILABLE);
         JSONArray nodes = tree.getJSONArray("nodes");
         Map<String, JSONObject> byId = new HashMap<>();
         for (int i = 0; i < nodes.length(); i++) {
@@ -89,9 +98,9 @@ public final class SettingsScreenPrivacy {
             boolean emptySearchField = emptySearch.contains(node.optString("resource_id"))
                     && node.optString("text", "").isEmpty() && !flag(extras, "input_content_present")
                     && !flag(extras, "password") && !flag(extras, "is_password") && !flag(extras, "isPassword");
-            if (sensitive && !emptySearchField) throw new Blocked(Blocked.Reason.SENSITIVE_INPUT);
+            if (sensitive && !emptySearchField && !commerceScope) throw new Blocked(Blocked.Reason.SENSITIVE_INPUT);
             if (hiddenRegions.contains(node.getString("node_id"))) continue;
-            if (!description(node) && independent(node, byId) && (blockedTitles.contains(normalize(node.optString("text")))
+            if (!commerceScope && !description(node) && independent(node, byId) && (blockedTitles.contains(normalize(node.optString("text")))
                     || blockedTitles.contains(normalize(node.optString("content_description")))))
                 throw new Blocked(Blocked.Reason.SENSITIVE_SCREEN);
             if(otherSettingControl(node,byId,setting))continue;
@@ -99,8 +108,9 @@ public final class SettingsScreenPrivacy {
             String resourceName = resource.substring(resource.lastIndexOf('/') + 1);
             boolean description = descriptions.contains(resourceName);
             for (String token : privateResources) description |= resourceName.toLowerCase(Locale.ROOT).contains(token);
-            String text = sensitive || description ? null : approved(node.optString("text", null), pkg);
-            String content = sensitive || description ? null : approved(node.optString("content_description", null), pkg);
+            boolean hidden = hiddenRegions.contains(node.getString("node_id"));
+            String text = sensitive || description || hidden ? null : approved(node.optString("text", null), pkg, setting);
+            String content = sensitive || description || hidden ? null : approved(node.optString("content_description", null), pkg, setting);
             recognized |= text != null || content != null;
             if (description) continue;
             JSONObject safe = new JSONObject();
@@ -160,7 +170,7 @@ public final class SettingsScreenPrivacy {
             JSONArray elements = vision.optJSONArray("elements"), safeElements = new JSONArray();
             if (elements != null) for (int i = 0; i < elements.length(); i++) {
                 JSONObject element = elements.getJSONObject(i);
-                String text = approved(element.optString("text", null), pkg);
+                String text = approved(element.optString("text", null), pkg, setting);
                 if (text == null) continue;
                 JSONObject safe = new JSONObject().put("element_id", "ocr_" + i).put("text", text);
                 for (String key : new String[]{"bounds_in_screen", "confidence", "actionable"})
@@ -180,7 +190,7 @@ public final class SettingsScreenPrivacy {
         if (nodes.length() > 0 && !recognized) {
             // Settings can expose only its container/back button during redraw.
             // Keep every unrecognized label local and wait for a readable screen.
-            if (settings.contains(pkg) && vision == null) throw new Incomplete();
+            if ((settings.contains(pkg) || commerceScope && commerce.contains(pkg)) && vision == null) throw new Incomplete();
             throw new Blocked();
         }
         JSONObject safeTree = new JSONObject();
@@ -232,6 +242,11 @@ public final class SettingsScreenPrivacy {
             boolean identity = false;
             for (String token : privateResources) identity |= name.contains(token);
             for (String token : privateRegions) identity |= name.contains(token);
+            if (commerce.contains(node.optString("package_name"))) {
+                for (String token : commercePrivate) identity |= name.contains(token);
+                for (String token : new String[]{"product_name", "product_title", "goods_name", "item_name", "search_history_item"})
+                    identity |= name.contains(token);
+            }
             if (!identity) continue;
             roots.add(node.getString("node_id"));
             // A private identity can label its entire clickable row. Redact that
@@ -259,7 +274,13 @@ public final class SettingsScreenPrivacy {
         return hidden;
     }
 
-    private String approved(String value, String pkg) {
+    private String approved(String value, String pkg, String setting) {
+        if ("commerce".equals(setting)) {
+            if (value == null) return null;
+            String text = normalize(value);
+            if (launchers.contains(pkg)) return "쿠팡".equals(text) || "coupang".equals(text) ? text : null;
+            return commerce.contains(pkg) && commerceLabels.contains(text) ? text : null;
+        }
         String text = vocabulary.exportSettingsLabel(value);
         return launchers.contains(pkg) && !"설정".equals(text) && !"settings".equals(text) ? null : text;
     }

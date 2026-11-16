@@ -92,7 +92,7 @@ Click/
 
 ## MVP Scope
 
-장기 목표는 쿠팡, Android 설정 앱, 정부24의 사용 안내입니다. 현재 카탈로그 v2.3.0에는 Android 설정 110개와 쿠팡 71개, 총 181개 Goal이 있습니다. 실행 승인 범위는 설정 110개로, 설정 변경 검증 50개·설정 화면 이동 21개·사용자가 직접 진행하는 안내 39개입니다. 쿠팡 71개는 분류 전용이며 정부24 실행 graph는 아직 없습니다. 직접 진행 안내는 사용자 답변과 기술 검증 결과를 구분하며, 기종별 실제 실행이 모두 검증됐다는 뜻은 아닙니다. 새 태스크를 사용하려면 Backend와 Android 앱을 함께 업데이트해야 합니다. 전체 목록은 [Goal 카탈로그](docs/goal-type-keyword-catalog.md), 배포 후 DB·목표 선택 확인은 [AI2 감사 안내](AI-Agent/src/ai_agent/graph_proposal/README.md#db-기록-처리)를 참고합니다.
+카탈로그 v2.4.0에는 Android 설정 110개와 쿠팡 71개, 총 181개 Goal의 실행 안내가 있습니다. 설정은 변경 검증 50개·화면 이동 21개·직접 진행 안내 39개입니다. 쿠팡은 화면 이동 8개·확인 후 장바구니 담기 및 반영 검사 1개·직접 진행 안내 62개입니다. 상품·주문 선택, 검색어·개인정보 입력과 거래 확정은 사용자가 쿠팡에서 진행하며 사용자 답변과 기술 검증 결과를 구분합니다. 전 기종·쿠팡 앱 버전의 실기기 검증 완료를 뜻하지 않으며 정부24 graph는 아직 없습니다. 새 태스크를 사용하려면 Backend와 Android 앱을 함께 업데이트해야 합니다. [쿠팡 실행 안내](docs/tasks/coupang.md), [Goal 카탈로그](docs/goal-type-keyword-catalog.md), [AI2 감사 안내](AI-Agent/src/ai_agent/graph_proposal/README.md#db-기록-처리)를 참고합니다.
 
 아래는 합의한 설계 흐름입니다. Backend typed graph 선택·주입 일부가 연결되어 있으며, 범용 DB graph loader와 legacy raw-goal 경로 정리는 후속 작업입니다.
 

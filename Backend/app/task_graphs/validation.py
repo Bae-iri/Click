@@ -33,6 +33,33 @@ def load_graph(body, *, executable=True):
     _fields(body.get("policy", {}), RuntimePolicy)
     graph = ADAPTER.validate_python(body)
     definition = graph.definition
+    if definition.target_app == 'coupang':
+        from ai_agent.task_graph.commerce import PACKAGES, PREDICATES as COMMERCE_PREDICATES
+        if (not definition.goal_type.startswith('coupang.') or not definition.task_type.startswith('commerce_')
+                or graph.synonyms.get('commerce_mode') not in {('navigation',), ('assisted',), ('action',)}):
+            raise ValueError('Invalid commerce execution contract')
+        for edge in graph.transitions:
+            if edge.verification_predicate not in {'state_reached', *COMMERCE_PREDICATES}:
+                raise ValueError('Invalid commerce verification predicate')
+            if edge.action_type not in {ActionType.TAP, ActionType.OBSERVE_ONLY}:
+                raise ValueError('Commerce guides only native taps and manual steps')
+            if edge.action_type == ActionType.TAP and (
+                    not edge.selector.package_candidates or set(edge.selector.package_candidates) - PACKAGES):
+                raise ValueError('Commerce targets must belong to Coupang')
+            if edge.transition_id == 'CP_ACTION' and edge.safety_level != SafetyLevel.CONFIRM_REQUIRED:
+                raise ValueError('Commerce changes require confirmation')
+            if edge.action_type == ActionType.TAP and edge.transition_id != 'CP_NAVIGATE' and edge.safety_level != SafetyLevel.CONFIRM_REQUIRED:
+                raise ValueError('Commerce action guides require confirmation')
+            if edge.transition_id == 'CP_NAVIGATE':
+                from ai_agent.task_graph.commerce import DOCUMENT
+                allowed_navigation = set(DOCUMENT['navigation_labels'])
+                allowed_navigation.update(label for page in DOCUMENT['pages'].values() for label in page['titles'])
+                if (set(edge.target_keywords) - allowed_navigation or edge.verification_predicate != 'state_reached'
+                        or edge.completes_task):
+                    raise ValueError('Commerce navigation cannot introduce a mutation')
+            if edge.completes_task and (edge.action_type != ActionType.OBSERVE_ONLY
+                    or edge.verification_predicate not in COMMERCE_PREDICATES):
+                raise ValueError('Commerce completion requires an explicit result predicate')
     if not definition.task_id or not definition.goal_type:
         raise ValueError("Missing graph identity")
     if definition.done_state not in graph.states or not definition.start_states:

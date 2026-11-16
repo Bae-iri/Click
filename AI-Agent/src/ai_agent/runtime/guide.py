@@ -19,11 +19,18 @@ def recovery_command(session_id, plan):
         "TARGET_NOT_VISIBLE": f"{plan.target_label or '다음'} 항목이 현재 화면에 보이지 않아요. 안내 창을 접고 목록을 위로 밀어 아래 항목을 살펴보세요. 화면이 바뀌면 이어서 안내할게요.",
         "STATE_AMBIGUOUS": "현재 화면을 정확히 구분하지 못했어요. 화면 제목을 확인하거나 이전 화면으로 돌아간 뒤 다시 확인해 주세요.",
         "STATE_UNKNOWN": "‘다시 시도하기’를 눌러 안내를 이어가 주세요.",
-        "TARGET_AMBIGUOUS": "비슷한 항목이 여러 개라 누를 곳을 확정하지 못했어요. 직접 원하는 메뉴로 이동하거나 화면을 다시 확인해 주세요.",
-        "LOW_CONFIDENCE": "현재 화면에서 누를 항목을 확실히 판단하지 못했어요. ‘다시 시도하기’를 누르거나 직접 메뉴로 이동해 주세요.",
-        "MODEL_ABSTAINED": "현재 화면의 안내를 확정하지 못했어요. ‘다시 시도하기’를 누르거나 직접 메뉴로 이동해 주세요.",
-        "MODEL_UNAVAILABLE": "화면 판단에 응답을 받지 못했어요. 잠시 후 ‘다시 시도하기’를 눌러 주세요.",
-        "MODEL_WAIT_WITHOUT_ACTION": "아직 조작이 확인되지 않아 안내를 다시 확인해야 해요. ‘다시 시도하기’를 누르거나 직접 메뉴로 이동해 주세요.",
+        "TARGET_AMBIGUOUS": "비슷한 항목 중 어느 메뉴를 원하시나요? 원하는 메뉴를 직접 열어 주시면 바뀐 화면에서 안내를 이어갈게요.",
+        "LOW_CONFIDENCE": "어느 항목으로 이동하려고 하시나요? 원하는 메뉴를 직접 열어 주시면 바뀐 화면에서 안내를 이어갈게요.",
+        "MODEL_ABSTAINED": "현재 화면에서 어느 메뉴를 원하시나요? 원하는 메뉴를 직접 열어 주시면 바뀐 화면에서 안내를 이어갈게요.",
+        "MODEL_UNAVAILABLE": "화면 판단 서비스에 연결하지 못했어요. 연결이 복구된 뒤 다시 확인해 주세요.",
+        "MODEL_WAIT_WITHOUT_ACTION": "아직 조작이 확인되지 않았어요. 어느 메뉴로 이동하려고 하시나요? 원하는 메뉴를 직접 열어 주세요.",
+        "CANDIDATE_LIMIT": "확인할 항목이 너무 많아요. 원하는 설정의 하위 메뉴를 열어 화면에 보이는 항목을 줄여 주세요.",
+        "OBSERVATION_TOO_LARGE": "화면 정보가 너무 많아요. 원하는 설정의 하위 메뉴를 열어 관찰할 범위를 줄여 주세요.",
+        "NO_CANDIDATES": "안내할 항목이 현재 화면에 없어요. 원하는 메뉴를 열거나 목록을 이동해 항목이 보이게 해 주세요.",
+        "INVALID_CANDIDATES": "화면 항목을 올바르게 구분하지 못했어요. 중첩된 창을 닫고 원하는 설정 화면을 열어 주세요.",
+        "MODEL_NOT_CONFIGURED": "화면 판단 서비스 설정을 확인해야 해요. 설정이 복구된 뒤 다시 확인해 주세요.",
+        "DEADLINE_EXCEEDED": "화면 판단에 사용할 시간이 부족했어요. 서비스 상태를 확인한 뒤 다시 확인해 주세요.",
+        "SELECTION_FAILED": "안내 중 발생한 오류를 확인해야 해요. 원하는 메뉴로 직접 이동해 주세요.",
         "ACTION_EVENT_MISSING": "값이 바뀌었지만 안내한 조작인지 확인하지 못했어요. 추가로 조작하지 말고 현재 화면을 다시 확인해 주세요.",
         "ACTION_RESULT_UNOBSERVABLE": "조작 결과를 아직 확인하지 못했어요. 추가로 조작하지 말고 화면을 다시 확인해 주세요.",
         "VISION_UNAVAILABLE": "화면 분석으로도 다음 항목을 확인하지 못했어요. 직접 메뉴로 이동하거나 화면을 다시 확인해 주세요.",
@@ -33,6 +40,8 @@ def recovery_command(session_id, plan):
         "APP_NOT_OPEN": "‘설정 열기’를 눌러주세요. 설정 화면에서 이어서 안내할게요.",
     }
     message = messages.get(plan.reason_code, "다음 항목을 확인하지 못했어요. 직접 메뉴로 이동하거나 화면을 다시 확인해 주세요.")
+    if plan.failure and plan.failure.cause == "network_error":
+        message = "네트워크에 연결하지 못했어요. 인터넷 연결을 복구한 뒤 다시 확인해 주세요."
     policy = {"avoid_covering_target": False, "recovery": plan.to_dict()}
     if plan.next_action == "go_back":
         policy["recovery_action"] = {"type": "navigate_back", "target_app": "android_settings"}

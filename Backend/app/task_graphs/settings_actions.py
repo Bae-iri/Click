@@ -77,5 +77,7 @@ def action_releases():
             'settings_change' if mode == 'native_checked' else 'settings_assisted',
             ('S0_UNKNOWN', 'S1_SETTINGS_HOME'), 'S_DONE', spec['slots']), states, tuple(edges), {})
         has_choices = mode == 'native_checked' and bool(contract.get('choices'))
-        yield {'version': '1.1.0' if has_choices else '1.0.0', 'approved': True, 'priority': 110 if has_choices else 100,
+        # Route amendments need a new release without changing pinned graphs.
+        yield {'version': capability.get('graph_version', '1.1.0' if has_choices else '1.0.0'),
+            'approved': True, 'priority': 110 if has_choices else 100,
             'status': mode + '_device_validation_pending'}, graph

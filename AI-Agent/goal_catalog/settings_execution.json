@@ -1135,6 +1135,7 @@
       "name": "VPN 연결",
       "setting": "vpn",
       "mode": "assisted",
+      "graph_version": "1.0.1",
       "device_validated": false,
       "page_name": "VPN",
       "pages": [
@@ -1145,6 +1146,10 @@
         "Connections",
         "네트워크 및 인터넷",
         "Network & internet"
+      ],
+      "intermediate": [
+        "기타 연결 설정",
+        "More connection settings"
       ],
       "instruction": "원하는 VPN 프로필을 직접 선택해 연결하거나 연결 해제하세요. 인증 정보는 직접 입력하고 기기의 연결 표시를 확인하세요."
     },
@@ -1152,6 +1157,7 @@
       "name": "VPN 연결 해제",
       "setting": "vpn",
       "mode": "assisted",
+      "graph_version": "1.0.1",
       "device_validated": false,
       "page_name": "VPN",
       "pages": [
@@ -1162,6 +1168,10 @@
         "Connections",
         "네트워크 및 인터넷",
         "Network & internet"
+      ],
+      "intermediate": [
+        "기타 연결 설정",
+        "More connection settings"
       ],
       "instruction": "원하는 VPN 프로필을 직접 선택해 연결하거나 연결 해제하세요. 인증 정보는 직접 입력하고 기기의 연결 표시를 확인하세요."
     },

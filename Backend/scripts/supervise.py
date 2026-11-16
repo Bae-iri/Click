@@ -1,4 +1,4 @@
-"""Keep one local API/Whisper process running; stop via a per-run control marker."""
+"""Keep one local API process running; stop via a per-run control marker."""
 import argparse
 from contextlib import contextmanager
 import json
@@ -47,7 +47,7 @@ def write_state(path, value):
 
 def run(service, python, env_file, port):
     from dotenv import dotenv_values
-    if not python.is_file() or not env_file.is_file() or not 1 <= port <= 65535:
+    if service != 'api' or not python.is_file() or not env_file.is_file() or not 1 <= port <= 65535:
         raise ValueError('Check interpreter, environment file and port')
     identity = json.loads(subprocess.check_output([str(python), '-c',
         'import json,sys,sysconfig; print(json.dumps([sys._base_executable,sysconfig.get_path("purelib")]))'], text=True))
@@ -79,11 +79,9 @@ def run(service, python, env_file, port):
                 values = dotenv_values(env_file)
                 env = {**os.environ, **{k: v for k, v in values.items() if v is not None}}
                 env['PYTHONPATH'] = identity[1]
-                module = 'app.main:app' if service == 'api' else 'inference.whisper_stt:app'
-                args = [identity[0], '-m', 'uvicorn', module, '--host', '127.0.0.1',
+                args = [identity[0], '-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1',
                         '--port', str(port), '--workers', '1', '--no-access-log', '--no-proxy-headers']
-                if service == 'api':
-                    args.extend(['--log-config', 'logging.json'])
+                args.extend(['--log-config', 'logging.json'])
                 with (STATE / f'{service}.stdout.log').open('ab') as out, (STATE / f'{service}.stderr.log').open('ab') as err:
                     child = subprocess.Popen(args, cwd=BACKEND, env=env, stdout=out, stderr=err,
                         creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
@@ -109,7 +107,7 @@ def run(service, python, env_file, port):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['run', 'stop'])
-    parser.add_argument('service', choices=['api', 'stt'])
+    parser.add_argument('service', choices=['api'])
     parser.add_argument('--python', type=Path, default=Path(sys.executable))
     parser.add_argument('--env-file', type=Path)
     parser.add_argument('--port', type=int)
@@ -120,8 +118,8 @@ def main():
             write_state(STATE / f'stop-{args.service}.json', {'run_id': state['run_id']})
             print('Stop requested for this supervisor run only.')
         else:
-            env_file = args.env_file or (STATE / '.env' if args.service == 'api' else BACKEND / 'inference/.env')
-            run(args.service, args.python.resolve(), env_file.resolve(), args.port or (8001 if args.service == 'api' else 8091))
+            env_file = args.env_file or STATE / '.env'
+            run(args.service, args.python.resolve(), env_file.resolve(), args.port or 8001)
         return 0
     except Exception as error:
         print('SUPERVISOR_ERROR: ' + type(error).__name__ + '. Check local configuration, lock and service logs.')

@@ -3,6 +3,15 @@ import org.json.JSONObject;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public class CompletionEvidenceTest {
+ @Test public void commercePageArrivalDoesNotProveAnOrderOrCartChange() throws Exception {
+  JSONObject proof=new JSONObject().put("status","OPENED").put("reason","commerce_page_visible")
+      .put("goal_type","coupang.cart.view");
+  JSONObject metadata=new JSONObject().put("technical_outcome",proof);
+  assertTrue(CompletionEvidence.accepted(metadata,"coupang.cart.view"));
+  assertFalse(CompletionEvidence.verified(metadata));
+  assertFalse(CompletionEvidence.accepted(metadata,"coupang.cart.add"));
+  assertFalse(CompletionEvidence.accepted(metadata,"coupang.order.checkout"));
+ }
  @Test public void missingUnverifiedAndUnchangedEvidenceNeverCompletesWithoutAUserAnswer() throws Exception {
   assertFalse(CompletionEvidence.accepted(null));assertFalse(CompletionEvidence.accepted(new JSONObject()));
   for(String status:new String[]{"UNVERIFIABLE","NOT_ACHIEVED"})

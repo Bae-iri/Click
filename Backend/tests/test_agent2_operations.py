@@ -210,8 +210,8 @@ def test_catalog_audit_reports_each_registered_release_without_claiming_device_p
     assert report["total"] > 0
     assert all(row["device_validation"] == "NOT_ASSESSED" for row in report["graphs"])
     assert all(row["static_valid"] for row in report["graphs"] if row["approved"])
-    assert report["structural_valid"] == report["total"] == 110
-    assert report["execution_enabled"] == 110
+    assert report["structural_valid"] == report["total"] == 181
+    assert report["execution_enabled"] == 181
     assert report["unsupported_predicates"] == {}
     assert all(not row["execution_enabled"] for row in report["graphs"] if not row["approved"])
 

@@ -1507,6 +1507,74 @@ public class ClickOverlayServiceExecutionTest {
         verify((TutorialNarrator) get("narrator")).speak("‘설정 열기’를 눌러주세요. 설정 화면에서 이어서 안내할게요.");
     }
 
+    private ScreenSnapshot wrongSettingsSubpage() {
+        String pkg = "com.android.settings";
+        AccessibilityNodeSnapshot title = new AccessibilityNodeSnapshot("title", null, true, pkg,
+                "접근성", null, null, "android.widget.TextView", null, new int[]{80,80,800,180},
+                false,true,false,false,false,null,42);
+        AccessibilityNodeSnapshot back = new AccessibilityNodeSnapshot("back", null, true, pkg,
+                null, "뒤로가기", null, "android.widget.ImageButton", null, new int[]{0,80,80,180},
+                true,true,false,false,false,null,42);
+        return new ScreenSnapshot(pkg, Instant.now().toString(),1080,2400,List.of(title,back),42);
+    }
+
+    private void assertSettingsSubpageBackRecovery(String type) throws Exception {
+        currentScreen = wrongSettingsSubpage();
+        prepareGuideResponse();
+        JSONObject policy = new JSONObject();
+        if (type == null) policy.put("recovery",new JSONObject().put("waiting_for","user")
+                .put("reason_code","STATE_UNKNOWN"));
+        else policy.put("recovery_action",new JSONObject().put("type",type));
+        JSONObject guide = new JSONObject().put("guide_command_id", "settings-back")
+                .put("command_type", "highlight").put("action_type", "observe_only")
+                .put("message", "이전 페이지로 돌아가 주세요.")
+                .put("render_policy", policy);
+        callbacks.get(1).onSuccess(new AgentTurnContract.Response(new JSONObject()
+                .put("request_id", requests.get(1).requestId).put("session_id", "frontend-session")
+                .put("session_version", 1).put("episode_id", "episode").put("state_id", "S0_UNKNOWN")
+                .put("task_status", "IN_PROGRESS").put("guide_command", guide).toString()));
+        org.mockito.ArgumentCaptor<Runnable> click = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView")).navigationRecovery(eq(true),anyString(),click.capture());
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(anyBoolean()), never());
+        accessibility.when(() -> ClickAccessibilityService.performRecoveryNavigation(true)).thenReturn(true);
+        click.getValue().run();
+        accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(true));
+        assertNull(shadowOf(service).getNextStartedActivity());
+        assertEquals(NavigationRecovery.Action.BACK,((NavigationRecovery)get("navigationRecovery")).awaiting());
+        currentScreen = new ScreenSnapshot(screen.packageName,Instant.now().toString(),1080,2400,screen.nodes,81);
+        Method observe = ClickOverlayService.class.getDeclaredMethod("handleNavigationSnapshot",ScreenSnapshot.class);
+        observe.setAccessible(true);
+        assertEquals(false,observe.invoke(service,currentScreen));
+        assertEquals(AgentActionEvents.BACK_NAVIGATED,get("pendingActionType"));
+        assertEquals("frontend-session",get("agentSessionId"));
+        assertEquals(NavigationRecovery.Action.NONE,((NavigationRecovery)get("navigationRecovery")).hint());
+    }
+
+    @Test public void explicitSettingsBackWorksWithoutRecordedNavigationHistory() throws Exception {
+        assertSettingsSubpageBackRecovery("navigate_back");
+    }
+
+    @Test public void legacyOpenSettingsResponseReturnsFromTheCurrentSettingsSubpage() throws Exception {
+        assertSettingsSubpageBackRecovery("open_android_settings_or_show_app_drawer");
+    }
+
+    @Test public void unknownSettingsSubpageUsesBackWithNoExplicitServerNavigationAction() throws Exception {
+        assertSettingsSubpageBackRecovery(null);
+    }
+
+    @Test public void settingsEntryButtonRechecksThePageBeforeLaunchingSettings() throws Exception {
+        prepareGuideResponse();set("turnInFlight",false);
+        Method show = ClickOverlayService.class.getDeclaredMethod("showSettingsEntryRecovery");
+        show.setAccessible(true);show.invoke(service);
+        org.mockito.ArgumentCaptor<Runnable> click = org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(click.capture());
+        currentScreen = wrongSettingsSubpage();
+        click.getValue().run();
+        verify((TaskFlowOverlayView)get("taskFlowView")).navigationRecovery(eq(true),anyString(),any());
+        assertNull(shadowOf(service).getNextStartedActivity());
+    }
+
     @Test public void observationRetryHidesLegacyDiagnosticsAndRefreshesSilently() throws Exception {
         prepareGuideResponse();
         String diagnostic = "현재 화면에서 다음 조작을 확정하지 못했어요. 화면을 다시 확인해 주세요.";
@@ -2680,6 +2748,44 @@ public class ClickOverlayServiceExecutionTest {
         // Even a forced snapshot refresh must not resume exporting personal inputs.
         send(null);
         assertEquals(count, requests.size());
+    }
+
+    @Test public void commerceObservationUsesItsOwnScopeAndManualStepStopsFurtherUploads() throws Exception {
+        prepareGuideResponse(); deliver(1, "highlight", "tap", null);
+        set("acceptedGoal", catalog.executableGoal("coupang.order.cancel").toTypedGoalJson());
+        AccessibilityNodeSnapshot title = new AccessibilityNodeSnapshot("commerce-title", null, true,
+                "com.coupang.mobile", "주문 상세", null, null, "android.widget.TextView", null,
+                new int[]{20, 40, 900, 140}, false, true, false, false, false, null, 42);
+        currentScreen = new ScreenSnapshot("com.coupang.mobile", Instant.now().toString(), 1080, 2400,
+                List.of(title), 42);
+        send(null);
+        int index = requests.size() - 1;
+        assertEquals("commerce", requests.get(index).observationSetting);
+        JSONObject guide = new JSONObject().put("guide_command_id", "manual-commerce")
+                .put("command_type", "highlight").put("action_type", "observe_only")
+                .put("requires_user_action", false).put("message", "대상 주문과 환불금액을 직접 확인해 주세요.")
+                .put("render_policy", new JSONObject().put("manual_handoff", true).put("allow_result_check", true));
+        JSONObject body = new JSONObject().put("request_id", requests.get(index).requestId)
+                .put("session_id", requests.get(index).sessionId).put("session_version", 7)
+                .put("episode_id", "episode").put("task_status", "IN_PROGRESS")
+                .put("state_id", "C_TARGET").put("guide_command", guide).put("metadata", new JSONObject());
+        callbacks.get(index).onSuccess(new AgentTurnContract.Response(body.toString()));
+        assertEquals(true, get("manualSettingsHandoff"));
+        verify((TaskFlowOverlayView)get("taskFlowView")).progress(any(), any(), contains("환불금액"), eq(true));
+        int count = requests.size(); send(null); assertEquals(count, requests.size());
+    }
+
+    @Test public void commerceEntryFromAnotherAppWaitsForTheUserWithoutUploadingThatScreen() throws Exception {
+        prepareGuideResponse(); deliver(1, "highlight", "tap", null);
+        set("acceptedGoal", catalog.executableGoal("coupang.cart.view").toTypedGoalJson());
+        currentScreen = new ScreenSnapshot("com.other.app", Instant.now().toString(), 1080, 2400,
+                List.of(), 42);
+        int count = requests.size(); send(null);
+        assertEquals(count, requests.size());
+        assertEquals(true, get("waitingForExplicitRetry"));
+        verify((TaskFlowOverlayView)get("taskFlowView")).appEntryRecovery(eq("쿠팡"), any());
+        Method enabled = ClickOverlayService.class.getDeclaredMethod("automaticTouchEnabled");
+        enabled.setAccessible(true); assertEquals(false, enabled.invoke(service));
     }
 
     @Test public void transientTurnFailureRetainsExactActionEvidenceAndWaitsForExplicitRecovery() throws Exception {

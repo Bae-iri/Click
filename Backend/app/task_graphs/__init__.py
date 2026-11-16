@@ -28,6 +28,11 @@ def releases():
         # Drafts use future task-specific predicates and cannot be executed yet.
         load_graph(json.loads(json.dumps(graph.to_dict())), executable=False)
         yield release, graph
+    from .commerce import commerce_releases
+    catalog = json.loads((ROOT / 'goal_catalog.json').read_text(encoding='utf-8'))
+    for release, graph in commerce_releases(catalog):
+        load_graph(json.loads(json.dumps(graph.to_dict())))
+        yield release, graph
 
 
 def approved_graphs():

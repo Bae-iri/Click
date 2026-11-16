@@ -1103,10 +1103,14 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     public void settingsEntryRecovery(Runnable open) {
-        clear("설정 앱에서 이어갈게요");
-        narrationMessage = "‘설정 열기’를 눌러주세요. 설정 화면에서 이어서 안내할게요.";
+        appEntryRecovery("설정", open);
+    }
+
+    public void appEntryRecovery(String appName, Runnable open) {
+        clear(appName + " 앱에서 이어갈게요");
+        narrationMessage = "‘" + appName + " 열기’를 눌러주세요. 앱 화면에서 이어서 안내할게요.";
         content.addView(text(narrationMessage, 17), spaced(8));
-        Button action = primaryButton("설정 열기", () -> {});
+        Button action = primaryButton(appName + " 열기", () -> {});
         action.setOnClickListener(view -> {
             if (!action.isEnabled()) return;
             action.setEnabled(false);
@@ -1129,6 +1133,18 @@ public final class TaskFlowOverlayView extends LinearLayout {
         narrationMessage = "‘다시 시도하기’를 눌러 안내를 이어가 주세요.";
         content.addView(text(narrationMessage, 17), spaced(8));
         addRecoveryRetry(retry);
+    }
+
+    public void selectionRecovery(String message, String requiredChange, Runnable retry) {
+        clear("");
+        compactSummary = "도움이 필요해요!";
+        narrationMessage = message;
+        content.addView(text(message, 17), spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
+        String label = "connection_restored".equals(requiredChange) ? "연결 복구 후 확인"
+                : java.util.Set.of("provider_available", "provider_configuration", "fresh_time_budget",
+                    "valid_model_response").contains(requiredChange) ? "서비스 복구 후 확인" : "화면 변경 후 확인";
+        recoveryActions.addView(primaryButton(label, retry), spaced(8));
     }
 
     public void recoveryApology(Runnable retry) {

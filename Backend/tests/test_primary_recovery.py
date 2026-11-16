@@ -92,14 +92,14 @@ def test_accepted_display_guide_survives_the_reported_confidence_drop_and_checkp
     ("wait_for_result", "MODEL_WAIT_WITHOUT_ACTION"),
     ("offline", "MODEL_UNAVAILABLE"),
 ])
-def test_provider_holds_have_bounded_recovery_and_explicit_retry(outcome, reason):
+def test_provider_holds_require_a_change_before_retry(outcome, reason):
     scenario = Scenario([outcome])
     for turn in range(scenario.graph.policy.recovery_limit):
         result = scenario.observe()
         recovery = result.guide_command.render_policy["recovery"]
         assert result.guide_command.target_node_id is None
         assert recovery["reason_code"] == reason
-        assert recovery["attempts"] == turn + 1
+        assert recovery["attempts"] == 1
         assert result.debug["recovery"] == recovery
     assert recovery["waiting_for"] == "user"
     assert "fallback_action" not in result.guide_command.render_policy
@@ -108,10 +108,19 @@ def test_provider_holds_have_bounded_recovery_and_explicit_retry(outcome, reason
         assert result.debug["ui_selection"]["called"] is False
         assert result.debug["ui_selection"]["paused"] is True
         assert "fallback_action" not in result.guide_command.render_policy
-    assert len(scenario.calls) == scenario.graph.policy.recovery_limit
+    assert len(scenario.calls) == 1
     assert scenario.engine.session_store.get("s").total_failed_attempts == 0
     scenario.outcomes.append("selected")
-    resumed = scenario.retry()
+    if outcome == "offline":
+        assert recovery["failure"]["required_change"] == "connection_restored"
+        resumed = scenario.retry()
+    else:
+        # Pressing retry does not answer a selection ambiguity.
+        unchanged = scenario.retry()
+        assert unchanged.debug["ui_selection"]["paused"] is True
+        assert len(scenario.calls) == 1
+        resumed = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
+            bounds_in_screen=(10, 300, 1000, 400))))
     assert resumed.guide_command.target_node_id == "display"
     assert resumed.debug["ui_selection"]["called"] is True
     assert resumed.debug["recovery"]["decision"] == "continue"
@@ -136,18 +145,18 @@ def test_low_confidence_after_revalidation_stays_bounded_across_checkpoint_resto
         recovery = result.guide_command.render_policy["recovery"]
         assert result.guide_command.target_node_id is None
         assert recovery["reason_code"] == "LOW_CONFIDENCE"
-        assert recovery["attempts"] == min(turn, scenario.graph.policy.recovery_limit)
+        assert recovery["attempts"] == 1
         assert result.debug["ui_selection"]["hold_reason"] == hold_reason
         assert scenario.engine.session_store.get("s").total_failed_attempts == 0
-        if turn >= scenario.graph.policy.recovery_limit:
-            assert recovery["waiting_for"] == "user"
-            assert "fallback_action" not in result.guide_command.render_policy
-        if turn > scenario.graph.policy.recovery_limit:
+        assert recovery["waiting_for"] == "user"
+        assert recovery["failure"]["required_change"] == "user_clarification"
+        assert "fallback_action" not in result.guide_command.render_policy
+        if turn > 1:
             assert result.debug["ui_selection"]["called"] is False
-    assert len(scenario.calls) == 1 + scenario.graph.policy.recovery_limit
+    assert len(scenario.calls) == 2
 
 
-def test_retry_releases_failed_action_fingerprint_without_resetting_spent_action_budget():
+def test_changed_evidence_releases_failed_action_without_resetting_spent_action_budget():
     scenario = Scenario(["selected"])
     first = scenario.observe()
     event = UserActionEvent(UserActionType.TAP_COMPLETED,
@@ -159,7 +168,11 @@ def test_retry_releases_failed_action_fingerprint_without_resetting_spent_action
     old_attempt = first.guide_command.render_policy["attempt_id"]
     for at in (3000, 4000, 5000):
         scenario.observe(at=at)
-    resumed = scenario.retry()
+    unchanged = scenario.retry()
+    assert unchanged.guide_command.target_node_id is None
+    assert unchanged.debug["ui_selection"]["paused"] is True
+    resumed = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
+        bounds_in_screen=(10, 300, 1000, 400))))
     assert resumed.guide_command.target_node_id == "display"
     assert resumed.guide_command.render_policy["attempt_id"] != old_attempt
     assert resumed.debug["ui_selection"]["called"] is True
@@ -205,7 +218,7 @@ def test_rejection_overrides_a_retained_target_and_stale_retries_do_not_unlock_r
         result = scenario.observe(event=UserActionEvent(UserActionType.MANUAL_OVERRIDE,
             session_id=session, occurred_at_ms=at))
         assert result.debug["ui_selection"]["paused"] is True
-    assert len(scenario.calls) == 3
+    assert len(scenario.calls) == 1
 
 
 def test_jev_payload_separates_a_displayed_plan_from_an_executed_action():
@@ -278,7 +291,7 @@ def test_rule_state_mismatch_cannot_turn_visible_low_confidence_into_an_ocr_loop
         assert "vision_fallback" not in result.guide_command.render_policy
     assert recovery["waiting_for"] == "user"
     scenario.observe()
-    assert len(scenario.calls) == scenario.graph.policy.recovery_limit
+    assert len(scenario.calls) == 1
 
 
 @pytest.mark.parametrize("outcome,failed", [("selected", False), ((.72, .81), True)])

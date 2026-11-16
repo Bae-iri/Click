@@ -52,6 +52,11 @@ def make_outcome(technical, now, direction="increase", *, previous=None, setting
     if technical.get('reason') == 'manual_result_required' or setting not in {'font_size', 'brightness', 'volume', 'wifi', *CONTROLS}:
         message = '직접 진행한 작업 결과를 확인해 주세요. 앱에서 변경 성공을 검증하지는 못했어요.'
         question = '원하시는 결과를 얻었나요?'
+    if setting == 'commerce':
+        message = ('안내한 조작 뒤 쿠팡 화면에 반영된 결과를 확인했어요.'
+            if technical.get('reason') == 'commerce_effect_observed' and technical['status'] == 'CHANGED'
+            else '쿠팡에서 직접 진행한 결과를 확인해 주세요. 앱에서 거래 완료를 검증한 것은 아니에요.')
+        question = '원하시는 결과를 얻었나요?'
     if technical.get('reason') == 'target_value_changed_opposite_direction':
         message = '요청한 방향과 반대로 바뀌었어요. 원하는 변경 방향을 다시 확인해 주세요.'
     elif technical.get('reason') == 'no_correlated_action':
@@ -76,6 +81,9 @@ def answer_outcome(outcome, answer, now):
 
 
 def follow_up(outcome):
+    if outcome.get('setting') == 'commerce':
+        return {'message': '쿠팡에서 대상 상품·주문과 진행 상태를 확인해 주세요. 어떤 도움이 더 필요한가요?',
+            'choices': [{'id': 'other', 'label': '다른 도움이 필요해요'}, {'id': 'unsure', 'label': '잘 모르겠어요'}]}
     if outcome.get('setting') not in {'font_size', 'brightness', 'volume', 'wifi'}:
         return {'message': '기기에서 선택한 항목과 현재 설정 상태를 확인해 주세요. 어떤 도움이 더 필요한가요?',
             'choices': [{'id': 'other', 'label': '다른 도움이 필요해요'}, {'id': 'unsure', 'label': '잘 모르겠어요'}]}

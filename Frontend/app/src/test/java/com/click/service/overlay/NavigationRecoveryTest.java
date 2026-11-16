@@ -15,6 +15,34 @@ public class NavigationRecoveryTest {
   recovery.unplannedTap();recovery.observe(settings("잘못 연 화면"));
   assertEquals(BACK,recovery.recommend(settings("잘못 연 화면")));
  }
+ @Test public void settingsSubpageOffersBackWithoutHistoryAndAcceptsARecreatedWindow() {
+  NavigationRecovery recovery=new NavigationRecovery();
+  ScreenSnapshot wrong=settings("접근성");
+  recovery.unplannedTap();recovery.unplannedTap();
+  assertEquals(BACK,recovery.recommendSettingsBack());
+  assertEquals(BACK,recovery.recommend(wrong));
+  recovery.requested(BACK,wrong);
+  ScreenSnapshot root=settings("설정");
+  ScreenSnapshot recreated=new ScreenSnapshot(root.packageName,root.capturedAt,1080,2400,root.nodes,8);
+  assertEquals(BACK,recovery.observe(recreated));
+  assertEquals(NONE,recovery.hint());
+  assertEquals(BACK,recovery.recommendSettingsBack());
+  recovery.requested(BACK,recreated);
+  assertEquals(BACK,recovery.observe(settings("디스플레이")));
+ }
+ @Test public void settingsBackWaitsThroughEmptyFramesAndReobservesWithoutForcingHome() {
+  NavigationRecovery recovery=new NavigationRecovery();ScreenSnapshot wrong=settings("접근성");
+  recovery.recommendSettingsBack();recovery.requested(BACK,wrong);
+  assertEquals(NONE,recovery.observe(new ScreenSnapshot(wrong.packageName,wrong.capturedAt,1080,2400,List.of(),8)));
+  assertEquals(BACK,recovery.awaiting());
+  assertTrue(recovery.finishManualWait());
+  assertEquals(NONE,recovery.hint());assertEquals(NONE,recovery.awaiting());
+  assertEquals(BACK,recovery.recommendSettingsBack());
+ }
+ @Test public void settingsBackRecommendationDoesNotApplyAfterSwitchingToAnotherApp() {
+  NavigationRecovery recovery=new NavigationRecovery();recovery.recommendSettingsBack();
+  assertEquals(HOME,recovery.recommend(screen("com.example.other","다른 앱")));
+ }
  @Test public void uncertainHistoryMultipleTapsOrOtherAppRequiresHome() {
   NavigationRecovery recovery=new NavigationRecovery();assertEquals(HOME,recovery.recommend(settings("알 수 없음")));
   recovery.onPath(settings("설정"));recovery.unplannedTap();recovery.unplannedTap();

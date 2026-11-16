@@ -34,14 +34,11 @@ from app.api.v1.endpoints.account_actions import build_router as build_account_a
 from app.services.account_actions import AccountActionService
 from app.services.voice_queue import VoiceQueueService
 from app.api.v1.endpoints.voice_queue import build_router as build_voice_queue_router
-from app.api.v1.endpoints.transcription import build_router as build_transcription_router
 from app.core.metrics import RequestMetrics
 from app.services.guidance import GuidanceService  # noqa: E402
-from app.services.transcription import TranscriptionService
 
 
-def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
-               transcription_service: TranscriptionService | None = None) -> FastAPI:
+def create_app(database_url: str | None = None, *, enable_legacy: bool = False) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         try:
@@ -85,8 +82,6 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
     app.state.turn_service = turn_service
     voice_queue = VoiceQueueService(session_factory, turn_service.repository.idle_seconds)
     app.state.voice_queue = voice_queue
-    speech = transcription_service or TranscriptionService()
-    app.state.transcription_service = speech
     app.state.engine = engine
     app.state.session_factory = session_factory
     from app.core.validation import install_validation_endpoint
@@ -110,7 +105,6 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
     app.include_router(build_agent_router(turn_service, principal), prefix="/api/v1")
     app.include_router(build_history_router(turn_service, principal), prefix="/api/v1")
     app.include_router(build_voice_queue_router(voice_queue, principal), prefix="/api/v1")
-    app.include_router(build_transcription_router(speech, principal), prefix="/api/v1")
     app.include_router(build_users_router(get_db, principal), prefix="/api/v1")
 
     @app.get("/health", tags=["system"])

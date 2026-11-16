@@ -2,13 +2,14 @@
 
 > 이 문서는 `AI-Agent/goal_catalog/mvp_goals.json`에서 자동 생성한다. 직접 수정하지 말고 JSON 수정 후 `cd AI-Agent && python scripts/export_goal_catalog_markdown.py`를 실행한다.
 
-- Catalog version: `2.3.0`
+- Catalog version: `2.4.0`
 - 전체 Goal: **181개** (Android 설정 110개, 쿠팡 71개)
-- 실행 승인: **110개**, 분류 전용: **71개**
+- 실행 승인: **181개**, 분류 전용: **0개**
 - `키워드 그룹`의 각 괄호에서는 하나 이상, 괄호와 괄호 사이는 모두 충족해야 분류 후보가 된다.
 - `catalog_only`는 Goal 추출만 가능하다는 뜻이다. 승인 Task Graph가 없으므로 실제 작업은 시작하지 않는다.
 - 설정 변경 상태 검증 경로: **50개**, 직접 진행 안내: **39개**. 승인 표시는 실행 안내를 시작할 수 있다는 뜻이며 실기기 검증 완료를 뜻하지 않는다.
 - `settings_assisted`는 화면 안내 뒤 사용자가 직접 선택·입력한다. 사용자 완료 응답은 기술 검증과 별도 기록한다.
+- 쿠팡: 화면 이동 **8개**, 확인 후 조작·반영 검사 **1개**, 직접 진행 안내 **62개**. 실기기 검증은 별도이며 로그인·개인정보 입력·거래 확정은 사용자가 진행한다.
 - 이전 v2.0은 82개였고, v2.1은 160개였고, v2.2는 설정 화면 열기 경로를 추가했다.
 
 ## Android 설정
@@ -130,74 +131,74 @@
 
 | # | Goal Type | 표시 이름 | 키워드 그룹 | 실행 상태 | 위험도 |
 | ---: | --- | --- | --- | --- | --- |
-| 111 | `coupang.product.search` | 쿠팡 상품 검색 | (쿠팡 / 상품 / 제품 / 물건) + (검색 / 찾아 / 찾아줘) | catalog_only | normal |
-| 112 | `coupang.product.details` | 쿠팡 상품 상세 보기 | (상품 / 제품) + (상세 / 자세히 / 정보 / 설명) | catalog_only | normal |
-| 113 | `coupang.cart.add` | 쿠팡 장바구니 담기 | (장바구니 / 카트) + (담아 / 추가 / 넣어) | catalog_only | normal |
-| 114 | `coupang.cart.view` | 쿠팡 장바구니 보기 | (장바구니 / 카트) + (보여 / 열어 / 확인 / 목록) | catalog_only | normal |
-| 115 | `coupang.cart.remove` | 쿠팡 장바구니 상품 삭제 | (장바구니 / 카트) + (빼 / 삭제 / 지워 / 제거) | catalog_only | normal |
-| 116 | `coupang.order.checkout` | 쿠팡 주문·결제 진행 | (주문진행 / 결제진행 / 구매진행 / 주문해줘 / 결제해줘 / 구매해줘 / 주문할래 / 결제할래 / 구매할래) | catalog_only | high |
-| 117 | `coupang.order.list` | 쿠팡 주문 목록 보기 | (주문목록 / 주문내역 / 구매내역) + (보여 / 열어 / 확인) | catalog_only | normal |
-| 118 | `coupang.order.track` | 쿠팡 배송 조회 | (배송 / 택배) + (조회 / 어디 / 언제와 / 추적 / 상태) | catalog_only | normal |
-| 119 | `coupang.order.cancel` | 쿠팡 주문 취소 | (주문 / 구매 / 결제) + (취소 / 철회) | catalog_only | high |
-| 120 | `coupang.order.return` | 쿠팡 반품 신청 | (반품 / 돌려보내) + (신청 / 접수 / 하고싶어) | catalog_only | high |
-| 121 | `coupang.order.exchange` | 쿠팡 교환 신청 | (교환 / 바꿔받) + (신청 / 접수 / 하고싶어) | catalog_only | high |
-| 122 | `coupang.review.write` | 쿠팡 상품평 작성 | (상품평 / 리뷰 / 후기) + (작성 / 써 / 남겨) | catalog_only | normal |
-| 123 | `coupang.review.view` | 쿠팡 상품평 보기 | (상품평 / 리뷰 / 후기) + (보여 / 읽어 / 확인) | catalog_only | normal |
-| 124 | `coupang.wishlist.add` | 쿠팡 찜 추가 | (찜 / 위시리스트) + (추가 / 담아 / 저장) | catalog_only | normal |
-| 125 | `coupang.wishlist.remove` | 쿠팡 찜 삭제 | (찜 / 위시리스트) + (삭제 / 빼 / 해제) | catalog_only | normal |
-| 126 | `coupang.wishlist.view` | 쿠팡 찜 목록 보기 | (찜목록 / 찜한상품 / 위시리스트) + (보여 / 열어 / 확인) | catalog_only | normal |
-| 127 | `coupang.address.add` | 쿠팡 배송지 추가 | (배송지 / 주소) + (추가 / 등록 / 새로) | catalog_only | normal |
-| 128 | `coupang.address.change` | 쿠팡 배송지 변경 | (배송지 / 주소) + (변경 / 바꿔 / 수정) | catalog_only | normal |
-| 129 | `coupang.payment_method.add` | 쿠팡 결제수단 추가 | (결제수단 / 카드 / 계좌) + (추가 / 등록) | catalog_only | high |
-| 130 | `coupang.payment_method.change` | 쿠팡 결제수단 변경 | (결제수단 / 결제카드 / 결제계좌) + (변경 / 바꿔 / 수정) | catalog_only | high |
-| 131 | `coupang.coupon.view` | 쿠팡 쿠폰함 보기 | (쿠폰 / 할인쿠폰) + (보여 / 쿠폰함 / 확인) | catalog_only | normal |
-| 132 | `coupang.coupon.apply` | 쿠팡 쿠폰 적용 | (쿠폰 / 할인쿠폰) + (적용 / 사용 / 써줘) | catalog_only | normal |
-| 133 | `coupang.rocket_delivery.filter` | 로켓배송 상품만 보기 | (로켓배송 / 로켓와우) + (필터 / 상품만 / 모아 / 보여) | catalog_only | normal |
-| 134 | `coupang.category.browse` | 쿠팡 카테고리 둘러보기 | (카테고리 / 상품분류) + (열어 / 보여 / 둘러) | catalog_only | normal |
-| 135 | `coupang.seller.info` | 쿠팡 판매자 정보 보기 | (판매자 / 셀러) + (정보 / 상세 / 누구) | catalog_only | normal |
-| 136 | `coupang.customer_service.open` | 쿠팡 고객센터 열기 | (고객센터 / 상담원 / 문의) + (열어 / 연결 / 채팅 / 전화) | catalog_only | normal |
-| 137 | `coupang.rocket_wow.manage` | 로켓와우 멤버십 관리 | (로켓와우 / 와우멤버십 / 쿠팡멤버십) + (관리 / 가입 / 해지 / 확인) | catalog_only | high |
-| 138 | `coupang.order.reorder` | 쿠팡 재구매 | (재구매 / 다시구매 / 전에산거) + (주문 / 사줘 / 구매) | catalog_only | high |
-| 139 | `coupang.receipt.view` | 쿠팡 영수증 보기 | (영수증 / 거래명세서 / 결제내역) + (보여 / 발급 / 확인) | catalog_only | normal |
-| 140 | `coupang.search.filter` | 쿠팡 검색 필터 설정 | (검색필터 / 필터 / 조건) + (설정 / 적용 / 걸어) | catalog_only | normal |
-| 141 | `coupang.search.sort` | 쿠팡 검색 결과 정렬 | (정렬 / 낮은가격순 / 높은가격순 / 판매량순 / 최신순) + (바꿔 / 적용 / 보여) | catalog_only | normal |
-| 142 | `coupang.delivery_date.check` | 쿠팡 도착 예정일 확인 | (도착예정 / 도착날짜 / 배송예정) + (언제 / 확인 / 알려) | catalog_only | normal |
-| 143 | `coupang.order.gift` | 쿠팡 선물하기 | (선물 / 선물하기) + (보내 / 주문 / 구매) | catalog_only | high |
-| 144 | `coupang.cash_receipt.manage` | 쿠팡 현금영수증 관리 | (현금영수증) + (등록 / 발급 / 변경 / 관리) | catalog_only | normal |
-| 145 | `coupang.product.price.check` | 쿠팡 상품 가격 확인 | (상품가격 / 제품가격 / 판매가격 / 가격) + (얼마 / 확인 / 알려) | catalog_only | normal |
-| 146 | `coupang.product.stock.check` | 쿠팡 상품 재고 확인 | (재고 / 품절 / 남은수량) + (확인 / 있어 / 남았 / 알려) | catalog_only | normal |
-| 147 | `coupang.product.compare` | 쿠팡 상품 비교 | (상품비교 / 제품비교 / 두상품) + (비교 / 차이 / 대조) | catalog_only | normal |
-| 148 | `coupang.product.share` | 쿠팡 상품 공유 | (상품링크 / 제품링크 / 이상품) + (공유 / 보내 / 링크복사) | catalog_only | normal |
-| 149 | `coupang.product.option.select` | 쿠팡 상품 옵션 선택 | (상품옵션 / 제품옵션 / 옵션선택) + (선택 / 바꿔 / 골라) | catalog_only | normal |
-| 150 | `coupang.product.restock_notification` | 쿠팡 재입고 알림 신청 | (재입고알림 / 입고알림 / 재고알림) + (신청 / 켜 / 등록) | catalog_only | normal |
-| 151 | `coupang.product.inquiry.write` | 쿠팡 상품 문의 작성 | (상품문의 / 제품문의 / 판매자문의) + (작성 / 질문 / 남겨) | catalog_only | normal |
-| 152 | `coupang.product.inquiry.view` | 쿠팡 상품 문의 보기 | (상품문의 / 제품문의 / 판매자문의) + (보여 / 확인 / 읽어) | catalog_only | normal |
-| 153 | `coupang.cart.quantity.increase` | 쿠팡 장바구니 수량 늘리기 | (장바구니수량 / 카트수량) + (늘려 / 추가 / 많이) | catalog_only | normal |
-| 154 | `coupang.cart.quantity.decrease` | 쿠팡 장바구니 수량 줄이기 | (장바구니수량 / 카트수량) + (줄여 / 빼 / 적게) | catalog_only | normal |
-| 155 | `coupang.cart.select` | 쿠팡 장바구니 상품 선택 | (장바구니상품 / 카트상품) + (선택 / 체크 / 골라) | catalog_only | normal |
-| 156 | `coupang.cart.unselect` | 쿠팡 장바구니 상품 선택 해제 | (장바구니상품 / 카트상품) + (선택해제 / 체크해제 / 빼줘) | catalog_only | normal |
-| 157 | `coupang.order.details` | 쿠팡 주문 상세 보기 | (주문상세 / 주문정보 / 구매상세) + (보여 / 확인 / 열어) | catalog_only | normal |
-| 158 | `coupang.order.address.change` | 쿠팡 주문 배송지 변경 | (주문배송지 / 주문주소 / 받는주소) + (변경 / 바꿔 / 수정) | catalog_only | high |
-| 159 | `coupang.delivery.instructions.change` | 쿠팡 배송 요청사항 변경 | (배송요청사항 / 배송메모 / 문앞메모) + (변경 / 바꿔 / 수정) | catalog_only | normal |
-| 160 | `coupang.order.cancel_status` | 쿠팡 취소 처리 상태 확인 | (취소상태 / 취소처리 / 주문취소결과) + (확인 / 어떻게 / 언제) | catalog_only | normal |
-| 161 | `coupang.order.refund_status` | 쿠팡 환불 상태 확인 | (환불상태 / 환불처리 / 환불금) + (확인 / 언제 / 들어와) | catalog_only | normal |
-| 162 | `coupang.order.return_status` | 쿠팡 반품 상태 확인 | (반품상태 / 반품처리 / 반품진행) + (확인 / 어떻게 / 언제) | catalog_only | normal |
-| 163 | `coupang.order.exchange_status` | 쿠팡 교환 상태 확인 | (교환상태 / 교환처리 / 교환진행) + (확인 / 어떻게 / 언제) | catalog_only | normal |
-| 164 | `coupang.order.return_pickup.track` | 쿠팡 반품 수거 조회 | (반품수거 / 회수기사 / 반품기사) + (조회 / 언제와 / 추적 / 확인) | catalog_only | normal |
-| 165 | `coupang.review.edit` | 쿠팡 상품평 수정 | (상품평 / 리뷰 / 후기) + (수정 / 고쳐 / 바꿔) | catalog_only | normal |
-| 166 | `coupang.review.delete` | 쿠팡 상품평 삭제 | (상품평 / 리뷰 / 후기) + (삭제 / 지워 / 제거) | catalog_only | high |
-| 167 | `coupang.review.helpful` | 쿠팡 상품평 도움돼요 표시 | (상품평 / 리뷰 / 후기) + (도움돼요 / 추천 / 유용해) | catalog_only | normal |
-| 168 | `coupang.address.remove` | 쿠팡 배송지 삭제 | (배송지 / 등록주소) + (삭제 / 지워 / 제거) | catalog_only | high |
-| 169 | `coupang.payment_method.remove` | 쿠팡 결제수단 삭제 | (결제수단 / 결제카드 / 결제계좌) + (삭제 / 지워 / 제거) | catalog_only | high |
-| 170 | `coupang.coupon.download` | 쿠팡 쿠폰 받기 | (쿠폰 / 할인쿠폰) + (받아 / 다운로드 / 발급) | catalog_only | normal |
-| 171 | `coupang.search.recent.view` | 쿠팡 최근 검색어 보기 | (최근검색 / 검색기록 / 검색내역) + (보여 / 확인 / 열어) | catalog_only | normal |
-| 172 | `coupang.search.recent.clear` | 쿠팡 최근 검색어 삭제 | (최근검색 / 검색기록 / 검색내역) + (삭제 / 지워 / 비워) | catalog_only | high |
-| 173 | `coupang.account.login` | 쿠팡 로그인 | (쿠팡로그인 / 계정로그인) + (해줘 / 접속 / 들어가) | catalog_only | normal |
-| 174 | `coupang.account.logout` | 쿠팡 로그아웃 | (쿠팡로그아웃 / 계정로그아웃) + (해줘 / 나가 / 종료) | catalog_only | high |
-| 175 | `coupang.profile.change` | 쿠팡 회원 정보 변경 | (회원정보 / 프로필정보 / 내정보) + (변경 / 바꿔 / 수정) | catalog_only | normal |
-| 176 | `coupang.rocket_wow.benefits` | 쿠팡 와우 혜택 보기 | (와우혜택 / 로켓와우혜택 / 멤버십혜택) + (보여 / 확인 / 뭐야) | catalog_only | normal |
-| 177 | `coupang.recurring_delivery.manage` | 쿠팡 정기배송 관리 | (정기배송 / 정기구매 / 정기배달) + (관리 / 변경 / 해지 / 신청) | catalog_only | high |
-| 178 | `coupang.rocket_fresh.filter` | 로켓프레시 상품만 보기 | (로켓프레시 / 신선식품) + (상품만 / 모아 / 보여 / 필터) | catalog_only | normal |
-| 179 | `coupang.coupay.balance.view` | 쿠페이 머니 잔액 보기 | (쿠페이 / 쿠페이머니) + (잔액 / 얼마 / 확인) | catalog_only | normal |
-| 180 | `coupang.coupay.money.add` | 쿠페이 머니 충전 | (쿠페이 / 쿠페이머니) + (충전 / 넣어 / 추가) | catalog_only | high |
-| 181 | `coupang.points.view` | 쿠팡 캐시·포인트 보기 | (쿠팡캐시 / 쿠팡포인트 / 적립금) + (잔액 / 얼마 / 확인 / 보여) | catalog_only | normal |
+| 111 | `coupang.product.search` | 쿠팡 상품 검색 | (쿠팡 / 상품 / 제품 / 물건) + (검색 / 찾아 / 찾아줘) | approved · 직접 진행 (`CP-product-search`) | normal |
+| 112 | `coupang.product.details` | 쿠팡 상품 상세 보기 | (상품 / 제품) + (상세 / 자세히 / 정보 / 설명) | approved · 직접 진행 (`CP-product-details`) | normal |
+| 113 | `coupang.cart.add` | 쿠팡 장바구니 담기 | (장바구니 / 카트) + (담아 / 추가 / 넣어) | approved · 확인 후 조작 (`CP-cart-add`) | normal |
+| 114 | `coupang.cart.view` | 쿠팡 장바구니 보기 | (장바구니 / 카트) + (보여 / 열어 / 확인 / 목록) | approved · 화면 이동 (`CP-cart-view`) | normal |
+| 115 | `coupang.cart.remove` | 쿠팡 장바구니 상품 삭제 | (장바구니 / 카트) + (빼 / 삭제 / 지워 / 제거) | approved · 직접 진행 (`CP-cart-remove`) | normal |
+| 116 | `coupang.order.checkout` | 쿠팡 주문·결제 진행 | (주문진행 / 결제진행 / 구매진행 / 주문해줘 / 결제해줘 / 구매해줘 / 주문할래 / 결제할래 / 구매할래) | approved · 직접 진행 (`CP-order-checkout`) | high |
+| 117 | `coupang.order.list` | 쿠팡 주문 목록 보기 | (주문목록 / 주문내역 / 구매내역) + (보여 / 열어 / 확인) | approved · 화면 이동 (`CP-order-list`) | normal |
+| 118 | `coupang.order.track` | 쿠팡 배송 조회 | (배송 / 택배) + (조회 / 어디 / 언제와 / 추적 / 상태) | approved · 직접 진행 (`CP-order-track`) | normal |
+| 119 | `coupang.order.cancel` | 쿠팡 주문 취소 | (주문 / 구매 / 결제) + (취소 / 철회) | approved · 직접 진행 (`CP-order-cancel`) | high |
+| 120 | `coupang.order.return` | 쿠팡 반품 신청 | (반품 / 돌려보내) + (신청 / 접수 / 하고싶어) | approved · 직접 진행 (`CP-order-return`) | high |
+| 121 | `coupang.order.exchange` | 쿠팡 교환 신청 | (교환 / 바꿔받) + (신청 / 접수 / 하고싶어) | approved · 직접 진행 (`CP-order-exchange`) | high |
+| 122 | `coupang.review.write` | 쿠팡 상품평 작성 | (상품평 / 리뷰 / 후기) + (작성 / 써 / 남겨) | approved · 직접 진행 (`CP-review-write`) | normal |
+| 123 | `coupang.review.view` | 쿠팡 상품평 보기 | (상품평 / 리뷰 / 후기) + (보여 / 읽어 / 확인) | approved · 직접 진행 (`CP-review-view`) | normal |
+| 124 | `coupang.wishlist.add` | 쿠팡 찜 추가 | (찜 / 위시리스트) + (추가 / 담아 / 저장) | approved · 직접 진행 (`CP-wishlist-add`) | normal |
+| 125 | `coupang.wishlist.remove` | 쿠팡 찜 삭제 | (찜 / 위시리스트) + (삭제 / 빼 / 해제) | approved · 직접 진행 (`CP-wishlist-remove`) | normal |
+| 126 | `coupang.wishlist.view` | 쿠팡 찜 목록 보기 | (찜목록 / 찜한상품 / 위시리스트) + (보여 / 열어 / 확인) | approved · 화면 이동 (`CP-wishlist-view`) | normal |
+| 127 | `coupang.address.add` | 쿠팡 배송지 추가 | (배송지 / 주소) + (추가 / 등록 / 새로) | approved · 직접 진행 (`CP-address-add`) | normal |
+| 128 | `coupang.address.change` | 쿠팡 배송지 변경 | (배송지 / 주소) + (변경 / 바꿔 / 수정) | approved · 직접 진행 (`CP-address-change`) | normal |
+| 129 | `coupang.payment_method.add` | 쿠팡 결제수단 추가 | (결제수단 / 카드 / 계좌) + (추가 / 등록) | approved · 직접 진행 (`CP-payment-method-add`) | high |
+| 130 | `coupang.payment_method.change` | 쿠팡 결제수단 변경 | (결제수단 / 결제카드 / 결제계좌) + (변경 / 바꿔 / 수정) | approved · 직접 진행 (`CP-payment-method-change`) | high |
+| 131 | `coupang.coupon.view` | 쿠팡 쿠폰함 보기 | (쿠폰 / 할인쿠폰) + (보여 / 쿠폰함 / 확인) | approved · 화면 이동 (`CP-coupon-view`) | normal |
+| 132 | `coupang.coupon.apply` | 쿠팡 쿠폰 적용 | (쿠폰 / 할인쿠폰) + (적용 / 사용 / 써줘) | approved · 직접 진행 (`CP-coupon-apply`) | normal |
+| 133 | `coupang.rocket_delivery.filter` | 로켓배송 상품만 보기 | (로켓배송 / 로켓와우) + (필터 / 상품만 / 모아 / 보여) | approved · 직접 진행 (`CP-rocket-delivery-filter`) | normal |
+| 134 | `coupang.category.browse` | 쿠팡 카테고리 둘러보기 | (카테고리 / 상품분류) + (열어 / 보여 / 둘러) | approved · 화면 이동 (`CP-category-browse`) | normal |
+| 135 | `coupang.seller.info` | 쿠팡 판매자 정보 보기 | (판매자 / 셀러) + (정보 / 상세 / 누구) | approved · 직접 진행 (`CP-seller-info`) | normal |
+| 136 | `coupang.customer_service.open` | 쿠팡 고객센터 열기 | (고객센터 / 상담원 / 문의) + (열어 / 연결 / 채팅 / 전화) | approved · 화면 이동 (`CP-customer-service-open`) | normal |
+| 137 | `coupang.rocket_wow.manage` | 로켓와우 멤버십 관리 | (로켓와우 / 와우멤버십 / 쿠팡멤버십) + (관리 / 가입 / 해지 / 확인) | approved · 직접 진행 (`CP-rocket-wow-manage`) | high |
+| 138 | `coupang.order.reorder` | 쿠팡 재구매 | (재구매 / 다시구매 / 전에산거) + (주문 / 사줘 / 구매) | approved · 직접 진행 (`CP-order-reorder`) | high |
+| 139 | `coupang.receipt.view` | 쿠팡 영수증 보기 | (영수증 / 거래명세서 / 결제내역) + (보여 / 발급 / 확인) | approved · 직접 진행 (`CP-receipt-view`) | normal |
+| 140 | `coupang.search.filter` | 쿠팡 검색 필터 설정 | (검색필터 / 필터 / 조건) + (설정 / 적용 / 걸어) | approved · 직접 진행 (`CP-search-filter`) | normal |
+| 141 | `coupang.search.sort` | 쿠팡 검색 결과 정렬 | (정렬 / 낮은가격순 / 높은가격순 / 판매량순 / 최신순) + (바꿔 / 적용 / 보여) | approved · 직접 진행 (`CP-search-sort`) | normal |
+| 142 | `coupang.delivery_date.check` | 쿠팡 도착 예정일 확인 | (도착예정 / 도착날짜 / 배송예정) + (언제 / 확인 / 알려) | approved · 직접 진행 (`CP-delivery-date-check`) | normal |
+| 143 | `coupang.order.gift` | 쿠팡 선물하기 | (선물 / 선물하기) + (보내 / 주문 / 구매) | approved · 직접 진행 (`CP-order-gift`) | high |
+| 144 | `coupang.cash_receipt.manage` | 쿠팡 현금영수증 관리 | (현금영수증) + (등록 / 발급 / 변경 / 관리) | approved · 직접 진행 (`CP-cash-receipt-manage`) | normal |
+| 145 | `coupang.product.price.check` | 쿠팡 상품 가격 확인 | (상품가격 / 제품가격 / 판매가격 / 가격) + (얼마 / 확인 / 알려) | approved · 직접 진행 (`CP-product-price-check`) | normal |
+| 146 | `coupang.product.stock.check` | 쿠팡 상품 재고 확인 | (재고 / 품절 / 남은수량) + (확인 / 있어 / 남았 / 알려) | approved · 직접 진행 (`CP-product-stock-check`) | normal |
+| 147 | `coupang.product.compare` | 쿠팡 상품 비교 | (상품비교 / 제품비교 / 두상품) + (비교 / 차이 / 대조) | approved · 직접 진행 (`CP-product-compare`) | normal |
+| 148 | `coupang.product.share` | 쿠팡 상품 공유 | (상품링크 / 제품링크 / 이상품) + (공유 / 보내 / 링크복사) | approved · 직접 진행 (`CP-product-share`) | normal |
+| 149 | `coupang.product.option.select` | 쿠팡 상품 옵션 선택 | (상품옵션 / 제품옵션 / 옵션선택) + (선택 / 바꿔 / 골라) | approved · 직접 진행 (`CP-product-option-select`) | normal |
+| 150 | `coupang.product.restock_notification` | 쿠팡 재입고 알림 신청 | (재입고알림 / 입고알림 / 재고알림) + (신청 / 켜 / 등록) | approved · 직접 진행 (`CP-product-restock-notification`) | normal |
+| 151 | `coupang.product.inquiry.write` | 쿠팡 상품 문의 작성 | (상품문의 / 제품문의 / 판매자문의) + (작성 / 질문 / 남겨) | approved · 직접 진행 (`CP-product-inquiry-write`) | normal |
+| 152 | `coupang.product.inquiry.view` | 쿠팡 상품 문의 보기 | (상품문의 / 제품문의 / 판매자문의) + (보여 / 확인 / 읽어) | approved · 직접 진행 (`CP-product-inquiry-view`) | normal |
+| 153 | `coupang.cart.quantity.increase` | 쿠팡 장바구니 수량 늘리기 | (장바구니수량 / 카트수량) + (늘려 / 추가 / 많이) | approved · 직접 진행 (`CP-cart-quantity-increase`) | normal |
+| 154 | `coupang.cart.quantity.decrease` | 쿠팡 장바구니 수량 줄이기 | (장바구니수량 / 카트수량) + (줄여 / 빼 / 적게) | approved · 직접 진행 (`CP-cart-quantity-decrease`) | normal |
+| 155 | `coupang.cart.select` | 쿠팡 장바구니 상품 선택 | (장바구니상품 / 카트상품) + (선택 / 체크 / 골라) | approved · 직접 진행 (`CP-cart-select`) | normal |
+| 156 | `coupang.cart.unselect` | 쿠팡 장바구니 상품 선택 해제 | (장바구니상품 / 카트상품) + (선택해제 / 체크해제 / 빼줘) | approved · 직접 진행 (`CP-cart-unselect`) | normal |
+| 157 | `coupang.order.details` | 쿠팡 주문 상세 보기 | (주문상세 / 주문정보 / 구매상세) + (보여 / 확인 / 열어) | approved · 직접 진행 (`CP-order-details`) | normal |
+| 158 | `coupang.order.address.change` | 쿠팡 주문 배송지 변경 | (주문배송지 / 주문주소 / 받는주소) + (변경 / 바꿔 / 수정) | approved · 직접 진행 (`CP-order-address-change`) | high |
+| 159 | `coupang.delivery.instructions.change` | 쿠팡 배송 요청사항 변경 | (배송요청사항 / 배송메모 / 문앞메모) + (변경 / 바꿔 / 수정) | approved · 직접 진행 (`CP-delivery-instructions-change`) | normal |
+| 160 | `coupang.order.cancel_status` | 쿠팡 취소 처리 상태 확인 | (취소상태 / 취소처리 / 주문취소결과) + (확인 / 어떻게 / 언제) | approved · 직접 진행 (`CP-order-cancel-status`) | normal |
+| 161 | `coupang.order.refund_status` | 쿠팡 환불 상태 확인 | (환불상태 / 환불처리 / 환불금) + (확인 / 언제 / 들어와) | approved · 직접 진행 (`CP-order-refund-status`) | normal |
+| 162 | `coupang.order.return_status` | 쿠팡 반품 상태 확인 | (반품상태 / 반품처리 / 반품진행) + (확인 / 어떻게 / 언제) | approved · 직접 진행 (`CP-order-return-status`) | normal |
+| 163 | `coupang.order.exchange_status` | 쿠팡 교환 상태 확인 | (교환상태 / 교환처리 / 교환진행) + (확인 / 어떻게 / 언제) | approved · 직접 진행 (`CP-order-exchange-status`) | normal |
+| 164 | `coupang.order.return_pickup.track` | 쿠팡 반품 수거 조회 | (반품수거 / 회수기사 / 반품기사) + (조회 / 언제와 / 추적 / 확인) | approved · 직접 진행 (`CP-order-return-pickup-track`) | normal |
+| 165 | `coupang.review.edit` | 쿠팡 상품평 수정 | (상품평 / 리뷰 / 후기) + (수정 / 고쳐 / 바꿔) | approved · 직접 진행 (`CP-review-edit`) | normal |
+| 166 | `coupang.review.delete` | 쿠팡 상품평 삭제 | (상품평 / 리뷰 / 후기) + (삭제 / 지워 / 제거) | approved · 직접 진행 (`CP-review-delete`) | high |
+| 167 | `coupang.review.helpful` | 쿠팡 상품평 도움돼요 표시 | (상품평 / 리뷰 / 후기) + (도움돼요 / 추천 / 유용해) | approved · 직접 진행 (`CP-review-helpful`) | normal |
+| 168 | `coupang.address.remove` | 쿠팡 배송지 삭제 | (배송지 / 등록주소) + (삭제 / 지워 / 제거) | approved · 직접 진행 (`CP-address-remove`) | high |
+| 169 | `coupang.payment_method.remove` | 쿠팡 결제수단 삭제 | (결제수단 / 결제카드 / 결제계좌) + (삭제 / 지워 / 제거) | approved · 직접 진행 (`CP-payment-method-remove`) | high |
+| 170 | `coupang.coupon.download` | 쿠팡 쿠폰 받기 | (쿠폰 / 할인쿠폰) + (받아 / 다운로드 / 발급) | approved · 직접 진행 (`CP-coupon-download`) | normal |
+| 171 | `coupang.search.recent.view` | 쿠팡 최근 검색어 보기 | (최근검색 / 검색기록 / 검색내역) + (보여 / 확인 / 열어) | approved · 화면 이동 (`CP-search-recent-view`) | normal |
+| 172 | `coupang.search.recent.clear` | 쿠팡 최근 검색어 삭제 | (최근검색 / 검색기록 / 검색내역) + (삭제 / 지워 / 비워) | approved · 직접 진행 (`CP-search-recent-clear`) | high |
+| 173 | `coupang.account.login` | 쿠팡 로그인 | (쿠팡로그인 / 계정로그인) + (해줘 / 접속 / 들어가) | approved · 직접 진행 (`CP-account-login`) | normal |
+| 174 | `coupang.account.logout` | 쿠팡 로그아웃 | (쿠팡로그아웃 / 계정로그아웃) + (해줘 / 나가 / 종료) | approved · 직접 진행 (`CP-account-logout`) | high |
+| 175 | `coupang.profile.change` | 쿠팡 회원 정보 변경 | (회원정보 / 프로필정보 / 내정보) + (변경 / 바꿔 / 수정) | approved · 직접 진행 (`CP-profile-change`) | normal |
+| 176 | `coupang.rocket_wow.benefits` | 쿠팡 와우 혜택 보기 | (와우혜택 / 로켓와우혜택 / 멤버십혜택) + (보여 / 확인 / 뭐야) | approved · 화면 이동 (`CP-rocket-wow-benefits`) | normal |
+| 177 | `coupang.recurring_delivery.manage` | 쿠팡 정기배송 관리 | (정기배송 / 정기구매 / 정기배달) + (관리 / 변경 / 해지 / 신청) | approved · 직접 진행 (`CP-recurring-delivery-manage`) | high |
+| 178 | `coupang.rocket_fresh.filter` | 로켓프레시 상품만 보기 | (로켓프레시 / 신선식품) + (상품만 / 모아 / 보여 / 필터) | approved · 직접 진행 (`CP-rocket-fresh-filter`) | normal |
+| 179 | `coupang.coupay.balance.view` | 쿠페이 머니 잔액 보기 | (쿠페이 / 쿠페이머니) + (잔액 / 얼마 / 확인) | approved · 직접 진행 (`CP-coupay-balance-view`) | normal |
+| 180 | `coupang.coupay.money.add` | 쿠페이 머니 충전 | (쿠페이 / 쿠페이머니) + (충전 / 넣어 / 추가) | approved · 직접 진행 (`CP-coupay-money-add`) | high |
+| 181 | `coupang.points.view` | 쿠팡 캐시·포인트 보기 | (쿠팡캐시 / 쿠팡포인트 / 적립금) + (잔액 / 얼마 / 확인 / 보여) | approved · 직접 진행 (`CP-points-view`) | normal |

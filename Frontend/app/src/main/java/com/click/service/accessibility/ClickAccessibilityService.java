@@ -23,10 +23,13 @@ import java.lang.ref.WeakReference;
 
 public final class ClickAccessibilityService extends AccessibilityService {
     private static final String TAG = "ClickSnapshot";
-    private static final long SNAPSHOT_DEBOUNCE_MS = 300L;
+    private static final long SNAPSHOT_DEBOUNCE_MS = 120L;
+    private static final long SNAPSHOT_MAX_WAIT_MS = 300L;
     private final AccessibilitySnapshotCollector collector = new AccessibilitySnapshotCollector();
     private final Runnable captureRunnable = this::captureCurrentScreen;
     private Handler mainHandler;
+    private long snapshotBurstStartedAt = -1L;
+    private long snapshotScheduledAt = -1L;
     private String lastForegroundPackage;
     private Integer lastForegroundWindow;
     private boolean touchInteraction;
@@ -52,7 +55,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(tutorial);
         }
-        mainHandler.postDelayed(captureRunnable, SNAPSHOT_DEBOUNCE_MS);
+        scheduleSnapshot(false);
     }
 
     @Override
@@ -128,14 +131,14 @@ public final class ClickAccessibilityService extends AccessibilityService {
             lastForegroundPackage = packageName.toString();
             lastForegroundWindow = event.getWindowId();
         }
-        if (mainHandler == null) mainHandler = new Handler(getMainLooper());
-        mainHandler.removeCallbacks(captureRunnable);
-        mainHandler.postDelayed(captureRunnable, SNAPSHOT_DEBOUNCE_MS);
+        scheduleSnapshot(false);
     }
 
     @Override
     public void onInterrupt() {
         if (mainHandler != null) mainHandler.removeCallbacks(captureRunnable);
+        snapshotBurstStartedAt = -1L;
+        snapshotScheduledAt = -1L;
     }
 
     @Override
@@ -155,6 +158,8 @@ public final class ClickAccessibilityService extends AccessibilityService {
 
     private void disconnect() {
         if (mainHandler != null) mainHandler.removeCallbacks(captureRunnable);
+        snapshotBurstStartedAt = -1L;
+        snapshotScheduledAt = -1L;
         if (connectedService.get() == this) {
             connectedService.clear();
             ClickOverlayService.onAccessibilityOverlayLost();
@@ -165,8 +170,21 @@ public final class ClickAccessibilityService extends AccessibilityService {
     public static void requestFreshSnapshot() {
         ClickAccessibilityService service = connectedService.get();
         if (service != null && service.mainHandler != null) {
-            service.mainHandler.post(service.captureRunnable);
+            service.scheduleSnapshot(true);
         }
+    }
+
+    private void scheduleSnapshot(boolean immediate) {
+        if (mainHandler == null) mainHandler = new Handler(getMainLooper());
+        long now = android.os.SystemClock.uptimeMillis();
+        // A fresh read that is already due must survive later queued AX events.
+        if (snapshotScheduledAt >= 0 && snapshotScheduledAt <= now) return;
+        if (snapshotBurstStartedAt < 0) snapshotBurstStartedAt = now;
+        long captureAt = immediate ? now : Math.min(now + SNAPSHOT_DEBOUNCE_MS,
+                snapshotBurstStartedAt + SNAPSHOT_MAX_WAIT_MS);
+        mainHandler.removeCallbacks(captureRunnable);
+        snapshotScheduledAt = captureAt;
+        mainHandler.postAtTime(captureRunnable, captureAt);
     }
 
     public static ScreenSnapshot freshSnapshot() {
@@ -540,6 +558,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
     }
 
     private void captureCurrentScreen() {
+        // Explicit refreshes and scroll callbacks may already have queued the same read.
+        if (mainHandler != null) mainHandler.removeCallbacks(captureRunnable);
+        snapshotBurstStartedAt = -1L;
+        snapshotScheduledAt = -1L;
         ScreenSnapshot snapshot = readCurrentScreen();
         if (snapshot == null) return;
         LatestScreenSnapshot.set(snapshot);
@@ -548,6 +570,14 @@ public final class ClickAccessibilityService extends AccessibilityService {
 
     private ScreenSnapshot readCurrentScreen() {
         AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(this);
+        try {
+            return readCurrentScreen(root);
+        } finally {
+            if (root != null) root.recycle();
+        }
+    }
+
+    private ScreenSnapshot readCurrentScreen(AccessibilityNodeInfo root) {
         String packageName = root == null || root.getPackageName() == null
                 ? lastForegroundPackage : root.getPackageName().toString();
         if (packageName == null || packageName.equals(getPackageName())) return null;

@@ -22,7 +22,7 @@ def test_every_settings_goal_has_backend_graph_and_unreviewed_graphs_are_inactiv
     from pathlib import Path
     catalog = json.loads((Path(__file__).parents[2] / "AI-Agent/goal_catalog/mvp_goals.json").read_text(encoding="utf-8"))
     expected = {g["goal_type"] for g in catalog["goals"] if g["target_app"] == "android_settings"}
-    definitions = list(releases())
+    definitions = [(r, g) for r, g in releases() if g.definition.target_app == 'android_settings']
     assert {g.definition.goal_type for _, g in definitions} == expected
     assert len(definitions) == len(expected) == 110
     app = create_app()
@@ -30,8 +30,9 @@ def test_every_settings_goal_has_backend_graph_and_unreviewed_graphs_are_inactiv
     repository.seed_mvp()
     with repository.factory() as db:
         rows = list(db.scalars(select(ApprovedTaskGraph)))
-        assert len(rows) == 110
-        assert sum(row.approved for row in rows) == 110
+        assert len(rows) == 181
+        assert sum(row.approved for row in rows) == 181
+        assert sum(row.target_app == 'coupang' for row in rows) == 71
         assert all(not row.active for row in rows if not row.approved)
     for release, graph in definitions:
         if release["approved"]:

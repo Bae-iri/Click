@@ -37,7 +37,8 @@ def runtime_configuration():
     runtime_root = Path(runtime.__file__).parent
     sources = sorted(runtime_root.rglob("*.py"))
     sources += [Path(__file__), Path(__file__).parents[1] / "services/screen_jev.py",
-                Path(__file__).parents[1] / "services/goal_jev.py"]
+                Path(__file__).parents[1] / "services/goal_jev.py",
+                Path(__file__).parents[1] / "services/commerce_jev.py"]
     digest = sha256()
     for source in sources:
         digest.update(source.name.encode())
@@ -217,7 +218,9 @@ class RuntimeAgentAdapter:
         if legacy_handoff:
             command_type = "highlight"
             status = "IN_PROGRESS"
-        result_check = runtime_session is not None and not recovering and command_type == "done"
+        commerce_navigation = bool(graph and graph.definition.target_app == 'coupang'
+            and graph.synonyms.get('commerce_mode') == ('navigation',))
+        result_check = runtime_session is not None and not recovering and command_type == "done" and not commerce_navigation
         if result_check and graph.definition.task_type != "settings_navigation":
             status = "WAITING_RESULT"
         target = next((node for node in tree.nodes if result.match_result and node.node_id == result.match_result.target_node_id), None) if tree else None

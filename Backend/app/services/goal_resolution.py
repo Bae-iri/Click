@@ -36,6 +36,9 @@ class GoalResolutionService:
                 message="변경을 원하시는지 다시 확인해 주세요. 아직 작업을 시작하지 않았어요.")
         scored = []
         for goal in self.catalog["goals"]:
+            if goal['target_app'] == 'coupang' and text == normalize(goal['display_name']):
+                scored.append((10000, goal))
+                continue
             lengths = [max((len(normalize(word)) for word in group if normalize(word) and normalize(word) in text), default=0)
                 for group in goal["keyword_groups"]]
             if not lengths or not all(lengths):

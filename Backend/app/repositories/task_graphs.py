@@ -85,7 +85,7 @@ class TaskGraphRepository:
         from app.schemas.agent_turn import TypedGoalRequest
         graph = load_graph(body, executable=approved)
         definition = graph.definition
-        TypedGoalRequest(catalog_version="2.3.0", goal_type=definition.goal_type,
+        TypedGoalRequest(catalog_version="2.4.0", goal_type=definition.goal_type,
             target_app=definition.target_app, slots=definition.required_slots)
         if not isinstance(version, str) or not version or len(version) > 64:
             raise ValueError("Invalid graph version")
