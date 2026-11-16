@@ -11,13 +11,13 @@ def test_goal_catalog_has_unique_settings_and_coupang_keyword_rules():
     goals = catalog["goals"]
     goal_types = [goal["goal_type"] for goal in goals]
 
-    assert catalog["version"] == "2.4.0"
-    assert len(goals) == 181
+    assert catalog["version"] == "2.4.1"
+    assert len(goals) == 182
     assert len(goal_types) == len(set(goal_types))
-    assert sum(goal["target_app"] == "android_settings" for goal in goals) == 110
+    assert sum(goal["target_app"] == "android_settings" for goal in goals) == 111
     assert sum(goal["target_app"] == "coupang" for goal in goals) == 71
     assert sum(g['execution_status'] == 'approved' and g['task_type'] == 'settings_change' for g in goals) == 56
-    assert sum(g['execution_status'] == 'approved' and g['task_type'] == 'settings_assisted' for g in goals) == 33
+    assert sum(g['execution_status'] == 'approved' and g['task_type'] == 'settings_assisted' for g in goals) == 34
     assert all(goal["keyword_groups"] and all(group for group in goal["keyword_groups"]) for goal in goals)
 
 

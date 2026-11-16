@@ -383,7 +383,15 @@
     ],
     "notification_sound": [
       "com.android.soundpicker",
-      "com.samsung.android.app.soundpicker"
+      "com.samsung.android.app.soundpicker",
+      "com.samsung.android.secsoundpicker"
+    ],
+    "storage": [
+      "com.samsung.android.lool",
+      "com.samsung.android.sm"
+    ],
+    "theme": [
+      "com.samsung.android.themestore"
     ]
   },
   "blocked_titles": [

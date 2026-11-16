@@ -8,13 +8,53 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class SettingsExecutionGoalTest {
+    @Test public void displayModeRequestsCannotSelectGalaxyThemes() throws Exception {
+        GoalCatalogClassifier catalog = GoalCatalogClassifier.fromJson(resource("mvp_goals.json"));
+        for (String text : new String[]{"어두운 테마로 바꿔줘", "밝은 테마로 바꿔줘", "다크모드 테마 바꿔줘",
+                "라이트모드 테마 바꿔줘", "검은 배경 테마 바꿔줘", "흰 바탕 테마 바꿔줘"}) {
+            GoalCatalogClassifier.Classification result = catalog.classify(text, "com.android.settings");
+            assertTrue(text, result.match == null || !"settings.theme.change".equals(result.match.goalType));
+        }
+    }
+
+    @Test public void foregroundCommerceAppCannotMakeSimRequestsAmbiguous() throws Exception {
+        GoalCatalogClassifier catalog = GoalCatalogClassifier.fromJson(resource("mvp_goals.json"));
+        for (String text : new String[]{"심카드 추가", "심카드 등록"}) {
+            GoalCatalogClassifier.Classification result = catalog.classify(text, "com.coupang.mobile");
+            assertFalse(text, result.ambiguous);
+            assertNotNull(text, result.match);
+            assertEquals(text, "settings.sim.manage", result.match.goalType);
+        }
+    }
+
+    @Test public void reportedSettingsRequestsKeepTheirExactGoal() throws Exception {
+        GoalCatalogClassifier catalog = GoalCatalogClassifier.fromJson(resource("mvp_goals.json"));
+        String[][] cases = {
+            {"배터리 잔량 표시해줘", "settings.battery_percentage.enable"},
+            {"배터리 잔량 표시 꺼줘", "settings.battery_percentage.disable"},
+            {"기본 키보드 설정", "settings.keyboard.change"},
+            {"잠금 화면의 알림 설정", "settings.lockscreen_notifications.manage"},
+            {"테마 바꿔줘", "settings.theme.change"},
+            {"갤럭시 테마 적용해줘", "settings.theme.change"},
+            {"어두운 테마 켜줘", "settings.dark_mode.enable"},
+            {"핫스팟 비번 바꿔줘", "settings.hotspot.password.change"},
+            {"SIM 추가하기", "settings.sim.manage"}
+        };
+        for (String[] item : cases) {
+            GoalCommandInterpreter.Result result = GoalCommandInterpreter.interpret(
+                item[0], false, false, false, catalog, "com.android.settings");
+            assertEquals(item[0], GoalCommandInterpreter.Kind.START_TASK, result.kind);
+            assertEquals(item[0], item[1], result.goal.goalType);
+        }
+    }
+
     private String resource(String name) throws Exception {
         try (java.io.InputStream in = getClass().getResourceAsStream("/" + name)) {
             assertNotNull(name, in);
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }
     }
-    @Test public void all89SettingsActionsReachTheTypedServerContract() throws Exception {
+    @Test public void all90SettingsActionsReachTheTypedServerContract() throws Exception {
         String source = resource("mvp_goals.json");
         GoalCatalogClassifier catalog = GoalCatalogClassifier.fromJson(source);
         AgentServerContract server = AgentServerContract.fromOpenApi(new JSONObject(resource("openapi.json")));
@@ -33,11 +73,11 @@ public class SettingsExecutionGoalTest {
             assertEquals(goalType, GoalCommandInterpreter.Kind.START_TASK, result.kind);
             assertEquals(goalType, result.goal.goalType);
             assertTrue(goalType, server.supportsGoal(goalType));
-            assertEquals("2.4.0", result.goal.toTypedGoalJson().getString("catalog_version"));
+            assertEquals("2.4.1", result.goal.toTypedGoalJson().getString("catalog_version"));
             if ("settings_assisted".equals(result.goal.taskType)) assisted++; else changes++;
         }
         assertEquals(56, changes);
-        assertEquals(33, assisted);
+        assertEquals(34, assisted);
     }
     @Test public void conversationalSwitchRequestsReachTheSameTypedGoal() throws Exception {
         String source=resource("mvp_goals.json");
@@ -76,6 +116,6 @@ public class SettingsExecutionGoalTest {
             assertEquals(task,entry.getString("goal_type"),resumed.goalType);
             checked++;
         }
-        assertEquals(181,checked);
+        assertEquals(182,checked);
     }
 }

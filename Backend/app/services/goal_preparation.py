@@ -81,6 +81,8 @@ class GoalPreparationService:
             return exact
         scored = []
         for goal in self.catalog['goals']:
+            if any(normalize(word) and normalize(word) in text for word in goal.get('excluded_keywords', [])):
+                continue
             lengths = [max((len(normalize(w)) for w in group if normalize(w) and normalize(w) in text), default=0)
                 for group in goal['keyword_groups']]
             if lengths and all(lengths):

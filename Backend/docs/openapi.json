@@ -10481,7 +10481,8 @@
               "2.3.0",
               "2.3.1",
               "2.3.2",
-              "2.4.0"
+              "2.4.0",
+              "2.4.1"
             ],
             "title": "Catalog Version"
           },
@@ -10577,6 +10578,7 @@
               "settings.software_update.check",
               "settings.factory_reset",
               "settings.device_name.change",
+              "settings.theme.change",
               "settings.navigation.settings",
               "settings.navigation.display",
               "settings.navigation.sound",

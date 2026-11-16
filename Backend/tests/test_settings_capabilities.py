@@ -14,12 +14,13 @@ from app.task_graphs import releases
 def test_generated_contract_exactly_matches_every_approved_graph():
     contract=json.loads(OUTPUT.read_text())
     assert contract==build()
-    assert len(contract['goals'])==110
+    assert len(contract['goals'])==sum(1 for release,graph in releases()
+        if release['approved'] and graph.definition.target_app == 'android_settings')
     assert {'S_CATEGORY','S_INTERMEDIATE','S2_CATEGORY','S2_DISPLAY_MENU'}<=set(contract['navigation_states'])
     assert {'연결','블루투스','wi-fi','알림','배터리'}<=set(contract['navigation_labels'])
     assert not {'확인','허용','삭제','초기화','비밀번호'}&set(contract['navigation_labels'])
     for release,graph in releases():
-        if not release['approved']:continue
+        if not release['approved'] or graph.definition.target_app != 'android_settings':continue
         for state in contract['goals'][graph.definition.goal_type]['navigation']:
             if state!='S0_UNKNOWN':assert navigation_state(graph,state)
         for edges in contract['goals'][graph.definition.goal_type]['navigation'].values():

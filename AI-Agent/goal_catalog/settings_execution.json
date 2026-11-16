@@ -148,10 +148,7 @@
         "위치 사용",
         "Use location"
       ],
-      "categories": [
-        "위치",
-        "Location"
-      ],
+      "categories": [],
       "intermediate": []
     },
     "power_saving": {
@@ -408,9 +405,8 @@
       ]
     },
     "battery_percentage": {
+      "dedicated_pages": [],
       "pages": [
-        "배터리",
-        "Battery",
         "고급 설정",
         "Advanced settings"
       ],
@@ -422,13 +418,7 @@
       ],
       "categories": [
         "알림",
-        "Notifications",
-        "배터리",
-        "Battery"
-      ],
-      "intermediate": [
-        "고급 설정",
-        "Advanced settings"
+        "Notifications"
       ]
     },
     "color_inversion": {
@@ -472,17 +462,29 @@
       ],
       "categories": [
         "접근성",
-        "Accessibility"
+        "Accessibility",
+        "소리 및 진동",
+        "Sound & vibration",
+        "Sounds and vibration",
+        "소리",
+        "Sound"
       ],
       "intermediate": [
         "청각 보조",
         "Hearing enhancements",
         "자막 설정",
-        "Caption preferences"
+        "Caption preferences",
+        "자막 환경설정"
       ]
     },
     "mono_audio": {
+      "dedicated_pages": [
+        "모노 오디오",
+        "Mono audio"
+      ],
       "pages": [
+        "모노 오디오",
+        "Mono audio",
         "청각 보조",
         "Hearing enhancements",
         "오디오 조정",
@@ -496,12 +498,7 @@
         "접근성",
         "Accessibility"
       ],
-      "intermediate": [
-        "청각 보조",
-        "Hearing enhancements",
-        "오디오 조정",
-        "Audio adjustment"
-      ]
+      "intermediate": []
     }
   },
   "goals": {
@@ -863,13 +860,15 @@
       "name": "위치 서비스 켜기",
       "setting": "location",
       "mode": "native_checked",
-      "device_validated": false
+      "device_validated": false,
+      "graph_version": "1.1.0"
     },
     "settings.location.disable": {
       "name": "위치 서비스 끄기",
       "setting": "location",
       "mode": "native_checked",
-      "device_validated": false
+      "device_validated": false,
+      "graph_version": "1.1.0"
     },
     "settings.power_saving.enable": {
       "name": "절전 모드 켜기",
@@ -964,9 +963,12 @@
       ],
       "categories": [
         "배터리 및 디바이스 케어",
-        "Battery and device care"
+        "Battery and device care",
+        "디바이스 케어",
+        "Device care"
       ],
-      "instruction": "항목과 파일을 직접 확인하세요. 필요한 파일을 보관한 뒤 삭제할 항목만 선택하세요."
+      "instruction": "항목과 파일을 직접 확인하세요. 필요한 파일을 보관한 뒤 삭제할 항목만 선택하세요.",
+      "graph_version": "1.1.0"
     },
     "settings.talkback.enable": {
       "name": "TalkBack 켜기",
@@ -1034,12 +1036,8 @@
       "setting": "keyboard",
       "mode": "assisted",
       "device_validated": false,
-      "page_name": "키보드",
+      "page_name": "기본 키보드",
       "pages": [
-        "키보드 목록 및 기본",
-        "Keyboard list and default",
-        "화면 키보드",
-        "On-screen keyboard",
         "기본 키보드",
         "Default keyboard"
       ],
@@ -1051,11 +1049,21 @@
         "System"
       ],
       "instruction": "기본 키보드에서 사용할 키보드를 직접 선택하세요. 키보드가 입력 내용을 처리하므로 신뢰하는 앱을 선택하세요.",
-      "intermediate": [
-        "언어 및 입력",
-        "Languages & input"
+      "graph_version": "1.2.0",
+      "intermediate_path": [
+        [
+          "언어 및 입력",
+          "Languages & input"
+        ],
+        [
+          "키보드 목록 및 기본",
+          "키보드 목록 및 기본 설정",
+          "Keyboard list and default",
+          "화면 키보드",
+          "On-screen keyboard"
+        ]
       ],
-      "graph_version": "1.1.0"
+      "allow_intermediate_shortcuts": true
     },
     "settings.default_apps.change": {
       "name": "기본 앱 변경",
@@ -1219,7 +1227,7 @@
       "name": "VPN 연결",
       "setting": "vpn",
       "mode": "assisted",
-      "graph_version": "1.0.1",
+      "graph_version": "1.1.0",
       "device_validated": false,
       "page_name": "VPN",
       "pages": [
@@ -1237,14 +1245,13 @@
         "More connection settings",
         "고급",
         "Advanced"
-      ],
-      "graph_version": "1.1.0"
+      ]
     },
     "settings.vpn.disconnect": {
       "name": "VPN 연결 해제",
       "setting": "vpn",
       "mode": "assisted",
-      "graph_version": "1.0.1",
+      "graph_version": "1.1.0",
       "device_validated": false,
       "page_name": "VPN",
       "pages": [
@@ -1262,8 +1269,7 @@
         "More connection settings",
         "고급",
         "Advanced"
-      ],
-      "graph_version": "1.1.0"
+      ]
     },
     "settings.private_dns.change": {
       "name": "프라이빗 DNS 변경",
@@ -1273,7 +1279,9 @@
       "page_name": "프라이빗 DNS",
       "pages": [
         "프라이빗 DNS",
-        "Private DNS"
+        "Private DNS",
+        "비공개 DNS",
+        "개인 DNS"
       ],
       "categories": [
         "연결",
@@ -1288,7 +1296,7 @@
         "고급",
         "Advanced"
       ],
-      "graph_version": "1.1.0"
+      "graph_version": "1.2.0"
     },
     "settings.sim.manage": {
       "name": "SIM 관리",
@@ -1298,6 +1306,8 @@
       "page_name": "SIM 관리자",
       "pages": [
         "SIM 관리자",
+        "SIM 카드 관리자",
+        "SIM card manager",
         "SIM manager",
         "SIMs",
         "SIM"
@@ -1308,7 +1318,8 @@
         "네트워크 및 인터넷",
         "Network & internet"
       ],
-      "instruction": "원하는 SIM을 직접 선택한 뒤 통화·문자·데이터 설정을 확인하고 변경하세요."
+      "instruction": "SIM을 추가하려면 ‘eSIM 추가’ 또는 ‘SIM 추가’를 선택하고 통신사의 안내에 따라 직접 진행하세요. 기존 SIM은 원하는 항목을 선택해 통화·문자·데이터 설정을 확인하고 변경하세요.",
+      "graph_version": "1.1.0"
     },
     "settings.hotspot.password.change": {
       "name": "핫스팟 비밀번호 변경",
@@ -1323,7 +1334,9 @@
       ],
       "categories": [
         "연결",
-        "Connections"
+        "Connections",
+        "네트워크 및 인터넷",
+        "Network & internet"
       ],
       "instruction": "설정 또는 구성에서 새 비밀번호를 직접 입력하고 저장하세요. 비밀번호는 전송하지 않아요.",
       "intermediate": [
@@ -1332,7 +1345,7 @@
         "핫스팟 및 테더링",
         "Hotspot & tethering"
       ],
-      "graph_version": "1.1.0"
+      "graph_version": "1.2.0"
     },
     "settings.wallpaper.change": {
       "name": "배경 화면 변경",
@@ -1371,13 +1384,15 @@
       "name": "배터리 잔량 표시 켜기",
       "setting": "battery_percentage",
       "mode": "native_checked",
-      "device_validated": false
+      "device_validated": false,
+      "graph_version": "1.1.0"
     },
     "settings.battery_percentage.disable": {
       "name": "배터리 잔량 표시 끄기",
       "setting": "battery_percentage",
       "mode": "native_checked",
-      "device_validated": false
+      "device_validated": false,
+      "graph_version": "1.1.0"
     },
     "settings.battery_status.view": {
       "name": "배터리 사용량 보기",
@@ -1444,15 +1459,23 @@
       "setting": "lockscreen_notifications",
       "mode": "assisted",
       "device_validated": false,
-      "page_name": "알림",
+      "page_name": "잠금화면 알림",
       "pages": [
+        "잠금화면 알림",
+        "잠금 화면 알림",
+        "Lock screen notifications"
+      ],
+      "categories": [
         "알림",
         "Notifications",
         "잠금화면",
-        "Lock screen"
+        "잠금 화면",
+        "Lock screen",
+        "잠금화면 및 AOD",
+        "Lock screen and AOD"
       ],
-      "categories": [],
-      "instruction": "잠금화면 알림에서 표시 여부와 내용 숨김을 직접 선택하세요. 표시할 개인정보 범위를 확인하세요."
+      "instruction": "잠금화면 알림에서 표시 여부와 내용 숨김을 직접 선택하세요. 표시할 개인정보 범위를 확인하세요.",
+      "graph_version": "1.1.0"
     },
     "settings.color_inversion.enable": {
       "name": "색상 반전 켜기",
@@ -1470,25 +1493,29 @@
       "name": "실시간 자막 켜기",
       "setting": "captions",
       "mode": "native_checked",
-      "device_validated": false
+      "device_validated": false,
+      "graph_version": "1.1.0"
     },
     "settings.captions.disable": {
       "name": "실시간 자막 끄기",
       "setting": "captions",
       "mode": "native_checked",
-      "device_validated": false
+      "device_validated": false,
+      "graph_version": "1.1.0"
     },
     "settings.mono_audio.enable": {
       "name": "모노 오디오 켜기",
       "setting": "mono_audio",
       "mode": "native_checked",
-      "device_validated": false
+      "device_validated": false,
+      "graph_version": "1.1.0"
     },
     "settings.mono_audio.disable": {
       "name": "모노 오디오 끄기",
       "setting": "mono_audio",
       "mode": "native_checked",
-      "device_validated": false
+      "device_validated": false,
+      "graph_version": "1.1.0"
     },
     "settings.backup.enable": {
       "name": "기기 백업 켜기",
@@ -1580,6 +1607,22 @@
       ],
       "categories": [],
       "instruction": "기기 이름에서 새 이름을 직접 입력하고 저장하세요. 입력한 이름은 전송하지 않아요."
+    },
+    "settings.theme.change": {
+      "name": "테마 변경",
+      "setting": "theme",
+      "mode": "assisted",
+      "device_validated": false,
+      "page_name": "테마",
+      "pages": [
+        "테마",
+        "Themes",
+        "Galaxy Themes",
+        "갤럭시 테마"
+      ],
+      "categories": [],
+      "instruction": "원하는 테마를 직접 선택하고 미리보기와 적용 대상을 확인한 뒤 적용하세요.",
+      "graph_version": "1.0.0"
     }
   },
   "mode_choices": {

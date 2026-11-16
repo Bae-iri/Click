@@ -24,14 +24,14 @@ def test_every_settings_goal_has_backend_graph_and_unreviewed_graphs_are_inactiv
     expected = {g["goal_type"] for g in catalog["goals"] if g["target_app"] == "android_settings"}
     definitions = [(r, g) for r, g in releases() if g.definition.target_app == 'android_settings']
     assert {g.definition.goal_type for _, g in definitions} == expected
-    assert len(definitions) == len(expected) == 110
+    assert len(definitions) == len(expected) == 111
     app = create_app()
     repository = app.state.turn_service.graphs
     repository.seed_mvp()
     with repository.factory() as db:
         rows = list(db.scalars(select(ApprovedTaskGraph)))
-        assert len(rows) == 181
-        assert sum(row.approved for row in rows) == 181
+        assert len(rows) == 182
+        assert sum(row.approved for row in rows) == 182
         assert sum(row.target_app == 'coupang' for row in rows) == 71
         assert all(not row.active for row in rows if not row.approved)
     for release, graph in definitions:

@@ -36,6 +36,8 @@ class GoalResolutionService:
                 message="변경을 원하시는지 다시 확인해 주세요. 아직 작업을 시작하지 않았어요.")
         scored = []
         for goal in self.catalog["goals"]:
+            if any(normalize(word) and normalize(word) in text for word in goal.get('excluded_keywords', [])):
+                continue
             if goal['target_app'] == 'coupang' and text == normalize(goal['display_name']):
                 scored.append((10000, goal))
                 continue
@@ -46,6 +48,8 @@ class GoalResolutionService:
             score = len(lengths) * 100 + sum(lengths)
             if any(text == normalize(word) for word in goal.get("utterances", [])):
                 score += 1000
+            # One character of keyword specificity outranks foreground context.
+            score *= 2
             package = request.device_context.foreground_package or ""
             if (goal["target_app"] == "android_settings" and package == "com.android.settings") or (
                     goal["target_app"] == "coupang" and "coupang" in package.lower()):

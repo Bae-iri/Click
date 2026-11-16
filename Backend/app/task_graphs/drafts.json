@@ -1677,5 +1677,25 @@
     "completion_predicate": "verified_device_name_change",
     "risk_level": "normal",
     "validation_status": "needs_device_evidence"
+  },
+  {
+    "task_id": "SET-theme-change",
+    "goal_type": "settings.theme.change",
+    "name": "테마 변경",
+    "slots": {
+      "setting": "theme",
+      "action": "change"
+    },
+    "category_labels": [
+      "Themes"
+    ],
+    "control_labels": [
+      "테마",
+      "갤럭시테마",
+      "theme"
+    ],
+    "completion_predicate": "verified_theme_change",
+    "risk_level": "normal",
+    "validation_status": "needs_device_evidence"
   }
 ]
