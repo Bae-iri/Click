@@ -491,7 +491,7 @@ def main():
         if args.command == "process":
             result = process_sessions(factory, limit=args.limit)
         elif args.command == 'assess-browse':
-            from app.services.browse_assessment import assess_browsing
+            from scripts.browse_assessment import assess_browsing
             result = assess_browsing(factory,limit=args.limit)
         elif args.command == "assess-jev":
             result = assess_jev(factory, reviews=read_json(args.reviews) if args.reviews else None, limit=args.limit)

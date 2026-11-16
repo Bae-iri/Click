@@ -1,4 +1,4 @@
-"""Consent and retention enforced offline; browsing never waits for AI2."""
+"""Offline Agent(2) assessment with consent and retention fences."""
 from datetime import timezone
 import time
 from sqlalchemy import select
