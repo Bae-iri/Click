@@ -30,6 +30,8 @@ public final class GoalPreparationState {
     }
     public boolean ready() {
         JSONArray missing = data.optJSONArray("missing_fields");
+        if (browsing()) return "ready".equals(data.optString("status")) && data.optJSONObject("browse_goal") != null
+                && question() == null && missing != null && missing.length() == 0;
         return "ready".equals(data.optString("status")) && goal != null && question() == null
                 && missing != null && missing.length() == 0 && data.optJSONObject("graph_reference") != null;
     }
@@ -48,6 +50,7 @@ public final class GoalPreparationState {
         }
         return new JSONObject().put("question_id", question.getString("id")).put("value", selected);
     }
+    public boolean browsing() { return "browse".equals(data.optString("execution_mode")); }
     public String exactSpokenChoice(String text) {
         if (!needsInput()) return null;
         if ("text".equals(question().optString("kind"))) return text;

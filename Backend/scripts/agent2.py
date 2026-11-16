@@ -17,6 +17,7 @@ from sqlalchemy.exc import IntegrityError
 from app import models  # noqa: F401
 from app.database import build_engine, build_session_factory
 from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
+from app.models.agent_session import AgentSession
 from app.models.task_graph import ApprovedTaskGraph
 from app.repositories.users import UserRepository, UserNotFoundError
 from app.repositories.task_graphs import TaskGraphRepository, NoCompatibleGraphError, AmbiguousGraphError
@@ -111,6 +112,10 @@ def process_sessions(factory, *, limit=100, now=None):
             with factory() as db:
                 profiles = UserRepository(db)
                 profiles.lock_user(user_id)
+                session = db.get(AgentSession,session_id)
+                if session and (session.workflow or {}).get('version') == 'coupang-browse.v1':
+                    summary['ineligible'] += 1
+                    continue
                 consent = profiles.latest_consent(user_id, "model_training")
                 if not consent or not consent.consented:
                     summary["ineligible"] += 1
@@ -134,6 +139,8 @@ def process_sessions(factory, *, limit=100, now=None):
                     continue
                 envelopes, graphs, missing = [], {}, []
                 for event in events:
+                    if event.kind == 'browse':
+                        continue
                     ref = event.payload.get("graph_reference") or {}
                     query = select(ApprovedTaskGraph).where(ApprovedTaskGraph.graph_hash == event.graph_hash,
                         ApprovedTaskGraph.approved.is_(True))
@@ -182,6 +189,9 @@ def assess_jev(factory, *, reviews=None, now=None, limit=100):
         users = UserRepository(db)
         for session_id, user_id in sessions:
             users.lock_user(user_id)
+            session = db.get(AgentSession,session_id)
+            if session and (session.workflow or {}).get('version') == 'coupang-browse.v1':
+                continue
             consent = users.latest_consent(user_id, "model_training")
             if not consent or not consent.consented:
                 continue
@@ -191,6 +201,8 @@ def assess_jev(factory, *, reviews=None, now=None, limit=100):
             if len(envelopes) + len(events) > 10000:
                 raise ValueError("Assessment exceeds event budget")
             for event in events:
+                if event.kind == 'browse':
+                    continue
                 ref = event.payload.get("graph_reference") or {}
                 query = select(ApprovedTaskGraph).where(ApprovedTaskGraph.graph_hash == event.graph_hash,
                     ApprovedTaskGraph.approved.is_(True))
@@ -227,6 +239,9 @@ def propose_routes(factory, *, manifest, cases=None, now=None, limit=100, evalua
             # Same lock and transaction as withdrawal/deletion; eligibility is
             # rechecked on every run, including when old analysis receipts exist.
             users.lock_user(user_id)
+            session = db.get(AgentSession,session_id)
+            if session and (session.workflow or {}).get('version') == 'coupang-browse.v1':
+                continue
             consent = users.latest_consent(user_id, "model_training")
             if not consent or not consent.consented:
                 continue
@@ -404,6 +419,8 @@ def main():
     assessment.add_argument("--limit", type=int, default=100)
     assessment.add_argument("--reviews", help="Independent captured-target review manifest")
     assessment.add_argument("--format", choices=("text", "json"), default="text")
+    browse = commands.add_parser('assess-browse', help='Assess consented graphless browsing without learning or release')
+    browse.add_argument('--limit', type=int, default=100)
     comparison = commands.add_parser("compare-jev", help="Compare identical independently reviewed holdout screens")
     comparison.add_argument("--before", required=True)
     comparison.add_argument("--after", required=True)
@@ -473,6 +490,9 @@ def main():
         validate_database_keys(engine)
         if args.command == "process":
             result = process_sessions(factory, limit=args.limit)
+        elif args.command == 'assess-browse':
+            from app.services.browse_assessment import assess_browsing
+            result = assess_browsing(factory,limit=args.limit)
         elif args.command == "assess-jev":
             result = assess_jev(factory, reviews=read_json(args.reviews) if args.reviews else None, limit=args.limit)
             if args.format == "text":

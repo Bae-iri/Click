@@ -126,11 +126,82 @@ def test_invalid_configuration_never_connects(monkeypatch, key, value):
     assert JevGoalClassifier(lambda *a, **kw: pytest.fail('unexpected call')).select('깨알 같아요', CANDIDATES) is None
 
 
-@pytest.mark.parametrize('choice', ['clarify', 'unsupported', 'cancel', 'multiple'])
+@pytest.mark.parametrize('choice', ['clarify', 'unsupported', 'unsupported_app', 'unrelated', 'cancel', 'multiple'])
 def test_abstention_choices_never_become_goals(choice):
     def send(payload, **kwargs):
         return httpx.Response(200, json=response_for(payload, choice))
     assert JevGoalClassifier(send).select('깨알 같아요', CANDIDATES) is None
+
+
+@pytest.mark.parametrize('choice', ['unsupported', 'unsupported_app', 'unrelated'])
+@pytest.mark.parametrize('probability', [0.55, 0.98])
+def test_preparation_preserves_only_confident_unsupported_reasons(choice, probability):
+    def send(payload, **kwargs):
+        return httpx.Response(200, json=response_for(payload, choice, probability))
+    result = JevGoalClassifier(send).interpret_inputs('정부24에서 서류를 발급해줘', CANDIDATES, [])
+    assert result == ({'goal_type': None, 'inputs': {}, 'reason': choice} if probability == 0.98 else None)
+
+
+@pytest.mark.parametrize('source,choice,status,reason', [
+    ('정부24에서 주민등록등본 발급해줘', 'unsupported_app', 'unsupported', 'unsupported_app'),
+    ('주민등록등본 발급해줘', 'unsupported_app', 'unsupported', 'unsupported_app'),
+    ('정부24에서 글자 크기 키워줘', 'unsupported_app', 'unsupported', 'unsupported_app'),
+    ('휴대폰의 새로운 설정 기능을 만들어줘', 'unsupported', 'unsupported', 'unsupported'),
+    ('재미있는 시 한 편 써줘', 'unrelated', 'unsupported', 'unrelated'),
+    ('이거 좀 바꿔줘', 'clarify', 'needs_clarification', None),
+])
+def test_authenticated_preparation_separates_unsupported_from_clarification(monkeypatch, source, choice, status, reason):
+    calls = []
+    def post(self, payload, **kwargs):
+        calls.append(payload)
+        return httpx.Response(200, json=response_for(payload, choice))
+    monkeypatch.setattr(JevGoalClassifier, '_post', post)
+    app = create_app()
+    with TestClient(app) as client:
+        register(client)
+        flow = Flow(client, app, source)
+        body = flow.resolve()
+        assert body['resolution_status'] == status
+        assert body['goal'] is None and body['preparation']['graph_reference'] is None
+        assert body['metadata']['goal_selection']['candidates'] == []
+        if reason:
+            assert body['preparation']['status'] == 'unsupported'
+            assert body['preparation']['question'] is None and body['preparation']['missing_fields'] == []
+            assert body['metadata']['goal_interpretation']['reason'] == reason
+            if reason == 'unsupported_app':
+                assert '아직 클릭이 지원하지 않는 앱이에요.' in body['message']
+            restored = flow.resolve()
+            assert restored['message'] == body['message']
+            assert restored['metadata']['goal_interpretation']['reason'] == reason
+            assert restored['preparation']['status'] == 'unsupported'
+            from app.services.goal_resolution import font_goal
+            assert client.post('/api/v1/agent/commands', json={**flow.start_payload(),
+                'goal': font_goal('increase').model_dump()}).status_code == 409
+            flow.text = '휴대폰 전체 글자 크기 키워줘'
+            corrected = flow.resolve(preparation_reset=True)
+            assert corrected['resolution_status'] == 'confirmation_required'
+            assert 'goal_interpretation' not in corrected['metadata']
+        else:
+            assert body['preparation']['question']['field'] == 'request'
+        assert len(calls) == 1
+        with app.state.session_factory() as db:
+            row = db.get(AgentSession, flow.session)
+            assert row.episode_id is None and row.version == 0
+
+
+def test_catalog_only_app_is_unsupported_without_asking_model(monkeypatch):
+    monkeypatch.setattr(JevGoalClassifier, '_post', lambda *a, **kw: pytest.fail('known unsupported app'))
+    app = create_app()
+    for goal in app.state.turn_service.goal_preparation.catalog['goals']:
+        if goal['target_app'] == 'coupang':
+            goal['execution_status'] = 'catalog_only'
+    with TestClient(app) as client:
+        register(client)
+        body = Flow(client, app, '쿠팡 상품 검색해줘').resolve()
+        assert body['resolution_status'] == 'unsupported'
+        assert body['metadata']['goal_interpretation']['reason'] == 'unsupported_app'
+        assert '아직 클릭이 지원하지 않는 앱이에요.' in body['message']
+        assert body['preparation']['question'] is None and body['goal'] is None
 
 
 @pytest.mark.parametrize('fault', ['low_confidence', 'false_confidence', 'missing_probability', 'wrong_sum',

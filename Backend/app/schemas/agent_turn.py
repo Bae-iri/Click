@@ -554,6 +554,7 @@ class DeviceCapabilities(BaseModel):
     accessibility_tree: bool = True
     guide_overlay: bool = True
     automatic_scroll: bool = False
+    coupang_browse: bool = False
 
 
 class DeviceContextRequest(BaseModel):

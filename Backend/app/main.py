@@ -106,6 +106,10 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
     if enable_legacy:
         app.include_router(build_guidance_router(guidance_service, principal), prefix="/api/v1")
     app.include_router(build_agent_router(turn_service, principal), prefix="/api/v1")
+    from app.services.browse import BrowseService
+    from app.api.v1.endpoints.browse import build_router as build_browse_router
+    app.state.browse_service = BrowseService(session_factory, turn_service.repository)
+    app.include_router(build_browse_router(app.state.browse_service, principal), prefix="/api/v1")
     app.include_router(build_history_router(turn_service, principal), prefix="/api/v1")
     app.include_router(build_voice_queue_router(voice_queue, principal), prefix="/api/v1")
     app.include_router(build_interactions_router(app.state.interactions, principal), prefix="/api/v1")

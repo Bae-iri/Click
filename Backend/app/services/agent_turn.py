@@ -24,6 +24,9 @@ from uuid import uuid4
 
 def request_identity(request):
     payload = request.model_dump(mode="json")
+    capabilities = (payload.get('device_context') or {}).get('capabilities')
+    if capabilities is not None and not capabilities.get('coupang_browse'):
+        capabilities.pop('coupang_browse', None)
     # Adding optional approval metadata must not change pre-upgrade request IDs.
     if payload.get("approval_provenance") is None:
         payload.pop("approval_provenance", None)
@@ -165,6 +168,11 @@ class AgentTurnService:
 
     def handle_command(self, request):
         command = request.command_type
+        with self.session_factory() as db:
+            from app.models.agent_session import AgentSession
+            current = db.get(AgentSession, request.session_id)
+            if current and current.user_id == request.user_id and (current.workflow or {}).get('version') == 'coupang-browse.v1':
+                self.repository.conflict('BROWSE_COMMAND_REQUIRED')
         legacy = self.repository.typed_details(request.session_id, request.user_id) if (
             request.user_result is not None or request.adjustment_reason is not None) else None
         if legacy and legacy.get("task_outcome") is None and legacy.get("workflow", {}).get("version") == "interactive.v1":
