@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-16",
+  "issue": "Some navigation recovery rules were rendered as re-observation rather than a native Back action; a real manual overlay-button tap could also dispatch Back without returning to the preceding page.",
+  "changes": [
+    "Map typed BACK recovery rules to the existing native Back recovery.",
+    "Keep a real observed native Back control usable when a Settings page title is unavailable.",
+    "Expose the recovery panel and button even if the input menu was open.",
+    "Use explicit button instructions in manual mode.",
+    "Hide the touched guidance window and wait 120ms before revalidating the same native Settings window and dispatching Back.",
+    "Restore the guidance window only for the same session, generation and presentation; reobserve the returned page without restarting the task."
+  ],
+  "validation": {
+    "unit_and_service_tests_passed": 252,
+    "real_device_tests_passed": 2,
+    "manual_test": "Production recovery presenter rendered a visible Back button; a real injected screen touch executed native Back from Connections to the preceding Settings home.",
+    "automatic_test": "Production recovery presenter automatically executed native Back over the same controlled Settings detour.",
+    "preserved": [
+      "session",
+      "episode",
+      "accepted goal",
+      "fresh-observation request"
+    ],
+    "before_manual_fix": "On the same physical device, manual Back was dispatched once but did not return; automatic Back passed.",
+    "limits": [
+      "Detour setup used native Settings intents and a controlled in-memory task with no Backend gateway.",
+      "Tests establish native navigation and UI action behavior; they are not an end-to-end model accuracy measurement."
+    ],
+    "setting_value_changes": 0,
+    "actual_account_changes": 0
+  },
+  "installation": {
+    "package": "com.click",
+    "installed_at": "2026-11-16 20:20:38",
+    "apk_sha256": "11ff9b9003e680388b4a89325d597b3bfa91b170ed862f6714576aff84fa40cd",
+    "installed_hash_verified": true,
+    "data_cleared": false
+  },
+  "server_deployed": false
+}

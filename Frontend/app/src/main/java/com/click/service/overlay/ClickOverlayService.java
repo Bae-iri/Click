@@ -3686,7 +3686,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         var scene=com.click.data.snapshot.ScreenEnvironment.classify(screen,
                 ClickAccessibilityService.accessibilityWindowManager()!=null,
                 keyguard!=null && keyguard.isDeviceLocked(),getPackageName());
-        return scene.kind()==com.click.data.snapshot.ScreenEnvironment.Kind.SETTINGS_SUBPAGE;
+        return scene.kind()==com.click.data.snapshot.ScreenEnvironment.Kind.SETTINGS_SUBPAGE
+                || scene.kind()==com.click.data.snapshot.ScreenEnvironment.Kind.SETTINGS_UNKNOWN
+                    && ObservationRecovery.canReturnFromSettings(screen);
     }
 
     /** Recover the existing task one page at a time; opening Settings is the last fallback. */
@@ -3702,7 +3704,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         final int generation=execution.generation();final String session=execution.sessionId();
         final String page=com.click.data.snapshot.ScreenIdentity.pageTitle(expected);
         final String key=expected.packageName+"|"+expected.activeWindowId+"|"+page;
-        String message=failure==null ? "다른 설정 화면으로 이동했어요. 한 단계 뒤로 돌아가 기존 요청을 이어갈게요." : failure;
+        String message=failure!=null ? failure : automaticTouchEnabled()
+                ? "다른 설정 화면으로 이동했어요. 한 단계 뒤로 돌아가 기존 요청을 이어갈게요."
+                : "아래 ‘이전 화면으로’ 버튼을 눌러주세요. 돌아간 화면에서 기존 요청을 이어갈게요.";
         Runnable back=()->{
             if(presentation!=settingsEntryPresentation || generation!=execution.generation()
                     || !java.util.Objects.equals(session,execution.sessionId()) || closing
@@ -3712,41 +3716,68 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             ScreenSnapshot current=ClickAccessibilityService.freshSnapshot();
             if(!settingsBackPage(current) || !java.util.Objects.equals(expected.packageName,current.packageName)
                     || !java.util.Objects.equals(expected.activeWindowId,current.activeWindowId)
-                    || !java.util.Objects.equals(page,com.click.data.snapshot.ScreenIdentity.pageTitle(current))) {
+                    || !java.util.Objects.equals(page,com.click.data.snapshot.ScreenIdentity.pageTitle(current))
+                    || page==null && !expected.contentFingerprint().equals(current.contentFingerprint())) {
                 // A hidden/stale recovery button must never navigate a different page.
                 ClickAccessibilityService.requestFreshSnapshot();return;
             }
             if(settingsBackRecoveries>=3){showSettingsEntryRecovery("이전 화면 복귀를 확인하지 못했어요. 설정을 다시 열거나 직접 이동해 주세요.");return;}
             final long navigating=++settingsEntryPresentation;
-            lastBackRecoveryScreen=key;settingsBackRecoveries++;
-            navigationRecovery.requestedByUser(NavigationRecovery.Action.BACK,current);
-            boolean moved=ClickAccessibilityService.performSettingsBack(current.packageName,current.activeWindowId);
-            if(!moved){recoverSettingsBack(current,"뒤로 이동하지 못했어요. 휴대폰의 뒤로 버튼을 누르거나 다시 시도해 주세요.");return;}
-            taskFlowView.waitingProgress("이전 화면으로 돌아가고 있어요.");
-            ClickAccessibilityService.requestFreshSnapshot();
+            // A Back dispatched inside the overlay's touch callback may be consumed by
+            // that window. Release it first, then revalidate the native page after the gesture.
+            TaskFlowOverlayView owner=taskFlowView;
+            Runnable restoreWindow=()->{
+                if(!closing && owner==taskFlowView && navigating==settingsEntryPresentation
+                        && generation==execution.generation() && java.util.Objects.equals(session,execution.sessionId()))
+                    owner.setVisibility(View.VISIBLE);
+            };
+            owner.setVisibility(View.GONE);
             speechHandler.postDelayed(()->{
                 if(navigating!=settingsEntryPresentation || generation!=execution.generation()
-                        || !java.util.Objects.equals(session,execution.sessionId()) || closing
-                        || execution.paused() || execution.manual() || execution.pendingControl()!=null
-                        || execution.phase()==TaskExecutionController.Phase.STOPPED || execution.phase()==TaskExecutionController.Phase.COMPLETED
-                        || resultPrompt!=null || followUp!=null)return;
-                ScreenSnapshot latest=ClickAccessibilityService.freshSnapshot();
-                if(latest!=null && !settingsBackPage(latest) && handleEnvironment(latest))return;
-                if(latest==null || java.util.Objects.equals(current.packageName,latest.packageName)
-                        && java.util.Objects.equals(page,com.click.data.snapshot.ScreenIdentity.pageTitle(latest))) {
-                    recoverSettingsBack(latest==null?current:latest,"이전 화면으로 돌아간 것을 확인하지 못했어요. 뒤로 이동한 뒤 이어갈 수 있어요.");return;
+                        || !java.util.Objects.equals(session,execution.sessionId()) || closing || owner!=taskFlowView
+                        || execution.paused() || execution.pendingControl()!=null || execution.manual()
+                        || resultPrompt!=null || followUp!=null){restoreWindow.run();return;}
+                ScreenSnapshot ready=ClickAccessibilityService.freshSnapshot();
+                if(!settingsBackPage(ready) || !java.util.Objects.equals(current.packageName,ready.packageName)
+                        || !java.util.Objects.equals(current.activeWindowId,ready.activeWindowId)
+                        || !java.util.Objects.equals(page,com.click.data.snapshot.ScreenIdentity.pageTitle(ready))
+                        || page==null && !current.contentFingerprint().equals(ready.contentFingerprint())) {
+                    restoreWindow.run();ClickAccessibilityService.requestFreshSnapshot();return;
                 }
-                if(handleEnvironment(latest) || handleSettingsPageChange(latest))return;
-                if(!execution.environmentReady())return;
-                navigationRecovery.clear();pendingActionType=AgentActionEvents.MANUAL_OVERRIDE;
-                pendingActionOccurredAtMs=System.currentTimeMillis();execution.requestObservation();
-                if(execution.busy())pendingPageScreen=latest;
-                else sendAgentTurn(null,true);
-            },900L);
+                lastBackRecoveryScreen=key;settingsBackRecoveries++;
+                navigationRecovery.requestedByUser(NavigationRecovery.Action.BACK,current);
+                boolean moved=ClickAccessibilityService.performSettingsBack(current.packageName,current.activeWindowId);
+                if(!moved){restoreWindow.run();recoverSettingsBack(current,"뒤로 이동하지 못했어요. 휴대폰의 뒤로 버튼을 누르거나 다시 시도해 주세요.");return;}
+                taskFlowView.waitingProgress("이전 화면으로 돌아가고 있어요.");
+                ClickAccessibilityService.requestFreshSnapshot();
+                speechHandler.postDelayed(()->{
+                    if(navigating!=settingsEntryPresentation || generation!=execution.generation()
+                            || !java.util.Objects.equals(session,execution.sessionId()) || closing
+                            || execution.paused() || execution.manual() || execution.pendingControl()!=null
+                            || execution.phase()==TaskExecutionController.Phase.STOPPED || execution.phase()==TaskExecutionController.Phase.COMPLETED
+                            || resultPrompt!=null || followUp!=null){restoreWindow.run();return;}
+                    ScreenSnapshot latest=ClickAccessibilityService.freshSnapshot();
+                    restoreWindow.run();
+                    if(latest!=null && !settingsBackPage(latest) && handleEnvironment(latest))return;
+                    if(latest==null || java.util.Objects.equals(current.packageName,latest.packageName)
+                            && java.util.Objects.equals(page,com.click.data.snapshot.ScreenIdentity.pageTitle(latest))
+                            && (page!=null || current.contentFingerprint().equals(latest.contentFingerprint()))) {
+                        recoverSettingsBack(latest==null?current:latest,"이전 화면으로 돌아간 것을 확인하지 못했어요. 뒤로 이동한 뒤 이어갈 수 있어요.");return;
+                    }
+                    if(handleEnvironment(latest) || handleSettingsPageChange(latest))return;
+                    if(!execution.environmentReady())return;
+                    navigationRecovery.clear();pendingActionType=AgentActionEvents.MANUAL_OVERRIDE;
+                    pendingActionOccurredAtMs=System.currentTimeMillis();execution.requestObservation();
+                    if(execution.busy())pendingPageScreen=latest;
+                    else sendAgentTurn(null,true);
+                },900L);
+            },120L);
         };
         taskFlowView.setAutomaticProgress(false);
         taskFlowView.failureRecovery("이전 화면에서 이어갈게요",message,"이전 화면으로",back);
-        taskFlowCollapsed=false;updateFloatingVisibility();placeTaskFlow(null,true);speak(message);
+        taskFlowCollapsed=false;
+        if(overlayView!=null){overlayView.collapse();overlayView.setRecognizedSpeech(message);}
+        updateFloatingVisibility();placeTaskFlow(null,true);speak(message);
         if(failure==null && automaticTouchEnabled() && settingsBackRecoveries<3
                 && !key.equals(lastBackRecoveryScreen))speechHandler.post(back);
     }
@@ -4122,6 +4153,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         JSONObject rule=com.click.data.snapshot.ScreenEnvironmentPolicy.recovery(reason);
         if(rule.length()==0){showObservationRecovery(initialGoal,"",retry);return;}
         String action=rule.optString("action");
+        if("BACK".equals(action)) {
+            recoverSettingsBack(ClickAccessibilityService.freshSnapshot());return;
+        }
         String label="VERIFY".equals(action)?"결과 확인":"RECONCILE".equals(action)?"연결 다시 확인":"다시 안내받기";
         final int generation=execution.generation();final String session=execution.sessionId(),episode=execution.episodeId();
         Runnable next=()->{

@@ -1202,7 +1202,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.addView(text(message,17),spaced(8));
         if(actionLabel!=null && action!=null){
             recoveryActions.setVisibility(VISIBLE);
-            recoveryActions.addView(primaryButton(actionLabel,action),spaced(8));
+            Button recoveryButton=primaryButton(actionLabel,action);
+            recoveryButton.setTag("task_recovery_action");
+            recoveryActions.addView(recoveryButton,spaced(8));
         }
     }
 
