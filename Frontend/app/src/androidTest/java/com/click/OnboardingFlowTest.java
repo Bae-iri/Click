@@ -19,6 +19,7 @@ import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry;
 import androidx.test.runner.lifecycle.Stage;
 import com.click.designpreview.OnboardingActivity;
 import com.click.designpreview.AccountStartActivity;
+import com.click.designpreview.TextSizeSetupActivity;
 import com.click.designpreview.LoginActivity;
 import com.click.designpreview.PermissionGuideActivity;
 import com.click.designpreview.AccessibilityHelpActivity;
@@ -35,31 +36,56 @@ import static org.junit.Assert.*;
 public class OnboardingFlowTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
-    @Test public void automationSummaryAppearsOnEachEnableButNotOnReopen() throws Exception {
+    @Test public void bothAutomationEntryPointsRequireFullReadingBeforeEnable() throws Exception {
         com.click.data.local.TouchAutomationSettings settings = new com.click.data.local.TouchAutomationSettings(
                 instrumentation.getTargetContext());
         boolean original = settings.isEnabled();
         settings.setEnabled(false);
         try (ActivityScenario<MenuActivity> scenario = ActivityScenario.launch(MenuActivity.class)) {
-            for (int i = 0; i < 2; i++) {
-                clickView("자동 모드");
-                shown("자동 모드를 켰어요");
-                shown("결제·전화 걸기·메시지 보내기는 자동으로 실행하지 않아요.");
+            for (int route = 0; route < 2; route++) {
+                if (route == 0) clickView("자동 모드"); else tap("자동으로 도와주기");
+                shown("안내를 끝까지 읽고 자동 모드를 켜주세요.");
+                assertFalse(settings.isEnabled());
+                scenario.onActivity(activity -> assertFalse(((androidx.appcompat.widget.SwitchCompat)
+                        find(activity.getWindow().getDecorView(), "자동 모드")).isChecked()));
+                final View[] dialog = {null};
+                instrumentation.runOnMainSync(() -> {
+                    for (View root : WindowInspector.getGlobalWindowViews()) {
+                        if (root.findViewWithTag("click_dialog_body_scroll") != null) dialog[0] = root;
+                    }
+                    assertNotNull(dialog[0]);
+                    View confirm = dialog[0].findViewById(android.R.id.button1);
+                    assertFalse(confirm.isEnabled());
+                    confirm.performClick();
+                    assertFalse(settings.isEnabled());
+                    android.widget.ScrollView body = dialog[0].findViewWithTag("click_dialog_body_scroll");
+                    assertTrue(body.canScrollVertically(1));
+                    int end = body.getChildAt(0).getHeight() - body.getHeight();
+                    body.scrollTo(0, end / 2);
+                    assertFalse(confirm.isEnabled());
+                    body.scrollTo(0, end);
+                    assertTrue(confirm.isEnabled());
+                    assertFalse(settings.isEnabled());
+                });
+                screenshot("automation-read-complete-" + route);
+                clickView("자동 모드 켜기");
                 assertTrue(settings.isEnabled());
-                if (i == 0) screenshot("automation-summary");
-                clickView("알겠어요");
+                scenario.recreate();
+                assertTrue(settings.isEnabled());
+                assertNoWindowText("안내를 끝까지 읽고 자동 모드를 켜주세요.");
                 clickView("자동 모드");
                 assertFalse(settings.isEnabled());
-                assertNoWindowText("자동 모드를 켰어요");
+                if (route == 0) clickView("자동 모드"); else tap("자동으로 도와주기");
+                shown("안내를 끝까지 읽고 자동 모드를 켜주세요.");
+                instrumentation.runOnMainSync(() -> {
+                    for (View root : WindowInspector.getGlobalWindowViews()) {
+                        if (root.findViewWithTag("click_dialog_body_scroll") != null)
+                            assertFalse(root.findViewById(android.R.id.button1).isEnabled());
+                    }
+                });
+                clickView("닫기");
+                assertFalse(settings.isEnabled());
             }
-            tap("자동으로 도와주기");
-            clickView("자동 모드 켜기");
-            shown("자동 모드를 켰어요");
-            assertTrue(settings.isEnabled());
-            clickView("알겠어요");
-            scenario.recreate();
-            assertTrue(settings.isEnabled());
-            assertNoWindowText("자동 모드를 켰어요");
         } finally { settings.setEnabled(original); }
     }
 
@@ -73,17 +99,15 @@ public class OnboardingFlowTest {
         try (ActivityScenario<OnboardingActivity> s = ActivityScenario.launch(OnboardingActivity.class)) {
             screenshot("onboarding-clue-welcome");
             tap("시작하기");
-            shown("혼자 할 수 있도록\n클릭이 도와드려요");
+            shown("글자 크기\n어떻게 키우더라?");
             s.onActivity(a -> {
                 assertFalse(a.findViewById(com.click.designpreview.R.id.onboarding_step_three).isShown());
                 assertEquals("온보딩, 2단계 중 2단계", a.findViewById(com.click.designpreview.R.id.onboarding_progress).getContentDescription());
             });
-            tap("이전"); shown("처음이신가요?"); tap("시작하기");
+            tap("이전"); shown("핸드폰 사용을 위해\n누군가에게 도움을\n구한 적이 있나요?"); tap("시작하기");
             shown("가입하기"); assertNoWindowText("전화번호로 로그인하기");
             screenshot("onboarding-third");
             tap("가입하기");
-            shown("이 정도 글씨 괜찮으세요?");
-            tap("이 크기로 시작하기");
             shown("회원가입");
             shown("카카오로 가입하기"); shown("번호로 가입하기"); shown("로그인하기");
             assertNoWindowText("또는");
@@ -94,8 +118,6 @@ public class OnboardingFlowTest {
 
     @Test public void signupChoicesRemainAboveLoginAfterRecreation() throws Exception {
         try (ActivityScenario<AccountStartActivity> s = ActivityScenario.launch(AccountStartActivity.class)) {
-            shown("이 정도 글씨 괜찮으세요?");
-            tap("이 크기로 시작하기");
             shown("카카오로 가입하기"); shown("번호로 가입하기");
             shown("환영합니다!\n저는 클루라고 해요.");
             screenshot("signup-clue-welcome");
@@ -112,11 +134,11 @@ public class OnboardingFlowTest {
         }
     }
 
-    @Test public void signupFirstFitsTextSizeThenUsesTheSameSettingEverywhere() throws Exception {
+    @Test public void textSizePrecedesOnboardingAndUsesTheSameSettingEverywhere() throws Exception {
         android.content.Context context = instrumentation.getTargetContext();
         int original = com.click.ui.common.ClickTextScale.level(context);
         com.click.ui.common.ClickTextScale.saveLevel(context, 1);
-        try (ActivityScenario<AccountStartActivity> scenario = ActivityScenario.launch(AccountStartActivity.class)) {
+        try (ActivityScenario<TextSizeSetupActivity> scenario = ActivityScenario.launch(TextSizeSetupActivity.class)) {
             shown("이 정도 글씨 괜찮으세요?");
             screenshot("signup-text-size-default");
             final float[] titleSize = {0};
@@ -147,10 +169,13 @@ public class OnboardingFlowTest {
             scenario.recreate();
             scenario.onActivity(a -> assertEquals(3, ((android.widget.SeekBar) a.findViewById(
                     com.click.designpreview.R.id.text_size_scale)).getProgress()));
-            tap("이 크기로 시작하기");
-            shown("카카오로 가입하기"); shown("번호로 가입하기");
-            scenario.recreate();
+            tap("시작하기");
+            shown("핸드폰 사용을 위해\n누군가에게 도움을\n구한 적이 있나요?");
+            tap("시작하기");
+            shown("글자 크기\n어떻게 키우더라?");
+            tap("가입하기");
             shown("회원가입");
+            shown("카카오로 가입하기"); shown("번호로 가입하기");
             tap("번호로 가입하기");
             TextView title = shown("전화번호로 가입해요");
             assertEquals(30 * 1.3f * title.getResources().getDisplayMetrics().scaledDensity, title.getTextSize(), .5f);

@@ -87,7 +87,7 @@ public class HomeRequestTest {
         com.click.data.remote.VoiceQueueGateway queue = mock(com.click.data.remote.VoiceQueueGateway.class);
         org.robolectric.util.ReflectionHelpers.setField(service, "overlayView", panel);
         org.robolectric.util.ReflectionHelpers.setField(service, "queueGateway", queue);
-        org.robolectric.util.ReflectionHelpers.setField(service, "agentSessionId", "existing-session");
+        org.robolectric.util.ReflectionHelpers.setField(org.robolectric.util.ReflectionHelpers.getField(service,"execution"), "agentSessionId", "existing-session");
         doAnswer(call -> { ((Runnable) call.getArgument(0)).run(); return true; }).when(panel).post(any());
         service.onStartCommand(new Intent().putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL,
                 "  화면 밝기를 높여줘  "), 0, 1);
@@ -96,6 +96,33 @@ public class HomeRequestTest {
         order.verify(queue).enqueue(anyString(), eq("화면 밝기를 높여줘"), any());
         verify(panel, never()).openText();
         verify(panel, never()).openMenu();
+    }
+
+    @Test public void lateAccessibilityConnectionKeepsDraftUntilLaunchAndSendsOnce() {
+        com.click.designpreview.ClickHost host = mock(com.click.designpreview.ClickHost.class);
+        when(host.accessibilityEnabled()).thenReturn(true);
+        try (MockedStatic<PermissionStatus> permissions = mockStatic(PermissionStatus.class);
+             MockedStatic<ClickAccessibilityService> accessibility = mockStatic(ClickAccessibilityService.class);
+             MockedStatic<com.click.designpreview.ClickHost> bridge = mockStatic(com.click.designpreview.ClickHost.class)) {
+            permissions.when(() -> PermissionStatus.isAccessibilityEnabled(any())).thenReturn(true);
+            bridge.when(() -> com.click.designpreview.ClickHost.from(any())).thenReturn(host);
+            try (ActivityController<HomeActivity> controller = Robolectric.buildActivity(HomeActivity.class).setup()) {
+                HomeActivity activity = controller.get();
+                EditText input = activity.findViewById(R.id.home_request_input);
+                input.setText("화면 밝기를 높여줘");
+                activity.findViewById(R.id.home_request_send).performClick();
+                assertNull(shadowOf(activity).getNextStartedService());
+                assertEquals("화면 밝기를 높여줘", input.getText().toString());
+                accessibility.when(ClickAccessibilityService::accessibilityWindowManager).thenReturn(mock(WindowManager.class));
+                when(host.accessibilityConnected()).thenReturn(true);
+                shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(250));
+                Intent service = shadowOf(activity).getNextStartedService();
+                assertEquals("화면 밝기를 높여줘", service.getStringExtra(ClickOverlayService.EXTRA_INITIAL_GOAL));
+                assertEquals("", input.getText().toString());
+                shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(9));
+                assertNull(shadowOf(activity).getNextStartedService());
+            }
+        }
     }
 
     private void withHome(java.util.function.Consumer<HomeActivity> test) {

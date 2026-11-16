@@ -87,6 +87,9 @@ class GoalPreparationService:
         # Snapshot under the same user-first serialization order as queue/cancel operations.
         with self.factory() as db:
             now = self._lock(db, request)
+            # Use the authenticated profile only for the final authored UI message;
+            # the name is never part of goal classification/model inputs.
+            user_name = db.get(User, request.user_id).name
             cached = db.scalar(select(AgentGoalResolution).where(AgentGoalResolution.user_id == request.user_id,
                 AgentGoalResolution.request_id == request.request_id))
             if cached:
@@ -214,7 +217,8 @@ class GoalPreparationService:
                     message = f"{display_name} 화면을 찾고 진행 방법을 안내할게요. 상품·주문 선택과 입력은 쿠팡에서 직접 해주세요."
                 if selected['task_type'] == 'settings_assisted':
                     display_name += ' · 직접 진행 안내'
-                    message = '설정 화면까지 안내할게요. 항목 선택·입력·최종 변경은 직접 진행하고 결과를 확인해 주세요.'
+                    from ai_agent.task_graph.assisted_guidance import start_message
+                    message = start_message(selected['goal_type'], user_name=user_name) or '설정 화면까지 안내할게요. 항목 선택·입력·최종 변경은 직접 진행하고 결과를 확인해 주세요.'
                     if selected.get('risk_level') == 'high':
                         message += ' 데이터 삭제나 보안 변경이 포함될 수 있으니 기기의 경고를 확인해 주세요.'
             except ValueError:

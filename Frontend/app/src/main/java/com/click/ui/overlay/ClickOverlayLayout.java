@@ -209,18 +209,24 @@ public final class ClickOverlayLayout extends ViewGroup {
         }
     }
 
-    // [UI 수정] 접힌 버튼은 64dp, 모든 펼친 창은 요청 확인과 같은 공통 너비.
+    // [UI 수정] 접힌 커서와 터치 영역은 64dp.
     // 화면 폭에서는 24dp를 비운다. 실제 화면 좌표는 호스트가 결정한다.
     public int getWindowWidth(Mode target, int screenWidth) {
-        return target == Mode.COLLAPSED ? dp(64) : Math.min(screenWidth - dp(24), dp(FloatingPanelStyle.PANEL_WIDTH_DP));
+        return target == Mode.COLLAPSED ? dp(64)
+                : Math.min(screenWidth - dp(24), dp(FloatingPanelStyle.PANEL_WIDTH_DP));
     }
     // [UI 수정] 펼친 창은 내용 높이를 측정하고 화면 높이 - 96dp로 제한한다.
     // 마지막 줄의 216/350/340dp는 패널을 아직 측정할 수 없을 때만 쓰는 초기 높이이다.
     public int getWindowHeight(Mode target) {
+        return getWindowHeight(target, getWindowWidth(target, getResources().getDisplayMetrics().widthPixels),
+                getResources().getDisplayMetrics().heightPixels - dp(96));
+    }
+
+    /** Embedded practice screens must measure at their own width and height. */
+    public int getWindowHeight(Mode target, int width, int availableHeight) {
         if (target == Mode.COLLAPSED) return dp(64);
-        int limit = getResources().getDisplayMetrics().heightPixels - dp(96);
+        int limit = Math.max(0, availableHeight);
         if (target == mode && panel != null) {
-            int width = getWindowWidth(target, getResources().getDisplayMetrics().widthPixels);
             panel.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(limit, MeasureSpec.AT_MOST));
             return Math.min(limit, panel.getMeasuredHeight());
@@ -488,12 +494,12 @@ public final class ClickOverlayLayout extends ViewGroup {
         if (mode != Mode.COLLAPSED && panel != null) panel.layout(0, 0, getWidth(), getHeight());
     }
     // [UI 수정] 접힌 클루 이미지와 창/터치 영역은 64dp이다.
-    // 창 크기도 바꿀 때는 getWindowWidth/Height, 중심 좌표, hitsHandle과 두 호스트의 초기 64dp를 맞춘다.
+    // 창 크기도 바꿀 때는 getWindowWidth/Height, 중심 좌표, hitsHandle과 호스트의 초기 창 크기를 맞춘다.
     @Override protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
         if (mode == Mode.COLLAPSED) {
             int size = Math.min(getWidth(), dp(64));
-            int left = (getWidth() - size) / 2;
+            int left = 0;
             int top = Math.round(getClickCenterY(mode) - size / 2f);
             collapsedIcon.setBounds(left, top, left + size, top + size);
             collapsedIcon.draw(canvas);
@@ -546,9 +552,8 @@ public final class ClickOverlayLayout extends ViewGroup {
     private boolean hitsHandle(MotionEvent event) {
         // Expanded headers contain ordinary buttons. In particular, a slow or
         // slightly moving press on "줄이기" must never turn into a trash drag.
-        return mode == Mode.COLLAPSED && Math.hypot(
-                event.getX() - getClickCenterX(mode, getWidth()),
-                event.getY() - getClickCenterY(mode)) <= dp(32);
+        return mode == Mode.COLLAPSED && event.getX() >= 0 && event.getX() <= getWidth()
+                && event.getY() >= 0 && event.getY() <= getHeight();
     }
     @SuppressLint("ClickableViewAccessibility")
     @Override public boolean onTouchEvent(MotionEvent event) {

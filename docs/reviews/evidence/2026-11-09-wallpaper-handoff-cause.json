@@ -1,0 +1,101 @@
+{
+  "date": "2026-11-09T23:24:14.954639+09:00",
+  "reported_issue": "Wallpaper settings opens, but final Change wallpapers button has no highlight.",
+  "confirmed_code_cause": "Wallpaper is assisted and immediately hands off at the wallpaper overview title, before an authored Change wallpapers transition.",
+  "reproduction": {
+    "state": "S_TARGET",
+    "command_type": "highlight",
+    "action_type": "observe_only",
+    "target_node_id": null,
+    "target_bounds": null,
+    "render_policy": {
+      "manual_handoff": true,
+      "allow_result_check": true
+    },
+    "message": "사진이나 배경화면을 직접 선택하고 홈 화면·잠금화면 중 적용할 위치를 선택하세요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+    "transition_ids": [
+      "S0_TO_S1_OPEN_SETTINGS",
+      "OPEN_PAGE_FROM_HOME",
+      "MANUAL_HANDOFF"
+    ]
+  },
+  "source_references": {
+    "assisted_goal": {
+      "path": "AI-Agent/goal_catalog/settings_execution.json",
+      "line": 1223,
+      "sha256": "69b861c6d7cd9fe47ceb0dda6a8d87b2f7343e3b836eb2b75e87c0a5d99c3787"
+    },
+    "graph_handoff": {
+      "path": "Backend/app/task_graphs/settings_actions.py",
+      "line": 72,
+      "sha256": "6b1968af71f82dcd9e005686faaaaf096776bc0c4489260bcd7a3b32b61e49d7"
+    },
+    "empty_highlight": {
+      "path": "AI-Agent/src/ai_agent/runtime/engine.py",
+      "line": 504,
+      "sha256": "6849fe1b20f6b1b09fc2717006049f44a01f3cceb24078679cdece3d5239dc2a"
+    },
+    "client_handoff": {
+      "path": "Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java",
+      "line": 2747,
+      "sha256": "a8732b6bd22949c78b02b4fd31339a60de75d0f41198b8bfc6650ae03257d2b5"
+    }
+  },
+  "contract_goal": {
+    "navigation": {
+      "S0_UNKNOWN": [
+        {
+          "label": "설정",
+          "labels": [
+            "settings",
+            "설정"
+          ],
+          "packages": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.huawei.android.launcher",
+            "com.miui.home",
+            "com.oppo.launcher",
+            "com.sec.android.app.launcher",
+            "com.vivo.launcher"
+          ],
+          "role": "app_icon",
+          "transition_id": "S0_TO_S1_OPEN_SETTINGS"
+        }
+      ],
+      "S1_SETTINGS_HOME": [
+        {
+          "label": "배경화면 및 스타일",
+          "labels": [
+            "wallpaper",
+            "wallpaper & style",
+            "배경화면",
+            "배경화면 및 스타일"
+          ],
+          "packages": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "role": "menu_item",
+          "transition_id": "OPEN_PAGE_FROM_HOME"
+        }
+      ]
+    },
+    "page_titles": {
+      "S0_UNKNOWN": [],
+      "S1_SETTINGS_HOME": [
+        [
+          "설정",
+          "Settings"
+        ]
+      ]
+    },
+    "task_id": "SET-wallpaper-change",
+    "task_type": "settings_assisted"
+  },
+  "physical_limit": "The exact failure screen was not captured. During the final direct wallpaper-settings observation the device was locked (isKeyguardShowing=true, NotificationShade active, WallpaperSettingsActivity underneath). Do not attribute the issue to System UI or another wallpaper package on that evidence.",
+  "raw_screen_or_photos_exported": false,
+  "wallpaper_changes": 0,
+  "runtime_code_changed": false,
+  "required_behavior": "Guide to the safe Change wallpapers entry first; hand off only when personal wallpaper/photo selection begins, preserving private-screen boundaries."
+}

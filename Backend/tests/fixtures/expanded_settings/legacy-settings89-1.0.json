@@ -1,0 +1,3740 @@
+{
+  "settings.display_size.increase": {
+    "definition": {
+      "task_id": "SET-display_size-increase",
+      "goal_type": "settings.display_size.increase",
+      "name": "화면 요소 크게 하기",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "display_size",
+        "direction": "increase"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "화면 요소 크게 하기",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "화면 크기",
+            "화면 크게/작게",
+            "Display size",
+            "Display size and text"
+          ]
+        ],
+        "optional_keywords": [
+          "화면 크기",
+          "화면 크게/작게",
+          "Display size",
+          "Display size and text"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_CATEGORY": {
+        "state_id": "S_CATEGORY",
+        "name": "디스플레이",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "디스플레이",
+            "Display"
+          ]
+        ],
+        "optional_keywords": [
+          "디스플레이",
+          "Display"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_CATEGORY",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_CATEGORY",
+        "action_type": "tap",
+        "action_name": "디스플레이 열기",
+        "target_keywords": [
+          "디스플레이",
+          "Display"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "디스플레이 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE",
+        "from_state": "S_CATEGORY",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "화면 크기 열기",
+        "target_keywords": [
+          "화면 크기",
+          "화면 크게/작게",
+          "Display size",
+          "Display size and text"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "화면 크기 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "화면 크기 열기",
+        "target_keywords": [
+          "화면 크기",
+          "화면 크게/작게",
+          "Display size",
+          "Display size and text"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "화면 크기 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "화면 크기 조절 막대를 요청한 방향으로 움직이고 미리보기와 실제 화면 크기를 확인하세요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.display_size.decrease": {
+    "definition": {
+      "task_id": "SET-display_size-decrease",
+      "goal_type": "settings.display_size.decrease",
+      "name": "화면 요소 작게 하기",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "display_size",
+        "direction": "decrease"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "화면 요소 작게 하기",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "화면 크기",
+            "화면 크게/작게",
+            "Display size",
+            "Display size and text"
+          ]
+        ],
+        "optional_keywords": [
+          "화면 크기",
+          "화면 크게/작게",
+          "Display size",
+          "Display size and text"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_CATEGORY": {
+        "state_id": "S_CATEGORY",
+        "name": "디스플레이",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "디스플레이",
+            "Display"
+          ]
+        ],
+        "optional_keywords": [
+          "디스플레이",
+          "Display"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_CATEGORY",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_CATEGORY",
+        "action_type": "tap",
+        "action_name": "디스플레이 열기",
+        "target_keywords": [
+          "디스플레이",
+          "Display"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "디스플레이 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE",
+        "from_state": "S_CATEGORY",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "화면 크기 열기",
+        "target_keywords": [
+          "화면 크기",
+          "화면 크게/작게",
+          "Display size",
+          "Display size and text"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "화면 크기 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "화면 크기 열기",
+        "target_keywords": [
+          "화면 크기",
+          "화면 크게/작게",
+          "Display size",
+          "Display size and text"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "화면 크기 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "화면 크기 조절 막대를 요청한 방향으로 움직이고 미리보기와 실제 화면 크기를 확인하세요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.notifications.enable": {
+    "definition": {
+      "task_id": "SET-notifications-enable",
+      "goal_type": "settings.notifications.enable",
+      "name": "앱 알림 켜기",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "notifications",
+        "state": "on"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "앱 알림 켜기",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "알림",
+            "Notifications"
+          ]
+        ],
+        "optional_keywords": [
+          "알림",
+          "Notifications"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "알림 열기",
+        "target_keywords": [
+          "알림",
+          "Notifications"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "알림 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "알림을 바꿀 앱을 직접 선택하고 알림 허용을 요청한 상태로 바꾸세요. 휴대폰 전체 알림에는 공통 스위치가 없을 수 있어요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.notifications.disable": {
+    "definition": {
+      "task_id": "SET-notifications-disable",
+      "goal_type": "settings.notifications.disable",
+      "name": "앱 알림 끄기",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "notifications",
+        "state": "off"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "앱 알림 끄기",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "알림",
+            "Notifications"
+          ]
+        ],
+        "optional_keywords": [
+          "알림",
+          "Notifications"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "알림 열기",
+        "target_keywords": [
+          "알림",
+          "Notifications"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "알림 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "알림을 바꿀 앱을 직접 선택하고 알림 허용을 요청한 상태로 바꾸세요. 휴대폰 전체 알림에는 공통 스위치가 없을 수 있어요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.screen_lock.change": {
+    "definition": {
+      "task_id": "SET-screen_lock-change",
+      "goal_type": "settings.screen_lock.change",
+      "name": "화면 잠금 방식 변경",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "screen_lock",
+        "action": "change"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "화면 잠금 방식 변경",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "보안 및 개인정보 보호",
+            "Security & privacy",
+            "보안",
+            "Security",
+            "잠금화면",
+            "Lock screen"
+          ]
+        ],
+        "optional_keywords": [
+          "보안 및 개인정보 보호",
+          "Security & privacy",
+          "보안",
+          "Security",
+          "잠금화면",
+          "Lock screen"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "보안 및 개인정보 보호 열기",
+        "target_keywords": [
+          "보안 및 개인정보 보호",
+          "Security & privacy",
+          "보안",
+          "Security",
+          "잠금화면",
+          "Lock screen"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "보안 및 개인정보 보호 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "화면 잠금 방식을 직접 선택하세요. 현재 잠금 인증과 새 PIN·패턴·비밀번호 입력은 직접 진행하세요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.language.change": {
+    "definition": {
+      "task_id": "SET-language-change",
+      "goal_type": "settings.language.change",
+      "name": "기기 언어 변경",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "language",
+        "action": "change"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "기기 언어 변경",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "언어",
+            "Language",
+            "Languages"
+          ]
+        ],
+        "optional_keywords": [
+          "언어",
+          "Language",
+          "Languages"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_CATEGORY": {
+        "state_id": "S_CATEGORY",
+        "name": "일반",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "일반",
+            "일반 관리",
+            "General management",
+            "시스템",
+            "System"
+          ]
+        ],
+        "optional_keywords": [
+          "일반",
+          "일반 관리",
+          "General management",
+          "시스템",
+          "System"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_CATEGORY",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_CATEGORY",
+        "action_type": "tap",
+        "action_name": "일반 열기",
+        "target_keywords": [
+          "일반",
+          "일반 관리",
+          "General management",
+          "시스템",
+          "System"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "일반 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE",
+        "from_state": "S_CATEGORY",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "언어 열기",
+        "target_keywords": [
+          "언어",
+          "Language",
+          "Languages"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "언어 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "언어 열기",
+        "target_keywords": [
+          "언어",
+          "Language",
+          "Languages"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "언어 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "원하는 언어를 직접 추가하거나 선택하고 기본 언어로 적용하세요. 메뉴 언어가 바뀌는지 확인하세요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.keyboard.change": {
+    "definition": {
+      "task_id": "SET-keyboard-change",
+      "goal_type": "settings.keyboard.change",
+      "name": "기본 키보드 변경",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "keyboard",
+        "action": "change"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "기본 키보드 변경",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "키보드 목록 및 기본",
+            "Keyboard list and default",
+            "화면 키보드",
+            "On-screen keyboard",
+            "기본 키보드",
+            "Default keyboard"
+          ]
+        ],
+        "optional_keywords": [
+          "키보드 목록 및 기본",
+          "Keyboard list and default",
+          "화면 키보드",
+          "On-screen keyboard",
+          "기본 키보드",
+          "Default keyboard"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_CATEGORY": {
+        "state_id": "S_CATEGORY",
+        "name": "일반",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "일반",
+            "일반 관리",
+            "General management",
+            "시스템",
+            "System"
+          ]
+        ],
+        "optional_keywords": [
+          "일반",
+          "일반 관리",
+          "General management",
+          "시스템",
+          "System"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_CATEGORY",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_CATEGORY",
+        "action_type": "tap",
+        "action_name": "일반 열기",
+        "target_keywords": [
+          "일반",
+          "일반 관리",
+          "General management",
+          "시스템",
+          "System"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "일반 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE",
+        "from_state": "S_CATEGORY",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "키보드 목록 및 기본 열기",
+        "target_keywords": [
+          "키보드 목록 및 기본",
+          "Keyboard list and default",
+          "화면 키보드",
+          "On-screen keyboard",
+          "기본 키보드",
+          "Default keyboard"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "키보드 목록 및 기본 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "키보드 목록 및 기본 열기",
+        "target_keywords": [
+          "키보드 목록 및 기본",
+          "Keyboard list and default",
+          "화면 키보드",
+          "On-screen keyboard",
+          "기본 키보드",
+          "Default keyboard"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "키보드 목록 및 기본 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "기본 키보드에서 사용할 키보드를 직접 선택하세요. 키보드가 입력 내용을 처리하므로 신뢰하는 앱을 선택하세요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.wifi.saved_networks.view": {
+    "definition": {
+      "task_id": "SET-wifi-saved_networks-view",
+      "goal_type": "settings.wifi.saved_networks.view",
+      "name": "저장된 와이파이 보기",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "wifi_saved_networks",
+        "action": "view"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "저장된 와이파이 보기",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "Wi-Fi",
+            "와이파이"
+          ]
+        ],
+        "optional_keywords": [
+          "Wi-Fi",
+          "와이파이"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_CATEGORY": {
+        "state_id": "S_CATEGORY",
+        "name": "연결",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "연결",
+            "Connections",
+            "네트워크 및 인터넷",
+            "Network & internet"
+          ]
+        ],
+        "optional_keywords": [
+          "연결",
+          "Connections",
+          "네트워크 및 인터넷",
+          "Network & internet"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_CATEGORY",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_CATEGORY",
+        "action_type": "tap",
+        "action_name": "연결 열기",
+        "target_keywords": [
+          "연결",
+          "Connections",
+          "네트워크 및 인터넷",
+          "Network & internet"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "연결 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE",
+        "from_state": "S_CATEGORY",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "Wi-Fi 열기",
+        "target_keywords": [
+          "Wi-Fi",
+          "와이파이"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "Wi-Fi 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "Wi-Fi 열기",
+        "target_keywords": [
+          "Wi-Fi",
+          "와이파이"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "Wi-Fi 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "네트워크 관리 또는 저장된 네트워크를 직접 열어 확인하세요. 저장된 네트워크 이름은 전송하지 않아요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.vpn.connect": {
+    "definition": {
+      "task_id": "SET-vpn-connect",
+      "goal_type": "settings.vpn.connect",
+      "name": "VPN 연결",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "vpn",
+        "action": "connect"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "VPN 연결",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "VPN"
+          ]
+        ],
+        "optional_keywords": [
+          "VPN"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_CATEGORY": {
+        "state_id": "S_CATEGORY",
+        "name": "연결",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "연결",
+            "Connections",
+            "네트워크 및 인터넷",
+            "Network & internet"
+          ]
+        ],
+        "optional_keywords": [
+          "연결",
+          "Connections",
+          "네트워크 및 인터넷",
+          "Network & internet"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_CATEGORY",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_CATEGORY",
+        "action_type": "tap",
+        "action_name": "연결 열기",
+        "target_keywords": [
+          "연결",
+          "Connections",
+          "네트워크 및 인터넷",
+          "Network & internet"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "연결 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE",
+        "from_state": "S_CATEGORY",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "VPN 열기",
+        "target_keywords": [
+          "VPN"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "VPN 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "VPN 열기",
+        "target_keywords": [
+          "VPN"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "VPN 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "원하는 VPN 프로필을 직접 선택해 연결하거나 연결 해제하세요. 인증 정보는 직접 입력하고 기기의 연결 표시를 확인하세요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.vpn.disconnect": {
+    "definition": {
+      "task_id": "SET-vpn-disconnect",
+      "goal_type": "settings.vpn.disconnect",
+      "name": "VPN 연결 해제",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "vpn",
+        "action": "disconnect"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "VPN 연결 해제",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "VPN"
+          ]
+        ],
+        "optional_keywords": [
+          "VPN"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_CATEGORY": {
+        "state_id": "S_CATEGORY",
+        "name": "연결",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "연결",
+            "Connections",
+            "네트워크 및 인터넷",
+            "Network & internet"
+          ]
+        ],
+        "optional_keywords": [
+          "연결",
+          "Connections",
+          "네트워크 및 인터넷",
+          "Network & internet"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_CATEGORY",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_CATEGORY",
+        "action_type": "tap",
+        "action_name": "연결 열기",
+        "target_keywords": [
+          "연결",
+          "Connections",
+          "네트워크 및 인터넷",
+          "Network & internet"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "연결 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE",
+        "from_state": "S_CATEGORY",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "VPN 열기",
+        "target_keywords": [
+          "VPN"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "VPN 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "VPN 열기",
+        "target_keywords": [
+          "VPN"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "VPN 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "원하는 VPN 프로필을 직접 선택해 연결하거나 연결 해제하세요. 인증 정보는 직접 입력하고 기기의 연결 표시를 확인하세요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.private_dns.change": {
+    "definition": {
+      "task_id": "SET-private_dns-change",
+      "goal_type": "settings.private_dns.change",
+      "name": "프라이빗 DNS 변경",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "private_dns",
+        "action": "change"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "프라이빗 DNS 변경",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "프라이빗 DNS",
+            "Private DNS"
+          ]
+        ],
+        "optional_keywords": [
+          "프라이빗 DNS",
+          "Private DNS"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_CATEGORY": {
+        "state_id": "S_CATEGORY",
+        "name": "연결",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "연결",
+            "Connections",
+            "네트워크 및 인터넷",
+            "Network & internet"
+          ]
+        ],
+        "optional_keywords": [
+          "연결",
+          "Connections",
+          "네트워크 및 인터넷",
+          "Network & internet"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_CATEGORY",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_CATEGORY",
+        "action_type": "tap",
+        "action_name": "연결 열기",
+        "target_keywords": [
+          "연결",
+          "Connections",
+          "네트워크 및 인터넷",
+          "Network & internet"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "연결 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE",
+        "from_state": "S_CATEGORY",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "프라이빗 DNS 열기",
+        "target_keywords": [
+          "프라이빗 DNS",
+          "Private DNS"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "프라이빗 DNS 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "프라이빗 DNS 열기",
+        "target_keywords": [
+          "프라이빗 DNS",
+          "Private DNS"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "프라이빗 DNS 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "원하는 모드를 직접 선택하세요. 공급자 호스트 이름이 필요하면 직접 입력하고 저장하세요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.hotspot.password.change": {
+    "definition": {
+      "task_id": "SET-hotspot-password-change",
+      "goal_type": "settings.hotspot.password.change",
+      "name": "핫스팟 비밀번호 변경",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "hotspot_password",
+        "action": "change"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "핫스팟 비밀번호 변경",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "모바일 핫스팟",
+            "Mobile hotspot",
+            "Wi-Fi hotspot"
+          ]
+        ],
+        "optional_keywords": [
+          "모바일 핫스팟",
+          "Mobile hotspot",
+          "Wi-Fi hotspot"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_CATEGORY": {
+        "state_id": "S_CATEGORY",
+        "name": "연결",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "연결",
+            "Connections"
+          ]
+        ],
+        "optional_keywords": [
+          "연결",
+          "Connections"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_CATEGORY",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_CATEGORY",
+        "action_type": "tap",
+        "action_name": "연결 열기",
+        "target_keywords": [
+          "연결",
+          "Connections"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "연결 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE",
+        "from_state": "S_CATEGORY",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "모바일 핫스팟 열기",
+        "target_keywords": [
+          "모바일 핫스팟",
+          "Mobile hotspot",
+          "Wi-Fi hotspot"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "모바일 핫스팟 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "모바일 핫스팟 열기",
+        "target_keywords": [
+          "모바일 핫스팟",
+          "Mobile hotspot",
+          "Wi-Fi hotspot"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "모바일 핫스팟 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 또는 구성에서 새 비밀번호를 직접 입력하고 저장하세요. 비밀번호는 전송하지 않아요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  },
+  "settings.notification_history.view": {
+    "definition": {
+      "task_id": "SET-notification_history-view",
+      "goal_type": "settings.notification_history.view",
+      "name": "알림 기록 보기",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "start_states": [
+        "S0_UNKNOWN",
+        "S1_SETTINGS_HOME"
+      ],
+      "done_state": "S_DONE",
+      "required_slots": {
+        "setting": "notification_history",
+        "action": "view"
+      }
+    },
+    "states": {
+      "S0_UNKNOWN": {
+        "state_id": "S0_UNKNOWN",
+        "name": "알 수 없는 화면",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": false
+      },
+      "S1_SETTINGS_HOME": {
+        "state_id": "S1_SETTINGS_HOME",
+        "name": "설정",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ],
+        "optional_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_TARGET": {
+        "state_id": "S_TARGET",
+        "name": "알림 기록 보기",
+        "required_keywords": [],
+        "required_keyword_groups": [
+          [
+            "알림",
+            "Notifications"
+          ]
+        ],
+        "optional_keywords": [
+          "알림",
+          "Notifications"
+        ],
+        "package_candidates": [
+          "com.android.settings",
+          "com.samsung.android.settings"
+        ],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0.7,
+        "verification_only": false
+      },
+      "S_CHANGED": {
+        "state_id": "S_CHANGED",
+        "name": "검증 대기",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      },
+      "S_DONE": {
+        "state_id": "S_DONE",
+        "name": "결과",
+        "required_keywords": [],
+        "required_keyword_groups": [],
+        "optional_keywords": [],
+        "package_candidates": [],
+        "role_hints": [
+          "text",
+          "menu_item",
+          "toggle"
+        ],
+        "confidence_threshold": 0,
+        "verification_only": true
+      }
+    },
+    "transitions": [
+      {
+        "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+        "from_state": "S0_UNKNOWN",
+        "to_state": "S1_SETTINGS_HOME",
+        "action_type": "tap",
+        "action_name": "설정 앱 열기",
+        "target_keywords": [
+          "설정",
+          "Settings"
+        ],
+        "target_role": "app_icon",
+        "safety_level": "LOW_RISK",
+        "guide_message": "설정 앱을 열어주세요.",
+        "allow_scroll": false,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.launcher3",
+            "com.google.android.apps.nexuslauncher",
+            "com.sec.android.app.launcher",
+            "com.miui.home",
+            "com.huawei.android.launcher",
+            "com.oppo.launcher",
+            "com.vivo.launcher",
+            "org.lineageos.trebuchet"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "OPEN_PAGE_FROM_HOME",
+        "from_state": "S1_SETTINGS_HOME",
+        "to_state": "S_TARGET",
+        "action_type": "tap",
+        "action_name": "알림 열기",
+        "target_keywords": [
+          "알림",
+          "Notifications"
+        ],
+        "target_role": "menu_item",
+        "safety_level": "LOW_RISK",
+        "guide_message": "알림 항목을 눌러주세요.",
+        "allow_scroll": true,
+        "requires_user_action": true,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 10,
+        "verification_predicate": "state_reached",
+        "completes_task": false
+      },
+      {
+        "transition_id": "MANUAL_HANDOFF",
+        "from_state": "S_TARGET",
+        "to_state": "S_DONE",
+        "action_type": "observe_only",
+        "action_name": "직접 진행 안내",
+        "target_keywords": [],
+        "target_role": null,
+        "safety_level": "LOW_RISK",
+        "guide_message": "고급 설정에서 알림 기록을 직접 열어 확인하세요. 알림 내용이 있는 화면은 전송하지 않아요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+        "allow_scroll": false,
+        "requires_user_action": false,
+        "confirmation_message": null,
+        "selector": {
+          "synonym_keys": [],
+          "package_candidates": [],
+          "resource_ids": [],
+          "context_keywords": [],
+          "excluded_keywords": [],
+          "allow_unlabelled_in_context": false
+        },
+        "priority": 0,
+        "verification_predicate": "manual_result_required",
+        "completes_task": true
+      }
+    ],
+    "synonyms": {},
+    "policy": {
+      "retry_limit": 2,
+      "settle_ms": 500,
+      "observation_timeout_ms": 5000,
+      "recovery_limit": 3,
+      "max_failed_attempts": 6
+    }
+  }
+}

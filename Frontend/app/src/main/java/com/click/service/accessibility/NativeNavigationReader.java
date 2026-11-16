@@ -24,11 +24,11 @@ final class NativeNavigationReader {
         return n.isVisibleToUser() && n.isEnabled() && n.getRangeInfo()==null && !n.isCheckable()
                 && !n.isEditable() && !type.contains("seekbar") && !type.contains("slider")
                 && (n.isScrollable() || type.contains("recyclerview") || type.contains("listview")
-                    || type.contains("viewpager") || type.contains("scrollview"));
+                    || type.contains("viewpager") || type.contains("pagedview") || type.contains("scrollview"));
     }
     private static final class Candidate { String id;long score=-1; }
     static NavigationState read(AccessibilityNodeInfo root) {
-        Candidate best=new Candidate();find(root,"node_0",best);
+        Candidate best=new Candidate();find(root,"node_0",best,com.click.service.overlay.NavigationRecovery.isHome(String.valueOf(root.getPackageName())));
         String id=best.id==null?"node_0":best.id;
         AccessibilityNodeInfo selected=nodeAt(root,id);boolean recycle=selected!=root;
         if(selected==null)return null;
@@ -37,7 +37,7 @@ final class NativeNavigationReader {
             AccessibilityNodeInfo.CollectionInfo info=selected.getCollectionInfo();
             boolean horizontal=has(selected,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.getId())
                     || has(selected,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId())
-                    || type.contains("horizontal") || type.contains("viewpager")
+                    || type.contains("horizontal") || type.contains("viewpager") || type.contains("pagedview")
                     || info!=null && info.getRowCount()==1 && info.getColumnCount()>1;
             boolean vertical=has(selected,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.getId())
                     || has(selected,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.getId())
@@ -52,7 +52,7 @@ final class NativeNavigationReader {
                     || has(selected,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId());
             int[] indices={Integer.MAX_VALUE,-1};
             int count=info==null?-1:axis==NavigationState.Axis.HORIZONTAL?info.getColumnCount():info.getRowCount();
-            List<String> parts=new ArrayList<>();readContent(selected,axis,indices,parts,true);
+            List<String> parts=new ArrayList<>();readContent(selected,axis,indices,parts,true,true,true);
             Collections.sort(parts);String digest;
             try {digest=Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256")
                     .digest(String.join("\n",parts).getBytes(StandardCharsets.UTF_8)));}
@@ -61,8 +61,10 @@ final class NativeNavigationReader {
                     indices[0]==Integer.MAX_VALUE?-1:indices[0],indices[1],count,digest);
         } finally {if(recycle)selected.recycle();}
     }
-    private static void find(AccessibilityNodeInfo n,String id,Candidate best) {
+    private static void find(AccessibilityNodeInfo n,String id,Candidate best,boolean launcher) {
         if(!n.isVisibleToUser() || !n.isEnabled())return;
+        // A launcher widget's list is not the app-page collection.
+        if(launcher && String.valueOf(n.getClassName()).toLowerCase(Locale.ROOT).contains("appwidget"))return;
         if(collection(n)) {
             Rect b=new Rect();n.getBoundsInScreen(b);long score=(long)b.width()*b.height();
             if(n.isScrollable())score+=1_000_000_000_000L;
@@ -72,7 +74,7 @@ final class NativeNavigationReader {
         }
         for(int i=0;i<n.getChildCount();i++) {
             AccessibilityNodeInfo child=n.getChild(i);if(child==null)continue;
-            try{find(child,id+"_"+i,best);}finally{child.recycle();}
+            try{find(child,id+"_"+i,best,launcher);}finally{child.recycle();}
         }
     }
     static AccessibilityNodeInfo nodeAt(AccessibilityNodeInfo root,String id) {
@@ -85,10 +87,10 @@ final class NativeNavigationReader {
     }
     /** Read indices and page identity in one walk while retaining their separate privacy rules. */
     private static void readContent(AccessibilityNodeInfo n,NavigationState.Axis axis,int[] out,
-                                    List<String> parts,boolean includeLabels) {
+                                    List<String> parts,boolean includeLabels,boolean includeIndices,boolean selectedRoot) {
         if(!n.isVisibleToUser())return;
-        AccessibilityNodeInfo.CollectionItemInfo item=n.getCollectionItemInfo();
-        if(item!=null) {
+        AccessibilityNodeInfo.CollectionItemInfo item=selectedRoot?null:n.getCollectionItemInfo();
+        if(includeIndices && item!=null) {
             int index=axis==NavigationState.Axis.HORIZONTAL?item.getColumnIndex():item.getRowIndex();
             if(index>=0){out[0]=Math.min(out[0],index);out[1]=Math.max(out[1],index);}
         }
@@ -96,20 +98,22 @@ final class NativeNavigationReader {
         if(includeLabels) {
             String resource=String.valueOf(n.getViewIdResourceName()).toLowerCase(Locale.ROOT);
             String type=String.valueOf(n.getClassName()).toLowerCase(Locale.ROOT);
-            includeLabels = !resource.contains("widget") && !type.contains("clock") && !resource.endsWith("/summary");
+            includeLabels = !resource.contains("widget") && !type.contains("appwidget") && !type.contains("clock") && !resource.endsWith("/summary");
             if(includeLabels) {
                 CharSequence text=n.getText(),description=n.getContentDescription();
                 String label=text!=null?text.toString():description!=null?description.toString():"";
                 if(!label.isBlank() && !CLOCK_LABEL.matcher(label).matches()) {
-                    Rect bounds=new Rect();n.getBoundsInScreen(bounds);
-                    parts.add(resource+"|"+type+"|"+label+"|"+bounds.toShortString());
+                    AccessibilityNodeInfo.CollectionItemInfo labelItem=n.getCollectionItemInfo();
+                    String index=labelItem==null?"":labelItem.getRowIndex()+":"+labelItem.getColumnIndex();
+                    parts.add(resource+"|"+type+"|"+label+"|"+index);
                 }
             }
         }
         int childCount=n.getChildCount();
+        boolean childIndices=includeIndices && (selectedRoot || n.getCollectionInfo()==null);
         for(int i=0;i<childCount;i++) {
             AccessibilityNodeInfo child=n.getChild(i);if(child==null)continue;
-            try{readContent(child,axis,out,parts,includeLabels);}finally{child.recycle();}
+            try{readContent(child,axis,out,parts,includeLabels,childIndices,false);}finally{child.recycle();}
         }
     }
 }

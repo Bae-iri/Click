@@ -147,5 +147,11 @@ def test_recreated_window_requires_unique_control_and_both_persisted_and_slider_
         target_bounds=guide.target_bounds)
     result = turn(3, after, scale, event=event,
         at=2501 + graph.policy.observation_timeout_ms if problem == "late_observation" else 3000)
-    assert not result.verification_result.task_completed
+    if problem == "wrong_package":
+        assert result.verification_result is None
+        assert result.guide_command.target_node_id is None
+        assert result.guide_command.render_policy["recovery"]["reason_code"] == "OTHER_APP"
+    else:
+        assert not result.verification_result.task_completed
+    assert not engine.session_store.get("recreated-font").task_completed
     assert engine.session_store.get("recreated-font").technical_outcome.get("status") != "CHANGED"

@@ -28,6 +28,7 @@ public final class ErrorDetails {
 
     /** Shared by typed and spoken requests; diagnostic details belong in the app log. */
     public static String requestMessage(Throwable error) {
+        if(error instanceof ExecutionState.ContractMismatch)return error.getMessage();
         if (error instanceof com.click.data.snapshot.SettingsScreenPrivacy.Incomplete)
             return "현재 설정 화면을 아직 읽지 못했어요. 잠시 뒤 다시 시도해 주세요.";
         if (error instanceof com.click.data.snapshot.SettingsScreenPrivacy.Blocked) {

@@ -1,0 +1,393 @@
+{
+  "schema_version": "click-system-reliability-audit.v1",
+  "captured_at_kst": "2026-11-09T20:26:16.480385+09:00",
+  "scope": "Root-cause analysis and proposal; production code, database, feature exposure and installed app were not changed during this audit.",
+  "catalog": {
+    "version": "2.3.0",
+    "total": 181,
+    "approved": 110,
+    "catalog_only": 71,
+    "approved_settings_change": 50,
+    "approved_assisted": 39,
+    "approved_navigation": 21,
+    "execution_contract_modes": {
+      "device_value": 6,
+      "device_wifi": 2,
+      "native_checked": 42,
+      "assisted": 39
+    },
+    "device_validated_true": 0
+  },
+  "release_observation": {
+    "production": {
+      "schema_version": "click-build.v1",
+      "target_validation": "settings-slider.v1",
+      "source_sha256": "2278872c872d645d8f06e0f0fcefe3c553de5b8902f46aaade545db181d1d263",
+      "runtime_configuration": {
+        "provider": "jev",
+        "code_hash": "5a1bc9b59684332dc708d51771f5507379faedf31115c31ed23860be19632b70",
+        "model": "jev-1.14.0",
+        "minimum_confidence": 0.8
+      },
+      "goal_interpretation": {
+        "provider": "jev",
+        "configured": true
+      },
+      "observation_contract": {
+        "schema_version": "agent-observation.v1",
+        "policy_sha256": "f8528595478657e32d7e1abad2fdc97136914f13e1e32bc5bfb12123aff7f4c8",
+        "vocabulary_sha256": "ce11d74ea56e6a54453d9ddcfc89a28b4b3d62edf6fc3213297c7296cf655e06"
+      },
+      "source_revision": "9bd993d6173cf0e14e421369285325f0969b6dcc"
+    },
+    "local": {
+      "source_sha256": "f6f1b19492b1b4fb667c38cfad73830afa7509bede374707c24504538362c20a",
+      "observation_contract": {
+        "schema_version": "agent-observation.v1",
+        "policy_sha256": "f8528595478657e32d7e1abad2fdc97136914f13e1e32bc5bfb12123aff7f4c8",
+        "vocabulary_sha256": "ce11d74ea56e6a54453d9ddcfc89a28b4b3d62edf6fc3213297c7296cf655e06"
+      }
+    },
+    "local_git_head": "6816edba0cfabbc1cd06d512794fc3544d4b3717",
+    "production_commit_available_in_local_git": false,
+    "installed_apk_sha256": "5898a6058a8520475c95e85d7acebd63471387f47e5822806f09fef6f7fc6596",
+    "installed_apk_matches_previous_bluetooth_fix": true,
+    "production_db_graphs_read": false,
+    "production_user_sessions_read": false
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "priority": "P0",
+      "confidence": "confirmed_native_probe",
+      "title": "Server-supported expanded navigation and switches are denied by the Android automation policy",
+      "references": [
+        "native_auto_policy",
+        "native_value_guard",
+        "automation_action"
+      ],
+      "scope": "Automatic mode; a security restriction is not a bug by itself, but capability exposure does not reflect it."
+    },
+    {
+      "id": "F02",
+      "priority": "P0",
+      "confidence": "confirmed_python_and_android_probes",
+      "title": "Expanded graph state IDs are absent from the Android scroll-recovery contract",
+      "references": [
+        "scroll_state_whitelist",
+        "navigation_release",
+        "action_release"
+      ],
+      "scope": "82 graphs contain S_CATEGORY; 28 also contain S_INTERMEDIATE. This does not mean all tasks always fail."
+    },
+    {
+      "id": "F03",
+      "priority": "P0",
+      "confidence": "confirmed_isolated_sqlite_reproduction",
+      "title": "Startup seeding silently preserves an existing same-version graph after code/data changes",
+      "references": [
+        "seed",
+        "action_release",
+        "navigation_release"
+      ],
+      "scope": "Production DB contents were not read; actual affected persisted releases are unknown."
+    },
+    {
+      "id": "F04",
+      "priority": "P0",
+      "confidence": "confirmed_isolated_file_reproduction_and_public_version_read",
+      "title": "Release identity omits runtime execution-contract assets and the app checks syntax capabilities rather than a full release bundle",
+      "references": [
+        "source_identity",
+        "public_version",
+        "client_negotiation",
+        "validation_manifest"
+      ],
+      "scope": "Observed APK/server/local sources do not form a verified matching bundle; this alone is not proof of API incompatibility."
+    },
+    {
+      "id": "F05",
+      "priority": "P1",
+      "confidence": "confirmed_catalog_and_code_inspection",
+      "title": "Approved goals mix automatic, guided, assisted, and read-only capabilities without a device validation gate",
+      "references": [
+        "device_validation_gates",
+        "action_release"
+      ],
+      "scope": "All 89 execution-contract device_validated flags are false; prior physical evidence for six core tasks still exists."
+    },
+    {
+      "id": "F06",
+      "priority": "P1",
+      "confidence": "confirmed_android_probe_and_prior_bluetooth_regression",
+      "title": "Full-screen identity and path-scoped recovery budgets cause unrelated changes and layout churn to disrupt progress",
+      "references": [
+        "settings_search_scope",
+        "snapshot_identity",
+        "manual_handoff"
+      ],
+      "scope": "Path churn is controlled reproduction; no production rate was measured."
+    },
+    {
+      "id": "F07",
+      "priority": "P1",
+      "confidence": "confirmed_code_and_ci_inspection",
+      "title": "Production Jev decisions and real-device user flows are not equivalent to the default rule-path/local-test gates",
+      "references": [
+        "default_provider",
+        "all_graph_candidates",
+        "ci_android"
+      ],
+      "scope": "Some model paths are mocked and tested; the gap is live model + actual device + full UI in one release gate."
+    },
+    {
+      "id": "F08",
+      "priority": "P1",
+      "confidence": "confirmed_code_exposure_not_incident_attribution",
+      "title": "Client 15-second read timeout is not coordinated with the server 20-second execution timeout",
+      "references": [
+        "client_timeout",
+        "server_timeout"
+      ],
+      "scope": "No live inference-latency distribution or actual timeout incident was collected."
+    },
+    {
+      "id": "F09",
+      "priority": "P2",
+      "confidence": "confirmed_build_configuration_risk",
+      "title": "Production Docker dependency resolution does not use the CI version constraints",
+      "references": [
+        "docker_dependencies"
+      ],
+      "scope": "No production dependency inventory was available; actual drift was not demonstrated."
+    },
+    {
+      "id": "F10",
+      "priority": "P1",
+      "confidence": "confirmed_partial_observability",
+      "title": "Persisted server events cannot alone explain local privacy rejection, stale rendering, or actual device execution",
+      "references": [
+        "telemetry",
+        "manual_handoff"
+      ],
+      "scope": "Existing runtime event persistence and opt-in validation diagnostics are strengths; tracing is incomplete across boundaries."
+    }
+  ],
+  "source_references": {
+    "native_auto_policy": {
+      "path": "Frontend/app/src/main/java/com/click/service/accessibility/TouchAutomationPolicy.java",
+      "line": 14
+    },
+    "native_value_guard": {
+      "path": "Frontend/app/src/main/java/com/click/service/accessibility/TouchAutomationPolicy.java",
+      "line": 23
+    },
+    "scroll_state_whitelist": {
+      "path": "Frontend/app/src/main/java/com/click/service/overlay/ObservationRecovery.java",
+      "line": 53
+    },
+    "seed": {
+      "path": "Backend/app/repositories/task_graphs.py",
+      "line": 30
+    },
+    "action_release": {
+      "path": "Backend/app/task_graphs/settings_actions.py",
+      "line": 80
+    },
+    "navigation_release": {
+      "path": "Backend/app/task_graphs/settings_navigation.py",
+      "line": 53
+    },
+    "source_identity": {
+      "path": "Backend/app/core/validation.py",
+      "line": 30
+    },
+    "public_version": {
+      "path": "Backend/app/main.py",
+      "line": 103
+    },
+    "client_negotiation": {
+      "path": "Frontend/app/src/main/java/com/click/data/remote/AgentTurnGateway.java",
+      "line": 96
+    },
+    "settings_search_scope": {
+      "path": "Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java",
+      "line": 3691
+    },
+    "capture_debounce": {
+      "path": "Frontend/app/src/main/java/com/click/service/accessibility/ClickAccessibilityService.java",
+      "line": 134
+    },
+    "snapshot_identity": {
+      "path": "Frontend/app/src/main/java/com/click/data/snapshot/ScreenSnapshot.java",
+      "line": 167
+    },
+    "all_graph_candidates": {
+      "path": "Backend/app/services/screen_jev.py",
+      "line": 50
+    },
+    "default_provider": {
+      "path": "Backend/app/clients/runtime_agent.py",
+      "line": 32
+    },
+    "client_timeout": {
+      "path": "Frontend/app/src/main/java/com/click/data/remote/AuthenticatedHttpClient.java",
+      "line": 13
+    },
+    "server_timeout": {
+      "path": "Backend/app/services/agent_turn.py",
+      "line": 30
+    },
+    "device_validation_gates": {
+      "path": "Frontend/app/src/main/java/com/click/domain/goal/GoalCatalogClassifier.java",
+      "line": 37
+    },
+    "manual_handoff": {
+      "path": "Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java",
+      "line": 2747
+    },
+    "automation_action": {
+      "path": "Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java",
+      "line": 3243
+    },
+    "docker_dependencies": {
+      "path": "Backend/Dockerfile",
+      "line": 6
+    },
+    "ci_android": {
+      "path": ".github/workflows/backend.yml",
+      "line": 22
+    },
+    "validation_manifest": {
+      "path": "Backend/app/core/validation.py",
+      "line": 40
+    },
+    "telemetry": {
+      "path": "Backend/app/repositories/agent_sessions.py",
+      "line": 227
+    }
+  },
+  "controlled_reproductions": {
+    "seed_same_version_change": {
+      "version": "1.0.0",
+      "body_changed": true,
+      "stored_hash_unchanged": true,
+      "startup_rejected_drift": false,
+      "new_body_selected": false,
+      "explicit_registration_correctly_rejects": "GRAPH_RELEASE_IMMUTABLE"
+    },
+    "release_manifest_omits_execution_contract": {
+      "source_digest_unchanged": true,
+      "execution_contract_file_changed": true,
+      "policy_and_vocabulary_files_unchanged": true
+    },
+    "expanded_category_empty_target_response": {
+      "state_id": "S_CATEGORY",
+      "action_type": "observe_only",
+      "render_policy": {
+        "avoid_covering_target": false,
+        "recovery": {
+          "schema_version": "ai1-recovery.v1",
+          "decision": "wait",
+          "reason_code": "TARGET_NOT_VISIBLE",
+          "next_action": "manual_navigation",
+          "waiting_for": "user",
+          "recoverable": true,
+          "attempts": 0,
+          "retry_after_ms": 0,
+          "options": [
+            "retry",
+            "manual_navigation",
+            "cancel"
+          ]
+        },
+        "runtime_strategy": "wait_for_action",
+        "attempt_id": null,
+        "step_id": null
+      }
+    },
+    "frontend_scroll_state_contract_gap": {
+      "frontend_navigation_states": [
+        "S1_SETTINGS_HOME",
+        "S2_CATEGORY",
+        "S2_DISPLAY_MENU",
+        "S2_SOUND_MENU",
+        "S3_FONT_MENU"
+      ],
+      "affected_goals": 82,
+      "missing_state_counts": {
+        "S_CATEGORY": 82,
+        "S_INTERMEDIATE": 28
+      },
+      "examples": {
+        "settings.wifi.enable": [
+          "S_CATEGORY"
+        ],
+        "settings.wifi.disable": [
+          "S_CATEGORY"
+        ],
+        "settings.navigation.wifi": [
+          "S_CATEGORY"
+        ],
+        "settings.navigation.bluetooth": [
+          "S_CATEGORY"
+        ],
+        "settings.navigation.font_size": [
+          "S_CATEGORY",
+          "S_INTERMEDIATE"
+        ],
+        "settings.navigation.screen_timeout": [
+          "S_CATEGORY"
+        ],
+        "settings.navigation.display_size": [
+          "S_CATEGORY",
+          "S_INTERMEDIATE"
+        ]
+      }
+    },
+    "trailing_debounce_exposure": {
+      "configured_ms": 300,
+      "hypothetical_event_gap_ms": 100,
+      "maximum_wait_enforced_in_scheduler": false,
+      "observed_in_production": false
+    }
+  },
+  "android_audit_probes": {
+    "cases": 5,
+    "passed": 5,
+    "purpose": "Assertions record current gaps; passing is not release acceptance or an end-to-end success rate.",
+    "cases_names": [
+      "expandedStatesRejectTheSameScrollRecoveryAcceptedForLegacyStates",
+      "approvedNativeCheckedContractsStillHaveNoNativeAutoTapPermission",
+      "expandedNavigationNamesAreRejectedByTheNativeAutoTapPolicy",
+      "settingsContainerPathChurnCanResetNoProgressDetectionOneHundredTimes",
+      "unrelatedWifiStateStillChangesSettingsNavigationIdentity"
+    ]
+  },
+  "historical_validation_not_rerun_as_part_of_audit": {
+    "android_jvm": 582,
+    "ai_agent": 393,
+    "backend_related": 261,
+    "bluetooth_fixture": 7
+  },
+  "not_established": [
+    "Share of user failures attributable to each finding",
+    "Actual production DB graph hashes",
+    "Success rate or latency of the current production Jev flow",
+    "Reliability across OEMs and OS releases",
+    "Causality of dependency drift or debounce starvation in the user incidents"
+  ],
+  "references": {
+    "android_nodes": "https://developer.android.com/reference/android/view/accessibility/AccessibilityNodeInfo",
+    "android_testing": "https://developer.android.com/training/testing/fundamentals/what-to-test",
+    "repeatable_installs": "https://pip.pypa.io/en/stable/topics/repeatable-installs/",
+    "canary_releases": "https://sre.google/workbook/canarying-releases/"
+  },
+  "code_metrics_context_only": {
+    "overlay_service_lines": 4053,
+    "private_boolean_fields": 31,
+    "delayed_callback_sites": 21,
+    "fresh_snapshot_calls": 20,
+    "note": "Counts describe coupling; they do not establish a defect on their own."
+  }
+}

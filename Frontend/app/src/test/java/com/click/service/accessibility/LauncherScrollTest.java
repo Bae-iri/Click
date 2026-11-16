@@ -116,4 +116,30 @@ public class LauncherScrollTest {
         verify(root).recycle(); verify(child, atLeastOnce()).recycle();
         verify(child, never()).performAction(anyInt());
     }
+    @Test public void horizontalPagerNeverUsesAnAmbiguousGenericScrollAction() {
+        when(root.getClassName()).thenReturn("com.android.launcher3.PagedView");
+        when(root.isScrollable()).thenReturn(true);
+        when(root.getActionList()).thenReturn(List.of(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD));
+        when(root.performAction(anyInt())).thenReturn(true);
+        doAnswer(call->{((Rect)call.getArgument(0)).set(0,100,1080,2100);return null;}).when(root).getBoundsInScreen(any());
+        doReturn(true).when(service).dispatchGesture(any(),any(),any());
+        assertTrue(ClickAccessibilityService.swipeHomePage(true,"com.sec.android.app.launcher",43));
+        verify(root,never()).performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+        verify(service).dispatchGesture(any(),any(),any());
+    }
+
+    @Test public void failedDirectionalPagingDoesNotFallBackToGenericVerticalSemantics() {
+        when(root.getClassName()).thenReturn("com.android.launcher3.PagedView");
+        when(root.isScrollable()).thenReturn(true);
+        when(root.getActionList()).thenReturn(List.of(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD,
+                AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT));
+        when(root.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId())).thenReturn(false);
+        when(root.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)).thenReturn(true);
+        doAnswer(call->{((Rect)call.getArgument(0)).set(0,100,1080,2100);return null;}).when(root).getBoundsInScreen(any());
+        doReturn(true).when(service).dispatchGesture(any(),any(),any());
+        assertTrue(ClickAccessibilityService.swipeHomePage(true,"com.sec.android.app.launcher",43));
+        verify(root,never()).performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
+        verify(service).dispatchGesture(any(),any(),any());
+    }
+
 }

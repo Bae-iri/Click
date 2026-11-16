@@ -5,4 +5,5 @@
     <item name="task_flow_collapse" type="id" />
     <item name="task_flow_input" type="id" />
     <item name="task_flow_replay" type="id" />
+    <item name="task_flow_edit" type="id" />
 </resources>

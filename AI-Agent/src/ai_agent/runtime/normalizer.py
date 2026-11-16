@@ -35,6 +35,23 @@ def normalize_accessibility_tree(
     for node in nodes:
         if not node.visible_to_user:
             continue
+        # OEM SeekBars may expose checked tick children as SeekBars too. Only
+        # suppress a valueless native child inside its real parent range; two
+        # actual ranges must remain distinct and ambiguous.
+        parent = nodes_by_id.get(node.parent_id)
+        if (parent and infer_role(node) == 'slider' and extract_numeric_value(node) is None
+                and infer_role(parent) == 'slider' and parent.visible_to_user and parent.enabled
+                and node.package_name == parent.package_name and node.window_id == parent.window_id
+                and extract_confidence(node) is None and extract_confidence(parent) is None
+                and not node.node_id.startswith('vision:') and not parent.node_id.startswith('vision:')
+                and _has_area(node.bounds_in_screen) and _has_area(parent.bounds_in_screen)):
+            progress, minimum, maximum = (parent.extras.get(k) for k in ('progress', 'min', 'max'))
+            bounds, child = parent.bounds_in_screen, node.bounds_in_screen
+            if (all(type(v) in (int, float) and isfinite(v) for v in (progress, minimum, maximum))
+                    and minimum < maximum and minimum <= progress <= maximum
+                    and bounds[0] <= child[0] < child[2] <= bounds[2]
+                    and bounds[1] <= child[1] < child[3] <= bounds[3]):
+                continue
         label = _merge_label(node)
         # Numeric descriptions describe a slider's changing value, not its setting.
         if (infer_role(node) == 'slider' and inherited_labels.get(node.node_id)

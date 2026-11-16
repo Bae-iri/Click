@@ -7,7 +7,7 @@
 - 실행 승인: **181개**, 분류 전용: **0개**
 - `키워드 그룹`의 각 괄호에서는 하나 이상, 괄호와 괄호 사이는 모두 충족해야 분류 후보가 된다.
 - `catalog_only`는 Goal 추출만 가능하다는 뜻이다. 승인 Task Graph가 없으므로 실제 작업은 시작하지 않는다.
-- 설정 변경 상태 검증 경로: **50개**, 직접 진행 안내: **39개**. 승인 표시는 실행 안내를 시작할 수 있다는 뜻이며 실기기 검증 완료를 뜻하지 않는다.
+- 설정 변경 상태 검증 경로: **56개**, 직접 진행 안내: **33개**. 승인 표시는 실행 안내를 시작할 수 있다는 뜻이며 실기기 검증 완료를 뜻하지 않는다.
 - `settings_assisted`는 화면 안내 뒤 사용자가 직접 선택·입력한다. 사용자 완료 응답은 기술 검증과 별도 기록한다.
 - 쿠팡: 화면 이동 **8개**, 확인 후 조작·반영 검사 **1개**, 직접 진행 안내 **62개**. 실기기 검증은 별도이며 로그인·개인정보 입력·거래 확정은 사용자가 진행한다.
 - 이전 v2.0은 82개였고, v2.1은 160개였고, v2.2는 설정 화면 열기 경로를 추가했다.
@@ -35,15 +35,15 @@
 | 17 | `settings.dark_mode.enable` | 다크 모드 켜기 | (다크모드 / 어두운테마 / 야간모드) + (켜 / 적용 / 바꿔 / 키고 / 키는 / 킬 / 켤) | approved (`SET-dark_mode-enable`) | normal |
 | 18 | `settings.dark_mode.disable` | 다크 모드 끄기 | (다크모드 / 어두운테마 / 야간모드) + (꺼 / 해제 / 밝은테마 / 끄고 / 끄는 / 끌) | approved (`SET-dark_mode-disable`) | normal |
 | 19 | `settings.screen_timeout.set` | 화면 자동 꺼짐 시간 변경 | (화면자동꺼짐 / 화면꺼짐시간 / 스크린타임아웃) + (변경 / 바꿔 / 늘려 / 줄여 / 설정) | approved · 직접 진행 (`SET-screen_timeout-set`) | normal |
-| 20 | `settings.display_size.increase` | 화면 요소 크게 하기 | (화면크기 / 화면요소 / 아이콘크기 / 디스플레이크기) + (키워 / 크게 / 확대 / 늘려) | approved · 직접 진행 (`SET-display_size-increase`) | normal |
-| 21 | `settings.display_size.decrease` | 화면 요소 작게 하기 | (화면크기 / 화면요소 / 아이콘크기 / 디스플레이크기) + (줄여 / 작게 / 축소) | approved · 직접 진행 (`SET-display_size-decrease`) | normal |
+| 20 | `settings.display_size.increase` | 화면 요소 크게 하기 | (화면크기 / 화면요소 / 아이콘크기 / 디스플레이크기) + (키워 / 크게 / 확대 / 늘려) | approved (`SET-display_size-increase`) | normal |
+| 21 | `settings.display_size.decrease` | 화면 요소 작게 하기 | (화면크기 / 화면요소 / 아이콘크기 / 디스플레이크기) + (줄여 / 작게 / 축소) | approved (`SET-display_size-decrease`) | normal |
 | 22 | `settings.volume.increase` | 미디어 음량 높이기 | (소리 / 볼륨 / 음량 / 미디어 / 음악 / 동영상) + (키워 / 크게 / 높여 / 올려 / 잘안들려) | approved (`SET-volume-increase`) | normal |
 | 23 | `settings.volume.decrease` | 미디어 음량 낮추기 | (소리 / 볼륨 / 음량 / 미디어 / 음악 / 동영상) + (줄여 / 작게 / 낮춰 / 시끄러워) | approved (`SET-volume-decrease`) | normal |
-| 24 | `settings.mute.enable` | 무음 모드 켜기 | (무음 / 소리안나게 / 조용히) + (켜 / 설정 / 바꿔 / 키고 / 키는 / 킬 / 켤) | approved · 직접 진행 (`SET-mute-enable`) | normal |
-| 25 | `settings.mute.disable` | 무음 모드 끄기 | (무음 / 소리안나게) + (꺼 / 해제 / 소리나게 / 끄고 / 끄는 / 끌) | approved · 직접 진행 (`SET-mute-disable`) | normal |
+| 24 | `settings.mute.enable` | 무음 모드 켜기 | (무음 / 소리안나게 / 조용히) + (켜 / 설정 / 바꿔 / 키고 / 키는 / 킬 / 켤) | approved (`SET-mute-enable`) | normal |
+| 25 | `settings.mute.disable` | 무음 모드 끄기 | (무음 / 소리안나게) + (꺼 / 해제 / 소리나게 / 끄고 / 끄는 / 끌) | approved (`SET-mute-disable`) | normal |
 | 26 | `settings.ringtone.change` | 벨소리 변경 | (벨소리 / 전화소리 / 링톤) + (바꿔 / 변경 / 선택) | approved · 직접 진행 (`SET-ringtone-change`) | normal |
-| 27 | `settings.vibrate.enable` | 진동 모드 켜기 | (진동 / 바이브레이션) + (켜 / 설정 / 바꿔 / 키고 / 키는 / 킬 / 켤) | approved · 직접 진행 (`SET-vibrate-enable`) | normal |
-| 28 | `settings.vibrate.disable` | 진동 모드 끄기 | (진동 / 바이브레이션) + (꺼 / 해제 / 끄고 / 끄는 / 끌) | approved · 직접 진행 (`SET-vibrate-disable`) | normal |
+| 27 | `settings.vibrate.enable` | 진동 모드 켜기 | (진동 / 바이브레이션) + (켜 / 설정 / 바꿔 / 키고 / 키는 / 킬 / 켤) | approved (`SET-vibrate-enable`) | normal |
+| 28 | `settings.vibrate.disable` | 진동 모드 끄기 | (진동 / 바이브레이션) + (꺼 / 해제 / 끄고 / 끄는 / 끌) | approved (`SET-vibrate-disable`) | normal |
 | 29 | `settings.notifications.enable` | 앱 알림 켜기 | (알림 / 푸시) + (켜 / 허용 / 받게 / 키고 / 키는 / 킬 / 켤) | approved · 직접 진행 (`SET-notifications-enable`) | normal |
 | 30 | `settings.notifications.disable` | 앱 알림 끄기 | (알림 / 푸시) + (꺼 / 차단 / 안받게 / 끄고 / 끄는 / 끌) | approved · 직접 진행 (`SET-notifications-disable`) | normal |
 | 31 | `settings.location.enable` | 위치 서비스 켜기 | (위치 / gps) + (켜 / 허용 / 활성화 / 키고 / 키는 / 킬 / 켤) | approved (`SET-location-enable`) | normal |

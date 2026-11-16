@@ -50,7 +50,8 @@ def already_satisfied(graph, nodes, settings):
     setting = graph.definition.required_slots.get('setting')
     if setting == 'wifi':
         return wifi_already(graph, nodes, settings)
-    if setting == 'dark_mode':
+    from ai_agent.task_graph.settings import CHOICES
+    if setting in CHOICES:
         from ai_agent.runtime.setting_choices import already_satisfied as choice_already
         found = choice_already(graph, nodes, settings)
         if found is not None:
@@ -83,5 +84,9 @@ def manual_handoff(graph, nodes, raw_nodes):
                     and state.required_keyword_groups
                     and all(normalize_text(title.label) in {normalize_text(w) for w in group}
                         for group in state.required_keyword_groups)):
-                return edge
+                from dataclasses import replace
+                from ai_agent.task_graph.assisted_guidance import handoff_message
+                page = next(w for group in state.required_keyword_groups for w in group
+                    if normalize_text(w) == normalize_text(title.label))
+                return replace(edge, guide_message=handoff_message(graph.definition.goal_type,page,edge.guide_message))
     return None

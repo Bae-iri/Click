@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-12",
+  "changes": [
+    "Existing Clue failure artwork beside a short speech bubble on negative feedback.",
+    "Small later action at the right of the title; 48dp minimum button height.",
+    "Removed the explanatory text below the input.",
+    "Treat absent, JSON null and legacy literal null drafts as empty while preserving real text.",
+    "Narration uses the same concise text as the displayed bubble."
+  ],
+  "validation": {
+    "unit_tests": 231,
+    "failures": 0,
+    "errors": 0,
+    "visual_previews": [
+      "evidence/2026-11-12-negative-feedback.png",
+      "evidence/2026-11-12-negative-feedback-large-text.png"
+    ],
+    "large_system_font_scale": 1.5,
+    "apk_build": "passed",
+    "server_contract_preflight": "passed",
+    "data_preserving_install": "passed",
+    "installed_package": "com.click",
+    "apk_sha256": "1cc44807883a8e0c6a0dd510df2e5acc7d0f8e6771ecba96d3b76100ab6d50d5",
+    "apology_visual_previews": 2
+  },
+  "integration": {
+    "backend_change": false,
+    "render_redeploy_required": false,
+    "concurrent_source_edits": "Applied only the feedback patch to the active working tree; other ongoing changes preserved."
+  },
+  "negative_message": "죄송합니다.\n불편했던 점을\n알려주세요.",
+  "layout_followup": {
+    "negative_input_min_lines": 2,
+    "negative_input_max_lines": 3,
+    "clue_size_dp": [
+      108,
+      148
+    ],
+    "bubble_min_height_dp": 124,
+    "tail": "14dp side tail pointing left toward Clue; text padding reserves the tail area",
+    "visual_previews_passed": 2
+  }
+}

@@ -55,6 +55,14 @@ public class FloatingReferenceFlowTest {
                         EditText input = (EditText) description(panel, "확인할 내용 입력");
                         input.setText("   "); assertFalse(find(panel, "입력하기").isEnabled());
                         input.setText("화면 밝기를 낮춰줘");
+                        View microphone = panel.findViewWithTag("goal_input_microphone");
+                        assertNotNull(microphone);
+                        assertSame(input.getParent(), microphone.getParent());
+                        microphone.performClick();
+                        assertTrue(replies.voiceOpened);
+                        assertTrue(replies.narrationStopped);
+                        assertNull(replies.answer);
+                        assertEquals("화면 밝기를 낮춰줘", input.getText().toString());
                         find(panel, "입력하기").performClick();
                         assertEquals("화면 밝기를 낮춰줘", replies.answer);
                         assertNull(replies.rephrased);
@@ -179,7 +187,7 @@ public class FloatingReferenceFlowTest {
                 });
                 InstrumentationRegistry.getInstrumentation().waitForIdleSync();
                 scenario.onActivity(activity -> {
-                    readable(find(shown[0], "다시 듣기")); readable(find(shown[0], "줄이기"));
+                    readable(find(shown[0], screen == 1 ? "내용 수정" : "다시 듣기")); readable(find(shown[0], "줄이기"));
                     footerVisible(shown[0]);
                     if (screen == 0) readable(find(shown[0], "휴대폰 전체"));
                     if (screen == 1) readable(find(shown[0], "안내 시작하기"));
@@ -239,7 +247,8 @@ public class FloatingReferenceFlowTest {
         try (FileOutputStream out = new FileOutputStream(new File(InstrumentationRegistry.getInstrumentation().getTargetContext().getCacheDir(), name + ".png"))) { bitmap.compress(Bitmap.CompressFormat.PNG, 100, out); } catch (Exception error) { throw new AssertionError(error); } bitmap.recycle();
     }
     private static final class Replies implements TaskFlowOverlayView.Listener {
-        String answer, rephrased, command; boolean confirmed, collapsed;
+        String answer, rephrased, command; boolean confirmed, collapsed, voiceOpened, narrationStopped;
+        public void openInput() { voiceOpened = true; } public void stopGuidance() { narrationStopped = true; }
         public void chooseGoal(JSONObject goal) {} public void clarify(String choice) {} public void result(String answer) {} public void adjust(String reason) {} public void control(String command) { this.command = command; }
         public void rephrase(String value) { rephrased = value; } public void answerGoalInput(String value) { answer = value; }
         public void confirmRequirements() { confirmed = true; } public void collapse() { collapsed = true; }

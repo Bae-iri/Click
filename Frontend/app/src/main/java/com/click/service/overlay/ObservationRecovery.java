@@ -51,9 +51,7 @@ public final class ObservationRecovery {
                     || "TARGET_NOT_FOUND".equals(fallback.optString("reason_code")));
     }
     private static boolean navigationMenu(String stateId) {
-        return "S1_SETTINGS_HOME".equals(stateId) || "S2_DISPLAY_MENU".equals(stateId)
-                || "S3_FONT_MENU".equals(stateId) || "S2_SOUND_MENU".equals(stateId)
-                || "S2_CATEGORY".equals(stateId);
+        return com.click.data.snapshot.SettingsCapabilities.navigationState(stateId);
     }
     /** Older primary-Jev responses omitted the missing-target reason. A recognized
      * Settings list can still be explored, but never while an action result is pending.
@@ -84,10 +82,12 @@ public final class ObservationRecovery {
     public static boolean sameNavigationScreen(ScreenSnapshot expected, ScreenSnapshot current) {
         return settingsScreen(expected) && settingsScreen(current) && expected.activeWindowId != null
                 && expected.activeWindowId.equals(current.activeWindowId)
-                && expected.withAdjustmentValues(null,null).sameNativeContent(current.withAdjustmentValues(null,null));
+                && !expected.nodes.isEmpty() && expected.privacyMaskingReady && current.privacyMaskingReady
+                && com.click.data.snapshot.ScreenIdentity.navigationFingerprint(expected).equals(
+                    com.click.data.snapshot.ScreenIdentity.navigationFingerprint(current));
     }
     public static String navigationFingerprint(ScreenSnapshot screen) {
-        return screen.navigation != null ? screen.navigation.fingerprint : screen.withAdjustmentValues(null,null).observationFingerprint();
+        return screen.navigation != null ? screen.navigation.fingerprint : com.click.data.snapshot.ScreenIdentity.navigationFingerprint(screen);
     }
     private static boolean settingsScreen(ScreenSnapshot screen) {
         return screen != null && TouchAutomationPolicy.settingsPackage(screen.packageName);
@@ -115,7 +115,7 @@ public final class ObservationRecovery {
         boolean font = goalType.startsWith("settings.font_size.");
         boolean brightness = goalType.startsWith("settings.brightness.");
         boolean volume = goalType.startsWith("settings.volume.");
-        if (!font && !brightness && !volume) return null;
+        if (!font && !brightness && !volume) return com.click.data.snapshot.SettingsCapabilities.targetLabel(goalType,stateId);
         if ("S0_UNKNOWN".equals(stateId)) return "설정";
         if ("S1_SETTINGS_HOME".equals(stateId)) return volume ? "소리 및 진동" : "디스플레이";
         if ("S2_DISPLAY_MENU".equals(stateId)) return font ? "글자 크기와 스타일" : brightness ? "밝기" : null;

@@ -14,6 +14,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
+import com.click.ui.common.ClickTextScale;
 
 /** Welcome, two feature introductions, and a ready screen in the independent design preview. */
 public final class OnboardingActivity extends Activity {
@@ -24,7 +25,7 @@ public final class OnboardingActivity extends Activity {
     };
     private static final int[] DESCRIPTIONS = {
             R.string.onboarding_description, R.string.onboarding_question_description,
-            0, R.string.onboarding_ready_description
+            R.string.onboarding_task_description, R.string.onboarding_ready_description
     };
     private int page;
     private final OnboardingDrawables.Check[] checks = new OnboardingDrawables.Check[3];
@@ -52,6 +53,12 @@ public final class OnboardingActivity extends Activity {
                 (view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
                         view.setClipBounds(new Rect(0, 0, right - left, bottom - top)));
 
+        // Text is already chosen on the preceding screen; use it in the introduction too.
+        for (int id : new int[]{R.id.onboarding_bubble, R.id.onboarding_feature_bubble,
+                R.id.onboarding_guide_bubble, R.id.onboarding_quote, R.id.onboarding_start_label,
+                R.id.onboarding_skip, R.id.onboarding_back, R.id.guide_entry}) {
+            ClickTextScale.applyTree(findViewById(id));
+        }
         setLineHeight(R.id.onboarding_title, 1.28f);
         setLineHeight(R.id.onboarding_description, 1.5f);
         setLineHeight(R.id.onboarding_bubble, 1.35f);
@@ -61,7 +68,9 @@ public final class OnboardingActivity extends Activity {
             findViewById(R.id.onboarding_title).setAccessibilityHeading(true);
         }
         View bubble = findViewById(R.id.onboarding_bubble);
-        bubble.setBackground(new OnboardingDrawables.Bubble(getResources()));
+        bubble.setBackground(new OnboardingDrawables.Bubble(getResources(),
+                getColor(R.color.onboarding_blue), .4f, 28f));
+        ((TextView) bubble).setTextColor(Color.WHITE);
         addShadow(bubble, 4);
         findViewById(R.id.onboarding_quote).setBackground(new OnboardingDrawables.Bubble(
                 getResources(), getColor(R.color.onboarding_blue_light), .78f, 28f));
@@ -103,14 +112,15 @@ public final class OnboardingActivity extends Activity {
         TextView title = findViewById(R.id.onboarding_title);
         TextView description = findViewById(R.id.onboarding_description);
         title.setText(TITLES[page]);
-        title.setGravity(welcome ? Gravity.START : Gravity.CENTER);
-        description.setGravity(welcome ? Gravity.START : Gravity.CENTER);
+        title.setGravity(Gravity.START);
+        description.setGravity(Gravity.START);
         int textInset = welcome ? dp(16) : 0;
         title.setPadding(textInset, 0, textInset, 0);
         description.setPadding(textInset, 0, textInset, 0);
         description.setVisibility(DESCRIPTIONS[page] == 0 ? View.GONE : View.VISIBLE);
         if (DESCRIPTIONS[page] != 0) description.setText(DESCRIPTIONS[page]);
-        visible(R.id.onboarding_quote, page == 2);
+        fitWelcomePage(welcome, title, description);
+        visible(R.id.onboarding_quote, false);
         visible(R.id.onboarding_welcome_scene, welcome);
         visible(R.id.onboarding_feature_scene, feature);
         visible(R.id.onboarding_ready_scene, false);
@@ -119,13 +129,15 @@ public final class OnboardingActivity extends Activity {
         visible(R.id.onboarding_start_arrow, page != 2);
         visible(R.id.guide_entry, false);
         if (feature) {
-            ((OnboardingFeatureLayout) findViewById(R.id.onboarding_feature_scene)).setTask(page == 2);
             TextView bubble = findViewById(R.id.onboarding_feature_bubble);
             bubble.setText(page == 1 ? R.string.onboarding_question_bubble : R.string.onboarding_task_bubble);
             bubble.setTextColor(page == 1 ? getColor(R.color.onboarding_bubble_text) : Color.WHITE);
             bubble.setBackground(new OnboardingDrawables.Bubble(getResources(),
-                    page == 1 ? Color.WHITE : getColor(R.color.onboarding_blue), .48f, 32f));
+                    page == 1 ? Color.WHITE : getColor(R.color.onboarding_blue), .68f, 26f, true));
             addShadow(bubble, page == 1 ? 4 : 6);
+            TextView guide = findViewById(R.id.onboarding_guide_bubble);
+            guide.setBackground(new OnboardingDrawables.Bubble(getResources(),
+                    getColor(R.color.onboarding_blue_light), .5f, 18f));
         }
         int[] bars = {R.id.onboarding_step_one, R.id.onboarding_step_two};
         findViewById(R.id.onboarding_step_three).setVisibility(View.GONE);
@@ -158,6 +170,44 @@ public final class OnboardingActivity extends Activity {
             title.announceForAccessibility(title.getText());
         }
         if (page == 3) prepareChecklistAnimation();
+    }
+
+    private void fitWelcomePage(boolean welcome, TextView title, TextView description) {
+        // Resize text within readable bounds before reducing the decorative character.
+        if (welcome) {
+            fitText(title, 16, 24, 3, 1.25f);
+            fitText(description, 10, 16, 3, 1.4f);
+            fitText(findViewById(R.id.onboarding_bubble), 10, 16, 2, 1.3f);
+        } else {
+            title.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE);
+            description.setAutoSizeTextTypeWithDefaults(TextView.AUTO_SIZE_TEXT_TYPE_NONE);
+            title.setMaxLines(Integer.MAX_VALUE); description.setMaxLines(Integer.MAX_VALUE);
+            title.setTextSize(ClickTextScale.size(this, 24));
+            description.setTextSize(ClickTextScale.size(this, 16));
+            setLineHeight(R.id.onboarding_title, 1.28f);
+            setLineHeight(R.id.onboarding_description, 1.5f);
+        }
+        android.widget.LinearLayout.LayoutParams art =
+                (android.widget.LinearLayout.LayoutParams) findViewById(R.id.onboarding_art).getLayoutParams();
+        art.height = welcome ? 0 : android.view.ViewGroup.LayoutParams.WRAP_CONTENT;
+        art.topMargin = dp(welcome ? 12 : 24);
+        findViewById(R.id.onboarding_art).setLayoutParams(art);
+        View body = findViewById(R.id.onboarding_body);
+        body.setPadding(0, dp(welcome ? 8 : 16), 0, dp(welcome ? 8 : 16));
+        android.widget.LinearLayout.LayoutParams spacing =
+                (android.widget.LinearLayout.LayoutParams) description.getLayoutParams();
+        spacing.topMargin = dp(welcome ? 12 : 18); description.setLayoutParams(spacing);
+        ScrollView scroll = findViewById(R.id.onboarding_scroll);
+        scroll.setVerticalScrollBarEnabled(!welcome);
+        scroll.setOverScrollMode(welcome ? View.OVER_SCROLL_NEVER : View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+    }
+
+    private void fitText(TextView view, int minSize, int maxSize, int lines, float lineSpacing) {
+        view.setMaxLines(lines);
+        view.setLineSpacing(0, lineSpacing);
+        view.setAutoSizeTextTypeUniformWithConfiguration(minSize,
+                Math.max(minSize, Math.round(ClickTextScale.size(this, maxSize))), 1,
+                android.util.TypedValue.COMPLEX_UNIT_SP);
     }
 
     private void prepareChecklistAnimation() {

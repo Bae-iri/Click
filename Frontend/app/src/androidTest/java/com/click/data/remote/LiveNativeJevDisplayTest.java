@@ -40,8 +40,10 @@ public class LiveNativeJevDisplayTest {
     private final File reportFile = new File(app.getCacheDir(), "native-jev-display-result.json");
 
     @Test public void actualSettingsDisplayDecisionsAndNavigation() throws Exception {
-        boolean captureOnly = "true".equals(InstrumentationRegistry.getArguments().getString("captureNativeOnly"));
-        assumeTrue(captureOnly || "true".equals(InstrumentationRegistry.getArguments().getString("liveJevDisplay")));
+        boolean captureFontMenuOnly = "true".equals(InstrumentationRegistry.getArguments().getString("captureFontMenuOnly"));
+        boolean captureOnly = captureFontMenuOnly || "true".equals(InstrumentationRegistry.getArguments().getString("captureNativeOnly"));
+        boolean followFontMenu = "true".equals(InstrumentationRegistry.getArguments().getString("liveFontMenu"));
+        assumeTrue(captureOnly || followFontMenu || "true".equals(InstrumentationRegistry.getArguments().getString("liveJevDisplay")));
         JSONObject report = new JSONObject().put("source", "physical_device_native_settings")
                 .put("server", BuildConfig.CLICK_API_BASE_URL).put("actual_clicks", false)
                 .put("mode", captureOnly ? "native_capture_only" : "native_live_server").put("external_requests", 0)
@@ -70,17 +72,20 @@ public class LiveNativeJevDisplayTest {
             Settings.Secure.putString(app.getContentResolver(), key, String.join(":", services));
             Settings.Secure.putInt(app.getContentResolver(), Settings.Secure.ACCESSIBILITY_ENABLED, 1);
             for (int attempt = 0; attempt < 50 && ClickAccessibilityService.freshSnapshot() == null; attempt++) SystemClock.sleep(100);
-            app.startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            app.startActivity(new Intent(captureFontMenuOnly ? Settings.ACTION_DISPLAY_SETTINGS : Settings.ACTION_SETTINGS)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             ScreenSnapshot first = null;
             for (int attempt = 0; attempt < 60; attempt++) {
                 SystemClock.sleep(200);
                 first = ClickAccessibilityService.freshSnapshot();
-                if (settings(first) && first.nodes.stream().anyMatch(n -> n.visibleToUser && n.enabled && "디스플레이".equals(n.text))) break;
+                if (settings(first) && first.nodes.stream().anyMatch(n -> n.visibleToUser && n.enabled
+                        && (captureFontMenuOnly ? "글자 크기와 스타일" : "디스플레이").equals(n.text))) break;
                 if (attempt > 10 && attempt % 6 == 0 && scroll(automation.getRootInActiveWindow()))
                     report.put("native_scrolls", report.optInt("native_scrolls") + 1);
             }
             assertNotNull("Native accessibility screen is unavailable", first);
-            assertTrue("Display must be visible on the actual Settings home", first.nodes.stream().anyMatch(n -> n.visibleToUser && n.enabled && "디스플레이".equals(n.text)));
+            assertTrue("Requested menu must be visible on the actual Settings page", first.nodes.stream().anyMatch(n -> n.visibleToUser && n.enabled
+                    && (captureFontMenuOnly ? "글자 크기와 스타일" : "디스플레이").equals(n.text)));
             SettingsScreenPrivacy privacy;
             try (java.io.InputStream vocabulary = app.getAssets().open("vision_vocabulary.json");
                  java.io.InputStream policy = app.getAssets().open("screen_privacy_policy.json")) {
@@ -89,6 +94,8 @@ public class LiveNativeJevDisplayTest {
             if (captureOnly) {
                 JSONObject filtered = privacy.filter(new JSONObject().put("accessibility_tree", new JSONObject(first.toJson())));
                 Files.write(new File(app.getCacheDir(), "native-jev-display-screen.json").toPath(),
+                        filtered.getJSONObject("accessibility_tree").toString().getBytes(StandardCharsets.UTF_8));
+                if (captureFontMenuOnly) Files.write(new File(app.getCacheDir(), "native-font-menu-screen-0.json").toPath(),
                         filtered.getJSONObject("accessibility_tree").toString().getBytes(StandardCharsets.UTF_8));
                 report.put("filtered_nodes", filtered.getJSONObject("accessibility_tree").getJSONArray("nodes").length())
                         .put("font_scale_unchanged", Math.abs(originalScale - Settings.System.getFloat(
@@ -105,7 +112,7 @@ public class LiveNativeJevDisplayTest {
             JSONObject goal = new JSONObject().put("catalog_version", catalog.getString("version"))
                     .put("goal_type", "settings.font_size.increase").put("target_app", "android_settings")
                     .put("slots", new JSONObject().put("setting", "font_size").put("direction", "increase"));
-            for (int turn = 0; turn < 5; turn++) {
+            for (int turn = 0; turn < (followFontMenu ? 1 : 5); turn++) {
                 SystemClock.sleep(700);
                 ScreenSnapshot nativeScreen = ClickAccessibilityService.freshSnapshot();
                 assertTrue("Actual Settings screen must remain available", settings(nativeScreen));
@@ -164,8 +171,59 @@ public class LiveNativeJevDisplayTest {
                 last = new JSONObject(http.post(AgentTurnContract.PATH, privacy.filter(body).toString()).body);
                 report.put("after_click_state", last.optString("state_id"));
                 report.put("after_click_selection", last.getJSONObject("metadata").optJSONObject("debug"));
+                if (followFontMenu) {
+                    JSONArray fontTurns = new JSONArray();
+                    report.put("font_menu_observations", fontTurns);
+                    boolean reachedFont = false;
+                    boolean movedList = false;
+                    for (int turn = 0; turn < 8; turn++) {
+                        SystemClock.sleep(900);
+                        ScreenSnapshot screen = ClickAccessibilityService.freshSnapshot();
+                        assertTrue("Display must remain available", settings(screen));
+                        JSONObject next = command(contract, session, last, "observe")
+                                .put("accessibility_tree", new JSONObject(screen.toJson()));
+                        if (movedList) next.put("user_action_event", AgentActionEvents.of(
+                                AgentActionEvents.MANUAL_OVERRIDE, null, null, null, System.currentTimeMillis()));
+                        movedList = false;
+                        JSONObject filtered = privacy.filter(next);
+                        Files.write(new File(app.getCacheDir(), "native-font-menu-screen-" + turn + ".json").toPath(),
+                                filtered.getJSONObject("accessibility_tree").toString().getBytes(StandardCharsets.UTF_8));
+                        report.put("external_requests", report.getInt("external_requests") + 1);
+                        last = new JSONObject(http.post(AgentTurnContract.PATH, filtered.toString()).body);
+                        JSONObject instruction = last.getJSONObject("guide_command");
+                        boolean fontTarget = targetHasLabel(screen, instruction.optString("target_node_id"), "글자 크기와 스타일");
+                        JSONObject metadata = last.getJSONObject("metadata");
+                        JSONObject policy = instruction.optJSONObject("render_policy");
+                        boolean canScroll = com.click.service.overlay.ObservationRecovery.canSearchByScrolling(
+                                last.optString("state_id"), policy, screen)
+                                || com.click.service.overlay.ObservationRecovery.canSearchJevWait(
+                                        last.optString("state_id"), policy, metadata, screen);
+                        fontTurns.put(new JSONObject().put("state", last.optString("state_id"))
+                                .put("action", instruction.optString("action_type")).put("font_target", fontTarget)
+                                .put("search_allowed", canScroll).put("policy", policy)
+                                .put("debug", metadata.optJSONObject("debug")));
+                        write(report);
+                        if (fontTarget && "tap".equals(instruction.optString("action_type"))) {
+                            assertTrue("Approved font menu must be clickable", clickLabel(automation, "글자 크기와 스타일"));
+                            for (int attempt = 0; attempt < 30; attempt++) {
+                                SystemClock.sleep(200);
+                                if (independentTitle(ClickAccessibilityService.freshSnapshot(), "글자 크기와 스타일")) {
+                                    reachedFont = true; break;
+                                }
+                            }
+                            break;
+                        }
+                        if (canScroll) movedList = ClickAccessibilityService.performSettingsScroll(true,
+                                screen.packageName, screen.activeWindowId);
+                    }
+                    report.put("font_menu_reached", reachedFont);
+                    write(report);
+                    assertTrue("The approved route must reach the real font menu after Display", reachedFont);
+                }
                 instrumentation.sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK);
             }
+            if (followFontMenu) assertTrue("The live probe must actually reach the font menu",
+                    report.optBoolean("font_menu_reached", false));
             report.put("font_scale_unchanged", Math.abs(originalScale - Settings.System.getFloat(
                     app.getContentResolver(), Settings.System.FONT_SCALE, 1f)) < .001f);
             report.put("probe_completed", true);
@@ -233,11 +291,14 @@ public class LiveNativeJevDisplayTest {
         return false;
     }
     private boolean clickDisplay(UiAutomation automation) {
+        return clickLabel(automation, "디스플레이");
+    }
+    private boolean clickLabel(UiAutomation automation, String label) {
         AccessibilityNodeInfo root = automation.getRootInActiveWindow();
         if (root == null || !"com.android.settings".contentEquals(root.getPackageName())) return false;
         try {
-            for (AccessibilityNodeInfo match : root.findAccessibilityNodeInfosByText("디스플레이")) {
-                if (!match.isVisibleToUser() || !"디스플레이".contentEquals(match.getText())) continue;
+            for (AccessibilityNodeInfo match : root.findAccessibilityNodeInfosByText(label)) {
+                if (!match.isVisibleToUser() || !label.contentEquals(match.getText())) continue;
                 for (AccessibilityNodeInfo row = match; row != null; row = row.getParent())
                     if (row.isClickable()) return row.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }

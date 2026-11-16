@@ -72,9 +72,22 @@ public final class SettingsScreenPrivacy {
             if (vision != null) throw new Blocked();
             return result;
         }
+        JSONObject window=tree.optJSONObject("window_context");
+        if(window!=null){
+            java.util.Iterator<String> names=window.keys();
+            while(names.hasNext())if(!Set.of("settings_activity","window_kind","keyboard_visible").contains(names.next()))throw new Blocked();
+            Object activity=window.opt("settings_activity"),kind=window.opt("window_kind"),keyboard=window.opt("keyboard_visible");
+            if(activity!=null && !(activity instanceof String) || kind!=null && !(kind instanceof String)
+                    || keyboard!=null && !(keyboard instanceof Boolean))throw new Blocked();
+            try{tree.put("window_context",new NativeWindowContext(window.optString("settings_activity","UNKNOWN"),
+                    window.optString("window_kind","UNKNOWN"),window.optBoolean("keyboard_visible")).toJson());}
+            catch(IllegalArgumentException invalid){throw new Blocked();}
+        }
         String pkg = tree.optString("package_name");
+        NativeControlSurface.Match surface=NativeControlSurface.identify(tree);
+        boolean controlScope=surface!=null && (setting==null || setting.equals(surface.setting()));
         boolean commerceScope = "commerce".equals(setting);
-        if (!settings.contains(pkg) && !launchers.contains(pkg) && !(commerceScope && commerce.contains(pkg)))
+        if (!settings.contains(pkg) && !launchers.contains(pkg) && !(commerceScope && commerce.contains(pkg)) && !controlScope)
             throw new Blocked(Blocked.Reason.UNSUPPORTED_APP);
         if (commerceScope && !commerce.contains(pkg) && !launchers.contains(pkg))
             throw new Blocked(Blocked.Reason.UNSUPPORTED_APP);
@@ -88,7 +101,7 @@ public final class SettingsScreenPrivacy {
         Set<String> hiddenRegions = privateNodes(byId);
         JSONArray safeNodes = new JSONArray();
         Set<String> needed = new HashSet<>();
-        boolean recognized = false;
+        boolean recognized = controlScope;
         for (int i = 0; i < nodes.length(); i++) {
             JSONObject node = nodes.getJSONObject(i);
             if (!node.optBoolean("visible_to_user", true)) continue;
@@ -103,6 +116,7 @@ public final class SettingsScreenPrivacy {
             if (!commerceScope && !description(node) && independent(node, byId) && (blockedTitles.contains(normalize(node.optString("text")))
                     || blockedTitles.contains(normalize(node.optString("content_description")))))
                 throw new Blocked(Blocked.Reason.SENSITIVE_SCREEN);
+            if(controlScope && !surface.nodeIds().contains(node.optString("node_id")))continue;
             if(otherSettingControl(node,byId,setting))continue;
             String resource = node.optString("resource_id");
             String resourceName = resource.substring(resource.lastIndexOf('/') + 1);
@@ -195,7 +209,7 @@ public final class SettingsScreenPrivacy {
         }
         JSONObject safeTree = new JSONObject();
         for (String key : new String[]{"package_name", "active_window_id", "captured_at", "observation_id",
-                "screen_revision", "captured_at_ms", "screen_width", "screen_height"})
+                "screen_revision", "captured_at_ms", "screen_width", "screen_height", "window_context"})
             if (tree.has(key)) safeTree.put(key, tree.get(key));
         JSONObject applied = tree.optJSONObject("applied_settings");
         if (applied != null) {
@@ -219,6 +233,16 @@ public final class SettingsScreenPrivacy {
                     && "android.app.UiModeManager.getNightMode".equals(applied.optString("night_mode_source"))
                     && nightMode instanceof Integer && ((Integer) nightMode) >= 0 && ((Integer) nightMode) <= 3)
                 safeApplied.put("night_mode_source", "android.app.UiModeManager.getNightMode").put("night_mode", nightMode);
+            Object ringerMode = applied.opt("ringer_mode");
+            if (("mute".equals(setting) || "vibrate".equals(setting))
+                    && "android.media.AudioManager.getRingerMode".equals(applied.optString("ringer_mode_source"))
+                    && ringerMode instanceof Integer && ((Integer) ringerMode) >= 0 && ((Integer) ringerMode) <= 2)
+                safeApplied.put("ringer_mode_source", "android.media.AudioManager.getRingerMode").put("ringer_mode", ringerMode);
+            Object density = applied.opt("display_density_dpi");
+            if ("display_size".equals(setting)
+                    && "android.content.res.Configuration.densityDpi".equals(applied.optString("display_density_source"))
+                    && density instanceof Integer && ((Integer)density) >= 72 && ((Integer)density) <= 2000)
+                safeApplied.put("display_density_source", "android.content.res.Configuration.densityDpi").put("display_density_dpi", density);
             if (safeApplied.length() > 0) safeTree.put("applied_settings", safeApplied);
         }
         safeTree.put("nodes", relevantNodes);

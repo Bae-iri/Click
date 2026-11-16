@@ -1,3 +1,4 @@
+from app.schemas.execution import ExecutionState
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -8,6 +9,7 @@ class CancelSessionRequest(BaseModel):
 
 
 class AgentSessionResponse(BaseModel):
+    execution_state: ExecutionState | None = None
     session_id: str
     episode_id: str | None = None
     status: Literal["IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "WAITING_ADJUSTMENT", "PAUSED", "COMPLETED", "BLOCKED", "CANCELLED", "EXPIRED"]

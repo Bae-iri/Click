@@ -42,6 +42,9 @@ def eligible_nodes(transition: Transition, nodes: tuple[NormalizedNode, ...], gr
     roles = {'menu_item': {'menu_item', 'button'}, 'slider': {'slider'},
              'app_icon': {'app_icon'}, 'toggle': {'toggle'}, 'radio': {'radio'}}
     allowed_roles = roles.get(transition.target_role, {transition.target_role})
+    from ai_agent.runtime.setting_choices import is_choice
+    if is_choice(transition, graph):
+        allowed_roles = allowed_roles | {'radio'}
     packages = transition.selector.package_candidates or state.package_candidates
     eligible = []
     for node in nodes:
@@ -53,6 +56,16 @@ def eligible_nodes(transition: Transition, nodes: tuple[NormalizedNode, ...], gr
             continue
         if transition.action_type == ActionType.DRAG and node.role != 'slider':
             continue
+        if (graph.definition.required_slots.get('setting') == 'display_size' and transition.target_role == 'slider'):
+            from ai_agent.runtime.classifier import _screen_titles
+            from ai_agent.task_graph.settings import DOCUMENT
+            pages = DOCUMENT['goals'][graph.definition.goal_type]['pages']
+            if (node.value is None or node.source_confidence is not None or node.node_id.startswith('vision:')
+                    or not any(title.package_name == node.package_name and title.window_id == node.window_id
+                        and title.source_confidence is None and not title.node_id.startswith('vision:')
+                        and normalize_text(title.label) in {normalize_text(p) for p in pages}
+                        for title in _screen_titles(nodes))):
+                continue
         if not node.bounds or node.bounds[2] <= node.bounds[0] or node.bounds[3] <= node.bounds[1]:
             continue
         if any_keyword_matches(node.label, transition.selector.excluded_keywords):

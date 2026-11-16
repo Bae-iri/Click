@@ -1,0 +1,15 @@
+[
+ {"status":"IN_PROGRESS","command":"resolve_goal","phase":"PREPARING"},
+ {"status":"IN_PROGRESS","command":"observe","phase":"OBSERVING"},
+ {"status":"IN_PROGRESS","command":"observe","guide":{"action_type":"tap","requires_user_action":true},"phase":"GUIDING"},
+ {"status":"IN_PROGRESS","command":"observe","guide":{"action_type":"drag","requires_user_action":true},"verification":{"attempt_id":"a","status":"WAITING_FOR_OBSERVATION"},"phase":"VERIFYING"},
+ {"status":"IN_PROGRESS","command":"observe","guide":{"render_policy":{"manual_handoff":true}},"phase":"MANUAL"},
+ {"status":"WAITING_CONFIRMATION","command":"observe","phase":"CONFIRMATION"},
+ {"status":"WAITING_RESULT","command":"request_result","phase":"RESULT"},
+ {"status":"WAITING_ADJUSTMENT","command":"respond_result","phase":"FOLLOW_UP"},
+ {"status":"PAUSED","command":"pause_task","phase":"PAUSED"},
+ {"status":"CANCELLED","command":"cancel_task","phase":"STOPPED"},
+ {"status":"EXPIRED","command":"respond_result","phase":"STOPPED"},
+ {"status":"BLOCKED","command":"observe","phase":"STOPPED"},
+ {"status":"COMPLETED","command":"respond_result","phase":"COMPLETED"}
+]

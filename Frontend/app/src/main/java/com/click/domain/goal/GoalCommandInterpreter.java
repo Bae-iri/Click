@@ -90,6 +90,16 @@ public final class GoalCommandInterpreter {
         return result(Kind.UNSUPPORTED, "설정이나 쿠팡에서 어떤 도움이 필요하신지 말씀해 주시겠어요?");
     }
 
+    /** A complete new request is not an answer to a previous task's result question. */
+    public static boolean explicitTaskRequest(String source, GoalCatalogClassifier catalog, String foregroundPackage) {
+        if (catalog == null || source == null) return false;
+        String normalized = GoalCatalogClassifier.normalize(source);
+        if (normalized.contains("대신") || normalized.matches(".*(하지마|하지말|지마|지말|지않|안해|말아|멈춰|중단해|작업취소|일단멈춰|잠깐기다려|기다려봐).*")) return false;
+        boolean action = normalized.matches(".*(켜|꺼|키워|줄여|낮춰|높여|열어|보여|바꿔|설정해|연결해|삭제해|켜고|끄고|키우고|줄이고|낮추고|높이고|열고|바꾸고|해줘|해주세요|open|connect|change|turn).*");
+        GoalCatalogClassifier.Classification result = catalog.classify(source, foregroundPackage);
+        return action && (result.matched() || result.ambiguous);
+    }
+
     private static boolean isCancelControl(String text) {
         return text.equals("취소") || text.equals("취소해") || text.equals("취소해줘")
                 || text.equals("취소할래") || text.equals("안할래") || text.equals("이거안할래")

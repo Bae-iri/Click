@@ -71,10 +71,15 @@ def test_sensitive_and_unsupported_screens_hand_off_without_provider_call(node):
     engine = ClickAgentEngine(task_graphs={goal.task_id: graph}, screen_resolver=resolver)
     result = engine.handle_turn(AgentTurnRequest("r", "s", None, (node,), typed_goal=goal,
         device_context=DeviceContext("android")))
-    assert result.guide_command.command_type == CommandType.BLOCKED
-    assert result.guide_command.render_policy["manual_only"] is True
     assert result.guide_command.target_node_id is None
-    assert "직접 진행" in result.guide_command.message
+    if node.package_name == "com.bank.app":
+        assert result.guide_command.render_policy["recovery"]["reason_code"] == "OTHER_APP"
+        assert result.guide_command.render_policy["recovery_action"]["type"] == "open_android_settings_or_show_app_drawer"
+        assert not engine.session_store.get("s").task_completed
+    else:
+        assert result.guide_command.command_type == CommandType.BLOCKED
+        assert result.guide_command.render_policy["manual_only"] is True
+        assert "직접 진행" in result.guide_command.message
     sender.assert_not_called()
 
 

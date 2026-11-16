@@ -28,7 +28,7 @@ def digest(value):
 
 def source_digest():
     result = hashlib.sha256()
-    for folder in (BACKEND / 'app', BACKEND / 'migrations', ROOT / 'AI-Agent/src'):
+    for folder in (BACKEND / 'app', BACKEND / 'migrations', ROOT / 'AI-Agent/src', ROOT / 'AI-Agent/goal_catalog'):
         for path in sorted(folder.rglob('*')):
             if path.is_file() and path.suffix in {'.py', '.json'} and '__pycache__' not in path.parts:
                 result.update(path.relative_to(ROOT).as_posix().encode() + b'\0')

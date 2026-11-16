@@ -266,7 +266,11 @@ def test_abandoned_claim_is_recoverable_without_runtime_memory():
     with TestClient(app) as client:
         auth = register(client)
         request = AgentTurnRequest(**payload(), user_id=auth["user_id"])
-        digest = sha256(json.dumps(request.model_dump(mode="json"), sort_keys=True,
+        identity=request.model_dump(mode="json")
+        # A pre-upgrade request did not contain the newly optional provenance field.
+        identity.pop("approval_provenance",None)
+        identity.pop("execution_context",None)
+        digest = sha256(json.dumps(identity, sort_keys=True,
                                    separators=(",", ":"), ensure_ascii=False).encode()).hexdigest()
         repo.claim(request, digest)  # Simulates process death immediately after DB claim.
         assert post(client, payload()).status_code == 409

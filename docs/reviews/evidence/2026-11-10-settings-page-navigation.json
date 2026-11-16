@@ -1,0 +1,45 @@
+{
+  "recorded_at": "2026-11-10T12:48:56.471043+09:00",
+  "tests": {
+    "android_full": {
+      "tests": 716,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "backend_full": {
+      "passed": 2258
+    },
+    "agent_full": {
+      "passed": 396
+    },
+    "backend_targeted": {
+      "passed": 134
+    }
+  },
+  "source_files": {
+    "Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java": "aba81fce3f89bf83abf9e4844b3b89987877e8ed4322f7cc984a0a859c47316c",
+    "Frontend/app/src/main/java/com/click/service/overlay/TaskExecutionController.java": "2e8350b4fd330dc95fdda4a46fd36220e57b7ce0e565d43e13af4cd105153f41",
+    "Frontend/app/src/main/java/com/click/service/overlay/NavigationRecovery.java": "58c6fb88db9b5969f7c14f99c32a0e788bd0b32ce4b3c08c20cb78e0b9a4f0bd",
+    "Frontend/app/src/main/java/com/click/service/overlay/SettingsPageNavigation.java": "79dfd9f0675b6d5feb6d324fa4e86173edeedf45641810413aff321c00d97565",
+    "AI-Agent/src/ai_agent/runtime/primary.py": "cdfd24a5a95c13000a239c12154787bf97de82eb18dc80a034a0851fb338a81f",
+    "AI-Agent/src/ai_agent/runtime/engine.py": "76dec4b58d17b80ca2413ffb15f177ef9eaee569c883f1a1acc81af22d161c6d",
+    "Backend/tests/test_observed_page_navigation.py": "a7ca9f6a38d2b55d405420a9272a74679adcd8045382cde6af35d0900081bfb8"
+  },
+  "apk_sha256": "41edf54343ea501c761592fb6fd07eec90de178a66d52495bd6ef00d7673fd0c",
+  "installed_apk_matches_build": true,
+  "device_serial": "R3CN8157M2Z",
+  "artifact": "Frontend/app/build/outputs/apk/debug/app-page-navigation-debug.apk",
+  "server_deployed": false,
+  "production_model_called": false,
+  "physical_settings_changed": false,
+  "physical_end_to_end_performed": false,
+  "logs": {
+    "android_full": "/private/tmp/click-page-navigation-android-verified.log",
+    "backend_full": "/private/tmp/click-page-navigation-backend-all.log",
+    "agent_full": "/private/tmp/click-page-navigation-agent.log",
+    "backend_targeted": "/private/tmp/click-page-navigation-backend-final.log",
+    "apk_build": "/private/tmp/click-page-navigation-apk.log"
+  },
+  "apk_capability_contract_sha256": "962ac3d938d34555c5644c5c3e8e4b33be373eb9580d331bb1f1cc6b2b5bb4f2"
+}

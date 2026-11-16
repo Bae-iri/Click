@@ -34,7 +34,7 @@ android {
     defaultConfig {
         buildConfigField "String", "KAKAO_NATIVE_APP_KEY", javaString(kakaoNativeAppKey)
         manifestPlaceholders.kakaoRedirectScheme = "kakao${kakaoNativeAppKey ?: 'unconfigured'}"
-        applicationId "com.click"
+        applicationId "com.clueclick.app"
         minSdk 26
         targetSdk 34
         versionCode 1
@@ -77,6 +77,7 @@ android {
         main.assets.srcDir "../../AI-Agent/goal_catalog"
         test.resources.srcDir "../../Backend/docs"
         test.resources.srcDir "../../AI-Agent/goal_catalog"
+        test.resources.srcDir "../../AI-Agent/tests/fixtures"
     }
 
     testOptions {
@@ -108,4 +109,81 @@ tasks.withType(Test).configureEach {
     def contractOutput = layout.buildDirectory.dir("contract/${name}")
     systemProperty "click.contractOutput", contractOutput.get().asFile.absolutePath
     outputs.dir(contractOutput)
+}
+
+// One reviewed JSON is consumed by Python, Android assets and native policy code.
+def settingsCapabilities = rootProject.file("../AI-Agent/goal_catalog/settings_capabilities.json")
+def generatedCapabilities = layout.buildDirectory.dir("generated/settingsCapabilities/java")
+def generateSettingsCapabilities = tasks.register("generateSettingsCapabilities") {
+    inputs.file(settingsCapabilities)
+    outputs.dir(generatedCapabilities)
+    doLast {
+        def json = settingsCapabilities.getText("UTF-8")
+        def parsed = new groovy.json.JsonSlurper().parseText(json)
+        if (parsed.schema_version != "settings-capabilities.v1") throw new GradleException("Unsupported settings capability contract")
+        def target = new File(generatedCapabilities.get().asFile, "com/click/generated/SettingsCapabilitiesData.java")
+        target.parentFile.mkdirs()
+        def body = new StringBuilder("package com.click.generated;\npublic final class SettingsCapabilitiesData {\npublic static String json() { StringBuilder value=new StringBuilder();\n")
+        for (int i=0;i<json.length();i+=2048) body.append("value.append(").append(groovy.json.JsonOutput.toJson(json.substring(i, Math.min(i+2048,json.length())))).append(");\n")
+        body.append("return value.toString(); }\n}\n")
+        target.setText(body.toString(), "UTF-8")
+    }
+}
+android.sourceSets.main.java.srcDir(generatedCapabilities)
+tasks.named("preBuild").configure { dependsOn(generateSettingsCapabilities) }
+
+
+// Graph-independent foreground environment and cause-specific recovery policy.
+def environmentPolicy = rootProject.file("../AI-Agent/goal_catalog/screen_environment_policy.json")
+def generatedEnvironment = layout.buildDirectory.dir("generated/screenEnvironment/java")
+def generateScreenEnvironment = tasks.register("generateScreenEnvironment") {
+    inputs.file(environmentPolicy)
+    outputs.dir(generatedEnvironment)
+    doLast {
+        def json=environmentPolicy.getText("UTF-8")
+        if(new groovy.json.JsonSlurper().parseText(json).schema_version!="screen-environment.v1") throw new GradleException("Unsupported environment policy")
+        def target=new File(generatedEnvironment.get().asFile,"com/click/generated/ScreenEnvironmentData.java")
+        target.parentFile.mkdirs()
+        def body=new StringBuilder("package com.click.generated;\npublic final class ScreenEnvironmentData { public static String json(){ StringBuilder value=new StringBuilder();\n")
+        for(int i=0;i<json.length();i+=2048) body.append("value.append(").append(groovy.json.JsonOutput.toJson(json.substring(i,Math.min(i+2048,json.length())))).append(");\n")
+        body.append("return value.toString();}}\n")
+        target.setText(body.toString(),"UTF-8")
+    }
+}
+android.sourceSets.main.java.srcDir(generatedEnvironment)
+tasks.named("preBuild").configure { dependsOn(generateScreenEnvironment) }
+
+// The lifecycle projection is generated from the exact policy used by Python.
+def executionPolicy = rootProject.file("../AI-Agent/goal_catalog/execution_state_contract.json")
+def generatedExecution = layout.buildDirectory.dir("generated/executionState/java")
+def generateExecutionState = tasks.register("generateExecutionState") {
+    inputs.file(executionPolicy)
+    outputs.dir(generatedExecution)
+    doLast {
+        def target = new File(generatedExecution.get().asFile, "com/click/generated/ExecutionStateData.java")
+        target.parentFile.mkdirs()
+        target.setText("package com.click.generated;\npublic final class ExecutionStateData { public static String json() { return " +
+                groovy.json.JsonOutput.toJson(executionPolicy.getText("UTF-8")) + "; } }\n", "UTF-8")
+    }
+}
+android.sourceSets.main.java.srcDir(generatedExecution)
+tasks.named("preBuild").configure { dependsOn(generateExecutionState) }
+
+// Bind an APK to the exact API origin used in its BuildConfig before installation.
+android.buildTypes.each { kind ->
+    def title = kind.name.capitalize()
+    def identityAssets = layout.buildDirectory.dir("generated/releaseIdentity/${kind.name}/assets")
+    def apiOrigin = kind.name == "validation" ? (validationEnvironment.api_base_url ?: clickApiBaseUrl) : clickApiBaseUrl
+    def generateIdentity = tasks.register("generate${title}ReleaseIdentity") {
+        inputs.property("apiBaseUrl", apiOrigin)
+        inputs.property("taskTerminationVersion", "task-termination.v1")
+        outputs.dir(identityAssets)
+        doLast {
+            def output = new File(identityAssets.get().asFile, "click_release_identity.json")
+            output.parentFile.mkdirs()
+            output.setText(groovy.json.JsonOutput.toJson([api_base_url: apiOrigin, task_termination_version: "task-termination.v1"]), "UTF-8")
+        }
+    }
+    android.sourceSets.getByName(kind.name).assets.srcDir(identityAssets)
+    tasks.matching { it.name == "merge${title}Assets" }.configureEach { dependsOn(generateIdentity) }
 }

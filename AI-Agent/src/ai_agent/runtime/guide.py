@@ -39,13 +39,22 @@ def recovery_command(session_id, plan):
         "SETTINGS_OFF_PATH": "다른 설정 메뉴로 들어왔어요. 이전 화면으로 돌아가서 이어서 안내할게요.",
         "APP_NOT_OPEN": "‘설정 열기’를 눌러주세요. 설정 화면에서 이어서 안내할게요.",
     }
+    from ai_agent.runtime.environment import recovery_rule
+    for reason in ('OTHER_APP','RECENTS_VISIBLE','KEYBOARD_VISIBLE','DIALOG_VISIBLE','SYSTEM_PANEL_VISIBLE','SYSTEM_DIALOG_VISIBLE','MANUAL_EXTERNAL_CHOICE'):
+        messages[reason]=recovery_rule(reason).get('message','원래 화면으로 돌아가 주세요.')
     message = messages.get(plan.reason_code, "다음 항목을 확인하지 못했어요. 직접 메뉴로 이동하거나 화면을 다시 확인해 주세요.")
     if plan.failure and plan.failure.cause == "network_error":
         message = "네트워크에 연결하지 못했어요. 인터넷 연결을 복구한 뒤 다시 확인해 주세요."
     policy = {"avoid_covering_target": False, "recovery": plan.to_dict()}
     if plan.next_action == "go_back":
         policy["recovery_action"] = {"type": "navigate_back", "target_app": "android_settings"}
+    if plan.next_action == "go_home":
+        policy["recovery_action"]={"type":"navigate_home","requires_user_activation":True}
+    if plan.next_action == "dismiss_interruption":
+        policy["recovery_action"]={"type":"dismiss_interruption","requires_user_activation":True}
     if plan.next_action == "open_settings":
+        policy["expected_next_observation"]={"send_fresh_accessibility_tree":True,
+            "send_user_action_event":"manual_override","reclassify_environment":True}
         # Opening an OS app is a user-activated navigation recovery, not a
         # substitute model selection or proof that any setting was changed.
         policy["recovery_action"] = {
@@ -61,7 +70,7 @@ def recovery_command(session_id, plan):
         policy["backend_handoff"] = {"type": "task_graph_reselection_required", "reason_code": plan.reason_code}
     return GuideCommand(guide_command_id=f"guide_{session_id}_recovery", command_type=CommandType.HIGHLIGHT,
         action_type=ActionType.OBSERVE_ONLY, message=message, safety_level=SafetyLevel.LOW_RISK,
-        requires_user_action=False, render_policy=policy)
+        requires_user_action=plan.next_action=="open_settings", render_policy=policy)
 
 
 def build_guide_command(
@@ -78,7 +87,11 @@ def build_guide_command(
         return _blocked_command(session_id, transition, "이 작업은 자동 안내를 중단해야 해요.")
 
     if user_confirmation == "rejected":
-        return _blocked_command(session_id, transition, "요청을 중단했어요.")
+        from ai_agent.runtime.termination import user_declined
+        termination = user_declined(graph.definition.required_slots.get("setting"))
+        return GuideCommand(f"guide_{session_id}_declined", CommandType.CANCELLED,
+            ActionType.OBSERVE_ONLY, termination["message"], SafetyLevel.LOW_RISK, False,
+            render_policy={"termination": termination})
 
     if task_completed:
         return GuideCommand(

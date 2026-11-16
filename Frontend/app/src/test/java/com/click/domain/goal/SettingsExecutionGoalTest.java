@@ -36,8 +36,8 @@ public class SettingsExecutionGoalTest {
             assertEquals("2.4.0", result.goal.toTypedGoalJson().getString("catalog_version"));
             if ("settings_assisted".equals(result.goal.taskType)) assisted++; else changes++;
         }
-        assertEquals(50, changes);
-        assertEquals(39, assisted);
+        assertEquals(56, changes);
+        assertEquals(33, assisted);
     }
     @Test public void conversationalSwitchRequestsReachTheSameTypedGoal() throws Exception {
         String source=resource("mvp_goals.json");

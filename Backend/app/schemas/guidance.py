@@ -67,7 +67,7 @@ class ObserveRequest(BaseModel):
 
 class GuideCommandResponse(BaseModel):
     guide_command_id: str
-    command_type: Literal["highlight", "gesture_hint", "confirmation", "result_confirmation", "done", "blocked"]
+    command_type: Literal["highlight", "gesture_hint", "confirmation", "result_confirmation", "done", "cancelled", "blocked"]
     action_type: Literal["tap", "drag", "scroll", "observe_only"]
     proposed_action: Literal["tap", "drag", "scroll"] | None = None
     message: str

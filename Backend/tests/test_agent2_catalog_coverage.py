@@ -37,10 +37,10 @@ def test_catalog_coverage_counts_goals_separately_from_release_versions(app):
     assert coverage["total_goals"] == 181
     assert coverage["approved_goals"] == coverage["selectable_goals"] == 181
     assert coverage["catalog_only_goals"] == 0
-    assert {k: v for k, v in coverage["by_task_type"].items() if k.startswith('settings_')} == {
-        "settings_change": {"approved": 50, "selectable": 50},
+    assert {k:v for k,v in coverage["by_task_type"].items() if k.startswith("settings_")} == {
+        "settings_change": {"approved": 56, "selectable": 56},
         "settings_navigation": {"approved": 21, "selectable": 21},
-        "settings_assisted": {"approved": 39, "selectable": 39},
+        "settings_assisted": {"approved": 33, "selectable": 33},
     }
     assert sum(v['selectable'] for k, v in coverage['by_task_type'].items() if k.startswith('commerce_')) == 71
     assert coverage["blocked_goals"] == coverage["unexpected_executable_goals"] == []

@@ -39,6 +39,11 @@ DB·사용자 동의·삭제 연계와 실제 AI1 replay adapter는 `Backend/scr
 | 승인·반영 | 정확한 평가·본문 hash에 검토자/시각 결합, DB 활성 version과 audit 원자 반영, stale-base 차단·rollback |
 | 모델 | 명시적으로 weak label을 허용한 train split의 CPU 빈도 baseline, 불변 로컬 artifact registry |
 
+같은 pending guide의 대기 관측이 여러 번 들어와도 조작 전 원래 기준 관측을
+보존합니다. 결과는 해당 guide에서 실제 관측된 before hash와 연결하며, 대기 polling은
+시도 분모에 넣지 않습니다. 알려지지 않은 before hash와 변경된 target binding은
+기존처럼 증거 부족·계약 오류로 처리합니다.
+
 실제 제품 gold·독립 holdout은 아직 없습니다. 합성·공개 참고 자료만으로 평가 PASS나 운영 release를 만들지 않습니다. 새 selector·UI 경로·작업을 추측 생성하지 않습니다. 실제 실패에서 필요한 새로운 변환 규칙·모델 개선은 후속 데이터에 따라 추가합니다.
 
 ## DB 기록 처리

@@ -12,7 +12,7 @@ ENUMS = {
     "strategy": {"continue", "wait_for_action", "reobserve", "retry_target", "alternate_transition", "backend_reselection"},
     "status": VISION | {"SUCCESS", "DONE", "NO_CHANGE", "WRONG_STATE", "UNKNOWN", "WAITING_FOR_ACTION", "WAITING_FOR_OBSERVATION"},
     "vision_status": VISION,
-    "command_type": {"highlight", "gesture_hint", "confirmation", "done", "blocked"},
+    "command_type": {"highlight", "gesture_hint", "confirmation", "done", "cancelled", "blocked"},
     "action_type": {"tap", "drag", "scroll", "observe_only"},
     "safety_level": {"LOW_RISK", "CONFIRM_REQUIRED", "BLOCKED"},
     "type": {"none", "settings_app_recovery", "vision_fallback", "vision_augmented_match", "target_match_fallback", "replan"},

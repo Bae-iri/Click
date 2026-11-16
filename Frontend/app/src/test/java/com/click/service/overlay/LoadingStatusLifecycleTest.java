@@ -15,6 +15,10 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 public class LoadingStatusLifecycleTest {
  private void field(Object obj, String name, Object value) throws Exception {
+  if("turnInFlight".equals(name)) {
+   Field state=obj.getClass().getDeclaredField("execution");state.setAccessible(true);
+   ((TaskExecutionController)state.get(obj)).setBusy((boolean)value);return;
+  }
   Field f=obj.getClass().getDeclaredField(name);f.setAccessible(true);f.set(obj,value);
  }
  private LoadingStatusView find(ViewGroup parent) {

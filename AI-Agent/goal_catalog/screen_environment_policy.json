@@ -1,0 +1,435 @@
+{
+  "schema_version": "screen-environment.v1",
+  "settings_packages": [
+    "com.android.settings",
+    "com.samsung.android.settings"
+  ],
+  "launcher_packages": [
+    "com.android.launcher",
+    "com.android.launcher3",
+    "com.google.android.apps.nexuslauncher",
+    "com.huawei.android.launcher",
+    "com.miui.home",
+    "com.oppo.launcher",
+    "com.sec.android.app.launcher",
+    "com.vivo.launcher",
+    "org.lineageos.trebuchet"
+  ],
+  "settings_home_titles": [
+    "설정",
+    "settings"
+  ],
+  "settings_home_activities": [
+    "com.android.settings.Settings",
+    "com.android.settings.SettingsActivity",
+    "com.android.settings.homepage.SettingsHomepageActivity",
+    "com.android.settings.SettingsHomepageActivity",
+    "com.samsung.android.settings.SettingsActivity",
+    "com.android.settings.Settings$MainSettingsActivity"
+  ],
+  "settings_subpage_activities": [
+    "com.android.settings.SubSettings",
+    "com.android.settings.vpn2.VpnSettings"
+  ],
+  "recents_tokens": [
+    "overview",
+    "recents",
+    "recent_tasks",
+    "recent_apps"
+  ],
+  "drawer_tokens": [
+    "all_apps",
+    "allapps",
+    "apps_container",
+    "apps_content",
+    "app_drawer",
+    "apps_view"
+  ],
+  "home_tokens": [
+    "workspace",
+    "hotseat",
+    "home_screen",
+    "homescreen"
+  ],
+  "dialog_classes": [
+    "android.app.Dialog",
+    "android.app.AlertDialog",
+    "android.widget.PopupWindow",
+    "android.inputmethodservice.SoftInputWindow",
+    "androidx.appcompat.app.AlertDialog",
+    "androidx.appcompat.app.AppCompatDialog"
+  ],
+  "recovery": {
+    "GOAL_AMBIGUOUS": {
+      "category": "REQUEST",
+      "action": "CLARIFY",
+      "message": "원하시는 작업을 조금 더 자세히 말해 주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "GOAL_UNSUPPORTED": {
+      "category": "REQUEST",
+      "action": "CLARIFY",
+      "message": "원하시는 작업을 조금 더 자세히 말해 주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "OTHER_APP": {
+      "category": "NAVIGATION",
+      "action": "RETURN_TO_TASK",
+      "message": "다른 앱으로 이동했어요. 이전 화면으로 돌아가서 안내를 이어갈게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "APP_NOT_OPEN": {
+      "category": "NAVIGATION",
+      "action": "RETURN_TO_TASK",
+      "message": "다른 앱으로 이동했어요. 이전 화면으로 돌아가서 안내를 이어갈게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "SETTINGS_OFF_PATH": {
+      "category": "NAVIGATION",
+      "action": "BACK",
+      "message": "다른 설정 화면에 있어요. 뒤로가기를 눌러 이전 화면으로 이동해 주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "SETTINGS_SUBPAGE_START": {
+      "category": "NAVIGATION",
+      "action": "BACK",
+      "message": "다른 설정 화면에 있어요. 뒤로가기를 눌러 이전 화면으로 이동해 주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "RECENTS_VISIBLE": {
+      "category": "NAVIGATION",
+      "action": "HOME",
+      "message": "최근 앱 화면에 있어요. 홈으로 이동한 뒤 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "KEYBOARD_VISIBLE": {
+      "category": "INTERRUPTION",
+      "action": "DISMISS",
+      "message": "원래 화면이 가려져 있어요. 뒤로가기를 눌러 닫은 뒤 이어갈게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "DIALOG_VISIBLE": {
+      "category": "INTERRUPTION",
+      "action": "DISMISS",
+      "message": "원래 화면이 가려져 있어요. 뒤로가기를 눌러 닫은 뒤 이어갈게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "SYSTEM_PANEL_VISIBLE": {
+      "category": "INTERRUPTION",
+      "action": "DISMISS",
+      "message": "원래 화면이 가려져 있어요. 뒤로가기를 눌러 닫은 뒤 이어갈게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "DEVICE_LOCKED": {
+      "category": "DEVICE",
+      "action": "UNLOCK",
+      "message": "휴대폰 잠금을 풀어주세요. 화면이 켜지면 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "ACCESSIBILITY_DISCONNECTED": {
+      "category": "CONNECTION",
+      "action": "RECONNECT",
+      "message": "접근성 연결을 확인해 주세요. 연결되면 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "OBSERVATION_EMPTY": {
+      "category": "OBSERVATION",
+      "action": "REOBSERVE",
+      "message": "화면이 바뀌는 중이에요. 잠시 기다려 주세요.",
+      "automatic_retries": 3,
+      "keep_goal": true
+    },
+    "OBSERVATION_STALE": {
+      "category": "OBSERVATION",
+      "action": "REOBSERVE",
+      "message": "화면이 바뀌는 중이에요. 잠시 기다려 주세요.",
+      "automatic_retries": 3,
+      "keep_goal": true
+    },
+    "OBSERVATION_INSUFFICIENT": {
+      "category": "OBSERVATION",
+      "action": "REOBSERVE",
+      "message": "화면이 바뀌는 중이에요. 잠시 기다려 주세요.",
+      "automatic_retries": 3,
+      "keep_goal": true
+    },
+    "WAITING_FOR_SETTLE": {
+      "category": "OBSERVATION",
+      "action": "REOBSERVE",
+      "message": "화면이 바뀌는 중이에요. 잠시 기다려 주세요.",
+      "automatic_retries": 3,
+      "keep_goal": true
+    },
+    "TARGET_NOT_VISIBLE": {
+      "category": "TARGET",
+      "action": "SCROLL",
+      "message": "원하시는 항목을 찾고 있어요. 목록을 이동한 뒤 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "TARGET_NOT_FOUND": {
+      "category": "TARGET",
+      "action": "ASSIST",
+      "message": "표시된 화면에서 직접 원하는 항목으로 이동해 주세요. 이동하면 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "TARGET_AMBIGUOUS": {
+      "category": "TARGET",
+      "action": "ASSIST",
+      "message": "표시된 화면에서 직접 원하는 항목으로 이동해 주세요. 이동하면 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "STATE_AMBIGUOUS": {
+      "category": "TARGET",
+      "action": "ASSIST",
+      "message": "표시된 화면에서 직접 원하는 항목으로 이동해 주세요. 이동하면 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "GRAPH_PATH_UNAVAILABLE": {
+      "category": "TARGET",
+      "action": "ASSIST",
+      "message": "표시된 화면에서 직접 원하는 항목으로 이동해 주세요. 이동하면 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "STATE_UNKNOWN": {
+      "category": "TARGET",
+      "action": "ASSIST",
+      "message": "표시된 화면에서 직접 원하는 항목으로 이동해 주세요. 이동하면 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "LOW_CONFIDENCE": {
+      "category": "SELECTION",
+      "action": "ASSIST",
+      "message": "누를 곳을 확실히 구분하기 어려워요. 원하는 항목으로 직접 이동해 주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "MODEL_ABSTAINED": {
+      "category": "SELECTION",
+      "action": "ASSIST",
+      "message": "누를 곳을 확실히 구분하기 어려워요. 원하는 항목으로 직접 이동해 주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "MODEL_WAIT_WITHOUT_ACTION": {
+      "category": "SELECTION",
+      "action": "ASSIST",
+      "message": "누를 곳을 확실히 구분하기 어려워요. 원하는 항목으로 직접 이동해 주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "MODEL_UNAVAILABLE": {
+      "category": "INFRASTRUCTURE",
+      "action": "RECONCILE",
+      "message": "연결을 확인해 주세요. 진행 상태를 확인한 뒤 이어갈게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "NETWORK_UNAVAILABLE": {
+      "category": "INFRASTRUCTURE",
+      "action": "RECONCILE",
+      "message": "연결을 확인해 주세요. 진행 상태를 확인한 뒤 이어갈게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "ACTION_DISPATCH_FAILED": {
+      "category": "EXECUTION",
+      "action": "MANUAL",
+      "message": "자동 조작을 멈췄어요. 표시된 항목을 직접 조작해 주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "ACTION_BUDGET_EXHAUSTED": {
+      "category": "EXECUTION",
+      "action": "MANUAL",
+      "message": "자동 조작을 멈췄어요. 표시된 항목을 직접 조작해 주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "ACTION_RESULT_UNOBSERVABLE": {
+      "category": "VERIFICATION",
+      "action": "VERIFY",
+      "message": "설정이 원하는 상태인지 확인해 주세요. 확인 전에는 다시 조작하지 않을게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "ACTION_EVENT_MISSING": {
+      "category": "VERIFICATION",
+      "action": "VERIFY",
+      "message": "설정이 원하는 상태인지 확인해 주세요. 확인 전에는 다시 조작하지 않을게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "ALREADY_SET": {
+      "category": "BOUNDARY",
+      "action": "RESULT",
+      "message": "이미 원하는 상태이거나 더 조절할 수 없는 상태예요. 현재 설정을 확인해 주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "LIMIT_REACHED": {
+      "category": "BOUNDARY",
+      "action": "RESULT",
+      "message": "이미 원하는 상태이거나 더 조절할 수 없는 상태예요. 현재 설정을 확인해 주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "SENSITIVE_INPUT": {
+      "category": "PRIVACY",
+      "action": "MANUAL",
+      "message": "이 단계는 직접 진행해 주세요. 입력 내용은 보내지 않고 자동 조작도 멈출게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "SENSITIVE_SCREEN": {
+      "category": "PRIVACY",
+      "action": "MANUAL",
+      "message": "이 단계는 직접 진행해 주세요. 입력 내용은 보내지 않고 자동 조작도 멈출게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "CONSENT_DECLINED": {
+      "category": "PRIVACY",
+      "action": "MANUAL",
+      "message": "이 단계는 직접 진행해 주세요. 입력 내용은 보내지 않고 자동 조작도 멈출게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "VISION_MASKING_FAILED": {
+      "category": "PRIVACY",
+      "action": "MANUAL",
+      "message": "이 단계는 직접 진행해 주세요. 입력 내용은 보내지 않고 자동 조작도 멈출게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "STALE_RESPONSE": {
+      "category": "ASYNC",
+      "action": "DROP",
+      "message": "현재 작업에서 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "TASK_REPLACED": {
+      "category": "ASYNC",
+      "action": "DROP",
+      "message": "현재 작업에서 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "CONTRACT_MISMATCH": {
+      "category": "VERSION",
+      "action": "MANUAL",
+      "message": "이 단계는 직접 진행해 주세요. 앱과 서버의 연결 상태를 확인해야 해요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "SYSTEM_DIALOG_VISIBLE": {
+      "category": "PRIVACY",
+      "action": "MANUAL",
+      "message": "화면의 내용을 확인하고 직접 선택해 주세요. 선택이 끝나면 이어서 안내할게요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    },
+    "MANUAL_EXTERNAL_CHOICE": {
+      "category": "PRIVACY",
+      "action": "MANUAL",
+      "message": "원하는 항목을 직접 선택해 주세요. 선택한 내용은 보내지 않으며, 끝나면 완료 확인을 눌러주세요.",
+      "automatic_retries": 0,
+      "keep_goal": true
+    }
+  },
+  "settings_home_tokens": [
+    "settings_homepage",
+    "homepage_container",
+    "homepage_title",
+    "settings_dashboard"
+  ],
+  "empty_search_resources": [
+    "android:id/search_src_text",
+    "com.android.settings:id/search_src_text",
+    "com.android.settings:id/search"
+  ],
+  "system_packages": [
+    "com.android.systemui",
+    "android",
+    "com.android.permissioncontroller",
+    "com.google.android.permissioncontroller",
+    "com.samsung.android.permissioncontroller"
+  ],
+  "manual_packages_by_setting": {
+    "wallpaper": [
+      "com.samsung.android.app.dressroom"
+    ],
+    "ringtone": [
+      "com.android.soundpicker",
+      "com.samsung.android.app.soundpicker"
+    ],
+    "notification_sound": [
+      "com.android.soundpicker",
+      "com.samsung.android.app.soundpicker"
+    ]
+  },
+  "blocked_titles": [
+    "삼성 계정",
+    "samsung account",
+    "google 계정",
+    "google account",
+    "계정 관리",
+    "manage accounts",
+    "계정",
+    "accounts",
+    "로그인",
+    "sign in",
+    "비밀번호",
+    "password",
+    "pin",
+    "pin 입력",
+    "enter pin",
+    "패턴 확인",
+    "confirm pattern",
+    "본인 인증",
+    "verify your identity",
+    "알림 기록",
+    "notification history",
+    "메시지",
+    "messages",
+    "결제",
+    "payments"
+  ],
+  "back_labels": [
+    "뒤로",
+    "뒤로 이동",
+    "이전",
+    "이전 화면",
+    "navigate up",
+    "back"
+  ],
+  "native_control_surfaces": {
+    "brightness": {
+      "package": "com.android.systemui",
+      "wrapper_ids": [
+        "com.android.systemui:id/brightness_dialog_slider"
+      ],
+      "slider_ids": [
+        "com.android.systemui:id/slider"
+      ]
+    }
+  }
+}

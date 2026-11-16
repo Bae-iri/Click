@@ -236,8 +236,7 @@ public class NativeFontChangeRecognitionTest {
     }
 
     private static Object field(Object target, String name) {
-        try { java.lang.reflect.Field f = target.getClass().getDeclaredField(name); f.setAccessible(true); return f.get(target); }
-        catch (ReflectiveOperationException e) { throw new AssertionError(e); }
+        return com.click.testutil.ServiceStateAccess.get(target,name);
     }
     private static void call(Object target, String name) {
         try { java.lang.reflect.Method m = target.getClass().getDeclaredMethod(name); m.setAccessible(true); m.invoke(target); }

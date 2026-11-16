@@ -25,6 +25,7 @@ from ai_agent.runtime.progress import graph_progress
 from ai_agent.telemetry.execution_events import produce
 from app.clients.screen_state_llm import LocalScreenStateLlm
 from app.services.screen_jev import JevScreenResolver
+from ai_agent.runtime.capabilities import identity as capability_identity
 
 
 def runtime_configuration():
@@ -43,6 +44,9 @@ def runtime_configuration():
     for source in sources:
         digest.update(source.name.encode())
         digest.update(source.read_bytes())
+    # Runtime decisions also depend on shared execution data, not only Python sources.
+    for source in sorted((runtime_root.parents[2]/"goal_catalog").glob("*.json")):
+        digest.update(source.name.encode());digest.update(source.read_bytes())
     configuration["code_hash"] = digest.hexdigest()
     if provider == "jev":
         _, model, minimum = JevScreenResolver.configuration()
@@ -93,6 +97,7 @@ class RuntimeAgentAdapter:
         runtime_request = RuntimeRequest(
             request_id=request.request_id,
             session_id=request.session_id,
+            window_context=tree.window_context.model_dump(mode="json") if tree and tree.window_context else {},
             screen_bounds=(0, 0, screen_width, screen_height)
             if screen_width and screen_height else None,
             raw_goal=RawGoalInput(
@@ -186,6 +191,8 @@ class RuntimeAgentAdapter:
             vision_failure=getattr(request, "vision_failure", None) if self.vision_consent_request_id else None,
             user_action_event=self._action_event(request),
             episode_id=getattr(request, "episode_id", None),
+            execution_context=({**request.execution_context.model_dump(),
+                "episode_id":getattr(request,"episode_id",None)} if getattr(request,"execution_context",None) else None),
             applied_settings=tree.applied_settings.model_dump() if tree and tree.applied_settings else {},
         )
         try:
@@ -204,6 +211,7 @@ class RuntimeAgentAdapter:
             "confirmation": "WAITING_CONFIRMATION",
             "done": "COMPLETED",
             "blocked": "BLOCKED",
+            "cancelled": "CANCELLED",
         }.get(command_type, "IN_PROGRESS")
         runtime_session = self.runtime.session_store.get(request.session_id)
         progress_state = result.current_state_id
@@ -257,10 +265,12 @@ class RuntimeAgentAdapter:
                 render_policy={} if result_check else dict(guide.render_policy),
             ),
             metadata={
+                "environment_context": result.debug.get("environment_context",{}),
                 "technical_outcome": technical,
                 "checklist": result.debug.get("checklist", []),
                 "goal_label": graph.definition.name if graph else "선택한 작업",
                 "runtime": "ai_agent.runtime",
+                "capability_contract": capability_identity(),
                 "runtime_decision": result.debug.get("replan_decision"),
                 "recovery": recovery,
                 "score_semantics": "heuristic_scores_not_probabilities",

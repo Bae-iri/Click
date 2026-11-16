@@ -133,28 +133,43 @@ public final class OnboardingDrawables {
         private final int color;
         private final float tailPosition;
         private final float radius;
+        private final boolean tailOnRight;
 
         Bubble(Resources resources) {
             this(resources, Color.WHITE, .4f, 28f);
         }
 
         Bubble(Resources resources, int color, float tailPosition, float radius) {
+            this(resources, color, tailPosition, radius, false);
+        }
+
+        Bubble(Resources resources, int color, float tailPosition, float radius, boolean tailOnRight) {
             super(resources);
             this.color = color;
             this.tailPosition = tailPosition;
             this.radius = radius * density;
+            this.tailOnRight = tailOnRight;
             paint.setColor(color);
         }
 
         @Override protected void onBoundsChange(Rect rect) {
-            bounds.set(rect.left, rect.top, rect.right, rect.bottom - 7f * density);
-            float x = rect.left + bounds.width() * tailPosition;
-            float y = bounds.bottom;
             tail.reset();
-            tail.moveTo(x, y - 2f * density);
-            tail.lineTo(x - 3f * density, y + 7f * density);
-            tail.quadTo(x - 4f * density, y + 12f * density, x + 2f * density, y + 8f * density);
-            tail.lineTo(x + 18f * density, y - 2f * density);
+            if (tailOnRight) {
+                bounds.set(rect.left, rect.top, rect.right - 8f * density, rect.bottom);
+                float x = bounds.right, y = bounds.top + bounds.height() * tailPosition;
+                tail.moveTo(x - 2f * density, y - 10f * density);
+                tail.quadTo(x + density, y + density, x + 8f * density, y + 5f * density);
+                tail.quadTo(x + 8f * density, y + 8f * density, x + density, y + 7f * density);
+                tail.lineTo(x - 3f * density, y + 5f * density);
+            } else {
+                bounds.set(rect.left, rect.top, rect.right, rect.bottom - 7f * density);
+                float x = rect.left + bounds.width() * tailPosition;
+                float y = bounds.bottom;
+                tail.moveTo(x, y - 2f * density);
+                tail.lineTo(x - 3f * density, y + 7f * density);
+                tail.quadTo(x - 4f * density, y + 12f * density, x + 2f * density, y + 8f * density);
+                tail.lineTo(x + 18f * density, y - 2f * density);
+            }
             tail.close();
             if (color == 0xFF3F78F7) {
                 paint.setShader(new LinearGradient(bounds.left, bounds.top,

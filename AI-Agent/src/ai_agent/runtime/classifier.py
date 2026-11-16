@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from ai_agent.task_graph.settings import CHOICE_PREDICATES
+
 from ai_agent.runtime.keywords import any_keyword_matches, any_phrase_matches, normalize_text
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence
 from ai_agent.runtime.types import DeviceContext, NormalizedNode, TaskGraph, TaskState
@@ -46,12 +48,15 @@ def classify_screen_state(
         title_match = bool(required_groups and any(
             title in relevant and all(any_phrase_matches(title.label, group) for group in required_groups)
             for title in titles))
+        exact_title_match = bool(required_groups and any(
+            title in relevant and all(normalize_text(title.label) in {normalize_text(word) for word in group}
+                for group in required_groups) for title in titles))
         # Some settings pages combine navigation rows and the actual adjustment
         # control. A uniquely grounded slider is stronger evidence than a broad
         # menu title such as Samsung's "글자 크기와 스타일".
         control_match = any(
             (transition.target_role in {'slider', 'toggle'}
-                or transition.verification_predicate in {'system_night_mode_on', 'system_night_mode_off'})
+                or transition.verification_predicate in CHOICE_PREDICATES)
             and transition.action_type.value in {'drag', 'tap'}
             and transition.completes_task
             and sum(selector_evidence(node, transition, relevant, graph)[0] >= 0.7
@@ -59,13 +64,14 @@ def classify_screen_state(
             for transition in graph.transitions_from(state.state_id))
         if score >= state.confidence_threshold:
             candidates.append({"state_id": state.state_id, "score": round(min(score, 1.0), 4),
-                               "title_match": title_match, "control_match": control_match})
+                               "title_match": title_match, "exact_title_match": exact_title_match, "control_match": control_match})
 
     # A page title outranks words in row descriptions, even after a skipped step.
-    candidates.sort(key=lambda item: (-int(item["control_match"]), -int(item["title_match"]),
+    candidates.sort(key=lambda item: (-int(item["control_match"]), -int(item["exact_title_match"]), -int(item["title_match"]),
                                       -item["score"], item["state_id"]))
     ambiguous = bool(len(candidates) > 1
         and candidates[0]["control_match"] == candidates[1]["control_match"]
+        and candidates[0]["exact_title_match"] == candidates[1]["exact_title_match"]
         and candidates[0]["title_match"] == candidates[1]["title_match"]
         and candidates[0]["score"] - candidates[1]["score"] < 0.025)
     relevant_titles = [title for title in titles if any(
