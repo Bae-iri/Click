@@ -57,10 +57,15 @@ public final class AgentTurnGateway {
     }
 
     public void send(AgentTurnContract.Request request, Callback callback) {
-        final long deadline=android.os.SystemClock.elapsedRealtime()+RequestBudget.TOTAL_MS;
+        final long queuedAt=android.os.SystemClock.elapsedRealtime();
+        final long deadline=queuedAt+RequestBudget.TOTAL_MS;
         executor.execute(() -> {
+            final long startedAt=android.os.SystemClock.elapsedRealtime();
             try (RequestBudget budget=new RequestBudget(deadline)) {
                 AgentTurnContract.Response response = execute(request);
+                if(com.click.BuildConfig.DEBUG) android.util.Log.i("ClickLatency",
+                        "command="+request.commandType()+" queue_ms="+(startedAt-queuedAt)
+                        +" total_ms="+(android.os.SystemClock.elapsedRealtime()-queuedAt));
                 mainHandler.post(() -> callback.onSuccess(response));
             } catch (Throwable error) {
                 mainHandler.post(() -> callback.onFailure(classifyFailure(error)));
@@ -85,7 +90,10 @@ public final class AgentTurnGateway {
                     request.accessibilityTree == null || request.accessibilityTree.privacyMaskingReady);
         }
         journal.stage(body);
+        long postedAt=android.os.SystemClock.elapsedRealtime();
         HttpResult result = http.post(AgentTurnContract.PATH, body.toString(),25000);
+        if(com.click.BuildConfig.DEBUG) android.util.Log.i("ClickLatency",
+                "command="+request.commandType()+" http_ms="+(android.os.SystemClock.elapsedRealtime()-postedAt));
         AgentTurnContract.Response response = new AgentTurnContract.Response(result.body);
         if(!request.requestId.equals(response.requestId) || !request.sessionId.equals(response.sessionId))throw new java.io.IOException("INVALID_TURN_RESPONSE");
         ExecutionState.validate(response,request,false);

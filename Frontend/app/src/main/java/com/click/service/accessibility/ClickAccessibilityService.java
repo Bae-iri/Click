@@ -23,7 +23,6 @@ import java.lang.ref.WeakReference;
 
 public final class ClickAccessibilityService extends AccessibilityService {
     private static final String TAG = "ClickSnapshot";
-    private static final long SNAPSHOT_DEBOUNCE_MS = 300L;
     private final AccessibilitySnapshotCollector collector = new AccessibilitySnapshotCollector();
     private final Runnable captureRunnable = this::captureCurrentScreen;
     private Handler mainHandler;
@@ -584,8 +583,12 @@ public final class ClickAccessibilityService extends AccessibilityService {
         // A window event is not evidence of the screen visible now. Settings
         // transitions can briefly remove the root after a System UI event.
         if (root == null) return null;
+        try { return collectCurrentScreen(root); }
+        finally { root.recycle(); }
+    }
+
+    private ScreenSnapshot collectCurrentScreen(AccessibilityNodeInfo root) {
         if (root.getPackageName() == null || getPackageName().contentEquals(root.getPackageName())) {
-            root.recycle();
             return null;
         }
         String packageName = root.getPackageName().toString();

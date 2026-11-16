@@ -7,10 +7,12 @@ import java.util.List;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(RobolectricTestRunner.class)
+@Config(sdk=34,application=android.app.Application.class)
 public class NativeNavigationReaderTest {
  private AccessibilityNodeInfo node(String type,int width,int height) {
   AccessibilityNodeInfo n=mock(AccessibilityNodeInfo.class);
@@ -108,6 +110,34 @@ public class NativeNavigationReaderTest {
   children(root,pager);
   NavigationState state=NativeNavigationReader.read(root);
   assertEquals("node_0_0",state.containerId);assertEquals(NavigationState.Axis.HORIZONTAL,state.axis);
+ }
+
+ @Test public void nestedCollectionContentStillIdentifiesPageWithoutUsingItsItemIndices() {
+  AccessibilityNodeInfo pager=node("ViewPager",1080,2000),grid=node("GridLayout",1000,1600),label=node("TextView",100,100);
+  when(pager.getCollectionInfo()).thenReturn(AccessibilityNodeInfo.CollectionInfo.obtain(1,5,false));
+  when(grid.getCollectionInfo()).thenReturn(AccessibilityNodeInfo.CollectionInfo.obtain(5,5,false));
+  when(grid.getCollectionItemInfo()).thenReturn(AccessibilityNodeInfo.CollectionItemInfo.obtain(0,1,2,1,false));
+  when(label.getCollectionItemInfo()).thenReturn(AccessibilityNodeInfo.CollectionItemInfo.obtain(4,1,4,1,false));
+  when(label.getText()).thenReturn("설정");children(pager,grid);children(grid,label);
+  NavigationState before=NativeNavigationReader.read(pager);
+  when(label.getText()).thenReturn("다른 페이지");
+  NavigationState after=NativeNavigationReader.read(pager);
+  assertEquals(2,after.firstIndex);assertEquals(2,after.lastIndex);
+  assertNotEquals(before.fingerprint,after.fingerprint);
+ }
+
+ @Test public void privateSubtreeDoesNotEnterFingerprintButStillSuppliesListPosition() {
+  AccessibilityNodeInfo list=node("ListView",1080,2000),input=node("EditText",1000,100),child=node("TextView",100,100);
+  when(list.getCollectionInfo()).thenReturn(AccessibilityNodeInfo.CollectionInfo.obtain(30,1,false));
+  when(input.isEditable()).thenReturn(true);when(input.getText()).thenReturn("PRIVATE_VALUE");
+  when(input.getCollectionItemInfo()).thenReturn(AccessibilityNodeInfo.CollectionItemInfo.obtain(8,1,0,1,false));
+  when(child.getCollectionItemInfo()).thenReturn(AccessibilityNodeInfo.CollectionItemInfo.obtain(12,1,0,1,false));
+  when(child.getText()).thenReturn("PRIVATE_DESCENDANT");children(list,input);children(input,child);
+  NavigationState before=NativeNavigationReader.read(list);
+  when(input.getText()).thenReturn("CHANGED_SECRET");when(child.getText()).thenReturn("CHANGED_DESCENDANT");
+  NavigationState after=NativeNavigationReader.read(list);
+  assertEquals(8,after.firstIndex);assertEquals(12,after.lastIndex);
+  assertEquals(before.fingerprint,after.fingerprint);
  }
 
 }

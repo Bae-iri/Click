@@ -221,7 +221,8 @@ class RuntimeAgentAdapter:
         recovery = guide.render_policy.get("recovery")
         recovering = bool((recovery and recovery.get("recoverable")) or guide.render_policy.get("backend_handoff"))
         # Recoverable navigation failures keep the episode alive and preserve their instructions.
-        legacy_handoff = recovering and command_type == "blocked"
+        legacy_handoff = (recovering and command_type == "blocked"
+            and not guide.render_policy.get("privacy_blocked"))
         if legacy_handoff:
             command_type = "highlight"
             status = "IN_PROGRESS"

@@ -25,8 +25,8 @@ def test_observed_home_resets_progress_and_keeps_goal():
     result=turns.send((launcher,),at=2000,event=event)
     assert turns.session.current_state_id=='S0_UNKNOWN'
     assert 'S2_DISPLAY_MENU' not in turns.session.observed_path
-    assert turns.session.total_failed_attempts==0
-    assert not turns.session.transition_attempts
+    assert turns.session.total_failed_attempts==2
+    assert turns.session.transition_attempts=={'old':2}
     assert turns.session.typed_goal.goal_type==before.typed_goal.goal_type
     evidence=produce(result,before,turns.session,navigation_action='home_navigated')
     assert evidence['count_attempt'] is False
@@ -79,3 +79,19 @@ def test_navigation_can_be_computed_without_committing_partial_turn():
     assert updated is not before
     assert updated.pending_attempt is None
     assert turns.session is before
+
+
+def test_cross_episode_navigation_and_home_after_completion_do_not_reopen_work():
+    from ai_agent.runtime.navigation import navigation_result
+    from ai_agent.runtime.types import AgentTurnRequest
+    turns = Turns()
+    first = turns.send(at=1000)
+    event = turns.event(first, at=1200, action=UserActionType.BACK_NAVIGATED)
+    request = AgentTurnRequest('nav', 's', raw_goal=None, accessibility_tree=(),
+        episode_id='current', user_action_event=replace(event, episode_id='previous'))
+    assert navigation_result(request, turns.session) is turns.session
+    completed = replace(turns.session, task_completed=True)
+    launcher = replace(_node('settings', '설정'), package_name='com.android.launcher3')
+    request = replace(request, accessibility_tree=(launcher,),
+        user_action_event=replace(event, action_type=UserActionType.HOME_NAVIGATED, episode_id='current'))
+    assert navigation_result(request, completed) is completed

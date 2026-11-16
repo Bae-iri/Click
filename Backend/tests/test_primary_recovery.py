@@ -119,8 +119,13 @@ def test_provider_holds_require_a_change_before_retry(outcome, reason):
         unchanged = scenario.retry()
         assert unchanged.debug["ui_selection"]["paused"] is True
         assert len(scenario.calls) == 1
-        resumed = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
+        moved = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
             bounds_in_screen=(10, 300, 1000, 400))))
+        assert moved.debug["ui_selection"]["paused"] is True
+        assert len(scenario.calls) == 1
+        # A newly identified native control supplies evidence; layout alone does not.
+        resumed = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
+            resource_id="android:id/display")))
     assert resumed.guide_command.target_node_id == "display"
     assert resumed.debug["ui_selection"]["called"] is True
     assert resumed.debug["recovery"]["decision"] == "continue"
@@ -171,9 +176,18 @@ def test_changed_evidence_releases_failed_action_without_resetting_spent_action_
     unchanged = scenario.retry()
     assert unchanged.guide_command.target_node_id is None
     assert unchanged.debug["ui_selection"]["paused"] is True
-    resumed = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
+    moved = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
         bounds_in_screen=(10, 300, 1000, 400))))
-    assert resumed.guide_command.target_node_id == "display"
+    assert moved.debug["ui_selection"]["paused"] is True
+    exhausted = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
+        resource_id="android:id/display")))
+    assert exhausted.debug["ui_selection"]["paused"] is True
+    # After exhaustion, identify a genuinely different page instead of refreshing
+    # the old target identity to obtain another allowance on the same page.
+    scenario.edge = next(t for t in scenario.graph.transitions if t.from_state == "S2_DISPLAY_MENU")
+    resumed = scenario.observe(nodes=(replace(scenario.nodes[0], text="디스플레이"),
+        replace(scenario.nodes[1], node_id="next-menu", text=scenario.edge.target_keywords[0])))
+    assert resumed.guide_command.target_node_id == "next-menu"
     assert resumed.guide_command.render_policy["attempt_id"] != old_attempt
     assert resumed.debug["ui_selection"]["called"] is True
     assert scenario.engine.session_store.get("s").total_failed_attempts == 1

@@ -1,0 +1,172 @@
+{
+  "date": "2026-11-16",
+  "reason_for_follow_up": "Previously measured improvements were absent from the retained com.click installation and not fully deployed to the server.",
+  "android": {
+    "package": "com.click",
+    "previous_last_update": "2026-11-12 17:00:26",
+    "installed_at": "2026-11-16 10:26:26",
+    "update_mode": "adb install -r -t; same package and signing certificate; no data clear",
+    "installed_apk": {
+      "installed_artifact_matches": true,
+      "sha256": "42a1dd210eb16cc6d001232e5ddabae61aaa0f395dd33381d453355acb3d439f",
+      "package": "com.click"
+    },
+    "extra_launcher_app_installed": false,
+    "existing_app_reopened": true
+  },
+  "device_measurement": {
+    "model": "SM-N981N",
+    "sdk": 33,
+    "samples": 20,
+    "native_nodes": [
+      79
+    ],
+    "metrics": {
+      "capture_ms": {
+        "median": 13.05,
+        "p95_nearest_rank": 34.638
+      },
+      "privacy_ms": {
+        "median": 35.611,
+        "p95_nearest_rank": 49.481
+      },
+      "draw_wait_ms": {
+        "median": 9.634,
+        "p95_nearest_rank": 14.902
+      },
+      "capture_to_draw_ms": {
+        "median": 59.461,
+        "p95_nearest_rank": 93.373
+      }
+    },
+    "overlay_removed": true,
+    "overlay_permission_restored": true,
+    "network_requests": 0,
+    "setting_changes": 0,
+    "excludes": [
+      "AI selection",
+      "HTTP",
+      "event debounce",
+      "compositor presentation"
+    ],
+    "comparison_limit": "Previous device measurements had 56 nodes; this screen had 79. Do not claim a speedup by comparing these runs."
+  },
+  "live_synthetic_check": {
+    "samples": 1,
+    "start_task": {
+      "queue_ms": 0,
+      "http_ms": 1091,
+      "gateway_total_ms": 1306
+    },
+    "cancel_task": {
+      "queue_ms": 0,
+      "http_ms": 627,
+      "gateway_total_ms": 636
+    },
+    "runtime": "ai_agent.runtime",
+    "test_passed": true,
+    "session_cancelled": true,
+    "setting_changes": 0,
+    "limits": [
+      "Synthetic screen, not the user real task.",
+      "Single sample; no percentile or before/after claim.",
+      "HTTP includes network and server work; provider-only timing unavailable."
+    ]
+  },
+  "server_rollout": {
+    "baseline_revision": "a7f214b943e1adcb79934e0241315c2c3a4de126",
+    "live_runtime_code_hash": "9e3735a4504dd8c7d63fc1b7694762c3f714ef774b986b4dbe4c2194c55ab701",
+    "prepared_runtime_code_hash": "ef60a1eff9d8e89627034ed29a4a17ab7275e950b9b468fb0716412df1be07a0",
+    "branch": "codex/performance-rollout-20261116",
+    "deployed": false,
+    "schema_changes": false,
+    "model_confidence_or_graph_changes": false,
+    "publication": {
+      "pushed": false,
+      "blocked_by": "automatic approval review",
+      "reason": "Explicit user authorization to upload code and performance report to the external GitHub repository was not established.",
+      "user_approval_required": [
+        "Upload reviewed commit to GitHub",
+        "Merge and deploy server changes"
+      ]
+    }
+  },
+  "same_baseline_runtime_benchmark": {
+    "baseline": {
+      "startup_ms": 342.348,
+      "median_ms": 63.718,
+      "samples_ms": [
+        66.36,
+        64.797,
+        63.35,
+        63.717,
+        63.37,
+        66.146,
+        63.459,
+        63.719,
+        64.184,
+        63.322
+      ],
+      "scope": "synthetic runtime; no HTTP, DB or external AI",
+      "target": "display"
+    },
+    "prepared": {
+      "startup_ms": 350.392,
+      "median_ms": 12.362,
+      "samples_ms": [
+        13.044,
+        12.471,
+        12.942,
+        12.622,
+        12.494,
+        12.226,
+        12.254,
+        11.99,
+        12.119,
+        11.704
+      ],
+      "scope": "synthetic runtime; no HTTP, DB or external AI",
+      "target": "display"
+    },
+    "limits": "Local synthetic IPC/runtime only; not a prediction of end-to-end production latency."
+  },
+  "validation": {
+    "ai_agent": {
+      "passed": 429
+    },
+    "backend": {
+      "total": 2541,
+      "initial_passed": 2535,
+      "initial_failed": 6,
+      "initial_failure_cause": "Sandbox denied local IPC sockets for production process tests.",
+      "process_rerun_passed": 7,
+      "unresolved_failures": 0
+    },
+    "android": {
+      "total": 847,
+      "initial_passed": 788,
+      "initial_failed": 59,
+      "rerun_passed": 59,
+      "rerun_environment": "KAKAO_NATIVE_APP_KEY empty, matching CI; initial local Kakao Application initialization failed in Robolectric.",
+      "unresolved_failures": 0,
+      "focused_performance_tests": 41
+    },
+    "android_to_backend_contract": {
+      "passed": 6,
+      "requires_local_ipc_permission": true
+    },
+    "measurement_permission_cleanup_tests": {
+      "passed": 2
+    },
+    "smoke_check": "PASS: migrations; live local auth/turn; process restart/replay/resume/cancel; safe logs",
+    "local_load": {
+      "requests": 40,
+      "concurrency": 4,
+      "status_200": 40,
+      "external_ai": false
+    },
+    "shared_capability_export": "unchanged",
+    "openapi_export": "unchanged",
+    "live_api_protocol": "execution-state.v1 compatible"
+  }
+}

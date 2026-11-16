@@ -8,6 +8,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -25,6 +26,7 @@ from app.services.auth import AuthService  # noqa: E402
 from app.core.http import HttpBoundary, ErrorEnvelope, install_error_handlers  # noqa: E402
 from app.clients.agent import AgentClient, ClickAgentEngine  # noqa: E402
 from app.clients.runtime_agent import RuntimeAgentAdapter  # noqa: E402
+from app.clients.runtime_process import warm_runtime  # noqa: E402
 from app.database import Base, build_engine, build_session_factory, session_scope  # noqa: E402
 from app import models as _models  # noqa: E402,F401
 from app.repositories.sessions import InMemorySessionRepository  # noqa: E402
@@ -47,6 +49,7 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False,
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         try:
+            await run_in_threadpool(warm_runtime)
             yield
         finally:
             application.state.engine.dispose()

@@ -43,6 +43,18 @@ EXTERNAL_CHANGES = {"connection_restored", "provider_available", "provider_confi
                     "fresh_time_budget", "valid_model_response"}
 
 
+def provider_attempt_count(state):
+    """Migrate old failure counts without charging candidate/observation work as AI calls."""
+    count = state.get("provider_attempts")
+    if type(count) is int and count >= 0:
+        return count
+    failure = state.get("failure") or {}
+    if failure.get("stage") in {"provider", "model_response", "model_selection"}:
+        legacy = state.get("attempts", 0)
+        return legacy if type(legacy) is int and legacy >= 0 else 0
+    return 0
+
+
 def selection_failure(diagnostics, *, outcome_uncertain=False, cause=None):
     cause = cause or diagnostics.get("status")
     # A model decision exists only after a call and a validated response.

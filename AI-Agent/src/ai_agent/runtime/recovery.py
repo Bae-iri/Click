@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from hashlib import sha256
 
 from ai_agent.runtime.replanner import decide_replan
-from ai_agent.runtime.failures import EXTERNAL_CHANGES, SelectionFailure
+from ai_agent.runtime.failures import EXTERNAL_CHANGES, SelectionFailure, provider_attempt_count
 from ai_agent.runtime.targeting import selector_evidence
 from ai_agent.runtime.types import ReplanDecision, VerificationStatus as Status
 
@@ -62,7 +62,7 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
                     awaiting_vision_consent=False, vision_failed=False,
                     within_settling_interval=False, user_retry=False, completed=False,
                     selection_failure=None, primary_failure=None,
-                    selection_fingerprint=None, selection_paused=False):
+                    selection_fingerprint=None, selection_paused=False, selection_called=False):
     base = decide_replan(session=session, verification_result=verification,
         failed_node_ids=failed_node_ids, total_failed_attempts=total_failed_attempts,
         max_failed_attempts=graph.policy.max_failed_attempts, match_result=match)
@@ -98,12 +98,17 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
     waiting_result = bool(verification and verification.status in {Status.UNKNOWN, Status.WAITING_FOR_OBSERVATION})
     label = manual_navigation_target(graph, match, nodes)
     if primary_failure and primary_failure.next_action != "reobserve":
+        from ai_agent.runtime.primary import recovery_scope
+        scope = recovery_scope(snapshot)
         old = dict(session.recovery_state) if session else {}
-        if old.get("selection_fingerprint") != selection_fingerprint or user_retry:
+        # Actual native page navigation already retires recovery in the engine.
+        # A classifier/scope change or a legacy checkpoint must not refund it.
+        if user_retry:
             old = {}
-        state = {**old, "failure": primary_failure.to_dict(),
+        state = {**old, "scope": scope, "failure": primary_failure.to_dict(),
                  "selection_fingerprint": selection_fingerprint,
                  "attempts": old.get("attempts", 0) + int(not selection_paused),
+                 "provider_attempts": provider_attempt_count(old) + int(selection_called),
                  "retry_after_ms": 0}
         reason, action = primary_failure.reason_code, primary_failure.next_action
         # Keep native list-search evidence without discarding the original cause.
@@ -142,7 +147,7 @@ def decide_recovery(*, graph, session, snapshot, match, nodes, verification,
     if selection_failure and old.get('waiting_for_user') and not user_retry:
         return plan(old.get("decision", "wait"), old.get("reason_code", reason),
                     old.get("next_action", "user_assistance"), "user", old)
-    if old.get("scope") != scope or user_retry:
+    if user_retry or (not selection_failure and old.get("scope") != scope):
         old = {}
     if old.get("waiting_for_user"):
         return plan(old.get("decision", "wait"), old.get("reason_code", reason),

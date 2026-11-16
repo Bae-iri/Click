@@ -59,6 +59,11 @@ Click 버튼은 홈 화면과 다른 앱 위에서 같은 기능 메뉴를 제�
 sh ./gradlew :app:assembleDebug
 ```
 
+기존 설치가 `com.click`이면 `sh ./gradlew -PCLICK_APPLICATION_ID=com.click :app:assembleDebug`로
+같은 패키지의 APK를 만든다. 기본 패키지는 `com.clueclick.app`이므로 기존 앱의 패키지를
+확인하지 않고 설치하면 아이콘이 두 개 생길 수 있다. 업데이트 전 서명 일치와 서버 실행 계약을
+확인하고 `scripts/install_verified_debug.py`로 데이터 유지 설치한다.
+
 Android 빌드는 경로에 `:`가 없는 폴더에서 실행한다. macOS에서 경로의 `:`는
 Java 클래스 경로와 충돌할 수 있다. Android Studio에서 사용 중인
 `~/StudioProjects/Click/Frontend`는 이 제한에 해당하지 않는다.

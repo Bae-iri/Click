@@ -67,10 +67,15 @@ class AgentTurnService:
         if prepared_reference is not None and selected_reference != prepared_reference:
             self.repository.conflict("PREPARED_GRAPH_CHANGED")
         checkpoint_graph_version = graph_version(selected_graph)
-        compatible_versions = {checkpoint_graph_version}
-        # Existing font sessions used the whole bundled registry hash before DB loading.
-        if selected_graph and selected_graph.definition.task_id in {"MVP-01", "MVP-02"}:
-            compatible_versions.add(graph_version())
+
+        def compatible(version):
+            if version == checkpoint_graph_version:
+                return True
+            # Only legacy font checkpoints need the whole bundled registry hash.
+            return (selected_graph is not None
+                and selected_graph.definition.task_id in {"MVP-01", "MVP-02"}
+                and version == graph_version())
+
         canonical = json.dumps(request_identity(request), sort_keys=True,
                                separators=(",", ":"), ensure_ascii=False)
         if command_context is not None:
@@ -79,7 +84,7 @@ class AgentTurnService:
         claim = self.repository.claim(request, digest)
         if "cached" in claim:
             if claim["graph_version"] is not None and (
-                claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] not in compatible_versions
+                claim["schema_version"] != SCHEMA_VERSION or not compatible(claim["graph_version"])
             ):
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
             return self.narrator.decorate(safe_response(AgentTurnResponse.model_validate(claim["cached"])), graph=selected_graph)
@@ -93,7 +98,7 @@ class AgentTurnService:
                         "device_context": DeviceContextRequest.model_validate(details["device_context"])})
             approved = validate_confirmation(self.session_factory, request, int(self.repository.clock()))
             if claim["checkpoint"] is not None and (
-                claim["schema_version"] != SCHEMA_VERSION or claim["graph_version"] not in compatible_versions
+                claim["schema_version"] != SCHEMA_VERSION or not compatible(claim["graph_version"])
             ):
                 self.repository.conflict("CHECKPOINT_INCOMPATIBLE")
             # An isolated runtime per turn prevents cross-request state corruption.
@@ -102,7 +107,7 @@ class AgentTurnService:
             authorization = ((previous.pending_attempt or {}).get("authorization") or {}) if previous else {}
             if authorization and authorization.get("expires_at", 0) <= int(self.repository.clock()):
                 store.update(request.session_id, pending_attempt=None, pending_selection=None, pending_transition_id=None)
-            # Production work runs in a spawned process with no DB/session factory.
+            # Production work runs in an isolated process with no DB/session factory.
             # Injected engines are controlled in-process simulations used by unit tests.
             timeout = remaining(self.timeout_seconds)
             if self.engine_factory is RuntimeAgentAdapter:
@@ -244,10 +249,9 @@ class AgentTurnService:
             current = self.repository.typed_details(request.session_id, request.user_id)
             if not current["goal_type"] or current["goal_type"].rsplit(".", 1)[0] != request.goal.goal_type.rsplit(".", 1)[0]:
                 raise ValueError("adjust_task must keep the same setting; use replace_task for another goal")
-        graph_hash = graph_version()
         if command in {"pause_task", "resume_task", "cancel_task"}:
             pinned = self.repository.typed_details(request.session_id, request.user_id)
-            graph_hash = pinned["graph_hash"] or graph_hash
+            graph_hash = pinned["graph_hash"] or graph_version()
             canonical = json.dumps(request_identity(request), sort_keys=True,
                 separators=(",", ":"), ensure_ascii=False)
             details = self.repository.apply_typed_control(request, graph_hash,
@@ -293,7 +297,7 @@ class AgentTurnService:
         if reference is None:
             details=self.repository.typed_details(request.session_id,request.user_id)
             if details["version"]!=response.session_version:self.repository.conflict("STALE_REPLAY")
-            reference=dict(task_id=response.task_id,version=details["graph_version"],sha256=details["graph_hash"] or graph_hash)
+            reference=dict(task_id=response.task_id,version=details["graph_version"],sha256=details["graph_hash"] or graph_version())
             goal_type=details["goal_type"]
         return AgentCommandResponse(
             contract_version=request.contract_version,

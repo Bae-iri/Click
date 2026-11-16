@@ -13,7 +13,9 @@ _MAX_RESULT = 4 * 1024 * 1024
 # runtime on every screen. Each turn still receives its own killable process.
 _START_METHOD = "forkserver" if "forkserver" in multiprocessing.get_all_start_methods() else "spawn"
 if _START_METHOD == "forkserver":
-    multiprocessing.set_forkserver_preload(["app.clients.runtime_work"])
+    multiprocessing.set_forkserver_preload([
+        "app.clients.runtime_process", "app.clients.runtime_work",
+    ])
 
 def _run(connection, operation, end):
     token = deadline.set(end)
@@ -32,6 +34,20 @@ def _run(connection, operation, end):
     finally:
         deadline.reset(token)
         connection.close()
+
+
+def _ready():
+    return True
+
+
+def warm_runtime():
+    """Load the clean runtime server before accepting the first screen turn.
+
+    No request, provider call, session or database connection enters this probe.
+    The disposable worker also verifies that IPC and process cleanup work.
+    """
+    run_runtime(_ready, 10)
+
 
 def run_runtime(operation, timeout):
     if not math.isfinite(timeout) or timeout <= 0:

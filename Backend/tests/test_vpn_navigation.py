@@ -144,7 +144,7 @@ def test_vpn_intermediate_rejects_invalid_or_ambiguous_rows(problem):
     resolver = JevScreenResolver(forbidden)
     assert resolver.resolve(nodes=nodes, raw_nodes=raw, graph=graph, goal=goal,
         screen_bounds=(0, 0, 1080, 2400)) is None
-    assert resolver.last_diagnostics['status'] == 'no_candidates'
+    assert resolver.last_diagnostics['status'] == ('ambiguous_candidates' if problem == 'duplicate' else 'no_candidates')
 
 
 @pytest.mark.parametrize('action', ['connect', 'disconnect'])

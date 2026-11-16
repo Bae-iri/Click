@@ -14,6 +14,11 @@ import org.json.JSONObject;
 
 /** Last check before HTTP: only reviewed settings labels, structure and numeric control values. */
 public final class SettingsScreenPrivacy {
+    private static final java.util.regex.Pattern WHITESPACE = java.util.regex.Pattern.compile("\\s+");
+    private static final java.util.regex.Pattern RESOURCE_ID = java.util.regex.Pattern.compile("[a-zA-Z0-9_.]+:id/[a-zA-Z0-9_]+");
+    private static final java.util.regex.Pattern NATIVE_CLASS = java.util.regex.Pattern.compile(
+        "android\\.widget\\.(TextView|Button|ImageButton|Switch|SwitchCompat|CheckBox|RadioButton|SeekBar|ListView|LinearLayout|FrameLayout|RelativeLayout)"
+        + "|android\\.view\\.View|androidx\\.recyclerview\\.widget\\.RecyclerView");
     public static final class Blocked extends IOException {
         public enum Reason { SENSITIVE_INPUT, SENSITIVE_SCREEN, UNSUPPORTED_APP, UNVERIFIED_SCREEN, VISION_MASK_UNAVAILABLE }
         public final Reason reason;
@@ -123,7 +128,7 @@ public final class SettingsScreenPrivacy {
                 if (node.has(key)) safe.put(key, node.get(key));
             safe.put("package_name", pkg).put("text", text == null ? JSONObject.NULL : text)
                     .put("content_description", content == null ? JSONObject.NULL : content);
-            if (resource.matches("[a-zA-Z0-9_.]+:id/[a-zA-Z0-9_]+")) safe.put("resource_id", resource);
+            if (RESOURCE_ID.matcher(resource).matches()) safe.put("resource_id", resource);
             String role = node.optString("role");
             if (roles.contains(role)) safe.put("role", role);
             boolean nativeCheckedControl = node.optBoolean("checkable") && extras != null
@@ -140,8 +145,7 @@ public final class SettingsScreenPrivacy {
             }
             // Preserve a finite native class identity needed by server role inference.
             String className = node.optString("class_name");
-            if (className.matches("android\\.widget\\.(TextView|Button|ImageButton|Switch|SwitchCompat|CheckBox|RadioButton|SeekBar|ListView|LinearLayout|FrameLayout|RelativeLayout)"
-                    + "|android\\.view\\.View|androidx\\.recyclerview\\.widget\\.RecyclerView"))
+            if (NATIVE_CLASS.matcher(className).matches())
                 safe.put("class_name", className);
             else if ("slider".equals(role)) safe.put("class_name", "android.widget.SeekBar");
             else if ("switch".equals(role) || "toggle".equals(role)) safe.put("class_name", "android.widget.Switch");
@@ -330,7 +334,7 @@ public final class SettingsScreenPrivacy {
     }
 
     private static boolean flag(JSONObject object, String key) { return object != null && object.optBoolean(key); }
-    private static String normalize(String text) { return text.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " "); }
+    private static String normalize(String text) { return WHITESPACE.matcher(text.trim().toLowerCase(Locale.ROOT)).replaceAll(" "); }
     private static Set<String> strings(JSONArray array) throws JSONException {
         Set<String> values = new HashSet<>();
         for (int i = 0; i < array.length(); i++) values.add(array.getString(i));

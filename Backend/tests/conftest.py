@@ -1,6 +1,6 @@
 """Controlled-provider unit tests inject an in-process runtime boundary.
 
-Production uses spawned, killable workers. Mark process_runtime tests to exercise
+Production uses isolated, killable workers. Mark process_runtime tests to exercise
 that boundary; process tests cannot inherit monkeypatched provider senders.
 """
 import os
@@ -16,3 +16,4 @@ from app.clients.turn_executor import execute
 def controlled_runtime_boundary(request,monkeypatch):
     if request.node.get_closest_marker("process_runtime") is None:
         monkeypatch.setattr("app.services.agent_turn.run_runtime",execute)
+        monkeypatch.setattr("app.main.warm_runtime", lambda: None)

@@ -53,6 +53,21 @@ class JevScreenResolver(JevGoalClassifier):
                 return None
             # Reviewed menu identities and unlabeled sliders are candidates.
             # Unknown free-form labels never create an export exception.
+            # These caches live for one observation only: bounds, privacy and
+            # eligibility are always rebuilt when the next native screen arrives.
+            evidence = {}
+            keys = {}
+            def identity(node):
+                if node.node_id not in keys:
+                    keys[node.node_id] = target_key(node)
+                return keys[node.node_id]
+
+            def score(node, transition):
+                key = (transition.transition_id, node.node_id)
+                if key not in evidence:
+                    evidence[key] = selector_evidence(node, transition, nodes, graph)
+                return evidence[key]
+
             bindings = {}
             for transition in sorted(graph.transitions, key=lambda t: (t.from_state, t.priority, t.transition_id)):
                 if (graph.states[transition.from_state].verification_only
@@ -64,12 +79,12 @@ class JevScreenResolver(JevGoalClassifier):
                     # Model confidence cannot identify a setting by itself.
                     # All adjustment tasks require graph-owned control evidence.
                     if (transition.target_role == 'slider'
-                            and selector_evidence(node, transition, nodes, graph)[0] < MATCH_THRESHOLD):
+                            and score(node, transition)[0] < MATCH_THRESHOLD):
                         continue
                     # An approved menu identity cannot stand for a different
                     # navigation target. Unlabelled sliders still use context.
                     if (node.role in {"menu_item", "button", "app_icon"} and node.label
-                            and selector_evidence(node, transition, nodes, graph)[0] < MATCH_THRESHOLD):
+                            and score(node, transition)[0] < MATCH_THRESHOLD):
                         continue
                     if screen_bounds:
                         x, y = (node.bounds[0] + node.bounds[2]) / 2, (node.bounds[1] + node.bounds[3]) / 2
@@ -77,24 +92,24 @@ class JevScreenResolver(JevGoalClassifier):
                             continue
                     if node.source_confidence is not None and node.source_confidence < minimum:
                         continue
-                    if target_key(node) in (excluded_target_keys or {}).get(transition.transition_id, ()):
+                    if identity(node) in (excluded_target_keys or {}).get(transition.transition_id, ()):
                         continue
                     bindings[f"candidate_{len(bindings)}"] = (transition, node)
             # A named menu is not a candidate for every menu edge merely because
             # its role/package fit. Keep all graph routes matching its identity;
             # leave unrecognized controls to Jev instead of guessing their identity.
             identified = {n.node_id for t, n in bindings.values()
-                          if selector_evidence(n, t, nodes, graph)[1] in {"resource_id", "exact_label"}}
+                          if score(n, t)[1] in {"resource_id", "exact_label"}}
             bindings = {key: (t, n) for key, (t, n) in bindings.items()
                         if n.node_id not in identified
-                        or selector_evidence(n, t, nodes, graph)[0] >= MATCH_THRESHOLD}
+                        or score(n, t)[0] >= MATCH_THRESHOLD}
             # Two native controls with the same reviewed identity are ambiguous;
             # model confidence cannot turn one into the uniquely intended target.
             from collections import Counter
-            identities = Counter((t.transition_id, target_key(n)) for t,n in bindings.values())
+            identities = Counter((t.transition_id, keys[n.node_id]) for t,n in bindings.values())
             ambiguous = any(count > 1 for count in identities.values())
             bindings = {key:(t,n) for key,(t,n) in bindings.items()
-                        if identities[t.transition_id,target_key(n)] == 1}
+                        if identities[t.transition_id,keys[n.node_id]] == 1}
             self.last_diagnostics["candidate_count"] = len(bindings)
             if not bindings or len(bindings) > 250:
                 self.last_diagnostics["status"] = ("ambiguous_candidates" if ambiguous else "no_candidates") if not bindings else "candidate_limit"
@@ -105,8 +120,9 @@ class JevScreenResolver(JevGoalClassifier):
             # A low-confidence decision with a visible matching control needs
             # disambiguation, not scrolling that control off the screen.
             self.last_diagnostics["grounded_candidate_count"] = sum(
-                selector_evidence(n, t, nodes, graph)[0] >= MATCH_THRESHOLD for t, n in bindings.values())
+                score(n, t)[0] >= MATCH_THRESHOLD for t, n in bindings.values())
             relevant = {n.node_id for _, n in bindings.values()}
+            candidate_ids = set(relevant)
             words = tuple(w for t in graph.transitions for w in selector_keywords(t, graph))
             relevant.update(n.node_id for n in nodes if any_keyword_matches(n.label, words))
             # A destination menu label is not the current page title. Keep the
@@ -119,7 +135,7 @@ class JevScreenResolver(JevGoalClassifier):
             relevant.update(n.node_id for n in raw_nodes if n.parent_id in parents and n.parent_id is not None)
             relevant.update(p for p in parents if p is not None)
             for index, node in enumerate(nodes):
-                if node.node_id in {n.node_id for _, n in bindings.values()}:
+                if node.node_id in candidate_ids:
                     relevant.update(n.node_id for n in nodes[max(0,index-2):index+3])
             selected_nodes = [n for n in nodes if n.node_id in relevant]
             self.last_diagnostics["exported_node_count"] = len(selected_nodes)
@@ -272,7 +288,7 @@ class JevScreenResolver(JevGoalClassifier):
                 self.last_diagnostics.update(chosen_state=selected_transition.from_state,
                     chosen_transition=selected_transition.transition_id,
                     chosen_transition_hash=sha256(selected_transition.transition_id.encode()).hexdigest(),
-                    chosen_target_hash=sha256(target_key(selected_node).encode()).hexdigest())
+                    chosen_target_hash=sha256(keys[selected_node.node_id].encode()).hexdigest())
             else:
                 self.last_diagnostics["chosen_outcome"] = choice
             if confidence < minimum:
@@ -289,7 +305,7 @@ class JevScreenResolver(JevGoalClassifier):
             # Honor reviewed ordering for equally grounded alternatives in this step.
             preferred = match_next_ui(transition.from_state, nodes, graph,
                                       excluded_target_keys=excluded_target_keys)
-            selected_score, _ = selector_evidence(node, transition, nodes, graph)
+            selected_score, _ = score(node, transition)
             if (selected_score >= MATCH_THRESHOLD and not preferred.fallback_reason
                     and preferred.confidence >= selected_score
                     and preferred.transition_id != transition.transition_id
@@ -301,7 +317,7 @@ class JevScreenResolver(JevGoalClassifier):
             return MatchResult(transition.from_state, transition.to_state, transition.action_type,
                 node.node_id, node.label, node.bounds,
                 "vision_jev_choice" if node.source_confidence is not None else "jev_choice", confidence,
-                transition_id=transition.transition_id, target_key=target_key(node))
+                transition_id=transition.transition_id, target_key=keys[node.node_id])
         except TimeoutError:
             self.last_diagnostics["status"] = "deadline_exceeded"
             return None

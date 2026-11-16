@@ -9,6 +9,7 @@ import java.util.*;
 
 /** Select one native collection, not the first nested carousel that happens to move. */
 final class NativeNavigationReader {
+    private static final java.util.regex.Pattern CLOCK_OR_NUMBER=java.util.regex.Pattern.compile("[0-9 :./%APMapm오전후]+");
     private NativeNavigationReader() {}
     private static boolean has(AccessibilityNodeInfo n,int action) {
         return n.getActionList().stream().anyMatch(a->a.getId()==action);
@@ -44,9 +45,9 @@ final class NativeNavigationReader {
             boolean forward=has(selected,AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
                     || has(selected,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.getId())
                     || has(selected,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId());
-            int[] indices={Integer.MAX_VALUE,-1};indices(selected,axis,indices);
+            int[] indices={Integer.MAX_VALUE,-1};
             int count=info==null?-1:axis==NavigationState.Axis.HORIZONTAL?info.getColumnCount():info.getRowCount();
-            List<String> parts=new ArrayList<>();fingerprint(selected,parts);
+            List<String> parts=new ArrayList<>();summarize(selected,axis,indices,parts,true,true,true);
             Collections.sort(parts);String digest;
             try {digest=Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256")
                     .digest(String.join("\n",parts).getBytes(StandardCharsets.UTF_8)));}
@@ -82,33 +83,38 @@ final class NativeNavigationReader {
         }
         return n;
     }
-    private static void indices(AccessibilityNodeInfo n,NavigationState.Axis axis,int[] out) {
-        indices(n,axis,out,true);
-    }
-    private static void indices(AccessibilityNodeInfo n,NavigationState.Axis axis,int[] out,boolean selectedRoot) {
+    /** Read each child once while keeping index and fingerprint pruning independent. */
+    private static void summarize(AccessibilityNodeInfo n,NavigationState.Axis axis,int[] out,
+                                  List<String> parts,boolean selectedRoot,boolean readIndices,boolean readFingerprint) {
         if(!n.isVisibleToUser())return;
-        AccessibilityNodeInfo.CollectionItemInfo item=selectedRoot?null:n.getCollectionItemInfo();
-        if(item!=null) {
-            int index=axis==NavigationState.Axis.HORIZONTAL?item.getColumnIndex():item.getRowIndex();
-            if(index>=0){out[0]=Math.min(out[0],index);out[1]=Math.max(out[1],index);}
+        boolean childIndices=readIndices;
+        if(readIndices) {
+            AccessibilityNodeInfo.CollectionItemInfo item=selectedRoot?null:n.getCollectionItemInfo();
+            if(item!=null) {
+                int index=axis==NavigationState.Axis.HORIZONTAL?item.getColumnIndex():item.getRowIndex();
+                if(index>=0){out[0]=Math.min(out[0],index);out[1]=Math.max(out[1],index);}
+            }
+            // Nested icon grids supply their page index, not their children's icon indices.
+            if(!selectedRoot && n.getCollectionInfo()!=null)childIndices=false;
         }
-        // Items inside a page's icon grid are not page indices of its parent pager.
-        if(!selectedRoot && n.getCollectionInfo()!=null)return;
-        for(int i=0;i<n.getChildCount();i++){AccessibilityNodeInfo c=n.getChild(i);if(c!=null)try{indices(c,axis,out,false);}finally{c.recycle();}}
-    }
-    private static void fingerprint(AccessibilityNodeInfo n,List<String> parts) {
-        if(!n.isVisibleToUser() || n.isPassword() || n.isEditable() || n.getRangeInfo()!=null)return;
-        String resource=String.valueOf(n.getViewIdResourceName()).toLowerCase(Locale.ROOT);
-        String type=String.valueOf(n.getClassName()).toLowerCase(Locale.ROOT);
-        if(resource.contains("widget") || type.contains("appwidget") || type.contains("clock") || resource.endsWith("/summary"))return;
-        String label=n.getText()!=null?n.getText().toString():n.getContentDescription()!=null?n.getContentDescription().toString():"";
-        if(!label.isBlank() && !label.matches("[0-9 :./%APMapm오전후]+")) {
-            // Layout animation is not movement to a new page. Native item
-            // indices distinguish repeated rows without absolute pixel bounds.
-            AccessibilityNodeInfo.CollectionItemInfo item=n.getCollectionItemInfo();
-            String index=item==null?"":item.getRowIndex()+":"+item.getColumnIndex();
-            parts.add(resource+"|"+type+"|"+label+"|"+index);
+        boolean childFingerprint=readFingerprint && !n.isPassword() && !n.isEditable() && n.getRangeInfo()==null;
+        if(childFingerprint) {
+            String resource=String.valueOf(n.getViewIdResourceName()).toLowerCase(Locale.ROOT);
+            String type=String.valueOf(n.getClassName()).toLowerCase(Locale.ROOT);
+            childFingerprint=!(resource.contains("widget") || type.contains("appwidget") || type.contains("clock") || resource.endsWith("/summary"));
+            if(childFingerprint) {
+                String label=n.getText()!=null?n.getText().toString():n.getContentDescription()!=null?n.getContentDescription().toString():"";
+                if(!label.isBlank() && !CLOCK_OR_NUMBER.matcher(label).matches()) {
+                    AccessibilityNodeInfo.CollectionItemInfo item=n.getCollectionItemInfo();
+                    String index=item==null?"":item.getRowIndex()+":"+item.getColumnIndex();
+                    parts.add(resource+"|"+type+"|"+label+"|"+index);
+                }
+            }
         }
-        for(int i=0;i<n.getChildCount();i++){AccessibilityNodeInfo c=n.getChild(i);if(c!=null)try{fingerprint(c,parts);}finally{c.recycle();}}
+        if(!childIndices && !childFingerprint)return;
+        for(int i=0;i<n.getChildCount();i++) {
+            AccessibilityNodeInfo child=n.getChild(i);if(child==null)continue;
+            try{summarize(child,axis,out,parts,false,childIndices,childFingerprint);}finally{child.recycle();}
+        }
     }
 }

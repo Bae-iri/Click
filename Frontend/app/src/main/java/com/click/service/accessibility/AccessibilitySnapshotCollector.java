@@ -38,8 +38,9 @@ final class AccessibilitySnapshotCollector {
         Rect bounds = new Rect();
         node.getBoundsInScreen(bounds);
         String className = string(node.getClassName());
+        String role = inferRole(className, node);
         if (node.isVisibleToUser() && (node.isPassword() || node.isEditable()
-                || "text_field".equals(inferRole(className, node))) && bounds.isEmpty()) maskReady[0] = false;
+                || "text_field".equals(role)) && bounds.isEmpty()) maskReady[0] = false;
         AccessibilityNodeInfo.RangeInfo range = node.getRangeInfo();
         Float progress = range == null ? null : range.getCurrent();
         boolean intersectsScreen = bounds.right > 0 && bounds.bottom > 0
@@ -58,7 +59,7 @@ final class AccessibilitySnapshotCollector {
                     string(node.getContentDescription()),
                     node.getViewIdResourceName(),
                     className,
-                    inferRole(className, node),
+                    role,
                     new int[]{left, top, right, bottom},
                     node.isClickable(),
                     node.isEnabled(),
@@ -67,14 +68,18 @@ final class AccessibilitySnapshotCollector {
                     node.isCheckable(),
                     progress,
                     node.getWindowId(),
-                    node.isPassword() || node.isEditable() || "text_field".equals(inferRole(className, node)),
+                    node.isPassword() || node.isEditable() || "text_field".equals(role),
                     range == null ? null : range.getMin(), range == null ? null : range.getMax(), node.isPassword(),
                     node.isCheckable() ? node.isChecked() : null
             ));
         }
         for (int index = 0; index < node.getChildCount(); index++) {
-            visit(node.getChild(index), nodeId + "_" + index, nodeId, packageName,
-                    screenWidth, screenHeight, output, maskReady);
+            AccessibilityNodeInfo child = node.getChild(index);
+            if (child == null) continue;
+            try {
+                visit(child, nodeId + "_" + index, nodeId, packageName,
+                        screenWidth, screenHeight, output, maskReady);
+            } finally { child.recycle(); }
         }
     }
 

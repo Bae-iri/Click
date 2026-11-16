@@ -15,6 +15,7 @@ import org.json.JSONObject;
 
 /** Fail-closed export policy for the current settings graph; no free-form OCR text. */
 public final class VisionPrivacy {
+    private static final java.util.regex.Pattern WHITESPACE = java.util.regex.Pattern.compile("\\s+");
     private final Map<String, Set<String>> groups = new HashMap<>();
     private final Set<String> settingsLabels = new HashSet<>();
 
@@ -65,7 +66,7 @@ public final class VisionPrivacy {
     }
 
     private static String normalize(String text) {
-        return text.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+        return WHITESPACE.matcher(text.trim().toLowerCase(Locale.ROOT)).replaceAll(" ");
     }
 
     public static void requireMaskBounds(int[] bounds, int width, int height) {

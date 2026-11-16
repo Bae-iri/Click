@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 from hashlib import sha256
 import json
 
-from ai_agent.runtime.failures import EXTERNAL_CHANGES, SelectionFailure, selection_failure
+from ai_agent.runtime.failures import EXTERNAL_CHANGES, SelectionFailure, selection_failure, provider_attempt_count
 from ai_agent.runtime.targeting import eligible_nodes, target_key, selector_evidence
 from ai_agent.runtime.types import MatchResult, SafetyLevel, VerificationStatus as Status
 
@@ -67,16 +67,30 @@ def observe_page_navigation(session, snapshot, nodes, graph):
 
 def recovery_scope(snapshot):
     # Layout/window churn is not progress. Bound selection retries for the
-    # current graph step, and require explicit retry after exhaustion.
-    return "selection:" + snapshot.state_id
+    # current native page, falling back to the graph step without a page title.
+    return "selection:" + (snapshot.page_fingerprint or snapshot.state_id)
 
 
-def selection_fingerprint(snapshot, raw_nodes, screen_bounds, exclusions):
-    """Exclude timestamps/observation IDs; include changes to candidate eligibility."""
-    evidence = [(n.node_id, n.parent_id, n.visible_to_user, n.enabled, n.clickable,
-                 n.scrollable, n.resource_id, n.window_id, n.bounds_in_screen) for n in raw_nodes]
-    return sha256(json.dumps([snapshot.fingerprint, sorted(evidence, key=lambda n: n[0]),
-        screen_bounds, exclusions], sort_keys=True).encode()).hexdigest()
+def selection_fingerprint(snapshot, nodes, screen_bounds, exclusions):
+    """Retry evidence excludes layout, generated IDs and unrelated device values.
+
+    Accepted guides still use the exact native snapshot/bounds in _retained_match.
+    A moved control must be revalidated, but movement alone cannot answer a model
+    ambiguity or refund a spent recovery budget.
+    """
+    evidence = []
+    for node in nodes:
+        bounds = node.bounds
+        visible = bool(bounds and bounds[2] > bounds[0] and bounds[3] > bounds[1])
+        if visible and screen_bounds:
+            x, y = (bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2
+            visible = screen_bounds[0] <= x < screen_bounds[2] and screen_bounds[1] <= y < screen_bounds[3]
+        evidence.append((target_key(node), node.label, node.label_parts, node.structure_role,
+            node.enabled, node.actionable, node.scrollable, visible,
+            node.value, node.range_min, node.range_max, node.checked, node.source_confidence))
+    return "v2:" + sha256(json.dumps([recovery_scope(snapshot),
+        sorted(evidence, key=lambda item: json.dumps(item, sort_keys=True)), exclusions],
+        sort_keys=True).encode()).hexdigest()
 
 
 def selection_binding(match, nodes, diagnostics):
@@ -140,7 +154,8 @@ def _retained_match(session, attempt, snapshot, nodes, graph, exclusions):
 
 
 def decide_primary(*, resolver, request, session, snapshot, nodes, raw_nodes, graph,
-                   goal, verification, attempt, exclusions, screen_bounds):
+                   goal, verification, attempt, exclusions, screen_bounds,
+                   evidence_fingerprint=None):
     info = {"provider": "jev", "mode": "primary", "status": "skipped", "called": False}
     if ((session and session.task_completed) or (verification and verification.task_completed)
             or request.user_confirmation == "rejected"
@@ -148,10 +163,17 @@ def decide_primary(*, resolver, request, session, snapshot, nodes, raw_nodes, gr
         return PrimaryDecision(None, info)
 
     recovery = session.recovery_state if session else {}
-    fingerprint = selection_fingerprint(snapshot, raw_nodes, screen_bounds, exclusions)
+    fingerprint = evidence_fingerprint or selection_fingerprint(snapshot, nodes, screen_bounds, exclusions)
     previous_failure = recovery.get("failure")
-    changed = recovery.get("selection_fingerprint") != fingerprint
+    previous_fingerprint = recovery.get("selection_fingerprint", "")
+    # Old paused checkpoints have no semantic evidence baseline. Keep them paused
+    # until a real page change or an allowed explicit provider retry.
+    changed = (isinstance(previous_fingerprint, str)
+        and previous_fingerprint.startswith("v2:") and previous_fingerprint != fingerprint)
+    observation_exhausted = (previous_failure and previous_failure.get("next_action") == "reobserve"
+        and recovery.get("attempts", 0) >= graph.policy.recovery_limit)
     if recovery.get("waiting_for_user") and (not previous_failure
+            or provider_attempt_count(recovery) >= graph.policy.recovery_limit or observation_exhausted
             or previous_failure.get("required_change") in EXTERNAL_CHANGES or not changed):
         info.update(recovery.get("primary_diagnostics", {}), called=False, paused=True)
         failure = SelectionFailure(**previous_failure) if previous_failure else None

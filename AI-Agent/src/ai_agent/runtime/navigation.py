@@ -23,9 +23,11 @@ def session_fields(session):
 def navigation_result(request, session):
     """Compute interruption state without exposing a partially committed turn."""
     event = request.user_action_event
-    if not session or not event or event.action_type.value not in {"back_navigated", "home_navigated"}:
+    if (not session or session.task_completed or not event
+            or event.action_type.value not in {"back_navigated", "home_navigated"}):
         return session
-    if event.session_id not in {None, request.session_id} or event.occurred_at_ms is None:
+    if (event.session_id not in {None, request.session_id} or event.occurred_at_ms is None
+            or event.episode_id is not None and event.episode_id != request.episode_id):
         return session
     baseline = session.last_snapshot.captured_at_ms if session.last_snapshot else None
     if baseline is not None and event.occurred_at_ms <= baseline:
@@ -46,8 +48,8 @@ def navigation_result(request, session):
                    last_target_node_id=None, recovery_state={}, vision_state={}, last_snapshot=None)
     if home:
         changes.update(current_state_id="S0_UNKNOWN", observed_path=(), progress_steps=(),
-                       task_completed=False, technical_outcome={}, failed_node_ids=(),
-                       failed_target_keys={}, transition_attempts={}, total_failed_attempts=0,
-                       recovery_count=0)
+                       technical_outcome={}, failed_node_ids=())
+        # Native IDs and the displayed path expire on Home. Semantic exclusions
+        # and spent action budgets belong to the episode and survive navigation.
     changes['processed_event_keys'] = (*session.processed_event_keys, key)[-128:]
     return replace(session, **changes)
