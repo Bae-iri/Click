@@ -12,6 +12,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import com.click.data.local.LocalAccountStore;
 import com.click.ui.common.ClickUi;
 import com.click.ui.common.ClickTextScale;
 
@@ -28,7 +29,9 @@ public final class FeedbackOverlayView extends ScrollView {
     public FeedbackOverlayView(Context context, boolean positive, String message, String draft, Listener listener) {
         super(context);
         this.listener = listener;
-        guidanceMessage = positive ? message : "죄송합니다.\n불편했던 점을\n알려주세요.";
+        String name = new LocalAccountStore(context).name().trim();
+        guidanceMessage = positive ? message : "정말 죄송합니다. 아직 클릭이 성장 중이라 "
+                + (name.isEmpty() ? "사용자님" : name) + "께 불편을 드렸습니다.";
         setFillViewport(false);
         setBackground(ClickUi.outlined(0xFFFFFFFF, ClickUi.BORDER, dp(22), dp(1)));
         setElevation(dp(12));

@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-16",
+  "issue": "The installed GitHub source still contained the old fixed negative-feedback apology while the requested replacement existed only in the working directory.",
+  "old_copy": "죄송합니다.\n불편했던 점을\n알려주세요.",
+  "new_copy_template": "정말 죄송합니다. 아직 클릭이 성장 중이라 {name_or_사용자님}께 불편을 드렸습니다.",
+  "speech_source": "FeedbackOverlayView.guidanceMessage, the same text rendered in the form.",
+  "backend_change_required": false,
+  "validation": {
+    "tests_passed": 240,
+    "sha256": "13ed5308d60fe5f09e66e4ea2c849f9b606e2b21522dd8becc61a7dadcf8bd56",
+    "package": "com.click",
+    "installed": true,
+    "installed_at": "2026-11-16 11:14:39",
+    "installed_hash_verified": true,
+    "device_copy_cases_passed": 4,
+    "real_feedback_submissions": 0,
+    "real_account_changes": 0
+  },
+  "device_verification": {
+    "runner": "FeedbackCopyProbeTest",
+    "cases": [
+      "empty profile / font scale 1.0",
+      "empty profile / font scale 1.5",
+      "synthetic named profile / font scale 1.0",
+      "synthetic named profile / font scale 1.5"
+    ],
+    "visual_review": "Default and large-font images inspected; complete new apology visible.",
+    "account_profile": "Disposable test profile only; real account untouched.",
+    "tts_scope": "Service regression verified the exact text handed to TutorialNarrator; physical speaker output was not measured."
+  }
+}

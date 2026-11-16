@@ -3767,6 +3767,11 @@ public class ClickOverlayServiceExecutionTest {
         verify(interactions).classify(anyString(),eq("야 이상한 색기야"),eq((String)session),callback.capture());
         callback.getValue().onSuccess(feedbackResponse(false,"negative-1"));
         assertNotNull(get("feedbackView"));
+        String expected="정말 죄송합니다. 아직 클릭이 성장 중이라 사용자님께 불편을 드렸습니다.";
+        var form=(com.click.ui.overlay.FeedbackOverlayView)get("feedbackView");
+        assertEquals(expected,form.guidanceMessage());
+        assertNotNull(feedbackChild(form,android.widget.TextView.class,expected));
+        verify((TutorialNarrator)get("narrator")).speak(expected);
         assertEquals(session,get("agentSessionId"));assertSame(goal,get("acceptedGoal"));
         assertSame(prompt,get("resultPrompt"));assertSame(panel,get("taskFlowView"));assertEquals(turns,requests.size());
         verify(queue,never()).enqueue(anyString(),anyString(),any());verify(queue,never()).complete(anyString(),any());
