@@ -206,7 +206,7 @@ def test_jev_choice_protocol_rejects_unknown_or_uncertain_actions(browse,monkeyp
     assert diagnostics['provider_latency_ms']>=0
 
 def test_ai2_obeys_latest_consent_excludes_earlier_events_and_keeps_unknown_separate(browse):
-    from app.services.browse_assessment import assess_browsing
+    from scripts.browse_assessment import assess_browsing
     from app.repositories.users import UserRepository
     resolution=prepare(browse)
     browse.browse('start',goal_resolution_id=resolution)
