@@ -44,6 +44,19 @@ public class SequentialTaskPresentationTest {
   View end=find(view,"끝내기");assertNotNull(end);end.performClick();end.performClick();assertEquals(1,ended[0]);
  }
 
+ @Test public void unsupportedAppShowsItsExplanationInsteadOfAnotherClarification() throws Exception {
+  var listener=mock(TaskFlowOverlayView.Listener.class);
+  var view=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),listener);
+  String message="아직 클릭이 지원하지 않는 앱이에요. 지금은 휴대폰 설정만 안내할 수 있어요.";
+  var state=new GoalPreparationState(new JSONObject().put("version","goal-inputs.v1").put("id","unsupported")
+    .put("source_text","정부24에서 주민등록등본 발급해줘").put("status","unsupported")
+    .put("missing_fields",new JSONArray()),null,message);
+  view.preparation(state);
+  assertNotNull(find(view,"아직 지원하지 않아요"));assertNotNull(find(view,message));
+  assertEquals(message,view.guidanceMessage());assertNull(view.findViewWithTag("goal_input_field"));
+  assertNull(find(view,"안내 시작하기"));verify(listener,never()).confirmRequirements();
+ }
+
  @Test public void declinedChoiceHasNoApologyFailureClueOrRetryAndEndRunsOnce() {
   var view=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
   Runnable end=mock(Runnable.class);String message="밝기를 바꾸지 않고 안내를 마칠게요.";

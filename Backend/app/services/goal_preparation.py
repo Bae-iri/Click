@@ -15,6 +15,15 @@ from app.schemas.agent_turn import AgentGoalResolutionResponse, TypedGoalRequest
 from app.schemas.goal_preparation import GoalPreparation, InputQuestion
 from app.services.goal_inputs import GoalInputRequirements, normalize, negated
 from app.services.goal_classifier import configured_goal_classifier
+from app.services import browse_policy
+from app.schemas.browse import BrowseGoal
+
+
+UNSUPPORTED_MESSAGES = {
+    'unsupported_app': '아직 클릭이 지원하지 않는 앱이에요. 지금은 휴대폰 설정만 안내할 수 있어요.',
+    'unsupported': '아직 클릭이 지원하지 않는 작업이에요. 지원하는 휴대폰 설정 작업을 말씀해 주세요.',
+    'unrelated': '클릭은 지금 휴대폰 설정을 도와드리고 있어요. 설정에서 필요한 도움을 말씀해 주세요.',
+}
 
 
 class GoalPreparationService:
@@ -83,7 +92,11 @@ class GoalPreparationService:
         return [goal for score, goal in scored if score == top]
 
     def resolve(self, request):
-        digest = sha256(json.dumps(request.model_dump(mode='json'), sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        identity = request.model_dump(mode='json')
+        capabilities = identity['device_context']['capabilities']
+        if not capabilities.get('coupang_browse'):
+            capabilities.pop('coupang_browse', None)
+        digest = sha256(json.dumps(identity, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         # Snapshot under the same user-first serialization order as queue/cancel operations.
         with self.factory() as db:
             now = self._lock(db, request)
@@ -100,21 +113,26 @@ class GoalPreparationService:
                 return AgentGoalResolutionResponse.model_validate(cached.response)
             current = self._current(db, request)
             parent_id = current.id if current else None
-            previous = None
+            previous, restored_response = None, None
             if request.goal_resolution_id:
                 parent = self._owned(db, request, request.goal_resolution_id)
                 if parent.id != parent_id or parent.expires_at <= now:
                     self.conflict('STALE_GOAL_RESOLUTION')
-                previous = deepcopy(parent.response['preparation'])
+                restored_response = parent.response
             elif current and current.expires_at > now and not request.preparation_reset:
                 stored = current.response.get('preparation')
                 if stored and stored['source_text'] == request.source_text:
-                    previous = deepcopy(stored)  # Reconnect restores answered fields; no approval is restored.
-            if request.preparation_reset:
-                previous = None
+                    restored_response = current.response
+            rejection_reason = None
+            if restored_response and not request.preparation_reset:
+                previous = deepcopy(restored_response['preparation'])  # No approval is restored.
+                rejection_reason = restored_response.get('metadata', {}).get('goal_interpretation', {}).get('reason')
+                if rejection_reason not in UNSUPPORTED_MESSAGES:
+                    rejection_reason = None
             db.commit()
 
         source = request.source_text
+        browse_allowed = browse_policy.enabled() and request.device_context.capabilities.coupang_browse
         values = dict(previous['values']) if previous else {}
         family = next((f for f in self.requirements.document['families'] if previous and f['id'] == previous['family']), None)
         if request.clarification_answer:
@@ -127,13 +145,29 @@ class GoalPreparationService:
             if field_id == 'request':
                 source = request.clarification_answer.value.strip()
                 values, family, previous = {}, None, None
+                rejection_reason = None
+            elif field_id == 'browse_query' and previous.get('execution_mode') == 'browse':
+                if not browse_allowed:
+                    self.conflict('BROWSE_DISABLED')
+                values['browse_query'] = browse_policy.safe_query(request.clarification_answer.value)
             else:
                 field = next(f for f in self.requirements.required(family, values) if f['id'] == field_id)
                 values[field_id] = self.requirements.answer(field, request.clarification_answer.value)
 
         matches = [] if negated(source) else self._keywords(source)
         match = matches[0] if len(matches) == 1 else None
-        if previous is None:
+        browse_context = '쿠팡' in normalize(source) or request.device_context.foreground_package == browse_policy.POLICY['package']
+        browse_type = (previous.get('browse_goal_type') if previous and previous.get('execution_mode') == 'browse'
+                       else match['goal_type'] if match and match['goal_type'] in browse_policy.GOALS and browse_context else None) if browse_allowed else None
+        if match and not browse_type and match.get('execution_status') != 'approved':
+            supported_apps = {g['target_app'] for g in self.catalog['goals'] if g.get('execution_status') == 'approved'}
+            rejection_reason = 'unsupported_app' if match['target_app'] not in supported_apps else 'unsupported'
+            family, values = None, {}
+        named_app = self.requirements.explicit_values(source).get('app_name')
+        if browse_allowed and match and match['goal_type'] in browse_policy.GOALS and not browse_context and named_app:
+            rejection_reason = 'unsupported_app'
+            family, values = None, {}
+        if previous is None and not browse_type and not rejection_reason:
             family = None if negated(source) else self.requirements.family(match['goal_type'] if match else None, source)
             ambiguous_direction = len(self.requirements.directions(source, family)) > 1
             values = {} if negated(source) else self.requirements.explicit_values(source, family)
@@ -146,15 +180,21 @@ class GoalPreparationService:
             if not negated(source) and len(matches) < 2 and (match is None or family is not None) and (
                     family is None or self.requirements.missing(family, values)):
                 candidates = [{k: g[k] for k in ('goal_type', 'display_name', 'target_app', 'slots')}
-                    for g in self.catalog['goals'] if g.get('execution_status') == 'approved'
+                    for g in self.catalog['goals'] if (g.get('execution_status') == 'approved'
+                        or browse_allowed and browse_context and g['goal_type'] in browse_policy.GOALS)
                     and (not match or not family or g['goal_type'].startswith(family['goal_prefix']))]
                 # Unknown intent needs one goal choice, not a union of unrelated
                 # families' conflicting field definitions. Its fields are derived
                 # from the chosen goal and the original request below.
                 fields = family['fields'] if family else []
                 inferred = self.llm.interpret_inputs(source, candidates, fields)
-                if inferred:
+                if inferred and inferred.get('reason') in UNSUPPORTED_MESSAGES:
+                    rejection_reason = inferred['reason']
+                    family, values = None, {}
+                elif inferred:
                     suggested = next((g for g in candidates if g['goal_type'] == inferred['goal_type']), None)
+                    if suggested and suggested['goal_type'] in browse_policy.GOALS and browse_allowed:
+                        browse_type = suggested['goal_type']
                     selected_family = self.requirements.family(suggested['goal_type']) if suggested else None
                     directions = self.requirements.directions(source, selected_family) if selected_family else set()
                     contradictory = suggested and 'direction' in suggested['slots'] and directions and (
@@ -184,10 +224,36 @@ class GoalPreparationService:
         fields = self.requirements.required(family, values) if family else []
         missing = self.requirements.missing(family, values) if family else []
         question = None
-        if family is None:
+        browse_goal = None
+        if browse_type:
+            family, fields, missing = None, [], []
+            rejection_reason = None
+            display_name = '쿠팡 상품 검색' if browse_type.endswith('search') else '쿠팡 상품 상세 보기'
+            if browse_type.endswith('search') and not values.get('browse_query'):
+                literal_query = browse_policy.explicit_query(source)
+                if literal_query:
+                    values['browse_query'] = literal_query
+            if not values.get('browse_query'):
+                missing = [{'id': 'browse_query'}]
+                question = InputQuestion(id=identifier + ':browse_query', field='browse_query', label='상품 이름', kind='text',
+                    message='어떤 상품을 찾을까요? 상품 이름을 말씀해 주세요.', placeholder='예: 무선 이어폰', max_length=100)
+                message = question.message
+            else:
+                browse_goal = BrowseGoal(goal_type=browse_type, query=browse_policy.safe_query(values['browse_query']))
+                status, resolution_status = 'ready', 'confirmation_required'
+                action_label = '검색을' if browse_type.endswith('search') else '상세 보기를'
+                message = f'쿠팡에서 “{browse_goal.query}” 상품 {action_label} 안내할까요? 상품 화면의 공개 항목을 AI로 확인해요. 검색어 입력과 화면 조작은 직접 진행해 주세요.'
+        elif rejection_reason:
+            status, resolution_status = 'unsupported', 'unsupported'
+            message = UNSUPPORTED_MESSAGES[rejection_reason]
+        elif family is None:
             if match:
                 status, resolution_status = 'unsupported', 'unsupported'
-                message = '이 작업의 입력 조건과 실행 안내는 아직 지원하지 않아요.'
+                supported_apps = {g['target_app'] for g in self.catalog['goals'] if g.get('execution_status') == 'approved'}
+                if browse_allowed:
+                    supported_apps.add('coupang')
+                rejection_reason = 'unsupported_app' if match['target_app'] not in supported_apps else 'unsupported'
+                message = UNSUPPORTED_MESSAGES[rejection_reason]
             else:
                 question = InputQuestion(id=identifier + ':request', field='request', label='요청', kind='text',
                     message='원하시는 작업을 조금 더 자세히 말해주세요.', placeholder='예: 글자 크기를 키워줘', max_length=200)
@@ -231,15 +297,24 @@ class GoalPreparationService:
                     message = '현재는 동영상·음악의 미디어 음량 조절을 지원해요. 벨소리·알림·통화 소리는 아직 지원하지 않아요.'
                 else:
                     message = f'{label}에서 이 설정을 바꾸는 실행 안내는 아직 지원하지 않아요. 요청을 수정할 수 있어요.'
+        if browse_allowed and rejection_reason:
+            message = {
+                'unsupported_app': '아직 클릭이 지원하지 않는 앱이에요. 휴대폰 설정과 쿠팡 상품 검색·상세 보기를 안내할 수 있어요.',
+                'unsupported': '아직 클릭이 지원하지 않는 작업이에요. 휴대폰 설정과 쿠팡 상품 검색·상세 보기를 안내할 수 있어요.',
+                'unrelated': '클릭은 휴대폰 설정과 쿠팡 상품 찾기를 도와드리고 있어요. 필요한 도움을 말씀해 주세요.',
+            }[rejection_reason]
         prepared = GoalPreparation(id=identifier, source_text=source, family=family['id'] if family else None,
             status=status, values=values, required_fields=fields, missing_fields=[f['id'] for f in missing] or (
                 ['request'] if question and question.field == 'request' else []), question=question,
-            graph_reference=reference, expires_at=now + self.TTL)
+            graph_reference=reference, expires_at=now + self.TTL, execution_mode='browse' if browse_type else 'graph',
+            browse_goal_type=browse_type, browse_goal=browse_goal)
         response = AgentGoalResolutionResponse(request_id=request.request_id, session_id=request.session_id,
             session_version=0, resolution_status=resolution_status, goal=goal, display_name=display_name,
             message=message, preparation=prepared)
         response.metadata['goal_selection'] = {'id': identifier, 'message': message,
             'candidates': [{'goal': goal.model_dump(mode='json'), 'label': display_name}] if goal else []}
+        if rejection_reason:
+            response.metadata['goal_interpretation'] = {'reason': rejection_reason}
         with self.factory() as db:
             self._lock(db, request)  # A cancel or start during inference invalidates this result.
             current = self._current(db, request)

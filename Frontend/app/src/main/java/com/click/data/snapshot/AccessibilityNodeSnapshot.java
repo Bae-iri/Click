@@ -28,6 +28,7 @@ public final class AccessibilityNodeSnapshot {
     public final boolean sensitiveInput;
     /** Alias used by the vision safety pipeline. */
     public final boolean sensitive;
+    public final String publicBrowseQueryHash;
     private final boolean passwordInput;
     private final boolean inputContentPresent;
 
@@ -93,6 +94,7 @@ public final class AccessibilityNodeSnapshot {
             Boolean checked) {
         this.checked = !sensitiveInput && checkable ? checked : null;
         this.passwordInput = passwordInput;
+        this.publicBrowseQueryHash = CoupangBrowsePrivacy.captureQueryHash(packageName,resourceId,text,passwordInput);
         this.inputContentPresent = sensitiveInput && text != null && !text.isEmpty();
         this.rangeMin = sensitiveInput ? null : rangeMin;
         this.rangeMax = sensitiveInput ? null : rangeMax;
@@ -117,6 +119,7 @@ public final class AccessibilityNodeSnapshot {
         this.progress = sensitiveInput ? null : progress;
     }
 
+    public boolean passwordInput() { return passwordInput; }
     boolean emptySearchInput() {
         return !passwordInput && !inputContentPresent && ScreenEnvironmentPolicy.contains("empty_search_resources",resourceId);
     }

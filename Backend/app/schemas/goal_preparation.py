@@ -1,5 +1,6 @@
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
+from app.schemas.browse import BrowseGoal
 
 
 class ClarificationAnswer(BaseModel):
@@ -36,4 +37,7 @@ class GoalPreparation(BaseModel):
     missing_fields: list[str] = Field(default_factory=list)
     question: InputQuestion | None = None
     graph_reference: dict | None = None
+    execution_mode: Literal['graph', 'browse'] = 'graph'
+    browse_goal_type: Literal['coupang.product.search', 'coupang.product.details'] | None = None
+    browse_goal: BrowseGoal | None = None
     expires_at: int

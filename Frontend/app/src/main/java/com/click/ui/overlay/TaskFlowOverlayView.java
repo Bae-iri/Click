@@ -781,6 +781,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     private String preparedSummary(com.click.domain.goal.GoalPreparationState state) {
+        if (state.browsing()) return state.message;
         String type = state.goal == null ? "" : state.goal.optString("goal_type");
         boolean increase = type.endsWith(".increase");
         if (type.startsWith("settings.font_size."))
@@ -829,7 +830,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
             return;
         }
         JSONObject question = state.question();
-        reviewStage(1, question == null ? "조금 더 확인할게요" : state.guidance(),
+        reviewStage(1, question == null ? ("unsupported".equals(state.data.optString("status"))
+                        ? "아직 지원하지 않아요" : "조금 더 확인할게요") : state.guidance(),
                 question != null && "choice".equals(question.optString("kind"))
                         ? "필요한 정보를 먼저 확인할게요." : "");
         narrationMessage = state.guidance();
@@ -895,6 +897,19 @@ public final class TaskFlowOverlayView extends LinearLayout {
             content.addView(help, spaced(14));
         }
         requestEditor(state.data.optString("source_text"), null);
+    }
+
+    public void browsing(String message, boolean terminal, Runnable observe, Runnable openApp, Runnable finish) {
+        reviewStage(1, "쿠팡 상품 찾기", "검색과 상품 상세 화면을 안내해요.");
+        narrationMessage = message;
+        content.addView(text(message, 16), spaced(12));
+        if (terminal) {
+            content.addView(primaryButton("안내 끝내기", finish), spaced(12));
+        } else {
+            content.addView(primaryButton("현재 화면 확인", observe), spaced(12));
+            content.addView(secondaryButton("쿠팡 열기", openApp), spaced(8));
+            content.addView(quietButton("원하는 상품을 확인했어요", finish), spaced(8));
+        }
     }
 
     public void requirements(RequirementReview review, boolean executable) {

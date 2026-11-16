@@ -169,6 +169,21 @@ def generateExecutionState = tasks.register("generateExecutionState") {
 android.sourceSets.main.java.srcDir(generatedExecution)
 tasks.named("preBuild").configure { dependsOn(generateExecutionState) }
 
+def browsePolicy = rootProject.file("../AI-Agent/goal_catalog/coupang_browse_policy.json")
+def generatedBrowse = layout.buildDirectory.dir("generated/coupangBrowse/java")
+def generateBrowsePolicy = tasks.register("generateBrowsePolicy") {
+    inputs.file(browsePolicy)
+    outputs.dir(generatedBrowse)
+    doLast {
+        def target = new File(generatedBrowse.get().asFile, "com/click/generated/CoupangBrowsePolicyData.java")
+        target.parentFile.mkdirs()
+        target.setText("package com.click.generated; public final class CoupangBrowsePolicyData { public static String json() { return " +
+                groovy.json.JsonOutput.toJson(browsePolicy.getText("UTF-8")) + "; } }", "UTF-8")
+    }
+}
+android.sourceSets.main.java.srcDir(generatedBrowse)
+tasks.named("preBuild").configure { dependsOn(generateBrowsePolicy) }
+
 // Bind an APK to the exact API origin used in its BuildConfig before installation.
 android.buildTypes.each { kind ->
     def title = kind.name.capitalize()

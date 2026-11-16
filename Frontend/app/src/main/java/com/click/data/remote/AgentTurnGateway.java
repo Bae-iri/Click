@@ -184,7 +184,8 @@ public final class AgentTurnGateway {
         org.json.JSONObject state = new org.json.JSONObject(http.get("/api/v1/agent/sessions/" + sessionId).body);
         org.json.JSONObject outcome = state.optJSONObject("task_outcome");
         org.json.JSONObject metadata = new org.json.JSONObject().put("task_outcome", outcome)
-                .put("task_id", state.opt("task_id")).put("requires_goal",state.optBoolean("requires_goal",false));
+                .put("task_id", state.opt("task_id")).put("requires_goal",state.optBoolean("requires_goal",false))
+                .put("browsing",state.optBoolean("browsing",false));
         if(outcome!=null && outcome.optJSONObject("termination")!=null)metadata.put("termination",outcome.getJSONObject("termination"));
         if(outcome!=null && "WAITING_RESULT".equals(state.optString("status")))metadata.put("result_prompt",outcome.optJSONObject("prompt"));
         if(state.optJSONObject("result_prompt")!=null)metadata.put("result_prompt",state.getJSONObject("result_prompt"));

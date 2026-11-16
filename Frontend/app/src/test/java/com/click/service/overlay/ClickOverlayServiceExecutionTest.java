@@ -67,11 +67,13 @@ public class ClickOverlayServiceExecutionTest {
     private final List<AgentTurnGateway.Callback> callbacks = new ArrayList<>();
     private MockedStatic<ClickAccessibilityService> accessibility;
     private MockedStatic<LatestScreenSnapshot> snapshots;
+    private org.mockito.MockedConstruction<com.click.data.local.AuthTokenStore> auth;
     private ScreenSnapshot screen;
     private ScreenSnapshot currentScreen;
     private ScreenSnapshot cachedScreen;
 
     @Before public void setup() throws Exception {
+        auth = mockConstruction(com.click.data.local.AuthTokenStore.class);
         // Skip onCreate: these tests use a controlled gateway and no real overlay or microphone.
         service = Robolectric.buildService(ClickOverlayService.class).get();
         gateway = mock(AgentTurnGateway.class);
@@ -190,12 +192,35 @@ public class ClickOverlayServiceExecutionTest {
     }
 
     @After public void cleanup() {
+        if (auth != null) auth.close();
         if (accessibility != null) accessibility.close();
         if (snapshots != null) snapshots.close();
     }
 
     @Test public void spokenEditorCorrectionIsDraftEvenWhenItSoundsLikeConfirmation() throws Exception {
         checkEditorSpeech(false,false);
+    }
+    @Test public void confirmedCoupangBrowseUsesSeparateManualContractAndStopDiscardsLateReply() throws Exception {
+        try(var browse=mockConstruction(com.click.data.remote.CoupangBrowseGateway.class)) {
+            assertTrue(contract.coupangBrowse);
+            JSONObject data=new JSONObject().put("version","goal-inputs.v1").put("id","browse-prepared")
+                .put("source_text","쿠팡 상품 검색해줘").put("status","ready").put("execution_mode","browse")
+                .put("missing_fields",new JSONArray()).put("browse_goal",new JSONObject()
+                    .put("goal_type","coupang.product.search").put("query","이어폰"));
+            set("goalPreparation",new com.click.domain.goal.GoalPreparationState(data,null,"상품 찾기를 안내할까요?"));
+            confirm();
+            assertNotNull(get("coupangBrowse"));assertTrue(sent.isEmpty());assertNull(get("acceptedGoal"));
+            var payload=org.mockito.ArgumentCaptor.forClass(JSONObject.class);
+            var callback=org.mockito.ArgumentCaptor.forClass(com.click.data.remote.CoupangBrowseGateway.Callback.class);
+            verify(browse.constructed().get(0)).send(payload.capture(),callback.capture());
+            assertEquals("start",payload.getValue().getString("command"));
+            assertEquals("browse-prepared",payload.getValue().getString("goal_resolution_id"));
+            assertFalse(payload.getValue().has("graph_reference"));
+            service.onStopRequested();assertNull(get("coupangBrowse"));
+            assertFalse((boolean)get("turnInFlight"));
+            callback.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+            assertNull(get("coupangBrowse"));assertTrue(sent.isEmpty());
+        }
     }
     @Test public void replacedEditorCannotTurnALateTranscriptIntoANewTask() throws Exception {
         checkEditorSpeech(true,false);
@@ -963,11 +988,13 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("scope-question", sent.get(1).getJSONObject("clarification_answer").getString("question_id"));
         assertEquals("system", sent.get(1).getJSONObject("clarification_answer").getString("value"));
         assertNull(get("acceptedGoal"));
+        assertEquals(List.of("글자 크기를 키워줘"), new com.click.data.local.RequestLibraryStore(service)
+                .entries(false).stream().map(entry -> entry.request).toList());
     }
 
     @Test public void spokenClarificationAnswersCurrentQuestionInsteadOfStartingANewRequest() throws Exception {
         preparation.put("source_text", "이거 바꿔줘").put("status", "needs_input")
-                .put("question", new JSONObject().put("id", "rephrase-question").put("kind", "text")
+                .put("question", new JSONObject().put("id", "rephrase-question").put("field", "request").put("kind", "text")
                         .put("message", "원하시는 작업을 조금 더 자세히 말해주세요.").put("max_length", 200));
         Method resolve = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
         resolve.setAccessible(true); resolve.invoke(service, "이거 바꿔줘", null);
@@ -978,6 +1005,27 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("rephrase-question", answer.getString("question_id"));
         assertEquals("화면 밝기를 낮춰줘", answer.getString("value"));
         assertEquals("이거 바꿔줘", sent.get(1).getString("source_text"));
+        var history = new com.click.data.local.RequestLibraryStore(service).entries(false);
+        assertEquals(List.of("화면 밝기를 낮춰줘", "이거 바꿔줘"),
+                history.stream().map(entry -> entry.request).toList());
+        assertNull("Clarification must not start execution", get("acceptedGoal"));
+    }
+
+    @Test public void unresolvedRequestAndEditedRequestAreSavedWithoutStartingExecution() throws Exception {
+        preparation.put("source_text", "프라이빗 디엔에스").put("status", "needs_input")
+                .put("question", new JSONObject().put("id", "request-question").put("field", "request")
+                        .put("kind", "text").put("message", "원하시는 작업을 조금 더 자세히 말해주세요."));
+        goal = null;
+        Method resolve = ClickOverlayService.class.getDeclaredMethod("resolveGoal", String.class, String.class);
+        resolve.setAccessible(true);
+        resolve.invoke(service, "프라이빗 디엔에스", null);
+        resolve.invoke(service, "프라이빗 DNS 설정해줘", null);
+        var history = new com.click.data.local.RequestLibraryStore(service).entries(false);
+        assertEquals(List.of("프라이빗 DNS 설정해줘", "프라이빗 디엔에스"),
+                history.stream().map(entry -> entry.request).toList());
+        assertTrue(history.stream().allMatch(entry -> entry.goalType.isEmpty()));
+        assertNull(get("acceptedGoal"));
+        assertTrue(sent.stream().allMatch(request -> "resolve_goal".equals(request.optString("command_type"))));
     }
 
     @Test public void incompleteOrUnsupportedPreparationCannotStart() throws Exception {
