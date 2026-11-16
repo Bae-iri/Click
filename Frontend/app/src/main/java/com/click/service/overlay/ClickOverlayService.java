@@ -1080,6 +1080,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void sendAdjustment(String reason) {
         if (followUp == null || execution.busy() || execution.paused()) return;
+        if ("other".equals(reason)) {
+            processVipRequest("다른 도움이 필요해요", true);
+            return;
+        }
         AgentTurnContract.Request request = AgentTurnContract.Request.control(execution.sessionId(),
                 execution.sessionVersion(), execution.episodeId(), "adjust_task", null);
         request.adjustmentReason = reason; sendFlowRequest(request);
@@ -2017,6 +2021,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void processVipRequest(String command) {
+        processVipRequest(command, false);
+    }
+
+    private void processVipRequest(String command, boolean openNewRequest) {
         queueGeneration++;
         waitingForCompletedEnd=false;endingTask=false;advanceAfterUserEnd=false;
         abortActiveRequest();
@@ -2038,10 +2046,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if (activeVoiceRequestId != null && quickHelpSelections != null) quickHelpSelections.remove(activeVoiceRequestId);
                 awaitingReplacement = response.awaitingReplacement;
                 activeVoiceRequestId = null;
-                String message = "요청을 멈췄어요. 마이크를 꾹 눌러 새로 말해 주세요.";
+                String message = openNewRequest ? "어떤 도움이 필요하세요? 새 요청을 입력해 주세요."
+                        : "요청을 멈췄어요. 마이크를 꾹 눌러 새로 말해 주세요.";
                 if (!requestActive && overlayView != null) {
                     overlayView.setRequestStatus("요청을 멈췄어요", false);
                     overlayView.setRecognizedSpeech(message);
+                    if (openNewRequest) {
+                        overlayView.setDraftText("");
+                        overlayView.openMenu();
+                    }
                     speak(message);
                 }
             }
