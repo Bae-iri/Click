@@ -14,7 +14,6 @@ from fastapi import HTTPException
 from sqlalchemy import select, text
 
 from app.models.task_graph import ApprovedTaskGraph
-from app.schemas.transcription import STT_MODEL
 from ai_agent.runtime.types import VerificationStatus
 
 BACKEND = Path(__file__).resolve().parents[2]
@@ -59,7 +58,7 @@ def environment_manifest(factory, environment_id):
     manifest = {'schema_version': 'click-validation-environment.v1', 'environment_id': environment_id,
                 'source_sha256': source_digest(),
                 'source_revision': revision if re.fullmatch('[0-9a-f]{40}', revision) else None,
-                'database_migrations': actual, 'approved_graphs': graphs, 'stt_model': STT_MODEL}
+                'database_migrations': actual, 'approved_graphs': graphs}
     manifest['fingerprint'] = digest(manifest)
     return manifest
 

@@ -9,16 +9,27 @@ def normalize(text):
 
 
 def negated(text):
-    return any(word in normalize(text) for word in ("하지마", "하지말", "지마", "지말", "지않", "안해", "말아", "취소"))
+    n = normalize(text)
+    business_text = n.replace('주문을', '주문').replace('구매를', '구매').replace('결제를', '결제')
+    business_cancel = n.count('취소') == 1 and any(word in business_text for word in (
+        '주문취소', '구매취소', '결제취소', '취소처리', '취소상태', '취소내역'))
+    return ('취소' in n and not business_cancel) or any(word in n for word in (
+        "하지마", "하지말", "지마", "지말", "지않", "안해", "말아"))
 
 
 class GoalInputRequirements:
     def __init__(self, document=None):
         self.document = document or json.loads((Path(__file__).parents[1] / "task_graphs/input_requirements.json").read_text(encoding="utf-8"))
+        if document is None:
+            catalog = json.loads((Path(__file__).parents[1] / 'task_graphs/goal_catalog.json').read_text(encoding='utf-8'))
+            self.document['families'].extend({'id': g['goal_type'], 'goal_prefix': g['goal_type'],
+                'keywords': [], 'fields': [], 'routes': [{'when': {}, 'target_app': 'coupang'}]}
+                for g in catalog['goals'] if g['target_app'] == 'coupang')
 
     def family(self, goal_type=None, source_text=""):
         if goal_type:
-            return next((f for f in sorted(self.document["families"], key=lambda f: len(f["goal_prefix"]), reverse=True) if goal_type.startswith(f["goal_prefix"])), None)
+            return next((f for f in sorted(self.document["families"], key=lambda f: len(f["goal_prefix"]), reverse=True)
+                if goal_type == f['goal_prefix'] or goal_type.startswith(f['goal_prefix']) and f['goal_prefix'].endswith('.')), None)
         matches = [f for f in self.document["families"] if any(normalize(k) in normalize(source_text) for k in f["keywords"])]
         return matches[0] if len(matches) == 1 else None
 

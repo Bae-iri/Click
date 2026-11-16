@@ -13,6 +13,9 @@ BASE_PREDICATES = {'state_reached', 'target_value_increased', 'target_value_decr
 def supported_predicates(slots, task_type):
     """One finite capability contract for execution, proposals and rollout audits."""
     result = set(BASE_PREDICATES)
+    if task_type.startswith('commerce_'):
+        from ai_agent.task_graph.commerce import PREDICATES
+        return {'state_reached', *PREDICATES}
     if slots.get('setting') in {*CONTROLS, 'wifi'}:
         result |= {'target_checked_on', 'target_checked_off'}
     if slots.get('setting') == 'dark_mode' and CONTROLS['dark_mode'].get('choices'):

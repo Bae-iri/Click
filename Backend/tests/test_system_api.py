@@ -13,7 +13,8 @@ def test_health_readiness_and_openapi():
         assert client.get("/ready").json() == {"status": "ready", "database": "ok"}
         schema = client.get("/openapi.json").json()
         assert "/api/v1/agent/turn" in schema["paths"]
-        assert "/api/v1/speech/transcriptions" in schema["paths"]
+        assert "/api/v1/speech/transcriptions" not in schema["paths"]
+        assert client.post("/api/v1/speech/transcriptions", json={}).status_code == 404
         assert "/ready" in schema["paths"]
 
 

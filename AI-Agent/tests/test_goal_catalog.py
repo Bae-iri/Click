@@ -11,7 +11,7 @@ def test_goal_catalog_has_unique_settings_and_coupang_keyword_rules():
     goals = catalog["goals"]
     goal_types = [goal["goal_type"] for goal in goals]
 
-    assert catalog["version"] == "2.3.0"
+    assert catalog["version"] == "2.4.0"
     assert len(goals) == 181
     assert len(goal_types) == len(set(goal_types))
     assert sum(goal["target_app"] == "android_settings" for goal in goals) == 110
@@ -44,7 +44,8 @@ def test_transactional_coupang_goals_are_marked_high_risk():
         "coupang.coupay.money.add",
     }:
         assert by_type[goal_type]["risk_level"] == "high"
-        assert by_type[goal_type]["execution_status"] == "catalog_only"
+        assert by_type[goal_type]["execution_status"] == "approved"
+        assert by_type[goal_type]['graph_id'].startswith('CP-')
 
 
 def test_generated_goal_catalog_doc_contains_every_goal_and_keyword():

@@ -6,10 +6,16 @@ import com.click.data.snapshot.NavigationState;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /** Select one native collection, not the first nested carousel that happens to move. */
 final class NativeNavigationReader {
     private NativeNavigationReader() {}
+    private static final Pattern CLOCK_LABEL = Pattern.compile("[0-9 :./%APMapm오전후]+");
+    private static final Set<Integer> SCROLL_ACTIONS = Set.of(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
+            AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD, AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.getId(),
+            AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.getId(), AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.getId(),
+            AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId());
     private static boolean has(AccessibilityNodeInfo n,int action) {
         return n.getActionList().stream().anyMatch(a->a.getId()==action);
     }
@@ -44,9 +50,9 @@ final class NativeNavigationReader {
             boolean forward=has(selected,AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
                     || has(selected,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.getId())
                     || has(selected,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId());
-            int[] indices={Integer.MAX_VALUE,-1};indices(selected,axis,indices);
+            int[] indices={Integer.MAX_VALUE,-1};
             int count=info==null?-1:axis==NavigationState.Axis.HORIZONTAL?info.getColumnCount():info.getRowCount();
-            List<String> parts=new ArrayList<>();fingerprint(selected,parts);
+            List<String> parts=new ArrayList<>();readContent(selected,axis,indices,parts,true);
             Collections.sort(parts);String digest;
             try {digest=Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256")
                     .digest(String.join("\n",parts).getBytes(StandardCharsets.UTF_8)));}
@@ -60,10 +66,7 @@ final class NativeNavigationReader {
         if(collection(n)) {
             Rect b=new Rect();n.getBoundsInScreen(b);long score=(long)b.width()*b.height();
             if(n.isScrollable())score+=1_000_000_000_000L;
-            if(n.getActionList().stream().anyMatch(action->Set.of(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD,
-                    AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_UP.getId(),
-                    AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN.getId(),AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.getId(),
-                    AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId()).contains(action.getId())))score+=2_000_000_000_000L;
+            if(n.getActionList().stream().anyMatch(action->SCROLL_ACTIONS.contains(action.getId())))score+=2_000_000_000_000L;
             // A range-backed control can never win over a navigation collection.
             if(score>best.score){best.id=id;best.score=score;}
         }
@@ -80,25 +83,33 @@ final class NativeNavigationReader {
         }
         return n;
     }
-    private static void indices(AccessibilityNodeInfo n,NavigationState.Axis axis,int[] out) {
+    /** Read indices and page identity in one walk while retaining their separate privacy rules. */
+    private static void readContent(AccessibilityNodeInfo n,NavigationState.Axis axis,int[] out,
+                                    List<String> parts,boolean includeLabels) {
         if(!n.isVisibleToUser())return;
         AccessibilityNodeInfo.CollectionItemInfo item=n.getCollectionItemInfo();
         if(item!=null) {
             int index=axis==NavigationState.Axis.HORIZONTAL?item.getColumnIndex():item.getRowIndex();
             if(index>=0){out[0]=Math.min(out[0],index);out[1]=Math.max(out[1],index);}
         }
-        for(int i=0;i<n.getChildCount();i++){AccessibilityNodeInfo c=n.getChild(i);if(c!=null)try{indices(c,axis,out);}finally{c.recycle();}}
-    }
-    private static void fingerprint(AccessibilityNodeInfo n,List<String> parts) {
-        if(!n.isVisibleToUser() || n.isPassword() || n.isEditable() || n.getRangeInfo()!=null)return;
-        String resource=String.valueOf(n.getViewIdResourceName()).toLowerCase(Locale.ROOT);
-        String type=String.valueOf(n.getClassName()).toLowerCase(Locale.ROOT);
-        if(resource.contains("widget") || type.contains("clock") || resource.endsWith("/summary"))return;
-        String label=n.getText()!=null?n.getText().toString():n.getContentDescription()!=null?n.getContentDescription().toString():"";
-        if(!label.isBlank() && !label.matches("[0-9 :./%APMapm오전후]+")) {
-            Rect bounds=new Rect();n.getBoundsInScreen(bounds);
-            parts.add(resource+"|"+type+"|"+label+"|"+bounds.toShortString());
+        includeLabels = includeLabels && !n.isPassword() && !n.isEditable() && n.getRangeInfo()==null;
+        if(includeLabels) {
+            String resource=String.valueOf(n.getViewIdResourceName()).toLowerCase(Locale.ROOT);
+            String type=String.valueOf(n.getClassName()).toLowerCase(Locale.ROOT);
+            includeLabels = !resource.contains("widget") && !type.contains("clock") && !resource.endsWith("/summary");
+            if(includeLabels) {
+                CharSequence text=n.getText(),description=n.getContentDescription();
+                String label=text!=null?text.toString():description!=null?description.toString():"";
+                if(!label.isBlank() && !CLOCK_LABEL.matcher(label).matches()) {
+                    Rect bounds=new Rect();n.getBoundsInScreen(bounds);
+                    parts.add(resource+"|"+type+"|"+label+"|"+bounds.toShortString());
+                }
+            }
         }
-        for(int i=0;i<n.getChildCount();i++){AccessibilityNodeInfo c=n.getChild(i);if(c!=null)try{fingerprint(c,parts);}finally{c.recycle();}}
+        int childCount=n.getChildCount();
+        for(int i=0;i<childCount;i++) {
+            AccessibilityNodeInfo child=n.getChild(i);if(child==null)continue;
+            try{readContent(child,axis,out,parts,includeLabels);}finally{child.recycle();}
+        }
     }
 }

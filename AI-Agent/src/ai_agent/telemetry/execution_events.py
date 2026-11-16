@@ -4,6 +4,7 @@ import math
 
 SCHEMA = "agent-execution-event.v1"
 REASONS = {
+    'commerce_page_visible', 'commerce_manual_result_required', 'commerce_effect_observed', 'commerce_result_unobserved',
     "target_value_increased", "target_value_decreased", "target_value_unchanged",
     "target_checked_on", "target_checked_off", "wifi_already_set",
     "wifi_switch_unobservable", "wifi_state_unobservable", "wifi_state_transition",

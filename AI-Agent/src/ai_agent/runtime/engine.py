@@ -49,7 +49,8 @@ from ai_agent.runtime.privacy import sanitize_request
 from ai_agent.runtime.vision_cycles import decide_vision_cycle
 from ai_agent.runtime.semantic_state import resolve_state
 from ai_agent.runtime.ui_selection import select_ui_target
-from ai_agent.runtime.primary import PrimaryDecision, decide_primary, retry_session, selection_binding
+from ai_agent.runtime.primary import PrimaryDecision, decide_primary, retry_session, selection_binding, selection_fingerprint
+from ai_agent.runtime.failures import selection_failure as classify_selection_failure
 from ai_agent.runtime.decision import decide_guide
 from ai_agent.telemetry.trace_logger import diagnostic_payload
 
@@ -159,6 +160,9 @@ class ClickAgentEngine:
             )
 
         graph = self._task_graph_for(typed_goal)
+        if graph.definition.target_app == 'coupang':
+            from ai_agent.runtime.commerce import handle_turn
+            return handle_turn(self, request, graph, typed_goal, existing_session, original_screen)
         vocabulary_key = graph.definition.required_slots.get("setting", "")
         from ai_agent.runtime.screen_privacy import assess_screen, filter_nodes
         context = request.device_context or (request.raw_goal.device_context if request.raw_goal else None)
@@ -167,6 +171,14 @@ class ClickAgentEngine:
         # Credential/authentication boundaries apply to every selector, including
         # local rules. An unknown screen is an observation failure, not proof of PII.
         if assessment.status and (self.screen_resolver or assessment.status == 'sensitive_screen'):
+            failure = classify_selection_failure({"status": assessment.status, "called": False},
+                outcome_uncertain=bool(existing_session and existing_session.pending_attempt
+                    and existing_session.pending_attempt.get("event_key")))
+            recovery = {"schema_version": "ai1-recovery.v1", "decision": "wait",
+                "reason_code": failure.reason_code, "next_action": failure.next_action,
+                "waiting_for": "user", "recoverable": failure.retryable, "attempts": 0,
+                "retry_after_ms": 0, "options": ["manual_navigation", "cancel"],
+                "failure": failure.to_dict()}
             return AgentTurnResponse(request_id=request.request_id, session_id=request.session_id,
                 task_id=typed_goal.task_id, typed_goal=typed_goal,
                 current_state_id=existing_session.current_state_id if existing_session else "S0_UNKNOWN",
@@ -174,10 +186,11 @@ class ClickAgentEngine:
                     command_type=CommandType.BLOCKED, action_type=ActionType.OBSERVE_ONLY,
                     message=assessment.message, safety_level=SafetyLevel.BLOCKED,
                     requires_user_action=False, render_policy={"privacy_blocked": assessment.status == 'sensitive_screen',
-                        "manual_only": True, "observation_reason": assessment.reason}),
+                        "manual_only": True, "observation_reason": assessment.reason, "recovery": recovery}),
                 debug={"ui_selection": {"provider": "jev" if self.screen_resolver else "rules",
                     "mode": "primary" if self.screen_resolver else "local", "called": False,
-                    "status": assessment.status, "observation_reason": assessment.reason}})
+                    "status": assessment.status, "observation_reason": assessment.reason,
+                    "failure": failure.to_dict()}, "recovery": recovery})
         request = replace(request, accessibility_tree=filter_nodes(
             original_screen if self.screen_resolver else request.accessibility_tree, vocabulary_key,
             finite_labels=bool(self.screen_resolver)))
@@ -368,7 +381,8 @@ class ClickAgentEngine:
                 decision_hash=sha256(f"{request.session_id}:{request.request_id}".encode()).hexdigest(),
                 screen_hash=current_snapshot.fingerprint)
         if (primary_decision and primary_decision.recovery_reason
-                and ui_selection.get("grounded_candidate_count", 0) > 0
+                and (ui_selection.get("grounded_candidate_count", 0) > 0
+                     or (primary_decision.failure and primary_decision.failure.next_action != "reobserve"))
                 and vision_analysis and vision_analysis.status == "not_requested"
                 and vision_analysis.reason == "no_matching_target_node"):
             # A visible-but-uncertain candidate is not evidence of missing UI.
@@ -377,9 +391,6 @@ class ClickAgentEngine:
             match=match_result, analysis=vision_analysis, completed=task_completed)
         awaiting_vision_consent = bool(cycle.command and cycle.command.command_type == CommandType.CONFIRMATION)
         selection_failure = primary_decision.recovery_reason if primary_decision else None
-        # Keep physical absence/ambiguity evidence for bounded Android list search.
-        if selection_failure == "MODEL_ABSTAINED" and match_result.fallback_reason:
-            selection_failure = None
         recovery_plan = decide_recovery(graph=graph, session=existing_session, snapshot=current_snapshot,
             match=match_result, nodes=normalized_nodes, verification=verification_result,
             failed_node_ids=failed_node_ids, total_failed_attempts=total_failed_attempts,
@@ -389,7 +400,11 @@ class ClickAgentEngine:
             within_settling_interval=within_settling_interval, completed=task_completed,
             user_retry=user_retry if self.screen_resolver else bool(request.user_action_event
                 and request.user_action_event.action_type.value == "manual_override"),
-            selection_failure=selection_failure)
+            selection_failure=selection_failure,
+            primary_failure=primary_decision.failure if primary_decision else None,
+            selection_fingerprint=selection_fingerprint(current_snapshot, accessibility_nodes, screen_bounds,
+                previous_exclusions) if primary_decision else None,
+            selection_paused=bool(ui_selection.get("paused")))
         if self.screen_resolver:
             if primary_wait and (failed_attempt or (existing_session and
                     existing_session.recovery_state.get('jev_wait_fingerprint') == current_snapshot.fingerprint)):

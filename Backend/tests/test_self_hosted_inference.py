@@ -1,18 +1,13 @@
 import json
 from types import SimpleNamespace
-from concurrent.futures import ThreadPoolExecutor
-from threading import Event
 
 import httpx
 import pytest
-from fastapi.testclient import TestClient
 
 from app.clients.self_hosted import InferenceEndpoint
 from app.services.goal_llm import LocalGoalLlm
 from app.services.goal_resolution import GoalResolutionService
 from app.repositories.task_graphs import NoCompatibleGraphError
-from inference.whisper_stt import create_app as create_worker, load_model
-from tests.test_transcription import audio_request, stt_result
 
 
 TOKEN = 'test-owned-server-token-' + 'x' * 32
@@ -25,7 +20,6 @@ def configured(monkeypatch):
     monkeypatch.setenv('SELF_HOSTED_LLM_URL', 'http://127.0.0.1:8092/v1/chat/completions')
     monkeypatch.setenv('SELF_HOSTED_LLM_TOKEN', TOKEN)
     monkeypatch.setenv('SELF_HOSTED_LLM_MODEL', 'our-local-model')
-    monkeypatch.setenv('SELF_HOSTED_STT_TOKEN', TOKEN)
 
 
 def completion(content, finish='stop'):
@@ -129,42 +123,3 @@ def test_transport_ignores_proxy_environment_and_does_not_follow_redirects(monke
 def test_invalid_endpoint_rejected(configured, monkeypatch, url):
     monkeypatch.setenv('SELF_HOSTED_LLM_URL', url)
     with pytest.raises(ValueError): InferenceEndpoint.from_env('SELF_HOSTED_LLM')
-
-
-def test_worker_auth_pcm_and_korean_response(configured):
-    seen = []
-    def transcribe(model, pcm):
-        seen.append(pcm)
-        assert model == 'fake-loaded-model' and len(pcm) == 3200
-        return ' 글자 크기 줄여줘 '
-    with TestClient(create_worker(lambda: 'fake-loaded-model', transcribe)) as client:
-        body = audio_request().model_dump()
-        assert client.post('/v1/transcriptions', json=body).status_code == 401
-        result = client.post('/v1/transcriptions', json=body, headers={'Authorization': 'Bearer ' + TOKEN})
-        assert result.json() == stt_result()
-        invalid = {**body, 'mime_type': 'SECRET_INVALID_INPUT'}
-        result = client.post('/v1/transcriptions', json=invalid, headers={'Authorization': 'Bearer ' + TOKEN})
-        assert result.status_code == 422 and 'SECRET_INVALID_INPUT' not in result.text
-    assert len(seen) == 1
-
-
-def test_worker_busy_does_not_queue_private_audio(configured):
-    entered, release = Event(), Event()
-    def transcribe(model, pcm):
-        entered.set(); assert release.wait(5); return '글자 크게'
-    with TestClient(create_worker(lambda: None, transcribe)) as client, ThreadPoolExecutor() as pool:
-        def request():
-            return client.post('/v1/transcriptions', json=audio_request().model_dump(),
-                headers={'Authorization': 'Bearer ' + TOKEN})
-        first = pool.submit(request)
-        assert entered.wait(5)
-        try: assert request().status_code == 503
-        finally: release.set()
-        assert first.result().status_code == 200
-
-
-def test_worker_requires_strong_token_and_local_weights(monkeypatch, tmp_path):
-    monkeypatch.setenv('SELF_HOSTED_STT_TOKEN', '')
-    with pytest.raises(RuntimeError), TestClient(create_worker(lambda: pytest.fail('must reject before model load'))): pass
-    monkeypatch.setenv('WHISPER_MODEL_PATH', str(tmp_path))
-    with pytest.raises(RuntimeError): load_model()

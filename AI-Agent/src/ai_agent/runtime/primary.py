@@ -4,7 +4,10 @@ Rule matches are evidence, not permission to replace an abstaining provider.
 Only an already accepted selection can be retained on an unchanged observation.
 """
 from dataclasses import dataclass, replace
+from hashlib import sha256
+import json
 
+from ai_agent.runtime.failures import EXTERNAL_CHANGES, SelectionFailure, selection_failure
 from ai_agent.runtime.targeting import eligible_nodes, target_key, selector_evidence
 from ai_agent.runtime.types import MatchResult, SafetyLevel, VerificationStatus as Status
 
@@ -14,6 +17,7 @@ class PrimaryDecision:
     match: MatchResult | None
     diagnostics: dict
     recovery_reason: str | None = None
+    failure: SelectionFailure | None = None
 
 
 def retry_session(request, session):
@@ -28,6 +32,11 @@ def retry_session(request, session):
     if (baseline is not None and (event.occurred_at_ms is None
             or event.occurred_at_ms <= baseline)):
         return session
+    failure = session.recovery_state.get("failure", {})
+    if (event.action_type.value == "manual_override" and failure
+            and failure.get("required_change") not in EXTERNAL_CHANGES):
+        # A retry button is not new target evidence or an answer to ambiguity.
+        return session
     return replace(session, pending_attempt=None, pending_selection=None, pending_transition_id=None,
                    pending_confirmation_transition_id=None, recovery_state={})
 
@@ -36,6 +45,14 @@ def recovery_scope(snapshot):
     # Layout/window churn is not progress. Bound selection retries for the
     # current graph step, and require explicit retry after exhaustion.
     return "selection:" + snapshot.state_id
+
+
+def selection_fingerprint(snapshot, raw_nodes, screen_bounds, exclusions):
+    """Exclude timestamps/observation IDs; include changes to candidate eligibility."""
+    evidence = [(n.node_id, n.parent_id, n.visible_to_user, n.enabled, n.clickable,
+                 n.scrollable, n.resource_id, n.window_id, n.bounds_in_screen) for n in raw_nodes]
+    return sha256(json.dumps([snapshot.fingerprint, sorted(evidence, key=lambda n: n[0]),
+        screen_bounds, exclusions], sort_keys=True).encode()).hexdigest()
 
 
 def selection_binding(match, nodes, diagnostics):
@@ -92,9 +109,14 @@ def decide_primary(*, resolver, request, session, snapshot, nodes, raw_nodes, gr
         return PrimaryDecision(None, info)
 
     recovery = session.recovery_state if session else {}
-    if recovery.get("waiting_for_user"):
+    fingerprint = selection_fingerprint(snapshot, raw_nodes, screen_bounds, exclusions)
+    previous_failure = recovery.get("failure")
+    changed = recovery.get("selection_fingerprint") != fingerprint
+    if recovery.get("waiting_for_user") and (not previous_failure
+            or previous_failure.get("required_change") in EXTERNAL_CHANGES or not changed):
         info.update(recovery.get("primary_diagnostics", {}), called=False, paused=True)
-        return PrimaryDecision(None, info, recovery["reason_code"])
+        failure = SelectionFailure(**previous_failure) if previous_failure else None
+        return PrimaryDecision(None, info, recovery["reason_code"], failure)
 
     same_screen = bool(session and session.last_snapshot
                        and session.last_snapshot.fingerprint == snapshot.fingerprint)
@@ -106,8 +128,11 @@ def decide_primary(*, resolver, request, session, snapshot, nodes, raw_nodes, gr
                                     Status.NO_CHANGE, Status.WRONG_STATE})
     if settling or (same_screen and pending_result) or recovery.get("jev_wait_fingerprint") == snapshot.fingerprint:
         info["status"] = "waiting"
-        return PrimaryDecision(None, info,
-            "WAITING_FOR_SETTLE" if settling else "ACTION_RESULT_UNOBSERVABLE")
+        failure = selection_failure(info, cause="settling" if settling else "result_unobservable",
+            outcome_uncertain=bool(attempt and attempt.get("event_key") and verification
+                and verification.status in {Status.WAITING_FOR_OBSERVATION, Status.UNKNOWN}))
+        info["failure"] = failure.to_dict()
+        return PrimaryDecision(None, info, failure.reason_code, failure)
 
     event = request.user_action_event
     retained = (_retained_match(session, attempt, snapshot, nodes, graph, exclusions)
@@ -123,11 +148,9 @@ def decide_primary(*, resolver, request, session, snapshot, nodes, raw_nodes, gr
     info.update(resolver.last_diagnostics)
     if match:
         return PrimaryDecision(match, info)
-    status = info.get("status")
-    reason = ("LOW_CONFIDENCE" if status == "low_confidence" else
-              ("ACTION_RESULT_UNOBSERVABLE" if pending_result else "MODEL_WAIT_WITHOUT_ACTION")
-                  if status == "waiting" else
-              "MODEL_UNAVAILABLE" if status in {"provider_error", "timeout", "deadline_exceeded",
-                  "invalid_response", "not_configured", "invalid_candidates", "input_too_large"} else
-              "MODEL_ABSTAINED")
-    return PrimaryDecision(None, info, reason)
+    uncertain = bool(attempt and attempt.get("event_key") and verification
+        and verification.status in {Status.WAITING_FOR_OBSERVATION, Status.UNKNOWN})
+    failure = selection_failure(info, outcome_uncertain=uncertain,
+        cause="result_unobservable" if info.get("status") == "waiting" and pending_result else None)
+    info["failure"] = failure.to_dict()
+    return PrimaryDecision(None, info, failure.reason_code, failure)

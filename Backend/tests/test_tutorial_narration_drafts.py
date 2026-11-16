@@ -15,7 +15,7 @@ def test_offline_generation_creates_unapproved_draft_without_changing_source(tmp
             json={'choices':[{'finish_reason':'stop','message':{'content':json.dumps({'script':'화면 아래의 클릭 버튼을 눌러보세요.'})}}]})
     monkeypatch.setattr(LocalGoalLlm,'configuration',staticmethod(lambda:(SimpleNamespace(post=send),'test')))
     assert main(['--source',str(source),'--output',str(output)])==0
-    entry=json.loads(output.read_text())['scripts'][0]
+    entry=json.loads(output.read_text(encoding='utf-8'))['scripts'][0]
     assert entry['approved'] is False
     assert entry['reviewed_by']==''
     assert entry['source']==original['scripts'][0]['source']

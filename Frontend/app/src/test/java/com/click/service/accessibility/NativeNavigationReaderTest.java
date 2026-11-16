@@ -61,4 +61,24 @@ public class NativeNavigationReaderTest {
   String json=screen.toJson();assertFalse(json.contains("local_only_hash"));assertFalse(json.contains("private_container"));
   assertFalse(json.contains("navigation"));
  }
+ @Test public void pageIndicesAndFingerprintShareOneContentTraversal() {
+  AccessibilityNodeInfo list=node("ListView",1080,2000),item=node("TextView",1000,100);
+  when(item.getText()).thenReturn("설정 항목");
+  when(item.getCollectionItemInfo()).thenReturn(AccessibilityNodeInfo.CollectionItemInfo.obtain(5,1,0,1,false));
+  children(list,item);
+  NavigationState state=NativeNavigationReader.read(list);
+  assertEquals(5,state.firstIndex);assertEquals(5,state.lastIndex);
+  // One selection pass and one combined content pass; previously three full walks.
+  verify(list,times(2)).getChild(0);
+ }
+ @Test public void ignoredLabelsStillContributeIndicesWithoutEnteringPageIdentity() {
+  AccessibilityNodeInfo list=node("ListView",1080,2000),summary=node("TextView",1000,100),item=node("TextView",1000,100);
+  when(summary.getViewIdResourceName()).thenReturn("settings:id/summary");
+  when(item.getCollectionItemInfo()).thenReturn(AccessibilityNodeInfo.CollectionItemInfo.obtain(7,1,0,1,false));
+  when(item.getText()).thenReturn("old status");children(summary,item);children(list,summary);
+  NavigationState before=NativeNavigationReader.read(list);
+  assertEquals(7,before.lastIndex);
+  when(item.getText()).thenReturn("changed status");
+  assertEquals(before.fingerprint,NativeNavigationReader.read(list).fingerprint);
+ }
 }

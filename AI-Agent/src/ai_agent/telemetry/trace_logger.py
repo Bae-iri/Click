@@ -6,7 +6,7 @@ import re
 from hashlib import sha256
 
 CONTAINERS = {"observation", "agent_chain", "goal_typing", "vision_fallback",
-              "verification", "match", "guide", "fallback", "debug", "result", "correlation", "replan_decision", "recovery", "state_classification"}
+              "verification", "match", "guide", "fallback", "debug", "result", "correlation", "replan_decision", "recovery", "state_classification", "failure"}
 VISION = {"used", "not_requested", "not_configured", "provider_error", "no_signal", "consent_required", "masking_failed"}
 ENUMS = {
     "strategy": {"continue", "wait_for_action", "reobserve", "retry_target", "alternate_transition", "backend_reselection"},
@@ -25,15 +25,31 @@ ENUMS = {
     "next_action": {"none", "reobserve", "manual_navigation", "user_assistance", "reselect_graph", "vision_analysis", "open_settings"},
     "waiting_for": {"none", "user", "consent", "observation"},
 }
+# Shared telemetry owns its closed wire vocabulary and never imports the runtime.
+ENUMS.update(stage={"observation", "candidate_generation", "configuration", "request_preparation", "provider",
+                   "model_response", "model_selection", "verification", "selection"},
+    cause={"unsupported_screen", "sensitive_screen", "empty_observation", "candidate_limit",
+           "no_candidates", "invalid_candidates", "ambiguous_candidates", "input_too_large",
+           "not_configured", "network_error", "provider_error", "timeout", "deadline_exceeded",
+           "invalid_response", "low_confidence", "abstained", "waiting", "result_unobservable",
+           "settling", "unknown_failure"},
+    required_change={"supported_screen", "safe_screen", "new_observation", "narrow_observation",
+        "new_target_evidence", "valid_candidates", "user_clarification", "provider_configuration",
+        "connection_restored", "provider_available", "fresh_time_budget", "valid_model_response",
+        "action_result_evidence", "settle_interval", "diagnostic_review"})
+ENUMS["reason_code"].update({"UNSUPPORTED_SCREEN", "SENSITIVE_SCREEN", "CANDIDATE_LIMIT", "NO_CANDIDATES",
+    "INVALID_CANDIDATES", "OBSERVATION_TOO_LARGE", "MODEL_NOT_CONFIGURED", "DEADLINE_EXCEEDED", "SELECTION_FAILED"})
+ENUMS["next_action"].update({"narrow_observation", "ask_user", "restore_connection", "restore_provider"})
 METRICS = {"count_attempt", "task_completed", "state_score", "score_gap", "recovery_count", "confidence", "element_count", "accessibility_node_count", "vision_element_count",
            "normalized_node_count", "actionable_node_count", "synthetic_vision_node_count",
            "score", "title_match", "control_match", "ambiguous", "title_conflict", "attempts", "retry_after_ms", "recoverable", "accessibility_tree_present", "vision_snapshot_present", "vision_has_screenshot",
            "vision_has_ocr_text", "requires_user_action", "session_stateful", "matched_from_vision"}
 METRICS.add("vision_processing_time_ms")
+METRICS.update({"retryable", "outcome_uncertain"})
 UI_SELECTION_STATUSES = {"selected", "disabled", "skipped", "ineligible", "no_candidates", "candidate_limit",
     "not_configured", "invalid_candidates", "input_too_large", "deadline_exceeded", "provider_error",
     "timeout", "invalid_response", "uncertain", "low_confidence", "abstained", "invalid_choice", "waiting",
-    "sensitive_screen", "unsupported_screen"}
+    "sensitive_screen", "unsupported_screen", "empty_observation", "network_error", "ambiguous_candidates"}
 UI_SELECTION_HOLD_REASONS = {"none", "raw_confidence_below_minimum",
     "normalized_probability_below_minimum", "both_below_minimum",
     "wait_for_result", "insufficient_evidence"}
@@ -47,6 +63,8 @@ def diagnostic_payload(value, depth=0):
     selection = value.get("ui_selection")
     if isinstance(selection, Mapping):
         safe = {}
+        if isinstance(selection.get("failure"), Mapping):
+            safe["failure"] = diagnostic_payload(selection["failure"], depth + 1)
         OBSERVATION_REASONS = {'unsupported_scope', 'unsupported_app', 'input_present', 'credential_input',
             'protected_screen', 'unrecognized_settings_screen', 'safe_native_labels', 'empty_observation'}
         if selection.get('observation_reason') in OBSERVATION_REASONS:
@@ -78,11 +96,16 @@ def diagnostic_payload(value, depth=0):
         choice_count = selection.get("choice_count")
         if type(choice_count) is int and 3 <= choice_count <= 252:
             safe["choice_count"] = choice_count
-        for key in ("candidate_count", "grounded_candidate_count"):
+        if selection.get("limit_kind") in {"candidates", "observation_nodes", "payload_bytes"}:
+            safe["limit_kind"] = selection["limit_kind"]
+        if type(selection.get("limit")) is int and selection["limit"] in {160, 250, 65536}:
+            safe["limit"] = selection["limit"]
+        for key, maximum in (("candidate_count", 100_000_000 if selection.get("status") == "candidate_limit" else 250),
+                             ("grounded_candidate_count", 250)):
             count = selection.get(key)
-            if type(count) is int and 0 <= count <= 250:
+            if type(count) is int and 0 <= count <= maximum:
                 safe[key] = count
-        for key, maximum in (("payload_bytes", 65536), ("exported_node_count", 160),
+        for key, maximum in (("payload_bytes", 100_000_000), ("exported_node_count", 100_000_000),
                              ("filter_time_ms", 100_000_000), ("provider_latency_ms", 100_000_000)):
             metric = selection.get(key)
             if type(metric) in (int, float) and math.isfinite(metric) and 0 <= metric <= maximum:

@@ -1,5 +1,7 @@
 # AI1 주 판단 경로: Jev
 
+쿠팡 목표의 후보 구성과 직접 진행 경계는 [쿠팡 실행 안내](../../docs/tasks/coupang.md)를 따른다. 같은 `JevScreenResolver`가 앱별 처리로 분기하며, 아래 설정용 슬롯·용어·조작 검증을 쿠팡에 대신 사용하지 않는다.
+
 Backend의 `RuntimeAgentAdapter`가 `AI1_UI_SELECTOR_PROVIDER=jev`를 읽으면
 `JevScreenResolver`를 AI1의 `screen_resolver`로 주입한다. Jev가 화면 정보와
 승인된 그래프를 보고 **현재 단계와 실제 조작 대상**을 함께 선택한다.

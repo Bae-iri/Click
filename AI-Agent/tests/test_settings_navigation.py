@@ -205,10 +205,11 @@ def test_scrolling_display_out_of_view_never_switches_to_accessibility(graph):
 
 
 @pytest.mark.parametrize("package", ["com.android.settings", "com.samsung.android.settings"])
-def test_wrong_settings_submenu_returns_back_without_reopening_settings(package):
+@pytest.mark.parametrize("back_label", ["뒤로", "뒤로가기", "뒤로 가기", "Navigate up"])
+def test_wrong_settings_submenu_returns_back_without_reopening_settings(package, back_label):
     tree = (*settings_screen("접근성", (("visibility", "시인성 향상", "글꼴, 색상"),)),
         AccessibilityNode("back", package_name=PACKAGE, parent_id="root", clickable=True,
-            class_name="android.widget.ImageButton", content_description="뒤로",
+            class_name="android.widget.ImageButton", content_description=back_label,
             bounds_in_screen=(0, 80, 40, 180)))
     tree = tuple(replace(node, package_name=package) for node in tree)
     engine = engine_for()

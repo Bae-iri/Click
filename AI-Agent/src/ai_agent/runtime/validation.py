@@ -12,7 +12,7 @@ from pathlib import Path
 def _approved_settings_slots():
     catalog = json.loads((Path(__file__).resolve().parents[3] / 'goal_catalog/mvp_goals.json').read_text())
     return {entry['goal_type']: entry['slots'] for entry in catalog['goals']
-        if entry.get('execution_status') == 'approved' and entry.get('target_app') == 'android_settings'}
+        if entry.get('execution_status') == 'approved'}
 
 
 class ContractViolationError(ValueError):
@@ -46,8 +46,9 @@ def validate_agent_turn_request(
         supported = _approved_settings_slots()
         if goal.goal_type not in supported:
             raise ContractViolationError("Unsupported typed goal.")
-        if goal.target_app != "android_settings":
-            raise ContractViolationError("typed_goal.target_app must be android_settings.")
+        expected_app = 'coupang' if goal.goal_type.startswith('coupang.') else 'android_settings'
+        if goal.target_app != expected_app:
+            raise ContractViolationError('typed_goal.target_app does not match the goal.')
         if goal.slots != supported[goal.goal_type]:
             raise ContractViolationError("typed_goal.slots do not match the approved graph.")
         if request.device_context is None or request.device_context.platform != "android":

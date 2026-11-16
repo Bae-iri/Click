@@ -233,6 +233,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         trashDropParams = new WindowManager.LayoutParams(
                 dp(112), dp(112), overlayWindowType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                         | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
                 PixelFormat.TRANSLUCENT
         );
@@ -257,6 +258,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         windowParams = new WindowManager.LayoutParams(
                 dp(64), dp(64), overlayWindowType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                         | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT
         );
@@ -642,7 +644,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 WindowManager.LayoutParams.WRAP_CONTENT, overlayWindowType,
                 // Waiting/guidance must not become the active accessibility window.
                 // Editable preparation explicitly enables focus in placeTaskFlow.
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                        | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 PixelFormat.TRANSLUCENT);
         taskFlowParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING;
         taskFlowParams.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
@@ -675,6 +678,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowParams.gravity = (atBottom ? Gravity.BOTTOM : Gravity.TOP) | Gravity.CENTER_HORIZONTAL;
         taskFlowParams.y = dp(24);
         taskFlowParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                 | (goalSelection == null && goalPreparation == null && (requirementReview == null || requirementReview.confirmed()) ? WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE : 0);
         taskFlowHeightLimit = height;
         taskFlowRestingGravity = taskFlowParams.gravity;
@@ -706,6 +710,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowParams.gravity = Gravity.TOP | Gravity.START;
         taskFlowParams.x = left; taskFlowParams.y = top;
         taskFlowParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                 | (windowParams.flags & (WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                         | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS));
         windowManager.updateViewLayout(taskFlowView, taskFlowParams);
@@ -2056,6 +2061,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         // Vision consent keeps the observation to which the permission was bound.
         ScreenSnapshot snapshot = pendingVisionScreen != null ? pendingVisionScreen
                 : ClickAccessibilityService.freshSnapshot();
+        if (acceptedGoal != null && "coupang".equals(acceptedGoal.optString("target_app"))
+                && snapshot != null && !"com.coupang.mobile".equals(snapshot.packageName)
+                && !NavigationRecovery.isHomeScreen(snapshot)) {
+            showCoupangEntryRecovery(); return;
+        }
         if (preserveTargetHelp(snapshot)) return;
         force = force || forceNextObservation;
         if (snapshot == null || (pendingVisionSnapshot == null && agentGateway.needsFreshObservation(snapshot))) {
@@ -2119,6 +2129,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         SettingsAdjustment scope=acceptedGoal==null?null:SettingsAdjustment.forGoal(acceptedGoal.optString("goal_type"));
         JSONObject goalSlots=acceptedGoal==null?null:acceptedGoal.optJSONObject("slots");
         request.observationSetting=scope==null?(goalSlots==null?null:goalSlots.optString("setting",null)):scope.setting;
+        if (acceptedGoal != null && "coupang".equals(acceptedGoal.optString("target_app")))
+            request.observationSetting = "commerce";
         if (!firstTurnSent) {
             request.acceptedGoal = acceptedGoal;
             request.goalResolutionId = goalResolutionId;
@@ -2641,6 +2653,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void showSettingsEntryRecovery() {
+        ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+        if (ObservationRecovery.canReturnFromSettings(current)) {
+            recoverSettingsBack(current);
+            return;
+        }
         ensureTaskFlow();
         final int generation = executionGeneration;
         final String session = agentSessionId;
@@ -2652,6 +2669,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowView.settingsEntryRecovery(() -> {
             if (generation != executionGeneration || !java.util.Objects.equals(session, agentSessionId)
                     || closing || agentPaused || turnInFlight || pendingControl != null) return;
+            ScreenSnapshot latest = ClickAccessibilityService.freshSnapshot();
+            if (ObservationRecovery.canReturnFromSettings(latest)) {
+                waitingForExplicitRetry = false;
+                recoverSettingsBack(latest);
+                return;
+            }
             guideStepTimer.clear();
             waitingForExplicitRetry = false;
             pendingVerifiedAction = null;
@@ -2668,6 +2691,36 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             speechHandler.postDelayed(() -> {
                 if (generation == executionGeneration && java.util.Objects.equals(session, agentSessionId))
                     sendAgentTurn(null, true);
+            }, 1200L);
+        });
+        taskFlowCollapsed = false;
+        placeTaskFlow(null, true);
+    }
+
+    private void showCoupangEntryRecovery() {
+        ensureTaskFlow();
+        final int generation = executionGeneration;
+        final String session = agentSessionId;
+        waitingForExplicitRetry = true;
+        taskFlowView.setAutomaticProgress(false);
+        hideConfirmation(); hideGuideOverlay();
+        taskFlowView.appEntryRecovery("쿠팡", () -> {
+            if (generation != executionGeneration || !java.util.Objects.equals(session, agentSessionId)
+                    || closing || agentPaused || turnInFlight || pendingControl != null) return;
+            Intent launch = getPackageManager().getLaunchIntentForPackage("com.coupang.mobile");
+            if (launch == null) {
+                android.widget.Toast.makeText(this, "쿠팡 앱을 설치한 뒤 다시 시도해 주세요.", android.widget.Toast.LENGTH_LONG).show();
+                showCoupangEntryRecovery(); return;
+            }
+            try { startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); }
+            catch (RuntimeException unavailable) { showCoupangEntryRecovery(); return; }
+            waitingForExplicitRetry = false;
+            pendingVerifiedAction = null;
+            pendingActionType = AgentActionEvents.MANUAL_OVERRIDE;
+            pendingActionOccurredAtMs = System.currentTimeMillis();
+            speechHandler.postDelayed(() -> {
+                if (generation == executionGeneration && java.util.Objects.equals(session, agentSessionId)
+                        && !closing && !agentPaused) sendAgentTurn(null, true);
             }, 1200L);
         });
         taskFlowCollapsed = false;
@@ -2823,6 +2876,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (!present) return;
             hideConfirmation();
             hideGuideOverlay();
+            if ("open_coupang".equals(recoveryAction.optString("type"))) {
+                showCoupangEntryRecovery(); return;
+            }
             if ("navigate_back".equals(recoveryAction.optString("type"))
                     || ObservationRecovery.canReturnFromSettings(displayedSnapshot)) {
                 recoverSettingsBack(displayedSnapshot);
@@ -2866,6 +2922,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 showTargetHelp(response.stateId);
                 return;
             } else {
+                JSONObject recovery = command.renderPolicy.optJSONObject("recovery");
+                JSONObject failure = recovery == null ? null : recovery.optJSONObject("failure");
+                if (failure != null) {
+                    taskFlowView.selectionRecovery(command.message, failure.optString("required_change"), retry);
+                    speak(taskFlowView.guidanceMessage());
+                    placeTaskFlow(null, true);
+                    return;
+                }
                 if (targetSelectionHelp) {
                     showTargetHelp(response.stateId);
                     return;
@@ -3013,6 +3077,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String reason = recovery.optString("reason_code");
         if (!("STATE_UNKNOWN".equals(reason) || "GRAPH_PATH_UNAVAILABLE".equals(reason)
                 || "TARGET_NOT_FOUND".equals(reason) || "APP_NOT_OPEN".equals(reason))) return false;
+        if (ObservationRecovery.canReturnFromSettings(screen)) {
+            recoverSettingsBack(screen);
+            return true;
+        }
         showNavigationRecovery(navigationRecovery.recommend(screen));
         return true;
     }
@@ -3031,7 +3099,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (generation != executionGeneration || agentPaused || navigationRecovery.awaiting() != action) return;
             ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
             if (!handleNavigationSnapshot(current)) { sendAgentTurn(null, true); return; }
-            if (manual && navigationRecovery.finishManualWait()) {
+            if (navigationRecovery.finishManualWait()) {
                 // No correlated screen change: re-observe without fabricating BACK_NAVIGATED
                 // or forcing the user home just because Settings recreated its window.
                 forceNextObservation = true;
@@ -3126,8 +3194,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void recoverSettingsBack(ScreenSnapshot expected) {
         if (!ObservationRecovery.canReturnFromSettings(expected)) { waitForFreshGuide(); return; }
-        showNavigationRecovery(navigationRecovery.recommend(expected));
-
+        waitingForExplicitRetry = false;
+        showNavigationRecovery(navigationRecovery.recommendSettingsBack());
     }
 
     private void automationStatus(String message) {
@@ -3695,7 +3763,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         });
         confirmationParams = new WindowManager.LayoutParams(
                 screenWidth() - dp(28), Math.min(dp(300), screenHeight() - dp(56)), overlayWindowType,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
                 PixelFormat.TRANSLUCENT);
         confirmationParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
         confirmationParams.y = dp(28);
@@ -3815,6 +3883,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
                 overlayWindowType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                        | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                         | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
         guideOverlayParams.gravity = Gravity.START | Gravity.TOP;
@@ -3926,6 +3995,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private boolean automaticTouchEnabled() {
+        if (acceptedGoal != null && "coupang".equals(acceptedGoal.optString("target_app"))) return false;
         return new com.click.data.local.TouchAutomationSettings(this).isEnabled();
     }
 

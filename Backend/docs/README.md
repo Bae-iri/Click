@@ -85,18 +85,9 @@ Jev 화면 선택을 사용할 때는 [휴대폰·백엔드의 화면 전송 필
 
 ## 모델 연결
 
-설정은 루트 `.env.example`과 [모델 worker 안내](../inference/README.md)를 따릅니다. 자체 STT/LLM worker는 API와 분리하고 실제 가중치·한국어 추론·메모리·지연을 확인합니다. STT worker와 API·앱 모델 계약은 Whisper large-v3로 전환했습니다. 실제 서버에는 CTranslate2 가중치 배치와 `inference.whisper_stt:app` 실행, API endpoint 변경 및 앱 업데이트가 필요합니다. 목표 해석 LLM도 STT와 별도 설정입니다.
+음성 인식은 Android 온디바이스 서비스에서 처리하며 Backend에는 텍스트만 전달합니다. 음성 업로드 API와 별도 음성 worker는 제공하지 않습니다.
 
-```powershell
-python scripts/check_stt.py --env-file .env
-python scripts/check_stt.py --env-file .env --wav /path/to/test-ko.wav --expected-text "글자 크게 해줘"
-```
-
-CONFIGURED_ONLY는 설정 확인이며 추론 성공이 아닙니다. PASS는 실제 provider/model/전사 응답 검사이며 기대 문구를 지정하면 공백 제외 일치도 검사합니다. 공개 API 왕복은 `--api-url`과 STT_CHECK_ACCESS_TOKEN을 사용합니다(원격 HTTPS, 로컬 loopback만 HTTP 허용). CONFIG_ERROR/AUDIO_ERROR/NO_SPEECH/UNAVAILABLE/TIMEOUT/RESPONSE_ERROR/TEXT_MISMATCH를 구분합니다. Backend의 `422 NO_SPEECH`는 재녹음, `422 INVALID_REQUEST`는 입력 형식 오류이며 503 서버 장애와 다릅니다. 음성은 16kHz mono PCM16 WAV, 최대 20초/650000바이트이며 토큰·원음·전사문을 출력하지 않습니다.
-
-2026-10-27 Windows 로컬에서는 Whisper large-v3 가중치·해시 확인, CPU/int8 모델 로드, worker와 API 상태 점검 및 인증을 확인했습니다. 관련 Backend 테스트 84개와 앱 오류 안내·모델 계약 단위 테스트 8개가 통과했습니다. 한국어 WAV가 없어 실제 전사·지연·전사 중 메모리 및 휴대폰 검증은 보류했습니다. 운영 배포는 별도입니다.
-
-기기에서는 녹음 → 인증된 Backend → 실제 STT worker → 텍스트 표시와 장애 시 텍스트 입력 복구를 확인합니다. OCR도 동의 → 로컬 한국어 OCR → 마스킹된 elements → 실제 안내를 확인하고, 취소/화면 전환 이후 늦은 응답이 이전 작업을 실행하지 않는지 검사합니다. API 계약 확인만으로 모델·기기 성공을 기록하지 않습니다.
+목표 해석 LLM은 루트 `.env.example`과 [LLM 연결 안내](../inference/README.md)를 따릅니다. 연결 확인은 `python scripts/check_goal_llm.py --env-file .env`로 실행합니다. 화면 판단 모델은 [Jev 안내](../inference/jev.md)를 참고합니다.
 
 ## 운영
 
@@ -104,7 +95,7 @@ CONFIGURED_ONLY는 설정 확인이며 추론 성공이 아닙니다. PASS는 �
 
 배포는 루트 Compose/render.yaml과 기존 DB를 사용합니다. Dockerfile은 Backend/Dockerfile, build context는 저장소 루트, 시작은 `python scripts/render_start.py`, pre-deploy는 `python scripts/render_start.py --migrate`, health check는 `/ready`입니다. 앱 API 주소·배포 branch/commit·서버 OpenAPI를 함께 확인합니다. 비밀값은 Git·로그·채팅에 넣지 않습니다.
 
-Goal 카탈로그 v2.3.0의 실행 범위는 Android 설정 110개(변경 검증 50개·화면 이동 21개·직접 진행 안내 39개)입니다. 쿠팡 71개는 분류 전용입니다. 서버 시작 시 승인 seed를 DB에 등록하며 기존 episode의 고정 version/hash는 유지합니다. 배포 후 `python scripts/agent2.py audit`의 `status=PASS`, `catalog_coverage.selectable_goals=110`, 빈 `blocked_goals`·`unexpected_executable_goals`를 확인합니다. 등록 그래프 수만으로 목표 누락을 판단하지 않습니다. 자세한 상태와 실패 종료 조건은 [AI2 감사 안내](../../AI-Agent/src/ai_agent/graph_proposal/README.md#db-기록-처리)를 따릅니다.
+Goal 카탈로그 v2.4.0은 Android 설정 110개와 쿠팡 71개를 지원합니다. 쿠팡은 화면 이동 8개·확인 후 장바구니 담기 및 반영 검사 1개·직접 진행 안내 62개이며 [쿠팡 실행 안내](../../docs/tasks/coupang.md)에 관측·결과 경계를 설명합니다. 서버 시작 시 승인 seed를 DB에 등록하며 기존 episode의 고정 version/hash는 유지합니다. 배포 후 `python scripts/agent2.py audit`의 `status=PASS`, `catalog_coverage.selectable_goals=181`, 빈 `blocked_goals`·`unexpected_executable_goals`를 확인합니다. 이는 정적 지원 구성 검사이며 실기기 검증이 아닙니다. 자세한 상태와 실패 종료 조건은 [AI2 감사 안내](../../AI-Agent/src/ai_agent/graph_proposal/README.md#db-기록-처리)를 따릅니다.
 
 암호화 저장에는 `DATA_ENCRYPTION_KEYS`·`DATA_LOOKUP_KEY`와 `20261107_18` 이전이 필요합니다. [데이터 암호화·유지보수 배포·키 교체](data-encryption.md)를 먼저 따릅니다. 이전 앱 서버를 중단한 뒤 기존 데이터 변환을 적용하며 평문으로 되돌리는 downgrade는 거부합니다.
 
@@ -142,7 +133,7 @@ python scripts/supervise.py stop api
 
 prepare는 운영 DATABASE_URL 대신 `instance/validation/validation.db`를 사용하고 migration·승인 seed를 준비합니다. 같은 폴더의 `.env`에는 비밀값이 있으므로 공유하지 않습니다. 서버의 `/validation/environment`는 환경 ID를 설정한 경우에만 활성화하며 코드·migration·승인 graph hash를 비교합니다. 코드나 승인 graph가 달라지면 prepare·서버 재시작·APK 재빌드로 다시 맞춥니다. 검증 서버는 loopback에서 실행합니다.
 
-`supervise.py run stt --python <STT-가상환경-python.exe>`는 별도 STT worker를 실행하며 기본 환경 파일은 `inference/.env`, 포트는 8091입니다. 모델 가중치와 worker 설정이 먼저 필요합니다. 감독 프로세스는 직접 시작한 자식만 재시작하며 이미 점유된 포트의 프로세스를 종료하지 않습니다. 터미널에서 실행하는 명령이므로 실행 중에는 터미널을 유지합니다.
+감독 프로세스는 직접 시작한 API 자식만 재시작하며 이미 점유된 포트의 프로세스를 종료하지 않습니다. 터미널에서 실행하는 명령이므로 실행 중에는 터미널을 유지합니다.
 
 ## 검증과 남은 작업
 

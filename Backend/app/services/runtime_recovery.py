@@ -26,7 +26,7 @@ def prepare(recovery, checkpoint, graph, reference, response, graphs):
     if not stopped:
         try:
             goal = TypedGoalRequest(**{key: checkpoint["typed_goal"][key] for key in ("goal_type", "target_app", "slots")},
-                                    catalog_version="2.3.0")
+                                    catalog_version="2.4.0")
             selected = graphs.select(goal, excluded_hashes=excluded)
         except NoCompatibleGraphError:
             stopped = "no_compatible_alternative"

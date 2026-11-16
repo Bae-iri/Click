@@ -44,7 +44,7 @@ public class GoalCommandInterpreterTest {
         GoalCatalogClassifier catalog = loadCatalog();
         GoalCommandInterpreter.Result orderCancel = GoalCommandInterpreter.interpret(
                 "쿠팡에서 한 주문 취소해줘", true, false, false, catalog, "com.coupang.mobile");
-        assertEquals(GoalCommandInterpreter.Kind.CATALOGUED_UNAVAILABLE, orderCancel.kind);
+        assertEquals(GoalCommandInterpreter.Kind.START_TASK, orderCancel.kind);
         assertEquals("coupang.order.cancel", orderCancel.goal.goalType);
 
         GoalCommandInterpreter.Result queueCancel = GoalCommandInterpreter.interpret(
@@ -77,7 +77,7 @@ public class GoalCommandInterpreterTest {
                         catalog, "com.android.settings").kind);
     }
 
-    @Test public void classifiesApprovedAndCatalogOnlyGoalsFromSharedCatalog() throws Exception {
+    @Test public void classifiesSettingsAndCommerceGoalsFromSharedCatalog() throws Exception {
         GoalCatalogClassifier catalog = loadCatalog();
         assertEquals(181, catalog.size());
 
@@ -96,7 +96,7 @@ public class GoalCommandInterpreterTest {
 
         GoalCommandInterpreter.Result coupang = GoalCommandInterpreter.interpret(
                 "장바구니에 이거 담아줘", false, false, false, catalog, "com.coupang.mobile");
-        assertEquals(GoalCommandInterpreter.Kind.CATALOGUED_UNAVAILABLE, coupang.kind);
+        assertEquals(GoalCommandInterpreter.Kind.START_TASK, coupang.kind);
         assertEquals("coupang.cart.add", coupang.goal.goalType);
     }
 

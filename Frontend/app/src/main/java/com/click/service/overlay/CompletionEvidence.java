@@ -13,6 +13,12 @@ final class CompletionEvidence {
     }
     static boolean accepted(JSONObject metadata, String goalType) {
         if (accepted(metadata)) return true;
+        if (metadata != null && goalType != null && goalType.startsWith("coupang.")) {
+            JSONObject outcome = metadata.optJSONObject("task_outcome");
+            JSONObject proof = outcome == null ? metadata.optJSONObject("technical_outcome") : outcome.optJSONObject("technical");
+            return proof != null && "OPENED".equals(proof.optString("status"))
+                && "commerce_page_visible".equals(proof.optString("reason")) && goalType.equals(proof.optString("goal_type"));
+        }
         if (metadata == null || goalType == null || !goalType.startsWith("settings.navigation.")) return false;
         JSONObject outcome = metadata.optJSONObject("task_outcome");
         JSONObject proof = outcome == null ? null : outcome.optJSONObject("technical");

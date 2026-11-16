@@ -82,7 +82,7 @@ def classify_screen_state(
                                 and title.label.strip().casefold() not in {"설정", "settings"}
                                 for title in relevant_titles)
                             and any(node.actionable and node.label.strip().casefold() in
-                                {"뒤로", "뒤로 이동", "이전", "이전 화면", "navigate up", "back"}
+                                {"뒤로", "뒤로가기", "뒤로 가기", "뒤로 이동", "이전", "이전 화면", "navigate up", "back"}
                                 and node.package_name in {"com.android.settings", "com.samsung.android.settings"}
                                 for node in nodes)),
                         reason_code="STATE_AMBIGUOUS" if ambiguous else "STATE_IDENTIFIED" if chosen else "STATE_UNKNOWN")

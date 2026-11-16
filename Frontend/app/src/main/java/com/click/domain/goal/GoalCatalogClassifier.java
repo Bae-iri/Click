@@ -152,6 +152,7 @@ public final class GoalCatalogClassifier {
     }
 
     private static int score(Rule rule, String text, String foregroundPackage) {
+        if ("coupang".equals(rule.targetApp) && text.equals(normalize(rule.displayName))) return 10000;
         int score = rule.keywordGroups.size() * 100;
         for (List<String> group : rule.keywordGroups) {
             int longest = 0;

@@ -19,7 +19,7 @@ public final class ObservationRecovery {
     }
     private static boolean backLabel(String label) {
         return label != null && label.trim().toLowerCase(java.util.Locale.ROOT)
-                .matches("뒤로|뒤로 이동|이전|이전 화면|navigate up|back");
+                .matches("뒤로|뒤로가기|뒤로 가기|뒤로 이동|이전|이전 화면|navigate up|back");
     }
     public static boolean canSearchByScrolling(JSONObject policy, ScreenSnapshot screen) {
         JSONObject recovery = policy == null ? null : policy.optJSONObject("recovery");

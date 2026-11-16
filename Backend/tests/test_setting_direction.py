@@ -32,7 +32,7 @@ def test_model_cannot_reverse_explicit_setting_direction(monkeypatch, provider, 
     monkeypatch.setenv('TYPESAFE_API_KEY', 'test-only-secret')
     monkeypatch.setenv('JEV_MODEL', 'jev-1.14.0')
     monkeypatch.setenv('JEV_MIN_CONFIDENCE', '0.8')
-    catalog = json.loads((Path(__file__).parents[1] / 'app/task_graphs/goal_catalog.json').read_text())
+    catalog = json.loads((Path(__file__).parents[1] / 'app/task_graphs/goal_catalog.json').read_text(encoding='utf-8'))
     candidates = [g for g in catalog['goals'] if g['goal_type'].startswith(f'settings.{setting}.')]
     family = GoalInputRequirements().family(f'settings.{setting}.{direction}')
     for predicted in [direction, 'increase' if direction == 'decrease' else 'decrease']:
