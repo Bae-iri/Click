@@ -108,21 +108,19 @@ def answer_outcome(outcome, answer, now):
 def follow_up(outcome):
     if outcome.get('setting') not in {'font_size', 'brightness', 'volume', 'wifi'}:
         return {'message': '기기에서 선택한 항목과 현재 설정 상태를 확인해 주세요. 어떤 도움이 더 필요한가요?',
-            'choices': [{'id': 'other', 'label': '다른 도움이 필요해요'}, {'id': 'unsure', 'label': '잘 모르겠어요'}]}
+            'choices': [{'id': 'other', 'label': '다른 도움이 필요해요'}]}
     if outcome.get('setting') == 'wifi':
         return {'message': '와이파이 켜짐 상태와 네트워크 연결은 별개예요. 어떤 도움이 더 필요한가요?',
-            'choices': [{'id': 'other', 'label': '다른 도움이 필요해요'}, {'id': 'unsure', 'label': '잘 모르겠어요'}]}
+            'choices': [{'id': 'other', 'label': '다른 도움이 필요해요'}]}
     direction = outcome.get("technical", {}).get("limit_direction")
     choices = [{"id": "too_small", "label": "글자가 아직 작아요"},
                {"id": "too_large", "label": "글자가 너무 커요"},
-               {"id": "other", "label": "크기 말고 다른 점이 불편해요"},
-               {"id": "unsure", "label": "잘 모르겠어요"}]
+               {"id": "other", "label": "다른 도움이 필요해요"}]
     setting = outcome.get('setting', 'font_size')
     if setting in {'brightness', 'volume'}:
         # Keep the wire direction IDs compatible while presenting task-specific choices.
         choices[0]['label'] = '화면이 아직 어두워요' if setting == 'brightness' else '소리가 아직 작아요'
         choices[1]['label'] = '화면이 너무 밝아요' if setting == 'brightness' else '소리가 너무 커요'
-        choices[2]['label'] = '다른 점이 불편해요'
     if direction == "increase":
         choices = [c for c in choices if c["id"] != "too_small"]
     if direction == "decrease":

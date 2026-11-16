@@ -1153,8 +1153,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
         clear("조금 더 도와드릴게요"); addOutcomeMessage(followUp.optString("message"));
         JSONArray choices = followUp.optJSONArray("choices");
         if (choices != null) for (int i = 0; i < choices.length(); i++) {
-            JSONObject choice = choices.optJSONObject(i); if (choice == null) continue;
-            content.addView(secondaryButton(choice.optString("label"),
+            JSONObject choice = choices.optJSONObject(i);
+            if (choice == null || "unsure".equals(choice.optString("id"))) continue;
+            String label = "other".equals(choice.optString("id"))
+                    ? "다른 도움이 필요해요" : choice.optString("label");
+            content.addView(secondaryButton(label,
                     () -> listener.adjust(choice.optString("id"))), spaced(8));
         }
     }
