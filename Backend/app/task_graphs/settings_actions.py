@@ -47,12 +47,17 @@ def action_releases():
             edge('OPEN_PAGE', 'S_CATEGORY', 'S_TARGET', pages)
             path = contract.get('intermediate_path', [intermediate] if intermediate else [])
             previous = 'S_CATEGORY'
+            ancestors = []
             for index, words in enumerate(path):
                 key = 'S_INTERMEDIATE' if index == 0 else f'S_INTERMEDIATE_{index + 1}'
                 suffix = '' if index == 0 else f'_{index + 1}'
                 states[key] = state(key, words[0], words)
                 edge('OPEN_INTERMEDIATE' + suffix, previous, key, words, 1)
+                if contract.get('allow_intermediate_shortcuts'):
+                    for ancestor in ancestors:
+                        edge('OPEN_INTERMEDIATE' + suffix + '_FROM_' + ancestor, ancestor, key, words, 1)
                 edge('OPEN_PAGE_FROM_INTERMEDIATE' + suffix, key, 'S_TARGET', pages)
+                ancestors.append(previous)
                 previous = key
         edge('OPEN_PAGE_FROM_HOME', 'S1_SETTINGS_HOME', 'S_TARGET', pages, 10)
         if mode == 'native_checked':

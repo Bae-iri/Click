@@ -3640,6 +3640,42 @@ public class ClickOverlayServiceExecutionTest {
         verify(panel,never()).settingsEntryRecovery(any());
     }
 
+    @Test public void deviceCareStorageStopsAtManualInstructionsWithoutReopeningSettings() throws Exception {
+        expectedExternalSettingsChoice("settings.storage.cleanup", "com.samsung.android.lool");
+    }
+
+    @Test public void notificationSoundPickerStopsAtManualInstructionsWithoutReopeningSettings() throws Exception {
+        expectedExternalSettingsChoice("settings.notification_sound.change", "com.samsung.android.secsoundpicker");
+    }
+
+    @Test public void galaxyThemesStopsAtManualInstructionsWithoutReopeningSettings() throws Exception {
+        expectedExternalSettingsChoice("settings.theme.change", "com.samsung.android.themestore");
+    }
+
+    private void expectedExternalSettingsChoice(String goalType, String pkg) throws Exception {
+        prepareGuideResponse(goalType);deliver(1,"highlight","tap",null);
+        var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
+        currentScreen=environmentScene(pkg,"private selection",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        broadcastCurrentPage();
+        assertEquals(2,requests.size());assertTrue(((TaskExecutionController)fieldValue("execution")).manual());
+        verify(panel).progress(anyString(),any(),contains("직접 선택한 뒤 완료 확인"),eq(true));
+        verify(panel,never()).settingsEntryRecovery(any());
+        for(int i=0;i<5;i++)broadcastCurrentPage();
+        assertEquals("Personal choices remain local after arrival",2,requests.size());
+        assertNull(shadowOf(service).getNextStartedActivity());
+    }
+
+    @Test public void newRequestOnAnExistingSettingsPageStartsWithoutReopeningSettings() throws Exception {
+        goal=catalog.executableGoal("settings.hotspot.password.change").toTypedGoalJson();
+        currentScreen=environmentScene("com.android.settings","네트워크 및 인터넷",
+            new com.click.data.snapshot.NativeWindowContext("SUBPAGE","APPLICATION",false));
+        resolve();var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);confirm();
+        assertEquals(2,requests.size());assertEquals("start_task",requests.get(1).commandType());
+        assertSame(currentScreen,requests.get(1).accessibilityTree);
+        verify(panel,never()).settingsEntryRecovery(any());
+        assertNull(shadowOf(service).getNextStartedActivity());
+    }
+
     @Test public void physicalBackWithinCalendarDoesNotMistakePrivateTextChangeForTaskReentry() throws Exception {
         prepareGuideResponse();deliver(1,"highlight","tap",null);
         currentScreen=environmentScene("com.samsung.android.calendar","개인 일정 A",com.click.data.snapshot.NativeWindowContext.UNKNOWN);broadcastCurrentPage();

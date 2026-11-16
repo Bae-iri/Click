@@ -1047,9 +1047,7 @@
           {
             "label": "알림",
             "labels": [
-              "battery",
               "notifications",
-              "배터리",
               "알림"
             ],
             "packages": [
@@ -1058,38 +1056,6 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_CATEGORY"
-          },
-          {
-            "label": "배터리",
-            "labels": [
-              "advanced settings",
-              "battery",
-              "고급 설정",
-              "배터리"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
-            "transition_id": "OPEN_PAGE_FROM_HOME"
-          }
-        ],
-        "S_CATEGORY": [
-          {
-            "label": "배터리",
-            "labels": [
-              "advanced settings",
-              "battery",
-              "고급 설정",
-              "배터리"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
-            "transition_id": "OPEN_PAGE"
           },
           {
             "label": "고급 설정",
@@ -1102,24 +1068,22 @@
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
-            "transition_id": "OPEN_INTERMEDIATE"
+            "transition_id": "OPEN_PAGE_FROM_HOME"
           }
         ],
-        "S_INTERMEDIATE": [
+        "S_CATEGORY": [
           {
-            "label": "배터리",
+            "label": "고급 설정",
             "labels": [
               "advanced settings",
-              "battery",
-              "고급 설정",
-              "배터리"
+              "고급 설정"
             ],
             "packages": [
               "com.android.settings",
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
-            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
+            "transition_id": "OPEN_PAGE"
           }
         ]
       },
@@ -1134,15 +1098,7 @@
         "S_CATEGORY": [
           [
             "알림",
-            "Notifications",
-            "배터리",
-            "Battery"
-          ]
-        ],
-        "S_INTERMEDIATE": [
-          [
-            "고급 설정",
-            "Advanced settings"
+            "Notifications"
           ]
         ]
       },
@@ -1181,9 +1137,7 @@
           {
             "label": "알림",
             "labels": [
-              "battery",
               "notifications",
-              "배터리",
               "알림"
             ],
             "packages": [
@@ -1192,38 +1146,6 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_CATEGORY"
-          },
-          {
-            "label": "배터리",
-            "labels": [
-              "advanced settings",
-              "battery",
-              "고급 설정",
-              "배터리"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
-            "transition_id": "OPEN_PAGE_FROM_HOME"
-          }
-        ],
-        "S_CATEGORY": [
-          {
-            "label": "배터리",
-            "labels": [
-              "advanced settings",
-              "battery",
-              "고급 설정",
-              "배터리"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
-            "transition_id": "OPEN_PAGE"
           },
           {
             "label": "고급 설정",
@@ -1236,24 +1158,22 @@
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
-            "transition_id": "OPEN_INTERMEDIATE"
+            "transition_id": "OPEN_PAGE_FROM_HOME"
           }
         ],
-        "S_INTERMEDIATE": [
+        "S_CATEGORY": [
           {
-            "label": "배터리",
+            "label": "고급 설정",
             "labels": [
               "advanced settings",
-              "battery",
-              "고급 설정",
-              "배터리"
+              "고급 설정"
             ],
             "packages": [
               "com.android.settings",
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
-            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
+            "transition_id": "OPEN_PAGE"
           }
         ]
       },
@@ -1268,15 +1188,7 @@
         "S_CATEGORY": [
           [
             "알림",
-            "Notifications",
-            "배터리",
-            "Battery"
-          ]
-        ],
-        "S_INTERMEDIATE": [
-          [
-            "고급 설정",
-            "Advanced settings"
+            "Notifications"
           ]
         ]
       },
@@ -1952,6 +1864,11 @@
             "label": "접근성",
             "labels": [
               "accessibility",
+              "sound",
+              "sound & vibration",
+              "sounds and vibration",
+              "소리",
+              "소리 및 진동",
               "접근성"
             ],
             "packages": [
@@ -1995,6 +1912,7 @@
               "caption preferences",
               "hearing enhancements",
               "자막 설정",
+              "자막 환경설정",
               "청각 보조"
             ],
             "packages": [
@@ -2032,7 +1950,12 @@
         "S_CATEGORY": [
           [
             "접근성",
-            "Accessibility"
+            "Accessibility",
+            "소리 및 진동",
+            "Sound & vibration",
+            "Sounds and vibration",
+            "소리",
+            "Sound"
           ]
         ],
         "S_INTERMEDIATE": [
@@ -2040,7 +1963,8 @@
             "청각 보조",
             "Hearing enhancements",
             "자막 설정",
-            "Caption preferences"
+            "Caption preferences",
+            "자막 환경설정"
           ]
         ]
       },
@@ -2080,6 +2004,11 @@
             "label": "접근성",
             "labels": [
               "accessibility",
+              "sound",
+              "sound & vibration",
+              "sounds and vibration",
+              "소리",
+              "소리 및 진동",
               "접근성"
             ],
             "packages": [
@@ -2123,6 +2052,7 @@
               "caption preferences",
               "hearing enhancements",
               "자막 설정",
+              "자막 환경설정",
               "청각 보조"
             ],
             "packages": [
@@ -2160,7 +2090,12 @@
         "S_CATEGORY": [
           [
             "접근성",
-            "Accessibility"
+            "Accessibility",
+            "소리 및 진동",
+            "Sound & vibration",
+            "Sounds and vibration",
+            "소리",
+            "Sound"
           ]
         ],
         "S_INTERMEDIATE": [
@@ -2168,7 +2103,8 @@
             "청각 보조",
             "Hearing enhancements",
             "자막 설정",
-            "Caption preferences"
+            "Caption preferences",
+            "자막 환경설정"
           ]
         ]
       },
@@ -4841,6 +4777,8 @@
             "label": "연결",
             "labels": [
               "connections",
+              "network & internet",
+              "네트워크 및 인터넷",
               "연결"
             ],
             "packages": [
@@ -4924,7 +4862,9 @@
         "S_CATEGORY": [
           [
             "연결",
-            "Connections"
+            "Connections",
+            "네트워크 및 인터넷",
+            "Network & internet"
           ]
         ],
         "S_INTERMEDIATE": [
@@ -4985,14 +4925,10 @@
             "transition_id": "OPEN_CATEGORY"
           },
           {
-            "label": "키보드 목록 및 기본",
+            "label": "기본 키보드",
             "labels": [
               "default keyboard",
-              "keyboard list and default",
-              "on-screen keyboard",
-              "기본 키보드",
-              "키보드 목록 및 기본",
-              "화면 키보드"
+              "기본 키보드"
             ],
             "packages": [
               "com.android.settings",
@@ -5004,14 +4940,10 @@
         ],
         "S_CATEGORY": [
           {
-            "label": "키보드 목록 및 기본",
+            "label": "기본 키보드",
             "labels": [
               "default keyboard",
-              "keyboard list and default",
-              "on-screen keyboard",
-              "기본 키보드",
-              "키보드 목록 및 기본",
-              "화면 키보드"
+              "기본 키보드"
             ],
             "packages": [
               "com.android.settings",
@@ -5032,17 +4964,14 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_INTERMEDIATE"
-          }
-        ],
-        "S_INTERMEDIATE": [
+          },
           {
             "label": "키보드 목록 및 기본",
             "labels": [
-              "default keyboard",
               "keyboard list and default",
               "on-screen keyboard",
-              "기본 키보드",
               "키보드 목록 및 기본",
+              "키보드 목록 및 기본 설정",
               "화면 키보드"
             ],
             "packages": [
@@ -5050,7 +4979,53 @@
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
+            "transition_id": "OPEN_INTERMEDIATE_2_FROM_S_CATEGORY"
+          }
+        ],
+        "S_INTERMEDIATE": [
+          {
+            "label": "기본 키보드",
+            "labels": [
+              "default keyboard",
+              "기본 키보드"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
             "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
+          },
+          {
+            "label": "키보드 목록 및 기본",
+            "labels": [
+              "keyboard list and default",
+              "on-screen keyboard",
+              "키보드 목록 및 기본",
+              "키보드 목록 및 기본 설정",
+              "화면 키보드"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_INTERMEDIATE_2"
+          }
+        ],
+        "S_INTERMEDIATE_2": [
+          {
+            "label": "기본 키보드",
+            "labels": [
+              "default keyboard",
+              "기본 키보드"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE_2"
           }
         ]
       },
@@ -5075,6 +5050,15 @@
           [
             "언어 및 입력",
             "Languages & input"
+          ]
+        ],
+        "S_INTERMEDIATE_2": [
+          [
+            "키보드 목록 및 기본",
+            "키보드 목록 및 기본 설정",
+            "Keyboard list and default",
+            "화면 키보드",
+            "On-screen keyboard"
           ]
         ]
       },
@@ -5254,35 +5238,7 @@
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
-            "transition_id": "OPEN_CATEGORY"
-          },
-          {
-            "label": "위치",
-            "labels": [
-              "location",
-              "위치"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
             "transition_id": "OPEN_PAGE_FROM_HOME"
-          }
-        ],
-        "S_CATEGORY": [
-          {
-            "label": "위치",
-            "labels": [
-              "location",
-              "위치"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
-            "transition_id": "OPEN_PAGE"
           }
         ]
       },
@@ -5292,12 +5248,6 @@
           [
             "설정",
             "Settings"
-          ]
-        ],
-        "S_CATEGORY": [
-          [
-            "위치",
-            "Location"
           ]
         ]
       },
@@ -5344,35 +5294,7 @@
               "com.samsung.android.settings"
             ],
             "role": "menu_item",
-            "transition_id": "OPEN_CATEGORY"
-          },
-          {
-            "label": "위치",
-            "labels": [
-              "location",
-              "위치"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
             "transition_id": "OPEN_PAGE_FROM_HOME"
-          }
-        ],
-        "S_CATEGORY": [
-          {
-            "label": "위치",
-            "labels": [
-              "location",
-              "위치"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
-            "transition_id": "OPEN_PAGE"
           }
         ]
       },
@@ -5382,12 +5304,6 @@
           [
             "설정",
             "Settings"
-          ]
-        ],
-        "S_CATEGORY": [
-          [
-            "위치",
-            "Location"
           ]
         ]
       },
@@ -5427,9 +5343,26 @@
             "label": "알림",
             "labels": [
               "lock screen",
+              "lock screen and aod",
               "notifications",
               "알림",
-              "잠금화면"
+              "잠금 화면",
+              "잠금화면",
+              "잠금화면 및 aod"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_CATEGORY"
+          },
+          {
+            "label": "잠금화면 알림",
+            "labels": [
+              "lock screen notifications",
+              "잠금 화면 알림",
+              "잠금화면 알림"
             ],
             "packages": [
               "com.android.settings",
@@ -5437,6 +5370,22 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_PAGE_FROM_HOME"
+          }
+        ],
+        "S_CATEGORY": [
+          {
+            "label": "잠금화면 알림",
+            "labels": [
+              "lock screen notifications",
+              "잠금 화면 알림",
+              "잠금화면 알림"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE"
           }
         ]
       },
@@ -5446,6 +5395,17 @@
           [
             "설정",
             "Settings"
+          ]
+        ],
+        "S_CATEGORY": [
+          [
+            "알림",
+            "Notifications",
+            "잠금화면",
+            "잠금 화면",
+            "Lock screen",
+            "잠금화면 및 AOD",
+            "Lock screen and AOD"
           ]
         ]
       },
@@ -6039,10 +5999,12 @@
             "transition_id": "OPEN_CATEGORY"
           },
           {
-            "label": "청각 보조",
+            "label": "모노 오디오",
             "labels": [
               "audio adjustment",
               "hearing enhancements",
+              "mono audio",
+              "모노 오디오",
               "오디오 조정",
               "청각 보조"
             ],
@@ -6056,10 +6018,12 @@
         ],
         "S_CATEGORY": [
           {
-            "label": "청각 보조",
+            "label": "모노 오디오",
             "labels": [
               "audio adjustment",
               "hearing enhancements",
+              "mono audio",
+              "모노 오디오",
               "오디오 조정",
               "청각 보조"
             ],
@@ -6069,38 +6033,6 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_PAGE"
-          },
-          {
-            "label": "청각 보조",
-            "labels": [
-              "audio adjustment",
-              "hearing enhancements",
-              "오디오 조정",
-              "청각 보조"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
-            "transition_id": "OPEN_INTERMEDIATE"
-          }
-        ],
-        "S_INTERMEDIATE": [
-          {
-            "label": "청각 보조",
-            "labels": [
-              "audio adjustment",
-              "hearing enhancements",
-              "오디오 조정",
-              "청각 보조"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
-            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
           }
         ]
       },
@@ -6116,14 +6048,6 @@
           [
             "접근성",
             "Accessibility"
-          ]
-        ],
-        "S_INTERMEDIATE": [
-          [
-            "청각 보조",
-            "Hearing enhancements",
-            "오디오 조정",
-            "Audio adjustment"
           ]
         ]
       },
@@ -6173,10 +6097,12 @@
             "transition_id": "OPEN_CATEGORY"
           },
           {
-            "label": "청각 보조",
+            "label": "모노 오디오",
             "labels": [
               "audio adjustment",
               "hearing enhancements",
+              "mono audio",
+              "모노 오디오",
               "오디오 조정",
               "청각 보조"
             ],
@@ -6190,10 +6116,12 @@
         ],
         "S_CATEGORY": [
           {
-            "label": "청각 보조",
+            "label": "모노 오디오",
             "labels": [
               "audio adjustment",
               "hearing enhancements",
+              "mono audio",
+              "모노 오디오",
               "오디오 조정",
               "청각 보조"
             ],
@@ -6203,38 +6131,6 @@
             ],
             "role": "menu_item",
             "transition_id": "OPEN_PAGE"
-          },
-          {
-            "label": "청각 보조",
-            "labels": [
-              "audio adjustment",
-              "hearing enhancements",
-              "오디오 조정",
-              "청각 보조"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
-            "transition_id": "OPEN_INTERMEDIATE"
-          }
-        ],
-        "S_INTERMEDIATE": [
-          {
-            "label": "청각 보조",
-            "labels": [
-              "audio adjustment",
-              "hearing enhancements",
-              "오디오 조정",
-              "청각 보조"
-            ],
-            "packages": [
-              "com.android.settings",
-              "com.samsung.android.settings"
-            ],
-            "role": "menu_item",
-            "transition_id": "OPEN_PAGE_FROM_INTERMEDIATE"
           }
         ]
       },
@@ -6250,14 +6146,6 @@
           [
             "접근성",
             "Accessibility"
-          ]
-        ],
-        "S_INTERMEDIATE": [
-          [
-            "청각 보조",
-            "Hearing enhancements",
-            "오디오 조정",
-            "Audio adjustment"
           ]
         ]
       },
@@ -9270,6 +9158,8 @@
             "label": "프라이빗 DNS",
             "labels": [
               "private dns",
+              "개인 dns",
+              "비공개 dns",
               "프라이빗 dns"
             ],
             "packages": [
@@ -9285,6 +9175,8 @@
             "label": "프라이빗 DNS",
             "labels": [
               "private dns",
+              "개인 dns",
+              "비공개 dns",
               "프라이빗 dns"
             ],
             "packages": [
@@ -9315,6 +9207,8 @@
             "label": "프라이빗 DNS",
             "labels": [
               "private dns",
+              "개인 dns",
+              "비공개 dns",
               "프라이빗 dns"
             ],
             "packages": [
@@ -9690,8 +9584,10 @@
             "label": "SIM 관리자",
             "labels": [
               "sim",
+              "sim card manager",
               "sim manager",
               "sim 관리자",
+              "sim 카드 관리자",
               "sims"
             ],
             "packages": [
@@ -9707,8 +9603,10 @@
             "label": "SIM 관리자",
             "labels": [
               "sim",
+              "sim card manager",
               "sim manager",
               "sim 관리자",
+              "sim 카드 관리자",
               "sims"
             ],
             "packages": [
@@ -9867,6 +9765,8 @@
             "label": "배터리 및 디바이스 케어",
             "labels": [
               "battery and device care",
+              "device care",
+              "디바이스 케어",
               "배터리 및 디바이스 케어"
             ],
             "packages": [
@@ -9919,7 +9819,9 @@
         "S_CATEGORY": [
           [
             "배터리 및 디바이스 케어",
-            "Battery and device care"
+            "Battery and device care",
+            "디바이스 케어",
+            "Device care"
           ]
         ]
       },
@@ -10111,6 +10013,64 @@
       },
       "task_id": "SET-talkback-enable",
       "task_type": "settings_change"
+    },
+    "settings.theme.change": {
+      "navigation": {
+        "S0_UNKNOWN": [
+          {
+            "label": "설정",
+            "labels": [
+              "settings",
+              "설정"
+            ],
+            "packages": [
+              "com.android.launcher3",
+              "com.google.android.apps.nexuslauncher",
+              "com.huawei.android.launcher",
+              "com.miui.home",
+              "com.oppo.launcher",
+              "com.sec.android.app.launcher",
+              "com.vivo.launcher"
+            ],
+            "role": "app_icon",
+            "transition_id": "S0_TO_S1_OPEN_SETTINGS"
+          }
+        ],
+        "S1_SETTINGS_HOME": [
+          {
+            "label": "테마",
+            "labels": [
+              "galaxy themes",
+              "themes",
+              "갤럭시 테마",
+              "테마"
+            ],
+            "packages": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "role": "menu_item",
+            "transition_id": "OPEN_PAGE_FROM_HOME"
+          }
+        ]
+      },
+      "page_titles": {
+        "S0_UNKNOWN": [],
+        "S1_SETTINGS_HOME": [
+          [
+            "설정",
+            "Settings"
+          ]
+        ]
+      },
+      "success": {
+        "direction": null,
+        "kind": "user_report",
+        "requested_state": null,
+        "setting": "theme"
+      },
+      "task_id": "SET-theme-change",
+      "task_type": "settings_assisted"
     },
     "settings.vibrate.disable": {
       "navigation": {
@@ -11374,6 +11334,7 @@
     "default apps",
     "default keyboard",
     "default notification sound",
+    "device care",
     "display",
     "display & touch",
     "display brightness",
@@ -11383,6 +11344,7 @@
     "eye comfort shield",
     "font size",
     "font size and style",
+    "galaxy themes",
     "general management",
     "hearing enhancements",
     "hotspot & tethering",
@@ -11395,11 +11357,14 @@
     "live caption",
     "location",
     "lock screen",
+    "lock screen and aod",
+    "lock screen notifications",
     "magnification",
     "manage networks",
     "mobile hotspot",
     "mobile hotspot and tethering",
     "mobile networks",
+    "mono audio",
     "more connection settings",
     "network & internet",
     "nfc",
@@ -11420,8 +11385,10 @@
     "security",
     "security & privacy",
     "sim",
+    "sim card manager",
     "sim manager",
     "sim 관리자",
+    "sim 카드 관리자",
     "sims",
     "sleep",
     "software update",
@@ -11436,6 +11403,7 @@
     "talkback",
     "text and display",
     "text size",
+    "themes",
     "timing controls",
     "visibility",
     "visibility enhancements",
@@ -11445,6 +11413,8 @@
     "wallpaper & style",
     "wi-fi",
     "wi-fi hotspot",
+    "개인 dns",
+    "갤럭시 테마",
     "계정 및 백업",
     "고급",
     "고급 설정",
@@ -11464,7 +11434,9 @@
     "데이터 사용",
     "데이터 절약 모드",
     "디바이스 정보",
+    "디바이스 케어",
     "디스플레이",
+    "모노 오디오",
     "모바일 네트워크",
     "모바일 핫스팟",
     "모바일 핫스팟 및 테더링",
@@ -11484,6 +11456,7 @@
     "볼륨",
     "블루라이트 필터",
     "블루투스",
+    "비공개 dns",
     "색상 및 움직임",
     "색상 반전",
     "생체 인식 및 보안",
@@ -11519,7 +11492,12 @@
     "자동 회전",
     "자막",
     "자막 설정",
+    "자막 환경설정",
+    "잠금 화면",
+    "잠금 화면 알림",
     "잠금화면",
+    "잠금화면 및 aod",
+    "잠금화면 알림",
     "재설정 옵션",
     "저장 공간",
     "저장공간",
@@ -11528,6 +11506,8 @@
     "접근성",
     "청각 보조",
     "키보드 목록 및 기본",
+    "키보드 목록 및 기본 설정",
+    "테마",
     "텍스트 및 디스플레이",
     "톡백",
     "편안하게 화면 보기",

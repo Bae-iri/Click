@@ -5,9 +5,9 @@ from tests.test_settings_execution import start
 from tests.test_visible_settings_navigation import screen
 CASES=[]
 for goal,c in DOCUMENT['goals'].items():
-    if c.get('graph_version')!='1.1.0' or c['mode']!='assisted':continue
+    if not c.get('graph_version') or c['mode']!='assisted':continue
     path=c.get('intermediate_path', [c['intermediate']] if c.get('intermediate') else [])
-    headings=[c['categories'],*path]
+    headings=[head for head in [c['categories'],*path] if head]
     for index,head in enumerate(headings):
         destination=headings[index+1] if index+1<len(headings) else c['pages']
         CASES.append((goal,head[0],destination[0]))
@@ -20,7 +20,7 @@ def test_nested_public_menu_does_not_handoff_on_the_parent(goal,title,label):
     assert b['guide_command']['action_type']=='tap',b
     assert b['task_status']=='IN_PROGRESS',b
 
-@pytest.mark.parametrize('goal',[g for g,c in DOCUMENT['goals'].items() if c.get('graph_version')=='1.1.0' and c['mode']=='assisted'])
+@pytest.mark.parametrize('goal',[g for g,c in DOCUMENT['goals'].items() if c.get('graph_version') and c['mode']=='assisted'])
 def test_only_exact_safe_destination_enters_explicit_manual_handoff(goal):
     c=DOCUMENT['goals'][goal];_,b=start(goal,screen(c['pages'][0],[]))
     assert b['guide_command']['render_policy']['manual_handoff'] is True,b

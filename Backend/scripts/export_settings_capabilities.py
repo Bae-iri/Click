@@ -27,7 +27,7 @@ def build():
     goals={}; labels=set(); states=set()
     def safe(label):return not any(w in normalized(label) for w in RISKY)
     for release,graph in releases():
-        if not release['approved']:continue
+        if not release['approved'] or graph.definition.target_app != 'android_settings':continue
         routes={}
         for edge in graph.transitions:
             if (edge.action_type.value!='tap' or edge.safety_level.value!='LOW_RISK'

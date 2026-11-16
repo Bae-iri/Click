@@ -68,6 +68,7 @@ public final class GoalCatalogClassifier {
         final JSONObject slots;
         final List<List<String>> keywordGroups;
         final List<String> utterances;
+        final List<String> excludedKeywords;
 
         Rule(JSONObject object) throws JSONException {
             goalType = object.getString("goal_type");
@@ -81,6 +82,7 @@ public final class GoalCatalogClassifier {
                     ? new JSONObject() : object.getJSONObject("slots");
             keywordGroups = parseGroups(object.getJSONArray("keyword_groups"));
             utterances = parseStrings(object.optJSONArray("utterances"));
+            excludedKeywords = parseStrings(object.optJSONArray("excluded_keywords"));
         }
     }
 
@@ -152,6 +154,10 @@ public final class GoalCatalogClassifier {
     }
 
     private static int score(Rule rule, String text, String foregroundPackage) {
+        for (String keyword : rule.excludedKeywords) {
+            String excluded = normalize(keyword);
+            if (!excluded.isEmpty() && text.contains(excluded)) return -1;
+        }
         if ("coupang".equals(rule.targetApp) && text.equals(normalize(rule.displayName))) return 10000;
         int score = rule.keywordGroups.size() * 100;
         for (List<String> group : rule.keywordGroups) {
@@ -169,6 +175,7 @@ public final class GoalCatalogClassifier {
             if (text.equals(normalize(utterance))) score += 1_000;
         }
         // Foreground is a tie-breaker, not authority to override more specific words.
+        score *= 2;
         if (foregroundMatches(rule.targetApp, foregroundPackage)) score += 1;
         return score;
     }

@@ -25,7 +25,7 @@ public class CoupangGoalTest {
             GoalCatalogClassifier.Classification classified = catalog.classify(goal.getString("display_name"), "com.coupang.mobile");
             assertNotNull(type, classified.match);
             assertEquals(type, classified.match.goalType);
-            assertEquals("2.4.0", match.toTypedGoalJson().getString("catalog_version"));
+            assertEquals("2.4.1", match.toTypedGoalJson().getString("catalog_version"));
             checked++;
         }
         assertEquals(71, checked);

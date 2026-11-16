@@ -32,15 +32,15 @@ def test_catalog_coverage_counts_goals_separately_from_release_versions(app):
     report = audit_catalog(app.state.session_factory)
     coverage = report["catalog_coverage"]
     assert report["status"] == "PASS"
-    assert report["total"] == 182
-    assert coverage["catalog_version"] == "2.4.0"
-    assert coverage["total_goals"] == 181
-    assert coverage["approved_goals"] == coverage["selectable_goals"] == 181
+    assert report["total"] == 183
+    assert coverage["catalog_version"] == "2.4.1"
+    assert coverage["total_goals"] == 182
+    assert coverage["approved_goals"] == coverage["selectable_goals"] == 182
     assert coverage["catalog_only_goals"] == 0
     assert {k:v for k,v in coverage["by_task_type"].items() if k.startswith("settings_")} == {
         "settings_change": {"approved": 56, "selectable": 56},
         "settings_navigation": {"approved": 21, "selectable": 21},
-        "settings_assisted": {"approved": 33, "selectable": 33},
+        "settings_assisted": {"approved": 34, "selectable": 34},
     }
     assert sum(v['selectable'] for k, v in coverage['by_task_type'].items() if k.startswith('commerce_')) == 71
     assert coverage["blocked_goals"] == coverage["unexpected_executable_goals"] == []
@@ -63,7 +63,7 @@ def test_missing_goal_blocks_audit_even_when_remaining_graphs_are_valid(app, pro
     assert report["status"] == "BLOCKED"
     assert report["static_valid"] == report["total"]
     coverage = report["catalog_coverage"]
-    assert coverage["selectable_goals"] == 180
+    assert coverage["selectable_goals"] == 181
     assert [(goal["goal_type"], goal["status"]) for goal in coverage["blocked_goals"]] == [
         ("settings.wifi.enable", "MISSING_GRAPH")]
     # Auditing must preserve a missing/disabled release for the operator to inspect.
@@ -81,7 +81,7 @@ def test_equal_priority_releases_are_reported_as_ambiguous(app):
     app.state.turn_service.graphs.register(body, version="99.0.0", approved=True, priority=priority)
 
     report = audit_catalog(app.state.session_factory)
-    assert report["static_valid"] == report["total"] == 182
+    assert report["static_valid"] == report["total"] == 183
     assert report["status"] == "BLOCKED"
     assert report["catalog_coverage"]["blocked_goals"][0]["status"] == "AMBIGUOUS_GRAPH"
 
@@ -134,4 +134,4 @@ def test_audit_cli_exit_status_reflects_catalog_coverage(tmp_path, missing):
     assert result.returncode == int(missing), result.stderr
     report = json.loads(result.stdout)
     assert report["status"] == ("BLOCKED" if missing else "PASS")
-    assert report["catalog_coverage"]["selectable_goals"] == 181 - int(missing)
+    assert report["catalog_coverage"]["selectable_goals"] == 182 - int(missing)

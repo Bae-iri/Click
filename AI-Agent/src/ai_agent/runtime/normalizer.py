@@ -181,6 +181,35 @@ def _label_target(
             return None
         if parent.scrollable or infer_role(parent) in {"list", "text_input"}:
             return None
+        # Native preference rows can expose the title and Switch as siblings,
+        # including inside a clickable row. Bind the title to that one checked
+        # widget before treating the whole preference as a navigation menu.
+        if (label_node.resource_id == 'android:id/title'
+                and label_node.package_name in {'com.android.settings', 'com.samsung.android.settings'}
+                and extract_confidence(label_node) is None and not label_node.node_id.startswith('vision:')
+                and parent.parent_id is not None):
+            height = ((screen_bounds[3] - screen_bounds[1]) if _has_area(screen_bounds)
+                      else max(n.bounds_in_screen[3] for n in nodes_by_id.values()))
+            if bounds[3] - bounds[1] < height / 2:
+                children = [n for n in nodes_by_id.values()
+                    if n.visible_to_user and n.package_name == parent.package_name
+                    and n.window_id == parent.window_id
+                    and _descends_from(n, parent.node_id, nodes_by_id)]
+                switches = [n for n in children if infer_role(n) == 'toggle']
+                titles = [n for n in children if n.resource_id == 'android:id/title']
+                if len(switches) == len(titles) == 1:
+                    switch = switches[0]
+                    from ai_agent.runtime.settings_controls import GENERIC_LABELS
+                    switch_name = normalize_text(_merge_label(switch))
+                    title_name = normalize_text(_merge_label(label_node))
+                    if (switch.enabled and switch.checkable and type(switch.extras.get('checked')) is bool
+                            and (not switch_name or switch_name in GENERIC_LABELS or switch_name == title_name)
+                            and switch.resource_id in {'android:id/switch_widget', 'com.android.settings:id/switch_widget'}
+                            and extract_confidence(switch) is None and not switch.node_id.startswith('vision:')
+                            and _has_area(switch.bounds_in_screen)
+                            and bounds[0] <= switch.bounds_in_screen[0] < switch.bounds_in_screen[2] <= bounds[2]
+                            and bounds[1] <= switch.bounds_in_screen[1] < switch.bounds_in_screen[3] <= bounds[3]):
+                        return switch
         if _is_control(parent):
             # Root/page-sized containers are not a defensible target for one text label.
             if parent.parent_id is None:

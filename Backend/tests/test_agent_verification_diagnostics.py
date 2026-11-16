@@ -59,6 +59,6 @@ def test_all_approved_catalog_entries_identify_their_registered_graph_for_resume
     catalog=json.loads((Path(__file__).parents[1]/'app/task_graphs/goal_catalog.json').read_text())
     graphs=approved_graphs()
     approved=[g for g in catalog['goals'] if g['execution_status']=='approved']
-    assert len(approved)==181
+    assert len(approved)==182
     for goal in approved:
         assert goal['graph_id']==graphs[goal['goal_type']].definition.task_id

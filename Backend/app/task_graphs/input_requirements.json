@@ -1734,6 +1734,18 @@
           "target_app": "android_settings"
         }
       ]
+    },
+    {
+      "id": "settings_theme_change",
+      "goal_prefix": "settings.theme.change",
+      "keywords": [],
+      "fields": [],
+      "routes": [
+        {
+          "when": {},
+          "target_app": "android_settings"
+        }
+      ]
     }
   ]
 }

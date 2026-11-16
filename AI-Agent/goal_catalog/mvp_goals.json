@@ -1,5 +1,5 @@
 {
-  "version": "2.4.0",
+  "version": "2.4.1",
   "matching": {
     "strategy": "all_keyword_groups",
     "normalization": "lowercase_remove_space_and_punctuation",
@@ -1253,7 +1253,10 @@
         [
           "바꿔",
           "변경",
-          "선택"
+          "선택",
+          "설정",
+          "기본",
+          "바꾸"
         ]
       ],
       "graph_id": "SET-keyboard-change"
@@ -1811,7 +1814,9 @@
           "관리",
           "변경",
           "설정",
-          "전환"
+          "전환",
+          "추가",
+          "등록"
         ]
       ],
       "graph_id": "SET-sim-manage"
@@ -1829,7 +1834,11 @@
       "keyword_groups": [
         [
           "핫스팟비밀번호",
-          "테더링비밀번호"
+          "테더링비밀번호",
+          "핫스팟비번",
+          "테더링비번",
+          "하스팟비번",
+          "하스팟비밀번호"
         ],
         [
           "바꿔",
@@ -1901,7 +1910,10 @@
         [
           "배터리퍼센트",
           "배터리잔량표시",
-          "배터리숫자"
+          "배터리숫자",
+          "배터리잔량",
+          "배터리백분율",
+          "배터리비율"
         ],
         [
           "켜",
@@ -1910,7 +1922,9 @@
           "키고",
           "키는",
           "킬",
-          "켤"
+          "켤",
+          "표시해",
+          "표시하기"
         ]
       ],
       "graph_id": "SET-battery_percentage-enable"
@@ -1929,7 +1943,10 @@
         [
           "배터리퍼센트",
           "배터리잔량표시",
-          "배터리숫자"
+          "배터리숫자",
+          "배터리잔량",
+          "배터리백분율",
+          "배터리비율"
         ],
         [
           "꺼",
@@ -2052,13 +2069,16 @@
       "keyword_groups": [
         [
           "잠금화면알림",
-          "락스크린알림"
+          "락스크린알림",
+          "잠금화면의알림"
         ],
         [
           "관리",
           "숨겨",
           "표시",
-          "바꿔"
+          "바꿔",
+          "설정",
+          "변경"
         ]
       ],
       "graph_id": "SET-lockscreen_notifications-manage"
@@ -4701,6 +4721,41 @@
         "편안하게 화면 보기 설정 열어줘",
         "편안하게 화면 보기 화면으로 이동해줘"
       ]
+    },
+    {
+      "goal_type": "settings.theme.change",
+      "display_name": "테마 변경",
+      "target_app": "android_settings",
+      "task_type": "settings_assisted",
+      "execution_status": "approved",
+      "slots": {
+        "setting": "theme",
+        "action": "change"
+      },
+      "keyword_groups": [
+        [
+          "테마",
+          "갤럭시테마",
+          "theme"
+        ],
+        [
+          "바꿔",
+          "바꾸",
+          "변경",
+          "설정",
+          "선택",
+          "적용"
+        ]
+      ],
+      "excluded_keywords": [
+        "다크모드",
+        "라이트모드",
+        "어두운테마",
+        "밝은테마",
+        "검은배경테마",
+        "흰바탕테마"
+      ],
+      "graph_id": "SET-theme-change"
     }
   ]
 }

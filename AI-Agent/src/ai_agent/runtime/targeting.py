@@ -14,7 +14,7 @@ def target_key(node: NormalizedNode) -> str:
 
 def control_label(node: NormalizedNode) -> str:
     """Samsung SeekBars expose their changing step number as contentDescription."""
-    label = normalize_text(node.label_parts[0] if node.role in {'menu_item', 'button', 'app_icon'}
+    label = normalize_text(node.label_parts[0] if node.role in {'menu_item', 'button', 'app_icon', 'toggle'}
                            and node.label_parts else node.label)
     if node.role == 'slider' and re.fullmatch(r'[+-]?(?:\d+(?:[.,]\d+)?|[.,]\d+)\s*%?', label):
         return ''

@@ -35,7 +35,8 @@ def target_allowed(node, nodes, setting):
         return True
     # Anonymous or generic master switches require a dedicated page, not a
     # category such as Display containing several unrelated settings.
-    dedicated = pages - {normalize_text(w) for w in (*contract['categories'], *contract['intermediate'])}
+    dedicated = {normalize_text(w) for w in contract.get('dedicated_pages', contract['pages'])}
+    dedicated -= {normalize_text(w) for w in (*contract['categories'], *contract.get('intermediate', []))}
     specific = titles.intersection(dedicated)
     return bool(specific and node.resource_id in MASTER_IDS
         and labels.issubset(STATUS_NAMES | names.intersection(GENERIC_LABELS))

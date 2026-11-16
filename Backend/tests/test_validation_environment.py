@@ -57,7 +57,7 @@ def test_prepare_uses_isolated_migrated_db_and_only_current_approved_graphs(pair
                 goal['graph_id'] for goal in json.loads((Path(__file__).parents[1]
                     / 'app/task_graphs/goal_catalog.json').read_text(encoding='utf-8'))['goals']
                 if goal['target_app'] == 'coupang'}
-        assert len(response.json()['approved_graphs']) == 181
+        assert len(response.json()['approved_graphs']) == 182
         assert response.json()['database_migrations'] == ['20261111_19']
         assert '/validation/environment' not in client.get('/openapi.json').json()['paths']
     assert (instance / 'validation.db').is_file()
