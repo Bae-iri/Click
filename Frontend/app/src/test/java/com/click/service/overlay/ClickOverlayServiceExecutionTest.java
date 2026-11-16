@@ -609,15 +609,15 @@ public class ClickOverlayServiceExecutionTest {
         assertNull(get("confirmationView"));
     }
 
-    @Test public void wrongSettingsPageOffersSettingsEntryAndWaitsForUserActivation() throws Exception {
-        prepareGuideResponse(); set("turnInFlight", false);
+    @Test public void wrongSettingsPageOffersBackWithoutRestartingTheTask() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
         NavigationRecovery recovery=(NavigationRecovery)get("navigationRecovery");
         recovery.onPath(screen); recovery.unplannedTap();
         AccessibilityNodeSnapshot back = new AccessibilityNodeSnapshot("back", null, true,
                 "com.android.settings", null, "뒤로", null, "android.widget.ImageButton", "button",
                 new int[]{0, 40, 80, 120}, true, true, false, false, false, null, 42);
         ScreenSnapshot wrong = new ScreenSnapshot("com.android.settings", Instant.now().toString(),
-                1080, 2400, List.of(back), 42);
+                1080, 2400, List.of(wrongSettingsPage().nodes.get(0),back), 42);
         currentScreen = wrong;
         Method recover = ClickOverlayService.class.getDeclaredMethod("recoverSettingsBack", ScreenSnapshot.class);
         recover.setAccessible(true); recover.invoke(service, wrong);
@@ -625,9 +625,12 @@ public class ClickOverlayServiceExecutionTest {
         accessibility.verify(() -> ClickAccessibilityService.performSettingsBack(anyString(), anyInt()), never());
         accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(anyBoolean()), never());
         org.mockito.ArgumentCaptor<Runnable> click=org.mockito.ArgumentCaptor.forClass(Runnable.class);
-        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(click.capture());
-        currentScreen=screen;
+        verify((TaskFlowOverlayView)get("taskFlowView")).failureRecovery(anyString(),anyString(),eq("이전 화면으로"),click.capture());
+        accessibility.when(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42)).thenReturn(true);
         click.getValue().run();
+        click.getValue().run();
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42),times(1));
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
         accessibility.verify(() -> ClickAccessibilityService.performRecoveryNavigation(anyBoolean()), never());
     }
 
@@ -3142,7 +3145,7 @@ public class ClickOverlayServiceExecutionTest {
         verify((TaskFlowOverlayView)get("taskFlowView")).progress(any(),any(),contains("페어링 모드"),eq(true));
         assertEquals(true,get("manualSettingsHandoff"));
     }
-    @Test public void staleManualHandoffOffersSettingsEntryAtAnUnrelatedPage() throws Exception {
+    @Test public void staleManualHandoffOffersBackAtAnUnrelatedPage() throws Exception {
         currentScreen=bluetoothPage(false,"블루투스");prepareGuideResponse("settings.bluetooth.connect");
         set("acceptedGoal",catalog.executableGoal("settings.bluetooth.connect").toTypedGoalJson());
         currentScreen=bluetoothPage(false,"디스플레이");
@@ -3150,7 +3153,8 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(false,get("manualSettingsHandoff"));
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
         assertEquals(NavigationRecovery.Action.BACK,((NavigationRecovery)get("navigationRecovery")).hint());
-        verify((TaskFlowOverlayView)get("taskFlowView")).settingsEntryRecovery(any());
+        verify((TaskFlowOverlayView)get("taskFlowView")).failureRecovery(anyString(),anyString(),eq("이전 화면으로"),any());
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
     }
     @Test public void unreadableManualHandoffDoesNotSuspendObservationRetries() throws Exception {
         currentScreen=bluetoothPage(false,"블루투스");prepareGuideResponse("settings.bluetooth.connect");
@@ -3269,12 +3273,13 @@ public class ClickOverlayServiceExecutionTest {
         cachedScreen=currentScreen;
         ((BroadcastReceiver)get("collapseReceiver")).onReceive(service,new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED));
     }
-    @Test public void differentSettingsPageOffersSettingsEntryAndRejoinsOnFreshEvidence() throws Exception {
+    @Test public void differentSettingsPageOffersBackAndRejoinsOnFreshEvidence() throws Exception {
         prepareGuideResponse();deliver(1,"highlight","tap",null);
         TaskFlowOverlayView panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
         int count=requests.size();currentScreen=wrongSettingsPage();broadcastCurrentPage();
         assertEquals("The wrong page stays local",count,requests.size());
-        verify(panel).settingsEntryRecovery(any());
+        verify(panel).failureRecovery(anyString(),anyString(),eq("이전 화면으로"),any());
+        verify(panel,never()).settingsEntryRecovery(any());
         verify(panel,never()).recoveryApology(any());verify(panel,never()).observationRecovery(anyString(),any());
         assertTrue(((TaskExecutionController)fieldValue("execution")).retryRequired());
         currentScreen=displaySettingsPage();broadcastCurrentPage();
@@ -3284,6 +3289,119 @@ public class ClickOverlayServiceExecutionTest {
         assertFalse(((TaskExecutionController)fieldValue("execution")).retryRequired());
         assertEquals("settings.font_size.increase",((JSONObject)get("acceptedGoal")).getString("goal_type"));
     }
+    @Test public void automaticDetourUsesOneBackAndKeepsTheAcceptedTask() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        var state=(TaskExecutionController)fieldValue("execution");
+        String session=state.sessionId(),episode=state.episodeId();int version=state.sessionVersion();
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        accessibility.when(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42)).thenReturn(true);
+        currentScreen=wrongSettingsPage();broadcastCurrentPage();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42),times(1));
+        broadcastCurrentPage();shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42),times(1));
+        assertEquals(session,state.sessionId());assertEquals(episode,state.episodeId());assertEquals(version,state.sessionVersion());
+        currentScreen=displaySettingsPage();broadcastCurrentPage();
+        assertEquals(3,requests.size());assertEquals("observe",requests.get(2).commandType());
+        assertEquals(episode,requests.get(2).episodeId);assertEquals(Integer.valueOf(version),requests.get(2).expectedVersion);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        assertEquals("An already observed return cancels the watchdog",3,requests.size());
+    }
+
+    @Test public void failedBackStopsLoadingAndNeverStartsFromSettingsHome() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        currentScreen=wrongSettingsPage();broadcastCurrentPage();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42),times(1));
+        verify((TaskFlowOverlayView)get("taskFlowView")).failureRecovery(anyString(),contains("뒤로 이동하지 못했어요"),eq("이전 화면으로"),any());
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+        assertEquals(2,requests.size());
+        assertTrue(shadowOf(service).getNextStartedActivity()==null);
+    }
+
+    @Test public void recoveryBackButtonCannotNavigateAfterPauseOrPageChange() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        currentScreen=wrongSettingsPage();broadcastCurrentPage();
+        var button=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView")).failureRecovery(anyString(),anyString(),eq("이전 화면으로"),button.capture());
+        var state=(TaskExecutionController)fieldValue("execution");state.pause();button.getValue().run();
+        state.resume();currentScreen=displaySettingsPage();button.getValue().run();
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsBack(anyString(),anyInt()),never());
+    }
+
+    @Test public void delayedBackCannotTouchAnUnrelatedSettingsPageEvenInTheSameWindow() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        currentScreen=wrongSettingsPage();broadcastCurrentPage();
+        currentScreen=environmentScene("com.android.settings","알림",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsBack(anyString(),anyInt()),never());
+    }
+
+    @Test public void backWatchdogExplainsAnUnchangedPageWithoutRepeatingNavigation() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        accessibility.when(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42)).thenReturn(true);
+        currentScreen=wrongSettingsPage();broadcastCurrentPage();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42),times(1));
+        verify((TaskFlowOverlayView)get("taskFlowView")).failureRecovery(anyString(),contains("돌아간 것을 확인하지 못했어요"),eq("이전 화면으로"),any());
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+        assertEquals(2,requests.size());
+    }
+
+    @Test public void backWatchdogReobservesTheReturnedPageWhenItsBroadcastWasLost() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        accessibility.when(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42)).thenReturn(true);
+        currentScreen=wrongSettingsPage();broadcastCurrentPage();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+        currentScreen=displaySettingsPage();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
+        var state=(TaskExecutionController)fieldValue("execution");
+        assertEquals("phase="+state.phase()+" busy="+state.busy()+" environment="+get("environmentWaitKey")
+                +" pendingPage="+get("pendingPageScreen"),3,requests.size());
+        assertEquals("observe",requests.get(2).commandType());
+        assertSame(currentScreen,requests.get(2).accessibilityTree);
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+    }
+
+    @Test public void queuedRecoveryBackCannotActAfterTheTaskStops() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        currentScreen=wrongSettingsPage();broadcastCurrentPage();
+        ((TaskExecutionController)fieldValue("execution")).stop();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsBack(anyString(),anyInt()),never());
+    }
+
+    @Test public void detourDuringTheFirstRequestKeepsTheAcknowledgedVersionOnReturn() throws Exception {
+        prepareGuideResponse();
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        accessibility.when(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42)).thenReturn(true);
+        currentScreen=wrongSettingsPage();broadcastCurrentPage();
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42),times(1));
+        currentScreen=displaySettingsPage();broadcastCurrentPage();assertEquals(2,requests.size());
+        deliver(1,"highlight","tap",null);
+        assertEquals(3,requests.size());assertEquals("observe",requests.get(2).commandType());
+        assertEquals(Integer.valueOf(7),requests.get(2).expectedVersion);
+        assertSame(currentScreen,requests.get(2).accessibilityTree);
+    }
+
+    @Test public void nestedWrongPagesCannotCauseUnboundedAutomaticBacks() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        accessibility.when(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42)).thenReturn(true);
+        for(String title:List.of("블루투스","Wi-Fi","알림","위치")) {
+            currentScreen=environmentScene("com.android.settings",title,com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+            broadcastCurrentPage();shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));
+        }
+        accessibility.verify(() -> ClickAccessibilityService.performSettingsBack("com.android.settings",42),times(3));
+        assertEquals(2,requests.size());assertTrue(shadowOf(service).getNextStartedActivity()==null);
+    }
+
     @Test public void pageChangeDuringNetworkWaitDropsOldGuideAndUsesAcknowledgedVersion() throws Exception {
         prepareGuideResponse();
         ((TaskExecutionController)fieldValue("execution")).guidePresented(false);

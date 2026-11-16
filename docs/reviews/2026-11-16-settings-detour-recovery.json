@@ -1,0 +1,66 @@
+{
+  "date": "2026-11-16",
+  "issue": "An off-route Settings page used the Settings-entry recovery, sending the user back to the beginning instead of returning one page within the current task.",
+  "root_cause": [
+    "recoverSettingsBack delegated to showSettingsEntryRecovery.",
+    "Local off-route handling offered opening Settings even when the existing task already had a previous native page."
+  ],
+  "behavior": {
+    "automatic_mode": "Request one native Back on the same verified Settings page. No repeat on an unchanged page; bounded to three recoveries until a valid guide resumes.",
+    "manual_mode": "Offer an explicit previous-page action.",
+    "resume": "Read the returned screen and observe using the same session, episode, goal and acknowledged server version.",
+    "watchdog_ms": 900,
+    "unchanged_or_failed_back": "Stop loading and provide an actionable Back retry; no automatic Settings restart.",
+    "initial_settings_entry": "Retained when no task page has been observed.",
+    "safety": [
+      "No Back from another app, dialog, sensitive input or locked screen.",
+      "Old callbacks cannot act after navigation, pause or stop.",
+      "A recovery action can execute once per presentation.",
+      "No setting change or previous action approval is replayed."
+    ]
+  },
+  "validation": {
+    "android_related_tests_passed": 248,
+    "execution_service_tests_passed": 236,
+    "navigation_recovery_tests_passed": 10,
+    "settings_page_tests_passed": 2,
+    "failures": 0,
+    "apk_build": "PASS",
+    "api_protocol_compatible": true,
+    "covered_cases": [
+      "single detour with same session and episode",
+      "automatic Back once",
+      "manual button double-click suppression",
+      "failed native Back",
+      "unchanged-page watchdog",
+      "lost screen broadcast",
+      "first request still in flight while detouring",
+      "old response version acknowledged before observation",
+      "stale page/pause/stop callbacks",
+      "bounded nested off-route pages",
+      "initial Settings entry and sensitive/external environment regressions"
+    ]
+  },
+  "device_update": {
+    "compatible": true,
+    "required_protocol": "execution-state.v1",
+    "mode": "execution_state",
+    "package": "com.click",
+    "signature_matches": true,
+    "sha256": "80a962f816b2aa05ec9b14d631c7eeb83b7e7c67ae0ca8cc0d5ff0473801b55c",
+    "installed": true,
+    "installed_at": "2026-11-16 10:59:24",
+    "installed_hash_verified": true
+  },
+  "limits": [
+    "Behavioral recovery checks used a controlled Android service/gateway in Robolectric.",
+    "APK installation and identity were verified on the phone; a full real-device detour episode was not replayed automatically."
+  ],
+  "scope": {
+    "backend_changed": false,
+    "server_deployed": false,
+    "base_commit": "f37048a",
+    "branch": "codex/performance-rollout-20261116",
+    "unrelated_workspace_changes_excluded": true
+  }
+}

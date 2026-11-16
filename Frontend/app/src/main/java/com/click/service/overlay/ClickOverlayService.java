@@ -3664,10 +3664,80 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void recoverSettingsBack(ScreenSnapshot expected) {
-        if (!ObservationRecovery.canReturnFromSettings(expected)) { waitForFreshGuide(); return; }
-        navigationRecovery.recommend(expected);
-        showSettingsEntryRecovery();
+        recoverSettingsBack(expected, null);
     }
+
+    private boolean settingsBackPage(ScreenSnapshot screen) {
+        if(screen==null || screen.activeWindowId==null)return false;
+        android.app.KeyguardManager keyguard=getSystemService(android.app.KeyguardManager.class);
+        var scene=com.click.data.snapshot.ScreenEnvironment.classify(screen,
+                ClickAccessibilityService.accessibilityWindowManager()!=null,
+                keyguard!=null && keyguard.isDeviceLocked(),getPackageName());
+        return scene.kind()==com.click.data.snapshot.ScreenEnvironment.Kind.SETTINGS_SUBPAGE;
+    }
+
+    /** Recover the existing task one page at a time; opening Settings is the last fallback. */
+    private void recoverSettingsBack(ScreenSnapshot expected, String failure) {
+        if((!execution.started() && lastSubmittedScreen==null && observedPageScreen==null)
+                || !settingsBackPage(expected)){showSettingsEntryRecovery();return;}
+        guideStepTimer.clear();actionTracker.clear();automationGuard.interrupt();clearVisionState();
+        agentConfirmationId=null;confirmationExpiresAt=0;automaticAdjustmentApprovalPending=false;
+        adjustmentDelegation.clear();pendingApprovalProvenance=null;
+        hideGuideOverlay();hideConfirmation();ensureTaskFlow();
+        execution.recovery();execution.clearObservation();
+        final long presentation=++settingsEntryPresentation;
+        final int generation=execution.generation();final String session=execution.sessionId();
+        final String page=com.click.data.snapshot.ScreenIdentity.pageTitle(expected);
+        final String key=expected.packageName+"|"+expected.activeWindowId+"|"+page;
+        String message=failure==null ? "다른 설정 화면으로 이동했어요. 한 단계 뒤로 돌아가 기존 요청을 이어갈게요." : failure;
+        Runnable back=()->{
+            if(presentation!=settingsEntryPresentation || generation!=execution.generation()
+                    || !java.util.Objects.equals(session,execution.sessionId()) || closing
+                    || execution.paused() || execution.pendingControl()!=null || execution.manual()
+                    || execution.phase()==TaskExecutionController.Phase.STOPPED || execution.phase()==TaskExecutionController.Phase.COMPLETED
+                    || resultPrompt!=null || followUp!=null)return;
+            ScreenSnapshot current=ClickAccessibilityService.freshSnapshot();
+            if(!settingsBackPage(current) || !java.util.Objects.equals(expected.packageName,current.packageName)
+                    || !java.util.Objects.equals(expected.activeWindowId,current.activeWindowId)
+                    || !java.util.Objects.equals(page,com.click.data.snapshot.ScreenIdentity.pageTitle(current))) {
+                // A hidden/stale recovery button must never navigate a different page.
+                ClickAccessibilityService.requestFreshSnapshot();return;
+            }
+            if(settingsBackRecoveries>=3){showSettingsEntryRecovery("이전 화면 복귀를 확인하지 못했어요. 설정을 다시 열거나 직접 이동해 주세요.");return;}
+            final long navigating=++settingsEntryPresentation;
+            lastBackRecoveryScreen=key;settingsBackRecoveries++;
+            navigationRecovery.requestedByUser(NavigationRecovery.Action.BACK,current);
+            boolean moved=ClickAccessibilityService.performSettingsBack(current.packageName,current.activeWindowId);
+            if(!moved){recoverSettingsBack(current,"뒤로 이동하지 못했어요. 휴대폰의 뒤로 버튼을 누르거나 다시 시도해 주세요.");return;}
+            taskFlowView.waitingProgress("이전 화면으로 돌아가고 있어요.");
+            ClickAccessibilityService.requestFreshSnapshot();
+            speechHandler.postDelayed(()->{
+                if(navigating!=settingsEntryPresentation || generation!=execution.generation()
+                        || !java.util.Objects.equals(session,execution.sessionId()) || closing
+                        || execution.paused() || execution.manual() || execution.pendingControl()!=null
+                        || execution.phase()==TaskExecutionController.Phase.STOPPED || execution.phase()==TaskExecutionController.Phase.COMPLETED
+                        || resultPrompt!=null || followUp!=null)return;
+                ScreenSnapshot latest=ClickAccessibilityService.freshSnapshot();
+                if(latest!=null && !settingsBackPage(latest) && handleEnvironment(latest))return;
+                if(latest==null || java.util.Objects.equals(current.packageName,latest.packageName)
+                        && java.util.Objects.equals(page,com.click.data.snapshot.ScreenIdentity.pageTitle(latest))) {
+                    recoverSettingsBack(latest==null?current:latest,"이전 화면으로 돌아간 것을 확인하지 못했어요. 뒤로 이동한 뒤 이어갈 수 있어요.");return;
+                }
+                if(handleEnvironment(latest) || handleSettingsPageChange(latest))return;
+                if(!execution.environmentReady())return;
+                navigationRecovery.clear();pendingActionType=AgentActionEvents.MANUAL_OVERRIDE;
+                pendingActionOccurredAtMs=System.currentTimeMillis();execution.requestObservation();
+                if(execution.busy())pendingPageScreen=latest;
+                else sendAgentTurn(null,true);
+            },900L);
+        };
+        taskFlowView.setAutomaticProgress(false);
+        taskFlowView.failureRecovery("이전 화면에서 이어갈게요",message,"이전 화면으로",back);
+        taskFlowCollapsed=false;updateFloatingVisibility();placeTaskFlow(null,true);speak(message);
+        if(failure==null && automaticTouchEnabled() && settingsBackRecoveries<3
+                && !key.equals(lastBackRecoveryScreen))speechHandler.post(back);
+    }
+
 
     private void automationStatus(String message) {
         if (taskFlowView != null) taskFlowView.setAutomationStatus(message);
@@ -3950,6 +4020,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             lastNavigableEnvironment=current;
             if(environmentWait==null)return false;
             if(!execution.environmentReady())return true;
+            ++settingsEntryPresentation;
             environmentWait=null;environmentWaitKey=null;
             clearTargetHelpWait();clearGuideResyncRetry();clearMissingScreenWait();
             presentationGate.clear();navigationRecovery.clear();stopNarration();hideGuideOverlay();hideConfirmation();
@@ -3997,6 +4068,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 ScreenSnapshot anchor=lastNavigableEnvironment!=null?lastNavigableEnvironment:lastSubmittedScreen;
                 if(anchor==null){showSettingsEntryRecovery();return true;}
                 navigationRecovery.offPathPage(anchor);showSettingsEntryRecovery();return true;
+            case SETTINGS_SUBPAGE:
+                navigationRecovery.offPathPage(lastNavigableEnvironment!=null?lastNavigableEnvironment:lastSubmittedScreen);
+                recoverSettingsBack(current);return true;
             default:
                 navigationRecovery.offPathPage(lastNavigableEnvironment!=null?lastNavigableEnvironment:lastSubmittedScreen);
                 showSettingsEntryRecovery();return true;
@@ -4071,6 +4145,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         ScreenSnapshot before=observedPageScreen!=null?observedPageScreen:lastSubmittedScreen;
         SettingsPageNavigation.Change change=pages.changed(before,current,setting);
         if(change==SettingsPageNavigation.Change.NONE || !execution.pageChanged())return false;
+        ++settingsEntryPresentation;
         JSONObject navigationEvent=change==SettingsPageNavigation.Change.ON_ROUTE && pendingVerifiedAction!=null
                 && AgentActionEvents.TAP_COMPLETED.equals(pendingVerifiedAction.optString("action_type"))
                     ? pendingVerifiedAction : null;
@@ -4096,7 +4171,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if(change==SettingsPageNavigation.Change.OFF_ROUTE) {
             execution.recovery();execution.clearObservation();
             navigationRecovery.offPathPage(before);
-            showSettingsEntryRecovery();
+            recoverSettingsBack(current);
             return true;
         }
         navigationRecovery.clear();
