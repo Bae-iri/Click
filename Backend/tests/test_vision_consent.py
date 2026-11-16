@@ -149,10 +149,12 @@ def test_rejection_sends_no_vision_and_stops():
     request["user_confirmation"] = "rejected"
     response = client.post(PATH, json=request)
     assert response.status_code == 200, response.text
-    assert response.json()["task_status"] == "IN_PROGRESS"
+    assert response.json()["task_status"] == "CANCELLED"
     assert response.json()["guide_command"]["target_node_id"] is None
-
-    assert response.json()["guide_command"]["render_policy"]["vision_cycle"]["status"] == "declined"
+    termination = response.json()["metadata"]["termination"]
+    assert termination["code"] == "USER_DECLINED"
+    assert termination["scope"] == "vision"
+    assert termination["counts_as_failure"] is False
 
 
 def test_vision_consent_does_not_approve_setting_change():
@@ -207,6 +209,8 @@ def test_frontend_masking_failure_sends_only_code_and_rejected_confirmation(fail
     expected = "WAITING_CONFIRMATION" if failure in {"capture_failed", "ocr_failed"} else "IN_PROGRESS" if failure == "screen_changed" else "BLOCKED"
     assert response.json()["task_status"] == expected
     assert response.json()["metadata"]["vision_failure"] == failure
+    assert response.json()["metadata"].get("termination") is None
+    assert response.json()["metadata"]["failure_classification"]["counts_as_failure"] == (failure in {"masking_failed","capture_failed","ocr_failed"})
     expected_message = "개인정보" if failure == "masking_failed" else "화면"
     assert expected_message in response.json()["guide_command"]["message"]
     assert ("confirmation" in response.json()["metadata"]) == (failure in {"capture_failed", "ocr_failed"})

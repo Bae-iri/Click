@@ -18,24 +18,24 @@ public final class DesignPreviewActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ForegroundCountdown countdown;
     private View splash;
-    private HomeStartArtworkView artwork;
+    private View artwork;
     private boolean resumed;
     private boolean navigated;
-    private final Runnable openOnboarding = () -> {
+    private final Runnable openNextScreen = () -> {
         if (!resumed || navigated || isFinishing() || isDestroyed()) return;
         navigated = true;
         if (ClickHost.from(this).signedIn()) {
             if (ClickHost.from(this).accessibilityEnabled()) ClickHost.from(this).openHome(this);
             else startActivity(new Intent(this, AccessibilityHelpActivity.class));
-        } else startActivity(new Intent(this, OnboardingActivity.class));
+        } else startActivity(new Intent(this, TextSizeSetupActivity.class));
         finish();
     };
     private final Runnable startCountdown = () -> {
         if (!resumed || navigated) return;
         long now = SystemClock.uptimeMillis();
         countdown.resume(now);
-        handler.removeCallbacks(openOnboarding);
-        handler.postDelayed(openOnboarding, countdown.remaining(now));
+        handler.removeCallbacks(openNextScreen);
+        handler.postDelayed(openNextScreen, countdown.remaining(now));
     };
 
     @Override
@@ -59,12 +59,14 @@ public final class DesignPreviewActivity extends Activity {
         }
         setContentView(R.layout.activity_design_preview);
         splash = findViewById(R.id.splash_screen);
+        // The splash uses the wordmark alone, centered above Clue.
+        ((ClickBrandView) ((android.view.ViewGroup) splash).getChildAt(0)).setCursorVisible(false);
         artwork = findViewById(R.id.splash_artwork);
         // Library R ids can be unresolved in some host APKs; the splash layout order is fixed.
         if (artwork == null && splash instanceof android.view.ViewGroup
                 && ((android.view.ViewGroup) splash).getChildCount() > 1
-                && ((android.view.ViewGroup) splash).getChildAt(1) instanceof HomeStartArtworkView) {
-            artwork = (HomeStartArtworkView) ((android.view.ViewGroup) splash).getChildAt(1);
+                && ((android.view.ViewGroup) splash).getChildAt(1) instanceof ClueArtworkView) {
+            artwork = ((android.view.ViewGroup) splash).getChildAt(1);
         }
         splash.setOnApplyWindowInsetsListener((view, insets) -> {
             view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
@@ -90,7 +92,6 @@ public final class DesignPreviewActivity extends Activity {
     protected void onResume() {
         super.onResume();
         resumed = true;
-        if (artwork != null) artwork.setAnimationActive(true);
         // Posting to the attached view starts the timer after the initial layout.
         splash.post(startCountdown);
     }
@@ -98,9 +99,8 @@ public final class DesignPreviewActivity extends Activity {
     @Override
     protected void onPause() {
         resumed = false;
-        if (artwork != null) artwork.setAnimationActive(false);
         splash.removeCallbacks(startCountdown);
-        handler.removeCallbacks(openOnboarding);
+        handler.removeCallbacks(openNextScreen);
         countdown.pause(SystemClock.uptimeMillis());
         super.onPause();
     }
@@ -114,7 +114,7 @@ public final class DesignPreviewActivity extends Activity {
     @Override
     protected void onDestroy() {
         splash.removeCallbacks(startCountdown);
-        handler.removeCallbacks(openOnboarding);
+        handler.removeCallbacks(openNextScreen);
         super.onDestroy();
     }
 

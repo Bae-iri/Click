@@ -325,3 +325,11 @@ def test_uncorrelated_change_to_maximum_stays_unverifiable():
     result = f.send("request_result")
     assert result["metadata"]["task_outcome"]["technical"]["status"] == "UNVERIFIABLE"
     assert "키웠어요" not in result["metadata"]["result_prompt"]["message"]
+
+
+@pytest.mark.parametrize("setting", ["font_size", "brightness", "volume", "wifi", "bluetooth"])
+def test_follow_up_offers_new_request_without_unsure(setting):
+    from app.services.task_outcome import follow_up
+    choices = follow_up({"setting": setting})["choices"]
+    assert "unsure" not in {choice["id"] for choice in choices}
+    assert {"id": "other", "label": "다른 도움이 필요해요"} in choices

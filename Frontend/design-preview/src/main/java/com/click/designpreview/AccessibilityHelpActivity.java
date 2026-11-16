@@ -26,9 +26,11 @@ public final class AccessibilityHelpActivity extends Activity {
     private Typeface medium;
     private Typeface semibold;
     private Typeface regular;
+    private AccessibilityConnectionWatcher connectionWatcher;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
+        connectionWatcher = new AccessibilityConnectionWatcher(this);
         medium = getResources().getFont(R.font.pretendard_medium);
         semibold = getResources().getFont(R.font.pretendard_semibold);
         regular = getResources().getFont(R.font.pretendard_regular);
@@ -38,6 +40,12 @@ public final class AccessibilityHelpActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         render(ClickHost.from(this).accessibilityConnected());
+        connectionWatcher.start(() -> render(true), () -> {});
+    }
+
+    @Override protected void onPause() {
+        connectionWatcher.stop();
+        super.onPause();
     }
 
     private void render(boolean enabled) {

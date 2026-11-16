@@ -1,0 +1,80 @@
+{
+  "date": "2026-11-11",
+  "fix": "Remove Back/Home recovery detours and use the existing real Settings action",
+  "root_cause": [
+    "Recovery used a Back-to-Home escalation instead of opening the settings required for the task",
+    "Whole-screen fingerprint and in-flight request guards could silently ignore a navigation click after the UI disabled its button",
+    "Dispatch and observed screen movement were not represented separately"
+  ],
+  "behavior": {
+    "removed_ui": [
+      "돌아가기 / 뒤로가기",
+      "홈으로 이동",
+      "원래 작업으로 돌아가기",
+      "system navigation highlight for a recovery detour"
+    ],
+    "retained_action": "설정 열기",
+    "actual_dispatch": "Settings.ACTION_SETTINGS with FLAG_ACTIVITY_NEW_TASK",
+    "requires_user_activation": true,
+    "whole_screen_fingerprint_blocks_click": false,
+    "busy_server_blocks_local_launch": false,
+    "observed_movement": "Fresh Settings package observation before sending the next turn",
+    "no_movement_after_ms": 1200,
+    "no_movement": "Honest retry message and usable Settings action",
+    "unavailable_activity": "Direct manual instruction, no dead button",
+    "duplicate_click": "One launch per presentation",
+    "stale_action": "Blocked by presentation token, generation, session, pause/stop/control checks",
+    "task_scope": "Original goal/session/episode retained",
+    "old_native_or_vision_approval": "Cleared before recovery"
+  },
+  "validation": {
+    "android_full": {
+      "tests": 825,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "final_affected_suite_after_last_source_changes": {
+      "tests": 229,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "apk_build": "debug and debug androidTest passed",
+    "rendered_ui": "Frontend/app/build/reports/useful-recovery/settings-entry.png",
+    "physical_device_tested": false
+  },
+  "rollout": {
+    "installed_by_this_task": false,
+    "server_changed": false,
+    "live_preflight": {
+      "compatible": false,
+      "installed": false,
+      "reason": "Server upgrade is not deployed: APK requires execution-state.v1"
+    },
+    "render_deployment_user_owned": true
+  },
+  "artifacts": {
+    "apk": {
+      "path": "Frontend/app/build/outputs/apk/debug/app-useful-recovery-debug.apk",
+      "sha256": "5ca3dca1b2419e3d09000e2c40e36277ab5920938f1eb17c11c39472ed7957cf"
+    },
+    "test_apk": {
+      "path": "Frontend/app/build/outputs/apk/androidTest/debug/app-useful-recovery-debug-androidTest.apk",
+      "sha256": "e1e5465eb47948bab5ce1529a5740b00f88a0c3fff66fbd7ae1244b232732172"
+    }
+  },
+  "limits": [
+    "Android accepting the Settings intent does not prove movement; unavailable or missing AX observations remain unconfirmed",
+    "No physical-device installation was performed because production is missing execution-state.v1",
+    "Opening Settings does not authorize changing any setting"
+  ],
+  "source_hashes": {
+    "Frontend/app/src/main/java/com/click/service/overlay/ClickOverlayService.java": "7157fb9d8289c21d1ed3b17598f22422c5e1365097c5fde9074e72732bba9354",
+    "Frontend/app/src/main/java/com/click/ui/overlay/TaskFlowOverlayView.java": "8e8014f202c764207aa08808ccb2a747b10f7e9163be76e2cb926e3971a4618f",
+    "Frontend/app/src/test/java/com/click/service/overlay/ClickOverlayServiceExecutionTest.java": "817778414705f8e9e47803167c8c88eb3c97c67363385c5125869c42686a008d",
+    "Frontend/app/src/test/java/com/click/ui/overlay/NavigationRecoveryViewTest.java": "6ac2f03651477b4d0f74958f936ae6be2237f583b724f2451bed9733a16c2c43",
+    "docs/failure-recovery-contract.md": "3cd85baed805b18b3bf1768eb202a99fd0d2996ea5857887c4f9412bab0822f7",
+    "docs/navigation-recovery.md": "d73e77ab8ead6311a1c90d18a95643ae3da9e64741706b8e0e6540d3f7d93f24"
+  }
+}

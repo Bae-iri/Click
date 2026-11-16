@@ -68,6 +68,10 @@ def test_vpn_route_reaches_vpn_then_hands_off(action, titles, start_at):
             assert candidates[0]['current_page'] == graph.states['S_CATEGORY'].name
             assert candidates[0]['destination_page'] == graph.states['S_INTERMEDIATE'].name
             assert intermediate.lower() in {name.lower() for name in candidates[0]['target_names']}
+            navigation = candidates[0]['navigation']
+            assert navigation['scope'] == 'open_next_menu_only'
+            assert navigation['completes_goal'] is False
+            assert navigation['remaining_page_titles'][-1][0][0] == 'VPN'
         return answer(payload, expected)
 
     resolver = JevScreenResolver(send)
@@ -140,7 +144,7 @@ def test_vpn_intermediate_rejects_invalid_or_ambiguous_rows(problem):
     resolver = JevScreenResolver(forbidden)
     assert resolver.resolve(nodes=nodes, raw_nodes=raw, graph=graph, goal=goal,
         screen_bounds=(0, 0, 1080, 2400)) is None
-    assert resolver.last_diagnostics['status'] == 'no_candidates'
+    assert resolver.last_diagnostics['status'] == ('ambiguous_candidates' if problem == 'duplicate' else 'no_candidates')
 
 
 @pytest.mark.parametrize('action', ['connect', 'disconnect'])
@@ -158,12 +162,12 @@ def test_vpn_route_upgrade_preserves_existing_pinned_release(action):
             if 'S_INTERMEDIATE' not in {transition.from_state, transition.to_state}))
     # Simulate the already deployed 1.0.0 bundle before publishing the new route.
     with repository.factory() as db:
-        db.delete(db.get(ApprovedTaskGraph, goal.task_id + ':1.0.1'))
+        db.delete(db.get(ApprovedTaskGraph, goal.task_id + ':1.1.0'))
         db.commit()
     old_reference = repository.register(canonical_graph(old)[0], version='1.0.0', approved=True)
     repository.seed_mvp()
     updated, reference = repository.select(goal)
-    assert reference['version'] == '1.0.1'
+    assert reference['version'] == '1.1.0'
     assert 'S_INTERMEDIATE' in updated.states
     pinned, preserved = repository.select_pinned({'task_id': goal.task_id, 'graph_version': '1.0.0',
         'goal_type': goal.goal_type, 'goal': {'target_app': goal.target_app},

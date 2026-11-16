@@ -14,6 +14,9 @@ public final class AgentServerContract {
     public final String contractVersion;
     public final boolean interactiveWorkflow;
     public final boolean goalPreparation;
+    public boolean approvalProvenance;
+    public boolean executionState;
+    public boolean userDecline;
 
     private AgentServerContract(Set<String> commands, Set<String> goals, Set<String> appliedSettingFields,
                                 String version, boolean interactive, boolean preparation) {
@@ -30,6 +33,7 @@ public final class AgentServerContract {
 
     /** A staged backend rollout must not make older servers reject existing font requests. */
     public String encode(AgentTurnContract.Request request) throws JSONException {
+        request.executionContextEnabled=executionState;
         request.contractVersion = contractVersion;
         request.interactiveWorkflow = interactiveWorkflow;
         JSONObject body = new JSONObject(request.toJson());
@@ -72,11 +76,24 @@ public final class AgentServerContract {
         JSONObject settings = document.getJSONObject("components").getJSONObject("schemas").optJSONObject("AppliedSettings");
         if (settings != null && settings.optJSONObject("properties") != null)
             settings.getJSONObject("properties").keys().forEachRemaining(settingFields::add);
-        return new AgentServerContract(commands, goals, settingFields, selected,
+        AgentServerContract result=new AgentServerContract(commands, goals, settingFields, selected,
                 AgentTurnContract.CONTRACT_VERSION.equals(selected) && properties.has("workflow_version"),
                 AgentTurnContract.CONTRACT_VERSION.equals(selected) && commands.contains("resolve_goal")
                         && properties.has("preparation_version") && properties.has("clarification_answer")
                         && properties.has("goal_resolution_id"));
+        JSONObject schemas=document.getJSONObject("components").getJSONObject("schemas");
+        JSONObject guide=schemas.optJSONObject("GuideCommandResponse"),cancel=schemas.optJSONObject("CancelVoiceRequest");
+        result.userDecline=document.getJSONObject("paths").has("/api/v1/voice-requests/{request_id}/cancel")
+            && guide!=null && cancel!=null
+            && strings(guide.getJSONObject("properties").getJSONObject("command_type").optJSONArray("enum")).contains("cancelled")
+            && strings(cancel.getJSONObject("properties").getJSONObject("reason").optJSONArray("enum"))
+                .containsAll(java.util.Set.of("USER_DECLINED","USER_ABORTED"));
+        result.approvalProvenance=properties.has("approval_provenance");
+        JSONObject execution=document.getJSONObject("components").getJSONObject("schemas").optJSONObject("ExecutionContext");
+        JSONObject protocol=execution==null?null:execution.optJSONObject("properties").optJSONObject("protocol_version");
+        result.executionState=properties.has("execution_context") && protocol!=null
+                && (ExecutionState.version().equals(protocol.optString("const")) || strings(protocol.optJSONArray("enum")).contains(ExecutionState.version()));
+        return result;
     }
 
     private static JSONObject resolve(JSONObject document, JSONObject schema) throws JSONException {

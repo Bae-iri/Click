@@ -21,7 +21,101 @@ import static org.mockito.Mockito.*;
 @RunWith(RobolectricTestRunner.class)
 @org.robolectric.annotation.Config(sdk = 34, application = android.app.Application.class)
 public class FloatingHeaderConsistencyTest {
-    @Test public void everyConfirmationKeepsEditBelowItsBalancedSummaryBox() throws Exception {
+    @Test public void titlesKeepOneSizeAndTypefaceAcrossInputProcessingGuidanceAndResults() throws Exception {
+        Context app = RuntimeEnvironment.getApplication();
+        int originalLevel = com.click.ui.common.ClickTextScale.level(app);
+        try {
+            for (float scale : new float[]{1f, 2f}) {
+                Configuration config = new Configuration(app.getResources().getConfiguration());
+                config.fontScale = scale;
+                Context context = app.createConfigurationContext(config);
+                for (int level = 0; level < 4; level++) {
+                    com.click.ui.common.ClickTextScale.saveLevel(app, level);
+                    int width = Math.round(340 * context.getResources().getDisplayMetrics().density);
+                    ClickOverlayLayout input = new ClickOverlayLayout(context);
+                    input.openMenu();
+                    geometry(input, width);
+                    TextView reference = ((FloatingPanelHeader) input.findViewWithTag("floating_header")).title;
+                    float expectedSize = android.util.TypedValue.applyDimension(android.util.TypedValue.COMPLEX_UNIT_SP,
+                            com.click.ui.common.ClickTextScale.size(context, 22), context.getResources().getDisplayMetrics());
+                    assertEquals(expectedSize, reference.getTextSize(), .01f);
+                    TaskFlowOverlayView flow = new TaskFlowOverlayView(context, mock(TaskFlowOverlayView.Listener.class));
+                    for (Runnable screen : new Runnable[]{
+                            () -> flow.waiting("사용자 요청을 처리하고 있어요"),
+                            () -> flow.requirements(new RequirementReview("글자를 키워줘"), false),
+                            () -> flow.paused(),
+                            () -> flow.result(new JSONObject(), true),
+                            () -> flow.completed("완료했어요.", () -> {}),
+                            () -> flow.accessibilityRecovery("접근성 연결을 확인해 주세요", () -> {}, () -> {}),
+                            () -> flow.waiting("사용자 요청을 처리하고 있어요")}) {
+                        screen.run();
+                        geometry(flow, width);
+                        assertTitleMatches(reference, ((FloatingPanelHeader) flow.findViewWithTag("floating_header")).title);
+                    }
+                    flow.progress("글자 크기", null, "디스플레이를 눌러주세요.", false);
+                    geometry(flow, width);
+                    assertTitleMatches(reference, findText(flow, "디스플레이를 눌러주세요."));
+                    flow.waitingProgress("필요한 항목을 찾고 있어요.");
+                    geometry(flow, width);
+                    assertTitleMatches(reference, findText(flow, "필요한 항목을 찾고 있어요."));
+                    flow.targetHelp("디스플레이", () -> {});
+                    geometry(flow, width);
+                    assertTitleMatches(reference, findText(flow, "디스플레이 항목을 찾아주세요"));
+                    flow.confirmation("계속 진행할까요?", answer -> {});
+                    geometry(flow, width);
+                    assertTitleMatches(reference, findText(flow, "계속 진행할까요?"));
+                    input.openVoice();
+                    geometry(input, width);
+                    assertTitleMatches(reference, ((FloatingPanelHeader) input.findViewWithTag("floating_header")).title);
+                    input.openText();
+                    geometry(input, width);
+                    assertTitleMatches(reference, ((FloatingPanelHeader) input.findViewWithTag("floating_header")).title);
+                }
+            }
+        } finally {
+            com.click.ui.common.ClickTextScale.saveLevel(app, originalLevel);
+        }
+    }
+
+    private void assertTitleMatches(TextView expected, TextView actual) {
+        assertNotNull(actual);
+        assertEquals(actual.getText().toString(), expected.getTextSize(), actual.getTextSize(), .01f);
+        assertEquals(expected.getTypeface(), actual.getTypeface());
+        assertEquals(expected.getLineSpacingExtra(), actual.getLineSpacingExtra(), .01f);
+        assertEquals(expected.getLineSpacingMultiplier(), actual.getLineSpacingMultiplier(), .01f);
+        assertFalse(actual.getIncludeFontPadding());
+        assertNotNull(actual.getLayout());
+        for (int line = 0; line < actual.getLineCount(); line++) assertEquals(0, actual.getLayout().getEllipsisCount(line));
+    }
+
+    @Test public void requestEditMicrophoneFillsDraftAndStillRequiresApply() throws Exception {
+        TaskFlowOverlayView.Listener listener=mock(TaskFlowOverlayView.Listener.class);
+        TaskFlowOverlayView flow=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),listener);
+        flow.requirements(new RequirementReview("휴대폰 전체 글자를 크게 해줘"),true);
+        assertNull(flow.requestEditSpeechTarget());
+        findText(flow,"내용 수정").performClick();
+        View microphone=flow.findViewWithTag("request_edit_microphone");assertNotNull(microphone);
+        assertEquals("말로 내용 수정",microphone.getContentDescription());
+        microphone.performClick();verify(listener).openInput();verify(listener,atLeastOnce()).stopGuidance();
+        var target=flow.requestEditSpeechTarget();assertNotNull(target);
+        assertTrue(target.apply("  화면 밝기를 높여줘  "));
+        assertEquals("화면 밝기를 높여줘",findEditor(flow).getText().toString());
+        verify(listener,never()).rephrase(anyString());verify(listener,never()).confirmRequirements();
+        findText(flow,"수정한 내용 확인").performClick();verify(listener).rephrase("화면 밝기를 높여줘");
+    }
+
+    @Test public void closedOrReplacedEditorDiscardsItsPendingVoiceText() throws Exception {
+        TaskFlowOverlayView.Listener listener=mock(TaskFlowOverlayView.Listener.class);
+        TaskFlowOverlayView flow=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),listener);
+        flow.requirements(new RequirementReview("휴대폰 전체 글자를 크게 해줘"),true);
+        findText(flow,"내용 수정").performClick();var old=flow.requestEditSpeechTarget();
+        assertFalse(old.apply("  "));
+        flow.requirements(new RequirementReview("휴대폰 전체 글자를 작게 해줘"),true);
+        assertFalse(old.apply("지연된 이전 음성"));assertNull(flow.requestEditSpeechTarget());
+        verify(listener,never()).rephrase(anyString());
+    }
+
+    @Test public void everyConfirmationReplacesHeaderReplayWithEditing() throws Exception {
         for (float scale : new float[]{1f, 1.5f, 2f}) {
             Context app = RuntimeEnvironment.getApplication();
             Configuration config = new Configuration(app.getResources().getConfiguration());
@@ -45,19 +139,17 @@ public class FloatingHeaderConsistencyTest {
                 ViewGroup card = flow.findViewWithTag("review_summary_card");
                 ViewGroup section = flow.findViewWithTag("review_summary_section");
                 TextView edit = findText(flow, "내용 수정");
-                assertSame(section, edit.getParent());
-                assertSame(card, section.getChildAt(0));
-                assertSame(edit, section.getChildAt(1));
-                assertTrue((edit.getPaintFlags() & android.graphics.Paint.UNDERLINE_TEXT_FLAG) != 0);
-                assertFalse(edit instanceof Button);
+                FloatingPanelHeader header = flow.findViewWithTag("floating_header");
+                assertSame(header.edit, edit);
+                assertEquals(View.GONE, header.replay.getVisibility());
+                assertTrue(edit instanceof Button);
                 assertTrue(edit.isFocusable());
                 assertTrue(edit.isShown());
+                assertSame(card, section.getChildAt(0));
                 Rect editBounds = new Rect(); edit.getDrawingRect(editBounds);
-                section.offsetDescendantRectToMyCoords(edit, editBounds);
+                flow.offsetDescendantRectToMyCoords(edit, editBounds);
                 assertTrue(editBounds.left >= 0);
-                assertEquals(section.getWidth(), editBounds.right);
-                assertTrue(editBounds.top >= card.getBottom());
-                FloatingPanelHeader header = flow.findViewWithTag("floating_header");
+                assertTrue(editBounds.right <= flow.getWidth());
                 Rect dividerBounds = new Rect(); header.divider.getDrawingRect(dividerBounds);
                 flow.offsetDescendantRectToMyCoords(header.divider, dividerBounds);
                 Rect cardBounds = new Rect(); card.getDrawingRect(cardBounds);
@@ -66,8 +158,8 @@ public class FloatingHeaderConsistencyTest {
                         ((android.widget.LinearLayout.LayoutParams) header.divider.getLayoutParams()).topMargin,
                         cardBounds.top - dividerBounds.bottom);
                 View summaryRow = card.getChildAt(0);
-                assertEquals("Summary has equal space above and below", summaryRow.getTop(),
-                        card.getHeight() - summaryRow.getBottom());
+                assertEquals(card.getPaddingTop(), summaryRow.getTop());
+                assertTrue(editBounds.bottom <= cardBounds.top);
                 assertTrue(findText(flow, "안내 시작하기") != null || findText(flow, "선택한 내용 확인") != null);
                 EditText input = findEditor(card);
                 assertFalse(input.isShown());
@@ -87,7 +179,7 @@ public class FloatingHeaderConsistencyTest {
             }
             flow.progress("글자 크기", null, "디스플레이를 눌러주세요.", false);
             assertNull(flow.findViewWithTag("review_summary_card"));
-            assertNull(findText(flow, "내용 수정"));
+            assertEquals(View.GONE, findText(flow, "내용 수정").getVisibility());
             }
         }
     }
@@ -134,16 +226,23 @@ public class FloatingHeaderConsistencyTest {
                     label.getTop() + label.getHeight() / 2f, 1f);
             flow.progress("글자 크기", null, "디스플레이를 눌러주세요.", false);
             geometry(flow, width);
+            flow.setGuidanceTarget("디스플레이");
+            assertNotNull(findDescription(flow, "디스플레이. 안내를 접고 화면에서 찾기"));
+            flow.setGuidanceTarget("설정");
+            assertNull(findDescription(flow, "설정. 안내를 접고 화면에서 찾기"));
+            assertNull(findDescription(flow, "디스플레이. 안내를 접고 화면에서 찾기"));
             flow.result(new JSONObject(), true);
             geometry(flow, width);
             flow.observationRecovery("화면을 확인해 주세요.", () -> {});
             geometry(flow, width);
             assertEquals(0, ((FloatingPanelHeader) flow.findViewWithTag("floating_header")).title.length());
             assertNotNull(findText(flow, "‘다시 시도하기’를 눌러 안내를 이어가 주세요."));
-            assertNull(findText(flow, "죄송합니다. 클릭이 아직 배우는 중이라 많이 미숙합니다."));
+            assertFalse(flow.guidanceMessage().contains("팝업"));
+            assertFalse(flow.guidanceMessage().contains("잠금"));
+            assertNull(findText(flow, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
             flow.recoveryApology(() -> {});
             geometry(flow, width);
-            assertNotNull(findText(flow, "죄송합니다. 클릭이 아직 배우는 중이라 많이 미숙합니다."));
+            assertNotNull(findText(flow, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
             for (int repeat = 0; repeat < 2; repeat++) {
                 flow.setMinimizedProgress(true);
                 TextView compact = (TextView) findDescription(flow, "죄송합니다.. 눌러서 안내 펼치기");

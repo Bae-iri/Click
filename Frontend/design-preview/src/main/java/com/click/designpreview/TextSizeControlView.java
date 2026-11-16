@@ -11,7 +11,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import com.click.ui.common.ClickTextScale;
 
-/** The same persisted text-size control in signup and display settings. */
+/** The same persisted text-size control in initial setup and display settings. */
 public final class TextSizeControlView extends LinearLayout {
     private static final int BLUE = 0xFF3478F6, INK = 0xFF101A36, SECONDARY = 0xFF7182A4;
     private Runnable onSizeChanged;

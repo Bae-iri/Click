@@ -272,4 +272,26 @@ public class SettingsScreenPrivacyTest {
         catch (SettingsScreenPrivacy.Blocked blocked) { assertEquals(SettingsScreenPrivacy.Blocked.Reason.VISION_MASK_UNAVAILABLE, blocked.reason); }
     }
 
+    @Test public void onlyFiniteWindowContextCanReachHttpBoundary() throws Exception {
+        JSONObject input=request(node("title","설정"));
+        input.getJSONObject("accessibility_tree").put("window_context",new JSONObject().put("settings_activity","SUBPAGE").put("window_kind","APPLICATION").put("keyboard_visible",false));
+        assertEquals("SUBPAGE",privacy.filter(input).getJSONObject("accessibility_tree").getJSONObject("window_context").getString("settings_activity"));
+        input.getJSONObject("accessibility_tree").getJSONObject("window_context").put("activity_class","private");
+        assertThrows(SettingsScreenPrivacy.Blocked.class,()->privacy.filter(input));
+    }
+
+ @Test public void unlabeledNativeBrightnessExportsOnlyRegisteredControlAndAncestors() throws Exception {
+  String pkg="com.android.systemui";
+  JSONObject wrapper=node("wrapper",null).put("package_name",pkg).put("resource_id",pkg+":id/brightness_dialog_slider");
+  JSONObject slider=node("slider",null).put("package_name",pkg).put("parent_id","wrapper").put("resource_id",pkg+":id/slider")
+    .put("class_name","android.widget.SeekBar").put("role","slider").put("extras",new JSONObject().put("progress",0.4).put("min",0).put("max",1));
+  JSONObject input=request(wrapper,slider,node("private","private notification").put("package_name",pkg));
+  input.getJSONObject("accessibility_tree").put("package_name",pkg);
+  JSONObject exported=privacy.filter(input,"brightness");
+  assertEquals(2,exported.getJSONObject("accessibility_tree").getJSONArray("nodes").length());
+  assertFalse(exported.toString().contains("private notification"));
+  assertThrows(SettingsScreenPrivacy.Blocked.class,()->privacy.filter(input,"font_size"));
+  slider.remove("parent_id");
+  assertThrows(SettingsScreenPrivacy.Blocked.class,()->privacy.filter(input,"brightness"));
+ }
 }

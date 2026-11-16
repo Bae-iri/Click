@@ -176,7 +176,7 @@ def evaluate_cases(cases, graphs, *, engine_factory=None):
                 recovered = True
             recovery_seen |= bool(recovery.get("recoverable"))
             actual = {"state_id": result.current_state_id, "target_node_id": command.target_node_id,
-                "terminal": command.command_type.value in {"done", "blocked"},
+                "terminal": command.command_type.value in {"done", "cancelled", "blocked"},
                 "done": command.command_type.value == "done", "next_action": recovery.get("next_action"),
                 "reason_code": recovery.get("reason_code")}
             decisions.append({"case": case_index, "turn": index, "target_node_id": command.target_node_id,

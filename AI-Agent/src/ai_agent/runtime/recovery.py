@@ -32,12 +32,18 @@ class RecoveryPlan:
                 result["options"] = (["retry_after_change", "manual_navigation", "cancel"]
                     if self.failure.required_change in EXTERNAL_CHANGES else
                     ["manual_navigation", "cancel"])
+        else:
+            from ai_agent.runtime.environment import recovery_rule
+            rule = recovery_rule(self.reason_code)
+            result["failure"] = {"reason": self.reason_code, **rule} if rule else {"reason": self.reason_code}
         return result
 
 
 def manual_navigation_target(graph, match, nodes):
     if match.fallback_reason != "target_not_found" or match.state_id == "S0_UNKNOWN":
         return None
+    from ai_agent.runtime.capabilities import navigation_state
+    if not navigation_state(graph, match.state_id):return None
     edge = next((t for t in graph.transitions if t.transition_id == match.transition_id), None)
     if not edge or edge.completes_task or edge.action_type.value != "tap":
         return None

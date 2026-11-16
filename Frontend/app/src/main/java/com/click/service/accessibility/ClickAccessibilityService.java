@@ -31,6 +31,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
     private long snapshotBurstStartedAt = -1L;
     private long snapshotScheduledAt = -1L;
     private String lastForegroundPackage;
+    private String lastForegroundClass;
     private Integer lastForegroundWindow;
     private boolean touchInteraction;
     private AccessibilityNodeInfo draggedSource;
@@ -50,10 +51,12 @@ public final class ClickAccessibilityService extends AccessibilityService {
         ClickOverlayService.onAccessibilityOverlayAvailable();
         AccessibilityOnboardingState onboarding = new AccessibilityOnboardingState(this);
         if (onboarding.isPending()) {
-            onboarding.markTutorialLaunched();
-            Intent tutorial = new Intent(this, TutorialReadyActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            startActivity(tutorial);
+            boolean returnToSettings = onboarding.returnsToSettings();
+            if (returnToSettings) onboarding.markSettingsReturned();
+            else onboarding.markTutorialLaunched();
+            Intent destination = new Intent(this, returnToSettings ? com.click.MenuActivity.class : TutorialReadyActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(destination);
         }
         scheduleSnapshot(false);
     }
@@ -128,6 +131,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
             }
         }
         if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            lastForegroundClass=event.getClassName()==null?null:event.getClassName().toString();
             lastForegroundPackage = packageName.toString();
             lastForegroundWindow = event.getWindowId();
         }
@@ -228,12 +232,21 @@ public final class ClickAccessibilityService extends AccessibilityService {
 
     /** Revalidate the exact live node. Failure leaves the manual guide available. */
     public static boolean performGuidedTap(ScreenSnapshot expected, String id, int[] bounds) {
+        return performNavigationTap(expected,id,bounds,null,null);
+    }
+    public static boolean performGuidedNavigationTap(ScreenSnapshot expected,String id,int[] bounds,String goal,String state) {
+        return performNavigationTap(expected,id,bounds,goal,state);
+    }
+    private static boolean performNavigationTap(ScreenSnapshot expected,String id,int[] bounds,String goal,String state) {
         ClickAccessibilityService service = connectedService.get();
         if (service == null || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()) return false;
         ScreenSnapshot latest = freshSnapshot();
         if (!TouchAutomationPolicy.sameTarget(expected, latest, id, bounds)) return false;
-        com.click.data.snapshot.AccessibilityNodeSnapshot target = TouchAutomationPolicy.clickableTarget(latest, id, bounds);
+        com.click.data.snapshot.AccessibilityNodeSnapshot target = goal==null ? TouchAutomationPolicy.clickableTarget(latest,id,bounds)
+                : TouchAutomationPolicy.clickableTarget(latest,id,bounds,goal,state);
         if (target == null) return false;
+        boolean titleOnly=goal!=null && TouchAutomationPolicy.clickableTarget(latest,id,bounds)==null;
+        int[] tapBounds=titleOnly?target.bounds:bounds;
         AccessibilityNodeInfo node = ForegroundWindowReader.readRoot(service);
         if (node == null) return false;
         try {
@@ -254,7 +267,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
                     || !java.util.Objects.equals(node.getViewIdResourceName(), target.resourceId)
                     || !java.util.Objects.equals(node.getClassName() == null ? null : node.getClassName().toString(), target.className)
                     || !actual.equals(new Rect(target.bounds[0],target.bounds[1],target.bounds[2],target.bounds[3]))) return false;
-            boolean performed = node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+            boolean performed = !titleOnly && node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             final long actionAt = System.currentTimeMillis();
             if (performed) {
                 service.verifyTapChange(latest, id, actionAt, 0);
@@ -263,7 +276,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
             ScreenSnapshot current = freshSnapshot();
             if (!TouchAutomationPolicy.sameTarget(latest, current, id, bounds)
                     || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()) return false;
-            Path tap = new Path(); tap.moveTo((bounds[0] + bounds[2]) / 2f, (bounds[1] + bounds[3]) / 2f);
+            Path tap = new Path(); tap.moveTo((tapBounds[0] + tapBounds[2]) / 2f, (tapBounds[1] + tapBounds[3]) / 2f);
             android.accessibilityservice.GestureDescription gesture = new android.accessibilityservice.GestureDescription.Builder()
                     .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(tap, 0, 80L)).build();
             return service.dispatchGesture(gesture, new GestureResultCallback() {
@@ -287,6 +300,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
     }
 
     public static boolean performGuidedSlider(ScreenSnapshot expected, String id, int[] bounds, int direction, String setting) {
+        return performGuidedSlider(expected,id,bounds,direction,setting,1f);
+    }
+    public static boolean performGuidedSlider(ScreenSnapshot expected,String id,int[] bounds,int direction,String setting,float maxFraction) {
+        if(!Float.isFinite(maxFraction) || maxFraction<=0 || maxFraction>1)return false;
         ClickAccessibilityService service = connectedService.get();
         if (service == null || !new com.click.data.local.TouchAutomationSettings(service).isEnabled()
                 || direction != -1 && direction != 1) return false;
@@ -334,6 +351,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
                         || range.getType() != AccessibilityNodeInfo.RangeInfo.RANGE_TYPE_INT
                         || actual.width() <= actual.height()) return false;
                 float next = Math.max(range.getMin(), Math.min(range.getMax(), range.getCurrent() + direction));
+                if(Math.abs((double)next-range.getCurrent())/((double)range.getMax()-range.getMin())>maxFraction)return false;
                 float fraction = (next - range.getMin()) / (range.getMax() - range.getMin());
                 float x = Math.max(actual.left + 1, Math.min(actual.right - 1,
                         actual.left + actual.width() * fraction));
@@ -369,7 +387,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 next = SliderAdjustment.nextMediaValue(before, range.getMin(), range.getMax(), direction,
                         audio.getStreamVolume(stream), minimum, audio.getStreamMaxVolume(stream));
             }
-            if (!Float.isFinite(next)) return false;
+            if (!Float.isFinite(next) || Math.abs((double)next-before)/((double)range.getMax()-range.getMin())>maxFraction) return false;
             boolean performed = false;
             // SET_PROGRESS is exposed by Samsung/custom controls even when native scroll is absent.
             if (!commitByTouch && node.getActionList().contains(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS)) {
@@ -379,7 +397,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
                     performed = node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.getId(), arguments);
                 }
             }
-            if (!performed && !commitByTouch) {
+            if (!performed && !commitByTouch && maxFraction>=1f) {
                 int action = direction > 0 ? AccessibilityNodeInfo.ACTION_SCROLL_FORWARD : AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD;
                 AccessibilityNodeInfo.AccessibilityAction nativeAction = direction > 0
                         ? AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD
@@ -542,6 +560,12 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 .performSettingsScroll(forward, expectedPackage, expectedWindow);
     }
 
+    public static boolean revealSettingsTarget(String nodeId, int[] bounds, String expectedPackage, int expectedWindow) {
+        ClickAccessibilityService service=connectedService.get();
+        return service!=null && new NativeScrollExecutor(service,service.mainHandler,service.captureRunnable)
+                .revealSettingsTarget(nodeId,bounds,expectedPackage,expectedWindow);
+    }
+
     /** Return only while the same Settings window is still in front. */
     public static boolean performSettingsBack(String expectedPackage, int expectedWindow) {
         if (!"com.android.settings".equals(expectedPackage)
@@ -578,19 +602,8 @@ public final class ClickAccessibilityService extends AccessibilityService {
     }
 
     private ScreenSnapshot readCurrentScreen(AccessibilityNodeInfo root) {
-        String packageName = root == null || root.getPackageName() == null
-                ? lastForegroundPackage : root.getPackageName().toString();
-        if (packageName == null || packageName.equals(getPackageName())) return null;
-        WindowManager windowManager = getSystemService(WindowManager.class);
-        int width = getResources().getDisplayMetrics().widthPixels;
-        int height = getResources().getDisplayMetrics().heightPixels;
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            width = windowManager.getCurrentWindowMetrics().getBounds().width();
-            height = windowManager.getCurrentWindowMetrics().getBounds().height();
-        }
-        if (root == null) return new ScreenSnapshot(packageName, java.time.Instant.now().toString(),
-                width, height, java.util.Collections.emptyList(), lastForegroundWindow)
-                .withScreenRevision(screenRevisions.revision());
+        if (root == null || root.getPackageName() == null || getPackageName().contentEquals(root.getPackageName())) return null;
+        String packageName = root.getPackageName().toString();
         Float appliedScale = null;
         try {
             float scale = android.provider.Settings.System.getFloat(getContentResolver(),
@@ -613,15 +626,35 @@ public final class ClickAccessibilityService extends AccessibilityService {
             android.net.wifi.WifiManager wifi = getApplicationContext().getSystemService(android.net.wifi.WifiManager.class);
             if (wifi != null) wifiState = wifi.getWifiState();
         } catch (SecurityException ignored) { }
+        Integer ringerMode = null;
+        try {
+            android.media.AudioManager audio = getSystemService(android.media.AudioManager.class);
+            if (audio != null) ringerMode = audio.getRingerMode();
+        } catch (SecurityException ignored) { }
         Integer nightMode = null;
         try {
             android.app.UiModeManager mode = getSystemService(android.app.UiModeManager.class);
             if (mode != null) nightMode = mode.getNightMode();
         } catch (SecurityException ignored) { }
-        return collector.collect(root, packageName, width, height, appliedScale)
+        Integer displayDensity = null;
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            android.view.accessibility.AccessibilityWindowInfo nativeWindow = root.getWindow();
+            if (nativeWindow != null) {
+                try {
+                    if (nativeWindow.getDisplayId() == android.view.Display.DEFAULT_DISPLAY)
+                        displayDensity = getResources().getConfiguration().densityDpi;
+                } finally { nativeWindow.recycle(); }
+            }
+        }
+        com.click.data.snapshot.NativeWindowContext windowContext=NativeWindowContextReader.read(
+                this,root,lastForegroundPackage,lastForegroundWindow,lastForegroundClass);
+        return collector.collect(root, packageName, this, appliedScale)
+                .withWindowContext(windowContext)
                 .withAdjustmentValues(brightness, mediaVolume)
                 .withWifiState(wifiState)
                 .withNightMode(nightMode)
+                .withRingerMode(ringerMode)
+                .withDisplayDensity(displayDensity)
                 .withScreenRevision(screenRevisions.revision());
     }
 

@@ -1,0 +1,11 @@
+{
+  "android_full": 643,
+  "agent_backend_regression": 822,
+  "immediate_menu_and_privacy_regression": 63,
+  "assisted_goals": 33,
+  "apk_sha256": "050cb3ac669e09f37519f3625a105dedefd5fda33210801c2b38e6f4829a7b06",
+  "app_installed": false,
+  "installation_blocker": "ADB device disconnected",
+  "sensitive_screen_data_transmission": false,
+  "automatically_changes_sensitive_setting": false
+}

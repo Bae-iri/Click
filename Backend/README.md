@@ -2,8 +2,6 @@
 
 FastAPI 기반 Android 사용 안내 서버입니다.
 
-영구 DB를 사용하려면 `DATA_ENCRYPTION_KEYS`와 `DATA_LOOKUP_KEY` 설정 및 암호화 마이그레이션이 필요합니다. [암호화 저장·키 교체·배포 순서](docs/data-encryption.md)를 먼저 확인하세요. AI2의 새 역할과 분석 명령은 [Jev 판단 평가 안내](../docs/ai2-jev-assessment.md)에 정리했습니다.
-
 **입력 분류:** `resolve_goal`은 Docker/Render 배포에서 Jev를 사용한다. 직접 Python 실행의 기본값은 자체 서버이며 환경변수로 provider를 명시할 수 있다. 화면 판단용 `AI1_UI_SELECTOR_PROVIDER`와 요청 해석용 `GOAL_CLASSIFIER_PROVIDER`는 별개다. `/version.goal_interpretation`의 `provider`와 `configured`로 설정 반영 여부를 확인한다. `configured=true`는 환경 설정 검증이며 실제 모델 연결·정확도 검증은 아니다. 전송 전 개인정보 패턴 마스킹, 승인 후보·응답 검증이 적용되며 추론 실패 시 질문 흐름으로 돌아간다. [자체 서버 설정](inference/README.md#입력-분류-llm만-연결하기), [Jev 설정과 연결 점검](inference/jev.md)을 참고한다.
 
 ```powershell

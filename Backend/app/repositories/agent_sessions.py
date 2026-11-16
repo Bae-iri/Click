@@ -14,6 +14,7 @@ from app.models.lifecycle import SafetyConfirmation
 from app.models.voice_queue import VoiceRequest
 from app.models.user import User
 from app.services.task_outcome import make_outcome, answer_outcome, follow_up
+from ai_agent.runtime.task_success import normalize_technical
 
 ACTIVE = ("IN_PROGRESS", "WAITING_CONFIRMATION", "WAITING_RESULT", "WAITING_ADJUSTMENT")
 
@@ -91,7 +92,10 @@ class AgentSessionRepository:
                 self.expire(db, row, now)
                 if row.status == "EXPIRED":
                     raise HTTPException(410)
-                if row.status == "CANCELLED":
+                if row.status == "CANCELLED" and not (
+                        previous and previous.response
+                        and previous.response.get("task_status") == "CANCELLED"
+                        and (previous.response.get("metadata", {}).get("termination") or {}).get("code") == "USER_DECLINED"):
                     self.conflict("SESSION_CANCELLED")
                 if previous and previous.response is not None:
                     if previous.version != row.version:
@@ -168,8 +172,13 @@ class AgentSessionRepository:
             self.guard_voice_request(db, request, now)
             row = self.owned(db, request.session_id, request.user_id)
             response.episode_id = (recovery_plan or {}).get("episode_id", row.episode_id)
+            if graph_reference is not None:
+                response.metadata["execution_graph_reference"]=dict(graph_reference)
+                response.metadata["execution_goal_type"]=row.accepted_goal_type
             technical = response.metadata.get("technical_outcome") or {"status": "UNVERIFIABLE", "reason": "insufficient_evidence"}
-            outcome = {"setting": 'commerce' if (row.goal or {}).get('target_app') == 'coupang' else ((row.goal or {}).get("slots") or {}).get("setting", "font_size"),
+            technical = normalize_technical(technical, row.accepted_goal_type)
+            response.metadata["technical_outcome"] = technical
+            outcome = {"goal_type": row.accepted_goal_type, "setting": 'commerce' if (row.goal or {}).get('target_app') == 'coupang' else ((row.goal or {}).get("slots") or {}).get("setting", "font_size"),
                        "requested_state": ((row.goal or {}).get("slots") or {}).get("state"),
                        "technical": deepcopy(technical), "user": {"status": None, "confirmed_at": None},
                        "final": None, "checklist": response.metadata.get("checklist", [])}
@@ -178,7 +187,17 @@ class AgentSessionRepository:
                 outcome = make_outcome(technical, now, direction, previous=outcome)
                 response.guide_command.message = outcome["prompt"]["message"]
                 response.metadata["result_prompt"] = outcome["prompt"]
+            termination = response.metadata.get("termination")
+            if response.task_status == "CANCELLED" and termination and termination.get("code") == "USER_DECLINED":
+                outcome["final"] = "USER_DECLINED"
+                outcome["termination"] = deepcopy(termination)
+                checkpoint = None  # A cancelled operation cannot retain executable approval/attempts.
             response.metadata["task_outcome"] = outcome
+            provenance=getattr(request,"approval_provenance",None)
+            if provenance is not None and provenance.source=="delegated_goal":
+                if (row.workflow or {}).get("delegated_actions",0)>=1:
+                    self.conflict("CONFIRMATION_INVALID")
+                row.workflow={**(row.workflow or {}),"delegated_actions":1}
             if request.user_confirmation == "accepted":
                 approval = db.get(SafetyConfirmation, request.session_id)
                 if approval is None or approval.id != request.confirmation_id or approval.expires_at <= now:
@@ -515,7 +534,7 @@ class AgentSessionRepository:
             if row.status not in ACTIVE:
                 self.conflict("SESSION_CLOSED")
             outcome = deepcopy(row.task_outcome) or make_outcome({}, now,
-                setting='commerce' if (row.goal or {}).get('target_app') == 'coupang' else ((row.goal or {}).get('slots') or {}).get('setting', 'font_size'))
+                setting='commerce' if (row.goal or {}).get('target_app') == 'coupang' else ((row.goal or {}).get('slots') or {}).get('setting', 'font_size'), goal_type=row.accepted_goal_type)
             status, episode = row.status, row.episode_id
             history = list(row.outcome_history or [])
             message = None
@@ -588,7 +607,13 @@ class AgentSessionRepository:
 
     @staticmethod
     def describe(db, row, now):
-        return AgentSessionResponse(session_id=row.id, status=row.status, version=row.version,
+        from ai_agent.runtime.execution_contract import state
+        from app.schemas.execution import ExecutionState
+        checkpoint=db.get(AgentCheckpoint,row.id)
+        pending=(checkpoint.state or {}).get("pending_attempt") or {} if checkpoint else {}
+        snapshot=state(session_id=row.id,episode_id=row.episode_id,version=row.version,status=row.status,
+            attempt_id=pending.get("attempt_id"),guide_id=row.last_guide_command_id,graph_hash=row.graph_hash,goal_type=row.accepted_goal_type)
+        return AgentSessionResponse(execution_state=ExecutionState(**snapshot),session_id=row.id, status=row.status, version=row.version,
             episode_id=row.episode_id,
             task_outcome=row.task_outcome, outcome_history=row.outcome_history or [],
             task_id=row.task_id, state_id=row.state_id, last_guide_command_id=row.last_guide_command_id,

@@ -20,8 +20,42 @@ import com.click.service.accessibility.ClickAccessibilityService;
 public final class ClickApplication extends Application implements ClickHost {
     @Override public void onCreate() {
         super.onCreate();
+        registerActivityLifecycleCallbacks(new com.click.service.overlay.AppOverlayLifecycle());
         KakaoSignIn.initialize(this);
+        registerActivityLifecycleCallbacks(new AppVisibilityCallbacks());
     }
+    private int startedActivities;
+    private boolean appForeground;
+    private final android.os.Handler visibilityHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable appStopped = () -> {
+        if (startedActivities != 0) return;
+        appForeground = false;
+        com.click.service.overlay.ClickOverlayService.onAppVisibilityChanged(false);
+    };
+
+    public boolean isAppForeground() { return appForeground; }
+
+    private final class AppVisibilityCallbacks implements ActivityLifecycleCallbacks {
+        @Override public void onActivityStarted(Activity activity) {
+            visibilityHandler.removeCallbacks(appStopped);
+            startedActivities++;
+            appForeground = true;
+            com.click.service.overlay.ClickOverlayService.onAppVisibilityChanged(true);
+            }
+        @Override public void onActivityStopped(Activity activity) {
+            startedActivities--;
+            // The replacement activity owns visibility during a configuration change.
+            if (startedActivities == 0 && !activity.isChangingConfigurations()) {
+                visibilityHandler.post(appStopped);
+            }
+        }
+        @Override public void onActivityCreated(Activity activity, android.os.Bundle state) { }
+        @Override public void onActivityResumed(Activity activity) { }
+        @Override public void onActivityPaused(Activity activity) { }
+        @Override public void onActivitySaveInstanceState(Activity activity, android.os.Bundle state) { }
+        @Override public void onActivityDestroyed(Activity activity) { }
+    }
+
     @Override public boolean signedIn() { return new AuthTokenStore(this).hasRefreshToken(); }
     @Override public boolean accessibilityEnabled() { return PermissionStatus.isAccessibilityEnabled(this); }
     @Override public boolean accessibilityConnected() {
@@ -121,7 +155,8 @@ public final class ClickApplication extends Application implements ClickHost {
     }
 
     @Override public void openAccessibilitySettings(Activity activity) {
-        new AccessibilityOnboardingState(this).begin();
+        new AccessibilityOnboardingState(this).begin(activity.getIntent().getBooleanExtra(
+                com.click.designpreview.PermissionGuideActivity.EXTRA_RETURN_TO_SETTINGS, false));
         Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                 .putExtra(Intent.EXTRA_COMPONENT_NAME, new ComponentName(this, ClickAccessibilityService.class).flattenToString());
         try { activity.startActivity(intent); }
@@ -133,6 +168,12 @@ public final class ClickApplication extends Application implements ClickHost {
     @Override public void openPostPermissionTutorial(Activity activity) {
         new AccessibilityOnboardingState(this).markTutorialLaunched();
         activity.startActivity(new Intent(activity, TutorialReadyActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+    }
+
+    @Override public void returnToSettingsAfterAccessibility(Activity activity) {
+        new AccessibilityOnboardingState(this).markSettingsReturned();
+        activity.startActivity(new Intent(activity, MenuActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
     }
 

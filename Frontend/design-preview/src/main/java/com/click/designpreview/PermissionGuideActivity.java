@@ -28,6 +28,7 @@ import android.window.OnBackInvokedDispatcher;
 /** Five static, reversible cards before the user opens Android accessibility settings. */
 public final class PermissionGuideActivity extends Activity {
     public static final String EXTRA_RECONNECT = "accessibility_reconnect";
+    public static final String EXTRA_RETURN_TO_SETTINGS = "accessibility_return_to_settings";
     private static final int PAGE_COUNT = 5;
     private static final String PAGE_STATE = "permission_guide_cards_v3";
     private static final String SETTINGS_OPENED_STATE = "permission_settings_opened";
@@ -43,15 +44,17 @@ public final class PermissionGuideActivity extends Activity {
     private View[] progressBars;
     private TextView actionLabel;
     private OnboardingStartButton action;
-    private Button replay;
+    private TextView replay;
     private Typeface medium;
     private Typeface semibold;
     private Typeface regular;
     private boolean settingsOpened;
     private boolean tutorialOpened;
+    private AccessibilityConnectionWatcher connectionWatcher;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        connectionWatcher = new AccessibilityConnectionWatcher(this);
         narrator = new TutorialNarrator(this);
         settingsOpened = savedInstanceState != null
                 && savedInstanceState.getBoolean(SETTINGS_OPENED_STATE, false);
@@ -145,33 +148,35 @@ public final class PermissionGuideActivity extends Activity {
             if (page < PAGE_COUNT - 1) showPage(page + 1, true);
             else openSettings(Settings.ACTION_ACCESSIBILITY_SETTINGS);
         });
-        replay = new Button(this); replay.setText("안내 다시 듣기"); replay.setAllCaps(false);
+        replay = new TextView(this); replay.setText("안내 다시 듣기");
         replay.setTag("permission_replay");
         replay.setTypeface(medium); replay.setTextSize(com.click.ui.common.ClickTextScale.size(this, 13)); replay.setTextColor(BLUE);
         replay.setSingleLine(true);
+        replay.setGravity(Gravity.CENTER);
+        replay.setFocusable(true);
         replay.setMinWidth(0); replay.setMinimumWidth(0);
         replay.setMinHeight(dp(48)); replay.setMinimumHeight(dp(48));
         replay.setPadding(dp(12), dp(8), dp(12), dp(8));
-        replay.setBackground(new RippleDrawable(ColorStateList.valueOf(0x183478F6),
-                rounded(0xFFF1F6FF, 16), null));
+        replay.setBackground(null);
         replay.setStateListAnimator(null); replay.setElevation(0);
         replay.setOnClickListener(v -> { if (narrator.isSpeaking()) narrator.stop(); else narrator.replay(spokenPage); });
         narrator.setListener((speaking, unavailable) -> replay.setText(speaking ? "음성 멈춤" : "안내 다시 듣기"));
-        Button previous = new Button(this);
+        TextView previous = new TextView(this);
         backButton = previous;
         previous.setId(R.id.guide_back);
         previous.setText(R.string.guide_card_previous);
         previous.setAllCaps(false);
         previous.setTypeface(medium);
-        previous.setTextSize(com.click.ui.common.ClickTextScale.size(this, 15));
+        previous.setTextSize(com.click.ui.common.ClickTextScale.size(this, 13));
         previous.setTextColor(BLUE);
-        previous.setMinHeight(dp(52));
+        previous.setSingleLine(true);
+        previous.setGravity(Gravity.CENTER);
+        previous.setFocusable(true);
+        previous.setMinHeight(dp(48)); previous.setMinimumHeight(dp(48));
         previous.setMinimumWidth(0); previous.setMinWidth(0);
-        previous.setPadding(dp(18), dp(12), dp(18), dp(12));
-        previous.setStateListAnimator(null);
-        GradientDrawable previousFill = rounded(0xFFF1F6FF, 18);
-        previousFill.setStroke(dp(1), 0xFFD8E5FA);
-        previous.setBackground(new RippleDrawable(ColorStateList.valueOf(0x183478F6), previousFill, null));
+        previous.setPadding(dp(12), dp(8), dp(12), dp(8));
+        previous.setStateListAnimator(null); previous.setElevation(0);
+        previous.setBackground(null);
         previous.setOnClickListener(view -> { if (page > 0) showPage(page - 1, true); });
         controls.addView(previous, new LinearLayout.LayoutParams(-2, -2));
         controls.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
@@ -243,11 +248,18 @@ public final class PermissionGuideActivity extends Activity {
         cardFill.setStroke(dp(1), 0xFFE1E9F5);
         card.setBackground(cardFill);
         card.setClipToOutline(true);
-        PermissionScreenshotView screenshot = new PermissionScreenshotView(this, IMAGES[page], CROPS[page], TARGETS[page]);
+        PermissionScreenshotView screenshot = page == 0 ? PermissionScreenshotView.accessibilityFirstPage(this)
+                : new PermissionScreenshotView(this, IMAGES[page], CROPS[page], TARGETS[page]);
         screenshot.setId(R.id.guide_screenshot);
         screenshot.setContentDescription(getString(TITLES[page]));
         card.addView(screenshot, new LinearLayout.LayoutParams(-1, -2));
-        add(body, card, 24);
+        FrameLayout imageRegion = new FrameLayout(this);
+        int photoWidth = Math.max(dp(120), Math.min(getResources().getDisplayMetrics().widthPixels, dp(480)) - dp(60));
+        imageRegion.setMinimumHeight(Math.round(photoWidth * CROPS[page].height() / CROPS[page].width()) + dp(12));
+        imageRegion.addView(card, new FrameLayout.LayoutParams(-1, -2, Gravity.CENTER));
+        LinearLayout.LayoutParams imageParams = new LinearLayout.LayoutParams(-1, 0, 1);
+        imageParams.topMargin = dp(24);
+        body.addView(imageRegion, imageParams);
         spokenPage = getString(TITLES[page]) + ". " + getString(bodyText);
         narrator.speak(spokenPage);
         scroll.scrollTo(0, 0);
@@ -305,7 +317,19 @@ public final class PermissionGuideActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         narrator.resume();
+        if (settingsOpened && !tutorialOpened) {
+            connectionWatcher.start(this::onConnectionReady, () -> {});
+        }
+    }
+
+    private void onConnectionReady() {
         if (settingsOpened && !tutorialOpened && ClickHost.from(this).accessibilityConnected()) {
+            if (getIntent().getBooleanExtra(EXTRA_RETURN_TO_SETTINGS, false)) {
+                tutorialOpened = true;
+                ClickHost.from(this).returnToSettingsAfterAccessibility(this);
+                finish();
+                return;
+            }
             if (ClickHost.from(this).postPermissionTutorialWasLaunched()) {
                 finish();
                 return;
@@ -371,6 +395,7 @@ public final class PermissionGuideActivity extends Activity {
     }
 
     @Override protected void onPause() {
+        connectionWatcher.stop();
         narrator.pause();
         super.onPause();
     }

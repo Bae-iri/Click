@@ -30,6 +30,12 @@ def validate_agent_turn_request(
     *,
     has_session: bool = False,
 ) -> TurnPhase:
+    from ai_agent.runtime.execution_contract import validate_context
+    try:
+        validate_context(request.execution_context,session_id=request.session_id,request_id=request.request_id,
+            episode_id=request.episode_id,observation_id=request.observation_id)
+    except ValueError as invalid:
+        raise ContractViolationError(str(invalid)) from invalid
     if not request.request_id:
         raise ContractViolationError("request_id is required.")
     if not request.session_id:

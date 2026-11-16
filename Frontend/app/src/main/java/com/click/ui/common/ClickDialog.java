@@ -111,7 +111,10 @@ public final class ClickDialog {
         flatten(confirm);
         confirm.setTextSize(17); confirm.setMinHeight(ClickUi.dp(activity, 50));
         confirm.setPadding(padding, ClickUi.dp(activity, 12), padding, ClickUi.dp(activity, 12));
-        confirm.setOnClickListener(view -> { dialog.dismiss(); if (action != null) action.run(); });
+        confirm.setOnClickListener(view -> {
+            if (!confirm.isEnabled()) return;
+            dialog.dismiss(); if (action != null) action.run();
+        });
         if (requireScrollToEnd) {
             StateListDrawable background = new StateListDrawable();
             background.addState(new int[]{-android.R.attr.state_enabled},

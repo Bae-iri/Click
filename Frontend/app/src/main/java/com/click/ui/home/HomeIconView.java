@@ -32,7 +32,7 @@ public final class HomeIconView extends View {
         int resource = 0;
         switch (kind) {
             case WORDMARK: resource = com.click.designpreview.R.drawable.click_wordmark; break;
-            case CLICK: resource = com.click.designpreview.R.drawable.ic_click_cursor; break;
+            case CLICK: resource = com.click.designpreview.R.drawable.icon_floating_cursor; break;
             case SETTINGS: case FONT: resource = com.click.designpreview.R.drawable.icon_setting; break;
             case PHONE: resource = com.click.designpreview.R.drawable.icon_phone; break;
             case BRIGHTNESS: resource = com.click.designpreview.R.drawable.icon_sun; break;

@@ -1,0 +1,989 @@
+{
+  "source_revision": "8351449d76771d8d80764d1c7048777edc87bc3f",
+  "releases": {
+    "MVP-01": {
+      "version": "1.0.1",
+      "sha256": "5a507528746d472bd1fec5405ec70ecccf40db3758a617336fb7c5d51943daef",
+      "approved": true,
+      "priority": 101
+    },
+    "MVP-02": {
+      "version": "1.0.1",
+      "sha256": "48433f119d723865d891d5d47b0c313c31d2bdd4a294c871bed205e4f1e78d65",
+      "approved": true,
+      "priority": 101
+    },
+    "NAV-accessibility": {
+      "version": "1.0.0",
+      "sha256": "7945f842f0eab45b8ed3202145e12222671d2e21ffa3f32a7807b7c1706216ee",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-bluetooth": {
+      "version": "1.0.0",
+      "sha256": "1c7158334ab9747cfa0b0ac406635a0a4c6057ecb918fd550f5be439bf7e4df0",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-captions": {
+      "version": "1.0.0",
+      "sha256": "cad969db5c826b634782c6926326503cd8f9b5ddb541d6a1bd93c42f45858b28",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-connections": {
+      "version": "1.0.0",
+      "sha256": "6390aa70a76a8fe350f425db22dc73c8b3ee92b9c2286455b104b86609404573",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-display": {
+      "version": "1.0.0",
+      "sha256": "992caaf7801b24855b5fd5089e467a6c72cf7badd03f208b53070de2f8747435",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-display-size": {
+      "version": "1.0.0",
+      "sha256": "ed1a589a41a061753fb93e4e3710f4803f4343b5d7eb9f7eab6a0374418799c2",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-do-not-disturb": {
+      "version": "1.0.0",
+      "sha256": "80dd603fa15933f4f617428a491c7e6d39c37c8c618619eb48bbbc5059487544",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-eye-comfort": {
+      "version": "1.0.0",
+      "sha256": "667c673c92fefcad67fc74900ea8d3bd23cc736ddb53e933a59f32be7c295307",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-font-size": {
+      "version": "1.0.0",
+      "sha256": "5b3cd66ac2a2954d8e40f3cf0cca244059bb2093de1b35f9741116cb531e7c64",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-hearing": {
+      "version": "1.0.0",
+      "sha256": "8e0aa3b19b5989a33f2f5e435514864f6b1026df0dd294357d1faab6438da375",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-interaction": {
+      "version": "1.0.0",
+      "sha256": "1d0ae2932e1394dd4f2fa4918fd9c3c19ec379b79f7dd7bfe7cea4070bb1bbbd",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-magnification": {
+      "version": "1.0.0",
+      "sha256": "7feb3d355bfcdc3e9c8119200c9338f607758f9d5b4efa3a80045ae5dce4896c",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-notification-sound": {
+      "version": "1.0.0",
+      "sha256": "355ffe71b702bcc7e78242239045831cab4bb9875fa20d5d6d6b3e72305c8944",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-ringtone": {
+      "version": "1.0.0",
+      "sha256": "6b022c1a995067ff16e9b19096b9f08a841a2d82a5ac6ae475a261974b3e89f0",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-screen-timeout": {
+      "version": "1.0.0",
+      "sha256": "d30f42a701c9a534f40f615a406de7ed5fb6debe2f84304aed9b6ad2a0d4a6e9",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-settings": {
+      "version": "1.0.0",
+      "sha256": "e550fc8036941ce2be9b9e1f7fd0d40716a996ba871125abc6d214be6d3167a7",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-sound": {
+      "version": "1.0.0",
+      "sha256": "eb3def04769ab688bc8b609d02348995ee5a907e8988cbc367e1d4589f080e04",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-talkback": {
+      "version": "1.0.0",
+      "sha256": "811caf945051525cf995ef3eeb27f2bcff336ce05c2fb1e1bf15fa63c9ed0e5c",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-visibility": {
+      "version": "1.0.0",
+      "sha256": "7e06c101f674e778c760654d76a44e928fa925ccc150be055cd2a216ae9dbc3c",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-volume": {
+      "version": "1.0.0",
+      "sha256": "d66d765c9f0defb6833fad3c335ef60a549e820a954b8c8f6b9eec82f4b77ecf",
+      "approved": true,
+      "priority": 100
+    },
+    "NAV-wifi": {
+      "version": "1.0.0",
+      "sha256": "be2b6e1efbaa8debe1db418ba96aba0eeecc8322c95123fd0181c1a5c755632d",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-adaptive_brightness-disable": {
+      "version": "1.0.0",
+      "sha256": "89eb92b33af8ca96d88a99320482a11dabb174d087e5770a533a160587bef8b1",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-adaptive_brightness-enable": {
+      "version": "1.0.0",
+      "sha256": "d2ebca705b932e5be0673ff4cf4c4660aa3da9fce721ff0e17b493a261200e5f",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-airplane_mode-disable": {
+      "version": "1.0.0",
+      "sha256": "1a868a00d10a42ea773090988fe088d25a7813a4c8233918bbfd05dd4ce9a900",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-airplane_mode-enable": {
+      "version": "1.0.0",
+      "sha256": "4c3b23537089d9c2e2bd1795b2e88cfc33e98ddf10a355597b9dc946e84a21fb",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-app_cache-clear": {
+      "version": "1.0.0",
+      "sha256": "83e3dea4e1b650c79e6840c936dfb26f06b5c00ef6b9e34d5ca1251cd6b2e9a0",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-app_data-clear": {
+      "version": "1.0.0",
+      "sha256": "bbc3af73db2f3782a784283f021d3c56a4a02a174b6e679a9482e580e5f4ce60",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-app_permissions-manage": {
+      "version": "1.0.0",
+      "sha256": "256d8e703f0c2564d0aed0100b7f24571302c3900249a1fee0659c2394781ec9",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-apps-uninstall": {
+      "version": "1.0.0",
+      "sha256": "49c4949bd605c81fc4de9d33804f3f89932e2d5ba283682dc71273157b86f2a7",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-auto_rotate-disable": {
+      "version": "1.0.0",
+      "sha256": "9b251938736daec5d71ea43398b3290d37bd34a322822428e5b0bb2f930ee3f0",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-auto_rotate-enable": {
+      "version": "1.0.0",
+      "sha256": "ea1e4ee9b642ddadefb3215c04ba0edb90b7e58dbb5cfb3a3834ddc0bf1572e8",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-backup-disable": {
+      "version": "1.0.0",
+      "sha256": "869a42180aec6799b5bc6d3e5b1b834d3f02830b107b412210cd0064b5f99bd9",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-backup-enable": {
+      "version": "1.0.0",
+      "sha256": "d806577a7802d123b27894052028ef94d18f3270b68d98d92af4952f0f546d5a",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-battery_percentage-disable": {
+      "version": "1.0.0",
+      "sha256": "1861b7324fab2ad04f9bb5f0e91a1b9c36dbc9cbcf14dc14f515e57d4d642d50",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-battery_percentage-enable": {
+      "version": "1.0.0",
+      "sha256": "147bea5f741d60689bfe393f014006e75893609ad205174f5db23b4cd2435ba4",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-battery_status-view": {
+      "version": "1.0.0",
+      "sha256": "a0ae1c7c2db2fe992b3a0fb0c6d1a28883a1417d69ea886c830e70388b0822c8",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-biometric-setup": {
+      "version": "1.0.0",
+      "sha256": "043e19aec003ff4862f9621758673cd6eaee4abb7e077ce51ad494099fd65891",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-bluetooth-connect": {
+      "version": "1.0.0",
+      "sha256": "9e39ed1c21f8e8be0b4d0d884238c47c9933918fdd30bc87a24e8153ab1d3697",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-bluetooth-disable": {
+      "version": "1.0.0",
+      "sha256": "4a55f086d79b522f71fd57a0cedd984000966065ff40ef623833d6b4d851dfbf",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-bluetooth-enable": {
+      "version": "1.0.0",
+      "sha256": "99b79ee81b887470ff82de7e7fbd194a9807a27b828b9de585fd66ffbb642e9e",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-brightness-decrease": {
+      "version": "1.0.0",
+      "sha256": "5edbdf1e24e3c9c61687b966c03122e1936cf64e72a2595b96dacf306f254e67",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-brightness-increase": {
+      "version": "1.0.0",
+      "sha256": "b038c5f331aea083de5d5d02cdc0b53ef56353d3d8ca0807009af54da27b0b26",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-captions-disable": {
+      "version": "1.0.0",
+      "sha256": "be3efdf8e2d2efb2fe39a2fa99832c6da7b1aa019117846173bb0e39c2c82748",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-captions-enable": {
+      "version": "1.0.0",
+      "sha256": "a3cd5198c0de9e42132925e024d68c0abe75a68f349fec9125a61d3bd9a5688f",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-color_inversion-disable": {
+      "version": "1.0.0",
+      "sha256": "6d4d2d46f79780255292e47fb1bf06846187092af5f8aee36600a917a827326d",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-color_inversion-enable": {
+      "version": "1.0.0",
+      "sha256": "53901ab3cb148b28f05b7ed243c6acfa7196f17bbb53288e61e8db9ecdce49d6",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-dark_mode-disable": {
+      "version": "1.1.0",
+      "sha256": "51fdefb091574fe21dd48950af1e3c90ffa02e6d35f5cfd9582dd6dc6bf26297",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-dark_mode-enable": {
+      "version": "1.1.0",
+      "sha256": "d38e1cc2fa42731aa936332c4a33f95da507efdaf03944c3b17e7a90f57ee948",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-data_roaming-disable": {
+      "version": "1.0.0",
+      "sha256": "b81905f856b9c7777665636986b7c8ee7d9258442279b25ede8088ac93fecf43",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-data_roaming-enable": {
+      "version": "1.0.0",
+      "sha256": "9d411d6ed1835c552e484e701fe5e35e6aef98d61e8674b962042742ea01b24b",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-data_saver-disable": {
+      "version": "1.0.0",
+      "sha256": "9cdfd544a00c9cb29acb14922328b42215c0bc6c543deee05cedc76d5a330b3d",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-data_saver-enable": {
+      "version": "1.0.0",
+      "sha256": "6a37ae1b015aa064b14eaa838bd78315dfc605658b4c5b57136b1d776fc8465d",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-date_time-automatic-disable": {
+      "version": "1.0.0",
+      "sha256": "c47260f31a25ddffa23a8b40317cb5c02c4988e210b4272c42f1903e858c390c",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-date_time-automatic-enable": {
+      "version": "1.0.0",
+      "sha256": "52723f0d3e019f752a44b61f788ba162d1524ffde5d090b34d2cf9ac95263eb5",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-default_apps-change": {
+      "version": "1.0.0",
+      "sha256": "5c8c1a1b9c87ceb822411a6c2789d3c7f9dc863b3d7563bfeba7903992aeae3d",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-device_name-change": {
+      "version": "1.0.0",
+      "sha256": "7e3d897066266a1ae0eabb63701cd5650d7a5e50bc40c2ebb2ba3c186557d52e",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-display_size-decrease": {
+      "version": "1.1.0",
+      "sha256": "2a0c28d5d3b10233ec9be6a3614c0355877907b456c95a0ea0e324d03d0d1068",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-display_size-increase": {
+      "version": "1.1.0",
+      "sha256": "b63ac556a0dc509ba44cd8649a6132431c384fc5b490454fbb553530db4d2d83",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-do_not_disturb-disable": {
+      "version": "1.0.0",
+      "sha256": "87a4b69ddf54b19eb4cad8df6c0dcede9c7cfdd344293d7751d3f87ac6bb6699",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-do_not_disturb-enable": {
+      "version": "1.0.0",
+      "sha256": "d3452b85b266f16a14af7b9ac3af352fe7e01427fb0ba51023eadad4947d3e14",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-eye_comfort-disable": {
+      "version": "1.0.0",
+      "sha256": "bbf72257a1736b7baf359f5f701bb3ee62b4d95e28fad49ad9b3f44bce284912",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-eye_comfort-enable": {
+      "version": "1.0.0",
+      "sha256": "491d1c8646afb3cdd8e1d675a36a879db0a444bb463d063744bc361c040e3b66",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-factory_reset": {
+      "version": "1.0.0",
+      "sha256": "e1199fc40eb4272717c843faa230a806fafb83ae0b90de87e329852705725830",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-hotspot-disable": {
+      "version": "1.0.0",
+      "sha256": "f7f3074edb5689d802e810bf22d7dd55286f380538cc91b58ed5fd604295173f",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-hotspot-enable": {
+      "version": "1.0.0",
+      "sha256": "52cb3ea0a961cc95ec38b9671c924f085cad7a5a2ed47d1f892cfc832fa0af55",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-hotspot-password-change": {
+      "version": "1.1.0",
+      "sha256": "6fd2d965a27c6881c5d2d3d1571c43eda30450f16601db7a90e5ebd13f3c479e",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-keyboard-change": {
+      "version": "1.1.0",
+      "sha256": "26fb9eee813e0065b9d88cec4a66aac5c87613211069c2c3a1543983bf3eaf80",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-language-change": {
+      "version": "1.1.0",
+      "sha256": "27260156a6c5a3c1af70b478ca9f0d5c190a93095bd53446f281d12ea5ff5141",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-location-disable": {
+      "version": "1.0.0",
+      "sha256": "ec08501226400a8ec120118f009cbda707c06cc9467fef6ab804bb7183adbd28",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-location-enable": {
+      "version": "1.0.0",
+      "sha256": "9f4d7551997198aa1916444fef4101f10ef92755532f7fc76c066c70fe1fd75d",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-lockscreen_notifications-manage": {
+      "version": "1.0.0",
+      "sha256": "542743a163a7e34604f57fdaaf5a5ef17848769e8deba10ac356485164119918",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-magnification-disable": {
+      "version": "1.0.0",
+      "sha256": "1be68a82c954f152f6ff2e8f329e108aea49a16c0a2b6026b4a2ec193c963aa3",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-magnification-enable": {
+      "version": "1.0.0",
+      "sha256": "61106866ab6fbead836689abc7daf89c251d35ca81234372f9f10b70be03b845",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-mobile_data-disable": {
+      "version": "1.0.0",
+      "sha256": "69d851cb5c168466b29750c38ca6ca43c6e0c673cbc460e62b97ff1652d3b34f",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-mobile_data-enable": {
+      "version": "1.0.0",
+      "sha256": "d16c8236323e42e71b190b3c59cde0d49508bd66201035bbc05c202ca2ae8ef6",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-mono_audio-disable": {
+      "version": "1.0.0",
+      "sha256": "39ada25702cd71e72a0ec3273c3e40b213cfba1e7b5af05008d8017b49c5a4c1",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-mono_audio-enable": {
+      "version": "1.0.0",
+      "sha256": "3d842c1ab3712830e2b5a1963c0d05bc5cab0be5b6ccdde92e13c1e69818b625",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-mute-disable": {
+      "version": "1.1.0",
+      "sha256": "2067419077ff7bb9bf47041650048ae7c442cd806f8361e462da4cbc1e817435",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-mute-enable": {
+      "version": "1.1.0",
+      "sha256": "8b2fa8a9404b8baadc09d87afde1d286fd22e3c87dcf25a5a80999cdcef3eb7e",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-nfc-disable": {
+      "version": "1.0.0",
+      "sha256": "e27b4450939fa64c5f76ffd4ac2f35db0c45f514d073bbffc3f5b5022306b5a0",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-nfc-enable": {
+      "version": "1.0.0",
+      "sha256": "7eed0d5bdb14fc9661ceea239fd7652da273f59df351a2c9fdbc6cd243789e66",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-notification_history-view": {
+      "version": "1.1.0",
+      "sha256": "6bb499f3863b146ae74225d5b2a9b870d164e795cfa349ec094f704bc11cbd93",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-notification_sound-change": {
+      "version": "1.0.0",
+      "sha256": "e2945c156171628a8565bcfe42abe5503d324c8cbcba3f07593730e0a2281c12",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-notifications-disable": {
+      "version": "1.1.0",
+      "sha256": "dad38eaebe5634f18235cbc4103f71bb705fe2215673f43ff551e00df3e91191",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-notifications-enable": {
+      "version": "1.1.0",
+      "sha256": "91ae4fbf7892e6c6f04090bb36215610fd8e2bb0a2496e1ea0608bf42f8e4029",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-power_saving-disable": {
+      "version": "1.0.0",
+      "sha256": "cd562341076b389cd65d197e03bdba6d758f7c6d92e837ce9ebe2f1d2c321417",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-power_saving-enable": {
+      "version": "1.0.0",
+      "sha256": "59ef0b99b2761e74710f9e9c54913fdeb877206ec6f8dadb6b175d7264d32dbe",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-private_dns-change": {
+      "version": "1.1.0",
+      "sha256": "e99569bc300c4e0c9f6c64da8d3d8d029749fdeeee1d3b05ec24ab76bcd48b8e",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-ringtone-change": {
+      "version": "1.0.0",
+      "sha256": "6155efcdcb9cb1e471104ba0c3af33a554ea9e96b2200236a0c9d3ca1413adbf",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-screen_lock-change": {
+      "version": "1.1.0",
+      "sha256": "10a7809baf27f9aa172caf7d60cae024691191b5517edacb88f59755f8beaa20",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-screen_timeout-set": {
+      "version": "1.0.0",
+      "sha256": "894b90b4ca226bc2df21f6dbd90d2cc7eebb0ae875f0c17682cde1583b169961",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-sim-manage": {
+      "version": "1.0.0",
+      "sha256": "1f252f0d43285897affffd577e7ec38f7212da838b8441b1a0ca6c16e16902b3",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-software_update-check": {
+      "version": "1.0.0",
+      "sha256": "d25100fd9031dbfd50d9d8cf2ad89b8b5490942c540503e1512c876ac6902739",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-storage-cleanup": {
+      "version": "1.0.0",
+      "sha256": "1af9136d9578679315693713d91b5b412ff7a8fe1d9c14b1dd05b02dca0a4936",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-talkback-disable": {
+      "version": "1.0.0",
+      "sha256": "9150fe7bd95aae4eade766a639ed9211bb38e7e169490aecc403670495644fe4",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-talkback-enable": {
+      "version": "1.0.0",
+      "sha256": "a7c0f8f34d1e12631525cab8383378b018a34041eca2de729050542ec99b05cf",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-vibrate-disable": {
+      "version": "1.1.0",
+      "sha256": "7771ec9a75a1280ebdea6866bd77ba7151b33d89835f5ef50250d43acddb23a6",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-vibrate-enable": {
+      "version": "1.1.0",
+      "sha256": "b8e2ac7a252bf2775c1790e4babcd24c27db33e8c7a909c0c8c3c70fb9d30011",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-volume-decrease": {
+      "version": "1.0.1",
+      "sha256": "50258f40cde34fa97691a6cc672d81bef82aebeef4c0a7b9de75675f34ee7063",
+      "approved": true,
+      "priority": 101
+    },
+    "SET-volume-increase": {
+      "version": "1.0.1",
+      "sha256": "1d257dd350981520aca1ea1df52b8df12099e3602308bab21cf436e0e9593383",
+      "approved": true,
+      "priority": 101
+    },
+    "SET-vpn-connect": {
+      "version": "1.1.0",
+      "sha256": "b2b6120e58ce78533fa991eaf31a994daca430025e42bea39e2f2cc85c0874eb",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-vpn-disconnect": {
+      "version": "1.1.0",
+      "sha256": "49c2ca22f1953241ef93b182623896c1945d6a00a3a5da5a45f75283b48e1534",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-wallpaper-change": {
+      "version": "1.0.0",
+      "sha256": "85b64f26f9a5fadee1bdb7cefb858f3d702c26bcc0dd3113ef37e8eaf18c5ec3",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-wifi-connect": {
+      "version": "1.0.0",
+      "sha256": "0ec2f77766db355e5170b956c307f1eb34b902bc3629c603fd86bf3f8392bf4d",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-wifi-disable": {
+      "version": "1.0.0",
+      "sha256": "46801b22cdb492675600b973ee2d21774e48b6ca12aa73fac2604266cc7cc39d",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-wifi-enable": {
+      "version": "1.0.0",
+      "sha256": "06532cf1fc1f73f81a62060c824d2e0cf5ba918eb737cd6b33a5c9a8d8a7af93",
+      "approved": true,
+      "priority": 100
+    },
+    "SET-wifi-saved_networks-view": {
+      "version": "1.1.0",
+      "sha256": "44ba10026c16d26520b845ffaeffef10cac8b476aa028a39ce13cdfdb568b6b4",
+      "approved": true,
+      "priority": 110
+    },
+    "SET-wifi-share": {
+      "version": "1.0.0",
+      "sha256": "3a0de3bb0055afda26ea3c83ec4181391d990bcaa8f5c04b0d4259a3e2ed21d6",
+      "approved": true,
+      "priority": 100
+    }
+  },
+  "bluetooth_connect": {
+    "release": {
+      "version": "1.0.0",
+      "approved": true,
+      "priority": 100,
+      "status": "assisted_device_validation_pending"
+    },
+    "body": {
+      "definition": {
+        "done_state": "S_DONE",
+        "goal_type": "settings.bluetooth.connect",
+        "name": "블루투스 기기 연결",
+        "required_slots": {
+          "action": "connect",
+          "setting": "bluetooth"
+        },
+        "start_states": [
+          "S0_UNKNOWN",
+          "S1_SETTINGS_HOME"
+        ],
+        "target_app": "android_settings",
+        "task_id": "SET-bluetooth-connect",
+        "task_type": "settings_assisted"
+      },
+      "policy": {
+        "max_failed_attempts": 6,
+        "observation_timeout_ms": 5000,
+        "recovery_limit": 3,
+        "retry_limit": 2,
+        "settle_ms": 500
+      },
+      "states": {
+        "S0_UNKNOWN": {
+          "confidence_threshold": 0,
+          "name": "알 수 없는 화면",
+          "optional_keywords": [],
+          "package_candidates": [],
+          "required_keyword_groups": [],
+          "required_keywords": [],
+          "role_hints": [
+            "text",
+            "menu_item",
+            "toggle"
+          ],
+          "state_id": "S0_UNKNOWN",
+          "verification_only": false
+        },
+        "S1_SETTINGS_HOME": {
+          "confidence_threshold": 0.7,
+          "name": "설정",
+          "optional_keywords": [
+            "설정",
+            "Settings"
+          ],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "required_keyword_groups": [
+            [
+              "설정",
+              "Settings"
+            ]
+          ],
+          "required_keywords": [],
+          "role_hints": [
+            "text",
+            "menu_item",
+            "toggle"
+          ],
+          "state_id": "S1_SETTINGS_HOME",
+          "verification_only": false
+        },
+        "S_CATEGORY": {
+          "confidence_threshold": 0.7,
+          "name": "연결",
+          "optional_keywords": [
+            "연결",
+            "Connections",
+            "연결된 기기",
+            "Connected devices"
+          ],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "required_keyword_groups": [
+            [
+              "연결",
+              "Connections",
+              "연결된 기기",
+              "Connected devices"
+            ]
+          ],
+          "required_keywords": [],
+          "role_hints": [
+            "text",
+            "menu_item",
+            "toggle"
+          ],
+          "state_id": "S_CATEGORY",
+          "verification_only": false
+        },
+        "S_CHANGED": {
+          "confidence_threshold": 0,
+          "name": "검증 대기",
+          "optional_keywords": [],
+          "package_candidates": [],
+          "required_keyword_groups": [],
+          "required_keywords": [],
+          "role_hints": [
+            "text",
+            "menu_item",
+            "toggle"
+          ],
+          "state_id": "S_CHANGED",
+          "verification_only": true
+        },
+        "S_DONE": {
+          "confidence_threshold": 0,
+          "name": "결과",
+          "optional_keywords": [],
+          "package_candidates": [],
+          "required_keyword_groups": [],
+          "required_keywords": [],
+          "role_hints": [
+            "text",
+            "menu_item",
+            "toggle"
+          ],
+          "state_id": "S_DONE",
+          "verification_only": true
+        },
+        "S_TARGET": {
+          "confidence_threshold": 0.7,
+          "name": "블루투스 기기 연결",
+          "optional_keywords": [
+            "블루투스",
+            "Bluetooth"
+          ],
+          "package_candidates": [
+            "com.android.settings",
+            "com.samsung.android.settings"
+          ],
+          "required_keyword_groups": [
+            [
+              "블루투스",
+              "Bluetooth"
+            ]
+          ],
+          "required_keywords": [],
+          "role_hints": [
+            "text",
+            "menu_item",
+            "toggle"
+          ],
+          "state_id": "S_TARGET",
+          "verification_only": false
+        }
+      },
+      "synonyms": {},
+      "transitions": [
+        {
+          "action_name": "설정 앱 열기",
+          "action_type": "tap",
+          "allow_scroll": false,
+          "completes_task": false,
+          "confirmation_message": null,
+          "from_state": "S0_UNKNOWN",
+          "guide_message": "설정 앱을 열어주세요.",
+          "priority": 0,
+          "requires_user_action": true,
+          "safety_level": "LOW_RISK",
+          "selector": {
+            "allow_unlabelled_in_context": false,
+            "context_keywords": [],
+            "excluded_keywords": [],
+            "package_candidates": [
+              "com.android.launcher3",
+              "com.google.android.apps.nexuslauncher",
+              "com.sec.android.app.launcher",
+              "com.miui.home",
+              "com.huawei.android.launcher",
+              "com.oppo.launcher",
+              "com.vivo.launcher",
+              "org.lineageos.trebuchet"
+            ],
+            "resource_ids": [],
+            "synonym_keys": []
+          },
+          "target_keywords": [
+            "설정",
+            "Settings"
+          ],
+          "target_role": "app_icon",
+          "to_state": "S1_SETTINGS_HOME",
+          "transition_id": "S0_TO_S1_OPEN_SETTINGS",
+          "verification_predicate": "state_reached"
+        },
+        {
+          "action_name": "연결 열기",
+          "action_type": "tap",
+          "allow_scroll": true,
+          "completes_task": false,
+          "confirmation_message": null,
+          "from_state": "S1_SETTINGS_HOME",
+          "guide_message": "연결 항목을 눌러주세요.",
+          "priority": 0,
+          "requires_user_action": true,
+          "safety_level": "LOW_RISK",
+          "selector": {
+            "allow_unlabelled_in_context": false,
+            "context_keywords": [],
+            "excluded_keywords": [],
+            "package_candidates": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "resource_ids": [],
+            "synonym_keys": []
+          },
+          "target_keywords": [
+            "연결",
+            "Connections",
+            "연결된 기기",
+            "Connected devices"
+          ],
+          "target_role": "menu_item",
+          "to_state": "S_CATEGORY",
+          "transition_id": "OPEN_CATEGORY",
+          "verification_predicate": "state_reached"
+        },
+        {
+          "action_name": "블루투스 열기",
+          "action_type": "tap",
+          "allow_scroll": true,
+          "completes_task": false,
+          "confirmation_message": null,
+          "from_state": "S_CATEGORY",
+          "guide_message": "블루투스 항목을 눌러주세요.",
+          "priority": 0,
+          "requires_user_action": true,
+          "safety_level": "LOW_RISK",
+          "selector": {
+            "allow_unlabelled_in_context": false,
+            "context_keywords": [],
+            "excluded_keywords": [],
+            "package_candidates": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "resource_ids": [],
+            "synonym_keys": []
+          },
+          "target_keywords": [
+            "블루투스",
+            "Bluetooth"
+          ],
+          "target_role": "menu_item",
+          "to_state": "S_TARGET",
+          "transition_id": "OPEN_PAGE",
+          "verification_predicate": "state_reached"
+        },
+        {
+          "action_name": "블루투스 열기",
+          "action_type": "tap",
+          "allow_scroll": true,
+          "completes_task": false,
+          "confirmation_message": null,
+          "from_state": "S1_SETTINGS_HOME",
+          "guide_message": "블루투스 항목을 눌러주세요.",
+          "priority": 10,
+          "requires_user_action": true,
+          "safety_level": "LOW_RISK",
+          "selector": {
+            "allow_unlabelled_in_context": false,
+            "context_keywords": [],
+            "excluded_keywords": [],
+            "package_candidates": [
+              "com.android.settings",
+              "com.samsung.android.settings"
+            ],
+            "resource_ids": [],
+            "synonym_keys": []
+          },
+          "target_keywords": [
+            "블루투스",
+            "Bluetooth"
+          ],
+          "target_role": "menu_item",
+          "to_state": "S_TARGET",
+          "transition_id": "OPEN_PAGE_FROM_HOME",
+          "verification_predicate": "state_reached"
+        },
+        {
+          "action_name": "직접 진행 안내",
+          "action_type": "observe_only",
+          "allow_scroll": false,
+          "completes_task": true,
+          "confirmation_message": null,
+          "from_state": "S_TARGET",
+          "guide_message": "연결할 기기를 직접 선택하고, 양쪽 기기의 연결 코드가 같은지 확인한 뒤 페어링하세요. 직접 진행한 뒤 완료 확인을 눌러주세요.",
+          "priority": 0,
+          "requires_user_action": false,
+          "safety_level": "LOW_RISK",
+          "selector": {
+            "allow_unlabelled_in_context": false,
+            "context_keywords": [],
+            "excluded_keywords": [],
+            "package_candidates": [],
+            "resource_ids": [],
+            "synonym_keys": []
+          },
+          "target_keywords": [],
+          "target_role": null,
+          "to_state": "S_DONE",
+          "transition_id": "MANUAL_HANDOFF",
+          "verification_predicate": "manual_result_required"
+        }
+      ]
+    },
+    "sha256": "9e39ed1c21f8e8be0b4d0d884238c47c9933918fdd30bc87a24e8153ab1d3697",
+    "goal_type": "settings.bluetooth.connect"
+  }
+}

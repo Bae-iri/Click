@@ -575,7 +575,8 @@
         "연결된 기기",
         "Connected devices"
       ],
-      "instruction": "연결할 기기를 직접 선택하고, 양쪽 기기의 연결 코드가 같은지 확인한 뒤 페어링하세요."
+      "instruction": "연결할 기기가 보이지 않으면 기기의 전원과 페어링 모드를 켜고, 휴대폰 가까이에 둔 뒤 검색될 때까지 잠시 기다려주세요. 기기가 나타나면 직접 선택하고, 양쪽 기기의 연결 코드가 같은지 확인한 뒤 페어링하세요.",
+      "graph_version": "1.0.1"
     },
     "settings.mobile_data.enable": {
       "name": "모바일 데이터 켜기",
@@ -657,38 +658,78 @@
     "settings.display_size.increase": {
       "name": "화면 요소 크게 하기",
       "setting": "display_size",
-      "mode": "assisted",
+      "mode": "native_slider",
       "device_validated": false,
       "page_name": "화면 크기",
       "pages": [
-        "화면 크기",
         "화면 크게/작게",
+        "화면 확대",
+        "화면 크기",
+        "Screen zoom",
         "Display size",
         "Display size and text"
       ],
       "categories": [
         "디스플레이",
-        "Display"
+        "Display",
+        "접근성",
+        "Accessibility"
       ],
-      "instruction": "화면 크기 조절 막대를 요청한 방향으로 움직이고 미리보기와 실제 화면 크기를 확인하세요."
+      "instruction": "화면 크기 조절 막대를 요청한 방향으로 움직이고 미리보기와 실제 화면 크기를 확인하세요.",
+      "graph_version": "1.1.0",
+      "labels": [
+        "화면 크게/작게",
+        "화면 확대",
+        "화면 크기",
+        "Screen zoom",
+        "Display size"
+      ],
+      "resource_ids": [
+        "com.android.settings:id/seek_bar"
+      ],
+      "value_domain": {
+        "minimum": 72,
+        "maximum": 2000,
+        "integer": true
+      }
     },
     "settings.display_size.decrease": {
       "name": "화면 요소 작게 하기",
       "setting": "display_size",
-      "mode": "assisted",
+      "mode": "native_slider",
       "device_validated": false,
       "page_name": "화면 크기",
       "pages": [
-        "화면 크기",
         "화면 크게/작게",
+        "화면 확대",
+        "화면 크기",
+        "Screen zoom",
         "Display size",
         "Display size and text"
       ],
       "categories": [
         "디스플레이",
-        "Display"
+        "Display",
+        "접근성",
+        "Accessibility"
       ],
-      "instruction": "화면 크기 조절 막대를 요청한 방향으로 움직이고 미리보기와 실제 화면 크기를 확인하세요."
+      "instruction": "화면 크기 조절 막대를 요청한 방향으로 움직이고 미리보기와 실제 화면 크기를 확인하세요.",
+      "graph_version": "1.1.0",
+      "labels": [
+        "화면 크게/작게",
+        "화면 확대",
+        "화면 크기",
+        "Screen zoom",
+        "Display size"
+      ],
+      "resource_ids": [
+        "com.android.settings:id/seek_bar"
+      ],
+      "value_domain": {
+        "minimum": 72,
+        "maximum": 2000,
+        "integer": true
+      }
     },
     "settings.volume.increase": {
       "name": "미디어 음량 높이기",
@@ -705,7 +746,7 @@
     "settings.mute.enable": {
       "name": "무음 모드 켜기",
       "setting": "mute",
-      "mode": "assisted",
+      "mode": "system_choice",
       "device_validated": false,
       "page_name": "소리 및 진동",
       "pages": [
@@ -721,7 +762,7 @@
     "settings.mute.disable": {
       "name": "무음 모드 끄기",
       "setting": "mute",
-      "mode": "assisted",
+      "mode": "system_choice",
       "device_validated": false,
       "page_name": "소리 및 진동",
       "pages": [
@@ -755,7 +796,7 @@
     "settings.vibrate.enable": {
       "name": "진동 모드 켜기",
       "setting": "vibrate",
-      "mode": "assisted",
+      "mode": "system_choice",
       "device_validated": false,
       "page_name": "소리 및 진동",
       "pages": [
@@ -771,7 +812,7 @@
     "settings.vibrate.disable": {
       "name": "진동 모드 끄기",
       "setting": "vibrate",
-      "mode": "assisted",
+      "mode": "system_choice",
       "device_validated": false,
       "page_name": "소리 및 진동",
       "pages": [
@@ -791,11 +832,15 @@
       "device_validated": false,
       "page_name": "알림",
       "pages": [
+        "앱 알림",
+        "App notifications"
+      ],
+      "categories": [
         "알림",
         "Notifications"
       ],
-      "categories": [],
-      "instruction": "알림을 바꿀 앱을 직접 선택하고 알림 허용을 요청한 상태로 바꾸세요. 휴대폰 전체 알림에는 공통 스위치가 없을 수 있어요."
+      "instruction": "알림을 바꿀 앱을 직접 선택하고 알림 허용을 요청한 상태로 바꾸세요. 휴대폰 전체 알림에는 공통 스위치가 없을 수 있어요.",
+      "graph_version": "1.1.0"
     },
     "settings.notifications.disable": {
       "name": "앱 알림 끄기",
@@ -804,11 +849,15 @@
       "device_validated": false,
       "page_name": "알림",
       "pages": [
+        "앱 알림",
+        "App notifications"
+      ],
+      "categories": [
         "알림",
         "Notifications"
       ],
-      "categories": [],
-      "instruction": "알림을 바꿀 앱을 직접 선택하고 알림 허용을 요청한 상태로 바꾸세요. 휴대폰 전체 알림에는 공통 스위치가 없을 수 있어요."
+      "instruction": "알림을 바꿀 앱을 직접 선택하고 알림 허용을 요청한 상태로 바꾸세요. 휴대폰 전체 알림에는 공통 스위치가 없을 수 있어요.",
+      "graph_version": "1.1.0"
     },
     "settings.location.enable": {
       "name": "위치 서비스 켜기",
@@ -841,15 +890,21 @@
       "device_validated": false,
       "page_name": "보안",
       "pages": [
+        "화면 잠금 방식",
+        "Screen lock type",
+        "화면 잠금",
+        "Screen lock"
+      ],
+      "categories": [
+        "잠금화면",
+        "Lock screen",
         "보안 및 개인정보 보호",
         "Security & privacy",
         "보안",
-        "Security",
-        "잠금화면",
-        "Lock screen"
+        "Security"
       ],
-      "categories": [],
-      "instruction": "화면 잠금 방식을 직접 선택하세요. 현재 잠금 인증과 새 PIN·패턴·비밀번호 입력은 직접 진행하세요."
+      "instruction": "화면 잠금 방식을 직접 선택하세요. 현재 잠금 인증과 새 PIN·패턴·비밀번호 입력은 직접 진행하세요.",
+      "graph_version": "1.1.0"
     },
     "settings.biometric.setup": {
       "name": "생체 인식 등록",
@@ -955,7 +1010,12 @@
         "시스템",
         "System"
       ],
-      "instruction": "원하는 언어를 직접 추가하거나 선택하고 기본 언어로 적용하세요. 메뉴 언어가 바뀌는지 확인하세요."
+      "instruction": "원하는 언어를 직접 추가하거나 선택하고 기본 언어로 적용하세요. 메뉴 언어가 바뀌는지 확인하세요.",
+      "intermediate": [
+        "언어 및 입력",
+        "Languages & input"
+      ],
+      "graph_version": "1.1.0"
     },
     "settings.date_time.automatic.enable": {
       "name": "날짜와 시간 자동 설정 켜기",
@@ -990,7 +1050,12 @@
         "시스템",
         "System"
       ],
-      "instruction": "기본 키보드에서 사용할 키보드를 직접 선택하세요. 키보드가 입력 내용을 처리하므로 신뢰하는 앱을 선택하세요."
+      "instruction": "기본 키보드에서 사용할 키보드를 직접 선택하세요. 키보드가 입력 내용을 처리하므로 신뢰하는 앱을 선택하세요.",
+      "intermediate": [
+        "언어 및 입력",
+        "Languages & input"
+      ],
+      "graph_version": "1.1.0"
     },
     "settings.default_apps.change": {
       "name": "기본 앱 변경",
@@ -1036,8 +1101,10 @@
       "device_validated": false,
       "page_name": "와이파이",
       "pages": [
-        "Wi-Fi",
-        "와이파이"
+        "네트워크 관리",
+        "저장된 네트워크",
+        "Manage networks",
+        "Saved networks"
       ],
       "categories": [
         "연결",
@@ -1045,7 +1112,24 @@
         "네트워크 및 인터넷",
         "Network & internet"
       ],
-      "instruction": "네트워크 관리 또는 저장된 네트워크를 직접 열어 확인하세요. 저장된 네트워크 이름은 전송하지 않아요."
+      "instruction": "저장된 네트워크 목록을 직접 확인하세요. 네트워크 이름과 비밀번호는 전송하지 않아요.",
+      "intermediate": [
+        "Wi-Fi",
+        "와이파이"
+      ],
+      "graph_version": "1.1.0",
+      "intermediate_path": [
+        [
+          "Wi-Fi",
+          "와이파이"
+        ],
+        [
+          "고급 설정",
+          "Advanced settings",
+          "고급",
+          "Advanced"
+        ]
+      ]
     },
     "settings.nfc.enable": {
       "name": "NFC 켜기",
@@ -1147,11 +1231,14 @@
         "네트워크 및 인터넷",
         "Network & internet"
       ],
+      "instruction": "원하는 VPN 프로필을 직접 선택해 연결하거나 연결 해제하세요. 인증 정보는 직접 입력하고 기기의 연결 표시를 확인하세요.",
       "intermediate": [
         "기타 연결 설정",
-        "More connection settings"
+        "More connection settings",
+        "고급",
+        "Advanced"
       ],
-      "instruction": "원하는 VPN 프로필을 직접 선택해 연결하거나 연결 해제하세요. 인증 정보는 직접 입력하고 기기의 연결 표시를 확인하세요."
+      "graph_version": "1.1.0"
     },
     "settings.vpn.disconnect": {
       "name": "VPN 연결 해제",
@@ -1169,11 +1256,14 @@
         "네트워크 및 인터넷",
         "Network & internet"
       ],
+      "instruction": "원하는 VPN 프로필을 직접 선택해 연결하거나 연결 해제하세요. 인증 정보는 직접 입력하고 기기의 연결 표시를 확인하세요.",
       "intermediate": [
         "기타 연결 설정",
-        "More connection settings"
+        "More connection settings",
+        "고급",
+        "Advanced"
       ],
-      "instruction": "원하는 VPN 프로필을 직접 선택해 연결하거나 연결 해제하세요. 인증 정보는 직접 입력하고 기기의 연결 표시를 확인하세요."
+      "graph_version": "1.1.0"
     },
     "settings.private_dns.change": {
       "name": "프라이빗 DNS 변경",
@@ -1191,7 +1281,14 @@
         "네트워크 및 인터넷",
         "Network & internet"
       ],
-      "instruction": "원하는 모드를 직접 선택하세요. 공급자 호스트 이름이 필요하면 직접 입력하고 저장하세요."
+      "instruction": "원하는 모드를 직접 선택하세요. 공급자 호스트 이름이 필요하면 직접 입력하고 저장하세요.",
+      "intermediate": [
+        "기타 연결 설정",
+        "More connection settings",
+        "고급",
+        "Advanced"
+      ],
+      "graph_version": "1.1.0"
     },
     "settings.sim.manage": {
       "name": "SIM 관리",
@@ -1228,7 +1325,14 @@
         "연결",
         "Connections"
       ],
-      "instruction": "설정 또는 구성에서 새 비밀번호를 직접 입력하고 저장하세요. 비밀번호는 전송하지 않아요."
+      "instruction": "설정 또는 구성에서 새 비밀번호를 직접 입력하고 저장하세요. 비밀번호는 전송하지 않아요.",
+      "intermediate": [
+        "모바일 핫스팟 및 테더링",
+        "Mobile Hotspot and Tethering",
+        "핫스팟 및 테더링",
+        "Hotspot & tethering"
+      ],
+      "graph_version": "1.1.0"
     },
     "settings.wallpaper.change": {
       "name": "배경 화면 변경",
@@ -1325,11 +1429,15 @@
       "device_validated": false,
       "page_name": "알림",
       "pages": [
+        "고급 설정",
+        "Advanced settings"
+      ],
+      "categories": [
         "알림",
         "Notifications"
       ],
-      "categories": [],
-      "instruction": "고급 설정에서 알림 기록을 직접 열어 확인하세요. 알림 내용이 있는 화면은 전송하지 않아요."
+      "instruction": "알림 기록을 직접 열어 확인하세요. 알림 내용이 있는 화면은 전송하지 않아요.",
+      "graph_version": "1.1.0"
     },
     "settings.lockscreen_notifications.manage": {
       "name": "잠금 화면 알림 관리",
@@ -1472,6 +1580,124 @@
       ],
       "categories": [],
       "instruction": "기기 이름에서 새 이름을 직접 입력하고 저장하세요. 입력한 이름은 전송하지 않아요."
+    }
+  },
+  "mode_choices": {
+    "mute": {
+      "pages": [
+        "소리 및 진동",
+        "소리 모드",
+        "Sound & vibration",
+        "Sounds and vibration",
+        "Sound mode"
+      ],
+      "categories": [],
+      "options": {
+        "sound": {
+          "labels": [
+            "소리",
+            "Sound"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 2
+        },
+        "vibrate": {
+          "labels": [
+            "진동",
+            "Vibrate"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 1
+        },
+        "mute": {
+          "labels": [
+            "무음",
+            "Mute",
+            "Silent"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 0
+        }
+      },
+      "state_options": {
+        "on": "mute",
+        "off": "sound"
+      },
+      "system": {
+        "key": "ringer_mode",
+        "source": "android.media.AudioManager.getRingerMode",
+        "predicate_prefix": "system_ringer_mode"
+      }
+    },
+    "vibrate": {
+      "pages": [
+        "소리 및 진동",
+        "소리 모드",
+        "Sound & vibration",
+        "Sounds and vibration",
+        "Sound mode"
+      ],
+      "categories": [],
+      "options": {
+        "sound": {
+          "labels": [
+            "소리",
+            "Sound"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 2
+        },
+        "vibrate": {
+          "labels": [
+            "진동",
+            "Vibrate"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 1
+        },
+        "mute": {
+          "labels": [
+            "무음",
+            "Mute",
+            "Silent"
+          ],
+          "resource_ids": [
+            "com.android.settings:id/low_button",
+            "com.android.settings:id/mid_button",
+            "com.android.settings:id/high_button"
+          ],
+          "value": 0
+        }
+      },
+      "state_options": {
+        "on": "vibrate",
+        "off": "sound"
+      },
+      "system": {
+        "key": "ringer_mode",
+        "source": "android.media.AudioManager.getRingerMode",
+        "predicate_prefix": "system_ringer_mode"
+      }
     }
   }
 }

@@ -114,4 +114,47 @@ public class GuideFreshnessTest {
         assertFalse(GuideFreshness.stillValid(requested, settings().withScreenRevision("epoch:2"),
                 "vision_1", DISPLAY, true));
     }
+    private static ScreenSnapshot manualPage(String title, boolean device, int window) {
+        java.util.List<AccessibilityNodeSnapshot> nodes=new java.util.ArrayList<>();
+        nodes.add(new AccessibilityNodeSnapshot("root",null,true,"com.android.settings",null,null,null,
+                "android.widget.FrameLayout","container",new int[]{0,0,1080,2400},false,true,false,false,false,null,window));
+        nodes.add(new AccessibilityNodeSnapshot("heading","root",true,"com.android.settings",title,null,null,
+                "android.widget.TextView","text",new int[]{40,80,1000,180},false,true,false,false,false,null,window));
+        nodes.add(new AccessibilityNodeSnapshot("devices","root",true,"com.android.settings",null,null,
+                "com.android.settings:id/device_list","android.widget.ListView","list",new int[]{0,400,1080,2000},false,true,false,true,false,null,window));
+        if(device)nodes.add(new AccessibilityNodeSnapshot("earphones","devices",true,"com.android.settings","Synthetic headphones",null,null,
+                "android.widget.TextView","text",new int[]{40,600,1000,700},false,true,false,false,false,null,window));
+        return new ScreenSnapshot("com.android.settings","now",1080,2400,nodes,window);
+    }
+    private static boolean sameManual(ScreenSnapshot before,ScreenSnapshot after) {
+        return GuideFreshness.sameManualSettingsPage(before,after,java.util.Set.of("블루투스","Bluetooth"));
+    }
+    @Test public void bluetoothPageRemainsUsableWhenDiscoveryBecomesEmptyOrPopulated() {
+        assertTrue(sameManual(manualPage("블루투스",true,5),manualPage("블루투스",false,5)));
+        assertTrue(sameManual(manualPage("블루투스",false,5),manualPage("블루투스",true,5)));
+    }
+    @Test public void bluetoothPageCannotBorrowTitleFromADeviceOrMenuRow() {
+        ScreenSnapshot original=manualPage("블루투스",false,5);
+        ScreenSnapshot latest=manualPage("연결",false,5);
+        java.util.List<AccessibilityNodeSnapshot> nodes=new java.util.ArrayList<>(latest.nodes);
+        nodes.add(new AccessibilityNodeSnapshot("fake-title","devices",true,"com.android.settings","블루투스",null,null,
+                "android.widget.TextView","text",new int[]{40,500,1000,600},false,true,false,false,false,null,5));
+        assertFalse(sameManual(original,new ScreenSnapshot("com.android.settings","now",1080,2400,nodes,5)));
+    }
+    @Test public void manualPageRequiresSameWindowAndActualHeading() {
+        ScreenSnapshot original=manualPage("블루투스",false,5);
+        assertFalse(sameManual(original,manualPage("디스플레이",false,5)));
+        assertFalse(sameManual(original,manualPage("블루투스",false,6)));
+        assertFalse(sameManual(original,manualPage(null,false,5)));
+        assertFalse(sameManual(original,null));
+        assertFalse(sameManual(original,screen("com.other.app",1080,5,original.nodes.toArray(new AccessibilityNodeSnapshot[0]))));
+    }
+    @Test public void personalInputCannotQualifyAsAStableManualPage() {
+        ScreenSnapshot original=manualPage("블루투스",false,5);
+        java.util.List<AccessibilityNodeSnapshot> nodes=new java.util.ArrayList<>(original.nodes);
+        nodes.add(new AccessibilityNodeSnapshot("input","root",true,"com.android.settings",null,null,null,
+                "android.widget.EditText","text_field",new int[]{40,600,1000,700},true,true,false,false,false,null,5,true));
+        assertFalse(sameManual(original,new ScreenSnapshot("com.android.settings","now",1080,2400,nodes,5)));
+    }
+
 }

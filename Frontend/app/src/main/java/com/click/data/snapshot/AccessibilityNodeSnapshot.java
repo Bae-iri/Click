@@ -117,6 +117,10 @@ public final class AccessibilityNodeSnapshot {
         this.progress = sensitiveInput ? null : progress;
     }
 
+    boolean emptySearchInput() {
+        return !passwordInput && !inputContentPresent && ScreenEnvironmentPolicy.contains("empty_search_resources",resourceId);
+    }
+
     JSONObject toJson() throws JSONException {
         JSONObject object = new JSONObject();
         object.put("node_id", nodeId);

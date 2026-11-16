@@ -8,8 +8,9 @@ import android.graphics.PixelFormat;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 
-/** Scalable conversation bubble; the tail stays inside its measured bounds. */
+/** A side tail points toward the speaker and stays inside the measured bounds. */
 final class SpeechBubbleDrawable extends Drawable {
+    static final int TAIL_DP = 14;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final float density;
@@ -24,19 +25,19 @@ final class SpeechBubbleDrawable extends Drawable {
     @Override public void draw(Canvas canvas) {
         float left = getBounds().left, right = getBounds().right;
         float top = getBounds().top, bottom = getBounds().bottom;
-        float tail = 6 * density;
+        float tail = TAIL_DP * density;
         float edge = outgoing ? right : left;
         float direction = outgoing ? -1 : 1;
-        float bodyBottom = bottom - tail;
+        float bodyEdge = edge + direction * tail;
+        float middle = (top + bottom) / 2;
+        canvas.drawRoundRect(new RectF(outgoing ? left : bodyEdge, top,
+                outgoing ? bodyEdge : right, bottom), 18 * density, 18 * density, paint);
         path.reset();
-        path.moveTo(edge + direction * 18 * density, bodyBottom - 9 * density);
-        path.quadTo(edge + direction * 10 * density, bodyBottom, edge, bottom);
-        path.quadTo(edge + direction * 8 * density, bodyBottom - 6 * density,
-                edge + direction * 5 * density, bodyBottom - 18 * density);
+        path.moveTo(bodyEdge + direction * 3 * density, middle - 11 * density);
+        path.lineTo(edge, middle + 4 * density);
+        path.lineTo(bodyEdge + direction * 3 * density, middle + 12 * density);
         path.close();
         canvas.drawPath(path, paint);
-        canvas.drawRoundRect(new RectF(left, top, right, bodyBottom),
-                18 * density, 18 * density, paint);
     }
 
     @Override public void setAlpha(int alpha) { paint.setAlpha(alpha); invalidateSelf(); }

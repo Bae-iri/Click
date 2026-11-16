@@ -33,7 +33,20 @@ final class NativeScrollExecutor {
                     || expectedPackage != null && !expectedPackage.equals(pkg)
                     || expectedWindow != null && root.getWindowId() != expectedWindow) return false;
             com.click.data.snapshot.NavigationState navigation=NativeNavigationReader.read(root);
-            if (scrollCollection(root,navigation,towardNextPage)) {
+            // Samsung PagedView advertises generic forward/back and page-up/
+            // down actions without an axis. For horizontal pages, use only an
+            // explicit left/right native action; otherwise use the observed
+            // collection's horizontal gesture instead of an ambiguous action.
+            AccessibilityNodeInfo container=navigation==null?null:NativeNavigationReader.nodeAt(root,navigation.containerId);
+            boolean nativeDirection=true;
+            if(container!=null)try {
+                if(navigation.axis==com.click.data.snapshot.NavigationState.Axis.HORIZONTAL) {
+                    int action=towardNextPage?AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId()
+                            :AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.getId();
+                    nativeDirection=container.getActionList().stream().anyMatch(a->a.getId()==action);
+                }
+            }finally{if(container!=root && container!=null)container.recycle();}
+            if (nativeDirection && scrollCollection(root,navigation,towardNextPage, navigation==null || navigation.axis!=com.click.data.snapshot.NavigationState.Axis.HORIZONTAL)) {
                 if(handler!=null)handler.postDelayed(captureSnapshot,650L);
                 return true;
             }
@@ -86,7 +99,43 @@ final class NativeScrollExecutor {
         }finally{root.recycle();}
     }
 
+    boolean revealSettingsTarget(String nodeId,int[] bounds,String expectedPackage,int expectedWindow) {
+        if(!TouchAutomationPolicy.settingsPackage(expectedPackage))return false;
+        AccessibilityNodeInfo root=ForegroundWindowReader.readRoot(service);if(root==null)return revealSkipped("root_unavailable");
+        TargetVisibility.Plan plan;
+        java.util.List<Rect> controls=new java.util.ArrayList<>();
+        try {
+            if(root.getWindowId()!=expectedWindow || !expectedPackage.equals(String.valueOf(root.getPackageName())))return revealSkipped("window_changed");
+            android.util.DisplayMetrics metrics=service.getResources().getDisplayMetrics();
+            var screen=new AccessibilitySnapshotCollector().collect(root,expectedPackage,service,null);
+            plan=TargetVisibility.plan(screen,nodeId,bounds,metrics.density);
+            for(var node:screen.nodes) if(node.visibleToUser && node.bounds!=null
+                    && ("slider".equals(node.role) || "text_field".equals(node.role) || node.checkable))
+                controls.add(new Rect(node.bounds[0],node.bounds[1],node.bounds[2],node.bounds[3]));
+        }finally{root.recycle();}
+        if(plan==null)return revealSkipped("target_or_viewport_changed");
+        Rect viewport=new Rect(plan.viewport[0],plan.viewport[1],plan.viewport[2],plan.viewport[3]);
+        controls.addAll(overlayBounds());
+        float[] segment=ScrollGesturePath.vertical(viewport,plan.distance,plan.forward,controls,24);
+        if(segment==null)return revealSkipped("blocked_gesture_lane");
+        Path path=new Path();path.moveTo(segment[0],segment[1]);path.lineTo(segment[2],segment[3]);
+        var gesture=new android.accessibilityservice.GestureDescription.Builder().addStroke(
+                new android.accessibilityservice.GestureDescription.StrokeDescription(path,0L,300L)).build();
+        boolean dispatched=service.dispatchGesture(gesture,new GestureResultCallback(){
+            @Override public void onCompleted(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.postDelayed(captureSnapshot,350L);}
+            @Override public void onCancelled(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.post(captureSnapshot);}
+        },handler);
+        return dispatched || revealSkipped("gesture_rejected");
+    }
+
+    private static boolean revealSkipped(String reason) {
+        Log.i("ClickScroll","target_reveal_skipped reason="+reason);return false;
+    }
+
     private static boolean scrollCollection(AccessibilityNodeInfo root,com.click.data.snapshot.NavigationState navigation,boolean forward) {
+        return scrollCollection(root,navigation,forward,true);
+    }
+    private static boolean scrollCollection(AccessibilityNodeInfo root,com.click.data.snapshot.NavigationState navigation,boolean forward,boolean allowGeneric) {
         if(navigation==null)return false;
         AccessibilityNodeInfo list=NativeNavigationReader.nodeAt(root,navigation.containerId);if(list==null)return false;
         try {
@@ -99,11 +148,27 @@ final class NativeScrollExecutor {
             boolean advertised=list.getActionList().stream().anyMatch(action->action.getId()==directional);
             if(directional==generic)return list.performAction(generic);
             if(advertised && list.performAction(directional))return true;
-            return list.getActionList().stream().anyMatch(action->action.getId()==generic) && list.performAction(generic);
+            return allowGeneric && list.getActionList().stream().anyMatch(action->action.getId()==generic) && list.performAction(generic);
         }finally{if(list!=root)list.recycle();}
     }
 
     private float uncoveredLine(Rect viewport,boolean vertical) {
+        return uncoveredLine(viewport,vertical,java.util.Collections.emptyList(),new float[]{.5f,.3f,.7f,.2f,.8f});
+    }
+
+    private float uncoveredLine(Rect viewport,boolean vertical,java.util.List<Rect> controls,float[] fractions) {
+        java.util.List<Rect> covered=new java.util.ArrayList<>(controls);
+        covered.addAll(overlayBounds());
+        for(float fraction:fractions) {
+            float position=vertical?viewport.left+viewport.width()*fraction:viewport.top+viewport.height()*fraction;
+            boolean clear=true;
+            for(Rect rect:covered)if(vertical?position>=rect.left-24 && position<=rect.right+24:position>=rect.top-24 && position<=rect.bottom+24){clear=false;break;}
+            if(clear)return position;
+        }
+        return -1;
+    }
+
+    private java.util.List<Rect> overlayBounds() {
         java.util.List<Rect> covered=new java.util.ArrayList<>();
         for(AccessibilityWindowInfo window:service.getWindows())try {
             if(window.getType()!=AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY)continue;
@@ -112,13 +177,7 @@ final class NativeScrollExecutor {
                 Rect bounds=new Rect();window.getBoundsInScreen(bounds);covered.add(bounds);
             }}finally{root.recycle();}
         }finally{window.recycle();}
-        for(float fraction:new float[]{.5f,.3f,.7f,.2f,.8f}) {
-            float position=vertical?viewport.left+viewport.width()*fraction:viewport.top+viewport.height()*fraction;
-            boolean clear=true;
-            for(Rect rect:covered)if(vertical?position>=rect.left-24 && position<=rect.right+24:position>=rect.top-24 && position<=rect.bottom+24){clear=false;break;}
-            if(clear)return position;
-        }
-        return -1;
+        return covered;
     }
 
 }

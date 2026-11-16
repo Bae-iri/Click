@@ -9,6 +9,7 @@ import java.util.List;
 
 public final class ScreenSnapshot {
     public final NavigationState navigation;
+    public final NativeWindowContext windowContext;
     public final String packageName;
     public final Integer activeWindowId;
     public final String capturedAt;
@@ -21,6 +22,8 @@ public final class ScreenSnapshot {
     public final Integer appliedBrightness, appliedMediaVolume;
     public final Integer appliedWifiState;
     public final Integer appliedNightMode;
+    public final Integer appliedRingerMode;
+    public final Integer appliedDisplayDensityDpi;
     public final String screenRevision;
 
     public ScreenSnapshot(
@@ -47,14 +50,17 @@ public final class ScreenSnapshot {
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
                           Float appliedFontScale) {
         this(packageName, capturedAt, screenWidth, screenHeight, nodes, activeWindowId,
-                privacyMaskingReady, appliedFontScale, null, null, null, null, null, null);
+                privacyMaskingReady, appliedFontScale, null, null, null, null, null, null, null, null, NativeWindowContext.UNKNOWN);
     }
 
     private ScreenSnapshot(String packageName, String capturedAt, int screenWidth, int screenHeight,
                           List<AccessibilityNodeSnapshot> nodes, Integer activeWindowId, boolean privacyMaskingReady,
-                          Float appliedFontScale, String screenRevision, Integer brightness, Integer mediaVolume, Integer wifiState, NavigationState navigation, Integer nightMode) {
+                          Float appliedFontScale, String screenRevision, Integer brightness, Integer mediaVolume, Integer wifiState, NavigationState navigation, Integer nightMode, Integer ringerMode, Integer displayDensityDpi, NativeWindowContext windowContext) {
+        this.windowContext=windowContext==null?NativeWindowContext.UNKNOWN:windowContext;
         this.navigation = navigation;
         this.appliedNightMode = nightMode;
+        this.appliedRingerMode = ringerMode;
+        this.appliedDisplayDensityDpi = displayDensityDpi;
         this.appliedWifiState = wifiState;
         this.screenRevision = screenRevision;
         this.appliedFontScale = appliedFontScale;
@@ -71,36 +77,55 @@ public final class ScreenSnapshot {
 
     public ScreenSnapshot withScreenRevision(String revision) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
-                activeWindowId, privacyMaskingReady, appliedFontScale, revision, appliedBrightness, appliedMediaVolume, appliedWifiState, navigation, appliedNightMode);
+                activeWindowId, privacyMaskingReady, appliedFontScale, revision, appliedBrightness, appliedMediaVolume, appliedWifiState, navigation, appliedNightMode, appliedRingerMode, appliedDisplayDensityDpi, windowContext);
     }
 
     public ScreenSnapshot withAdjustmentValues(Integer brightness, Integer mediaVolume) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
-                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision, brightness, mediaVolume, appliedWifiState, navigation, appliedNightMode);
+                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision, brightness, mediaVolume, appliedWifiState, navigation, appliedNightMode, appliedRingerMode, appliedDisplayDensityDpi, windowContext);
     }
 
     public ScreenSnapshot withWifiState(Integer state) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
                 activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision,
-                appliedBrightness, appliedMediaVolume, state, navigation, appliedNightMode);
+                appliedBrightness, appliedMediaVolume, state, navigation, appliedNightMode, appliedRingerMode, appliedDisplayDensityDpi, windowContext);
     }
 
     public ScreenSnapshot withNightMode(Integer mode) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
                 activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision,
-                appliedBrightness, appliedMediaVolume, appliedWifiState, navigation, mode);
+                appliedBrightness, appliedMediaVolume, appliedWifiState, navigation, mode, appliedRingerMode, appliedDisplayDensityDpi, windowContext);
+    }
+
+    public ScreenSnapshot withRingerMode(Integer mode) {
+        return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
+                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision,
+                appliedBrightness, appliedMediaVolume, appliedWifiState, navigation, appliedNightMode, mode, appliedDisplayDensityDpi, windowContext);
+    }
+
+    public ScreenSnapshot withDisplayDensity(Integer density) {
+        return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
+                activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision,
+                appliedBrightness, appliedMediaVolume, appliedWifiState, navigation, appliedNightMode, appliedRingerMode, density, windowContext);
     }
 
     public ScreenSnapshot withNavigation(NavigationState navigation) {
         return new ScreenSnapshot(packageName, capturedAt, screenWidth, screenHeight, nodes,
                 activeWindowId, privacyMaskingReady, appliedFontScale, screenRevision,
-                appliedBrightness, appliedMediaVolume, appliedWifiState, navigation, appliedNightMode);
+                appliedBrightness, appliedMediaVolume, appliedWifiState, navigation, appliedNightMode, appliedRingerMode, appliedDisplayDensityDpi, windowContext);
+    }
+
+    public ScreenSnapshot withWindowContext(NativeWindowContext context) {
+        return new ScreenSnapshot(packageName,capturedAt,screenWidth,screenHeight,nodes,activeWindowId,
+                privacyMaskingReady,appliedFontScale,screenRevision,appliedBrightness,appliedMediaVolume,
+                appliedWifiState,navigation,appliedNightMode,appliedRingerMode,appliedDisplayDensityDpi,context);
     }
 
     public String toJson() {
         try {
             JSONObject object = new JSONObject();
             object.put("package_name", packageName);
+            if(!NativeWindowContext.UNKNOWN.equals(windowContext))object.put("window_context",windowContext.toJson());
             if (activeWindowId != null) object.put("active_window_id", activeWindowId);
             object.put("captured_at", capturedAt);
             object.put("observation_id", observationId);
@@ -120,6 +145,10 @@ public final class ScreenSnapshot {
                         .put("wifi_state", appliedWifiState);
             if (appliedNightMode != null && appliedNightMode >= 0 && appliedNightMode <= 3)
                 applied.put("night_mode_source", "android.app.UiModeManager.getNightMode").put("night_mode", appliedNightMode);
+            if (appliedRingerMode != null && appliedRingerMode >= 0 && appliedRingerMode <= 2)
+                applied.put("ringer_mode_source", "android.media.AudioManager.getRingerMode").put("ringer_mode", appliedRingerMode);
+            if (appliedDisplayDensityDpi != null && appliedDisplayDensityDpi >= 72 && appliedDisplayDensityDpi <= 2000)
+                applied.put("display_density_source", "android.content.res.Configuration.densityDpi").put("display_density_dpi", appliedDisplayDensityDpi);
             if (applied.length() > 0) object.put("applied_settings", applied);
             object.put("screen_width", screenWidth);
             object.put("screen_height", screenHeight);
@@ -165,23 +194,15 @@ public final class ScreenSnapshot {
     }
 
     private String fingerprint(boolean includeRevision) {
-        StringBuilder value = new StringBuilder(packageName).append('|').append(screenWidth)
-                .append('x').append(screenHeight).append('|').append(activeWindowId);
-        value.append('|').append(privacyMaskingReady).append('|').append(appliedFontScale);
-        value.append('|').append(appliedBrightness).append('|').append(appliedMediaVolume).append('|').append(appliedWifiState).append('|').append(appliedNightMode);
-        if (includeRevision) value.append('|').append(screenRevision);
-        for (AccessibilityNodeSnapshot node : nodes) {
-            value.append('|').append(node.nodeId).append(':').append(node.text)
-                    .append(':').append(node.resourceId).append(':').append(node.packageName)
-                    .append(':').append(node.windowId).append(':').append(node.role)
-                    .append(':').append(node.sensitiveInput).append(':').append(node.rangeMin).append(':').append(node.rangeMax)
-                    .append(':').append(node.contentDescription).append(':').append(node.className)
-                    .append(':').append(java.util.Arrays.toString(node.bounds))
-                    .append(':').append(node.parentId).append(':').append(node.visibleToUser)
-                    .append(':').append(node.clickable).append(':').append(node.enabled)
-                    .append(':').append(node.scrollable).append(':').append(node.checkable)
-                    .append(':').append(node.selected).append(':').append(node.progress).append(':').append(node.checked);
-        }
-        return Integer.toHexString(value.toString().hashCode());
+        return digest(nativeContentJson()+"|"+privacyMaskingReady+"|"+(includeRevision?screenRevision:""));
+    }
+
+    static String digest(String value) {
+        try {
+            byte[] bytes=java.security.MessageDigest.getInstance("SHA-256").digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder result=new StringBuilder();
+            for(byte b:bytes)result.append(String.format(java.util.Locale.ROOT,"%02x",b&255));
+            return result.toString();
+        } catch(java.security.NoSuchAlgorithmException error){throw new IllegalStateException(error);}
     }
 }

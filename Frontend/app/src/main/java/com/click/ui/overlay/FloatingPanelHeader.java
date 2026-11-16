@@ -18,7 +18,7 @@ import com.click.ui.common.ClickTextScale;
 
 /** 요청 확인 기준의 공통 헤더. 입력·진행·결과 화면도 이 규격을 그대로 사용한다. */
 final class FloatingPanelHeader extends LinearLayout {
-    final Button replay, collapse;
+    final Button replay, edit, collapse;
     final View divider;
     final TextView title;
     private final LinearLayout row, identity, actions;
@@ -34,13 +34,9 @@ final class FloatingPanelHeader extends LinearLayout {
         identity.setMinimumHeight(dp(48));
         title = new TextView(context);
         title.setTag("floating_title");
-        title.setTextSize(ClickTextScale.size(context, 15));
+        FloatingPanelStyle.styleTitle(title);
         title.setTextColor(0xFF101A36);
-        title.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_semibold));
-        title.setIncludeFontPadding(false);
         title.setGravity(Gravity.CENTER_VERTICAL);
-        title.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
-        if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         com.click.ui.home.HomeIconView wordmark = new com.click.ui.home.HomeIconView(context,
                 com.click.ui.home.HomeIconView.Kind.WORDMARK);
         wordmark.setTag("floating_wordmark");
@@ -58,6 +54,11 @@ final class FloatingPanelHeader extends LinearLayout {
         replay.setCompoundDrawablesRelative(speaker, null, null, null);
         replay.setCompoundDrawablePadding(dp(4));
         actions.addView(replay, new LayoutParams(-2, -2));
+        edit = button("내용 수정", () -> {}, true);
+        edit.setTag("floating_edit");
+        edit.setContentDescription("내용 수정");
+        edit.setVisibility(GONE);
+        actions.addView(edit, new LayoutParams(-2, -2));
         collapse = button("줄이기", onCollapse, false);
         collapse.setContentDescription("안내 창 줄이기");
         LayoutParams gap = new LayoutParams(-2, -2); gap.leftMargin = dp(8);
@@ -98,11 +99,12 @@ final class FloatingPanelHeader extends LinearLayout {
     @Override protected void onMeasure(int width, int height) {
         title.setVisibility(title.length() == 0 ? GONE : VISIBLE);
         int natural = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
-        replay.measure(natural, natural); collapse.measure(natural, natural);
+        replay.measure(natural, natural); edit.measure(natural, natural); collapse.measure(natural, natural);
         int actionHeight = Math.max(dp(48), Math.max(replay.getMeasuredHeight(), collapse.getMeasuredHeight()));
-        replay.getLayoutParams().height = collapse.getLayoutParams().height = actionHeight;
+        replay.getLayoutParams().height = edit.getLayoutParams().height = collapse.getLayoutParams().height = actionHeight;
         // Keep the CLICK wordmark visible; controls wrap at larger text sizes.
-        int replayWidth = replay.getVisibility() == GONE ? 0 : replay.getMeasuredWidth();
+        int replayWidth = (replay.getVisibility() == GONE ? 0 : replay.getMeasuredWidth())
+                + (edit.getVisibility() == GONE ? 0 : edit.getMeasuredWidth());
         boolean stacked = dp(66 + 12 + 8) + replayWidth
                 + collapse.getMeasuredWidth() > MeasureSpec.getSize(width);
         int orientation = stacked ? VERTICAL : HORIZONTAL;

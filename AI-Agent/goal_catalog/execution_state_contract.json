@@ -1,0 +1,37 @@
+{
+  "version": "execution-state.v1",
+  "status_phases": {
+    "IN_PROGRESS": "OBSERVING",
+    "WAITING_GOAL": "PREPARING",
+    "WAITING_CONFIRMATION": "CONFIRMATION",
+    "WAITING_RESULT": "RESULT",
+    "WAITING_ADJUSTMENT": "FOLLOW_UP",
+    "PAUSED": "PAUSED",
+    "CANCELLED": "STOPPED",
+    "EXPIRED": "STOPPED",
+    "BLOCKED": "STOPPED",
+    "COMPLETED": "COMPLETED"
+  },
+  "episode_changing_commands": [
+    "start_task",
+    "replace_task",
+    "adjust_task"
+  ],
+  "preparation_commands": [
+    "resolve_goal",
+    "cancel_goal"
+  ],
+  "snapshot_actions": false,
+  "unknown_result_replay": false,
+  "command_phases": {
+    "resolve_goal": "PREPARING",
+    "cancel_goal": "PREPARING"
+  },
+  "guidance_phase": "GUIDING",
+  "manual_phase": "MANUAL",
+  "verification_phase": "VERIFYING",
+  "verification_wait_statuses": [
+    "UNKNOWN",
+    "WAITING_FOR_OBSERVATION"
+  ]
+}

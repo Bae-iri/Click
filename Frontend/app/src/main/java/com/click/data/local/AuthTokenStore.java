@@ -34,6 +34,8 @@ public final class AuthTokenStore {
                 .apply();
     }
 
+    public DeviceTaskJournal taskJournal(){return new DeviceTaskJournal(preferences,userId(),this::userId);}
+
     public String accessToken() { return preferences.getString("access_token", null); }
     public String refreshToken() { return preferences.getString("refresh_token", null); }
     public String userId() { return preferences.getString("user_id", null); }

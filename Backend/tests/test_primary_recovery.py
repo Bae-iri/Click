@@ -206,7 +206,8 @@ def test_rejection_overrides_a_retained_target_and_stale_retries_do_not_unlock_r
     scenario = Scenario(["selected"])
     scenario.observe()
     cancelled = scenario.observe(confirmation="rejected")
-    assert cancelled.guide_command.command_type.value == "blocked"
+    assert cancelled.guide_command.command_type.value == "cancelled"
+    assert cancelled.guide_command.render_policy["termination"]["code"] == "USER_DECLINED"
     assert cancelled.guide_command.target_node_id is None
     assert scenario.engine.session_store.get("s").pending_attempt is None
     assert len(scenario.calls) == 1

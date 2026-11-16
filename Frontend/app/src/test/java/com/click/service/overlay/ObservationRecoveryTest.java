@@ -163,4 +163,10 @@ public class ObservationRecoveryTest {
         assertTrue(ObservationRecovery.missingScreenMessage(false, false).contains("접근성"));
     }
 
+    @Test public void expandedNavigationStatesUseTheSameRecoveryContract() throws Exception {
+        for(String state:java.util.List.of("S_CATEGORY","S_INTERMEDIATE"))
+            assertTrue(ObservationRecovery.canSearchByScrolling(state,offscreenPolicy("TARGET_NOT_VISIBLE"),settings("com.android.settings")));
+        assertFalse(ObservationRecovery.canSearchByScrolling("S_TARGET",offscreenPolicy("TARGET_NOT_VISIBLE"),settings("com.android.settings")));
+    }
+
 }

@@ -11,6 +11,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class AccessibilitySnapshotCollector {
+    /** Observation and execution must clip native bounds to the same window. */
+    ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, android.content.Context context, Float fontScale) {
+        android.util.DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+        int width = metrics.widthPixels, height = metrics.heightPixels;
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            Rect window = context.getSystemService(android.view.WindowManager.class)
+                    .getCurrentWindowMetrics().getBounds();
+            width = window.width();
+            height = window.height();
+        }
+        return collect(root, packageName, width, height, fontScale);
+    }
+
     ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, int width, int height, Float fontScale) {
         List<AccessibilityNodeSnapshot> nodes = new ArrayList<>();
         boolean[] maskReady = {true};

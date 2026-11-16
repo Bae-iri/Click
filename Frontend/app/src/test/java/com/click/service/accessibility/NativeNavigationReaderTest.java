@@ -81,4 +81,53 @@ public class NativeNavigationReaderTest {
   when(item.getText()).thenReturn("changed status");
   assertEquals(before.fingerprint,NativeNavigationReader.read(list).fingerprint);
  }
+ @Test public void samsungWorkspacePagedViewIsHorizontal() {
+  AccessibilityNodeInfo pager=node("com.android.launcher3.PagedView",1080,2000);
+  when(pager.isScrollable()).thenReturn(true);
+  when(pager.getPackageName()).thenReturn("com.sec.android.app.launcher");
+  when(pager.getViewIdResourceName()).thenReturn("com.sec.android.app.launcher:id/workspace");
+  when(pager.getActionList()).thenReturn(List.of(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD));
+  assertEquals(NavigationState.Axis.HORIZONTAL,NativeNavigationReader.read(pager).axis);
+ }
+ @Test public void nestedIconGridIndicesAreNotLauncherPageEndpoints() {
+  AccessibilityNodeInfo pager=node("ViewPager",1080,2000),grid=node("GridLayout",1000,1600);
+  when(pager.getCollectionInfo()).thenReturn(AccessibilityNodeInfo.CollectionInfo.obtain(1,5,false));
+  when(grid.getCollectionInfo()).thenReturn(AccessibilityNodeInfo.CollectionInfo.obtain(5,5,false));
+  when(grid.getCollectionItemInfo()).thenReturn(AccessibilityNodeInfo.CollectionItemInfo.obtain(0,1,2,1,false));
+  AccessibilityNodeInfo first=node("TextView",100,100),last=node("TextView",100,100);
+  when(first.getCollectionItemInfo()).thenReturn(AccessibilityNodeInfo.CollectionItemInfo.obtain(0,1,0,1,false));
+  when(last.getCollectionItemInfo()).thenReturn(AccessibilityNodeInfo.CollectionItemInfo.obtain(4,1,4,1,false));
+  children(pager,grid);children(grid,first,last);
+  NavigationState state=NativeNavigationReader.read(pager);
+  assertEquals(2,state.firstIndex);assertEquals(2,state.lastIndex);
+  assertFalse(state.atStart());assertFalse(state.atEnd());
+ }
+ @Test public void launcherWidgetCannotHijackPageSearch() {
+  AccessibilityNodeInfo root=node("FrameLayout",1080,2400),pager=node("ViewPager",1080,2000);
+  AccessibilityNodeInfo widget=node("android.appwidget.AppWidgetHostView",1080,1800),list=node("RecyclerView",1080,1700);
+  when(root.getPackageName()).thenReturn("com.sec.android.app.launcher");
+  when(list.isScrollable()).thenReturn(true);
+  when(list.getActionList()).thenReturn(List.of(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_DOWN));
+  children(root,widget,pager);children(widget,list);
+  NavigationState state=NativeNavigationReader.read(root);
+  assertEquals("node_0_1",state.containerId);assertEquals(NavigationState.Axis.HORIZONTAL,state.axis);
+ }
+ @Test public void layoutAnimationIsNotEvidenceOfANewPage() {
+  AccessibilityNodeInfo pager=node("ViewPager",1080,2000),icon=node("TextView",200,200);
+  when(icon.getText()).thenReturn("설정");children(pager,icon);
+  String before=NativeNavigationReader.read(pager).fingerprint;
+  doAnswer(call->{((Rect)call.getArgument(0)).set(5,0,205,200);return null;}).when(icon).getBoundsInScreen(any());
+  assertEquals(before,NativeNavigationReader.read(pager).fingerprint);
+ }
+
+ @Test public void genericAppsAndWidgetsWrapperDoesNotHideANonScrollablePager() {
+  AccessibilityNodeInfo root=node("FrameLayout",1080,2400),pager=node("com.android.launcher3.PagedView",1080,2000);
+  when(root.getPackageName()).thenReturn("com.sec.android.app.launcher");
+  when(root.getViewIdResourceName()).thenReturn("com.sec.android.app.launcher:id/apps_and_widgets");
+  when(pager.isScrollable()).thenReturn(false);
+  children(root,pager);
+  NavigationState state=NativeNavigationReader.read(root);
+  assertEquals("node_0_0",state.containerId);assertEquals(NavigationState.Axis.HORIZONTAL,state.axis);
+ }
+
 }

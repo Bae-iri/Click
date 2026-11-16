@@ -56,6 +56,8 @@ def sensitive_node(node):
 
 
 def sanitize_request(request, *, vision_vocabulary_key=None):
+    from ai_agent.runtime.environment import safe_window_context
+    request = replace(request, window_context=safe_window_context(request.window_context))
     nodes = tuple(replace(node,
         text=None if sensitive_node(node) else redact_text(node.text),
         content_description=None if sensitive_node(node) else redact_text(node.content_description),

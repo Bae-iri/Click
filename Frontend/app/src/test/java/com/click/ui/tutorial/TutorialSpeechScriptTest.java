@@ -64,15 +64,16 @@ public class TutorialSpeechScriptTest {
         verify(narrator, never()).speak("화면 제목만 수정한 경우");
     }
 
-    @Test public void requestReviewAndBothReplayButtonsUseTheTutorialScript() {
+    @Test public void requestReviewOffersHeaderEditingAndKeepsFooterReplay() {
         clearInvocations(narrator);
         activity.onTextSubmitted("이 화면은 어떻게 사용해요?");
         String ready = activity.getString(R.string.tutorial_speech_review_ready);
         verify(narrator).speak(ready);
-        find("다시 듣기").performClick();
+        assertEquals(View.GONE, activity.findViewById(R.id.task_flow_replay).getVisibility());
+        assertTrue(activity.findViewById(R.id.task_flow_edit).isShown());
         find("안내 다시 듣기").performClick();
         verify(narrator, times(1)).speak(ready);
-        verify(narrator, times(2)).replay(ready);
+        verify(narrator, times(1)).replay(ready);
         find("안내 시작하기").performClick();
         verify(narrator).speak(activity.getString(R.string.tutorial_speech_running));
     }
@@ -90,9 +91,11 @@ public class TutorialSpeechScriptTest {
 
     @Test public void inputExplainsBothMethodsWithoutRequestTerminology() {
         activity.findViewById(R.id.tutorial_next).performClick();
-        assertNotNull(find("원하시는 방법으로 하고 싶은 작업을 말씀해주세요"));
-        assertNotNull(find("말로도 입력할 수 있고, 글로도 입력할 수 있어요"));
+        assertEquals("클릭 버튼을 눌러보세요", ((TextView) activity.findViewById(R.id.tutorial_title)).getText());
+        assertNotNull(find("꾹 누르면 없앨 수도 있어요."));
         ((ClickOverlayLayout) activity.findViewById(R.id.tutorial_floating_control)).openMenu();
+        assertNotNull(find("말이나 글로 입력할 수 있어요."));
+        assertNotNull(find("원하시는 작업을 말하거나 써주세요"));
         verify(narrator).speak(activity.getString(R.string.tutorial_speech_input));
     }
 
@@ -102,6 +105,7 @@ public class TutorialSpeechScriptTest {
         TutorialFloatingHost host = activity.findViewById(R.id.tutorial_floating_host);
         ClickOverlayLayout control = host.getControl();
         TaskFlowOverlayView panel = (TaskFlowOverlayView) get("reviewView");
+        host.expandReview();
         clearInvocations(narrator);
         for (int i = 0; i < 2; i++) {
             layoutHost(host);
@@ -114,7 +118,7 @@ public class TutorialSpeechScriptTest {
             assertTrue(panel.getX() + panel.getWidth() <= host.getWidth());
             assertTrue(panel.getY() + panel.getHeight() <= control.getY()
                     || panel.getY() >= control.getY() + control.getHeight());
-            if (i == 0) find("진행중이에요!").performClick();
+            if (i == 0) find("설치된 앱 항목을 눌러주세요.").performClick();
             else assertTrue(host.onOpenRequested());
             layoutHost(host);
             assertFalse(panel.isMinimizedProgress());
@@ -134,6 +138,62 @@ public class TutorialSpeechScriptTest {
         host.measure(View.MeasureSpec.makeMeasureSpec(Math.round(340 * density), View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(Math.round(600 * density), View.MeasureSpec.EXACTLY));
         host.layout(0, 0, host.getMeasuredWidth(), host.getMeasuredHeight());
+    }
+
+    @Test public void phoneFillsTheLessonAndFloatingPanelsStayInsideItsScreen() throws Exception {
+        activity.findViewById(R.id.tutorial_next).performClick();
+        ViewGroup page = (ViewGroup) ((ViewGroup) activity.findViewById(android.R.id.content)).getChildAt(0);
+        TutorialFloatingHost host = activity.findViewById(R.id.tutorial_floating_host);
+        ClickOverlayLayout control = host.getControl();
+        View stage = activity.findViewById(R.id.tutorial_phone_stage);
+        float density = activity.getResources().getDisplayMetrics().density;
+        for (int heightDp : new int[]{800, 580}) {
+            for (ClickOverlayLayout.Mode mode : ClickOverlayLayout.Mode.values()) {
+                if (mode == ClickOverlayLayout.Mode.MENU) control.openMenu();
+                else if (mode == ClickOverlayLayout.Mode.VOICE) control.openVoice();
+                else if (mode == ClickOverlayLayout.Mode.TEXT) control.openText();
+                else control.collapse();
+                layoutPage(page, Math.round(340 * density), Math.round(heightDp * density));
+                assertTrue(host.getTop() > 0);
+                assertTrue(host.getBottom() < stage.getHeight());
+                assertTrue(control.getX() >= 0 && control.getY() >= 0);
+                assertTrue(control.getX() + control.getWidth() <= host.getWidth());
+                assertTrue(control.getY() + control.getHeight() <= host.getHeight());
+                android.graphics.Rect phone = boundsIn(page, stage);
+                android.graphics.Rect replay = boundsIn(page, find("안내 다시 듣기"));
+                assertTrue(mode + " at " + heightDp + ": phone=" + phone + ", replay=" + replay,
+                        phone.bottom <= replay.top);
+                assertTrue("Phone should extend to the replay footer", replay.top - phone.bottom <= 16 * density);
+            }
+        }
+        activity.onTextSubmitted("휴대폰 전체 글자 크기 키워줘");
+        find("안내 시작하기").performClick();
+        layoutPage(page, Math.round(340 * density), Math.round(800 * density));
+        assertNotNull(find("클릭이 이렇게 알려드려요!"));
+        assertNotNull(find("자동 모드를 키시면, 클릭이 자동으로 해드려요."));
+        View target = page.findViewWithTag("tutorial_highlight_target");
+        assertTrue(page.findViewWithTag("tutorial_settings_screenshot")
+                instanceof com.click.designpreview.PermissionScreenshotView);
+        assertTrue(target.isShown());
+        TaskFlowOverlayView panel = (TaskFlowOverlayView) get("reviewView");
+        assertTrue(panel.isMinimizedProgress());
+        assertFalse(android.graphics.Rect.intersects(boundsIn(page, target), boundsIn(page, panel)));
+        target.performClick();
+        assertTrue(target.isSelected());
+        assertEquals("설치된 앱, 선택했어요", target.getContentDescription().toString());
+    }
+
+    private void layoutPage(View page, int width, int height) {
+        page.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
+        page.layout(0, 0, width, height);
+    }
+
+    private android.graphics.Rect boundsIn(ViewGroup parent, View view) {
+        android.graphics.Rect bounds = new android.graphics.Rect();
+        view.getDrawingRect(bounds);
+        parent.offsetDescendantRectToMyCoords(view, bounds);
+        return bounds;
     }
 
     @Test public void voiceInstructionsTeachHoldingAndReleasingWithoutAddingAStep() throws Exception {

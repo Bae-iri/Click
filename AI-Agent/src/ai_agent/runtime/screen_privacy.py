@@ -94,18 +94,21 @@ def private_node_ids(nodes):
 
 def assess_screen(nodes, setting, package=None):
     hidden = private_node_ids(nodes)
+    from ai_agent.runtime.environment import native_control_surface
+    surface=native_control_surface(nodes,package)
+    control_scope=surface is not None and (setting is None or setting==surface['setting'])
     def result(status, reason):
         return ScreenAssessment(status, reason, len(hidden))
     if not labels_for(setting):
         return result('unsupported_screen', 'unsupported_scope')
-    if package is not None and package not in PACKAGES:
+    if package is not None and package not in PACKAGES and not control_scope:
         return result('unsupported_screen', 'unsupported_app')
     by_id = {n.node_id: n for n in nodes}
-    recognized = False
+    recognized = control_scope
     for node in nodes:
         if not node.visible_to_user:
             continue
-        if node.package_name not in PACKAGES:
+        if node.package_name not in PACKAGES and not (control_scope and node.package_name==surface['package']):
             return result('unsupported_screen', 'unsupported_app')
         is_input = sensitive_node(node) or node.role in {'text_field', 'text_input'}
         password = any(node.extras.get(k) for k in ('password', 'is_password', 'isPassword'))
@@ -143,9 +146,13 @@ def screen_status(nodes, setting, package=None):
 
 
 def filter_nodes(nodes, setting, *, finite_labels=True):
+    from ai_agent.runtime.environment import native_control_surface
+    surface=native_control_surface(nodes)
+    control_scope=surface is not None and (setting is None or setting==surface['setting'])
     hidden_ids = private_node_ids(nodes)
     result = []
     for node in nodes:
+        if control_scope and node.node_id not in surface['node_ids']:continue
         hidden = (node.node_id in hidden_ids or sensitive_node(node)
             or node.role in {'text_field', 'text_input'} or description(node))
         result.append(replace(node,
@@ -162,11 +169,16 @@ def normalized_labels(setting):
     return frozenset(normalize_text(word) for word in labels_for(setting))
 
 
-def minimize_nodes(nodes, setting):
+def minimize_nodes(nodes, setting, *, raw_nodes=()):
+    from ai_agent.runtime.environment import native_control_surface
+    # Normalization deliberately drops parent links; only original AX evidence can
+    # prove that an unlabeled OS slider belongs to the registered wrapper.
+    surface=native_control_surface(raw_nodes) if raw_nodes else None
+    control_scope=surface is not None and setting==surface['setting']
     allowed = normalized_labels(setting)
     output = []
     for node in nodes:
-        if node.package_name not in PACKAGES or node.structure_role == "description" or description(node):
+        if (node.package_name not in PACKAGES and not (control_scope and node.node_id in surface['node_ids'])) or node.structure_role == "description" or description(node):
             continue
         parts = tuple(dict.fromkeys(part for part in node.label_parts if part in allowed))
         text = node.label if node.label in allowed else " ".join(parts)
