@@ -12,7 +12,8 @@ from app.models.lifecycle import SafetyConfirmation
 def follow_up():
     return {"message": "글자가 아직 작나요, 너무 큰가요? 다른 요청은 새로 입력해 주세요.",
             "choices": [{"id": "too_small", "label": "아직 작아요"},
-                        {"id": "too_large", "label": "너무 커요"}]}
+                        {"id": "too_large", "label": "너무 커요"},
+                        {"id": "other", "label": "다른 도움이 필요해요"}]}
 
 
 def apply(repository, request, graph_reference=None):

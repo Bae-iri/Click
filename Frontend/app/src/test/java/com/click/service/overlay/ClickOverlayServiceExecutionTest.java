@@ -144,6 +144,51 @@ public class ClickOverlayServiceExecutionTest {
         });
     }
 
+    @Test public void otherHelpClearsCurrentTaskAndOpensFreshRequestMenu() throws Exception {
+        com.click.data.remote.VoiceQueueGateway queue = mock(com.click.data.remote.VoiceQueueGateway.class);
+        ClickOverlayLayout input = mock(ClickOverlayLayout.class);
+        set("queueGateway", queue);
+        set("overlayView", input);
+        set("followUp", new JSONObject().put("message", "어떤 도움이 필요한가요?"));
+        set("resultPrompt", new JSONObject().put("id", "old-result"));
+        set("activeVoiceRequestId", "old-request");
+        set("acceptedGoal", goal);
+        doAnswer(call -> {
+            ((com.click.data.remote.VoiceQueueGateway.Callback) call.getArgument(1)).onSuccess(
+                    mock(com.click.data.remote.VoiceQueueGateway.Response.class));
+            return "interrupt-id";
+        }).when(queue).interrupt(any(String.class), any(com.click.data.remote.VoiceQueueGateway.Callback.class));
+
+        Method adjust = ClickOverlayService.class.getDeclaredMethod("sendAdjustment", String.class);
+        adjust.setAccessible(true);
+        adjust.invoke(service, "other");
+
+        assertNull(get("agentSessionId"));
+        assertNull(get("followUp"));
+        assertNull(get("resultPrompt"));
+        assertNull(get("acceptedGoal"));
+        assertNull(get("activeVoiceRequestId"));
+        verify(input).setDraftText("");
+        verify(input, atLeastOnce()).openMenu();
+        verify(queue).interrupt(eq("다른 도움이 필요해요"), any(com.click.data.remote.VoiceQueueGateway.Callback.class));
+        verify(gateway, never()).send(any(), any());
+    }
+
+    @Test public void followUpHidesUnsureAndRoutesOtherHelp() throws Exception {
+        TaskFlowOverlayView.Listener listener = mock(TaskFlowOverlayView.Listener.class);
+        TaskFlowOverlayView panel = new TaskFlowOverlayView(service, listener);
+        panel.followUp(new JSONObject().put("choices", new JSONArray()
+                .put(new JSONObject().put("id", "unsure").put("label", "잘 모르겠어요"))
+                .put(new JSONObject().put("id", "other").put("label", "크기 말고 다른 점이 불편해요"))));
+        java.util.ArrayList<android.view.View> matches = new java.util.ArrayList<>();
+        panel.findViewsWithText(matches, "잘 모르겠어요", android.view.View.FIND_VIEWS_WITH_TEXT);
+        assertTrue(matches.isEmpty());
+        panel.findViewsWithText(matches, "다른 도움이 필요해요", android.view.View.FIND_VIEWS_WITH_TEXT);
+        assertEquals(1, matches.size());
+        matches.get(0).performClick();
+        verify(listener).adjust("other");
+    }
+
     @After public void cleanup() {
         if (accessibility != null) accessibility.close();
         if (snapshots != null) snapshots.close();
