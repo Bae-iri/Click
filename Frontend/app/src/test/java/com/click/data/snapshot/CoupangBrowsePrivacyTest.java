@@ -25,6 +25,22 @@ public class CoupangBrowsePrivacyTest {
     private ScreenSnapshot screen(AccessibilityNodeSnapshot... nodes) {
         return new ScreenSnapshot(PKG,Instant.now().toString(),1080,2400,List.of(nodes),42);
     }
+    @Test public void actualCoupangSearchFieldNeedsBothItsSearchParentAndPublicSearchPage() throws Exception {
+        var privacy=new CoupangBrowsePrivacy(RuntimeEnvironment.getApplication());
+        var bar=node("rds_search_bar",null,false,false);
+        var field=new AccessibilityNodeSnapshot("input",bar.nodeId,true,PKG,"무선 이어폰",null,PKG+":id/edit_text",
+            "android.widget.EditText",null,new int[]{30,25,290,110},true,true,false,false,false,null,42,true,null,null,false);
+        var page=node("search_home_container",null,false,false);
+        JSONObject safe=privacy.filter(screen(bar,field,page));
+        assertEquals("public",safe.getString("status"));
+        assertEquals(CoupangBrowsePrivacy.queryHash("무선 이어폰"),safe.getString("query_hash"));
+        assertFalse(safe.toString().contains("무선 이어폰"));
+        assertEquals("sensitive",privacy.filter(screen(bar,field)).getString("status"));
+        var outside=new AccessibilityNodeSnapshot("unrelated",null,true,PKG,"private-address",null,PKG+":id/edit_text",
+            "android.widget.EditText",null,new int[]{30,25,290,110},true,true,false,false,false,null,42,true,null,null,false);
+        JSONObject blocked=privacy.filter(screen(bar,page,outside));
+        assertEquals("sensitive",blocked.getString("status"));assertFalse(blocked.has("query_hash"));
+    }
     @Test public void searchInputExportsOnlyItsHashAndPublicProductControls() throws Exception {
         var input=node("search_input","무선 이어폰",true,false);
         var view=screen(input,node("search_results","",false,false),node("product_title","무선 이어폰",false,false),

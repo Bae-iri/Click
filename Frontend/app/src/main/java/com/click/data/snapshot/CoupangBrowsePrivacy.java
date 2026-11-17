@@ -34,7 +34,10 @@ public final class CoupangBrowsePrivacy {
         StringBuilder result=new StringBuilder();for(byte b:hash)result.append(String.format(Locale.ROOT,"%02x",b&255));return result.toString();
     }
     public static String captureQueryHash(String pkg,String id,String value,boolean password) {
-        if(password || !policy.optString("package").equals(pkg) || !has("query_resources",resource(id)) || value==null || value.isBlank())return null;
+        // Generic EditText hashes stay local until filter() proves a public search ancestor.
+        if(password || !policy.optString("package").equals(pkg)
+                || !(has("query_resources",resource(id)) || has("contextual_query_resources",resource(id)))
+                || value==null || value.isBlank())return null;
         try { return queryHash(value); }catch(Exception unavailable){return null;}
     }
     private static String publicLabel(String value) {
@@ -62,8 +65,18 @@ public final class CoupangBrowsePrivacy {
             if(has("private_page_resources",name))return blocked(base,"sensitive");
             if(label!=null && has("blocked_titles",label.trim()))return blocked(base,"sensitive");
             boolean query=has("query_resources",name);
+            if(!query && has("contextual_query_resources",name)) {
+                boolean publicPage=false;
+                for(var candidate:screen.nodes)if(candidate.visibleToUser && has("contextual_query_pages",resource(candidate.resourceId)))publicPage=true;
+                Set<String> seen=new HashSet<>();String parent=node.parentId;
+                while(publicPage && parent!=null && seen.add(parent)) {
+                    var ancestor=byId.get(parent);if(ancestor==null)break;
+                    if(contains("blocked_resource_tokens",resource(ancestor.resourceId)))break;
+                    if(has("search_resources",resource(ancestor.resourceId))){query=true;break;}
+                    parent=ancestor.parentId;
+                }
+            }
             if(node.passwordInput() || node.sensitiveInput && !query)return blocked(base,"sensitive");
-            if(query && node.publicBrowseQueryHash!=null)base.put("query_hash",node.publicBrowseQueryHash);
             if(contains("blocked_resource_tokens",name))continue;
             Set<String> parents=new HashSet<>();String parent=node.parentId;boolean hidden=false;
             while(parent!=null && parents.add(parent)) {
@@ -72,6 +85,7 @@ public final class CoupangBrowsePrivacy {
                 parent=ancestor.parentId;
             }
             if(hidden)continue;
+            if(query && node.publicBrowseQueryHash!=null)base.put("query_hash",node.publicBrowseQueryHash);
             if(node.resourceId==null || !node.resourceId.startsWith(screen.packageName+":id/"))continue;
             if(!(has("search_resources",name)||has("product_resources",name)||has("results_resources",name)
                     ||has("detail_resources",name)||has("title_resources",name)))continue;

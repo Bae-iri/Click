@@ -1197,7 +1197,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     public void appEntryRecovery(String appName, Runnable open) {
-        narrationMessage = "‘" + appName + " 열기’를 눌러주세요. 앱 화면에서 이어서 안내할게요.";
+        narrationMessage = "쿠팡".equals(appName)
+                ? "현재 화면에서 쿠팡 아이콘을 확인하지 못했어요. ‘쿠팡 열기’를 누르면 앱에서 이어서 안내할게요."
+                : "‘" + appName + " 열기’를 눌러주세요. 앱 화면에서 이어서 안내할게요.";
         appEntryRecovery(appName, narrationMessage, open, true);
     }
 

@@ -4184,4 +4184,25 @@ public class ClickOverlayServiceExecutionTest {
         verify(panel).failureRecovery(eq("설정 앱을 직접 열어주세요"),contains("열지 못했어요"),isNull(),isNull());
         accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());
     }
+    @Test public void coupangNativeLoadErrorPreemptsGenericHelpAndResumesWhenItClears() throws Exception {
+        prepareGuideResponse(); deliver(1,"highlight","tap",null);
+        set("acceptedGoal",catalog.executableGoal("coupang.order.checkout").toTypedGoalJson());
+        var error=new AccessibilityNodeSnapshot("error",null,true,"com.coupang.mobile",
+            "네트워크 연결이 원활하지 않습니다",null,"com.coupang.mobile:id/error_view_title","android.widget.TextView",null,
+            new int[]{50,600,900,700},false,true,false,false,false,null,42);
+        var retry=new AccessibilityNodeSnapshot("retry",null,true,"com.coupang.mobile",null,null,
+            "com.coupang.mobile:id/error_view_first_button","android.view.ViewGroup",null,
+            new int[]{300,800,700,950},true,true,false,false,false,null,42);
+        currentScreen=new ScreenSnapshot("com.coupang.mobile",Instant.now().toString(),1080,2400,List.of(error,retry),42);
+        int count=requests.size();send(null);
+        assertEquals(count,requests.size());
+        assertNotNull(get("coupangNativeGuide"));
+        verify((TaskFlowOverlayView)get("taskFlowView")).progress(any(),any(),contains("네트워크 연결"),eq(false));
+        send(null);assertEquals(count,requests.size());
+        var cart=new AccessibilityNodeSnapshot("cart",null,true,"com.coupang.mobile","장바구니",null,null,
+            "android.widget.TextView",null,new int[]{20,50,900,140},false,true,false,false,false,null,42);
+        currentScreen=new ScreenSnapshot("com.coupang.mobile",Instant.now().toString(),1080,2400,List.of(cart),42);
+        send(null);assertNull(get("coupangNativeGuide"));assertEquals(count+1,requests.size());
+    }
+
 }
