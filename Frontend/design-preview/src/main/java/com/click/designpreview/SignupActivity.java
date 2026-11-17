@@ -264,15 +264,7 @@ public final class SignupActivity extends Activity {
         scroll.scrollTo(0, 0);
         scroll.post(() -> scroll.scrollTo(0, 0));
         View body = findViewById(R.id.signup_body);
-        body.animate().cancel();
-        if (android.animation.ValueAnimator.areAnimatorsEnabled()) {
-            body.setAlpha(.35f);
-            body.setTranslationY(dp(6));
-            body.animate().alpha(1f).translationY(0f).setDuration(180).start();
-        } else {
-            body.setAlpha(1f);
-            body.setTranslationY(0f);
-        }
+        com.click.ui.common.ClickUiSpeed.reveal(body);
         TextView title = findViewById(accountPage ? R.id.signup_account_title : R.id.signup_profile_title);
         title.announceForAccessibility(title.getText());
     }

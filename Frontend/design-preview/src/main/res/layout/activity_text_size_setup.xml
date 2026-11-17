@@ -26,6 +26,9 @@
             <com.click.designpreview.TextSizeControlView android:id="@+id/text_size_setup_control"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="32dp" />
+            <com.click.designpreview.UiSpeedControlView android:id="@+id/text_size_setup_speed_control"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="20dp" />
         </LinearLayout>
     </ScrollView>
     <com.click.designpreview.OnboardingStartButton android:id="@+id/text_size_setup_continue"

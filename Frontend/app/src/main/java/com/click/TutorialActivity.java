@@ -407,6 +407,7 @@ public final class TutorialActivity extends AppCompatActivity implements Tutoria
     private void updateCopy() {
         if (displayedStep != step) {
             displayedStep = step;
+            com.click.ui.common.ClickUiSpeed.reveal(lesson);
             lessonScroll.post(() -> lessonScroll.scrollTo(0, 0));
         }
         toolbar.findViewWithTag("tutorial_skip").setVisibility(step == COMPLETE ? View.GONE : View.VISIBLE);

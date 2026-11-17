@@ -122,7 +122,8 @@ public final class DesignPreviewActivity extends Activity {
         view.setAlpha(0f);
         view.setTranslationY(8f * getResources().getDisplayMetrics().density);
         return view.animate().alpha(1f).translationY(0f)
-                .setStartDelay(delay).setDuration(480L)
+                .setStartDelay(com.click.ui.common.ClickUiSpeed.duration(this, delay))
+                .setDuration(com.click.ui.common.ClickUiSpeed.duration(this, 480L))
                 .setInterpolator(new DecelerateInterpolator());
     }
 }

@@ -4,5 +4,9 @@
     <item name="text_size_scale" type="id" />
     <item name="text_size_preview" type="id" />
     <item name="text_size_current" type="id" />
+    <item name="ui_speed_scale" type="id" />
+    <item name="ui_speed_current" type="id" />
+    <item name="ui_speed_preview" type="id" />
+    <item name="ui_speed_replay" type="id" />
     <item name="accessibility_help_action" type="id" />
 </resources>
