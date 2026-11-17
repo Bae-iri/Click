@@ -3170,6 +3170,100 @@ public class ClickOverlayServiceExecutionTest {
         enabled.setAccessible(true); assertEquals(false, enabled.invoke(service));
     }
 
+    private void prepareCoupangEntry() throws Exception {
+        prepareGuideResponse(); deliver(1, "highlight", "tap", null);
+        set("acceptedGoal", catalog.executableGoal("coupang.cart.view").toTypedGoalJson());
+        clearInvocations((GuideOverlayView)get("guideOverlayView"), (TaskFlowOverlayView)get("taskFlowView"));
+    }
+
+    private ScreenSnapshot coupangLauncher(String... labels) {
+        List<AccessibilityNodeSnapshot> nodes=new ArrayList<>();
+        for(int i=0;i<labels.length;i++)nodes.add(new AccessibilityNodeSnapshot("icon-"+i,null,true,
+                "com.sec.android.app.launcher",labels[i],null,null,"android.widget.TextView",null,
+                new int[]{100+i*200,300,250+i*200,500},true,true,false,false,false,null,43));
+        return new ScreenSnapshot("com.sec.android.app.launcher",Instant.now().toString(),1080,2400,nodes,43);
+    }
+
+    @Test public void coupangIconOnHomeIsHighlightedLocallyWithoutUploadingOrSearchingForSettings() throws Exception {
+        prepareCoupangEntry(); currentScreen=coupangLauncher("설정","쿠팡");
+        int count=requests.size(); send(null);
+        assertEquals(count,requests.size());
+        verify((GuideOverlayView)get("guideOverlayView")).showTarget(eq(new int[]{300,300,450,500}),eq("tap"),eq(0));
+        verify((TaskFlowOverlayView)get("taskFlowView")).progress(any(),any(),eq("표시한 쿠팡 앱을 눌러주세요."),eq(false));
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+        accessibility.verify(()->ClickAccessibilityService.swipeHomePage(anyBoolean(),anyString(),any()),never());
+        accessibility.verify(()->ClickAccessibilityService.performGuidedTap(any(),any(),any()),never());
+    }
+
+    @Test public void confirmedCoupangRequestFindsItsHomeIconBeforeTheFirstExecutionTurn() throws Exception {
+        goal=catalog.executableGoal("coupang.cart.view").toTypedGoalJson();
+        currentScreen=coupangLauncher("쿠팡");
+        set("windowManager",mock(WindowManager.class));
+        var highlight=mock(GuideOverlayView.class);when(highlight.isAttachedToWindow()).thenReturn(true);
+        set("guideOverlayView",highlight);
+        resolve(); confirm();
+        assertEquals(1,requests.size());
+        assertEquals("resolve_goal",requests.get(0).commandType());
+        assertEquals("coupang.cart.view",((JSONObject)get("acceptedGoal")).getString("goal_type"));
+        assertEquals(false,get("firstTurnSent"));
+        verify(highlight).showTarget(eq(new int[]{100,300,250,500}),eq("tap"),eq(0));
+        currentScreen=new ScreenSnapshot("com.coupang.mobile",Instant.now().toString(),1080,2400,
+                List.of(new AccessibilityNodeSnapshot("cart",null,true,"com.coupang.mobile","장바구니",null,
+                        null,"android.widget.TextView",null,new int[]{100,300,250,500},true,true,false,false,false,null,44)),44);
+        send(null);
+        assertEquals(2,requests.size());
+        assertEquals("coupang.cart.view",requests.get(1).acceptedGoal.getString("goal_type"));
+        assertEquals(RESOLUTION,requests.get(1).goalResolutionId);
+        assertEquals("commerce",requests.get(1).observationSetting);
+    }
+
+    @Test public void missingCoupangIconOffersAppLaunchWithoutUploadingTheLauncher() throws Exception {
+        prepareCoupangEntry(); currentScreen=coupangLauncher("설정","쿠팡이츠");
+        int count=requests.size(); send(null);
+        assertEquals(count,requests.size());
+        verify((TaskFlowOverlayView)get("taskFlowView")).appEntryRecovery(eq("쿠팡"),any());
+        verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),any(),anyInt());
+    }
+
+    @Test public void coupangDuplicateIconsOfferAppLaunchInsteadOfGuessing() throws Exception {
+        prepareCoupangEntry(); currentScreen=coupangLauncher("쿠팡","쿠팡");
+        int count=requests.size(); send(null);
+        assertEquals(count,requests.size());
+        verify((TaskFlowOverlayView)get("taskFlowView")).appEntryRecovery(eq("쿠팡"),any());
+        verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),any(),anyInt());
+    }
+
+    @Test public void coupangIconGuideSurvivesUnchangedHomeAndResumesTheAcceptedGoalAfterAppEntry() throws Exception {
+        prepareCoupangEntry(); currentScreen=coupangLauncher("Coupang, 알림 2개"); send(null);
+        int count=requests.size();
+        currentScreen=coupangLauncher("Coupang, 알림 3개"); send(null);
+        assertEquals(count,requests.size());
+        verify((TaskFlowOverlayView)get("taskFlowView"),times(1)).progress(any(),any(),contains("쿠팡 앱"),eq(false));
+        currentScreen=new ScreenSnapshot("com.coupang.mobile",Instant.now().toString(),1080,2400,
+                List.of(new AccessibilityNodeSnapshot("cart",null,true,"com.coupang.mobile","장바구니",null,
+                        null,"android.widget.TextView",null,new int[]{100,300,250,500},true,true,false,false,false,null,44)),44);
+        send(null);
+        assertEquals(count+1,requests.size());
+        assertEquals("coupang.cart.view",((JSONObject)get("acceptedGoal")).getString("goal_type"));
+        assertSame(currentScreen,requests.get(count).accessibilityTree);
+        assertEquals("commerce",requests.get(count).observationSetting);
+        assertEquals(AgentActionEvents.MANUAL_OVERRIDE,requests.get(count).userActionEvent.getString("action_type"));
+        assertEquals(false,get("appIconGuide"));
+    }
+
+    @Test public void coupangIconFromAnotherWindowOrOutsideScreenCannotBeHighlighted() throws Exception {
+        prepareCoupangEntry();
+        ScreenSnapshot launcher=coupangLauncher("쿠팡");
+        currentScreen=new ScreenSnapshot(launcher.packageName,launcher.capturedAt,1080,2400,launcher.nodes,99);
+        send(null);
+        verify((TaskFlowOverlayView)get("taskFlowView")).appEntryRecovery(eq("쿠팡"),any());
+        clearInvocations((TaskFlowOverlayView)get("taskFlowView"));
+        currentScreen=coupangLauncher("쿠팡"); currentScreen.nodes.get(0).bounds[2]=1200;
+        send(null);
+        verify((TaskFlowOverlayView)get("taskFlowView")).appEntryRecovery(eq("쿠팡"),any());
+        verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),any(),anyInt());
+    }
+
     @Test public void transientTurnFailureRetainsExactActionEvidenceAndWaitsForExplicitRecovery() throws Exception {
         prepareGuideResponse(); deliver(1, "highlight", "drag", "right");
         JSONObject event = new JSONObject().put("event_id", "original-event")

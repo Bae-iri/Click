@@ -163,7 +163,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int targetHelpGeneration = -1;
     private int assistedRecoveryGeneration = -1, recoveryApologyGeneration = -1;
     private ScreenSnapshot targetHelpScreen;
-    private boolean settingsIconGuide;
+    private boolean appIconGuide;
     private WindowManager.LayoutParams taskFlowParams;
     private Runnable resultTimeout;
     private String pendingReplacement;
@@ -2532,8 +2532,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         ScreenSnapshot snapshot = pendingVisionScreen != null ? pendingVisionScreen
                 : ClickAccessibilityService.freshSnapshot();
         if (execution.acceptedGoal() != null && "coupang".equals(execution.acceptedGoal().optString("target_app"))
-                && snapshot != null && !"com.coupang.mobile".equals(snapshot.packageName)
-                && !NavigationRecovery.isHomeScreen(snapshot)) {
+                && snapshot != null && !"com.coupang.mobile".equals(snapshot.packageName)) {
             showCoupangEntryRecovery(); return;
         }
         if (preserveTargetHelp(snapshot)) return;
@@ -3177,16 +3176,49 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if(!hasConfirmedGoal() || execution.acceptedGoal()==null || !"android_settings".equals(execution.acceptedGoal().optString("target_app")))return false;
         AccessibilityNodeSnapshot target=settingsIconTarget(screen);
         if(target==null)return false;
+        showAppIconGuide(screen,target,"설정");
+        return true;
+    }
+
+    private AccessibilityNodeSnapshot coupangIconTarget(ScreenSnapshot screen) {
+        if(screen==null || !NavigationRecovery.isHomeScreen(screen) || screen.activeWindowId==null)return null;
+        AccessibilityNodeSnapshot selected=null;
+        for(AccessibilityNodeSnapshot node:screen.nodes) {
+            if(!node.visibleToUser || !node.enabled || !node.clickable || node.sensitiveInput || node.checkable || node.scrollable
+                    || !screen.packageName.equals(node.packageName) || node.windowId!=screen.activeWindowId
+                    || node.bounds==null || node.bounds.length!=4 || node.bounds[0]<0 || node.bounds[1]<0
+                    || node.bounds[2]>screen.screenWidth || node.bounds[3]>screen.screenHeight
+                    || node.bounds[0]>=node.bounds[2] || node.bounds[1]>=node.bounds[3]
+                    || node.bounds[2]-node.bounds[0]>screen.screenWidth/2
+                    || node.bounds[3]-node.bounds[1]>screen.screenHeight/2)continue;
+            if(!coupangAppLabel(node.text) && !coupangAppLabel(node.contentDescription))continue;
+            if(selected!=null)return null;
+            selected=node;
+        }
+        return selected;
+    }
+
+    private static boolean coupangAppLabel(String label) {
+        if(label==null)return false;
+        String name=label.trim().toLowerCase(java.util.Locale.ROOT);
+        return name.equals("쿠팡") || name.equals("coupang") || name.startsWith("쿠팡,") || name.startsWith("coupang,");
+    }
+
+    private AccessibilityNodeSnapshot appIconTarget(ScreenSnapshot screen) {
+        return execution.acceptedGoal()!=null && "coupang".equals(execution.acceptedGoal().optString("target_app"))
+                ? coupangIconTarget(screen) : settingsIconTarget(screen);
+    }
+
+    private void showAppIconGuide(ScreenSnapshot screen,AccessibilityNodeSnapshot target,String app) {
         ensureTaskFlow();hideConfirmation();stopNarration();guideStepTimer.clear();actionTracker.clear();automationGuard.interrupt();
-        clearTargetHelpWait();targetHelpGeneration=execution.generation();targetHelpScreen=screen;settingsIconGuide=true;
+        clearTargetHelpWait();targetHelpGeneration=execution.generation();targetHelpScreen=screen;appIconGuide=true;
         clearMissingScreenWait();execution.clearObservation();execution.retry();
-        String message="표시한 설정 앱을 눌러주세요.";
+        String message="표시한 "+app+" 앱을 눌러주세요.";
         taskFlowView.progress(initialGoal,null,message,false);taskFlowView.setAutomaticProgress(false);
         showGuideOverlay(target.bounds,"tap",0);nativeGuideScreen=screen;
         placeTaskFlow(target.bounds,false);collapseTaskFlow();
         if(overlayView!=null)overlayView.setRecognizedSpeech(message);
         speak(message);
-        return true;
     }
 
     private boolean isSettingsGoal(String goal) {
@@ -3363,6 +3395,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void showCoupangEntryRecovery() {
+        ScreenSnapshot entryScreen=ClickAccessibilityService.freshSnapshot();
+        if(appIconGuide && preserveTargetHelp(entryScreen))return;
+        AccessibilityNodeSnapshot icon=coupangIconTarget(entryScreen);
+        if(icon!=null) {
+            showAppIconGuide(entryScreen,icon,"쿠팡");
+            return;
+        }
+        clearTargetHelpWait();
         ensureTaskFlow();
         final int generation = execution.generation();
         final String session = execution.sessionId();
@@ -4127,7 +4167,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         targetHelpGeneration = -1;
         recoveryApologyGeneration = -1;
         targetHelpScreen = null;
-        settingsIconGuide = false;
+        appIconGuide = false;
     }
 
     private boolean handleEnvironment(ScreenSnapshot current) {
@@ -4140,7 +4180,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         var kind=scene.kind();
         if(kind==com.click.data.snapshot.ScreenEnvironment.Kind.SELF)return false;
         if(kind==com.click.data.snapshot.ScreenEnvironment.Kind.UNOBSERVABLE)return environmentWait!=null;
-        if(kind==com.click.data.snapshot.ScreenEnvironment.Kind.OTHER_APP
+        if((kind==com.click.data.snapshot.ScreenEnvironment.Kind.OTHER_APP
+                || kind==com.click.data.snapshot.ScreenEnvironment.Kind.HOME
+                || kind==com.click.data.snapshot.ScreenEnvironment.Kind.APP_DRAWER
+                || kind==com.click.data.snapshot.ScreenEnvironment.Kind.LAUNCHER)
                 && "coupang".equals(execution.acceptedGoal().optString("target_app"))
                 && !"com.coupang.mobile".equals(current.packageName)) {
             showCoupangEntryRecovery();return true;
@@ -4380,13 +4423,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         // underneath even while the help card is expanded.
         if (current == null || current.nodes.isEmpty()
                 || getPackageName().equals(current.packageName)) {
-            if(settingsIconGuide)hideGuideOverlay();
+            if(appIconGuide)hideGuideOverlay();
             return true;
         }
         if (targetHelpScreen == null) { targetHelpScreen = current; return true; }
-        boolean wasSettingsIcon=settingsIconGuide;
-        if(wasSettingsIcon) {
-            AccessibilityNodeSnapshot previous=settingsIconTarget(targetHelpScreen),visible=settingsIconTarget(current);
+        boolean wasAppIcon=appIconGuide;
+        if(wasAppIcon) {
+            AccessibilityNodeSnapshot previous=appIconTarget(targetHelpScreen),visible=appIconTarget(current);
             if(previous!=null && visible!=null && java.util.Objects.equals(targetHelpScreen.activeWindowId,current.activeWindowId)
                     && previous.nodeId.equals(visible.nodeId) && java.util.Arrays.equals(previous.bounds,visible.bounds)) {
                 showGuideOverlay(visible.bounds,"tap",0);nativeGuideScreen=current;
@@ -4396,7 +4439,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         } else if (targetHelpScreen.contentFingerprint().equals(current.contentFingerprint())) return true;
         // A real screen change resumes this request and immediately removes the old
         // target message, including while an older server response is still pending.
-        if(!wasSettingsIcon)assistedRecoveryGeneration = execution.generation();
+        if(!wasAppIcon)assistedRecoveryGeneration = execution.generation();
         clearTargetHelpWait();
         stopNarration();
         panelInterruptedNarration = false;
