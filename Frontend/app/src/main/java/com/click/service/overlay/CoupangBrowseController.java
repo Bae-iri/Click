@@ -11,6 +11,7 @@ public final class CoupangBrowseController {
         void present(JSONObject response,ScreenSnapshot submitted);
         void failed(Throwable error,Runnable retry);
         void busy(boolean value);
+        default boolean localGuide(ScreenSnapshot screen) { return false; }
     }
     private final CoupangBrowseGateway gateway;
     private final CoupangBrowsePrivacy privacy;
@@ -25,7 +26,7 @@ public final class CoupangBrowseController {
     }
     public void start(String session,String resolution) {this.session=session;send("start",null,resolution);}
     public void restore(String session,int version) {this.session=session;this.version=version;send("snapshot",null,null);}
-    public void observe(ScreenSnapshot screen) {if(!busy&&!terminal)send("observe",screen,null);}
+    public void observe(ScreenSnapshot screen) {if(!closed&&!busy&&!terminal&&!listener.localGuide(screen))send("observe",screen,null);}
     public void finish() {if(!busy&&!terminal)send("finish",null,null);}
     public boolean terminal(){return terminal;}
     public void screenChanged(ScreenSnapshot current) {

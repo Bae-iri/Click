@@ -164,6 +164,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int assistedRecoveryGeneration = -1, recoveryApologyGeneration = -1;
     private ScreenSnapshot targetHelpScreen;
     private boolean appIconGuide;
+    private com.click.data.snapshot.CoupangScreenGuide coupangNativeGuide;
     private WindowManager.LayoutParams taskFlowParams;
     private Runnable resultTimeout;
     private String pendingReplacement;
@@ -220,9 +221,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (OverlayActions.ACTION_COLLAPSE.equals(intent.getAction()) && overlayView != null) {
                 overlayView.collapse();
             } else if (OverlayActions.ACTION_SNAPSHOT_UPDATED.equals(intent.getAction())) {
+                if(coupangBrowse!=null)coupangBrowse.screenChanged(LatestScreenSnapshot.get());
+                if (showCoupangNativeGuide(LatestScreenSnapshot.get())) return;
                 if (coupangBrowse != null) {
                     ScreenSnapshot current=LatestScreenSnapshot.get();
-                    coupangBrowse.screenChanged(current);
                     if (lastSubmittedScreen==null || current==null || !lastSubmittedScreen.contentFingerprint().equals(current.contentFingerprint())) hideGuideOverlay();
                     return;
                 }
@@ -1107,6 +1109,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             var privacy=new com.click.data.snapshot.CoupangBrowsePrivacy(this);
             coupangBrowse=new CoupangBrowseController(gateway,privacy,new CoupangBrowseController.Listener(){
                 public void busy(boolean value){setTurnInFlight(value);}
+                public boolean localGuide(ScreenSnapshot screen){return showCoupangNativeGuide(screen);}
                 public void failed(Throwable error,Runnable retry){
                     if(closing || coupangBrowse==null || execution.paused())return;
                     hideGuideOverlay();ensureTaskFlow();
@@ -1125,6 +1128,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void showCoupangBrowse(JSONObject response,ScreenSnapshot submitted) {
+        if("IN_PROGRESS".equals(response.optString("status")) && showCoupangNativeGuide(ClickAccessibilityService.freshSnapshot()))return;
+        if(!"IN_PROGRESS".equals(response.optString("status")) && coupangNativeGuide!=null)clearTargetHelpWait();
         hideGuideOverlay();ensureTaskFlow();
         boolean terminal=!"IN_PROGRESS".equals(response.optString("status"));
         String message=response.optString("message");
@@ -2531,6 +2536,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         // Vision consent keeps the observation to which the permission was bound.
         ScreenSnapshot snapshot = pendingVisionScreen != null ? pendingVisionScreen
                 : ClickAccessibilityService.freshSnapshot();
+        if (showCoupangNativeGuide(snapshot)) return;
         if (execution.acceptedGoal() != null && "coupang".equals(execution.acceptedGoal().optString("target_app"))
                 && snapshot != null && !"com.coupang.mobile".equals(snapshot.packageName)) {
             showCoupangEntryRecovery(); return;
@@ -3394,7 +3400,41 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
     }
 
+    private boolean showCoupangNativeGuide(ScreenSnapshot screen) {
+        boolean goal=coupangBrowse!=null || execution.acceptedGoal()!=null
+                && "coupang".equals(execution.acceptedGoal().optString("target_app"));
+        if(!goal || closing || execution.sessionId()==null || execution.paused()
+                || execution.pendingControl()!=null || resultPrompt!=null || followUp!=null)return false;
+        if(coupangBrowse!=null && coupangBrowse.terminal())return false;
+        if(coupangBrowse==null && !hasConfirmedGoal())return false;
+        boolean wasLocal=coupangNativeGuide!=null;
+        if(coupangNativeGuide!=null && waitingForTargetHelp() && preserveTargetHelp(screen))return true;
+        var guide=com.click.data.snapshot.CoupangScreenGuide.identify(screen);
+        if(guide==null) {
+            if(wasLocal && coupangBrowse!=null) {
+                taskFlowView.browsing("쿠팡 화면이 바뀌었어요. 현재 화면 확인을 눌러 이어서 안내받으세요.",false,
+                    ()->{if(coupangBrowse!=null)coupangBrowse.observe(ClickAccessibilityService.freshSnapshot());},
+                    this::openCoupang,()->{if(coupangBrowse!=null)coupangBrowse.finish();});
+                taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=false;placeTaskFlow(null,true);
+                return true;
+            }
+            return false;
+        }
+        ensureTaskFlow();hideConfirmation();stopNarration();guideStepTimer.clear();actionTracker.clear();automationGuard.interrupt();
+        clearTargetHelpWait();targetHelpGeneration=execution.generation();targetHelpScreen=screen;coupangNativeGuide=guide;
+        clearMissingScreenWait();execution.clearObservation();execution.retry();
+        taskFlowView.progress(initialGoal,null,guide.message,false);taskFlowView.setAutomaticProgress(false);
+        if(guide.target!=null) {
+            showGuideOverlay(guide.target.bounds,"tap",0);nativeGuideScreen=screen;
+            placeTaskFlow(guide.target.bounds,false);collapseTaskFlow();
+        } else {hideGuideOverlay();taskFlowCollapsed=false;placeTaskFlow(null,true);}
+        if(overlayView!=null)overlayView.setRecognizedSpeech(guide.message);
+        speak(guide.message);
+        return true;
+    }
+
     private void showCoupangEntryRecovery() {
+        if (showCoupangNativeGuide(ClickAccessibilityService.freshSnapshot())) return;
         ScreenSnapshot entryScreen=ClickAccessibilityService.freshSnapshot();
         if(appIconGuide && preserveTargetHelp(entryScreen))return;
         AccessibilityNodeSnapshot icon=coupangIconTarget(entryScreen);
@@ -3438,6 +3478,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if ("blocked".equals(response.guideCommand.commandType) || "BLOCKED".equals(response.taskStatus)) {
             showStoppedGuide(response); return;
         }
+        if (!"done".equals(response.guideCommand.commandType)
+                && showCoupangNativeGuide(ClickAccessibilityService.freshSnapshot())) return;
+        if ("done".equals(response.guideCommand.commandType) && coupangNativeGuide!=null)clearTargetHelpWait();
         if (waitingForTargetHelp() || execution.paused() || execution.retryRequired()) return;
         if (AgentActionEvents.BACK_NAVIGATED.equals(pendingActionType)
                 || AgentActionEvents.HOME_NAVIGATED.equals(pendingActionType)) return;
@@ -4168,6 +4211,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         recoveryApologyGeneration = -1;
         targetHelpScreen = null;
         appIconGuide = false;
+        coupangNativeGuide = null;
     }
 
     private boolean handleEnvironment(ScreenSnapshot current) {
@@ -4423,12 +4467,22 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         // underneath even while the help card is expanded.
         if (current == null || current.nodes.isEmpty()
                 || getPackageName().equals(current.packageName)) {
-            if(appIconGuide)hideGuideOverlay();
+            if(appIconGuide || coupangNativeGuide!=null)hideGuideOverlay();
             return true;
         }
         if (targetHelpScreen == null) { targetHelpScreen = current; return true; }
         boolean wasAppIcon=appIconGuide;
-        if(wasAppIcon) {
+        boolean wasCoupangNative=coupangNativeGuide!=null;
+        if(wasCoupangNative) {
+            var visible=com.click.data.snapshot.CoupangScreenGuide.identify(current);
+            if(coupangNativeGuide.sameStep(visible)) {
+                if(visible.target!=null) {
+                    showGuideOverlay(visible.target.bounds,"tap",0);nativeGuideScreen=current;
+                }
+                return true;
+            }
+            hideGuideOverlay();
+        } else if(wasAppIcon) {
             AccessibilityNodeSnapshot previous=appIconTarget(targetHelpScreen),visible=appIconTarget(current);
             if(previous!=null && visible!=null && java.util.Objects.equals(targetHelpScreen.activeWindowId,current.activeWindowId)
                     && previous.nodeId.equals(visible.nodeId) && java.util.Arrays.equals(previous.bounds,visible.bounds)) {
@@ -4439,7 +4493,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         } else if (targetHelpScreen.contentFingerprint().equals(current.contentFingerprint())) return true;
         // A real screen change resumes this request and immediately removes the old
         // target message, including while an older server response is still pending.
-        if(!wasAppIcon)assistedRecoveryGeneration = execution.generation();
+        if(!wasAppIcon && !wasCoupangNative)assistedRecoveryGeneration = execution.generation();
         clearTargetHelpWait();
         stopNarration();
         panelInterruptedNarration = false;

@@ -16,6 +16,18 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=34,application=Application.class)
 public class CoupangBrowseControllerTest {
+    @Test public void localGuidanceDoesNotConsumeAModelTurn() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);
+        var listener=mock(CoupangBrowseController.Listener.class);
+        var controller=new CoupangBrowseController(gateway,new CoupangBrowsePrivacy(RuntimeEnvironment.getApplication()),listener);
+        controller.start("session","prepared");
+        var callback=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        verify(gateway).send(any(),callback.capture());
+        callback.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+        when(listener.localGuide(null)).thenReturn(true);
+        controller.observe(null);
+        verify(gateway,times(1)).send(any(),any());
+    }
     @Test public void oneExplicitRequestAndNoLatePresentationAfterStop() throws Exception {
         var gateway=mock(CoupangBrowseGateway.class);
         var listener=mock(CoupangBrowseController.Listener.class);

@@ -27,6 +27,7 @@ public final class SettingsScreenPrivacy {
     private final VisionPrivacy vocabulary;
     private final Set<String> settings, launchers, blockedTitles, descriptions, privateResources, privateRegions, emptySearch, roles;
     private final Set<String> commerce, commerceLabels, commercePrivate;
+    private final JSONObject commerceAliases, commerceResources;
 
     public SettingsScreenPrivacy(VisionPrivacy vocabulary, JSONObject policy) throws JSONException {
         if (policy.getInt("version") != 1) throw new JSONException("Unsupported screen policy");
@@ -43,6 +44,8 @@ public final class SettingsScreenPrivacy {
         commerce = strings(policy.optJSONArray("commerce_packages") == null ? new JSONArray() : policy.getJSONArray("commerce_packages"));
         commerceLabels = strings(policy.optJSONArray("commerce_labels") == null ? new JSONArray() : policy.getJSONArray("commerce_labels"));
         commercePrivate = strings(policy.optJSONArray("commerce_private_resource_tokens") == null ? new JSONArray() : policy.getJSONArray("commerce_private_resource_tokens"));
+        commerceAliases=policy.optJSONObject("commerce_label_aliases")==null?new JSONObject():policy.getJSONObject("commerce_label_aliases");
+        commerceResources=policy.optJSONObject("commerce_resource_labels")==null?new JSONObject():policy.getJSONObject("commerce_resource_labels");
     }
 
     public static SettingsScreenPrivacy load(InputStream vocabulary, InputStream policy) throws IOException, JSONException {
@@ -125,6 +128,10 @@ public final class SettingsScreenPrivacy {
             boolean hidden = hiddenRegions.contains(node.getString("node_id"));
             String text = sensitive || description || hidden ? null : approved(node.optString("text", null), pkg, setting);
             String content = sensitive || description || hidden ? null : approved(node.optString("content_description", null), pkg, setting);
+            if(commerceScope && commerce.contains(pkg) && !sensitive && !description && !hidden && text==null && content==null) {
+                String label=commerceResources.optString(resource.substring(resource.lastIndexOf('/')+1),null);
+                if(label!=null && commerceLabels.contains(label) && node.optBoolean("clickable"))content=label;
+            }
             recognized |= text != null || content != null;
             if (description) continue;
             JSONObject safe = new JSONObject();
@@ -303,6 +310,7 @@ public final class SettingsScreenPrivacy {
             if (value == null) return null;
             String text = normalize(value);
             if (launchers.contains(pkg)) return "쿠팡".equals(text) || "coupang".equals(text) ? text : null;
+            text=commerceAliases.optString(text,text);
             return commerce.contains(pkg) && commerceLabels.contains(text) ? text : null;
         }
         String text = vocabulary.exportSettingsLabel(value);

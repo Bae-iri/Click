@@ -210,6 +210,15 @@
     "recent_keyword",
     "review_content",
     "inquiry_content",
-    "delivery_memo"
-  ]
+    "delivery_memo",
+    "search_home_container"
+  ],
+  "commerce_label_aliases": {
+    "쿠팡 홈": "홈",
+    "전체 카테고리": "카테고리",
+    "뒤로가기": "뒤로"
+  },
+  "commerce_resource_labels": {
+    "rds_search_bar": "상품 검색"
+  }
 }

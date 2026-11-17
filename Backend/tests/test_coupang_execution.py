@@ -80,6 +80,21 @@ def node(id, text, clickable=False, index=0, **kwargs):
         bounds_in_screen=(20, 40 + index * 200, 1000, 160 + index * 200), **kwargs)
 
 
+def test_actual_native_navigation_aliases_and_search_resource_are_read_without_queries():
+    nodes = [node('home', '', True, content_description='쿠팡 홈'),
+        node('category', '', True, 1, content_description='전체 카테고리'),
+        node('search', '', True, 2, resource_id=PKG + ':id/rds_search_bar'),
+        node('private', '쿠팡 홈 개인 메모', True, 3),
+        node('input', 'private-query', True, 4, class_name='android.widget.EditText')]
+    safe, result = filter_observation(nodes, PKG)
+    assert result.status is None
+    assert safe[0].content_description == '홈'
+    assert safe[1].content_description == '카테고리'
+    assert safe[2].content_description == '상품 검색'
+    assert safe[2].resource_id == nodes[2].resource_id
+    assert safe[3].text is None and safe[4].text is None and not safe[4].clickable
+
+
 def goal(suffix):
     definition = GRAPHS['coupang.' + suffix].definition
     return TypedGoal(definition.goal_type, 'coupang', definition.task_type,

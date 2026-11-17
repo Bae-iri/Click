@@ -15,6 +15,7 @@ def approved(value):
     if not isinstance(value, str):
         return None
     value = ' '.join(value.strip().lower().split())
+    value = POLICY.get('commerce_label_aliases', {}).get(value, value)
     return value if value in LABELS else None
 
 
@@ -44,6 +45,8 @@ def filter_observation(nodes, package=None):
             or node.role in {'text_field', 'text_input'})
         text = None if private else approved(node.text)
         content = None if private else approved(node.content_description)
+        if not private and node.package_name in PACKAGES and node.clickable and text is None and content is None:
+            content = approved(POLICY.get('commerce_resource_labels', {}).get((node.resource_id or '').rsplit('/', 1)[-1]))
         if node.package_name in LAUNCHERS:
             text = text if text in {'쿠팡', 'coupang'} else None
             content = content if content in {'쿠팡', 'coupang'} else None
