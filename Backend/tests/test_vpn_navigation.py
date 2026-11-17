@@ -1,4 +1,5 @@
 """VPN navigation with controlled Jev responses and native Samsung menu rows."""
+from tests.jev_answers import with_screen_judgments
 from dataclasses import replace
 
 import httpx
@@ -37,9 +38,9 @@ def answer(payload, transition, confidence=0.96):
     criteria = payload['questions']['screen']['criteria']
     choice = next(key for key, candidate in criteria.items()
         if isinstance(candidate, dict) and candidate['transition'] == transition)
-    return httpx.Response(200, json={'model': payload['model'], 'answers': {'screen': {
+    return httpx.Response(200, json=with_screen_judgments(payload, {'model': payload['model'], 'answers': {'screen': {
         'type': 'choice', 'choice': choice, 'confidence': confidence,
-        'probabilities': {key: float(key == choice) for key in criteria}}}})
+        'probabilities': {key: float(key == choice) for key in criteria}}}}))
 
 
 @pytest.mark.parametrize('action', ['connect', 'disconnect'])

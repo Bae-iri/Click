@@ -4,6 +4,7 @@ Rule matches are evidence, not permission to replace an abstaining provider.
 Only an already accepted selection can be retained on an unchanged observation.
 """
 from dataclasses import dataclass, replace
+from collections import Counter
 from hashlib import sha256
 import json
 
@@ -71,12 +72,28 @@ def recovery_scope(snapshot):
     return "selection:" + snapshot.state_id
 
 
-def selection_fingerprint(snapshot, raw_nodes, screen_bounds, exclusions):
-    """Exclude timestamps/observation IDs; include changes to candidate eligibility."""
-    evidence = [(n.node_id, n.parent_id, n.visible_to_user, n.enabled, n.clickable,
-                 n.scrollable, n.resource_id, n.window_id, n.bounds_in_screen) for n in raw_nodes]
-    return sha256(json.dumps([snapshot.fingerprint, sorted(evidence, key=lambda n: n[0]),
-        screen_bounds, exclusions], sort_keys=True).encode()).hexdigest()
+def selection_fingerprint(snapshot, nodes, screen_bounds, exclusions):
+    """Retry only on new semantic evidence, not layout or generated node IDs.
+
+    An accepted guide still requires exact native revalidation in _retained_match.
+    Moving it invalidates that guide but cannot answer a model's earlier ambiguity.
+    """
+    evidence = []
+    for node in nodes:
+        bounds = node.bounds
+        visible = bool(bounds and bounds[2] > bounds[0] and bounds[3] > bounds[1])
+        if visible and screen_bounds:
+            x, y = (bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2
+            visible = screen_bounds[0] <= x < screen_bounds[2] and screen_bounds[1] <= y < screen_bounds[3]
+        evidence.append((target_key(node), node.label, node.label_parts, node.structure_role,
+            node.enabled, node.actionable, node.clickable, node.scrollable, visible,
+            node.value, node.range_min, node.range_max, node.checked, node.selected,
+            node.checkable, node.source_confidence))
+    # Fixing mixed windows changes eligibility; merely renumbering them does not.
+    windows = sorted(Counter(node.window_id for node in nodes).values())
+    return "v2:" + sha256(json.dumps([recovery_scope(snapshot),
+        sorted(evidence, key=lambda item: json.dumps(item, sort_keys=True)), windows, exclusions],
+        sort_keys=True).encode()).hexdigest()
 
 
 def selection_binding(match, nodes, diagnostics):
@@ -148,9 +165,11 @@ def decide_primary(*, resolver, request, session, snapshot, nodes, raw_nodes, gr
         return PrimaryDecision(None, info)
 
     recovery = session.recovery_state if session else {}
-    fingerprint = selection_fingerprint(snapshot, raw_nodes, screen_bounds, exclusions)
+    fingerprint = selection_fingerprint(snapshot, nodes, screen_bounds, exclusions)
     previous_failure = recovery.get("failure")
-    changed = recovery.get("selection_fingerprint") != fingerprint
+    previous_fingerprint = recovery.get("selection_fingerprint", "")
+    changed = (isinstance(previous_fingerprint, str) and previous_fingerprint.startswith("v2:")
+               and previous_fingerprint != fingerprint)
     if recovery.get("waiting_for_user") and (not previous_failure
             or previous_failure.get("required_change") in EXTERNAL_CHANGES or not changed):
         info.update(recovery.get("primary_diagnostics", {}), called=False, paused=True)
