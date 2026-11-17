@@ -1110,6 +1110,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             coupangBrowse=new CoupangBrowseController(gateway,privacy,new CoupangBrowseController.Listener(){
                 public void busy(boolean value){setTurnInFlight(value);}
                 public boolean localGuide(ScreenSnapshot screen){return showCoupangNativeGuide(screen);}
+                public boolean canObserve(){return !closing && !execution.paused() && execution.pendingControl()==null;}
                 public void failed(Throwable error,Runnable retry){
                     if(closing || coupangBrowse==null || execution.paused())return;
                     hideGuideOverlay();ensureTaskFlow();
@@ -1124,6 +1125,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             execution.setStarted(true);execution.clearObservation();
             if(restoring)coupangBrowse.restore(execution.sessionId(),version);
             else coupangBrowse.start(execution.sessionId(),resolution);
+            coupangBrowse.screenChanged(ClickAccessibilityService.freshSnapshot());
         }catch(Exception failure){showQueueError(failure);}
     }
 
@@ -3434,6 +3436,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void showCoupangEntryRecovery() {
+        showCoupangEntryRecovery(true);
+    }
+
+    private void showCoupangEntryRecovery(boolean searchPages) {
         if (showCoupangNativeGuide(ClickAccessibilityService.freshSnapshot())) return;
         ScreenSnapshot entryScreen=ClickAccessibilityService.freshSnapshot();
         if(appIconGuide && preserveTargetHelp(entryScreen))return;
@@ -3441,6 +3447,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if(icon!=null) {
             showAppIconGuide(entryScreen,icon,"쿠팡");
             return;
+        }
+        if (searchPages && hasConfirmedGoal() && NavigationRecovery.isHomeScreen(entryScreen)) {
+            if (scrollSearchGeneration == execution.generation()) return;
+            execution.retry();
+            if (startAutomaticHomeSearch(entryScreen)) return;
         }
         clearTargetHelpWait();
         ensureTaskFlow();
@@ -4730,7 +4741,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         AutomaticScrollSearch.Plan plan = homeScrollSearch.plan(execution.sessionId() + ":" + execution.episodeId() + ":" + expected.packageName, frame);
         if (plan.status == AutomaticScrollSearch.Status.FINISHED) {
             hideGuideOverlay();hideConfirmation();
-            showSettingsEntryRecovery();
+            if (execution.acceptedGoal()!=null && "coupang".equals(execution.acceptedGoal().optString("target_app")))
+                showCoupangEntryRecovery(false);
+            else showSettingsEntryRecovery();
             return true;
         }
         boolean forward = plan.forward;
@@ -4738,7 +4751,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         final int token = ++homeSearchToken;
         scrollSearchGeneration = generation;
         ensureTaskFlow();
-        taskFlowView.waitingProgress("설정 앱을 찾기 위해 화면을 넘겨 보고 있어요.");
+        String app = execution.acceptedGoal()!=null && "coupang".equals(execution.acceptedGoal().optString("target_app")) ? "쿠팡" : "설정";
+        taskFlowView.waitingProgress(app + " 앱을 찾기 위해 화면을 넘겨 보고 있어요.");
         taskFlowView.setAutomaticProgress(automaticTouchEnabled());
         collapseTaskFlow();
         speechHandler.postDelayed(() -> {
@@ -4753,7 +4767,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             boolean searchable = current != null && NavigationRecovery.isHomeScreen(current)
                     && expected.packageName.equals(current.packageName)
                     && java.util.Objects.equals(expected.activeWindowId, current.activeWindowId)
-                    && !current.nodes.isEmpty() && !hasSettingsTarget(current);
+                    && !current.nodes.isEmpty() && appIconTarget(current)==null;
             boolean moved = plan.status == AutomaticScrollSearch.Status.MOVE && searchable && ClickAccessibilityService.swipeHomePage(
                     forward, expected.packageName, expected.activeWindowId);
             // A rejected/unchanged dispatch is observed again before deciding it is an endpoint.

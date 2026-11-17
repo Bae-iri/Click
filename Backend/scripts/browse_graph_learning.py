@@ -18,6 +18,7 @@ from ai_agent.graph_proposal.contracts import fingerprint
 from ai_agent.graph_proposal.proposals.browse_graph import (
     VERSION, GRAPH_SCHEMA, IncompleteBrowseTrace, generate_browse_graph,
 )
+from ai_agent.graph_proposal.proposals.browse_repairs import VERSION as REPAIR_VERSION, propose_repairs
 from app.models.agent_session import AgentSession
 from app.models.graph_proposal import BROWSE_GRAPH_CONSUMER, GraphProposal
 from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
@@ -38,7 +39,7 @@ class BrowseGraphLearningService:
             users = UserRepository(db)
             users.lock_user(user_id)  # Serializes with consent, deletion and other learners.
             session = db.get(AgentSession, session_id)
-            if (session is None or session.user_id != user_id or session.status != 'COMPLETED'
+            if (session is None or session.user_id != user_id or session.status not in {'IN_PROGRESS','COMPLETED','BLOCKED','CANCELLED'}
                     or (session.workflow or {}).get('version') != POLICY['version']):
                 return {'status': 'INELIGIBLE'}
             consent = users.latest_consent(user_id, 'model_training')
@@ -49,12 +50,12 @@ class BrowseGraphLearningService:
             # A missing/expired/pre-grant prefix cannot become a claimed full route.
             events = list(db.scalars(select(RuntimeEvent).where(RuntimeEvent.session_id == session_id,
                 RuntimeEvent.user_id == user_id, RuntimeEvent.kind == 'browse')
-                .order_by(RuntimeEvent.sequence).limit(POLICY['max_turns'] + 1)))
-            if (not events or len(events) > POLICY['max_turns']
+                .order_by(RuntimeEvent.sequence).limit(POLICY['max_turns'] + 2)))
+            if (not events or len(events) > POLICY['max_turns'] + 1
                     or any(e.expires_at <= now or e.created_at < granted for e in events)):
                 return {'status': 'INELIGIBLE'}
             anchor = events[-1]
-            input_hash = fingerprint({'generator': VERSION, 'consent': consent.id,
+            input_hash = fingerprint({'generator': VERSION, 'repairs': REPAIR_VERSION, 'consent': consent.id,
                 'events': [{'id': e.id, 'payload': e.payload} for e in events]})
             receipt = db.scalar(select(RuntimeEventConsumption).where(
                 RuntimeEventConsumption.consumer == BROWSE_GRAPH_CONSUMER,
@@ -74,6 +75,12 @@ class BrowseGraphLearningService:
             db.flush()
             records = [{'event_id': e.id, 'sequence': e.sequence, 'evidence': e.payload.get('browse', {})}
                        for e in events]
+            try:
+                repairs = propose_repairs(records, POLICY)
+            except ValueError:
+                repairs = None
+            if repairs is not None:
+                result.update(repairs=repairs, repairs_hash=fingerprint(repairs))
             try:
                 body = generate_browse_graph(records, POLICY)
             except IncompleteBrowseTrace as error:
@@ -95,7 +102,8 @@ class BrowseGraphLearningService:
                     goal_type=body['definition']['goal_type'], requires_human_review=True)
             receipt.result = dict(result)
             db.commit()
-            return {k: result[k] for k in ('status', 'proposal_id', 'reason', 'graph_hash') if k in result}
+            return {**{k: result[k] for k in ('status', 'proposal_id', 'reason', 'graph_hash') if k in result},
+                'repair_candidates': len(repairs['advice']) + len(repairs['unconfirmed_routes']) if repairs else 0}
 
     def process(self, *, limit=20, now=None):
         if type(limit) is not int or not 1 <= limit <= 1000:
@@ -120,18 +128,19 @@ class BrowseGraphLearningService:
                 .outerjoin(RuntimeEventConsumption, and_(RuntimeEventConsumption.event_id == RuntimeEvent.id,
                     RuntimeEventConsumption.consumer == BROWSE_GRAPH_CONSUMER))
                 .where(RuntimeEvent.kind == 'browse', RuntimeEvent.expires_at > now,
-                    AgentSession.status == 'COMPLETED', Consent.consented.is_(True),
+                    AgentSession.status.in_(['IN_PROGRESS','COMPLETED','BLOCKED','CANCELLED']), Consent.consented.is_(True),
                     latest.c.first_sequence == 1, latest.c.expires_at > now,
                     latest.c.first_created_at >= cast(grant_time, Float), RuntimeEventConsumption.id.is_(None))
                 .order_by(RuntimeEvent.created_at, RuntimeEvent.id).limit(limit + 1)))
         summary = {'created': 0, 'needs_data': 0, 'unchanged': 0, 'ineligible': 0, 'errors': 0,
-                   'has_more': len(pending) > limit}
+                   'repair_candidates': 0, 'has_more': len(pending) > limit}
         for session_id, user_id in pending[:limit]:
             try:
                 result = self.learn_session(session_id, user_id, now=now)
                 key = {'DRAFT_CREATED': 'created', 'NEEDS_DATA': 'needs_data',
                        'UNCHANGED': 'unchanged', 'INELIGIBLE': 'ineligible'}[result['status']]
                 summary[key] += 1
+                summary['repair_candidates'] += result.get('repair_candidates', 0)
             except UserNotFoundError:
                 summary['ineligible'] += 1
             except Exception as error:
@@ -139,6 +148,33 @@ class BrowseGraphLearningService:
                 log.warning('AI2 browse draft generation failed (%s)', type(error).__name__)
                 summary['errors'] += 1
         return summary
+
+    def list_improvements(self, *, limit=100, now=None):
+        if type(limit) is not int or not 1 <= limit <= 1000:
+            raise ValueError('limit must be between 1 and 1000')
+        now = int(self.clock()) if now is None else now
+        with self.factory() as db:
+            latest = select(RuntimeEvent.session_id, func.max(RuntimeEvent.sequence).label('seq')).where(
+                RuntimeEvent.kind == 'browse').group_by(RuntimeEvent.session_id).subquery()
+            rows = db.execute(select(RuntimeEventConsumption, RuntimeEvent)
+                .join(RuntimeEvent, RuntimeEventConsumption.event_id == RuntimeEvent.id)
+                .join(latest, and_(latest.c.session_id == RuntimeEvent.session_id, latest.c.seq == RuntimeEvent.sequence))
+                .where(RuntimeEventConsumption.consumer == BROWSE_GRAPH_CONSUMER,
+                    RuntimeEventConsumption.expires_at > now, RuntimeEvent.expires_at > now)
+                .order_by(RuntimeEventConsumption.consumed_at.desc(), RuntimeEventConsumption.id).limit(limit)).all()
+            results = []
+            for receipt, event in rows:
+                repair = receipt.result.get('repairs')
+                consent = UserRepository(db).latest_consent(event.user_id, 'model_training')
+                if (not consent or not consent.consented
+                        or event.created_at < consent.recorded_at.replace(tzinfo=timezone.utc).timestamp()
+                        or not repair or receipt.result.get('repairs_hash') != fingerprint(repair)
+                        or not (repair.get('advice') or repair.get('unconfirmed_routes'))):
+                    continue
+                results.append({'candidate_id': receipt.id, **repair,
+                    'updated_at': receipt.consumed_at, 'expires_at': receipt.expires_at,
+                    'independent_device_validation': 'NOT_ASSESSED'})
+            return results
 
     def list_drafts(self, *, limit=100, now=None):
         """Operator metadata only; no user/session IDs or stored payload export."""

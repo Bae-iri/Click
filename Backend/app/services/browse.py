@@ -11,15 +11,16 @@ from app.repositories.runtime_events import append
 from app.schemas.browse import BrowseGoal, BrowseResponse
 from app.services import browse_policy as policy
 from app.services.browse_jev import JevBrowseSelector
+from app.services.browse_route_hints import BrowseRouteHints
 
 CODE_HASH = policy.digest(''.join(Path(__file__).with_name(name).read_text(encoding='utf-8')
-    for name in ('browse.py','browse_policy.py','browse_jev.py')))
+    for name in ('browse.py','browse_policy.py','browse_jev.py','browse_route_hints.py')))
 
 
 class BrowseService:
     def __init__(self, factory, sessions, selector=None):
         self.factory, self.sessions = factory, sessions
-        self.selector = selector or JevBrowseSelector()
+        self.selector = selector or JevBrowseSelector(routes=BrowseRouteHints(factory))
 
     def handle(self, request, user_id):
         now = int(self.sessions.clock())
@@ -110,10 +111,12 @@ class BrowseService:
         state = deepcopy(state)
         step = state.get('steps',0)+1
         evidence = {'schema_version':'browse-event.v1','policy_version':policy.VERSION,
+            'step': step, 'command': request.command, 'execution_mode': 'guided', 'action_actor': 'user',
             'code_hash':CODE_HASH,
             'policy_hash':policy.digest(json.dumps(policy.POLICY,sort_keys=True)),
             'goal_type':state['goal']['goal_type'],'page':'unknown','outcome':'in_progress',
-            'candidate_count':0,'called':False,'provider_latency_ms':0,'action_correlated':False}
+            'candidate_count':0,'called':False,'provider_latency_ms':0,'action_correlated':False,
+            'reason':'entry_required'}
         result = BrowseResponse(request_id=request.request_id,session_id=request.session_id,
             session_version=request.expected_version+1,status='IN_PROGRESS',outcome='in_progress',step=step,
             message='쿠팡을 열고 현재 화면 확인을 눌러주세요.')
@@ -127,8 +130,10 @@ class BrowseService:
         else:
             screen = policy.sanitize(request.screen,now*1000)
             if request.screen and request.screen.status=='sensitive':
+                evidence['reason'] = 'sensitive_screen'
                 result.status,result.outcome,result.message = 'BLOCKED','blocked','개인정보나 주문·결제 화면에서는 탐색 안내를 멈춰요.'
             elif request.screen and screen is None:
+                evidence['reason'] = 'outside_app' if request.screen.status == 'outside_app' else 'unrecognized_screen'
                 result.message = '쿠팡의 공개 상품 화면을 열고 현재 화면 확인을 눌러주세요.'
             elif screen:
                 self.observe(request,state,pending,screen,now,result,evidence)
@@ -143,36 +148,47 @@ class BrowseService:
         evidence['observation_hash'] = fingerprint
         state['same_screen'] = state.get('same_screen',0)+1 if state.get('screen')==fingerprint else 1
         state['screen'] = fingerprint
-        correlated = bool(pending and request.action and request.action.guide_id==pending['guide_id']
+        attempted = bool(pending and request.action and request.action.guide_id==pending['guide_id']
             and request.action.observation_id==pending['observation_id'] and request.action.node_id==pending['node_id']
             and pending['captured_at_ms']<=request.action.occurred_at_ms<=screen.captured_at_ms
-            and request.action.occurred_at_ms<=now*1000+5000 and fingerprint!=pending['before_hash'])
+            and request.action.occurred_at_ms<=now*1000+5000)
+        correlated = attempted and fingerprint!=pending['before_hash']
+        if attempted:
+            evidence.update(action_attempted=True, attempt_hash=policy.digest(pending['guide_id']),
+                attempted_action=pending['kind'], attempted_resource=pending['resource'])
         evidence['action_correlated'] = correlated
         if correlated:
-            evidence.update(before_hash=pending['before_hash'],action_kind=pending['kind'],resource=pending['resource'])
+            evidence.update(before_hash=pending['before_hash'],action_kind=pending['kind'],resource=pending['resource'],
+                before_page=pending.get('page', 'unknown'))
         same_query = screen.query_hash==policy.query_hash(state['goal']['query'])
         search_success = state['goal']['goal_type'].endswith('search') and kind=='results' and same_query and any(
             policy.node_kind(n)=='product' for n in screen.nodes)
         titles = [policy.query_hash(n.label) for n in screen.nodes if policy.resource(n.resource_id) in policy.POLICY['title_resources'] and n.label]
         detail_success = kind=='detail' and correlated and pending['kind']=='product' and pending['label_hash'] in titles
         if search_success or detail_success:
+            evidence['reason'] = 'verified_navigation'
             result.status,result.outcome = 'COMPLETED','verified_navigation'
             result.message = '검색한 상품 목록을 확인했어요.' if search_success else '선택한 상품의 상세 화면을 확인했어요.'
             return
         if state['same_screen']>policy.POLICY['max_same_screen']:
+            evidence['reason'] = 'repeated_screen'
             result.outcome,result.message = 'unknown','같은 화면에서 진행을 확인하지 못했어요. 직접 이동한 뒤 다시 확인해 주세요.'
             return
         candidates = [(policy.node_kind(n),n) for n in screen.nodes if policy.node_kind(n)
             and (n.clickable or policy.node_kind(n)=='scroll')]
         candidates = [(k,n) for k,n in candidates if k!='product' or kind=='results' and same_query]
         chosen = None
+        evidence['candidate_count'] = len(candidates)
+        evidence['reason'] = 'no_candidates'
         if candidates:
             chosen,diagnostics = self.selector.choose(state['goal'],screen,candidates,state.get('history',[]))
-            evidence.update({k:v for k,v in diagnostics.items() if k in {'called','model','status','confidence','candidate_count','provider_latency_ms'}})
+            evidence.update({k:v for k,v in diagnostics.items() if k in {'called','model','status','confidence','candidate_count','provider_latency_ms','route_hint_count'}})
+            evidence['reason'] = diagnostics.get('status', 'selector_unavailable')
         if not chosen:
             result.outcome,result.message = 'unknown','안전하게 안내할 상품이나 검색창을 확인하지 못했어요. 직접 이동한 뒤 다시 확인해 주세요.'
             return
         action,node = chosen
+        evidence.update(selected_action=action, selected_resource=policy.resource(node.resource_id))
         result.guide_id,result.observation_id = str(uuid4()),screen.observation_id
         result.target_node_id,result.target_bounds,result.action_kind = node.node_id,node.bounds,action
         result.message = {'search':f'검색창을 누르고 “{state["goal"]["query"]}”를 직접 입력해 검색한 뒤 현재 화면 확인을 눌러주세요.',
@@ -180,5 +196,6 @@ class BrowseService:
             'scroll':'상품 목록을 직접 아래로 스크롤한 뒤 현재 화면 확인을 눌러주세요.'}[action]
         state['pending'] = {'guide_id':result.guide_id,'observation_id':screen.observation_id,'node_id':node.node_id,
             'captured_at_ms':screen.captured_at_ms,'before_hash':fingerprint,'kind':action,
+            'page': kind,
             'resource':policy.resource(node.resource_id),'label_hash':policy.query_hash(node.label)}
         state['history'] = (state.get('history',[])+[{'page':kind,'action':action}])[-12:]

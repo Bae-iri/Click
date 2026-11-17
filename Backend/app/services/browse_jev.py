@@ -1,6 +1,7 @@
 """Jev chooses a public browsing affordance; it cannot invent actions, text or coordinates."""
 import json
 import math
+import time
 from time import monotonic
 import httpx
 
@@ -10,6 +11,10 @@ from app.services.browse_policy import resource
 
 
 class JevBrowseSelector(JevGoalClassifier):
+    def __init__(self, sender=None, routes=None):
+        super().__init__(sender)
+        self.routes = routes
+
     def choose(self, goal, screen, candidates, history):
         started = None
         diagnostics = {'called': False, 'status': 'unavailable', 'candidate_count': len(candidates)}
@@ -28,6 +33,17 @@ class JevBrowseSelector(JevGoalClassifier):
                     'Search entry is manual; do not generate text or coordinates. Choose a product only when it matches '
                     'the requested product; otherwise choose scroll or insufficient. Never purchase, add to cart, '
                     'select options, sign in, change an account, or claim task completion.')}}}
+            if self.routes is not None:
+                hints = self.routes.get(goal, screen, candidates, int(time.time()))
+                if hints:
+                    payload['state']['observed_route_hints'] = hints
+                    diagnostics['route_hint_count'] = len(hints)
+                    payload['questions']['browse']['instructions'] += (
+                        ' AI2 route hints summarize previously observed transitions, not approved routes. '
+                        'Use them only when the current screen and goal agree. Current candidates remain '
+                        'the only choices; hints never establish target identity or completion. '
+                        'Repair advice may request new observation before repeating an unchanged action. '
+                        'An unconfirmed tap is uncertain evidence, not proof the route failed.')
             if len(json.dumps(payload, ensure_ascii=False).encode()) > 65536:
                 return None, diagnostics
             diagnostics['called'] = True

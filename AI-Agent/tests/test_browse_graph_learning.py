@@ -12,6 +12,17 @@ from ai_agent.graph_proposal.proposals.browse_graph import (
 POLICY = json.loads((Path(__file__).parents[1] / 'goal_catalog/coupang_browse_policy.json').read_text(encoding='utf-8'))
 
 
+def test_browse_assessment_distinguishes_missing_candidates_from_jev_abstention():
+    from ai_agent.graph_proposal.analysis.browse import assess_sessions
+    base = {'schema_version': 'browse-event.v1', 'page': 'search', 'outcome': 'unknown'}
+    result = assess_sessions([[{**base, 'reason': 'no_candidates'},
+        {**base, 'reason': 'abstained', 'called': True, 'provider_latency_ms': 12,
+         'route_hint_count': 1}]])
+    assert result['route_blockers'] == {'no_candidates': 1, 'abstained': 1}
+    assert result['ai2_hint_steps'] == 1 and result['jev_calls'] == 1
+    assert result['outcomes'] == {'unknown': 1}
+
+
 def trace(details=False):
     goal = 'coupang.product.details' if details else 'coupang.product.search'
     pages = ['results', 'detail'] if details else ['search', 'results']

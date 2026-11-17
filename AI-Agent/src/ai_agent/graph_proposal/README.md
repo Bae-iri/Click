@@ -28,6 +28,8 @@ DB·사용자 동의·삭제 연계와 실제 AI1 replay adapter는 `Backend/scr
 
 탐색 그래프의 DB 생성은 `Backend/scripts/browse_graph_learning.py`, 온라인 응답 이후의 별도 프로세스 실행·재처리는 `Backend/app/services/browse_graph_jobs.py`가 담당합니다. 사용자 실행 프로세스는 Agent 2 모듈을 import하지 않습니다.
 
+`proposals/browse_repairs.py`는 성공 경로뿐 아니라 실패·반복·Jev 보류 로그에서 재관측·후보 범위 점검 등 개선 후보를 만듭니다. Backend는 최신 세션 분석만 다음 Jev의 참고 정보로 투영하며, 성공으로 회복한 세션의 이전 개선 요청을 해제합니다. `list-browse-improvements`로 현재 후보를 확인할 수 있습니다. 미확인 탭은 실패 확정이나 새 selector 생성 근거로 사용하지 않습니다.
+
 ## 구현된 범위
 
 | 단계 | 구현 |
