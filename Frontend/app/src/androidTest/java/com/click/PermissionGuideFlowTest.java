@@ -24,12 +24,11 @@ import static org.junit.Assert.*;
 public class PermissionGuideFlowTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
 
-    @Test public void fiveStaticCardsKeepHeaderProgressAndPreviousNavigation() {
+    @Test public void threeStaticCardsKeepHeaderProgressAndPreviousNavigation() {
         instrumentation.getUiAutomation(android.app.UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         try (ActivityScenario<PermissionGuideActivity> scenario = ActivityScenario.launch(PermissionGuideActivity.class)) {
-            String[] titles = {"‘설치된 앱’을 눌러주세요", "‘클릭 화면 안내’를 선택해요",
-                    "위쪽 스위치를 켜주세요", "확인창에서 ‘허용’을 눌러요", "‘사용 중’이면 설정 완료예요"};
-            for (int page = 0; page < 5; page++) {
+            String[] titles = {"위쪽 스위치를 켜주세요", "확인창에서 ‘허용’을 눌러요", "‘사용 중’이면 설정 완료예요"};
+            for (int page = 0; page < 3; page++) {
                 settle();
                 final int currentPage = page;
                 scenario.onActivity(activity -> {
@@ -41,7 +40,7 @@ public class PermissionGuideFlowTest {
                     assertNotNull(screenshot);
                     assertFalse(screenshot.isClickable());
                     assertFalse(screenshot.performClick());
-                    assertEquals(5, ((ViewGroup) activity.findViewById(
+                    assertEquals(3, ((ViewGroup) activity.findViewById(
                             com.click.designpreview.R.id.guide_progress_bars)).getChildCount());
                     TextView replay = activity.getWindow().getDecorView().findViewWithTag("permission_replay");
                     assertEquals(1, replay.getLineCount());
@@ -58,35 +57,35 @@ public class PermissionGuideFlowTest {
                     assertTrue(progressAt[1] >= controlsAt[1] + replay.getHeight());
                     assertTrue(titleAt[1] > progressAt[1] + progress.getHeight());
                     assertNull(findText(activity.getWindow().getDecorView(), "사진을 누르면 전체 화면을 크게 볼 수 있어요"));
-                    if (currentPage == 3) assertNotNull(findText(activity.getWindow().getDecorView(),
+                    if (currentPage == 1) assertNotNull(findText(activity.getWindow().getDecorView(),
                             "휴대전화 제어 권한을 허용하는 창이에요. ‘허용’을 눌러야 클릭이 도와드릴 수 있어요."));
-                    if (currentPage == 4) assertNotNull(findText(activity.getWindow().getDecorView(),
+                    if (currentPage == 2) assertNotNull(findText(activity.getWindow().getDecorView(),
                             "사용 중으로 표시되면 완료예요."));
                     readable(activity.getWindow().getDecorView());
                     save(activity, "card-" + (currentPage + 1));
-                    if (currentPage < 4) next(activity);
+                    if (currentPage < 2) next(activity);
                 });
             }
             scenario.recreate();
             scenario.onActivity(activity -> {
-                assertPage(activity, 5);
+                assertPage(activity, 3);
                 assertEquals("지금 설정하기", activity.findViewById(com.click.designpreview.R.id.guide_action).getContentDescription());
                 activity.findViewById(com.click.designpreview.R.id.guide_back).performClick();
-                assertPage(activity, 4);
+                assertPage(activity, 2);
             });
             scenario.moveToState(Lifecycle.State.CREATED);
             scenario.moveToState(Lifecycle.State.RESUMED);
             SystemClock.sleep(1000);
-            scenario.onActivity(activity -> assertPage(activity, 4));
+            scenario.onActivity(activity -> assertPage(activity, 2));
         }
     }
 
-    @Test public void largestAppTextKeepsAllFiveCardsReadable() {
+    @Test public void largestAppTextKeepsAllThreeCardsReadable() {
         android.content.Context context = instrumentation.getTargetContext();
         int original = com.click.ui.common.ClickTextScale.level(context);
         try {
             com.click.ui.common.ClickTextScale.saveLevel(context, 3);
-            fiveStaticCardsKeepHeaderProgressAndPreviousNavigation();
+            threeStaticCardsKeepHeaderProgressAndPreviousNavigation();
         } finally {
             com.click.ui.common.ClickTextScale.saveLevel(context, original);
         }
@@ -99,13 +98,13 @@ public class PermissionGuideFlowTest {
                 swipe(activity, true); assertPage(activity, 2);
                 swipe(activity, false); assertPage(activity, 1);
                 swipe(activity, false); assertPage(activity, 1);
-                for (int i = 0; i < 4; i++) next(activity);
+                for (int i = 0; i < 2; i++) next(activity);
             });
             settle();
             scenario.onActivity(activity -> {
-                swipe(activity, true); assertPage(activity, 5);
+                swipe(activity, true); assertPage(activity, 3);
                 assertFalse(activity.isFinishing());
-                swipe(activity, false); assertPage(activity, 4);
+                swipe(activity, false); assertPage(activity, 2);
             });
         }
     }
@@ -130,7 +129,7 @@ public class PermissionGuideFlowTest {
     private static void assertPage(PermissionGuideActivity activity, int page) {
         assertNull(activity.findViewById(com.click.designpreview.R.id.guide_step_counter));
         View progress = activity.findViewById(com.click.designpreview.R.id.guide_progress_bars);
-        assertEquals("접근성 안내, 5단계 중 " + page + "단계", progress.getContentDescription());
+        assertEquals("접근성 안내, 3단계 중 " + page + "단계", progress.getContentDescription());
         assertEquals(View.VISIBLE, progress.getVisibility());
     }
 
