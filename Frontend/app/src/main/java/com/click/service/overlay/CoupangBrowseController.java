@@ -5,13 +5,14 @@ import com.click.data.snapshot.*;
 import org.json.*;
 import java.util.UUID;
 
-/** One explicit screen check per request. Never performs taps, scrolling, typing or a transaction. */
+/** Reads app entry once, then follows explicit checks. Never performs app actions. */
 public final class CoupangBrowseController {
     public interface Listener {
         void present(JSONObject response,ScreenSnapshot submitted);
         void failed(Throwable error,Runnable retry);
         void busy(boolean value);
         default boolean localGuide(ScreenSnapshot screen) { return false; }
+        default boolean canObserve() { return true; }
     }
     private final CoupangBrowseGateway gateway;
     private final CoupangBrowsePrivacy privacy;
@@ -21,16 +22,33 @@ public final class CoupangBrowseController {
     private boolean busy,closed,terminal;
     private JSONObject guide,action;
     private ScreenSnapshot guidedScreen;
+    private ScreenSnapshot entryScreen;
+    private boolean entryObserved;
     public CoupangBrowseController(CoupangBrowseGateway gateway,CoupangBrowsePrivacy privacy,Listener listener) {
         this.gateway=gateway;this.privacy=privacy;this.listener=listener;
     }
     public void start(String session,String resolution) {this.session=session;send("start",null,resolution);}
     public void restore(String session,int version) {this.session=session;this.version=version;send("snapshot",null,null);}
-    public void observe(ScreenSnapshot screen) {if(!closed&&!busy&&!terminal&&!listener.localGuide(screen))send("observe",screen,null);}
+    public void observe(ScreenSnapshot screen) {
+        if(!closed&&!busy&&!terminal&&listener.canObserve()&&!listener.localGuide(screen)) {
+            if(screen!=null && "com.coupang.mobile".equals(screen.packageName))entryObserved=true;
+            send("observe",screen,null);
+        }
+    }
     public void finish() {if(!busy&&!terminal)send("finish",null,null);}
     public boolean terminal(){return terminal;}
     public void screenChanged(ScreenSnapshot current) {
+        entryScreen=current;
         if(guidedScreen!=null && (current==null || !guidedScreen.contentFingerprint().equals(current.contentFingerprint())))guide=null;
+        observeEntry();
+    }
+    private void observeEntry() {
+        if(entryObserved || closed || busy || terminal || entryScreen==null
+                || !"com.coupang.mobile".equals(entryScreen.packageName))return;
+        try {
+            // Loading trees must not consume the only automatic entry observation.
+            if("public".equals(privacy.filter(entryScreen).optString("status")))observe(entryScreen);
+        } catch(Exception ignored) { /* Explicit screen check remains available. */ }
     }
     public void tap(String pkg,int window,String node,long occurredAt) {
         if(guide==null || guidedScreen==null || !guidedScreen.packageName.equals(pkg)
@@ -61,6 +79,7 @@ public final class CoupangBrowseController {
                 busy=false;listener.busy(false);version=response.optInt("session_version");
                 terminal=!"IN_PROGRESS".equals(response.optString("status"));action=null;
                 guide=response;guidedScreen=screen;listener.present(response,screen);
+                observeEntry();
             }
             public void failure(Throwable error) {
                 if(closed||owner!=generation)return;

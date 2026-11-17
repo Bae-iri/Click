@@ -63,6 +63,65 @@ def drafts(f):
         return list(db.scalars(select(GraphProposal).where(GraphProposal.proposal_type == 'new_browse_task_graph')))
 
 
+def test_ai2_route_hints_match_only_live_goal_page_and_candidates(browse):
+    from app.services.browse_route_hints import BrowseRouteHints
+    from app.schemas.browse import BrowseScreen
+    _, now = consent(browse)
+    complete(browse)
+    store = BrowseRouteHints(browse.app.state.session_factory)
+    view = BrowseScreen.model_validate(screen(node('search_bar', clickable=True)))
+    goal = {'goal_type': 'coupang.product.search'}
+    hints = store.get(goal, view, [('search', view.nodes[0])], now)
+    assert hints == [{'action': 'search', 'resource': 'search_bar',
+        'observed_next_page': 'results', 'supporting_traces': 1}]
+    assert store.get({'goal_type': 'coupang.product.details'}, view, [('search', view.nodes[0])], now) == []
+    assert store.get(goal, view, [], now) == []
+    assert store.get(goal, view, [('search', view.nodes[0])], now + 8 * 86400) == []
+    assert '무선 이어폰' not in json.dumps(hints, ensure_ascii=False)
+
+
+@pytest.mark.parametrize('problem', ['withdrawal', 'corruption'])
+def test_ai2_hints_disappear_after_withdrawal_or_corruption(browse, problem):
+    from app.services.browse_route_hints import BrowseRouteHints
+    from app.schemas.browse import BrowseScreen
+    user, now = consent(browse)
+    complete(browse)
+    store = BrowseRouteHints(browse.app.state.session_factory)
+    view = BrowseScreen.model_validate(screen(node('search_bar', clickable=True)))
+    assert store.get({'goal_type': 'coupang.product.search'}, view, [('search', view.nodes[0])], now)
+    with browse.app.state.session_factory() as db:
+        if problem == 'withdrawal':
+            UserRepository(db).record_consent(user, 'model_training', False, 'withdraw')
+        else:
+            proposal = db.get(GraphProposal, drafts(browse)[0].id)
+            proposal.evidence = {**proposal.evidence, 'graph_hash': '0' * 64}
+            db.commit()
+    assert store.get({'goal_type': 'coupang.product.search'}, view, [('search', view.nodes[0])], now) == []
+
+
+def test_observed_routes_reach_jev_but_cannot_override_abstention(browse, monkeypatch):
+    import httpx
+    from app.services.browse_jev import JevBrowseSelector
+    from app.services.browse_route_hints import BrowseRouteHints
+    from app.schemas.browse import BrowseScreen
+    _, now = consent(browse)
+    complete(browse)
+    monkeypatch.setenv('TYPESAFE_API_KEY', 'test-only')
+    monkeypatch.setenv('JEV_MODEL', 'jev-1.14.0')
+    monkeypatch.setattr('app.services.browse_jev.time.time', lambda: now)
+    view = BrowseScreen.model_validate(screen(node('search_bar', clickable=True)))
+    def send(payload, **kwargs):
+        assert payload['state']['observed_route_hints'][0]['resource'] == 'search_bar'
+        assert set(payload['questions']['browse']['criteria']) == {'c0', 'insufficient'}
+        assert 'node_id' not in json.dumps(payload) and 'bounds' not in json.dumps(payload)
+        return httpx.Response(200, json={'model': payload['model'], 'answers': {'browse': {
+            'type': 'choice', 'choice': 'insufficient', 'confidence': .99,
+            'probabilities': {'c0': .01, 'insufficient': .99}}}})
+    selected, diagnostic = JevBrowseSelector(send, BrowseRouteHints(browse.app.state.session_factory)).choose(
+        {'goal_type': 'coupang.product.search', 'query': '생수'}, view, [('search', view.nodes[0])], [])
+    assert selected is None and diagnostic['route_hint_count'] == 1
+
+
 @pytest.mark.parametrize('details', [False, True])
 def test_success_automatically_creates_a_real_new_graph_in_db_without_activation(browse, details):
     user, now = consent(browse)

@@ -12,7 +12,7 @@ from ai_agent.task_graph.settings import CHOICES, choice_spec, choice_predicate
 
 
 def action_releases():
-    specs = {s['goal_type']: s for s in json.loads((Path(__file__).parent / 'drafts.json').read_text())}
+    specs = {s['goal_type']: s for s in json.loads((Path(__file__).parent / 'drafts.json').read_text(encoding='utf-8'))}
     for goal_type, capability in DOCUMENT['goals'].items():
         mode = capability['mode']
         if mode not in {'native_checked', 'assisted', 'system_choice', 'native_slider'}:

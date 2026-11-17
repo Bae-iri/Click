@@ -3217,17 +3217,33 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("commerce",requests.get(1).observationSetting);
     }
 
+    @Test public void missingCoupangIconSearchesAdjacentPageThenHighlightsWithoutUploading() throws Exception {
+        prepareCoupangEntry(); currentScreen=coupangLauncher("설정");
+        accessibility.when(() -> ClickAccessibilityService.swipeHomePage(true,"com.sec.android.app.launcher",43)).thenReturn(true);
+        int count=requests.size(); send(null);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(210));
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true,"com.sec.android.app.launcher",43));
+        verify((TaskFlowOverlayView)get("taskFlowView")).waitingProgress(contains("쿠팡 앱을 찾기"));
+        currentScreen=coupangLauncher("쿠팡");
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));
+        verify((GuideOverlayView)get("guideOverlayView")).showTarget(eq(new int[]{100,300,250,500}),eq("tap"),eq(0));
+        assertEquals(count,requests.size());
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).appEntryRecovery(eq("쿠팡"),any());
+    }
+
     @Test public void missingCoupangIconOffersAppLaunchWithoutUploadingTheLauncher() throws Exception {
         prepareCoupangEntry(); currentScreen=coupangLauncher("설정","쿠팡이츠");
-        int count=requests.size(); send(null);
+        int count=requests.size(); send(null); shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(15));
         assertEquals(count,requests.size());
         verify((TaskFlowOverlayView)get("taskFlowView")).appEntryRecovery(eq("쿠팡"),any());
         verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),any(),anyInt());
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(true,"com.sec.android.app.launcher",43));
+        accessibility.verify(() -> ClickAccessibilityService.swipeHomePage(false,"com.sec.android.app.launcher",43));
     }
 
     @Test public void coupangDuplicateIconsOfferAppLaunchInsteadOfGuessing() throws Exception {
         prepareCoupangEntry(); currentScreen=coupangLauncher("쿠팡","쿠팡");
-        int count=requests.size(); send(null);
+        int count=requests.size(); send(null); shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(15));
         assertEquals(count,requests.size());
         verify((TaskFlowOverlayView)get("taskFlowView")).appEntryRecovery(eq("쿠팡"),any());
         verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),any(),anyInt());
@@ -3255,11 +3271,11 @@ public class ClickOverlayServiceExecutionTest {
         prepareCoupangEntry();
         ScreenSnapshot launcher=coupangLauncher("쿠팡");
         currentScreen=new ScreenSnapshot(launcher.packageName,launcher.capturedAt,1080,2400,launcher.nodes,99);
-        send(null);
+        send(null); shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(15));
         verify((TaskFlowOverlayView)get("taskFlowView")).appEntryRecovery(eq("쿠팡"),any());
         clearInvocations((TaskFlowOverlayView)get("taskFlowView"));
         currentScreen=coupangLauncher("쿠팡"); currentScreen.nodes.get(0).bounds[2]=1200;
-        send(null);
+        send(null); shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(15));
         verify((TaskFlowOverlayView)get("taskFlowView")).appEntryRecovery(eq("쿠팡"),any());
         verify((GuideOverlayView)get("guideOverlayView"),never()).showTarget(any(),any(),anyInt());
     }

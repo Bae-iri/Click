@@ -425,6 +425,8 @@ def main():
     learn.add_argument('--limit', type=int, default=100)
     drafts = commands.add_parser('list-browse-graphs', help='List retained generated draft metadata, without user data')
     drafts.add_argument('--limit', type=int, default=100)
+    repairs = commands.add_parser('list-browse-improvements', help='List current log-derived advisory repair candidates')
+    repairs.add_argument('--limit', type=int, default=100)
     comparison = commands.add_parser("compare-jev", help="Compare identical independently reviewed holdout screens")
     comparison.add_argument("--before", required=True)
     comparison.add_argument("--after", required=True)
@@ -502,6 +504,9 @@ def main():
         elif args.command == 'list-browse-graphs':
             from scripts.browse_graph_learning import BrowseGraphLearningService
             result = {'drafts': BrowseGraphLearningService(factory).list_drafts(limit=args.limit)}
+        elif args.command == 'list-browse-improvements':
+            from scripts.browse_graph_learning import BrowseGraphLearningService
+            result = {'improvements': BrowseGraphLearningService(factory).list_improvements(limit=args.limit)}
         elif args.command == 'assess-browse':
             from scripts.browse_assessment import assess_browsing
             result = assess_browsing(factory,limit=args.limit)

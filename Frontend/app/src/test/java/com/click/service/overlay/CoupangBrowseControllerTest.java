@@ -19,6 +19,7 @@ public class CoupangBrowseControllerTest {
     @Test public void localGuidanceDoesNotConsumeAModelTurn() throws Exception {
         var gateway=mock(CoupangBrowseGateway.class);
         var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);
         var controller=new CoupangBrowseController(gateway,new CoupangBrowsePrivacy(RuntimeEnvironment.getApplication()),listener);
         controller.start("session","prepared");
         var callback=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
@@ -56,5 +57,47 @@ public class CoupangBrowseControllerTest {
         verify(listener).failed(any(),retry.capture());retry.getValue().run();
         verify(gateway,times(2)).send(requests.capture(),any());
         assertEquals(original,requests.getValue().toString());
+    }
+
+    private com.click.data.snapshot.ScreenSnapshot appScreen(String pkg) {
+        var search = new com.click.data.snapshot.AccessibilityNodeSnapshot("search",null,true,pkg,"검색",null,
+            pkg+":id/search_bar","android.widget.TextView",null,new int[]{0,100,300,200},true,true,false,false,false,null,42);
+        return new com.click.data.snapshot.ScreenSnapshot(pkg,java.time.Instant.now().toString(),1080,2400,java.util.List.of(search),42);
+    }
+
+    @Test public void entryDuringStartIsObservedOnceAfterTheSessionVersionArrives() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);
+        var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);
+        var controller=new CoupangBrowseController(gateway,new CoupangBrowsePrivacy(RuntimeEnvironment.getApplication()),listener);
+        controller.start("session","prepared");
+        controller.screenChanged(appScreen("com.coupang.mobile"));
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        verify(gateway).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+        var requests=ArgumentCaptor.forClass(JSONObject.class);
+        verify(gateway,times(2)).send(requests.capture(),callbacks.capture());
+        assertEquals("observe",requests.getValue().getString("command"));
+        assertEquals(1,requests.getValue().getInt("expected_version"));
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",2));
+        controller.screenChanged(appScreen("com.coupang.mobile"));
+        verify(gateway,times(2)).send(any(),any());
+    }
+
+    @Test public void entryWaitsWhilePausedAndIgnoresOtherApps() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);
+        var listener=mock(CoupangBrowseController.Listener.class);
+        var controller=new CoupangBrowseController(gateway,new CoupangBrowsePrivacy(RuntimeEnvironment.getApplication()),listener);
+        controller.start("session","prepared");
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        verify(gateway).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+        controller.screenChanged(appScreen("com.coupang.mobile"));
+        verify(gateway,times(1)).send(any(),any());
+        when(listener.canObserve()).thenReturn(true);
+        controller.screenChanged(appScreen("com.sec.android.app.launcher"));
+        verify(gateway,times(1)).send(any(),any());
+        controller.screenChanged(appScreen("com.coupang.mobile"));
+        verify(gateway,times(2)).send(any(),any());
     }
 }
