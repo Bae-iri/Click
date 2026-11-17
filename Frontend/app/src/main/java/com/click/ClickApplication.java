@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Application;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.os.Build;
 import android.provider.Settings;
 import android.util.Log;
 import com.click.core.permission.PermissionStatus;
@@ -157,13 +158,30 @@ public final class ClickApplication extends Application implements ClickHost {
     @Override public void openAccessibilitySettings(Activity activity) {
         new AccessibilityOnboardingState(this).begin(activity.getIntent().getBooleanExtra(
                 com.click.designpreview.PermissionGuideActivity.EXTRA_RETURN_TO_SETTINGS, false));
-        // This system action is not exposed in the public SDK and may be absent or
-        // restricted by the device's Settings app. Fall back to the accessibility list.
+        String service = new ComponentName(this, ClickAccessibilityService.class).flattenToString();
+        // One UI owns its service details screen in a separate Settings package.
+        // The AOSP action can open only the accessibility homepage on these devices.
+        if ("samsung".equalsIgnoreCase(Build.MANUFACTURER)) {
+            Intent samsung = new Intent("com.samsung.accessibility.ACCESSIBILITY_DETAILS_SETTINGS")
+                    .setPackage("com.samsung.accessibility")
+                    .putExtra(Intent.EXTRA_COMPONENT_NAME, service);
+            if (tryOpenAccessibilityDetails(activity, samsung)) return;
+        }
+        // Neither details action is a public SDK guarantee.
         Intent intent = new Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
-                .putExtra(Intent.EXTRA_COMPONENT_NAME, new ComponentName(this, ClickAccessibilityService.class).flattenToString());
-        try { activity.startActivity(intent); }
-        catch (android.content.ActivityNotFoundException | SecurityException unavailable) {
+                .putExtra(Intent.EXTRA_COMPONENT_NAME, service);
+        if (!tryOpenAccessibilityDetails(activity, intent)) {
             activity.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+        }
+    }
+
+    private boolean tryOpenAccessibilityDetails(Activity activity, Intent intent) {
+        try {
+            activity.startActivity(intent);
+            return true;
+        } catch (android.content.ActivityNotFoundException | SecurityException unavailable) {
+            Log.w("ClickAccessibility", "Settings route unavailable: " + intent.getAction(), unavailable);
+            return false;
         }
     }
 
