@@ -30,7 +30,8 @@ def main(argv=None):
     try:
         engine = RuntimeAgentAdapter().runtime
     except ValueError:
-        print('CONFIG_ERROR: set TYPESAFE_API_KEY, pinned JEV_MODEL and JEV_MIN_CONFIDENCE in (0, 1].')
+        print('CONFIG_ERROR: check TYPESAFE_API_KEY, pinned JEV_MODEL, JEV_MIN_CONFIDENCE, '
+              'JEV_SCREEN_JUDGMENT_MODE and JEV_CHOICE_TEMPERATURE.')
         return 2
     nodes = tuple(AccessibilityNode(node_id=identifier, package_name='com.android.settings', text=label,
         class_name='android.widget.TextView', clickable=identifier != 'title',

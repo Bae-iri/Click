@@ -6,12 +6,14 @@ from ai_agent.telemetry.trace_logger import diagnostic_payload, UI_SELECTION_STA
 
 SCHEMA = "jev-decision.v1"
 SCORES = {"confidence", "raw_confidence", "normalized_probability", "minimum_confidence",
-          "top_probability", "probability_margin"}
+          "top_probability", "probability_margin", "page_confidence", "target_support_probability",
+          "tempered_top_probability", "tempered_probability_margin", "tempered_confidence"}
 HASHES = {"decision_hash", "screen_hash", "chosen_target_hash", "chosen_transition_hash", "code_hash"}
 COUNTS = {"choice_count": 252, "candidate_count": 250, "grounded_candidate_count": 250}
-FLAGS = {"called", "retained", "paused"}
+FLAGS = {"called", "retained", "paused", "page_target_consistent"}
 FIELDS = SCORES | HASHES | set(COUNTS) | FLAGS | {
-    "schema_version", "provider", "mode", "status", "model", "hold_reason", "choice_kind"}
+    "schema_version", "provider", "mode", "status", "model", "hold_reason", "choice_kind",
+    "judgment_mode", "question_count", "choice_temperature"}
 
 
 def validate_decision(record):
@@ -39,6 +41,13 @@ def validate_decision(record):
         raise ValueError("Invalid Jev hold reason")
     if "choice_kind" in record and record["choice_kind"] not in {"target", "wait_for_result", "insufficient_evidence"}:
         raise ValueError("Invalid Jev choice kind")
+    if "judgment_mode" in record and record["judgment_mode"] not in {"atomic", "legacy"}:
+        raise ValueError("Invalid Jev judgment mode")
+    if "question_count" in record and (type(record["question_count"]) is not int or record["question_count"] not in {1, 3}):
+        raise ValueError("Invalid Jev question count")
+    if "choice_temperature" in record and (type(record["choice_temperature"]) not in (int, float)
+            or not math.isfinite(record["choice_temperature"]) or not 0 < record["choice_temperature"] <= 10):
+        raise ValueError("Invalid Jev choice temperature")
     if record["called"] and not {"decision_hash", "screen_hash"} <= record.keys():
         raise ValueError("A provider call requires immutable decision and screen identities")
     return record

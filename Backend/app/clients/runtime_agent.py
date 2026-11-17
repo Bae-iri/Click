@@ -25,6 +25,7 @@ from ai_agent.runtime.progress import graph_progress
 from ai_agent.telemetry.execution_events import produce
 from app.clients.screen_state_llm import LocalScreenStateLlm
 from app.services.screen_jev import JevScreenResolver
+from app.services.jev_screen_judgments import screen_policy
 from ai_agent.runtime.capabilities import identity as capability_identity
 
 
@@ -39,7 +40,9 @@ def runtime_configuration():
     sources = sorted(runtime_root.rglob("*.py"))
     sources += [Path(__file__), Path(__file__).parents[1] / "services/screen_jev.py",
                 Path(__file__).parents[1] / "services/goal_jev.py",
-                Path(__file__).parents[1] / "services/commerce_jev.py"]
+                Path(__file__).parents[1] / "services/commerce_jev.py",
+                Path(__file__).parents[1] / "services/jev_probabilities.py",
+                Path(__file__).parents[1] / "services/jev_screen_judgments.py"]
     digest = sha256()
     for source in sources:
         digest.update(source.name.encode())
@@ -50,7 +53,9 @@ def runtime_configuration():
     configuration["code_hash"] = digest.hexdigest()
     if provider == "jev":
         _, model, minimum = JevScreenResolver.configuration()
-        configuration.update(model=model, minimum_confidence=minimum)
+        judgment_mode, temperature = screen_policy()
+        configuration.update(model=model, minimum_confidence=minimum,
+            screen_judgment_mode=judgment_mode, choice_temperature=temperature)
     return configuration
 
 
@@ -71,6 +76,7 @@ class RuntimeAgentAdapter:
         resolver = JevScreenResolver() if provider == "jev" else None
         if resolver:
             resolver.configuration()
+            screen_policy()
         self.runtime = ClickAgentEngine(session_store=session_store, task_graphs=graphs,
             screen_resolver=resolver, ui_selector=None,
             state_resolver=None if resolver else LocalScreenStateLlm())
@@ -222,7 +228,8 @@ class RuntimeAgentAdapter:
         recovery = guide.render_policy.get("recovery")
         recovering = bool((recovery and recovery.get("recoverable")) or guide.render_policy.get("backend_handoff"))
         # Recoverable navigation failures keep the episode alive and preserve their instructions.
-        legacy_handoff = recovering and command_type == "blocked"
+        legacy_handoff = (recovering and command_type == "blocked"
+                          and not guide.render_policy.get("privacy_blocked"))
         if legacy_handoff:
             command_type = "highlight"
             status = "IN_PROGRESS"

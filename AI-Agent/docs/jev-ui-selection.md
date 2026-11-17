@@ -3,8 +3,8 @@
 쿠팡 목표의 후보 구성과 직접 진행 경계는 [쿠팡 실행 안내](../../docs/tasks/coupang.md)를 따른다. 같은 `JevScreenResolver`가 앱별 처리로 분기하며, 아래 설정용 슬롯·용어·조작 검증을 쿠팡에 대신 사용하지 않는다.
 
 Backend의 `RuntimeAgentAdapter`가 `AI1_UI_SELECTOR_PROVIDER=jev`를 읽으면
-`JevScreenResolver`를 AI1의 `screen_resolver`로 주입한다. Jev가 화면 정보와
-승인된 그래프를 보고 **현재 단계와 실제 조작 대상**을 함께 선택한다.
+`JevScreenResolver`를 AI1의 `screen_resolver`로 주입한다. Jev가 최소화한 화면과
+승인된 후보를 보고 **현재 페이지·대상 존재 여부·실제 조작 대상**을 각각 판단한다.
 요청 목표를 해석하는 `GOAL_CLASSIFIER_PROVIDER`와는 독립적이다.
 
 ## 실행 흐름
@@ -12,8 +12,10 @@ Backend의 `RuntimeAgentAdapter`가 `AI1_UI_SELECTOR_PROVIDER=jev`를 읽으면
 1. 접근성 트리와 동의·개인정보 검사를 통과한 OCR 결과를 정규화한다.
 2. 그래프 전체에서 역할·앱·활성화·화면 영역 조건에 맞는 조작 대상을 만든다.
    문자열 매칭 점수나 현재 단계 추정으로 후보를 미리 제한하지 않는다.
-3. Jev가 메뉴 텍스트, 인접 설명, 부모 관계, 값, 상대 위치와 그래프를 읽어
-   단계 + 대상 조합을 선택한다. 규칙이 잘못 파악한 단계도 수정할 수 있다.
+3. 같은 HTTP 요청에서 `page` Choice, `target_supported` Noul, `screen` Choice를 받는다.
+   각 질문은 서로의 답을 참조하지 않는다. 코드가 원본 점수와 페이지·대상 일치를 검증한다.
+   전체 미래 그래프 대신 후보의 출발 페이지·목적지·대상 이름을 보내며,
+   규칙이 잘못 파악한 단계도 수정할 수 있다.
 4. 선택한 관측 노드의 실제 ID와 좌표를 로컬에서 복원한다. 이를 반영한 단계로
    직전 조작의 결과를 검증하므로 여러 단계를 직접 진행한 경우도 재동기화한다.
 5. 안내 생성, 설정 변경 전 확인, 전후 값과 조작 이벤트를 이용한 완료 검증을 수행한다.
@@ -35,6 +37,9 @@ ID·window·resource·좌표·활성 상태·의미 식별자가 모두 유효�
 이 경우 `ui_selection.called=false`, `retained=true`이며 이전 선택의 진단값임을
 표시한다. 승인 대기 안내를 유지해도 승인이 자동 부여되지는 않는다.
 화면이나 대상이 달라지면 재사용하지 않는다. OCR 대상은 이 유지 경로를 사용하지 않는다.
+모델 보류의 재호출 지문은 정규화한 화면 의미를 사용한다. 좌표·자동 생성 노드 ID·
+window 번호만 바뀌면 보류를 유지하며, 실제 페이지·대상 식별자·값·활성 상태 등
+판단 근거가 달라질 때 다시 평가한다. 안내 재사용의 엄격한 좌표 검사는 별도로 유지한다.
 
 Jev 입력의 `planned_action`은 안내한 계획이고, `previous_action`은 상관관계가
 확인된 행동 이벤트가 있을 때만 전달한다. 클릭하지 않은 같은 화면을 조작 실패나
@@ -57,11 +62,20 @@ AI1_UI_SELECTOR_PROVIDER=jev
 TYPESAFE_API_KEY=<기존 백엔드 비밀값 유지>
 JEV_MODEL=jev-1.14.0
 JEV_MIN_CONFIDENCE=0.8
+JEV_SCREEN_JUDGMENT_MODE=atomic
+JEV_CHOICE_TEMPERATURE=0.7
 ```
 
 기존 `.env`의 DB·STT 설정을 덮어쓰지 말고 필요한 항목만 추가한다.
 키 이름은 `JEV_API_KEY`가 아닌 `TYPESAFE_API_KEY`다. 주 판단 모드는
 `JEV_MIN_CONFIDENCE`를 사용하며 이전 보조 선택기의 `JEV_UI_MIN_CONFIDENCE`는 사용하지 않는다.
+`atomic`은 기본값이며 `legacy`만 기존 단일 질문을 명시적으로 선택한다.
+부분 응답·알 수 없는 페이지·페이지와 대상의 모순은 행동을 만들지 않는다.
+
+Jev는 확률을 반환하므로 낮은 temperature는 `softmax(log(p)/T)`로 로컬 적용한다.
+기본 T는 0.7이며, 보정값은 `tempered_*` 진단에만 기록한다. 순위는 같고
+낮은 원본 점수를 통과시키지 않는다. 페이지와 Noul도 원본 값으로 검증한다.
+상세 수식·한계·진단 필드는 [백엔드 화면 판단 문서](../../Backend/inference/jev-screen.md)를 따른다.
 
 백엔드 담당자가 Backend 디렉터리에서 실행하는 예:
 

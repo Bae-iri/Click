@@ -1,4 +1,5 @@
 """Jev owns step/target decisions; evidence and permission gates still own execution."""
+from tests.jev_answers import with_screen_judgments
 from dataclasses import replace
 from unittest.mock import Mock
 
@@ -131,9 +132,9 @@ def test_http_path_uses_primary_and_never_falls_back_to_rule_action(monkeypatch,
         if failure == 'success':
             choice = next(k for k, value in options.items() if isinstance(value, dict)
                           and value['step'] == 'S1_SETTINGS_HOME')
-        return httpx.Response(200, json={'model': payload['model'], 'answers': {'screen': {
+        return httpx.Response(200, json=with_screen_judgments(payload, {'model': payload['model'], 'answers': {'screen': {
             'type': 'choice', 'choice': choice, 'confidence': 0.1 if failure == 'low_confidence' else 1,
-            'probabilities': {key: float(key == choice) for key in options}}}})
+            'probabilities': {key: float(key == choice) for key in options}}}}))
 
     monkeypatch.setattr(JevScreenResolver, '_post', post)
     monkeypatch.setattr(JevUiSelector, 'select', Mock(side_effect=AssertionError('auxiliary call')))
@@ -192,9 +193,9 @@ def test_repeated_visible_menu_observations_preserve_selection_diagnostics(monke
         candidates = [key for key, value in options.items() if isinstance(value, dict)]
         assert len(candidates) == 1
         choice = 'insufficient_evidence' if outcome == 'abstained' else candidates[0]
-        return httpx.Response(200, json={'model': payload['model'], 'answers': {'screen': {
+        return httpx.Response(200, json=with_screen_judgments(payload, {'model': payload['model'], 'answers': {'screen': {
             'type': 'choice', 'choice': choice, 'confidence': 0.4 if outcome == 'low_confidence' else 1,
-            'probabilities': {key: float(key == choice) for key in options}}}})
+            'probabilities': {key: float(key == choice) for key in options}}}}))
 
     monkeypatch.setattr(JevScreenResolver, '_post', post)
     with authenticated_client(create_app()) as client:
