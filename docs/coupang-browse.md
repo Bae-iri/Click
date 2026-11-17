@@ -20,7 +20,28 @@ Android는 검색 입력의 원문을 snapshot에 남기기 전에 로컬 해시
 
 `runtime_events.kind=browse`, `browse-event.v1`로 관측 해시·페이지 종류·실제 행동 연결·선택 수·보류·결과·정책 해시·Jev 모델/응답 시간을 저장한다. 검색어·상품명·원본 화면·결제정보를 이 분석 기록에 넣지 않는다. 기존 암호화·세션 삭제 연계·7일 보존을 적용한다. 분석은 온라인 응답과 별개다.
 
-Backend에서 `python scripts/agent2.py assess-browse --limit 100`을 실행한다. 최신 `model_training` 동의 이후·미만료 기록만 집계하며 verified navigation·사용자 보고·중단·차단·판정 불가를 구분한다. 선택 정답률이나 독립 gold를 주장하지 않으며 자동 학습·새 경로 생성·운영 배포는 하지 않는다. 그래프용 기존 AI2 process/assessment/route proposal은 탐색 세션을 제외한다.
+Backend에서 `python scripts/agent2.py assess-browse --limit 100`을 실행하면 최신 `model_training` 동의 이후·미만료 기록의 verified navigation·사용자 보고·중단·차단·판정 불가를 구분해 집계한다. 그래프용 기존 AI2 process/assessment/route priority proposal과 탐색 분석은 별도 계약을 사용한다.
+
+## AI2 신규 그래프 자동 생성
+
+탐색 완료 응답을 보낸 뒤 AI2가 기록을 읽고 새 그래프 초안을 `graph_proposals`에 암호화 저장한다. `CLICK_AI2_BROWSE_GRAPH_ENABLED=1`이 기본값이며 서버 수명주기의 별도 worker가 60초마다 저장되지 못한 완료 기록을 재처리한다. 온라인 Jev 요청이나 화면 안내 중에 그래프를 생성하지 않으며 추가 모델 호출도 없다. 중복 HTTP 요청·재시작·반복 분석은 같은 근거에서 초안을 중복 생성하지 않는다.
+
+대상은 현재 허용된 쿠팡 상품 검색·상품 상세 보기다. 최초 관측부터 마지막 완료 관측까지 sequence와 정책/코드 hash가 일치하고, 각 화면 변화가 실제 안내·조작·전후 관측으로 연결되어야 한다. 검색 완료 화면만 관측한 경우, 사용자 완료 보고, 미연결 이동, 누락/만료된 기록, 다른 앱/결제 영역으로는 새 경로를 만들지 않는다. 현재 native scroll 결과를 독립적으로 연결하지 못하므로 scroll이 필요한 경로는 데이터 부족으로 남긴다.
+
+새 본문은 `browse-task-graph.v1`이다. 실제 관측한 화면 상태, 시작/종료 상태, 공개 resource selector를 쓰는 전이, 사용자 직접 조작 조건, 현재 확인된 목표에 결합된 완료 predicate를 가진다. selector는 기존 `browse_policy.resource()`와 같은 `normalized_browse_resource.v1` 규칙의 resource key를 사용하며, 정규화된 이름으로 원래의 native ID를 지어내지 않는다. 검색어·상품 이름·좌표·사용자/세션 ID를 본문에 넣지 않고 검색어는 `confirmed_request.query` 입력으로 매개변수화한다. 상품 selector는 새 화면의 공개 후보를 다시 판별해야 하며 저장된 상품이나 첫 번째 상품으로 고정하지 않는다.
+
+기존 graphless 실행이 끝난 뒤 만드는 **신규 그래프 초안**이며, 실행 중 참조한 graph hash로 소급 표시하지 않는다. `GraphProposal.proposal_type=new_browse_task_graph`, `base_graph_version=graphless`, `requires_human_review=true`로 저장한다. trace completeness 값은 제품 성공률이나 독립 기기 평가 점수가 아니다. 일반 설정 실행용 `runtime-task-graph.v1` 승인 테이블에 자동 등록·활성화하지 않는다. 별도 기기 검증·검토 없이 다음 사용자에게 실행 경로로 배포하지 않는다.
+
+후보는 원천 event에 연결된 만료 receipt를 참조한다. 최신 동의 이전 기록을 사용하지 않으며, 새 동의 경계·철회·탈퇴·세션 삭제·가장 이른 근거의 7일 보존 만료에 맞춰 초안과 평가도 삭제된다. migration `20261117_20`을 서버 코드와 함께 적용해야 한다. 앱/API 요청 계약 변경은 없다.
+
+```sh
+cd Backend
+python scripts/agent2.py learn-browse --limit 100
+python scripts/agent2.py list-browse-graphs --limit 100
+python scripts/agent2.py process --limit 100
+```
+
+첫 명령은 보존된 근거로 초안을 생성하고, 두 번째는 원문 없이 후보 ID·목표·상태/전이 수·만료 시각을 확인한다. `process`도 기존 그래프 분석과 신규 탐색 그래프 생성을 함께 실행한다. `NEEDS_DATA`는 성공 경로를 추측해 채웠다는 뜻이 아니라 초안을 만들 근거가 부족하다는 뜻이다.
 
 ## 검증 한계
 

@@ -5,6 +5,8 @@ from app.database import Base
 from app.models.user import JSONType
 from app.core.data_encryption import EncryptedJSON
 
+BROWSE_GRAPH_CONSUMER = 'ai2-browse-graphs.v1'
+
 
 class GraphProposal(Base):
     """Mirrors ai_agent.graph_proposal.schemas.GraphUpdateProposal."""
@@ -18,6 +20,8 @@ class GraphProposal(Base):
     proposal_confidence: Mapped[float] = mapped_column(Float)
     requires_human_review: Mapped[bool] = mapped_column(Boolean)
     created_at: Mapped[int] = mapped_column(BigInteger)
+    runtime_receipt_id: Mapped[str | None] = mapped_column(String(36),
+        ForeignKey('runtime_event_consumptions.id', ondelete='CASCADE'), unique=True, index=True)
 
 
 class EvaluationReport(Base):

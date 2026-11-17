@@ -26,6 +26,8 @@ graph_proposal/
 
 DB·사용자 동의·삭제 연계와 실제 AI1 replay adapter는 `Backend/scripts/agent2.py`, release 영속화는 `Backend/app/repositories/graph_releases.py`가 담당합니다. 합성 입력은 `AI-Agent/data/fixtures/agent2/`, 로컬 산출물은 Git에서 제외한 `AI-Agent/data/local/`에 둡니다. 모델 학습과 graph 후보 생성은 서로 다른 단계입니다.
 
+탐색 그래프의 DB 생성은 `Backend/scripts/browse_graph_learning.py`, 온라인 응답 이후의 별도 프로세스 실행·재처리는 `Backend/app/services/browse_graph_jobs.py`가 담당합니다. 사용자 실행 프로세스는 Agent 2 모듈을 import하지 않습니다.
+
 ## 구현된 범위
 
 | 단계 | 구현 |
@@ -34,7 +36,7 @@ DB·사용자 동의·삭제 연계와 실제 AI1 replay adapter는 `Backend/scr
 | 재구성 | 이벤트 ID/sequence 충돌·중복·누락·episode 내 graph 변경 검사, 이전 guide·행동·전후 관측 연결 |
 | 라벨·분석 | 시도 성공/실패·대기·수동 진행·불확실 분리, 중복 시도 제외, 실패 cluster·분모·추가 수집 요청 |
 | 데이터 | 출처·revision·검수·근거 manifest 검사, train/validation/holdout 및 group/session 분리 |
-| 후보 생성 | 연결된 개발용 시도 결과로 같은 상태의 기존 대체 전이 우선순위 patch 생성 |
+| 후보 생성 | 기존 대체 전이 우선순위 patch 및 실제 조작으로 연결된 공개 탐색의 신규 그래프 초안 생성 |
 | 평가 | base/candidate 구조·hash 검사, 동일 관측의 실제 AI1 replay, holdout 누출·회귀·데이터 부족·도구 오류 구분 |
 | 승인·반영 | 정확한 평가·본문 hash에 검토자/시각 결합, DB 활성 version과 audit 원자 반영, stale-base 차단·rollback |
 | 모델 | 명시적으로 weak label을 허용한 train split의 CPU 빈도 baseline, 불변 로컬 artifact registry |
@@ -44,7 +46,7 @@ DB·사용자 동의·삭제 연계와 실제 AI1 replay adapter는 `Backend/scr
 시도 분모에 넣지 않습니다. 알려지지 않은 before hash와 변경된 target binding은
 기존처럼 증거 부족·계약 오류로 처리합니다.
 
-실제 제품 gold·독립 holdout은 아직 없습니다. 합성·공개 참고 자료만으로 평가 PASS나 운영 release를 만들지 않습니다. 새 selector·UI 경로·작업을 추측 생성하지 않습니다. 실제 실패에서 필요한 새로운 변환 규칙·모델 개선은 후속 데이터에 따라 추가합니다.
+실제 제품 gold·독립 holdout은 아직 없습니다. 합성·공개 참고 자료만으로 평가 PASS나 운영 release를 만들지 않습니다. 새 selector·UI 경로·작업을 추측 생성하지 않습니다. `proposals/browse_graph.py`는 모든 관측 변화가 조작으로 연결되고 목적 화면까지 검증된 탐색에서 새 상태·전이 그래프를 구성합니다. Backend는 완료 응답 이후 및 주기적 재처리로 `graph_proposals`에 암호화 저장하며, 원천 기록·동의·만료에 함께 삭제합니다. 현재 대상과 명령은 [쿠팡 탐색 그래프 절차](../../../../docs/coupang-browse.md#ai2-신규-그래프-자동-생성)를 따릅니다. 생성 초안은 독립 검증·승인 전에는 운영 경로로 활성화하지 않습니다.
 
 ## DB 기록 처리
 
@@ -52,6 +54,8 @@ Backend 디렉터리에서 DATABASE_URL을 설정하고 실행합니다.
 
 ```powershell
 python scripts/agent2.py process --limit 100
+python scripts/agent2.py learn-browse --limit 100
+python scripts/agent2.py list-browse-graphs --limit 100
 python scripts/agent2.py assess-jev --limit 100
 python scripts/agent2.py assess-jev --reviews target-reviews.json --format json
 python scripts/agent2.py audit

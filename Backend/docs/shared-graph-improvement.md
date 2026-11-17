@@ -101,9 +101,16 @@ matcher has equally strong evidence for a lower-priority-number route in that
 step, the reviewed order is enforced locally. Priority never supplies missing UI
 evidence or forces navigation away from an already reached goal page.
 
-No background scheduler or production release is enabled by this change. Run
-analysis periodically with the existing operational scheduler; review and device
-validation remain explicit steps.
+The existing route-priority pipeline still runs through explicit operator commands.
+Public browsing now has an additional automatic Agent 2 path: after a verified
+trace completes, it creates a new `browse-task-graph.v1` draft in the encrypted
+`graph_proposals` table. A lifespan worker retries retained work every minute;
+`agent2.py learn-browse` also backfills it. Drafts are tied to expiring runtime
+receipts and disappear with consent withdrawal, source deletion or expiry.
+These are new state/transition graphs, not priority changes to an existing base.
+They remain drafts for independent device validation and review, and are never
+automatically inserted into `approved_task_graphs`. See
+[browsing graph generation](../../docs/coupang-browse.md#ai2-신규-그래프-자동-생성).
 
 Registration no longer advertises, collects or persists age/occupation. Legacy
 APKs can still register: the backend discards those two retired request keys
