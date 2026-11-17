@@ -159,6 +159,11 @@ public final class GoalCatalogClassifier {
             if (!excluded.isEmpty() && text.contains(excluded)) return -1;
         }
         if ("coupang".equals(rule.targetApp) && text.equals(normalize(rule.displayName))) return 10000;
+        // Curated full requests are aliases even when their conversational wording
+        // does not contain the shorter imperative keyword groups.
+        for (String utterance : rule.utterances) {
+            if (text.equals(normalize(utterance))) return 10000;
+        }
         int score = rule.keywordGroups.size() * 100;
         for (List<String> group : rule.keywordGroups) {
             int longest = 0;
@@ -170,9 +175,6 @@ public final class GoalCatalogClassifier {
             }
             if (longest == 0) return -1;
             score += longest;
-        }
-        for (String utterance : rule.utterances) {
-            if (text.equals(normalize(utterance))) score += 1_000;
         }
         // Foreground is a tie-breaker, not authority to override more specific words.
         score *= 2;

@@ -75,8 +75,10 @@ class GoalPreparationService:
 
     def _keywords(self, source):
         text = normalize(source)
-        exact = [g for g in self.catalog['goals'] if g['target_app'] == 'coupang'
-            and text == normalize(g['display_name'])]
+        exact = [g for g in self.catalog['goals'] if (
+            g['target_app'] == 'coupang' and text == normalize(g['display_name'])
+            or any(text == normalize(u) for u in g.get('utterances', [])))
+            and not any(normalize(w) and normalize(w) in text for w in g.get('excluded_keywords', []))]
         if exact:
             return exact
         scored = []
@@ -87,8 +89,6 @@ class GoalPreparationService:
                 for group in goal['keyword_groups']]
             if lengths and all(lengths):
                 score = 100 * len(lengths) + sum(lengths)
-                if any(text == normalize(w) for w in goal.get('utterances', [])):
-                    score += 1000
                 scored.append((score, goal))
         top = max((score for score, _ in scored), default=0)
         return [goal for score, goal in scored if score == top]

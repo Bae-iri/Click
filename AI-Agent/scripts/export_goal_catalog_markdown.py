@@ -34,6 +34,7 @@ def render(catalog: dict) -> str:
         f"- 전체 Goal: **{len(goals)}개** (Android 설정 {apps['android_settings']}개, 쿠팡 {apps['coupang']}개)",
         f"- 실행 승인: **{statuses['approved']}개**, 분류 전용: **{statuses['catalog_only']}개**",
         "- `키워드 그룹`의 각 괄호에서는 하나 이상, 괄호와 괄호 사이는 모두 충족해야 분류 후보가 된다.",
+        "- 등록된 `utterances` 예문과 전체 문장이 일치하면 키워드 그룹이 빠져 있어도 후보로 인식한다. 띄어쓰기와 문장부호는 무시한다.",
         "- `catalog_only`는 Goal 추출만 가능하다는 뜻이다. 승인 Task Graph가 없으므로 실제 작업은 시작하지 않는다.",
         f"- 설정 변경 상태 검증 경로: **{modes['settings_change']}개**, 직접 진행 안내: **{modes['settings_assisted']}개**. 승인 표시는 실행 안내를 시작할 수 있다는 뜻이며 실기기 검증 완료를 뜻하지 않는다.",
         "- `settings_assisted`는 화면 안내 뒤 사용자가 직접 선택·입력한다. 사용자 완료 응답은 기술 검증과 별도 기록한다.",

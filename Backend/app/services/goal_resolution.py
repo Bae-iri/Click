@@ -38,7 +38,8 @@ class GoalResolutionService:
         for goal in self.catalog["goals"]:
             if any(normalize(word) and normalize(word) in text for word in goal.get('excluded_keywords', [])):
                 continue
-            if goal['target_app'] == 'coupang' and text == normalize(goal['display_name']):
+            if (goal['target_app'] == 'coupang' and text == normalize(goal['display_name'])
+                    or any(text == normalize(u) for u in goal.get('utterances', []))):
                 scored.append((10000, goal))
                 continue
             lengths = [max((len(normalize(word)) for word in group if normalize(word) and normalize(word) in text), default=0)
@@ -46,8 +47,6 @@ class GoalResolutionService:
             if not lengths or not all(lengths):
                 continue
             score = len(lengths) * 100 + sum(lengths)
-            if any(text == normalize(word) for word in goal.get("utterances", [])):
-                score += 1000
             # One character of keyword specificity outranks foreground context.
             score *= 2
             package = request.device_context.foreground_package or ""

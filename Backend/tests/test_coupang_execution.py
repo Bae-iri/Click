@@ -10,6 +10,7 @@ import pytest
 
 from app.clients.checkpoint import capture, restore
 from app.main import create_app
+from app.models.agent_session import AgentSession
 from app.schemas.agent_turn import TypedGoalRequest
 from app.services.screen_jev import JevScreenResolver
 from app.task_graphs import approved_graphs
@@ -22,10 +23,56 @@ from ai_agent.runtime.types import (
 from ai_agent.task_graph.commerce import DOCUMENT
 from tests.helpers import authenticated_client
 from tests.test_typed_agent_contract import start_payload
+from tests.test_goal_preparation import Flow
 
 GRAPHS = approved_graphs()
 SUFFIXES = list(DOCUMENT['tasks'])
 PKG = 'com.coupang.mobile'
+
+
+@pytest.mark.parametrize('text', [
+    '쿠팡에서 구매하는거 도와줘', '쿠팡에서 구매하는 거 도와줘',
+    '쿠팡에서 구매하는 걸 도와줘', '쿠팡에서 구매하는 것 좀 도와줘',
+    '쿠팡에서 물건 사는 거 도와줘', '쿠팡 구매 도와줘',
+    '쿠팡에서 구매하는 방법 알려줘', '쿠팡에서 구매 도와주세요',
+])
+def test_purchase_help_reaches_checkout_review_without_model_or_transaction(text, monkeypatch):
+    app = create_app()
+    def unexpected(*args, **kwargs):
+        pytest.fail('A catalog-authored request must not depend on model availability')
+    monkeypatch.setattr(app.state.interactions.classifier, 'classify_interaction', unexpected, raising=False)
+    monkeypatch.setattr(app.state.turn_service.goal_preparation.llm, 'interpret_inputs', unexpected)
+    monkeypatch.setattr(app.state.turn_service.goal_resolution.llm, 'select', unexpected)
+    with authenticated_client(app) as client:
+        interaction = client.post('/api/v1/interactions/classify', json={'id': str(uuid4()), 'text': text})
+        assert interaction.status_code == 200 and interaction.json()['intent'] == 'task'
+        flow = Flow(client, app, text)
+        legacy = flow.payload()
+        legacy.pop('preparation_version')
+        legacy_body = client.post('/api/v1/agent/commands', json=legacy)
+        assert legacy_body.status_code == 200
+        assert legacy_body.json()['goal']['goal_type'] == 'coupang.order.checkout'
+        body = flow.resolve()
+        assert body['resolution_status'] == 'confirmation_required', body
+        assert body['goal']['goal_type'] == 'coupang.order.checkout'
+        assert body['preparation']['question'] is None
+        assert body['preparation']['graph_reference']['task_id'] == 'CP-order-checkout'
+        with app.state.session_factory() as db:
+            session = db.get(AgentSession, flow.session)
+            assert session.version == 0 and session.episode_id is None
+
+
+@pytest.mark.parametrize('text,expected', [
+    ('쿠팡에서 구매하는거 도와줘 취소', None),
+    ('쿠팡에서 구매하는거 도와줘 하지마', None),
+    ('쿠팡 구매내역 확인해줘', 'coupang.order.list'),
+    ('쿠팡 주문 취소해줘', 'coupang.order.cancel'),
+])
+def test_purchase_help_aliases_do_not_capture_cancel_or_order_history(text, expected):
+    service = create_app().state.turn_service.goal_preparation
+    from app.services.goal_inputs import negated
+    matches = [] if negated(text) else service._keywords(text)
+    assert [g['goal_type'] for g in matches] == ([expected] if expected else [])
 
 
 def node(id, text, clickable=False, index=0, **kwargs):
