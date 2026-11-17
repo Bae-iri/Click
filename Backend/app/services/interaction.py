@@ -54,6 +54,8 @@ class InteractionService:
 
     def _explicit_task(self, source):
         text = normalize(source)
+        if any(text == normalize(utterance) for goal in self.catalog for utterance in goal.get('utterances', [])):
+            return True
         if not _COMMAND_END.search(text):
             return False
         return any(all(any(normalize(word) in text for word in group) for group in goal['keyword_groups'])
