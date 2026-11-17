@@ -17,7 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.click.ui.common.ClickTextScale;
 
-/** Display preferences for text rendered inside Click. */
+/** Shared app display preferences, also available before onboarding. */
 public final class DisplaySettingsActivity extends AppCompatActivity {
     private static final int BLUE = 0xFF3478F6;
     private static final int INK = 0xFF101A36;
@@ -56,11 +56,14 @@ public final class DisplaySettingsActivity extends AppCompatActivity {
         });
 
         page.addView(header(), new LinearLayout.LayoutParams(-1, -2));
-        add(page, text("클릭 화면과 안내 글자의 크기를 조절할 수 있어요.", 14,
+        add(page, text("글자 크기와 화면 표시 속도를 편하게 맞춰주세요.", 14,
                 SECONDARY, regular), 20);
         LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(-1, -2);
         cardParams.topMargin = dp(26);
-        page.addView(sizeCard(), cardParams);
+        var sizeControl = new com.click.designpreview.TextSizeControlView(this);
+        sizeControl.setOnSizeChanged(() -> ClickTextScale.applyTree(root));
+        page.addView(sizeControl, cardParams);
+        add(page, new com.click.designpreview.UiSpeedControlView(this), 20);
 
         setContentView(root);
         root.requestApplyInsets();
@@ -78,15 +81,11 @@ public final class DisplaySettingsActivity extends AppCompatActivity {
         back.setBackground(ripple(Color.WHITE, 24));
         back.setOnClickListener(view -> finish());
         row.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        TextView title = text("클릭 글자 크기", 22, INK, semibold);
+        TextView title = text("화면 설정", 22, INK, semibold);
         title.setPadding(dp(12), 0, 0, 0);
         if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
         row.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
         return row;
-    }
-
-    private View sizeCard() {
-        return new com.click.designpreview.TextSizeControlView(this);
     }
 
     private android.graphics.drawable.Drawable ripple(int color, int radius) {
@@ -103,7 +102,8 @@ public final class DisplaySettingsActivity extends AppCompatActivity {
     private TextView text(String value, float size, int color, Typeface typeface) {
         TextView view = new TextView(this);
         view.setText(value);
-        view.setTextSize(ClickTextScale.size(this, size));
+        view.setTextSize(size);
+        ClickTextScale.applyTree(view);
         view.setTextColor(color);
         view.setTypeface(typeface);
         view.setIncludeFontPadding(false);

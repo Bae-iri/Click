@@ -106,7 +106,7 @@ public final class MenuActivity extends AppCompatActivity {
 
         section(page, "클릭 설정");
         LinearLayout displaySettings = group();
-        addRow(displaySettings, MenuIconView.Kind.SETTINGS, "화면 설정", "클릭 앱 글자 크기를 조절해요", false,
+        addRow(displaySettings, MenuIconView.Kind.SETTINGS, "화면 설정", "글자 크기와 화면 표시 속도를 조절해요", false,
                 view -> startActivity(new Intent(this, DisplaySettingsActivity.class)));
         divider(displaySettings);
         addRow(displaySettings, MenuIconView.Kind.CLUE, "클루에 대해서", "클릭과 함께하는 펭귄 친구를 소개해요", false,

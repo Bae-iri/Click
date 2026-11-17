@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ui_speed_title">화면 표시 속도</string>
+    <string name="ui_speed_description">화면과 안내가 나타나는 속도예요.</string>
+    <string name="ui_speed_slow">느리게</string>
+    <string name="ui_speed_normal">보통</string>
+    <string name="ui_speed_fast">빠르게</string>
+    <string name="ui_speed_preview_message">여기를 눌러주세요</string>
+    <string name="ui_speed_replay">미리보기 다시 보기</string>
+    <string name="ui_speed_adjust">화면 표시 속도 조절, %1$s</string>
+</resources>

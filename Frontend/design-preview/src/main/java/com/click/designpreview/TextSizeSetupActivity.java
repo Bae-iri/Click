@@ -7,7 +7,7 @@ import android.os.Bundle;
 import android.view.View;
 import com.click.ui.common.ClickTextScale;
 
-/** Choose a readable app text size before the first onboarding page. */
+/** Choose readable text and a comfortable UI speed before the first onboarding page. */
 public final class TextSizeSetupActivity extends Activity {
     private boolean openingOnboarding;
 

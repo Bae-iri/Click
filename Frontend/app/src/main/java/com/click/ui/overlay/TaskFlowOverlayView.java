@@ -29,6 +29,7 @@ import android.widget.TextView;
 import com.click.domain.goal.RequirementReview;
 import com.click.ui.common.ClickUi;
 import com.click.ui.common.ClickTextScale;
+import com.click.ui.common.ClickUiSpeed;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -259,6 +260,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         compactMessage.setText(minimized ? compactGuidance() : "");
         compactMessage.setContentDescription(minimized ? compactGuidance() + ". 눌러서 안내 펼치기" : null);
         compactScroll.setVisibility(minimized ? VISIBLE : GONE);
+        if (minimized) ClickUiSpeed.reveal(compactMessage);
+        else ClickUiSpeed.finishReveal(compactMessage);
         View[] sections = expandedSections();
         if (minimized) expandedVisibility = new int[sections.length];
         for (int i = 0; i < sections.length; i++) {
@@ -395,6 +398,13 @@ public final class TaskFlowOverlayView extends LinearLayout {
         FloatingPanelStyle.styleTitle(heading);
         setNarrationState(false, narrationUnavailable);
         pause.setText("일시정지"); pause.setOnClickListener(v -> listener.control("pause_task"));
+        ClickUiSpeed.reveal(content);
+    }
+
+    @Override protected void onDetachedFromWindow() {
+        ClickUiSpeed.finishReveal(content);
+        ClickUiSpeed.finishReveal(compactMessage);
+        super.onDetachedFromWindow();
     }
 
     private void addFailureClue() {
