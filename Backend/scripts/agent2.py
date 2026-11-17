@@ -421,6 +421,10 @@ def main():
     assessment.add_argument("--format", choices=("text", "json"), default="text")
     browse = commands.add_parser('assess-browse', help='Assess consented graphless browsing without learning or release')
     browse.add_argument('--limit', type=int, default=100)
+    learn = commands.add_parser('learn-browse', help='Generate new graph drafts from verified, consented browsing')
+    learn.add_argument('--limit', type=int, default=100)
+    drafts = commands.add_parser('list-browse-graphs', help='List retained generated draft metadata, without user data')
+    drafts.add_argument('--limit', type=int, default=100)
     comparison = commands.add_parser("compare-jev", help="Compare identical independently reviewed holdout screens")
     comparison.add_argument("--before", required=True)
     comparison.add_argument("--after", required=True)
@@ -490,6 +494,14 @@ def main():
         validate_database_keys(engine)
         if args.command == "process":
             result = process_sessions(factory, limit=args.limit)
+            from scripts.browse_graph_learning import BrowseGraphLearningService
+            result['browse_graphs'] = BrowseGraphLearningService(factory).process(limit=args.limit)
+        elif args.command == 'learn-browse':
+            from scripts.browse_graph_learning import BrowseGraphLearningService
+            result = BrowseGraphLearningService(factory).process(limit=args.limit)
+        elif args.command == 'list-browse-graphs':
+            from scripts.browse_graph_learning import BrowseGraphLearningService
+            result = {'drafts': BrowseGraphLearningService(factory).list_drafts(limit=args.limit)}
         elif args.command == 'assess-browse':
             from scripts.browse_assessment import assess_browsing
             result = assess_browsing(factory,limit=args.limit)
@@ -522,7 +534,9 @@ def main():
         print(json.dumps(result, ensure_ascii=False))
         if args.command == "audit":
             return int(result["status"] != "PASS")
-        return int(bool(result.get("errors"))) if args.command == "process" else 0
+        if args.command == 'process':
+            return int(bool(result.get('errors') or result['browse_graphs']['errors']))
+        return int(bool(result.get('errors'))) if args.command == 'learn-browse' else 0
     finally:
         engine.dispose()
 

@@ -30,6 +30,14 @@ class UserRepository:
 
     def record_consent(self, user_id: str, purpose: str, consented: bool, policy_version: str) -> Consent:
         self.lock_user(user_id)
+        if purpose == 'model_training':
+            from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
+            from app.models.graph_proposal import BROWSE_GRAPH_CONSUMER
+            # A new grant is also a new evidence boundary, not permission to reuse
+            # records preceding it. Receipt deletion cascades to generated drafts.
+            self.session.execute(delete(RuntimeEventConsumption).where(
+                RuntimeEventConsumption.consumer == BROWSE_GRAPH_CONSUMER,
+                RuntimeEventConsumption.event_id.in_(select(RuntimeEvent.id).where(RuntimeEvent.user_id == user_id))))
         if purpose == "model_training" and not consented:
             from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
             self.session.execute(delete(RuntimeEventConsumption).where(RuntimeEventConsumption.event_id.in_(

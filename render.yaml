@@ -31,6 +31,10 @@ services:
         value: jev
       - key: CLICK_COUPANG_BROWSE_ENABLED
         value: "1"
+      - key: CLICK_AI2_BROWSE_GRAPH_ENABLED
+        value: "1"
+      - key: CLICK_AI2_BROWSE_GRAPH_INTERVAL_SECONDS
+        value: "60"
       - key: TYPESAFE_API_KEY
         sync: false
       - key: JEV_MODEL
