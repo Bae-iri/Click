@@ -157,10 +157,12 @@ public final class ClickApplication extends Application implements ClickHost {
     @Override public void openAccessibilitySettings(Activity activity) {
         new AccessibilityOnboardingState(this).begin(activity.getIntent().getBooleanExtra(
                 com.click.designpreview.PermissionGuideActivity.EXTRA_RETURN_TO_SETTINGS, false));
-        Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        // This system action is not exposed in the public SDK and may be absent or
+        // restricted by the device's Settings app. Fall back to the accessibility list.
+        Intent intent = new Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
                 .putExtra(Intent.EXTRA_COMPONENT_NAME, new ComponentName(this, ClickAccessibilityService.class).flattenToString());
         try { activity.startActivity(intent); }
-        catch (android.content.ActivityNotFoundException missing) {
+        catch (android.content.ActivityNotFoundException | SecurityException unavailable) {
             activity.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
         }
     }
