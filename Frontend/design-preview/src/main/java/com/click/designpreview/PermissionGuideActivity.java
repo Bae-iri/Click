@@ -25,12 +25,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.window.OnBackInvokedDispatcher;
 
-/** Five static, reversible cards before the user opens Android accessibility settings. */
+/** Three static, reversible cards before the user opens Android accessibility settings. */
 public final class PermissionGuideActivity extends Activity {
     public static final String EXTRA_RECONNECT = "accessibility_reconnect";
     public static final String EXTRA_RETURN_TO_SETTINGS = "accessibility_return_to_settings";
-    private static final int PAGE_COUNT = 5;
-    private static final String PAGE_STATE = "permission_guide_cards_v3";
+    private static final int PAGE_COUNT = 3;
+    private static final String PAGE_STATE = "permission_guide_cards_v4";
     private static final String SETTINGS_OPENED_STATE = "permission_settings_opened";
     private static final int BLUE = 0xFF3478F6;
     private static final int INK = 0xFF101A36;
@@ -193,28 +193,23 @@ public final class PermissionGuideActivity extends Activity {
     }
 
     private static final int[] IMAGES = {
-        R.drawable.permission_01_accessibility, R.drawable.permission_02_installed_apps,
         R.drawable.permission_03_service_off, R.drawable.permission_04_consent,
         R.drawable.permission_05_service_on
     };
     private static final int[] TITLES = {
-        R.string.guide_card_apps_title, R.string.guide_card_click_title,
         R.string.guide_card_switch_title, R.string.guide_card_consent_title,
         R.string.guide_card_done_title
     };
     private static final int[] DESCRIPTIONS = {
-        R.string.guide_card_apps_body, R.string.guide_card_click_body,
         R.string.guide_card_switch_body, R.string.guide_card_consent_body,
         R.string.guide_card_done_body
     };
     // Display the relevant part of each screenshot at readable size.
     private static final RectF[] CROPS = {
-        new RectF(0, 1280, 1080, 2160), new RectF(0, 540, 1080, 1320),
         new RectF(0, 160, 1080, 960), new RectF(0, 720, 1080, 2250),
         new RectF(0, 160, 1080, 960)
     };
     private static final RectF[] TARGETS = {
-        new RectF(24, 1680, 1056, 1890), new RectF(24, 1050, 1056, 1260),
         new RectF(870, 335, 1032, 455), new RectF(795, 2055, 990, 2190),
         new RectF(24, 328, 1056, 470)
     };
@@ -238,7 +233,7 @@ public final class PermissionGuideActivity extends Activity {
         TextView title = title(TITLES[page], 21);
         title.setId(R.id.guide_card_title);
         add(body, title, 0);
-        int bodyText = page == 2 && getIntent().getBooleanExtra(EXTRA_RECONNECT, false)
+        int bodyText = page == 0 && getIntent().getBooleanExtra(EXTRA_RECONNECT, false)
                 ? R.string.guide_card_reconnect_body : DESCRIPTIONS[page];
         add(body, text(bodyText, 14, SECONDARY, regular), 10);
 
@@ -248,8 +243,8 @@ public final class PermissionGuideActivity extends Activity {
         cardFill.setStroke(dp(1), 0xFFE1E9F5);
         card.setBackground(cardFill);
         card.setClipToOutline(true);
-        PermissionScreenshotView screenshot = page == 0 ? PermissionScreenshotView.accessibilityFirstPage(this)
-                : new PermissionScreenshotView(this, IMAGES[page], CROPS[page], TARGETS[page]);
+        PermissionScreenshotView screenshot = new PermissionScreenshotView(
+                this, IMAGES[page], CROPS[page], TARGETS[page]);
         screenshot.setId(R.id.guide_screenshot);
         screenshot.setContentDescription(getString(TITLES[page]));
         card.addView(screenshot, new LinearLayout.LayoutParams(-1, -2));
