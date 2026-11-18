@@ -8,6 +8,35 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.*;
 
 public class AgentServerContractTest {
+    @Test public void naturalGoalResolutionAdvertisesPublicGuideWithoutPreexistingCapabilities() throws Exception {
+        JSONObject api;
+        try(var input=getClass().getResourceAsStream("/openapi.json")) {
+            api=new JSONObject(new String(input.readAllBytes(),StandardCharsets.UTF_8));
+        }
+        api.getJSONObject("paths").put("/api/v1/agent/public-guide/commands",new JSONObject());
+        JSONObject schemas=api.getJSONObject("components").getJSONObject("schemas");
+        JSONObject capabilities=schemas.optJSONObject("DeviceCapabilities");
+        if(capabilities==null) {
+            capabilities=new JSONObject().put("properties",new JSONObject());
+            schemas.put("DeviceCapabilities",capabilities);
+        }
+        capabilities.getJSONObject("properties").put("gov24_login",new JSONObject().put("type","boolean"));
+        AgentServerContract server=AgentServerContract.fromOpenApi(api);
+        assertTrue(server.gov24Login);
+        var request=AgentTurnContract.Request.resolve("session","정부24 로그인 도와줘",null);
+        assertFalse(new JSONObject(request.toJson()).getJSONObject("device_context").has("capabilities"));
+        JSONObject wire=new JSONObject(server.encode(request));
+        assertTrue(wire.getJSONObject("device_context").getJSONObject("capabilities").getBoolean("gov24_login"));
+        if(server.gov24Civil)assertTrue(wire.getJSONObject("device_context").getJSONObject("capabilities").getBoolean("gov24_civil"));
+        assertFalse(wire.has("accessibility_tree"));
+    }
+
+    @Test public void legacyGoalResolutionDoesNotReceiveUnsupportedCapabilities() throws Exception {
+        var request=AgentTurnContract.Request.resolve("session","정부24 로그인 도와줘",null);
+        JSONObject wire=new JSONObject(AgentServerContract.fromOpenApi(deployed()).encode(request));
+        assertFalse(wire.getJSONObject("device_context").has("capabilities"));
+    }
+
     @Test public void oldServersNeverReceiveNewSystemModeFields() throws Exception {
         JSONObject api;
         try(var in=getClass().getResourceAsStream("/openapi.json")) {

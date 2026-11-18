@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
     <!-- Debug-only entry points used for visual QA of the post-permission flow. -->
     <application>
+        <receiver android:name="com.click.debug.Gov24GuideProbeReceiver" android:exported="true" android:permission="android.permission.DUMP" />
         <activity
             android:name=".TutorialActivity"
             android:exported="true"

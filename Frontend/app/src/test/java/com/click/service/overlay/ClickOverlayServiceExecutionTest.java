@@ -200,6 +200,38 @@ public class ClickOverlayServiceExecutionTest {
     @Test public void spokenEditorCorrectionIsDraftEvenWhenItSoundsLikeConfirmation() throws Exception {
         checkEditorSpeech(false,false);
     }
+    @Test public void onlyVerifiedPublicLoginSnapshotsBypassTheSettingsGoalCatalog() throws Exception {
+        Method accept=ClickOverlayService.class.getDeclaredMethod("acceptExecutionState",AgentTurnContract.Response.class,String.class,boolean.class);
+        accept.setAccessible(true);
+        for(boolean publicMode:new boolean[]{false,true})for(String type:new String[]{"gov24.login","gov24.resident_copy.open","unknown.login"}) {
+            JSONObject state=new JSONObject().put("protocol_version",com.click.data.remote.ExecutionState.version())
+                .put("session_id","frontend-session").put("episode_id","public-episode").put("session_version",2)
+                .put("command_type","snapshot").put("task_status","IN_PROGRESS")
+                .put("phase",com.click.data.remote.ExecutionState.phase("IN_PROGRESS")).put("source","snapshot").put("goal_type",type);
+            var response=new AgentTurnContract.Response(new JSONObject().put("request_id","public-snapshot")
+                .put("session_id","frontend-session").put("episode_id","public-episode").put("session_version",2)
+                .put("task_status","IN_PROGRESS").put("response_type","control").put("execution_state",state)
+                .put("metadata",new JSONObject().put("public_guide",publicMode).put("public_guide_goal_type",type)).toString());
+            assertEquals(publicMode && java.util.Set.of("gov24.login","gov24.resident_copy.open").contains(type),accept.invoke(service,response,null,true));
+            assertNull(get("acceptedGoal"));
+        }
+    }
+
+    @Test public void publicLoginPreparationDoesNotRequireASettingsGoal() throws Exception {
+        JSONObject data=new JSONObject().put("version","goal-inputs.v1").put("id","public-login-prepared")
+            .put("source_text","정부24 로그인 도와줘").put("status","ready").put("execution_mode","public_guide")
+            .put("missing_fields",new JSONArray()).put("public_guide_goal",new JSONObject().put("goal_type","gov24.login"));
+        var state=new com.click.domain.goal.GoalPreparationState(data,null,"정부24 로그인 방법 선택을 안내할까요?");
+        assertTrue(state.ready());
+        set("goalPreparation",state);
+        invoke("showGoalPreparation");
+        var panel=(TaskFlowOverlayView)get("taskFlowView");
+        verify(panel).preparation(state);
+        verify(panel).offerAdjustmentDelegation(false);
+        verify(panel,never()).disruptiveTaskNotice(anyBoolean());
+        assertNull(get("acceptedGoal"));
+    }
+
     @Test public void confirmedCoupangBrowseUsesSeparateManualContractAndStopDiscardsLateReply() throws Exception {
         try(var browse=mockConstruction(com.click.data.remote.CoupangBrowseGateway.class)) {
             assertTrue(contract.coupangBrowse);
