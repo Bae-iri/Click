@@ -233,3 +233,14 @@ Backend/click-dev.db-*
 AI-Agent/data/android_control/
 AI-Agent/data/local/
 AI-Agent/data/graph_proposal/
+
+# Database backup artifacts and infrastructure state must never be committed.
+*.dump
+*.backup
+!Backend/Dockerfile.backup
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+**/.terraform/
+crash.log
