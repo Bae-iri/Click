@@ -53,8 +53,12 @@ public final class CoupangBrowseController {
     }
     public void finish() {if(!busy&&!terminal)send("finish",null,null);}
     public boolean terminal(){return terminal;}
+    public String status(){return guide==null?null:guide.optString("status",null); }
     public void screenChanged(ScreenSnapshot current) {
         entryScreen=current;
+        if("public-guide.v1".equals(protocol)&&!closed&&!terminal&&listener.canObserve()&&listener.localGuide(current)) {
+            guide=question=null;guidedScreen=null;entryObserved=false;observedPublicScene=null;return;
+        }
         if(guidedScreen!=null && (current==null || !guidedScreen.contentFingerprint().equals(current.contentFingerprint())))guide=null;
         if("public-guide.v1".equals(protocol)&&current!=null&&!closed&&!busy&&!terminal&&listener.canObserve()) {
             try {
@@ -70,6 +74,9 @@ public final class CoupangBrowseController {
     private void observeEntry() {
         if(closed || busy || terminal || entryScreen==null || !listener.canObserve())return;
         try {
+            if("public-guide.v1".equals(protocol)&&listener.localGuide(entryScreen)) {
+                guide=question=null;guidedScreen=null;entryObserved=false;observedPublicScene=null;return;
+            }
             JSONObject safe=privacy.filter(entryScreen);
             if("public-guide.v1".equals(protocol)) {
                 // Direct native taps can change the public choice screen without

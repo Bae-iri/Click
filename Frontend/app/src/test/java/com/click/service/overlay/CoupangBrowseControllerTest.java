@@ -100,6 +100,20 @@ public class CoupangBrowseControllerTest {
         controller.screenChanged(appScreen("com.coupang.mobile"));
         verify(gateway,times(2)).send(any(),any());
     }
+    @Test public void trustedLocalHomeNavigationPrecedesInputHandoffAndAllowsNextChoiceScreen() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);
+        var home=appScreen("kr.go.minwon.m");when(listener.localGuide(home)).thenReturn(true);
+        var controller=new CoupangBrowseController(gateway,view->view==home
+            ?new JSONObject().put("status","handoff").put("nodes",new JSONArray())
+            :new com.click.data.snapshot.Gov24LoginPrivacy().filter(view),"kr.go.minwon.m","public-guide.v1",listener);
+        controller.start("session","prepared");controller.screenChanged(home);
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);verify(gateway).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+        verify(gateway,times(1)).send(any(),any());assertFalse(controller.terminal());
+        controller.screenChanged(loginScreen("간편인증","공동인증서"));
+        verify(gateway,times(2)).send(any(),any());
+    }
     private com.click.data.snapshot.ScreenSnapshot loginScreen(String... labels) {
         var nodes=new java.util.ArrayList<com.click.data.snapshot.AccessibilityNodeSnapshot>();
         for(int i=0;i<labels.length;i++)nodes.add(new com.click.data.snapshot.AccessibilityNodeSnapshot(

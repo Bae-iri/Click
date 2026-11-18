@@ -213,6 +213,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private CoupangBrowseController coupangBrowse;
     private boolean gov24Guide;
     private boolean gov24Civil;
+    private String gov24EntryPresentation;
+    private int gov24EntryRevealCount;
+    private long gov24EntryRevealAt;
+    private int gov24TargetRefreshes;
     private WindowManager.LayoutParams guideOverlayParams;
     private ConfirmationOverlayView confirmationView;
     private WindowManager.LayoutParams confirmationParams;
@@ -224,6 +228,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 overlayView.collapse();
             } else if (OverlayActions.ACTION_SNAPSHOT_UPDATED.equals(intent.getAction())) {
                 if(coupangBrowse!=null)coupangBrowse.screenChanged(LatestScreenSnapshot.get());
+                if(gov24Guide&&coupangBrowse!=null&&!coupangBrowse.terminal()&&showGov24EntryGuide())return;
                 if (showCoupangNativeGuide(LatestScreenSnapshot.get())) return;
                 if (coupangBrowse != null) {
                     ScreenSnapshot current=LatestScreenSnapshot.get();
@@ -750,7 +755,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                 | (goalSelection == null && goalPreparation == null && (requirementReview == null || requirementReview.confirmed())
-                    && !(gov24Guide&&coupangBrowse!=null&&coupangBrowse.awaitingAnswer()) ? WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE : 0);
+                    && !(gov24Guide&&taskFlowView!=null&&taskFlowView.needsPublicGuideInput()) ? WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE : 0);
         taskFlowHeightLimit = height;
         taskFlowRestingGravity = taskFlowParams.gravity;
         appliedTaskFlowHeight = -1;
@@ -789,7 +794,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void clearTaskFlow() {
         if (coupangBrowse != null) { coupangBrowse.close(); coupangBrowse=null; }
-        gov24Guide=false;gov24Civil=false;
+        gov24Guide=false;gov24Civil=false;gov24EntryPresentation=null;gov24EntryRevealCount=0;gov24EntryRevealAt=0;gov24TargetRefreshes=0;
         adjustmentDelegation.clear();pendingApprovalProvenance=null;
         environmentWaitKey=null;environmentWait=null;lastNavigableEnvironment=null;
         observedPageScreen=pendingPageScreen=null;
@@ -1123,7 +1128,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             coupangBrowse=new CoupangBrowseController(gateway,privacy,gov24Guide?"kr.go.minwon.m":"com.coupang.mobile",
                 gov24Guide?"public-guide.v1":"coupang-browse.v1",new CoupangBrowseController.Listener(){
                 public void busy(boolean value){setTurnInFlight(value);}
-                public boolean localGuide(ScreenSnapshot screen){return !gov24Guide&&showCoupangNativeGuide(screen);}
+                public boolean localGuide(ScreenSnapshot screen){return gov24Guide?showGov24EntryGuide():showCoupangNativeGuide(screen);}
                 public boolean canObserve(){return !closing && !execution.paused() && execution.pendingControl()==null;}
                 public void failed(Throwable error,Runnable retry){
                     if(closing || coupangBrowse==null || execution.paused())return;
@@ -1139,37 +1144,57 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             execution.setStarted(true);execution.clearObservation();
             if(restoring)coupangBrowse.restore(execution.sessionId(),version);
             else coupangBrowse.start(execution.sessionId(),resolution);
+            if(gov24Guide&&!"kr.go.minwon.m".equals(foregroundPackage()))openCoupang();
             coupangBrowse.screenChanged(ClickAccessibilityService.freshSnapshot());
         }catch(Exception failure){showQueueError(failure);}
     }
 
     private void showCoupangBrowse(JSONObject response,ScreenSnapshot submitted) {
+        if(gov24Guide && "IN_PROGRESS".equals(response.optString("status")) && showGov24EntryGuide())return;
         if(!gov24Guide && "IN_PROGRESS".equals(response.optString("status")) && showCoupangNativeGuide(ClickAccessibilityService.freshSnapshot()))return;
         if(!"IN_PROGRESS".equals(response.optString("status")) && coupangNativeGuide!=null)clearTargetHelpWait();
         hideGuideOverlay();ensureTaskFlow();
         boolean terminal=!"IN_PROGRESS".equals(response.optString("status"));
         String message=response.optString("message");
+        JSONObject publicQuestion=response.optJSONObject("question");
+        boolean nativeProviderSelection=gov24Guide&&!gov24Civil&&publicQuestion!=null
+                &&"인증기관".equals(publicQuestion.optString("label"));
+        if(nativeProviderSelection)message="원하는 민간 인증서를 선택해 주세요.";
         int[] publicTarget=null;
-        if(gov24Guide&&terminal)stopListening();
+        if(gov24Guide) {
+            gov24EntryPresentation=null;
+            if(terminal) {
+                stopListening();
+                message="handoff".equals(response.optString("outcome"))
+                    ?(message.contains("동의")?"동의를 확인해 주세요.":"직접 인증해 주세요.")
+                    :"BLOCKED".equals(response.optString("status"))?"안내를 계속할 수 없어요.":"안내를 마쳤어요.";
+            } else if(message.contains("현재 화면 확인"))message="kr.go.minwon.m".equals(foregroundPackage())
+                ?"로그인 버튼을 찾고 있어요.":"정부24를 여는 중이에요.";
+        }
         ScreenSnapshot current=ClickAccessibilityService.freshSnapshot();
         if(!terminal && !response.isNull("target_node_id") && submitted!=null && current!=null
                 && submitted.contentFingerprint().equals(current.contentFingerprint())) {
             org.json.JSONArray bounds=response.optJSONArray("target_bounds");
             if(bounds!=null && bounds.length()==4) {
+                gov24TargetRefreshes=0;
                 publicTarget=new int[]{bounds.optInt(0),bounds.optInt(1),bounds.optInt(2),bounds.optInt(3)};
                 lastSubmittedScreen=submitted;
                 showGuideOverlay(new int[]{bounds.optInt(0),bounds.optInt(1),bounds.optInt(2),bounds.optInt(3)},
                     "scroll".equals(response.optString("action_kind"))?"scroll":"tap",GuideDragDirection.UNKNOWN);
             }
         } else if(!terminal && !response.isNull("target_node_id")) {
-            message="화면이 바뀌었어요. 현재 화면 확인을 눌러 새 안내를 받아주세요.";
+            message=gov24Guide?"화면을 다시 확인하고 있어요.":"화면이 바뀌었어요. 현재 화면 확인을 눌러 새 안내를 받아주세요.";
+            if(gov24Guide&&gov24TargetRefreshes++<2) {
+                CoupangBrowseController owner=coupangBrowse;
+                speechHandler.postDelayed(()->{if(!closing&&coupangBrowse==owner&&owner!=null&&!owner.terminal())
+                    owner.observe(ClickAccessibilityService.freshSnapshot());},350);
+            }
         }
         if(gov24Guide) {
             taskFlowView.publicGuide(message,terminal,response.optJSONObject("question"),gov24Civil,
                 (value,button)->{if(coupangBrowse!=null)coupangBrowse.answer(ClickAccessibilityService.freshSnapshot(),value,button);},
-                ()->{if(coupangBrowse!=null)coupangBrowse.observe(ClickAccessibilityService.freshSnapshot());},this::openCoupang,
                 ()->{if(coupangBrowse==null||endingTask)return;if(!terminal){coupangBrowse.finish();return;}
-                    endingTask=true;clearTaskFlow();finishActiveQueueRequest(null);});
+                    endingTask=true;clearTaskFlow();finishActiveQueueRequest("BLOCKED".equals(response.optString("status"))?"AGENT_ERROR":null);});
         } else taskFlowView.browsing(message,terminal,
             ()->{if(coupangBrowse!=null)coupangBrowse.observe(ClickAccessibilityService.freshSnapshot());},
             this::openCoupang,
@@ -1183,7 +1208,30 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=false;
         if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(gov24Guide?publicTarget:null,true);
         speak(message);
+        if(nativeProviderSelection)collapseTaskFlow();
         if(gov24Guide&&terminal)voiceReplyEnabled=false;
+    }
+
+    private boolean showGov24EntryGuide() {
+        if(!gov24Guide||gov24Civil||closing)return false;
+        var target=ClickAccessibilityService.gov24LoginEntry();
+        if(target==null){gov24EntryPresentation=null;return false;}
+        boolean visible=target.visible&&target.bounds[0]>=0&&target.bounds[1]>=0
+                &&target.bounds[2]<=screenWidth()&&target.bounds[3]<=screenHeight();
+        if(!visible&&gov24EntryRevealCount<3&&SystemClock.uptimeMillis()-gov24EntryRevealAt>=500) {
+            gov24EntryRevealAt=SystemClock.uptimeMillis();gov24EntryRevealCount++;
+            ClickAccessibilityService.revealGov24LoginEntry();
+            speechHandler.postDelayed(ClickAccessibilityService::requestFreshSnapshot,400);
+        }
+        String key=target.windowId+":"+target.nodeId+":"+java.util.Arrays.toString(target.bounds)+":"+visible;
+        if(key.equals(gov24EntryPresentation)&&taskFlowView!=null)return true;
+        gov24EntryPresentation=key;
+        hideGuideOverlay();ensureTaskFlow();
+        String message=visible?"로그인을 눌러주세요.":"로그인 버튼을 찾고 있어요.";
+        taskFlowView.progress(null,null,message,false);taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=false;
+        if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(visible?target.bounds:null,false);
+        if(visible)showGuideOverlay(target.bounds,"tap",GuideDragDirection.UNKNOWN);
+        speak(message);return true;
     }
 
     private void openCoupang() {
@@ -2154,6 +2202,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if (queuedGeneration != queueGeneration) return;
                 presentQueueSnapshot(response);
                 awaitingReplacement = response.awaitingReplacement;
+                if(gov24Guide&&coupangBrowse!=null&&coupangBrowse.terminal()) {
+                    completePublicGuideAndContinue(coupangBrowse.status());return;
+                }
                 if (overlayView != null && execution.sessionId() != null) {
                     overlayView.setRecognizedSpeech("이 작업을 마친 뒤 이어서 도와드릴게요.");
                 }
@@ -2166,6 +2217,30 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 showQueueError(error);
             }
         });
+    }
+
+    private void completePublicGuideAndContinue() {completePublicGuideAndContinue("COMPLETED");}
+    private void completePublicGuideAndContinue(String status) {
+        if(endingTask||activeVoiceRequestId==null||queueGateway==null)return;
+        endingTask=true;setTurnInFlight(true);
+        final int generation=execution.generation();final String finished=activeVoiceRequestId;
+        VoiceQueueGateway.Callback completion=new VoiceQueueGateway.Callback(){
+            public void onSuccess(VoiceQueueGateway.Response response) {
+                if(generation!=execution.generation()||closing)return;
+                if(quickHelpSelections!=null)quickHelpSelections.remove(finished);
+                activeVoiceRequestId=null;execution.clearSession();clearTaskFlow();
+                nextQueuedRequest=null;endingTask=false;setTurnInFlight(false);presentQueueSnapshot(response);
+                if(response.queuedCount>0&&!response.awaitingReplacement)claimNextQueuedRequest();
+                else shutdownClick();
+            }
+            public void onFailure(Throwable error) {
+                if(generation!=execution.generation()||closing)return;
+                endingTask=false;setTurnInFlight(false);showQueueError(error);
+            }
+        };
+        if("COMPLETED".equals(status))queueGateway.complete(finished,completion);
+        else if("CANCELLED".equals(status))queueGateway.cancel(finished,"USER_ABORTED",completion);
+        else queueGateway.fail(finished,"AGENT_ERROR",completion);
     }
 
     private void processVipRequest(String command) {
@@ -2486,6 +2561,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     onFailure(new java.io.IOException("INVALID_SESSION_STATE")); return;
                 }
                 setTurnInFlight(false);
+                if(response.metadata!=null&&response.metadata.optBoolean("public_guide")
+                        &&java.util.Set.of("COMPLETED","CANCELLED","EXPIRED","BLOCKED").contains(response.taskStatus)) {
+                    completePublicGuideAndContinue(response.taskStatus);return;
+                }
                 if(response.metadata!=null && (response.metadata.optBoolean("browsing")||response.metadata.optBoolean("public_guide"))) {
                     gov24Guide=response.metadata.optBoolean("public_guide");
                     gov24Civil="gov24.resident_copy.open".equals(response.metadata.optString("public_guide_goal_type"));
