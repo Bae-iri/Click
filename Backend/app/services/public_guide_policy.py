@@ -15,7 +15,7 @@ def civil_requested(source):
             and not any(word in text for word in ('초본만', '등본말고', '토지', '건축물')))
 
 def enabled():
-    return os.getenv('CLICK_GOV24_GUIDE_ENABLED', '0') == '1'
+    return os.getenv('CLICK_GOV24_GUIDE_ENABLED', '1') == '1'
 
 def requested(source):
     text = normalize(source)
