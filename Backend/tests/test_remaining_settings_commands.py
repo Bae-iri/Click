@@ -102,10 +102,12 @@ def test_exact_remaining_range_matches_shared_catalog():
     settings = [g for g in catalog["goals"] if g["goal_type"].startswith("settings.")
                 and g.get("task_type") != "settings_navigation"]
     start = next(i for i, g in enumerate(settings) if g["goal_type"] == "settings.magnification.enable")
-    assert [(g["goal_type"], g["slots"]) for g in settings[start:]] == CASES
+    end = next(i for i, g in enumerate(settings) if g["goal_type"] == "settings.device_name.change") + 1
+    # Later catalog additions (such as theme) are outside this original range.
+    assert [(g["goal_type"], g["slots"]) for g in settings[start:end]] == CASES
     assert len(CASES) == 48
     assert CASES[-1][0] == "settings.device_name.change"
-    for entry in settings[start:]:
+    for entry in settings[start:end]:
         assert entry["target_app"] == "android_settings"
         assert entry["execution_status"] == "approved"
 

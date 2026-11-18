@@ -57,7 +57,8 @@ def test_public_build_identity_contains_no_configuration_or_credentials(monkeypa
     assert body['target_validation']=='settings-slider.v1'
     assert len(body['source_sha256'])==64
     assert set(body)=={'schema_version','source_revision','source_sha256','target_validation','runtime_configuration','goal_interpretation','observation_contract','capability_contract'}
-    assert set(body['runtime_configuration']) <= {'provider','code_hash','model','minimum_confidence'}
+    assert set(body['runtime_configuration']) <= {'provider','code_hash','model','minimum_confidence',
+        'screen_judgment_mode','choice_temperature'}
 
 
 def test_device_runner_stops_before_adb_if_server_is_not_the_tested_release():

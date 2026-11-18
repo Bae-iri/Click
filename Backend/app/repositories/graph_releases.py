@@ -59,6 +59,15 @@ class GraphReleaseRepository:
             if base is None or base.graph_hash != release["base_hash"] or not base.approved:
                 raise ValueError("Stale or unapproved base")
             TaskGraphRepository._decode(base)
+            if release.get('selection') is not None:
+                from ai_agent.task_graph.success_selection import POLICY, priority_candidate, select_candidate
+                from types import SimpleNamespace
+                if not release.get('runtime_run_id') or release['reviewer'] != POLICY:
+                    raise ValueError('Automatic release requires retained runtime evidence')
+                candidate = priority_candidate(SimpleNamespace(**stored), base.body)
+                expected = select_candidate([candidate]) if candidate is not None else None
+                if expected is None or release['selection'] != expected:
+                    raise ValueError('Automatic selection evidence mismatch')
             if release.get("runtime_run_id"):
                 if (stored.get("task_id") != task or stored.get("proposal_type") != "transition_priority"
                         or stored.get("evidence", {}).get("base_graph_hash") != base.graph_hash
@@ -115,6 +124,7 @@ class GraphReleaseRepository:
             db.add(GraphReleaseAudit(release_id=identifier, previous_hash=base.graph_hash, graph_hash=graph_hash,
                 action="promote", reviewer=release["reviewer"], reviewed_at=release["reviewed_at"],
                 details={"release_hash": digest(release), "proposal_id": release["proposal_id"],
+                    "selection": release.get('selection'),
                     "evaluation_hash": release["evaluation_hash"], "manifest_hash": evaluation["manifest_hash"],
                     "checks": evaluation["checks"], "product_case_count": len(evaluation["product_case_ids"])}))
             db.commit()

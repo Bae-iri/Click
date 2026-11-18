@@ -302,6 +302,47 @@ def stored_proposal(factory, run_id, proposal_id, *, now=None):
         return GraphUpdateProposal(**proposals[0])
 
 
+def auto_select_routes(factory, run_id, *, manifest, cases, now=None, evaluator=None):
+    """Re-evaluate and publish one success-ranked candidate per task; no human approval."""
+    from ai_agent.task_graph.success_selection import priority_candidate, select_candidate
+    now = int(time.time()) if now is None else now
+    with factory() as db:
+        receipt = db.get(RuntimeEventConsumption, run_id)
+        if (receipt is None or receipt.consumer != ROUTE_CONSUMER
+                or receipt.result.get('expires_at', 0) <= now):
+            raise ValueError('Runtime proposal evidence expired or was withdrawn; run again')
+        proposals = [GraphUpdateProposal(**p) for p in receipt.result.get('proposals', [])]
+    groups, prepared = {}, {}
+    for proposal in proposals:
+        with factory() as db:
+            row = db.get(ApprovedTaskGraph, f'{proposal.task_id}:{proposal.base_graph_version}')
+            if row is None or not row.active or not row.approved:
+                continue
+            TaskGraphRepository._decode(row)
+            base = deepcopy(row.body)
+        candidate = priority_candidate(proposal, base)
+        if candidate is None:
+            continue
+        evaluation = GraphValidator().validate(proposal, base_graph=base, manifest=manifest,
+            cases=[case for case in cases if not isinstance(case, dict) or case.get('task_id') in (None, proposal.task_id)] if cases else cases,
+            evaluator=evaluator or replay_evaluator, graph_loader=load_graph)
+        if evaluation['decision'] != 'PASS':
+            continue
+        groups.setdefault(proposal.task_id, []).append(candidate)
+        prepared[proposal.proposal_id] = (proposal, base, evaluation)
+    manager = GraphVersionManager(GraphReleaseRepository(factory))
+    published = []
+    for task in sorted(groups):
+        winner = select_candidate(groups[task])
+        if winner is None:
+            continue
+        proposal, base, evaluation = prepared[winner['key']]
+        release = manager.prepare_automatic(proposal, base, evaluation=evaluation, selected_at=now)
+        release['runtime_run_id'] = run_id
+        published.append({**manager.promote(release), 'selection': release['selection']})
+    return {'status': 'PUBLISHED' if published else 'NEEDS_DATA', 'published': published}
+
+
 def audit_goal_coverage(factory):
     """Check the same catalog goals and graph selection used by new requests."""
     from app.schemas.agent_turn import TypedGoalRequest
@@ -434,6 +475,10 @@ def main():
     propose.add_argument("--manifest", required=True)
     propose.add_argument("--cases", help="Independent device replay cases; omitted cases yield NEEDS_DATA")
     propose.add_argument("--limit", type=int, default=100)
+    automatic = commands.add_parser('auto-select-routes', help='Select by observed success and publish after replay validation; no reviewer required')
+    automatic.add_argument('--run-id', required=True)
+    automatic.add_argument('--manifest', required=True)
+    automatic.add_argument('--cases', required=True)
     commands.add_parser("audit", help="Validate stored graph structures; no device-quality claims")
     fixture = commands.add_parser("fixture", help="Run curated/synthetic JSONL through the full offline pipeline")
     fixture.add_argument("--events", required=True)
@@ -518,6 +563,8 @@ def main():
         elif args.command == "propose-routes":
             result = propose_routes(factory, manifest=read_json(args.manifest),
                 cases=read_json(args.cases) if args.cases else None, limit=args.limit)
+        elif args.command == 'auto-select-routes':
+            result = auto_select_routes(factory, args.run_id, manifest=read_json(args.manifest), cases=read_json(args.cases))
         elif args.command == "audit":
             result = audit_catalog(factory)
         elif args.command == "publish":

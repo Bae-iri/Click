@@ -48,7 +48,7 @@ DB·사용자 동의·삭제 연계와 실제 AI1 replay adapter는 `Backend/scr
 시도 분모에 넣지 않습니다. 알려지지 않은 before hash와 변경된 target binding은
 기존처럼 증거 부족·계약 오류로 처리합니다.
 
-실제 제품 gold·독립 holdout은 아직 없습니다. 합성·공개 참고 자료만으로 평가 PASS나 운영 release를 만들지 않습니다. 새 selector·UI 경로·작업을 추측 생성하지 않습니다. `proposals/browse_graph.py`는 모든 관측 변화가 조작으로 연결되고 목적 화면까지 검증된 탐색에서 새 상태·전이 그래프를 구성합니다. Backend는 완료 응답 이후 및 주기적 재처리로 `graph_proposals`에 암호화 저장하며, 원천 기록·동의·만료에 함께 삭제합니다. 현재 대상과 명령은 [쿠팡 탐색 그래프 절차](../../../../docs/coupang-browse.md#ai2-신규-그래프-자동-생성)를 따릅니다. 생성 초안은 독립 검증·승인 전에는 운영 경로로 활성화하지 않습니다.
+실제 제품 gold·독립 holdout은 아직 없습니다. 합성·공개 참고 자료만으로 평가 PASS나 운영 release를 만들지 않습니다. 새 selector·UI 경로·작업을 추측 생성하지 않습니다. `proposals/browse_graph.py`는 모든 관측 변화가 조작으로 연결되고 목적 화면까지 검증된 탐색에서 새 상태·전이 그래프를 구성합니다. Backend는 완료 응답 이후 및 주기적 재처리로 `graph_proposals`에 암호화 저장하며, 원천 기록·동의·만료에 함께 삭제합니다. 현재 대상과 명령은 [쿠팡 탐색 그래프 절차](../../../../docs/coupang-browse.md#ai2-신규-그래프-자동-생성)를 따릅니다. 공개 탐색 후보는 단계 성공률로 자동 선택하며, 기존 경로 변경은 재평가 후 `auto-select-routes`가 선택·게시할 수 있습니다. 후보별 개발자 승인은 필요하지 않습니다. [자동 선택 정책과 적용 범위](../../../../docs/agent2-automatic-selection.md)를 참고하세요.
 
 ## DB 기록 처리
 
