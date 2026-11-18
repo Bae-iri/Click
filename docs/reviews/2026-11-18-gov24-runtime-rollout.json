@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-18",
+  "timezone": "Asia/Seoul",
+  "live_backend": {
+    "source_revision": "a798915be37d0ff9fe9f4ceec1916223e36c9e8d",
+    "health": "ok",
+    "gov24_login_enabled": true,
+    "public_guide_endpoint": true,
+    "gov24_capability": true,
+    "deployment": "user_triggered_manual_render_deploy"
+  },
+  "installed_app": {
+    "application_id": "com.clueclick.app",
+    "last_update_time": "2026-11-18 15:09:06 Asia/Seoul",
+    "government24_package_query_present": true,
+    "sha256": "26330e172c3d653b10c15fe51ce1f0cc438f07addbf53fd73076e9201bd20a8f",
+    "installation": "reinstalled_with_user_approval_due_to_different_signing_key"
+  },
+  "verification": {
+    "backend_rollout_and_related_regression_tests": {
+      "passed": 48
+    },
+    "android_apk_build": "PASS",
+    "installed_app_live_flow": "PENDING_DEVICE_RECONNECT"
+  },
+  "limitations": [
+    "The test phone disconnected after installation; the installed Click overlay to live-server flow is not yet verified.",
+    "No actual authentication, credential entry, consent submission, or document request was performed."
+  ]
+}
