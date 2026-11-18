@@ -106,10 +106,10 @@ class PublicGuideService(BrowseService):
                     state['selected_option']=selected
                     state.pop('public_preference',None)
                     if selected=='method_simple' and request.answer:
-                        projected=policy.projected_answer(request.answer)
-                        if any(policy.normalize(alias) in policy.normalize(projected)
+                        preference=policy.preference_text(request.answer)
+                        if preference and any(policy.normalize(alias) in policy.normalize(preference)
                                 for spec in policy.OPTIONS.values() if spec['group']=='provider' for alias in spec['aliases']):
-                            state['public_preference']=projected
+                            state['public_preference']=preference
                     return
                 prefix='어떤 선택인지 확실하지 않아요. 사용하실 항목을 하나만 말씀하거나 버튼으로 골라주세요. '
                 evidence['reason']='clarification_required'

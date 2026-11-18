@@ -73,6 +73,7 @@ public class DeviceSpeechInputTest {
         assertEquals("ko-KR", intent.getValue().getStringExtra(RecognizerIntent.EXTRA_LANGUAGE));
         assertTrue(intent.getValue().getBooleanExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false));
         assertTrue(intent.getValue().getBooleanExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false));
+        assertFalse(intent.getValue().getBooleanExtra(RecognizerIntent.EXTRA_MASK_OFFENSIVE_WORDS, true));
         listener.onReadyForSpeech(new Bundle());
         listener.onPartialResults(words(" 글자 크기 "));
         listener.onEndOfSpeech();
@@ -84,6 +85,14 @@ public class DeviceSpeechInputTest {
         verify(recognizer).destroy();
         listener.onResults(words("duplicate"));
         verify(callback, times(1)).onSuccess(anyString());
+    }
+
+    @Test public void negativeAndRoughWordingReachesTheCommandCallbackIntact() {
+        RecognitionListener listener = start();
+        listener.onPartialResults(words("어 시발"));
+        listener.onResults(words("어 시발 그런 거 말고 밝기만 올려줘"));
+        verify(callback).onPartialText("어 시발");
+        verify(callback).onSuccess("어 시발 그런 거 말고 밝기만 올려줘");
     }
 
     @Test public void releaseStopsOnceAndWaitsForFinalResultEvenBeforeReady() {

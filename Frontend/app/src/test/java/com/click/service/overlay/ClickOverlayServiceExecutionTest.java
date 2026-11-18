@@ -1535,6 +1535,26 @@ public class ClickOverlayServiceExecutionTest {
         }
     }
 
+    @Test public void contextualRequestsReachQueueWholeWithoutConsumingResultOrNegatedControls() throws Exception {
+        try (var library=mockConstruction(com.click.data.local.RequestLibraryStore.class)) {
+            var queue = prepareResultWithQueue();
+            int before = requests.size();
+            Object session = get("agentSessionId"), result = get("resultPrompt");
+            Method method = ClickOverlayService.class.getDeclaredMethod("handleRecognizedCommand", String.class);
+            method.setAccessible(true);
+            for (String source : new String[]{"글자를 키우지 말고 줄여줘", "글자 말고 밝기만 올려줘",
+                    "작업 취소하지 마", "멈춰 하지 말고 와이파이 켜줘"}) {
+                method.invoke(service, source);
+                verify(queue).enqueue(anyString(), eq(source), any());
+            }
+            verify(queue, never()).interrupt(anyString(), any());
+            verify(queue, never()).interrupt(anyString(), anyBoolean(), any());
+            assertSame(result, get("resultPrompt"));
+            assertEquals(session, get("agentSessionId"));
+            assertEquals(before, requests.size());
+        }
+    }
+
     @Test public void pausedTaskAndItsPendingRequestsArePreservedWhenAnotherRequestArrives() throws Exception {
         try (var library=mockConstruction(com.click.data.local.RequestLibraryStore.class)) {
         com.click.data.remote.VoiceQueueGateway queue = prepareResultWithQueue();set("agentPaused",true);

@@ -2,7 +2,7 @@
 import json
 import re
 from pathlib import Path
-from app.services.goal_inputs import negated, normalize
+from app.services.goal_inputs import needs_contextual_interpretation, normalize
 
 _CATALOG=json.loads((Path(__file__).parents[1]/'task_graphs/goal_catalog.json').read_text())['goals']
 _VERBS={'켜':'켜줘','끄':'꺼줘','키우':'키워줘','줄이':'줄여줘','낮추':'낮춰줘','높이':'높여줘',
@@ -27,7 +27,7 @@ def standalone(text):
 
 def split_requests(source):
     original=source.strip()
-    if negated(original) or _CONDITIONAL.search(original):
+    if needs_contextual_interpretation(original) or _CONDITIONAL.search(original):
         return (original,)
     separated=_JOIN.sub(lambda m:_VERBS[m[1]]+'\n',original)
     parts=tuple(p.strip() for p in _SEPARATOR.split(separated) if p.strip())

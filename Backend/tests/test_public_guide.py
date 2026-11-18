@@ -72,15 +72,25 @@ def test_finish_and_snapshot_do_not_verify_authentication(login):
 def test_disabled_client_cannot_start(login,monkeypatch):
     monkeypatch.setenv('CLICK_GOV24_GUIDE_ENABLED','0')
     assert login.resolve(preparation_reset=True)['preparation']['execution_mode']=='graph'
-def test_jev_payload_contains_only_projected_answer_and_offered_semantic_options(monkeypatch):
+def login_choice_response(payload, choice):
+    criteria=payload['questions']['login_choice']['criteria']
+    return httpx.Response(200,json={'model':payload['model'],'answers':{'login_choice':{
+        'type':'choice','choice':choice,'confidence':.99,
+        'probabilities':{key:.99 if key==choice else .01/(len(criteria)-1) for key in criteria}}}})
+
+
+def test_jev_payload_keeps_minimized_sentence_and_only_offered_options(monkeypatch):
     monkeypatch.setenv('TYPESAFE_API_KEY','test-only');monkeypatch.setenv('JEV_MODEL','jev-1.14.0')
     def send(payload,**kw):
         encoded=json.dumps(payload,ensure_ascii=False)
         for forbidden in ('010-1234-5678','홍길동','node_id','bounds','resource_id','screen','history'):assert forbidden not in encoded
-        assert payload['state']['answer']=='카카오 할래'
-        return httpx.Response(200,json={'model':payload['model'],'answers':{'login_choice':{'type':'choice','choice':'c0','confidence':.99,'probabilities':{'c0':.99,'c1':.005,'insufficient':.005}}}})
+        if payload['state']['answer']=='모르겠어':
+            return login_choice_response(payload,'insufficient')
+        assert payload['state']['answer'].endswith('카카오로 할래')
+        assert '[REDACTED]' in payload['state']['answer']
+        return login_choice_response(payload,'c0')
     selector=JevPublicGuideSelector(send)
-    assert selector.choose('홍길동 010-1234-5678 카카오로 할래',['method_simple','method_joint'],'choose_method')=='method_simple'
+    assert selector.choose('제 이름은 홍길동이고 010-1234-5678, 카카오로 할래',['method_simple','method_joint'],'choose_method')=='method_simple'
     assert selector.choose('모르겠어',['method_simple','method_joint'],'choose_method') is None
 
 def test_real_device_filtered_methods_providers_and_handoff_interoperate(login):
@@ -123,7 +133,44 @@ def test_public_provider_preference_is_reused_only_after_that_provider_is_observ
     result=login.command('observe',screen=screen('provider_kakao','provider_naver'))
     assert result['target_node_id']=='native_provider_kakao' and result['question'] is None
     assert chooser.choose.call_count==2
-    assert chooser.choose.call_args.args[0]=='카카오 할래'
+    assert chooser.choose.call_args.args[0]=='카카오로 할래'
+
+
+@pytest.mark.parametrize('source,selected',[
+    ('카카오는 하지 말고 네이버로 할래','provider_naver'),
+    ('카카오는 잘 모르겠고 네이버 인증서는 있어','provider_naver'),
+    ('어 시발 카카오 말고 네이버로 할래','provider_naver'),
+    ('둘 다 말고 PASS로 할래','provider_pass'),
+    ('어 시발 그런 거',None),
+    ('카카오로 하지 마',None),
+])
+def test_negative_uncertain_and_rough_language_reaches_jev_whole(monkeypatch,source,selected):
+    monkeypatch.setenv('TYPESAFE_API_KEY','test-only')
+    monkeypatch.setenv('JEV_MODEL','jev-1.14.0')
+    options=['provider_kakao','provider_naver','provider_pass']
+    calls=[]
+    def send(payload,**kwargs):
+        calls.append(payload)
+        assert payload['state']['answer']==source
+        criteria=payload['questions']['login_choice']['criteria']
+        assert {value['label'] for value in criteria.values() if isinstance(value,dict)}=={OPTIONS[key]['label'] for key in options}
+        choice='c'+str(options.index(selected)) if selected else 'insufficient'
+        return login_choice_response(payload,choice)
+    assert JevPublicGuideSelector(send).choose(source,options,'choose_provider')==selected
+    assert len(calls)==1
+
+
+def test_negative_preference_survives_method_to_provider_transition(login):
+    source='카카오는 하지 말고 네이버로 할래'
+    q=start(login)['question']
+    chooser=login.app.state.public_guide_service.selector
+    chooser.choose.side_effect=['method_simple','provider_naver']
+    result=login.command('observe',screen=screen(*METHODS),question_id=q['id'],answer=source)
+    assert result['target_node_id']=='native_method_simple'
+    assert chooser.choose.call_args.args[0]==source
+    result=login.command('observe',screen=screen('provider_kakao','provider_naver'))
+    assert result['target_node_id']=='native_provider_naver'
+    assert chooser.choose.call_args.args[0]==source
 
 def test_runtime_rollout_is_enabled_by_default_and_explicit_disable_is_observable(login,monkeypatch):
     monkeypatch.delenv('CLICK_GOV24_GUIDE_ENABLED',raising=False)

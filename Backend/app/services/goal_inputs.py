@@ -17,6 +17,19 @@ def negated(text):
         "하지마", "하지말", "지마", "지말", "지않", "안해", "말아"))
 
 
+def needs_contextual_interpretation(text):
+    """Route whole corrections to a language model; never remove or reject them.
+
+    Keyword direction/scope matches cannot tell the prohibited clause from the
+    requested one. This is a routing hint, not an intent or cancellation decision.
+    """
+    n = normalize(text)
+    return negated(text) or any(term in n for term in (
+        '말고', '아니라', '아니고', '대신', '말아', '말았', '않',
+        '안켜', '안꺼', '안키', '안끄', '안줄', '안올', '안내려', '안바꿔',
+        '못켜', '못꺼', '못키', '못끄', '못줄', '못올', '못내려', '못바꿔'))
+
+
 class GoalInputRequirements:
     def __init__(self, document=None):
         self.document = document or json.loads((Path(__file__).parents[1] / "task_graphs/input_requirements.json").read_text(encoding="utf-8"))

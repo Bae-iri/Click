@@ -1,6 +1,7 @@
 """Small semantic login options, independent of government24's native resource IDs."""
 from pathlib import Path
 import json, os, re, unicodedata
+from app.services.goal_input_privacy import classification_text
 POLICY = json.loads((Path(__file__).parents[3]/'AI-Agent/goal_catalog/gov24_login_policy.json').read_text(encoding='utf-8'))
 VERSION = POLICY['version']
 OPTIONS = POLICY['options']
@@ -40,13 +41,7 @@ def sanitize(screen, now_ms, *, civil=False):
             return None
     return screen
 
-def projected_answer(raw):
-    # Never send arbitrary speech, account identifiers or numbers to the model.
-    # Keep only known public option aliases and grammatical uncertainty/negation.
-    words = {a for spec in OPTIONS.values() for a in spec['aliases']}
-    words |= {str(i)+'번' for i in range(1,25)}
-    words |= {'첫번째','첫 번째','두번째','두 번째','세번째','세 번째','네번째','네 번째'}
-    words |= {'안','대신','있어','있는데','있고','없는데','없고','쓰고','쓰는데','할래','할게','원해'}
-    words |= {'말고','아니','안돼','안해','없어','없어요','모르겠','모르겠어요','몰라','둘다','둘 다'}
-    pattern = '|'.join(re.escape(w) for w in sorted(words,key=len,reverse=True))
-    return ' '.join(m.group() for m in re.finditer(pattern, raw, flags=re.I))[:160]
+def preference_text(raw):
+    # Keep grammar, negation, corrections, and feedback intact. Minimize private
+    # identifiers using the same boundary as ordinary goal interpretation.
+    return classification_text(raw)

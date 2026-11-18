@@ -1,0 +1,264 @@
+{
+  "schema_version": "jev-negation-regression.v1",
+  "date": "2026-11-18",
+  "validation": {
+    "backend_targeted_regressions": {
+      "passed": 392,
+      "failed": 0
+    },
+    "android_goal_and_overlay_regressions": {
+      "passed": 288,
+      "failed": 0
+    },
+    "android_speech_regressions": {
+      "passed": 16,
+      "failed": 0
+    },
+    "debug_apk_build": "PASS",
+    "debug_android_test_apk_build": "PASS",
+    "physical_app_installation": "NOT_RUN",
+    "physical_speech_recognition": "NOT_RUN"
+  },
+  "scope": "Synthetic model calls and controlled authenticated regression tests; no physical settings changes or authentication.",
+  "live_goal_classification": {
+    "schema_version": "jev-negation-check.v1",
+    "source_kind": "synthetic",
+    "live": true,
+    "model": "jev-1.14.0",
+    "minimum_confidence": 0.8,
+    "status": "PASS",
+    "results": [
+      {
+        "case": "font_correction",
+        "selected": "settings.font_size.decrease",
+        "expected": "settings.font_size.decrease",
+        "inputs": {
+          "scope": "system",
+          "direction": "decrease"
+        },
+        "passed": true,
+        "elapsed_ms": 290,
+        "calls": [
+          {
+            "http_status": 200,
+            "questions": [
+              "goal",
+              "scope",
+              "audio_stream"
+            ]
+          }
+        ]
+      },
+      {
+        "case": "brightness_correction",
+        "selected": "settings.brightness.decrease",
+        "expected": "settings.brightness.decrease",
+        "inputs": {
+          "direction": "decrease",
+          "scope": "system"
+        },
+        "passed": true,
+        "elapsed_ms": 234,
+        "calls": [
+          {
+            "http_status": 200,
+            "questions": [
+              "goal",
+              "scope",
+              "audio_stream"
+            ]
+          }
+        ]
+      },
+      {
+        "case": "cross_family",
+        "selected": "settings.brightness.increase",
+        "expected": "settings.brightness.increase",
+        "inputs": {
+          "direction": "increase",
+          "scope": "system"
+        },
+        "passed": true,
+        "elapsed_ms": 259,
+        "calls": [
+          {
+            "http_status": 200,
+            "questions": [
+              "goal",
+              "scope",
+              "audio_stream"
+            ]
+          }
+        ]
+      },
+      {
+        "case": "negated_app",
+        "selected": "settings.font_size.decrease",
+        "expected": "settings.font_size.decrease",
+        "inputs": {
+          "scope": "system",
+          "direction": "decrease"
+        },
+        "passed": true,
+        "elapsed_ms": 288,
+        "calls": [
+          {
+            "http_status": 200,
+            "questions": [
+              "goal",
+              "scope",
+              "audio_stream"
+            ]
+          }
+        ]
+      },
+      {
+        "case": "negated_stream",
+        "selected": "settings.volume.decrease",
+        "expected": "settings.volume.decrease",
+        "inputs": {
+          "audio_stream": "media",
+          "direction": "decrease",
+          "scope": "system"
+        },
+        "passed": true,
+        "elapsed_ms": 255,
+        "calls": [
+          {
+            "http_status": 200,
+            "questions": [
+              "goal",
+              "scope",
+              "audio_stream"
+            ]
+          }
+        ]
+      },
+      {
+        "case": "wifi_correction",
+        "selected": "settings.wifi.disable",
+        "expected": "settings.wifi.disable",
+        "inputs": {
+          "state": "off"
+        },
+        "passed": true,
+        "elapsed_ms": 271,
+        "calls": [
+          {
+            "http_status": 200,
+            "questions": [
+              "goal",
+              "scope",
+              "audio_stream"
+            ]
+          }
+        ]
+      },
+      {
+        "case": "wifi_keep_enabled",
+        "selected": "settings.wifi.enable",
+        "expected": "settings.wifi.enable",
+        "inputs": {
+          "state": "on"
+        },
+        "passed": true,
+        "elapsed_ms": 235,
+        "calls": [
+          {
+            "http_status": 200,
+            "questions": [
+              "goal",
+              "scope",
+              "audio_stream"
+            ]
+          }
+        ]
+      },
+      {
+        "case": "negative_only",
+        "selected": null,
+        "expected": null,
+        "inputs": {},
+        "passed": true,
+        "elapsed_ms": 247,
+        "calls": [
+          {
+            "http_status": 200,
+            "questions": [
+              "goal",
+              "scope",
+              "audio_stream"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "live_login_choice": {
+    "schema_version": "gov24-jev-check.v1",
+    "source_kind": "synthetic",
+    "device_authentication": "NOT_RUN",
+    "live": true,
+    "model": "jev-1.14.0",
+    "minimum_confidence": 0.8,
+    "status": "PASS",
+    "results": [
+      {
+        "case": "provider_implies_simple",
+        "selected": "method_simple",
+        "expected": "method_simple",
+        "passed": true,
+        "elapsed_ms": 244
+      },
+      {
+        "case": "financial_method",
+        "selected": "method_financial",
+        "expected": "method_financial",
+        "passed": true,
+        "elapsed_ms": 187
+      },
+      {
+        "case": "provider_preference",
+        "selected": "provider_naver",
+        "expected": "provider_naver",
+        "passed": true,
+        "elapsed_ms": 185
+      },
+      {
+        "case": "negative_preference",
+        "selected": "provider_naver",
+        "expected": "provider_naver",
+        "passed": true,
+        "elapsed_ms": 193
+      },
+      {
+        "case": "uncertain_alternative",
+        "selected": "provider_naver",
+        "expected": "provider_naver",
+        "passed": true,
+        "elapsed_ms": 186
+      },
+      {
+        "case": "rough_correction",
+        "selected": "provider_naver",
+        "expected": "provider_naver",
+        "passed": true,
+        "elapsed_ms": 195
+      },
+      {
+        "case": "negative_only",
+        "selected": null,
+        "expected": null,
+        "passed": true,
+        "elapsed_ms": 217
+      },
+      {
+        "case": "uncertain_preference",
+        "selected": null,
+        "expected": null,
+        "passed": true,
+        "elapsed_ms": 184
+      }
+    ]
+  }
+}

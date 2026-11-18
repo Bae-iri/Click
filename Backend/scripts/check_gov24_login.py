@@ -19,6 +19,9 @@ def main():
            ('financial_method','금융인증서로 할래',methods,'choose_method','method_financial'),
            ('provider_preference','네이버 인증서 있어',providers,'choose_provider','provider_naver'),
            ('negative_preference','카카오 말고 네이버로 할래',providers,'choose_provider','provider_naver'),
+           ('uncertain_alternative','카카오는 잘 모르겠고 네이버 인증서는 있어',providers,'choose_provider','provider_naver'),
+           ('rough_correction','어 시발 카카오 말고 네이버로 할래',providers,'choose_provider','provider_naver'),
+           ('negative_only','카카오로 하지 마',providers,'choose_provider',None),
            ('uncertain_preference','모르겠어',methods,'choose_method',None)]
     report={'schema_version':'gov24-jev-check.v1','source_kind':'synthetic','device_authentication':'NOT_RUN','live':args.live}
     if not args.live:

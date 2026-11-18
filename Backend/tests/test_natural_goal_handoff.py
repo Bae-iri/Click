@@ -107,17 +107,18 @@ def test_live_flow_check_requires_real_configuration_and_uses_only_disposable_da
     monkeypatch.setenv('JEV_MODEL','jev-1.14.0')
     monkeypatch.setenv('DATABASE_URL','postgresql://must-not-connect.invalid/production')
     calls=[]
-    expected={source:goal or 'settings.font_size.increase' for _,source,goal,_ in CASES}
+    expected={source:goal or ('cancel' if question=='request' else 'settings.font_size.increase')
+              for _,source,goal,question in CASES}
     def send(self,payload,**kwargs):
         calls.append(payload)
         goal=expected[payload['state']]
         criteria=payload['questions']['goal']['criteria']
-        choice=next(k for k,c in criteria.items() if isinstance(c,dict) and c.get('goal_type')==goal)
+        choice=goal if goal=='cancel' else next(k for k,c in criteria.items() if isinstance(c,dict) and c.get('goal_type')==goal)
         return httpx.Response(200,json=response_for(payload,choice))
     monkeypatch.setattr(JevGoalClassifier,'_post',send)
     assert main(['--run-live'] if run_live else [])==0
     output=capsys.readouterr().out
-    assert len(calls)==(7 if run_live else 0)
+    assert len(calls)==(8 if run_live else 0)
     assert 'test-only-secret' not in output and 'production' not in output
     if run_live: assert '8/8' in output
 

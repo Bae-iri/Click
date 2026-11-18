@@ -5,7 +5,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-/** Keyword mapping first; only genuine misses may ask our server for interpretation. */
+/** Keywords handle simple requests; the server interprets complete contextual requests. */
 public final class LocalGoalResolver {
     private LocalGoalResolver() {}
 
@@ -14,7 +14,8 @@ public final class LocalGoalResolver {
         if (catalog == null || server == null || !server.supports("resolve_goal")
                 || !"agent-fe-contract.v0.3".equals(server.contractVersion) || clarification != null) return false;
         String normalized = GoalCatalogClassifier.normalize(text);
-        if (normalized.isEmpty() || normalized.matches(".*(하지마|하지말|지마|지말|지않|안해|말아).*")) return false;
+        if (normalized.isEmpty()) return false;
+        if (GoalCommandInterpreter.requiresContextualInterpretation(text)) return true;
         GoalCatalogClassifier.Classification result = catalog.classify(text, foregroundPackage);
         if(result.matched() && "public_guide".equals(result.match.executionStatus)) {
             return "gov24.login".equals(result.match.goalType)?server.gov24Login:server.gov24Civil;
@@ -39,6 +40,10 @@ public final class LocalGoalResolver {
     public static JSONObject resolve(GoalCatalogClassifier catalog, AgentServerContract server,
                                      String text, String foregroundPackage, String clarification) throws JSONException {
         JSONArray candidates = new JSONArray();
+        if (GoalCommandInterpreter.requiresContextualInterpretation(text)) {
+            return new JSONObject().put("message", "요청의 뜻을 확인하지 못했어요. 원하는 작업을 다시 말씀해 주시겠어요?")
+                    .put("candidates", candidates);
+        }
         if (catalog != null && clarification == null && !GoalCatalogClassifier.normalize(text).matches(".*(하지마|하지말|지마|지말|지않|안해|말아|취소).*")) {
             GoalCatalogClassifier.Classification selection = catalog.classify(text, foregroundPackage);
             if (selection.matched() && selection.match.goalType.startsWith("settings.navigation.")) {

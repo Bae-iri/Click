@@ -13,8 +13,9 @@ from app.models.agent_session import AgentGoalResolution, AgentSession
 from app.models.user import User
 from app.schemas.agent_turn import AgentGoalResolutionResponse, TypedGoalRequest
 from app.schemas.goal_preparation import GoalPreparation, InputQuestion
-from app.services.goal_inputs import GoalInputRequirements, normalize, negated
+from app.services.goal_inputs import GoalInputRequirements, normalize, negated, needs_contextual_interpretation
 from app.services.goal_classifier import configured_goal_classifier
+from app.services.goal_jev import JevGoalClassifier
 from app.services import browse_policy, public_guide_policy
 from app.schemas.browse import BrowseGoal
 
@@ -158,14 +159,25 @@ class GoalPreparationService:
                 field = next(f for f in self.requirements.required(family, values) if f['id'] == field_id)
                 values[field_id] = self.requirements.answer(field, request.clarification_answer.value)
 
-        matches = [] if negated(source) else self._keywords(source)
+        model_context = isinstance(self.llm, JevGoalClassifier) and needs_contextual_interpretation(source)
+        lexical_blocked = negated(source) or model_context
+        public_guide_types = set()
+        if gov24_allowed:
+            public_guide_types.add('gov24.login')
+        if public_guide_policy.enabled() and request.device_context.capabilities.gov24_civil:
+            public_guide_types.add('gov24.resident_copy.open')
+        if previous and previous.get('execution_mode') == 'public_guide':
+            restored_type = (previous.get('public_guide_goal') or {}).get('goal_type')
+            if restored_type in public_guide_types:
+                public_guide_type = restored_type
+        matches = [] if lexical_blocked else self._keywords(source)
         gov24_matches = [g for g in matches if g['target_app'] == 'gov24']
         civil_requested = public_guide_policy.civil_requested(source) and len(gov24_matches) <= 1
         if (public_guide_policy.enabled() and request.device_context.capabilities.gov24_civil
-                and not negated(source) and civil_requested):
+                and not lexical_blocked and civil_requested):
             public_guide_type = 'gov24.resident_copy.open'
             family, values, rejection_reason = None, {}, None
-        elif (gov24_allowed and not negated(source) and public_guide_policy.requested(source)
+        elif (gov24_allowed and not lexical_blocked and public_guide_policy.requested(source)
               and not any(g['goal_type'] != 'gov24.login' for g in gov24_matches)):
             public_guide_type = 'gov24.login'
             family, values, rejection_reason = None, {}, None
@@ -179,7 +191,7 @@ class GoalPreparationService:
             rejection_reason = 'unsupported_app' if match['target_app'] not in supported_apps else 'unsupported'
             family, values = None, {}
         named_app = self.requirements.explicit_values(source).get('app_name')
-        if (match is None and not public_guide_type and not any(g['target_app']=='coupang' for g in self.catalog['goals'])
+        if (not model_context and match is None and not public_guide_type and not any(g['target_app']=='coupang' for g in self.catalog['goals'])
                 and (named_app=='쿠팡' or request.device_context.foreground_package=='com.coupang.mobile')):
             rejection_reason='unsupported_app'
             family, values=None, {}
@@ -187,20 +199,21 @@ class GoalPreparationService:
             rejection_reason = 'unsupported_app'
             family, values = None, {}
         if previous is None and not browse_type and not public_guide_type and not rejection_reason:
-            family = None if negated(source) else self.requirements.family(match['goal_type'] if match else None, source)
+            family = None if lexical_blocked else self.requirements.family(match['goal_type'] if match else None, source)
             ambiguous_direction = len(self.requirements.directions(source, family)) > 1
-            values = {} if negated(source) else self.requirements.explicit_values(source, family)
+            values = {} if lexical_blocked else self.requirements.explicit_values(source, family)
             if match and family:
                 for field in family['fields']:
                     if field['id'] == 'direction' and ambiguous_direction:
                         continue
                     if field.get('goal_slot') in match['slots']:
                         values.setdefault(field['id'], match['slots'][field['goal_slot']])
-            if not negated(source) and len(matches) < 2 and (match is None or family is not None) and (
-                    family is None or self.requirements.missing(family, values)):
+            if model_context or (not negated(source) and len(matches) < 2 and (match is None or family is not None) and (
+                    family is None or self.requirements.missing(family, values))):
                 candidates = [{k: g[k] for k in ('goal_type', 'display_name', 'target_app', 'slots')}
                     for g in self.catalog['goals'] if (g.get('execution_status') == 'approved'
-                        or browse_allowed and browse_context and g['goal_type'] in browse_policy.GOALS)
+                        or browse_allowed and browse_context and g['goal_type'] in browse_policy.GOALS
+                        or model_context and g['goal_type'] in public_guide_types)
                     and (not match or not family or g['goal_type'].startswith(family['goal_prefix']))]
                 # Unknown intent needs one goal choice, not a union of unrelated
                 # families' conflicting field definitions. Its fields are derived
@@ -212,22 +225,24 @@ class GoalPreparationService:
                     family, values = None, {}
                 elif inferred:
                     suggested = next((g for g in candidates if g['goal_type'] == inferred['goal_type']), None)
+                    if suggested and suggested['goal_type'] in public_guide_types:
+                        public_guide_type = suggested['goal_type']
                     if suggested and suggested['goal_type'] in browse_policy.GOALS and browse_allowed:
                         browse_type = suggested['goal_type']
                     selected_family = self.requirements.family(suggested['goal_type']) if suggested else None
                     directions = self.requirements.directions(source, selected_family) if selected_family else set()
-                    contradictory = suggested and 'direction' in suggested['slots'] and directions and (
+                    contradictory = not model_context and suggested and 'direction' in suggested['slots'] and directions and (
                         suggested['slots']['direction'] not in directions or len(directions) > 1)
                     if selected_family and not contradictory:
                         family = selected_family
-                        # Scope/audio identity comes only from deterministic rules
-                        # over the original text under this family's contract.
-                        # In particular, brightness/media and app-local font requests
-                        # have different rules and cannot reuse the old values.
-                        values = self.requirements.explicit_values(source, family)
+                        # Negated clauses must not override the selected goal or
+                        # scope. Jev's validated choices share the same model call.
+                        values = {} if model_context else self.requirements.explicit_values(source, family)
+                        if model_context and inferred['inputs'].get('scope') in {'system', 'app'}:
+                            values['scope'] = inferred['inputs']['scope']
                         for field in family['fields']:
                             key, slot = field['id'], field.get('goal_slot')
-                            if key in values or key in {'scope', 'audio_stream'}:
+                            if key in values or not model_context and key in {'scope', 'audio_stream'}:
                                 continue
                             candidate = suggested['slots'].get(slot) if slot else inferred['inputs'].get(key)
                             if candidate is None or key == 'app_name' and normalize(candidate) not in normalize(source):
