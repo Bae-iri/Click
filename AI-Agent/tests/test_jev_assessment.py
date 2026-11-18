@@ -129,12 +129,64 @@ def test_reviews_cannot_mix_session_or_group_splits():
 
 
 @pytest.mark.parametrize("field,value", [("raw_text", "private screen"), ("confidence", float('nan')),
-    ("normalized_probability", 1.1), ("called", 1), ("decision_hash", "raw-id")])
+    ("normalized_probability", 1.1), ("called", 1), ("decision_hash", "raw-id"),
+    ("choice_temperature", 0), ("choice_temperature", float('inf')), ("choice_temperature", True),
+    ("judgment_mode", "other"), ("question_count", 2), ("question_count", True),
+    ("page_confidence", "1"), ("target_support_probability", -.1), ("tempered_confidence", 1.1),
+    ("page_target_consistent", 1)])
 def test_decision_contract_rejects_private_unbounded_and_invalid_fields(field, value):
     event = instrument()[0]
     event["runtime"]["jev_decision"][field] = value
     with pytest.raises(ValueError):
         validate_event(event)
+
+
+def test_atomic_scores_survive_closed_evidence_without_exporting_page_or_probability_vectors():
+    from ai_agent.telemetry.trace_logger import diagnostic_payload
+    from ai_agent.telemetry.jev_decisions import decision_evidence
+    event = instrument()[0]
+    fields = {"judgment_mode": "atomic", "question_count": 3, "choice_temperature": .7,
+        "page_confidence": .96, "target_support_probability": .91, "page_target_consistent": False,
+        "tempered_top_probability": .98, "tempered_probability_margin": .95,
+        "tempered_confidence": .97, "hold_reason": "page_target_conflict"}
+    selection = {**event["runtime"]["jev_decision"], **fields,
+        "page_text": "private fixture", "probabilities": {"private fixture": 1}}
+    safe = diagnostic_payload({"ui_selection": selection})["ui_selection"]
+    assert all(safe[key] == value for key, value in fields.items())
+    assert "private fixture" not in str(safe)
+    event["runtime"]["jev_decision"] = decision_evidence({"ui_selection": selection})
+    validate_event(event)
+
+
+@pytest.mark.parametrize("reason,support", [("target_not_supported", .2),
+    ("page_not_identified", 1), ("page_target_conflict", 1)])
+def test_threshold_assessment_never_uses_sharpened_scores_to_override_atomic_holds(reason, support):
+    events = instrument(status="low_confidence", raw=.99, normalized=.99)
+    events[0]["runtime"]["jev_decision"].update(judgment_mode="atomic", question_count=3,
+        choice_temperature=.01, tempered_confidence=1, page_confidence=1,
+        target_support_probability=support, hold_reason=reason,
+        page_target_consistent=reason == "target_not_supported")
+    result = report(events, reviews_for(events))
+    assert all(row["accepted"] == 0 and row["correct_held"] == 1
+               for row in result["review_splits"]["holdout"]["thresholds"])
+    assert result["groups"][0]["judgment_mode"] == "atomic"
+    assert result["groups"][0]["choice_temperature"] == .01
+
+
+def test_an_earlier_numeric_hold_cannot_hide_a_page_conflict_in_threshold_sweeps():
+    events = instrument(status="low_confidence", raw=.7, normalized=.99)
+    events[0]["runtime"]["jev_decision"].update(judgment_mode="atomic", question_count=3,
+        choice_temperature=.7, page_confidence=1, target_support_probability=1,
+        page_target_consistent=False, hold_reason="raw_confidence_below_minimum")
+    result = report(events, reviews_for(events))
+    assert all(row["accepted"] == 0 for row in result["review_splits"]["holdout"]["thresholds"])
+
+
+def test_assessment_keeps_atomic_and_legacy_cohorts_separate():
+    old, new = instrument("old"), instrument("new")
+    new[0]["runtime"]["jev_decision"].update(judgment_mode="atomic", question_count=3,
+        choice_temperature=.7, page_confidence=.99, target_support_probability=.99, page_target_consistent=True)
+    assert len(report(old + new)["groups"]) == 2
 
 
 def test_same_step_holds_and_device_model_cohorts_are_reported_separately():

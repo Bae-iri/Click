@@ -6,6 +6,8 @@ from time import monotonic
 import httpx
 from app.services.goal_jev import _probability
 from app.services.goal_llm import _unique_object
+from app.services.jev_probabilities import temperature_diagnostics
+from app.services.jev_screen_judgments import screen_policy, atomic_payload, validate_atomic_answers, judgment_hold
 from ai_agent.runtime.budget import remaining
 from ai_agent.runtime.commerce import bindings_for
 from ai_agent.runtime.targeting import target_key
@@ -18,7 +20,9 @@ def resolve(resolver, *, nodes, graph, goal, raw_nodes=(), session=None, screen_
         'status': 'no_candidates'}
     try:
         _, model, minimum = resolver.configuration()
-        diagnostic.update(model=model, minimum_confidence=minimum)
+        judgment_mode, temperature = screen_policy()
+        diagnostic.update(model=model, minimum_confidence=minimum,
+            judgment_mode=judgment_mode, choice_temperature=temperature)
         from ai_agent.runtime.commerce_privacy import filter_observation, LABELS
         from ai_agent.runtime.normalizer import normalize_accessibility_tree
         from ai_agent.runtime.keywords import normalize_text
@@ -47,6 +51,11 @@ def resolve(resolver, *, nodes, graph, goal, raw_nodes=(), session=None, screen_
         refs = {n.node_id: f'n{i}' for i, n in enumerate(nodes)}
         criteria = {key: {'action': edge.action_type.value, 'node': refs[node.node_id],
             'purpose': edge.action_name} for key, (edge, node) in bindings.items()}
+        if judgment_mode == 'atomic':
+            for key, (edge, _) in bindings.items():
+                criteria[key].update(step=edge.from_state, transition=edge.transition_id,
+                    current_page=graph.states[edge.from_state].name,
+                    destination_page=graph.states[edge.to_state].name, target_names=edge.target_keywords)
         criteria.update(wait_for_result='Wait only for a correlated action still settling.',
             insufficient_evidence='No unique defensible next target; request more observation.')
         raw = {n.node_id: n for n in raw_nodes}
@@ -66,6 +75,9 @@ def resolve(resolver, *, nodes, graph, goal, raw_nodes=(), session=None, screen_
                 'If choosing a particular item or entering text is needed, abstain so the user can do it. '
                 'Never select another case or an indistinguishable duplicate target. '
                 'A selected action is a plan, not proof of execution or success.'}}}
+        if judgment_mode == 'atomic':
+            payload = atomic_payload(payload, graph, bindings)
+        diagnostic['question_count'] = len(payload['questions'])
         size = len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode())
         diagnostic.update(payload_bytes=size, candidate_count=len(bindings), exported_node_count=len(nodes))
         if size > 65536:
@@ -84,8 +96,10 @@ def resolve(resolver, *, nodes, graph, goal, raw_nodes=(), session=None, screen_
             return None
         diagnostic['status'] = 'invalid_response'
         body = json.loads(response.content, object_pairs_hook=_unique_object)
-        if body['model'] != model or set(body['answers']) != {'screen'}:
+        if body['model'] != model or set(body['answers']) != set(payload['questions']):
             return None
+        if judgment_mode == 'atomic':
+            page_state, page_confidence, target_support = validate_atomic_answers(body['answers'], payload)
         answer = body['answers']['screen']
         if set(answer) != {'type', 'choice', 'confidence', 'probabilities'} or answer['type'] != 'choice':
             return None
@@ -101,7 +115,21 @@ def resolve(resolver, *, nodes, graph, goal, raw_nodes=(), session=None, screen_
         normalized = (top - 1 / len(criteria)) / (1 - 1 / len(criteria))
         score = min(confidence, normalized)
         diagnostic.update(choice=choice, choice_count=len(criteria), raw_confidence=confidence,
-            normalized_probability=normalized, confidence=score, top_probability=top)
+            normalized_probability=normalized, confidence=score, top_probability=top,
+            probability_margin=top-max(p for key, p in probabilities.items() if key != choice),
+            hold_reason=('both_below_minimum' if confidence < minimum and normalized < minimum else
+                'raw_confidence_below_minimum' if confidence < minimum else
+                'normalized_probability_below_minimum' if normalized < minimum else
+                choice if choice not in bindings else 'none'))
+        diagnostic.update(temperature_diagnostics(probabilities, choice, temperature))
+        if judgment_mode == 'atomic':
+            diagnostic.update(page_confidence=page_confidence, target_support_probability=target_support)
+        if choice in bindings:
+            edge, node = bindings[choice]
+            if judgment_mode == 'atomic':
+                diagnostic['page_target_consistent'] = page_state == edge.from_state
+            diagnostic.update(chosen_transition_hash=sha256(edge.transition_id.encode()).hexdigest(),
+                chosen_target_hash=sha256(target_key(node).encode()).hexdigest())
         if score < minimum:
             diagnostic['status'] = 'low_confidence'
             return None
@@ -109,8 +137,15 @@ def resolve(resolver, *, nodes, graph, goal, raw_nodes=(), session=None, screen_
             diagnostic['status'] = 'waiting' if choice == 'wait_for_result' else 'abstained'
             return None
         edge, node = bindings[choice]
-        diagnostic.update(status='selected', chosen_transition_hash=sha256(edge.transition_id.encode()).hexdigest(),
-            chosen_target_hash=sha256(target_key(node).encode()).hexdigest())
+        if judgment_mode == 'atomic':
+            diagnostic['confidence'] = min(score, page_confidence, target_support)
+            reason = judgment_hold(page_state, page_confidence, target_support, edge, minimum)
+            if reason:
+                diagnostic.update(hold_reason=reason,
+                    status='low_confidence' if reason == 'page_confidence_below_minimum' else 'abstained')
+                return None
+            score = min(score, page_confidence, target_support)
+        diagnostic['status'] = 'selected'
         return MatchResult(edge.from_state, edge.to_state, edge.action_type, node.node_id, node.label,
             node.bounds, 'jev_choice', score, transition_id=edge.transition_id, target_key=target_key(node))
     except (TimeoutError, httpx.TimeoutException):

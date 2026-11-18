@@ -1,4 +1,5 @@
 """All six approved tasks start at Settings; provider choices are controlled test responses."""
+from tests.jev_answers import with_screen_judgments
 from dataclasses import replace
 import pytest
 from ai_agent.runtime import ClickAgentEngine, UserActionEvent, UserActionType
@@ -126,9 +127,9 @@ def test_layout_churn_does_not_refund_recovery_budget_or_unlock_a_paused_task(se
     def hold(payload,**kw):
         run.calls.append(payload)
         criteria=payload['questions']['screen']['criteria']
-        return httpx.Response(200,json={'model':payload['model'],'answers':{'screen':{
+        return httpx.Response(200,json=with_screen_judgments(payload, {'model':payload['model'],'answers':{'screen':{
             'type':'choice','choice':'insufficient_evidence','confidence':1,
-            'probabilities':{k:float(k=='insufficient_evidence') for k in criteria}}}})
+            'probabilities':{k:float(k=='insufficient_evidence') for k in criteria}}}}))
     run.resolver._sender=hold
     retry=UserActionEvent(UserActionType.MANUAL_OVERRIDE,occurred_at_ms=run.at+500,session_id='s',episode_id='e')
     for i in range(run.graph.policy.recovery_limit):

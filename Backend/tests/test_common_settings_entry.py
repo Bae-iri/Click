@@ -1,4 +1,5 @@
 """All approved Settings graphs share the same recoverable application entry."""
+from tests.jev_answers import with_screen_judgments
 from unittest.mock import Mock
 import pytest
 from app.task_graphs import approved_graphs
@@ -65,9 +66,9 @@ def test_opening_settings_retires_entry_wait_and_keeps_the_wifi_goal(monkeypatch
         criteria=payload['questions']['screen']['criteria']
         choice=next((k for k,c in criteria.items() if isinstance(c,dict) and c['transition']=='OPEN_CATEGORY'),
             'insufficient_evidence')
-        return httpx.Response(200,json={'model':payload['model'],'answers':{'screen':{
+        return httpx.Response(200,json=with_screen_judgments(payload, {'model':payload['model'],'answers':{'screen':{
             'type':'choice','choice':choice,'confidence':1,
-            'probabilities':{k:float(k==choice) for k in criteria}}}})
+            'probabilities':{k:float(k==choice) for k in criteria}}}}))
     monkeypatch.setattr(JevScreenResolver,'_post',decide)
     flow=Flow();prepared=flow.resolve('와이파이 켜줘')
     launcher={'package_name':'com.sec.android.app.launcher','screen_width':1080,'screen_height':2400,

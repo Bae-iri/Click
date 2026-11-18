@@ -19,6 +19,10 @@ class JevBrowseSelector(JevGoalClassifier):
         started = None
         diagnostics = {'called': False, 'status': 'unavailable', 'candidate_count': len(candidates)}
         try:
+            if self.routes is not None:
+                selected, automatic = self.routes.choose(goal, screen, candidates, int(time.time()))
+                if selected is not None:
+                    return selected, automatic
             _, model, minimum = self.configuration()
             diagnostics['model'] = model
             criteria = {f'c{i}': {'action': kind, 'resource': resource(node.resource_id), 'label': node.label}

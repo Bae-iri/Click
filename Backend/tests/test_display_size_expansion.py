@@ -80,7 +80,11 @@ def test_new_routes_do_not_replace_existing_pinned_graphs(goal):
     legacy=json.loads((Path(__file__).parent/'fixtures/expanded_settings/legacy-settings89-1.0.json').read_text())[goal]
     f,_=prepare(goal);repo=f.app.state.turn_service.graphs
     old=repo.register(legacy,version='1.0.0',approved=True,priority=100)
-    fresh=f.resolve(f.source_text)['preparation']['graph_reference'];assert fresh['version']=='1.1.0'
+    fresh=f.resolve(f.source_text)['preparation']['graph_reference']
+    # These routes were expanded again after the initial 1.1 rollout.
+    expected='1.2.0' if goal in {'settings.keyboard.change','settings.private_dns.change',
+        'settings.hotspot.password.change'} else '1.1.0'
+    assert fresh['version']==expected
     pinned,_=repo.select_pinned({'task_id':old['task_id'],'graph_version':'1.0.0',
         'goal_type':goal,'goal':{'target_app':'android_settings'},'graph_hash':old['sha256']})
     assert pinned.definition.task_type=='settings_assisted'

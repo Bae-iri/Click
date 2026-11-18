@@ -52,7 +52,8 @@ UI_SELECTION_STATUSES = {"selected", "disabled", "skipped", "ineligible", "no_ca
     "sensitive_screen", "unsupported_screen", "empty_observation", "network_error", "ambiguous_candidates"}
 UI_SELECTION_HOLD_REASONS = {"none", "raw_confidence_below_minimum",
     "normalized_probability_below_minimum", "both_below_minimum",
-    "wait_for_result", "insufficient_evidence"}
+    "wait_for_result", "insufficient_evidence", "target_not_supported",
+    "page_not_identified", "page_confidence_below_minimum", "page_target_conflict"}
 
 
 def diagnostic_payload(value, depth=0):
@@ -70,12 +71,12 @@ def diagnostic_payload(value, depth=0):
         if selection.get('observation_reason') in OBSERVATION_REASONS:
             safe['observation_reason'] = selection['observation_reason']
         for key, allowed in (("provider", {"rules", "jev"}), ("status", UI_SELECTION_STATUSES),
-                             ("mode", {"primary", "auxiliary"})):
+                             ("mode", {"primary", "auxiliary"}), ("judgment_mode", {"atomic", "legacy"})):
             if isinstance(selection.get(key), str) and selection[key] in allowed:
                 safe[key] = selection[key]
         if type(selection.get("called")) is bool:
             safe["called"] = selection["called"]
-        for key in ("retained", "paused"):
+        for key in ("retained", "paused", "page_target_consistent"):
             if type(selection.get(key)) is bool:
                 safe[key] = selection[key]
         choice = selection.get("choice")
@@ -96,6 +97,11 @@ def diagnostic_payload(value, depth=0):
         choice_count = selection.get("choice_count")
         if type(choice_count) is int and 3 <= choice_count <= 252:
             safe["choice_count"] = choice_count
+        if type(selection.get("question_count")) is int and selection["question_count"] in {1, 3}:
+            safe["question_count"] = selection["question_count"]
+        temperature = selection.get("choice_temperature")
+        if type(temperature) in (int, float) and math.isfinite(temperature) and 0 < temperature <= 10:
+            safe["choice_temperature"] = temperature
         if selection.get("limit_kind") in {"candidates", "observation_nodes", "payload_bytes"}:
             safe["limit_kind"] = selection["limit_kind"]
         if type(selection.get("limit")) is int and selection["limit"] in {160, 250, 65536}:
@@ -111,7 +117,8 @@ def diagnostic_payload(value, depth=0):
             if type(metric) in (int, float) and math.isfinite(metric) and 0 <= metric <= maximum:
                 safe[key] = metric
         for key in ("confidence", "minimum_confidence", "top_probability", "probability_margin",
-                    "raw_confidence", "normalized_probability"):
+                    "raw_confidence", "normalized_probability", "page_confidence", "target_support_probability",
+                    "tempered_top_probability", "tempered_probability_margin", "tempered_confidence"):
             confidence = selection.get(key)
             if type(confidence) in (int, float) and math.isfinite(confidence) and 0 <= confidence <= 1:
                 safe[key] = confidence

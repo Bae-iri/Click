@@ -41,3 +41,7 @@ services:
         value: jev-1.14.0
       - key: JEV_MIN_CONFIDENCE
         value: "0.8"
+      - key: JEV_SCREEN_JUDGMENT_MODE
+        value: atomic
+      - key: JEV_CHOICE_TEMPERATURE
+        value: "0.7"
