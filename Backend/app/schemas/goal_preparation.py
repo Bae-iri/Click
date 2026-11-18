@@ -37,7 +37,8 @@ class GoalPreparation(BaseModel):
     missing_fields: list[str] = Field(default_factory=list)
     question: InputQuestion | None = None
     graph_reference: dict | None = None
-    execution_mode: Literal['graph', 'browse'] = 'graph'
+    execution_mode: Literal['graph', 'browse', 'public_guide'] = 'graph'
     browse_goal_type: Literal['coupang.product.search', 'coupang.product.details'] | None = None
     browse_goal: BrowseGoal | None = None
+    public_guide_goal: dict[str, Literal['gov24.login']] | None = None
     expires_at: int
