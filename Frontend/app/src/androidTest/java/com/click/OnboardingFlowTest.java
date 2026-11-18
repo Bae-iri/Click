@@ -791,7 +791,7 @@ public class OnboardingFlowTest {
         }
         try (ActivityScenario<OverlayTutorialActivity> s = ActivityScenario.launch(
                 OverlayTutorialActivity.class)) {
-            shown("화면 위에\nClick이 떠 있어요");
+            shown(instrumentation.getTargetContext().getString(R.string.tutorial_explain_open_title));
             screenshot("overlay-tutorial");
         }
     }

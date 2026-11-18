@@ -29,6 +29,7 @@ import android.window.OnBackInvokedDispatcher;
 public final class PermissionGuideActivity extends Activity {
     public static final String EXTRA_RECONNECT = "accessibility_reconnect";
     public static final String EXTRA_RETURN_TO_SETTINGS = "accessibility_return_to_settings";
+    public static final String EXTRA_ONBOARDING = "accessibility_from_onboarding";
     private static final int PAGE_COUNT = 3;
     private static final String PAGE_STATE = "permission_guide_cards_v4";
     private static final String SETTINGS_OPENED_STATE = "permission_settings_opened";
@@ -54,6 +55,9 @@ public final class PermissionGuideActivity extends Activity {
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (savedInstanceState == null && getApplication() instanceof ClickHost) {
+            ((ClickHost) getApplication()).cancelAccessibilityReturn();
+        }
         connectionWatcher = new AccessibilityConnectionWatcher(this);
         narrator = new TutorialNarrator(this);
         settingsOpened = savedInstanceState != null
@@ -319,9 +323,14 @@ public final class PermissionGuideActivity extends Activity {
 
     private void onConnectionReady() {
         if (settingsOpened && !tutorialOpened && ClickHost.from(this).accessibilityConnected()) {
+            tutorialOpened = true;
             if (getIntent().getBooleanExtra(EXTRA_RETURN_TO_SETTINGS, false)) {
-                tutorialOpened = true;
                 ClickHost.from(this).returnToSettingsAfterAccessibility(this);
+                finish();
+                return;
+            }
+            if (!getIntent().getBooleanExtra(EXTRA_ONBOARDING, false)) {
+                ClickHost.from(this).returnToHomeAfterAccessibility(this);
                 finish();
                 return;
             }
@@ -329,7 +338,6 @@ public final class PermissionGuideActivity extends Activity {
                 finish();
                 return;
             }
-            tutorialOpened = true;
             ClickHost.from(this).openPostPermissionTutorial(this);
             finish();
         }
@@ -378,7 +386,10 @@ public final class PermissionGuideActivity extends Activity {
 
     private void goBack() {
         if (page > 0) showPage(page - 1, true);
-        else finish();
+        else {
+            if (getApplication() instanceof ClickHost) ((ClickHost) getApplication()).cancelAccessibilityReturn();
+            finish();
+        }
     }
 
     @Override public void onBackPressed() { goBack(); }

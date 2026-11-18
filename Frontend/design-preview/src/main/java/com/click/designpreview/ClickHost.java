@@ -21,6 +21,8 @@ public interface ClickHost {
     void openAccessibilitySettings(Activity activity);
     void openPostPermissionTutorial(Activity activity);
     default void returnToSettingsAfterAccessibility(Activity activity) { activity.finish(); }
+    default void returnToHomeAfterAccessibility(Activity activity) { activity.finish(); }
+    default void cancelAccessibilityReturn() {}
     boolean postPermissionTutorialWasLaunched();
 
     static ClickHost from(Activity activity) { return (ClickHost) activity.getApplication(); }
