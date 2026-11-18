@@ -184,4 +184,96 @@ public class CoupangBrowseControllerTest {
         assertEquals("카카오로",requests.getValue().getString("answer"));
         controller.close();assertFalse(controller.awaitingAnswer());
     }
+    private com.click.data.snapshot.ScreenSnapshot privateInputScreen() {
+        var input=new com.click.data.snapshot.AccessibilityNodeSnapshot("input",null,true,"kr.go.minwon.m","PRIVATE_VALUE",null,null,
+            "android.widget.EditText","text_field",new int[]{10,100,400,180},false,true,false,false,false,null,42,true,null,null,false);
+        return new com.click.data.snapshot.ScreenSnapshot("kr.go.minwon.m",java.time.Instant.now().toString(),1080,2400,java.util.List.of(input),42);
+    }
+    @Test public void transientInputBetweenHomeAndMethodsNeverTerminatesTheGuide() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);
+        when(listener.freshScreen()).thenAnswer(call->loginScreen("간편인증","공동인증서"));
+        var controller=new CoupangBrowseController(gateway,new com.click.data.snapshot.Gov24LoginPrivacy()::filter,
+            "kr.go.minwon.m","public-guide.v1",listener);
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        controller.start("session","prepared");verify(gateway).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+        controller.screenChanged(privateInputScreen());verify(gateway,times(1)).send(any(),any());
+        assertTrue(controller.settlingPrivateScreen());verify(listener).settlingPrivateScreen();
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));
+        var requests=ArgumentCaptor.forClass(JSONObject.class);
+        verify(gateway,times(2)).send(requests.capture(),callbacks.capture());
+        assertEquals("public",requests.getValue().getJSONObject("screen").getString("status"));
+        assertFalse(requests.getValue().toString().contains("PRIVATE_VALUE"));
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",2)
+            .put("question",new JSONObject().put("id","methods")));
+        assertFalse(controller.terminal());assertTrue(controller.awaitingAnswer());assertFalse(controller.settlingPrivateScreen());
+        controller.close();
+    }
+    @Test public void stableInputNeedsFreshNativeReadsAndExportsNoValuesOrNodes() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);when(listener.freshScreen()).thenAnswer(call->privateInputScreen());
+        var controller=new CoupangBrowseController(gateway,new com.click.data.snapshot.Gov24LoginPrivacy()::filter,
+            "kr.go.minwon.m","public-guide.v1",listener);
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        controller.start("session","prepared");verify(gateway).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+        controller.screenChanged(privateInputScreen());
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(1199));
+        verify(gateway,times(1)).send(any(),any());
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(1));
+        var requests=ArgumentCaptor.forClass(JSONObject.class);verify(gateway,times(2)).send(requests.capture(),callbacks.capture());
+        assertEquals("handoff",requests.getValue().getJSONObject("screen").getString("status"));
+        assertEquals(0,requests.getValue().getJSONObject("screen").getJSONArray("nodes").length());
+        assertFalse(requests.getValue().toString().contains("PRIVATE_VALUE"));
+        callbacks.getValue().success(new JSONObject().put("status","COMPLETED").put("outcome","handoff").put("session_version",2));
+        controller.screenChanged(loginScreen("간편인증"));
+        assertTrue(controller.terminal());assertEquals("COMPLETED",controller.status());assertEquals("handoff",controller.outcome());
+        assertEquals("credential_input",controller.handoffReason());controller.close();
+    }
+    @Test public void cachedPrivateSnapshotCannotStandInForFreshNativeEvidence() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);var cached=privateInputScreen();when(listener.freshScreen()).thenReturn(cached);
+        var controller=new CoupangBrowseController(gateway,new com.click.data.snapshot.Gov24LoginPrivacy()::filter,
+            "kr.go.minwon.m","public-guide.v1",listener);
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        controller.start("session","prepared");verify(gateway).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+        controller.screenChanged(cached);
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(3));
+        verify(gateway,times(1)).send(any(),any());controller.close();
+    }
+    @Test public void pausingOrClosingDropsPendingPrivateConfirmation() throws Exception {
+        for(boolean close:new boolean[]{false,true}) {
+            var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
+            when(listener.canObserve()).thenReturn(true);when(listener.freshScreen()).thenAnswer(call->privateInputScreen());
+            var controller=new CoupangBrowseController(gateway,new com.click.data.snapshot.Gov24LoginPrivacy()::filter,
+                "kr.go.minwon.m","public-guide.v1",listener);
+            var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+            controller.start("session","prepared");verify(gateway).send(any(),callbacks.capture());
+            callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+            controller.screenChanged(privateInputScreen());
+            if(close)controller.close();else when(listener.canObserve()).thenReturn(false);
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2));
+            verify(gateway,times(1)).send(any(),any());assertFalse(controller.settlingPrivateScreen());controller.close();
+        }
+    }
+    @Test public void lateAccessibilityBroadcastStillRequiresANativeReadBeforeHandoff() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);
+        var controller=new CoupangBrowseController(gateway,new com.click.data.snapshot.Gov24LoginPrivacy()::filter,
+            "kr.go.minwon.m","public-guide.v1",listener);
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        controller.start("session","prepared");verify(gateway).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+        controller.screenChanged(privateInputScreen());
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2));
+        controller.screenChanged(privateInputScreen());
+        verify(gateway,times(1)).send(any(),any());
+        when(listener.freshScreen()).thenAnswer(call->privateInputScreen());
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));
+        var requests=ArgumentCaptor.forClass(JSONObject.class);verify(gateway,times(2)).send(requests.capture(),any());
+        assertEquals("handoff",requests.getValue().getJSONObject("screen").getString("status"));
+        assertEquals(0,requests.getValue().getJSONObject("screen").getJSONArray("nodes").length());controller.close();
+    }
 }

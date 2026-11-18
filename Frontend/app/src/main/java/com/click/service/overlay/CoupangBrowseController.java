@@ -13,6 +13,8 @@ public final class CoupangBrowseController {
         void busy(boolean value);
         default boolean localGuide(ScreenSnapshot screen) { return false; }
         default boolean canObserve() { return true; }
+        default ScreenSnapshot freshScreen() { return null; }
+        default void settlingPrivateScreen() {}
     }
     private final CoupangBrowseGateway gateway;
     public interface ScreenFilter {JSONObject filter(ScreenSnapshot screen) throws Exception;}
@@ -27,6 +29,13 @@ public final class CoupangBrowseController {
     private ScreenSnapshot entryScreen;
     private boolean entryObserved;
     private String observedPublicScene;
+    private static final long PRIVATE_SETTLE_MS=1200L,PRIVATE_RECHECK_MS=400L;
+    private final android.os.Handler observationHandler=new android.os.Handler(android.os.Looper.getMainLooper());
+    private String pendingPrivateKey,pendingPrivateObservation;
+    private long pendingPrivateSince;
+    private Runnable privateRecheck;
+    private ScreenSnapshot verifyingPrivateRead;
+    private String responseStatus,responseOutcome,confirmedPrivateReason;
     public CoupangBrowseController(CoupangBrowseGateway gateway,CoupangBrowsePrivacy privacy,Listener listener) {
         this(gateway,privacy::filter,"com.coupang.mobile","coupang-browse.v1",listener);
     }
@@ -37,6 +46,8 @@ public final class CoupangBrowseController {
     public void restore(String session,int version) {this.session=session;this.version=version;send("snapshot",null,null);}
     public void observe(ScreenSnapshot screen) {
         if(!closed&&!busy&&!terminal&&listener.canObserve()&&!listener.localGuide(screen)) {
+            try {if(deferPrivateInput(screen))return;}
+            catch(Exception error){listener.failed(error,()->observe(screen));return;}
             if(screen!=null && packageName.equals(screen.packageName))entryObserved=true;
             send("observe",screen,null);
         }
@@ -45,6 +56,7 @@ public final class CoupangBrowseController {
     public void answer(ScreenSnapshot screen,String value,boolean button) {
         if(closed||busy||terminal||!listener.canObserve()||!awaitingAnswer())return;
         try {
+            if(deferPrivateInput(screen))return;
             JSONObject request=request("observe",screen,null);
             request.put("question_id",question.getString("id"))
                 .put(button?"choice":"answer",value);
@@ -53,10 +65,21 @@ public final class CoupangBrowseController {
     }
     public void finish() {if(!busy&&!terminal)send("finish",null,null);}
     public boolean terminal(){return terminal;}
-    public String status(){return guide==null?null:guide.optString("status",null); }
+    public String status(){return responseStatus;}
+    public String outcome(){return responseOutcome;}
+    public String handoffReason(){return confirmedPrivateReason;}
+    public boolean settlingPrivateScreen(){return pendingPrivateKey!=null;}
     public void screenChanged(ScreenSnapshot current) {
         entryScreen=current;
+        if(pendingPrivateKey!=null) {
+            try {
+                JSONObject safe=current==null?null:privacy.filter(current);
+                if(safe==null||!"handoff".equals(safe.optString("status"))
+                        ||!"credential_input".equals(safe.optString("handoff_reason")))clearPrivateRecheck();
+            }catch(Exception invalid){clearPrivateRecheck();}
+        }
         if("public-guide.v1".equals(protocol)&&!closed&&!terminal&&listener.canObserve()&&listener.localGuide(current)) {
+            clearPrivateRecheck();
             guide=question=null;guidedScreen=null;entryObserved=false;observedPublicScene=null;return;
         }
         if(guidedScreen!=null && (current==null || !guidedScreen.contentFingerprint().equals(current.contentFingerprint())))guide=null;
@@ -65,7 +88,7 @@ public final class CoupangBrowseController {
                 JSONObject safe=privacy.filter(current);
                 if("handoff".equals(safe.optString("status")) || action!=null&&guidedScreen!=null
                         &&!guidedScreen.contentFingerprint().equals(current.contentFingerprint())&&packageName.equals(current.packageName)) {
-                    send("observe",current,null);return;
+                    observe(current);return;
                 }
             }catch(Exception ignored){}
         }
@@ -75,6 +98,7 @@ public final class CoupangBrowseController {
         if(closed || busy || terminal || entryScreen==null || !listener.canObserve())return;
         try {
             if("public-guide.v1".equals(protocol)&&listener.localGuide(entryScreen)) {
+                clearPrivateRecheck();
                 guide=question=null;guidedScreen=null;entryObserved=false;observedPublicScene=null;return;
             }
             JSONObject safe=privacy.filter(entryScreen);
@@ -82,7 +106,7 @@ public final class CoupangBrowseController {
                 // Direct native taps can change the public choice screen without
                 // ever producing a tap on a highlighted target.
                 if("handoff".equals(safe.optString("status"))) {
-                    send("observe",entryScreen,null);return;
+                    observe(entryScreen);return;
                 }
                 if("public".equals(safe.optString("status")) && packageName.equals(entryScreen.packageName)
                         && !publicScene(safe).equals(observedPublicScene))observe(entryScreen);
@@ -91,6 +115,46 @@ public final class CoupangBrowseController {
             if(!entryObserved && packageName.equals(entryScreen.packageName)
                     && "public".equals(safe.optString("status")))observe(entryScreen);
         } catch(Exception ignored) { /* Explicit screen check remains available. */ }
+    }
+    /** A partial WebView can briefly expose the home search as an authentication field.
+     * Keep it local until fresh native reads prove a stable private surface. */
+    private boolean deferPrivateInput(ScreenSnapshot screen) throws Exception {
+        if(!"public-guide.v1".equals(protocol))return false;
+        JSONObject safe=screen==null?null:privacy.filter(screen);
+        boolean provisional=safe!=null&&"handoff".equals(safe.optString("status"))
+                &&"credential_input".equals(safe.optString("handoff_reason"));
+        if(!provisional){clearPrivateRecheck();return false;}
+        long now=android.os.SystemClock.uptimeMillis();
+        String key=screen.contentFingerprint();
+        if(!key.equals(pendingPrivateKey)) {
+            pendingPrivateKey=key;pendingPrivateSince=now;pendingPrivateObservation=screen.observationId;
+            guide=question=null;guidedScreen=null;observedPublicScene=null;
+            listener.settlingPrivateScreen();
+        } else if(screen==verifyingPrivateRead&&now-pendingPrivateSince>=PRIVATE_SETTLE_MS
+                &&!java.util.Objects.equals(pendingPrivateObservation,screen.observationId)) {
+            confirmedPrivateReason="credential_input";clearPrivateRecheck();return false;
+        }
+        if(privateRecheck==null) {
+            privateRecheck=()->{
+                privateRecheck=null;
+                refreshPrivateScreen();
+            };
+            observationHandler.postDelayed(privateRecheck,PRIVATE_RECHECK_MS);
+        }
+        return true;
+    }
+    private void refreshPrivateScreen() {
+        if(closed||terminal||!listener.canObserve()){clearPrivateRecheck();return;}
+        try {
+            verifyingPrivateRead=listener.freshScreen();
+            if(verifyingPrivateRead!=null)screenChanged(verifyingPrivateRead);
+        }catch(RuntimeException unavailable){
+            clearPrivateRecheck();listener.failed(unavailable,this::refreshPrivateScreen);
+        }finally{verifyingPrivateRead=null;}
+    }
+    private void clearPrivateRecheck() {
+        if(privateRecheck!=null)observationHandler.removeCallbacks(privateRecheck);
+        privateRecheck=null;pendingPrivateKey=pendingPrivateObservation=null;pendingPrivateSince=0;
     }
     private String publicScene(JSONObject safe) {
         java.util.List<String> options=new java.util.ArrayList<>();
@@ -133,7 +197,12 @@ public final class CoupangBrowseController {
             public void success(JSONObject response) {
                 if(closed||owner!=generation)return;
                 busy=false;listener.busy(false);version=response.optInt("session_version");
-                terminal=!"IN_PROGRESS".equals(response.optString("status"));action=null;
+                responseStatus=response.optString("status",null);responseOutcome=response.optString("outcome",null);
+                terminal=!"IN_PROGRESS".equals(responseStatus);action=null;
+                JSONObject submitted=request.optJSONObject("screen");
+                if(submitted!=null&&"handoff".equals(submitted.optString("status")))
+                    confirmedPrivateReason=submitted.optString("handoff_reason",null);
+                if(terminal)clearPrivateRecheck();
                 guide=response;question=response.optJSONObject("question");guidedScreen=screen;listener.present(response,screen);
                 observeEntry();
             }
@@ -144,5 +213,5 @@ public final class CoupangBrowseController {
             }
         });
     }
-    public void close(){closed=true;generation++;guide=action=question=null;gateway.close();}
+    public void close(){closed=true;generation++;clearPrivateRecheck();guide=action=question=null;gateway.close();}
 }

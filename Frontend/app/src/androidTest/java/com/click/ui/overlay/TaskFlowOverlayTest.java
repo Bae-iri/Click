@@ -305,8 +305,11 @@ public class TaskFlowOverlayTest {
                 assertNotNull(find(panel, "직접 입력하기"));
                 snapshot(panel, "goals");
                 panel.result(json("{\"message\":\"글자 크기를 키웠어요. 이제 글자가 보기 편한가요?\"}"));
-                find(panel, "네, 좋아요").performClick(); assertEquals("satisfied", answers.answer);
+                assertNull(find(panel, "네, 좋아요"));
+                find(panel, "네, 원하는 상태예요").performClick(); assertEquals("satisfied", answers.answer);
                 find(panel, "조금 더 도와주세요").performClick(); assertEquals("needs_help", answers.answer);
+                panel.result(json("{\"message\":\"이제 글자가 보기 편한가요?\",\"technical_status\":\"CHANGED\"}"));
+                find(panel, "네, 좋아요").performClick(); assertEquals("satisfied", answers.answer);
                 snapshot(panel, "result");
                 find(panel, "일시정지").performClick(); assertEquals("pause_task", answers.control);
                 panel.paused(); find(panel, "이어서 진행").performClick(); assertEquals("resume_task", answers.control);
@@ -341,14 +344,14 @@ public class TaskFlowOverlayTest {
                 assertEquals("이거 좀 바꿔줘", editor.getText().toString());
                 assertTrue(editor.isShown());
                 editor.setText("   ");
-                assertFalse(find(panel, "이 내용으로 다시 요청").isEnabled());
-                find(panel, "이 내용으로 다시 요청").performClick();
+                assertFalse(find(panel, "이 내용으로 시작하기").isEnabled());
+                find(panel, "이 내용으로 시작하기").performClick();
                 assertNull(answers.clarification);
                 editor.setText(" 휴대폰 글자를 크게 해줘 ");
                 panel.setNarrationState(false, true);
                 assertEquals(" 휴대폰 글자를 크게 해줘 ", editor.getText().toString());
                 snapshot(panel, "unresolved-edit");
-                find(panel, "이 내용으로 다시 요청").performClick();
+                find(panel, "이 내용으로 시작하기").performClick();
                 assertEquals("휴대폰 글자를 크게 해줘", answers.clarification);
                 assertNull(answers.goal);
                 find(panel, "다시 말하기").performClick();
@@ -357,7 +360,7 @@ public class TaskFlowOverlayTest {
                 assertEquals("cancel_task", answers.control);
 
                 panel.progress("글자를 크게 보기", new JSONArray(), "디스플레이를 눌러 주세요");
-                assertNull(find(panel, "이 내용으로 다시 요청"));
+                assertNull(find(panel, "이 내용으로 시작하기"));
                 assertTrue(find(panel, "일시정지").isShown());
                 assertNull(findDescription(panel, "말이나 글로 입력하기"));
             });
@@ -383,7 +386,7 @@ public class TaskFlowOverlayTest {
                 find(panel, "글로 수정하기").performClick();
                 panel.setAvailableHeight(Math.round(320 * density));
                 snapshot(panel, "unresolved-edit-large-text");
-                assertFullyInside(panel, find(panel, "이 내용으로 다시 요청"));
+                assertFullyInside(panel, find(panel, "이 내용으로 시작하기"));
                 assertFullyInside(panel, find(panel, "끝내기"));
             });
         }
@@ -437,17 +440,24 @@ public class TaskFlowOverlayTest {
                 });
                 activity.setContentView(panel);
                 panel.resolutionUnavailable("글자를 키워줘", "인터넷 연결을 확인해 주세요.", () -> actions[0]++);
-                assertNotNull(panel.findViewWithTag("failure_clue"));
+                assertNull(panel.findViewWithTag("failure_clue"));
+                assertNotNull(find(panel, "인터넷 연결을 확인해 주세요."));
+                assertNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
                 find(panel, "다시 확인").performClick();
                 assertEquals(1, actions[0]);
                 panel.failed("인터넷 연결을 확인해 주세요.");
-                assertNotNull(panel.findViewWithTag("failure_clue"));
-                assertNotNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
+                assertNull(panel.findViewWithTag("failure_clue"));
+                assertNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
                 assertTrue(panel.guidanceMessage().contains("인터넷 연결을 확인해 주세요."));
                 snapshot(panel, "failure-clue");
                 assertFullyInside(panel, find(panel, "끝내기"));
                 find(panel, "끝내기").performClick();
                 assertEquals(1, actions[1]);
+                panel.recoveryApology(() -> actions[0]++);
+                assertNotNull(panel.findViewWithTag("failure_clue"));
+                assertNotNull(find(panel, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
+                find(panel, "다시 시도하기").performClick();
+                assertEquals(2, actions[0]);
             });
         }
     }
@@ -532,7 +542,7 @@ public class TaskFlowOverlayTest {
                 assertNull(find(panel, "화면을 확인하고 있어요."));
                 panel.result(json("{\"message\":\"화면 밝기가 편하게 보이나요?\"}"));
                 panel.setAutomationStatus("다음 화면으로 이동했어요.");
-                assertNotNull(find(panel, "네, 좋아요"));
+                assertNotNull(find(panel, "네, 원하는 상태예요"));
                 assertNotNull(find(panel, "조금 더 도와주세요"));
                 assertNull(find(panel, "다음 화면으로 이동했어요."));
                 panel.observationRecovery("설정 화면에서 다시 확인해 주세요.", () -> {});
@@ -725,7 +735,7 @@ public class TaskFlowOverlayTest {
                 find(panel[0], "입력하기").performClick();
                 assertTrue(review.isPhone());
                 assertNull(find(panel[0], "2/2"));
-                assertNotNull(find(panel[0], review.summary()));
+                assertNotNull(find(panel[0], review.summary().replace(" · ", " ")));
                 assertFalse(confirmed[0]);
                 snapshot(panel[0], "requirements-ready");
                 find(panel[0], "안내 시작하기").performClick(); assertTrue(confirmed[0]);
@@ -783,7 +793,8 @@ public class TaskFlowOverlayTest {
                 assertTrue(panel.isMinimizedProgress());
                 assertTrue(panel.getHeight() <= cap);
                 assertFalse(panel.findViewById(com.click.R.id.task_flow_collapse).isShown());
-                assertFalse(findDescription(panel, "클릭 로고").isShown());
+                View logo = findDescription(panel, "클릭 로고");
+                assertTrue(logo == null || !logo.isShown());
                 assertTrue(findDescription(panel, panel.guidanceMessage() + ". 눌러서 안내 펼치기").isShown());
                 android.widget.ScrollView scroll = null;
                 for (int i = 0; i < panel.getChildCount(); i++)
@@ -798,17 +809,18 @@ public class TaskFlowOverlayTest {
                 snapshot(panel, "result-large-text");
                 assertFalse(panel.isMinimizedProgress());
                 assertFalse(panel.hasProgress());
-                assertTrue(find(panel, "네, 좋아요").isShown());
+                assertTrue(find(panel, "네, 원하는 상태예요").isShown());
                 assertTrue(panel.findViewById(com.click.R.id.task_flow_collapse).isShown());
                 panel.setMinimizedProgress(true);
                 snapshot(panel, "result-question-bubble");
                 assertTrue(panel.isMinimizedProgress());
                 assertEquals("글자가 편하게 보이나요?", panel.guidanceMessage());
                 assertNull(find(panel, "펼치기"));
-                assertFalse(findDescription(panel, "클릭 로고").isShown());
+                logo = findDescription(panel, "클릭 로고");
+                assertTrue(logo == null || !logo.isShown());
                 panel.setMinimizedProgress(false);
                 snapshot(panel, "result-question-restored");
-                assertTrue(find(panel, "네, 좋아요").isShown());
+                assertTrue(find(panel, "네, 원하는 상태예요").isShown());
             });
         }
     }

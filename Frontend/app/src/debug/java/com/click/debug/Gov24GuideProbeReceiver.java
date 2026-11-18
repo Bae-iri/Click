@@ -35,6 +35,9 @@ public final class Gov24GuideProbeReceiver extends BroadcastReceiver {
                 Object controller=field(ClickOverlayService.class,"coupangBrowse",service);
                 report.put("controller_exists",controller!=null);
                 if(controller!=null) {
+                    if(controller instanceof com.click.service.overlay.CoupangBrowseController flow)
+                        report.put("controller_status",flow.status()).put("controller_outcome",flow.outcome())
+                            .put("confirmed_handoff_reason",flow.handoffReason()).put("settling_private_screen",flow.settlingPrivateScreen());
                     for(String key:new String[]{"busy","terminal","entryObserved","version"})
                         report.put(key,field(controller.getClass(),key,controller));
                     report.put("awaiting_answer",field(controller.getClass(),"question",controller)!=null);
