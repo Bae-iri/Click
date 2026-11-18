@@ -1,0 +1,174 @@
+{
+  "schema_version": "click-device-compatibility-live.v1",
+  "date": "2026-11-18",
+  "timezone": "Asia/Seoul",
+  "code_commit": "86ca67895585ebac2dfbf42c0ea3c74bddf8f345",
+  "initial_apk_source_commit": "f026cd10e991424ce5347c9e71dce6103ee009c0",
+  "device": {
+    "manufacturer": "Samsung",
+    "model": "SM-N981N",
+    "android_version": "13",
+    "sdk": 33,
+    "gov24_version": "2.5.121",
+    "gov24_version_code": 217
+  },
+  "device_checks": [
+    {
+      "case": "initial_installed_client_auth_and_protocol",
+      "status": "PASS",
+      "tests": 1,
+      "seconds": 1.176
+    },
+    {
+      "case": "task_ui_large_text_and_native_setting_identity",
+      "status": "PASS",
+      "tests": 21,
+      "seconds": 21.317,
+      "initial_run": {
+        "tests": 21,
+        "failures": 7,
+        "cause": "Old result labels, renamed edit action, removed generic failure artwork, hidden-logo lookup and normalized summary expectations did not match the current product contract."
+      },
+      "fixture_change": "Align assertions with current UI and distinguish unverified from verified results; no production view code was changed to satisfy these expectations."
+    },
+    {
+      "case": "native_ui_and_readonly_brightness_media_identity",
+      "initial_result": {
+        "tests": 21,
+        "failures": 7
+      },
+      "cause": "Seven old UI assertions expected removed error artwork, old editing text, verified-result text without a verification status, or a removed logo.",
+      "correction": "Preserve callback, clipping and visibility assertions; explicitly test verified and unverified result labels and cause-specific error UI.",
+      "final_result": {
+        "tests": 21,
+        "failures": 0,
+        "seconds": 21.317
+      },
+      "apk_source": "initial compatibility revision; these product view implementations did not change in the later controller fix"
+    },
+    {
+      "case": "home_to_four_login_methods",
+      "initial_status": "FAIL",
+      "initial_seconds": 28.796,
+      "observed_failure": "Authentication handoff was shown while the native screen exposed four public choices and the controller had already become terminal.",
+      "cause_inference": "A single provisional credential-input observation during WebView transition could irreversibly terminate the public guide. The exact initial request reason was not retained by the old probe.",
+      "change": "Hold credential-input boundaries locally for 1200 ms of stable content, confirm through a fresh native read, drop stale questions and speech immediately, cancel pending confirmation on public/home changes, pause or close.",
+      "after_initial_fix": {
+        "status": "PASS",
+        "seconds": 39.441,
+        "path": "Click natural-language request -> live server -> Government24 home -> native login tap -> four method choices"
+      },
+      "final_code_followup": "The installed final APK additionally requires the direct fresh-read path rather than a delayed accessibility broadcast; covered by a regression test."
+    },
+    {
+      "case": "automated_native_simple_and_provider_continuation",
+      "status": "NOT_COMPLETED",
+      "attempts": [
+        {
+          "variant": "original text-point driver",
+          "seconds": 35.35,
+          "status": "FAIL",
+          "failure": "Provider prompt did not appear after the injected native selection."
+        },
+        {
+          "variant": "wait for collapsed panel",
+          "seconds": 35.458,
+          "status": "FAIL",
+          "failure": "Provider prompt did not appear after the injected native selection."
+        },
+        {
+          "variant": "grounded public button bounds",
+          "seconds": 35.692,
+          "status": "FAIL",
+          "failure": "Provider prompt did not appear after the injected native selection."
+        },
+        {
+          "variant": "explicit touchscreen event source",
+          "seconds": 35.564,
+          "status": "FAIL",
+          "failure": "Provider prompt did not appear after the injected native selection."
+        }
+      ],
+      "latest_driver_changes": "Use unambiguous public targets, wait for collapse, accept authentication or consent boundaries, use touchscreen events with real elapsed down/up timing.",
+      "latest_driver_retested": false,
+      "limit": "Do not count this case as an automatic pass. The real finger-touch continuation was confirmed separately."
+    },
+    {
+      "case": "user_assisted_native_continuation",
+      "status": "CONFIRMED",
+      "user_report": "Tapped; seems to work",
+      "observed_controller_status": "COMPLETED",
+      "observed_outcome": "handoff",
+      "observed_handoff_reason": "certificate_selection",
+      "exported_nodes": 0,
+      "safe_local_counter_probe": {
+        "status": "PASS",
+        "seconds": 0.53,
+        "provider_choices": 1,
+        "visible_input_fields": 2,
+        "exported_nodes": 0
+      },
+      "scope": "Authentication input boundary; no credential entry, consent submission or authentication request was performed by the test."
+    },
+    {
+      "case": "final_installed_client_login_and_server_compatibility",
+      "status": "PASS",
+      "tests": 1,
+      "seconds": 2.458,
+      "ui_navigation": false
+    }
+  ],
+  "final_local_validation": {
+    "android_suites": {
+      "com.click.data.snapshot.Gov24LoginPrivacyTest": {
+        "tests": 10,
+        "failures": 0,
+        "errors": 0
+      },
+      "com.click.service.overlay.ClickOverlayServiceExecutionTest": {
+        "tests": 258,
+        "failures": 0,
+        "errors": 0
+      },
+      "com.click.service.overlay.CoupangBrowseControllerTest": {
+        "tests": 14,
+        "failures": 0,
+        "errors": 0
+      }
+    },
+    "total_tests": 282,
+    "failures": 0,
+    "new_api_lint_issues": 0,
+    "main_pilot_and_test_apk_builds": "PASS"
+  },
+  "installed_apks": [
+    {
+      "application_id": "com.clueclick.app",
+      "file": "click-86ca678.apk",
+      "sha256": "6cd751e3d8f53c1a7600628b9fa32226aee9337e321c57de2563f359aa7cb52a",
+      "installed_hash_matches": true
+    },
+    {
+      "application_id": "com.click.gov24pilot",
+      "file": "click-gov24-86ca678.apk",
+      "sha256": "c197f9fa2d694bdbc3f37d822ecd8ef48ac0077d10c837bfe37e47775d8f356d",
+      "installed_hash_matches": true
+    }
+  ],
+  "latest_safe_probe": {
+    "application_id": "com.click.gov24pilot",
+    "label": "클릭 정부24 테스트",
+    "signed_in": true,
+    "accessibility_connected": true,
+    "screen_status": "handoff",
+    "public_node_count": 0,
+    "handoff_reason": "certificate_selection",
+    "overlay_running": false
+  },
+  "limits": [
+    "Only one physical Samsung Android 13 phone was tested; no cross-manufacturer or physical Android 8/9/11/14/15 success claim is made.",
+    "The full native provider flow did not pass under automatic touch injection. Its manual continuation and privacy boundary were observed separately.",
+    "The successful home-to-method flow ran on the initial transition fix; the stricter final fresh-read addition was regression tested and installed without repeating that entire UI flow after the user reached authentication.",
+    "The phone was left in the user-controlled Government24 flow. Final installation and authenticated read checks did not navigate Government24 or operate on its input fields."
+  ]
+}
