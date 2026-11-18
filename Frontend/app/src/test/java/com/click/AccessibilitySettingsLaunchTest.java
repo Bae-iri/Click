@@ -101,4 +101,39 @@ public class AccessibilitySettingsLaunchTest {
         assertEquals(Settings.ACTION_ACCESSIBILITY_SETTINGS, launches.getAllValues().get(1).getAction());
         assertTrue(new AccessibilityOnboardingState(app).isPending());
     }
+    @Test public void homeReviewPreservesTheSeenTutorialFlagAndReturnsHome() {
+        ClickApplication app = (ClickApplication) RuntimeEnvironment.getApplication();
+        AccessibilityOnboardingState state = new AccessibilityOnboardingState(app);
+        state.markTutorialLaunched();
+        Activity activity = mock(Activity.class);
+        when(activity.getIntent()).thenReturn(new Intent());
+        app.openAccessibilitySettings(activity);
+        assertTrue(state.isPending());
+        assertTrue(state.returnsToHome());
+        assertFalse(state.opensTutorial());
+        assertTrue(state.wasTutorialLaunched());
+    }
+
+    @Test public void onlyAnExplicitOnboardingEntryRequestsTheTutorial() {
+        ClickApplication app = (ClickApplication) RuntimeEnvironment.getApplication();
+        AccessibilityOnboardingState state = new AccessibilityOnboardingState(app);
+        Activity activity = mock(Activity.class);
+        when(activity.getIntent()).thenReturn(new Intent().putExtra(PermissionGuideActivity.EXTRA_ONBOARDING, true));
+        app.openAccessibilitySettings(activity);
+        assertTrue(state.isPending());
+        assertTrue(state.opensTutorial());
+        assertFalse(state.returnsToHome());
+        assertFalse(state.returnsToSettings());
+    }
+
+    @Test public void legacyPendingStateWithNoEntryMarkerDoesNotImplyOnboarding() {
+        ClickApplication app = (ClickApplication) RuntimeEnvironment.getApplication();
+        app.getSharedPreferences("click_accessibility_onboarding", android.content.Context.MODE_PRIVATE)
+            .edit().clear().putBoolean("pending", true).apply();
+        AccessibilityOnboardingState state = new AccessibilityOnboardingState(app);
+        assertTrue(state.isPending());
+        assertFalse(state.opensTutorial());
+        assertTrue(state.returnsToHome());
+    }
+
 }

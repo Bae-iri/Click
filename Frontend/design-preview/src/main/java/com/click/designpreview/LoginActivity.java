@@ -119,7 +119,12 @@ public final class LoginActivity extends Activity {
         if (!success) { showError(R.id.login_api_error, message, null); return; }
         password.setText("");
         if (ClickHost.from(this).accessibilityEnabled()) ClickHost.from(this).openHome(this);
-        else { startActivity(new Intent(this, PermissionGuideActivity.class)); finish(); }
+        else {
+            startActivity(new Intent(this, PermissionGuideActivity.class)
+                    .putExtra(PermissionGuideActivity.EXTRA_ONBOARDING,
+                            getIntent().getBooleanExtra(PermissionGuideActivity.EXTRA_ONBOARDING, false)));
+            finish();
+        }
     }
 
     // Both login methods share one in-flight request; switching cannot create duplicate sessions.

@@ -57,7 +57,7 @@ public class TutorialReadyFlowTest {
             Activity practice = opened;
             instrumentation.runOnMainSync(() -> {
                 assertNotNull(practice.findViewById(R.id.tutorial_floating_control));
-                assertEquals("클릭을 함께 연습해요",
+                assertEquals(practice.getString(R.string.tutorial_explain_open_title),
                         ((TextView) practice.findViewById(R.id.tutorial_title)).getText().toString());
             });
         } finally {

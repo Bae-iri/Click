@@ -174,7 +174,8 @@ public final class SignupActivity extends Activity {
                     ((TextView) findViewById(R.id.signup_action_label)).setText(R.string.signup_next);
                     if (success) {
                         password.setText(""); passwordConfirm.setText("");
-                        startActivity(new Intent(this, PermissionGuideActivity.class)); finish();
+                        startActivity(new Intent(this, PermissionGuideActivity.class)
+                                .putExtra(PermissionGuideActivity.EXTRA_ONBOARDING, true)); finish();
                     } else if (duplicate) {
                         showExistingAccount(address);
                     } else Toast.makeText(this, message, Toast.LENGTH_LONG).show();
