@@ -44,7 +44,7 @@ if (kakaoNativeAppKey && !(kakaoNativeAppKey ==~ /[0-9a-fA-F]{32}/)) {
 
 android {
     namespace "com.click"
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         buildConfigField "String", "KAKAO_NATIVE_APP_KEY", javaString(kakaoNativeAppKey)
@@ -53,9 +53,9 @@ android {
         manifestPlaceholders.clickAppLabel = gov24Pilot ? "클릭 정부24 테스트" : "@string/app_name"
         manifestPlaceholders.clickAccessibilityLabel = gov24Pilot ? "클릭 정부24 테스트" : "@string/accessibility_service_label"
         minSdk 26
-        targetSdk 34
-        versionCode providers.gradleProperty("CLICK_VERSION_CODE").getOrElse("1").toInteger()
-        versionName providers.gradleProperty("CLICK_VERSION_NAME").getOrElse("1.0")
+        targetSdk 36
+        versionCode providers.gradleProperty("CLICK_VERSION_CODE").getOrElse("3").toInteger()
+        versionName providers.gradleProperty("CLICK_VERSION_NAME").getOrElse("1.0.2")
         buildConfigField "boolean", "CANDIDATE_DIAGNOSTICS", candidateDiagnostics
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
