@@ -61,8 +61,9 @@ public final class ClickAccessibilityService extends AccessibilityService {
         AccessibilityOnboardingState onboarding = new AccessibilityOnboardingState(this);
         if (!onboarding.isPending() || onboardingReturnAttempts >= 4) return;
         onboardingReturnAttempts++;
-        Intent destination = new Intent(this, onboarding.returnsToSettings()
-                ? com.click.MenuActivity.class : TutorialReadyActivity.class)
+        Class<?> screen = onboarding.opensTutorial() ? TutorialReadyActivity.class
+                : onboarding.returnsToSettings() ? com.click.MenuActivity.class : com.click.HomeActivity.class;
+        Intent destination = new Intent(this, screen)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         try {

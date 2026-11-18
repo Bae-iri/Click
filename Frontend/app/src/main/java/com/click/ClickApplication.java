@@ -161,8 +161,13 @@ public final class ClickApplication extends Application implements ClickHost {
     }
 
     @Override public void openAccessibilitySettings(Activity activity) {
-        new AccessibilityOnboardingState(this).begin(activity.getIntent().getBooleanExtra(
-                com.click.designpreview.PermissionGuideActivity.EXTRA_RETURN_TO_SETTINGS, false));
+        AccessibilityOnboardingState onboarding = new AccessibilityOnboardingState(this);
+        boolean settings = activity.getIntent().getBooleanExtra(
+                com.click.designpreview.PermissionGuideActivity.EXTRA_RETURN_TO_SETTINGS, false);
+        if (!settings && activity.getIntent().getBooleanExtra(
+                com.click.designpreview.PermissionGuideActivity.EXTRA_ONBOARDING, false)) {
+            onboarding.beginOnboarding();
+        } else onboarding.beginReview(settings);
         String service = new ComponentName(this, ClickAccessibilityService.class).flattenToString();
         // One UI owns its service details screen in a separate Settings package.
         // The AOSP action can open only the accessibility homepage on these devices.
@@ -202,5 +207,14 @@ public final class ClickApplication extends Application implements ClickHost {
 
     @Override public boolean postPermissionTutorialWasLaunched() {
         return new AccessibilityOnboardingState(this).wasTutorialLaunched();
+    }
+
+    @Override public void returnToHomeAfterAccessibility(Activity activity) {
+        activity.startActivity(new Intent(activity, HomeActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+    }
+
+    @Override public void cancelAccessibilityReturn() {
+        new AccessibilityOnboardingState(this).cancelPending();
     }
 }

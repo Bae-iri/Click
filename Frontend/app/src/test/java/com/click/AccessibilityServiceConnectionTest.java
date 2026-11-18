@@ -18,22 +18,22 @@ import static org.mockito.Mockito.*;
 @LooperMode(LooperMode.Mode.PAUSED)
 public class AccessibilityServiceConnectionTest {
  @Test public void connectionKeepsReturnPendingUntilDestinationAcknowledges() throws Exception {
-  for(boolean settings:new boolean[]{true,false}) {
+  for(int entry:new int[]{0,1,2}) {
    var app=org.robolectric.RuntimeEnvironment.getApplication();
    var state=new com.click.data.local.AccessibilityOnboardingState(app);
-   state.begin(settings);
+   if(entry==0) state.beginOnboarding(); else state.beginReview(entry==2);
    try(var overlays=mockStatic(ClickOverlayService.class)) {
     var controller=Robolectric.buildService(ClickAccessibilityService.class).create();
     try {
      var connected=ClickAccessibilityService.class.getDeclaredMethod("onServiceConnected");connected.setAccessible(true);
      connected.invoke(controller.get());
      Intent destination=org.robolectric.Shadows.shadowOf(app).getNextStartedActivity();
-     assertEquals((settings?MenuActivity.class:TutorialReadyActivity.class).getName(),destination.getComponent().getClassName());
+     assertEquals((entry==0?TutorialReadyActivity.class:entry==2?MenuActivity.class:HomeActivity.class).getName(),destination.getComponent().getClassName());
      assertTrue(state.isPending());
      org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
        .idleFor(java.time.Duration.ofSeconds(1));
      assertNotNull(org.robolectric.Shadows.shadowOf(app).getNextStartedActivity());
-     if (settings) state.markSettingsReturned(); else state.markTutorialLaunched();
+     if(entry==0) state.markTutorialLaunched(); else if(entry==2) state.markSettingsReturned(); else state.markHomeReturned();
      org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
        .idleFor(java.time.Duration.ofSeconds(2));
      assertNull(org.robolectric.Shadows.shadowOf(app).getNextStartedActivity());
