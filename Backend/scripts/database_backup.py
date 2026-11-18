@@ -28,15 +28,34 @@ def sqlite_copy(source, destination):
         raise
 
 
-def postgres_backup(url, destination):
+def postgres_environment(url):
+    from psycopg.conninfo import conninfo_to_dict
+    from psycopg.pq import Conninfo
     parsed = make_url(url)
-    env = dict(os.environ, PGHOST=parsed.host or "localhost", PGPORT=str(parsed.port or 5432),
-        PGDATABASE=parsed.database or "", PGUSER=parsed.username or "", PGPASSWORD=parsed.password or "")
+    params = conninfo_to_dict(parsed.set(drivername="postgresql").render_as_string(hide_password=False))
+    names = {option.keyword.decode(): option.envvar.decode()
+             for option in Conninfo.get_defaults() if option.envvar}
+    env = {k: v for k, v in os.environ.items() if not k.startswith("PG")}
+    env["PGCONNECT_TIMEOUT"] = "30"
+    for key, value in params.items():
+        if key not in names:
+            raise ValueError("Connection option has no supported libpq environment variable")
+        env[names[key]] = value
+    return env
+
+
+def postgres_backup(url, destination, *, snapshot=None, timeout=1800):
+    # Use individual libpq variables: PGDATABASE itself does not expand a URI.
+    # This preserves TLS and escaped credentials without secrets in process args.
+    env = postgres_environment(url)
+    command = ["pg_dump", "--no-password", "--format=custom", "--no-owner", "--no-privileges"]
+    if snapshot is not None:
+        command.extend(["--snapshot", snapshot])
     path = Path(destination).resolve()
     with path.open("xb") as output:
         try:
-            result = subprocess.run(["pg_dump", "--format=custom", "--no-owner"], env=env,
-                stdout=output, stderr=subprocess.PIPE, timeout=300)
+            result = subprocess.run(command, env=env,
+                stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.PIPE, timeout=timeout)
             if result.returncode:
                 raise RuntimeError("Backup failed")
         except Exception as error:
