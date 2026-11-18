@@ -20,6 +20,11 @@ CODE_HASH = policy.digest(''.join(Path(__file__).with_name(name).read_text(encod
 class BrowseService:
     def __init__(self, factory, sessions, selector=None):
         self.factory, self.sessions = factory, sessions
+        self.policy = policy
+        self.goal_model, self.response_model = BrowseGoal, BrowseResponse
+        self.execution_mode, self.target_app = 'browse', 'coupang'
+        self.goal_field = 'browse_goal'
+        self.task_id, self.event_kind = 'COUPANG-BROWSE', 'browse'
         self.selector = selector or JevBrowseSelector(routes=BrowseRouteHints(factory, code_hash=CODE_HASH))
 
     def handle(self, request, user_id):
@@ -33,9 +38,9 @@ class BrowseService:
                 raise HTTPException(410)
             state = deepcopy(row.workflow or {})
             if request.command == 'snapshot':
-                if state.get('version') != policy.VERSION:
+                if state.get('version') != self.policy.VERSION:
                     self.sessions.conflict('NOT_BROWSE_SESSION')
-                return BrowseResponse(request_id=request.request_id, session_id=row.id, session_version=row.version,
+                return self.response_model(request_id=request.request_id, session_id=row.id, session_version=row.version,
                     status=row.status if row.status in {'IN_PROGRESS','COMPLETED','BLOCKED','CANCELLED'} else 'CANCELLED',
                     outcome=state.get('outcome', 'unknown'), step=state.get('steps', 0),
                     message='현재 화면 확인을 눌러 새 안내를 받아주세요.' if row.status == 'IN_PROGRESS' else '탐색 안내가 끝났어요.')
@@ -46,24 +51,24 @@ class BrowseService:
                 if previous.response:
                     if previous.version != row.version or row.status == 'CANCELLED' and request.command != 'cancel':
                         self.sessions.conflict('STALE_REPLAY')
-                    return BrowseResponse.model_validate(previous.response)
+                    return self.response_model.model_validate(previous.response)
             if row.version != request.expected_version:
                 self.sessions.conflict('STALE_VERSION')
             if row.lease_token and row.lease_until > now and request.command != 'cancel':
                 self.sessions.conflict('TURN_IN_PROGRESS')
             if request.command == 'start':
-                if not policy.enabled() or row.version != 0 or row.episode_id or row.status != 'IN_PROGRESS':
+                if not self.policy.enabled() or row.version != 0 or row.episode_id or row.status != 'IN_PROGRESS':
                     self.sessions.conflict('BROWSE_START_NOT_ALLOWED')
                 resolution = db.get(AgentGoalResolution, request.goal_resolution_id)
                 if (not resolution or resolution.user_id != user_id or resolution.session_id != row.id
                         or resolution.status != 'READY' or resolution.expires_at <= now):
                     self.sessions.conflict('GOAL_INPUTS_NOT_READY')
                 prepared = resolution.response['preparation']
-                if prepared.get('execution_mode') != 'browse':
+                if prepared.get('execution_mode') != self.execution_mode:
                     self.sessions.conflict('PREPARED_GOAL_MISMATCH')
-                goal = BrowseGoal.model_validate(prepared.get('browse_goal'))
-                state = {'version':policy.VERSION,'goal':goal.model_dump(),'history':[],'steps':0}
-            elif state.get('version') != policy.VERSION or row.status != 'IN_PROGRESS':
+                goal = self.goal_model.model_validate(prepared.get(self.goal_field))
+                state = {'version':self.policy.VERSION,'goal':goal.model_dump(),'history':[],'steps':0}
+            elif state.get('version') != self.policy.VERSION or row.status != 'IN_PROGRESS':
                 self.sessions.conflict('BROWSE_COMMAND_NOT_ALLOWED')
             token = str(uuid4())
             row.lease_token, row.lease_until = token, now + self.sessions.lease_seconds
@@ -84,9 +89,9 @@ class BrowseService:
                 ).values(version=response.session_version,status=response.status,lease_token=None,lease_until=None))
                 if changed.rowcount != 1:
                     self.sessions.conflict('TURN_SUPERSEDED')
-                row.workflow, row.task_id, row.state_id = state, 'COUPANG-BROWSE', evidence['page']
+                row.workflow, row.task_id, row.state_id = state, self.task_id, evidence['page']
                 row.accepted_goal_type = state['goal']['goal_type']
-                row.goal = {'goal_type':row.accepted_goal_type,'target_app':'coupang','slots':{}}
+                row.goal = {'goal_type':row.accepted_goal_type,'target_app':self.target_app,'slots':{}}
                 row.episode_id = row.episode_id or str(uuid4())
                 row.updated_at, row.expires_at = commit_now, commit_now+self.sessions.idle_seconds
                 row.last_guide_command_id = response.guide_id
@@ -100,7 +105,7 @@ class BrowseService:
                     if resolution.status != 'READY' or resolution.expires_at <= commit_now:
                         self.sessions.conflict('STALE_GOAL_RESOLUTION')
                     resolution.status,resolution.selection_request_id = 'ACCEPTED',request.request_id
-                append(db,row,request.request_id,{'browse':evidence},kind='browse',now=commit_now)
+                append(db,row,request.request_id,{self.event_kind:evidence},kind=self.event_kind,now=commit_now)
                 db.commit()
             return response
         except Exception:

@@ -1,0 +1,277 @@
+{
+  "source_kind": "device_test",
+  "capture_date": "2026-11-18",
+  "package": "kr.go.minwon.m",
+  "app_version": "2.5.121",
+  "scope": "public login navigation only",
+  "screens": {
+    "methods": {
+      "status": "public",
+      "nodes": [
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_4_2",
+          "option_id": "method_mobile_id",
+          "resource_id": "",
+          "label": "모바일 신분증",
+          "bounds": [
+            45,
+            1188,
+            509,
+            1607
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_4_3",
+          "option_id": "method_simple",
+          "resource_id": "",
+          "label": "간편인증",
+          "bounds": [
+            548,
+            1188,
+            1015,
+            1607
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_4_4",
+          "option_id": "method_joint",
+          "resource_id": "",
+          "label": "공동인증서",
+          "bounds": [
+            45,
+            1650,
+            509,
+            1965
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_4_5",
+          "option_id": "method_financial",
+          "resource_id": "",
+          "label": "금융인증서",
+          "bounds": [
+            548,
+            1650,
+            1015,
+            1965
+          ],
+          "clickable": true,
+          "scrollable": false
+        }
+      ],
+      "observation_id": "device-gov24-methods",
+      "captured_at_ms": 0,
+      "width": 1080,
+      "height": 2400,
+      "package_name": "kr.go.minwon.m"
+    },
+    "providers": {
+      "status": "public",
+      "nodes": [
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_0_0_0",
+          "option_id": "provider_banksalad",
+          "resource_id": "",
+          "label": "뱅크샐러드",
+          "bounds": [
+            92,
+            595,
+            236,
+            741
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_1_0_0",
+          "option_id": "provider_samsung",
+          "resource_id": "",
+          "label": "삼성패스",
+          "bounds": [
+            337,
+            595,
+            483,
+            741
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_2_0_0",
+          "option_id": "provider_toss",
+          "resource_id": "",
+          "label": "토스",
+          "bounds": [
+            585,
+            595,
+            728,
+            741
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_3_0_0",
+          "option_id": "provider_hana",
+          "resource_id": "",
+          "label": "하나인증서",
+          "bounds": [
+            829,
+            595,
+            973,
+            741
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_4_0_0",
+          "option_id": "provider_ibk",
+          "resource_id": "",
+          "label": "IBK인증서",
+          "bounds": [
+            92,
+            876,
+            236,
+            1022
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_5_0_0",
+          "option_id": "provider_woori",
+          "resource_id": "",
+          "label": "우리인증서",
+          "bounds": [
+            337,
+            876,
+            483,
+            1022
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_6_0_0",
+          "option_id": "provider_naver",
+          "resource_id": "",
+          "label": "네이버",
+          "bounds": [
+            585,
+            876,
+            728,
+            1022
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_7_0_0",
+          "option_id": "provider_pass",
+          "resource_id": "",
+          "label": "통신사PASS",
+          "bounds": [
+            829,
+            876,
+            973,
+            1022
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_8_0_0",
+          "option_id": "provider_kakaobank",
+          "resource_id": "",
+          "label": "카카오뱅크",
+          "bounds": [
+            92,
+            1157,
+            236,
+            1301
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_9_0_0",
+          "option_id": "provider_nh",
+          "resource_id": "",
+          "label": "NH인증서",
+          "bounds": [
+            337,
+            1157,
+            483,
+            1301
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_10_0_0",
+          "option_id": "provider_kakao",
+          "resource_id": "",
+          "label": "카카오톡",
+          "bounds": [
+            585,
+            1157,
+            728,
+            1301
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_11_0_0",
+          "option_id": "provider_kb",
+          "resource_id": "",
+          "label": "국민인증서",
+          "bounds": [
+            829,
+            1157,
+            973,
+            1301
+          ],
+          "clickable": true,
+          "scrollable": false
+        },
+        {
+          "node_id": "node_0_0_0_0_0_0_0_0_0_0_2_7_0_0_0_0_0_0_0_1_0_0_3_0_12_0_0",
+          "option_id": "provider_shinhan",
+          "resource_id": "",
+          "label": "신한인증서",
+          "bounds": [
+            92,
+            1439,
+            236,
+            1582
+          ],
+          "clickable": true,
+          "scrollable": false
+        }
+      ],
+      "observation_id": "device-gov24-providers",
+      "captured_at_ms": 0,
+      "width": 1080,
+      "height": 2400,
+      "package_name": "kr.go.minwon.m"
+    },
+    "handoff": {
+      "status": "handoff",
+      "nodes": [],
+      "observation_id": "device-gov24-handoff",
+      "captured_at_ms": 0,
+      "width": 1080,
+      "height": 2400,
+      "package_name": "kr.go.minwon.m",
+      "handoff_reason": "certificate_selection"
+    }
+  }
+}

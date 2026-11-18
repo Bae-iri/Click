@@ -615,6 +615,7 @@ class AgentSessionRepository:
             attempt_id=pending.get("attempt_id"),guide_id=row.last_guide_command_id,graph_hash=row.graph_hash,goal_type=row.accepted_goal_type)
         return AgentSessionResponse(execution_state=ExecutionState(**snapshot),session_id=row.id, status=row.status, version=row.version,
             browsing=(row.workflow or {}).get('version') == 'coupang-browse.v1',
+            public_guide=(row.workflow or {}).get('version') == 'gov24-login.v1',
             episode_id=row.episode_id,
             task_outcome=row.task_outcome, outcome_history=row.outcome_history or [],
             task_id=row.task_id, state_id=row.state_id, last_guide_command_id=row.last_guide_command_id,

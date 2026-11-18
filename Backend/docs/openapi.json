@@ -2741,6 +2741,172 @@
         ]
       }
     },
+    "/api/v1/agent/public-guide/commands": {
+      "post": {
+        "tags": [
+          "public-login-guidance"
+        ],
+        "summary": "Command",
+        "operationId": "command_api_v1_agent_public_guide_commands_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicGuideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicGuideResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Content Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/agent/sessions": {
       "get": {
         "tags": [
@@ -8037,6 +8203,11 @@
             "type": "boolean",
             "title": "Browsing",
             "default": false
+          },
+          "public_guide": {
+            "type": "boolean",
+            "title": "Public Guide",
+            "default": false
           }
         },
         "type": "object",
@@ -9252,6 +9423,11 @@
             "type": "boolean",
             "title": "Coupang Browse",
             "default": false
+          },
+          "gov24_login": {
+            "type": "boolean",
+            "title": "Gov24 Login",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -9845,7 +10021,8 @@
             "type": "string",
             "enum": [
               "graph",
-              "browse"
+              "browse",
+              "public_guide"
             ],
             "title": "Execution Mode",
             "default": "graph"
@@ -9874,6 +10051,21 @@
                 "type": "null"
               }
             ]
+          },
+          "public_guide_goal": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string",
+                  "const": "gov24.login"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Guide Goal"
           },
           "expires_at": {
             "type": "integer",
@@ -10323,6 +10515,448 @@
           "updated_at"
         ],
         "title": "ProductFeedbackResponse"
+      },
+      "PublicGuideNode": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Node Id"
+          },
+          "resource_id": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Resource Id"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 160,
+            "title": "Label",
+            "default": ""
+          },
+          "bounds": {
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bounds"
+          },
+          "clickable": {
+            "type": "boolean",
+            "title": "Clickable",
+            "default": false
+          },
+          "scrollable": {
+            "type": "boolean",
+            "title": "Scrollable",
+            "default": false
+          },
+          "option_id": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Option Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "node_id",
+          "resource_id",
+          "bounds",
+          "option_id"
+        ],
+        "title": "PublicGuideNode"
+      },
+      "PublicGuideRequest": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "public-guide.v1",
+            "title": "Protocol Version",
+            "default": "public-guide.v1"
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Request Id"
+          },
+          "session_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Session Id"
+          },
+          "expected_version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Version"
+          },
+          "command": {
+            "type": "string",
+            "enum": [
+              "start",
+              "observe",
+              "cancel",
+              "finish",
+              "snapshot"
+            ],
+            "title": "Command"
+          },
+          "goal_resolution_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal Resolution Id"
+          },
+          "screen": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicGuideScreen"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BrowseAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 160,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "choice": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Choice"
+          },
+          "question_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "session_id",
+          "expected_version",
+          "command"
+        ],
+        "title": "PublicGuideRequest"
+      },
+      "PublicGuideResponse": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "public-guide.v1",
+            "title": "Protocol Version",
+            "default": "public-guide.v1"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "session_version": {
+            "type": "integer",
+            "title": "Session Version"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "IN_PROGRESS",
+              "COMPLETED",
+              "CANCELLED",
+              "BLOCKED"
+            ],
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "in_progress",
+              "user_reported",
+              "cancelled",
+              "blocked",
+              "unknown",
+              "handoff"
+            ],
+            "title": "Outcome"
+          },
+          "guide_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guide Id"
+          },
+          "observation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation Id"
+          },
+          "target_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Node Id"
+          },
+          "target_bounds": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 4,
+                "minItems": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Bounds"
+          },
+          "action_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "login_navigation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Kind"
+          },
+          "step": {
+            "type": "integer",
+            "title": "Step",
+            "default": 0
+          },
+          "manual_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Manual Only",
+            "default": true
+          },
+          "subgoal": {
+            "type": "string",
+            "enum": [
+              "open_login",
+              "choose_method",
+              "choose_provider",
+              "handoff"
+            ],
+            "title": "Subgoal",
+            "default": "open_login"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InputQuestion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "session_id",
+          "session_version",
+          "status",
+          "message",
+          "outcome"
+        ],
+        "title": "PublicGuideResponse"
+      },
+      "PublicGuideScreen": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "public",
+              "outside_app",
+              "sensitive",
+              "unrecognized",
+              "handoff"
+            ],
+            "title": "Status"
+          },
+          "package_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package Name"
+          },
+          "observation_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Observation Id"
+          },
+          "captured_at_ms": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Captured At Ms"
+          },
+          "width": {
+            "type": "integer",
+            "maximum": 20000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "maximum": 20000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Height"
+          },
+          "query_hash": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query Hash"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/PublicGuideNode"
+            },
+            "type": "array",
+            "maxItems": 24,
+            "title": "Nodes"
+          },
+          "handoff_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "credential_input",
+                  "certificate_selection",
+                  "external_auth",
+                  "consent_required"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handoff Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "observation_id",
+          "captured_at_ms",
+          "width",
+          "height"
+        ],
+        "title": "PublicGuideScreen"
       },
       "RecordConsentRequest": {
         "properties": {
