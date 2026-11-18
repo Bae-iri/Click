@@ -65,11 +65,13 @@ def test_prepare_uses_isolated_migrated_db_and_only_current_approved_graphs(pair
     assert 'DATABASE_URL' not in response.text
 
 
-@pytest.mark.parametrize('drift', ['source', 'graph'])
+@pytest.mark.parametrize('drift', ['source', 'graph', 'runtime'])
 def test_identity_refuses_code_or_graph_changes_until_pair_is_rebuilt(paired, monkeypatch, drift):
     app, _ = paired
     if drift == 'source':
         monkeypatch.setattr('app.core.validation.source_digest', lambda: '0' * 64)
+    elif drift == 'runtime':
+        monkeypatch.setenv('JEV_MIN_CONFIDENCE', '0.91')
     else:
         with app.state.session_factory() as db:
             db.get(ApprovedTaskGraph, 'MVP-01:1.0.1').active = False

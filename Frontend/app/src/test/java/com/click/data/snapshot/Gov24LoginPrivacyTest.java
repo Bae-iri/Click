@@ -45,4 +45,23 @@ public class Gov24LoginPrivacyTest {
         var result=new Gov24LoginPrivacy().filter(new ScreenSnapshot("other.app",java.time.Instant.now().toString(),1080,2400,List.of(node("pii","private",false,false)),42));
         assertEquals("outside_app",result.getString("status"));assertFalse(result.toString().contains("private"));
     }
+    @Test public void civilModeExportsOnlyBoundPublicNavigationAndBoundaryMarkers() throws Exception {
+        var result=new Gov24LoginPrivacy(true).filter(screen(node("tile","주민등록등본",false,true),
+            node("menu","민원서비스",false,true),node("pii","홍길동님",false,false)));
+        assertEquals("public",result.getString("status"));assertEquals(2,result.getJSONArray("nodes").length());
+        assertEquals("nav_resident",result.getJSONArray("nodes").getJSONObject(0).getString("option_id"));
+        assertFalse(result.toString().contains("홍길동"));
+        result=new Gov24LoginPrivacy(true).filter(screen(node("heading","주민등록표 등본(초본) 발급",false,false),
+            node("apply","발급하기",false,true)));
+        assertEquals("marker_resident",result.getJSONArray("nodes").getJSONObject(0).getString("option_id"));
+        assertFalse(result.getJSONArray("nodes").getJSONObject(0).getBoolean("clickable"));
+        assertEquals("boundary_apply",result.getJSONArray("nodes").getJSONObject(1).getString("option_id"));
+    }
+    @Test public void civilModeDoesNotExportCredentialsOrChangeTheLoginFilter() throws Exception {
+        var source=screen(node("tile","주민등록등본",false,true));
+        assertEquals("unrecognized",new Gov24LoginPrivacy().filter(source).getString("status"));
+        var result=new Gov24LoginPrivacy(true).filter(screen(node("tile","주민등록등본",false,true),
+            node("input","private",true,false)));
+        assertEquals("handoff",result.getString("status"));assertEquals(0,result.getJSONArray("nodes").length());
+    }
 }

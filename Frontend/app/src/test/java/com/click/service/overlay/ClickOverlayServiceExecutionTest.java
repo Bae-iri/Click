@@ -203,7 +203,7 @@ public class ClickOverlayServiceExecutionTest {
     @Test public void onlyVerifiedPublicLoginSnapshotsBypassTheSettingsGoalCatalog() throws Exception {
         Method accept=ClickOverlayService.class.getDeclaredMethod("acceptExecutionState",AgentTurnContract.Response.class,String.class,boolean.class);
         accept.setAccessible(true);
-        for(boolean publicMode:new boolean[]{false,true})for(String type:new String[]{"gov24.login","unknown.login"}) {
+        for(boolean publicMode:new boolean[]{false,true})for(String type:new String[]{"gov24.login","gov24.resident_copy.open","unknown.login"}) {
             JSONObject state=new JSONObject().put("protocol_version",com.click.data.remote.ExecutionState.version())
                 .put("session_id","frontend-session").put("episode_id","public-episode").put("session_version",2)
                 .put("command_type","snapshot").put("task_status","IN_PROGRESS")
@@ -211,8 +211,8 @@ public class ClickOverlayServiceExecutionTest {
             var response=new AgentTurnContract.Response(new JSONObject().put("request_id","public-snapshot")
                 .put("session_id","frontend-session").put("episode_id","public-episode").put("session_version",2)
                 .put("task_status","IN_PROGRESS").put("response_type","control").put("execution_state",state)
-                .put("metadata",new JSONObject().put("public_guide",publicMode)).toString());
-            assertEquals(publicMode && "gov24.login".equals(type),accept.invoke(service,response,null,true));
+                .put("metadata",new JSONObject().put("public_guide",publicMode).put("public_guide_goal_type",type)).toString());
+            assertEquals(publicMode && java.util.Set.of("gov24.login","gov24.resident_copy.open").contains(type),accept.invoke(service,response,null,true));
             assertNull(get("acceptedGoal"));
         }
     }

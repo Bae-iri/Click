@@ -2,12 +2,15 @@ plugins {
     id "com.android.application"
 }
 
-def validationFile = rootProject.file("../Backend/instance/validation/environment.json")
+def validationFile = rootProject.file(providers.gradleProperty("CLICK_VALIDATION_MANIFEST")
+        .getOrElse("../Backend/instance/validation/environment.json"))
 def validationRequested = gradle.startParameter.taskNames.any { it.toLowerCase().contains("validation") }
 if (validationRequested && !validationFile.isFile()) {
     throw new GradleException("Prepare the paired backend first: Backend/scripts/validation.py prepare")
 }
-def validationEnvironment = validationFile.isFile() ? new groovy.json.JsonSlurper().parse(validationFile) : [:]
+def validationEnvironment = (validationFile.isFile() ?
+        new groovy.json.JsonSlurper().parse(validationFile) : [:])
+def validationSigningFile = providers.gradleProperty("CLICK_VALIDATION_KEYSTORE").orNull
 if (validationRequested && (!validationEnvironment.environment_id ||
         !(validationEnvironment.fingerprint ==~ /[0-9a-f]{64}/) || !validationEnvironment.api_base_url)) {
     throw new GradleException("Invalid paired backend manifest; run validation.py prepare again")
@@ -50,13 +53,26 @@ android {
         buildConfigField "String", "CLICK_VALIDATION_FINGERPRINT", '""'
     }
 
+    signingConfigs {
+        validationDevice {
+            if (validationSigningFile) storeFile rootProject.file(validationSigningFile)
+            storePassword "android"
+            keyAlias "AndroidDebugKey"
+            keyPassword "android"
+        }
+    }
+
     buildTypes {
         validation {
             initWith debug
-            applicationIdSuffix ".validation"
+            // A paired test app must never receive the normal app's Kakao OAuth redirect.
+            buildConfigField "String", "KAKAO_NATIVE_APP_KEY", '\"\"'
+            manifestPlaceholders.kakaoRedirectScheme = "kakaounconfiguredvalidation"
+            applicationIdSuffix providers.gradleProperty("CLICK_VALIDATION_APPLICATION_SUFFIX").getOrElse(".validation")
             versionNameSuffix "-validation"
+            resValue "string", "app_name", "Click 실기기 검증"
             matchingFallbacks = ["debug"]
-            signingConfig signingConfigs.debug
+            signingConfig validationSigningFile ? signingConfigs.validationDevice : signingConfigs.debug
             buildConfigField "String", "CLICK_API_BASE_URL", javaString(validationEnvironment.api_base_url)
             buildConfigField "String", "CLICK_VALIDATION_ENVIRONMENT_ID", javaString(validationEnvironment.environment_id)
             buildConfigField "String", "CLICK_VALIDATION_FINGERPRINT", javaString(validationEnvironment.fingerprint)
