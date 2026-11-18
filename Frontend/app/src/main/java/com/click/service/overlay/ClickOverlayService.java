@@ -976,7 +976,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void showGoalPreparation() {
         if (goalPreparation == null || closing) return;
         ensureTaskFlow();
-        if (goalPreparation.browsing()) {
+        if (goalPreparation.browsing() || goalPreparation.publicGuide()) {
             taskFlowView.setPreparationMessage(null);taskFlowView.preparation(goalPreparation);
             taskFlowView.offerAdjustmentDelegation(false);
             updateRequestStatus(true,false);placeTaskFlow(null,true);speak(goalPreparation.guidance());return;
@@ -1143,12 +1143,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         hideGuideOverlay();ensureTaskFlow();
         boolean terminal=!"IN_PROGRESS".equals(response.optString("status"));
         String message=response.optString("message");
+        int[] publicTarget=null;
         if(gov24Guide&&terminal)stopListening();
         ScreenSnapshot current=ClickAccessibilityService.freshSnapshot();
         if(!terminal && !response.isNull("target_node_id") && submitted!=null && current!=null
                 && submitted.contentFingerprint().equals(current.contentFingerprint())) {
             org.json.JSONArray bounds=response.optJSONArray("target_bounds");
             if(bounds!=null && bounds.length()==4) {
+                publicTarget=new int[]{bounds.optInt(0),bounds.optInt(1),bounds.optInt(2),bounds.optInt(3)};
                 lastSubmittedScreen=submitted;
                 showGuideOverlay(new int[]{bounds.optInt(0),bounds.optInt(1),bounds.optInt(2),bounds.optInt(3)},
                     "scroll".equals(response.optString("action_kind"))?"scroll":"tap",GuideDragDirection.UNKNOWN);
@@ -1173,7 +1175,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 clearTaskFlow();finishActiveQueueRequest(code);
             });
         taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=false;
-        if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(null,true);
+        if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(gov24Guide?publicTarget:null,true);
         speak(message);
         if(gov24Guide&&terminal)voiceReplyEnabled=false;
     }
@@ -1217,6 +1219,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean acceptExecutionState(AgentTurnContract.Response response,String command,boolean snapshot) {
         if(execution.acceptResponse(response,command,snapshot)) {
             String goalType=response.executionState==null?null:response.executionState.goalType;
+            boolean publicLoginSnapshot=snapshot && "gov24.login".equals(goalType)
+                    && response.metadata!=null && response.metadata.optBoolean("public_guide");
+            if(publicLoginSnapshot) {
+                execution.setAcceptedGoal(null);
+                return true;
+            }
             if(goalType!=null && goalClassifier!=null) {
                 GoalCatalogClassifier.Match goal=goalClassifier.executableGoal(goalType);
                 if(goal==null)return false;

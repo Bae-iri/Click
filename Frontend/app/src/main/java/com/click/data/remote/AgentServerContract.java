@@ -40,10 +40,15 @@ public final class AgentServerContract {
         request.interactiveWorkflow = interactiveWorkflow;
         JSONObject body = new JSONObject(request.toJson());
         JSONObject context = body.optJSONObject("device_context");
-        if (coupangBrowse && context != null && context.optJSONObject("capabilities") != null)
-            context.getJSONObject("capabilities").put("coupang_browse", true);
-        if(gov24Login && context!=null && context.optJSONObject("capabilities")!=null)
-            context.getJSONObject("capabilities").put("gov24_login",true);
+        if(context!=null && (coupangBrowse || gov24Login)) {
+            JSONObject capabilities=context.optJSONObject("capabilities");
+            if(capabilities==null) {
+                capabilities=new JSONObject();
+                context.put("capabilities",capabilities);
+            }
+            if(coupangBrowse)capabilities.put("coupang_browse",true);
+            if(gov24Login)capabilities.put("gov24_login",true);
+        }
         JSONObject screen = body.optJSONObject("accessibility_tree");
         JSONObject settings = screen == null ? null : screen.optJSONObject("applied_settings");
         if (settings != null) {
