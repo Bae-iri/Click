@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)][int]$VersionCode,
-    [string]$VersionName = '1.0.2',
+    [string]$VersionName = '1.0.3',
     [string]$SigningFile = '',
     [switch]$Unsigned
 )

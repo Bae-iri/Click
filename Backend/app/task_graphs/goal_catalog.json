@@ -3148,7 +3148,14 @@
     },
     {
       "goal_type": "gov24.resident_copy.open",
-      "excluded_keywords": ["초본", "신청 내역", "신청내역", "발급 내역", "발급내역", "처리상태"],
+      "excluded_keywords": [
+        "초본",
+        "신청 내역",
+        "신청내역",
+        "발급 내역",
+        "발급내역",
+        "처리상태"
+      ],
       "display_name": "정부24 주민등록등본 발급 화면 찾기",
       "target_app": "gov24",
       "task_type": "public_guidance",
@@ -3173,15 +3180,16 @@
         "정부24 등본 떼는 화면 보여줘"
       ],
       "risk_level": "normal",
-      "completion_scope": "public_screen_only"
+      "completion_scope": "public_screen_only",
+      "public_graph_id": "GOV24-BASE-RESIDENT-COPY"
     },
     {
       "goal_type": "gov24.resident_extract.open",
       "display_name": "정부24 주민등록초본 발급 화면 찾기",
       "target_app": "gov24",
-      "task_type": "public_service_navigation",
-      "execution_status": "catalog_only",
-      "execution_mode": "catalog_only",
+      "task_type": "public_guidance",
+      "execution_status": "public_guide",
+      "execution_mode": "public_guide",
       "graph_id": null,
       "slots": {},
       "keyword_groups": [
@@ -3201,15 +3209,16 @@
         "정부24 초본 떼는 화면 보여줘"
       ],
       "risk_level": "normal",
-      "completion_scope": "not_implemented"
+      "completion_scope": "public_screen_only",
+      "public_graph_id": "GOV24-BASE-RESIDENT-EXTRACT"
     },
     {
       "goal_type": "gov24.move_in.open",
       "display_name": "정부24 전입신고 화면 찾기",
       "target_app": "gov24",
-      "task_type": "public_service_navigation",
-      "execution_status": "catalog_only",
-      "execution_mode": "catalog_only",
+      "task_type": "public_guidance",
+      "execution_status": "public_guide",
+      "execution_mode": "public_guide",
       "graph_id": null,
       "slots": {},
       "keyword_groups": [
@@ -3228,15 +3237,16 @@
         "정부24 이사해서 전입 신고하고 싶어"
       ],
       "risk_level": "normal",
-      "completion_scope": "not_implemented"
+      "completion_scope": "public_screen_only",
+      "public_graph_id": "GOV24-BASE-MOVE-IN"
     },
     {
       "goal_type": "gov24.building_register.open",
       "display_name": "정부24 건축물대장 발급·열람 화면 찾기",
       "target_app": "gov24",
-      "task_type": "public_service_navigation",
-      "execution_status": "catalog_only",
-      "execution_mode": "catalog_only",
+      "task_type": "public_guidance",
+      "execution_status": "public_guide",
+      "execution_mode": "public_guide",
       "graph_id": null,
       "slots": {},
       "keyword_groups": [
@@ -3254,15 +3264,16 @@
         "정부24 건축물대장 열람 화면 보여줘"
       ],
       "risk_level": "normal",
-      "completion_scope": "not_implemented"
+      "completion_scope": "public_screen_only",
+      "public_graph_id": "GOV24-BASE-BUILDING-REGISTER"
     },
     {
       "goal_type": "gov24.land_register.open",
       "display_name": "정부24 토지·임야대장 발급·열람 화면 찾기",
       "target_app": "gov24",
-      "task_type": "public_service_navigation",
-      "execution_status": "catalog_only",
-      "execution_mode": "catalog_only",
+      "task_type": "public_guidance",
+      "execution_status": "public_guide",
+      "execution_mode": "public_guide",
       "graph_id": null,
       "slots": {},
       "keyword_groups": [
@@ -3281,7 +3292,8 @@
         "정부24 토지대장 발급 화면 찾아줘"
       ],
       "risk_level": "normal",
-      "completion_scope": "not_implemented"
+      "completion_scope": "public_screen_only",
+      "public_graph_id": "GOV24-BASE-LAND-REGISTER"
     },
     {
       "goal_type": "gov24.land_use_plan.open",
@@ -3417,9 +3429,9 @@
       "goal_type": "gov24.vehicle_register.open",
       "display_name": "정부24 자동차등록원부 발급·열람 화면 찾기",
       "target_app": "gov24",
-      "task_type": "public_service_navigation",
-      "execution_status": "catalog_only",
-      "execution_mode": "catalog_only",
+      "task_type": "public_guidance",
+      "execution_status": "public_guide",
+      "execution_mode": "public_guide",
       "graph_id": null,
       "slots": {},
       "keyword_groups": [
@@ -3437,7 +3449,8 @@
         "정부24 자동차등록원부 열람 화면 보여줘"
       ],
       "risk_level": "normal",
-      "completion_scope": "not_implemented"
+      "completion_scope": "public_screen_only",
+      "public_graph_id": "GOV24-BASE-VEHICLE-REGISTER"
     },
     {
       "goal_type": "gov24.resident_card.reissue.open",

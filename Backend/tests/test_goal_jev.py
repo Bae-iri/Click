@@ -308,6 +308,33 @@ def test_contextual_public_guide_uses_only_advertised_capabilities(monkeypatch, 
         assert len(calls) == 1
 
 
+@pytest.mark.parametrize('enabled', [False, True])
+def test_contextual_new_civil_service_requires_v4_capability(monkeypatch, enabled):
+    goal = 'gov24.building_register.open'
+    calls = []
+    def post(self, payload, **kwargs):
+        calls.append(payload)
+        listed = {v['goal_type'] for v in payload['questions']['goal']['criteria'].values() if isinstance(v, dict)}
+        assert (goal in listed) == enabled
+        return (contextual_response(payload, goal) if enabled
+                else httpx.Response(200, json=response_for(payload, 'unsupported_app')))
+    monkeypatch.setattr(JevGoalClassifier, '_post', post)
+    monkeypatch.setenv('CLICK_GOV24_GUIDE_ENABLED', '1')
+    with TestClient(create_app()) as client:
+        register(client)
+        flow = Flow(client, client.app, '밝기는 바꾸지 말고 정부24 건축물대장 안내 화면 찾아줘')
+        context = {'platform': 'android', 'locale': 'ko-KR',
+                   'capabilities': {'gov24_civil': True, 'gov24_services': enabled}}
+        response = flow.resolve(device_context=context)
+        if enabled:
+            assert response['preparation']['public_guide_goal'] == {'goal_type': goal}
+            assert flow.resolve(device_context=context)['preparation']['public_guide_goal'] == {'goal_type': goal}
+        else:
+            assert response['resolution_status'] == 'unsupported'
+            assert response['preparation']['public_guide_goal'] is None
+    assert len(calls) == 1
+
+
 @pytest.mark.parametrize('key,value', [('TYPESAFE_API_KEY', ''), ('TYPESAFE_API_KEY', 'bad\nkey'),
     ('JEV_MODEL', 'jev-latest'), ('JEV_MIN_CONFIDENCE', 'nan'), ('JEV_MIN_CONFIDENCE', '0'),
     ('JEV_MIN_CONFIDENCE', '1.1'), ('JEV_MIN_CONFIDENCE', 'invalid')])

@@ -11,7 +11,7 @@ from app.models.graph_proposal import GOV24_GRAPH_CONSUMER, GraphProposal
 from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
 from app.models.user import Consent
 from app.repositories.users import UserRepository
-from app.services.public_guide_policy import CIVIL, POLICY
+from app.services.public_guide_policy import CIVIL, CIVIL_GRAPHS, POLICY
 
 
 def eligible_events(db, session_id, user_id, now):
@@ -41,7 +41,7 @@ class GovernmentGraphLearningService:
             session = db.get(AgentSession, session_id)
             if (not session or session.user_id != user_id
                     or session.status not in {'IN_PROGRESS', 'COMPLETED', 'BLOCKED', 'CANCELLED'}
-                    or (session.workflow or {}).get('goal', {}).get('goal_type') != CIVIL['goal_type']):
+                    or (session.workflow or {}).get('goal', {}).get('goal_type') not in CIVIL_GRAPHS):
                 return {'status': 'INELIGIBLE'}
             events = eligible_events(db, session_id, user_id, now)
             if not events:
@@ -101,7 +101,7 @@ class GovernmentGraphLearningService:
                 .join(Consent, Consent.id == latest_consent)
                 .outerjoin(RuntimeEventConsumption, and_(RuntimeEventConsumption.event_id == RuntimeEvent.id,
                     RuntimeEventConsumption.consumer == GOV24_GRAPH_CONSUMER))
-                .where(RuntimeEvent.kind == 'public_guide', AgentSession.accepted_goal_type == CIVIL['goal_type'],
+                .where(RuntimeEvent.kind == 'public_guide', AgentSession.accepted_goal_type.in_(CIVIL_GRAPHS),
                     RuntimeEvent.expires_at > now, RuntimeEventConsumption.id.is_(None), Consent.consented.is_(True),
                     latest.c.first_sequence == 1, latest.c.expires_at > now,
                     latest.c.first_created_at >= cast(grant_time, Float))
@@ -144,9 +144,11 @@ def retained_graphs(factory, code_hash, now):
     return graphs
 
 
-def graph_candidates(factory, code_hash, source, options, now):
+def graph_candidates(factory, code_hash, source, options, now, *, goal_type=None):
     candidates = {}
     for graph in retained_graphs(factory, code_hash, now):
+        if graph['definition']['goal_type'] != (goal_type or CIVIL['goal_type']):
+            continue
         for edge in graph['transitions']:
             state = graph['states'][edge['from_state']]
             if state['source_signature'] == source and edge['option_id'] in options:

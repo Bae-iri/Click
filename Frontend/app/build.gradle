@@ -54,8 +54,8 @@ android {
         manifestPlaceholders.clickAccessibilityLabel = gov24Pilot ? "클릭 정부24 테스트" : "@string/accessibility_service_label"
         minSdk 26
         targetSdk 36
-        versionCode providers.gradleProperty("CLICK_VERSION_CODE").getOrElse("3").toInteger()
-        versionName providers.gradleProperty("CLICK_VERSION_NAME").getOrElse("1.0.2")
+        versionCode providers.gradleProperty("CLICK_VERSION_CODE").getOrElse("4").toInteger()
+        versionName providers.gradleProperty("CLICK_VERSION_NAME").getOrElse("1.0.3")
         buildConfigField "boolean", "CANDIDATE_DIAGNOSTICS", candidateDiagnostics
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

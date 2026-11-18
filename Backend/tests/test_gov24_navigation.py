@@ -20,6 +20,7 @@ class CivilFlow(LoginFlow):
     def payload(self, **kwargs):
         body = super().payload(**kwargs)
         body['device_context']['capabilities']['gov24_civil'] = True
+        body['device_context']['capabilities']['gov24_services'] = True
         return body
 
 

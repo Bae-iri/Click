@@ -22,7 +22,7 @@ class PublicGuideService(BrowseService):
         self.task_id,self.event_kind='GOV24-LOGIN','public_guide'
 
     def decide(self,request,state,now):
-        if state['goal']['goal_type'] == policy.CIVIL['goal_type']:
+        if state['goal']['goal_type'] in policy.CIVIL_GRAPHS:
             from app.services.gov24_navigation import decide
             return decide(self, request, state, now)
         state=deepcopy(state); step=state.get('steps',0)+1

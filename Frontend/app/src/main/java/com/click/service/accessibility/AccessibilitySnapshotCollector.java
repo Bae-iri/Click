@@ -94,6 +94,8 @@ final class AccessibilitySnapshotCollector {
         CharSequence hint = node.getHintText();
         if (hint == null) return false;
         String text = hint.toString().trim().toLowerCase(java.util.Locale.ROOT);
+        if(com.click.data.snapshot.Gov24LoginPrivacy.PACKAGE.contentEquals(String.valueOf(node.getPackageName()))
+                &&com.click.data.snapshot.Gov24LoginPrivacy.isPublicSearchHint(text))return true;
         return "검색".equals(text) || "search".equals(text);
     }
 

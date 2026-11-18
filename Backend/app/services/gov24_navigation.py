@@ -21,10 +21,13 @@ CODE_HASH = policy_digest(json.dumps(policy.CIVIL, sort_keys=True, ensure_ascii=
     ('gov24_navigation.py', 'gov24_routes.py', 'gov24_graphs.py', 'public_guide_policy.py')))
 
 
-def page_of(screen):
+def page_of(screen, goal_type=None):
     keys = {n.option_id for n in screen.nodes}
-    if {'marker_resident', 'boundary_apply'} <= keys:
-        return 'resident_service'
+    graph = policy.CIVIL_GRAPHS[goal_type or policy.CIVIL['goal_type']]
+    if any(set(required) <= keys for required in graph['completion']['any_of']):
+        return graph['completion']['page']
+    if 'marker_home' in keys:
+        return 'public_menu'
     if 'marker_services' in keys:
         return 'services'
     return 'public_menu' if any(policy.CIVIL_OPTIONS[k]['group'] == 'navigation' for k in keys) else 'unknown'
@@ -33,13 +36,17 @@ def page_of(screen):
 def decide(service, request, original, now):
     from app.schemas.public_guide import PublicGuideResponse
     state = deepcopy(original)
+    graph = policy.CIVIL_GRAPHS[state['goal']['goal_type']]
+    label = graph['label']
     step = state.get('steps', 0) + 1
     result = PublicGuideResponse(request_id=request.request_id, session_id=request.session_id,
         session_version=request.expected_version + 1, status='IN_PROGRESS', outcome='in_progress',
-        subgoal='find_resident_service', step=step,
-        message='정부24를 열고 현재 화면 확인을 눌러주세요. 주민등록등본 발급 안내 화면까지 함께 이동할게요.')
+        subgoal='find_resident_service' if graph['goal_type'] == policy.CIVIL['goal_type'] else 'find_service', step=step,
+        service_label=label, baseline_graph_id=graph['task_id'], graph_state='public_menu',
+        message=f'정부24의 {label} 안내 화면을 찾고 있어요. 공개 메뉴가 보이면 다음 위치를 안내할게요.')
     evidence = dict(schema_version=SCHEMA, policy_version=policy.CIVIL['version'], code_hash=CODE_HASH,
-        goal_type=policy.CIVIL['goal_type'], task_id='GOV24-RESIDENT-COPY', page='unknown', reason='entry_required', step=step)
+        goal_type=graph['goal_type'], task_id=graph['task_id'].replace('GOV24-BASE-', 'GOV24-'),
+        baseline_graph_id=graph['task_id'], page='unknown', reason='entry_required', step=step)
     pending = linked_attempt(request, state, now)
     if pending:
         # Private or unrecognized destinations still contribute an unresolved
@@ -49,7 +56,7 @@ def decide(service, request, original, now):
     if request.command in {'cancel', 'finish'}:
         result.status = 'CANCELLED' if request.command == 'cancel' else 'COMPLETED'
         result.outcome = 'cancelled' if request.command == 'cancel' else 'user_reported'
-        result.message = '정부24 주민등록등본 화면 안내를 마쳤어요.'
+        result.message = f'정부24 {label} 화면 안내를 마쳤어요.'
     elif step > policy.POLICY['max_turns']:
         result.status, result.outcome = 'BLOCKED', 'blocked'
         result.message = '화면 이동을 확인하지 못했어요. 정부24에서 직접 확인하거나 새로 시작해 주세요.'
@@ -63,8 +70,10 @@ def decide(service, request, original, now):
             evidence['reason'] = 'private_boundary'
             state.pop('pending', None)
         else:
-            result.message = '정부24의 공개 메뉴를 확인하지 못했어요. 직접 이동한 뒤 현재 화면 확인을 눌러주세요.'
+            result.message = f'{label}로 이동할 공개 메뉴를 확인하지 못했어요. 정부24의 서비스 목록을 열거나 목록을 내려주세요.'
             evidence['reason'] = 'unrecognized'
+    if result.subgoal == 'handoff':
+        result.graph_state = 'handoff'
     state.update(steps=step, outcome=result.outcome)
     evidence['outcome'] = result.outcome
     return result, evidence, state
@@ -85,38 +94,43 @@ def linked_attempt(request, state, now):
 def observe(service, request, screen, state, result, evidence, now):
     from app.schemas.goal_preparation import InputChoice, InputQuestion
     from uuid import uuid4
-    page = page_of(screen)
+    graph = policy.CIVIL_GRAPHS[state['goal']['goal_type']]
+    label = graph['label']
+    destination = graph['completion']['page']
+    page = page_of(screen, graph['goal_type'])
+    result.graph_state = 'service_entry' if page == destination else page
     keys = sorted(n.option_id for n in screen.nodes)
     source = digest(keys)
     screen_hash = digest(screen.model_dump(exclude={'observation_id', 'captured_at_ms'}))
     evidence.update(page=page, source=source)
     pending = linked_attempt(request, state, now)
     if pending:
-        label = 'unknown'
+        attempt_result = 'unknown'
         if source != pending['source'] and screen_hash != pending['screen_hash'] and page != 'unknown':
             # Progress is confirmed by observed public destination semantics.
             target = pending['option']
-            progressed = (page == 'resident_service' or target in {'nav_services', 'nav_frequent'}
+            progressed = (page == destination or target in {'nav_services', 'nav_frequent'}
                           and page == 'services' and pending['page'] != 'services')
-            label = 'successes' if progressed else 'failures'
+            attempt_result = 'successes' if progressed else 'failures'
         evidence['attempt'] = dict(id=policy_digest(pending['guide_id']), source=pending['source'],
-                                   option=pending['option'], result=label)
-        if label != 'unknown':
+                                   option=pending['option'], result=attempt_result)
+        if attempt_result != 'unknown':
             state.pop('pending', None)
-    if page == 'resident_service':
-        result.status, result.outcome, result.subgoal = 'COMPLETED', 'verified_navigation', 'resident_service'
-        result.message = '주민등록등본 발급 안내 화면에 도착했어요. 발급하기 이후의 신청서 작성과 제출은 정부24에서 직접 진행해 주세요.'
+    if page == destination:
+        result.status, result.outcome, result.subgoal = 'COMPLETED', 'verified_navigation', destination
+        result.message = f'{label} 안내 화면에 도착했어요. 신청서 작성과 최종 신청은 정부24에서 직접 진행해 주세요.'
         evidence['reason'] = 'verified_navigation'
         state.pop('pending', None)
         return
+    allowed = {edge['target_option'] for edge in graph['transitions']}
     candidates = {}
     for node in screen.nodes:
-        if policy.CIVIL_OPTIONS[node.option_id]['group'] == 'navigation':
+        if node.option_id in allowed and policy.CIVIL_OPTIONS[node.option_id]['group'] == 'navigation':
             candidates.setdefault(node.option_id, []).append(node)
     candidates = {key: nodes[0] for key, nodes in candidates.items() if len(nodes) == 1}
     evidence['candidate_count'] = len(candidates)
     if not candidates:
-        result.message = '주민등록등본으로 이동할 공개 메뉴가 보이지 않아요. 직접 메뉴를 이동한 뒤 현재 화면 확인을 눌러주세요.'
+        result.message = f'{label} 메뉴가 아직 보이지 않아요. 정부24 목록을 내려 항목을 찾아주세요. 화면이 바뀌면 안내를 이어갈게요.'
         evidence['reason'] = 'no_candidates'
         return
     selected = None
@@ -134,7 +148,7 @@ def observe(service, request, screen, state, result, evidence, now):
                 evidence['reason'] = 'user_selected'
     else:
         try:
-            winner = choose_route(service.factory, CODE_HASH, source, candidates, now)
+            winner = choose_route(service.factory, CODE_HASH, source, candidates, now, goal_type=graph['goal_type'])
         except Exception:
             winner = None
         if winner:
@@ -143,9 +157,12 @@ def observe(service, request, screen, state, result, evidence, now):
                 ('successes', 'failures', 'unknown', 'attempts', 'success_rate', 'score')})
             if winner.get('graph_hash'):
                 evidence.update(selection_policy='ai2_gov24_task_graph', selected_graph_hash=winner['graph_hash'])
-        elif len(candidates) == 1:
-            selected = next(iter(candidates))
-            evidence['reason'] = 'single_visible_option'
+        else:
+            from app.task_graphs.gov24 import choose
+            baseline = choose(graph, page, candidates)
+            if baseline:
+                selected = baseline['target_option']
+                evidence.update(reason='baseline_graph_selected', baseline_transition=baseline['id'])
     if selected:
         node = candidates[selected]
         service.target(result, screen, node)
@@ -156,7 +173,7 @@ def observe(service, request, screen, state, result, evidence, now):
             node_id=node.node_id, captured_at_ms=screen.captured_at_ms, screen_hash=screen_hash,
             source=source, option=selected, page=page)
     else:
-        result.message = '주민등록등본으로 이동할 메뉴를 골라주세요. 실제 이동 결과를 관측해 다음 경로 선택에 반영해요.'
+        result.message = f'{label}로 이동할 메뉴를 골라주세요. 실제 이동 결과를 관측해 다음 경로 선택에 반영해요.'
         result.question = InputQuestion(id='civil-' + uuid4().hex, field='civil_navigation',
             label='이동할 메뉴', kind='choice', message=result.message,
             choices=[InputChoice(value=k, label=policy.CIVIL_OPTIONS[k]['label']) for k in candidates], max_length=160)
