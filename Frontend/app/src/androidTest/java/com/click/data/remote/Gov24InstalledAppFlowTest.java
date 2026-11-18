@@ -52,25 +52,32 @@ public class Gov24InstalledAppFlowTest {
         clickText(targetPackage,"요청 보내기");
         long preparationDeadline=SystemClock.elapsedRealtime()+60000;
         while(!hasText(targetPackage,"안내 시작하기") && !hasText(targetPackage,"정부24 열기")
-                && !hasText(targetPackage,"1. 모바일 신분증") && SystemClock.elapsedRealtime()<preparationDeadline)
+                && !hasText(targetPackage,"1. 모바일 신분증") && !hasText(targetPackage,"__provider_question__")
+                && SystemClock.elapsedRealtime()<preparationDeadline)
             SystemClock.sleep(250);
         if(hasText(targetPackage,"안내 시작하기"))clickText(targetPackage,"안내 시작하기");
-        if(!hasText(targetPackage,"1. 모바일 신분증")) {
+        if(!hasText(targetPackage,"1. 모바일 신분증") && !hasText(targetPackage,"__provider_question__")) {
             awaitText(targetPackage,"정부24 열기",45000);
             clickText(targetPackage,"정부24 열기");
         }
         long deadline=SystemClock.elapsedRealtime()+45000;
-        while(SystemClock.elapsedRealtime()<deadline && !hasText(targetPackage,"1. 모바일 신분증")) {
+        while(SystemClock.elapsedRealtime()<deadline && !hasText(targetPackage,"1. 모바일 신분증")
+                && !hasText(targetPackage,"__provider_question__")) {
             if(!hasText("kr.go.minwon.m","간편인증")) clickIfClickable("kr.go.minwon.m","로그인");
             SystemClock.sleep(500);
         }
-        awaitText(targetPackage,"1. 모바일 신분증",1000);
-        assertTrue(hasText(targetPackage,"2. 간편인증"));
-        assertTrue(hasText(targetPackage,"3. 공동인증서"));
-        assertTrue(hasText(targetPackage,"4. 금융인증서"));
+        boolean providers=hasText(targetPackage,"__provider_question__");
+        if(!providers) {
+            awaitText(targetPackage,"1. 모바일 신분증",1000);
+            assertTrue(hasText(targetPackage,"2. 간편인증"));
+            assertTrue(hasText(targetPackage,"3. 공동인증서"));
+            assertTrue(hasText(targetPackage,"4. 금융인증서"));
+        }
         assertFalse(hasText(targetPackage,"아직 지원하지 않아요"));
+        assertFalse(hasText(targetPackage,"로그인 방법을 고르고, 실제 인증은 직접 진행해요."));
         Bundle evidence=new Bundle();
-        evidence.putString("gov24_live_flow","real_app_to_live_server_to_four_login_choices; no authentication");
+        evidence.putString("gov24_live_flow",providers?"real_app_to_live_server_to_provider_question; no authentication":
+            "real_app_to_live_server_to_four_login_choices; no authentication");
         instrumentation.sendStatus(0,evidence);
     }
 
@@ -86,6 +93,12 @@ public class Gov24InstalledAppFlowTest {
         info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
             |android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;
         automation.setServiceInfo(info);
+        boolean directNativeTransition=hasText(targetPackage,"2. 간편인증");
+        if(directNativeTransition) {
+            clickText(targetPackage,"줄이기");
+            tapText("kr.go.minwon.m","간편인증");
+        }
+        awaitText(targetPackage,"__provider_question__",20000);
         String editor="사용할 인증수단 이름 입력";
         revealText(targetPackage,editor);
         AccessibilityNodeInfo input=find(targetPackage,editor);
@@ -95,22 +108,32 @@ public class Gov24InstalledAppFlowTest {
         }finally{input.recycle();}
         revealText(targetPackage,"입력한 답변 보내기");
         clickText(targetPackage,"입력한 답변 보내기");
-        awaitText(targetPackage,"간편인증을 선택했어요. 표시한 항목을 눌러주세요. 개인정보나 인증 입력이 나오면 직접 진행해요.",25000);
-        tapText("kr.go.minwon.m","간편인증");
-        String provider="앞서 말씀하신 카카오톡이 보여요. 표시한 항목을 눌러주세요. 실제 인증은 직접 진행해요.";
-        long deadline=SystemClock.elapsedRealtime()+20000;
-        while(!hasText(targetPackage,provider) && SystemClock.elapsedRealtime()<deadline) {
-            SystemClock.sleep(500);
-        }
-        if(!hasText(targetPackage,provider) && hasText(targetPackage,"현재 화면 확인"))clickText(targetPackage,"현재 화면 확인");
-        awaitText(targetPackage,provider,20000);
+        awaitText(targetPackage,"카카오톡을 선택했어요. 표시한 항목을 눌러주세요. 개인정보나 인증 입력이 나오면 직접 진행해요.",25000);
         String kakao=hasText("kr.go.minwon.m","KAKAO(카카오)")?"KAKAO(카카오)":
             hasText("kr.go.minwon.m","카카오톡")?"카카오톡":"카카오";
         tapText("kr.go.minwon.m",kakao);
         awaitText(targetPackage,"안내 끝내기",20000);
         Bundle result=new Bundle();result.putString("gov24_live_jev_flow",
-            "natural_answer_to_simple_auth_to_observed_kakao_to_handoff; no credential entry or authentication request");
+            (directNativeTransition?"direct_native_simple_tap_to_provider_question":"existing_provider_question")
+                +"_to_natural_kakao_to_handoff; no credential entry or authentication request");
         instrumentation.sendStatus(0,result);
+    }
+
+    @Test public void completedPublicGuideCanBeEnded() throws Exception {
+        org.junit.Assume.assumeTrue("Explicitly finish the already completed public guide only",
+            "true".equals(InstrumentationRegistry.getArguments().getString("gov24Finish")));
+        Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
+        targetPackage=InstrumentationRegistry.getArguments().getString("targetPackage","com.click.gov24pilot");
+        assertTrue(java.util.Set.of("com.clueclick.app","com.click.gov24pilot").contains(targetPackage));
+        assertNotEquals(BuildConfig.APPLICATION_ID,targetPackage);
+        automation=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+        var info=automation.getServiceInfo();
+        info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
+        automation.setServiceInfo(info);
+        awaitText(targetPackage,"안내 끝내기",5000);
+        clickText(targetPackage,"안내 끝내기");
+        SystemClock.sleep(1000);
+        assertFalse(hasText(targetPackage,"안내 끝내기"));
     }
 
     private void revealText(String pkg,String text) {
@@ -180,7 +203,8 @@ public class Gov24InstalledAppFlowTest {
     }
 
     private AccessibilityNodeInfo findInTree(AccessibilityNodeInfo node,String text) {
-        if(("__scroll_forward__".equals(text) && node.isScrollable()
+        if(("__provider_question__".equals(text) && String.valueOf(node.getText()).startsWith("어느 인증기관을 사용하실까요?")
+                || "__scroll_forward__".equals(text) && node.isScrollable()
                 || text.equals(node.getText()==null?null:node.getText().toString())
                 || text.equals(node.getContentDescription()==null?null:node.getContentDescription().toString())
                 || text.equals(node.getViewIdResourceName())) && node.isVisibleToUser())return AccessibilityNodeInfo.obtain(node);
