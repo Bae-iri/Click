@@ -16,6 +16,9 @@ public final class LocalGoalResolver {
         String normalized = GoalCatalogClassifier.normalize(text);
         if (normalized.isEmpty() || normalized.matches(".*(하지마|하지말|지마|지말|지않|안해|말아).*")) return false;
         GoalCatalogClassifier.Classification result = catalog.classify(text, foregroundPackage);
+        if(result.matched() && "public_guide".equals(result.match.executionStatus)) {
+            return "gov24.login".equals(result.match.goalType)?server.gov24Login:server.gov24Civil;
+        }
         return !result.matched() && !result.ambiguous;
     }
 

@@ -20,9 +20,9 @@ from app.schemas.browse import BrowseGoal
 
 
 UNSUPPORTED_MESSAGES = {
-    'unsupported_app': '아직 클릭이 지원하지 않는 앱이에요. 지금은 휴대폰 설정만 안내할 수 있어요.',
-    'unsupported': '아직 클릭이 지원하지 않는 작업이에요. 지원하는 휴대폰 설정 작업을 말씀해 주세요.',
-    'unrelated': '클릭은 지금 휴대폰 설정을 도와드리고 있어요. 설정에서 필요한 도움을 말씀해 주세요.',
+    'unsupported_app': '아직 클릭이 지원하지 않는 앱이에요. 휴대폰 설정과 정부24 화면 안내를 도와드릴 수 있어요.',
+    'unsupported': '아직 클릭이 지원하지 않는 작업이에요. 휴대폰 설정이나 정부24에서 필요한 도움을 말씀해 주세요.',
+    'unrelated': '클릭은 휴대폰 설정과 정부24 화면 찾기를 도와드리고 있어요. 필요한 도움을 말씀해 주세요.',
 }
 
 
@@ -158,24 +158,31 @@ class GoalPreparationService:
                 field = next(f for f in self.requirements.required(family, values) if f['id'] == field_id)
                 values[field_id] = self.requirements.answer(field, request.clarification_answer.value)
 
-        civil_requested = public_guide_policy.civil_requested(source)
+        matches = [] if negated(source) else self._keywords(source)
+        gov24_matches = [g for g in matches if g['target_app'] == 'gov24']
+        civil_requested = public_guide_policy.civil_requested(source) and len(gov24_matches) <= 1
         if (public_guide_policy.enabled() and request.device_context.capabilities.gov24_civil
                 and not negated(source) and civil_requested):
             public_guide_type = 'gov24.resident_copy.open'
             family, values, rejection_reason = None, {}, None
-        elif gov24_allowed and not negated(source) and public_guide_policy.requested(source):
+        elif (gov24_allowed and not negated(source) and public_guide_policy.requested(source)
+              and not any(g['goal_type'] != 'gov24.login' for g in gov24_matches)):
             public_guide_type = 'gov24.login'
             family, values, rejection_reason = None, {}, None
-        matches = [] if negated(source) else self._keywords(source)
         match = matches[0] if len(matches) == 1 else None
         browse_context = '쿠팡' in normalize(source) or request.device_context.foreground_package == browse_policy.POLICY['package']
         browse_type = (previous.get('browse_goal_type') if previous and previous.get('execution_mode') == 'browse'
                        else match['goal_type'] if match and match['goal_type'] in browse_policy.GOALS and browse_context else None) if browse_allowed else None
         if match and not browse_type and match.get('execution_status') != 'approved':
             supported_apps = {g['target_app'] for g in self.catalog['goals'] if g.get('execution_status') == 'approved'}
+            supported_apps.add('gov24')
             rejection_reason = 'unsupported_app' if match['target_app'] not in supported_apps else 'unsupported'
             family, values = None, {}
         named_app = self.requirements.explicit_values(source).get('app_name')
+        if (match is None and not public_guide_type and not any(g['target_app']=='coupang' for g in self.catalog['goals'])
+                and (named_app=='쿠팡' or request.device_context.foreground_package=='com.coupang.mobile')):
+            rejection_reason='unsupported_app'
+            family, values=None, {}
         if browse_allowed and match and match['goal_type'] in browse_policy.GOALS and not browse_context and named_app:
             rejection_reason = 'unsupported_app'
             family, values = None, {}
@@ -286,7 +293,8 @@ class GoalPreparationService:
                 placeholder=field.get('placeholder'), max_length=field.get('max_length', 100))
             message = question.message
         else:
-            candidates = [g for g in self.catalog['goals'] if g['goal_type'].startswith(family['goal_prefix']) and g.get('execution_status') == 'approved'
+            candidates = [g for g in self.catalog['goals'] if (g['goal_type'] == family['goal_prefix']
+                or family['goal_prefix'].endswith('.') and g['goal_type'].startswith(family['goal_prefix'])) and g.get('execution_status') == 'approved'
                 and all(not f.get('goal_slot') or g['slots'].get(f['goal_slot']) == values[f['id']] for f in fields)]
             try:
                 route = next((r for r in family['routes'] if all(values.get(k) == v for k, v in r['when'].items())), None)
@@ -320,10 +328,18 @@ class GoalPreparationService:
                     message = f'{label}에서 이 설정을 바꾸는 실행 안내는 아직 지원하지 않아요. 요청을 수정할 수 있어요.'
         if browse_allowed and rejection_reason:
             message = {
-                'unsupported_app': '아직 클릭이 지원하지 않는 앱이에요. 휴대폰 설정과 쿠팡 상품 검색·상세 보기를 안내할 수 있어요.',
-                'unsupported': '아직 클릭이 지원하지 않는 작업이에요. 휴대폰 설정과 쿠팡 상품 검색·상세 보기를 안내할 수 있어요.',
-                'unrelated': '클릭은 휴대폰 설정과 쿠팡 상품 찾기를 도와드리고 있어요. 필요한 도움을 말씀해 주세요.',
+                'unsupported_app': '아직 클릭이 지원하지 않는 앱이에요. 휴대폰 설정과 정부24 화면 안내를 도와드릴 수 있어요.',
+                'unsupported': '아직 클릭이 지원하지 않는 작업이에요. 휴대폰 설정과 정부24 화면 안내를 도와드릴 수 있어요.',
+                'unrelated': '클릭은 휴대폰 설정과 정부24 화면 찾기를 도와드리고 있어요. 필요한 도움을 말씀해 주세요.',
             }[rejection_reason]
+        if match and match['target_app'] == 'gov24' and not public_guide_type:
+            status, resolution_status = 'unsupported', 'unsupported'
+            rejection_reason = 'unsupported'
+            if match['execution_status'] == 'public_guide':
+                message = '정부24 화면 안내를 사용하려면 최신 앱과 정부24 안내가 켜진 서버가 필요해요.'
+            else:
+                message = (f"{match['display_name']} 안내는 아직 준비 중이에요. "
+                           '현재는 정부24 로그인 방법 선택과 주민등록등본 발급 안내 화면 찾기를 지원해요.')
         prepared = GoalPreparation(id=identifier, source_text=source, family=family['id'] if family else None,
             status=status, values=values, required_fields=fields, missing_fields=[f['id'] for f in missing] or (
                 ['request'] if question and question.field == 'request' else []), question=question,

@@ -1,0 +1,28 @@
+{
+  "verified_on": "2026-11-18",
+  "environment": "local Windows; isolated PostgreSQL 18.6 servers and Moto S3 emulator",
+  "production_applied": false,
+  "production_data_used": false,
+  "actual_aws_upload_verified": false,
+  "backup_tests": {"passed": 9, "failed": 0},
+  "existing_sqlite_backup_regression": {"passed": 1, "failed": 0},
+  "restore": {
+    "status": "passed",
+    "source": "actual Click Alembic schema plus synthetic fixtures",
+    "target": "separate disposable PostgreSQL 18.6 server",
+    "tables": 27,
+    "rows": 6,
+    "download_sha256": "c01ff168b344c3ff4e6731cab58fb2d1e9db101d2ef88f9bf49397380ae50f3c",
+    "dump_bytes": 58531,
+    "verified_at_utc": "2026-11-18T08:16:47.113541+00:00"
+  },
+  "terraform_validate": "passed against hashicorp/aws 6.73.0; no plan/apply executed",
+  "render_blueprint_schema": "passed against https://render.com/schema/render.yaml.json",
+  "docker_image_build": "not run; Docker unavailable",
+  "production_pending": [
+    "AWS credentials, new dedicated S3 bucket name and private bucket provisioning",
+    "Render access, secret environment group and two cron services",
+    "First production snapshot upload and restore drill",
+    "Confirm actual Render database plan, backup status and recovery window"
+  ]
+}

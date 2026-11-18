@@ -9,3 +9,11 @@
 Frontend
 **/data
 **/*.log
+**/*.dump
+**/*.backup
+!Backend/Dockerfile.backup
+**/.terraform
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfplan
+**/*.tfvars

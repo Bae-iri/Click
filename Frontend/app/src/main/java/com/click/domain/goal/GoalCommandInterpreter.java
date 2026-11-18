@@ -3,7 +3,7 @@ package com.click.domain.goal;
 /** FE-owned interpretation for queue controls and data-driven typed goals. */
 public final class GoalCommandInterpreter {
     public enum Kind { START_TASK, REPLACE_TASK, PAUSE_TASK, RESUME_TASK, CANCEL_TASK, EXIT_APPLICATION,
-        CONFIRM_ACCEPTED, CONFIRM_REJECTED, CATALOGUED_UNAVAILABLE, NEEDS_CLARIFICATION, UNSUPPORTED }
+        CONFIRM_ACCEPTED, CONFIRM_REJECTED, PUBLIC_GUIDE, CATALOGUED_UNAVAILABLE, NEEDS_CLARIFICATION, UNSUPPORTED }
 
     public static final class Result {
         public final Kind kind;
@@ -55,6 +55,9 @@ public final class GoalCommandInterpreter {
             }
             if (classification.matched()) {
                 GoalCatalogClassifier.Match match = classification.match;
+                if("public_guide".equals(match.executionStatus)) {
+                    return new Result(Kind.PUBLIC_GUIDE,"정부24 공개 화면 안내를 서버에서 확인할게요.",match);
+                }
                 if (!match.isExecutable()) {
                     return new Result(Kind.CATALOGUED_UNAVAILABLE,
                             match.displayName + " 요청으로 분류했어요. 이 작업의 실행 안내는 아직 승인되지 않았어요.", match);

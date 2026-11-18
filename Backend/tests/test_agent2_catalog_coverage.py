@@ -33,16 +33,18 @@ def test_catalog_coverage_counts_goals_separately_from_release_versions(app):
     coverage = report["catalog_coverage"]
     assert report["status"] == "PASS"
     assert report["total"] == 183
-    assert coverage["catalog_version"] == "2.4.1"
-    assert coverage["total_goals"] == 182
-    assert coverage["approved_goals"] == coverage["selectable_goals"] == 182
-    assert coverage["catalog_only_goals"] == 0
+    assert coverage["catalog_version"] == "2.5.0"
+    assert coverage["total_goals"] == 131
+    assert coverage["approved_goals"] == coverage["selectable_goals"] == 111
+    assert coverage["catalog_only_goals"] == 18
+    assert coverage["public_guide_goals"] == 2
+    assert coverage["legacy_graph_goals"] == 71
     assert {k:v for k,v in coverage["by_task_type"].items() if k.startswith("settings_")} == {
         "settings_change": {"approved": 56, "selectable": 56},
         "settings_navigation": {"approved": 21, "selectable": 21},
         "settings_assisted": {"approved": 34, "selectable": 34},
     }
-    assert sum(v['selectable'] for k, v in coverage['by_task_type'].items() if k.startswith('commerce_')) == 71
+    assert not any(k.startswith('commerce_') for k in coverage['by_task_type'])
     assert coverage["blocked_goals"] == coverage["unexpected_executable_goals"] == []
     goal = next(goal for goal in coverage["goals"] if goal["goal_type"] == "settings.font_size.increase")
     assert goal["graph_reference"]["version"] == "99.0.0"
@@ -63,7 +65,7 @@ def test_missing_goal_blocks_audit_even_when_remaining_graphs_are_valid(app, pro
     assert report["status"] == "BLOCKED"
     assert report["static_valid"] == report["total"]
     coverage = report["catalog_coverage"]
-    assert coverage["selectable_goals"] == 181
+    assert coverage["selectable_goals"] == 110
     assert [(goal["goal_type"], goal["status"]) for goal in coverage["blocked_goals"]] == [
         ("settings.wifi.enable", "MISSING_GRAPH")]
     # Auditing must preserve a missing/disabled release for the operator to inspect.
@@ -134,4 +136,4 @@ def test_audit_cli_exit_status_reflects_catalog_coverage(tmp_path, missing):
     assert result.returncode == int(missing), result.stderr
     report = json.loads(result.stdout)
     assert report["status"] == ("BLOCKED" if missing else "PASS")
-    assert report["catalog_coverage"]["selectable_goals"] == 182 - int(missing)
+    assert report["catalog_coverage"]["selectable_goals"] == 111 - int(missing)

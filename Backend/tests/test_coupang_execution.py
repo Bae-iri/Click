@@ -10,7 +10,7 @@ import httpx
 import pytest
 
 from app.clients.checkpoint import capture, restore
-from app.main import create_app
+from tests.legacy_commerce import create_app, legacy_catalog
 from app.models.agent_session import AgentSession
 from app.schemas.agent_turn import TypedGoalRequest
 from app.services.screen_jev import JevScreenResolver
@@ -307,8 +307,8 @@ def test_all_commerce_display_names_resolve_to_one_goal_and_business_cancel_keep
     from app.services.goal_preparation import GoalPreparationService
     from app.services.goal_inputs import GoalInputRequirements, negated
     service = GoalPreparationService.__new__(GoalPreparationService)
-    service.catalog = json.loads((Path(__file__).parents[1] / 'app/task_graphs/goal_catalog.json').read_text(encoding='utf-8'))
-    requirements = GoalInputRequirements()
+    service.catalog = legacy_catalog()
+    requirements = create_app().state.turn_service.goal_preparation.requirements
     for entry in service.catalog['goals']:
         if entry['target_app'] != 'coupang':
             continue
