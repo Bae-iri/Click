@@ -6,7 +6,7 @@ from app.schemas.goal_preparation import InputQuestion
 
 class PublicGuideGoal(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    goal_type: Literal['gov24.login'] = 'gov24.login'
+    goal_type: Literal['gov24.login', 'gov24.resident_copy.open'] = 'gov24.login'
 
 class PublicGuideNode(BrowseNode):
     option_id: str = Field(min_length=1, max_length=60)
@@ -42,7 +42,7 @@ class PublicGuideRequest(BrowseCommandRequest):
 
 class PublicGuideResponse(BrowseResponse):
     protocol_version: Literal['public-guide.v1'] = 'public-guide.v1'
-    outcome: Literal['in_progress','user_reported','cancelled','blocked','unknown','handoff']
+    outcome: Literal['in_progress','user_reported','cancelled','blocked','unknown','handoff','verified_navigation']
     action_kind: Literal['login_navigation'] | None = None
-    subgoal: Literal['open_login','choose_method','choose_provider','handoff'] = 'open_login'
+    subgoal: Literal['open_login','choose_method','choose_provider','handoff','find_resident_service','resident_service'] = 'open_login'
     question: InputQuestion | None = None

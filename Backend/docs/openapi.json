@@ -8208,6 +8208,21 @@
             "type": "boolean",
             "title": "Public Guide",
             "default": false
+          },
+          "public_guide_goal_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "gov24.login",
+                  "gov24.resident_copy.open"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Guide Goal Type"
           }
         },
         "type": "object",
@@ -9428,6 +9443,11 @@
             "type": "boolean",
             "title": "Gov24 Login",
             "default": false
+          },
+          "gov24_civil": {
+            "type": "boolean",
+            "title": "Gov24 Civil",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -10057,7 +10077,10 @@
               {
                 "additionalProperties": {
                   "type": "string",
-                  "const": "gov24.login"
+                  "enum": [
+                    "gov24.login",
+                    "gov24.resident_copy.open"
+                  ]
                 },
                 "type": "object"
               },
@@ -10742,7 +10765,8 @@
               "cancelled",
               "blocked",
               "unknown",
-              "handoff"
+              "handoff",
+              "verified_navigation"
             ],
             "title": "Outcome"
           },
@@ -10835,7 +10859,9 @@
               "open_login",
               "choose_method",
               "choose_provider",
-              "handoff"
+              "handoff",
+              "find_resident_service",
+              "resident_service"
             ],
             "title": "Subgoal",
             "default": "open_login"

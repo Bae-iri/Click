@@ -212,6 +212,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private GuideOverlayView guideOverlayView;
     private CoupangBrowseController coupangBrowse;
     private boolean gov24Guide;
+    private boolean gov24Civil;
     private WindowManager.LayoutParams guideOverlayParams;
     private ConfirmationOverlayView confirmationView;
     private WindowManager.LayoutParams confirmationParams;
@@ -788,7 +789,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void clearTaskFlow() {
         if (coupangBrowse != null) { coupangBrowse.close(); coupangBrowse=null; }
-        gov24Guide=false;
+        gov24Guide=false;gov24Civil=false;
         adjustmentDelegation.clear();pendingApprovalProvenance=null;
         environmentWaitKey=null;environmentWait=null;lastNavigableEnvironment=null;
         observedPageScreen=pendingPageScreen=null;
@@ -1054,7 +1055,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void confirmRequirementReview() {
         if (goalPreparation != null) {
             if (execution.paused() || execution.busy() || execution.acceptedGoal() != null || !goalPreparation.ready()) return;
-            if (goalPreparation.publicGuide()) {gov24Guide=true;startCoupangBrowse(goalPreparation.id(),false,0);return;}
+            if (goalPreparation.publicGuide()) {
+                gov24Guide=true;
+                JSONObject publicGoal=goalPreparation.data.optJSONObject("public_guide_goal");
+                gov24Civil=publicGoal!=null&&"gov24.resident_copy.open".equals(publicGoal.optString("goal_type"));
+                startCoupangBrowse(goalPreparation.id(),false,0);return;
+            }
             if (goalPreparation.browsing()) {gov24Guide=false;}
             if (goalPreparation.browsing()) { startCoupangBrowse(goalPreparation.id(),false,0);return; }
             GoalCatalogClassifier.Match match = goalClassifier == null ? null
@@ -1112,7 +1118,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             goalPreparation=null;goalResolutionId=null;requirementReview=null;goalSelection=null;
             var gateway=gov24Guide?new com.click.data.remote.CoupangBrowseGateway(this,"/api/v1/agent/public-guide/commands","public-guide.v1")
                 :new com.click.data.remote.CoupangBrowseGateway(this);
-            CoupangBrowseController.ScreenFilter privacy=gov24Guide?new com.click.data.snapshot.Gov24LoginPrivacy()::filter
+            CoupangBrowseController.ScreenFilter privacy=gov24Guide?new com.click.data.snapshot.Gov24LoginPrivacy(gov24Civil)::filter
                 :new com.click.data.snapshot.CoupangBrowsePrivacy(this)::filter;
             coupangBrowse=new CoupangBrowseController(gateway,privacy,gov24Guide?"kr.go.minwon.m":"com.coupang.mobile",
                 gov24Guide?"public-guide.v1":"coupang-browse.v1",new CoupangBrowseController.Listener(){
@@ -1159,7 +1165,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             message="화면이 바뀌었어요. 현재 화면 확인을 눌러 새 안내를 받아주세요.";
         }
         if(gov24Guide) {
-            taskFlowView.publicLogin(message,terminal,response.optJSONObject("question"),
+            taskFlowView.publicGuide(message,terminal,response.optJSONObject("question"),gov24Civil,
                 (value,button)->{if(coupangBrowse!=null)coupangBrowse.answer(ClickAccessibilityService.freshSnapshot(),value,button);},
                 ()->{if(coupangBrowse!=null)coupangBrowse.observe(ClickAccessibilityService.freshSnapshot());},this::openCoupang,
                 ()->{if(coupangBrowse==null||endingTask)return;if(!terminal){coupangBrowse.finish();return;}
@@ -1219,7 +1225,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean acceptExecutionState(AgentTurnContract.Response response,String command,boolean snapshot) {
         if(execution.acceptResponse(response,command,snapshot)) {
             String goalType=response.executionState==null?null:response.executionState.goalType;
-            boolean publicLoginSnapshot=snapshot && "gov24.login".equals(goalType)
+            String declaredPublicGoal=response.metadata==null?"":response.metadata.optString("public_guide_goal_type");
+            boolean knownPublicGoal="gov24.login".equals(goalType)
+                    || "gov24.resident_copy.open".equals(goalType) && goalType.equals(declaredPublicGoal);
+            boolean publicLoginSnapshot=snapshot && knownPublicGoal
+                    && (declaredPublicGoal.isEmpty() || declaredPublicGoal.equals(goalType))
                     && response.metadata!=null && response.metadata.optBoolean("public_guide");
             if(publicLoginSnapshot) {
                 execution.setAcceptedGoal(null);
@@ -2478,6 +2488,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 setTurnInFlight(false);
                 if(response.metadata!=null && (response.metadata.optBoolean("browsing")||response.metadata.optBoolean("public_guide"))) {
                     gov24Guide=response.metadata.optBoolean("public_guide");
+                    gov24Civil="gov24.resident_copy.open".equals(response.metadata.optString("public_guide_goal_type"));
                     startCoupangBrowse(null,true,response.sessionVersion);return;
                 }
                 if ("COMPLETED".equals(response.taskStatus) || "CANCELLED".equals(response.taskStatus)

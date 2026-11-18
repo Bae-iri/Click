@@ -36,7 +36,7 @@ def source_digest():
     return result.hexdigest()
 
 
-def environment_manifest(factory, environment_id):
+def environment_manifest(factory, environment_id, *, runtime_settings=None):
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', environment_id):
         raise ValueError('Invalid validation environment identity')
     config = Config(str(BACKEND / 'alembic.ini'))
@@ -55,7 +55,13 @@ def environment_manifest(factory, environment_id):
             graphs.append({'task_id': row.task_id, 'version': row.graph_version, 'sha256': row.graph_hash})
     revision = subprocess.run(['git', '-c', f'safe.directory={ROOT.as_posix()}', 'rev-parse', 'HEAD'],
                               cwd=ROOT, capture_output=True, text=True, check=False).stdout.strip()
+    settings = os.environ if runtime_settings is None else runtime_settings
+    configuration = {key: settings.get(key, default) for key, default in {
+        'CLICK_COUPANG_BROWSE_ENABLED': '0', 'CLICK_GOV24_GUIDE_ENABLED': '1', 'JEV_MODEL': 'jev-1.14.0',
+        'JEV_MIN_CONFIDENCE': '0.8', 'AI1_UI_SELECTOR_PROVIDER': 'rules',
+    }.items()}
     manifest = {'schema_version': 'click-validation-environment.v1', 'environment_id': environment_id,
+                'runtime_configuration': configuration,
                 'source_sha256': source_digest(),
                 'source_revision': revision if re.fullmatch('[0-9a-f]{40}', revision) else None,
                 'database_migrations': actual, 'approved_graphs': graphs}

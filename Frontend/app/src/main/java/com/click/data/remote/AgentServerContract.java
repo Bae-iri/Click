@@ -19,6 +19,7 @@ public final class AgentServerContract {
     public boolean userDecline;
     public boolean coupangBrowse;
     public boolean gov24Login;
+    public boolean gov24Civil;
 
     private AgentServerContract(Set<String> commands, Set<String> goals, Set<String> appliedSettingFields,
                                 String version, boolean interactive, boolean preparation) {
@@ -40,7 +41,7 @@ public final class AgentServerContract {
         request.interactiveWorkflow = interactiveWorkflow;
         JSONObject body = new JSONObject(request.toJson());
         JSONObject context = body.optJSONObject("device_context");
-        if(context!=null && (coupangBrowse || gov24Login)) {
+        if(context!=null && (coupangBrowse || gov24Login || gov24Civil)) {
             JSONObject capabilities=context.optJSONObject("capabilities");
             if(capabilities==null) {
                 capabilities=new JSONObject();
@@ -48,6 +49,7 @@ public final class AgentServerContract {
             }
             if(coupangBrowse)capabilities.put("coupang_browse",true);
             if(gov24Login)capabilities.put("gov24_login",true);
+            if(gov24Civil)capabilities.put("gov24_civil",true);
         }
         JSONObject screen = body.optJSONObject("accessibility_tree");
         JSONObject settings = screen == null ? null : screen.optJSONObject("applied_settings");
@@ -99,6 +101,7 @@ public final class AgentServerContract {
             && capabilities!=null && capabilities.getJSONObject("properties").has("coupang_browse");
         result.gov24Login=document.getJSONObject("paths").has("/api/v1/agent/public-guide/commands")
             && capabilities!=null && capabilities.getJSONObject("properties").has("gov24_login");
+        result.gov24Civil=result.gov24Login && capabilities.getJSONObject("properties").has("gov24_civil");
         JSONObject guide=schemas.optJSONObject("GuideCommandResponse"),cancel=schemas.optJSONObject("CancelVoiceRequest");
         result.userDecline=document.getJSONObject("paths").has("/api/v1/voice-requests/{request_id}/cancel")
             && guide!=null && cancel!=null

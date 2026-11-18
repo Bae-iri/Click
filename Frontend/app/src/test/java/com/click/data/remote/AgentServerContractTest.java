@@ -27,6 +27,7 @@ public class AgentServerContractTest {
         assertFalse(new JSONObject(request.toJson()).getJSONObject("device_context").has("capabilities"));
         JSONObject wire=new JSONObject(server.encode(request));
         assertTrue(wire.getJSONObject("device_context").getJSONObject("capabilities").getBoolean("gov24_login"));
+        if(server.gov24Civil)assertTrue(wire.getJSONObject("device_context").getJSONObject("capabilities").getBoolean("gov24_civil"));
         assertFalse(wire.has("accessibility_tree"));
     }
 

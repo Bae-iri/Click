@@ -6,6 +6,18 @@
   "goal_type": "gov24.login",
   "max_turns": 24,
   "max_nodes": 24,
+  "civil_navigation": {
+    "version": "gov24-resident-navigation.v1",
+    "goal_type": "gov24.resident_copy.open",
+    "options": {
+      "nav_resident": {"label": "주민등록등본", "group": "navigation", "aliases": ["주민등록등본", "주민등록 등본", "주민등록표 등본", "주민등록표 등본(초본) 발급", "주민등록표 등본 발급", "주민등록등본(초본)"]},
+      "nav_services": {"label": "민원서비스", "group": "navigation", "aliases": ["민원서비스", "민원 서비스", "서비스"]},
+      "nav_frequent": {"label": "자주 찾는 서비스", "group": "navigation", "aliases": ["자주 찾는 서비스", "자주찾는 서비스", "자주찾는서비스"]},
+      "marker_services": {"label": "민원서비스", "group": "marker", "aliases": ["민원서비스", "민원 서비스", "자주 찾는 서비스", "자주찾는서비스"]},
+      "marker_resident": {"label": "주민등록표 등본(초본) 발급", "group": "marker", "aliases": ["주민등록표 등본(초본) 발급", "주민등록표 등본 발급", "주민등록등본 발급"]},
+      "boundary_apply": {"label": "발급하기", "group": "boundary", "aliases": ["발급하기", "신청하기"]}
+    }
+  },
   "options": {
     "entry_login": {
       "label": "로그인",
