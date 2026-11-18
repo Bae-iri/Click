@@ -28,6 +28,8 @@ public final class ClickAccessibilityService extends AccessibilityService {
     private final AccessibilitySnapshotCollector collector = new AccessibilitySnapshotCollector();
     private final Runnable captureRunnable = this::captureCurrentScreen;
     private Handler mainHandler;
+    private int onboardingReturnAttempts;
+    private final Runnable onboardingReturn = this::returnFromAccessibilitySettings;
     private long snapshotBurstStartedAt = -1L;
     private long snapshotScheduledAt = -1L;
     private String lastForegroundPackage;
@@ -49,16 +51,28 @@ public final class ClickAccessibilityService extends AccessibilityService {
         mainHandler = new Handler(getMainLooper());
         Log.i(TAG, "Click accessibility service connected");
         ClickOverlayService.onAccessibilityOverlayAvailable();
-        AccessibilityOnboardingState onboarding = new AccessibilityOnboardingState(this);
-        if (onboarding.isPending()) {
-            boolean returnToSettings = onboarding.returnsToSettings();
-            if (returnToSettings) onboarding.markSettingsReturned();
-            else onboarding.markTutorialLaunched();
-            Intent destination = new Intent(this, returnToSettings ? com.click.MenuActivity.class : TutorialReadyActivity.class)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            startActivity(destination);
-        }
+        mainHandler.removeCallbacks(onboardingReturn);
+        onboardingReturnAttempts = 0;
+        returnFromAccessibilitySettings();
         scheduleSnapshot(false);
+    }
+
+    private void returnFromAccessibilitySettings() {
+        AccessibilityOnboardingState onboarding = new AccessibilityOnboardingState(this);
+        if (!onboarding.isPending() || onboardingReturnAttempts >= 4) return;
+        onboardingReturnAttempts++;
+        Intent destination = new Intent(this, onboarding.returnsToSettings()
+                ? com.click.MenuActivity.class : TutorialReadyActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        try {
+            startActivity(destination);
+        } catch (android.content.ActivityNotFoundException | SecurityException unavailable) {
+            Log.w(TAG, "Accessibility return screen not opened", unavailable);
+        }
+        // A launch request may race Settings' permission dialog. The destination
+        // acknowledges success when resumed; retry briefly until then.
+        mainHandler.postDelayed(onboardingReturn, 1000L);
     }
 
     @Override
@@ -161,6 +175,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
     }
 
     private void disconnect() {
+        if (mainHandler != null) mainHandler.removeCallbacks(onboardingReturn);
         if (mainHandler != null) mainHandler.removeCallbacks(captureRunnable);
         snapshotBurstStartedAt = -1L;
         snapshotScheduledAt = -1L;

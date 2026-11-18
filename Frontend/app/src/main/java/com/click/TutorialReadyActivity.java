@@ -104,7 +104,11 @@ public final class TutorialReadyActivity extends AppCompatActivity {
         });
     }
 
-    @Override protected void onResume() { super.onResume(); narrator.resume(); }
+    @Override protected void onResume() {
+        super.onResume();
+        new com.click.data.local.AccessibilityOnboardingState(this).markTutorialLaunched();
+        narrator.resume();
+    }
     @Override protected void onPause() { narrator.pause(); super.onPause(); }
     @Override protected void onDestroy() { narrator.close(); super.onDestroy(); }
 

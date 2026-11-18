@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 @Config(sdk = 34, application = Application.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class AccessibilityServiceConnectionTest {
- @Test public void connectionUsesTheEntryDestinationAndConsumesItOnce() throws Exception {
+ @Test public void connectionKeepsReturnPendingUntilDestinationAcknowledges() throws Exception {
   for(boolean settings:new boolean[]{true,false}) {
    var app=org.robolectric.RuntimeEnvironment.getApplication();
    var state=new com.click.data.local.AccessibilityOnboardingState(app);
@@ -29,11 +29,47 @@ public class AccessibilityServiceConnectionTest {
      connected.invoke(controller.get());
      Intent destination=org.robolectric.Shadows.shadowOf(app).getNextStartedActivity();
      assertEquals((settings?MenuActivity.class:TutorialReadyActivity.class).getName(),destination.getComponent().getClassName());
-     assertFalse(state.isPending());
-     connected.invoke(controller.get());
+     assertTrue(state.isPending());
+     org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+       .idleFor(java.time.Duration.ofSeconds(1));
+     assertNotNull(org.robolectric.Shadows.shadowOf(app).getNextStartedActivity());
+     if (settings) state.markSettingsReturned(); else state.markTutorialLaunched();
+     org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+       .idleFor(java.time.Duration.ofSeconds(2));
      assertNull(org.robolectric.Shadows.shadowOf(app).getNextStartedActivity());
     } finally {controller.destroy();}
    }
+  }
+ }
+ @Test public void unacknowledgedReturnRetriesBrieflyAndRemainsRecoverable() throws Exception {
+  var app=org.robolectric.RuntimeEnvironment.getApplication();
+  var state=new com.click.data.local.AccessibilityOnboardingState(app);
+  state.begin();
+  try(var overlays=mockStatic(ClickOverlayService.class)) {
+   var controller=Robolectric.buildService(ClickAccessibilityService.class).create();
+   try {
+    var connected=ClickAccessibilityService.class.getDeclaredMethod("onServiceConnected");
+    connected.setAccessible(true);connected.invoke(controller.get());
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+      .idleFor(java.time.Duration.ofSeconds(10));
+    int launches=0;
+    while(org.robolectric.Shadows.shadowOf(app).getNextStartedActivity()!=null) launches++;
+    assertEquals(4,launches);
+    assertTrue(state.isPending());
+    assertFalse(state.wasTutorialLaunched());
+   } finally {controller.destroy();}
+  }
+ }
+ @Test public void resumedTutorialAcknowledgesReturn() {
+  var state=new com.click.data.local.AccessibilityOnboardingState(
+    org.robolectric.RuntimeEnvironment.getApplication());
+  state.begin();
+  try(var activity=Robolectric.buildActivity(TutorialReadyActivity.class)) {
+   activity.create().start();
+   assertTrue(state.isPending());
+   activity.resume();
+   assertFalse(state.isPending());
+   assertTrue(state.wasTutorialLaunched());
   }
  }
  @Test public void unbindingImmediatelyClearsConnectionBeforeDestroy() throws Exception {
