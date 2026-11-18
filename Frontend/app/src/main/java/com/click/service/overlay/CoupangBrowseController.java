@@ -26,6 +26,7 @@ public final class CoupangBrowseController {
     private ScreenSnapshot guidedScreen;
     private ScreenSnapshot entryScreen;
     private boolean entryObserved;
+    private String observedPublicScene;
     public CoupangBrowseController(CoupangBrowseGateway gateway,CoupangBrowsePrivacy privacy,Listener listener) {
         this(gateway,privacy::filter,"com.coupang.mobile","coupang-browse.v1",listener);
     }
@@ -67,12 +68,31 @@ public final class CoupangBrowseController {
         observeEntry();
     }
     private void observeEntry() {
-        if(entryObserved || closed || busy || terminal || entryScreen==null
-                || !packageName.equals(entryScreen.packageName))return;
+        if(closed || busy || terminal || entryScreen==null || !listener.canObserve())return;
         try {
-            // Loading trees must not consume the only automatic entry observation.
-            if("public".equals(privacy.filter(entryScreen).optString("status")))observe(entryScreen);
+            JSONObject safe=privacy.filter(entryScreen);
+            if("public-guide.v1".equals(protocol)) {
+                // Direct native taps can change the public choice screen without
+                // ever producing a tap on a highlighted target.
+                if("handoff".equals(safe.optString("status"))) {
+                    send("observe",entryScreen,null);return;
+                }
+                if("public".equals(safe.optString("status")) && packageName.equals(entryScreen.packageName)
+                        && !publicScene(safe).equals(observedPublicScene))observe(entryScreen);
+                return;
+            }
+            if(!entryObserved && packageName.equals(entryScreen.packageName)
+                    && "public".equals(safe.optString("status")))observe(entryScreen);
         } catch(Exception ignored) { /* Explicit screen check remains available. */ }
+    }
+    private String publicScene(JSONObject safe) {
+        java.util.List<String> options=new java.util.ArrayList<>();
+        JSONArray nodes=safe.optJSONArray("nodes");
+        for(int i=0;nodes!=null&&i<nodes.length();i++) {
+            JSONObject node=nodes.optJSONObject(i);if(node!=null)options.add(node.optString("option_id"));
+        }
+        java.util.Collections.sort(options);
+        return safe.optString("package_name")+":"+safe.optInt("width")+":"+safe.optInt("height")+":"+options;
     }
     public void tap(String pkg,int window,String node,long occurredAt) {
         if(guide==null || guidedScreen==null || !guidedScreen.packageName.equals(pkg)
@@ -98,6 +118,9 @@ public final class CoupangBrowseController {
     }
     private void deliver(JSONObject request,ScreenSnapshot screen) {
         if(closed||busy)return;
+        JSONObject safe=request.optJSONObject("screen");
+        if("public-guide.v1".equals(protocol) && safe!=null && "public".equals(safe.optString("status")))
+            observedPublicScene=publicScene(safe);
         busy=true;listener.busy(true);final int owner=generation;
         gateway.send(request,new CoupangBrowseGateway.Callback(){
             public void success(JSONObject response) {

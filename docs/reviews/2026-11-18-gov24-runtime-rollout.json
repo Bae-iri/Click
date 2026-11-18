@@ -1,30 +1,75 @@
 {
+  "schema_version": "gov24-runtime-rollout.v2",
   "date": "2026-11-18",
   "timezone": "Asia/Seoul",
+  "source_commit": "b1459506d160a8493e740566361fa67ad4c2b6ad",
   "live_backend": {
     "source_revision": "a798915be37d0ff9fe9f4ceec1916223e36c9e8d",
-    "health": "ok",
     "gov24_login_enabled": true,
-    "public_guide_endpoint": true,
-    "gov24_capability": true,
+    "goal_classifier_provider": "jev",
+    "configured": true,
     "deployment": "user_triggered_manual_render_deploy"
   },
-  "installed_app": {
-    "application_id": "com.clueclick.app",
-    "last_update_time": "2026-11-18 15:09:06 Asia/Seoul",
-    "government24_package_query_present": true,
-    "sha256": "26330e172c3d653b10c15fe51ce1f0cc438f07addbf53fd73076e9201bd20a8f",
-    "installation": "reinstalled_with_user_approval_due_to_different_signing_key"
-  },
-  "verification": {
-    "backend_rollout_and_related_regression_tests": {
-      "passed": 48
+  "installed_apps": [
+    {
+      "application_id": "com.click.gov24pilot",
+      "label": "클릭 정부24 테스트",
+      "last_update_time": "2026-11-18 16:07:34 Asia/Seoul",
+      "apk_sha256": "ebae6142d2ec9139adf45b39804f2061927e92dd182bf3e9fda7c5a40c0f3222"
     },
-    "android_apk_build": "PASS",
-    "installed_app_live_flow": "PENDING_DEVICE_RECONNECT"
+    {
+      "application_id": "com.clueclick.app",
+      "label": "클릭",
+      "last_update_time": "2026-11-18 16:11:18 Asia/Seoul",
+      "apk_sha256": "f455adc1abd9fecdf779b33e6a43bd0d08fc71eac2fd7f79e57dc0d12f4b396e"
+    }
+  ],
+  "regression_validation": {
+    "backend_integration": {
+      "passed": 47
+    },
+    "targeted_android_suites": {
+      "agent_server_contract": 10,
+      "gov24_privacy": 7,
+      "browse_controller": 8,
+      "overlay_execution_cases": 3,
+      "failures": 0
+    },
+    "debug_builds": "PASS"
   },
+  "live_device_validation": [
+    {
+      "case": "real_app_request_or_restore_to_current_provider_question",
+      "result": "PASS",
+      "elapsed_seconds": 6.094,
+      "deleted_explanatory_subtitle_absent": true
+    },
+    {
+      "case": "natural_kakao_answer_through_live_jev_to_manual_authentication_boundary",
+      "result": "PASS",
+      "elapsed_seconds": 12.446,
+      "starting_screen": "public_provider_choices",
+      "native_direct_method_transition_in_this_run": false,
+      "final_subgoal": "handoff",
+      "final_outcome": "handoff",
+      "handoff_reason": "certificate_selection",
+      "terminal": true,
+      "public_node_count": 0,
+      "awaiting_answer": false
+    },
+    {
+      "case": "end_completed_public_guide",
+      "result": "PASS",
+      "elapsed_seconds": 1.068
+    }
+  ],
+  "direct_native_transition_regressions": [
+    "Direct native method selection refreshes the provider question without a highlighted tap.",
+    "A public-screen change while a request is in flight is processed after its response; a pending private boundary exports zero nodes and terminates."
+  ],
   "limitations": [
-    "The test phone disconnected after installation; the installed Click overlay to live-server flow is not yet verified.",
-    "No actual authentication, credential entry, consent submission, or document request was performed."
+    "The final natural-answer scenario began on the already open provider grid; direct native transition cases are covered by controller regression tests.",
+    "No credential entry, consent submission, authentication request, actual login, or civil document application was performed.",
+    "This is a bounded check on one connected device, not a population accuracy or success-rate estimate."
   ]
 }
