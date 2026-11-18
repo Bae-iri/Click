@@ -73,7 +73,7 @@ public class SettingsExecutionGoalTest {
             assertEquals(goalType, GoalCommandInterpreter.Kind.START_TASK, result.kind);
             assertEquals(goalType, result.goal.goalType);
             assertTrue(goalType, server.supportsGoal(goalType));
-            assertEquals("2.4.1", result.goal.toTypedGoalJson().getString("catalog_version"));
+            assertEquals("2.5.0", result.goal.toTypedGoalJson().getString("catalog_version"));
             if ("settings_assisted".equals(result.goal.taskType)) assisted++; else changes++;
         }
         assertEquals(56, changes);
@@ -116,6 +116,6 @@ public class SettingsExecutionGoalTest {
             assertEquals(task,entry.getString("goal_type"),resumed.goalType);
             checked++;
         }
-        assertEquals(182,checked);
+        assertEquals(111,checked);
     }
 }

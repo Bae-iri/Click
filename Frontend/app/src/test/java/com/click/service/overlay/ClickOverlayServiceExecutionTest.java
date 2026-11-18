@@ -1748,7 +1748,14 @@ public class ClickOverlayServiceExecutionTest {
     }
 
     private void prepareGuideResponse(String goalType) throws Exception {
-        goal=catalog.executableGoal(goalType).toTypedGoalJson();prepareGuideResponse();
+        goal=(goalType.startsWith("coupang.")?legacyCommerceGoal(goalType):catalog.executableGoal(goalType)).toTypedGoalJson();prepareGuideResponse();
+    }
+
+    private GoalCatalogClassifier.Match legacyCommerceGoal(String goalType) throws Exception {
+        // These cases simulate an older client's retained catalog explicitly.
+        var archived=GoalCatalogClassifier.fromJson(resource("/legacy_coupang_goals.json").toString());
+        set("goalClassifier",archived);
+        return archived.executableGoal(goalType);
     }
 
     private void prepareGuideResponse() throws Exception {
@@ -3133,7 +3140,7 @@ public class ClickOverlayServiceExecutionTest {
 
     @Test public void commerceObservationUsesItsOwnScopeAndManualStepStopsFurtherUploads() throws Exception {
         prepareGuideResponse(); deliver(1, "highlight", "tap", null);
-        set("acceptedGoal", catalog.executableGoal("coupang.order.cancel").toTypedGoalJson());
+        set("acceptedGoal", legacyCommerceGoal("coupang.order.cancel").toTypedGoalJson());
         AccessibilityNodeSnapshot title = new AccessibilityNodeSnapshot("commerce-title", null, true,
                 "com.coupang.mobile", "주문 상세", null, null, "android.widget.TextView", null,
                 new int[]{20, 40, 900, 140}, false, true, false, false, false, null, 42);
@@ -3159,7 +3166,7 @@ public class ClickOverlayServiceExecutionTest {
 
     @Test public void commerceEntryFromAnotherAppWaitsForTheUserWithoutUploadingThatScreen() throws Exception {
         prepareGuideResponse(); deliver(1, "highlight", "tap", null);
-        set("acceptedGoal", catalog.executableGoal("coupang.cart.view").toTypedGoalJson());
+        set("acceptedGoal", legacyCommerceGoal("coupang.cart.view").toTypedGoalJson());
         currentScreen = new ScreenSnapshot("com.other.app", Instant.now().toString(), 1080, 2400,
                 List.of(), 42);
         int count = requests.size(); send(null);
@@ -3172,7 +3179,7 @@ public class ClickOverlayServiceExecutionTest {
 
     private void prepareCoupangEntry() throws Exception {
         prepareGuideResponse(); deliver(1, "highlight", "tap", null);
-        set("acceptedGoal", catalog.executableGoal("coupang.cart.view").toTypedGoalJson());
+        set("acceptedGoal", legacyCommerceGoal("coupang.cart.view").toTypedGoalJson());
         clearInvocations((GuideOverlayView)get("guideOverlayView"), (TaskFlowOverlayView)get("taskFlowView"));
     }
 
@@ -3196,7 +3203,7 @@ public class ClickOverlayServiceExecutionTest {
     }
 
     @Test public void confirmedCoupangRequestFindsItsHomeIconBeforeTheFirstExecutionTurn() throws Exception {
-        goal=catalog.executableGoal("coupang.cart.view").toTypedGoalJson();
+        goal=legacyCommerceGoal("coupang.cart.view").toTypedGoalJson();
         currentScreen=coupangLauncher("쿠팡");
         set("windowManager",mock(WindowManager.class));
         var highlight=mock(GuideOverlayView.class);when(highlight.isAttachedToWindow()).thenReturn(true);
@@ -4246,7 +4253,7 @@ public class ClickOverlayServiceExecutionTest {
     }
     @Test public void coupangNativeLoadErrorPreemptsGenericHelpAndResumesWhenItClears() throws Exception {
         prepareGuideResponse(); deliver(1,"highlight","tap",null);
-        set("acceptedGoal",catalog.executableGoal("coupang.order.checkout").toTypedGoalJson());
+        set("acceptedGoal",legacyCommerceGoal("coupang.order.checkout").toTypedGoalJson());
         var error=new AccessibilityNodeSnapshot("error",null,true,"com.coupang.mobile",
             "네트워크 연결이 원활하지 않습니다",null,"com.coupang.mobile:id/error_view_title","android.widget.TextView",null,
             new int[]{50,600,900,700},false,true,false,false,false,null,42);

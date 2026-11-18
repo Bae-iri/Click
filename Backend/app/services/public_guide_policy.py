@@ -10,16 +10,16 @@ CIVIL_OPTIONS = CIVIL['options']
 
 def civil_requested(source):
     text = normalize(source)
-    return (('정부24' in text or '정부이십사' in text)
+    return (('정부24' in text or '정부이십사' in text or 'gov24' in text)
             and any(word in text for word in ('주민등록등본', '주민등록표등본', '등본'))
-            and not any(word in text for word in ('초본만', '등본말고', '토지', '건축물')))
+            and not any(word in text for word in ('초본', '등본말고', '토지', '건축물', '신청내역', '발급내역', '처리상태')))
 
 def enabled():
     return os.getenv('CLICK_GOV24_GUIDE_ENABLED', '1') == '1'
 
 def requested(source):
     text = normalize(source)
-    return ('정부24' in text or '정부이십사' in text) and any(w in text for w in ('로그인','인증','접속')) and not any(w in text for w in ('하지마','하지않','취소','말고'))
+    return ('정부24' in text or '정부이십사' in text or 'gov24' in text) and any(w in text for w in ('로그인','인증','접속')) and not any(w in text for w in ('하지마','하지않','취소','말고'))
 
 def normalize(text):
     return re.sub(r'[^가-힣a-z0-9]', '', unicodedata.normalize('NFKC', text).lower())
