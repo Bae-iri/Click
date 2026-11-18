@@ -100,6 +100,58 @@ public class CoupangBrowseControllerTest {
         controller.screenChanged(appScreen("com.coupang.mobile"));
         verify(gateway,times(2)).send(any(),any());
     }
+    private com.click.data.snapshot.ScreenSnapshot loginScreen(String... labels) {
+        var nodes=new java.util.ArrayList<com.click.data.snapshot.AccessibilityNodeSnapshot>();
+        for(int i=0;i<labels.length;i++)nodes.add(new com.click.data.snapshot.AccessibilityNodeSnapshot(
+            "node_"+i,null,true,"kr.go.minwon.m",labels[i],null,null,"android.widget.Button",null,
+            new int[]{10,100+i*100,400,180+i*100},true,true,false,false,false,null,42));
+        return new com.click.data.snapshot.ScreenSnapshot("kr.go.minwon.m",java.time.Instant.now().toString(),1080,2400,nodes,42);
+    }
+    @Test public void directNativeLoginMethodChangeRefreshesProviderQuestionWithoutAGuidedTap() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);
+        var controller=new CoupangBrowseController(gateway,new com.click.data.snapshot.Gov24LoginPrivacy()::filter,
+            "kr.go.minwon.m","public-guide.v1",listener);
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        var requests=ArgumentCaptor.forClass(JSONObject.class);
+        controller.start("session","prepared");verify(gateway).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+        controller.screenChanged(loginScreen("간편인증","공동인증서"));
+        verify(gateway,times(2)).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",2)
+            .put("question",new JSONObject().put("id","methods")));
+        controller.screenChanged(loginScreen("카카오톡","네이버"));
+        verify(gateway,times(3)).send(requests.capture(),callbacks.capture());
+        assertEquals("provider_kakao",requests.getValue().getJSONObject("screen").getJSONArray("nodes").getJSONObject(0).getString("option_id"));
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",3)
+            .put("question",new JSONObject().put("id","providers")));
+        controller.screenChanged(loginScreen("카카오톡","네이버"));verify(gateway,times(3)).send(any(),any());
+        controller.answer(loginScreen("카카오톡","네이버"),"카카오로 할래",false);
+        verify(gateway,times(4)).send(requests.capture(),any());
+        assertEquals("providers",requests.getValue().getString("question_id"));
+    }
+    @Test public void nativeChangeDuringRequestRefreshesOnceAndPendingPrivateBoundaryStopsExport() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);
+        var controller=new CoupangBrowseController(gateway,new com.click.data.snapshot.Gov24LoginPrivacy()::filter,
+            "kr.go.minwon.m","public-guide.v1",listener);
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        var requests=ArgumentCaptor.forClass(JSONObject.class);
+        controller.start("session","prepared");verify(gateway).send(any(),callbacks.capture());
+        controller.screenChanged(loginScreen("간편인증"));
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1));
+        verify(gateway,times(2)).send(any(),callbacks.capture());
+        controller.screenChanged(loginScreen("카카오톡","네이버"));verify(gateway,times(2)).send(any(),any());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",2));
+        verify(gateway,times(3)).send(any(),callbacks.capture());
+        controller.screenChanged(loginScreen("인증서 선택"));
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",3));
+        verify(gateway,times(4)).send(requests.capture(),callbacks.capture());
+        assertEquals("handoff",requests.getValue().getJSONObject("screen").getString("status"));
+        assertEquals(0,requests.getValue().getJSONObject("screen").getJSONArray("nodes").length());
+        callbacks.getValue().success(new JSONObject().put("status","COMPLETED").put("session_version",4));
+        controller.screenChanged(loginScreen("카카오톡"));verify(gateway,times(4)).send(any(),any());
+    }
     @Test public void publicLoginQuestionSurvivesScreenChangeAndReplyCarriesFreshQuestionBinding() throws Exception {
         var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
         when(listener.canObserve()).thenReturn(true);
