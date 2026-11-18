@@ -3,6 +3,7 @@ import pytest
 from dataclasses import replace
 
 from app.services.screen_jev import JevScreenResolver
+from tests.jev_answers import with_screen_judgments
 from app.clients.runtime_agent import RuntimeAgentAdapter
 from app.task_graphs import approved_graphs
 TASK_GRAPHS = approved_graphs()
@@ -38,7 +39,7 @@ def sender_for(transition, choice_override=None, mutate=None):
                                          and v["transition"] == transition.transition_id), "insufficient_evidence")
         answer = {"type":"choice", "choice":choice, "confidence":1,
             "probabilities": {k:float(k==choice) for k in criteria}}
-        result = {"model":payload["model"], "answers":{"screen":answer}}
+        result = with_screen_judgments(payload, {"model":payload["model"], "answers":{"screen":answer}})
         if mutate:
             mutate(result)
         return httpx.Response(200,json=result)

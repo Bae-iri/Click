@@ -1,7 +1,8 @@
 # AI1 Jev 주 판단 연결
 
 `AI1_UI_SELECTOR_PROVIDER=jev`이면 `RuntimeAgentAdapter`가 `JevScreenResolver`를
-AI1의 주 판단기로 주입한다. 현재 화면 단계와 UI 대상을 함께 선택한다.
+AI1의 주 판단기로 주입한다. 현재 화면 확인과 UI 대상 선택을 작은 질문으로 나누고,
+코드가 답의 일관성을 검증한다.
 
 백엔드 담당자의 기존 `TYPESAFE_API_KEY`를 사용한다. 프론트엔드 개발자에게
 키를 전달할 필요는 없다. 기존 `.env`에 다음 설정을 반영한다.
@@ -11,12 +12,80 @@ AI1_UI_SELECTOR_PROVIDER=jev
 TYPESAFE_API_KEY=<기존 값 유지>
 JEV_MODEL=jev-1.14.0
 JEV_MIN_CONFIDENCE=0.8
+JEV_SCREEN_JUDGMENT_MODE=atomic
+JEV_CHOICE_TEMPERATURE=0.7
 ```
 
 `.env` 사용 시 서버 실행 명령이 파일을 읽는지 확인한다.
 예: Backend 폴더에서 `python -m uvicorn app.main:app --env-file .env`.
 변경된 Backend와 AI-Agent 코드를 함께 배포하고 프로세스를 재시작한다.
 `GOAL_CLASSIFIER_PROVIDER`는 요청 목표 해석의 별도 설정이며 여기서 바꾸지 않는다.
+
+## 작은 판단 세 개, HTTP 요청 한 번
+
+기본값 `atomic`은 설정·쿠팡의 AI1 화면 판단을 다음 세 질문으로 나눈다.
+
+| 질문 | 타입 | 판단 범위 |
+| --- | --- | --- |
+| `page` | Choice | 화면에 보이는 페이지가 어느 승인된 출발 단계인지. 불명확하면 `unknown_page` |
+| `target_supported` | Noul | 현재 화면에 적절한 다음 행동 후보가 하나라도 존재하는지 |
+| `screen` | Choice | 관측에 근거한 실제 다음 대상 또는 대기·판단 보류 |
+
+세 질문은 같은 관측을 사용하며 서로의 답을 입력으로 받지 않는다. 추가 왕복이나
+자동 재시도는 없다. 설정 입력에서는 전체 미래 그래프 대신 후보의 출발 페이지·
+목적지·대상 이름을 보낸다. 이전 세션 단계로 후보를 제한하지 않아 사용자 우회나
+단계 건너뛰기 후에도 현재 화면을 다시 판단할 수 있다. 쿠팡의 `C_NAVIGATE`는
+특정 제목 하나가 아니라 목적 페이지에 도달하기 전의 탐색 단계로 설명한다.
+
+행동 안내는 원본 대상 점수, 원본 페이지 점수, Noul 값이 모두 기존 기준을 통과하고,
+페이지 답이 선택한 대상의 출발 단계와 일치할 때만 허용한다. 어느 답이든 누락되거나
+형식이 잘못되면 전체 판단을 거절한다. 유효한 대기·판단 보류 응답은 행동을 만들지 않는다.
+승인과 실제 행동 결과 검증은 별도로 유지한다. 새 보류 사유는
+`target_not_supported`, `page_not_identified`, `page_confidence_below_minimum`,
+`page_target_conflict`다. 잘못된 화면이라는 판단만으로 임의의 뒤로가기 동작을 만들지 않는다.
+
+`JEV_SCREEN_JUDGMENT_MODE=legacy`는 기존 단일 질문으로 명시적으로 되돌리는 설정이다.
+부분 응답을 받았다는 이유로 자동 전환하지 않는다. `/version`의
+`runtime_configuration.screen_judgment_mode`와 `choice_temperature`로 실제 배포 설정을 확인한다.
+
+모델 보류 이후 재호출 여부는 정규화한 대상의 의미·값·활성 여부·실제 가시성으로
+판단한다. 위치·생성된 노드 ID·window 번호만 바뀌어도 보류가 풀리던 동작을 제거했다.
+반면 이미 허용한 안내의 대상 좌표가 바뀌면 기존 안내를 그대로 재사용하지 않는다.
+옛 체크포인트에 의미 기반 지문이 없으면 실제 페이지 이동이나 허용된 복구 전까지
+보류를 유지한다. 동작 재시도 예산과 사용자 승인은 이 지문으로 초기화하지 않는다.
+민감 화면의 `privacy_blocked` 응답은 어댑터에서도 `blocked`·`BLOCKED`를 유지한다.
+일반적인 복구 안내로 변환해 차단 표시를 약화하지 않는다.
+
+## 낮은 temperature의 적용 범위
+
+공식 System One 요청 스키마에는 temperature 파라미터가 없다. Jev가 반환한 확률에
+로컬에서 다음 식을 적용한다. 확률을 logits처럼 취급한 `softmax(p/T)`는 사용하지 않는다.
+
+```text
+q_i = softmax(log(p_i) / T) = p_i^(1/T) / sum_j p_j^(1/T)
+T = 0.7  (환경변수 허용 범위: 0 < T <= 10)
+```
+
+이 변환은 1위 선택을 바꾸거나 동률을 해소하지 않는다. 낮은 T는 기존 차이를 키우며,
+잘못된 선택도 더 확신하게 표현할 수 있다. 따라서 보정값은 진단·비교에만 사용하고,
+통과 기준·후보 선택·승인·복구·완료 판정에는 사용하지 않는다. 원본 confidence와
+확률 분포를 먼저 검증하며, 낮은 원본 점수가 T 보정으로 통과하는 일은 없다.
+0인 확률은 0으로 유지하고 log-space에서 계산해 수치 오버플로를 피한다.
+
+설계 근거: [System One 계약](https://docs.typesafe.ai/api/system-one),
+[한 요청의 독립 질문](https://docs.typesafe.ai/patterns/fan-out),
+[선택지 적합성 확인](https://docs.typesafe.ai/patterns/companion-noul).
+질문 분리와 입력 축소만으로 실제 모델 정확도나 서버 응답 속도가 개선됐다고 단정하지 않는다.
+
+모델·네트워크 없이 입력 크기와 로컬 준비 비용을 비교하려면 다음 명령을 사용한다.
+
+```sh
+python scripts/benchmark_jev_judgments.py --iterations 20 --output /tmp/jev-payloads.json
+```
+
+합성 설정 화면 6종에서는 입력이 약 26~37% 작아졌다. 쿠팡 탐색 1종은 기존 입력이
+작아서 세 질문 추가 후 약 121% 커졌다. 두 모드 모두 관측당 요청 경계 진입은 1회다.
+이 비교는 실제 API 호출·기기 조작·전체 서버 응답 지연을 측정하지 않는다.
 
 연결 확인은 백엔드 담당자 환경에서 실행한다:
 
@@ -40,9 +109,15 @@ API 응답, 재전송 응답, 저장된 진단에는 다음 값이 함께 남는
 | `top_probability` | 모델이 고른 항목의 확률. UI 후보가 아니라 대기·판단 보류의 확률일 수도 있다. |
 | `choice_count` | UI 후보와 대기·판단 보류 2개를 합한 전체 선택지 수 |
 | `normalized_probability` | `(top_probability - 1/choice_count) / (1 - 1/choice_count)` |
-| `confidence` | 원본 confidence와 보정값 중 작은 최종값 |
+| `confidence` | 원본 confidence와 normalized_probability의 최솟값. atomic 행동 후보는 페이지·Noul 값까지 포함한 최솟값 |
 | `minimum_confidence` | 통과 기준 |
 | `hold_reason` | `none`, `raw_confidence_below_minimum`, `normalized_probability_below_minimum`, `both_below_minimum`, `wait_for_result`, `insufficient_evidence` |
+| `judgment_mode` / `question_count` | `atomic`/3 또는 `legacy`/1. 질문 수이며 HTTP 호출 수가 아니다. |
+| `page_confidence` | 원본 페이지 confidence와 해당 Choice 정규화 확률의 최솟값 |
+| `target_support_probability` | 원본 Noul 값. 대상 선택이나 실행 성공 확률이 아니다. |
+| `page_target_consistent` | 식별한 페이지와 선택한 대상의 출발 단계가 일치하는지. 수치 기준에 먼저 걸려도 기록한다. |
+| `choice_temperature` | 로컬 확률 변환에 사용한 T |
+| `tempered_top_probability` / `tempered_probability_margin` / `tempered_confidence` | T 적용 후 진단값. 행동 허용 근거로 사용하지 않는다. |
 | `retained` | 유효한 이전 네이티브 선택을 유지했는지. 참이면 현재 모델 응답의 새 점수가 아니다. |
 | `paused` | 같은 화면에서 복구 한도에 도달하여 사용자 재시도를 기다리는지 |
 

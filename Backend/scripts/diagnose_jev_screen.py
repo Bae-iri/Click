@@ -38,7 +38,8 @@ def main(argv=None):
         _, model, _ = JevScreenResolver.configuration()
         engine = RuntimeAgentAdapter().runtime
     except ValueError:
-        print("CONFIG_ERROR: check TYPESAFE_API_KEY, pinned JEV_MODEL and JEV_MIN_CONFIDENCE.")
+        print("CONFIG_ERROR: check TYPESAFE_API_KEY, pinned JEV_MODEL, JEV_MIN_CONFIDENCE, "
+              "JEV_SCREEN_JUDGMENT_MODE and JEV_CHOICE_TEMPERATURE.")
         return 2
     graph = next(g for g in engine.task_graphs.values()
                  if g.definition.goal_type == "settings.font_size.increase")

@@ -470,7 +470,7 @@ class ClickAgentEngine:
                 and request.user_action_event.action_type.value == "manual_override"),
             selection_failure=selection_failure,
             primary_failure=primary_decision.failure if primary_decision else None,
-            selection_fingerprint=selection_fingerprint(current_snapshot, accessibility_nodes, screen_bounds,
+            selection_fingerprint=selection_fingerprint(current_snapshot, normalized_nodes, screen_bounds,
                 previous_exclusions) if primary_decision else None,
             selection_paused=bool(ui_selection.get("paused")))
         if self.screen_resolver:
