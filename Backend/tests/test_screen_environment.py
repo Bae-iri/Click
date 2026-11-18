@@ -12,6 +12,13 @@ from app.schemas.agent_turn import NativeWindowContext
 from tests.test_screen_jev import scene
 
 CASES=json.loads((Path(__file__).resolve().parents[2]/'AI-Agent/tests/fixtures/screen_environment_cases.json').read_text())
+def test_foreground_package_support_matches_the_export_boundary():
+    root=Path(__file__).resolve().parents[2]/'AI-Agent/goal_catalog'
+    privacy=json.loads((root/'screen_privacy_policy.json').read_text())
+    capabilities=json.loads((root/'settings_capabilities.json').read_text())
+    for key in ('settings_packages','launcher_packages'):
+        assert set(policy()[key])==set(privacy[key])==set(capabilities[key])
+
 def request_for(item,**kw):
     pkg=item['package'];nodes=[]
     if item.get('title') is not None:nodes.append(AccessibilityNode('title',package_name=pkg,window_id=7,text=item['title'],class_name='android.widget.TextView',bounds_in_screen=(20,20,900,80)))

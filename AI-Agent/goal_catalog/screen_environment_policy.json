@@ -12,8 +12,7 @@
     "com.miui.home",
     "com.oppo.launcher",
     "com.sec.android.app.launcher",
-    "com.vivo.launcher",
-    "org.lineageos.trebuchet"
+    "com.vivo.launcher"
   ],
   "settings_home_titles": [
     "설정",

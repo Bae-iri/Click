@@ -10,14 +10,15 @@ public final class ScreenIdentity {
         if(screen==null || screen.activeWindowId==null || !screen.privacyMaskingReady)return null;
         Map<String, AccessibilityNodeSnapshot> byId = new HashMap<>();
         for (AccessibilityNodeSnapshot n : screen.nodes) {
-            if (n.visibleToUser && n.sensitiveInput) return null;
+            if (n.visibleToUser && n.sensitiveInput && !n.emptySearchInput()) return null;
             byId.put(n.nodeId, n);
         }
         AccessibilityNodeSnapshot top = null;
         for (AccessibilityNodeSnapshot n : screen.nodes) {
             if (!n.visibleToUser || !n.enabled || n.clickable || n.scrollable || n.checkable
                     || !screen.packageName.equals(n.packageName) || !Objects.equals(screen.activeWindowId, n.windowId)
-                    || !"android.widget.TextView".equals(n.className) || n.text == null || n.text.isBlank()
+                    || !(n.heading || "android.widget.TextView".equals(n.className) || toolbarTitle(n.resourceId))
+                    || titleText(n) == null
                     || n.bounds == null || n.bounds.length != 4 || n.bounds[0] >= n.bounds[2] || n.bounds[1] >= n.bounds[3]
                     || SettingsCapabilities.privateIdentity(n.resourceId)
                     || n.resourceId != null && (n.resourceId.endsWith("/summary") || n.resourceId.endsWith("/description"))) continue;
@@ -27,15 +28,27 @@ public final class ScreenIdentity {
                 if (!seen.add(parent)) { independent=false;break; }
                 AccessibilityNodeSnapshot ancestor = byId.get(parent);
                 if (ancestor == null) { independent=false;break; }
-                if (ancestor.clickable || ancestor.scrollable || SettingsCapabilities.privateIdentity(ancestor.resourceId) || "list".equals(ancestor.role)
+                if (ancestor.clickable || ancestor.checkable || ancestor.scrollable
+                        || !screen.packageName.equals(ancestor.packageName) || !Objects.equals(screen.activeWindowId, ancestor.windowId)
+                        || SettingsCapabilities.privateIdentity(ancestor.resourceId) || "list".equals(ancestor.role)
                         || !ancestor.visibleToUser || !ancestor.enabled) { independent=false;break; }
                 parent=ancestor.parentId;
             }
-            if (independent && (top == null || n.bounds[1] < top.bounds[1]
-                    || n.bounds[1] == top.bounds[1] && n.bounds[0] < top.bounds[0])) top=n;
+            if (independent && (top == null || n.heading && !top.heading
+                    || n.heading == top.heading && (n.bounds[1] < top.bounds[1]
+                        || n.bounds[1] == top.bounds[1] && n.bounds[0] < top.bounds[0]))) top=n;
         }
         if (top == null) return null;
-        return SettingsCapabilities.canonical(top.text);
+        return SettingsCapabilities.canonical(titleText(top));
+    }
+    private static String titleText(AccessibilityNodeSnapshot node) {
+        if (node.text != null && !node.text.isBlank()) return node.text;
+        return node.heading && node.contentDescription != null && !node.contentDescription.isBlank()
+                ? node.contentDescription : null;
+    }
+    private static boolean toolbarTitle(String resource) {
+        return resource != null && (resource.endsWith("/action_bar_title") || resource.endsWith("/toolbar_title")
+                || resource.endsWith("/collapsing_toolbar_title"));
     }
     public static boolean samePage(ScreenSnapshot before, ScreenSnapshot after) {
         String title=pageTitle(before);

@@ -43,4 +43,11 @@ public class SettingsPageNavigationTest {
   assertFalse(SettingsCapabilities.routePageTitle("settings.font_size.increase","접근성"));
   assertFalse(SettingsCapabilities.routePageTitle("settings.volume.increase","블루투스"));
  }
+ @Test public void semanticHeadingWithDescriptionRejoinsWithoutDependingOnViewClass() throws Exception {
+  var heading=new AccessibilityNodeSnapshot("heading",null,true,"com.android.settings",null,"디스플레이",null,
+   "android.view.View","container",new int[]{20,20,900,80},false,true,false,false,false,null,1,false,null,null,false,null,true,false);
+  var current=new ScreenSnapshot("com.android.settings","2026-11-18T00:00:00Z",1080,2400,List.of(heading),1);
+  assertEquals(SettingsPageNavigation.Change.ON_ROUTE,policy().changed(page("설정",1,300,false),current,"font_size"));
+  assertFalse(policy().onRoute(current,"volume"));
+ }
 }

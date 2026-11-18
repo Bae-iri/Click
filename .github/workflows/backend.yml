@@ -24,6 +24,9 @@ jobs:
         working-directory: Frontend
       - run: bash gradlew :app:testDebugUnitTest :app:assembleDebug
         working-directory: Frontend
+      - name: Verify Android minSdk API compatibility
+        run: bash gradlew :app:lintDebug -PCLICK_API_COMPATIBILITY_ONLY=true
+        working-directory: Frontend
   backend:
     runs-on: ubuntu-24.04
     strategy:
@@ -97,7 +100,7 @@ jobs:
         run: bash gradlew :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest --no-daemon --console=plain
         working-directory: Frontend
       - name: Replay Android service requests at the authenticated backend API
-        run: python -m pytest -q contract_tests
+        run: python -m pytest -q -p tests.conftest contract_tests
         working-directory: Backend
       - uses: actions/upload-artifact@v4
         if: always()

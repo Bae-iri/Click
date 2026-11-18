@@ -3678,6 +3678,24 @@ public class ClickOverlayServiceExecutionTest {
         currentScreen=displaySettingsPage();broadcastCurrentPage();assertEquals(count+1,requests.size());
         assertEquals(-1,get("recoveryApologyGeneration"));
     }
+    @Test public void virtualNativeHeadingAndEmptyVendorSearchResumeFromApology() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        ((TaskExecutionController)fieldValue("execution")).recovery();
+        set("targetHelpGeneration",get("executionGeneration"));set("recoveryApologyGeneration",get("executionGeneration"));
+        set("targetHelpScreen",currentScreen);
+        var heading=new AccessibilityNodeSnapshot("heading",null,true,"com.android.settings","디스플레이",null,null,
+            "android.view.View","container",new int[]{20,20,900,100},false,true,false,false,false,null,42,
+            false,null,null,false,null,true,false);
+        var search=new AccessibilityNodeSnapshot("search",null,true,"com.android.settings",null,null,"com.android.settings:id/vendor_query",
+            "android.widget.EditText","text_field",new int[]{20,120,900,200},false,true,false,false,false,null,42,
+            true,null,null,false,null,false,true);
+        int count=requests.size();
+        currentScreen=new ScreenSnapshot("com.android.settings",Instant.now().toString(),1080,2400,List.of(heading,search),42);
+        broadcastCurrentPage();
+        assertEquals(count+1,requests.size());assertSame(currentScreen,requests.get(count).accessibilityTree);
+        assertEquals(-1,get("recoveryApologyGeneration"));
+        assertFalse(((TaskExecutionController)fieldValue("execution")).retryRequired());
+    }
     @Test public void pageChangeCannotResumeExplicitPauseOrResultQuestion() throws Exception {
         prepareGuideResponse();deliver(1,"highlight","tap",null);
         var state=(TaskExecutionController)fieldValue("execution");state.pause();

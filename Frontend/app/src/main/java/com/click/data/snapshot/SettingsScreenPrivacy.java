@@ -111,10 +111,16 @@ public final class SettingsScreenPrivacy {
             if (!pkg.equals(node.optString("package_name", pkg))) throw new Blocked(Blocked.Reason.UNSUPPORTED_APP);
             JSONObject extras = node.optJSONObject("extras");
             boolean sensitive = input(node, extras);
-            boolean emptySearchField = emptySearch.contains(node.optString("resource_id"))
-                    && node.optString("text", "").isEmpty() && !flag(extras, "input_content_present")
+            boolean emptySearchField = (emptySearch.contains(node.optString("resource_id"))
+                    || flag(extras, "empty_search_input"))
+                    && (node.isNull("text") || node.optString("text", "").isEmpty())
+                    && (node.isNull("content_description") || node.optString("content_description", "").isEmpty())
+                    && !flag(extras, "input_content_present")
                     && !flag(extras, "password") && !flag(extras, "is_password") && !flag(extras, "isPassword");
             if (sensitive && !emptySearchField && !commerceScope) throw new Blocked(Blocked.Reason.SENSITIVE_INPUT);
+            // An empty native search box supplies no screen evidence or server capability.
+            // Drop its node and local semantic flags instead of exporting a new input exception.
+            if (sensitive && emptySearchField && !commerceScope) continue;
             if (hiddenRegions.contains(node.getString("node_id"))) continue;
             if (!commerceScope && !description(node) && independent(node, byId) && (blockedTitles.contains(normalize(node.optString("text")))
                     || blockedTitles.contains(normalize(node.optString("content_description")))))

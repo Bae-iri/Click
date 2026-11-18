@@ -29,6 +29,9 @@ public final class AccessibilityNodeSnapshot {
     /** Alias used by the vision safety pipeline. */
     public final boolean sensitive;
     public final String publicBrowseQueryHash;
+    /** Native semantics used locally for page continuity, never to authorize an action. */
+    public final boolean heading;
+    private final boolean searchInput;
     private final boolean passwordInput;
     private final boolean inputContentPresent;
 
@@ -92,10 +95,28 @@ public final class AccessibilityNodeSnapshot {
             boolean selected, boolean scrollable, boolean checkable, Float progress,
             int windowId, boolean sensitiveInput, Float rangeMin, Float rangeMax, boolean passwordInput,
             Boolean checked) {
+        this(nodeId, parentId, visibleToUser, packageName, text, contentDescription, resourceId,
+                className, role, bounds, clickable, enabled, selected, scrollable, checkable,
+                progress, windowId, sensitiveInput, rangeMin, rangeMax, passwordInput, checked, false, false);
+    }
+
+    public AccessibilityNodeSnapshot(String nodeId, String parentId, boolean visibleToUser,
+            String packageName, String text, String contentDescription, String resourceId,
+            String className, String role, int[] bounds, boolean clickable, boolean enabled,
+            boolean selected, boolean scrollable, boolean checkable, Float progress,
+            int windowId, boolean sensitiveInput, Float rangeMin, Float rangeMax, boolean passwordInput,
+            Boolean checked, boolean heading, boolean searchInput) {
+        this.heading = !sensitiveInput && heading;
+        this.searchInput = sensitiveInput && !passwordInput && searchInput;
         this.checked = !sensitiveInput && checkable ? checked : null;
         this.passwordInput = passwordInput;
         this.publicBrowseQueryHash = CoupangBrowsePrivacy.captureQueryHash(packageName,resourceId,text,passwordInput);
-        this.inputContentPresent = sensitiveInput && text != null && !text.isEmpty();
+        boolean searchIdentity = searchInput || sensitiveInput && !passwordInput
+                && ScreenEnvironmentPolicy.contains("empty_search_resources", resourceId);
+        String description = contentDescription == null ? "" : contentDescription.trim().toLowerCase(java.util.Locale.ROOT);
+        boolean searchPrompt = searchIdentity && ("검색".equals(description) || "search".equals(description));
+        this.inputContentPresent = sensitiveInput && (text != null && !text.isEmpty()
+                || contentDescription != null && !contentDescription.isEmpty() && !searchPrompt);
         this.rangeMin = sensitiveInput ? null : rangeMin;
         this.rangeMax = sensitiveInput ? null : rangeMax;
         this.sensitiveInput = sensitiveInput;
@@ -121,7 +142,8 @@ public final class AccessibilityNodeSnapshot {
 
     public boolean passwordInput() { return passwordInput; }
     boolean emptySearchInput() {
-        return !passwordInput && !inputContentPresent && ScreenEnvironmentPolicy.contains("empty_search_resources",resourceId);
+        return sensitiveInput && !passwordInput && !inputContentPresent
+                && (searchInput || ScreenEnvironmentPolicy.contains("empty_search_resources",resourceId));
     }
 
     JSONObject toJson() throws JSONException {
@@ -143,6 +165,9 @@ public final class AccessibilityNodeSnapshot {
         object.put("scrollable", scrollable);
         object.put("checkable", checkable);
         JSONObject extras = new JSONObject();
+        if (heading) extras.put("heading", true);
+        // Only a boolean native fact leaves the collector; hints and query text stay local.
+        if (emptySearchInput()) extras.put("empty_search_input", true);
         if (checked != null) extras.put("checked", checked);
         if (sensitiveInput) extras.put("editable", true);
         if (passwordInput) extras.put("is_password", true);

@@ -38,7 +38,7 @@ public final class FeedbackOverlayView extends ScrollView {
         addView(body, new ScrollView.LayoutParams(-1, -2));
         TextView title = ClickUi.sectionTitle(context, positive ? "고마워요!" : "의견을 들려주세요");
         title.setTextSize(ClickTextScale.size(context, 20));
-        title.setAccessibilityHeading(true);
+        androidx.core.view.ViewCompat.setAccessibilityHeading(title, true);
         later = ClickUi.secondaryButton(context, positive ? "닫기" : "나중에");
         later.setOnClickListener(v -> { if (!saving) listener.dismiss(); });
         if (positive) {

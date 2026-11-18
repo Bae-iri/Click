@@ -3519,7 +3519,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private JSONObject manualSettingsSpec() {
         if (execution.acceptedGoal() == null) return null;
         try (java.io.InputStream in = getAssets().open("settings_execution.json")) {
-            JSONObject spec = new JSONObject(new String(in.readAllBytes(), StandardCharsets.UTF_8))
+            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+            byte[] buffer = new byte[4096];
+            int count;
+            while ((count = in.read(buffer)) != -1) bytes.write(buffer, 0, count);
+            JSONObject spec = new JSONObject(bytes.toString(StandardCharsets.UTF_8.name()))
                     .getJSONObject("goals").optJSONObject(execution.acceptedGoal().optString("goal_type"));
             return spec != null && "assisted".equals(spec.optString("mode")) ? spec : null;
         } catch (Exception unavailable) { return null; }
