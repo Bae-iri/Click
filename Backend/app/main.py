@@ -124,7 +124,7 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
     from app.services.public_guide import PublicGuideService
     from app.api.v1.endpoints.public_guide import build_router as build_public_guide_router
     app.state.public_guide_service = PublicGuideService(session_factory, turn_service.repository)
-    app.include_router(build_public_guide_router(app.state.public_guide_service, principal), prefix="/api/v1")
+    app.include_router(build_public_guide_router(app.state.public_guide_service, principal, app.state.browse_graph_jobs), prefix="/api/v1")
     app.include_router(build_history_router(turn_service, principal), prefix="/api/v1")
     app.include_router(build_voice_queue_router(voice_queue, principal), prefix="/api/v1")
     app.include_router(build_interactions_router(app.state.interactions, principal), prefix="/api/v1")
