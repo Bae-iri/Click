@@ -28,8 +28,9 @@ final class SettingsPageNavigation {
         if(vocabulary==null || title==null || setting==null)return false;
         // This is the existing reviewed scope, not permission to export another page's controls.
         for(var node:current.nodes)
-            if(node.text!=null && title.equals(SettingsCapabilities.canonical(node.text))
-                    && vocabulary.exportLabel(node.text,setting)!=null)return true;
+            for(String label:new String[]{node.text,node.heading?node.contentDescription:null})
+                if(label!=null && title.equals(SettingsCapabilities.canonical(label))
+                        && vocabulary.exportLabel(label,setting)!=null)return true;
         return false;
     }
     /** A missing/partial heading is insufficient evidence, not a different page. */

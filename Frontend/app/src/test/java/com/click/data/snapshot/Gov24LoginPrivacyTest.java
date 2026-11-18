@@ -64,4 +64,30 @@ public class Gov24LoginPrivacyTest {
             node("input","private",true,false)));
         assertEquals("handoff",result.getString("status"));assertEquals(0,result.getJSONArray("nodes").length());
     }
+    private AccessibilityNodeSnapshot child(String id,String parent,String label) {
+        return new AccessibilityNodeSnapshot(id,parent,true,Gov24LoginPrivacy.PACKAGE,label,null,null,
+            "android.view.View","text",new int[]{40,110,350,180},false,true,false,false,false,null,42);
+    }
+    @Test public void virtualTextChildUsesTheNativeButtonsIdentityAndBounds() throws Exception {
+        var result=new Gov24LoginPrivacy().filter(screen(node("button",null,false,true),child("label","button","간편인증")));
+        assertEquals("public",result.getString("status"));
+        var target=result.getJSONArray("nodes").getJSONObject(0);
+        assertEquals("button",target.getString("node_id"));
+        assertEquals(30,target.getJSONArray("bounds").getInt(0));
+        assertEquals("method_simple",target.getString("option_id"));
+    }
+    @Test public void repeatedLabelInOneButtonIsOneCandidateButSeparateButtonsRemainAmbiguous() throws Exception {
+        var result=new Gov24LoginPrivacy().filter(screen(node("button","간편인증",false,true),child("label","button","간편인증")));
+        assertEquals(1,result.getJSONArray("nodes").length());
+        result=new Gov24LoginPrivacy().filter(screen(node("button",null,false,true),child("label","button","간편인증"),node("other","간편인증",false,true)));
+        assertEquals("unrecognized",result.getString("status"));
+    }
+    @Test public void mixedButtonCannotBorrowOneChildsIdentityOrHideCredentials() throws Exception {
+        for(String label:new String[]{"금융인증서","개인 이름"}) {
+            var result=new Gov24LoginPrivacy().filter(screen(node("button",null,false,true),child("a","button","간편인증"),child("b","button",label)));
+            assertEquals("unrecognized",result.getString("status"));
+        }
+        var result=new Gov24LoginPrivacy().filter(screen(node("button",null,false,true),child("label","button","간편인증"),node("input","PRIVATE_VALUE",true,false)));
+        assertEquals("handoff",result.getString("status"));assertFalse(result.toString().contains("PRIVATE_VALUE"));
+    }
 }

@@ -47,4 +47,28 @@ public class Gov24LoginEntryTest {
         var root=home(new Rect(700,50,820,100));when(root.getPackageName()).thenReturn("other.app");assertNull(Gov24LoginEntry.inspect(root));
         assertNull(Gov24LoginEntry.inspect(home(new Rect(700,50,820,100),node("로그인",true,false,false,new Rect(0,500,400,580)))));
     }
+    @Test public void virtualProviderLabelCannotExposeTheHomeBehindItsDialog() {
+        assertNull(Gov24LoginEntry.inspect(home(new Rect(700,50,820,100),
+            node("카카오톡",false,false,false,new Rect(0,200,400,280)))));
+    }
+    @Test public void childLabelIdentifiesItsButtonWithoutPromotingTheWholeHome() {
+        var child=node("로그인",false,false,false,new Rect(720,60,800,90));
+        var button=node(null,true,false,false,new Rect(700,50,820,100),child);
+        var root=node(null,true,false,false,new Rect(0,0,1080,2400),
+            node("정부24",false,false,false,new Rect(0,0,100,40)),
+            node("자주찾는 서비스",false,false,false,new Rect(0,100,400,140)),button);
+        var target=Gov24LoginEntry.inspect(root);
+        assertNotNull(target);assertEquals("node_0_2",target.nodeId);assertArrayEquals(new int[]{700,50,820,100},target.bounds);
+        when(button.isClickable()).thenReturn(false);
+        assertNull("The page contains other labels and cannot stand in for the button",Gov24LoginEntry.inspect(root));
+    }
+    @Test public void mixedChildLabelsCannotNameALoginButtonAndNeverReadSearchValues() {
+        var search=node("PRIVATE_QUERY",true,true,false,new Rect(720,60,800,90));
+        var button=node(null,true,false,false,new Rect(700,50,820,100),
+            node("로그인",false,false,false,new Rect(720,60,800,90)),search);
+        var root=node(null,false,false,false,new Rect(0,0,1080,2400),
+            node("정부24",false,false,false,new Rect(0,0,100,40)),
+            node("자주찾는 서비스",false,false,false,new Rect(0,100,400,140)),button);
+        assertNull(Gov24LoginEntry.inspect(root));verify(search,never()).getText();
+    }
 }

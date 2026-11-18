@@ -65,67 +65,78 @@ public final class OnDeviceVision {
             callback.onFailure("masking_failed", "개인정보가 보일 수 있는 화면이라 화면 분석을 하지 않았어요.");
             return;
         }
-        final long capturedAtMs = System.currentTimeMillis();
-        try {
-            service.takeScreenshot(Display.DEFAULT_DISPLAY, service.getMainExecutor(),
-                    new AccessibilityService.TakeScreenshotCallback() {
-                @Override public void onSuccess(AccessibilityService.ScreenshotResult result) {
-                    if (finished.get()) { result.getHardwareBuffer().close(); return; }
-                    Bitmap bitmap = null;
-                    try (HardwareBuffer buffer = result.getHardwareBuffer()) {
-                        Bitmap hardware = Bitmap.wrapHardwareBuffer(buffer, result.getColorSpace());
-                        if (hardware != null) {
-                            bitmap = hardware.copy(Bitmap.Config.ARGB_8888, true);
-                            hardware.recycle();
-                        }
-                    } catch (RuntimeException error) {
-                        callback.onFailure("capture_failed", "화면 이미지를 읽지 못했어요. 다시 시도할 때 허용을 확인할게요.");
-                        return;
-                    }
-                    if (bitmap == null) {
-                        callback.onFailure("capture_failed", "화면 이미지를 읽지 못했어요.");
-                        return;
-                    }
-                    if (bitmap.getWidth() != screen.screenWidth || bitmap.getHeight() != screen.screenHeight) {
-                        bitmap.recycle();
-                        callback.onFailure("screen_changed", "화면 크기가 바뀌었어요. 현재 화면에서 다시 요청해 주세요.");
-                        return;
-                    }
-                    ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
-                    if (current == null || !screen.fingerprint().equals(current.fingerprint())) {
-                        bitmap.recycle();
-                        callback.onFailure("screen_changed", "캡처 중 화면이 바뀌어 분석하지 않았어요. 다시 요청해 주세요.");
-                        return;
-                    }
-                    resultCallback.onImageCaptured();
-                    // Remove known input fields before local OCR. Only graph labels leave the device.
-                    try {
-                        Canvas canvas = new Canvas(bitmap);
-                        Paint mask = new Paint();
-                        mask.setColor(Color.BLACK);
-                        if (!screen.privacyMaskingReady) throw new IllegalStateException("Unknown sensitive bounds");
-                        for (AccessibilityNodeSnapshot node : screen.nodes) {
-                            if (node.sensitiveInput || (node.className != null
-                                    && node.className.toLowerCase(java.util.Locale.ROOT).contains("edittext"))) {
-                                VisionPrivacy.requireMaskBounds(node.bounds, bitmap.getWidth(), bitmap.getHeight());
-                                canvas.drawRect(node.bounds[0], node.bounds[1], node.bounds[2], node.bounds[3], mask);
+        Api30.capture(service, engine, privacy, vocabularyKey, strategy, focus, screen,
+                callback, finished, resultCallback::onImageCaptured);
+    }
+
+    /** Keep newer callback and buffer types out of the class verified on Android 8–10. */
+    @androidx.annotation.RequiresApi(30)
+    private static final class Api30 {
+        static void capture(AccessibilityService service, VisionOcrEngine engine, VisionPrivacy privacy,
+                String vocabularyKey, String strategy, int[] focus, ScreenSnapshot screen,
+                Callback callback, java.util.concurrent.atomic.AtomicBoolean finished, Runnable imageCaptured) {
+            final long capturedAtMs = System.currentTimeMillis();
+            try {
+                service.takeScreenshot(Display.DEFAULT_DISPLAY, service.getMainExecutor(),
+                        new AccessibilityService.TakeScreenshotCallback() {
+                    @Override public void onSuccess(AccessibilityService.ScreenshotResult result) {
+                        if (finished.get()) { result.getHardwareBuffer().close(); return; }
+                        Bitmap bitmap = null;
+                        try (HardwareBuffer buffer = result.getHardwareBuffer()) {
+                            Bitmap hardware = Bitmap.wrapHardwareBuffer(buffer, result.getColorSpace());
+                            if (hardware != null) {
+                                bitmap = hardware.copy(Bitmap.Config.ARGB_8888, true);
+                                hardware.recycle();
                             }
+                        } catch (RuntimeException error) {
+                            callback.onFailure("capture_failed", "화면 이미지를 읽지 못했어요. 다시 시도할 때 허용을 확인할게요.");
+                            return;
                         }
-                    } catch (RuntimeException error) {
-                        bitmap.recycle();
-                        callback.onFailure("masking_failed", "개인정보를 안전하게 가리지 못해 화면 분석을 중단했어요.");
-                        return;
+                        if (bitmap == null) {
+                            callback.onFailure("capture_failed", "화면 이미지를 읽지 못했어요.");
+                            return;
+                        }
+                        if (bitmap.getWidth() != screen.screenWidth || bitmap.getHeight() != screen.screenHeight) {
+                            bitmap.recycle();
+                            callback.onFailure("screen_changed", "화면 크기가 바뀌었어요. 현재 화면에서 다시 요청해 주세요.");
+                            return;
+                        }
+                        ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+                        if (current == null || !screen.fingerprint().equals(current.fingerprint())) {
+                            bitmap.recycle();
+                            callback.onFailure("screen_changed", "캡처 중 화면이 바뀌어 분석하지 않았어요. 다시 요청해 주세요.");
+                            return;
+                        }
+                        imageCaptured.run();
+                        // Remove known input fields before local OCR. Only graph labels leave the device.
+                        try {
+                            Canvas canvas = new Canvas(bitmap);
+                            Paint mask = new Paint();
+                            mask.setColor(Color.BLACK);
+                            if (!screen.privacyMaskingReady) throw new IllegalStateException("Unknown sensitive bounds");
+                            for (AccessibilityNodeSnapshot node : screen.nodes) {
+                                if (node.sensitiveInput || (node.className != null
+                                        && node.className.toLowerCase(java.util.Locale.ROOT).contains("edittext"))) {
+                                    VisionPrivacy.requireMaskBounds(node.bounds, bitmap.getWidth(), bitmap.getHeight());
+                                    canvas.drawRect(node.bounds[0], node.bounds[1], node.bounds[2], node.bounds[3], mask);
+                                }
+                            }
+                        } catch (RuntimeException error) {
+                            bitmap.recycle();
+                            callback.onFailure("masking_failed", "개인정보를 안전하게 가리지 못해 화면 분석을 중단했어요.");
+                            return;
+                        }
+                        recognize(engine, privacy, vocabularyKey, strategy, focus, bitmap, screen, capturedAtMs, callback);
                     }
-                    recognize(engine, privacy, vocabularyKey, strategy, focus, bitmap, screen, capturedAtMs, callback);
-                }
-                @Override public void onFailure(int errorCode) {
-                    callback.onFailure(errorCode == AccessibilityService.ERROR_TAKE_SCREENSHOT_NO_ACCESSIBILITY_ACCESS
-                            || errorCode == AccessibilityService.ERROR_TAKE_SCREENSHOT_SECURE_WINDOW ? "unsupported" : "capture_failed",
-                            "화면 캡처를 사용할 수 없어요. 접근성 권한 또는 보호된 화면인지 확인해 주세요.");
-                }
-            });
-        } catch (RuntimeException error) {
-            callback.onFailure("capture_failed", "화면 캡처 권한을 사용할 수 없어요. 접근성 서비스를 다시 켜 주세요.");
+                    @Override public void onFailure(int errorCode) {
+                        callback.onFailure(errorCode == AccessibilityService.ERROR_TAKE_SCREENSHOT_NO_ACCESSIBILITY_ACCESS
+                                || errorCode == AccessibilityService.ERROR_TAKE_SCREENSHOT_SECURE_WINDOW ? "unsupported" : "capture_failed",
+                                "화면 캡처를 사용할 수 없어요. 접근성 권한 또는 보호된 화면인지 확인해 주세요.");
+                    }
+                });
+            } catch (RuntimeException error) {
+                callback.onFailure("capture_failed", "화면 캡처 권한을 사용할 수 없어요. 접근성 서비스를 다시 켜 주세요.");
+            }
         }
     }
 

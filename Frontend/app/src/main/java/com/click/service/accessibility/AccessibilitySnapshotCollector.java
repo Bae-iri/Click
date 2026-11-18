@@ -56,7 +56,8 @@ final class AccessibilitySnapshotCollector {
                     node.isVisibleToUser(),
                     string(node.getPackageName()) == null ? packageName : string(node.getPackageName()),
                     node.isShowingHintText() ? null : string(node.getText()),
-                    string(node.getContentDescription()),
+                    node.isShowingHintText() && (node.isEditable() || "text_field".equals(role))
+                            ? null : string(node.getContentDescription()),
                     node.getViewIdResourceName(),
                     className,
                     role,
@@ -70,7 +71,9 @@ final class AccessibilitySnapshotCollector {
                     node.getWindowId(),
                     node.isPassword() || node.isEditable() || "text_field".equals(role),
                     range == null ? null : range.getMin(), range == null ? null : range.getMax(), node.isPassword(),
-                    node.isCheckable() ? node.isChecked() : null
+                    node.isCheckable() ? node.isChecked() : null,
+                    androidx.core.view.accessibility.AccessibilityNodeInfoCompat.wrap(node).isHeading(),
+                    searchHint(node)
             ));
         }
         int childCount = node.getChildCount();
@@ -86,16 +89,24 @@ final class AccessibilitySnapshotCollector {
         }
     }
 
+    private static boolean searchHint(AccessibilityNodeInfo node) {
+        if (!(node.isEditable() || String.valueOf(node.getClassName()).contains("EditText")) || node.isPassword()) return false;
+        CharSequence hint = node.getHintText();
+        if (hint == null) return false;
+        String text = hint.toString().trim().toLowerCase(java.util.Locale.ROOT);
+        return "검색".equals(text) || "search".equals(text);
+    }
+
     private String inferRole(String className, AccessibilityNodeInfo node) {
         if (node.getRangeInfo() != null
                 && node.getActionList().contains(AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS)) return "slider";
         if (className == null) return null;
         String lower = className.toLowerCase(java.util.Locale.ROOT);
         if (lower.contains("seekbar") || lower.contains("slider")) return "slider";
+        if (lower.contains("radiobutton")) return "radio_button";
         if (lower.contains("button")) return "button";
         if (lower.contains("switch")) return "switch";
         if (lower.contains("checkbox")) return "checkbox";
-        if (lower.contains("radiobutton")) return "radio_button";
         if (lower.contains("edittext")) return "text_field";
         if (lower.contains("list") || node.isScrollable()) return "list";
         if (node.isClickable()) return "menu_item";

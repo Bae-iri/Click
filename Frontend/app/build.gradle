@@ -103,6 +103,12 @@ android {
     testOptions {
         unitTests.includeAndroidResources = true
     }
+    lint {
+        // CI checks the advertised minSdk without silencing other lint checks in normal runs.
+        if (providers.gradleProperty("CLICK_API_COMPATIBILITY_ONLY").getOrElse("false").toBoolean()) {
+            checkOnly "NewApi"
+        }
+    }
 }
 
 dependencies {
@@ -220,7 +226,10 @@ android.buildTypes.each { kind ->
         }
     }
     android.sourceSets.getByName(kind.name).assets.srcDir(identityAssets)
-    tasks.matching { it.name == "merge${title}Assets" }.configureEach { dependsOn(generateIdentity) }
+    tasks.matching {
+        it.name == "merge${title}Assets" || it.name.contains(title)
+                && (it.name.contains("Lint") || it.name.startsWith("lint"))
+    }.configureEach { dependsOn(generateIdentity) }
 }
 
 // Shared public login semantics; no native resource IDs or credentials in this policy.

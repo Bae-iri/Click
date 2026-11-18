@@ -33,6 +33,15 @@ public class ScreenIdentityTest {
   ScreenSnapshot empty=new ScreenSnapshot("com.android.settings","2026-11-09T00:00:00Z",1080,2400,List.of(),1);
   assertFalse(ScreenIdentity.samePage(empty,empty));assertNull(ScreenIdentity.pageTitle(empty));
  }
+ @Test public void knownEmptySearchDoesNotHideARealTitleButTypedQueryStillDoes() {
+  var title=node("title","디스플레이",20,false,1,null);
+  for(String query:new String[]{null,"private query"}) {
+   var input=new AccessibilityNodeSnapshot("search",null,true,"com.android.settings",query,null,"android:id/search_src_text",
+    "android.widget.EditText","text_field",new int[]{20,100,900,180},true,true,false,false,false,null,1,true,null,null,false);
+   var current=new ScreenSnapshot("com.android.settings","2026-11-18T00:00:00Z",1080,2400,List.of(title,input),1);
+   assertEquals(query==null?"디스플레이":null,ScreenIdentity.pageTitle(current));
+  }
+ }
  @Test public void oldJavaStringHashCollisionCannotHideReplacedTarget() {
   assertEquals("Aa".hashCode(),"BB".hashCode());
   assertNotEquals(screen(1,"Aa",null).contentFingerprint(),screen(1,"BB",null).contentFingerprint());

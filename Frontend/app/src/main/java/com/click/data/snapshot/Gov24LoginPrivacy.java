@@ -50,7 +50,9 @@ public final class Gov24LoginPrivacy {
         if(!PACKAGE.equals(screen.packageName))return exact(POLICY.optJSONArray("auth_packages"),screen.packageName)
             ?blocked(base,"handoff","external_auth"):blocked(base,"outside_app",null);
         base.put("package_name",PACKAGE);
-        Map<String,List<JSONObject>> options=new LinkedHashMap<>();
+        Map<String,AccessibilityNodeSnapshot> byId=new HashMap<>();
+        for(var node:screen.nodes)byId.put(node.nodeId,node);
+        Map<String,Map<String,JSONObject>> options=new LinkedHashMap<>();
         JSONObject specs=civil?POLICY.getJSONObject("civil_navigation").getJSONObject("options"):POLICY.getJSONObject("options");
         for(AccessibilityNodeSnapshot n:screen.nodes) {
             if(!n.visibleToUser)continue;
@@ -60,19 +62,54 @@ public final class Gov24LoginPrivacy {
             if(label!=null&&exact(POLICY.optJSONArray("consent_labels"),label))return blocked(base,"handoff","consent_required");
             if(label!=null&&exact(POLICY.optJSONArray("handoff_labels"),label))return blocked(base,"handoff","certificate_selection");
             String key=civil?civilOption(label,n.clickable):option(label);
-            if(key==null||(!civil&&!n.clickable)||!n.enabled||n.checkable||n.scrollable)continue;
-            int[] b=n.bounds;
+            if(key==null && civil && !n.clickable)key=civilOption(label,true);
+            if(key==null||!n.enabled||n.checkable||n.scrollable)continue;
+            boolean marker=civil&&"marker".equals(specs.getJSONObject(key).optString("group"));
+            AccessibilityNodeSnapshot target=marker?n:clickOwner(n,key,screen,byId);
+            if(target==null)continue;
+            int[] b=target.bounds;
             if(b==null||b.length!=4||b[0]<0||b[1]<0||b[2]>screen.screenWidth||b[3]>screen.screenHeight||b[0]>=b[2]||b[1]>=b[3])continue;
-            JSONObject node=new JSONObject().put("node_id",n.nodeId).put("option_id",key)
+            JSONObject node=new JSONObject().put("node_id",target.nodeId).put("option_id",key)
                 .put("resource_id","").put("label",specs.getJSONObject(key).getString("label"))
-                .put("bounds",new JSONArray(b)).put("clickable",n.clickable).put("scrollable",false);
-            options.computeIfAbsent(key,k->new ArrayList<>()).add(node);
+                .put("bounds",new JSONArray(b)).put("clickable",!marker).put("scrollable",false);
+            options.computeIfAbsent(key,k->new LinkedHashMap<>()).put(target.nodeId,node);
         }
         // A modal provider grid takes precedence over the underlying login page.
         boolean provider=!civil&&options.keySet().stream().anyMatch(k->k.startsWith("provider_"));
         JSONArray exported=new JSONArray();
-        for(var entry:options.entrySet())if(entry.getValue().size()==1&&(!provider||entry.getKey().startsWith("provider_")))exported.put(entry.getValue().get(0));
+        for(var entry:options.entrySet())if(entry.getValue().size()==1&&(!provider||entry.getKey().startsWith("provider_")))exported.put(entry.getValue().values().iterator().next());
         if(exported.length()==0||exported.length()>POLICY.getInt("max_nodes"))return base;
         return base.put("status","public").put("nodes",exported);
+    }
+
+    /** A virtual text child may label a native button. Never promote a whole list or mixed row. */
+    private AccessibilityNodeSnapshot clickOwner(AccessibilityNodeSnapshot label,String key,ScreenSnapshot screen,
+            Map<String,AccessibilityNodeSnapshot> byId) {
+        AccessibilityNodeSnapshot target=label;
+        Set<String> seen=new HashSet<>();
+        while(target!=null && seen.add(target.nodeId)) {
+            if(!target.visibleToUser||!target.enabled||target.sensitiveInput||target.checkable||target.scrollable
+                    ||!PACKAGE.equals(target.packageName)||target.windowId!=label.windowId)return null;
+            if(target.clickable)break;
+            target=byId.get(target.parentId);
+        }
+        if(target==null||!target.clickable)return null;
+        if(target==label)return target;
+        int[] outer=target.bounds,inner=label.bounds;
+        if(outer==null||inner==null||outer.length!=4||inner.length!=4
+                ||inner[0]<outer[0]||inner[1]<outer[1]||inner[2]>outer[2]||inner[3]>outer[3])return null;
+        for(var child:screen.nodes) {
+            if(!child.visibleToUser)continue;
+            seen.clear();AccessibilityNodeSnapshot ancestor=child;
+            while(ancestor!=null&&seen.add(ancestor.nodeId)&&!target.nodeId.equals(ancestor.nodeId))ancestor=byId.get(ancestor.parentId);
+            if(ancestor==null||!target.nodeId.equals(ancestor.nodeId))continue;
+            if(child.sensitiveInput||child.checkable||child.scrollable)return null;
+            for(String text:new String[]{child.text,child.contentDescription}) {
+                if(text==null||text.isBlank())continue;
+                String option=civil?civilOption(text,true):option(text);
+                if(!key.equals(option))return null;
+            }
+        }
+        return target;
     }
 }
