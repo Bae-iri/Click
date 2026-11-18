@@ -217,13 +217,21 @@ def main():
             raise ValueError('DATABASE_URL is required')
         engine = build_engine()
         validate_database_keys(engine)
-        learner = BrowseGraphLearningService(build_session_factory(engine))
+        factory = build_session_factory(engine)
+        learner = BrowseGraphLearningService(factory)
+        from app.services.gov24_graphs import GovernmentGraphLearningService
+        government = GovernmentGraphLearningService(factory)
         if 'session_id' in job:
             if any(not isinstance(job[k], str) or not 1 <= len(job[k]) <= 200 for k in ('session_id', 'user_id')):
                 raise ValueError('Invalid graph learning job')
-            result = learner.learn_session(job['session_id'], job['user_id'])
+            with factory() as db:
+                session = db.get(AgentSession, job['session_id'])
+                is_government = session and (session.workflow or {}).get('goal', {}).get('goal_type') == 'gov24.resident_copy.open'
+            result = (government if is_government else learner).learn_session(job['session_id'], job['user_id'])
         else:
             result = learner.process(limit=job['limit'])
+            result['government_graphs'] = government.process(limit=job['limit'])
+            result['errors'] += result['government_graphs']['errors']
         print(json.dumps(result))
         return int(bool(result.get('errors')))
     except UserNotFoundError:

@@ -18,7 +18,7 @@ def policy_digest(value):
 
 CODE_HASH = policy_digest(json.dumps(policy.CIVIL, sort_keys=True, ensure_ascii=False) + ''.join(
     Path(__file__).with_name(name).read_text(encoding='utf-8') for name in
-    ('gov24_navigation.py', 'gov24_routes.py', 'public_guide_policy.py')))
+    ('gov24_navigation.py', 'gov24_routes.py', 'gov24_graphs.py', 'public_guide_policy.py')))
 
 
 def page_of(screen):
@@ -141,6 +141,8 @@ def observe(service, request, screen, state, result, evidence, now):
             selected = winner['key']
             evidence.update(reason='ai2_selected', selection_metrics={k: winner[k] for k in
                 ('successes', 'failures', 'unknown', 'attempts', 'success_rate', 'score')})
+            if winner.get('graph_hash'):
+                evidence.update(selection_policy='ai2_gov24_task_graph', selected_graph_hash=winner['graph_hash'])
         elif len(candidates) == 1:
             selected = next(iter(candidates))
             evidence['reason'] = 'single_visible_option'
