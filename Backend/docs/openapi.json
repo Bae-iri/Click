@@ -8215,7 +8215,12 @@
                 "type": "string",
                 "enum": [
                   "gov24.login",
-                  "gov24.resident_copy.open"
+                  "gov24.resident_copy.open",
+                  "gov24.resident_extract.open",
+                  "gov24.building_register.open",
+                  "gov24.land_register.open",
+                  "gov24.move_in.open",
+                  "gov24.vehicle_register.open"
                 ]
               },
               {
@@ -9448,6 +9453,11 @@
             "type": "boolean",
             "title": "Gov24 Civil",
             "default": false
+          },
+          "gov24_services": {
+            "type": "boolean",
+            "title": "Gov24 Services",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -10079,7 +10089,12 @@
                   "type": "string",
                   "enum": [
                     "gov24.login",
-                    "gov24.resident_copy.open"
+                    "gov24.resident_copy.open",
+                    "gov24.resident_extract.open",
+                    "gov24.building_register.open",
+                    "gov24.land_register.open",
+                    "gov24.move_in.open",
+                    "gov24.vehicle_register.open"
                   ]
                 },
                 "type": "object"
@@ -10861,10 +10876,45 @@
               "choose_provider",
               "handoff",
               "find_resident_service",
-              "resident_service"
+              "resident_service",
+              "find_service",
+              "service_entry"
             ],
             "title": "Subgoal",
             "default": "open_login"
+          },
+          "service_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Label"
+          },
+          "baseline_graph_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Graph Id"
+          },
+          "graph_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph State"
           },
           "question": {
             "anyOf": [

@@ -166,16 +166,19 @@ class GoalPreparationService:
             public_guide_types.add('gov24.login')
         if public_guide_policy.enabled() and request.device_context.capabilities.gov24_civil:
             public_guide_types.add('gov24.resident_copy.open')
+            if request.device_context.capabilities.gov24_services:
+                public_guide_types.update(public_guide_policy.CIVIL_GRAPHS)
         if previous and previous.get('execution_mode') == 'public_guide':
             restored_type = (previous.get('public_guide_goal') or {}).get('goal_type')
             if restored_type in public_guide_types:
                 public_guide_type = restored_type
         matches = [] if lexical_blocked else self._keywords(source)
         gov24_matches = [g for g in matches if g['target_app'] == 'gov24']
-        civil_requested = public_guide_policy.civil_requested(source) and len(gov24_matches) <= 1
+        civil_type = public_guide_policy.civil_goal(source) if len(gov24_matches) <= 1 else None
         if (public_guide_policy.enabled() and request.device_context.capabilities.gov24_civil
-                and not lexical_blocked and civil_requested):
-            public_guide_type = 'gov24.resident_copy.open'
+                and not lexical_blocked and civil_type and (civil_type == 'gov24.resident_copy.open'
+                    or request.device_context.capabilities.gov24_services)):
+            public_guide_type = civil_type
             family, values, rejection_reason = None, {}, None
         elif (gov24_allowed and not lexical_blocked and public_guide_policy.requested(source)
               and not any(g['goal_type'] != 'gov24.login' for g in gov24_matches)):
@@ -264,9 +267,10 @@ class GoalPreparationService:
             status, resolution_status = 'ready', 'confirmation_required'
             display_name = '정부24 로그인 방법 선택'
             message = '정부24 로그인 방법을 함께 고를까요? 실제 화면에 보이는 항목에서 말·글·버튼으로 선택해요. 개인정보 입력과 실제 인증은 직접 진행해 주세요.'
-            if public_guide_type == 'gov24.resident_copy.open':
-                display_name = '정부24 주민등록등본 발급 화면 찾기'
-                message = '정부24에서 주민등록등본 발급 안내 화면까지 함께 이동할까요? 화면에 보이는 공개 메뉴를 안내하고, 신청서 입력과 발급 신청은 직접 진행해 주세요.'
+            if public_guide_type in public_guide_policy.CIVIL_GRAPHS:
+                label = public_guide_policy.CIVIL_GRAPHS[public_guide_type]['label']
+                display_name = f'정부24 {label} 안내 화면 찾기'
+                message = f'정부24에서 {label} 안내 화면까지 함께 이동할까요? 화면에 보이는 공개 메뉴를 안내하고, 신청서 입력과 최종 신청은 직접 진행해 주세요.'
             rejection_reason = None
         elif browse_type:
             family, fields, missing = None, [], []

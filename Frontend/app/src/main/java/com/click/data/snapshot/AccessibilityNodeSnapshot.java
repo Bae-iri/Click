@@ -114,7 +114,8 @@ public final class AccessibilityNodeSnapshot {
         boolean searchIdentity = searchInput || sensitiveInput && !passwordInput
                 && ScreenEnvironmentPolicy.contains("empty_search_resources", resourceId);
         String description = contentDescription == null ? "" : contentDescription.trim().toLowerCase(java.util.Locale.ROOT);
-        boolean searchPrompt = searchIdentity && ("검색".equals(description) || "search".equals(description));
+        boolean searchPrompt = searchIdentity && ("검색".equals(description) || "search".equals(description)
+                || Gov24LoginPrivacy.PACKAGE.equals(packageName) && Gov24LoginPrivacy.isPublicSearchHint(contentDescription));
         this.inputContentPresent = sensitiveInput && (text != null && !text.isEmpty()
                 || contentDescription != null && !contentDescription.isEmpty() && !searchPrompt);
         this.rangeMin = sensitiveInput ? null : rangeMin;

@@ -226,7 +226,8 @@ def main():
                 raise ValueError('Invalid graph learning job')
             with factory() as db:
                 session = db.get(AgentSession, job['session_id'])
-                is_government = session and (session.workflow or {}).get('goal', {}).get('goal_type') == 'gov24.resident_copy.open'
+                from app.services.public_guide_policy import CIVIL_GRAPHS
+                is_government = session and (session.workflow or {}).get('goal', {}).get('goal_type') in CIVIL_GRAPHS
             result = (government if is_government else learner).learn_session(job['session_id'], job['user_id'])
         else:
             result = learner.process(limit=job['limit'])

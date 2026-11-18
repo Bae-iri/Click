@@ -3,10 +3,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.schemas.browse import BrowseNode, BrowseScreen, BrowseCommandRequest, BrowseResponse
 from app.schemas.goal_preparation import InputQuestion
+from app.schemas.public_guide_types import PublicGuideGoalType
 
 class PublicGuideGoal(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    goal_type: Literal['gov24.login', 'gov24.resident_copy.open'] = 'gov24.login'
+    goal_type: PublicGuideGoalType = 'gov24.login'
 
 class PublicGuideNode(BrowseNode):
     option_id: str = Field(min_length=1, max_length=60)
@@ -44,5 +45,8 @@ class PublicGuideResponse(BrowseResponse):
     protocol_version: Literal['public-guide.v1'] = 'public-guide.v1'
     outcome: Literal['in_progress','user_reported','cancelled','blocked','unknown','handoff','verified_navigation']
     action_kind: Literal['login_navigation'] | None = None
-    subgoal: Literal['open_login','choose_method','choose_provider','handoff','find_resident_service','resident_service'] = 'open_login'
+    subgoal: Literal['open_login','choose_method','choose_provider','handoff','find_resident_service','resident_service','find_service','service_entry'] = 'open_login'
+    service_label: str | None = None
+    baseline_graph_id: str | None = None
+    graph_state: str | None = None
     question: InputQuestion | None = None

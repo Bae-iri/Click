@@ -7,13 +7,30 @@ VERSION = POLICY['version']
 OPTIONS = POLICY['options']
 CIVIL = POLICY['civil_navigation']
 CIVIL_OPTIONS = CIVIL['options']
+from app.task_graphs.gov24 import GRAPHS as CIVIL_GRAPHS, validate as validate_baselines
+validate_baselines(CIVIL_OPTIONS)
+if set(CIVIL['services']) != set(CIVIL_GRAPHS) or any(
+        CIVIL['services'][goal]['graph_id'] != graph['task_id'] or CIVIL['services'][goal]['label'] != graph['label']
+        for goal, graph in CIVIL_GRAPHS.items()):
+    raise ValueError('Government24 service catalog and baseline graphs disagree')
+CIVIL['graphs'] = CIVIL_GRAPHS
+
+
+def civil_goal(source):
+    text = normalize(source)
+    if any(word in text for word in ('신청내역', '발급내역', '처리상태', '하지마', '하지않', '취소', '말고')):
+        return None
+    matches = [goal for goal, service in CIVIL['services'].items()
+               if any(normalize(alias) in text for alias in service['aliases'])]
+    # '등본' in a named land/vehicle service is not a resident-copy request.
+    specific = [goal for goal in matches if goal != CIVIL['goal_type']]
+    if specific:
+        matches = specific
+    return matches[0] if len(matches) == 1 else None
 
 
 def civil_requested(source):
-    text = normalize(source)
-    return ((any(word in text for word in ('정부24', '정부이십사', 'gov24', '주민등록등본', '주민등록표등본')))
-            and any(word in text for word in ('주민등록등본', '주민등록표등본', '등본'))
-            and not any(word in text for word in ('초본', '등본말고', '토지', '건축물', '신청내역', '발급내역', '처리상태')))
+    return civil_goal(source) == CIVIL['goal_type']
 
 def enabled():
     return os.getenv('CLICK_GOV24_GUIDE_ENABLED', '1') == '1'

@@ -1,0 +1,433 @@
+{
+  "schema_version": "gov24-baseline-task-graphs.v1",
+  "graphs": [
+    {
+      "task_id": "GOV24-BASE-RESIDENT-COPY",
+      "goal_type": "gov24.resident_copy.open",
+      "target_app": "gov24",
+      "label": "주민등록등본",
+      "states": {
+        "public_menu": {
+          "terminal": false
+        },
+        "services": {
+          "terminal": false
+        },
+        "service_entry": {
+          "terminal": true
+        },
+        "handoff": {
+          "terminal": true
+        }
+      },
+      "start_state": "public_menu",
+      "transitions": [
+        {
+          "id": "select_public_menu",
+          "from_state": "public_menu",
+          "to_state": "service_entry",
+          "target_option": "nav_resident",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "select_services",
+          "from_state": "services",
+          "to_state": "service_entry",
+          "target_option": "nav_resident",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_frequent",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_frequent",
+          "priority": 10,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_services",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_services",
+          "priority": 20,
+          "verification": "fresh_public_destination"
+        }
+      ],
+      "completion": {
+        "state_id": "service_entry",
+        "page": "resident_service",
+        "any_of": [
+          [
+            "marker_resident",
+            "boundary_apply"
+          ]
+        ],
+        "predicate": "resident_service_visible",
+        "scope": "public_screen_only"
+      },
+      "device_validation": "NOT_ASSESSED"
+    },
+    {
+      "task_id": "GOV24-BASE-RESIDENT-EXTRACT",
+      "goal_type": "gov24.resident_extract.open",
+      "target_app": "gov24",
+      "label": "주민등록초본",
+      "states": {
+        "public_menu": {
+          "terminal": false
+        },
+        "services": {
+          "terminal": false
+        },
+        "service_entry": {
+          "terminal": true
+        },
+        "handoff": {
+          "terminal": true
+        }
+      },
+      "start_state": "public_menu",
+      "transitions": [
+        {
+          "id": "select_public_menu",
+          "from_state": "public_menu",
+          "to_state": "service_entry",
+          "target_option": "nav_extract",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "combined_public_menu",
+          "from_state": "public_menu",
+          "to_state": "service_entry",
+          "target_option": "nav_resident",
+          "priority": 1,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "select_services",
+          "from_state": "services",
+          "to_state": "service_entry",
+          "target_option": "nav_extract",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "combined_services",
+          "from_state": "services",
+          "to_state": "service_entry",
+          "target_option": "nav_resident",
+          "priority": 1,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_frequent",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_frequent",
+          "priority": 10,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_services",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_services",
+          "priority": 20,
+          "verification": "fresh_public_destination"
+        }
+      ],
+      "completion": {
+        "state_id": "service_entry",
+        "page": "service_entry",
+        "any_of": [
+          [
+            "marker_extract",
+            "boundary_apply"
+          ],
+          [
+            "marker_resident",
+            "boundary_apply"
+          ]
+        ],
+        "predicate": "public_service_entry_visible",
+        "scope": "public_screen_only"
+      },
+      "device_validation": "NOT_ASSESSED"
+    },
+    {
+      "task_id": "GOV24-BASE-BUILDING-REGISTER",
+      "goal_type": "gov24.building_register.open",
+      "target_app": "gov24",
+      "label": "건축물대장",
+      "states": {
+        "public_menu": {
+          "terminal": false
+        },
+        "services": {
+          "terminal": false
+        },
+        "service_entry": {
+          "terminal": true
+        },
+        "handoff": {
+          "terminal": true
+        }
+      },
+      "start_state": "public_menu",
+      "transitions": [
+        {
+          "id": "select_public_menu",
+          "from_state": "public_menu",
+          "to_state": "service_entry",
+          "target_option": "nav_building",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "select_services",
+          "from_state": "services",
+          "to_state": "service_entry",
+          "target_option": "nav_building",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_frequent",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_frequent",
+          "priority": 10,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_services",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_services",
+          "priority": 20,
+          "verification": "fresh_public_destination"
+        }
+      ],
+      "completion": {
+        "state_id": "service_entry",
+        "page": "service_entry",
+        "any_of": [
+          [
+            "marker_building",
+            "boundary_apply"
+          ]
+        ],
+        "predicate": "public_service_entry_visible",
+        "scope": "public_screen_only"
+      },
+      "device_validation": "NOT_ASSESSED"
+    },
+    {
+      "task_id": "GOV24-BASE-LAND-REGISTER",
+      "goal_type": "gov24.land_register.open",
+      "target_app": "gov24",
+      "label": "토지·임야대장",
+      "states": {
+        "public_menu": {
+          "terminal": false
+        },
+        "services": {
+          "terminal": false
+        },
+        "service_entry": {
+          "terminal": true
+        },
+        "handoff": {
+          "terminal": true
+        }
+      },
+      "start_state": "public_menu",
+      "transitions": [
+        {
+          "id": "select_public_menu",
+          "from_state": "public_menu",
+          "to_state": "service_entry",
+          "target_option": "nav_land",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "select_services",
+          "from_state": "services",
+          "to_state": "service_entry",
+          "target_option": "nav_land",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_frequent",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_frequent",
+          "priority": 10,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_services",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_services",
+          "priority": 20,
+          "verification": "fresh_public_destination"
+        }
+      ],
+      "completion": {
+        "state_id": "service_entry",
+        "page": "service_entry",
+        "any_of": [
+          [
+            "marker_land",
+            "boundary_apply"
+          ]
+        ],
+        "predicate": "public_service_entry_visible",
+        "scope": "public_screen_only"
+      },
+      "device_validation": "NOT_ASSESSED"
+    },
+    {
+      "task_id": "GOV24-BASE-MOVE-IN",
+      "goal_type": "gov24.move_in.open",
+      "target_app": "gov24",
+      "label": "전입신고",
+      "states": {
+        "public_menu": {
+          "terminal": false
+        },
+        "services": {
+          "terminal": false
+        },
+        "service_entry": {
+          "terminal": true
+        },
+        "handoff": {
+          "terminal": true
+        }
+      },
+      "start_state": "public_menu",
+      "transitions": [
+        {
+          "id": "select_public_menu",
+          "from_state": "public_menu",
+          "to_state": "service_entry",
+          "target_option": "nav_move_in",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "select_services",
+          "from_state": "services",
+          "to_state": "service_entry",
+          "target_option": "nav_move_in",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_frequent",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_frequent",
+          "priority": 10,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_services",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_services",
+          "priority": 20,
+          "verification": "fresh_public_destination"
+        }
+      ],
+      "completion": {
+        "state_id": "service_entry",
+        "page": "service_entry",
+        "any_of": [
+          [
+            "marker_move_in",
+            "boundary_apply"
+          ]
+        ],
+        "predicate": "public_service_entry_visible",
+        "scope": "public_screen_only"
+      },
+      "device_validation": "NOT_ASSESSED"
+    },
+    {
+      "task_id": "GOV24-BASE-VEHICLE-REGISTER",
+      "goal_type": "gov24.vehicle_register.open",
+      "target_app": "gov24",
+      "label": "자동차등록원부",
+      "states": {
+        "public_menu": {
+          "terminal": false
+        },
+        "services": {
+          "terminal": false
+        },
+        "service_entry": {
+          "terminal": true
+        },
+        "handoff": {
+          "terminal": true
+        }
+      },
+      "start_state": "public_menu",
+      "transitions": [
+        {
+          "id": "select_public_menu",
+          "from_state": "public_menu",
+          "to_state": "service_entry",
+          "target_option": "nav_vehicle",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "select_services",
+          "from_state": "services",
+          "to_state": "service_entry",
+          "target_option": "nav_vehicle",
+          "priority": 0,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_frequent",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_frequent",
+          "priority": 10,
+          "verification": "fresh_public_destination"
+        },
+        {
+          "id": "open_nav_services",
+          "from_state": "public_menu",
+          "to_state": "services",
+          "target_option": "nav_services",
+          "priority": 20,
+          "verification": "fresh_public_destination"
+        }
+      ],
+      "completion": {
+        "state_id": "service_entry",
+        "page": "service_entry",
+        "any_of": [
+          [
+            "marker_vehicle",
+            "boundary_apply"
+          ]
+        ],
+        "predicate": "public_service_entry_visible",
+        "scope": "public_screen_only"
+      },
+      "device_validation": "NOT_ASSESSED"
+    }
+  ]
+}

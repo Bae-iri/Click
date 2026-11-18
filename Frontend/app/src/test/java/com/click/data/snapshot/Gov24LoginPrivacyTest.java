@@ -64,6 +64,35 @@ public class Gov24LoginPrivacyTest {
             node("input","private",true,false)));
         assertEquals("handoff",result.getString("status"));assertEquals(0,result.getJSONArray("nodes").length());
     }
+    private AccessibilityNodeSnapshot search(String value,boolean searchIdentity) {
+        return new AccessibilityNodeSnapshot("search",null,true,Gov24LoginPrivacy.PACKAGE,value,"검색",null,
+            "android.widget.EditText","text_input",new int[]{10,20,600,90},false,true,false,false,false,null,42,
+            true,null,null,false,null,false,searchIdentity);
+    }
+    @Test public void emptyPublicHomeSearchDoesNotBlockServiceNavigation() throws Exception {
+        var result=new Gov24LoginPrivacy(true).filter(screen(node("brand","정부24",false,false),
+            node("frequent","자주 찾는 서비스",false,false),node("tile","건축물대장",false,true),search(null,true)));
+        assertEquals("public",result.getString("status"));
+        String exported=result.toString();
+        assertTrue(exported.contains("nav_building"));
+        assertFalse(exported.contains("text_input"));
+        assertFalse(exported.contains("검색"));
+    }
+    @Test public void filledSearchOrNonSearchFieldStillStopsAllScreenExport() throws Exception {
+        for(var input:List.of(search("PRIVATE_QUERY",true),search(null,false))) {
+            var result=new Gov24LoginPrivacy(true).filter(screen(node("brand","정부24",false,false),
+                node("frequent","자주 찾는 서비스",false,false),node("tile","토지대장",false,true),input));
+            assertEquals("handoff",result.getString("status"));
+            assertEquals(0,result.getJSONArray("nodes").length());
+            assertFalse(result.toString().contains("PRIVATE_QUERY"));
+        }
+    }
+    @Test public void serviceTitleInAClickableParentIsNavigationRatherThanAFalsePageMarker() throws Exception {
+        var result=new Gov24LoginPrivacy(true).filter(screen(node("row",null,false,true),child("label","row","자동차등록원부")));
+        assertEquals("public",result.getString("status"));
+        assertEquals("nav_vehicle",result.getJSONArray("nodes").getJSONObject(0).getString("option_id"));
+        assertEquals("row",result.getJSONArray("nodes").getJSONObject(0).getString("node_id"));
+    }
     private AccessibilityNodeSnapshot child(String id,String parent,String label) {
         return new AccessibilityNodeSnapshot(id,parent,true,Gov24LoginPrivacy.PACKAGE,label,null,null,
             "android.view.View","text",new int[]{40,110,350,180},false,true,false,false,false,null,42);

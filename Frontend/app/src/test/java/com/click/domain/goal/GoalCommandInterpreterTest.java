@@ -122,8 +122,9 @@ public class GoalCommandInterpreterTest {
         org.junit.Assert.assertFalse(government.canStart());
         GoalCommandInterpreter.Result planned=GoalCommandInterpreter.interpret(
                 "정부24 전입신고 화면 찾아줘",false,false,false,catalog,"kr.go.minwon.m");
-        assertEquals(GoalCommandInterpreter.Kind.CATALOGUED_UNAVAILABLE,planned.kind);
+        assertEquals(GoalCommandInterpreter.Kind.PUBLIC_GUIDE,planned.kind);
         assertEquals("gov24.move_in.open",planned.goal.goalType);
+        org.junit.Assert.assertFalse(planned.canStart());
     }
 
     private static GoalCatalogClassifier loadCatalog() throws Exception {

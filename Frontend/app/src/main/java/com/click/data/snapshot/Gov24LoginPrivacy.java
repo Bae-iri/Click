@@ -28,6 +28,28 @@ public final class Gov24LoginPrivacy {
         }
         return null;
     }
+    public static boolean supportsCivilGoal(String goalType) {
+        return goalType!=null && POLICY.optJSONObject("civil_navigation").optJSONObject("services").has(goalType);
+    }
+    public static boolean isPublicSearchHint(String hint) {
+        return exact(POLICY.optJSONObject("civil_navigation").optJSONArray("search_hints"),hint);
+    }
+    public static boolean knownBaselineGraph(String value) {
+        JSONObject services=POLICY.optJSONObject("civil_navigation").optJSONObject("services");
+        for(var keys=services.keys();keys.hasNext();)if(services.optJSONObject(keys.next()).optString("graph_id").equals(value))return true;
+        return false;
+    }
+    private boolean publicHome(ScreenSnapshot screen) {
+        boolean brand=false,services=false;
+        for(var node:screen.nodes) {
+            if(!node.visibleToUser||!PACKAGE.equals(node.packageName))continue;
+            for(String value:new String[]{node.text,node.contentDescription}) {
+                if("정부24".equals(normalize(value)))brand=true;
+                if("자주찾는서비스".equals(normalize(value))||"민원서비스".equals(normalize(value)))services=true;
+            }
+        }
+        return civil&&brand&&services;
+    }
     private String civilOption(String label,boolean clickable) {
         JSONObject specs=POLICY.optJSONObject("civil_navigation").optJSONObject("options");
         for(var keys=specs.keys();keys.hasNext();) {
@@ -50,6 +72,7 @@ public final class Gov24LoginPrivacy {
         if(!PACKAGE.equals(screen.packageName))return exact(POLICY.optJSONArray("auth_packages"),screen.packageName)
             ?blocked(base,"handoff","external_auth"):blocked(base,"outside_app",null);
         base.put("package_name",PACKAGE);
+        boolean publicHome=publicHome(screen);
         Map<String,AccessibilityNodeSnapshot> byId=new HashMap<>();
         for(var node:screen.nodes)byId.put(node.nodeId,node);
         Map<String,Map<String,JSONObject>> options=new LinkedHashMap<>();
@@ -57,15 +80,23 @@ public final class Gov24LoginPrivacy {
         for(AccessibilityNodeSnapshot n:screen.nodes) {
             if(!n.visibleToUser)continue;
             if(!PACKAGE.equals(n.packageName)||screen.activeWindowId!=null&&n.windowId!=screen.activeWindowId)return blocked(base,"sensitive",null);
-            if(n.sensitiveInput||n.passwordInput())return blocked(base,"handoff","credential_input");
+            if(n.sensitiveInput||n.passwordInput()) {
+                if(publicHome&&n.emptySearchInput())continue;
+                return blocked(base,"handoff","credential_input");
+            }
             String label=n.text!=null?n.text:n.contentDescription;
             if(label!=null&&exact(POLICY.optJSONArray("consent_labels"),label))return blocked(base,"handoff","consent_required");
             if(label!=null&&exact(POLICY.optJSONArray("handoff_labels"),label))return blocked(base,"handoff","certificate_selection");
-            String key=civil?civilOption(label,n.clickable):option(label);
-            if(key==null && civil && !n.clickable)key=civilOption(label,true);
+            String key=civil?civilOption(label,true):option(label);
+            if(key==null&&civil&&(!n.clickable||publicHome&&"정부24".equals(normalize(label))))key=civilOption(label,false);
             if(key==null||!n.enabled||n.checkable||n.scrollable)continue;
             boolean marker=civil&&"marker".equals(specs.getJSONObject(key).optString("group"));
             AccessibilityNodeSnapshot target=marker?n:clickOwner(n,key,screen,byId);
+            if(civil&&!marker&&target==null&&!n.clickable) {
+                key=civilOption(label,false);
+                marker=key!=null;
+                target=marker?n:null;
+            }
             if(target==null)continue;
             int[] b=target.bounds;
             if(b==null||b.length!=4||b[0]<0||b[1]<0||b[2]>screen.screenWidth||b[3]>screen.screenHeight||b[0]>=b[2]||b[1]>=b[3])continue;

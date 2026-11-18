@@ -16,8 +16,9 @@ from ai_agent.task_graph.success_selection import outcome_metrics, select_candid
 SCHEMA = 'gov24-navigation-event.v1'
 
 
-def route_snapshot(factory, code_hash, *, now=None, include_graphs=True):
+def route_snapshot(factory, code_hash, *, now=None, include_graphs=True, goal_type=None):
     now = int(time.time()) if now is None else now
+    goal_type = goal_type or CIVIL['goal_type']
     counts = defaultdict(lambda: dict(successes=0, failures=0, unknown=0))
     report = dict(sessions=0, incompatible=0, routes=[], events=[])
     with factory() as db:
@@ -39,7 +40,7 @@ def route_snapshot(factory, code_hash, *, now=None, include_graphs=True):
             if [e.sequence for e in events] != list(range(1, len(events) + 1)):
                 continue
             values = [e.payload.get('public_guide', {}) for e in events]
-            if not all(v.get('goal_type') == CIVIL['goal_type'] for v in values):
+            if not all(v.get('goal_type') == goal_type for v in values):
                 continue
             if not all(v.get('schema_version') == SCHEMA and v.get('code_hash') == code_hash
                        and v.get('policy_version') == CIVIL['version'] for v in values):
@@ -93,10 +94,10 @@ def valid_attempt(attempt):
         and attempt.get('result') in {'successes', 'failures', 'unknown'})
 
 
-def choose_route(factory, code_hash, source, options, now):
+def choose_route(factory, code_hash, source, options, now, *, goal_type=None):
     from app.services.gov24_graphs import graph_candidates
-    rows = route_snapshot(factory, code_hash, now=now, include_graphs=False)['routes']
-    graphs = graph_candidates(factory, code_hash, source, options, now)
+    rows = route_snapshot(factory, code_hash, now=now, include_graphs=False, goal_type=goal_type)['routes']
+    graphs = graph_candidates(factory, code_hash, source, options, now, goal_type=goal_type)
     candidates = [dict(key=r['option'], **r) for r in rows
                   if r['source'] == source and r['option'] in options and (not graphs or r['option'] in graphs)]
     winner = select_candidate(candidates)

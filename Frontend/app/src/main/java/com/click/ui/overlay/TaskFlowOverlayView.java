@@ -932,6 +932,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public void publicGuide(String message,boolean terminal,org.json.JSONObject question,boolean civil,
             java.util.function.BiConsumer<String,Boolean> answer,Runnable finish) {
+        publicGuide(message,terminal,question,civil,"주민등록등본",answer,finish);
+    }
+    public void publicGuide(String message,boolean terminal,org.json.JSONObject question,boolean civil,String serviceLabel,
+            java.util.function.BiConsumer<String,Boolean> answer,Runnable finish) {
         if(terminal) {
             progress(null,null,message,false);controls.setVisibility(GONE);divider.setVisibility(GONE);
             recoveryActions.addView(primaryButton("끝내기",finish),spaced(0));recoveryActions.setVisibility(VISIBLE);return;
@@ -939,7 +943,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if(question==null||!civil&&"인증기관".equals(question.optString("label"))) {
             progress(null,null,message,false);return;
         }
-        reviewStage(1,civil?"정부24 주민등록등본 안내":"정부24 로그인 안내",
+        reviewStage(1,civil?"정부24 "+serviceLabel+" 안내":"정부24 로그인 안내",
             civil?"발급 안내 화면까지 함께 이동해요. 신청서 작성과 제출은 직접 진행해요.":"");
         publicGuideInput=true;
         narrationMessage=message;content.addView(text(message,16),spaced(12));

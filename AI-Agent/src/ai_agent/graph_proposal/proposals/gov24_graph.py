@@ -22,16 +22,29 @@ def identity(body):
     return 'AI2-GOV24-' + fingerprint(material)[:32]
 
 
+def contract(policy, goal):
+    graph = policy.get('graphs', {}).get(goal)
+    if graph:
+        return graph['completion']['page'], graph['completion']['predicate'], {e['target_option'] for e in graph['transitions']}
+    if goal == policy['goal_type']:
+        return 'resident_service', 'resident_service_visible', {'nav_resident', 'nav_services', 'nav_frequent'}
+    raise ValueError('unsupported_goal')
+
+
 def validate_graph(body, policy, package):
     if not isinstance(body, dict) or set(body) != {
             'schema_version', 'definition', 'states', 'transitions', 'completion', 'policy_version', 'policy_hash', 'code_hash'}:
         raise ValueError('invalid_graph_fields')
     definition = body['definition']
+    if not isinstance(definition, dict):
+        raise ValueError('invalid_definition')
+    goal = definition.get('goal_type')
+    destination_page, predicate, allowed_options = contract(policy, goal)
     if (body['schema_version'] != SCHEMA or body['policy_version'] != policy['version']
             or body['policy_hash'] != fingerprint(policy) or not hashed(body['code_hash'])
             or not isinstance(definition, dict) or set(definition) != {
                 'task_id', 'goal_type', 'target_app', 'package', 'start_state', 'done_state'}
-            or definition['goal_type'] != policy['goal_type'] or definition['target_app'] != 'gov24'
+            or definition['target_app'] != 'gov24'
             or definition['package'] != package):
         raise ValueError('unsupported_graph_contract')
     edges, states = body['transitions'], body['states']
@@ -42,25 +55,25 @@ def validate_graph(body, policy, package):
         raise ValueError('invalid_graph_topology')
     for name, state in states.items():
         if (not isinstance(state, dict) or set(state) != {'state_id', 'page', 'source_signature'}
-                or state['state_id'] != name or state['page'] not in PAGES or not hashed(state['source_signature'])):
+                or state['state_id'] != name or state['page'] not in {'public_menu', 'services', destination_page} or not hashed(state['source_signature'])):
             raise ValueError('invalid_public_state')
     for i, edge in enumerate(edges):
         if not isinstance(edge, dict) or set(edge) != {
                 'transition_id', 'from_state', 'to_state', 'option_id', 'binding', 'manual_only', 'verification'}:
             raise ValueError('invalid_edge_fields')
         option = policy['options'].get(edge['option_id'], {})
-        if (option.get('group') != 'navigation' or edge['transition_id'] != 'E' + str(i)
+        if (option.get('group') != 'navigation' or edge['option_id'] not in allowed_options or edge['transition_id'] != 'E' + str(i)
                 or edge['from_state'] != names[i] or edge['to_state'] != names[i + 1]
                 or edge['binding'] != 'fresh_public_candidate' or edge['manual_only'] is not True
                 or edge['verification'] != 'correlated_public_destination'):
             raise ValueError('invalid_public_action')
         source, destination = states[names[i]], states[names[i + 1]]
-        if (source['page'] == 'resident_service' or source['source_signature'] == destination['source_signature']
-                or not (destination['page'] == 'resident_service' or edge['option_id'] in {'nav_services', 'nav_frequent'}
+        if (source['page'] == destination_page or source['source_signature'] == destination['source_signature']
+                or not (destination['page'] == destination_page or edge['option_id'] in {'nav_services', 'nav_frequent'}
                         and destination['page'] == 'services' and source['page'] != 'services')):
             raise ValueError('unverified_destination')
-    if (states[names[-1]]['page'] != 'resident_service' or body['completion'] != {
-            'state_id': names[-1], 'predicate': 'resident_service_visible', 'scope': 'public_screen_only'}
+    if (states[names[-1]]['page'] != destination_page or body['completion'] != {
+            'state_id': names[-1], 'predicate': predicate, 'scope': 'public_screen_only'}
             or definition['task_id'] != identity(body)):
         raise ValueError('invalid_completion')
     return body
@@ -73,12 +86,17 @@ def generate_graph(records, policy, package):
     if ([r['sequence'] for r in records] != list(range(1, len(records) + 1))
             or len({r['event_id'] for r in records}) != len(records)):
         raise IncompleteGovernmentTrace('incomplete_event_sequence')
+    goal = events[-1].get('goal_type')
+    try:
+        destination_page, predicate, _ = contract(policy, goal)
+    except ValueError as error:
+        raise IncompleteGovernmentTrace('unsupported_goal') from error
     code = events[0].get('code_hash')
     if not hashed(code) or any(e.get('schema_version') != 'gov24-navigation-event.v1'
-            or e.get('policy_version') != policy['version'] or e.get('goal_type') != policy['goal_type']
+            or e.get('policy_version') != policy['version'] or e.get('goal_type') != goal
             or e.get('code_hash') != code or e.get('outcome') not in {'in_progress', 'verified_navigation'} for e in events):
         raise IncompleteGovernmentTrace('incompatible_trace')
-    if events[-1].get('outcome') != 'verified_navigation' or events[-1].get('page') != 'resident_service':
+    if events[-1].get('outcome') != 'verified_navigation' or events[-1].get('page') != destination_page:
         raise IncompleteGovernmentTrace('verified_navigation_required')
     observations = [e for e in events if e.get('source')]
     if len(observations) < 2 or observations[0].get('page') not in {'public_menu', 'services'}:
@@ -104,9 +122,9 @@ def generate_graph(records, policy, package):
         states[name] = dict(state_id=name, page=event.get('page'), source_signature=event['source'])
         current = event
     done = 'G' + str(len(edges))
-    body = dict(schema_version=SCHEMA, definition=dict(goal_type=policy['goal_type'], target_app='gov24',
+    body = dict(schema_version=SCHEMA, definition=dict(goal_type=goal, target_app='gov24',
         package=package, start_state='G0', done_state=done), states=states, transitions=edges,
-        completion=dict(state_id=done, predicate='resident_service_visible', scope='public_screen_only'),
+        completion=dict(state_id=done, predicate=predicate, scope='public_screen_only'),
         policy_version=policy['version'], policy_hash=fingerprint(policy), code_hash=code)
     body['definition']['task_id'] = identity(body)
     try:
