@@ -158,7 +158,12 @@ class GoalPreparationService:
                 field = next(f for f in self.requirements.required(family, values) if f['id'] == field_id)
                 values[field_id] = self.requirements.answer(field, request.clarification_answer.value)
 
-        if gov24_allowed and not negated(source) and public_guide_policy.requested(source):
+        civil_requested = public_guide_policy.civil_requested(source)
+        if (public_guide_policy.enabled() and request.device_context.capabilities.gov24_civil
+                and not negated(source) and civil_requested):
+            public_guide_type = 'gov24.resident_copy.open'
+            family, values, rejection_reason = None, {}, None
+        elif gov24_allowed and not negated(source) and public_guide_policy.requested(source):
             public_guide_type = 'gov24.login'
             family, values, rejection_reason = None, {}, None
         matches = [] if negated(source) else self._keywords(source)
@@ -237,6 +242,9 @@ class GoalPreparationService:
             status, resolution_status = 'ready', 'confirmation_required'
             display_name = '정부24 로그인 방법 선택'
             message = '정부24 로그인 방법을 함께 고를까요? 실제 화면에 보이는 항목에서 말·글·버튼으로 선택해요. 개인정보 입력과 실제 인증은 직접 진행해 주세요.'
+            if public_guide_type == 'gov24.resident_copy.open':
+                display_name = '정부24 주민등록등본 발급 화면 찾기'
+                message = '정부24에서 주민등록등본 발급 안내 화면까지 함께 이동할까요? 화면에 보이는 공개 메뉴를 안내하고, 신청서 입력과 발급 신청은 직접 진행해 주세요.'
             rejection_reason = None
         elif browse_type:
             family, fields, missing = None, [], []

@@ -89,7 +89,7 @@ class BrowseService:
                 ).values(version=response.session_version,status=response.status,lease_token=None,lease_until=None))
                 if changed.rowcount != 1:
                     self.sessions.conflict('TURN_SUPERSEDED')
-                row.workflow, row.task_id, row.state_id = state, self.task_id, evidence['page']
+                row.workflow, row.task_id, row.state_id = state, evidence.get('task_id', self.task_id), evidence['page']
                 row.accepted_goal_type = state['goal']['goal_type']
                 row.goal = {'goal_type':row.accepted_goal_type,'target_app':self.target_app,'slots':{}}
                 row.episode_id = row.episode_id or str(uuid4())

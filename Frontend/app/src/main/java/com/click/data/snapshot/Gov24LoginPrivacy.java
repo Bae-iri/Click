@@ -6,6 +6,9 @@ import java.util.*;
 
 /** Exports only public semantic login labels. Credentials and identities stay local. */
 public final class Gov24LoginPrivacy {
+    private final boolean civil;
+    public Gov24LoginPrivacy(){this(false);}
+    public Gov24LoginPrivacy(boolean civil){this.civil=civil;}
     public static final String PACKAGE="kr.go.minwon.m";
     private static final JSONObject POLICY;
     static {try {POLICY=new JSONObject(com.click.generated.Gov24LoginPolicyData.json());}
@@ -25,6 +28,14 @@ public final class Gov24LoginPrivacy {
         }
         return null;
     }
+    private String civilOption(String label,boolean clickable) {
+        JSONObject specs=POLICY.optJSONObject("civil_navigation").optJSONObject("options");
+        for(var keys=specs.keys();keys.hasNext();) {
+            String key=keys.next();JSONObject spec=specs.optJSONObject(key);
+            if(clickable==!"marker".equals(spec.optString("group"))&&exact(spec.optJSONArray("aliases"),label))return key;
+        }
+        return null;
+    }
     private JSONObject blocked(JSONObject base,String status,String reason) throws JSONException {
         base.put("status",status).put("nodes",new JSONArray());
         if(reason!=null)base.put("handoff_reason",reason);
@@ -40,7 +51,7 @@ public final class Gov24LoginPrivacy {
             ?blocked(base,"handoff","external_auth"):blocked(base,"outside_app",null);
         base.put("package_name",PACKAGE);
         Map<String,List<JSONObject>> options=new LinkedHashMap<>();
-        JSONObject specs=POLICY.getJSONObject("options");
+        JSONObject specs=civil?POLICY.getJSONObject("civil_navigation").getJSONObject("options"):POLICY.getJSONObject("options");
         for(AccessibilityNodeSnapshot n:screen.nodes) {
             if(!n.visibleToUser)continue;
             if(!PACKAGE.equals(n.packageName)||screen.activeWindowId!=null&&n.windowId!=screen.activeWindowId)return blocked(base,"sensitive",null);
@@ -48,17 +59,17 @@ public final class Gov24LoginPrivacy {
             String label=n.text!=null?n.text:n.contentDescription;
             if(label!=null&&exact(POLICY.optJSONArray("consent_labels"),label))return blocked(base,"handoff","consent_required");
             if(label!=null&&exact(POLICY.optJSONArray("handoff_labels"),label))return blocked(base,"handoff","certificate_selection");
-            String key=option(label);
-            if(key==null||!n.clickable||!n.enabled||n.checkable||n.scrollable)continue;
+            String key=civil?civilOption(label,n.clickable):option(label);
+            if(key==null||(!civil&&!n.clickable)||!n.enabled||n.checkable||n.scrollable)continue;
             int[] b=n.bounds;
             if(b==null||b.length!=4||b[0]<0||b[1]<0||b[2]>screen.screenWidth||b[3]>screen.screenHeight||b[0]>=b[2]||b[1]>=b[3])continue;
             JSONObject node=new JSONObject().put("node_id",n.nodeId).put("option_id",key)
                 .put("resource_id","").put("label",specs.getJSONObject(key).getString("label"))
-                .put("bounds",new JSONArray(b)).put("clickable",true).put("scrollable",false);
+                .put("bounds",new JSONArray(b)).put("clickable",n.clickable).put("scrollable",false);
             options.computeIfAbsent(key,k->new ArrayList<>()).add(node);
         }
         // A modal provider grid takes precedence over the underlying login page.
-        boolean provider=options.keySet().stream().anyMatch(k->k.startsWith("provider_"));
+        boolean provider=!civil&&options.keySet().stream().anyMatch(k->k.startsWith("provider_"));
         JSONArray exported=new JSONArray();
         for(var entry:options.entrySet())if(entry.getValue().size()==1&&(!provider||entry.getKey().startsWith("provider_")))exported.put(entry.getValue().get(0));
         if(exported.length()==0||exported.length()>POLICY.getInt("max_nodes"))return base;
