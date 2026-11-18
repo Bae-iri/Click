@@ -1,0 +1,121 @@
+{
+  "schema_version": "click-device-compatibility-check.v1",
+  "date": "2026-11-18",
+  "timezone": "Asia/Seoul",
+  "code_commit": "f026cd10e991424ce5347c9e71dce6103ee009c0",
+  "user_report": {
+    "symptom": "repeated growth-in-progress help message",
+    "device_model": null,
+    "android_version": null,
+    "incident_logs_available": false
+  },
+  "confirmed_findings": [
+    {
+      "id": "title_identity",
+      "evidence": "An independent generic View with identical public title text could not rejoin guidance because page identity required TextView.",
+      "change": "Collect native heading metadata through AndroidX compatibility; accept explicit headings and finite toolbar identities; retain ancestor, window, privacy and control checks."
+    },
+    {
+      "id": "empty_search",
+      "evidence": "Unknown native search IDs blocked the whole page; Android JSONObject null text also failed the old empty-string check.",
+      "change": "Use exact native search hints as local facts, handle JSON null explicitly, discard empty search nodes before HTTP. Nonempty queries, passwords, unknown editors and private descriptions remain blocked."
+    },
+    {
+      "id": "public_button_owner",
+      "evidence": "Government24 labels in virtual child nodes were not candidates when the real clickable parent owned the action.",
+      "change": "Bind an unambiguous public label to its native clickable ancestor, deduplicate one owner, reject mixed rows and distinct duplicate owners; do not read editable values."
+    },
+    {
+      "id": "selection_role",
+      "evidence": "The generic button check ran before RadioButton and classified native selection controls as ordinary buttons.",
+      "change": "Preserve the radio selection role before generic button matching."
+    },
+    {
+      "id": "api_compatibility",
+      "evidence": "NewApi lint found 7 findings: an unguarded API-33 InputStream read, an unguarded API-28 accessibility setter, and API-30 screenshot callback references inside an existing version guard.",
+      "change": "Use a buffered read and AndroidX accessibility setter; isolate screenshot callbacks in a version-specific class; add the NewApi check to CI."
+    },
+    {
+      "id": "package_support",
+      "evidence": "The environment classified one launcher as supported although the privacy and capability contracts rejected it.",
+      "change": "Align environment support with the existing finite export/capability scope; unsupported launchers are not newly authorized."
+    }
+  ],
+  "validation": {
+    "full_android_unit_pass_before_final_api_only_edits": {
+      "tests": 972,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "final_affected_android_suites_after_api_edits": {
+      "tests": 340,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "native_semantics_sdk_levels": [
+      26,
+      28,
+      30,
+      34,
+      35
+    ],
+    "native_semantics_tests": {
+      "tests": 40,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "legacy_screenshot_and_feedback_sdk_levels": [
+      26,
+      28
+    ],
+    "new_api_lint": {
+      "min_sdk": 26,
+      "issues": 0,
+      "status": "PASS"
+    },
+    "backend_environment_capability_jev_stability": {
+      "passed": 134
+    },
+    "ai_agent_full_suite": {
+      "passed": 481
+    },
+    "android_http_contract_replay": {
+      "passed": 6,
+      "controlled_provider_fixture": "tests.conftest"
+    },
+    "main_apk_operating_server_protocol_preflight": {
+      "compatible": true,
+      "required_protocol": "execution-state.v1",
+      "installed": false
+    },
+    "pilot_wire_assets_equal_verified_main": true,
+    "builds": {
+      "main_apk": "PASS",
+      "government24_pilot_apk": "PASS",
+      "main_instrumentation_apk": "PASS"
+    },
+    "connected_device_count": 0
+  },
+  "artifacts": [
+    {
+      "file": "click-compatibility-f026cd1.apk",
+      "application_id": "com.clueclick.app",
+      "sha256": "819e2b05d1212f0b58a547762a5110d807926219fc4ba5bac8ee31775cd17675"
+    },
+    {
+      "file": "click-gov24-compatibility-f026cd1.apk",
+      "application_id": "com.click.gov24pilot",
+      "sha256": "d0a168ab8e5c740cd5db38098f4201d995e5244ba21a9c7ab3a75e5e388ba051"
+    }
+  ],
+  "limits": [
+    "No device was connected for installation or live flow testing of this revision.",
+    "The unidentified phone incident is not proven to have the same cause as any individual controlled reproduction.",
+    "Robolectric SDK cases do not establish compatibility for every manufacturer, OS build, display configuration or Government24 version.",
+    "Unknown labels and headings inside unverified interactive or scrolling containers remain conservative; this change does not enable arbitrary screen export or unrestricted navigation.",
+    "The general app still declares versionCode 1 and versionName 1.0; the artifact hashes and source revision identify these APKs."
+  ]
+}
