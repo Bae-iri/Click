@@ -2,15 +2,17 @@
 
 > 이 문서는 `AI-Agent/goal_catalog/mvp_goals.json`에서 자동 생성한다. 직접 수정하지 말고 JSON 수정 후 `cd AI-Agent && python scripts/export_goal_catalog_markdown.py`를 실행한다.
 
-- Catalog version: `2.4.1`
-- 전체 Goal: **182개** (Android 설정 111개, 쿠팡 71개)
-- 실행 승인: **182개**, 분류 전용: **0개**
+- Catalog version: `2.5.0`
+- 전체 Goal: **131개** (Android 설정 111개, 정부24 20개)
+- 그래프 실행 승인: **111개**, 공개 화면 안내 연결: **2개**, 분류 전용: **18개**
 - `키워드 그룹`의 각 괄호에서는 하나 이상, 괄호와 괄호 사이는 모두 충족해야 분류 후보가 된다.
 - 등록된 `utterances` 예문과 전체 문장이 일치하면 키워드 그룹이 빠져 있어도 후보로 인식한다. 띄어쓰기와 문장부호는 무시한다.
 - `catalog_only`는 Goal 추출만 가능하다는 뜻이다. 승인 Task Graph가 없으므로 실제 작업은 시작하지 않는다.
+- `public_guide`는 별도 공개 화면 안내로 연결된다. 로그인 성공이나 민원 신청·발급 완료를 뜻하지 않는다.
 - 설정 변경 상태 검증 경로: **56개**, 직접 진행 안내: **34개**. 승인 표시는 실행 안내를 시작할 수 있다는 뜻이며 실기기 검증 완료를 뜻하지 않는다.
 - `settings_assisted`는 화면 안내 뒤 사용자가 직접 선택·입력한다. 사용자 완료 응답은 기술 검증과 별도 기록한다.
-- 쿠팡: 화면 이동 **8개**, 확인 후 조작·반영 검사 **1개**, 직접 진행 안내 **62개**. 실기기 검증은 별도이며 로그인·개인정보 입력·거래 확정은 사용자가 진행한다.
+- v2.5.0부터 쿠팡 71개 목표는 활성 목록에서 제외했다. 기존 버전의 기록·그래프 호환용 목록은 `legacy_coupang_goals.json`에 보존한다.
+- 정부24는 로그인 방법 선택·주민등록등본 발급 안내 화면 찾기 두 목표가 연결되어 있다. 나머지 민원은 준비 중이며 실제 화면 경로를 임의 생성하지 않는다.
 - 이전 v2.0은 82개였고, v2.1은 160개였고, v2.2는 설정 화면 열기 경로를 추가했다.
 
 ## Android 설정
@@ -129,78 +131,27 @@
 | 110 | `settings.navigation.eye_comfort` | 편안하게 화면 보기 설정 열기 | (편안하게 화면 보기 / 블루라이트 필터 / Eye comfort shield / Night Light / Night light) + (열어 / 열기 / 이동 / 들어가 / 가줘 / 보여줘 / 보여 줘 / open) | approved (`NAV-eye-comfort`) | normal |
 | 111 | `settings.theme.change` | 테마 변경 | (테마 / 갤럭시테마 / theme) + (바꿔 / 바꾸 / 변경 / 설정 / 선택 / 적용) | approved · 직접 진행 (`SET-theme-change`) | normal |
 
-## 쿠팡
+## 정부24 생활 민원
 
 | # | Goal Type | 표시 이름 | 키워드 그룹 | 실행 상태 | 위험도 |
 | ---: | --- | --- | --- | --- | --- |
-| 112 | `coupang.product.search` | 쿠팡 상품 검색 | (쿠팡 / 상품 / 제품 / 물건) + (검색 / 찾아 / 찾아줘) | approved · 직접 진행 (`CP-product-search`) | normal |
-| 113 | `coupang.product.details` | 쿠팡 상품 상세 보기 | (상품 / 제품) + (상세 / 자세히 / 정보 / 설명) | approved · 직접 진행 (`CP-product-details`) | normal |
-| 114 | `coupang.cart.add` | 쿠팡 장바구니 담기 | (장바구니 / 카트) + (담아 / 추가 / 넣어) | approved · 확인 후 조작 (`CP-cart-add`) | normal |
-| 115 | `coupang.cart.view` | 쿠팡 장바구니 보기 | (장바구니 / 카트) + (보여 / 열어 / 확인 / 목록) | approved · 화면 이동 (`CP-cart-view`) | normal |
-| 116 | `coupang.cart.remove` | 쿠팡 장바구니 상품 삭제 | (장바구니 / 카트) + (빼 / 삭제 / 지워 / 제거) | approved · 직접 진행 (`CP-cart-remove`) | normal |
-| 117 | `coupang.order.checkout` | 쿠팡 주문·결제 진행 | (주문진행 / 결제진행 / 구매진행 / 주문해줘 / 결제해줘 / 구매해줘 / 주문할래 / 결제할래 / 구매할래) | approved · 직접 진행 (`CP-order-checkout`) | high |
-| 118 | `coupang.order.list` | 쿠팡 주문 목록 보기 | (주문목록 / 주문내역 / 구매내역) + (보여 / 열어 / 확인) | approved · 화면 이동 (`CP-order-list`) | normal |
-| 119 | `coupang.order.track` | 쿠팡 배송 조회 | (배송 / 택배) + (조회 / 어디 / 언제와 / 추적 / 상태) | approved · 직접 진행 (`CP-order-track`) | normal |
-| 120 | `coupang.order.cancel` | 쿠팡 주문 취소 | (주문 / 구매 / 결제) + (취소 / 철회) | approved · 직접 진행 (`CP-order-cancel`) | high |
-| 121 | `coupang.order.return` | 쿠팡 반품 신청 | (반품 / 돌려보내) + (신청 / 접수 / 하고싶어) | approved · 직접 진행 (`CP-order-return`) | high |
-| 122 | `coupang.order.exchange` | 쿠팡 교환 신청 | (교환 / 바꿔받) + (신청 / 접수 / 하고싶어) | approved · 직접 진행 (`CP-order-exchange`) | high |
-| 123 | `coupang.review.write` | 쿠팡 상품평 작성 | (상품평 / 리뷰 / 후기) + (작성 / 써 / 남겨) | approved · 직접 진행 (`CP-review-write`) | normal |
-| 124 | `coupang.review.view` | 쿠팡 상품평 보기 | (상품평 / 리뷰 / 후기) + (보여 / 읽어 / 확인) | approved · 직접 진행 (`CP-review-view`) | normal |
-| 125 | `coupang.wishlist.add` | 쿠팡 찜 추가 | (찜 / 위시리스트) + (추가 / 담아 / 저장) | approved · 직접 진행 (`CP-wishlist-add`) | normal |
-| 126 | `coupang.wishlist.remove` | 쿠팡 찜 삭제 | (찜 / 위시리스트) + (삭제 / 빼 / 해제) | approved · 직접 진행 (`CP-wishlist-remove`) | normal |
-| 127 | `coupang.wishlist.view` | 쿠팡 찜 목록 보기 | (찜목록 / 찜한상품 / 위시리스트) + (보여 / 열어 / 확인) | approved · 화면 이동 (`CP-wishlist-view`) | normal |
-| 128 | `coupang.address.add` | 쿠팡 배송지 추가 | (배송지 / 주소) + (추가 / 등록 / 새로) | approved · 직접 진행 (`CP-address-add`) | normal |
-| 129 | `coupang.address.change` | 쿠팡 배송지 변경 | (배송지 / 주소) + (변경 / 바꿔 / 수정) | approved · 직접 진행 (`CP-address-change`) | normal |
-| 130 | `coupang.payment_method.add` | 쿠팡 결제수단 추가 | (결제수단 / 카드 / 계좌) + (추가 / 등록) | approved · 직접 진행 (`CP-payment-method-add`) | high |
-| 131 | `coupang.payment_method.change` | 쿠팡 결제수단 변경 | (결제수단 / 결제카드 / 결제계좌) + (변경 / 바꿔 / 수정) | approved · 직접 진행 (`CP-payment-method-change`) | high |
-| 132 | `coupang.coupon.view` | 쿠팡 쿠폰함 보기 | (쿠폰 / 할인쿠폰) + (보여 / 쿠폰함 / 확인) | approved · 화면 이동 (`CP-coupon-view`) | normal |
-| 133 | `coupang.coupon.apply` | 쿠팡 쿠폰 적용 | (쿠폰 / 할인쿠폰) + (적용 / 사용 / 써줘) | approved · 직접 진행 (`CP-coupon-apply`) | normal |
-| 134 | `coupang.rocket_delivery.filter` | 로켓배송 상품만 보기 | (로켓배송 / 로켓와우) + (필터 / 상품만 / 모아 / 보여) | approved · 직접 진행 (`CP-rocket-delivery-filter`) | normal |
-| 135 | `coupang.category.browse` | 쿠팡 카테고리 둘러보기 | (카테고리 / 상품분류) + (열어 / 보여 / 둘러) | approved · 화면 이동 (`CP-category-browse`) | normal |
-| 136 | `coupang.seller.info` | 쿠팡 판매자 정보 보기 | (판매자 / 셀러) + (정보 / 상세 / 누구) | approved · 직접 진행 (`CP-seller-info`) | normal |
-| 137 | `coupang.customer_service.open` | 쿠팡 고객센터 열기 | (고객센터 / 상담원 / 문의) + (열어 / 연결 / 채팅 / 전화) | approved · 화면 이동 (`CP-customer-service-open`) | normal |
-| 138 | `coupang.rocket_wow.manage` | 로켓와우 멤버십 관리 | (로켓와우 / 와우멤버십 / 쿠팡멤버십) + (관리 / 가입 / 해지 / 확인) | approved · 직접 진행 (`CP-rocket-wow-manage`) | high |
-| 139 | `coupang.order.reorder` | 쿠팡 재구매 | (재구매 / 다시구매 / 전에산거) + (주문 / 사줘 / 구매) | approved · 직접 진행 (`CP-order-reorder`) | high |
-| 140 | `coupang.receipt.view` | 쿠팡 영수증 보기 | (영수증 / 거래명세서 / 결제내역) + (보여 / 발급 / 확인) | approved · 직접 진행 (`CP-receipt-view`) | normal |
-| 141 | `coupang.search.filter` | 쿠팡 검색 필터 설정 | (검색필터 / 필터 / 조건) + (설정 / 적용 / 걸어) | approved · 직접 진행 (`CP-search-filter`) | normal |
-| 142 | `coupang.search.sort` | 쿠팡 검색 결과 정렬 | (정렬 / 낮은가격순 / 높은가격순 / 판매량순 / 최신순) + (바꿔 / 적용 / 보여) | approved · 직접 진행 (`CP-search-sort`) | normal |
-| 143 | `coupang.delivery_date.check` | 쿠팡 도착 예정일 확인 | (도착예정 / 도착날짜 / 배송예정) + (언제 / 확인 / 알려) | approved · 직접 진행 (`CP-delivery-date-check`) | normal |
-| 144 | `coupang.order.gift` | 쿠팡 선물하기 | (선물 / 선물하기) + (보내 / 주문 / 구매) | approved · 직접 진행 (`CP-order-gift`) | high |
-| 145 | `coupang.cash_receipt.manage` | 쿠팡 현금영수증 관리 | (현금영수증) + (등록 / 발급 / 변경 / 관리) | approved · 직접 진행 (`CP-cash-receipt-manage`) | normal |
-| 146 | `coupang.product.price.check` | 쿠팡 상품 가격 확인 | (상품가격 / 제품가격 / 판매가격 / 가격) + (얼마 / 확인 / 알려) | approved · 직접 진행 (`CP-product-price-check`) | normal |
-| 147 | `coupang.product.stock.check` | 쿠팡 상품 재고 확인 | (재고 / 품절 / 남은수량) + (확인 / 있어 / 남았 / 알려) | approved · 직접 진행 (`CP-product-stock-check`) | normal |
-| 148 | `coupang.product.compare` | 쿠팡 상품 비교 | (상품비교 / 제품비교 / 두상품) + (비교 / 차이 / 대조) | approved · 직접 진행 (`CP-product-compare`) | normal |
-| 149 | `coupang.product.share` | 쿠팡 상품 공유 | (상품링크 / 제품링크 / 이상품) + (공유 / 보내 / 링크복사) | approved · 직접 진행 (`CP-product-share`) | normal |
-| 150 | `coupang.product.option.select` | 쿠팡 상품 옵션 선택 | (상품옵션 / 제품옵션 / 옵션선택) + (선택 / 바꿔 / 골라) | approved · 직접 진행 (`CP-product-option-select`) | normal |
-| 151 | `coupang.product.restock_notification` | 쿠팡 재입고 알림 신청 | (재입고알림 / 입고알림 / 재고알림) + (신청 / 켜 / 등록) | approved · 직접 진행 (`CP-product-restock-notification`) | normal |
-| 152 | `coupang.product.inquiry.write` | 쿠팡 상품 문의 작성 | (상품문의 / 제품문의 / 판매자문의) + (작성 / 질문 / 남겨) | approved · 직접 진행 (`CP-product-inquiry-write`) | normal |
-| 153 | `coupang.product.inquiry.view` | 쿠팡 상품 문의 보기 | (상품문의 / 제품문의 / 판매자문의) + (보여 / 확인 / 읽어) | approved · 직접 진행 (`CP-product-inquiry-view`) | normal |
-| 154 | `coupang.cart.quantity.increase` | 쿠팡 장바구니 수량 늘리기 | (장바구니수량 / 카트수량) + (늘려 / 추가 / 많이) | approved · 직접 진행 (`CP-cart-quantity-increase`) | normal |
-| 155 | `coupang.cart.quantity.decrease` | 쿠팡 장바구니 수량 줄이기 | (장바구니수량 / 카트수량) + (줄여 / 빼 / 적게) | approved · 직접 진행 (`CP-cart-quantity-decrease`) | normal |
-| 156 | `coupang.cart.select` | 쿠팡 장바구니 상품 선택 | (장바구니상품 / 카트상품) + (선택 / 체크 / 골라) | approved · 직접 진행 (`CP-cart-select`) | normal |
-| 157 | `coupang.cart.unselect` | 쿠팡 장바구니 상품 선택 해제 | (장바구니상품 / 카트상품) + (선택해제 / 체크해제 / 빼줘) | approved · 직접 진행 (`CP-cart-unselect`) | normal |
-| 158 | `coupang.order.details` | 쿠팡 주문 상세 보기 | (주문상세 / 주문정보 / 구매상세) + (보여 / 확인 / 열어) | approved · 직접 진행 (`CP-order-details`) | normal |
-| 159 | `coupang.order.address.change` | 쿠팡 주문 배송지 변경 | (주문배송지 / 주문주소 / 받는주소) + (변경 / 바꿔 / 수정) | approved · 직접 진행 (`CP-order-address-change`) | high |
-| 160 | `coupang.delivery.instructions.change` | 쿠팡 배송 요청사항 변경 | (배송요청사항 / 배송메모 / 문앞메모) + (변경 / 바꿔 / 수정) | approved · 직접 진행 (`CP-delivery-instructions-change`) | normal |
-| 161 | `coupang.order.cancel_status` | 쿠팡 취소 처리 상태 확인 | (취소상태 / 취소처리 / 주문취소결과) + (확인 / 어떻게 / 언제) | approved · 직접 진행 (`CP-order-cancel-status`) | normal |
-| 162 | `coupang.order.refund_status` | 쿠팡 환불 상태 확인 | (환불상태 / 환불처리 / 환불금) + (확인 / 언제 / 들어와) | approved · 직접 진행 (`CP-order-refund-status`) | normal |
-| 163 | `coupang.order.return_status` | 쿠팡 반품 상태 확인 | (반품상태 / 반품처리 / 반품진행) + (확인 / 어떻게 / 언제) | approved · 직접 진행 (`CP-order-return-status`) | normal |
-| 164 | `coupang.order.exchange_status` | 쿠팡 교환 상태 확인 | (교환상태 / 교환처리 / 교환진행) + (확인 / 어떻게 / 언제) | approved · 직접 진행 (`CP-order-exchange-status`) | normal |
-| 165 | `coupang.order.return_pickup.track` | 쿠팡 반품 수거 조회 | (반품수거 / 회수기사 / 반품기사) + (조회 / 언제와 / 추적 / 확인) | approved · 직접 진행 (`CP-order-return-pickup-track`) | normal |
-| 166 | `coupang.review.edit` | 쿠팡 상품평 수정 | (상품평 / 리뷰 / 후기) + (수정 / 고쳐 / 바꿔) | approved · 직접 진행 (`CP-review-edit`) | normal |
-| 167 | `coupang.review.delete` | 쿠팡 상품평 삭제 | (상품평 / 리뷰 / 후기) + (삭제 / 지워 / 제거) | approved · 직접 진행 (`CP-review-delete`) | high |
-| 168 | `coupang.review.helpful` | 쿠팡 상품평 도움돼요 표시 | (상품평 / 리뷰 / 후기) + (도움돼요 / 추천 / 유용해) | approved · 직접 진행 (`CP-review-helpful`) | normal |
-| 169 | `coupang.address.remove` | 쿠팡 배송지 삭제 | (배송지 / 등록주소) + (삭제 / 지워 / 제거) | approved · 직접 진행 (`CP-address-remove`) | high |
-| 170 | `coupang.payment_method.remove` | 쿠팡 결제수단 삭제 | (결제수단 / 결제카드 / 결제계좌) + (삭제 / 지워 / 제거) | approved · 직접 진행 (`CP-payment-method-remove`) | high |
-| 171 | `coupang.coupon.download` | 쿠팡 쿠폰 받기 | (쿠폰 / 할인쿠폰) + (받아 / 다운로드 / 발급) | approved · 직접 진행 (`CP-coupon-download`) | normal |
-| 172 | `coupang.search.recent.view` | 쿠팡 최근 검색어 보기 | (최근검색 / 검색기록 / 검색내역) + (보여 / 확인 / 열어) | approved · 화면 이동 (`CP-search-recent-view`) | normal |
-| 173 | `coupang.search.recent.clear` | 쿠팡 최근 검색어 삭제 | (최근검색 / 검색기록 / 검색내역) + (삭제 / 지워 / 비워) | approved · 직접 진행 (`CP-search-recent-clear`) | high |
-| 174 | `coupang.account.login` | 쿠팡 로그인 | (쿠팡로그인 / 계정로그인) + (해줘 / 접속 / 들어가) | approved · 직접 진행 (`CP-account-login`) | normal |
-| 175 | `coupang.account.logout` | 쿠팡 로그아웃 | (쿠팡로그아웃 / 계정로그아웃) + (해줘 / 나가 / 종료) | approved · 직접 진행 (`CP-account-logout`) | high |
-| 176 | `coupang.profile.change` | 쿠팡 회원 정보 변경 | (회원정보 / 프로필정보 / 내정보) + (변경 / 바꿔 / 수정) | approved · 직접 진행 (`CP-profile-change`) | normal |
-| 177 | `coupang.rocket_wow.benefits` | 쿠팡 와우 혜택 보기 | (와우혜택 / 로켓와우혜택 / 멤버십혜택) + (보여 / 확인 / 뭐야) | approved · 화면 이동 (`CP-rocket-wow-benefits`) | normal |
-| 178 | `coupang.recurring_delivery.manage` | 쿠팡 정기배송 관리 | (정기배송 / 정기구매 / 정기배달) + (관리 / 변경 / 해지 / 신청) | approved · 직접 진행 (`CP-recurring-delivery-manage`) | high |
-| 179 | `coupang.rocket_fresh.filter` | 로켓프레시 상품만 보기 | (로켓프레시 / 신선식품) + (상품만 / 모아 / 보여 / 필터) | approved · 직접 진행 (`CP-rocket-fresh-filter`) | normal |
-| 180 | `coupang.coupay.balance.view` | 쿠페이 머니 잔액 보기 | (쿠페이 / 쿠페이머니) + (잔액 / 얼마 / 확인) | approved · 직접 진행 (`CP-coupay-balance-view`) | normal |
-| 181 | `coupang.coupay.money.add` | 쿠페이 머니 충전 | (쿠페이 / 쿠페이머니) + (충전 / 넣어 / 추가) | approved · 직접 진행 (`CP-coupay-money-add`) | high |
-| 182 | `coupang.points.view` | 쿠팡 캐시·포인트 보기 | (쿠팡캐시 / 쿠팡포인트 / 적립금) + (잔액 / 얼마 / 확인 / 보여) | approved · 직접 진행 (`CP-points-view`) | normal |
+| 112 | `gov24.login` | 정부24 로그인 방법 선택 | (정부24 / 정부이십사 / gov24) + (로그인 / 인증 / 접속) | public_guide · 공개 화면까지만 안내 | normal |
+| 113 | `gov24.resident_copy.open` | 정부24 주민등록등본 발급 화면 찾기 | (정부24 / 정부이십사 / gov24) + (주민등록등본 / 주민등록표 등본 / 등본) | public_guide · 공개 화면까지만 안내 | normal |
+| 114 | `gov24.resident_extract.open` | 정부24 주민등록초본 발급 화면 찾기 | (정부24 / 정부이십사 / gov24) + (주민등록초본 / 주민등록표 초본 / 초본) | catalog_only | normal |
+| 115 | `gov24.move_in.open` | 정부24 전입신고 화면 찾기 | (정부24 / 정부이십사 / gov24) + (전입신고 / 전입 신고) | catalog_only | normal |
+| 116 | `gov24.building_register.open` | 정부24 건축물대장 발급·열람 화면 찾기 | (정부24 / 정부이십사 / gov24) + (건축물대장 / 건축물 대장) | catalog_only | normal |
+| 117 | `gov24.land_register.open` | 정부24 토지·임야대장 발급·열람 화면 찾기 | (정부24 / 정부이십사 / gov24) + (토지대장 / 임야대장 / 토지 대장) | catalog_only | normal |
+| 118 | `gov24.land_use_plan.open` | 정부24 토지이용계획 확인 화면 찾기 | (정부24 / 정부이십사 / gov24) + (토지이용계획 / 토지 이용 계획) | catalog_only | normal |
+| 119 | `gov24.local_tax_payment.open` | 정부24 지방세 납세증명 화면 찾기 | (정부24 / 정부이십사 / gov24) + (지방세 납세 / 지방세 완납) | catalog_only | normal |
+| 120 | `gov24.local_tax_assessment.open` | 정부24 지방세 세목별 과세증명 화면 찾기 | (정부24 / 정부이십사 / gov24) + (세목별 과세 / 세목별과세) | catalog_only | normal |
+| 121 | `gov24.national_tax_payment.open` | 정부24 국세 납세증명 화면 찾기 | (정부24 / 정부이십사 / gov24) + (국세 납세 / 국세 완납) | catalog_only | normal |
+| 122 | `gov24.income_certificate.open` | 정부24 소득금액증명 화면 찾기 | (정부24 / 정부이십사 / gov24) + (소득금액증명 / 소득 금액 증명) | catalog_only | normal |
+| 123 | `gov24.vehicle_register.open` | 정부24 자동차등록원부 발급·열람 화면 찾기 | (정부24 / 정부이십사 / gov24) + (자동차등록원부 / 자동차 등록 원부) | catalog_only | normal |
+| 124 | `gov24.resident_card.reissue.open` | 정부24 주민등록증 재발급 화면 찾기 | (정부24 / 정부이십사 / gov24) + (주민등록증 재발급 / 주민등록증 다시) | catalog_only | normal |
+| 125 | `gov24.passport.reissue.open` | 정부24 여권 재발급 화면 찾기 | (정부24 / 정부이십사 / gov24) + (여권 재발급 / 여권 다시) | catalog_only | normal |
+| 126 | `gov24.application.history.view` | 정부24 민원 신청 내역 화면 찾기 | (정부24 / 정부이십사 / gov24) + (신청내역 / 신청 내역 / 신청한 민원 / 신청 기록) | catalog_only | normal |
+| 127 | `gov24.application.status.view` | 정부24 민원 처리 상태 화면 찾기 | (정부24 / 정부이십사 / gov24) + (처리상태 / 처리 상태 / 진행상태 / 진행 상황) | catalog_only | normal |
+| 128 | `gov24.documents.issued.view` | 정부24 발급 내역 화면 찾기 | (정부24 / 정부이십사 / gov24) + (발급내역 / 발급 내역 / 발급 기록) | catalog_only | normal |
+| 129 | `gov24.documents.electronic.view` | 정부24 전자문서지갑 화면 찾기 | (정부24 / 정부이십사 / gov24) + (전자문서지갑 / 전자 문서 지갑 / 전자증명서) | catalog_only | normal |
+| 130 | `gov24.benefits.view` | 정부24 보조금24 혜택 화면 찾기 | (정부24 / 정부이십사 / gov24) + (보조금24 / 보조금 이십사 / 받을 수 있는 혜택) | catalog_only | normal |
+| 131 | `gov24.service.search` | 정부24 민원서비스 검색 화면 찾기 | (정부24 / 정부이십사 / gov24) + (민원 검색 / 서비스 검색 / 민원 찾기) | catalog_only | normal |

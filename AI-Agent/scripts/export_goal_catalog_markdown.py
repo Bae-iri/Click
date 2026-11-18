@@ -23,27 +23,27 @@ def render(catalog: dict) -> str:
     apps = Counter(goal["target_app"] for goal in goals)
     statuses = Counter(goal["execution_status"] for goal in goals)
     modes = Counter(g["task_type"] for g in goals if g["execution_status"] == "approved")
-    commerce = json.loads((AI_AGENT / 'goal_catalog/commerce_execution.json').read_text(encoding='utf-8'))['tasks']
-    commerce_modes = Counter(spec.get('mode', 'assisted') for spec in commerce.values())
     lines = [
         "# Goal Type·키워드 전체 표",
         "",
         "> 이 문서는 `AI-Agent/goal_catalog/mvp_goals.json`에서 자동 생성한다. 직접 수정하지 말고 JSON 수정 후 `cd AI-Agent && python scripts/export_goal_catalog_markdown.py`를 실행한다.",
         "",
         f"- Catalog version: `{catalog['version']}`",
-        f"- 전체 Goal: **{len(goals)}개** (Android 설정 {apps['android_settings']}개, 쿠팡 {apps['coupang']}개)",
-        f"- 실행 승인: **{statuses['approved']}개**, 분류 전용: **{statuses['catalog_only']}개**",
+        f"- 전체 Goal: **{len(goals)}개** (Android 설정 {apps['android_settings']}개, 정부24 {apps['gov24']}개)",
+        f"- 그래프 실행 승인: **{statuses['approved']}개**, 공개 화면 안내 연결: **{statuses['public_guide']}개**, 분류 전용: **{statuses['catalog_only']}개**",
         "- `키워드 그룹`의 각 괄호에서는 하나 이상, 괄호와 괄호 사이는 모두 충족해야 분류 후보가 된다.",
         "- 등록된 `utterances` 예문과 전체 문장이 일치하면 키워드 그룹이 빠져 있어도 후보로 인식한다. 띄어쓰기와 문장부호는 무시한다.",
         "- `catalog_only`는 Goal 추출만 가능하다는 뜻이다. 승인 Task Graph가 없으므로 실제 작업은 시작하지 않는다.",
+        "- `public_guide`는 별도 공개 화면 안내로 연결된다. 로그인 성공이나 민원 신청·발급 완료를 뜻하지 않는다.",
         f"- 설정 변경 상태 검증 경로: **{modes['settings_change']}개**, 직접 진행 안내: **{modes['settings_assisted']}개**. 승인 표시는 실행 안내를 시작할 수 있다는 뜻이며 실기기 검증 완료를 뜻하지 않는다.",
         "- `settings_assisted`는 화면 안내 뒤 사용자가 직접 선택·입력한다. 사용자 완료 응답은 기술 검증과 별도 기록한다.",
-        f"- 쿠팡: 화면 이동 **{commerce_modes['navigation']}개**, 확인 후 조작·반영 검사 **{commerce_modes['action']}개**, 직접 진행 안내 **{commerce_modes['assisted']}개**. 실기기 검증은 별도이며 로그인·개인정보 입력·거래 확정은 사용자가 진행한다.",
+        "- v2.5.0부터 쿠팡 71개 목표는 활성 목록에서 제외했다. 기존 버전의 기록·그래프 호환용 목록은 `legacy_coupang_goals.json`에 보존한다.",
+        "- 정부24는 로그인 방법 선택·주민등록등본 발급 안내 화면 찾기 두 목표가 연결되어 있다. 나머지 민원은 준비 중이며 실제 화면 경로를 임의 생성하지 않는다.",
         "- 이전 v2.0은 82개였고, v2.1은 160개였고, v2.2는 설정 화면 열기 경로를 추가했다.",
         "",
     ]
     number = 0
-    for target_app, title in (("android_settings", "Android 설정"), ("coupang", "쿠팡")):
+    for target_app, title in (("android_settings", "Android 설정"), ("gov24", "정부24 생활 민원")):
         lines.extend([
             f"## {title}",
             "",
@@ -61,9 +61,8 @@ def render(catalog: dict) -> str:
             status = escape(goal["execution_status"])
             if goal["task_type"] == "settings_assisted":
                 status += " · 직접 진행"
-            if goal['target_app'] == 'coupang':
-                mode = commerce[goal['goal_type'].removeprefix('coupang.')].get('mode', 'assisted')
-                status += ' · ' + {'navigation': '화면 이동', 'action': '확인 후 조작', 'assisted': '직접 진행'}[mode]
+            if goal['execution_status'] == 'public_guide':
+                status += ' · 공개 화면까지만 안내'
             if goal.get("graph_id"):
                 status += f" (`{escape(goal['graph_id'])}`)"
             lines.append(

@@ -8,7 +8,7 @@ import static org.junit.Assert.*;
 
 public class CoupangGoalTest {
     private GoalCatalogClassifier catalog() throws Exception {
-        try (java.io.InputStream input = getClass().getResourceAsStream("/mvp_goals.json")) {
+        try (java.io.InputStream input = getClass().getResourceAsStream("/legacy_coupang_goals.json")) {
             return GoalCatalogClassifier.fromJson(new String(input.readAllBytes(), StandardCharsets.UTF_8));
         }
     }
@@ -32,7 +32,7 @@ public class CoupangGoalTest {
 
     @Test public void allCommerceGoalsCanBeSelectedAndResumedWithoutLosingTheirIdentity() throws Exception {
         String raw;
-        try (java.io.InputStream input = getClass().getResourceAsStream("/mvp_goals.json")) {
+        try (java.io.InputStream input = getClass().getResourceAsStream("/legacy_coupang_goals.json")) {
             raw = new String(input.readAllBytes(), StandardCharsets.UTF_8);
         }
         GoalCatalogClassifier catalog = GoalCatalogClassifier.fromJson(raw);

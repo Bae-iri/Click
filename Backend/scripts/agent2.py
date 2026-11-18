@@ -350,6 +350,9 @@ def audit_goal_coverage(factory):
     catalog = read_json(BACKEND / "app/task_graphs/goal_catalog.json")
     approved = [goal for goal in catalog["goals"] if goal["execution_status"] == "approved"]
     expected = {(goal["goal_type"], goal["target_app"]) for goal in approved}
+    legacy_path = BACKEND.parent / 'AI-Agent/goal_catalog/legacy_coupang_goals.json'
+    legacy = read_json(legacy_path)['goals'] if catalog.get('legacy_catalog') == legacy_path.name else []
+    legacy_keys = {(g['goal_type'], g['target_app']) for g in legacy}
     repository = TaskGraphRepository(factory)
     reports = []
     for entry in approved:
@@ -381,10 +384,12 @@ def audit_goal_coverage(factory):
     return {"catalog_version": catalog["version"], "total_goals": len(catalog["goals"]),
         "approved_goals": len(approved),
         "catalog_only_goals": sum(goal["execution_status"] == "catalog_only" for goal in catalog["goals"]),
+        "public_guide_goals": sum(goal["execution_status"] == "public_guide" for goal in catalog["goals"]),
+        "legacy_graph_goals": len(actual & legacy_keys),
         "selectable_goals": sum(report["status"] == "READY" for report in reports),
         "blocked_goals": [report for report in reports if report["status"] != "READY"],
         "unexpected_executable_goals": [{"goal_type": goal, "target_app": app}
-                                        for goal, app in sorted(actual - expected)],
+                                        for goal, app in sorted(actual - expected - legacy_keys)],
         "by_task_type": {kind: {
             "approved": sum(report["task_type"] == kind for report in reports),
             "selectable": sum(report["task_type"] == kind and report["status"] == "READY" for report in reports)}

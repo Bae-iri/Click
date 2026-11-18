@@ -143,7 +143,6 @@ def test_preparation_preserves_only_confident_unsupported_reasons(choice, probab
 
 
 @pytest.mark.parametrize('source,choice,status,reason', [
-    ('정부24에서 주민등록등본 발급해줘', 'unsupported_app', 'unsupported', 'unsupported_app'),
     ('주민등록등본 발급해줘', 'unsupported_app', 'unsupported', 'unsupported_app'),
     ('정부24에서 글자 크기 키워줘', 'unsupported_app', 'unsupported', 'unsupported_app'),
     ('휴대폰의 새로운 설정 기능을 만들어줘', 'unsupported', 'unsupported', 'unsupported'),
