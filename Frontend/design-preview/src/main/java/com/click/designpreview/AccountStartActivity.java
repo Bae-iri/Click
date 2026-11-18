@@ -37,7 +37,8 @@ public final class AccountStartActivity extends Activity {
             if (!submitting) startActivity(new Intent(this, SignupActivity.class));
         });
         findViewById(R.id.account_start_login).setOnClickListener(view -> {
-            if (!submitting) startActivity(new Intent(this, LoginActivity.class));
+            if (!submitting) startActivity(new Intent(this, LoginActivity.class)
+                    .putExtra(PermissionGuideActivity.EXTRA_ONBOARDING, onboardingEntry()));
         });
     }
 
@@ -63,10 +64,15 @@ public final class AccountStartActivity extends Activity {
             }
             if (ClickHost.from(this).accessibilityEnabled()) ClickHost.from(this).openHome(this);
             else {
-                startActivity(new Intent(this, PermissionGuideActivity.class));
+                startActivity(new Intent(this, PermissionGuideActivity.class)
+                        .putExtra(PermissionGuideActivity.EXTRA_ONBOARDING, onboardingEntry()));
                 finish();
             }
         });
+    }
+
+    private boolean onboardingEntry() {
+        return getIntent().getBooleanExtra(PermissionGuideActivity.EXTRA_ONBOARDING, false);
     }
 
     private void setSubmitting(boolean value) {

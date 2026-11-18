@@ -352,6 +352,7 @@ public final class MenuActivity extends AppCompatActivity {
         add(statuses, permissionRow("접근성", "화면을 읽고 눌러야 할 곳을 안내해요.", accessibility, () -> {
             if (dialog[0] != null) dialog[0].dismiss();
             startActivity(new Intent(this, com.click.designpreview.PermissionGuideActivity.class)
+                    .putExtra(com.click.designpreview.PermissionGuideActivity.EXTRA_RETURN_TO_SETTINGS, true)
                     .putExtra(com.click.designpreview.PermissionGuideActivity.EXTRA_RECONNECT,
                             !accessibility && PermissionStatus.isAccessibilityEnabled(this)));
         }), 0);

@@ -181,6 +181,12 @@ public final class HomeActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume(); requestLaunching = false;
+        com.click.data.local.AccessibilityOnboardingState onboarding =
+                new com.click.data.local.AccessibilityOnboardingState(this);
+        if (onboarding.isPending() && onboarding.returnsToHome()
+                && com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() != null) {
+            onboarding.markHomeReturned();
+        }
         if (Float.compare(renderedTextScale, ClickTextScale.scale(this)) != 0) {
             recreate();
             return;

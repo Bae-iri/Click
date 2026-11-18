@@ -3,8 +3,8 @@
     <string name="click_tutorial_progress">%1$d/%2$d</string>
     <string name="tutorial_click_hint">여기를 눌러보세요</string>
     <string name="tutorial_ready_title">이제 클릭이\n도와드릴 수 있어요!</string>
-    <string name="tutorial_ready_description">클릭 사용법을 알아볼까요?</string>
-    <string name="tutorial_ready_start">시작하기</string>
+    <string name="tutorial_ready_description">그림과 설명을 보며\n클릭 사용법을 차근차근 알아봐요.</string>
+    <string name="tutorial_ready_start">사용법 보기</string>
     <item name="tutorial_ready_title" type="id" />
     <item name="tutorial_ready_start" type="id" />
     <item name="tutorial_next" type="id" />

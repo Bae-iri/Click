@@ -57,7 +57,7 @@ public class PermissionGuideConnectionTest {
         ClickHost host = mock(ClickHost.class);
         when(host.accessibilityEnabled()).thenReturn(true);
         try (MockedStatic<ClickHost> bridge = mockStatic(ClickHost.class);
-             ActivityController<PermissionGuideActivity> controller = Robolectric.buildActivity(PermissionGuideActivity.class)) {
+             ActivityController<PermissionGuideActivity> controller = Robolectric.buildActivity(PermissionGuideActivity.class, onboardingIntent())) {
             PermissionGuideActivity activity = controller.get();
             bridge.when(() -> ClickHost.from(activity)).thenReturn(host);
             controller.setup();
@@ -77,7 +77,7 @@ public class PermissionGuideConnectionTest {
         ClickHost host = mock(ClickHost.class);
         when(host.accessibilityEnabled()).thenReturn(true);
         try (MockedStatic<ClickHost> bridge = mockStatic(ClickHost.class);
-             ActivityController<PermissionGuideActivity> controller = Robolectric.buildActivity(PermissionGuideActivity.class)) {
+             ActivityController<PermissionGuideActivity> controller = Robolectric.buildActivity(PermissionGuideActivity.class, onboardingIntent())) {
             PermissionGuideActivity activity = controller.get();
             bridge.when(() -> ClickHost.from(activity)).thenReturn(host);
             controller.setup();
@@ -89,6 +89,66 @@ public class PermissionGuideConnectionTest {
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(250));
             assertTrue(activity.isFinishing());
             verify(host).openPostPermissionTutorial(activity);
+        }
+    }
+
+    private static android.content.Intent onboardingIntent() {
+        return new android.content.Intent(org.robolectric.RuntimeEnvironment.getApplication(), PermissionGuideActivity.class)
+                .putExtra(PermissionGuideActivity.EXTRA_ONBOARDING, true);
+    }
+
+    @Test @org.robolectric.annotation.LooperMode(org.robolectric.annotation.LooperMode.Mode.PAUSED)
+    public void homeReviewReturnsHomeEvenIfTheTutorialHasNeverBeenSeen() {
+        for (boolean seen : new boolean[]{false, true}) {
+            ClickHost host = mock(ClickHost.class);
+            when(host.accessibilityEnabled()).thenReturn(true);
+            when(host.postPermissionTutorialWasLaunched()).thenReturn(seen);
+            try (MockedStatic<ClickHost> bridge = mockStatic(ClickHost.class);
+                 ActivityController<PermissionGuideActivity> controller = Robolectric.buildActivity(PermissionGuideActivity.class)) {
+                bridge.when(() -> ClickHost.from(any(PermissionGuideActivity.class))).thenReturn(host);
+                controller.setup();
+                for (int i = 0; i < 3; i++)
+                    controller.get().findViewById(com.click.designpreview.R.id.guide_action).performClick();
+                controller.recreate();
+                assertFalse(controller.get().isFinishing());
+                when(host.accessibilityConnected()).thenReturn(true);
+                org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+                    .idleFor(java.time.Duration.ofMillis(250));
+                assertTrue(controller.get().isFinishing());
+                verify(host).returnToHomeAfterAccessibility(controller.get());
+                verify(host, never()).openPostPermissionTutorial(any());
+                verify(host, never()).returnToSettingsAfterAccessibility(any());
+            }
+        }
+    }
+
+    @Test public void reviewingCardsWhileAlreadyConnectedDoesNotNavigateAway() {
+        ClickHost host = mock(ClickHost.class);
+        when(host.accessibilityEnabled()).thenReturn(true);
+        when(host.accessibilityConnected()).thenReturn(true);
+        try (MockedStatic<ClickHost> bridge = mockStatic(ClickHost.class);
+             ActivityController<PermissionGuideActivity> controller = Robolectric.buildActivity(PermissionGuideActivity.class)) {
+            bridge.when(() -> ClickHost.from(any(PermissionGuideActivity.class))).thenReturn(host);
+            controller.setup();
+            controller.get().findViewById(com.click.designpreview.R.id.guide_action).performClick();
+            controller.recreate();
+            assertFalse(controller.get().isFinishing());
+            verify(host, never()).openAccessibilitySettings(any());
+            verify(host, never()).openPostPermissionTutorial(any());
+            verify(host, never()).returnToHomeAfterAccessibility(any());
+        }
+    }
+
+    @Test @Config(application = ClickApplication.class)
+    public void startingAReviewCancelsAnAbandonedOnboardingReturn() {
+        com.click.data.local.AccessibilityOnboardingState state =
+            new com.click.data.local.AccessibilityOnboardingState(org.robolectric.RuntimeEnvironment.getApplication());
+        state.beginOnboarding();
+        try (ActivityController<PermissionGuideActivity> controller = Robolectric.buildActivity(PermissionGuideActivity.class).setup()) {
+            assertFalse(state.isPending());
+            state.beginReview(false);
+            controller.get().onBackPressed();
+            assertFalse(state.isPending());
         }
     }
 
