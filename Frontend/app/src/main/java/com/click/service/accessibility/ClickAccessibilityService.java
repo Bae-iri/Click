@@ -526,6 +526,17 @@ public final class ClickAccessibilityService extends AccessibilityService {
         return null;
     }
 
+    public static Gov24LoginEntry.Target gov24LoginEntry() {
+        ClickAccessibilityService service=connectedService.get();if(service==null)return null;
+        AccessibilityNodeInfo root=ForegroundWindowReader.readRoot(service);
+        try{return Gov24LoginEntry.inspect(root);}finally{if(root!=null)root.recycle();}
+    }
+    public static boolean revealGov24LoginEntry() {
+        ClickAccessibilityService service=connectedService.get();if(service==null)return false;
+        AccessibilityNodeInfo root=ForegroundWindowReader.readRoot(service);
+        try{return Gov24LoginEntry.reveal(root);}finally{if(root!=null)root.recycle();}
+    }
+
     public static WindowManager accessibilityWindowManager() {
         ClickAccessibilityService service = connectedService.get();
         return service == null ? null : service.getSystemService(WindowManager.class);

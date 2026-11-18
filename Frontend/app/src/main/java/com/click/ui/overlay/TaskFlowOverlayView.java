@@ -104,6 +104,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private final FloatingPanelHeader header;
     private final ScrollView scroll;
     private int maxHeight;
+    private boolean publicGuideInput;
+    public boolean needsPublicGuideInput(){return publicGuideInput;}
     private boolean resetScrollPending;
     private final ScrollView compactScroll;
     private final TextView compactMessage;
@@ -362,6 +364,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         super.onMeasure(width, MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST));
     }
     private void clear(String title) {
+        publicGuideInput=false;
         compactSummary = null;
         targetHelpInstruction = null;
         targetHelpOpened = false;
@@ -791,6 +794,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     private String preparedSummary(com.click.domain.goal.GoalPreparationState state) {
+        if (state.publicGuide()) return state.guidance();
         if (state.browsing()) return state.message;
         String type = state.goal == null ? "" : state.goal.optString("goal_type");
         boolean increase = type.endsWith(".increase");
@@ -924,14 +928,21 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     public void publicLogin(String message,boolean terminal,org.json.JSONObject question,
             java.util.function.BiConsumer<String,Boolean> answer,Runnable observe,Runnable openApp,Runnable finish) {
-        publicGuide(message,terminal,question,false,answer,observe,openApp,finish);
+        publicGuide(message,terminal,question,false,answer,finish);
     }
     public void publicGuide(String message,boolean terminal,org.json.JSONObject question,boolean civil,
-            java.util.function.BiConsumer<String,Boolean> answer,Runnable observe,Runnable openApp,Runnable finish) {
+            java.util.function.BiConsumer<String,Boolean> answer,Runnable finish) {
+        if(terminal) {
+            progress(null,null,message,false);controls.setVisibility(GONE);divider.setVisibility(GONE);
+            recoveryActions.addView(primaryButton("끝내기",finish),spaced(0));recoveryActions.setVisibility(VISIBLE);return;
+        }
+        if(question==null||!civil&&"인증기관".equals(question.optString("label"))) {
+            progress(null,null,message,false);return;
+        }
         reviewStage(1,civil?"정부24 주민등록등본 안내":"정부24 로그인 안내",
             civil?"발급 안내 화면까지 함께 이동해요. 신청서 작성과 제출은 직접 진행해요.":"");
+        publicGuideInput=true;
         narrationMessage=message;content.addView(text(message,16),spaced(12));
-        if(terminal){content.addView(primaryButton("안내 끝내기",finish),spaced(12));return;}
         if(question!=null) {
             org.json.JSONArray choices=question.optJSONArray("choices");
             for(int i=0;choices!=null&&i<choices.length();i++) {
@@ -953,9 +964,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
                 }
             }),spaced(8));
         }
-        content.addView(secondaryButton("현재 화면 확인",observe),spaced(12));
-        content.addView(secondaryButton("정부24 열기",openApp),spaced(8));
-        content.addView(quietButton("직접 진행하고 안내 끝내기",finish),spaced(8));
     }
 
     public void requirements(RequirementReview review, boolean executable) {

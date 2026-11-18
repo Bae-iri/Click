@@ -217,6 +217,21 @@ public class ClickOverlayServiceExecutionTest {
         }
     }
 
+    @Test public void completedPublicGuideReceiptDoesNotBlockTheNextExplicitRequest() throws Exception {
+        var queue=mock(com.click.data.remote.VoiceQueueGateway.class);set("queueGateway",queue);
+        set("activeVoiceRequestId","completed-public-guide");
+        invoke("completePublicGuideAndContinue");
+        var callback=org.mockito.ArgumentCaptor.forClass(com.click.data.remote.VoiceQueueGateway.Callback.class);
+        verify(queue).complete(eq("completed-public-guide"),callback.capture());
+        var constructor=com.click.data.remote.VoiceQueueGateway.Response.class.getDeclaredConstructor(String.class);
+        constructor.setAccessible(true);
+        var queued=new JSONObject().put("queue_version",1).put("queued",new JSONArray().put(new JSONObject()
+            .put("id","new-login-request").put("raw_goal","정부24 로그인 도와줘").put("status","QUEUED")));
+        callback.getValue().onSuccess(constructor.newInstance(queued.toString()));
+        assertNull(get("agentSessionId"));assertNull(get("activeVoiceRequestId"));
+        verify(queue).claim(any());verify(gateway,never()).send(any(),any());
+    }
+
     @Test public void publicLoginPreparationDoesNotRequireASettingsGoal() throws Exception {
         JSONObject data=new JSONObject().put("version","goal-inputs.v1").put("id","public-login-prepared")
             .put("source_text","정부24 로그인 도와줘").put("status","ready").put("execution_mode","public_guide")

@@ -21,6 +21,12 @@ public final class Gov24GuideProbeReceiver extends BroadcastReceiver {
             JSONObject safe=new Gov24LoginPrivacy().filter(screen);
             report.put("screen_status",safe.optString("status")).put("public_node_count",safe.getJSONArray("nodes").length());
             report.put("handoff_reason",safe.optString("handoff_reason"));
+            var home=ClickAccessibilityService.gov24LoginEntry();
+            if(home!=null) {
+                report.put("raw_filter_status",safe.optString("status"));
+                report.put("screen_status","public_home").put("handoff_reason","");
+                report.put("local_login_visible",home.visible);
+            }
             Object service=((java.lang.ref.WeakReference<?>)field(ClickOverlayService.class,"runningService",null)).get();
             report.put("overlay_running",service!=null);
             if(service!=null) {

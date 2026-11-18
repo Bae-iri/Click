@@ -18,6 +18,9 @@ public final class GoalPreparationState {
     public boolean needsInput() { return "needs_input".equals(data.optString("status")) && question() != null; }
     public JSONObject question() { return data.optJSONObject("question"); }
     public String guidance() {
+        JSONObject publicGoal=data.optJSONObject("public_guide_goal");
+        if(publicGuide()&&"ready".equals(data.optString("status"))&&publicGoal!=null
+                &&"gov24.login".equals(publicGoal.optString("goal_type")))return "정부24 로그인을 안내할게요.";
         JSONObject current = question();
         String guidance = current == null ? message : current.optString("message", message);
         // Keep the displayed question and TTS consistent with older server responses too.
