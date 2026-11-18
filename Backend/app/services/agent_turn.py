@@ -171,7 +171,7 @@ class AgentTurnService:
         with self.session_factory() as db:
             from app.models.agent_session import AgentSession
             current = db.get(AgentSession, request.session_id)
-            if current and current.user_id == request.user_id and (current.workflow or {}).get('version') == 'coupang-browse.v1':
+            if current and current.user_id == request.user_id and (current.workflow or {}).get('version') in {'coupang-browse.v1','gov24-login.v1'}:
                 self.repository.conflict('BROWSE_COMMAND_REQUIRED')
         legacy = self.repository.typed_details(request.session_id, request.user_id) if (
             request.user_result is not None or request.adjustment_reason is not None) else None

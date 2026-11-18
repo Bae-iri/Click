@@ -922,6 +922,37 @@ public final class TaskFlowOverlayView extends LinearLayout {
         }
     }
 
+    public void publicLogin(String message,boolean terminal,org.json.JSONObject question,
+            java.util.function.BiConsumer<String,Boolean> answer,Runnable observe,Runnable openApp,Runnable finish) {
+        reviewStage(1,"정부24 로그인 안내","로그인 방법을 고르고, 실제 인증은 직접 진행해요.");
+        narrationMessage=message;content.addView(text(message,16),spaced(12));
+        if(terminal){content.addView(primaryButton("안내 끝내기",finish),spaced(12));return;}
+        if(question!=null) {
+            org.json.JSONArray choices=question.optJSONArray("choices");
+            for(int i=0;choices!=null&&i<choices.length();i++) {
+                org.json.JSONObject choice=choices.optJSONObject(i);if(choice==null)continue;
+                String value=choice.optString("value");
+                content.addView(secondaryButton((i+1)+". "+choice.optString("label"),()->answer.accept(value,true)),spaced(6));
+            }
+            EditText editor=new EditText(getContext());editor.setHint("예: 카카오 인증서를 쓰고 싶어요");
+            editor.setSingleLine(true);editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
+            editor.setTextSize(ClickTextScale.size(getContext(),14));editor.setTextColor(INK);editor.setMinHeight(dp(48));
+            editor.setContentDescription("사용할 인증수단 이름 입력");
+            editor.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(160)});
+            content.addView(editor,spaced(10));
+            content.addView(secondaryButton("말로 답하기",()->{hideKeyboard(editor);listener.stopGuidance();listener.openInput();}),spaced(8));
+            content.addView(primaryButton("입력한 답변 보내기",()->{
+                String value=editor.getText().toString().trim();if(!value.isEmpty()) {
+                    ((android.view.inputmethod.InputMethodManager)getContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(editor.getWindowToken(),0);
+                    answer.accept(value,false);
+                }
+            }),spaced(8));
+        }
+        content.addView(secondaryButton("현재 화면 확인",observe),spaced(12));
+        content.addView(secondaryButton("정부24 열기",openApp),spaced(8));
+        content.addView(quietButton("직접 진행하고 안내 끝내기",finish),spaced(8));
+    }
+
     public void requirements(RequirementReview review, boolean executable) {
         requirements(review, executable, review.prompt(executable));
     }

@@ -8,6 +8,7 @@
 
     <queries>
         <package android:name="com.coupang.mobile" />
+        <package android:name="kr.go.minwon.m" />
         <package android:name="com.kakao.talk" />
         <intent>
             <action android:name="android.speech.RecognitionService" />

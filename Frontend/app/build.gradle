@@ -34,7 +34,7 @@ android {
     defaultConfig {
         buildConfigField "String", "KAKAO_NATIVE_APP_KEY", javaString(kakaoNativeAppKey)
         manifestPlaceholders.kakaoRedirectScheme = "kakao${kakaoNativeAppKey ?: 'unconfigured'}"
-        applicationId "com.clueclick.app"
+        applicationId providers.gradleProperty("CLICK_APPLICATION_ID").getOrElse("com.clueclick.app")
         minSdk 26
         targetSdk 34
         versionCode 1
@@ -202,3 +202,19 @@ android.buildTypes.each { kind ->
     android.sourceSets.getByName(kind.name).assets.srcDir(identityAssets)
     tasks.matching { it.name == "merge${title}Assets" }.configureEach { dependsOn(generateIdentity) }
 }
+
+// Shared public login semantics; no native resource IDs or credentials in this policy.
+def loginGuidePolicy = rootProject.file("../AI-Agent/goal_catalog/gov24_login_policy.json")
+def generatedLoginGuide = layout.buildDirectory.dir("generated/publicGuide/java")
+def generateLoginGuide = tasks.register("generateLoginGuide") {
+    inputs.file(loginGuidePolicy)
+    outputs.dir(generatedLoginGuide)
+    doLast {
+        def target = new File(generatedLoginGuide.get().asFile, "com/click/generated/Gov24LoginPolicyData.java")
+        target.parentFile.mkdirs()
+        target.setText("package com.click.generated; public final class Gov24LoginPolicyData { public static String json() { return " +
+            groovy.json.JsonOutput.toJson(loginGuidePolicy.getText("UTF-8")) + "; } }", "UTF-8")
+    }
+}
+android.sourceSets.main.java.srcDir(generatedLoginGuide)
+tasks.named("preBuild").configure { dependsOn(generateLoginGuide) }

@@ -100,4 +100,22 @@ public class CoupangBrowseControllerTest {
         controller.screenChanged(appScreen("com.coupang.mobile"));
         verify(gateway,times(2)).send(any(),any());
     }
+    @Test public void publicLoginQuestionSurvivesScreenChangeAndReplyCarriesFreshQuestionBinding() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);
+        var controller=new CoupangBrowseController(gateway,view->new JSONObject().put("status","outside_app"),
+            "kr.go.minwon.m","public-guide.v1",listener);
+        controller.start("session","prepared");
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        verify(gateway).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("session_version",1)
+            .put("question",new JSONObject().put("id","current-question")));
+        controller.screenChanged(appScreen("other.app"));assertTrue(controller.awaitingAnswer());
+        controller.answer(appScreen("kr.go.minwon.m"),"카카오로",false);
+        var requests=ArgumentCaptor.forClass(JSONObject.class);verify(gateway,times(2)).send(requests.capture(),any());
+        assertEquals("public-guide.v1",requests.getValue().getString("protocol_version"));
+        assertEquals("current-question",requests.getValue().getString("question_id"));
+        assertEquals("카카오로",requests.getValue().getString("answer"));
+        controller.close();assertFalse(controller.awaitingAnswer());
+    }
 }
