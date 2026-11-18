@@ -117,5 +117,6 @@
     "Robolectric SDK cases do not establish compatibility for every manufacturer, OS build, display configuration or Government24 version.",
     "Unknown labels and headings inside unverified interactive or scrolling containers remain conservative; this change does not enable arbitrary screen export or unrestricted navigation.",
     "The general app still declares versionCode 1 and versionName 1.0; the artifact hashes and source revision identify these APKs."
-  ]
+  ],
+  "follow_up_report": "2026-11-18-device-compatibility-live.json"
 }
