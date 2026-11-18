@@ -14,12 +14,54 @@ import org.mockito.ArgumentCaptor;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowBuild;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 34, application = ClickApplication.class)
 public class AccessibilitySettingsLaunchTest {
+    @Test public void samsungUsesItsOwnDetailsScreenInsteadOfAospHomepage() {
+        ShadowBuild.setManufacturer("samsung");
+        ClickApplication app = (ClickApplication) RuntimeEnvironment.getApplication();
+        Activity activity = mock(Activity.class);
+        when(activity.getIntent()).thenReturn(new Intent());
+
+        app.openAccessibilitySettings(activity);
+
+        ArgumentCaptor<Intent> launch = ArgumentCaptor.forClass(Intent.class);
+        verify(activity).startActivity(launch.capture());
+        assertEquals("com.samsung.accessibility.ACCESSIBILITY_DETAILS_SETTINGS", launch.getValue().getAction());
+        assertEquals("com.samsung.accessibility", launch.getValue().getPackage());
+        assertEquals(new ComponentName(app, ClickAccessibilityService.class).flattenToString(),
+                launch.getValue().getStringExtra(Intent.EXTRA_COMPONENT_NAME));
+    }
+
+    @Test public void missingSamsungScreenTriesAospDetailsBeforeList() {
+        assertSamsungFallback(new ActivityNotFoundException());
+    }
+
+    @Test public void restrictedSamsungScreenTriesAospDetailsBeforeList() {
+        assertSamsungFallback(new SecurityException());
+    }
+
+    private void assertSamsungFallback(RuntimeException failure) {
+        ShadowBuild.setManufacturer("samsung");
+        ClickApplication app = (ClickApplication) RuntimeEnvironment.getApplication();
+        Activity activity = mock(Activity.class);
+        when(activity.getIntent()).thenReturn(new Intent());
+        doThrow(failure).doThrow(new ActivityNotFoundException()).doNothing()
+                .when(activity).startActivity(any(Intent.class));
+
+        app.openAccessibilitySettings(activity);
+
+        ArgumentCaptor<Intent> launches = ArgumentCaptor.forClass(Intent.class);
+        verify(activity, times(3)).startActivity(launches.capture());
+        assertEquals("com.samsung.accessibility.ACCESSIBILITY_DETAILS_SETTINGS", launches.getAllValues().get(0).getAction());
+        assertEquals("android.settings.ACCESSIBILITY_DETAILS_SETTINGS", launches.getAllValues().get(1).getAction());
+        assertEquals(Settings.ACTION_ACCESSIBILITY_SETTINGS, launches.getAllValues().get(2).getAction());
+    }
+
     @Test public void opensOwnServiceDetailsAndPreservesReturnDestination() {
         ClickApplication app = (ClickApplication) RuntimeEnvironment.getApplication();
         Activity activity = mock(Activity.class);

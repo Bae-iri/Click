@@ -484,6 +484,12 @@ public final class MenuActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume();
+        com.click.data.local.AccessibilityOnboardingState onboarding =
+                new com.click.data.local.AccessibilityOnboardingState(this);
+        if (onboarding.isPending() && onboarding.returnsToSettings()
+                && com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() != null) {
+            onboarding.markSettingsReturned();
+        }
         syncAutomationToggle();
         graphConsent.read(new GraphImprovementConsentGateway.Callback() {
             @Override public void onResult(boolean consented) { graphConsented = consented; }
