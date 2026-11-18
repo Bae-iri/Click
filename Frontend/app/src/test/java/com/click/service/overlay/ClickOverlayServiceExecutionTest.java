@@ -4178,6 +4178,50 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals(before,requests.size());
         accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());
     }
+    @Test public void lateSettingsEntryAfterSoundPageArrivalReobservesWithoutOpeningOrBacking() throws Exception {
+        prepareGuideResponse("settings.volume.increase");deliver(1,"highlight","tap",null);
+        currentScreen=environmentScene("com.android.settings","소리 및 진동",
+                new com.click.data.snapshot.NativeWindowContext("SUBPAGE","APPLICATION",false));
+        int before=requests.size();var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
+        invoke("showSettingsEntryRecovery");
+        assertEquals(before+1,requests.size());assertSame(currentScreen,requests.get(before).accessibilityTree);
+        verify(panel,never()).settingsEntryRecovery(any());
+        assertNull(shadowOf(service).getNextStartedActivity());
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());
+    }
+    @Test public void repeatedRecoveryOnSameSoundPageOffersObservationInsteadOfReopeningSettings() throws Exception {
+        prepareGuideResponse("settings.volume.increase");deliver(1,"highlight","tap",null);
+        currentScreen=environmentScene("com.android.settings","소리 및 진동",
+                new com.click.data.snapshot.NativeWindowContext("SUBPAGE","APPLICATION",false));
+        set("lastSubmittedScreen",currentScreen);
+        int before=requests.size();var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
+        invoke("showSettingsEntryRecovery");invoke("showSettingsEntryRecovery");
+        assertEquals(before,requests.size());
+        verify(panel,never()).settingsEntryRecovery(any());
+        verify(panel,times(2)).observationRecovery(contains("설정 화면에 있어요"),any());
+        assertNull(shadowOf(service).getNextStartedActivity());
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());
+    }
+    @Test public void oldSettingsOpenButtonCannotReopenSettingsAfterUserReachedSoundPage() throws Exception {
+        prepareGuideResponse("settings.volume.increase");deliver(1,"highlight","tap",null);
+        invoke("showSettingsEntryRecovery");var panel=(TaskFlowOverlayView)get("taskFlowView");
+        var click=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify(panel).settingsEntryRecovery(click.capture());
+        currentScreen=environmentScene("com.android.settings","소리 및 진동",
+                new com.click.data.snapshot.NativeWindowContext("SUBPAGE","APPLICATION",false));
+        int before=requests.size();click.getValue().run();
+        assertEquals(before+1,requests.size());assertSame(currentScreen,requests.get(before).accessibilityTree);
+        assertNull(shadowOf(service).getNextStartedActivity());
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());
+    }
+    @Test public void missingSubpageHeadingDoesNotLocallyForceSettingsEntry() throws Exception {
+        prepareGuideResponse("settings.volume.increase");deliver(1,"highlight","tap",null);
+        var unknown=new ScreenSnapshot("com.android.settings",Instant.now().toString(),1080,2400,List.of(),42)
+                .withWindowContext(new com.click.data.snapshot.NativeWindowContext("SUBPAGE","APPLICATION",false));
+        var method=ClickOverlayService.class.getDeclaredMethod("handleEnvironment",ScreenSnapshot.class);method.setAccessible(true);
+        assertEquals(false,method.invoke(service,unknown));
+        verify((TaskFlowOverlayView)get("taskFlowView"),never()).settingsEntryRecovery(any());
+        accessibility.verify(()->ClickAccessibilityService.performRecoveryNavigation(anyBoolean()),never());
+    }
     @Test public void settingsResumeUsesAnObservedSettingsScreenAndPreservesTheGoal() throws Exception {
         prepareGuideResponse();deliver(1,"highlight","tap",null);JSONObject original=(JSONObject)get("acceptedGoal");
         invoke("showSettingsEntryRecovery");var click=org.mockito.ArgumentCaptor.forClass(Runnable.class);

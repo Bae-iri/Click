@@ -114,5 +114,7 @@ def environment_recovery(environment,setting):
         # Generic Settings on a native sub-Activity is not evidence of the Settings home.
         if heading and (heading not in normalized_labels(setting) or heading in policy()['settings_home_titles']):
             return ('SETTINGS_OFF_PATH','go_back')
-        if not heading:return ('SETTINGS_OFF_PATH','go_back')
+        # OEM toolbar redraws can temporarily omit the heading. Let normal
+        # observation/selection assess visible controls instead of navigating
+        # away from a potentially correct Settings subpage before Jev runs.
     return None
