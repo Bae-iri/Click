@@ -10,7 +10,7 @@ CIVIL_OPTIONS = CIVIL['options']
 
 def civil_requested(source):
     text = normalize(source)
-    return (('정부24' in text or '정부이십사' in text or 'gov24' in text)
+    return ((any(word in text for word in ('정부24', '정부이십사', 'gov24', '주민등록등본', '주민등록표등본')))
             and any(word in text for word in ('주민등록등본', '주민등록표등본', '등본'))
             and not any(word in text for word in ('초본', '등본말고', '토지', '건축물', '신청내역', '발급내역', '처리상태')))
 
