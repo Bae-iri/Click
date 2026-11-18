@@ -40,5 +40,5 @@ class GoalPreparation(BaseModel):
     execution_mode: Literal['graph', 'browse', 'public_guide'] = 'graph'
     browse_goal_type: Literal['coupang.product.search', 'coupang.product.details'] | None = None
     browse_goal: BrowseGoal | None = None
-    public_guide_goal: dict[str, Literal['gov24.login']] | None = None
+    public_guide_goal: dict[str, Literal['gov24.login', 'gov24.resident_copy.open']] | None = None
     expires_at: int

@@ -13,7 +13,7 @@ sys.path.insert(0, str(BACKEND.parent / 'AI-Agent/src'))
 INSTANCE = BACKEND / 'instance/validation'
 
 
-def prepare(env_file, port):
+def prepare(env_file, port, *, coupang_browse=False, gov24=False):
     from dotenv import dotenv_values, set_key
     from cryptography.fernet import Fernet
     from app.core.data_encryption import DataCipher
@@ -21,6 +21,10 @@ def prepare(env_file, port):
         raise ValueError('Invalid validation port')
     INSTANCE.mkdir(parents=True, exist_ok=True)
     values = dict(dotenv_values(env_file))
+    if coupang_browse:
+        values['CLICK_COUPANG_BROWSE_ENABLED'] = '1'
+    if gov24:
+        values['CLICK_GOV24_GUIDE_ENABLED'] = '1'
     target = INSTANCE / '.env'
     previous = dotenv_values(target) if target.exists() else {}
     values.update(DATABASE_URL='sqlite+pysqlite:///' + (INSTANCE / 'validation.db').as_posix(),
@@ -47,7 +51,7 @@ def prepare(env_file, port):
     try:
         factory = build_session_factory(engine)
         TaskGraphRepository(factory).seed_mvp()
-        manifest = environment_manifest(factory, values['CLICK_VALIDATION_ENVIRONMENT_ID'])
+        manifest = environment_manifest(factory, values['CLICK_VALIDATION_ENVIRONMENT_ID'], runtime_settings=values)
         expected = {graph.definition.task_id: canonical_graph(graph)[1] for graph in approved_graphs().values()}
         actual = {row['task_id']: row['sha256'] for row in manifest['approved_graphs']}
         if not expected or actual != expected:
@@ -97,22 +101,45 @@ def trace(session):
 
 
 def main():
+    global INSTANCE
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     prepare_cmd = commands.add_parser('prepare')
     prepare_cmd.add_argument('--env-file', type=Path, default=BACKEND / '.env')
     prepare_cmd.add_argument('--port', type=int, default=8001)
+    prepare_cmd.add_argument('--coupang-browse', action='store_true')
+    prepare_cmd.add_argument('--gov24', action='store_true')
+    parser.add_argument('--instance', type=Path, default=INSTANCE)
     commands.add_parser('check')
+    commands.add_parser('serve', help='Serve the isolated paired instance on localhost')
     trace_cmd = commands.add_parser('trace')
     trace_cmd.add_argument('--session', required=True)
     args = parser.parse_args()
+    INSTANCE = args.instance.resolve()
+    if not INSTANCE.is_relative_to((BACKEND / 'instance').resolve()):
+        parser.error('Instance must be inside Backend/instance')
     try:
         if args.command == 'prepare':
             if not args.env_file.is_file():
                 raise ValueError('Source environment file does not exist')
-            prepare(args.env_file, args.port)
+            prepare(args.env_file, args.port, coupang_browse=args.coupang_browse, gov24=args.gov24)
         elif args.command == 'check':
             check()
+        elif args.command == 'serve':
+            from dotenv import dotenv_values
+            from urllib.parse import urlparse
+            import uvicorn
+            settings = dotenv_values(INSTANCE / '.env')
+            expected = json.loads((INSTANCE / 'environment.json').read_text(encoding='utf-8'))
+            address = urlparse(expected['api_base_url'])
+            if address.hostname != '127.0.0.1' or not address.port:
+                raise ValueError('Only a local validation server may be started')
+            os.environ.update({k: v for k, v in settings.items() if v is not None})
+            # Windows venv launchers may have a different PID from the actual
+            # serving interpreter. Let the helper manage the real server only.
+            (INSTANCE / 'server-runtime.json').write_text(json.dumps({
+                'pid': os.getpid(), 'fingerprint': expected['fingerprint']}), encoding='utf-8')
+            uvicorn.run('app.main:create_app', factory=True, host='127.0.0.1', port=address.port)
         else:
             trace(args.session)
         return 0

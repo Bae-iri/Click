@@ -30,3 +30,4 @@ class AgentSessionResponse(BaseModel):
     follow_up: dict | None = None
     browsing: bool = False
     public_guide: bool = False
+    public_guide_goal_type: Literal['gov24.login', 'gov24.resident_copy.open'] | None = None

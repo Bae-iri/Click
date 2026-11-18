@@ -1,0 +1,17 @@
+// Use the same pinned Android plugin artifact when only its implementation,
+// rather than the plugin-marker POM, is present in a local Gradle cache.
+gradle.beforeProject { project ->
+    def isolatedRoot = gradle.startParameter.projectProperties['CLICK_VALIDATION_BUILD_ROOT']
+    if (isolatedRoot) {
+        def name = project.path == ':' ? 'root' : project.path.substring(1).replace(':', '/')
+        project.layout.buildDirectory.set(new File(isolatedRoot, name))
+    }
+}
+
+settingsEvaluated { settings ->
+    settings.pluginManagement.resolutionStrategy.eachPlugin {
+        if (requested.id.id in ['com.android.application', 'com.android.library']) {
+            useModule("com.android.tools.build:gradle:${requested.version}")
+        }
+    }
+}
