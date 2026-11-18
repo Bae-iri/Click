@@ -6,7 +6,7 @@ from unittest.mock import Mock
 import pytest
 from sqlalchemy import select
 from fastapi.testclient import TestClient
-from app.main import create_app
+from tests.legacy_commerce import create_app
 from app.models.runtime_event import RuntimeEvent
 from app.models.agent_session import AgentSession
 from app.services.browse_policy import query_hash

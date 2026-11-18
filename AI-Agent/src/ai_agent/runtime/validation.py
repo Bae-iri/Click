@@ -10,8 +10,11 @@ from pathlib import Path
 
 @lru_cache(maxsize=1)
 def _approved_settings_slots():
-    catalog = json.loads((Path(__file__).resolve().parents[3] / 'goal_catalog/mvp_goals.json').read_text())
-    return {entry['goal_type']: entry['slots'] for entry in catalog['goals']
+    folder = Path(__file__).resolve().parents[3] / 'goal_catalog'
+    catalog = json.loads((folder / 'mvp_goals.json').read_text(encoding='utf-8'))
+    legacy = (json.loads((folder / 'legacy_coupang_goals.json').read_text(encoding='utf-8'))['goals']
+              if catalog.get('legacy_catalog') == 'legacy_coupang_goals.json' else [])
+    return {entry['goal_type']: entry['slots'] for entry in [*catalog['goals'], *legacy]
         if entry.get('execution_status') == 'approved'}
 
 

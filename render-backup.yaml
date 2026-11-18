@@ -1,0 +1,30 @@
+# Separate Blueprint: deploy only after infra/backup is applied and the
+# click-db-backup-secrets environment group has been created manually.
+# Never write dumps to the web service's ephemeral filesystem.
+services:
+  - type: cron
+    name: click-db-daily-backup
+    runtime: docker
+    region: singapore
+    plan: starter
+    branch: develop
+    schedule: "0 18 * * *" # UTC 18:00 = next day 03:00 KST
+    dockerfilePath: ./Backend/Dockerfile.backup
+    dockerContext: .
+    dockerCommand: python managed_database_backup.py backup
+    envVars:
+      - fromGroup: click-db-backup-secrets
+      - key: DATABASE_URL # Existing click_db Internal URL, read-only backup login preferred.
+        sync: false
+  - type: cron
+    name: click-db-backup-retention
+    runtime: docker
+    region: singapore
+    plan: starter
+    branch: develop
+    schedule: "30 * * * *" # Every hour at :30, UTC/KST
+    dockerfilePath: ./Backend/Dockerfile.backup
+    dockerContext: .
+    dockerCommand: python managed_database_backup.py prune
+    envVars:
+      - fromGroup: click-db-backup-secrets

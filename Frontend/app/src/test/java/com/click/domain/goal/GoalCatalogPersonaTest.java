@@ -52,9 +52,9 @@ public class GoalCatalogPersonaTest {
             String expected = goal.getString("goal_type");
             String targetApp = goal.getString("target_app");
             String matchingForeground = "android_settings".equals(targetApp)
-                    ? "com.android.settings" : "com.coupang.mobile";
+                    ? "com.android.settings" : "kr.go.minwon.m";
             String otherForeground = "android_settings".equals(targetApp)
-                    ? "com.coupang.mobile" : "com.android.settings";
+                    ? "kr.go.minwon.m" : "com.android.settings";
 
             for (String base : combinations(goal.getJSONArray("keyword_groups"))) {
                 List<String> variants = new ArrayList<>();
@@ -108,34 +108,26 @@ public class GoalCatalogPersonaTest {
                 {"settings.mono_audio.enable", "한쪽 이어폰 소리 때문에 모노 오디오 설정해", settings},
                 {"settings.software_update.check", "시스템 업데이트 있는지 검사해줘", settings},
                 {"settings.device_name.change", "휴대폰 이름 변경하고 싶어", settings},
-                {"coupang.product.search", "쿠팡에서 휴지 찾아줘", coupang},
-                {"coupang.product.price.check", "이 상품 가격 얼마인지 알려줘", coupang},
-                {"coupang.product.stock.check", "이거 품절이야? 재고 있는지 확인해", coupang},
-                {"coupang.product.compare", "두 상품 차이 비교해줘", coupang},
-                {"coupang.product.share", "이 상품 링크 카톡으로 공유해줘", coupang},
-                {"coupang.product.option.select", "제품 옵션 골라줘", coupang},
-                {"coupang.product.restock_notification", "품절이면 재입고 알림 신청해줘", coupang},
-                {"coupang.product.inquiry.write", "판매자 문의에 질문 남겨줘", coupang},
-                {"coupang.cart.add", "장바구니에 이거 담아줘", coupang},
-                {"coupang.cart.quantity.increase", "카트 수량 더 많이 늘려줘", coupang},
-                {"coupang.order.list", "내 구매 내역 확인해줘", coupang},
-                {"coupang.order.track", "내 택배 지금 어디야", coupang},
-                {"coupang.order.cancel", "쿠팡에서 한 주문 취소해줘", coupang},
-                {"coupang.order.cancel", "방금 한 결제 취소해줘", coupang},
-                {"coupang.order.refund_status", "환불금 언제 들어와", coupang},
-                {"coupang.order.return_pickup.track", "반품 수거 기사 언제 와", coupang},
-                {"coupang.review.edit", "내가 쓴 상품평 고쳐줘", coupang},
-                {"coupang.review.delete", "방금 쓴 리뷰 지워줘", coupang},
-                {"coupang.address.remove", "예전 배송지 삭제해줘", coupang},
-                {"coupang.payment_method.remove", "등록한 결제 카드 삭제해", coupang},
-                {"coupang.search.recent.clear", "최근 검색 기록 다 지워줘", coupang},
-                {"coupang.account.logout", "쿠팡 로그아웃 해줘", coupang},
-                {"coupang.rocket_wow.benefits", "로켓와우 혜택 뭐야", coupang},
-                {"coupang.recurring_delivery.manage", "정기 배송 해지하고 싶어", coupang},
-                {"coupang.rocket_fresh.filter", "로켓프레시 상품만 모아 보여줘", coupang},
-                {"coupang.coupay.balance.view", "쿠페이 머니 잔액 얼마야", coupang},
-                {"coupang.coupay.money.add", "쿠페이에 돈 충전해줘", coupang},
-                {"coupang.points.view", "내 쿠팡 캐시 잔액 보여줘", coupang}
+                {"gov24.login", "정부24 로그인 도와줘", "kr.go.minwon.m"},
+                {"gov24.resident_copy.open", "정부24 주민등록등본 발급 화면 찾아줘", "kr.go.minwon.m"},
+                {"gov24.resident_extract.open", "정부24 주민등록초본 발급 화면 찾아줘", "kr.go.minwon.m"},
+                {"gov24.move_in.open", "정부24 전입신고 화면 찾아줘", "kr.go.minwon.m"},
+                {"gov24.building_register.open", "정부24 건축물대장 열람 화면 보여줘", "kr.go.minwon.m"},
+                {"gov24.land_register.open", "정부24 토지대장 발급 화면 찾아줘", "kr.go.minwon.m"},
+                {"gov24.land_use_plan.open", "정부24 토지이용계획 확인 화면 보여줘", "kr.go.minwon.m"},
+                {"gov24.local_tax_payment.open", "정부24 지방세 납세증명서 발급 화면 찾아줘", "kr.go.minwon.m"},
+                {"gov24.local_tax_assessment.open", "정부24 지방세 세목별 과세증명 화면 찾아줘", "kr.go.minwon.m"},
+                {"gov24.national_tax_payment.open", "정부24 국세 납세증명서 발급 화면 찾아줘", "kr.go.minwon.m"},
+                {"gov24.income_certificate.open", "정부24 소득금액증명 발급 화면 찾아줘", "kr.go.minwon.m"},
+                {"gov24.vehicle_register.open", "정부24 자동차등록원부 열람 화면 보여줘", "kr.go.minwon.m"},
+                {"gov24.resident_card.reissue.open", "정부24 주민등록증 재발급 신청 화면 찾아줘", "kr.go.minwon.m"},
+                {"gov24.passport.reissue.open", "정부24 여권 재발급 신청 화면 찾아줘", "kr.go.minwon.m"},
+                {"gov24.application.history.view", "정부24 나의 신청 내역 보여줘", "kr.go.minwon.m"},
+                {"gov24.application.status.view", "정부24 민원 처리 상태 확인하고 싶어", "kr.go.minwon.m"},
+                {"gov24.documents.issued.view", "정부24 증명서 발급 내역 보여줘", "kr.go.minwon.m"},
+                {"gov24.documents.electronic.view", "정부24 전자문서지갑 열어줘", "kr.go.minwon.m"},
+                {"gov24.benefits.view", "정부24 보조금24 혜택 확인하고 싶어", "kr.go.minwon.m"},
+                {"gov24.service.search", "정부24 민원서비스 검색 화면 열어줘", "kr.go.minwon.m"},
         };
         for (Object[] item : cases) {
             assertGoal(classifier, (String) item[0], (String) item[1], (String) item[2]);

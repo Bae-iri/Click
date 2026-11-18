@@ -44,8 +44,8 @@ public class GoalCommandInterpreterTest {
         GoalCatalogClassifier catalog = loadCatalog();
         GoalCommandInterpreter.Result orderCancel = GoalCommandInterpreter.interpret(
                 "쿠팡에서 한 주문 취소해줘", true, false, false, catalog, "com.coupang.mobile");
-        assertEquals(GoalCommandInterpreter.Kind.START_TASK, orderCancel.kind);
-        assertEquals("coupang.order.cancel", orderCancel.goal.goalType);
+        assertEquals(GoalCommandInterpreter.Kind.UNSUPPORTED, orderCancel.kind);
+        org.junit.Assert.assertNull(orderCancel.goal);
 
         GoalCommandInterpreter.Result queueCancel = GoalCommandInterpreter.interpret(
                 "이 작업 취소해줘", true, false, false, catalog, "com.coupang.mobile");
@@ -77,9 +77,9 @@ public class GoalCommandInterpreterTest {
                         catalog, "com.android.settings").kind);
     }
 
-    @Test public void classifiesSettingsAndCommerceGoalsFromSharedCatalog() throws Exception {
+    @Test public void classifiesSettingsAndGovernmentGoalsFromSharedCatalog() throws Exception {
         GoalCatalogClassifier catalog = loadCatalog();
-        assertEquals(182, catalog.size());
+        assertEquals(131, catalog.size());
 
         GoalCommandInterpreter.Result font = GoalCommandInterpreter.interpret(
                 "글씨가 너무 커서 좀 작게 해 줘", false, false, false, catalog, "com.android.settings");
@@ -96,8 +96,16 @@ public class GoalCommandInterpreterTest {
 
         GoalCommandInterpreter.Result coupang = GoalCommandInterpreter.interpret(
                 "장바구니에 이거 담아줘", false, false, false, catalog, "com.coupang.mobile");
-        assertEquals(GoalCommandInterpreter.Kind.START_TASK, coupang.kind);
-        assertEquals("coupang.cart.add", coupang.goal.goalType);
+        assertEquals(GoalCommandInterpreter.Kind.UNSUPPORTED, coupang.kind);
+        GoalCommandInterpreter.Result government=GoalCommandInterpreter.interpret(
+                "정부24 주민등록등본 발급 화면 찾아줘",false,false,false,catalog,"kr.go.minwon.m");
+        assertEquals(GoalCommandInterpreter.Kind.PUBLIC_GUIDE,government.kind);
+        assertEquals("gov24.resident_copy.open",government.goal.goalType);
+        org.junit.Assert.assertFalse(government.canStart());
+        GoalCommandInterpreter.Result planned=GoalCommandInterpreter.interpret(
+                "정부24 전입신고 화면 찾아줘",false,false,false,catalog,"kr.go.minwon.m");
+        assertEquals(GoalCommandInterpreter.Kind.CATALOGUED_UNAVAILABLE,planned.kind);
+        assertEquals("gov24.move_in.open",planned.goal.goalType);
     }
 
     private static GoalCatalogClassifier loadCatalog() throws Exception {
