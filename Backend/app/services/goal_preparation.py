@@ -15,7 +15,7 @@ from app.schemas.agent_turn import AgentGoalResolutionResponse, TypedGoalRequest
 from app.schemas.goal_preparation import GoalPreparation, InputQuestion
 from app.services.goal_inputs import GoalInputRequirements, normalize, negated
 from app.services.goal_classifier import configured_goal_classifier
-from app.services import browse_policy
+from app.services import browse_policy, public_guide_policy
 from app.schemas.browse import BrowseGoal
 
 
@@ -134,6 +134,8 @@ class GoalPreparationService:
             db.commit()
 
         source = request.source_text
+        public_guide_type = None
+        gov24_allowed = public_guide_policy.enabled() and request.device_context.capabilities.gov24_login
         browse_allowed = browse_policy.enabled() and request.device_context.capabilities.coupang_browse
         values = dict(previous['values']) if previous else {}
         family = next((f for f in self.requirements.document['families'] if previous and f['id'] == previous['family']), None)
@@ -156,6 +158,9 @@ class GoalPreparationService:
                 field = next(f for f in self.requirements.required(family, values) if f['id'] == field_id)
                 values[field_id] = self.requirements.answer(field, request.clarification_answer.value)
 
+        if gov24_allowed and not negated(source) and public_guide_policy.requested(source):
+            public_guide_type = 'gov24.login'
+            family, values, rejection_reason = None, {}, None
         matches = [] if negated(source) else self._keywords(source)
         match = matches[0] if len(matches) == 1 else None
         browse_context = '쿠팡' in normalize(source) or request.device_context.foreground_package == browse_policy.POLICY['package']
@@ -169,7 +174,7 @@ class GoalPreparationService:
         if browse_allowed and match and match['goal_type'] in browse_policy.GOALS and not browse_context and named_app:
             rejection_reason = 'unsupported_app'
             family, values = None, {}
-        if previous is None and not browse_type and not rejection_reason:
+        if previous is None and not browse_type and not public_guide_type and not rejection_reason:
             family = None if negated(source) else self.requirements.family(match['goal_type'] if match else None, source)
             ambiguous_direction = len(self.requirements.directions(source, family)) > 1
             values = {} if negated(source) else self.requirements.explicit_values(source, family)
@@ -227,7 +232,13 @@ class GoalPreparationService:
         missing = self.requirements.missing(family, values) if family else []
         question = None
         browse_goal = None
-        if browse_type:
+        if public_guide_type:
+            family, fields, missing = None, [], []
+            status, resolution_status = 'ready', 'confirmation_required'
+            display_name = '정부24 로그인 방법 선택'
+            message = '정부24 로그인 방법을 함께 고를까요? 실제 화면에 보이는 항목에서 말·글·버튼으로 선택해요. 개인정보 입력과 실제 인증은 직접 진행해 주세요.'
+            rejection_reason = None
+        elif browse_type:
             family, fields, missing = None, [], []
             rejection_reason = None
             display_name = '쿠팡 상품 검색' if browse_type.endswith('search') else '쿠팡 상품 상세 보기'
@@ -308,8 +319,9 @@ class GoalPreparationService:
         prepared = GoalPreparation(id=identifier, source_text=source, family=family['id'] if family else None,
             status=status, values=values, required_fields=fields, missing_fields=[f['id'] for f in missing] or (
                 ['request'] if question and question.field == 'request' else []), question=question,
-            graph_reference=reference, expires_at=now + self.TTL, execution_mode='browse' if browse_type else 'graph',
-            browse_goal_type=browse_type, browse_goal=browse_goal)
+            graph_reference=reference, expires_at=now + self.TTL, execution_mode='public_guide' if public_guide_type else 'browse' if browse_type else 'graph',
+            browse_goal_type=browse_type, browse_goal=browse_goal,
+            public_guide_goal={'goal_type':public_guide_type} if public_guide_type else None)
         response = AgentGoalResolutionResponse(request_id=request.request_id, session_id=request.session_id,
             session_version=0, resolution_status=resolution_status, goal=goal, display_name=display_name,
             message=message, preparation=prepared)

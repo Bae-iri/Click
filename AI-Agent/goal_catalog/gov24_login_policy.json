@@ -1,0 +1,243 @@
+{
+  "version": "gov24-login.v1",
+  "protocol": "public-guide.v1",
+  "package": "kr.go.minwon.m",
+  "app_name": "정부24",
+  "goal_type": "gov24.login",
+  "max_turns": 24,
+  "max_nodes": 24,
+  "options": {
+    "entry_login": {
+      "label": "로그인",
+      "group": "entry",
+      "aliases": [
+        "로그인"
+      ]
+    },
+    "method_mobile_id": {
+      "label": "모바일 신분증",
+      "group": "method",
+      "aliases": [
+        "모바일 신분증",
+        "모바일신분증",
+        "모바일 주민등록증",
+        "모바일 운전면허증"
+      ]
+    },
+    "method_simple": {
+      "label": "간편인증",
+      "group": "method",
+      "aliases": [
+        "간편인증",
+        "간편 인증",
+        "민간인증서"
+      ]
+    },
+    "method_joint": {
+      "label": "공동인증서",
+      "group": "method",
+      "aliases": [
+        "공동인증서",
+        "공인인증서",
+        "공동 인증서"
+      ]
+    },
+    "method_financial": {
+      "label": "금융인증서",
+      "group": "method",
+      "aliases": [
+        "금융인증서",
+        "금융 인증서"
+      ]
+    },
+    "method_biometric": {
+      "label": "생체인증",
+      "group": "method",
+      "aliases": [
+        "생체인증",
+        "지문인증",
+        "얼굴인증"
+      ]
+    },
+    "method_pin": {
+      "label": "간편비밀번호",
+      "group": "method",
+      "aliases": [
+        "간편비밀번호"
+      ]
+    },
+    "method_pattern": {
+      "label": "패턴",
+      "group": "method",
+      "aliases": [
+        "패턴"
+      ]
+    },
+    "method_account": {
+      "label": "아이디 로그인",
+      "group": "method",
+      "aliases": [
+        "아이디 로그인"
+      ]
+    },
+    "method_guest": {
+      "label": "비회원 로그인(개인)",
+      "group": "method",
+      "aliases": [
+        "비회원 로그인(개인)"
+      ]
+    },
+    "provider_naver": {
+      "label": "네이버",
+      "group": "provider",
+      "aliases": [
+        "네이버",
+        "NAVER(네이버)"
+      ]
+    },
+    "provider_kakao": {
+      "label": "카카오톡",
+      "group": "provider",
+      "aliases": [
+        "카카오",
+        "카카오톡",
+        "KAKAO(카카오)",
+        "카톡"
+      ]
+    },
+    "provider_banksalad": {
+      "label": "뱅크샐러드",
+      "group": "provider",
+      "aliases": [
+        "뱅크샐러드",
+        "BANKSALAD(뱅크샐러드)"
+      ]
+    },
+    "provider_kakaobank": {
+      "label": "카카오뱅크",
+      "group": "provider",
+      "aliases": [
+        "카카오뱅크",
+        "KAKAOBANK(카카오뱅크)",
+        "카뱅"
+      ]
+    },
+    "provider_pass": {
+      "label": "통신사PASS",
+      "group": "provider",
+      "aliases": [
+        "통신사PASS",
+        "PASS",
+        "패스",
+        "통신사 패스",
+        "PASS 휴대전화 인증(통신사패스)"
+      ]
+    },
+    "provider_woori": {
+      "label": "우리인증서",
+      "group": "provider",
+      "aliases": [
+        "우리인증서",
+        "우리은행",
+        "우리은행(우리인증서)"
+      ]
+    },
+    "provider_shinhan": {
+      "label": "신한인증서",
+      "group": "provider",
+      "aliases": [
+        "신한인증서",
+        "신한은행",
+        "신한은행(신한인증서)"
+      ]
+    },
+    "provider_nh": {
+      "label": "NH인증서",
+      "group": "provider",
+      "aliases": [
+        "NH인증서",
+        "NH모바일인증서",
+        "농협"
+      ]
+    },
+    "provider_hana": {
+      "label": "하나인증서",
+      "group": "provider",
+      "aliases": [
+        "하나인증서",
+        "하나은행",
+        "하나은행(하나인증서)"
+      ]
+    },
+    "provider_ibk": {
+      "label": "IBK인증서",
+      "group": "provider",
+      "aliases": [
+        "IBK인증서",
+        "기업은행",
+        "기업은행(IBK인증서)"
+      ]
+    },
+    "provider_samsung": {
+      "label": "삼성패스",
+      "group": "provider",
+      "aliases": [
+        "삼성패스",
+        "삼성 패스",
+        "SAMSUNG PASS(삼성패스)"
+      ]
+    },
+    "provider_toss": {
+      "label": "토스",
+      "group": "provider",
+      "aliases": [
+        "토스",
+        "TOSS(토스)"
+      ]
+    },
+    "provider_kb": {
+      "label": "국민인증서",
+      "group": "provider",
+      "aliases": [
+        "국민인증서",
+        "국민은행",
+        "KB 국민은행(국민인증서)"
+      ]
+    }
+  },
+  "handoff_labels": [
+    "이름",
+    "성명",
+    "생년월일",
+    "주민등록번호",
+    "휴대폰 번호",
+    "휴대전화번호",
+    "휴대전화 번호",
+    "인증번호",
+    "인증서 선택",
+    "인증서 비밀번호",
+    "비밀번호 입력",
+    "인증 요청",
+    "인증요청",
+    "본인정보 입력",
+    "개인정보 입력",
+    "인증서",
+    "공동인증서가 없습니다."
+  ],
+  "auth_packages": [
+    "com.mobileid.wallet",
+    "com.kakao.talk",
+    "com.nhn.android.search",
+    "com.skt.pass",
+    "com.kt.android.auth",
+    "com.lguplus.smartotp",
+    "com.kbstar.kbbank",
+    "viva.republica.toss"
+  ],
+  "consent_labels": [
+    "서비스 이용에 대한 동의",
+    "개인정보수집이용동의",
+    "제3자정보제공동의",
+    "모두 동의하고 인증요청"
+  ]
+}

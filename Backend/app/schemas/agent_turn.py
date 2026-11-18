@@ -558,6 +558,7 @@ class DeviceCapabilities(BaseModel):
     guide_overlay: bool = True
     automatic_scroll: bool = False
     coupang_browse: bool = False
+    gov24_login: bool = False
 
 
 class DeviceContextRequest(BaseModel):

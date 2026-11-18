@@ -18,6 +18,7 @@ public final class AgentServerContract {
     public boolean executionState;
     public boolean userDecline;
     public boolean coupangBrowse;
+    public boolean gov24Login;
 
     private AgentServerContract(Set<String> commands, Set<String> goals, Set<String> appliedSettingFields,
                                 String version, boolean interactive, boolean preparation) {
@@ -41,6 +42,8 @@ public final class AgentServerContract {
         JSONObject context = body.optJSONObject("device_context");
         if (coupangBrowse && context != null && context.optJSONObject("capabilities") != null)
             context.getJSONObject("capabilities").put("coupang_browse", true);
+        if(gov24Login && context!=null && context.optJSONObject("capabilities")!=null)
+            context.getJSONObject("capabilities").put("gov24_login",true);
         JSONObject screen = body.optJSONObject("accessibility_tree");
         JSONObject settings = screen == null ? null : screen.optJSONObject("applied_settings");
         if (settings != null) {
@@ -89,6 +92,8 @@ public final class AgentServerContract {
         JSONObject capabilities=schemas.optJSONObject("DeviceCapabilities");
         result.coupangBrowse=document.getJSONObject("paths").has(CoupangBrowseGateway.PATH)
             && capabilities!=null && capabilities.getJSONObject("properties").has("coupang_browse");
+        result.gov24Login=document.getJSONObject("paths").has("/api/v1/agent/public-guide/commands")
+            && capabilities!=null && capabilities.getJSONObject("properties").has("gov24_login");
         JSONObject guide=schemas.optJSONObject("GuideCommandResponse"),cancel=schemas.optJSONObject("CancelVoiceRequest");
         result.userDecline=document.getJSONObject("paths").has("/api/v1/voice-requests/{request_id}/cancel")
             && guide!=null && cancel!=null
