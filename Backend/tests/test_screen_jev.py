@@ -31,6 +31,51 @@ def scene(setting):
     return graph, transition, node, goal
 
 
+@pytest.mark.parametrize("connected", [False, True])
+def test_display_candidate_diagnostics_locate_missing_row_binding(connected):
+    from ai_agent.runtime.normalizer import normalize_accessibility_tree
+    from ai_agent.telemetry.trace_logger import diagnostic_payload
+    graph, _, _, goal = scene("font_size")
+    raw = [AccessibilityNode(node_id="list", package_name="com.android.settings", scrollable=True,
+        bounds_in_screen=(0, 100, 1080, 2200)),
+        AccessibilityNode(node_id="title", text="설정", package_name="com.android.settings",
+            bounds_in_screen=(10, 0, 1000, 90)),
+        AccessibilityNode(node_id="label", parent_id="row", text="디스플레이",
+            package_name="com.android.settings", bounds_in_screen=(30, 200, 700, 260))]
+    if connected:
+        raw.append(AccessibilityNode(node_id="row", parent_id="list", clickable=True,
+            package_name="com.android.settings", bounds_in_screen=(0, 180, 1080, 300)))
+    transition = next(t for t in graph.transitions if t.from_state == "S1_SETTINGS_HOME"
+        and "디스플레이" in t.target_keywords)
+    calls = []
+    def send(payload, **kwargs):
+        calls.append(payload)
+        return sender_for(transition)(payload, **kwargs)
+    resolver = JevScreenResolver(send)
+    resolver.resolve(nodes=normalize_accessibility_tree(tuple(raw)), graph=graph, goal=goal)
+    selection = diagnostic_payload({"ui_selection": resolver.last_diagnostics})["ui_selection"]
+    counts = selection["candidate_diagnostics"]
+    assert counts["display_normalized_nodes"] >= 1
+    assert counts["display_minimized_nodes"] >= 1
+    assert bool(counts["display_actionable_nodes"]) == connected
+    assert bool(calls) == connected
+    if not connected:
+        assert selection["candidate_count"] == 0
+        assert selection["status"] == "no_candidates"
+        assert selection["called"] is False
+
+
+def test_candidate_diagnostics_are_bounded_and_do_not_export_screen_text():
+    from ai_agent.telemetry.trace_logger import diagnostic_payload
+    raw = {"ui_selection": {"candidate_diagnostics": {
+        "normalized_nodes": 4, "eligible_pairs": 0, "display_normalized_nodes": True,
+        "minimized_nodes": -1, "offscreen_pairs": float("nan"),
+        "excluded_pairs": 100_000_001, "screen_text": "PRIVATE_LABEL"}}}
+    expected = {"ui_selection": {"candidate_diagnostics": {"normalized_nodes": 4, "eligible_pairs": 0}}}
+    assert diagnostic_payload(raw) == expected
+    assert diagnostic_payload(expected) == expected
+
+
 def sender_for(transition, choice_override=None, mutate=None):
     def send(payload, **kwargs):
         criteria = payload["questions"]["screen"]["criteria"]

@@ -117,6 +117,11 @@ public final class MenuActivity extends AppCompatActivity {
         LinearLayout tutorial = group();
         addRow(tutorial, MenuIconView.Kind.BOOK, "클릭 사용법", "직접 따라 하며 익혀보세요", false,
                 view -> startActivity(new Intent(this, TutorialActivity.class)));
+        if (com.click.data.local.CandidateDiagnosticLog.enabled()) {
+            divider(tutorial);
+            addRow(tutorial, MenuIconView.Kind.SETTINGS, "테스트 진단 자료 공유", "안내가 멈췄다면 문제 확인 자료를 공유해 주세요", false,
+                    view -> shareCandidateDiagnostics());
+        }
         divider(tutorial);
         addRow(tutorial, MenuIconView.Kind.ACCESSIBILITY, "접근성 설정", "접근성 설정 방법을 확인해요", false,
                 view -> startActivity(new Intent(this, com.click.designpreview.PermissionGuideActivity.class)
@@ -214,6 +219,22 @@ public final class MenuActivity extends AppCompatActivity {
         params.setMarginStart(dp(10));
         note.addView(copy, params);
         return note;
+    }
+
+    private void shareCandidateDiagnostics() {
+        try {
+            java.io.File file = new com.click.data.local.CandidateDiagnosticLog(this).export();
+            Uri uri = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".diagnostic-files", file);
+            Intent share = new Intent(Intent.ACTION_SEND).setType("application/octet-stream")
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            share.setClipData(android.content.ClipData.newRawUri("진단 자료", uri));
+            startActivity(Intent.createChooser(share, "테스트 진단 자료 공유"));
+        } catch (java.io.FileNotFoundException empty) {
+            Toast.makeText(this, "아직 진단 자료가 없어요. 문제가 발생한 안내를 다시 실행해 주세요.", Toast.LENGTH_LONG).show();
+        } catch (Exception unavailable) {
+            Toast.makeText(this, "진단 자료를 공유하지 못했어요. 잠시 후 다시 시도해 주세요.", Toast.LENGTH_LONG).show();
+        }
     }
 
     private View header() {

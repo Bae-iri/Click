@@ -20,6 +20,16 @@ def javaString = { value -> groovy.json.JsonOutput.toJson(value ?: "") }
 def clickApiBaseUrl = providers.gradleProperty("CLICK_API_BASE_URL")
         .getOrElse("https://click-db.onrender.com")
 def clickApplicationId = providers.gradleProperty("CLICK_APPLICATION_ID").getOrElse("com.clueclick.app")
+def candidateDiagnostics = providers.gradleProperty("CLICK_CANDIDATE_DIAGNOSTICS").getOrElse("false")
+if (!(candidateDiagnostics in ["true", "false"])) throw new GradleException("CLICK_CANDIDATE_DIAGNOSTICS must be true or false")
+def releaseSigning = new Properties()
+def releaseSigningPath = providers.gradleProperty("CLICK_RELEASE_SIGNING_FILE").getOrElse("release-signing.properties")
+def releaseSigningFile = rootProject.file(releaseSigningPath)
+if (releaseSigningFile.isFile()) releaseSigningFile.withInputStream { releaseSigning.load(it) }
+def hasReleaseSigning = ["storeFile", "storePassword", "keyAlias", "keyPassword"].every { releaseSigning.getProperty(it)?.trim() }
+if (!releaseSigning.isEmpty() && !hasReleaseSigning) throw new GradleException("Incomplete release signing properties")
+if (providers.gradleProperty("CLICK_REQUIRE_RELEASE_SIGNING").getOrElse("false") == "true" && !hasReleaseSigning)
+    throw new GradleException("Play upload signing is required; configure CLICK_RELEASE_SIGNING_FILE")
 def gov24Pilot = clickApplicationId == "com.click.gov24pilot"
 // Keep machine-local Kakao setup across builds without committing an app key.
 def localSettings = new Properties()
@@ -44,8 +54,9 @@ android {
         manifestPlaceholders.clickAccessibilityLabel = gov24Pilot ? "클릭 정부24 테스트" : "@string/accessibility_service_label"
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode providers.gradleProperty("CLICK_VERSION_CODE").getOrElse("1").toInteger()
+        versionName providers.gradleProperty("CLICK_VERSION_NAME").getOrElse("1.0")
+        buildConfigField "boolean", "CANDIDATE_DIAGNOSTICS", candidateDiagnostics
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField "String", "CLICK_API_BASE_URL", "\"${clickApiBaseUrl}\""
@@ -54,6 +65,14 @@ android {
     }
 
     signingConfigs {
+        if (hasReleaseSigning) {
+            playUpload {
+                storeFile rootProject.file(releaseSigning.getProperty("storeFile"))
+                storePassword releaseSigning.getProperty("storePassword")
+                keyAlias releaseSigning.getProperty("keyAlias")
+                keyPassword releaseSigning.getProperty("keyPassword")
+            }
+        }
         validationDevice {
             if (validationSigningFile) storeFile rootProject.file(validationSigningFile)
             storePassword "android"
@@ -78,6 +97,7 @@ android {
             buildConfigField "String", "CLICK_VALIDATION_FINGERPRINT", javaString(validationEnvironment.fingerprint)
         }
         release {
+            if (hasReleaseSigning) signingConfig signingConfigs.playUpload
             minifyEnabled false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }

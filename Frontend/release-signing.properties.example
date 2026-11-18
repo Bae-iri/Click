@@ -1,0 +1,6 @@
+# Copy to release-signing.properties (ignored by Git).
+# Use the EXISTING Google Play upload key. Forward slashes work on Windows.
+storeFile=C:/path/to/existing-upload-key.jks
+storePassword=
+keyAlias=
+keyPassword=

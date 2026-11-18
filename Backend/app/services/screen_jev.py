@@ -39,6 +39,16 @@ class JevScreenResolver(JevGoalClassifier):
             self.last_diagnostics.update(model=model, minimum_confidence=minimum,
                 judgment_mode=judgment_mode, choice_temperature=temperature)
             setting = graph.definition.required_slots.get("setting", "")
+            def display_count(items, actionable=False):
+                return sum((not actionable or n.actionable) and
+                    any(part in {"디스플레이", "화면", "display", "screen"}
+                        for part in (n.label_parts or (n.label,))) for n in items)
+            counts = self.last_diagnostics["candidate_diagnostics"] = {
+                "normalized_nodes": len(nodes), "display_normalized_nodes": display_count(nodes),
+                "display_actionable_nodes": display_count(nodes, True),
+                "eligible_pairs": 0, "selector_rejected_pairs": 0, "invalid_slider_pairs": 0,
+                "offscreen_pairs": 0, "source_confidence_rejected_pairs": 0,
+                "excluded_pairs": 0, "ambiguous_pairs": 0}
             if raw_nodes:
                 assessment = assess_screen(raw_nodes, setting)
                 if assessment.status:
@@ -50,6 +60,7 @@ class JevScreenResolver(JevGoalClassifier):
             from ai_agent.runtime.environment import native_control_surface
             surface=native_control_surface(raw_nodes) if raw_nodes else None
             nodes = minimize_nodes(nodes, setting, raw_nodes=raw_nodes)
+            counts.update(minimized_nodes=len(nodes), display_minimized_nodes=display_count(nodes))
             if not nodes and not (surface and surface['setting']==setting):
                 self.last_diagnostics["status"] = "empty_observation"
                 return None
@@ -68,25 +79,32 @@ class JevScreenResolver(JevGoalClassifier):
                         or transition.safety_level == SafetyLevel.BLOCKED):
                     continue
                 for node in eligible_nodes(transition, nodes, graph):
+                    counts["eligible_pairs"] += 1
                     if transition.target_role == 'slider' and not valid_slider_value(node.value, node.range_min, node.range_max):
+                        counts["invalid_slider_pairs"] += 1
                         continue
                     # Model confidence cannot identify a setting by itself.
                     # All adjustment tasks require graph-owned control evidence.
                     if (transition.target_role == 'slider'
                             and selector_evidence(node, transition, nodes, graph)[0] < MATCH_THRESHOLD):
+                        counts["selector_rejected_pairs"] += 1
                         continue
                     # An approved menu identity cannot stand for a different
                     # navigation target. Unlabelled sliders still use context.
                     if (node.role in {"menu_item", "button", "app_icon"} and node.label
                             and selector_evidence(node, transition, nodes, graph)[0] < MATCH_THRESHOLD):
+                        counts["selector_rejected_pairs"] += 1
                         continue
                     if screen_bounds:
                         x, y = (node.bounds[0] + node.bounds[2]) / 2, (node.bounds[1] + node.bounds[3]) / 2
                         if not (screen_bounds[0] <= x < screen_bounds[2] and screen_bounds[1] <= y < screen_bounds[3]):
+                            counts["offscreen_pairs"] += 1
                             continue
                     if node.source_confidence is not None and node.source_confidence < minimum:
+                        counts["source_confidence_rejected_pairs"] += 1
                         continue
                     if target_key(node) in (excluded_target_keys or {}).get(transition.transition_id, ()):
+                        counts["excluded_pairs"] += 1
                         continue
                     bindings[f"candidate_{len(bindings)}"] = (transition, node)
             # A named menu is not a candidate for every menu edge merely because
@@ -102,6 +120,7 @@ class JevScreenResolver(JevGoalClassifier):
             from collections import Counter
             identities = Counter((t.transition_id, target_key(n)) for t,n in bindings.values())
             ambiguous = any(count > 1 for count in identities.values())
+            counts["ambiguous_pairs"] = sum(count for count in identities.values() if count > 1)
             bindings = {key:(t,n) for key,(t,n) in bindings.items()
                         if identities[t.transition_id,target_key(n)] == 1}
             self.last_diagnostics["candidate_count"] = len(bindings)
