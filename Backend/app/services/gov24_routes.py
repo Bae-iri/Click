@@ -16,7 +16,7 @@ from ai_agent.task_graph.success_selection import outcome_metrics, select_candid
 SCHEMA = 'gov24-navigation-event.v1'
 
 
-def route_snapshot(factory, code_hash, *, now=None):
+def route_snapshot(factory, code_hash, *, now=None, include_graphs=True):
     now = int(time.time()) if now is None else now
     counts = defaultdict(lambda: dict(successes=0, failures=0, unknown=0))
     report = dict(sessions=0, incompatible=0, routes=[], events=[])
@@ -61,6 +61,8 @@ def route_snapshot(factory, code_hash, *, now=None):
                     status=value.get('reason', 'observed'))
                 if value.get('selected_option') in CIVIL_OPTIONS:
                     entry['option'] = value['selected_option']
+                if value.get('selection_policy') == 'ai2_gov24_task_graph':
+                    entry['selection_policy'] = 'ai2_gov24_task_graph'
                 if isinstance(attempt, dict) and valid_attempt(attempt):
                     entry['attempt'] = {k: attempt[k] for k in ('source', 'option', 'result')}
                 report['events'].append(entry)
@@ -76,6 +78,9 @@ def route_snapshot(factory, code_hash, *, now=None):
         row['leader'] = bool(winner and winner['key'] == row['option'])
     report['events'].sort(key=lambda e: (e['at'], e['id']))
     report['events'] = report['events'][-100:]
+    if include_graphs:
+        from app.services.gov24_graphs import graph_summary
+        report['graphs'] = graph_summary(factory, code_hash=code_hash, now=now)
     return report
 
 
@@ -89,6 +94,10 @@ def valid_attempt(attempt):
 
 
 def choose_route(factory, code_hash, source, options, now):
-    rows = route_snapshot(factory, code_hash, now=now)['routes']
-    return select_candidate([dict(key=r['option'], **r) for r in rows
-                             if r['source'] == source and r['option'] in options])
+    from app.services.gov24_graphs import graph_candidates
+    rows = route_snapshot(factory, code_hash, now=now, include_graphs=False)['routes']
+    graphs = graph_candidates(factory, code_hash, source, options, now)
+    candidates = [dict(key=r['option'], **r) for r in rows
+                  if r['source'] == source and r['option'] in options and (not graphs or r['option'] in graphs)]
+    winner = select_candidate(candidates)
+    return {**winner, **graphs.get(winner['key'], {})} if winner else None

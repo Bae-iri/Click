@@ -246,6 +246,7 @@ def main(argv=None):
 def render_gov24(report, previous=None):
     lines = [f"\n[{datetime.now().astimezone():%H:%M:%S}] 정부24 | 학습 세션 {report['sessions']} / 버전 제외 {report['incompatible']}",
              '출발 화면 / 메뉴 | 성공 실패 미확인 | 성공률 | Wilson 하한 | 상태 | 직전 대비']
+    lines.append(f"검증된 공개 작업 그래프 {len(report.get('graphs', []))}개")
     old = {(r['source'], r['option']): r for r in (previous or {}).get('routes', [])}
     for row in report['routes']:
         before = old.get((row['source'], row['option']))
@@ -262,6 +263,8 @@ def render_gov24(report, previous=None):
         stamp = datetime.fromtimestamp(event['at']).astimezone().strftime('%H:%M:%S')
         attempt = event.get('attempt')
         observed = f" / 결과 {attempt['option']}={attempt['result']}" if attempt else ''
+        if event.get('selection_policy') == 'ai2_gov24_task_graph':
+            observed += ' / AI2 작업 그래프 선택'
         lines.append(f"[{stamp}] {event['status']} {event['page']} → {event.get('option', '-')}{observed}")
     return '\n'.join(lines)
 

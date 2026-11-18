@@ -12,7 +12,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.engine import make_url
 
-from app.main import create_app
+from tests.legacy_commerce import create_app
 from app.models.agent_session import AgentSession
 from app.models.graph_proposal import GraphProposal
 from app.repositories.users import UserRepository

@@ -469,6 +469,9 @@ def main():
     browse.add_argument('--limit', type=int, default=100)
     learn = commands.add_parser('learn-browse', help='Generate new graph drafts from verified, consented browsing')
     learn.add_argument('--limit', type=int, default=100)
+    government = commands.add_parser('learn-gov24', help='Generate Government24 graphs from verified public navigation')
+    government.add_argument('--limit', type=int, default=100)
+    commands.add_parser('list-gov24-graphs', help='List retained consented public Government24 graph metadata')
     drafts = commands.add_parser('list-browse-graphs', help='List retained generated draft metadata, without user data')
     drafts.add_argument('--limit', type=int, default=100)
     repairs = commands.add_parser('list-browse-improvements', help='List current log-derived advisory repair candidates')
@@ -551,6 +554,12 @@ def main():
         elif args.command == 'learn-browse':
             from scripts.browse_graph_learning import BrowseGraphLearningService
             result = BrowseGraphLearningService(factory).process(limit=args.limit)
+        elif args.command == 'learn-gov24':
+            from app.services.gov24_graphs import GovernmentGraphLearningService
+            result = GovernmentGraphLearningService(factory).process(limit=args.limit)
+        elif args.command == 'list-gov24-graphs':
+            from app.services.gov24_graphs import graph_summary
+            result = {'drafts': graph_summary(factory)}
         elif args.command == 'list-browse-graphs':
             from scripts.browse_graph_learning import BrowseGraphLearningService
             result = {'drafts': BrowseGraphLearningService(factory).list_drafts(limit=args.limit)}
@@ -593,7 +602,7 @@ def main():
             return int(result["status"] != "PASS")
         if args.command == 'process':
             return int(bool(result.get('errors') or result['browse_graphs']['errors']))
-        return int(bool(result.get('errors'))) if args.command == 'learn-browse' else 0
+        return int(bool(result.get('errors'))) if args.command in {'learn-browse', 'learn-gov24'} else 0
     finally:
         engine.dispose()
 
