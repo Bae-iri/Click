@@ -57,7 +57,7 @@ def environment_manifest(factory, environment_id, *, runtime_settings=None):
                               cwd=ROOT, capture_output=True, text=True, check=False).stdout.strip()
     settings = os.environ if runtime_settings is None else runtime_settings
     configuration = {key: settings.get(key, default) for key, default in {
-        'CLICK_COUPANG_BROWSE_ENABLED': '0', 'CLICK_GOV24_GUIDE_ENABLED': '0', 'JEV_MODEL': 'jev-1.14.0',
+        'CLICK_COUPANG_BROWSE_ENABLED': '0', 'CLICK_GOV24_GUIDE_ENABLED': '1', 'JEV_MODEL': 'jev-1.14.0',
         'JEV_MIN_CONFIDENCE': '0.8', 'AI1_UI_SELECTOR_PROVIDER': 'rules',
     }.items()}
     manifest = {'schema_version': 'click-validation-environment.v1', 'environment_id': environment_id,
