@@ -35,7 +35,7 @@ cd Frontend
 sh gradlew :app:testDebugUnitTest --tests com.click.data.snapshot.Gov24LoginPrivacyTest --tests com.click.service.overlay.CoupangBrowseControllerTest
 ```
 
-테스트폰에는 `-PCLICK_APPLICATION_ID=com.click.gov24pilot`로 별도 APK를 빌드할 수 있다. 기존 앱의 로그인·데이터를 덮어쓰지 않는다. `Gov24LoginDeviceTest`는 현재 정부24 화면을 읽고 로컬 필터를 검증한다. `expected=public` 또는 `expected=handoff`를 지정하며 입력·인증은 하지 않는다. 산출물은 개인정보를 제외한 semantic option·bounds 또는 빈 handoff 관측이다.
+테스트폰에는 `-PCLICK_APPLICATION_ID=com.click.gov24pilot`로 이름이 **클릭 정부24 테스트**인 별도 APK를 빌드할 수 있다. 홈 아이콘과 접근성 서비스 이름을 일반 클릭과 구분한다. 기존 앱의 로그인·데이터를 덮어쓰지 않는다. `Gov24LoginDeviceTest`는 현재 정부24 화면을 읽고 로컬 필터를 검증한다. `expected=public` 또는 `expected=handoff`를 지정하며 입력·인증은 하지 않는다. 산출물은 개인정보를 제외한 semantic option·bounds 또는 빈 handoff 관측이다.
 
 2026-11-18 연결 기기에서 정부24 2.5.121의 로그인 네 가지 방법·간편인증 기관 목록·기관 선택 뒤 입력 필드 3개를 확인했다. 사용자가 설정한 키로 실제 Jev `jev-1.14.0` 연결 검사를 추가했다. 공개 예시 선호 5건(외부 호출 4건, 로컬 불확실 응답 1건)이 기대 결과를 반환했다. 개인정보를 제외한 실제 기기 화면을 HTTP로 재생한 5개 확인 항목도 통과했다: 로그인 방법 질문, 불확실 답변 재질문, 자연어로 간편인증 선택, 관측된 기관 목록에서 기존 카카오 선호 이어가기, 인증 입력 전 중단. 전체 검사는 음성 재생 없이 수행했다.
 
@@ -48,14 +48,22 @@ sh gradlew :app:testDebugUnitTest --tests com.click.data.snapshot.Gov24LoginPriv
 
 서버는 푸시 여부와 별개로 `/version`의 `source_revision`이 배포할 커밋과 같은지, `public_guidance.gov24_login_enabled`가 `true`인지 확인한다. CI가 시작되지 못했을 때도 `checksPass` 자동 배포는 진행되지 않으므로 Render에서 수동 배포한 뒤 같은 값을 다시 확인한다.
 
-실제 클릭 계정으로 기기에서 로그인한 뒤 아래 검사를 명시적으로 실행할 수 있다. 토큰은 기기 안에서만 사용하며 출력하지 않는다. 이 검사는 실제 오버레이에 요청을 전달하고 공개 로그인 방법 네 가지가 나타나는지 확인하며, 인증수단 선택·인증 요청·개인정보 입력은 진행하지 않는다. 일반 테스트 실행에서는 건너뛴다.
+실제 클릭 계정으로 기기에서 로그인한 뒤 아래 검사를 명시적으로 실행할 수 있다. 토큰은 기기 안에서만 사용하며 출력하지 않는다. 이 검사는 실제 홈 입력창에 요청을 입력하고 전송 버튼을 눌러 공개 로그인 방법 네 가지가 나타나는지 확인하며, 인증수단 선택·인증 요청·개인정보 입력은 진행하지 않는다. 일반 테스트 실행에서는 건너뛴다.
 
 ```sh
 cd Frontend
 sh gradlew :app:assembleDebug :app:assembleDebugAndroidTest
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
-adb shell am instrument -w -r -e gov24Live true \
+# 일반 클릭을 검사할 때는 별도 정부24 테스트 APK에서 실행한다.
+# 대상 앱 자체를 instrumentation으로 재시작하면 접근성 서비스가 끊길 수 있다.
+sh gradlew -PCLICK_APPLICATION_ID=com.click.gov24pilot :app:assembleDebug :app:assembleDebugAndroidTest
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb shell am instrument -w -r -e gov24Live true -e targetPackage com.clueclick.app \
   -e class com.click.data.remote.Gov24InstalledAppFlowTest \
-  com.clueclick.app.test/androidx.test.runner.AndroidJUnitRunner
+  com.click.gov24pilot.test/androidx.test.runner.AndroidJUnitRunner
 ```
+
+
+자연어 진입의 `resolve_goal` 요청도 서버가 공개한 `gov24_login` capability를 포함해야 한다. 이 요청은 처음부터 `device_context.capabilities`가 없는 형태이므로, 계약 인코더가 필요한 객체를 만들고 지원 정보를 넣는다. 공개 가이드 코드와 서버 활성화만으로는 이 전송 누락을 해결할 수 없다. 구버전 서버에는 미지원 capability를 추가하지 않는 회귀 검사도 유지한다.
