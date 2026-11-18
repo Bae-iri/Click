@@ -22,8 +22,10 @@ public final class AgentTurnGateway {
     private volatile AgentServerContract contract;
     private final com.click.data.local.DeviceTaskJournal journal;
     private final com.click.data.snapshot.SettingsScreenPrivacy screenPrivacy;
+    private final com.click.data.local.CandidateDiagnosticLog candidateLog;
 
     public AgentTurnGateway(Context context) {
+        candidateLog = new com.click.data.local.CandidateDiagnosticLog(context);
         http = new AuthenticatedHttpClient(context);
         journal=new com.click.data.local.AuthTokenStore(context).taskJournal();
         com.click.data.snapshot.SettingsScreenPrivacy loaded = null;
@@ -37,18 +39,31 @@ public final class AgentTurnGateway {
     /** Run before action events or one-use approvals are consumed by a request. */
     public boolean needsFreshObservation(com.click.data.snapshot.ScreenSnapshot screen) {
         if (screenPrivacy == null || screen == null) return false;
+        logSettingsCandidates(screen, null, null, "preflight");
         try {
             screenPrivacy.filter(new org.json.JSONObject().put("accessibility_tree", new org.json.JSONObject(screen.toJson())));
         } catch (com.click.data.snapshot.SettingsScreenPrivacy.Incomplete incomplete) {
+            logPreflightResult(screen, "incomplete");
             return true;
         } catch (com.click.data.snapshot.SettingsScreenPrivacy.Blocked blocked) {
+            logPreflightResult(screen, blocked.reason.name());
             // Keep an unsupported/transitional frame on device and use the
             // bounded observation retry. Credentials still fail closed below.
             return blocked.reason == com.click.data.snapshot.SettingsScreenPrivacy.Blocked.Reason.UNSUPPORTED_APP;
         } catch (Exception blockedOrInvalid) {
+            logPreflightResult(screen, "invalid_observation");
             // The actual send path must enforce its original privacy/contract error.
         }
         return false;
+    }
+
+    private void logPreflightResult(com.click.data.snapshot.ScreenSnapshot screen, String reason) {
+        if (!com.click.data.local.CandidateDiagnosticLog.enabled()
+                || !com.click.service.accessibility.TouchAutomationPolicy.settingsPackage(screen.packageName)) return;
+        try {
+            candidateLog.record(new org.json.JSONObject().put("stage", "preflight_result")
+                    .put("observation_id", screen.observationId).put("reason", reason));
+        } catch (Exception ignored) { /* No exception text or screen labels are persisted. */ }
     }
 
     private static Throwable classifyFailure(Throwable error){
@@ -79,20 +94,53 @@ public final class AgentTurnGateway {
             body.remove("vision_snapshot");
         }
         if (body.has("accessibility_tree") || body.has("vision_snapshot")) {
+            logSettingsCandidates(request, null, "collected");
             if (screenPrivacy == null)
                 throw new com.click.data.snapshot.SettingsScreenPrivacy.Blocked();
             body = screenPrivacy.filter(body, request.observationSetting,
                     request.accessibilityTree == null || request.accessibilityTree.privacyMaskingReady);
+            logSettingsCandidates(request, body, "filtered");
         }
         journal.stage(body);
         HttpResult result = http.post(AgentTurnContract.PATH, body.toString(),25000);
         AgentTurnContract.Response response = new AgentTurnContract.Response(result.body);
         if(!request.requestId.equals(response.requestId) || !request.sessionId.equals(response.sessionId))throw new java.io.IOException("INVALID_TURN_RESPONSE");
         ExecutionState.validate(response,request,false);
+        if (com.click.data.local.CandidateDiagnosticLog.enabled() && request.accessibilityTree != null
+                && com.click.service.accessibility.TouchAutomationPolicy.settingsPackage(request.accessibilityTree.packageName)) {
+            org.json.JSONObject debug = response.metadata == null ? null : response.metadata.optJSONObject("debug");
+            org.json.JSONObject selection = debug == null ? null : debug.optJSONObject("ui_selection");
+            try {
+                if (selection != null) candidateLog.record(com.click.data.snapshot.SettingsCandidateDiagnostics.selection(selection)
+                        .put("stage", "selection").put("request_id", request.requestId)
+                        .put("observation_id", request.accessibilityTree.observationId));
+            } catch (Exception ignored) { /* Diagnostic output cannot fail a successful turn. */ }
+        }
         journal.acknowledge(request.sessionId,request.requestId);
         if (response.metadata != null && result.traceId != null)
             response.metadata.put("backend_trace_id", result.traceId);
         return response;
+    }
+
+    private void logSettingsCandidates(AgentTurnContract.Request request, org.json.JSONObject filtered, String stage) {
+        logSettingsCandidates(request.accessibilityTree, request.requestId, filtered, stage);
+    }
+
+    private void logSettingsCandidates(com.click.data.snapshot.ScreenSnapshot screen, String requestId,
+            org.json.JSONObject filtered, String stage) {
+        if (!com.click.data.local.CandidateDiagnosticLog.enabled() || screen == null
+                || !com.click.service.accessibility.TouchAutomationPolicy.settingsPackage(screen.packageName)) return;
+        try {
+            org.json.JSONObject report = com.click.data.snapshot.SettingsCandidateDiagnostics.inspect(screen, filtered);
+            report.put("stage", stage).put("request_id", requestId);
+            org.json.JSONArray nodes = report.getJSONArray("display_nodes");
+            report.remove("display_nodes");
+            candidateLog.record(report);
+            // Separate records avoid logcat truncating the ancestry evidence.
+            for (int i = 0; i < nodes.length(); i++) candidateLog.record(nodes.getJSONObject(i)
+                    .put("stage", stage).put("request_id", requestId)
+                    .put("observation_id", screen.observationId).put("display_index", i));
+        } catch (Exception ignored) { /* Diagnostics must never affect task execution. */ }
     }
 
     public com.click.data.local.DeviceTaskJournal journal(){return journal;}

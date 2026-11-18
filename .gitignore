@@ -224,6 +224,9 @@ __marimo__/
 **/build/
 **/local.properties
 Frontend/_wrapper/
+Frontend/release-signing.properties
+*.jks
+*.keystore
 
 # Local backend database (including SQLite journal files)
 Backend/click-dev.db

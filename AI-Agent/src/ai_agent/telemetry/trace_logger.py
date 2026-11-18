@@ -64,6 +64,14 @@ def diagnostic_payload(value, depth=0):
     selection = value.get("ui_selection")
     if isinstance(selection, Mapping):
         safe = {}
+        counts = selection.get("candidate_diagnostics")
+        if isinstance(counts, Mapping):
+            allowed_counts = {"normalized_nodes", "display_normalized_nodes", "display_actionable_nodes",
+                "minimized_nodes", "display_minimized_nodes", "eligible_pairs", "selector_rejected_pairs",
+                "invalid_slider_pairs", "offscreen_pairs", "source_confidence_rejected_pairs",
+                "excluded_pairs", "ambiguous_pairs"}
+            safe["candidate_diagnostics"] = {key: count for key, count in counts.items()
+                if key in allowed_counts and type(count) is int and 0 <= count <= 100_000_000}
         if isinstance(selection.get("failure"), Mapping):
             safe["failure"] = diagnostic_payload(selection["failure"], depth + 1)
         OBSERVATION_REASONS = {'unsupported_scope', 'unsupported_app', 'input_present', 'credential_input',

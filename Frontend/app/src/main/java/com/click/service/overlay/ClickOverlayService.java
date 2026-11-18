@@ -5056,6 +5056,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             boolean moved=plan.status==AutomaticScrollSearch.Status.MOVE
                     && ClickAccessibilityService.performSettingsScroll(forward,expected.packageName,expected.activeWindowId);
             android.util.Log.i("ClickScroll","settings forward="+forward+" dispatched="+moved);
+            if (com.click.data.local.CandidateDiagnosticLog.enabled()) {
+                try {
+                    new com.click.data.local.CandidateDiagnosticLog(this).record(new JSONObject()
+                            .put("stage", "scroll").put("observation_id", beforeScroll.observationId)
+                            .put("forward", forward).put("dispatched", moved));
+                } catch (Exception ignored) { /* Diagnostics cannot interrupt navigation. */ }
+            }
             // Dispatch success/failure never proves that the list ended.
             speechHandler.postDelayed(() -> {
                 if (generation!=execution.generation()) return;
