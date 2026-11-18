@@ -20,7 +20,7 @@ CODE_HASH = policy.digest(''.join(Path(__file__).with_name(name).read_text(encod
 class BrowseService:
     def __init__(self, factory, sessions, selector=None):
         self.factory, self.sessions = factory, sessions
-        self.selector = selector or JevBrowseSelector(routes=BrowseRouteHints(factory))
+        self.selector = selector or JevBrowseSelector(routes=BrowseRouteHints(factory, code_hash=CODE_HASH))
 
     def handle(self, request, user_id):
         now = int(self.sessions.clock())
@@ -155,7 +155,8 @@ class BrowseService:
         correlated = attempted and fingerprint!=pending['before_hash']
         if attempted:
             evidence.update(action_attempted=True, attempt_hash=policy.digest(pending['guide_id']),
-                attempted_action=pending['kind'], attempted_resource=pending['resource'])
+                attempted_action=pending['kind'], attempted_resource=pending['resource'],
+                attempted_page=pending.get('page', 'unknown'))
         evidence['action_correlated'] = correlated
         if correlated:
             evidence.update(before_hash=pending['before_hash'],action_kind=pending['kind'],resource=pending['resource'],
@@ -182,7 +183,7 @@ class BrowseService:
         evidence['reason'] = 'no_candidates'
         if candidates:
             chosen,diagnostics = self.selector.choose(state['goal'],screen,candidates,state.get('history',[]))
-            evidence.update({k:v for k,v in diagnostics.items() if k in {'called','model','status','confidence','candidate_count','provider_latency_ms','route_hint_count'}})
+            evidence.update({k:v for k,v in diagnostics.items() if k in {'called','model','status','confidence','candidate_count','provider_latency_ms','route_hint_count','selection_policy','selection_metrics'}})
             evidence['reason'] = diagnostics.get('status', 'selector_unavailable')
         if not chosen:
             result.outcome,result.message = 'unknown','안전하게 안내할 상품이나 검색창을 확인하지 못했어요. 직접 이동한 뒤 다시 확인해 주세요.'

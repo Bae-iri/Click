@@ -135,7 +135,7 @@ def test_success_automatically_creates_a_real_new_graph_in_db_without_activation
     assert graph['definition']['goal_type'] == ('coupang.product.details' if details else 'coupang.product.search')
     assert graph['definition']['inputs'] == {'query': 'confirmed_request.query'}
     assert len(graph['states']) == 2 and len(graph['transitions']) == 1
-    assert proposal.base_graph_version == 'graphless' and proposal.requires_human_review
+    assert proposal.base_graph_version == 'graphless' and not proposal.requires_human_review
     assert proposal.evidence['independent_device_validation'] == 'NOT_ASSESSED'
     assert browse.app.state.browse_service.selector.choose.call_count == 1
     with browse.app.state.session_factory() as db:

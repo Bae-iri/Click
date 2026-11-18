@@ -89,5 +89,5 @@ class GraphLearner:
                             "attempts": sum(counts[e["transition_id"]].values()), "success_rate": rate(e),
                             "mean_success_duration_ms": duration(e) if duration(e) < float("inf") else None}
                             for e in observed}},
-                    proposal_confidence=rate(best), requires_human_review=True))
+                    proposal_confidence=rate(best), requires_human_review=False))
         return proposals

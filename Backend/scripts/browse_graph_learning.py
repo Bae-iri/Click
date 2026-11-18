@@ -1,7 +1,7 @@
-"""Durable Agent(2) draft generation, after the online browsing response.
+"""Persist encrypted Agent2 graphs and attempt outcomes after browse responses.
 
-Only encrypted graph proposals are written. ApprovedTaskGraph is deliberately
-not a destination: a captured successful route still needs independent review.
+Online candidate selection consumes outcome statistics without human approval.
+Native-settings release storage is separate from public-browsing graphs.
 """
 from datetime import timezone
 import logging
@@ -19,6 +19,7 @@ from ai_agent.graph_proposal.proposals.browse_graph import (
     VERSION, GRAPH_SCHEMA, IncompleteBrowseTrace, generate_browse_graph,
 )
 from ai_agent.graph_proposal.proposals.browse_repairs import VERSION as REPAIR_VERSION, propose_repairs
+from ai_agent.graph_proposal.analysis.browse_outcomes import browse_outcomes
 from app.models.agent_session import AgentSession
 from app.models.graph_proposal import BROWSE_GRAPH_CONSUMER, GraphProposal
 from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
@@ -55,7 +56,8 @@ class BrowseGraphLearningService:
                     or any(e.expires_at <= now or e.created_at < granted for e in events)):
                 return {'status': 'INELIGIBLE'}
             anchor = events[-1]
-            input_hash = fingerprint({'generator': VERSION, 'repairs': REPAIR_VERSION, 'consent': consent.id,
+            input_hash = fingerprint({'generator': VERSION, 'repairs': REPAIR_VERSION,
+                'outcomes': 'browse-outcomes.v1', 'consent': consent.id,
                 'events': [{'id': e.id, 'payload': e.payload} for e in events]})
             receipt = db.scalar(select(RuntimeEventConsumption).where(
                 RuntimeEventConsumption.consumer == BROWSE_GRAPH_CONSUMER,
@@ -75,6 +77,12 @@ class BrowseGraphLearningService:
             db.flush()
             records = [{'event_id': e.id, 'sequence': e.sequence, 'evidence': e.payload.get('browse', {})}
                        for e in events]
+            try:
+                outcomes = browse_outcomes(records, POLICY)
+            except ValueError:
+                pass  # A partial or incompatible trace cannot supply selection statistics.
+            else:
+                result.update(outcomes=outcomes, outcomes_hash=fingerprint(outcomes))
             try:
                 repairs = propose_repairs(records, POLICY)
             except ValueError:
@@ -96,10 +104,10 @@ class BrowseGraphLearningService:
                 db.add(GraphProposal(id=proposal_id, task_id=body['definition']['task_id'],
                     base_graph_version='graphless', proposal_type='new_browse_task_graph',
                     change={'schema_version': GRAPH_SCHEMA, 'graph': body}, evidence=evidence,
-                    proposal_confidence=1.0, requires_human_review=True, created_at=now,
+                    proposal_confidence=1.0, requires_human_review=False, created_at=now,
                     runtime_receipt_id=receipt.id))
                 result.update(status='DRAFT_CREATED', proposal_id=proposal_id, graph_hash=graph_hash,
-                    goal_type=body['definition']['goal_type'], requires_human_review=True)
+                    goal_type=body['definition']['goal_type'], requires_human_review=False)
             receipt.result = dict(result)
             db.commit()
             return {**{k: result[k] for k in ('status', 'proposal_id', 'reason', 'graph_hash') if k in result},
@@ -190,7 +198,7 @@ class BrowseGraphLearningService:
             return [{'proposal_id': row.id, 'task_id': row.task_id,
                 'goal_type': row.change['graph']['definition']['goal_type'],
                 'graph_hash': row.evidence['graph_hash'], 'states': len(row.change['graph']['states']),
-                'transitions': len(row.change['graph']['transitions']), 'requires_human_review': True,
+                'transitions': len(row.change['graph']['transitions']), 'requires_human_review': row.requires_human_review,
                 'created_at': row.created_at, 'expires_at': expires} for row, expires in rows]
 
 
