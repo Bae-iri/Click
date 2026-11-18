@@ -38,6 +38,20 @@ class GraphVersionManager:
             raise ValueError("A durable release store is required")
         return self.store.publish(release)
 
+    def prepare_automatic(self, proposal, base_graph, *, evaluation, selected_at):
+        from ai_agent.task_graph.success_selection import priority_candidate, select_candidate, POLICY
+        candidate = priority_candidate(proposal, base_graph)
+        selection = select_candidate([candidate]) if candidate is not None else None
+        if selection is None:
+            raise ValueError('Automatic release requires sufficient improving success evidence')
+        # Deterministic version binds the exact proposal, evaluation and base.
+        version = 'ai2-' + fingerprint({'proposal': proposal.proposal_id,
+            'base': fingerprint(base_graph), 'evaluation': evaluation, 'policy': POLICY})[:40]
+        release = self.prepare(proposal, base_graph, candidate_version=version, evaluation=evaluation,
+            reviewer=POLICY, reviewed_at=selected_at)
+        release['selection'] = selection
+        return release
+
     def rollback(self, task_id, target_version, *, expected_current_hash, reviewer, reviewed_at):
         if self.store is None:
             raise ValueError("A durable release store is required")

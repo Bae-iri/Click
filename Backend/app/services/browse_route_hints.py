@@ -1,4 +1,4 @@
-"""Project AI2 observed drafts onto current candidates; hints grant no authority."""
+"""Select current candidates by Agent2 success evidence; provide fallback hints."""
 from collections import Counter
 from datetime import timezone
 import json
@@ -14,8 +14,77 @@ log = logging.getLogger(__name__)
 
 
 class BrowseRouteHints:
-    def __init__(self, factory):
+    def __init__(self, factory, *, code_hash=None):
         self.factory = factory
+        self.code_hash = code_hash
+
+    def choose(self, goal, screen, candidates, now):
+        """Agent2 selects a fresh, unambiguous candidate by retained outcome evidence."""
+        from ai_agent.task_graph.success_selection import select_candidate
+        from collections import defaultdict
+        counts = defaultdict(lambda: {'successes': 0, 'failures': 0, 'unknown': 0})
+        page = policy.page(screen)
+        try:
+            with self.factory() as db:
+                latest = select(RuntimeEvent.session_id, func.max(RuntimeEvent.sequence).label('seq')).where(
+                    RuntimeEvent.kind == 'browse').group_by(RuntimeEvent.session_id).subquery()
+                rows = db.execute(select(RuntimeEventConsumption, RuntimeEvent)
+                    .join(RuntimeEvent, RuntimeEventConsumption.event_id == RuntimeEvent.id)
+                    .join(latest, (latest.c.session_id == RuntimeEvent.session_id) & (latest.c.seq == RuntimeEvent.sequence))
+                    .where(RuntimeEventConsumption.consumer == BROWSE_GRAPH_CONSUMER,
+                        RuntimeEventConsumption.expires_at > now, RuntimeEvent.expires_at > now)
+                    .order_by(RuntimeEvent.created_at.desc(), RuntimeEvent.id).limit(100)).all()
+                for receipt, event in rows:
+                    consent = UserRepository(db).latest_consent(event.user_id, 'model_training')
+                    if (not consent or not consent.consented
+                            or event.created_at < consent.recorded_at.replace(tzinfo=timezone.utc).timestamp()):
+                        continue
+                    outcomes = receipt.result.get('outcomes')
+                    if not isinstance(outcomes, dict):
+                        continue
+                    outcome_hash = policy.digest(json.dumps(outcomes, sort_keys=True, ensure_ascii=False,
+                        separators=(',', ':'), allow_nan=False))
+                    if (receipt.result.get('outcomes_hash') != outcome_hash
+                            or receipt.result.get('expires_at', 0) <= now
+                            or outcomes.get('schema_version') != 'browse-outcomes.v1'
+                            or outcomes.get('goal_type') != goal['goal_type']
+                            or outcomes.get('policy_hash') != policy.digest(json.dumps(policy.POLICY, sort_keys=True))
+                            or self.code_hash is not None and outcomes.get('code_hash') != self.code_hash):
+                        continue
+                    for route in outcomes.get('routes', []):
+                        if route['page'] == page:
+                            key = (route['action'], route['resource'])
+                            for name in ('successes', 'failures', 'unknown'):
+                                value = route[name]
+                                if type(value) is not int or value < 0:
+                                    raise ValueError('Invalid route outcome counts')
+                                counts[key][name] += value
+            # Identical resource IDs on different product cards do not establish
+            # product identity. Let Jev inspect labels when a key is ambiguous.
+            fresh = {}
+            for candidate in candidates:
+                kind, node = candidate
+                key = (kind, policy.resource(node.resource_id))
+                fresh.setdefault(key, []).append(candidate)
+            def matches_goal(key):
+                if key[0] != 'product':
+                    return True
+                query = ''.join(goal.get('query', '').split()).casefold()
+                label = ''.join(fresh[key][0][1].label.split()).casefold()
+                return bool(query and query in label)
+            ranked = [{'key': key, **metrics} for key, metrics in counts.items()
+                      if len(fresh.get(key, [])) == 1 and matches_goal(key)]
+            winner = select_candidate(ranked)
+            if winner is None:
+                return None, {'status': 'ai2_needs_data'}
+            return fresh[winner['key']][0], {'called': False, 'status': 'ai2_selected',
+                'selection_policy': winner['selection_policy'], 'candidate_count': len(candidates),
+                'provider_latency_ms': 0,
+                'selection_metrics': {k: winner[k] for k in
+                    ('attempts', 'successes', 'failures', 'unknown', 'success_rate', 'score')}}
+        except Exception as error:
+            log.warning('AI2 automatic selection unavailable (%s)', type(error).__name__)
+            return None, {'status': 'ai2_unavailable'}
 
     def get(self, goal, screen, candidates, now):
         allowed = {(kind, policy.resource(node.resource_id)) for kind, node in candidates}

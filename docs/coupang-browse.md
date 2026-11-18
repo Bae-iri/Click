@@ -24,7 +24,7 @@ python -X utf8 scripts/agent2.py list-browse-graphs --limit 100
 
 앱 진입 시 읽을 수 있는 공개 화면이 생기면 첫 Jev 판단을 한 번 요청한다. 로딩 중 빈 화면은 이 기회를 소모하지 않는다. 이후 화면 확인은 사용자 버튼으로 진행하며, 일시정지·종료 중에는 진입 판단도 보내지 않는다.
 
-AI2가 생성한 관측 경로 초안은 다음 Jev 판단의 참고 정보로 사용한다. 현재 목표·페이지·실제 후보의 action/resource가 일치하는 전이만 전달하며, 근거 trace 수를 함께 제공한다. 최신 학습 동의·만료·본문 해시를 매번 확인하고, 근거가 없거나 저장소가 실패하면 기존 Jev 판단으로 진행한다. 초안을 실행 그래프로 승인하거나 후보를 추가하지 않는다. 이 연결은 상품 검색·상세 탐색 모드에 적용되며 기존 71개 commerce 목표 전체의 경로 학습을 의미하지 않는다.
+AI2는 보존된 단계 성공·실패·미확인 시도 통계로 현재 후보를 자동 선택한다. 최소 표본·성공률을 충족하고 현재 노드와 유일하게 대응할 때 개발자 승인 없이 안내한다. 데이터 부족·동점·모호한 상품 대상이면 기존 Jev 판단으로 진행하고 관측 경로 초안을 참고 정보로 전달한다. 최신 학습 동의·만료·해시와 현재 서버 code hash를 확인하며, 후보를 추가하거나 완료를 추측하지 않는다. 이 연결은 상품 검색·상세 탐색 모드에 적용되며 기존 71개 commerce 목표 전체의 경로 학습을 의미하지 않는다. [성공률 정책과 자동 게시 절차](agent2-automatic-selection.md)를 따른다.
 
 `assess-browse`는 `route_blockers`로 화면 미인식·후보 없음·반복 화면·모델 보류를 구분하고 `ai2_hint_steps`로 참고 경로 사용 횟수를 집계한다. 기록만으로 성공률 향상을 주장하지 않으며, 비교는 실기기 측정으로 확인한다.
 
@@ -62,7 +62,7 @@ Backend에서 `python scripts/agent2.py assess-browse --limit 100`을 실행하�
 
 새 본문은 `browse-task-graph.v1`이다. 실제 관측한 화면 상태, 시작/종료 상태, 공개 resource selector를 쓰는 전이, 사용자 직접 조작 조건, 현재 확인된 목표에 결합된 완료 predicate를 가진다. selector는 기존 `browse_policy.resource()`와 같은 `normalized_browse_resource.v1` 규칙의 resource key를 사용하며, 정규화된 이름으로 원래의 native ID를 지어내지 않는다. 검색어·상품 이름·좌표·사용자/세션 ID를 본문에 넣지 않고 검색어는 `confirmed_request.query` 입력으로 매개변수화한다. 상품 selector는 새 화면의 공개 후보를 다시 판별해야 하며 저장된 상품이나 첫 번째 상품으로 고정하지 않는다.
 
-기존 graphless 실행이 끝난 뒤 만드는 **신규 그래프 초안**이며, 실행 중 참조한 graph hash로 소급 표시하지 않는다. `GraphProposal.proposal_type=new_browse_task_graph`, `base_graph_version=graphless`, `requires_human_review=true`로 저장한다. trace completeness 값은 제품 성공률이나 독립 기기 평가 점수가 아니다. 일반 설정 실행용 `runtime-task-graph.v1` 승인 테이블에 자동 등록·활성화하지 않는다. 별도 기기 검증·검토 없이 다음 사용자에게 실행 경로로 배포하지 않는다.
+기존 graphless 실행이 끝난 뒤 만드는 **신규 그래프 초안**이며, 실행 중 참조한 graph hash로 소급 표시하지 않는다. `GraphProposal.proposal_type=new_browse_task_graph`, `base_graph_version=graphless`, `requires_human_review=false`로 저장한다. trace completeness 값은 제품 성공률이나 독립 기기 평가 점수가 아니다. 일반 설정 실행용 `runtime-task-graph.v1` 테이블에 자동 등록하지 않는다. 다음 사용자의 공개 탐색 후보 선택은 별도로 집계한 성공·실패·미확인 통계가 자동 선택 기준을 충족할 때 적용한다.
 
 후보는 원천 event에 연결된 만료 receipt를 참조한다. 최신 동의 이전 기록을 사용하지 않으며, 새 동의 경계·철회·탈퇴·세션 삭제·가장 이른 근거의 7일 보존 만료에 맞춰 초안과 평가도 삭제된다. migration `20261117_20`을 서버 코드와 함께 적용해야 한다. 앱/API 요청 계약 변경은 없다.
 

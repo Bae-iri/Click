@@ -80,6 +80,18 @@ The command prints status, `run_id` and candidate IDs; it does not print runtime
 contents or export them to files. With missing evaluation evidence it returns
 `NEEDS_DATA`. Supplying no cases can generate proposals, but cannot approve them.
 
+For automatic selection without per-candidate developer approval, run:
+
+```powershell
+python scripts/agent2.py auto-select-routes --run-id <run-id> --manifest review-manifest.json --cases device-holdout.json
+```
+
+Agent2 replays candidates, compares success evidence and publishes one passing
+winner per task. It generates the version and records the policy identity in the
+audit. Insufficient samples, ties or failed evaluation preserve the active graph.
+See [the automatic selection policy](../../docs/agent2-automatic-selection.md).
+The following manual publication command remains available for compatibility.
+
 For a selected candidate, replay both graph versions on independently reviewed
 device holdout, covering the device cohorts represented by the proposal. Cases
 can declare `device_cohort` using the same allowlisted format. If a new route would
