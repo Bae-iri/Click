@@ -60,6 +60,7 @@ public class Gov24InstalledAppFlowTest {
             if(hasText(targetPackage,"로그인을 눌러주세요.")&&hasText("kr.go.minwon.m","로그인"))
                 tapText("kr.go.minwon.m","로그인");
             assertFalse("Public home must not be handed off as authentication",hasText(targetPackage,"직접 인증해 주세요."));
+            assertFalse("Public home must not be handed off as consent",hasText(targetPackage,"동의를 확인해 주세요."));
             assertFalse(hasText(targetPackage,"현재 화면 확인"));
             assertFalse(hasText(targetPackage,"정부24 열기"));
             assertFalse(hasText(targetPackage,"직접 진행하고 안내 끝내기"));
@@ -95,18 +96,18 @@ public class Gov24InstalledAppFlowTest {
         boolean directNativeTransition=hasText(targetPackage,"2. 간편인증");
         if(directNativeTransition) {
             clickText(targetPackage,"줄이기");
-            tapText("kr.go.minwon.m","간편인증");
+            awaitAbsent(targetPackage,"2. 간편인증",5000);
+            tapPublicOption("method_simple");
         }
         awaitText(targetPackage,"원하는 민간 인증서를 선택해 주세요.",25000);
         assertFalse("Provider choices must stay in Government24",hasText(targetPackage,"__any_numbered_choice__"));
         assertFalse(hasText(targetPackage,"사용할 인증수단 이름 입력"));
-        String kakao=hasText("kr.go.minwon.m","KAKAO(카카오)")?"KAKAO(카카오)":
-            hasText("kr.go.minwon.m","카카오톡")?"카카오톡":"카카오";
-        tapText("kr.go.minwon.m",kakao);
-        awaitText(targetPackage,"직접 인증해 주세요.",20000);
+        tapPublicOption("provider_kakao");
+        String boundary=awaitPrivateBoundary(20000);
         Bundle result=new Bundle();result.putString("gov24_live_native_flow",
             (directNativeTransition?"direct_native_simple_tap_to_provider_question":"existing_provider_question")
                 +"_to_native_certificate_selection_to_handoff; no credential entry or authentication request");
+        result.putString("gov24_handoff_kind",boundary);
         instrumentation.sendStatus(0,result);
     }
 
@@ -121,10 +122,49 @@ public class Gov24InstalledAppFlowTest {
         var info=automation.getServiceInfo();
         info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS;
         automation.setServiceInfo(info);
-        awaitText(targetPackage,"직접 인증해 주세요.",5000);
+        awaitPrivateBoundary(5000);
         clickText(targetPackage,"끝내기");
         SystemClock.sleep(1000);
         assertFalse(hasText(targetPackage,"직접 인증해 주세요."));
+        assertFalse(hasText(targetPackage,"동의를 확인해 주세요."));
+    }
+
+    private void awaitAbsent(String pkg,String text,long timeout) {
+        long deadline=SystemClock.elapsedRealtime()+timeout;int absent=0;
+        do {
+            absent=hasText(pkg,text)?0:absent+1;
+            if(absent>=2)return;
+            SystemClock.sleep(150);
+        }while(SystemClock.elapsedRealtime()<deadline);
+        fail("Guide did not finish collapsing before the native tap: "+text);
+    }
+
+    private String awaitPrivateBoundary(long timeout) {
+        long deadline=SystemClock.elapsedRealtime()+timeout;
+        do {
+            if(hasText(targetPackage,"직접 인증해 주세요."))return "authentication";
+            if(hasText(targetPackage,"동의를 확인해 주세요."))return "consent";
+            SystemClock.sleep(200);
+        }while(SystemClock.elapsedRealtime()<deadline);
+        fail("Expected authentication or consent handoff did not appear");return null;
+    }
+
+    @Test public void inspectCurrentBoundaryWithoutExportingInputValues() throws Exception {
+        org.junit.Assume.assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("gov24Inspect")));
+        Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
+        targetPackage=InstrumentationRegistry.getArguments().getString("targetPackage","com.click.gov24pilot");
+        automation=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
+        var info=automation.getServiceInfo();
+        info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            |android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;
+        automation.setServiceInfo(info);
+        JSONObject safe=com.click.service.accessibility.Gov24PublicTestTarget.inspect(automation,instrumentation.getTargetContext(),targetPackage);
+        if("handoff".equals(safe.optString("status")))assertEquals(0,safe.getJSONArray("nodes").length());
+        Bundle report=new Bundle();report.putString("gov24_boundary_probe",new JSONObject()
+            .put("status",safe.optString("status")).put("reason",safe.optString("handoff_reason"))
+            .put("exported_nodes",safe.getJSONArray("nodes").length()).put("provider_choice_count",safe.getInt("provider_choice_count"))
+            .put("visible_input_count",safe.getInt("visible_input_count")).put("selected_provider_count",safe.getInt("selected_provider_count")).toString());
+        instrumentation.sendStatus(0,report);
     }
 
     private void revealText(String pkg,String text) {
@@ -142,11 +182,33 @@ public class Gov24InstalledAppFlowTest {
         android.graphics.Rect bounds=new android.graphics.Rect();
         try {node.getBoundsInScreen(bounds);}finally{node.recycle();}
         assertFalse(bounds.isEmpty());
+        tapBounds(bounds);
+    }
+
+    private void tapPublicOption(String option) throws Exception {
+        Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
+        JSONObject safe=com.click.service.accessibility.Gov24PublicTestTarget.inspect(
+            automation,instrumentation.getTargetContext(),targetPackage);
+        assertEquals("The current screen must expose public choices", "public", safe.getString("status"));
+        org.json.JSONArray nodes=safe.getJSONArray("nodes");JSONObject target=null;
+        for(int i=0;i<nodes.length();i++)if(option.equals(nodes.getJSONObject(i).optString("option_id")))target=nodes.getJSONObject(i);
+        assertNotNull("Missing unambiguous public option: "+option,target);
+        Bundle evidence=new Bundle();evidence.putString("gov24_public_touch_geometry",new JSONObject()
+            .put("option",option).put("target_bounds",target.getJSONArray("bounds")).put("click_windows",safe.getJSONArray("click_windows")).toString());
+        instrumentation.sendStatus(0,evidence);
+        var b=target.getJSONArray("bounds");tapBounds(new android.graphics.Rect(b.getInt(0),b.getInt(1),b.getInt(2),b.getInt(3)));
+    }
+
+    private void tapBounds(android.graphics.Rect bounds) {
         long now=SystemClock.uptimeMillis();
         var down=android.view.MotionEvent.obtain(now,now,android.view.MotionEvent.ACTION_DOWN,bounds.exactCenterX(),bounds.exactCenterY(),0);
-        var up=android.view.MotionEvent.obtain(now,now+80,android.view.MotionEvent.ACTION_UP,bounds.exactCenterX(),bounds.exactCenterY(),0);
-        try {assertTrue(automation.injectInputEvent(down,true));assertTrue(automation.injectInputEvent(up,true));}
-        finally{down.recycle();up.recycle();}
+        down.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+        try {
+            assertTrue(automation.injectInputEvent(down,true));SystemClock.sleep(80);
+            var up=android.view.MotionEvent.obtain(now,SystemClock.uptimeMillis(),android.view.MotionEvent.ACTION_UP,bounds.exactCenterX(),bounds.exactCenterY(),0);
+            up.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+            try{assertTrue(automation.injectInputEvent(up,true));}finally{up.recycle();}
+        }finally{down.recycle();}
     }
 
     private void awaitText(String pkg,String text,long timeout) {

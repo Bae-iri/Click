@@ -1130,6 +1130,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 public void busy(boolean value){setTurnInFlight(value);}
                 public boolean localGuide(ScreenSnapshot screen){return gov24Guide?showGov24EntryGuide():showCoupangNativeGuide(screen);}
                 public boolean canObserve(){return !closing && !execution.paused() && execution.pendingControl()==null;}
+                public ScreenSnapshot freshScreen(){return ClickAccessibilityService.freshSnapshot();}
+                public void settlingPrivateScreen(){
+                    if(closing||!gov24Guide)return;
+                    gov24EntryPresentation=null;stopListening();stopNarration();hideGuideOverlay();hideConfirmation();ensureTaskFlow();
+                    taskFlowView.waitingProgress("다음 화면을 확인하고 있어요.");taskFlowView.setAutomaticProgress(false);
+                    updateFloatingVisibility();placeTaskFlow(null,false);
+                }
                 public void failed(Throwable error,Runnable retry){
                     if(closing || coupangBrowse==null || execution.paused())return;
                     hideGuideOverlay();ensureTaskFlow();
