@@ -25,4 +25,22 @@ public class SettingsPageNavigationTest {
   assertEquals(SettingsPageNavigation.Change.NONE,policy().changed(before,page("디스플레이",1,300,true),"font_size"));
   assertEquals(SettingsPageNavigation.Change.NONE,policy().changed(before,null,"font_size"));
  }
+ @Test public void unreadableSubpageTitleDoesNotProveTheUserLeftTheVolumeRoute() throws Exception {
+  var current=new ScreenSnapshot("com.android.settings","2026-11-10T00:00:00Z",1080,2400,List.of(),1)
+    .withWindowContext(new NativeWindowContext("SUBPAGE","APPLICATION",false));
+  assertFalse(policy().onRoute(current,"volume"));
+  assertFalse(policy().offRoute(current,"volume"));
+  assertTrue(policy().offRoute(page("블루투스",1,300,false),"volume"));
+ }
+ @Test public void samsungSoundAndVolumePagesStayOnTheVolumeRoute() throws Exception {
+  var pages=policy();
+  assertTrue(pages.onRoute(page("소리 및 진동",1,300,false),"volume"));
+  assertTrue(pages.onRoute(page("음량",1,300,false),"volume"));
+  assertEquals(SettingsPageNavigation.Change.ON_ROUTE,
+    pages.changed(page("소리 및 진동",1,300,false),page("음량",2,300,false),"volume"));
+  assertTrue(SettingsCapabilities.routePageTitle("settings.volume.increase","소리 및 진동"));
+  assertTrue(SettingsCapabilities.routePageTitle("settings.volume.decrease","음량"));
+  assertFalse(SettingsCapabilities.routePageTitle("settings.font_size.increase","접근성"));
+  assertFalse(SettingsCapabilities.routePageTitle("settings.volume.increase","블루투스"));
+ }
 }
