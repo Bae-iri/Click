@@ -31,6 +31,8 @@ services:
         value: jev
       - key: CLICK_COUPANG_BROWSE_ENABLED
         value: "1"
+      - key: CLICK_GOV24_GUIDE_ENABLED
+        value: "1"
       - key: CLICK_AI2_BROWSE_GRAPH_ENABLED
         value: "1"
       - key: CLICK_AI2_BROWSE_GRAPH_INTERVAL_SECONDS

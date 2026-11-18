@@ -6,7 +6,7 @@ VERSION = POLICY['version']
 OPTIONS = POLICY['options']
 
 def enabled():
-    return os.getenv('CLICK_GOV24_GUIDE_ENABLED', '0') == '1'
+    return os.getenv('CLICK_GOV24_GUIDE_ENABLED', '1') == '1'
 
 def requested(source):
     text = normalize(source)
