@@ -11,6 +11,24 @@ SPLITS = {"train", "validation", "holdout"}
 THRESHOLDS = (0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95)
 
 
+def _threshold_score(decision):
+    fields = ("raw_confidence", "normalized_probability")
+    if decision.get("judgment_mode") == "atomic":
+        if "page_target_consistent" not in decision:
+            return None
+        fields += ("page_confidence", "target_support_probability")
+    if not all(key in decision for key in fields):
+        return None
+    return min(decision[key] for key in fields)
+
+
+def _passes_threshold(decision, threshold):
+    # Unknown or contradictory pages stay rejected at every numeric threshold.
+    return (decision.get("page_target_consistent") is not False
+            and decision.get("hold_reason") not in {"page_not_identified", "page_target_conflict"}
+            and _threshold_score(decision) >= threshold)
+
+
 def rate(numerator, denominator):
     return numerator / denominator if denominator else None
 
@@ -61,12 +79,12 @@ def _review_metrics(records):
         output["scores"][score] = {"samples": len(scored), "bins": bins,
             "brier_score": rate(sum((r["decision"][score] - int(r["review_label"] == "correct")) ** 2
                                     for r in scored), len(scored))}
-    paired = [r for r in labeled if all(key in r["decision"] for key in ("raw_confidence", "normalized_probability"))]
+    paired = [r for r in labeled if _threshold_score(r["decision"]) is not None]
     for threshold in THRESHOLDS:
-        accepted = [r for r in paired if min(r["decision"]["raw_confidence"], r["decision"]["normalized_probability"]) >= threshold]
+        accepted = [r for r in paired if _passes_threshold(r["decision"], threshold)]
         wrong = sum(r["review_label"] == "incorrect" for r in accepted)
-        held_correct = sum(r["review_label"] == "correct" and min(r["decision"]["raw_confidence"],
-                           r["decision"]["normalized_probability"]) < threshold for r in paired)
+        held_correct = sum(r["review_label"] == "correct" and not _passes_threshold(r["decision"], threshold)
+                           for r in paired)
         output["thresholds"].append({"threshold": threshold, "reviewed_candidates": len(paired),
             "accepted": len(accepted), "wrong_accepted": wrong, "wrong_accepted_rate": rate(wrong, len(accepted)),
             "correct_held": held_correct, "coverage": rate(len(accepted), len(paired))})
@@ -153,7 +171,8 @@ def analyze_jev(events, episodes, *, now, reviews=None):
     for record in records:
         d = record["decision"]
         identity = (record["task_id"], record["graph_hash"], record["state_id"], record["device_cohort"],
-                    record["source_kind"], d.get("model"), d.get("code_hash"), d.get("minimum_confidence"))
+                    record["source_kind"], d.get("model"), d.get("code_hash"), d.get("minimum_confidence"),
+                    d.get("judgment_mode", "legacy"), d.get("choice_temperature", 1.0))
         groups[identity].append(record)
         if d["status"] == "low_confidence":
             repeated[(record["session_key"], record["episode_id"], record["state_id"])].append(record)
@@ -170,9 +189,10 @@ def analyze_jev(events, episodes, *, now, reviews=None):
             issues["provider_failure"].append(record["event_id"])
     group_reports = []
     for identity, items in sorted(groups.items(), key=lambda item: str(item[0])):
-        task, graph, state, cohort, source, model, code, minimum = identity
+        task, graph, state, cohort, source, model, code, minimum, judgments, temperature = identity
         group_reports.append({"task_id": task, "graph_hash": graph, "state_id": state, "device_cohort": cohort,
             "source_kind": source, "model": model, "code_hash": code, "minimum_confidence": minimum,
+            "judgment_mode": judgments, "choice_temperature": temperature,
             "provider_calls": len(items), "statuses": dict(Counter(r["decision"]["status"] for r in items)),
             "execution": _execution_metrics(items), "reviews": _review_metrics(items),
             "event_ids": [r["event_id"] for r in items]})
@@ -231,7 +251,9 @@ def compare_assessments(before, after):
             missing.append("same_captured_screen_and_task")
     for cases in sides:
         configurations = {(c["decision"].get("model"), c["decision"].get("code_hash"),
-                           c["decision"].get("minimum_confidence")) for c in cases.values()}
+                           c["decision"].get("minimum_confidence"),
+                           c["decision"].get("judgment_mode", "legacy"),
+                           c["decision"].get("choice_temperature", 1.0)) for c in cases.values()}
         if len(configurations) != 1 or any(None in config for config in configurations):
             missing.append("one_identified_runtime_configuration_per_run")
         if any(c["source_kind"] not in {"runtime", "device_test"} for c in cases.values()):

@@ -1,6 +1,7 @@
 """Primary graph-constrained Jev step + target selection; never generates coordinates."""
 import json
 import math
+from dataclasses import replace
 from hashlib import sha256
 from time import monotonic
 
@@ -16,6 +17,8 @@ from ai_agent.runtime.types import MatchResult, SafetyLevel
 from ai_agent.runtime.verification import valid_slider_value
 from ai_agent.runtime.budget import remaining
 from app.services.navigation_context import next_menu_context, immediate_menu_request
+from app.services.jev_probabilities import temperature_diagnostics
+from app.services.jev_screen_judgments import screen_policy, atomic_payload, validate_atomic_answers, judgment_hold
 
 
 class JevScreenResolver(JevGoalClassifier):
@@ -32,7 +35,9 @@ class JevScreenResolver(JevGoalClassifier):
         filter_started = monotonic()
         try:
             _, model, minimum = self.configuration()
-            self.last_diagnostics.update(model=model, minimum_confidence=minimum)
+            judgment_mode, temperature = screen_policy()
+            self.last_diagnostics.update(model=model, minimum_confidence=minimum,
+                judgment_mode=judgment_mode, choice_temperature=temperature)
             setting = graph.definition.required_slots.get("setting", "")
             if raw_nodes:
                 assessment = assess_screen(raw_nodes, setting)
@@ -221,6 +226,9 @@ class JevScreenResolver(JevGoalClassifier):
                     + immediate['open_menu'][0]
                     + '. The overall task goal is context for later steps, not the button requested now. '
                     + payload['questions']['screen']['instructions'])
+            if judgment_mode == "atomic":
+                payload = atomic_payload(payload, graph, bindings)
+            self.last_diagnostics["question_count"] = len(payload["questions"])
             payload_bytes = len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode())
             self.last_diagnostics.update(payload_bytes=payload_bytes, exported_node_count=len(selected_nodes),
                 filter_time_ms=round((monotonic() - filter_started) * 1000, 3))
@@ -242,8 +250,10 @@ class JevScreenResolver(JevGoalClassifier):
                 return None
             self.last_diagnostics["status"] = "invalid_response"
             result = json.loads(response.content, object_pairs_hook=_unique_object)
-            if result["model"] != model or set(result["answers"]) != {"screen"}:
+            if result["model"] != model or set(result["answers"]) != set(payload["questions"]):
                 return None
+            if judgment_mode == "atomic":
+                page_state, page_confidence, target_support = validate_atomic_answers(result["answers"], payload)
             answer = result["answers"]["screen"]
             if set(answer) != {"type", "choice", "confidence", "probabilities"} or answer["type"] != "choice":
                 return None
@@ -271,8 +281,14 @@ class JevScreenResolver(JevGoalClassifier):
                 choice=choice, choice_count=len(criteria), raw_confidence=raw_confidence,
                 normalized_probability=normalized_probability, hold_reason=hold_reason,
                 top_probability=top, probability_margin=top-max(p for k,p in probabilities.items() if k != choice))
+            self.last_diagnostics.update(temperature_diagnostics(probabilities, choice, temperature))
+            if judgment_mode == "atomic":
+                self.last_diagnostics.update(page_confidence=page_confidence,
+                    target_support_probability=target_support)
             if choice in bindings:
                 selected_transition, selected_node = bindings[choice]
+                if judgment_mode == "atomic":
+                    self.last_diagnostics["page_target_consistent"] = page_state == selected_transition.from_state
                 self.last_diagnostics.update(chosen_state=selected_transition.from_state,
                     chosen_transition=selected_transition.transition_id,
                     chosen_transition_hash=sha256(selected_transition.transition_id.encode()).hexdigest(),
@@ -286,6 +302,14 @@ class JevScreenResolver(JevGoalClassifier):
                 self.last_diagnostics["status"] = "waiting" if choice == "wait_for_result" else "abstained"
                 return None
             transition, node = bindings[choice]
+            if judgment_mode == "atomic":
+                self.last_diagnostics["confidence"] = min(confidence, page_confidence, target_support)
+                reason = judgment_hold(page_state, page_confidence, target_support, transition, minimum)
+                if reason:
+                    self.last_diagnostics.update(hold_reason=reason,
+                        status="low_confidence" if reason == "page_confidence_below_minimum" else "abstained")
+                    return None
+                confidence = min(confidence, page_confidence, target_support)
             # Revalidate against this observation and graph; coordinates stay local.
             if transition not in graph.transitions or node not in eligible_nodes(transition, nodes, graph):
                 return None
@@ -301,7 +325,7 @@ class JevScreenResolver(JevGoalClassifier):
                             for t, n in bindings.values())):
                 preferred_transition = next(t for t in graph.transitions if t.transition_id == preferred.transition_id)
                 if preferred_transition.priority < transition.priority:
-                    return preferred
+                    return replace(preferred, confidence=min(preferred.confidence, confidence))
             return MatchResult(transition.from_state, transition.to_state, transition.action_type,
                 node.node_id, node.label, node.bounds,
                 "vision_jev_choice" if node.source_confidence is not None else "jev_choice", confidence,

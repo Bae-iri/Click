@@ -1,4 +1,5 @@
 """Decision evidence survives HTTP responses, retries and persisted turn records."""
+from tests.jev_answers import with_screen_judgments
 from hashlib import sha256
 import json
 
@@ -38,10 +39,10 @@ def test_decision_evidence_survives_reobservation_retry_and_storage(
         candidate = next(key for key, value in options.items() if isinstance(value, dict))
         choice = candidate if choice_kind == "candidate" else choice_kind
         calls.append((choice, options[candidate]["transition"]))
-        return httpx.Response(200, json={"model": payload["model"], "answers": {"screen": {
+        return httpx.Response(200, json=with_screen_judgments(payload, {"model": payload["model"], "answers": {"screen": {
             "type": "choice", "choice": choice, "confidence": raw,
             "probabilities": {key: probability if key == choice else (1 - probability) / 2
-                              for key in options}}}})
+                              for key in options}}}}))
 
     monkeypatch.setattr(JevScreenResolver, "_post", post)
     app = create_app()
@@ -110,10 +111,10 @@ def test_synthetic_diagnostic_report_distinguishes_target_wait_and_abstention(
         choice = (candidate, "wait_for_result", "insufficient_evidence")[len(calls)]
         probability = 0.95 if not calls else 0.85
         calls.append(choice)
-        return httpx.Response(200, json={"model": payload["model"], "answers": {"screen": {
+        return httpx.Response(200, json=with_screen_judgments(payload, {"model": payload["model"], "answers": {"screen": {
             "type": "choice", "choice": choice, "confidence": 0.9,
             "probabilities": {key: probability if key == choice else (1 - probability) / 2
-                              for key in criteria}}}})
+                              for key in criteria}}}}))
 
     monkeypatch.setattr(JevScreenResolver, "_post", post)
     output = tmp_path / "diagnostics.json"

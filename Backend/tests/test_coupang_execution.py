@@ -1,4 +1,5 @@
 """Commerce integration boundaries; synthetic native observations, no purchases."""
+from tests.jev_answers import with_screen_judgments
 from copy import deepcopy
 from dataclasses import replace
 import json
@@ -158,11 +159,12 @@ def test_jev_navigates_from_home_and_reuses_the_exact_unexecuted_target(monkeypa
     calls = []
     def send(payload, **kwargs):
         calls.append(payload)
+        assert set(payload['questions']) == {'page', 'target_supported', 'screen'}
         criteria = payload['questions']['screen']['criteria']
         key = next(k for k, v in criteria.items() if isinstance(v, dict) and
             next(n for n in payload['state']['nodes'] if n['id'] == v['node'])['label'] == '마이쿠팡')
-        return httpx.Response(200, json={'model': payload['model'], 'answers': {'screen': {
-            'type': 'choice', 'choice': key, 'confidence': 1, 'probabilities': {k: int(k == key) for k in criteria}}}})
+        return httpx.Response(200, json=with_screen_judgments(payload, {'model': payload['model'], 'answers': {'screen': {
+            'type': 'choice', 'choice': key, 'confidence': 1, 'probabilities': {k: int(k == key) for k in criteria}}}}))
     engine = ClickAgentEngine(task_graphs=GRAPHS, screen_resolver=JevScreenResolver(send))
     nodes = [node('home', '홈'), node('my', '마이쿠팡', True, 1), node('secret', '구매자 김민수 owner@example.com', index=2)]
     first = engine.handle_turn(request('order.list', nodes))
@@ -174,6 +176,33 @@ def test_jev_navigates_from_home_and_reuses_the_exact_unexecuted_target(monkeypa
     encoded = json.dumps(calls, ensure_ascii=False)
     for private in ('김민수', 'owner@example.com', 'bounds', 'node_id', PKG, 'secret'):
         assert private not in encoded
+
+
+@pytest.mark.parametrize('problem', ['unsupported_target', 'unknown_page', 'incomplete'])
+def test_atomic_commerce_judgments_must_agree_before_a_native_target_is_guided(monkeypatch, problem):
+    monkeypatch.setenv('TYPESAFE_API_KEY', 'test-only')
+    calls = []
+    def send(payload, **kwargs):
+        calls.append(payload)
+        criteria = payload['questions']['screen']['criteria']
+        key = next(k for k in criteria if k.startswith('candidate_'))
+        result = with_screen_judgments(payload, {'model': payload['model'], 'answers': {'screen': {
+            'type': 'choice', 'choice': key, 'confidence': 1,
+            'probabilities': {k: int(k == key) for k in criteria}}}})
+        if problem == 'unsupported_target':
+            result['answers']['target_supported']['noul'] = .2
+        elif problem == 'unknown_page':
+            page = result['answers']['page']
+            page.update(choice='unknown_page', probabilities={k: int(k == 'unknown_page') for k in page['probabilities']})
+        else:
+            result['answers'].pop('target_supported')
+        return httpx.Response(200, json=result)
+    engine = ClickAgentEngine(task_graphs=GRAPHS, screen_resolver=JevScreenResolver(send))
+    result = engine.handle_turn(request('order.list', [node('home', '홈'), node('my', '마이쿠팡', True, 1)]))
+    assert len(calls) == 1
+    assert result.guide_command.target_node_id is None
+    assert result.guide_command.action_type.value == 'observe_only'
+    assert result.debug['ui_selection']['status'] == ('invalid_response' if problem == 'incomplete' else 'abstained')
 
 
 def test_confirmation_then_correlated_new_effect_is_required_for_cart_add():
@@ -355,7 +384,7 @@ def test_jev_failure_cannot_become_a_local_commerce_action(monkeypatch, problem)
         if problem == 'unknown_choice':
             answer['choice'] = 'invented-target'
         return httpx.Response(503 if problem == 'http_failure' else 200,
-            json={'model': 'jev-0.0.0' if problem == 'wrong_model' else payload['model'], 'answers': {'screen': answer}})
+            json=with_screen_judgments(payload, {'model': 'jev-0.0.0' if problem == 'wrong_model' else payload['model'], 'answers': {'screen': answer}}))
     engine = ClickAgentEngine(task_graphs=GRAPHS, screen_resolver=JevScreenResolver(send))
     result = engine.handle_turn(request('order.list', [node('home', '쿠팡'), node('my', '마이쿠팡', True, 1)]))
     assert result.guide_command.target_node_id is None

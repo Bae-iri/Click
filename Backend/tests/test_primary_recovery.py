@@ -1,4 +1,5 @@
 """End-to-end primary decisions through runtime state and the production Jev adapter."""
+from tests.jev_answers import with_screen_judgments
 from dataclasses import replace
 
 import httpx
@@ -40,10 +41,10 @@ class Scenario:
         else:
             raw, probability = 1, 1
             choice = candidate if outcome == "selected" else outcome
-        return httpx.Response(200, json={"model": payload["model"], "answers": {"screen": {
+        return httpx.Response(200, json=with_screen_judgments(payload, {"model": payload["model"], "answers": {"screen": {
             "type": "choice", "choice": choice, "confidence": raw,
             "probabilities": {k: probability if k == choice else (1 - probability) / (len(criteria) - 1)
-                              for k in criteria}}}})
+                              for k in criteria}}}}))
 
     def observe(self, *, nodes=None, event=None, confirmation=None, at=None):
         self.turn += 1
@@ -119,8 +120,12 @@ def test_provider_holds_require_a_change_before_retry(outcome, reason):
         unchanged = scenario.retry()
         assert unchanged.debug["ui_selection"]["paused"] is True
         assert len(scenario.calls) == 1
-        resumed = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
+        moved = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
             bounds_in_screen=(10, 300, 1000, 400))))
+        assert moved.debug["ui_selection"]["paused"] is True
+        assert len(scenario.calls) == 1
+        resumed = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
+            resource_id="android:id/replaced_target", bounds_in_screen=(10, 300, 1000, 400))))
     assert resumed.guide_command.target_node_id == "display"
     assert resumed.debug["ui_selection"]["called"] is True
     assert resumed.debug["recovery"]["decision"] == "continue"
@@ -172,7 +177,7 @@ def test_changed_evidence_releases_failed_action_without_resetting_spent_action_
     assert unchanged.guide_command.target_node_id is None
     assert unchanged.debug["ui_selection"]["paused"] is True
     resumed = scenario.observe(nodes=(scenario.nodes[0], replace(scenario.nodes[1],
-        bounds_in_screen=(10, 300, 1000, 400))))
+        resource_id="android:id/replaced_target", bounds_in_screen=(10, 300, 1000, 400))))
     assert resumed.guide_command.target_node_id == "display"
     assert resumed.guide_command.render_policy["attempt_id"] != old_attempt
     assert resumed.debug["ui_selection"]["called"] is True
