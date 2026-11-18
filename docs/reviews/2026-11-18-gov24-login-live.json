@@ -1,0 +1,61 @@
+{
+  "date": "2026-11-18",
+  "timezone": "Asia/Seoul",
+  "source_commit": "d26b3f0",
+  "model": "jev-1.14.0",
+  "minimum_confidence": 0.8,
+  "scope": "Public login preference selection and private handoff; no authentication",
+  "audio_playback": false,
+  "production_deployment": false,
+  "direct_selector_check": {
+    "status": "PASS",
+    "source_kind": "synthetic",
+    "cases": 5,
+    "network_cases": 4,
+    "local_uncertainty_case": 1,
+    "cases_checked": [
+      "provider_implies_simple",
+      "financial_method",
+      "provider_preference",
+      "negative_preference",
+      "uncertain_preference"
+    ]
+  },
+  "http_device_capture_replay": {
+    "schema_version": "gov24-live-flow-check.v1",
+    "source_kind": "sanitized_device_capture_replay",
+    "live_jev": true,
+    "audio_playback": false,
+    "device_authentication": "NOT_RUN",
+    "cases": [
+      {
+        "case": "four_observed_methods",
+        "passed": true
+      },
+      {
+        "case": "uncertain_answer_reasks",
+        "passed": true
+      },
+      {
+        "case": "natural_answer_resolves_simple_method",
+        "passed": true,
+        "http_elapsed_ms": 348
+      },
+      {
+        "case": "preference_reused_after_provider_observed",
+        "passed": true,
+        "http_elapsed_ms": 301
+      },
+      {
+        "case": "private_handoff_without_login_success_claim",
+        "passed": true
+      }
+    ],
+    "status": "PASS"
+  },
+  "limitations": [
+    "Public screens are captured device observations replayed through HTTP, not live on-device end-to-end execution.",
+    "No credential entry, consent submission, authentication request, actual login, or resident-document issuance was performed.",
+    "These bounded cases do not establish population accuracy or production device success rates."
+  ]
+}
