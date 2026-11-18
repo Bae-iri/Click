@@ -32,4 +32,8 @@ final class SettingsPageNavigation {
                     && vocabulary.exportLabel(node.text,setting)!=null)return true;
         return false;
     }
+    /** A missing/partial heading is insufficient evidence, not a different page. */
+    boolean offRoute(ScreenSnapshot current,String setting) {
+        return ScreenIdentity.pageTitle(current)!=null && !onRoute(current,setting);
+    }
 }

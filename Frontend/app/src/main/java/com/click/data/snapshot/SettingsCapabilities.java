@@ -71,6 +71,18 @@ public final class SettingsCapabilities {
         }
         return false;
     }
+    /** Titles on this goal's authored navigation, rather than its wider export vocabulary. */
+    public static boolean routePageTitle(String goal,String title) {
+        JSONObject spec=DATA.optJSONObject("goals").optJSONObject(goal==null?"":goal);
+        JSONObject routes=spec==null?null:spec.optJSONObject("navigation");
+        if(routes==null || title==null)return false;
+        for(var states=routes.keys();states.hasNext();)
+            if(navigationForGoal(goal,states.next(),title))return true;
+        JSONObject pages=spec.optJSONObject("page_titles");
+        if(pages!=null)for(var states=pages.keys();states.hasNext();)
+            if(pageTitle(goal,states.next(),title))return true;
+        return false;
+    }
     public static boolean compatible(JSONObject remote) {
         return remote==null || "settings-capabilities.v1".equals(remote.optString("schema_version"))
                 && sha256().equals(remote.optString("sha256"));

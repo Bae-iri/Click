@@ -3143,7 +3143,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     ClickAccessibilityService.accessibilityWindowManager()!=null,keyguard!=null && keyguard.isDeviceLocked(),getPackageName());
             var pages=pageNavigation();JSONObject slots=execution.acceptedGoal()==null?null:execution.acceptedGoal().optJSONObject("slots");
             boolean offRoute=scene.kind()==com.click.data.snapshot.ScreenEnvironment.Kind.SETTINGS_SUBPAGE && pages!=null
-                    && !pages.onRoute(current,slots==null?null:slots.optString("setting",null));
+                    && pages.offRoute(current,slots==null?null:slots.optString("setting",null));
             if(execution.acceptedGoal()!=null && (!scene.navigable() || offRoute)
                     && scene.kind()!=com.click.data.snapshot.ScreenEnvironment.Kind.UNOBSERVABLE && scene.kind()!=com.click.data.snapshot.ScreenEnvironment.Kind.SELF) {
                 execution.deferResumeForEnvironment();environmentWaitKey=null;
@@ -3322,6 +3322,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void showSettingsEntryRecovery(String failure) {
         ScreenSnapshot entryScreen = ClickAccessibilityService.freshSnapshot();
+        if (recoverObservedSettingsSubpage(entryScreen)) return;
         if (ObservationRecovery.canReturnFromSettings(entryScreen)) {
             recoverSettingsBack(entryScreen);
             return;
@@ -3343,6 +3344,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     || !java.util.Objects.equals(session,execution.sessionId()) || closing
                     || execution.paused() || execution.pendingControl()!=null)return;
             ScreenSnapshot latest = ClickAccessibilityService.freshSnapshot();
+            if (recoverObservedSettingsSubpage(latest)) return;
             if (ObservationRecovery.canReturnFromSettings(latest)) {
                 execution.retry();
                 recoverSettingsBack(latest);
@@ -3384,6 +3386,42 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowCollapsed=false;
         if(overlayView!=null){overlayView.collapse();overlayView.setRecognizedSpeech(message);}
         updateFloatingVisibility();placeTaskFlow(null,true);speak(message);
+    }
+
+    /** A delayed app-entry recovery must not reopen or leave a page already reached. */
+    private boolean recoverObservedSettingsSubpage(ScreenSnapshot current) {
+        if (current==null || execution.acceptedGoal()==null
+                || !"android_settings".equals(execution.acceptedGoal().optString("target_app"))) return false;
+        android.app.KeyguardManager keyguard=getSystemService(android.app.KeyguardManager.class);
+        var scene=com.click.data.snapshot.ScreenEnvironment.classify(current,
+                ClickAccessibilityService.accessibilityWindowManager()!=null,
+                keyguard!=null && keyguard.isDeviceLocked(),getPackageName());
+        var pages=pageNavigation();
+        JSONObject slots=execution.acceptedGoal().optJSONObject("slots");
+        if(scene.kind()!=com.click.data.snapshot.ScreenEnvironment.Kind.SETTINGS_SUBPAGE || pages==null
+                || !pages.onRoute(current,slots==null?null:slots.optString("setting",null))
+                || !com.click.data.snapshot.SettingsCapabilities.routePageTitle(
+                    execution.acceptedGoal().optString("goal_type"),com.click.data.snapshot.ScreenIdentity.pageTitle(current))) return false;
+        ++settingsEntryPresentation;
+        navigationRecovery.clear();environmentWait=null;environmentWaitKey=null;
+        clearTargetHelpWait();clearGuideResyncRetry();clearMissingScreenWait();
+        hideGuideOverlay();hideConfirmation();stopNarration();
+        agentConfirmationId=null;confirmationExpiresAt=0;
+        automaticAdjustmentApprovalPending=false;
+        adjustmentDelegation.clear();pendingApprovalProvenance=null;
+        ensureTaskFlow();
+        if(!com.click.data.snapshot.ScreenIdentity.samePage(lastSubmittedScreen,current) && execution.pageChanged()) {
+            observedPageScreen=current;execution.requestObservation();
+            taskFlowView.waitingProgress("현재 설정 화면에서 이어서 안내할게요.");
+            if(execution.busy())pendingPageScreen=current;
+            else sendAgentTurn(null,true);
+        } else {
+            execution.recovery();
+            final int generation=execution.generation();
+            showObservationRecovery("설정 화면에 있어요. 현재 화면을 다시 확인하고 안내를 이어갈게요.",
+                    ()->retryObservation(generation,true));
+        }
+        return true;
     }
 
     private boolean stableManualSettingsPage(AgentTurnContract.GuideCommand command, ScreenSnapshot latest) {
@@ -3683,6 +3721,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         JSONObject visionFallback = command.visionFallback();
         if (recoveryAction != null) {
             if (!present) return;
+            if (recoverObservedSettingsSubpage(displayedSnapshot)) return;
             if("navigate_home".equals(recoveryAction.optString("type"))){navigationRecovery.forceHome();showSettingsEntryRecovery();return;}
             if("dismiss_interruption".equals(recoveryAction.optString("type"))){navigationRecovery.offPathPage(lastSubmittedScreen);showSettingsEntryRecovery();return;}
             hideConfirmation();
@@ -3887,6 +3926,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String reason = recovery.optString("reason_code");
         if (!("STATE_UNKNOWN".equals(reason) || "GRAPH_PATH_UNAVAILABLE".equals(reason)
                 || "TARGET_NOT_FOUND".equals(reason) || "APP_NOT_OPEN".equals(reason))) return false;
+        if (recoverObservedSettingsSubpage(screen)) return true;
         if (ObservationRecovery.canReturnFromSettings(screen)) {
             recoverSettingsBack(screen);
             return true;
@@ -4297,7 +4337,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         if(kind==com.click.data.snapshot.ScreenEnvironment.Kind.SETTINGS_SUBPAGE) {
             var pages=pageNavigation();JSONObject slots=execution.acceptedGoal().optJSONObject("slots");
-            offRoute=pages!=null && !pages.onRoute(current,slots==null?null:slots.optString("setting",null));
+            offRoute=pages!=null && pages.offRoute(current,slots==null?null:slots.optString("setting",null));
         }
         if(valuePending && scene.navigable() && !offRoute)return false;
         boolean expectedDialog=false;
