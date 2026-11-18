@@ -4,7 +4,7 @@
 
 ## 실행 경로
 
-1. 서버에서 `CLICK_GOV24_GUIDE_ENABLED=1`을 설정하고 신규 Backend와 Android 앱을 함께 사용한다. 기본값은 꺼짐이며 구버전 서버에는 새 capability를 보내지 않는다.
+1. 서버에서 `CLICK_GOV24_GUIDE_ENABLED=1`을 설정하고 신규 Backend와 Android 앱을 함께 사용한다. 기본값과 Render 배포 설정은 켜짐이며, `0`으로 명시하면 비활성화한다. 구버전 서버에는 새 capability를 보내지 않는다. `/version`의 `public_guidance.gov24_login_enabled`로 실제 활성화 상태를 확인한다.
 2. “정부24 로그인 도와줘” 요청을 확인하면 `public-guide.v1`, `/api/v1/agent/public-guide/commands`로 시작한다. 기존 목표 카탈로그와 승인 그래프를 임의로 확장하지 않는다.
 3. 현재 화면의 공개 로그인 버튼을 의미 기반으로 정규화한다. 실제 정부24 WebView 버튼은 resource ID가 없어도 텍스트/접근성 설명·클릭 가능 여부·현재 window·bounds가 확인되면 후보가 된다. 전체 화면 원문은 보내지 않는다.
 4. `open_login → choose_method → choose_provider → handoff`의 중간 목표를 사용한다. 간편인증 팝업에서는 뒤쪽 로그인 페이지의 선택지를 제외한다.

@@ -141,6 +141,7 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
         from app.services.goal_classifier import goal_classifier_configuration
         from ai_agent.runtime.screen_privacy import observation_contract
         from ai_agent.runtime.capabilities import identity as capability_identity
+        from app.services.public_guide_policy import enabled as gov24_login_enabled
         import re
         revision = os.getenv("RENDER_GIT_COMMIT", "")
         return {"schema_version": "click-build.v1", "target_validation": "settings-slider.v1",
@@ -148,6 +149,7 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
                 "goal_interpretation": goal_classifier_configuration(),
                 "observation_contract": observation_contract(),
                 "capability_contract": capability_identity(),
+                "public_guidance": {"gov24_login_enabled": gov24_login_enabled()},
                 "source_revision": revision if re.fullmatch(r"[0-9a-f]{40}", revision) else None}
 
     @app.get("/ops/metrics", tags=["system"])

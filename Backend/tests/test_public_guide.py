@@ -124,3 +124,12 @@ def test_public_provider_preference_is_reused_only_after_that_provider_is_observ
     assert result['target_node_id']=='native_provider_kakao' and result['question'] is None
     assert chooser.choose.call_count==2
     assert chooser.choose.call_args.args[0]=='카카오 할래'
+
+def test_runtime_rollout_is_enabled_by_default_and_explicit_disable_is_observable(login,monkeypatch):
+    monkeypatch.delenv('CLICK_GOV24_GUIDE_ENABLED',raising=False)
+    assert login.app.state.public_guide_service.policy.enabled()
+    assert login.client.get('/version').json()['public_guidance']['gov24_login_enabled'] is True
+    assert login.resolve(preparation_reset=True)['preparation']['execution_mode']=='public_guide'
+    monkeypatch.setenv('CLICK_GOV24_GUIDE_ENABLED','0')
+    assert login.client.get('/version').json()['public_guidance']['gov24_login_enabled'] is False
+    assert login.resolve(preparation_reset=True)['preparation']['execution_mode']=='graph'
