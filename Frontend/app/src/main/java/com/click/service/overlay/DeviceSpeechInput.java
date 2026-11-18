@@ -42,6 +42,8 @@ public final class DeviceSpeechInput implements SpeechInput {
                         .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")
                         .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
                         .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                        // Preserve the utterance for Jev's intent/feedback interpretation.
+                        .putExtra(RecognizerIntent.EXTRA_MASK_OFFENSIVE_WORDS, false)
                         .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                         .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, MAX_LISTENING_MS)
                         .putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, MAX_LISTENING_MS);

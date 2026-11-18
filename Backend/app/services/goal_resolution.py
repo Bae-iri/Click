@@ -6,6 +6,8 @@ import re
 from app.schemas.agent_turn import AgentGoalResolutionResponse, TypedGoalRequest
 from app.repositories.task_graphs import NoCompatibleGraphError, AmbiguousGraphError
 from app.services.goal_classifier import configured_goal_classifier
+from app.services.goal_jev import JevGoalClassifier
+from app.services.goal_inputs import needs_contextual_interpretation
 
 
 def normalize(value):
@@ -31,11 +33,12 @@ class GoalResolutionService:
     def resolve(self, request, version):
         text = normalize(request.source_text)
         base = dict(request_id=request.request_id, session_id=request.session_id, session_version=version)
-        if any(term in text for term in ("하지마", "하지말", "지마", "지말", "지않", "안해", "말아")):
+        model_context = isinstance(self.llm, JevGoalClassifier) and needs_contextual_interpretation(request.source_text)
+        if not model_context and any(term in text for term in ("하지마", "하지말", "지마", "지말", "지않", "안해", "말아")):
             return AgentGoalResolutionResponse(**base, resolution_status="needs_clarification",
                 message="변경을 원하시는지 다시 확인해 주세요. 아직 작업을 시작하지 않았어요.")
         scored = []
-        for goal in self.catalog["goals"]:
+        for goal in ([] if model_context else self.catalog["goals"]):
             if any(normalize(word) and normalize(word) in text for word in goal.get('excluded_keywords', [])):
                 continue
             if (goal['target_app'] == 'coupang' and text == normalize(goal['display_name'])
@@ -55,8 +58,8 @@ class GoalResolutionService:
                 score += 1
             scored.append((score, goal))
         if not scored:
-            # Only genuine keyword misses reach the LLM. Negation, tied matches and
-            # known but unsupported goals keep their deterministic outcomes.
+            # Contextual requests reach Jev whole, even when individual words
+            # match catalog entries. An abstention never falls back to those words.
             eligible = []
             for goal in self.catalog["goals"]:
                 if goal.get("execution_status") != "approved":

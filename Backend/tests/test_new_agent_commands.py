@@ -47,14 +47,8 @@ def test_resolution_does_not_execute_then_confirmed_goal_starts():
 
 
 def test_resolution_negation_and_unapproved_goal_do_not_start():
-    for text, expected in [("글자 크기 키우지 마", "needs_clarification"), ("쿠팡 상품 주문해줘", "unsupported")]:
+    for text, expected in [("글자 크기 키우지 마", "needs_clarification"), ("정부24 전입신고 화면 찾아줘", "unsupported")]:
         application = create_app()
-        if text.startswith('쿠팡'):
-            # Coupang is supported now; an inactive release must still stay unavailable.
-            from app.models.task_graph import ApprovedTaskGraph
-            with application.state.session_factory() as db:
-                db.get(ApprovedTaskGraph, 'CP-order-checkout:1.0.0').active = False
-                db.commit()
         with TestClient(application) as client:
             register(client)
             _, response = resolution(client, text)

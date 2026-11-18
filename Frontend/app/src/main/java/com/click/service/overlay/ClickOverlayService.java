@@ -851,6 +851,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     // through server preparation; ordinary speech still needs a scope question.
                     if (!explicitCardSelection) {
                         requirementReview = RequirementReview.isFontRequest(text) ? new RequirementReview(text) : null;
+                        if (GoalCommandInterpreter.requiresContextualInterpretation(text)) requirementReview = null;
                     }
                     resolveGoalOnServer(preparationSource, clarification); return;
                 }
@@ -2141,6 +2142,18 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 .matches("다음요청시작|다음요청시작해|다음요청시작해주세요|다음작업시작")) {
             nextQueuedRequest.run(); return;
         }
+        GoalCommandInterpreter.Result control = GoalCommandInterpreter.interpret(
+                command, execution.sessionId() != null, execution.paused(), agentConfirmationId != null,
+                null, foregroundPackage());
+        if (control.kind == GoalCommandInterpreter.Kind.INTERPRET_REQUEST) {
+            enqueueNormalRequest(command);
+            return;
+        }
+        if (control.kind == GoalCommandInterpreter.Kind.REPLACE_TASK
+                && GoalCommandInterpreter.requiresContextualInterpretation(command)) {
+            sendAgentReplacement(command);
+            return;
+        }
         boolean explicitRequest = GoalCommandInterpreter.explicitTaskRequest(command, goalClassifier, foregroundPackage());
         boolean contextualAnswer = resultPrompt != null && TaskFlowAnswers.result(command) != null
                 || followUp != null && !explicitRequest && TaskFlowAnswers.adjustment(command) != null
@@ -2153,9 +2166,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (handleExitConfirmation(command)) {
             return;
         }
-        GoalCommandInterpreter.Result control = GoalCommandInterpreter.interpret(
-                command, execution.sessionId() != null, execution.paused(), agentConfirmationId != null,
-                null, foregroundPackage());
         if (control.kind == GoalCommandInterpreter.Kind.EXIT_APPLICATION) {
             shutdownClick();
         } else if (control.kind == GoalCommandInterpreter.Kind.PAUSE_TASK) {

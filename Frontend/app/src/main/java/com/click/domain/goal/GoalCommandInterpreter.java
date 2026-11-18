@@ -3,7 +3,7 @@ package com.click.domain.goal;
 /** FE-owned interpretation for queue controls and data-driven typed goals. */
 public final class GoalCommandInterpreter {
     public enum Kind { START_TASK, REPLACE_TASK, PAUSE_TASK, RESUME_TASK, CANCEL_TASK, EXIT_APPLICATION,
-        CONFIRM_ACCEPTED, CONFIRM_REJECTED, PUBLIC_GUIDE, CATALOGUED_UNAVAILABLE, NEEDS_CLARIFICATION, UNSUPPORTED }
+        CONFIRM_ACCEPTED, CONFIRM_REJECTED, INTERPRET_REQUEST, PUBLIC_GUIDE, CATALOGUED_UNAVAILABLE, NEEDS_CLARIFICATION, UNSUPPORTED }
 
     public static final class Result {
         public final Kind kind;
@@ -41,10 +41,8 @@ public final class GoalCommandInterpreter {
             return result(Kind.CONFIRM_ACCEPTED, null);
         if (confirmationOpen && (text.equals("아니") || text.equals("아니오") || text.equals("싫어")))
             return result(Kind.CONFIRM_REJECTED, null);
-        if (text.contains("하지마") || text.contains("하지말") || text.contains("지마")
-                || text.contains("지말") || text.contains("지않") || text.contains("안해")
-                || text.contains("말아") || text.contains("키우지마"))
-            return result(Kind.UNSUPPORTED, "요청한 변경을 실행하지 않을게요.");
+        if (requiresContextualInterpretation(source))
+            return result(hasActiveTask && text.contains("대신") ? Kind.REPLACE_TASK : Kind.INTERPRET_REQUEST, null);
 
         // Resolve concrete business goals before generic controls. For example,
         // "쿠팡 주문 취소" is a commerce goal, while "이 작업 취소" is a queue control.
@@ -95,12 +93,22 @@ public final class GoalCommandInterpreter {
 
     /** A complete new request is not an answer to a previous task's result question. */
     public static boolean explicitTaskRequest(String source, GoalCatalogClassifier catalog, String foregroundPackage) {
-        if (catalog == null || source == null) return false;
+        if (source == null) return false;
         String normalized = GoalCatalogClassifier.normalize(source);
-        if (normalized.contains("대신") || normalized.matches(".*(하지마|하지말|지마|지말|지않|안해|말아|멈춰|중단해|작업취소|일단멈춰|잠깐기다려|기다려봐).*")) return false;
+        if (normalized.contains("대신")) return false;
+        if (requiresContextualInterpretation(source)) return true;
+        if (catalog == null || normalized.matches(".*(멈춰|중단해|작업취소|일단멈춰|잠깐기다려|기다려봐).*")) return false;
         boolean action = normalized.matches(".*(켜|꺼|키워|줄여|낮춰|높여|열어|보여|바꿔|설정해|연결해|삭제해|켜고|끄고|키우고|줄이고|낮추고|높이고|열고|바꾸고|해줘|해주세요|open|connect|change|turn).*");
         GoalCatalogClassifier.Classification result = catalog.classify(source, foregroundPackage);
         return action && (result.matched() || result.ambiguous);
+    }
+
+    /** Routing only: keep negated/replaced clauses together for server interpretation. */
+    public static boolean requiresContextualInterpretation(String source) {
+        return GoalCatalogClassifier.normalize(source).matches(
+                ".*(하지마|하지말|지마|지말|지않|안해|말아|말았|말고|아니라|아니고|대신|않"
+                        + "|안켜|안꺼|안키|안끄|안줄|안올|안내려|안바꿔"
+                        + "|못켜|못꺼|못키|못끄|못줄|못올|못내려|못바꿔).*");
     }
 
     private static boolean isCancelControl(String text) {

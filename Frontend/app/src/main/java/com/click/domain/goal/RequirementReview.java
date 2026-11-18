@@ -31,13 +31,26 @@ public final class RequirementReview {
         return forResolvedGoal(request, goal, label, null);
     }
     public static RequirementReview forResolvedGoal(String request, JSONObject goal, String label, RequirementReview previous) {
-        if (!goal.optString("goal_type").startsWith("settings.font_size.")) return forGoal(request, goal, label);
+        boolean contextual = GoalCommandInterpreter.requiresContextualInterpretation(request);
+        if (!goal.optString("goal_type").startsWith("settings.font_size.")) {
+            RequirementReview review = forGoal(request, goal, label);
+            if (contextual) review.blocked = false;
+            return review;
+        }
         RequirementReview review = previous != null && previous.isFont() && request.equals(previous.request)
                 ? previous : new RequirementReview(request, true);
         // The model may suggest a direction; scope remains a separate user requirement.
         // Named apps and missing scope must never silently become a system-wide change.
         JSONObject slots = goal.optJSONObject("slots");
         String direction = slots == null ? "" : slots.optString("direction");
+        if (contextual) {
+            // The server has interpreted the whole request. Local keywords must
+            // not reverse its direction; the legacy protocol still asks scope.
+            review.blocked = false;
+            review.target = null;
+            review.scope = null;
+            review.direction = null;
+        }
         if (review.direction == null && !review.blocked && ("increase".equals(direction) || "decrease".equals(direction)))
             review.direction = direction;
         return review;
@@ -55,7 +68,8 @@ public final class RequirementReview {
         return review;
     }
     public static RequirementReview forGoal(String request, JSONObject goal, String label) {
-        RequirementReview review = new RequirementReview(request);
+        RequirementReview review = new RequirementReview(request,
+                goal.optString("goal_type").startsWith("settings.font_size."));
         if (review.isFont() && "android_settings".equals(goal.optString("target_app"))
                 && !review.blocked && namedApp(request) == null && !review.appOnly()) {
             review.choose("phone");

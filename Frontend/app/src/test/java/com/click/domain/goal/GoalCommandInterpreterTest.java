@@ -66,15 +66,33 @@ public class GoalCommandInterpreterTest {
         assertEquals(GoalCommandInterpreter.Kind.NEEDS_CLARIFICATION,
                 GoalCommandInterpreter.interpret("스톱", true, false, false,
                         catalog, "com.android.settings").kind);
-        assertEquals(GoalCommandInterpreter.Kind.UNSUPPORTED,
+        assertEquals(GoalCommandInterpreter.Kind.INTERPRET_REQUEST,
                 GoalCommandInterpreter.interpret("글자 크기 크게 하지 마", false, false, false,
                         catalog, "com.android.settings").kind);
-        assertEquals(GoalCommandInterpreter.Kind.UNSUPPORTED,
+        assertEquals(GoalCommandInterpreter.Kind.INTERPRET_REQUEST,
                 GoalCommandInterpreter.interpret("글자 크기 크게 안 해 줘", false, false, false,
                         catalog, "com.android.settings").kind);
-        assertEquals(GoalCommandInterpreter.Kind.UNSUPPORTED,
+        assertEquals(GoalCommandInterpreter.Kind.INTERPRET_REQUEST,
                 GoalCommandInterpreter.interpret("와이파이가 꺼지지 않게 해줘", false, false, false,
                         catalog, "com.android.settings").kind);
+    }
+
+    @Test public void contextualRequestsNeverChooseLocalKeywordGoalsOrNegatedControls() throws Exception {
+        GoalCatalogClassifier catalog = loadCatalog();
+        for (String source : new String[]{"글자를 키우지 말고 줄여줘", "글자 말고 밝기만 올려줘",
+                "작업 취소하지 마", "취소하지 말고 계속해줘", "잠깐 기다려 봐 하지 말고 와이파이 켜줘",
+                "카카오톡 말고 휴대폰 전체 글자를 줄여줘"}) {
+            GoalCommandInterpreter.Result result = GoalCommandInterpreter.interpret(
+                    source, true, true, true, catalog, "com.android.settings");
+            assertEquals(source, GoalCommandInterpreter.Kind.INTERPRET_REQUEST, result.kind);
+            org.junit.Assert.assertFalse(result.canStart());
+            org.junit.Assert.assertNull(result.goal);
+            assertTrue(GoalCommandInterpreter.explicitTaskRequest(source, catalog, null));
+        }
+        assertEquals(GoalCommandInterpreter.Kind.CANCEL_TASK,
+                GoalCommandInterpreter.interpret("이 작업 취소해줘", true, false, false).kind);
+        assertEquals(GoalCommandInterpreter.Kind.CONFIRM_REJECTED,
+                GoalCommandInterpreter.interpret("아니오", true, false, true).kind);
     }
 
     @Test public void classifiesSettingsAndGovernmentGoalsFromSharedCatalog() throws Exception {

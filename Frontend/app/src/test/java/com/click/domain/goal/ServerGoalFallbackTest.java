@@ -40,8 +40,16 @@ public class ServerGoalFallbackTest {
         assertFalse(fallback("글자 크게"));
         assertFalse(fallback("글자 크게 작게"));
         assertFalse(fallback("글자 밝게")); // Known, unsupported goal.
-        assertFalse(fallback("변경하지마"));
+        assertTrue(fallback("변경하지마"));
         assertFalse(fallback(""));
+    }
+    @Test public void correctionsReachServerEvenWithMatchingOrTiedKeywords() throws Exception {
+        for (String source : new String[]{"휴대폰 전체 글자 크게 하지 말고 작게 해줘",
+                "글자 말고 밝기를 올려줘", "카카오톡 말고 휴대폰 전체 글자를 작게 해줘"}) {
+            assertTrue(source, fallback(source));
+            assertEquals(0, LocalGoalResolver.resolve(catalog, server, source, null, null)
+                    .getJSONArray("candidates").length());
+        }
     }
     @Test public void oldServerKeepsLocalClarification() throws Exception {
         assertFalse(LocalGoalResolver.needsServerResolution(catalog, AgentServerContract.fromOpenApi(oldSchema),

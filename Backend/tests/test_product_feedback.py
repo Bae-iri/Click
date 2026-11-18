@@ -38,10 +38,14 @@ def classify(client, source='야 이상한 색기야', identifier=None, **extra)
 @pytest.mark.parametrize('source,intent', [
     ('야 이상한 색기야', 'negative_feedback'), ('클릭 진짜 답답하네', 'negative_feedback'),
     ('클릭은 별로 안 좋아', 'negative_feedback'), ('고마워', 'positive_feedback'),
+    ('어 시발 그런 거', 'negative_feedback'),
     ('폰트 키워줘서 고마워', 'positive_feedback'), ('너 덕분에 편했어', 'positive_feedback')])
 def test_feedback_is_saved_encrypted_without_creating_an_agent_session(configured, source, intent):
     app = create_app()
-    app.state.interactions.classifier = JevGoalClassifier(lambda payload, **kw: jev_answer(payload, intent))
+    def send(payload, **kwargs):
+        assert payload['state'] == source
+        return jev_answer(payload, intent)
+    app.state.interactions.classifier = JevGoalClassifier(send)
     with TestClient(app) as client:
         register(client)
         response = classify(client, source)

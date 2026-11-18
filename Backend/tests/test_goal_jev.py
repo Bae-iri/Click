@@ -1,6 +1,7 @@
 """Jev's real protocol boundary and authenticated preparation path, without network calls."""
 from copy import deepcopy
 import json
+from pathlib import Path
 
 import httpx
 import pytest
@@ -34,13 +35,16 @@ def configured(monkeypatch):
     monkeypatch.setenv('JEV_MIN_CONFIDENCE', '0.8')
 
 
-def response_for(payload, choice='goal_0', probability=0.98):
-    keys = payload['questions']['goal']['criteria']
-    probabilities = {k: probability if k == choice else (1 - probability) / (len(keys) - 1) for k in keys}
-    return {'model': payload['model'], 'answers': {'goal': {
-        'type': 'choice', 'choice': choice, 'probabilities': probabilities,
-        'confidence': (probability - 1 / len(keys)) / (1 - 1 / len(keys)),
-    }}, 'usage': {'input_tokens': 100, 'output_tokens': 0}}
+def response_for(payload, choice='goal_0', probability=0.98, **auxiliary):
+    answers = {}
+    for question, spec in payload['questions'].items():
+        keys = spec['criteria']
+        selected = choice if question == 'goal' else auxiliary.get(question, 'unspecified')
+        probabilities = {k: probability if k == selected else (1 - probability) / (len(keys) - 1) for k in keys}
+        answers[question] = {'type': 'choice', 'choice': selected, 'probabilities': probabilities,
+            'confidence': (probability - 1 / len(keys)) / (1 - 1 / len(keys))}
+    return {'model': payload['model'], 'answers': answers,
+            'usage': {'input_tokens': 100, 'output_tokens': 0}}
 
 
 def success(payload, *, timeout):
@@ -113,9 +117,195 @@ def test_media_context_does_not_authorize_app_only_or_conflicting_volume_request
         assert result is None
 
 
-@pytest.mark.parametrize('source', ['', ' ', 'a' * 2001, '비밀번호는 private', '글씨 키우지 마', '글씨 키워줘 취소'])
+@pytest.mark.parametrize('source', ['', ' ', 'a' * 2001, '비밀번호는 private'])
 def test_rejected_input_never_reaches_provider(source):
     assert JevGoalClassifier(lambda *a, **kw: pytest.fail('unexpected call')).select(source, CANDIDATES) is None
+
+
+@pytest.mark.parametrize('source', ['글씨 키우지 마', '글씨 키워줘 취소', '작업 취소하지 말아줘'])
+def test_negative_requests_reach_jev_whole_and_can_abstain(source):
+    calls = []
+    def send(payload, **kwargs):
+        calls.append(payload)
+        assert payload['state'] == source
+        return httpx.Response(200, json=response_for(payload, 'cancel'))
+    assert JevGoalClassifier(send).select(source, CANDIDATES) is None
+    assert len(calls) == 1
+
+
+def contextual_response(payload, goal, **auxiliary):
+    criteria = payload['questions']['goal']['criteria']
+    choice = next(key for key, value in criteria.items()
+                  if isinstance(value, dict) and value['goal_type'] == goal)
+    return httpx.Response(200, json=response_for(payload, choice, **auxiliary))
+
+
+@pytest.mark.parametrize('source,goal,scope,stream', [
+    ('휴대폰 전체 글자를 키우지 말고 줄여줘', 'settings.font_size.decrease', 'system', 'unspecified'),
+    ('글자 크기 키우지 말고 줄여줘', 'settings.font_size.decrease', 'unspecified', 'unspecified'),
+    ('밝기 올리지 말고 내려줘', 'settings.brightness.decrease', 'system', 'unspecified'),
+    ('글자는 키우지 말고 밝기만 올려줘', 'settings.brightness.increase', 'system', 'unspecified'),
+    ('시발 글자는 키우지 말고 밝기만 올려줘', 'settings.brightness.increase', 'system', 'unspecified'),
+    ('카카오톡 글자는 바꾸지 말고 화면 밝기만 올려줘', 'settings.brightness.increase', 'system', 'unspecified'),
+    ('카카오톡 말고 휴대폰 전체 글자를 줄여줘', 'settings.font_size.decrease', 'system', 'unspecified'),
+    ('와이파이 켜지 말고 꺼줘', 'settings.wifi.disable', 'unspecified', 'unspecified'),
+    ('와이파이가 꺼지지 않게 해줘', 'settings.wifi.enable', 'unspecified', 'unspecified'),
+    ('벨소리는 바꾸지 말고 음악 소리만 줄여줘', 'settings.volume.decrease', 'system', 'media'),
+])
+def test_authenticated_contextual_requests_use_only_jev_interpretation(monkeypatch, source, goal, scope, stream):
+    calls = []
+    def post(self, payload, **kwargs):
+        calls.append(payload)
+        assert payload['state'] == source
+        assert {'goal', 'scope', 'audio_stream'} == set(payload['questions'])
+        return contextual_response(payload, goal, scope=scope, audio_stream=stream)
+    monkeypatch.setattr(JevGoalClassifier, '_post', post)
+    app = create_app()
+    with TestClient(app) as client:
+        register(client)
+        flow = Flow(client, app, source)
+        body = flow.resolve()
+        assert body['preparation']['source_text'] == source
+        if goal.startswith('settings.font_size.') and scope == 'unspecified':
+            assert body['goal'] is None
+            assert body['preparation']['values'] == {'direction': 'decrease'}
+            assert body['preparation']['question']['field'] == 'scope'
+            body = flow.answer('system')
+        assert body['resolution_status'] == 'confirmation_required'
+        assert body['goal']['goal_type'] == goal
+        assert body['preparation']['graph_reference'] is not None
+        assert len(calls) == 1
+        # Restoring preparation keeps interpreted inputs, without a keyword/model retry.
+        assert flow.resolve()['goal']['goal_type'] == goal
+        assert len(calls) == 1
+        with app.state.session_factory() as db:
+            row = db.get(AgentSession, flow.session)
+            assert row.episode_id is None and row.version == 0
+        if goal == 'settings.font_size.decrease':
+            wrong = flow.start_payload()
+            wrong['goal'] = {**wrong['goal'], 'goal_type': GOAL,
+                             'slots': {'setting': 'font_size', 'direction': 'increase'}}
+            assert client.post('/api/v1/agent/commands', json=wrong).status_code == 409
+            started = client.post('/api/v1/agent/commands', json=flow.start_payload())
+            assert started.status_code == 200, started.text
+            assert started.json()['task_id'] == 'MVP-02'
+
+
+@pytest.mark.parametrize('failure', ['timeout', 'cancel', 'clarify', 'multiple', 'low_confidence', 'malformed'])
+def test_contextual_failure_never_falls_back_to_negated_keywords(monkeypatch, failure):
+    calls = []
+    source = '휴대폰 전체 글자는 키우지 말고 밝기만 올려줘'
+    def post(self, payload, **kwargs):
+        calls.append(payload)
+        assert payload['state'] == source
+        if failure == 'timeout':
+            raise httpx.ReadTimeout('controlled failure')
+        if failure == 'malformed':
+            return httpx.Response(200, json={'answers': {}})
+        choice = failure if failure != 'low_confidence' else 'goal_0'
+        return httpx.Response(200, json=response_for(payload, choice,
+            probability=0.55 if failure == 'low_confidence' else 0.98))
+    monkeypatch.setattr(JevGoalClassifier, '_post', post)
+    app = create_app()
+    with TestClient(app) as client:
+        register(client)
+        body = Flow(client, app, source).resolve()
+        assert len(calls) == 1
+        assert body['goal'] is None and body['preparation']['values'] == {}
+        assert body['preparation']['graph_reference'] is None
+        assert body['preparation']['question']['field'] == 'request'
+        assert body['metadata']['goal_selection']['candidates'] == []
+
+
+@pytest.mark.parametrize('fault', ['low_confidence', 'missing', 'wrong_sum', 'unknown'])
+def test_contextual_scope_choice_is_validated_and_never_assumed(fault):
+    def send(payload, **kwargs):
+        response = response_for(payload, 'goal_1', scope='system')
+        scope = response['answers']['scope']
+        if fault == 'low_confidence':
+            scope['confidence'] = 0.1
+        elif fault == 'missing':
+            del response['answers']['scope']
+        elif fault == 'wrong_sum':
+            scope['probabilities']['app'] = 1.0
+        else:
+            scope['choice'] = 'invented'
+        return httpx.Response(200, json=response)
+    result = JevGoalClassifier(send).interpret_inputs('글자를 키우지 말고 줄여줘', CANDIDATES, FIELDS)
+    assert result == ({'goal_type': 'settings.font_size.decrease', 'inputs': {'direction': 'decrease'}}
+                      if fault == 'low_confidence' else None)
+
+
+def test_contextual_app_only_request_cannot_become_phone_wide():
+    def send(payload, **kwargs):
+        return httpx.Response(200, json=response_for(payload, 'goal_1', scope='app'))
+    assert JevGoalClassifier(send).interpret_inputs(
+        '휴대폰 전체 말고 카카오톡 앱 안에서만 글자를 줄여줘', CANDIDATES, FIELDS) is None
+
+
+def test_contextual_unknown_scope_does_not_select_a_brightness_route():
+    catalog = json.loads((Path(__file__).parents[1] / 'app/task_graphs/goal_catalog.json').read_text())
+    def send(payload, **kwargs):
+        return contextual_response(payload, 'settings.brightness.increase')
+    assert JevGoalClassifier(send).interpret_inputs(
+        '글자 말고 밝기를 올려줘', [g for g in catalog['goals'] if g['execution_status'] == 'approved'], []) is None
+
+
+def test_contextual_request_keeps_privacy_minimization():
+    def send(payload, **kwargs):
+        assert '010-1234-5678' not in payload['state']
+        assert '[REDACTED]' in payload['state']
+        assert payload['state'].endswith('글자를 키우지 말고 줄여줘')
+        return httpx.Response(200, json=response_for(payload, 'goal_1'))
+    assert JevGoalClassifier(send).select('전화번호는 010-1234-5678, 글자를 키우지 말고 줄여줘', CANDIDATES) == 'settings.font_size.decrease'
+
+
+def test_legacy_resolution_also_forwards_contextual_request(monkeypatch):
+    from tests.test_new_agent_commands import resolution
+    calls = []
+    source = '와이파이는 켜지 말고 블루투스만 켜줘'
+    def post(self, payload, **kwargs):
+        calls.append(payload)
+        assert payload['state'] == source
+        return contextual_response(payload, 'settings.bluetooth.enable')
+    monkeypatch.setattr(JevGoalClassifier, '_post', post)
+    with TestClient(create_app()) as client:
+        register(client)
+        _, response = resolution(client, source)
+        assert response.status_code == 200
+        assert response.json()['goal']['goal_type'] == 'settings.bluetooth.enable'
+        assert response.json()['resolution_status'] == 'confirmation_required'
+        assert len(calls) == 1
+
+
+@pytest.mark.parametrize('enabled', [False, True])
+def test_contextual_public_guide_uses_only_advertised_capabilities(monkeypatch, enabled):
+    source = '밝기는 바꾸지 말고 정부24 등본 발급 화면 찾아줘'
+    calls = []
+    def post(self, payload, **kwargs):
+        calls.append(payload)
+        listed = {v['goal_type'] for v in payload['questions']['goal']['criteria'].values() if isinstance(v, dict)}
+        assert ('gov24.resident_copy.open' in listed) == enabled
+        if enabled:
+            return contextual_response(payload, 'gov24.resident_copy.open')
+        return httpx.Response(200, json=response_for(payload, 'unsupported_app'))
+    monkeypatch.setattr(JevGoalClassifier, '_post', post)
+    monkeypatch.setenv('CLICK_GOV24_GUIDE_ENABLED', '1')
+    app = create_app()
+    with TestClient(app) as client:
+        register(client)
+        flow = Flow(client, app, source)
+        context = {'platform': 'android', 'locale': 'ko-KR', 'capabilities': {'gov24_civil': enabled}}
+        body = flow.resolve(device_context=context)
+        if enabled:
+            assert body['preparation']['execution_mode'] == 'public_guide'
+            assert body['preparation']['public_guide_goal']['goal_type'] == 'gov24.resident_copy.open'
+            assert body['resolution_status'] == 'confirmation_required'
+            assert flow.resolve(device_context=context)['preparation']['public_guide_goal'] == body['preparation']['public_guide_goal']
+        else:
+            assert body['resolution_status'] == 'unsupported'
+            assert body['preparation']['public_guide_goal'] is None
+        assert len(calls) == 1
 
 
 @pytest.mark.parametrize('key,value', [('TYPESAFE_API_KEY', ''), ('TYPESAFE_API_KEY', 'bad\nkey'),

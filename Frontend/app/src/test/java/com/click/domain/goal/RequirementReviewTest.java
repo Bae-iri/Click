@@ -117,4 +117,29 @@ public class RequirementReviewTest {
         review.update("다른 뜻이에요");
         assertNull(review.confirm(catalog, server));
     }
+
+    @Test public void interpretedCorrectionUsesServerDirectionAndStillAsksLegacyScope() throws Exception {
+        JSONObject goal = catalog.executableGoal("settings.font_size.decrease").toTypedGoalJson();
+        RequirementReview review = RequirementReview.forResolvedGoal(
+                "휴대폰 전체 글자를 키우지 말고 줄여줘", goal, "글자를 작게");
+        assertFalse(review.isBlocked());
+        assertTrue(review.needsTarget());
+        assertFalse(review.needsDirection());
+        assertFalse(review.confirmed());
+        assertNull(review.proposedGoal(catalog, server));
+        review.choose("phone");
+        assertEquals("settings.font_size.decrease", review.confirm(catalog, server).getString("goal_type"));
+    }
+
+    @Test public void interpretedCrossFamilyCorrectionDoesNotRecreateAFontTask() throws Exception {
+        JSONObject goal = new JSONObject().put("catalog_version", "2.1")
+                .put("goal_type", "settings.brightness.increase").put("target_app", "android_settings")
+                .put("slots", new JSONObject().put("setting", "brightness").put("direction", "increase"));
+        RequirementReview review = RequirementReview.forResolvedGoal(
+                "글자는 키우지 말고 밝기만 올려줘", goal, "밝기를 높이기");
+        assertFalse(review.isFont());
+        assertFalse(review.isBlocked());
+        assertFalse(review.confirmed());
+        assertEquals("밝기를 높이기", review.summary());
+    }
 }
