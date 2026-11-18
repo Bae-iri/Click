@@ -49,3 +49,22 @@ def test_a_real_settings_sound_menu_row_remains_navigable():
     nodes=normalize_accessibility_tree(raw,screen_bounds=(0,0,1080,2400))
     edge=next(t for t in graph.transitions if t.from_state=='S1_SETTINGS_HOME')
     assert [n.node_id for n in eligible_nodes(edge,nodes,graph)]==['row']
+
+
+def test_missing_samsung_toolbar_does_not_send_volume_navigation_back_before_jev(monkeypatch):
+    from tests.test_screen_jev import sender_for
+    monkeypatch.setenv('TYPESAFE_API_KEY','test-only-key')
+    graph,_,_,goal=scene('volume')
+    edge=next(t for t in graph.transitions if t.from_state=='S2_CATEGORY')
+    resolver=JevScreenResolver(sender_for(edge))
+    engine=ClickAgentEngine(task_graphs={goal.task_id:graph},screen_resolver=resolver)
+    row=AccessibilityNode('volume',text='음량',package_name='com.android.settings',window_id=7,
+        class_name='android.widget.TextView',clickable=True,bounds_in_screen=(20,300,900,400))
+    result=engine.handle_turn(AgentTurnRequest(request_id='toolbar-redraw',session_id='s',
+        typed_goal=goal,raw_goal=None,accessibility_tree=(row,),active_window_id=7,
+        observation_id='fresh-volume',captured_at_ms=1000,screen_bounds=(0,0,1080,2400),
+        device_context=DeviceContext('android',app_package='com.android.settings'),
+        window_context={'settings_activity':'SUBPAGE','window_kind':'APPLICATION'}))
+    assert resolver.last_diagnostics['called']
+    assert result.guide_command.target_node_id=='volume'
+    assert 'recovery_action' not in result.guide_command.render_policy
