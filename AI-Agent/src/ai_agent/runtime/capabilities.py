@@ -8,7 +8,7 @@ PATH=Path(__file__).resolve().parents[3]/'goal_catalog/settings_capabilities.jso
 
 @lru_cache(maxsize=1)
 def document():
-    value=json.loads(PATH.read_text())
+    value=json.loads(PATH.read_text(encoding="utf-8"))
     if value['schema_version']!='settings-capabilities.v1':raise ValueError('Unsupported settings capabilities')
     return value
 

@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sqlalchemy import ForeignKey, String, BigInteger, event
+from sqlalchemy import ForeignKey, String, BigInteger, Integer, event
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -31,6 +31,13 @@ class KakaoIdentity(Base):
     __tablename__ = "kakao_identities"
     subject: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+
+
+class LoginRateLimit(Base):
+    __tablename__ = 'login_rate_limits'
+    account_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    window_started_at: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 @event.listens_for(Account, "before_insert")

@@ -13,6 +13,7 @@ public final class Gov24PublicNavigation {
         catch(Exception error){throw new ExceptionInInitializerError(error);}}
     private static final class Scan {
         int visited,matches,inputs;boolean privateBoundary;AccessibilityNodeInfo target,scroll;
+        final AccessibilityTraversalBudget budget=new AccessibilityTraversalBudget(800,40,150,android.os.SystemClock::elapsedRealtime);
         void close(){if(target!=null)target.recycle();if(scroll!=null)scroll.recycle();}
     }
     public static boolean reveal(AccessibilityNodeInfo root,ScreenSnapshot screen,String goal) {
@@ -27,6 +28,7 @@ public final class Gov24PublicNavigation {
             Scan scan=new Scan();
             try {
                 visit(root,aliases,scan,0);
+                scan.budget.check();
                 if(scan.privateBoundary)return false;
                 if(scan.matches==1&&scan.target!=null) {
                     android.graphics.Rect bounds=new android.graphics.Rect();scan.target.getBoundsInScreen(bounds);
@@ -39,7 +41,7 @@ public final class Gov24PublicNavigation {
         }catch(Exception unavailable){return false;}
     }
     private static void visit(AccessibilityNodeInfo node,JSONArray aliases,Scan scan,int depth) {
-        if(depth>40||++scan.visited>800)return;
+        scan.budget.take(depth);scan.visited++;
         if(node.isEditable()||node.isPassword()||String.valueOf(node.getClassName()).contains("EditText")) {
             if(node.isVisibleToUser()) {
                 CharSequence hint=node.getHintText();
@@ -64,7 +66,8 @@ public final class Gov24PublicNavigation {
             scan.matches++;
             if(scan.target==null)scan.target=AccessibilityNodeInfo.obtain(node);
         }
-        for(int i=0;i<node.getChildCount()&&scan.visited<800;i++) {
+        for(int i=0;i<node.getChildCount();i++) {
+            scan.budget.check();
             AccessibilityNodeInfo child=node.getChild(i);if(child==null)continue;
             try{visit(child,aliases,scan,depth+1);}finally{child.recycle();}
         }

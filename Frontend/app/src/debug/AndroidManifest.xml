@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <!-- Debug-only entry points used for visual QA of the post-permission flow. -->
-    <application>
+    <application android:usesCleartextTraffic="true" tools:replace="android:usesCleartextTraffic">
         <receiver android:name="com.click.debug.Gov24GuideProbeReceiver" android:exported="true" android:permission="android.permission.DUMP" />
         <activity
             android:name=".TutorialActivity"

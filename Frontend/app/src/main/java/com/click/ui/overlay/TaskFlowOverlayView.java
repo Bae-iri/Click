@@ -586,7 +586,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         // 내용 확인 중에도 일시정지/중지를 본문 스크롤 밖의 하단에 유지한다.
         divider.setVisibility(VISIBLE); controls.setVisibility(VISIBLE);
         TextView subtitle = text(description, 15); subtitle.setTextColor(SECONDARY);
-        subtitle.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
+        subtitle.setBreakStrategy(android.graphics.text.LineBreaker.BREAK_STRATEGY_BALANCED);
         subtitle.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_regular));
         subtitle.setPadding(0, 0, 0, 0);
         if (description != null && !description.isEmpty()) content.addView(subtitle, spaced(8));
@@ -781,7 +781,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         summary.setGravity(Gravity.CENTER_VERTICAL);
         summary.setPadding(0, 0, 0, 0);
         summary.setLineSpacing(dp(2), 1.1f);
-        summary.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
+        summary.setBreakStrategy(android.graphics.text.LineBreaker.BREAK_STRATEGY_BALANCED);
         LayoutParams labelParams = new LayoutParams(0, -2, 1);
         labelParams.setMarginStart(dp(16));
         summaryRow.addView(summary, labelParams);
