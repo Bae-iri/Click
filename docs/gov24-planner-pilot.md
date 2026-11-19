@@ -107,6 +107,55 @@ Privacy Guard는 접근성 트리에서 현재 앱·현재 창·가시성·활�
 
 ## 로그
 
+### 차단 사유 진단 (`gov24-diagnostics.v1`)
+
+보관 소스 `2383646`은 모든 개인정보 경계를 `private_boundary`로 합쳤다.
+이전 로그의 빈 `facts`로는 비밀번호·검색창·동의·다른 창 중 무엇을 감지했는지 복원할 수 없다.
+`planner.called=false`, `jev.called=false`, `plan=null`이면 모델 실행 이전의 관측·보호 검사에서 멈춘 것이다.
+
+수정한 파일럿 응답·서버 로그·DB 이벤트에는 다음 필드를 함께 보관한다.
+
+* `observation_check`: 화면 상태, 관측 나이(`age_ms`, 서버 시각 - 기기 시각), 공개 노드 수,
+  정부24 패키지 일치 여부, 기존 `handoff_reason`, 새 `privacy_reason`, 세부 정보 제공 여부.
+* `diagnostic`: 고정 `code`, `category`(`observation`/`privacy`/`budget`), 검사 `stage`,
+  한국어 설명 `message`, 해당 판정에 필요한 숫자·불리언·고정 코드 `facts`.
+  공개 화면 검사를 통과했고 별도의 차단이 없으면 `null`이다. 모델 판단 결과는 기존 `planner`/`jev` 필드를 확인한다.
+* `verification.*.reason`: 실제 원인 코드. `UNKNOWN`을 실패나 인증 필요로 바꾸지 않는다.
+* 호출하지 않은 모델의 `reason`: 어떤 검사에서 멈췄는지 기록한다. 키 누락 등 기존 모델 사유는 보존한다.
+
+| 분류 | 대표 코드 | 의미 |
+|---|---|---|
+| 관측 부족 (`UNKNOWN`) | `observation_missing`, `snapshot_missing`, `empty_accessibility_tree`, `no_visible_nodes` | 요청에 화면이 없거나 기기에서 읽지 못함 |
+| 관측 거부 (`UNKNOWN`) | `stale_observation`, `future_observation`, `package_mismatch`, `outside_gov24_app` | 30초 초과, 5초 초과 미래 시각, 앱 불일치 |
+| 후보 부족 (`UNKNOWN`) | `no_public_options`, `ambiguous_public_options`, `public_options_limit`, `invalid_public_option` | 허용된 공개 항목 없음·중복·개수 초과·서버 형식 불일치 |
+| 입력 경계 (`BLOCKED`) | `password_field`, `sensitive_input_field`, `empty_search_field` | 비밀번호, 용도 미확인 입력창, 검증된 리소스의 빈 검색창 |
+| 인증·동의 경계 (`BLOCKED`) | `consent_prompt`, `certificate_prompt`, `private_identity_label`, `external_auth_app` | 동의 문구·인증 문구·개인 식별 문구·외부 인증 앱 감지 |
+| 관측 범위 보호 (`BLOCKED`) | `foreign_package_node`, `inactive_window_node` | 다른 앱 또는 활성 창이 아닌 창의 노드가 섞임. 인증 화면이라고 단정하지 않음 |
+| 자원 한도 (`BLOCKED`) | `turn_limit`, `planning_budget_exhausted` | 24턴·계획 3회 한도. 해당 횟수와 한도를 기록하며 목표 실패로 단정하지 않음 |
+
+`sensitive_input_field`는 개인정보 입력이 확인됐다는 뜻이 아니다. 입력 내용은 로컬에서 이미
+제거되어 필드 용도가 불명확할 수 있다. 이 실험의 기존 입력 필드 차단은 유지한다.
+`empty_search_field`도 이미 로컬 정책에 등록된 검색 리소스만 구분하며, 정부24의 모든 검색창을 식별한다고 보장하지 않는다.
+
+서버만 갱신하면 이전 앱이 보내던 네 가지 `handoff_reason`(`credential_input`,
+`certificate_selection`, `external_auth`, `consent_required`)과 관측 시각·패키지 사유까지 구분한다.
+세부 필드 유형과 창 혼합 사유는 **수정된 앱도 설치해야** 나타난다.
+새 앱은 연결한 서버의 OpenAPI에 `PublicGuideScreen.privacy_reason`이 있을 때만 이 필드를 보내므로
+구형 서버의 엄격한 요청 검증과 호환된다. 이전 앱의 세부 사유가 없으면
+`native_detail_available=false`이며 비밀번호·검색창 등으로 추정하지 않는다.
+
+응답 메시지에 해당 사유를 설명하며, 재접속 `snapshot`도 마지막 실험 진단과 종료 메시지를 복원한다.
+원문 AX·노드 ID·좌표·입력값·미등록 앱 패키지명은 이 진단에 넣지 않는다.
+
+예를 들어 다음은 **합성 재현 예시이며 과거 사용자 로그의 원인을 복원한 결과가 아니다.**
+
+```text
+1 UNKNOWN observation_missing       → 아직 화면 관측을 받지 않음
+2 UNKNOWN no_public_options         → 읽은 화면에서 허용된 공개 항목이 없음
+3 BLOCKED sensitive_input_field     → 용도 미확인 입력 필드로 로컬 검사 중단
+  planner.called=false, jev.called=false, next=user_handoff
+```
+
 Backend 폴더에서 테스트 서버와 **동일한 DB·암호화 키**를 사용하는 환경으로 실행한다.
 
 ```powershell

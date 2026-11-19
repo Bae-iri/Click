@@ -8,10 +8,11 @@ from pathlib import Path
 from app.schemas.public_guide import PublicGuideResponse
 from app.services import public_guide_policy as policy
 from app.services.gov24_planner import EXPERIMENT, SERVICES
+from app.services.gov24_diagnostics import inspect, private_code, diagnostic as build_diagnostic
 
 LOG = logging.getLogger(__name__)
 CODE_HASH = sha256(''.join(Path(__file__).with_name(f).read_text(encoding='utf-8') for f in
-    ('gov24_experiment.py', 'gov24_planner.py', 'gov24_jev.py')).encode()).hexdigest()
+    ('gov24_experiment.py', 'gov24_planner.py', 'gov24_jev.py', 'gov24_diagnostics.py')).encode()).hexdigest()
 NEXT = {'SUCCESS': 'next_subgoal', 'WAITING': 'keep_current_subgoal',
         'UNKNOWN': 'observe_or_ask_user', 'FAILED': 'jev_retry', 'BLOCKED': 'handoff_or_replan'}
 
@@ -51,13 +52,20 @@ def decide(service, request, original, now):
         message=f'정부24를 열고 현재 화면 확인을 눌러주세요. {title} 안내 화면까지 이동할게요.')
     evidence = dict(schema_version=EXPERIMENT, policy_version=policy.CIVIL['version'], code_hash=CODE_HASH,
         task_id='GOV24-PLANNER', goal_type=goal, page='unknown', step=step, reason='entry_required')
-    checks = {name: check('UNKNOWN', 'no_fresh_public_observation') for name in ('action', 'subgoal', 'final')}
+    observation_check = inspect(request.screen, now * 1000)
+    checks = {name: check('UNKNOWN', observation_check['code'], **observation_check)
+              for name in ('action', 'subgoal', 'final')}
+    if observation_check['code'] == 'public_observation':
+        checks['subgoal'] = check('UNKNOWN', 'subgoal_not_yet_verified')
+        checks['final'] = check('UNKNOWN', 'task_not_yet_verified')
     if linked_attempt(request, state, now):
         checks['action'] = check('SUCCESS', 'matching_target_tap', option=state['pending']['option'])
         state['pending']['tap_confirmed'] = True
     trace = {'version': EXPERIMENT, 'run_ref': sha256(request.session_id.encode()).hexdigest()[:16],
              'verification': checks, 'planner': {'called': False},
-             'jev': {'called': False}, 'next': 'observe_or_ask_user'}
+             'jev': {'called': False}, 'next': 'observe_or_ask_user',
+             'diagnostics_version': 'gov24-diagnostics.v1',
+             'observation_check': observation_check, 'diagnostic': None}
     screen = policy.sanitize(request.screen, now * 1000, civil=True)
     if request.command in {'cancel', 'finish'}:
         result.status = 'CANCELLED' if request.command == 'cancel' else 'COMPLETED'
@@ -66,22 +74,35 @@ def decide(service, request, original, now):
         trace['next'] = 'stop'
     elif step > policy.POLICY['max_turns']:
         result.status, result.outcome = 'BLOCKED', 'blocked'
-        checks['subgoal'] = check('BLOCKED', 'turn_limit')
+        trace['diagnostic'] = build_diagnostic('turn_limit', 'budget', 'session_limit',
+                                               step=step, max_turns=policy.POLICY['max_turns'])
+        checks['subgoal'] = check('BLOCKED', 'turn_limit', **trace['diagnostic']['facts'])
+        checks['final'] = check('UNKNOWN', 'completion_not_verified_before_turn_limit')
+        evidence['reason'] = 'turn_limit'
+        result.message = trace['diagnostic']['message']
         trace['next'] = 'stop'
     elif (screen and screen.status == 'handoff') or (request.screen and request.screen.status == 'sensitive'):
         result.status, result.outcome, result.subgoal = 'COMPLETED', 'handoff', 'handoff'
-        result.message = '인증이나 개인정보 입력이 필요해요. 화면 안내를 멈췄어요. 정부24에서 직접 진행해 주세요.'
+        reason = private_code(request.screen)
+        trace['diagnostic'] = build_diagnostic(reason, 'privacy', 'privacy_guard', **observation_check)
+        result.message = trace['diagnostic']['message']
         checks['action'] = check('SUCCESS', 'matching_target_tap') if linked_attempt(request, state, now) else checks['action']
-        checks['subgoal'] = check('BLOCKED', 'private_boundary')
-        checks['final'] = check('BLOCKED', 'authentication_or_private_input_required')
-        evidence['reason'], trace['next'] = 'private_boundary', 'user_handoff'
+        checks['subgoal'] = check('BLOCKED', reason, **observation_check)
+        checks['final'] = check('BLOCKED', reason, **observation_check)
+        evidence['reason'], trace['next'] = reason, 'user_handoff'
         state.pop('pending', None)
-    elif screen and screen.status == 'public':
+    elif screen and screen.status == 'public' and screen.nodes:
         observe(service, request, state, run, screen, result, evidence, trace, now)
     else:
         # Missing AX data is not a failure and must not trigger replanning.
-        result.message = '화면 정보를 충분히 읽지 못했어요. 화면이 뜬 뒤 현재 화면 확인을 눌러주세요.'
-        evidence['reason'] = 'insufficient_observation'
+        reason = observation_check['code']
+        trace['diagnostic'] = build_diagnostic(reason, 'observation', 'observation_validation', **observation_check)
+        result.message = trace['diagnostic']['message']
+        evidence['reason'] = reason
+    skip_reason = trace['diagnostic']['code'] if trace['diagnostic'] else 'not_needed_this_turn'
+    for model in ('planner', 'jev'):
+        if not trace[model]['called']:
+            trace[model].setdefault('reason', skip_reason)
     trace.update(revision=run['revision'], planner_calls=run['planner_calls'],
                  plan=run['plan'], completed=list(run['completed']),
                  active_subgoal=active_node(run), request_scope=state['goal'].get('request_scope', 'screen_only'),
@@ -89,8 +110,11 @@ def decide(service, request, original, now):
     for level, verdict in checks.items():
         verdict['condition_type'] = {'action': 'action_performed', 'subgoal': 'screen_entry', 'final': 'task_complete'}[level]
     run['history'] = (run['history'] + [{'step': step, 'page': evidence['page'],
-        'verification': deepcopy(checks), 'next': trace['next'], 'revision': run['revision']}])[-24:]
+        'verification': deepcopy(checks), 'diagnostic': deepcopy(trace['diagnostic']),
+        'observation_check': deepcopy(observation_check),
+        'next': trace['next'], 'revision': run['revision']}])[-24:]
     run['last_trace'] = deepcopy(trace)
+    run['last_message'] = result.message
     evidence.update(experiment=trace, outcome=result.outcome)
     result.experiment = trace
     state.update(steps=step, outcome=result.outcome)
@@ -171,9 +195,12 @@ def observe(service, request, state, run, screen, result, evidence, trace, now):
         state.pop('pending', None)
     if not run['plan'] or run['local_failures'] >= 2:
         if run['planner_calls'] >= 3:
-            checks['subgoal'] = check('BLOCKED', 'planning_budget_exhausted')
+            trace['diagnostic'] = build_diagnostic('planning_budget_exhausted', 'budget', 'planner',
+                                                   planner_calls=run['planner_calls'], max_planner_calls=3)
+            checks['subgoal'] = check('BLOCKED', 'planning_budget_exhausted', **trace['diagnostic']['facts'])
             result.status, result.outcome = 'BLOCKED', 'blocked'
-            result.message = '안내 경로를 확인하지 못했어요. 정부24에서 직접 확인해 주세요.'
+            result.message = trace['diagnostic']['message']
+            evidence['reason'] = 'planning_budget_exhausted'
             trace['next'] = 'stop'
             return
         run['planner_calls'] += 1

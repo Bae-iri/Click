@@ -21,6 +21,7 @@ public final class AgentServerContract {
     public boolean gov24Login;
     public boolean gov24Civil;
     public boolean gov24Planner;
+    public boolean gov24ObservationDiagnostics;
 
     private AgentServerContract(Set<String> commands, Set<String> goals, Set<String> appliedSettingFields,
                                 String version, boolean interactive, boolean preparation) {
@@ -105,6 +106,10 @@ public final class AgentServerContract {
             && capabilities!=null && capabilities.getJSONObject("properties").has("gov24_login");
         result.gov24Civil=result.gov24Login && capabilities.getJSONObject("properties").has("gov24_civil");
         result.gov24Planner=result.gov24Civil && capabilities.getJSONObject("properties").has("gov24_planner");
+        JSONObject publicScreen=schemas.optJSONObject("PublicGuideScreen");
+        result.gov24ObservationDiagnostics=result.gov24Login && publicScreen!=null
+            && publicScreen.optJSONObject("properties")!=null
+            && publicScreen.getJSONObject("properties").has("privacy_reason");
         JSONObject guide=schemas.optJSONObject("GuideCommandResponse"),cancel=schemas.optJSONObject("CancelVoiceRequest");
         result.userDecline=document.getJSONObject("paths").has("/api/v1/voice-requests/{request_id}/cancel")
             && guide!=null && cancel!=null
