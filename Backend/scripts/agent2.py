@@ -555,7 +555,7 @@ def main():
             from scripts.browse_graph_learning import BrowseGraphLearningService
             result = BrowseGraphLearningService(factory).process(limit=args.limit)
         elif args.command == 'learn-gov24':
-            from app.services.gov24_graphs import GovernmentGraphLearningService
+            from operations.gov24_graph_learning import GovernmentGraphLearningService
             result = GovernmentGraphLearningService(factory).process(limit=args.limit)
         elif args.command == 'list-gov24-graphs':
             from app.services.gov24_graphs import graph_summary

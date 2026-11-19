@@ -104,7 +104,10 @@ public final class AuthGateway {
         JSONObject body = new JSONObject().put("refresh_token", tokens.refreshToken());
         HttpResult result = post("/api/v1/auth/refresh", body.toString(), null);
         if (result.status < 200 || result.status >= 300) {
-            tokens.clear();
+            // Only the refresh endpoint's explicit invalid-token response revokes
+            // local credentials. Rate limits, outages and transport failures must
+            // also preserve the task journal stored with these credentials.
+            if (result.status == 401) tokens.clear();
             throw apiError("/api/v1/auth/refresh", result);
         }
         tokens.save(new JSONObject(result.body));
@@ -136,6 +139,7 @@ public final class AuthGateway {
                     connection.getHeaderField("X-Request-ID"));
         } finally {
             if(watchdog!=null)watchdog.cancel(false);
+            RequestBudget.finished(connection);
             connection.disconnect();
         }
     }
@@ -168,6 +172,7 @@ public final class AuthGateway {
             return new HttpResult(status, response, conflict, connection.getHeaderField("X-Request-ID"));
         } finally {
             if(watchdog!=null)watchdog.cancel(false);
+            RequestBudget.finished(connection);
             connection.disconnect();
         }
     }

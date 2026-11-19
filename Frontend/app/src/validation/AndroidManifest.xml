@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <application android:label="@string/app_name" tools:replace="android:label">
+    <application android:label="@string/app_name" android:usesCleartextTraffic="true" tools:replace="android:label,android:usesCleartextTraffic">
         <activity android:name="com.click.MainActivity" android:exported="true"
             tools:replace="android:exported" />
     </application>

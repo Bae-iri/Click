@@ -530,7 +530,10 @@ public final class MenuActivity extends AppCompatActivity {
         overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
     }
 
-    @Override public void onBackPressed() { closeMenu(); }
+    @Override public void onBackPressed() {
+        super.onBackPressed();
+        overridePendingTransition(R.anim.slide_in_left, R.anim.slide_out_right);
+    }
 
     private void returnToLogin() {
         startActivity(new Intent(this, MainActivity.class)

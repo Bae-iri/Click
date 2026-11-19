@@ -18,13 +18,15 @@ import com.click.data.remote.KakaoSignIn;
 import com.click.designpreview.ClickHost;
 import com.click.service.accessibility.ClickAccessibilityService;
 
-public final class ClickApplication extends Application implements ClickHost {
+public class ClickApplication extends Application implements ClickHost {
     @Override public void onCreate() {
         super.onCreate();
         registerActivityLifecycleCallbacks(new com.click.service.overlay.AppOverlayLifecycle());
-        KakaoSignIn.initialize(this);
+        initializeSignIn();
         registerActivityLifecycleCallbacks(new AppVisibilityCallbacks());
     }
+    /** External SDK startup is isolated from lifecycle/component tests. */
+    protected void initializeSignIn() { KakaoSignIn.initialize(this); }
     private int startedActivities;
     private boolean appForeground;
     private final android.os.Handler visibilityHandler = new android.os.Handler(android.os.Looper.getMainLooper());

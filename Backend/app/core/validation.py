@@ -28,7 +28,7 @@ def digest(value):
 
 def source_digest():
     result = hashlib.sha256()
-    for folder in (BACKEND / 'app', BACKEND / 'migrations', ROOT / 'AI-Agent/src', ROOT / 'AI-Agent/goal_catalog'):
+    for folder in (BACKEND / 'app', BACKEND / 'operations', BACKEND / 'migrations', ROOT / 'AI-Agent/src', ROOT / 'AI-Agent/goal_catalog'):
         for path in sorted(folder.rglob('*')):
             if path.is_file() and path.suffix in {'.py', '.json'} and '__pycache__' not in path.parts:
                 result.update(path.relative_to(ROOT).as_posix().encode() + b'\0')
@@ -59,6 +59,8 @@ def environment_manifest(factory, environment_id, *, runtime_settings=None):
     configuration = {key: settings.get(key, default) for key, default in {
         'CLICK_COUPANG_BROWSE_ENABLED': '0', 'CLICK_GOV24_GUIDE_ENABLED': '1', 'JEV_MODEL': 'jev-1.14.0',
         'JEV_MIN_CONFIDENCE': '0.8', 'AI1_UI_SELECTOR_PROVIDER': 'rules',
+        'GOAL_CLASSIFIER_PROVIDER': 'self_hosted', 'CLICK_GOV24_PLANNER_ENABLED': '0',
+        'JEV_SCREEN_JUDGMENT_MODE': 'atomic', 'JEV_CHOICE_TEMPERATURE': '0.7',
     }.items()}
     manifest = {'schema_version': 'click-validation-environment.v1', 'environment_id': environment_id,
                 'runtime_configuration': configuration,

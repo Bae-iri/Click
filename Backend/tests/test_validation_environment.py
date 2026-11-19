@@ -40,6 +40,35 @@ def test_validation_identity_is_disabled_by_default(monkeypatch):
         assert client.get('/validation/environment').status_code == 404
 
 
+def test_jev_profile_pins_both_providers_and_preserves_database_keys(tmp_path, monkeypatch, capsys):
+    instance = tmp_path / 'jev'
+    source = tmp_path / '.env'
+    source.write_text('TYPESAFE_API_KEY=PRIVATE_PROFILE_KEY\n')
+    monkeypatch.setattr(validation, 'INSTANCE', instance)
+    validation.prepare(source, 8001, profile='jev', gov24=True)
+    first = dotenv_values(instance / '.env')
+    assert first['AI1_UI_SELECTOR_PROVIDER'] == first['GOAL_CLASSIFIER_PROVIDER'] == 'jev'
+    assert first['CLICK_GOV24_GUIDE_ENABLED'] == '1'
+    assert ':memory:' not in first['DATABASE_URL'] and (instance / 'validation.db').is_file()
+    validation.prepare(source, 8001, profile='jev', gov24=True)
+    second = dotenv_values(instance / '.env')
+    for key in ('DATABASE_URL', 'DATA_ENCRYPTION_KEYS', 'DATA_LOOKUP_KEY', 'CLICK_VALIDATION_ENVIRONMENT_ID'):
+        assert first[key] == second[key]
+    manifest = json.loads((instance / 'environment.json').read_text())
+    assert manifest['runtime_configuration']['GOAL_CLASSIFIER_PROVIDER'] == 'jev'
+    assert manifest['runtime_configuration']['AI1_UI_SELECTOR_PROVIDER'] == 'jev'
+    assert 'PRIVATE_PROFILE_KEY' not in json.dumps(manifest) + capsys.readouterr().out
+
+
+def test_jev_profile_does_not_silently_start_an_unconfigured_classifier(tmp_path, monkeypatch):
+    monkeypatch.setattr(validation, 'INSTANCE', tmp_path / 'invalid')
+    source = tmp_path / '.env'
+    source.write_text('GEMINI_API_KEY=PRIVATE_NOT_A_JEV_KEY\n')
+    with pytest.raises(ValueError):
+        validation.prepare(source, 8001, profile='jev')
+    assert not (validation.INSTANCE / '.env').exists()
+
+
 def test_prepare_uses_isolated_migrated_db_and_only_current_approved_graphs(paired, capsys):
     app, instance = paired
     prepared = json.loads((instance / 'environment.json').read_text())
@@ -57,20 +86,24 @@ def test_prepare_uses_isolated_migrated_db_and_only_current_approved_graphs(pair
                 goal['graph_id'] for goal in json.loads((Path(__file__).parents[2]
                     / 'AI-Agent/goal_catalog/legacy_coupang_goals.json').read_text(encoding='utf-8'))['goals']}
         assert len(response.json()['approved_graphs']) == 182
-        assert response.json()['database_migrations'] == ['20261117_20']
+        assert response.json()['database_migrations'] == ['20261119_21']
         assert '/validation/environment' not in client.get('/openapi.json').json()['paths']
     assert (instance / 'validation.db').is_file()
     assert 'PRIVATE_API_KEY' not in response.text + capsys.readouterr().out
     assert 'DATABASE_URL' not in response.text
 
 
-@pytest.mark.parametrize('drift', ['source', 'graph', 'runtime'])
+@pytest.mark.parametrize('drift', ['source', 'graph', 'runtime', 'goal_provider', 'planner'])
 def test_identity_refuses_code_or_graph_changes_until_pair_is_rebuilt(paired, monkeypatch, drift):
     app, _ = paired
     if drift == 'source':
         monkeypatch.setattr('app.core.validation.source_digest', lambda: '0' * 64)
     elif drift == 'runtime':
         monkeypatch.setenv('JEV_MIN_CONFIDENCE', '0.91')
+    elif drift == 'goal_provider':
+        monkeypatch.setenv('GOAL_CLASSIFIER_PROVIDER', 'jev')
+    elif drift == 'planner':
+        monkeypatch.setenv('CLICK_GOV24_PLANNER_ENABLED', '1')
     else:
         with app.state.session_factory() as db:
             db.get(ApprovedTaskGraph, 'MVP-01:1.0.1').active = False

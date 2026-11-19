@@ -27,14 +27,24 @@ final class AccessibilitySnapshotCollector {
     ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, int width, int height, Float fontScale) {
         List<AccessibilityNodeSnapshot> nodes = new ArrayList<>();
         boolean[] maskReady = {true};
-        visit(root, "node_0", null, packageName, width, height, nodes, maskReady);
-        return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId(), maskReady[0], fontScale).withNavigation(NativeNavigationReader.read(root));
+        if(root==null)return null;
+        SnapshotTraversalBudget budget=new SnapshotTraversalBudget();
+        try {
+            visit(root, "node_0", null, packageName, width, height, nodes, maskReady,budget,0);
+            var navigation=NativeNavigationReader.read(root,budget);
+            budget.check();
+            return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId(), maskReady[0], fontScale).withNavigation(navigation);
+        } catch(SnapshotTraversalBudget.Incomplete incomplete) {
+            // Never expose a prefix that could omit a private field or the real target.
+            return null;
+        }
     }
 
     private void visit(AccessibilityNodeInfo node, String nodeId, String parentId, String packageName,
                        int screenWidth, int screenHeight,
-                       List<AccessibilityNodeSnapshot> output, boolean[] maskReady) {
+                       List<AccessibilityNodeSnapshot> output, boolean[] maskReady,SnapshotTraversalBudget budget,int depth) {
         if (node == null) return;
+        budget.visit(depth);
         Rect bounds = new Rect();
         node.getBoundsInScreen(bounds);
         String className = string(node.getClassName());
@@ -78,11 +88,12 @@ final class AccessibilitySnapshotCollector {
         }
         int childCount = node.getChildCount();
         for (int index = 0; index < childCount; index++) {
+            budget.child();
             AccessibilityNodeInfo child = node.getChild(index);
             if (child == null) continue;
             try {
                 visit(child, nodeId + "_" + index, nodeId, packageName,
-                        screenWidth, screenHeight, output, maskReady);
+                        screenWidth, screenHeight, output, maskReady,budget,depth+1);
             } finally {
                 child.recycle();
             }

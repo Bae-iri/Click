@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sqlalchemy import ForeignKey, String, BigInteger, event
+from sqlalchemy import ForeignKey, String, BigInteger, Integer, event
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -31,6 +31,14 @@ class KakaoIdentity(Base):
     __tablename__ = "kakao_identities"
     subject: Mapped[str] = mapped_column(String(64), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+
+
+class AuthLoginWindow(Base):
+    """Short-lived account limiter; stores an HMAC lookup, never a phone number or PIN."""
+    __tablename__ = "auth_login_windows"
+    identity_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    window_start: Mapped[int] = mapped_column(BigInteger, index=True)
+    attempts: Mapped[int] = mapped_column(Integer)
 
 
 @event.listens_for(Account, "before_insert")

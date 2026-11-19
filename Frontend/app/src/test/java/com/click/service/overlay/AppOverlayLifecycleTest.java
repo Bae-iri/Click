@@ -16,7 +16,7 @@ import static org.mockito.Mockito.*;
 
 /** Exercises the callbacks registered by the production Application. */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk=34, application=ClickApplication.class)
+@Config(sdk=34, application=com.click.testing.ClickTestApplication.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class AppOverlayLifecycleTest {
     @Test public void openingHomeEndsFloatingGuidance() {
