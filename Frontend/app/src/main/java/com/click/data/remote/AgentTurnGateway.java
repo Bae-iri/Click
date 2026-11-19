@@ -90,6 +90,12 @@ public final class AgentTurnGateway {
         if (!server.supports(request.commandType()))
             throw new java.io.IOException("현재 서버에서 이 작업 단계를 지원하지 않아요.");
         org.json.JSONObject body = new org.json.JSONObject(server.encode(request));
+        if("resolve_goal".equals(request.commandType())&&com.click.data.local.CandidateDiagnosticLog.enabled()) {
+            org.json.JSONObject context=body.optJSONObject("device_context");
+            org.json.JSONObject caps=context==null?null:context.optJSONObject("capabilities");
+            android.util.Log.i("ClickAgent","goal_prepare_start gov24_login="+(caps!=null&&caps.optBoolean("gov24_login"))
+                +" gov24_civil="+(caps!=null&&caps.optBoolean("gov24_civil")));
+        }
         if ("cancel_task".equals(request.commandType()) || "pause_task".equals(request.commandType())) {
             body.remove("accessibility_tree");
             body.remove("vision_snapshot");
@@ -107,6 +113,13 @@ public final class AgentTurnGateway {
         AgentTurnContract.Response response = new AgentTurnContract.Response(result.body);
         if(!request.requestId.equals(response.requestId) || !request.sessionId.equals(response.sessionId))throw new java.io.IOException("INVALID_TURN_RESPONSE");
         ExecutionState.validate(response,request,false);
+        if("resolve_goal".equals(request.commandType())&&com.click.data.local.CandidateDiagnosticLog.enabled()) {
+            org.json.JSONObject preparation=response.preparation;
+            String status=preparation==null?"missing":preparation.optString("status");
+            String mode=preparation==null?"missing":preparation.optString("execution_mode");
+            android.util.Log.i("ClickAgent","goal_prepare_end status="+(java.util.Set.of("ready","needs_input","unsupported","missing").contains(status)?status:"unknown")
+                +" mode="+(java.util.Set.of("graph","browse","public_guide","missing").contains(mode)?mode:"unknown"));
+        }
         if (com.click.data.local.CandidateDiagnosticLog.enabled() && request.accessibilityTree != null
                 && com.click.service.accessibility.TouchAutomationPolicy.settingsPackage(request.accessibilityTree.packageName)) {
             org.json.JSONObject debug = response.metadata == null ? null : response.metadata.optJSONObject("debug");
