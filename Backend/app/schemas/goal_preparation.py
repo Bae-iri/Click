@@ -1,6 +1,7 @@
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from app.schemas.browse import BrowseGoal
+from app.schemas.public_guide_goal import PublicGuideGoal
 
 
 class ClarificationAnswer(BaseModel):
@@ -40,5 +41,5 @@ class GoalPreparation(BaseModel):
     execution_mode: Literal['graph', 'browse', 'public_guide'] = 'graph'
     browse_goal_type: Literal['coupang.product.search', 'coupang.product.details'] | None = None
     browse_goal: BrowseGoal | None = None
-    public_guide_goal: dict[str, Literal['gov24.login', 'gov24.resident_copy.open']] | None = None
+    public_guide_goal: PublicGuideGoal | None = None
     expires_at: int

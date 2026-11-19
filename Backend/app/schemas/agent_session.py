@@ -1,4 +1,5 @@
 from app.schemas.execution import ExecutionState
+from app.schemas.public_guide_goal import PublicGoalType
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -30,4 +31,4 @@ class AgentSessionResponse(BaseModel):
     follow_up: dict | None = None
     browsing: bool = False
     public_guide: bool = False
-    public_guide_goal_type: Literal['gov24.login', 'gov24.resident_copy.open'] | None = None
+    public_guide_goal_type: PublicGoalType | None = None

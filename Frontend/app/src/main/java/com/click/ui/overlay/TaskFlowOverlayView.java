@@ -928,7 +928,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public void publicGuide(String message,boolean terminal,org.json.JSONObject question,boolean civil,
             java.util.function.BiConsumer<String,Boolean> answer,Runnable observe,Runnable openApp,Runnable finish) {
-        reviewStage(1,civil?"정부24 주민등록등본 안내":"정부24 로그인 안내",
+        reviewStage(1,civil?"정부24 민원 화면 안내":"정부24 로그인 안내",
             civil?"발급 안내 화면까지 함께 이동해요. 신청서 작성과 제출은 직접 진행해요.":"");
         narrationMessage=message;content.addView(text(message,16),spaced(12));
         if(terminal){content.addView(primaryButton("안내 끝내기",finish),spaced(12));return;}

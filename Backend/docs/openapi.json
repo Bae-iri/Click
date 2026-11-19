@@ -8215,7 +8215,10 @@
                 "type": "string",
                 "enum": [
                   "gov24.login",
-                  "gov24.resident_copy.open"
+                  "gov24.resident_copy.open",
+                  "gov24.resident_extract.open",
+                  "gov24.move_in.open",
+                  "gov24.building_register.open"
                 ]
               },
               {
@@ -9448,6 +9451,11 @@
             "type": "boolean",
             "title": "Gov24 Civil",
             "default": false
+          },
+          "gov24_planner": {
+            "type": "boolean",
+            "title": "Gov24 Planner",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -10075,20 +10083,12 @@
           "public_guide_goal": {
             "anyOf": [
               {
-                "additionalProperties": {
-                  "type": "string",
-                  "enum": [
-                    "gov24.login",
-                    "gov24.resident_copy.open"
-                  ]
-                },
-                "type": "object"
+                "$ref": "#/components/schemas/PublicGuideGoal"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Public Guide Goal"
+            ]
           },
           "expires_at": {
             "type": "integer",
@@ -10539,6 +10539,34 @@
         ],
         "title": "ProductFeedbackResponse"
       },
+      "PublicGuideGoal": {
+        "properties": {
+          "goal_type": {
+            "type": "string",
+            "enum": [
+              "gov24.login",
+              "gov24.resident_copy.open",
+              "gov24.resident_extract.open",
+              "gov24.move_in.open",
+              "gov24.building_register.open"
+            ],
+            "title": "Goal Type",
+            "default": "gov24.login"
+          },
+          "request_scope": {
+            "type": "string",
+            "enum": [
+              "screen_only",
+              "task_completion"
+            ],
+            "title": "Request Scope",
+            "default": "screen_only"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PublicGuideGoal"
+      },
       "PublicGuideNode": {
         "properties": {
           "node_id": {
@@ -10852,6 +10880,18 @@
             "const": true,
             "title": "Manual Only",
             "default": true
+          },
+          "experiment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment"
           },
           "subgoal": {
             "type": "string",

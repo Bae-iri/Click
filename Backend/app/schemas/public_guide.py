@@ -3,10 +3,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.schemas.browse import BrowseNode, BrowseScreen, BrowseCommandRequest, BrowseResponse
 from app.schemas.goal_preparation import InputQuestion
-
-class PublicGuideGoal(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    goal_type: Literal['gov24.login', 'gov24.resident_copy.open'] = 'gov24.login'
+from app.schemas.public_guide_goal import PublicGuideGoal
 
 class PublicGuideNode(BrowseNode):
     option_id: str = Field(min_length=1, max_length=60)
@@ -41,6 +38,7 @@ class PublicGuideRequest(BrowseCommandRequest):
         return self
 
 class PublicGuideResponse(BrowseResponse):
+    experiment: dict | None = None
     protocol_version: Literal['public-guide.v1'] = 'public-guide.v1'
     outcome: Literal['in_progress','user_reported','cancelled','blocked','unknown','handoff','verified_navigation']
     action_kind: Literal['login_navigation'] | None = None

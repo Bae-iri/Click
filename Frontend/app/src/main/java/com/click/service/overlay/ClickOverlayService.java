@@ -1058,7 +1058,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if (goalPreparation.publicGuide()) {
                 gov24Guide=true;
                 JSONObject publicGoal=goalPreparation.data.optJSONObject("public_guide_goal");
-                gov24Civil=publicGoal!=null&&"gov24.resident_copy.open".equals(publicGoal.optString("goal_type"));
+                gov24Civil=publicGoal!=null&&com.click.data.snapshot.Gov24LoginPrivacy.isPlannerGoal(publicGoal.optString("goal_type"));
                 startCoupangBrowse(goalPreparation.id(),false,0);return;
             }
             if (goalPreparation.browsing()) {gov24Guide=false;}
@@ -1227,7 +1227,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             String goalType=response.executionState==null?null:response.executionState.goalType;
             String declaredPublicGoal=response.metadata==null?"":response.metadata.optString("public_guide_goal_type");
             boolean knownPublicGoal="gov24.login".equals(goalType)
-                    || "gov24.resident_copy.open".equals(goalType) && goalType.equals(declaredPublicGoal);
+                    || com.click.data.snapshot.Gov24LoginPrivacy.isPlannerGoal(goalType) && goalType.equals(declaredPublicGoal);
             boolean publicLoginSnapshot=snapshot && knownPublicGoal
                     && (declaredPublicGoal.isEmpty() || declaredPublicGoal.equals(goalType))
                     && response.metadata!=null && response.metadata.optBoolean("public_guide");
@@ -2488,7 +2488,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 setTurnInFlight(false);
                 if(response.metadata!=null && (response.metadata.optBoolean("browsing")||response.metadata.optBoolean("public_guide"))) {
                     gov24Guide=response.metadata.optBoolean("public_guide");
-                    gov24Civil="gov24.resident_copy.open".equals(response.metadata.optString("public_guide_goal_type"));
+                    gov24Civil=com.click.data.snapshot.Gov24LoginPrivacy.isPlannerGoal(response.metadata.optString("public_guide_goal_type"));
                     startCoupangBrowse(null,true,response.sessionVersion);return;
                 }
                 if ("COMPLETED".equals(response.taskStatus) || "CANCELLED".equals(response.taskStatus)

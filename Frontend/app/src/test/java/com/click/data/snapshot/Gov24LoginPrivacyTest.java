@@ -64,4 +64,17 @@ public class Gov24LoginPrivacyTest {
             node("input","private",true,false)));
         assertEquals("handoff",result.getString("status"));assertEquals(0,result.getJSONArray("nodes").length());
     }
+    @Test public void experimentalCivilLabelsRemainPublicAndRequireEnabledVisibleNodes() throws Exception {
+        var result=new Gov24LoginPrivacy(true).filter(screen(node("extract","주민등록초본",false,true),
+            node("move","전입신고",false,true),node("building","건축물대장",false,true),
+            node("private","홍길동 주소",false,false)));
+        assertEquals(3,result.getJSONArray("nodes").length());
+        assertFalse(result.toString().contains("홍길동"));
+        var detail=new Gov24LoginPrivacy(true).filter(screen(node("title","전입신고",false,false),
+            node("apply","신청하기",false,true)));
+        assertEquals("marker_move_in",detail.getJSONArray("nodes").getJSONObject(0).getString("option_id"));
+        assertFalse(detail.getJSONArray("nodes").getJSONObject(0).getBoolean("clickable"));
+        assertTrue(Gov24LoginPrivacy.isPlannerGoal("gov24.move_in.open"));
+        assertFalse(Gov24LoginPrivacy.isPlannerGoal("gov24.login"));
+    }
 }
