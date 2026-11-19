@@ -16,12 +16,12 @@ public final class Gov24LoginEntry {
         Target(String id,int window,Rect rect,boolean shown){nodeId=id;windowId=window;
             bounds=new int[]{rect.left,rect.top,rect.right,rect.bottom};visible=shown&&!rect.isEmpty();}
     }
-    private static final class Scan {boolean brand,services,privateBoundary,choices;int inputs,logins;Target target;}
+    private static final class Scan {boolean brand,services,privateBoundary,choices,logout;int inputs,logins;Target target;}
     private record ClickOwner(AccessibilityNodeInfo node,String path) {}
     public static Target inspect(AccessibilityNodeInfo root) {
         if(root==null || !Gov24LoginPrivacy.PACKAGE.contentEquals(String.valueOf(root.getPackageName())))return null;
         Scan scan=new Scan();visit(root,"node_0",scan,null);
-        return scan.brand&&scan.services&&!scan.privateBoundary&&!scan.choices&&scan.inputs<=1&&scan.logins==1?scan.target:null;
+        return scan.brand&&scan.services&&!scan.privateBoundary&&!scan.choices&&!scan.logout&&scan.inputs<=1&&scan.logins==1?scan.target:null;
     }
     private static void visit(AccessibilityNodeInfo node,String path,Scan scan,ClickOwner owner) {
         CharSequence pkg=node.getPackageName();
@@ -35,6 +35,7 @@ public final class Gov24LoginEntry {
                 if(value==null)continue;String label=value.toString(),normalized=Gov24LoginPrivacy.normalize(label);
                 if("정부24".equals(normalized))scan.brand=true;
                 if("자주찾는서비스".equals(normalized))scan.services=true;
+                if(node.isVisibleToUser()&&("로그아웃".equals(normalized)||"로그아웃하기".equals(normalized)))scan.logout=true;
                 if(node.isVisibleToUser()&&(exact(POLICY.optJSONArray("consent_labels"),label)
                         ||exact(POLICY.optJSONArray("handoff_labels"),label)))scan.privateBoundary=true;
                 Rect bounds=new Rect();node.getBoundsInScreen(bounds);

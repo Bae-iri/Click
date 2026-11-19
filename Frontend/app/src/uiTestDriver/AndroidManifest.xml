@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application android:label="Click UI test driver" tools:replace="android:label">
+        <activity android:name="com.click.designpreview.DesignPreviewActivity">
+            <intent-filter tools:node="removeAll" />
+        </activity>
+        <service android:name="com.click.service.accessibility.ClickAccessibilityService" tools:node="remove" />
+        <service android:name="com.click.service.overlay.ClickOverlayService" tools:node="remove" />
+    </application>
+</manifest>

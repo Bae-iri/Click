@@ -78,8 +78,11 @@ public class Gov24LoginPrivacyTest {
         assertFalse(exported.contains("text_input"));
         assertFalse(exported.contains("검색"));
     }
-    @Test public void filledSearchOrNonSearchFieldStillStopsAllScreenExport() throws Exception {
-        for(var input:List.of(search("PRIVATE_QUERY",true),search(null,false))) {
+    @Test public void identifiedPublicSearchQueryStaysLocalAndNonSearchFieldsStillStopExport() throws Exception {
+        var publicSearch=new Gov24LoginPrivacy(true).filter(screen(node("brand","정부24",false,false),
+            node("frequent","자주 찾는 서비스",false,false),node("tile","토지대장",false,true),search("PRIVATE_QUERY",true)));
+        assertEquals("public",publicSearch.getString("status"));assertFalse(publicSearch.toString().contains("PRIVATE_QUERY"));
+        for(var input:List.of(search("PRIVATE_QUERY",false),search(null,false))) {
             var result=new Gov24LoginPrivacy(true).filter(screen(node("brand","정부24",false,false),
                 node("frequent","자주 찾는 서비스",false,false),node("tile","토지대장",false,true),input));
             assertEquals("handoff",result.getString("status"));

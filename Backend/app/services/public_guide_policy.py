@@ -7,6 +7,7 @@ VERSION = POLICY['version']
 OPTIONS = POLICY['options']
 CIVIL = POLICY['civil_navigation']
 CIVIL_OPTIONS = CIVIL['options']
+CIVIL_SCREEN_OPTIONS = {**CIVIL_OPTIONS, **OPTIONS}
 from app.task_graphs.gov24 import GRAPHS as CIVIL_GRAPHS, validate as validate_baselines
 validate_baselines(CIVIL_OPTIONS)
 if set(CIVIL['services']) != set(CIVIL_GRAPHS) or any(
@@ -52,11 +53,42 @@ def sanitize(screen, now_ms, *, civil=False):
     if screen.status != 'public' or screen.package_name != POLICY['package']:
         return None
     for node in screen.nodes:
-        spec = (CIVIL_OPTIONS if civil else OPTIONS).get(node.option_id)
+        spec = (CIVIL_SCREEN_OPTIONS if civil else OPTIONS).get(node.option_id)
         if (not spec or node.label != spec['label'] or node.resource_id or node.scrollable
                 or node.clickable != (spec['group'] != 'marker')):
             return None
+    if screen.auth_state == 'signed_in' and any(n.option_id == 'entry_login' for n in screen.nodes):
+        return None
+    if screen.auth_state == 'signed_out' and sum(n.option_id == 'entry_login' for n in screen.nodes) != 1:
+        return None
     return screen
+
+
+def question_fingerprint(screen, *, ordered=True):
+    """Bind choices to public semantics; rebind the chosen native target on every answer."""
+    from hashlib import sha256
+    keys = [n.option_id for n in screen.nodes]
+    value = [screen.package_name, screen.auth_state, keys if ordered else sorted(keys)]
+    return sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+
+
+def navigation_limit(state, request, screen, *, civil=False):
+    specs = CIVIL_SCREEN_OPTIONS if civil else OPTIONS
+    keys = [node.option_id for node in screen.nodes]
+    allowed = set(OPTIONS)
+    if civil:
+        allowed |= {edge['target_option'] for edge in CIVIL_GRAPHS[state['goal']['goal_type']]['transitions']}
+    candidates = {key for key in keys if key in allowed and keys.count(key) == 1
+                  and specs[key]['group'] in {'entry', 'method', 'provider', 'navigation'}}
+    if not candidates:
+        return False
+    signature = question_fingerprint(screen, ordered=False)
+    turns = state.get('navigation_turns', 0)
+    if (state.get('public_scene') != signature or request.action is not None
+            or request.answer is not None or request.choice is not None):
+        turns += 1
+    state.update(navigation_turns=turns, public_scene=signature)
+    return turns > POLICY['max_turns']
 
 def preference_text(raw):
     # Keep grammar, negation, corrections, and feedback intact. Minimize private

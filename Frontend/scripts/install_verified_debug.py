@@ -16,6 +16,10 @@ import zipfile
 class IncompatibleServer(ValueError):
     pass
 
+def declares_recovery(schema):
+    return (schema.get('const') == 'gov24-recovery.v1' or 'gov24-recovery.v1' in schema.get('enum', [])
+            or any(declares_recovery(choice) for choice in schema.get('anyOf', [])))
+
 def check_compatibility(apk, document, base_url=None):
     schemas=document.get('components',{}).get('schemas',{})
     request=schemas.get('AgentCommandRequest',{}).get('properties',{})
@@ -57,6 +61,15 @@ def check_compatibility(apk, document, base_url=None):
                 or not {'USER_DECLINED','USER_ABORTED'}.issubset(reasons.get('enum',[]))
                 or '/api/v1/voice-requests/{request_id}/cancel' not in document.get('paths',{})):
             raise IncompatibleServer('Server upgrade is not deployed: APK requires task-termination.v1')
+    if identity.get('gov24_recovery_version'):
+        response=schemas.get('PublicGuideResponse',{}).get('properties',{})
+        public_request=schemas.get('PublicGuideRequest',{}).get('properties',{})
+        screen=schemas.get('PublicGuideScreen',{}).get('properties',{})
+        if (identity['gov24_recovery_version']!='gov24-recovery.v1'
+                or not {'await_login','await_public'}.issubset(response.get('subgoal',{}).get('enum',[]))
+                or not declares_recovery(response.get('recovery_version',{}))
+                or not declares_recovery(public_request.get('recovery_version',{})) or 'auth_state' not in screen):
+            raise IncompatibleServer('Server upgrade is not deployed: APK requires gov24-recovery.v1')
     return {'compatible':True,'required_protocol':required,'mode':'execution_state'}
 
 def fetch_schema(base):

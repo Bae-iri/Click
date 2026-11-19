@@ -936,15 +936,17 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public void publicGuide(String message,boolean terminal,org.json.JSONObject question,boolean civil,String serviceLabel,
             java.util.function.BiConsumer<String,Boolean> answer,Runnable finish) {
+        boolean loginChoice=question!=null&&"login_choice".equals(question.optString("field"));
+        boolean civilChoice=civil&&!loginChoice;
         if(terminal) {
             progress(null,null,message,false);controls.setVisibility(GONE);divider.setVisibility(GONE);
             recoveryActions.addView(primaryButton("끝내기",finish),spaced(0));recoveryActions.setVisibility(VISIBLE);return;
         }
-        if(question==null||!civil&&"인증기관".equals(question.optString("label"))) {
+        if(question==null||"인증기관".equals(question.optString("label"))) {
             progress(null,null,message,false);return;
         }
-        reviewStage(1,civil?"정부24 "+serviceLabel+" 안내":"정부24 로그인 안내",
-            civil?"발급 안내 화면까지 함께 이동해요. 신청서 작성과 제출은 직접 진행해요.":"");
+        reviewStage(1,civilChoice?"정부24 "+serviceLabel+" 안내":"정부24 로그인 안내",
+            civil?(loginChoice?"로그인 후 원래 민원 안내를 이어가요.":"발급 안내 화면까지 함께 이동해요. 신청서 작성과 제출은 직접 진행해요."):"");
         publicGuideInput=true;
         narrationMessage=message;content.addView(text(message,16),spaced(12));
         if(question!=null) {
@@ -954,10 +956,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
                 String value=choice.optString("value");
                 content.addView(secondaryButton((i+1)+". "+choice.optString("label"),()->answer.accept(value,true)),spaced(6));
             }
-            EditText editor=new EditText(getContext());editor.setHint(civil?"예: 주민등록등본":"예: 카카오 인증서를 쓰고 싶어요");
+            EditText editor=new EditText(getContext());editor.setHint(civilChoice?"예: "+serviceLabel:"예: 카카오 인증서를 쓰고 싶어요");
             editor.setSingleLine(true);editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT);
             editor.setTextSize(ClickTextScale.size(getContext(),14));editor.setTextColor(INK);editor.setMinHeight(dp(48));
-            editor.setContentDescription(civil?"이동할 공개 메뉴 이름 입력":"사용할 인증수단 이름 입력");
+            editor.setContentDescription(civilChoice?"이동할 공개 메뉴 이름 입력":"사용할 인증수단 이름 입력");
             editor.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(160)});
             content.addView(editor,spaced(10));
             content.addView(secondaryButton("말로 답하기",()->{hideKeyboard(editor);listener.stopGuidance();listener.openInput();}),spaced(8));

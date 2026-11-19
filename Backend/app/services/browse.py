@@ -40,10 +40,13 @@ class BrowseService:
             if request.command == 'snapshot':
                 if state.get('version') != self.policy.VERSION:
                     self.sessions.conflict('NOT_BROWSE_SESSION')
+                details = dict(message='현재 화면 확인을 눌러 새 안내를 받아주세요.' if row.status == 'IN_PROGRESS' else '탐색 안내가 끝났어요.')
+                if row.status == 'IN_PROGRESS':
+                    details.update(self.snapshot_details(state))
                 return self.response_model(request_id=request.request_id, session_id=row.id, session_version=row.version,
                     status=row.status if row.status in {'IN_PROGRESS','COMPLETED','BLOCKED','CANCELLED'} else 'CANCELLED',
                     outcome=state.get('outcome', 'unknown'), step=state.get('steps', 0),
-                    message='현재 화면 확인을 눌러 새 안내를 받아주세요.' if row.status == 'IN_PROGRESS' else '탐색 안내가 끝났어요.')
+                    **details)
             previous = db.scalar(select(AgentTurn).where(AgentTurn.user_id == user_id, AgentTurn.request_id == request.request_id))
             if previous:
                 if previous.session_id != row.id or previous.request_hash != identity:
@@ -111,6 +114,9 @@ class BrowseService:
         except Exception:
             self.sessions.release(request.session_id,token)
             raise
+
+    def snapshot_details(self, state):
+        return {}
 
     def decide(self, request, state, now):
         state = deepcopy(state)
