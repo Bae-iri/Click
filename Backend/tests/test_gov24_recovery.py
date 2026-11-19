@@ -37,6 +37,8 @@ def test_login_prerequisite_resumes_each_original_service_only_after_signed_in_h
     private = command(civil, 'observe', screen=screen(status='handoff', reason='credential_input'))
     assert private['status'] == 'IN_PROGRESS' and private['subgoal'] == 'await_login'
     assert private['target_node_id'] is None and private['question'] is None
+    assert private['diagnostic']['status'] == 'WAITING'
+    assert '원래 요청' in private['message']
     assert command(civil, 'snapshot')['subgoal'] == 'await_login'
     target = next(edge['target_option'] for edge in graph['transitions']
                   if edge['target_option'] not in {'nav_services','nav_frequent'})
