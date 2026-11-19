@@ -75,6 +75,8 @@ def decide(service, request, original, now):
     state.update(steps=step, outcome=result.outcome)
     evidence['outcome'] = result.outcome
     evidence['navigation_turns'] = state.get('navigation_turns', 0)
+    from app.services.gov24_diagnostics import attach
+    attach(result, evidence, state, request, now * 1000, civil=True)
     return result, evidence, state
 
 

@@ -41,6 +41,12 @@ class BrowseService:
                 if state.get('version') != self.policy.VERSION:
                     self.sessions.conflict('NOT_BROWSE_SESSION')
                 details = dict(message='현재 화면 확인을 눌러 새 안내를 받아주세요.' if row.status == 'IN_PROGRESS' else '탐색 안내가 끝났어요.')
+                if self.execution_mode == 'public_guide' and state.get('public_guide_diagnostic'):
+                    details['diagnostic'] = deepcopy(state['public_guide_diagnostic'])
+                    if row.status != 'IN_PROGRESS':
+                        details['message'] = state.get('public_guide_message', details['message'])
+                    if state.get('outcome') == 'handoff':
+                        details['subgoal'] = 'handoff'
                 if row.status == 'IN_PROGRESS':
                     details.update(self.snapshot_details(state))
                 return self.response_model(request_id=request.request_id, session_id=row.id, session_version=row.version,

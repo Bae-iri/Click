@@ -133,6 +133,8 @@ class PublicGuideService(BrowseService):
         state.update(steps=step,outcome=result.outcome)
         evidence['outcome']=result.outcome
         evidence['navigation_turns']=state.get('navigation_turns',0)
+        from app.services.gov24_diagnostics import attach
+        attach(result,evidence,state,request,now*1000)
         return result,evidence,state
 
     def observe_public(self,request,screen,state,result,evidence):
