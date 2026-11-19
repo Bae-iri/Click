@@ -102,6 +102,9 @@ public final class MenuActivity extends AppCompatActivity {
         divider(settings);
         addRow(settings, MenuIconView.Kind.PERSONALIZE, "클릭 개선 참여", "사용 결과를 바탕으로 클릭을 더 편리하게 만들어요", false,
                 view -> showGraphConsent());
+        divider(settings);
+        addRow(settings,MenuIconView.Kind.BOOK,"안내 방식","기억한 읽기 속도와 설명 방식을 관리해요",false,
+                view->com.click.ui.common.GuidanceDialogs.preferences(this));
         add(page, settings, 10);
 
         section(page, "클릭 설정");

@@ -76,6 +76,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         default void collapse() {}
         default void expand() {}
         default void openInput() {}
+        default void assistance() {}
     }
     private final Listener listener;
     private final TextView queuedRequests;
@@ -111,7 +112,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private final TextView compactMessage;
     private String progressMessage;
     private String compactSummary;
-    private static final String HELP_EXPLANATION = "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요.";
+    private static final String HELP_EXPLANATION = "현재 화면에서 안내할 위치를 확인하지 못했어요. 다시 확인하거나 요청을 고쳐 주세요.";
     private String targetHelpInstruction;
     private boolean targetHelpOpened;
     private boolean minimizedProgress;
@@ -123,6 +124,17 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private int[] expandedVisibility;
     private String requestSummary;
     private String preparationMessage;
+    private String guidanceEvidence=GuidanceExplanation.DEFAULT;
+    private Button assistanceEntry;
+    private TextView evidenceView;
+    private boolean detailedExplanations;
+    public String guidanceEvidence(){return guidanceEvidence;}
+    public void setGuidanceEvidence(String evidence){guidanceEvidence=evidence==null?GuidanceExplanation.DEFAULT:evidence;if(evidenceView!=null)evidenceView.setText(guidanceEvidence);}
+    public void setDetailedExplanations(boolean enabled){
+        detailedExplanations=enabled;
+        if(enabled&&hasProgress()&&evidenceView==null){evidenceView=text(guidanceEvidence,14);content.addView(evidenceView,spaced(8));}
+        if(evidenceView!=null)evidenceView.setVisibility(enabled?VISIBLE:GONE);
+    }
     private final CompactBubbleBackground compactBackground = new CompactBubbleBackground();
 
     // [UI 수정] 공통 틀을 만드는 곳: 배경/모서리 → 헤더 → 스크롤 본문 → 하단 버튼.
@@ -209,6 +221,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         stopParams.leftMargin = dp(6);
         controls.addView(stop, stopParams);
         addView(controls);
+        assistanceEntry=quietButton("이유·다시 확인",listener::assistance);
+        assistanceEntry.setTextSize(ClickTextScale.size(context,13));assistanceEntry.setVisibility(GONE);addView(assistanceEntry);
     }
 
     // Background status callbacks must never add a banner to a floating guide.
@@ -300,6 +314,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         guidanceTarget = null;
         if (label == null || label.trim().isEmpty()) return;
         String target = label.trim();
+        setGuidanceEvidence("안내를 만들 때 읽은 화면의 ‘"+target.substring(0,Math.min(60,target.length()))+"’ 항목을 대상으로 사용했어요. 작업 완료 여부는 따로 확인해요.");
         if (target.equals("설정") || target.equals("설정 앱") || target.startsWith("설정,")
                 || target.equalsIgnoreCase("settings") || target.equalsIgnoreCase("settings app")
                 || target.toLowerCase(java.util.Locale.ROOT).startsWith("settings,")) return;
@@ -364,6 +379,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
         super.onMeasure(width, MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST));
     }
     private void clear(String title) {
+        presentationRevision++;
+        guidanceEvidence=GuidanceExplanation.DEFAULT;
+        evidenceView=null;
+        if(assistanceEntry!=null)assistanceEntry.setVisibility(GONE);
         publicGuideInput=false;
         compactSummary = null;
         targetHelpInstruction = null;
@@ -404,6 +423,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     @Override protected void onDetachedFromWindow() {
+        presentationRevision++;
         ClickUiSpeed.finishReveal(content);
         ClickUiSpeed.finishReveal(compactMessage);
         super.onDetachedFromWindow();
@@ -456,6 +476,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         clear(getResources().getConfiguration().fontScale >= 1.4f
                 ? "작업을 마치지\n못했어요" : "작업을 마치지 못했어요");
         narrationMessage = message;
+        guidanceEvidence=message;assistanceEntry.setVisibility(VISIBLE);
         controls.setVisibility(GONE);
         divider.setVisibility(GONE);
         recoveryActions.addView(primaryButton("끝내기", () -> listener.control("cancel_task")), spaced(0));
@@ -909,6 +930,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     public void appTask(JSONObject result,java.util.function.Consumer<String> execute,Runnable refresh,Runnable tools,Runnable visual,Runnable finish) {
         progress(null,null,result.optString("message"),false);controls.setVisibility(GONE);divider.setVisibility(GONE);
+        if("proposed".equals(result.optString("status"))&&!result.optString("target_label").isBlank())guidanceEvidence="현재 화면의 ‘"+result.optString("target_label")+"’ 항목을 다음 대상으로 사용했어요. 실행 버튼을 누르기 전에는 조작하지 않아요.";
+        if("protected".equals(result.optString("status")))guidanceEvidence="입력·인증 화면을 감지해 안내를 멈췄어요. 직접 진행한 뒤 공개 화면에서 다시 확인할 수 있어요.";
         JSONArray goals=result.optJSONArray("subgoals");String active=result.optString("active_subgoal","");StringBuilder plan=new StringBuilder();
         for(int i=0;goals!=null&&i<goals.length();i++){
             JSONObject g=goals.optJSONObject(i);if(g==null)continue;if(plan.length()>0)plan.append('\n');
@@ -987,6 +1010,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         }
         reviewStage(1,civilChoice?"정부24 "+serviceLabel+" 안내":"정부24 로그인 안내",
             civil?(loginChoice?"로그인 후 원래 민원 안내를 이어가요.":"발급 안내 화면까지 함께 이동해요. 신청서 작성과 제출은 직접 진행해요."):"");
+        assistanceEntry.setVisibility(VISIBLE);
         publicGuideInput=true;
         narrationMessage=message;content.addView(text(message,16),spaced(12));
         if(question!=null) {
@@ -1150,6 +1174,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public void progress(String goal, JSONArray checklist, String instruction, boolean canRequestResult) {
         clear(null);
+        assistanceEntry.setVisibility(VISIBLE);
         progressMessage = instruction == null || instruction.trim().isEmpty() ? "작업을 진행하고 있어요." : instruction;
         narrationMessage = progressMessage;
         guidanceProgress = new LinearLayout(getContext());
@@ -1179,6 +1204,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             progressCompletion = primaryButton("다 했어요", () -> listener.control("request_result"));
             content.addView(progressCompletion, spaced(12));
         }
+        setDetailedExplanations(detailedExplanations);
     }
     public void result(JSONObject prompt) {
         result(prompt, false);
@@ -1278,6 +1304,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public void paused() {
         clear("작업을 잠시 멈췄어요"); content.addView(text("이어서 진행하거나 그만할 수 있어요.", 16));
+        assistanceEntry.setVisibility(VISIBLE);
         pause.setText("이어서 진행"); pause.setOnClickListener(v -> listener.control("resume_task"));
     }
     public void expired(Runnable newRequest) {
@@ -1336,7 +1363,15 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.addView(text("강조한 버튼을 누르거나 휴대폰의 내비게이션 버튼·제스처를 사용해 주세요.", 14), spaced(10));
     }
 
-    public void waiting(String message) { clear(message); }
+    private int presentationRevision;
+    public void waiting(String message) {
+        clear(message);final int owner=++presentationRevision;
+        postDelayed(()->{if(owner==presentationRevision&&heading.getText().toString().equals(message)){
+            content.addView(text("응답을 기다리고 있어요. 일시정지하거나 요청을 다시 확인할 수 있어요.",14),spaced(8));
+            guidanceEvidence="요청 또는 화면 확인 결과를 기다리고 있어요. 기다리는 중이라는 이유만으로 작업을 완료 처리하지 않아요.";
+            assistanceEntry.setVisibility(VISIBLE);
+        }},4000);
+    }
     public void waitingProgress(String message) {
         progress(null, null, message, false);
     }

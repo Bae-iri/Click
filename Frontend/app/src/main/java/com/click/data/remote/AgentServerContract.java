@@ -21,6 +21,7 @@ public final class AgentServerContract {
     public boolean appGuide;
     public boolean appTask;
     public boolean gov24Login;
+    public boolean reviseRequest;
     public boolean gov24Civil;
     public boolean gov24Services;
     public boolean gov24Planner;
@@ -105,6 +106,7 @@ public final class AgentServerContract {
                 AgentTurnContract.CONTRACT_VERSION.equals(selected) && commands.contains("resolve_goal")
                         && properties.has("preparation_version") && properties.has("clarification_answer")
                         && properties.has("goal_resolution_id"));
+        result.reviseRequest=document.getJSONObject("paths").has("/api/v1/voice-requests/{request_id}/revise");
         JSONObject schemas=document.getJSONObject("components").getJSONObject("schemas");
         JSONObject capabilities=schemas.optJSONObject("DeviceCapabilities");
         result.appGuide=document.getJSONObject("paths").has(AppGuideGateway.PATH);

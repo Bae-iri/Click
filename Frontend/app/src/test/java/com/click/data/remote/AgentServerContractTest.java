@@ -8,6 +8,11 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.*;
 
 public class AgentServerContractTest {
+    @Test public void correctingARunningRequestRequiresTheAdvertisedEndpoint() throws Exception {
+        JSONObject api=deployed();assertFalse(AgentServerContract.fromOpenApi(api).reviseRequest);
+        api.getJSONObject("paths").put("/api/v1/voice-requests/{request_id}/revise",new JSONObject());
+        assertTrue(AgentServerContract.fromOpenApi(api).reviseRequest);
+    }
     @Test public void privacyDiagnosticsRequireExplicitSupportFromTheConnectedBackend() throws Exception {
         JSONObject api;
         try(var input=getClass().getResourceAsStream("/openapi.json")) {

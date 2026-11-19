@@ -84,6 +84,8 @@ public final class FeedbackOverlayView extends ScrollView {
         }
         detail = ClickUi.input(context, positive ? "좋았던 점을 적어주세요 (선택)" : "의견을 적어주세요",
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        TextView use=ClickUi.body(context,"보낸 의견은 클릭 개선 검토에 사용해요. 이 의견만으로 설정이나 다음 안내 방식이 자동으로 바뀌지는 않아요.");
+        use.setTextSize(ClickTextScale.size(context,13));body.addView(use,ClickUi.wrap(dp(10)));
         detail.setTextSize(ClickTextScale.size(context, 17));
         detail.setSingleLine(false);
         detail.setMinLines(positive ? 3 : 2); detail.setMaxLines(positive ? 5 : 3);
