@@ -244,7 +244,6 @@ public class ClickOverlayServiceExecutionTest {
         invoke("showGoalPreparation");
         var panel=(TaskFlowOverlayView)get("taskFlowView");
         verify(panel).preparation(state);
-        verify(panel).offerAdjustmentDelegation(false);
         verify(panel,never()).disruptiveTaskNotice(anyBoolean());
         assertNull(get("acceptedGoal"));
     }

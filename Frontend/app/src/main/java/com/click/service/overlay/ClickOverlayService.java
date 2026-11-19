@@ -986,7 +986,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         ensureTaskFlow();
         if (goalPreparation.browsing() || goalPreparation.publicGuide()) {
             taskFlowView.setPreparationMessage(null);taskFlowView.preparation(goalPreparation);
-            taskFlowView.offerAdjustmentDelegation(false);
             updateRequestStatus(true,false);placeTaskFlow(null,true);speak(goalPreparation.guidance());return;
         }
         String review=nextTaskReview?TaskSequenceText.question(goalPreparation.goal==null?null:goalPreparation.goal.optString("goal_type")):sequenceOverview;
@@ -994,8 +993,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowView.preparation(goalPreparation);
         if(goalPreparation.ready())taskFlowView.disruptiveTaskNotice(com.click.data.local.DeviceTaskJournal.disruptive(
                 goalPreparation.goal.optJSONObject("slots")==null?null:goalPreparation.goal.optJSONObject("slots").optString("setting")));
-        taskFlowView.offerAdjustmentDelegation(goalPreparation.ready() && SettingsAdjustment.from(goalPreparation.goal)!=null
-                && automaticTouchEnabled() && agentGateway.currentContract()!=null && agentGateway.currentContract().approvalProvenance);
         updateRequestStatus(true, false); placeTaskFlow(null, true);
         speak(goalPreparation.ready() && review!=null?review:goalPreparation.guidance());
     }
@@ -1076,7 +1073,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             execution.setAcceptedGoal(goalPreparation.goal);
             activeGoalMatch = match;
             goalResolutionId = goalPreparation.id();
-            if(taskFlowView.adjustmentDelegated())adjustmentDelegation.grant(execution.acceptedGoal().optString("goal_type"),System.currentTimeMillis());
             startSelectedTask();
             return;
         }
