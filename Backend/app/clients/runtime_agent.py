@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from hashlib import sha256
 from pathlib import Path
+from time import monotonic
 
 from ai_agent.runtime import (
     AccessibilityNode,
@@ -46,6 +47,9 @@ def runtime_configuration():
                 Path(__file__).parents[1] / "services/jev_probabilities.py",
                 Path(__file__).parents[1] / "services/jev_screen_judgments.py",
                 Path(__file__).parents[1] / "services/gpt_verifier.py"]
+    sources += [Path(__file__).parents[1] / 'services/settings_planner.py',
+                Path(__file__).parents[1] / 'services/settings_experiment.py',
+                Path(__file__).parents[1] / 'services/settings_graphs.py']
     digest = sha256()
     for source in sources:
         digest.update(source.name.encode())
@@ -54,6 +58,9 @@ def runtime_configuration():
     for source in sorted((runtime_root.parents[2]/"goal_catalog").glob("*.json")):
         digest.update(source.name.encode());digest.update(source.read_bytes())
     configuration["code_hash"] = digest.hexdigest()
+    from app.services.settings_planner import enabled, model_name
+    if enabled():
+        configuration['settings_planner_model'] = model_name()
     if provider == "jev":
         _, model, minimum = JevScreenResolver.configuration()
         judgment_mode, temperature = screen_policy()
@@ -65,7 +72,7 @@ def runtime_configuration():
 class RuntimeAgentAdapter:
     """Translate the HTTP contract to the graph-constrained runtime."""
 
-    def __init__(self, session_store=None, task_graph=None) -> None:
+    def __init__(self, session_store=None, task_graph=None, learned_routes=()) -> None:
         self.vision_consent_request_id = None
         graphs = None if task_graph is None else {
             task_graph.definition.task_id: task_graph,
@@ -80,12 +87,33 @@ class RuntimeAgentAdapter:
         if resolver:
             resolver.configuration()
             screen_policy()
+        from app.services.settings_planner import enabled, GeminiSettingsPlanner
+        self.experiment_resolver = None
+        if enabled() and resolver:
+            from app.services.settings_experiment import SettingsExperimentResolver
+            resolver = self.experiment_resolver = SettingsExperimentResolver(
+                resolver, GeminiSettingsPlanner(), learned_routes)
         self.runtime = ClickAgentEngine(session_store=session_store, task_graphs=graphs,
             screen_resolver=resolver, ui_selector=None,
             state_resolver=None if resolver else LocalScreenStateLlm())
 
     def handle_turn(self, request: AgentTurnRequest) -> AgentTurnResponse:
+        started = monotonic()
         previous = self.runtime.session_store.get(request.session_id)
+        declared_arm = getattr(getattr(getattr(request, 'device_context', None), 'capabilities', None),
+                               'settings_experiment_arm', None)
+        if (declared_arm or previous and previous.settings_experiment) and not self.experiment_resolver:
+            raise ValueError('Settings experiment requires enabled pilot and Jev')
+        if self.experiment_resolver:
+            context = getattr(request, 'device_context', None)
+            arm = getattr(getattr(context, 'capabilities', None), 'settings_experiment_arm', None)
+            self.experiment_resolver.prepare(previous, arm, getattr(request, 'episode_id', None))
+            if not self.experiment_resolver.state.get('scope_hash'):
+                import json
+                scope = {key: getattr(context, key, None) for key in
+                         ('platform', 'locale', 'manufacturer', 'os_version', 'app_version')}
+                self.experiment_resolver.state['scope_hash'] = sha256(
+                    json.dumps(scope, sort_keys=True).encode()).hexdigest()
         raw_goal = getattr(request, "raw_goal", None)
         tree = request.accessibility_tree
         vision_snapshot = request.vision_snapshot
@@ -261,6 +289,22 @@ class RuntimeAgentAdapter:
         model_review = GptVerifier().review_runtime(
             result, graph, runtime_request, assessment=assessment,
             previous_attempt=previous.pending_attempt if previous else None)
+        experiment = None
+        if self.experiment_resolver:
+            from app.services.settings_experiment import trace
+            experiment = trace(self.experiment_resolver, runtime_request, result, previous, runtime_session, graph,
+                               round((monotonic() - started) * 1000))
+            if experiment and runtime_session:
+                self.runtime.session_store.update(request.session_id,
+                    settings_experiment=self.experiment_resolver.state)
+        guide_message = guide.message
+        if (experiment and experiment['arm'] == 'llm'
+                and experiment['jev'].get('status') == 'provider_error'
+                and (not experiment['plan'] or self.experiment_resolver.state.get('replan_requested'))
+                and experiment['planner'].get('reason_code') != 'planning_budget_exhausted'):
+            guide_message = ("Gemini의 하루 요청 한도를 초과했어요. 한도가 초기화된 뒤 다시 시도해 주세요."
+                if self.experiment_resolver.state.get('planner_error_cause') == 'daily_quota_exceeded'
+                else "Gemini 계획 서비스에서 응답을 받지 못했어요. 잠시 후 다시 시도해 주세요.")
         return AgentTurnResponse(
             request_id=result.request_id,
             session_id=result.session_id,
@@ -275,7 +319,7 @@ class RuntimeAgentAdapter:
                 command_type="result_confirmation" if result_check else command_type,
                 proposed_action=result.match_result.action_type.value if command_type == "confirmation" and "vision_fallback" not in guide.render_policy and result.match_result and guide.target_node_id is not None and guide.target_bounds is not None and result.match_result.action_type.value in {"tap", "drag", "scroll"} else None,
                 action_type="observe_only" if result_check or legacy_handoff else guide.action_type.value,
-                message=guide.message,
+                message=guide_message,
                 target_node_id=None if legacy_handoff else guide.target_node_id,
                 target_label=None if legacy_handoff else guide.target_label,
                 target_bounds=None if legacy_handoff else guide.target_bounds,
@@ -284,6 +328,7 @@ class RuntimeAgentAdapter:
                 render_policy={} if result_check else dict(guide.render_policy),
             ),
             metadata={
+                **({'settings_experiment': experiment} if experiment else {}),
                 "environment_context": result.debug.get("environment_context",{}),
                 "technical_outcome": technical,
                 "checklist": result.debug.get("checklist", []),

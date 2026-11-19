@@ -25,7 +25,7 @@ class JevScreenResolver(JevGoalClassifier):
     provider = "jev"
 
     def resolve(self, *, nodes, graph, goal, raw_nodes=(), session=None,
-                verification=None, excluded_target_keys=None, screen_bounds=None, attempt=None):
+                verification=None, excluded_target_keys=None, screen_bounds=None, attempt=None, subgoal=None):
         if graph.definition.target_app == 'coupang':
             from app.services.commerce_jev import resolve
             return resolve(self, nodes=nodes, graph=graph, goal=goal, raw_nodes=raw_nodes,
@@ -214,6 +214,8 @@ class JevScreenResolver(JevGoalClassifier):
                     "event_received": bool(previous_action.get("event_key"))} if previous_action else None),
                 "result": {"status": verification.status.value} if verification else None}
             immediate = immediate_menu_request(bindings,nodes,graph)
+            if subgoal is not None:
+                state['subgoal'] = subgoal
             if immediate:
                 state['immediate_request'] = immediate
             payload = {"model": model, "state": state, "questions": {"screen": {

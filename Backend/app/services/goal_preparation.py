@@ -384,6 +384,12 @@ class GoalPreparationService:
             message=message, preparation=prepared)
         response.metadata['goal_selection'] = {'id': identifier, 'message': message,
             'candidates': [{'goal': goal.model_dump(mode='json'), 'label': display_name}] if goal else []}
+        from app.services.settings_planner import enabled as settings_experiment_enabled, VERSION as settings_experiment_version
+        if settings_experiment_enabled() and request.device_context.capabilities.settings_experiment_arm:
+            response.metadata['settings_experiment_preparation'] = {
+                'version': settings_experiment_version, 'arm':request.device_context.capabilities.settings_experiment_arm,
+                'stage':'preparation','resolution_status':resolution_status,
+                'goal_type':goal.goal_type if goal else None,'missing_fields':prepared.missing_fields}
         if rejection_reason:
             response.metadata['goal_interpretation'] = {'reason': rejection_reason}
         with self.factory() as db:
