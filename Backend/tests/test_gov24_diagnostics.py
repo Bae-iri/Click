@@ -13,10 +13,10 @@ from tests.test_gov24_navigation import CivilFlow, view
 from tests.test_public_guide import login, screen as login_screen  # noqa: F401
 
 
-def decide(screen=None, *, civil=True, steps=0, command='start', selected=False):
+def decide(screen=None, *, civil=True, steps=0, command='start', selected=False, navigation_turns=0):
     import time
     service = PublicGuideService(None, None, selector=Mock())
-    state = dict(goal={'goal_type': 'gov24.resident_copy.open' if civil else 'gov24.login'}, steps=steps)
+    state = dict(goal={'goal_type': 'gov24.resident_copy.open' if civil else 'gov24.login'}, steps=steps, navigation_turns=navigation_turns)
     if selected:
         state['selected_option'] = 'method_simple'
     request = PublicGuideRequest(request_id='r', session_id='s', expected_version=steps,
@@ -67,10 +67,11 @@ def test_missing_observation_is_unknown_and_never_mistaken_for_authentication(ci
 def test_missing_observation_and_turn_budget_are_different(civil):
     missing, _, _, _ = decide(civil=civil)
     assert missing.diagnostic['code'] == 'observation_missing'
-    exhausted, evidence, _, _ = decide(civil=civil, steps=24)
+    source=view('nav_resident') if civil else login_screen('method_simple')
+    exhausted, evidence, _, _ = decide(source, civil=civil, steps=24, navigation_turns=24)
     assert exhausted.status == 'BLOCKED' and exhausted.diagnostic['category'] == 'budget'
-    assert exhausted.diagnostic['facts'] == {'step': 25, 'max_turns': 24}
-    assert evidence['reason'] == 'turn_limit'
+    assert exhausted.diagnostic['facts'] == {'navigation_turns': 25, 'max_turns': 24}
+    assert evidence['reason'] == 'navigation_limit'
 
 
 @pytest.mark.parametrize('reason', ['credential_input', 'certificate_selection', 'external_auth', 'consent_required'])

@@ -28,7 +28,7 @@ public class Gov24InstalledAppFlowTest {
         Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
         Context context=instrumentation.getTargetContext();
         targetPackage=InstrumentationRegistry.getArguments().getString("targetPackage","com.clueclick.app");
-        assertTrue(java.util.Set.of("com.clueclick.app","com.click.gov24pilot").contains(targetPackage));
+        assertEquals("com.clueclick.app",targetPackage);
         assertNotEquals("Run this test from the other Click package so the target accessibility service stays alive",
             BuildConfig.APPLICATION_ID,targetPackage);
         HttpResult version=AuthGateway.get("/version",null);
@@ -85,8 +85,8 @@ public class Gov24InstalledAppFlowTest {
         org.junit.Assume.assumeTrue("Explicit continuation of the live login choice screen only",
             "true".equals(InstrumentationRegistry.getArguments().getString("gov24Continue")));
         Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
-        targetPackage=InstrumentationRegistry.getArguments().getString("targetPackage","com.click.gov24pilot");
-        assertTrue(java.util.Set.of("com.clueclick.app","com.click.gov24pilot").contains(targetPackage));
+        targetPackage=InstrumentationRegistry.getArguments().getString("targetPackage","com.clueclick.app");
+        assertEquals("com.clueclick.app",targetPackage);
         assertNotEquals(BuildConfig.APPLICATION_ID,targetPackage);
         automation=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         var info=automation.getServiceInfo();
@@ -115,8 +115,8 @@ public class Gov24InstalledAppFlowTest {
         org.junit.Assume.assumeTrue("Explicitly finish the already completed public guide only",
             "true".equals(InstrumentationRegistry.getArguments().getString("gov24Finish")));
         Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
-        targetPackage=InstrumentationRegistry.getArguments().getString("targetPackage","com.click.gov24pilot");
-        assertTrue(java.util.Set.of("com.clueclick.app","com.click.gov24pilot").contains(targetPackage));
+        targetPackage=InstrumentationRegistry.getArguments().getString("targetPackage","com.clueclick.app");
+        assertEquals("com.clueclick.app",targetPackage);
         assertNotEquals(BuildConfig.APPLICATION_ID,targetPackage);
         automation=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         var info=automation.getServiceInfo();
@@ -152,7 +152,7 @@ public class Gov24InstalledAppFlowTest {
     @Test public void inspectCurrentBoundaryWithoutExportingInputValues() throws Exception {
         org.junit.Assume.assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("gov24Inspect")));
         Instrumentation instrumentation=InstrumentationRegistry.getInstrumentation();
-        targetPackage=InstrumentationRegistry.getArguments().getString("targetPackage","com.click.gov24pilot");
+        targetPackage=InstrumentationRegistry.getArguments().getString("targetPackage","com.clueclick.app");
         automation=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         var info=automation.getServiceInfo();
         info.flags|=android.accessibilityservice.AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS

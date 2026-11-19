@@ -40,22 +40,23 @@ class BrowseService:
             if request.command == 'snapshot':
                 if state.get('version') != self.policy.VERSION:
                     self.sessions.conflict('NOT_BROWSE_SESSION')
-                extra = {}
-                message = '현재 화면 확인을 눌러 새 안내를 받아주세요.' if row.status == 'IN_PROGRESS' else '탐색 안내가 끝났어요.'
+                details = dict(message='현재 화면 확인을 눌러 새 안내를 받아주세요.' if row.status == 'IN_PROGRESS' else '탐색 안내가 끝났어요.')
                 if self.execution_mode == 'public_guide' and state.get('public_guide_diagnostic'):
-                    extra['diagnostic'] = deepcopy(state['public_guide_diagnostic'])
+                    details['diagnostic'] = deepcopy(state['public_guide_diagnostic'])
                     if row.status != 'IN_PROGRESS':
-                        message = state.get('public_guide_message', message)
+                        details['message'] = state.get('public_guide_message', details['message'])
                 if self.execution_mode == 'public_guide' and state.get('experiment', {}).get('last_trace'):
-                    extra['experiment'] = deepcopy(state['experiment']['last_trace'])
+                    details['experiment'] = deepcopy(state['experiment']['last_trace'])
                     if row.status != 'IN_PROGRESS':
-                        message = state['experiment'].get('last_message', message)
-                if extra and state.get('outcome') == 'handoff':
-                    extra['subgoal'] = 'handoff'
+                        details['message'] = state['experiment'].get('last_message', details['message'])
+                if len(details) > 1 and state.get('outcome') == 'handoff':
+                    details['subgoal'] = 'handoff'
+                if row.status == 'IN_PROGRESS':
+                    details.update(self.snapshot_details(state))
                 return self.response_model(request_id=request.request_id, session_id=row.id, session_version=row.version,
                     status=row.status if row.status in {'IN_PROGRESS','COMPLETED','BLOCKED','CANCELLED'} else 'CANCELLED',
                     outcome=state.get('outcome', 'unknown'), step=state.get('steps', 0),
-                    message=message, **extra)
+                    **details)
             previous = db.scalar(select(AgentTurn).where(AgentTurn.user_id == user_id, AgentTurn.request_id == request.request_id))
             if previous:
                 if previous.session_id != row.id or previous.request_hash != identity:
@@ -128,6 +129,9 @@ class BrowseService:
         except Exception:
             self.sessions.release(request.session_id,token)
             raise
+
+    def snapshot_details(self, state):
+        return {}
 
     def decide(self, request, state, now):
         state = deepcopy(state)

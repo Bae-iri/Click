@@ -3,6 +3,8 @@ from app.services import public_guide_policy as policy
 
 
 MESSAGES = {
+    'authentication_required': '정부24에서 직접 로그인한 뒤 홈으로 돌아와 주세요. 원래 민원 요청을 이어갈게요.',
+    'navigation_limit': '메뉴 안내가 여러 차례 반복되어 멈췄어요. 정부24에서 직접 확인한 뒤 새 안내를 시작해 주세요.',
     'observation_missing': '아직 화면 관측을 받지 못했어요. 정부24를 열고 현재 화면 확인을 눌러주세요.',
     'snapshot_missing': '기기에서 현재 화면을 읽지 못했어요. 화면이 뜬 뒤 다시 확인해 주세요.',
     'stale_observation': '받은 화면 정보가 30초보다 오래됐어요. 현재 화면을 다시 확인해 주세요.',
@@ -67,7 +69,7 @@ def inspect(screen, now_ms, *, civil=True):
         return dict(report, code='package_mismatch')
     if policy.sanitize(screen, now_ms, civil=civil) is None:
         return dict(report, code='invalid_public_option')
-    return dict(report, code='public_observation' if screen.nodes else 'no_exported_nodes', accepted=True)
+    return dict(report, code='public_observation' if screen.nodes or screen.auth_state != 'unknown' else 'no_exported_nodes', accepted=True)
 
 
 def private_code(screen):
@@ -84,7 +86,12 @@ def attach(result, evidence, state, request, now_ms, *, civil=False):
     evidence['observation_check'] = report
     detail = None
     if result.status == 'BLOCKED':
-        detail = diagnostic('turn_limit', 'budget', 'session_limit', step=result.step, max_turns=policy.POLICY['max_turns'])
+        detail = diagnostic('navigation_limit', 'budget', 'guidance_limit', navigation_turns=state.get('navigation_turns',0), max_turns=policy.POLICY['max_turns'])
+    elif result.subgoal in {'await_login', 'await_public'}:
+        code = private_code(request.screen) if request.screen and request.screen.status in {'handoff','sensitive'} else report['code']
+        if code == 'public_observation':
+            code = 'authentication_required'
+        detail = diagnostic(code, 'privacy' if report['screen_status'] in {'handoff','sensitive'} else 'observation', 'manual_wait', **report)
     elif result.outcome == 'handoff':
         if evidence['reason'] == 'authentication_step':
             detail = diagnostic('authentication_step', 'observation', 'observation_validation', **report)
@@ -96,10 +103,12 @@ def attach(result, evidence, state, request, now_ms, *, civil=False):
         elif evidence['reason'] == 'no_candidates':
             detail = diagnostic('no_candidate_for_goal', 'observation', 'candidate_selection', **report)
     if detail:
+        waiting = result.subgoal in {'await_login','await_public'} and result.status == 'IN_PROGRESS'
         detail.update(version='gov24-diagnostics.v1',
-                      status='BLOCKED' if detail['category'] in {'budget', 'privacy'} else 'UNKNOWN')
+                      status='WAITING' if waiting else 'BLOCKED' if detail['category'] in {'budget', 'privacy'} else 'UNKNOWN')
         evidence['reason'] = detail['code']
-        result.message = detail['message']
+        if not waiting:
+            result.message = detail['message']
     result.diagnostic = detail
     evidence['diagnostic'] = detail
     state['public_guide_diagnostic'] = detail

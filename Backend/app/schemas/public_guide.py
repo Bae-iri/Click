@@ -8,30 +8,22 @@ from app.schemas.public_guide_goal import PublicGuideGoal
 class PublicGuideNode(BrowseNode):
     option_id: str = Field(min_length=1, max_length=60)
 
-# Closed, content-free observations from the on-device guard. Older apps omit this.
 PRIVACY_REASONS = {
-    'snapshot_missing': ('unrecognized', None),
-    'empty_accessibility_tree': ('unrecognized', None),
-    'no_visible_nodes': ('unrecognized', None),
-    'no_public_options': ('unrecognized', None),
-    'ambiguous_public_options': ('unrecognized', None),
-    'public_options_limit': ('unrecognized', None),
-    'outside_gov24_app': ('outside_app', None),
-    'external_auth_app': ('handoff', 'external_auth'),
-    'foreign_package_node': ('sensitive', None),
-    'inactive_window_node': ('sensitive', None),
-    'password_field': ('handoff', 'credential_input'),
-    'sensitive_input_field': ('handoff', 'credential_input'),
-    'empty_search_field': ('handoff', 'credential_input'),
-    'consent_prompt': ('handoff', 'consent_required'),
-    'certificate_prompt': ('handoff', 'certificate_selection'),
-    'private_identity_label': ('handoff', 'certificate_selection'),
+    'snapshot_missing': ('unrecognized', None), 'empty_accessibility_tree': ('unrecognized', None),
+    'no_visible_nodes': ('unrecognized', None), 'no_public_options': ('unrecognized', None),
+    'ambiguous_public_options': ('unrecognized', None), 'public_options_limit': ('unrecognized', None),
+    'outside_gov24_app': ('outside_app', None), 'external_auth_app': ('handoff', 'external_auth'),
+    'foreign_package_node': ('sensitive', None), 'inactive_window_node': ('sensitive', None),
+    'password_field': ('handoff', 'credential_input'), 'sensitive_input_field': ('handoff', 'credential_input'),
+    'empty_search_field': ('handoff', 'credential_input'), 'consent_prompt': ('handoff', 'consent_required'),
+    'certificate_prompt': ('handoff', 'certificate_selection'), 'private_identity_label': ('handoff', 'certificate_selection'),
 }
 
 class PublicGuideScreen(BrowseScreen):
     status: Literal['public', 'outside_app', 'sensitive', 'unrecognized', 'handoff']
     nodes: list[PublicGuideNode] = Field(default_factory=list, max_length=24)
     handoff_reason: Literal['credential_input', 'certificate_selection', 'external_auth', 'consent_required'] | None = None
+    auth_state: Literal['unknown', 'signed_out', 'signed_in'] = 'unknown'
     privacy_reason: Literal[
         'snapshot_missing', 'empty_accessibility_tree', 'no_visible_nodes', 'no_public_options',
         'ambiguous_public_options', 'public_options_limit', 'outside_gov24_app', 'external_auth_app',
@@ -45,12 +37,15 @@ class PublicGuideScreen(BrowseScreen):
             raise ValueError('Handoff screens contain only a stable reason')
         if self.query_hash is not None:
             raise ValueError('Login guide has no query content')
+        if self.status != 'public' and self.auth_state != 'unknown':
+            raise ValueError('Authentication state requires a public home')
         if self.privacy_reason is not None and PRIVACY_REASONS[self.privacy_reason] != (self.status, self.handoff_reason):
             raise ValueError('Privacy reason must match the local guard status')
         return self
 
 class PublicGuideRequest(BrowseCommandRequest):
     protocol_version: Literal['public-guide.v1'] = 'public-guide.v1'
+    recovery_version: Literal['gov24-recovery.v1'] | None = None
     screen: PublicGuideScreen | None = None
     answer: str | None = Field(default=None, min_length=1, max_length=160)
     choice: str | None = Field(default=None, min_length=1, max_length=60)
@@ -69,9 +64,11 @@ class PublicGuideResponse(BrowseResponse):
     diagnostic: dict | None = None
     experiment: dict | None = None
     protocol_version: Literal['public-guide.v1'] = 'public-guide.v1'
+    recovery_version: Literal['gov24-recovery.v1'] = 'gov24-recovery.v1'
     outcome: Literal['in_progress','user_reported','cancelled','blocked','unknown','handoff','verified_navigation']
     action_kind: Literal['login_navigation'] | None = None
-    subgoal: Literal['open_login','choose_method','choose_provider','handoff','find_resident_service','resident_service','find_service','service_entry'] = 'open_login'
+    subgoal: Literal['open_login','choose_method','choose_provider','await_login','await_public','handoff','find_resident_service','resident_service','find_service','service_entry'] = 'open_login'
+    reason_code: Literal['navigation_limit','authentication_required','private_input','screen_unrecognized','no_candidates'] | None = None
     service_label: str | None = None
     baseline_graph_id: str | None = None
     graph_state: str | None = None
