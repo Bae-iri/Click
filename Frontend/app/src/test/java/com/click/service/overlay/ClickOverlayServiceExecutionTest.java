@@ -4046,11 +4046,20 @@ public class ClickOverlayServiceExecutionTest {
         Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);render.setAccessible(true);
         render.invoke(service,new JSONObject().put("status","needs_input").put("message","상품을 골라주세요."),null);
         var end=org.mockito.ArgumentCaptor.forClass(Runnable.class);
-        verify((TaskFlowOverlayView)get("taskFlowView")).appTask(any(),any(),any(),any(),any(),end.capture());
+        verify((TaskFlowOverlayView)get("taskFlowView")).appTask(any(),any(),any(),any(),any(),end.capture(),any());
         end.getValue().run();end.getValue().run();
         verify(queue,times(1)).cancel(eq("finished-request"),eq("USER_ABORTED"),any());
         verify(queue,never()).complete(anyString(),any());verify(queue,never()).interrupt(anyString(),any());
         verify(owner,never()).confirmResult();assertNull(get("appGuide"));
+    }
+
+    @Test public void explicitAppResultCompletesTheQueueOnlyAfterServerAcknowledgesIt()throws Exception {
+        var queue=prepareResultWithQueue();var owner=mock(AppTaskController.class);set("appGuide",owner);contract.appTaskMemory=true;
+        Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);render.setAccessible(true);
+        render.invoke(service,new JSONObject().put("status","confirm_result").put("message","결과를 확인해 주세요."),null);
+        var confirmed=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify((TaskFlowOverlayView)get("taskFlowView")).appTask(any(),any(),any(),any(),any(),any(),confirmed.capture());
+        confirmed.getValue().run();verify(queue,never()).complete(anyString(),any());var receipt=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify(owner).confirmResultOnServer(receipt.capture(),any());
+        receipt.getValue().run();verify(queue).complete(eq("finished-request"),any());verify(queue,never()).cancel(anyString(),anyString(),any());
     }
 
     @Test public void queueFailureAfterPanelRemovalRecreatesRetryAndLateCallbackCannotReplaceAnotherTask()throws Exception {

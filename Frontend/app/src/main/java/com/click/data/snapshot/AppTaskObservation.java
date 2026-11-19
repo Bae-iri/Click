@@ -73,4 +73,12 @@ public final class AppTaskObservation {
         return screen.put("fingerprint",hash(screen.optString("package")+"|"+screen.optString("status")+"|"+screen.getJSONArray("nodes")));
     }
     public static JSONObject find(JSONObject screen,String id){JSONArray nodes=screen.optJSONArray("nodes");for(int i=0;nodes!=null&&i<nodes.length();i++){JSONObject n=nodes.optJSONObject(i);if(n!=null&&id.equals(n.optString("id")))return n;}return null;}
+    public static String targetKey(JSONObject node){return hash(node.optString("role")+"\n"+node.optString("resource")+"\n"+node.optString("label"));}
+    /** Stable across node paths, display geometry and clocks; no raw content is exported. */
+    public static String learningKey(JSONObject screen)throws JSONException {
+        List<String> keys=new ArrayList<>();JSONArray nodes=screen.getJSONArray("nodes");
+        for(int i=0;i<nodes.length();i++){JSONObject n=nodes.getJSONObject(i);keys.add(targetKey(n)+"|"+(n.optBoolean("clickable")?"1":"0")+(n.optBoolean("editable")?"1":"0")+(n.optBoolean("scrollable")?"1":"0")
+            +"|"+(n.optBoolean("selected")?"1":"0")+"|"+(n.isNull("checked")?"null":String.valueOf(n.optBoolean("checked")))+"|"+(n.optBoolean("has_value")?"1":"0")+"|"+n.optString("viewport_hash"));}
+        Collections.sort(keys);return hash(screen.optString("package")+"\n"+screen.optString("status")+"\n"+String.join("\n",keys));
+    }
 }

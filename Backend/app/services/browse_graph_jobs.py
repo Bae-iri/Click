@@ -83,3 +83,10 @@ class SettingsGraphJobs(BrowseGraphJobs):
     def is_enabled(self):
         return (os.getenv('CLICK_SETTINGS_EXPERIMENT_ENABLED','0') == '1'
             and os.getenv('CLICK_AI2_SETTINGS_GRAPH_ENABLED','0') == '1')
+
+
+class AppTaskLearningJobs(BrowseGraphJobs):
+    worker_script = 'app_task_learning.py'
+
+    def is_enabled(self):
+        return os.getenv('CLICK_AI2_APP_TASK_ENABLED','1') == '1'

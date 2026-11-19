@@ -8,10 +8,18 @@ import java.util.concurrent.*;
 public final class AppGuideGateway {
     public static final String PATH="/api/v1/agent/app-guide/step";
     public static final String TASK_PATH="/api/v1/agent/app-guide/task";
+    public static final String MEMORY_PATH=TASK_PATH+"/memory",EVENTS_PATH=TASK_PATH+"/events";
+    public static final String RESULT_PATH=TASK_PATH+"/result";
     public interface Callback {void success(JSONObject result);void failure(Throwable error);}
     private final AuthenticatedHttpClient http;
     private final RequestLifecycle lifecycle=new RequestLifecycle();
+    private final RequestLifecycle memoryLifecycle=new RequestLifecycle();
+    private volatile boolean closed;
     private final ExecutorService executor=Executors.newSingleThreadExecutor();
+    private final ExecutorService memoryExecutor=Executors.newSingleThreadExecutor();
+    private final ExecutorService resultExecutor=Executors.newSingleThreadExecutor();
+    private final java.util.concurrent.atomic.AtomicInteger memoryGeneration=new java.util.concurrent.atomic.AtomicInteger();
+    private final java.util.concurrent.atomic.AtomicBoolean flushing=new java.util.concurrent.atomic.AtomicBoolean();
     private final Handler main=new Handler(Looper.getMainLooper());
     public AppGuideGateway(Context context){http=new AuthenticatedHttpClient(context);}
     public void send(JSONObject request,Callback callback) {
@@ -62,5 +70,45 @@ public final class AppGuideGateway {
         if("tap".equals(tool)&&!node.optBoolean("clickable")||"set_text".equals(tool)&&!node.optBoolean("editable")
                 ||tool.startsWith("scroll_")&&!node.optBoolean("scrollable"))throw new java.io.IOException("UNSUPPORTED_APP_TASK_TOOL");
     }
-    public void close(){lifecycle.close();executor.shutdownNow();}
+    public void recall(JSONObject request,Callback callback){
+        if(closed)return;
+        int generation=memoryGeneration.incrementAndGet();memoryExecutor.execute(()->{
+            if(generation!=memoryGeneration.get())return;
+            try(RequestBudget budget=new RequestBudget(SystemClock.elapsedRealtime()+5000,memoryLifecycle)){
+                JSONObject result=new JSONObject(http.post(MEMORY_PATH,request.toString(),3000).body);validateMemory(request,result);
+                if(generation==memoryGeneration.get())lifecycle.post(main,()->callback.success(result));
+            }catch(Exception error){if(generation==memoryGeneration.get())lifecycle.post(main,()->callback.failure(error));}
+        });
+    }
+    public static void validateMemory(JSONObject request,JSONObject result)throws Exception {
+        if(!"app-task-memory.v1".equals(result.optString("protocol_version")))throw new java.io.IOException("INVALID_TASK_MEMORY");
+        JSONObject envelope=new JSONObject(result.toString()).put("protocol_version","app-task.v2").put("task_id",request.getJSONObject("state").getString("task_id"))
+            .put("status",result.optJSONObject("action")==null?"needs_input":"proposed");
+        validateTask(request,envelope);
+        if(result.optBoolean("collection_enabled")&&(!result.optString("consent_id","").matches("[0-9a-f-]{36}")||result.optLong("consent_recorded_at_ms")<=0))throw new java.io.IOException("INVALID_MEMORY_CONSENT");
+    }
+    public void flush(com.click.data.local.AppTaskStore store){
+        if(closed||store==null||!flushing.compareAndSet(false,true))return;
+        memoryExecutor.execute(()->{try(RequestBudget budget=new RequestBudget(SystemClock.elapsedRealtime()+8000,memoryLifecycle)){
+            for(int i=0;i<4;i++){JSONObject batch=store.experienceBatch();if(batch==null)break;
+                JSONObject receipt=new JSONObject(http.post(EVENTS_PATH,batch.toString(),3000).body);
+                if(!"app-task-experience-receipt.v1".equals(receipt.optString("protocol_version")))throw new java.io.IOException("INVALID_EXPERIENCE_RECEIPT");
+                java.util.Set<String> sent=new java.util.HashSet<>();JSONArray events=batch.getJSONArray("events"),ack=receipt.getJSONArray("acknowledged");
+                for(int j=0;j<events.length();j++)sent.add(events.getJSONObject(j).getString("event_id"));
+                java.util.Set<String> received=new java.util.HashSet<>();for(int j=0;j<ack.length();j++)received.add(ack.getString(j));
+                if(!sent.equals(received))throw new java.io.IOException("UNBOUND_EXPERIENCE_RECEIPT");store.acknowledgeExperiences(ack);
+            }
+        }catch(Exception error){android.util.Log.i("ClickAppTask","experience_upload_deferred type="+error.getClass().getSimpleName());}finally{flushing.set(false);}});
+    }
+    public void finishTask(JSONObject request,Callback callback){
+        if(closed)return;resultExecutor.execute(()->{
+            try(RequestBudget budget=new RequestBudget(SystemClock.elapsedRealtime()+6000,lifecycle)){
+                JSONObject result=new JSONObject(http.post(RESULT_PATH,request.toString(),4000).body);
+                if(!request.getString("request_id").equals(result.optString("request_id"))||!request.getString("session_id").equals(result.optString("session_id"))
+                    ||!request.getString("task_id").equals(result.optString("task_id"))||!"confirmed".equals(result.optString("status"))||!"user_reported".equals(result.optString("technical_source")))throw new java.io.IOException("INVALID_TASK_RESULT");
+                lifecycle.post(main,()->callback.success(result));
+            }catch(Exception error){lifecycle.post(main,()->callback.failure(error));}
+        });
+    }
+    public void close(){if(closed)return;closed=true;memoryGeneration.incrementAndGet();lifecycle.close();executor.shutdownNow();resultExecutor.shutdownNow();memoryExecutor.execute(memoryLifecycle::close);memoryExecutor.shutdown();}
 }

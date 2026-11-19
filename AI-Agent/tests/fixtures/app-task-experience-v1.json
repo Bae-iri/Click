@@ -1,0 +1,126 @@
+{
+  "schema_version": "app-task-key-fixtures.v1",
+  "synthetic": true,
+  "cases": [
+    {
+      "name": "public_controls",
+      "screen": {
+        "status": "public",
+        "package": "org.example.reader",
+        "observation_id": "fixture",
+        "captured_at_ms": 1,
+        "fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "width": 1080,
+        "height": 2400,
+        "keyboard_visible": false,
+        "nodes": [
+          {
+            "id": "node_0_1",
+            "label": "검색 🔍",
+            "resource": "org.example.reader:id/search",
+            "role": "button",
+            "bounds": [
+              10,
+              20,
+              400,
+              120
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "viewport_hash": "",
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_2",
+            "label": "목록",
+            "resource": "org.example.reader:id/list",
+            "role": "list",
+            "bounds": [
+              10,
+              200,
+              1000,
+              2000
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "viewport_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "source": "accessibility"
+          }
+        ]
+      },
+      "target_keys": [
+        "6c170d4165b88a83aeb36828463ebd3165f402ccd1e31c0dabc810ad1a2bd1ad",
+        "588f1596f1cbbe4ce6d0ece481944fc5985ad6f12c22022c1bb7d5b44dd371d2"
+      ],
+      "screen_key": "02455e36cc98f28241e4b19600ae7c1de5b6902001181b471debc9b32d560214"
+    },
+    {
+      "name": "viewport_change",
+      "screen": {
+        "status": "public",
+        "package": "org.example.reader",
+        "observation_id": "fixture",
+        "captured_at_ms": 1,
+        "fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "width": 1080,
+        "height": 2400,
+        "keyboard_visible": false,
+        "nodes": [
+          {
+            "id": "node_0_1",
+            "label": "검색 🔍",
+            "resource": "org.example.reader:id/search",
+            "role": "button",
+            "bounds": [
+              10,
+              20,
+              400,
+              120
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "viewport_hash": "",
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_2",
+            "label": "목록",
+            "resource": "org.example.reader:id/list",
+            "role": "list",
+            "bounds": [
+              10,
+              200,
+              1000,
+              2000
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "viewport_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "source": "accessibility"
+          }
+        ]
+      },
+      "target_keys": [
+        "6c170d4165b88a83aeb36828463ebd3165f402ccd1e31c0dabc810ad1a2bd1ad",
+        "588f1596f1cbbe4ce6d0ece481944fc5985ad6f12c22022c1bb7d5b44dd371d2"
+      ],
+      "screen_key": "b37747816e9c3bfd8a2bf274d6a57244b45665fa05103665234caa3209522ce1"
+    }
+  ]
+}

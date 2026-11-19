@@ -102,7 +102,7 @@ def process_sessions(factory, *, limit=100, now=None):
     now = int(time.time()) if now is None else now
     with factory() as db:
         sessions = list(db.execute(select(RuntimeEvent.session_id, RuntimeEvent.user_id).where(
-            RuntimeEvent.expires_at > now).distinct().order_by(RuntimeEvent.session_id)))
+            RuntimeEvent.expires_at > now, RuntimeEvent.kind != 'app_task').distinct().order_by(RuntimeEvent.session_id)))
     summary = {"processed": 0, "unchanged": 0, "ineligible": 0, "errors": 0, "has_more": False}
     for session_id, user_id in sessions:
         if summary["processed"] + summary["errors"] >= limit:
@@ -122,7 +122,7 @@ def process_sessions(factory, *, limit=100, now=None):
                     continue
                 granted = consent.recorded_at.replace(tzinfo=timezone.utc).timestamp()
                 events = list(db.scalars(select(RuntimeEvent).where(RuntimeEvent.session_id == session_id,
-                    RuntimeEvent.expires_at > now, RuntimeEvent.created_at >= granted).order_by(RuntimeEvent.sequence).limit(10001)))
+                    RuntimeEvent.expires_at > now, RuntimeEvent.created_at >= granted, RuntimeEvent.kind != 'app_task').order_by(RuntimeEvent.sequence).limit(10001)))
                 if len(events) > 10000:
                     raise ValueError("Session exceeds offline event budget")
                 if not events:
@@ -182,7 +182,7 @@ def assess_jev(factory, *, reviews=None, now=None, limit=100):
     now = int(time.time()) if now is None else now
     with factory() as db:
         sessions = list(db.execute(select(RuntimeEvent.session_id, RuntimeEvent.user_id).where(
-            RuntimeEvent.expires_at > now).distinct().order_by(RuntimeEvent.user_id, RuntimeEvent.session_id).limit(limit + 1)))
+            RuntimeEvent.expires_at > now, RuntimeEvent.kind != 'app_task').distinct().order_by(RuntimeEvent.user_id, RuntimeEvent.session_id).limit(limit + 1)))
         if len(sessions) > limit:
             raise ValueError("Assessment exceeds session budget; narrow retained input first")
         envelopes, graphs = [], {}
@@ -197,7 +197,7 @@ def assess_jev(factory, *, reviews=None, now=None, limit=100):
                 continue
             granted = consent.recorded_at.replace(tzinfo=timezone.utc).timestamp()
             events = list(db.scalars(select(RuntimeEvent).where(RuntimeEvent.session_id == session_id,
-                RuntimeEvent.expires_at > now, RuntimeEvent.created_at >= granted).order_by(RuntimeEvent.sequence).limit(10001)))
+                RuntimeEvent.expires_at > now, RuntimeEvent.created_at >= granted, RuntimeEvent.kind != 'app_task').order_by(RuntimeEvent.sequence).limit(10001)))
             if len(envelopes) + len(events) > 10000:
                 raise ValueError("Assessment exceeds event budget")
             for event in events:
@@ -230,7 +230,7 @@ def propose_routes(factory, *, manifest, cases=None, now=None, limit=100, evalua
     now = int(time.time()) if now is None else now
     with factory() as db:
         sessions = list(db.execute(select(RuntimeEvent.session_id, RuntimeEvent.user_id).where(
-            RuntimeEvent.expires_at > now).distinct().order_by(RuntimeEvent.user_id, RuntimeEvent.session_id).limit(limit + 1)))
+            RuntimeEvent.expires_at > now, RuntimeEvent.kind != 'app_task').distinct().order_by(RuntimeEvent.user_id, RuntimeEvent.session_id).limit(limit + 1)))
         if len(sessions) > limit:
             raise ValueError("Route run exceeds session budget; narrow retained input first")
         events, envelopes, graphs = [], [], {}
@@ -247,7 +247,7 @@ def propose_routes(factory, *, manifest, cases=None, now=None, limit=100, evalua
                 continue
             granted = consent.recorded_at.replace(tzinfo=timezone.utc).timestamp()
             batch = list(db.scalars(select(RuntimeEvent).where(RuntimeEvent.session_id == session_id,
-                RuntimeEvent.expires_at > now, RuntimeEvent.created_at >= granted).order_by(RuntimeEvent.sequence).limit(10001)))
+                RuntimeEvent.expires_at > now, RuntimeEvent.created_at >= granted, RuntimeEvent.kind != 'app_task').order_by(RuntimeEvent.sequence).limit(10001)))
             if len(events) + len(batch) > 10000:
                 raise ValueError("Route run exceeds event budget")
             for event in batch:
@@ -469,6 +469,8 @@ def main():
     browse.add_argument('--limit', type=int, default=100)
     learn = commands.add_parser('learn-browse', help='Generate new graph drafts from verified, consented browsing')
     learn.add_argument('--limit', type=int, default=100)
+    app_tasks = commands.add_parser('learn-app-tasks', help='Analyze consented app-independent execution experience')
+    app_tasks.add_argument('--limit', type=int, default=100)
     government = commands.add_parser('learn-gov24', help='Generate Government24 graphs from verified public navigation')
     government.add_argument('--limit', type=int, default=100)
     commands.add_parser('list-gov24-graphs', help='List retained consented public Government24 graph metadata')
@@ -551,9 +553,14 @@ def main():
             result = process_sessions(factory, limit=args.limit)
             from scripts.browse_graph_learning import BrowseGraphLearningService
             result['browse_graphs'] = BrowseGraphLearningService(factory).process(limit=args.limit)
+            from scripts.app_task_learning import AppTaskLearningService
+            result['app_task_memory'] = AppTaskLearningService(factory).process(limit=args.limit)
         elif args.command == 'learn-browse':
             from scripts.browse_graph_learning import BrowseGraphLearningService
             result = BrowseGraphLearningService(factory).process(limit=args.limit)
+        elif args.command == 'learn-app-tasks':
+            from scripts.app_task_learning import AppTaskLearningService
+            result = AppTaskLearningService(factory).process(limit=args.limit)
         elif args.command == 'learn-gov24':
             from operations.gov24_graph_learning import GovernmentGraphLearningService
             result = GovernmentGraphLearningService(factory).process(limit=args.limit)
@@ -601,8 +608,8 @@ def main():
         if args.command == "audit":
             return int(result["status"] != "PASS")
         if args.command == 'process':
-            return int(bool(result.get('errors') or result['browse_graphs']['errors']))
-        return int(bool(result.get('errors'))) if args.command in {'learn-browse', 'learn-gov24'} else 0
+            return int(bool(result.get('errors') or result['browse_graphs']['errors'] or result['app_task_memory']['errors']))
+        return int(bool(result.get('errors'))) if args.command in {'learn-browse', 'learn-gov24', 'learn-app-tasks'} else 0
     finally:
         engine.dispose()
 

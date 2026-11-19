@@ -55,6 +55,14 @@ public final class AppTaskMemory {
     public boolean repeated(JSONObject before,JSONObject action){int count=0;JSONArray attempts=data.optJSONArray("attempts");for(int i=0;attempts!=null&&i<attempts.length();i++){JSONObject a=attempts.optJSONObject(i);if("failed".equals(a.optString("outcome"))&&before.optString("fingerprint").equals(a.optString("fingerprint"))&&action.optString("tool").equals(a.optString("tool"))&&target(action).equals(a.optString("target")))count++;}return count>=2;}
     public boolean finished(){return data.optBoolean("completed");}
     public int actions(){return data.optInt("action_count");}
+    public int experienceSequence(){return data.optInt("experience_sequence");}
+    public void experienceSequence(int sequence)throws JSONException{data.put("experience_sequence",sequence);}
+    public String experienceId(){return data.optString("experience_task_id",id());}
+    public JSONArray pathPrefix(){JSONArray prefix=data.optJSONArray("experience_path");return prefix==null?new JSONArray():prefix;}
+    public void appendPath(String step)throws JSONException{JSONArray prefix=pathPrefix();if(prefix.length()<64)prefix.put(step);data.put("experience_path",prefix);}
+    public void experienceConsent(String consent)throws JSONException {
+        if(consent!=null&&!consent.equals(data.optString("experience_consent"))){data.put("experience_consent",consent).put("experience_sequence",0).put("experience_task_id",UUID.randomUUID().toString());}
+    }
     public String scope(){return data.optString("route_scope",null);}
     public void scope(String scope)throws JSONException{data.put("route_scope",scope);}
     public void confirmResult()throws JSONException{data.put("completed",true);}

@@ -406,9 +406,9 @@ public final class MenuActivity extends AppCompatActivity {
     private void showGraphConsent() {
         LinearLayout content = vertical();
         add(content, dialogSection("더 편리한 클릭을 함께 만들어요",
-                "동의하면 앞으로의 작업 단계, 조작 결과, 소요 시간과 기종 정보를 클릭의 안내를 개선하는 데 사용해요.",
-                "음성 원문이나 화면 문구, 개인별 이해도와 선호도는 이 분석에 사용하지 않아요.",
-                "동의하지 않아도 안내를 이용할 수 있어요. 철회하면 아직 적용되지 않은 분석 결과를 삭제해요."), 0);
+                "동의하면 앞으로 안내받는 앱 종류, 작업 단계와 조작 결과를 기억해 다음 안내를 개선해요.",
+                "경험 기록에는 음성·검색어·비밀번호 원문과 화면 이미지를 저장하지 않아요. 버튼과 화면은 원문 대신 구조 표시로 비교해요.",
+                "동의하지 않아도 안내를 이용할 수 있어요. 철회하면 서버의 경험 분석 결과를 삭제하고 새 기록 전송을 멈춰요."), 0);
         ClickDialog.show(this, "클릭 개선 참여", content,
                 graphConsented ? "참여 동의 철회" : "동의하고 참여하기", () ->
                         graphConsent.set(!graphConsented, new GraphImprovementConsentGateway.Callback() {
