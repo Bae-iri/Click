@@ -7,8 +7,10 @@ import java.util.*;
 /** Exports only public semantic login labels. Credentials and identities stay local. */
 public final class Gov24LoginPrivacy {
     private final boolean civil;
+    private final boolean diagnostics;
     public Gov24LoginPrivacy(){this(false);}
-    public Gov24LoginPrivacy(boolean civil){this.civil=civil;}
+    public Gov24LoginPrivacy(boolean civil){this(civil,false);}
+    public Gov24LoginPrivacy(boolean civil,boolean diagnostics){this.civil=civil;this.diagnostics=diagnostics;}
     public static final String PACKAGE="kr.go.minwon.m";
     private static final JSONObject POLICY;
     static {try {POLICY=new JSONObject(com.click.generated.Gov24LoginPolicyData.json());}
@@ -58,35 +60,45 @@ public final class Gov24LoginPrivacy {
         }
         return null;
     }
-    private JSONObject blocked(JSONObject base,String status,String reason) throws JSONException {
+    private JSONObject reason(JSONObject base,String code) throws JSONException {
+        if(diagnostics)base.put("privacy_reason",code);
+        return base;
+    }
+    private JSONObject blocked(JSONObject base,String status,String reason,String detail) throws JSONException {
         base.put("status",status).put("nodes",new JSONArray());
         if(reason!=null)base.put("handoff_reason",reason);
-        return base;
+        return reason(base,detail);
     }
     public JSONObject filter(ScreenSnapshot screen) throws Exception {
         JSONObject base=new JSONObject().put("status","unrecognized").put("nodes",new JSONArray())
             .put("observation_id",screen==null?UUID.randomUUID().toString():screen.observationId)
             .put("captured_at_ms",screen==null?System.currentTimeMillis():java.time.Instant.parse(screen.capturedAt).toEpochMilli())
             .put("width",screen==null?1:screen.screenWidth).put("height",screen==null?1:screen.screenHeight);
-        if(screen==null)return base;
+        if(screen==null)return reason(base,"snapshot_missing");
         if(!PACKAGE.equals(screen.packageName))return exact(POLICY.optJSONArray("auth_packages"),screen.packageName)
-            ?blocked(base,"handoff","external_auth"):blocked(base,"outside_app",null);
+            ?blocked(base,"handoff","external_auth","external_auth_app"):blocked(base,"outside_app",null,"outside_gov24_app");
         base.put("package_name",PACKAGE);
         boolean publicHome=publicHome(screen);
         Map<String,AccessibilityNodeSnapshot> byId=new HashMap<>();
         for(var node:screen.nodes)byId.put(node.nodeId,node);
         Map<String,Map<String,JSONObject>> options=new LinkedHashMap<>();
         JSONObject specs=civil?POLICY.getJSONObject("civil_navigation").getJSONObject("options"):POLICY.getJSONObject("options");
+        int visible=0;
         for(AccessibilityNodeSnapshot n:screen.nodes) {
             if(!n.visibleToUser)continue;
-            if(!PACKAGE.equals(n.packageName)||screen.activeWindowId!=null&&n.windowId!=screen.activeWindowId)return blocked(base,"sensitive",null);
+            visible++;
+            if(!PACKAGE.equals(n.packageName))return blocked(base,"sensitive",null,"foreign_package_node");
+            if(screen.activeWindowId!=null&&n.windowId!=screen.activeWindowId)return blocked(base,"sensitive",null,"inactive_window_node");
             if(n.sensitiveInput||n.passwordInput()) {
                 if(publicHome&&n.emptySearchInput())continue;
-                return blocked(base,"handoff","credential_input");
+                return blocked(base,"handoff","credential_input",
+                    n.passwordInput()?"password_field":n.emptySearchInput()?"empty_search_field":"sensitive_input_field");
             }
             String label=n.text!=null?n.text:n.contentDescription;
-            if(label!=null&&exact(POLICY.optJSONArray("consent_labels"),label))return blocked(base,"handoff","consent_required");
-            if(label!=null&&exact(POLICY.optJSONArray("handoff_labels"),label))return blocked(base,"handoff","certificate_selection");
+            if(label!=null&&exact(POLICY.optJSONArray("consent_labels"),label))return blocked(base,"handoff","consent_required","consent_prompt");
+            if(label!=null&&exact(POLICY.optJSONArray("handoff_labels"),label))return blocked(base,"handoff","certificate_selection",
+                Set.of("이름","성명","생년월일","주민등록번호","휴대폰번호","인증번호","본인정보입력","개인정보입력").contains(normalize(label))
+                    ?"private_identity_label":"certificate_prompt");
             String key=civil?civilOption(label,true):option(label);
             if(key==null&&civil&&(!n.clickable||publicHome&&"정부24".equals(normalize(label))))key=civilOption(label,false);
             if(key==null||!n.enabled||n.checkable||n.scrollable)continue;
@@ -109,7 +121,9 @@ public final class Gov24LoginPrivacy {
         boolean provider=!civil&&options.keySet().stream().anyMatch(k->k.startsWith("provider_"));
         JSONArray exported=new JSONArray();
         for(var entry:options.entrySet())if(entry.getValue().size()==1&&(!provider||entry.getKey().startsWith("provider_")))exported.put(entry.getValue().values().iterator().next());
-        if(exported.length()==0||exported.length()>POLICY.getInt("max_nodes"))return base;
+        if(exported.length()==0)return reason(base,screen.nodes.isEmpty()?"empty_accessibility_tree":visible==0?"no_visible_nodes":
+            options.isEmpty()?"no_public_options":"ambiguous_public_options");
+        if(exported.length()>POLICY.getInt("max_nodes"))return reason(base,"public_options_limit");
         return base.put("status","public").put("nodes",exported);
     }
 

@@ -18,7 +18,7 @@ def policy_digest(value):
 
 CODE_HASH = policy_digest(json.dumps(policy.CIVIL, sort_keys=True, ensure_ascii=False) + ''.join(
     Path(__file__).with_name(name).read_text(encoding='utf-8') for name in
-    ('gov24_navigation.py', 'gov24_routes.py', 'gov24_graphs.py', 'public_guide_policy.py')))
+    ('gov24_navigation.py', 'gov24_routes.py', 'gov24_graphs.py', 'public_guide_policy.py', 'gov24_diagnostics.py')))
 
 
 def page_of(screen, goal_type=None):
@@ -76,6 +76,8 @@ def decide(service, request, original, now):
         result.graph_state = 'handoff'
     state.update(steps=step, outcome=result.outcome)
     evidence['outcome'] = result.outcome
+    from app.services.gov24_diagnostics import attach
+    attach(result, evidence, state, request, now * 1000, civil=True)
     return result, evidence, state
 
 

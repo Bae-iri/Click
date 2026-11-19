@@ -1124,7 +1124,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             goalPreparation=null;goalResolutionId=null;requirementReview=null;goalSelection=null;
             var gateway=gov24Guide?new com.click.data.remote.CoupangBrowseGateway(this,"/api/v1/agent/public-guide/commands","public-guide.v1")
                 :new com.click.data.remote.CoupangBrowseGateway(this);
-            CoupangBrowseController.ScreenFilter privacy=gov24Guide?new com.click.data.snapshot.Gov24LoginPrivacy(gov24Civil)::filter
+            boolean gov24Diagnostics=agentGateway.currentContract()!=null && agentGateway.currentContract().gov24ObservationDiagnostics;
+            CoupangBrowseController.ScreenFilter privacy=gov24Guide?new com.click.data.snapshot.Gov24LoginPrivacy(gov24Civil,gov24Diagnostics)::filter
                 :new com.click.data.snapshot.CoupangBrowsePrivacy(this)::filter;
             coupangBrowse=new CoupangBrowseController(gateway,privacy,gov24Guide?"kr.go.minwon.m":"com.coupang.mobile",
                 gov24Guide?"public-guide.v1":"coupang-browse.v1",new CoupangBrowseController.Listener(){
@@ -1184,11 +1185,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             gov24EntryPresentation=null;
             if(terminal) {
                 stopListening();
-                message=gov24Civil&&"verified_navigation".equals(response.optString("outcome"))?message
+                message=response.optJSONObject("diagnostic")!=null?message
+                    :gov24Civil&&"verified_navigation".equals(response.optString("outcome"))?message
                     :"handoff".equals(response.optString("outcome"))
                     ?(message.contains("동의")?"동의를 확인해 주세요.":"직접 인증해 주세요.")
                     :"BLOCKED".equals(response.optString("status"))?"안내를 계속할 수 없어요.":"안내를 마쳤어요.";
-            } else if(!gov24Civil&&message.contains("현재 화면 확인"))message="kr.go.minwon.m".equals(foregroundPackage())
+            } else if(response.optJSONObject("diagnostic")==null&&!gov24Civil&&message.contains("현재 화면 확인"))message="kr.go.minwon.m".equals(foregroundPackage())
                 ?"로그인 버튼을 찾고 있어요.":"정부24를 여는 중이에요.";
         }
         ScreenSnapshot current=ClickAccessibilityService.freshSnapshot();
