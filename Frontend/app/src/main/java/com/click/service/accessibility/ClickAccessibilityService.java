@@ -213,6 +213,11 @@ public final class ClickAccessibilityService extends AccessibilityService {
         LatestScreenSnapshot.set(fresh);
         return fresh;
     }
+    public static boolean performAppTask(ScreenSnapshot expected,org.json.JSONObject observation,org.json.JSONObject action,String input,String selectedPackage){
+        return AppTaskExecutor.execute(connectedService.get(),expected,freshSnapshot(),observation,action,input,selectedPackage);
+    }
+    public static boolean appTaskInputMatches(String targetId,String expectedHash){return AppTaskExecutor.inputMatches(connectedService.get(),targetId,expectedHash);}
+    public static void captureAppTaskVision(AppTaskVision.Callback callback){AppTaskVision.capture(connectedService.get(),freshSnapshot(),callback);}
 
     public static void captureVision(ScreenSnapshot expected, String vocabularyKey, OnDeviceVision.Callback callback) {
         captureVision(expected, vocabularyKey, "full_frame", null, callback);

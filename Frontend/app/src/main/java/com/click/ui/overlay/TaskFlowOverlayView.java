@@ -907,6 +907,46 @@ public final class TaskFlowOverlayView extends LinearLayout {
         recoveryActions.setVisibility(VISIBLE);
     }
 
+    public void appTask(JSONObject result,java.util.function.Consumer<String> execute,Runnable refresh,Runnable tools,Runnable visual,Runnable finish) {
+        progress(null,null,result.optString("message"),false);controls.setVisibility(GONE);divider.setVisibility(GONE);
+        JSONArray goals=result.optJSONArray("subgoals");String active=result.optString("active_subgoal","");StringBuilder plan=new StringBuilder();
+        for(int i=0;goals!=null&&i<goals.length();i++){
+            JSONObject g=goals.optJSONObject(i);if(g==null)continue;if(plan.length()>0)plan.append('\n');
+            plan.append("verified".equals(g.optString("status"))?"✓ ":g.optString("id").equals(active)?"● ":"○ ").append(g.optString("title"));
+        }
+        if(plan.length()>0)content.addView(text(plan.toString(),14),spaced(8));
+        boolean verifying=result.optBoolean("verifying");JSONObject action=result.optJSONObject("action");
+        if(action!=null&&!verifying){
+            String tool=action.optString("tool"),label=result.optString("target_label","");
+            content.addView(text("tap".equals(tool)?"‘"+label+"’ 누르기":"set_text".equals(tool)?"검색어 입력":
+                "scroll_forward".equals(tool)?"아래로 이동":"scroll_backward".equals(tool)?"위로 이동":"back".equals(tool)?"뒤로가기":"선택한 앱 열기",17),spaced(8));
+            if(result.optBoolean("execute_allowed")){
+                if("set_text".equals(tool)){
+                    publicGuideInput=true;EditText input=new EditText(getContext());input.setHint("입력할 검색어를 적어 주세요");input.setSingleLine(true);input.setTextSize(ClickTextScale.size(getContext(),16));
+                    input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(200)});content.addView(input,spaced(8));
+                    recoveryActions.addView(primaryButton("이 검색어 입력하기",()->{String value=input.getText().toString();if(value.isEmpty())return;hideKeyboard(input);input.postDelayed(()->execute.accept(value),350);}),spaced(0));
+                }else recoveryActions.addView(primaryButton("이 단계 실행",()->execute.accept(null)),spaced(0));
+            }else content.addView(text("이 항목은 화면을 보고 직접 눌러주세요.",14),spaced(8));
+        }
+        if(!verifying){
+            recoveryActions.addView(secondaryButton("현재 화면 확인",refresh),spaced(8));
+            recoveryActions.addView(secondaryButton("다른 동작",tools),spaced(8));
+            recoveryActions.addView(quietButton("화면 글자 추가로 읽기",visual),spaced(8));
+            recoveryActions.addView(quietButton("결과 확인 · 안내 끝내기",finish),spaced(8));
+        }
+        recoveryActions.setVisibility(VISIBLE);
+    }
+    public void appTaskTools(java.util.function.Consumer<String> choice,Runnable back) {
+        clear("어떻게 진행할까요?");
+        String[] labels={"검색어 입력","아래로 이동","위로 이동","뒤로가기","앱 열기"};String[] values={"set_text","scroll_forward","scroll_backward","back","open_app"};
+        for(int i=0;i<labels.length;i++){final String value=values[i];content.addView(primaryButton(labels[i],()->choice.accept(value)),spaced(8));}
+        content.addView(secondaryButton("안내로 돌아가기",back),spaced(8));
+    }
+    public void appTaskApps(JSONArray apps,java.util.function.BiConsumer<String,String> selected,Runnable back) {
+        clear("어떤 앱을 열까요?");
+        for(int i=0;i<apps.length();i++){JSONObject app=apps.optJSONObject(i);if(app==null)continue;content.addView(secondaryButton(app.optString("label"),()->selected.accept(app.optString("package"),app.optString("label"))),spaced(4));}
+        content.addView(secondaryButton("안내로 돌아가기",back),spaced(8));
+    }
     public void browsing(String message, boolean terminal, Runnable observe, Runnable openApp, Runnable finish) {
         reviewStage(1, "쿠팡 상품 찾기", "검색과 상품 상세 화면을 안내해요.");
         narrationMessage = message;

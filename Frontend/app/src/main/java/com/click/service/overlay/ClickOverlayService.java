@@ -211,7 +211,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private final AutomaticScrollSearch automaticScrollSearch = new AutomaticScrollSearch();
     private GuideOverlayView guideOverlayView;
     private CoupangBrowseController coupangBrowse;
-    private AppGuideController appGuide;
+    private AppTaskController appGuide;
     private boolean gov24Guide;
     private boolean gov24Civil;
     private String gov24EntryPresentation;
@@ -581,7 +581,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private static void recordGuidedAction(String type, String packageName, int windowId, String nodeId,
                                           String resourceId, int[] bounds, long occurredAt, boolean automatic) {
         ClickOverlayService service = runningService.get();
-        if(service!=null&&service.appGuide!=null)return;
+        if(service!=null&&service.appGuide!=null){if(!automatic&&AgentActionEvents.TAP_COMPLETED.equals(type))service.appGuide.manualTap(packageName,windowId,nodeId,occurredAt);return;}
         if (service == null || service.execution.paused() || service.execution.pendingControl() != null) return;
         if (service.coupangBrowse != null) {
             if (!automatic && AgentActionEvents.TAP_COMPLETED.equals(type)) service.coupangBrowse.tap(packageName,windowId,nodeId,occurredAt);
@@ -763,7 +763,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
                 | (goalSelection == null && goalPreparation == null && (requirementReview == null || requirementReview.confirmed())
-                    && !(gov24Guide&&taskFlowView!=null&&taskFlowView.needsPublicGuideInput()) ? WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE : 0);
+                    && !((gov24Guide||appGuide!=null)&&taskFlowView!=null&&taskFlowView.needsPublicGuideInput()) ? WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE : 0);
         taskFlowHeightLimit = height;
         taskFlowRestingGravity = taskFlowParams.gravity;
         appliedTaskFlowHeight = -1;
@@ -1039,9 +1039,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if(agentGateway==null||agentGateway.currentContract()==null
                 ||initialGoal==null||initialGoal.trim().isEmpty())return false;
         ensureTaskFlow();
-        String message=agentGateway.currentContract().appGuide
-            ?"현재 앱 화면에서 안내할까요? 버튼과 메뉴 이름을 AI로 확인해 다음에 누를 위치를 알려드려요. 화면 조작과 입력은 직접 진행해 주세요."
-            :"현재 앱 화면에서 안내할까요? 요청하신 버튼과 메뉴 이름을 찾아 다음에 누를 위치를 알려드려요. 화면 조작과 입력은 직접 진행해 주세요.";
+        String message=agentGateway.currentContract().appTask
+            ?"현재 앱에서 단계별로 도와드릴까요? 버튼과 메뉴 정보를 AI로 확인하고, 각 동작은 실행 버튼을 눌렀을 때 진행해요. 입력할 검색어는 직접 확인해 주세요."
+            :"현재 앱에서 단계별로 도와드릴까요? 보이는 항목과 공통 동작으로 안내하고 진행 상태를 보관해요. 각 동작은 실행 버튼을 눌렀을 때 진행해요.";
         final int generation=execution.generation();
         taskFlowView.confirmation(message,accepted->{
             if(closing||generation!=execution.generation())return;
@@ -1056,37 +1056,76 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if(coupangBrowse!=null){coupangBrowse.close();coupangBrowse=null;}
         goalPreparation=null;requirementReview=null;goalSelection=null;
         gov24Guide=false;gov24Civil=false;stopListening();hideGuideOverlay();
-        appGuide=new AppGuideController(new com.click.data.remote.AppGuideGateway(this),initialGoal,new AppGuideController.Listener(){
+        final com.click.data.local.AppTaskStore taskStore=new com.click.data.local.AuthTokenStore(this).appTasks();
+        final AppTaskMemory taskMemory;
+        try{taskMemory=taskStore.restore(initialGoal);}catch(Exception error){showQueueError(error);return;}
+        appGuide=new AppTaskController(new com.click.data.remote.AppGuideGateway(this),taskMemory,taskStore,new AppTaskController.Listener(){
             public ScreenSnapshot fresh(){return ClickAccessibilityService.freshSnapshot();}
             public boolean canObserve(){return !closing&&!execution.paused();}
             public void busy(boolean busy){setTurnInFlight(busy);updateRequestStatus(true,busy);}
             public void failure(Throwable error){showAppGuideMessage(ErrorDetails.requestMessage(error),null);}
+            public boolean execute(ScreenSnapshot baseline,JSONObject observation,JSONObject action,String input,String selectedPackage){return ClickAccessibilityService.performAppTask(baseline,observation,action,input,selectedPackage);}
+            public boolean inputMatches(String target,String hash){return ClickAccessibilityService.appTaskInputMatches(target,hash);}
+            public String scope(String pkg){try{android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(pkg,0);return pkg+"|"+(android.os.Build.VERSION.SDK_INT>=28?info.getLongVersionCode():info.versionCode)+"|"+android.os.Build.VERSION.SDK_INT+"|app-task.v2";}catch(Exception e){return pkg+"|app-task.v2";}}
             public void present(JSONObject result,ScreenSnapshot screen){
-                int[] bounds=null;org.json.JSONArray target=result.optJSONArray("target_bounds");
-                if("guide".equals(result.optString("status"))&&target!=null&&target.length()==4) {
+                JSONObject action=result.optJSONObject("action");
+                int[] bounds=null;org.json.JSONArray target=action==null?null:action.optJSONArray("bounds");
+                if("proposed".equals(result.optString("status"))&&target!=null&&target.length()==4) {
                     bounds=new int[]{target.optInt(0),target.optInt(1),target.optInt(2),target.optInt(3)};
                     lastSubmittedScreen=screen;
-                    showGuideOverlay(bounds,"scroll".equals(result.optString("action_kind"))?"scroll":"tap",GuideDragDirection.UNKNOWN);
+                    showGuideOverlay(bounds,action.optString("tool").startsWith("scroll_")?"scroll":"tap",GuideDragDirection.UNKNOWN);
                 }else hideGuideOverlay();
                 JSONObject diagnostic=result.optJSONObject("diagnostic");
                 if(diagnostic!=null)android.util.Log.i("ClickAppGuide","model="+diagnostic.optString("model")
                     +" called="+diagnostic.optBoolean("called")+" latency_ms="+diagnostic.optLong("latency_ms")
                     +" status="+result.optString("status")+" reason="+diagnostic.optString("reason")
                     +" http_status="+diagnostic.optInt("http_status"));
-                showAppGuideMessage(result.optString("message"),bounds);
+                renderAppTask(result,bounds);
             }
-        },agentGateway.currentContract().appGuide);
+        },agentGateway.currentContract().appTask);
         showAppGuideMessage("도움이 필요한 앱을 열고 현재 화면 확인을 눌러주세요.",null);
         appGuide.refresh();
     }
 
     private void showAppGuideMessage(String message,int[] bounds) {
         if(appGuide==null||closing)return;
-        ensureTaskFlow();taskFlowView.appGuidance(message,()->{if(appGuide!=null)appGuide.refresh();},()->{
-            clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest(null);
-        });
-        taskFlowCollapsed=false;if(overlayView!=null)overlayView.collapse();
-        updateFloatingVisibility();placeTaskFlow(bounds,true);speak(message);
+        try{renderAppTask(new JSONObject().put("status","needs_input").put("message",message).put("subgoals",appGuide.memory().state().getJSONArray("subgoals")),bounds);}
+        catch(Exception error){showQueueError(error);}
+    }
+    private void renderAppTask(JSONObject result,int[] bounds){
+        if(appGuide==null||closing)return;final AppTaskController owner=appGuide;ensureTaskFlow();
+        JSONObject action=result.optJSONObject("action");final String actionId=action==null?"":action.optString("id");
+        taskFlowView.appTask(result,value->{if(appGuide==owner)owner.execute(actionId,value);},()->{if(appGuide==owner)owner.refresh();},
+            this::showAppTaskTools,this::readAppTaskVisual,()->{
+                if(appGuide!=owner||endingTask)return;endingTask=true;owner.confirmResult();clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest(null);
+            });
+        taskFlowCollapsed=false;if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(bounds,true);
+        if(!result.optBoolean("verifying"))speak(result.optString("message"));
+    }
+    private void showAppTaskTools(){
+        if(appGuide==null)return;final AppTaskController owner=appGuide;ensureTaskFlow();
+        taskFlowView.appTaskTools(tool->{if(appGuide!=owner)return;if("open_app".equals(tool))showAppTaskApps();else owner.chooseTool(tool);},()->{if(appGuide==owner)owner.refresh();});placeTaskFlow(null,true);
+    }
+    private void showAppTaskApps(){
+        if(appGuide==null)return;final AppTaskController owner=appGuide;org.json.JSONArray apps=new org.json.JSONArray();
+        try{
+            java.util.List<android.content.pm.ResolveInfo> found=getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0);
+            found.sort(java.util.Comparator.comparing(r->String.valueOf(r.loadLabel(getPackageManager()))));java.util.Set<String> seen=new java.util.HashSet<>();
+            for(var r:found)if(r.activityInfo!=null&&!getPackageName().equals(r.activityInfo.packageName)&&seen.add(r.activityInfo.packageName))apps.put(new JSONObject().put("package",r.activityInfo.packageName).put("label",String.valueOf(r.loadLabel(getPackageManager()))));
+        }catch(Exception error){showAppGuideMessage("설치된 앱 목록을 읽지 못했어요. 직접 앱을 열고 현재 화면을 확인해 주세요.",null);return;}
+        taskFlowView.appTaskApps(apps,(pkg,label)->{if(appGuide==owner)owner.chooseApp(pkg,label);},()->{if(appGuide==owner)showAppTaskTools();});placeTaskFlow(null,true);
+    }
+    private void readAppTaskVisual(){
+        if(appGuide==null)return;final AppTaskController owner=appGuide;ensureTaskFlow();
+        taskFlowView.confirmation("이 화면의 이름 없는 버튼 글자를 기기에서 추가로 읽을까요? 이미지 원본은 전송하지 않아요.",accepted->{
+            if(!accepted){if(appGuide==owner)owner.refresh();return;}if(appGuide!=owner||!owner.beginVisual())return;
+            hideGuideOverlay();if(taskFlowView!=null)taskFlowView.setVisibility(View.INVISIBLE);if(overlayView!=null)overlayView.setVisibility(View.INVISIBLE);
+            speechHandler.postDelayed(()->ClickAccessibilityService.captureAppTaskVision(new com.click.service.accessibility.AppTaskVision.Callback(){
+                private void restore(){if(appGuide!=owner||closing)return;if(taskFlowView!=null)taskFlowView.setVisibility(View.VISIBLE);if(overlayView!=null)overlayView.setVisibility(View.VISIBLE);}
+                public void success(ScreenSnapshot screen,JSONObject enriched){restore();if(appGuide==owner)owner.visualObservation(screen,enriched);}
+                public void failure(String reason){restore();if(appGuide==owner){owner.visualFailure(new java.io.IOException("APP_TASK_OCR_UNAVAILABLE"));showAppGuideMessage(reason,null);}}
+            }),250);
+        });placeTaskFlow(null,true);
     }
 
     private void chooseResolvedGoal(JSONObject goal) {
@@ -3340,7 +3379,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if("pause_task".equals(commandType)) {
                 execution.pause();hideGuideOverlay();stopNarration();
                 ensureTaskFlow();taskFlowView.paused();placeTaskFlow(null,true);
-            }else if("resume_task".equals(commandType)){execution.resume();appGuide.refresh();}
+            }else if("resume_task".equals(commandType)){execution.resume();appGuide.resume();}
             return;
         }
         if(coupangBrowse!=null) {

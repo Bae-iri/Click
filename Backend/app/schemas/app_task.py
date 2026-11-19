@@ -1,0 +1,124 @@
+"""Versioned, app-independent planning and grounded tool proposals."""
+from typing import Literal
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+class TaskNode(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    id: str = Field(min_length=1, max_length=200)
+    label: str = Field(default='', max_length=80)
+    resource: str = Field(default='', max_length=300)
+    role: Literal['button','text_field','list','tab','toggle','text','image','unknown'] = 'unknown'
+    bounds: tuple[int,int,int,int]
+    clickable: bool = False
+    editable: bool = False
+    scrollable: bool = False
+    selected: bool = False
+    checked: bool | None = None
+    has_value: bool = False
+    viewport_hash: str = Field(default='', max_length=64)
+    source: Literal['accessibility','ocr'] = 'accessibility'
+
+
+class TaskScreen(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    status: Literal['public','protected','outside','empty']
+    package: str = Field(default='', max_length=200)
+    observation_id: str = Field(min_length=1, max_length=200)
+    captured_at_ms: int = Field(ge=0)
+    fingerprint: str = Field(pattern=r'^[0-9a-f]{64}$')
+    width: int = Field(gt=0, le=20000)
+    height: int = Field(gt=0, le=20000)
+    keyboard_visible: bool = False
+    nodes: list[TaskNode] = Field(default_factory=list, max_length=80)
+
+    @model_validator(mode='after')
+    def grounded(self):
+        if self.status != 'public' and self.nodes:
+            raise ValueError('Non-public observations cannot carry controls')
+        if len({n.id for n in self.nodes}) != len(self.nodes):
+            raise ValueError('Duplicate control identity')
+        for n in self.nodes:
+            l,t,r,b=n.bounds
+            if not 0 <= l < r <= self.width or not 0 <= t < b <= self.height:
+                raise ValueError('Control outside observation')
+        return self
+
+
+class TaskSubgoal(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    id: str = Field(pattern=r'^g[0-7]$')
+    title: str = Field(min_length=1, max_length=80)
+    status: Literal['pending','verified'] = 'pending'
+
+
+class TaskAttempt(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    fingerprint: str = Field(pattern=r'^[0-9a-f]{64}$')
+    tool: str = Field(max_length=30)
+    target: str = Field(default='', max_length=200)
+    outcome: Literal['verified','failed','waiting','stale','protected']
+
+
+class TaskState(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    task_id: str = Field(min_length=1, max_length=100)
+    revision: int = Field(default=0, ge=0, le=100)
+    subgoals: list[TaskSubgoal] = Field(default_factory=list, max_length=8)
+    attempts: list[TaskAttempt] = Field(default_factory=list, max_length=8)
+    @model_validator(mode='after')
+    def unique(self):
+        if len({s.id for s in self.subgoals}) != len(self.subgoals):
+            raise ValueError('Duplicate subgoal')
+        return self
+
+
+class TaskApp(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    package: str = Field(pattern=r'^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$', max_length=200)
+    label: str = Field(min_length=1, max_length=80)
+
+
+class AppTaskRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    protocol_version: Literal['app-task.v2'] = 'app-task.v2'
+    request_id: str = Field(min_length=1, max_length=100)
+    goal: str = Field(min_length=1, max_length=200)
+    screen: TaskScreen
+    state: TaskState
+    # Only apps explicitly selected on the device; never an installed-app inventory.
+    apps: list[TaskApp] = Field(default_factory=list, max_length=1)
+
+
+class TaskExpectation(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    kind: Literal['screen_changed','target_visible','input_present','selection_changed','package_opened']
+    label: str = Field(default='', max_length=80)
+    package: str = Field(default='', max_length=200)
+
+
+class TaskAction(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    id: str
+    tool: Literal['tap','set_text','scroll_forward','scroll_backward','back','open_app']
+    target_id: str | None = None
+    bounds: tuple[int,int,int,int] | None = None
+    package: str = ''
+    expectation: TaskExpectation
+    advances_subgoal: bool = False
+
+
+class AppTaskResponse(BaseModel):
+    protocol_version: Literal['app-task.v2'] = 'app-task.v2'
+    request_id: str
+    task_id: str
+    observation_id: str
+    fingerprint: str
+    status: Literal['proposed','needs_input','confirm_result','unavailable','protected']
+    message: str
+    subgoals: list[TaskSubgoal] = Field(default_factory=list)
+    active_subgoal: str | None = None
+    action: TaskAction | None = None
+    # A proposal must be approved and revalidated locally before execution.
+    requires_confirmation: Literal[True] = True
+    diagnostic: dict = Field(default_factory=dict)
