@@ -1,0 +1,66 @@
+# Settings graph-vs-LLM experiment server. Separate from click-dev-api so that the
+# Gemini key and experiment traces never affect regular users or their data.
+# Create it from the Render dashboard: New > Blueprint > this file.
+# Use a database separate from click_db (DATABASE_URL), and new encryption keys.
+services:
+  - type: web
+    name: click-settings-experiment
+    runtime: docker
+    plan: 0.5c-512mb
+    region: singapore
+    branch: develop
+    dockerfilePath: ./Backend/Dockerfile
+    dockerContext: .
+    dockerCommand: python scripts/render_start.py
+    preDeployCommand: python scripts/render_start.py --migrate
+    healthCheckPath: /ready
+    numInstances: 1
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: CLICK_REQUIRE_EXECUTION_CONTEXT
+        value: "1"
+      - key: DATABASE_URL
+        sync: false
+      - key: DATA_ENCRYPTION_KEYS
+        sync: false
+      - key: DATA_LOOKUP_KEY
+        sync: false
+      # Paid Gemini key. Pinned model; no automatic fallback to another model.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_SETTINGS_MODEL
+        value: gemini-3.8-flash
+      - key: CLICK_SETTINGS_EXPERIMENT_ENABLED
+        value: "1"
+      # Pure A/B: keep route reuse off while comparing graph and LLM planning.
+      - key: CLICK_SETTINGS_ROUTE_REUSE_ENABLED
+        value: "0"
+      - key: CLICK_AI2_SETTINGS_GRAPH_ENABLED
+        value: "1"
+      - key: AI1_UI_SELECTOR_PROVIDER
+        value: jev
+      - key: GOAL_CLASSIFIER_PROVIDER
+        value: jev
+      - key: CLICK_COUPANG_BROWSE_ENABLED
+        value: "0"
+      - key: CLICK_GOV24_GUIDE_ENABLED
+        value: "0"
+      - key: CLICK_AI2_BROWSE_GRAPH_ENABLED
+        value: "0"
+      # Same conditions as the local experiment environment.
+      - key: GUIDE_NARRATION_ENABLED
+        value: "false"
+      - key: OPENAI_VERIFIER_ENABLED
+        value: "0"
+      - key: AGENT_TURN_TIMEOUT_SECONDS
+        value: "20"
+      - key: TYPESAFE_API_KEY
+        sync: false
+      - key: JEV_MODEL
+        value: jev-1.14.0
+      - key: JEV_MIN_CONFIDENCE
+        value: "0.8"
+      - key: JEV_SCREEN_JUDGMENT_MODE
+        value: atomic
+      - key: JEV_CHOICE_TEMPERATURE
+        value: "0.7"
