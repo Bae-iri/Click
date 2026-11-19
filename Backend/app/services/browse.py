@@ -46,8 +46,12 @@ class BrowseService:
                     extra['diagnostic'] = deepcopy(state['public_guide_diagnostic'])
                     if row.status != 'IN_PROGRESS':
                         message = state.get('public_guide_message', message)
-                    if state.get('outcome') == 'handoff':
-                        extra['subgoal'] = 'handoff'
+                if self.execution_mode == 'public_guide' and state.get('experiment', {}).get('last_trace'):
+                    extra['experiment'] = deepcopy(state['experiment']['last_trace'])
+                    if row.status != 'IN_PROGRESS':
+                        message = state['experiment'].get('last_message', message)
+                if extra and state.get('outcome') == 'handoff':
+                    extra['subgoal'] = 'handoff'
                 return self.response_model(request_id=request.request_id, session_id=row.id, session_version=row.version,
                     status=row.status if row.status in {'IN_PROGRESS','COMPLETED','BLOCKED','CANCELLED'} else 'CANCELLED',
                     outcome=state.get('outcome', 'unknown'), step=state.get('steps', 0),
@@ -106,6 +110,11 @@ class BrowseService:
                 row.task_outcome = {'technical':{'status':'OPENED' if response.outcome=='verified_navigation' else 'UNVERIFIABLE'},
                     'final':{'verified_navigation':'ACHIEVED','user_reported':'USER_REPORTED_RESOLVED','cancelled':'USER_STOPPED','blocked':'BLOCKED'}.get(response.outcome),
                     'browse_outcome':response.outcome}
+                experiment = evidence.get('experiment')
+                if experiment:
+                    row.task_outcome['verification'] = experiment['verification']
+                    if response.outcome == 'verified_navigation' and experiment['verification']['final']['status'] != 'SUCCESS':
+                        row.task_outcome['final'] = 'UNVERIFIABLE'
                 turn = db.scalar(select(AgentTurn).where(AgentTurn.user_id==user_id,AgentTurn.request_id==request.request_id))
                 turn.response = response.model_dump(mode='json')
                 if request.command == 'start':

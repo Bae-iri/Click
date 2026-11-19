@@ -17,6 +17,8 @@ public final class LocalGoalResolver {
         if (normalized.isEmpty()) return false;
         if (GoalCommandInterpreter.requiresContextualInterpretation(text)) return true;
         GoalCatalogClassifier.Classification result = catalog.classify(text, foregroundPackage);
+        if(result.matched() && server.gov24Planner
+                && com.click.data.snapshot.Gov24LoginPrivacy.isPlannerGoal(result.match.goalType)) return true;
         if(result.matched() && "public_guide".equals(result.match.executionStatus)) {
             return "gov24.login".equals(result.match.goalType)?server.gov24Login
                     :"gov24.resident_copy.open".equals(result.match.goalType)?server.gov24Civil:server.gov24Services;

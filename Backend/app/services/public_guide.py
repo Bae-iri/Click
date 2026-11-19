@@ -20,8 +20,16 @@ class PublicGuideService(BrowseService):
         self.execution_mode,self.target_app='public_guide','gov24'
         self.goal_field='public_guide_goal'
         self.task_id,self.event_kind='GOV24-LOGIN','public_guide'
+        from app.services.gov24_planner import GeminiGovernmentPlanner
+        from app.services.gov24_jev import JevGovernmentSelector
+        self.government_planner = GeminiGovernmentPlanner()
+        self.government_selector = JevGovernmentSelector()
 
     def decide(self,request,state,now):
+        if state.get('experiment') or state['goal'].get('planner'):
+            # Opt-in Gemini planner pilot; deterministic baseline graphs stay the default.
+            from app.services.gov24_experiment import decide
+            return decide(self, request, state, now)
         if state['goal']['goal_type'] in policy.CIVIL_GRAPHS:
             from app.services.gov24_navigation import decide
             return decide(self, request, state, now)

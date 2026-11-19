@@ -24,6 +24,11 @@ public class Gov24GoalCatalogTest {
             assertFalse(match.isExecutable());assertNull(catalog.executableGoal(match.goalType));
             assertTrue(LocalGoalResolver.needsServerResolution(catalog,server,request,"kr.go.minwon.m",null));
         }
+        for(String request:new String[]{"정부24 전입신고 화면 찾아줘","정부24 주민등록초본 발급 화면 찾아줘",
+                "정부24 건축물대장 열람 화면 보여줘"}) {
+            assertTrue(LocalGoalResolver.needsServerResolution(catalog,server,request,"kr.go.minwon.m",null));
+        }
+        server.gov24Planner=false;
         assertFalse(LocalGoalResolver.needsServerResolution(catalog,server,
             "정부24 소득금액증명 화면 찾아줘","kr.go.minwon.m",null));
     }

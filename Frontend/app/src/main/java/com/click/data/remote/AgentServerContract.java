@@ -21,6 +21,7 @@ public final class AgentServerContract {
     public boolean gov24Login;
     public boolean gov24Civil;
     public boolean gov24Services;
+    public boolean gov24Planner;
     public boolean gov24ObservationDiagnostics;
 
     private AgentServerContract(Set<String> commands, Set<String> goals, Set<String> appliedSettingFields,
@@ -53,6 +54,7 @@ public final class AgentServerContract {
             if(gov24Login)capabilities.put("gov24_login",true);
             if(gov24Civil)capabilities.put("gov24_civil",true);
             if(gov24Services)capabilities.put("gov24_services",true);
+            if(gov24Planner)capabilities.put("gov24_planner",true);
         }
         JSONObject screen = body.optJSONObject("accessibility_tree");
         JSONObject settings = screen == null ? null : screen.optJSONObject("applied_settings");
@@ -106,6 +108,7 @@ public final class AgentServerContract {
             && capabilities!=null && capabilities.getJSONObject("properties").has("gov24_login");
         result.gov24Civil=result.gov24Login && capabilities.getJSONObject("properties").has("gov24_civil");
         result.gov24Services=result.gov24Civil && capabilities.getJSONObject("properties").has("gov24_services");
+        result.gov24Planner=result.gov24Civil && capabilities.getJSONObject("properties").has("gov24_planner");
         JSONObject publicScreen=schemas.optJSONObject("PublicGuideScreen");
         result.gov24ObservationDiagnostics=result.gov24Login && publicScreen!=null
             && publicScreen.optJSONObject("properties")!=null

@@ -119,6 +119,19 @@ public class Gov24LoginPrivacyTest {
         var result=new Gov24LoginPrivacy().filter(screen(node("button",null,false,true),child("label","button","간편인증"),node("input","PRIVATE_VALUE",true,false)));
         assertEquals("handoff",result.getString("status"));assertFalse(result.toString().contains("PRIVATE_VALUE"));
     }
+    @Test public void experimentalCivilLabelsRemainPublicAndRequireEnabledVisibleNodes() throws Exception {
+        var result=new Gov24LoginPrivacy(true).filter(screen(node("extract","주민등록초본",false,true),
+            node("move","전입신고",false,true),node("building","건축물대장",false,true),
+            node("private","홍길동 주소",false,false)));
+        assertEquals(3,result.getJSONArray("nodes").length());
+        assertFalse(result.toString().contains("홍길동"));
+        var detail=new Gov24LoginPrivacy(true).filter(screen(node("title","전입신고",false,false),
+            node("apply","신청하기",false,true)));
+        assertEquals("marker_move_in",detail.getJSONArray("nodes").getJSONObject(0).getString("option_id"));
+        assertFalse(detail.getJSONArray("nodes").getJSONObject(0).getBoolean("clickable"));
+        assertTrue(Gov24LoginPrivacy.supportsCivilGoal("gov24.move_in.open"));
+        assertFalse(Gov24LoginPrivacy.supportsCivilGoal("gov24.login"));
+    }
     private AccessibilityNodeSnapshot diagnosticNode(String label,boolean input,boolean password,
             String pkg,int window,String resource,boolean visible) {
         return new AccessibilityNodeSnapshot("private-node",null,visible,pkg,label,input?null:"private-description",resource,
