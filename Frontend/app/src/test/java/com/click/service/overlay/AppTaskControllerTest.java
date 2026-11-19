@@ -21,13 +21,48 @@ import static com.click.testing.AppTaskFixtures.*;
 @Config(sdk=34,application=Application.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class AppTaskControllerTest {
+    @Test public void namedAppEntryWaitsForTargetAndManualOpeningContinuesAutomatically()throws Exception {
+        Listener l=new Listener();l.current=screen("com.android.launcher",node("com.android.launcher","node_0_1","설정","button"));
+        var gateway=mock(AppGuideGateway.class);var c=new AppTaskController(gateway,new AppTaskMemory("쿠팡에서 물 주문하고 싶어"),null,l,false);
+        c.targetApp("com.coupang.mobile","쿠팡");c.refresh();
+        assertEquals("open_app",l.result.getJSONObject("action").getString("tool"));assertEquals("쿠팡",l.result.getString("target_label"));
+        assertNull(c.memory().scope());assertEquals(0,l.executions);String old=l.result.getJSONObject("action").getString("id");
+        l.current=screen("com.coupang.mobile",node("com.coupang.mobile","node_0_1","쿠팡에서 검색하세요","button"));
+        c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+        assertEquals("tap",l.result.getJSONObject("action").getString("tool"));assertEquals("com.coupang.mobile",c.memory().scope());
+        c.execute(old,null);assertEquals(0,l.executions);verify(gateway,never()).send(any(),any());c.close();
+    }
+    @Test public void productRequestUsesVisibleSearchFieldWithoutCompletingTheOrder()throws Exception {
+        String pkg="com.coupang.mobile";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","","search"));
+        var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("쿠팡에서 물 주문하고 싶어"),null,l,false);c.targetApp(pkg,"쿠팡");c.refresh();
+        assertEquals("set_text",l.result.getJSONObject("action").getString("tool"));assertEquals("물",l.result.getString("suggested_query"));assertEquals(0,l.executions);
+        c.execute(l.result.getJSONObject("action").getString("id"),"물");l.current=screen(pkg,node(pkg,"node_0_1","물","search"));l.textMatches=true;
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600));
+        assertEquals("키보드의 검색을 눌러주세요.",l.result.getString("message"));assertFalse(c.memory().finished());assertNotNull(c.memory().active());assertEquals(1,l.executions);
+        l.current=screen(pkg,node(pkg,"node_0_1","물 상품","button"));c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+        assertEquals("검색 결과에서 원하는 상품을 골라주세요.",l.result.getString("message"));assertEquals(1,l.executions);c.close();
+    }
+    @Test public void targetAuthenticationStillStopsAndAmbiguousSearchIsNeverClicked()throws Exception {
+        String pkg="com.coupang.mobile";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","비밀번호","password"));
+        var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("쿠팡에서 물 주문하고 싶어"),null,l,false);c.targetApp(pkg,"쿠팡");c.refresh();
+        assertEquals("protected",l.result.getString("status"));
+        l.current=screen(pkg,node(pkg,"node_0_1","검색","button"),node(pkg,"node_0_2","상품 검색","button"));c.refresh();
+        assertTrue(l.result.isNull("action"));assertEquals(0,l.executions);c.close();
+    }
+    @Test public void searchUsesTheQueryTheUserEditedAndApproved()throws Exception {
+        String pkg="com.coupang.mobile";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","","search"));
+        var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("쿠팡에서 물 주문하고 싶어"),null,l,false);c.targetApp(pkg,"쿠팡");c.refresh();
+        c.execute(l.result.getJSONObject("action").getString("id"),"생수");l.actualText="생수";l.textMatches=true;l.current=screen(pkg,node(pkg,"node_0_1","생수","search"));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600));
+        assertEquals("키보드의 검색을 눌러주세요.",l.result.getString("message"));assertTrue(l.result.isNull("action"));assertEquals(1,l.executions);c.close();
+    }
     private static final class Listener implements AppTaskController.Listener {
-        ScreenSnapshot current;JSONObject result;int executions,presents;boolean accepted=true,allowed=true,textMatches;
+        ScreenSnapshot current;JSONObject result;int executions,presents;boolean accepted=true,allowed=true,textMatches;String actualText;
         public ScreenSnapshot fresh(){return current;}public boolean canObserve(){return allowed;}public void busy(boolean value){}
         public void present(JSONObject r,ScreenSnapshot submitted){result=r;presents++;}
         public void failure(Throwable error){throw new AssertionError(error);}
         public boolean execute(ScreenSnapshot baseline,JSONObject observation,JSONObject action,String input,String selectedPackage){executions++;return accepted;}
-        public boolean inputMatches(String target,String hash){return textMatches;}
+        public boolean inputMatches(String target,String hash){return textMatches&&(actualText==null||AppTaskObservation.hash(actualText).equals(hash));}
     }
     @Test public void approvedMultistepTaskRunsThroughSameEngineInThreeApps()throws Exception {
         for(String pkg:List.of("com.spotify.music","org.mozilla.firefox","com.google.android.youtube")){

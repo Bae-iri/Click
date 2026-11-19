@@ -16,6 +16,25 @@ import static org.junit.Assert.*;
 /** Device layout and interaction checks only. No queue writes or model calls. */
 @RunWith(AndroidJUnit4.class)
 public class GuidanceExperienceDeviceTest {
+    @Test public void appEntryStaysCompactAtNormalAndLargeText()throws Exception {
+        try(var scenario=ActivityScenario.launch(HomeActivity.class)){
+            for(float scale:new float[]{1f,1.5f}){
+                TaskFlowOverlayView[] panel={null};
+                scenario.onActivity(activity->{
+                    var config=new android.content.res.Configuration(activity.getResources().getConfiguration());config.fontScale=scale;
+                    Context context=activity.createConfigurationContext(config);
+                    panel[0]=new TaskFlowOverlayView(context,new TaskFlowOverlayView.Listener(){
+                        public void chooseGoal(org.json.JSONObject goal){}public void clarify(String choice){}public void rephrase(String text){}
+                        public void result(String answer){}public void adjust(String reason){}public void control(String command){}
+                    });
+                    try{panel[0].appTask(new org.json.JSONObject().put("status","proposed").put("message","쿠팡을 열어주세요.").put("target_label","쿠팡").put("execute_allowed",true).put("action",new org.json.JSONObject().put("tool","open_app")),v->{},()->{},()->{},()->{},()->{});}catch(Exception e){throw new AssertionError(e);}
+                    FrameLayout host=new FrameLayout(activity);host.addView(panel[0],new FrameLayout.LayoutParams(Math.min(dp(context,390),context.getResources().getDisplayMetrics().widthPixels-dp(context,24)),-2,Gravity.CENTER));activity.setContentView(host);
+                });
+                InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+                scenario.onActivity(activity->{assertTrue(find(panel[0],"쿠팡 열기").isShown());assertNull(find(panel[0],"현재 화면 확인"));assertNull(find(panel[0],"다른 동작"));save(panel[0],"coupang-entry-"+scale);});
+            }
+        }
+    }
     @Test public void compactHelpAndExpandedChoicesWorkAtNormalAndLargeText() {
         try(var scenario=ActivityScenario.launch(HomeActivity.class)) {
             for(float scale:new float[]{1f,1.5f}) {
