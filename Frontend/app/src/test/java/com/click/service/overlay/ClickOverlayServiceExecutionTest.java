@@ -249,6 +249,17 @@ public class ClickOverlayServiceExecutionTest {
         assertNull(get("acceptedGoal"));
     }
 
+    @Test public void governmentPrivacyCauseIsPresentedWithoutReplacingItWithGenericAuthentication() throws Exception {
+        set("gov24Guide",true);
+        String message="현재 활성 창과 다른 창의 접근성 요소가 섞여 있어 안내를 멈췄어요.";
+        JSONObject response=new JSONObject().put("status","COMPLETED").put("outcome","handoff")
+            .put("message",message).put("diagnostic",new JSONObject().put("code","inactive_window_node"));
+        Method show=ClickOverlayService.class.getDeclaredMethod("showCoupangBrowse",JSONObject.class,ScreenSnapshot.class);
+        show.setAccessible(true);show.invoke(service,response,null);
+        verify((TaskFlowOverlayView)get("taskFlowView")).publicGuide(eq(message),eq(true),isNull(),eq(false),
+            any(),any(),any());
+    }
+
     @Test public void confirmedCoupangBrowseUsesSeparateManualContractAndStopDiscardsLateReply() throws Exception {
         try(var browse=mockConstruction(com.click.data.remote.CoupangBrowseGateway.class)) {
             assertTrue(contract.coupangBrowse);

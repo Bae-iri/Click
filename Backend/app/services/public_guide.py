@@ -59,6 +59,8 @@ class PublicGuideService(BrowseService):
                 result.message='선택 화면을 다시 확인해야 해요. 정부24로 돌아가 현재 화면 확인을 눌러주세요.'
         state.update(steps=step,outcome=result.outcome)
         evidence['outcome']=result.outcome
+        from app.services.gov24_diagnostics import attach
+        attach(result,evidence,state,request,now*1000)
         return result,evidence,state
 
     def observe_public(self,request,screen,state,result,evidence):
