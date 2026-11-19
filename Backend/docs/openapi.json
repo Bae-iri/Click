@@ -9454,6 +9454,21 @@
             "title": "Gov24 Civil",
             "default": false
           },
+          "settings_experiment_arm": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "graph",
+                  "llm"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Experiment Arm"
+          },
           "gov24_services": {
             "type": "boolean",
             "title": "Gov24 Services",

@@ -47,6 +47,8 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
         from app.services.browse_graph_jobs import enabled
         stop = asyncio.Event()
         worker = asyncio.create_task(application.state.browse_graph_jobs.serve(stop)) if enabled() else None
+        settings_worker = (asyncio.create_task(application.state.settings_graph_jobs.serve(stop))
+            if application.state.settings_graph_jobs.is_enabled() else None)
         try:
             yield
         finally:
@@ -54,6 +56,8 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
                 stop.set()
                 if worker:
                     await worker
+                if settings_worker:
+                    await settings_worker
             finally:
                 application.state.engine.dispose()
 
@@ -118,8 +122,9 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
     from app.services.browse import BrowseService
     from app.api.v1.endpoints.browse import build_router as build_browse_router
     app.state.browse_service = BrowseService(session_factory, turn_service.repository)
-    from app.services.browse_graph_jobs import BrowseGraphJobs
+    from app.services.browse_graph_jobs import BrowseGraphJobs, SettingsGraphJobs
     app.state.browse_graph_jobs = BrowseGraphJobs(session_factory)
+    app.state.settings_graph_jobs = SettingsGraphJobs(session_factory)
     app.include_router(build_browse_router(app.state.browse_service, principal, app.state.browse_graph_jobs), prefix="/api/v1")
     from app.services.public_guide import PublicGuideService
     from app.api.v1.endpoints.public_guide import build_router as build_public_guide_router

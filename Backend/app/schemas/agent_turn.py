@@ -561,6 +561,7 @@ class DeviceCapabilities(BaseModel):
     coupang_browse: bool = False
     gov24_login: bool = False
     gov24_civil: bool = False
+    settings_experiment_arm: Literal['graph', 'llm'] | None = None
     gov24_services: bool = False
     gov24_planner: bool = False
 
