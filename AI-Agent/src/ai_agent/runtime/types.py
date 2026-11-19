@@ -393,6 +393,7 @@ class AgentTurnRequest:
     window_context: JsonDict = field(default_factory=dict)
     vision_failure: str | None = None
     execution_context: JsonDict | None = None
+    observation_profile: str | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)
@@ -454,6 +455,7 @@ class AgentSessionState:
     recovery_state: JsonDict = field(default_factory=dict)
     state_candidates: tuple[JsonDict, ...] = ()
     vision_state: JsonDict = field(default_factory=dict)
+    observation_profile: str | None = None
 
     def to_dict(self) -> JsonDict:
         return asdict(self)

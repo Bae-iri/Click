@@ -128,6 +128,8 @@ def _numeric_slider_label(label):
 def _structure_role(node, nodes_by_id):
     if _is_control(node):
         return "control"
+    if node.extras.get('heading') is True:
+        return "screen_text"
     if node.scrollable or infer_role(node) == "list":
         return "container"
     if _description(node):

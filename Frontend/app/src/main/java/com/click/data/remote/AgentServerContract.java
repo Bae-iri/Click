@@ -21,6 +21,7 @@ public final class AgentServerContract {
     public boolean gov24Login;
     public boolean gov24Civil;
     public boolean gov24Services;
+    public boolean commonScreen;
 
     private AgentServerContract(Set<String> commands, Set<String> goals, Set<String> appliedSettingFields,
                                 String version, boolean interactive, boolean preparation) {
@@ -98,6 +99,10 @@ public final class AgentServerContract {
                         && properties.has("preparation_version") && properties.has("clarification_answer")
                         && properties.has("goal_resolution_id"));
         JSONObject schemas=document.getJSONObject("components").getJSONObject("schemas");
+        JSONObject observation=schemas.optJSONObject("AccessibilityTree");
+        JSONObject observationProperties=observation == null ? null : observation.optJSONObject("properties");
+        JSONObject profile=observationProperties == null ? null : observationProperties.optJSONObject("observation_profile");
+        result.commonScreen=allowsString(profile, "common-screen.v1");
         JSONObject capabilities=schemas.optJSONObject("DeviceCapabilities");
         result.coupangBrowse=document.getJSONObject("paths").has(CoupangBrowseGateway.PATH)
             && capabilities!=null && capabilities.getJSONObject("properties").has("coupang_browse");
@@ -124,6 +129,17 @@ public final class AgentServerContract {
         String ref = schema.getString("$ref"), prefix = "#/components/schemas/";
         if (!ref.startsWith(prefix)) throw new JSONException("Unsupported agent schema reference");
         return document.getJSONObject("components").getJSONObject("schemas").getJSONObject(ref.substring(prefix.length()));
+    }
+
+    private static boolean allowsString(JSONObject schema, String value) throws JSONException {
+        if (schema == null) return false;
+        if (value.equals(schema.optString("const")) || strings(schema.optJSONArray("enum")).contains(value)) return true;
+        for (String union : new String[]{"anyOf", "oneOf"}) {
+            JSONArray alternatives = schema.optJSONArray(union);
+            if (alternatives != null) for (int i=0; i<alternatives.length(); i++)
+                if (allowsString(alternatives.optJSONObject(i), value)) return true;
+        }
+        return false;
     }
 
     private static Set<String> strings(JSONArray array) throws JSONException {

@@ -3,11 +3,25 @@ package com.click.data.remote;
 import com.click.domain.goal.GoalCatalogClassifier;
 import com.click.domain.goal.LocalGoalResolver;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import org.junit.Test;
 import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.*;
 
 public class AgentServerContractTest {
+    @Test public void commonScreensRequireExplicitServerSchemaSupport() throws Exception {
+        JSONObject api=deployed();
+        JSONObject schemas=api.getJSONObject("components").getJSONObject("schemas");
+        assertFalse(AgentServerContract.fromOpenApi(api).commonScreen);
+        schemas.put("AccessibilityTree", new JSONObject().put("properties", new JSONObject()
+            .put("observation_profile", new JSONObject().put("anyOf", new JSONArray()
+                .put(new JSONObject().put("const", "common-screen.v1"))
+                .put(new JSONObject().put("type", "null"))))));
+        assertTrue(AgentServerContract.fromOpenApi(api).commonScreen);
+        schemas.getJSONObject("AccessibilityTree").getJSONObject("properties")
+            .put("observation_profile", new JSONObject().put("description", "common-screen.v1 is unsupported"));
+        assertFalse(AgentServerContract.fromOpenApi(api).commonScreen);
+    }
     @Test public void naturalGoalResolutionAdvertisesPublicGuideWithoutPreexistingCapabilities() throws Exception {
         JSONObject api;
         try(var input=getClass().getResourceAsStream("/openapi.json")) {

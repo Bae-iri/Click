@@ -1,4 +1,4 @@
-"""Primary graph-constrained Jev step + target selection; never generates coordinates."""
+"""Jev screen navigation and verified-operation selection; coordinates stay local."""
 import json
 import math
 from dataclasses import replace
@@ -25,7 +25,7 @@ class JevScreenResolver(JevGoalClassifier):
     provider = "jev"
 
     def resolve(self, *, nodes, graph, goal, raw_nodes=(), session=None,
-                verification=None, excluded_target_keys=None, screen_bounds=None, attempt=None):
+                verification=None, excluded_target_keys=None, screen_bounds=None, attempt=None, semantic=False):
         if graph.definition.target_app == 'coupang':
             from app.services.commerce_jev import resolve
             return resolve(self, nodes=nodes, graph=graph, goal=goal, raw_nodes=raw_nodes,
@@ -50,13 +50,26 @@ class JevScreenResolver(JevGoalClassifier):
                 "offscreen_pairs": 0, "source_confidence_rejected_pairs": 0,
                 "excluded_pairs": 0, "ambiguous_pairs": 0}
             if raw_nodes:
-                assessment = assess_screen(raw_nodes, setting)
+                assessment = assess_screen(raw_nodes, setting, semantic=semantic)
                 if assessment.status:
                     self.last_diagnostics["status"] = assessment.status
                     self.last_diagnostics["observation_reason"] = assessment.reason
                     return None
                 hidden = private_node_ids(raw_nodes)
                 nodes = tuple(node for node in nodes if node.node_id not in hidden)
+            if semantic and raw_nodes:
+                # Keep native operation identity/confirmation unchanged. Navigation
+                # no longer needs a matching label, authored page or transition.
+                operational = any(t.verification_predicate != 'state_reached'
+                    and t.transition_id != 'COMMON_OPEN_MENU' and any(
+                        selector_evidence(n, t, nodes, graph)[0] >= MATCH_THRESHOLD
+                        for n in eligible_nodes(t, nodes, graph))
+                    for t in graph.transitions)
+                if not operational:
+                    from app.services.screen_semantic_jev import resolve
+                    return resolve(self, model=model, minimum=minimum, nodes=nodes, raw_nodes=raw_nodes,
+                        goal=goal, screen_bounds=screen_bounds, exclusions=excluded_target_keys,
+                        attempt=attempt)
             from ai_agent.runtime.environment import native_control_surface
             surface=native_control_surface(raw_nodes) if raw_nodes else None
             nodes = minimize_nodes(nodes, setting, raw_nodes=raw_nodes)
@@ -75,6 +88,8 @@ class JevScreenResolver(JevGoalClassifier):
             # Unknown free-form labels never create an export exception.
             bindings = {}
             for transition in sorted(graph.transitions, key=lambda t: (t.from_state, t.priority, t.transition_id)):
+                if transition.transition_id == 'COMMON_OPEN_MENU':
+                    continue
                 if (graph.states[transition.from_state].verification_only
                         or transition.safety_level == SafetyLevel.BLOCKED):
                     continue

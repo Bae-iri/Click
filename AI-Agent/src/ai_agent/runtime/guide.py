@@ -178,6 +178,8 @@ def build_guide_command(
 
     vision_derived = match_result.match_method.startswith("vision_")
     message = transition.guide_message if transition else "다음 항목을 눌러주세요."
+    if transition and transition.transition_id == 'COMMON_OPEN_MENU':
+        message = f"표시한 {match_result.target_label} 메뉴를 눌러주세요."
     if vision_derived:
         label = match_result.target_label or "표시한 항목"
         message = (

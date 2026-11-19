@@ -38,6 +38,9 @@ def selector_keywords(transition: Transition, graph: TaskGraph) -> tuple[str, ..
 
 
 def eligible_nodes(transition: Transition, nodes: tuple[NormalizedNode, ...], graph: TaskGraph):
+    if transition.transition_id == 'COMMON_OPEN_MENU':
+        from ai_agent.runtime.common_screen import navigation_nodes
+        return navigation_nodes(nodes)
     state = graph.states[transition.from_state]
     roles = {'menu_item': {'menu_item', 'button'}, 'slider': {'slider'},
              'app_icon': {'app_icon'}, 'toggle': {'toggle'}, 'radio': {'radio'}}

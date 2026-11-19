@@ -102,6 +102,7 @@ class AccessibilityTree(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     package_name: str | None = None
+    observation_profile: Literal["common-screen.v1"] | None = None
     active_window_id: int | None = None
     window_context: NativeWindowContext | None = None
     screen_revision: str | None = Field(default=None, min_length=1, max_length=100)

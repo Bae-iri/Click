@@ -1,5 +1,10 @@
 {
   "version": 1,
+  "common_screen": {
+    "profile": "common-screen.v1",
+    "max_label_length": 80,
+    "private_pattern": "@|https?://|[\\d\\s+().-]{7,}|[\\r\\n\\t]|(?:이름|성명|주소|password|token|otp)\\s*[:=]|님(?:의|$)"
+  },
   "settings_packages": [
     "com.android.settings",
     "com.samsung.android.settings"

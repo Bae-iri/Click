@@ -1,0 +1,179 @@
+{
+  "schema_version": "click-common-screen-review.v1",
+  "date": "2026-11-19",
+  "base_revision": "8cee7b6b4d6b776372ce4d97f8f525defc13a5b5",
+  "scope": "Native menu navigation for supported Settings goals; not a new-app or Government24 extractor expansion",
+  "observation_profile": "common-screen.v1",
+  "jev_weights_changed": false,
+  "live_comparison": {
+    "schema_version": "common-screen-comparison.v1",
+    "source": "synthetic_public_screens",
+    "live_provider": true,
+    "device_actions": false,
+    "cases": [
+      {
+        "case": "known_settings",
+        "expected_public_menu": "row0",
+        "finite": {
+          "status": "selected",
+          "provider_calls": 1,
+          "payload_bytes": 4481,
+          "questions": 3,
+          "candidate_count": 1,
+          "latency_ms": 260.05,
+          "selected_menu": "row0",
+          "matches_expected": true
+        },
+        "common": {
+          "status": "selected",
+          "provider_calls": 1,
+          "payload_bytes": 1528,
+          "questions": 1,
+          "candidate_count": 3,
+          "latency_ms": 203.64,
+          "selected_menu": "row0",
+          "matches_expected": true
+        }
+      },
+      {
+        "case": "unlisted_readability",
+        "expected_public_menu": "row1",
+        "finite": {
+          "status": "unsupported_screen",
+          "provider_calls": 0,
+          "payload_bytes": 0,
+          "questions": 0,
+          "candidate_count": 0,
+          "latency_ms": 0.34,
+          "selected_menu": null,
+          "matches_expected": false
+        },
+        "common": {
+          "status": "selected",
+          "provider_calls": 1,
+          "payload_bytes": 1544,
+          "questions": 1,
+          "candidate_count": 3,
+          "latency_ms": 198.01,
+          "selected_menu": "row1",
+          "matches_expected": true
+        }
+      },
+      {
+        "case": "unlisted_display",
+        "expected_public_menu": "row1",
+        "finite": {
+          "status": "unsupported_screen",
+          "provider_calls": 0,
+          "payload_bytes": 0,
+          "questions": 0,
+          "candidate_count": 0,
+          "latency_ms": 0.32,
+          "selected_menu": null,
+          "matches_expected": false
+        },
+        "common": {
+          "status": "selected",
+          "provider_calls": 1,
+          "payload_bytes": 1548,
+          "questions": 1,
+          "candidate_count": 3,
+          "latency_ms": 371.82,
+          "selected_menu": "row1",
+          "matches_expected": true
+        }
+      },
+      {
+        "case": "unlisted_audio",
+        "expected_public_menu": "row0",
+        "finite": {
+          "status": "unsupported_screen",
+          "provider_calls": 0,
+          "payload_bytes": 0,
+          "questions": 0,
+          "candidate_count": 0,
+          "latency_ms": 0.35,
+          "selected_menu": null,
+          "matches_expected": false
+        },
+        "common": {
+          "status": "selected",
+          "provider_calls": 1,
+          "payload_bytes": 1535,
+          "questions": 1,
+          "candidate_count": 3,
+          "latency_ms": 416.0,
+          "selected_menu": "row0",
+          "matches_expected": true
+        }
+      }
+    ]
+  },
+  "known_screen_request_reduction_percent": 65.9,
+  "validation": {
+    "backend_targeted": {
+      "passed": 191
+    },
+    "backend_common_screen": {
+      "passed": 15
+    },
+    "production_process_regressions": {
+      "passed": 24
+    },
+    "ai_agent": {
+      "passed": 486,
+      "preexisting_failures_deselected": 3,
+      "baseline_verified": true
+    },
+    "android": {
+      "com.click.data.snapshot.SettingsScreenPrivacyTest": {
+        "tests": 21,
+        "failures": 0,
+        "errors": 0
+      },
+      "com.click.data.snapshot.SettingsCandidateDiagnosticsTest": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0
+      },
+      "com.click.data.remote.AgentServerContractTest": {
+        "tests": 11,
+        "failures": 0,
+        "errors": 0
+      }
+    },
+    "android_new_api_lint": "PASS",
+    "apk_build": "PASS"
+  },
+  "broader_regression_limits": {
+    "initial_backend_full_run": {
+      "passed": 2945,
+      "failed": 24,
+      "errors": 1,
+      "skipped": 1
+    },
+    "resolved_new_regression": "11 selection-failure test cases used legacy request objects without the new optional profile; getattr compatibility fix passed targeted rerun.",
+    "baseline_backend_reproduction": "9 of the remaining selected checks also fail on unmodified base: 2 catalog expectations, missing psycopg and 6 sandbox IPC failures. All 24 process regression checks pass with IPC permitted.",
+    "suite_order_limit": "Four legacy authentication checks and a browsing fixture failed in the broad run but passed when isolated on base; full-suite order issues remain unclaimed.",
+    "baseline_ai_agent_failures": [
+      "online imports of offline Government24 graph implementation",
+      "stale public-guide goal count",
+      "stale set of implemented Government24 guide goals"
+    ]
+  },
+  "artifact": {
+    "path": "/private/tmp/click-common-screen-20261119.apk",
+    "sha256": "5dc4b16946e6adf94448e147d9363b604cfcb0936517f9d3b65e694a8780f269",
+    "installed_on_device": false
+  },
+  "rollout": {
+    "backend_deployed": false,
+    "requires_backend_and_apk": true
+  },
+  "limitations": [
+    "Four public synthetic scenes, one request per profile/case; no general accuracy or latency improvement claim.",
+    "No physical-device Settings navigation was performed for this change.",
+    "Unknown public menu titles are now permitted by structural/pattern filtering; this is not a guarantee of anonymization.",
+    "Setting-changing controls keep their existing identity, confirmation and verified-value requirements."
+  ]
+}

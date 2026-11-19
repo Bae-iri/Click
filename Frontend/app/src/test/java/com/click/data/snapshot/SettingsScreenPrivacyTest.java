@@ -18,6 +18,44 @@ public class SettingsScreenPrivacyTest {
         }
     }
 
+    @Test public void semanticProfileKeepsUnlistedNativeMenuTitlesButDropsBodyAndPrivateValues() throws Exception {
+        JSONObject row = node("row", null).put("parent_id", "list").put("clickable", true)
+                .put("class_name", "android.widget.LinearLayout");
+        JSONObject title = node("heading", "기기 환경").put("resource_id", "android:id/toolbar_title");
+        JSONObject label = node("label", "읽기 편의 메뉴").put("parent_id", "row").put("resource_id", "android:id/title");
+        JSONObject body = node("body", "PRIVATE_BODY");
+        JSONObject email = node("email", "test@example.com").put("clickable", true);
+        JSONObject result = privacy.filterSemantic(request(node("list", null).put("scrollable", true), row, title, label, body, email), "font_size", true);
+        String encoded = result.toString();
+        assertEquals("common-screen.v1", result.getJSONObject("accessibility_tree").getString("observation_profile"));
+        assertTrue(encoded.contains("읽기 편의 메뉴"));
+        assertTrue(encoded.contains("기기 환경"));
+        assertFalse(encoded.contains("PRIVATE_BODY"));
+        assertFalse(encoded.contains("test@example.com"));
+    }
+
+    @Test public void semanticProfileStillBlocksCredentialInputs() throws Exception {
+        JSONObject password = node("password", "SECRET").put("class_name", "android.widget.EditText")
+                .put("extras", new JSONObject().put("password", true));
+        try {
+            privacy.filterSemantic(request(node("title", "설정"), password), "font_size", true);
+            fail("Authentication inputs must remain local");
+        } catch (SettingsScreenPrivacy.Blocked blocked) {
+            assertEquals(SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_INPUT, blocked.reason);
+        }
+    }
+
+    @Test public void semanticProfileDoesNotExpandOtherApplications() throws Exception {
+        JSONObject request = request(node("row", "읽기 편의 메뉴").put("clickable", true));
+        request.getJSONObject("accessibility_tree").put("package_name", "unknown.app");
+        try {
+            privacy.filterSemantic(request, "font_size", true);
+            fail("New application execution needs its own contract");
+        } catch (SettingsScreenPrivacy.Blocked blocked) {
+            assertEquals(SettingsScreenPrivacy.Blocked.Reason.UNSUPPORTED_APP, blocked.reason);
+        }
+    }
+
     private JSONObject node(String id, String text) throws Exception {
         return new JSONObject().put("node_id", id).put("text", text)
                 .put("package_name", "com.android.settings").put("visible_to_user", true)

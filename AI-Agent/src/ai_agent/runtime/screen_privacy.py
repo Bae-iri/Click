@@ -92,7 +92,7 @@ def private_node_ids(nodes):
     return hidden
 
 
-def assess_screen(nodes, setting, package=None):
+def assess_screen(nodes, setting, package=None, *, semantic=False):
     hidden = private_node_ids(nodes)
     from ai_agent.runtime.environment import native_control_surface
     surface=native_control_surface(nodes,package)
@@ -134,6 +134,10 @@ def assess_screen(nodes, setting, package=None):
             return result('sensitive_screen', 'protected_screen')
         if not description(node) and not is_input:
             recognized |= bool(label(node.text, setting) or label(node.content_description, setting))
+            if semantic:
+                from ai_agent.runtime.common_screen import public_label, structural_label
+                recognized |= bool(structural_label(node, by_id) and
+                    (public_label(node.text) or public_label(node.content_description)))
     if recognized:
         return result(None, 'safe_native_labels')
     if not nodes:
@@ -145,19 +149,24 @@ def screen_status(nodes, setting, package=None):
     return assess_screen(nodes, setting, package).status
 
 
-def filter_nodes(nodes, setting, *, finite_labels=True):
+def filter_nodes(nodes, setting, *, finite_labels=True, semantic=False):
     from ai_agent.runtime.environment import native_control_surface
     surface=native_control_surface(nodes)
     control_scope=surface is not None and (setting is None or setting==surface['setting'])
     hidden_ids = private_node_ids(nodes)
+    by_id = {node.node_id: node for node in nodes}
+    from ai_agent.runtime.common_screen import public_label, structural_label
     result = []
     for node in nodes:
         if control_scope and node.node_id not in surface['node_ids']:continue
         hidden = (node.node_id in hidden_ids or sensitive_node(node)
             or node.role in {'text_field', 'text_input'} or description(node))
+        def exported(value):
+            approved = label(value, setting) if finite_labels else value
+            return approved or (public_label(value) if semantic and structural_label(node, by_id) else None)
         result.append(replace(node,
-            text=None if hidden else label(node.text, setting) if finite_labels else node.text,
-            content_description=None if hidden else label(node.content_description, setting) if finite_labels else node.content_description,
+            text=None if hidden else exported(node.text),
+            content_description=None if hidden else exported(node.content_description),
             extras={} if hidden else safe_extras(node.extras),
             clickable=False if hidden else node.clickable,
             enabled=False if hidden else node.enabled))

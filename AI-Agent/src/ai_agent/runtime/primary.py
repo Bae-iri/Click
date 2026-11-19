@@ -52,6 +52,8 @@ def observe_page_navigation(session, snapshot, nodes, graph):
             or snapshot.captured_at_ms<=previous.captured_at_ms):
         return session
     edge=next((edge for edge in graph.transitions if edge.transition_id==session.pending_transition_id),None)
+    if edge and edge.verification_predicate == 'semantic_page_changed':
+        return session  # Correlate the native action before judging this observed page change.
     if edge and edge.verification_predicate=='state_reached' and not session.recovery_state.get('waiting_for_user'):
         from ai_agent.runtime.verification import navigation_reachable
         if snapshot.state_id==edge.to_state or navigation_reachable(graph,edge.to_state,snapshot.state_id):
@@ -126,7 +128,7 @@ def _retained_match(session, attempt, snapshot, nodes, graph, exclusions):
                         and (previous.native_fingerprint is None
                              or previous.native_fingerprint == snapshot.native_fingerprint))
     stable_menu = (transition.action_type.value == "tap"
-        and transition.verification_predicate == "state_reached"
+        and transition.verification_predicate in {"state_reached", "semantic_page_changed"}
         and transition.safety_level == SafetyLevel.LOW_RISK
         and not transition.confirmation_message and not transition.completes_task
         and not graph.states[transition.to_state].verification_only
@@ -202,7 +204,8 @@ def decide_primary(*, resolver, request, session, snapshot, nodes, raw_nodes, gr
 
     match = resolver.resolve(nodes=nodes, graph=graph, goal=goal, raw_nodes=raw_nodes,
         session=session, verification=verification, excluded_target_keys=exclusions,
-        screen_bounds=screen_bounds, attempt=attempt)
+        screen_bounds=screen_bounds, attempt=attempt,
+        **({'semantic': True} if getattr(request, 'observation_profile', None) == 'common-screen.v1' else {}))
     info.update(resolver.last_diagnostics)
     if match:
         return PrimaryDecision(match, info)

@@ -47,6 +47,8 @@ def safe_extras(extras):
             and abs(value) <= 100_000_000 and math.isfinite(value)}
     if type(extras.get('checked')) is bool:
         safe['checked'] = extras['checked']
+    if extras.get('heading') is True:
+        safe['heading'] = True
     return safe
 
 

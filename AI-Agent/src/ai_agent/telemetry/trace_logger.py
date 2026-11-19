@@ -79,7 +79,7 @@ def diagnostic_payload(value, depth=0):
         if selection.get('observation_reason') in OBSERVATION_REASONS:
             safe['observation_reason'] = selection['observation_reason']
         for key, allowed in (("provider", {"rules", "jev"}), ("status", UI_SELECTION_STATUSES),
-                             ("mode", {"primary", "auxiliary"}), ("judgment_mode", {"atomic", "legacy"})):
+                             ("mode", {"primary", "auxiliary"}), ("judgment_mode", {"atomic", "legacy", "semantic"})):
             if isinstance(selection.get(key), str) and selection[key] in allowed:
                 safe[key] = selection[key]
         if type(selection.get("called")) is bool:
@@ -103,7 +103,7 @@ def diagnostic_payload(value, depth=0):
         if isinstance(model, str) and re.fullmatch(r"jev-[A-Za-z0-9_.-]{1,60}", model):
             safe["model"] = model
         choice_count = selection.get("choice_count")
-        if type(choice_count) is int and 3 <= choice_count <= 252:
+        if type(choice_count) is int and (2 if selection.get('judgment_mode') == 'semantic' else 3) <= choice_count <= 252:
             safe["choice_count"] = choice_count
         if type(selection.get("question_count")) is int and selection["question_count"] in {1, 3}:
             safe["question_count"] = selection["question_count"]

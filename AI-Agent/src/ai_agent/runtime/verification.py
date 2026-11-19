@@ -69,7 +69,7 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
         return VerificationResult(status, current_state_id, transition.to_state, message,
                                   attempt_id=attempt.get('attempt_id') if attempt else None,
                                   count_attempt=count, task_completed=completed, evidence=evidence)
-    if transition.verification_predicate not in {'state_reached', 'target_value_increased', 'target_value_decreased', *CHECKED_PREDICATES, *CHOICE_PREDICATES}:
+    if transition.verification_predicate not in {'semantic_page_changed', 'state_reached', 'target_value_increased', 'target_value_decreased', *CHECKED_PREDICATES, *CHOICE_PREDICATES}:
         return result(Status.UNKNOWN, 'unsupported_verification_predicate')
     correlated = bool(attempt and attempt.get('event_key')
                       and attempt.get('transition_id') == pending_transition_id)
@@ -90,6 +90,24 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
         return result(Status.WAITING_FOR_OBSERVATION, 'transient_screen_unavailable')
 
     # A manually reached nonterminal screen is progress, not evidence of executing a guide.
+    if transition.verification_predicate == 'semantic_page_changed':
+        from ai_agent.runtime.common_screen import fingerprint
+        baseline = (attempt or {}).get('baseline_semantic_fingerprint')
+        changed = bool(nodes and baseline and fingerprint(nodes) != baseline)
+        if not correlated:
+            return result(Status.SUCCESS if changed else Status.WAITING_FOR_ACTION,
+                          'observed_progress' if changed else 'no_correlated_action')
+        if observation_time is None or action_time is None or not baseline:
+            return result(Status.UNKNOWN, 'missing_observation_timing')
+        elapsed = observation_time - action_time
+        if elapsed < graph.policy.settle_ms:
+            return result(Status.WAITING_FOR_OBSERVATION, 'awaiting_settled_observation')
+        if changed:
+            return result(Status.SUCCESS, 'semantic_page_changed', count=True)
+        if elapsed < graph.policy.observation_timeout_ms:
+            return result(Status.WAITING_FOR_OBSERVATION, 'awaiting_settled_observation')
+        return result(Status.NO_CHANGE, 'settled_postcondition_not_met', count=True)
+
     if (transition.verification_predicate == 'state_reached'
             and current_state_id == transition.to_state
             and not graph.states[transition.to_state].verification_only

@@ -28,10 +28,12 @@ public final class SettingsScreenPrivacy {
     private final Set<String> settings, launchers, blockedTitles, descriptions, privateResources, privateRegions, emptySearch, roles;
     private final Set<String> commerce, commerceLabels, commercePrivate;
     private final JSONObject commerceAliases, commerceResources;
+    private final JSONObject commonPolicy;
 
     public SettingsScreenPrivacy(VisionPrivacy vocabulary, JSONObject policy) throws JSONException {
         if (policy.getInt("version") != 1) throw new JSONException("Unsupported screen policy");
         this.vocabulary = vocabulary;
+        commonPolicy = policy.optJSONObject("common_screen");
         settings = strings(policy.getJSONArray("settings_packages"));
         launchers = strings(policy.getJSONArray("launcher_packages"));
         blockedTitles = strings(policy.getJSONArray("blocked_titles"));
@@ -64,6 +66,14 @@ public final class SettingsScreenPrivacy {
         return filter(request, setting, true);
     }
     public JSONObject filter(JSONObject request, String setting, boolean imageMaskReady) throws JSONException, Blocked, Incomplete {
+        return filterInternal(request, setting, imageMaskReady, false);
+    }
+
+    public JSONObject filterSemantic(JSONObject request, String setting, boolean imageMaskReady) throws JSONException, Blocked, Incomplete {
+        return filterInternal(request, setting, imageMaskReady, true);
+    }
+
+    private JSONObject filterInternal(JSONObject request, String setting, boolean imageMaskReady, boolean semanticRequested) throws JSONException, Blocked, Incomplete {
         // Native text is filtered by identity, not by screenshot mask geometry.
         // Never permit an image path without its separate masking proof.
         if (request.optJSONObject("vision_snapshot") != null && !imageMaskReady)
@@ -87,6 +97,7 @@ public final class SettingsScreenPrivacy {
             catch(IllegalArgumentException invalid){throw new Blocked();}
         }
         String pkg = tree.optString("package_name");
+        boolean semantic = semanticRequested && commonPolicy != null && settings.contains(pkg) && !"commerce".equals(setting);
         NativeControlSurface.Match surface=NativeControlSurface.identify(tree);
         boolean controlScope=surface!=null && (setting==null || setting.equals(surface.setting()));
         boolean commerceScope = "commerce".equals(setting);
@@ -126,7 +137,7 @@ public final class SettingsScreenPrivacy {
                     || blockedTitles.contains(normalize(node.optString("content_description")))))
                 throw new Blocked(Blocked.Reason.SENSITIVE_SCREEN);
             if(controlScope && !surface.nodeIds().contains(node.optString("node_id")))continue;
-            if(otherSettingControl(node,byId,setting))continue;
+            if(!semantic && otherSettingControl(node,byId,setting))continue;
             String resource = node.optString("resource_id");
             String resourceName = resource.substring(resource.lastIndexOf('/') + 1);
             boolean description = descriptions.contains(resourceName);
@@ -134,6 +145,10 @@ public final class SettingsScreenPrivacy {
             boolean hidden = hiddenRegions.contains(node.getString("node_id"));
             String text = sensitive || description || hidden ? null : approved(node.optString("text", null), pkg, setting);
             String content = sensitive || description || hidden ? null : approved(node.optString("content_description", null), pkg, setting);
+            if (semantic && !sensitive && !description && !hidden && structuralLabel(node, byId)) {
+                if (text == null) text = publicLabel(node.optString("text", null));
+                if (content == null) content = publicLabel(node.optString("content_description", null));
+            }
             if(commerceScope && commerce.contains(pkg) && !sensitive && !description && !hidden && text==null && content==null) {
                 String label=commerceResources.optString(resource.substring(resource.lastIndexOf('/')+1),null);
                 if(label!=null && commerceLabels.contains(label) && node.optBoolean("clickable"))content=label;
@@ -174,6 +189,7 @@ public final class SettingsScreenPrivacy {
             safe.put("clickable", !sensitive && !description && !soundModeChoice(node,byId) && node.optBoolean("clickable"))
                     .put("enabled", !sensitive && !description && node.optBoolean("enabled", true));
             JSONObject numeric = new JSONObject();
+            if (semantic && !sensitive && !description && extras != null && extras.optBoolean("heading")) numeric.put("heading", true);
             if (!sensitive && !description && extras != null) {
                 for (String key : new String[]{"progress", "value", "current", "range_current", "percent", "min", "max"}) {
                     Object value = extras.opt(key);
@@ -221,6 +237,7 @@ public final class SettingsScreenPrivacy {
             throw new Blocked();
         }
         JSONObject safeTree = new JSONObject();
+        if (semantic) safeTree.put("observation_profile", commonPolicy.getString("profile"));
         for (String key : new String[]{"package_name", "active_window_id", "captured_at", "observation_id",
                 "screen_revision", "captured_at_ms", "screen_width", "screen_height", "window_context"})
             if (tree.has(key)) safeTree.put(key, tree.get(key));
@@ -321,6 +338,31 @@ public final class SettingsScreenPrivacy {
         }
         String text = vocabulary.exportSettingsLabel(value);
         return launchers.contains(pkg) && !"설정".equals(text) && !"settings".equals(text) ? null : text;
+    }
+
+    private String publicLabel(String value) throws JSONException {
+        if (value == null || value.isBlank() || value.length() > commonPolicy.getInt("max_label_length")
+                || value.contains("[REDACTED]")
+                || java.util.regex.Pattern.compile(commonPolicy.getString("private_pattern"),
+                    java.util.regex.Pattern.CASE_INSENSITIVE).matcher(value).find()) return null;
+        return normalize(value);
+    }
+
+    private static boolean structuralLabel(JSONObject node, Map<String, JSONObject> byId) {
+        String resource = node.optString("resource_id").toLowerCase(Locale.ROOT);
+        resource = resource.substring(resource.lastIndexOf('/') + 1);
+        if (resource.contains("summary") || resource.contains("description") || resource.contains("subtitle")) return false;
+        if (Set.of("title", "toolbar_title", "action_bar_title", "screen_title", "header_title").contains(resource)
+                || node.optJSONObject("extras") != null && node.optJSONObject("extras").optBoolean("heading")
+                || node.optBoolean("clickable") || Set.of("menu_item", "button", "slider", "toggle", "radio").contains(node.optString("role"))) return true;
+        Set<String> seen = new HashSet<>();
+        JSONObject parent = byId.get(node.optString("parent_id"));
+        while (parent != null && seen.add(parent.optString("node_id"))) {
+            if (parent.optBoolean("clickable")) return true;
+            if (parent.optBoolean("scrollable")) break;
+            parent = byId.get(parent.optString("parent_id"));
+        }
+        return false;
     }
 
     private static boolean otherSettingControl(JSONObject node,Map<String,JSONObject> byId,String setting) {

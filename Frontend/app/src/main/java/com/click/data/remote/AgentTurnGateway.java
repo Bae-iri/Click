@@ -41,7 +41,7 @@ public final class AgentTurnGateway {
         if (screenPrivacy == null || screen == null) return false;
         logSettingsCandidates(screen, null, null, "preflight");
         try {
-            screenPrivacy.filter(new org.json.JSONObject().put("accessibility_tree", new org.json.JSONObject(screen.toJson())));
+            screenPrivacy.filterSemantic(new org.json.JSONObject().put("accessibility_tree", new org.json.JSONObject(screen.toJson())), null, true);
         } catch (com.click.data.snapshot.SettingsScreenPrivacy.Incomplete incomplete) {
             logPreflightResult(screen, "incomplete");
             return true;
@@ -97,8 +97,9 @@ public final class AgentTurnGateway {
             logSettingsCandidates(request, null, "collected");
             if (screenPrivacy == null)
                 throw new com.click.data.snapshot.SettingsScreenPrivacy.Blocked();
-            body = screenPrivacy.filter(body, request.observationSetting,
-                    request.accessibilityTree == null || request.accessibilityTree.privacyMaskingReady);
+            boolean maskReady = request.accessibilityTree == null || request.accessibilityTree.privacyMaskingReady;
+            body = server.commonScreen ? screenPrivacy.filterSemantic(body, request.observationSetting, maskReady)
+                    : screenPrivacy.filter(body, request.observationSetting, maskReady);
             logSettingsCandidates(request, body, "filtered");
         }
         journal.stage(body);

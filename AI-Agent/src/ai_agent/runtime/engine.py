@@ -196,13 +196,21 @@ class ClickAgentEngine:
             from ai_agent.runtime.commerce import handle_turn
             return handle_turn(self, request, graph, typed_goal, existing_session, original_screen)
         vocabulary_key = graph.definition.required_slots.get("setting", "")
+        from ai_agent.runtime.common_screen import PROFILE, augment_graph, fingerprint as semantic_fingerprint
+        semantic = bool(self.screen_resolver and (request.observation_profile == PROFILE
+            or existing_session and existing_session.observation_profile == PROFILE))
+        if semantic:
+            graph = augment_graph(graph)
+            request = replace(request, observation_profile=PROFILE)
         from ai_agent.runtime.screen_privacy import assess_screen, filter_nodes
         context = request.device_context or (request.raw_goal.device_context if request.raw_goal else None)
         package = (context.foreground_app or context.app_package) if context else None
-        assessment = assess_screen(original_screen, vocabulary_key, package)
+        assessment = assess_screen(original_screen, vocabulary_key, package, semantic=semantic)
         from ai_agent.runtime.environment import classify_environment,environment_recovery
         environment=environment or classify_environment(request)
         interrupted=environment_recovery(environment,vocabulary_key)
+        if semantic and interrupted and interrupted[0] == 'SETTINGS_OFF_PATH':
+            interrupted = None
         if interrupted and environment.kind!='SENSITIVE' and assessment.status!='sensitive_screen':
             from ai_agent.runtime.recovery import RecoveryPlan
             from ai_agent.runtime.guide import recovery_command
@@ -258,9 +266,9 @@ class ClickAgentEngine:
                     "failure": failure.to_dict()}, "recovery": recovery})
         request = replace(request, accessibility_tree=filter_nodes(
             original_screen if self.screen_resolver else request.accessibility_tree, vocabulary_key,
-            finite_labels=bool(self.screen_resolver)))
-        # First pass removes all unapproved text before goal typing. Narrow the
-        # verified payload to this goal before classification, matching or traces.
+            finite_labels=bool(self.screen_resolver), semantic=semantic))
+        # Recheck public-label/input policy before classification and traces.
+        # Common-screen navigation preserves structural titles beyond goal vocabulary.
         if request.vision_snapshot and request.vision_snapshot.privacy_status == "verified":
             request = sanitize_request(request, vision_vocabulary_key=vocabulary_key)
         previous_state_id = (
@@ -552,6 +560,7 @@ class ClickAgentEngine:
                     'target_bounds': target.bounds, 'baseline_value': target.value, 'baseline_checked': target.checked,
                     'baseline_range_min': target.range_min, 'baseline_range_max': target.range_max,
                     'baseline_observation_id': request.observation_id,
+                    'baseline_semantic_fingerprint': semantic_fingerprint(normalized_nodes),
                     'baseline_captured_at_ms': current_snapshot.captured_at_ms,
                     'setting': graph.definition.required_slots.get('setting', 'font_size'),
                     'baseline_setting_value': applied_value(current_snapshot.applied_settings, graph.definition.required_slots.get('setting', 'font_size')),
@@ -689,6 +698,7 @@ class ClickAgentEngine:
                      and request.captured_at_ms <= existing_session.last_snapshot.captured_at_ms))):
             path = existing_session.observed_path
         session_changes = dict(
+            observation_profile=PROFILE if semantic else None,
             task_id=graph.definition.task_id, typed_goal=typed_goal, current_state_id=effective_state_id,
             pending_transition_id=pending_transition_id,
             pending_confirmation_transition_id=pending_confirmation_transition_id,

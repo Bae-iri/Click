@@ -41,7 +41,7 @@ def validate_decision(record):
         raise ValueError("Invalid Jev hold reason")
     if "choice_kind" in record and record["choice_kind"] not in {"target", "wait_for_result", "insufficient_evidence"}:
         raise ValueError("Invalid Jev choice kind")
-    if "judgment_mode" in record and record["judgment_mode"] not in {"atomic", "legacy"}:
+    if "judgment_mode" in record and record["judgment_mode"] not in {"atomic", "legacy", "semantic"}:
         raise ValueError("Invalid Jev judgment mode")
     if "question_count" in record and (type(record["question_count"]) is not int or record["question_count"] not in {1, 3}):
         raise ValueError("Invalid Jev question count")

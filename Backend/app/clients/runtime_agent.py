@@ -43,6 +43,7 @@ def runtime_configuration():
                 Path(__file__).parents[1] / "services/commerce_jev.py",
                 Path(__file__).parents[1] / "services/jev_probabilities.py",
                 Path(__file__).parents[1] / "services/jev_screen_judgments.py"]
+    sources.append(Path(__file__).parents[1] / "services/screen_semantic_jev.py")
     digest = sha256()
     for source in sources:
         digest.update(source.name.encode())
@@ -56,6 +57,7 @@ def runtime_configuration():
         judgment_mode, temperature = screen_policy()
         configuration.update(model=model, minimum_confidence=minimum,
             screen_judgment_mode=judgment_mode, choice_temperature=temperature)
+        configuration['supported_observation_profiles'] = ['common-screen.v1']
     return configuration
 
 
@@ -102,6 +104,7 @@ class RuntimeAgentAdapter:
         device = getattr(request, "device_context", None)
         runtime_request = RuntimeRequest(
             request_id=request.request_id,
+            observation_profile=tree.observation_profile if tree else None,
             session_id=request.session_id,
             window_context=tree.window_context.model_dump(mode="json") if tree and tree.window_context else {},
             screen_bounds=(0, 0, screen_width, screen_height)
