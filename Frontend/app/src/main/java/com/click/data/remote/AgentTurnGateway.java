@@ -143,6 +143,19 @@ public final class AgentTurnGateway {
         } catch (Exception ignored) { /* Diagnostics must never affect task execution. */ }
     }
 
+    /** No HTTP/model call. The same guard is enforced again immediately before POST. */
+    public com.click.data.snapshot.SettingsScreenPrivacy.Mode privacyMode(
+            com.click.data.snapshot.ScreenSnapshot screen, String setting) {
+        if (screenPrivacy == null || screen == null)
+            return com.click.data.snapshot.SettingsScreenPrivacy.Mode.UNVERIFIED;
+        try {
+            return screenPrivacy.classify(new org.json.JSONObject().put("accessibility_tree",
+                    new org.json.JSONObject(screen.toJson())), setting, screen.privacyMaskingReady);
+        } catch (org.json.JSONException malformed) {
+            return com.click.data.snapshot.SettingsScreenPrivacy.Mode.UNVERIFIED;
+        }
+    }
+
     public com.click.data.local.DeviceTaskJournal journal(){return journal;}
     public void reconcileOffline(String sessionId,Callback callback) {
         final long deadline=android.os.SystemClock.elapsedRealtime()+RequestBudget.TOTAL_MS;

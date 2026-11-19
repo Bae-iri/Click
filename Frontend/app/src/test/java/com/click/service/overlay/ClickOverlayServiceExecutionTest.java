@@ -97,6 +97,8 @@ public class ClickOverlayServiceExecutionTest {
         set("taskFlowView", mock(TaskFlowOverlayView.class));
         set("taskFlowParams", new WindowManager.LayoutParams());
         when(gateway.currentContract()).thenAnswer(call -> contract);
+        when(gateway.privacyMode(any(), any())).thenReturn(
+                com.click.data.snapshot.SettingsScreenPrivacy.Mode.PUBLIC_MINIMIZED);
         doAnswer(call -> {
             ((AgentTurnGateway.ContractCallback) call.getArgument(0)).onSuccess(contract);
             return null;
@@ -362,10 +364,12 @@ public class ClickOverlayServiceExecutionTest {
     @Test public void sensitiveVpnStepKeepsPurposeWithoutFailingOrResendingTheScreen() throws Exception {
         resolve(); confirm();
         set("acceptedGoal", new JSONObject().put("goal_type", "settings.vpn.connect").put("target_app", "android_settings"));
+        when(gateway.privacyMode(any(), any())).thenReturn(com.click.data.snapshot.SettingsScreenPrivacy.Mode.SENSITIVE);
         int count = sent.size();
         callbacks.get(callbacks.size() - 1).onFailure(new com.click.data.snapshot.SettingsScreenPrivacy.Blocked(
                 com.click.data.snapshot.SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_INPUT));
-        assertTrue((boolean) get("agentPaused"));
+        assertFalse((boolean) get("agentPaused"));
+        assertNotNull(get("environmentWait"));
         TaskFlowOverlayView view = (TaskFlowOverlayView) get("taskFlowView");
         verify(view).privateSettingsStep(contains("VPN 설정"));
         verify(view, never()).failed(any());
@@ -4357,4 +4361,46 @@ public class ClickOverlayServiceExecutionTest {
         send(null);assertNull(get("coupangNativeGuide"));assertEquals(count+1,requests.size());
     }
 
+    @Test public void sensitiveModeKeepsGoalAndOnlyResumesAfterVerifiedPublicScreen() throws Exception {
+        prepareGuideResponse(); deliver(1,"highlight","tap",null);
+        Object accepted=get("acceptedGoal"); int before=requests.size();
+        when(gateway.privacyMode(any(), any())).thenReturn(com.click.data.snapshot.SettingsScreenPrivacy.Mode.SENSITIVE);
+        currentScreen=environmentScene("com.android.settings","삼성 계정",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        broadcastCurrentPage();
+        assertEquals(before,requests.size()); assertSame(accepted,get("acceptedGoal"));
+        assertNotNull(get("environmentWait"));
+        verify((TaskFlowOverlayView)get("taskFlowView")).privateSettingsStep(anyString());
+        when(gateway.privacyMode(any(), any())).thenReturn(com.click.data.snapshot.SettingsScreenPrivacy.Mode.UNVERIFIED);
+        currentScreen=displaySettingsPage(); broadcastCurrentPage();
+        assertEquals(before,requests.size()); assertNotNull(get("environmentWait"));
+        when(gateway.privacyMode(any(), any())).thenReturn(com.click.data.snapshot.SettingsScreenPrivacy.Mode.PUBLIC_MINIMIZED);
+        broadcastCurrentPage();
+        assertEquals(before+1,requests.size()); assertSame(accepted,get("acceptedGoal"));
+        assertNull(get("environmentWait"));
+    }
+
+    @Test public void privacyBoundaryFailureDoesNotDiscardTheTaskAndDoesNotOverrideUserPause() throws Exception {
+        prepareGuideResponse();
+        Object accepted=get("acceptedGoal");
+        callbacks.get(1).onFailure(new com.click.data.snapshot.SettingsScreenPrivacy.Blocked(
+                com.click.data.snapshot.SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_INPUT));
+        assertSame(accepted,get("acceptedGoal")); assertNotNull(get("environmentWait"));
+        var state=(TaskExecutionController)fieldValue("execution");
+        assertNotEquals(TaskExecutionController.Phase.STOPPED,state.phase());
+        state.pause(); int before=requests.size();
+        when(gateway.privacyMode(any(), any())).thenReturn(com.click.data.snapshot.SettingsScreenPrivacy.Mode.PUBLIC_MINIMIZED);
+        currentScreen=displaySettingsPage(); broadcastCurrentPage();
+        assertEquals(before,requests.size()); assertTrue(state.paused());
+    }
+    @Test public void latePublicReplyCannotReplaceSensitiveModeWithConfirmation() throws Exception {
+        prepareGuideResponse();
+        when(gateway.privacyMode(any(), any())).thenReturn(com.click.data.snapshot.SettingsScreenPrivacy.Mode.SENSITIVE);
+        currentScreen=environmentScene("com.android.settings","삼성 계정",com.click.data.snapshot.NativeWindowContext.UNKNOWN);
+        broadcastCurrentPage();
+        assertNotNull(get("environmentWait"));
+        var panel=(TaskFlowOverlayView)get("taskFlowView");clearInvocations(panel);
+        deliver(1,"confirmation","drag",null);
+        assertNotNull(get("environmentWait")); assertNull(get("agentConfirmationId"));
+        verify(panel,never()).progress(any(),any(),eq("대상 안내"),anyBoolean());
+    }
 }

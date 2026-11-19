@@ -128,6 +128,12 @@ final class TaskExecutionController {
         if(paused() || manual() || pendingControl!=null || phase==Phase.RESULT || phase==Phase.FOLLOW_UP || phase==Phase.EXECUTING)return false;
         phase=beforeRecovery=Phase.OBSERVING;observationRequested=true;return true;
     }
+    boolean sensitiveEnvironmentBlocked() {
+        // Privacy interruption must also stop an in-flight local gesture loop.
+        // Explicit controls, manual handoff, and terminal phases retain precedence.
+        if (phase == Phase.EXECUTING && pendingControl == null) phase = beforeRecovery = Phase.OBSERVING;
+        return environmentBlocked();
+    }
     boolean environmentBlocked() {
         if(!environmentReady())return false;
         beforeRecovery=Phase.OBSERVING;phase=Phase.RECOVERY;recoveryCause=RecoveryCause.ENVIRONMENT;observationRequested=false;return true;

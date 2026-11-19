@@ -48,4 +48,9 @@ public class ScreenEnvironmentTest {
    "ACTION_DISPATCH_FAILED","ALREADY_SET","ACTION_RESULT_UNOBSERVABLE","STALE_RESPONSE","NETWORK_UNAVAILABLE","SENSITIVE_INPUT","CONTRACT_MISMATCH"};
   for(String reason:reasons){JSONObject rule=ScreenEnvironmentPolicy.recovery(reason);assertFalse(reason,rule.optString("category").isEmpty());assertTrue(rule.getInt("automatic_retries")<=3);assertTrue(rule.getBoolean("keep_goal"));}
  }
+ @Test public void sensitiveTitleOutranksVendorDialogWindow() throws Exception {
+  var screen=scene(new JSONObject().put("package","com.android.settings").put("title","삼성 계정")
+      .put("hints",new JSONObject().put("window_kind","DIALOG")));
+  assertEquals(ScreenEnvironment.Kind.SENSITIVE,ScreenEnvironment.classify(screen,true,false,"com.click").kind());
+ }
 }
