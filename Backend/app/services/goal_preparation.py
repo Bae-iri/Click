@@ -136,6 +136,7 @@ class GoalPreparationService:
 
         source = request.source_text
         public_guide_type = None
+        planner_goal = False
         gov24_allowed = public_guide_policy.enabled() and request.device_context.capabilities.gov24_login
         browse_allowed = browse_policy.enabled() and request.device_context.capabilities.coupang_browse
         values = dict(previous['values']) if previous else {}
@@ -172,10 +173,18 @@ class GoalPreparationService:
             restored_type = (previous.get('public_guide_goal') or {}).get('goal_type')
             if restored_type in public_guide_types:
                 public_guide_type = restored_type
+                planner_goal = bool((previous.get('public_guide_goal') or {}).get('planner'))
         matches = [] if lexical_blocked else self._keywords(source)
         gov24_matches = [g for g in matches if g['target_app'] == 'gov24']
         civil_type = public_guide_policy.civil_goal(source) if len(gov24_matches) <= 1 else None
+        from app.services import gov24_planner
+        planned_goal = gov24_planner.requested_goal(source) if (gov24_planner.enabled()
+            and request.device_context.capabilities.gov24_planner and len(gov24_matches) <= 1) else None
         if (public_guide_policy.enabled() and request.device_context.capabilities.gov24_civil
+                and not lexical_blocked and planned_goal):
+            public_guide_type, planner_goal = planned_goal, True
+            family, values, rejection_reason = None, {}, None
+        elif (public_guide_policy.enabled() and request.device_context.capabilities.gov24_civil
                 and not lexical_blocked and civil_type and (civil_type == 'gov24.resident_copy.open'
                     or request.device_context.capabilities.gov24_services)):
             public_guide_type = civil_type
@@ -271,6 +280,10 @@ class GoalPreparationService:
                 label = public_guide_policy.CIVIL_GRAPHS[public_guide_type]['label']
                 display_name = f'정부24 {label} 안내 화면 찾기'
                 message = f'정부24에서 {label} 안내 화면까지 함께 이동할까요? 화면에 보이는 공개 메뉴를 안내하고, 신청서 입력과 최종 신청은 직접 진행해 주세요.'
+            if planner_goal:
+                title = gov24_planner.SERVICES[public_guide_type][0]
+                display_name = f'정부24 {title} 안내 화면 찾기'
+                message = f'정부24 {title} 안내 화면까지 함께 이동할까요? 실제 발급·신청과 인증은 직접 진행해 주세요.'
             rejection_reason = None
         elif browse_type:
             family, fields, missing = None, [], []
@@ -364,7 +377,8 @@ class GoalPreparationService:
                 ['request'] if question and question.field == 'request' else []), question=question,
             graph_reference=reference, expires_at=now + self.TTL, execution_mode='public_guide' if public_guide_type else 'browse' if browse_type else 'graph',
             browse_goal_type=browse_type, browse_goal=browse_goal,
-            public_guide_goal={'goal_type':public_guide_type} if public_guide_type else None)
+            public_guide_goal={'goal_type': public_guide_type, 'planner': planner_goal,
+                'request_scope': gov24_planner.request_scope(source) if planner_goal else 'screen_only'} if public_guide_type else None)
         response = AgentGoalResolutionResponse(request_id=request.request_id, session_id=request.session_id,
             session_version=0, resolution_status=resolution_status, goal=goal, display_name=display_name,
             message=message, preparation=prepared)

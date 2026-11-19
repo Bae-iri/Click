@@ -30,7 +30,7 @@ def hasReleaseSigning = ["storeFile", "storePassword", "keyAlias", "keyPassword"
 if (!releaseSigning.isEmpty() && !hasReleaseSigning) throw new GradleException("Incomplete release signing properties")
 if (providers.gradleProperty("CLICK_REQUIRE_RELEASE_SIGNING").getOrElse("false") == "true" && !hasReleaseSigning)
     throw new GradleException("Play upload signing is required; configure CLICK_RELEASE_SIGNING_FILE")
-def gov24Pilot = clickApplicationId == "com.click.gov24pilot"
+def gov24Pilot = clickApplicationId in ["com.click.gov24pilot", "com.click.gov24planner"]
 // Keep machine-local Kakao setup across builds without committing an app key.
 def localSettings = new Properties()
 def localSettingsFile = rootProject.file("local.properties")
@@ -47,8 +47,8 @@ android {
     compileSdk 36
 
     defaultConfig {
-        buildConfigField "String", "KAKAO_NATIVE_APP_KEY", javaString(kakaoNativeAppKey)
-        manifestPlaceholders.kakaoRedirectScheme = "kakao${kakaoNativeAppKey ?: 'unconfigured'}"
+        buildConfigField "String", "KAKAO_NATIVE_APP_KEY", javaString(gov24Pilot ? "" : kakaoNativeAppKey)
+        manifestPlaceholders.kakaoRedirectScheme = gov24Pilot ? "kakaounconfiguredgov24pilot" : "kakao${kakaoNativeAppKey ?: 'unconfigured'}"
         applicationId clickApplicationId
         manifestPlaceholders.clickAppLabel = gov24Pilot ? "클릭 정부24 테스트" : "@string/app_name"
         manifestPlaceholders.clickAccessibilityLabel = gov24Pilot ? "클릭 정부24 테스트" : "@string/accessibility_service_label"

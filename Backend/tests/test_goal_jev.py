@@ -327,8 +327,8 @@ def test_contextual_new_civil_service_requires_v4_capability(monkeypatch, enable
                    'capabilities': {'gov24_civil': True, 'gov24_services': enabled}}
         response = flow.resolve(device_context=context)
         if enabled:
-            assert response['preparation']['public_guide_goal'] == {'goal_type': goal}
-            assert flow.resolve(device_context=context)['preparation']['public_guide_goal'] == {'goal_type': goal}
+            assert response['preparation']['public_guide_goal'] == {'goal_type': goal, 'planner': False, 'request_scope': 'screen_only'}
+            assert flow.resolve(device_context=context)['preparation']['public_guide_goal'] == {'goal_type': goal, 'planner': False, 'request_scope': 'screen_only'}
         else:
             assert response['resolution_status'] == 'unsupported'
             assert response['preparation']['public_guide_goal'] is None

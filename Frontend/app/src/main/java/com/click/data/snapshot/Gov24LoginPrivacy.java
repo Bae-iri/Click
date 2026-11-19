@@ -12,6 +12,10 @@ public final class Gov24LoginPrivacy {
     public Gov24LoginPrivacy(boolean civil){this(civil,false);}
     public Gov24LoginPrivacy(boolean civil,boolean diagnostics){this.civil=civil;this.diagnostics=diagnostics;}
     public static final String PACKAGE="kr.go.minwon.m";
+    public static boolean isPlannerGoal(String goal) {
+        return "gov24.resident_copy.open".equals(goal) || "gov24.resident_extract.open".equals(goal)
+            || "gov24.move_in.open".equals(goal) || "gov24.building_register.open".equals(goal);
+    }
     private static final JSONObject POLICY;
     static {try {POLICY=new JSONObject(com.click.generated.Gov24LoginPolicyData.json());}
         catch(JSONException error){throw new ExceptionInInitializerError(error);}}

@@ -18,7 +18,8 @@ public class CoupangBrowseGateway {
     public void send(JSONObject request,Callback callback) {
         executor.execute(()->{
             try {
-                JSONObject response=new JSONObject(http.post(path,request.toString(),15000).body);
+                JSONObject response=new JSONObject(http.post(path,request.toString(),
+                    "public-guide.v1".equals(protocol)?45000:15000).body);
                 validate(request,response,protocol);
                 main.post(()->callback.success(response));
             }catch(Exception error){main.post(()->callback.failure(error));}
