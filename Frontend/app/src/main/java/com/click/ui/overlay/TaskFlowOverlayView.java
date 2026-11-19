@@ -899,6 +899,14 @@ public final class TaskFlowOverlayView extends LinearLayout {
         requestEditor(state.data.optString("source_text"), null);
     }
 
+    public void appGuidance(String message, Runnable refresh, Runnable finish) {
+        progress(null, null, message, false);
+        controls.setVisibility(GONE); divider.setVisibility(GONE);
+        recoveryActions.addView(primaryButton("현재 화면 확인", refresh), spaced(0));
+        recoveryActions.addView(secondaryButton("안내 끝내기", finish), spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
+    }
+
     public void browsing(String message, boolean terminal, Runnable observe, Runnable openApp, Runnable finish) {
         reviewStage(1, "쿠팡 상품 찾기", "검색과 상품 상세 화면을 안내해요.");
         narrationMessage = message;
@@ -1405,7 +1413,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             tail.quadTo(baseX + dp(5), bendY, baseX + dp(10), edge);
             tail.close();
             shape.op(tail, Path.Op.UNION);
-            paint.setStyle(Paint.Style.FILL); paint.setColor(Color.WHITE);
+            paint.setStyle(Paint.Style.FILL); paint.setColor(0xE6FFFFFF);
             canvas.drawPath(shape, paint);
             paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(1)); paint.setColor(BORDER);
             canvas.drawPath(shape, paint);
