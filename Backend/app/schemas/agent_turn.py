@@ -561,6 +561,7 @@ class DeviceCapabilities(BaseModel):
     coupang_browse: bool = False
     gov24_login: bool = False
     gov24_civil: bool = False
+    gov24_planner: bool = False
 
 
 class DeviceContextRequest(BaseModel):

@@ -20,8 +20,17 @@ class PublicGuideService(BrowseService):
         self.execution_mode,self.target_app='public_guide','gov24'
         self.goal_field='public_guide_goal'
         self.task_id,self.event_kind='GOV24-LOGIN','public_guide'
+        from app.services.gov24_planner import GeminiGovernmentPlanner
+        from app.services.gov24_jev import JevGovernmentSelector
+        self.government_planner = GeminiGovernmentPlanner()
+        self.government_selector = JevGovernmentSelector()
 
     def decide(self,request,state,now):
+        from app.services.gov24_planner import SERVICES, enabled
+        if state['goal']['goal_type'] in SERVICES and (state.get('experiment') or enabled()
+                or state['goal']['goal_type'] != policy.CIVIL['goal_type']):
+            from app.services.gov24_experiment import decide
+            return decide(self, request, state, now)
         if state['goal']['goal_type'] == policy.CIVIL['goal_type']:
             from app.services.gov24_navigation import decide
             return decide(self, request, state, now)

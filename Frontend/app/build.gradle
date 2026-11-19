@@ -20,7 +20,7 @@ def javaString = { value -> groovy.json.JsonOutput.toJson(value ?: "") }
 def clickApiBaseUrl = providers.gradleProperty("CLICK_API_BASE_URL")
         .getOrElse("https://click-db.onrender.com")
 def clickApplicationId = providers.gradleProperty("CLICK_APPLICATION_ID").getOrElse("com.clueclick.app")
-def gov24Pilot = clickApplicationId == "com.click.gov24pilot"
+def gov24Pilot = clickApplicationId in ["com.click.gov24pilot", "com.click.gov24planner"]
 // Keep machine-local Kakao setup across builds without committing an app key.
 def localSettings = new Properties()
 def localSettingsFile = rootProject.file("local.properties")
@@ -37,8 +37,8 @@ android {
     compileSdk 34
 
     defaultConfig {
-        buildConfigField "String", "KAKAO_NATIVE_APP_KEY", javaString(kakaoNativeAppKey)
-        manifestPlaceholders.kakaoRedirectScheme = "kakao${kakaoNativeAppKey ?: 'unconfigured'}"
+        buildConfigField "String", "KAKAO_NATIVE_APP_KEY", javaString(gov24Pilot ? "" : kakaoNativeAppKey)
+        manifestPlaceholders.kakaoRedirectScheme = gov24Pilot ? "kakaounconfiguredgov24pilot" : "kakao${kakaoNativeAppKey ?: 'unconfigured'}"
         applicationId clickApplicationId
         manifestPlaceholders.clickAppLabel = gov24Pilot ? "클릭 정부24 테스트" : "@string/app_name"
         manifestPlaceholders.clickAccessibilityLabel = gov24Pilot ? "클릭 정부24 테스트" : "@string/accessibility_service_label"

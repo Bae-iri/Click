@@ -98,6 +98,11 @@ class BrowseService:
                 row.task_outcome = {'technical':{'status':'OPENED' if response.outcome=='verified_navigation' else 'UNVERIFIABLE'},
                     'final':{'verified_navigation':'ACHIEVED','user_reported':'USER_REPORTED_RESOLVED','cancelled':'USER_STOPPED','blocked':'BLOCKED'}.get(response.outcome),
                     'browse_outcome':response.outcome}
+                experiment = evidence.get('experiment')
+                if experiment:
+                    row.task_outcome['verification'] = experiment['verification']
+                    if response.outcome == 'verified_navigation' and experiment['verification']['final']['status'] != 'SUCCESS':
+                        row.task_outcome['final'] = 'UNVERIFIABLE'
                 turn = db.scalar(select(AgentTurn).where(AgentTurn.user_id==user_id,AgentTurn.request_id==request.request_id))
                 turn.response = response.model_dump(mode='json')
                 if request.command == 'start':
