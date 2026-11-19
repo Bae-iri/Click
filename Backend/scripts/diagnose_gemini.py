@@ -3,11 +3,46 @@ import argparse
 import json
 from pathlib import Path
 import os
+import re
 import sys
 from time import monotonic
 
 BACKEND=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(BACKEND))
+
+
+def generation_result(body, *, structured=False):
+    """A 200 response proves neither a completed generation nor a valid plan."""
+    candidates = body.get('candidates', []) if isinstance(body, dict) else []
+    if not isinstance(candidates, list):
+        candidates = []
+    finishes = [c.get('finishReason') for c in candidates if isinstance(c, dict)]
+    result = {'finish_reasons': [f for f in finishes if isinstance(f, str) and f in {
+        'STOP', 'MAX_TOKENS', 'SAFETY', 'RECITATION', 'OTHER', 'BLOCKLIST',
+        'PROHIBITED_CONTENT', 'SPII', 'MALFORMED_FUNCTION_CALL', 'IMAGE_SAFETY'}],
+        'success': False}
+    served = body.get('modelVersion') if isinstance(body, dict) else None
+    if isinstance(served, str) and re.fullmatch(r'[a-zA-Z0-9._-]{1,160}', served):
+        result['served_model'] = served
+    if len(candidates) != 1 or finishes != ['STOP']:
+        return result
+    content = candidates[0].get('content')
+    parts = content.get('parts') if isinstance(content, dict) else None
+    if not isinstance(parts, list):
+        return result
+    output = ''.join(p['text'] for p in parts if isinstance(p, dict)
+                     and isinstance(p.get('text'), str) and not p.get('thought')).strip()
+    result['output_characters'] = len(output)
+    result['success'] = bool(output)
+    if structured:
+        from app.services.goal_llm import _unique_object
+        try:
+            result['schema_valid'] = json.loads(output, object_pairs_hook=_unique_object) == {
+                'subgoals': ['adjust_setting']}
+        except (ValueError, TypeError):
+            result['schema_valid'] = False
+        result['success'] = result['success'] and result['schema_valid']
+    return result
 
 
 def main():
@@ -40,7 +75,7 @@ def main():
                       headers={'x-goog-api-key':token}) as client:
         for name,method,url,payload in checks:
             started=monotonic()
-            result={'check':name,'model':model}
+            result={'check':name,'model':model,'called':True,'success':False}
             try:
                 response=client.request(method,url,json=payload)
                 result['http_status']=response.status_code
@@ -48,16 +83,19 @@ def main():
                 if response.headers.get('retry-after'):result['retry_after']=response.headers['retry-after'][:80]
                 try:body=response.json()
                 except ValueError:body={}
+                if not isinstance(body, dict):body={}
                 if response.status_code==200 and name=='model_access':
                     result.update(model_name=body.get('name'),methods=body.get('supportedGenerationMethods'))
+                    result['success'] = (body.get('name') == 'models/' + model
+                        and 'generateContent' in (body.get('supportedGenerationMethods') or []))
                 elif response.status_code==200:
-                    result['finish_reasons']=[c.get('finishReason') for c in body.get('candidates',[])]
+                    result.update(generation_result(body, structured=name=='structured_generation'))
                 else:
                     failed=True
                     result.update(provider_error(response,token))
             except httpx.HTTPError as error:
-                failed=True
                 result['network_error']=type(error).__name__
+            failed = failed or not result['success']
             result['latency_ms']=round((monotonic()-started)*1000)
             print(json.dumps(result,ensure_ascii=False),flush=True)
     return 1 if failed else 0
