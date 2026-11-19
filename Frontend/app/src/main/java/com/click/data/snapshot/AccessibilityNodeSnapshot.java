@@ -142,7 +142,7 @@ public final class AccessibilityNodeSnapshot {
     }
 
     public boolean passwordInput() { return passwordInput; }
-    boolean publicSearchInput() { return sensitiveInput && !passwordInput && searchInput; }
+    public boolean publicSearchInput() { return sensitiveInput && !passwordInput && searchInput; }
     boolean emptySearchInput() {
         return sensitiveInput && !passwordInput && !inputContentPresent
                 && (searchInput || ScreenEnvironmentPolicy.contains("empty_search_resources",resourceId));

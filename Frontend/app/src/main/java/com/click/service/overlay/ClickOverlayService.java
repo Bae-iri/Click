@@ -1224,7 +1224,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
         }
         if(gov24Guide) {
-            taskFlowView.publicGuide(message,terminal,response.optJSONObject("question"),gov24Civil,response.optString("service_label","주민등록등본"),
+            if (!terminal && coupangBrowse != null && coupangBrowse.waitingForUser())
+                taskFlowView.publicGuideRecovery(message, () -> {
+                    if (coupangBrowse != null) coupangBrowse.refreshScreen();
+                }, this::openCoupang);
+            else taskFlowView.publicGuide(message,terminal,response.optJSONObject("question"),gov24Civil,response.optString("service_label","주민등록등본"),
                 (value,button)->{if(coupangBrowse!=null)coupangBrowse.answer(ClickAccessibilityService.freshSnapshot(),value,button);},
                 ()->{if(coupangBrowse==null||endingTask)return;if(!terminal){coupangBrowse.finish();return;}
                     endingTask=true;clearTaskFlow();finishActiveQueueRequest("BLOCKED".equals(response.optString("status"))?"AGENT_ERROR":null);});

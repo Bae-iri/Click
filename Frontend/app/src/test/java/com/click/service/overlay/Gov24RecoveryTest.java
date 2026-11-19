@@ -16,6 +16,36 @@ import static org.mockito.Mockito.*;
 /** Regressions for public observation refresh and manual authentication recovery. */
 @RunWith(RobolectricTestRunner.class) @Config(sdk=34,application=Application.class)
 public class Gov24RecoveryTest {
+    @Test public void publicWaitRechecksFreshScreenAndResumesWithoutAnAccessibilityEvent() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);
+        when(listener.freshScreen()).thenReturn(screen(node("brand","정부24",null),node("services","자주 찾는 서비스",null),node("login","로그인",null)));
+        var controller=new CoupangBrowseController(gateway,new Gov24LoginPrivacy()::filter,
+            Gov24LoginPrivacy.PACKAGE,"public-guide.v1",listener);
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        controller.start("original-request","resolution");verify(gateway).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("subgoal","await_public").put("session_version",1));
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500));
+        verify(listener).freshScreen();
+        var requests=ArgumentCaptor.forClass(JSONObject.class);verify(gateway,times(2)).send(requests.capture(),any());
+        assertEquals("original-request",requests.getValue().getString("session_id"));
+        assertEquals("public",requests.getValue().getJSONObject("screen").getString("status"));controller.close();
+    }
+    @Test public void automaticRecoveryIsBoundedAndManualRetryKeepsPrivateInputLocal() throws Exception {
+        var gateway=mock(CoupangBrowseGateway.class);var listener=mock(CoupangBrowseController.Listener.class);
+        when(listener.canObserve()).thenReturn(true);when(listener.freshScreen()).thenReturn(screen(search("PRIVATE_VALUE")));
+        var controller=new CoupangBrowseController(gateway,new Gov24LoginPrivacy()::filter,
+            Gov24LoginPrivacy.PACKAGE,"public-guide.v1",listener);
+        var callbacks=ArgumentCaptor.forClass(CoupangBrowseGateway.Callback.class);
+        controller.start("request","resolution");verify(gateway).send(any(),callbacks.capture());
+        callbacks.getValue().success(new JSONObject().put("status","IN_PROGRESS").put("subgoal","await_public").put("session_version",1));
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(20));
+        verify(listener,times(5)).freshScreen();verify(gateway).send(any(),any());
+        controller.refreshScreen();verify(listener,times(6)).freshScreen();verify(gateway).send(any(),any());
+        controller.close();
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(10));
+        verify(listener,times(6)).freshScreen();
+    }
     @Test public void incompatibleServerIsDetectedBeforeStartingARecoverySession() throws Exception {
         assertFalse(CoupangBrowseGateway.supportsRecovery(new JSONObject()));
         JSONObject properties=new JSONObject().put("subgoal",new JSONObject().put("enum",new JSONArray(List.of("await_login","await_public"))))
