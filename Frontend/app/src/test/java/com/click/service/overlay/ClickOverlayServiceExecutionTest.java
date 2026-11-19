@@ -357,16 +357,17 @@ public class ClickOverlayServiceExecutionTest {
         assertFalse((boolean) get("agentPaused"));
     }
 
-    @Test public void privacyBlockPausesScreenRequestsAndShowsManualGuidance() throws Exception {
+    @Test public void unverifiedPrivacyBlockWaitsForSettingsRecoveryWithoutResending() throws Exception {
         resolve();
         confirm();
         assertTrue(sent.size() >= 2);
         int count = sent.size();
+        // Unverified is missing evidence: offer Settings recovery instead of stopping the task.
         callbacks.get(callbacks.size() - 1).onFailure(new com.click.data.snapshot.SettingsScreenPrivacy.Blocked());
-        assertTrue((boolean) get("agentPaused"));
         assertFalse((boolean) get("turnInFlight"));
-        verify((TaskFlowOverlayView) get("taskFlowView")).failed(contains("직접 진행"));
-        send(null);
+        TaskFlowOverlayView view = (TaskFlowOverlayView) get("taskFlowView");
+        verify(view, never()).failed(anyString());
+        verify(view).failureRecovery(eq("설정 화면을 다시 확인할게요"), anyString(), eq("설정 화면 열기"), any());
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
         assertEquals(count, sent.size());
     }
@@ -4401,6 +4402,18 @@ public class ClickOverlayServiceExecutionTest {
         when(gateway.privacyMode(any(), any())).thenReturn(com.click.data.snapshot.SettingsScreenPrivacy.Mode.PUBLIC_MINIMIZED);
         currentScreen=displaySettingsPage(); broadcastCurrentPage();
         assertEquals(before,requests.size()); assertTrue(state.paused());
+    }
+    @Test public void unverifiedPrivacyFailureKeepsAcceptedGoalForFreshSettingsObservation() throws Exception {
+        prepareGuideResponse();
+        Object accepted=get("acceptedGoal");
+        callbacks.get(1).onFailure(new com.click.data.snapshot.SettingsScreenPrivacy.Blocked(
+                com.click.data.snapshot.SettingsScreenPrivacy.Blocked.Reason.UNVERIFIED_SCREEN));
+        assertSame(accepted,get("acceptedGoal"));
+        var state=(TaskExecutionController)fieldValue("execution");
+        assertNotEquals(TaskExecutionController.Phase.STOPPED,state.phase());
+        var panel=(TaskFlowOverlayView)get("taskFlowView");
+        verify(panel,never()).failed(anyString());
+        verify(panel).failureRecovery(eq("설정 화면을 다시 확인할게요"),anyString(),eq("설정 화면 열기"),any());
     }
     @Test public void latePublicReplyCannotReplaceSensitiveModeWithConfirmation() throws Exception {
         prepareGuideResponse();

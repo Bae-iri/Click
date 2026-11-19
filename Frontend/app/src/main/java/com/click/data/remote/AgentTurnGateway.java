@@ -33,16 +33,25 @@ public final class AgentTurnGateway {
         try (java.io.InputStream vocabulary = context.getAssets().open("vision_vocabulary.json");
              java.io.InputStream policy = context.getAssets().open("screen_privacy_policy.json")) {
             loaded = com.click.data.snapshot.SettingsScreenPrivacy.load(vocabulary, policy);
-        } catch (Exception ignored) { /* Missing policy fails closed before screen HTTP. */ }
+        } catch (Exception error) {
+            com.click.data.local.SettingsExperimentDiagnostics.record("policy_load","BLOCKED",
+                error.getClass().getSimpleName(),null,false);
+        }
         screenPrivacy = loaded;
+        if(loaded!=null)com.click.data.local.SettingsExperimentDiagnostics.record("policy_load","SUCCESS","policy_loaded",null,true);
     }
 
     /** Run before action events or one-use approvals are consumed by a request. */
     public boolean needsFreshObservation(com.click.data.snapshot.ScreenSnapshot screen) {
+        return needsFreshObservation(screen, null);
+    }
+
+    public boolean needsFreshObservation(com.click.data.snapshot.ScreenSnapshot screen, String observationSetting) {
         if (screenPrivacy == null || screen == null) return false;
         logSettingsCandidates(screen, null, null, "preflight");
         try {
-            screenPrivacy.filter(new org.json.JSONObject().put("accessibility_tree", new org.json.JSONObject(screen.toJson())));
+            screenPrivacy.filter(new org.json.JSONObject().put("accessibility_tree", new org.json.JSONObject(screen.toJson())),
+                    observationSetting);
         } catch (com.click.data.snapshot.SettingsScreenPrivacy.Incomplete incomplete) {
             logPreflightResult(screen, "incomplete");
             return true;
@@ -109,6 +118,8 @@ public final class AgentTurnGateway {
             logSettingsCandidates(request, body, "filtered");
         }
         journal.stage(body);
+        if(com.click.BuildConfig.DEBUG) android.util.Log.i("ClickAgent", "agent.turn.dispatch command="
+                + request.commandType() + " scope=" + request.observationSetting);
         HttpResult result = http.post(AgentTurnContract.PATH, body.toString(),25000);
         AgentTurnContract.Response response = new AgentTurnContract.Response(result.body);
         if(!request.requestId.equals(response.requestId) || !request.sessionId.equals(response.sessionId))throw new java.io.IOException("INVALID_TURN_RESPONSE");

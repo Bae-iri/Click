@@ -2901,7 +2901,21 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                             execution.clearObservation();
                         }
                     } else {
-                        showStoppedTask(goalAwarePrivacyMessage(ErrorDetails.requestMessage(error), false), false);
+                        // Unverified is missing evidence, not a completed/failed task.
+                        // Keep the goal and require a new public Settings observation.
+                        execution.recovery();execution.clearObservation();
+                        hideGuideOverlay();hideConfirmation();stopNarration();
+                        final int retryGeneration=execution.generation();
+                        taskFlowView.failureRecovery("설정 화면을 다시 확인할게요",
+                            "현재 화면을 확인하지 못했어요. 휴대폰 설정 첫 화면에서 안내를 이어갈게요.","설정 화면 열기",()->{
+                            if(retryGeneration!=execution.generation()||closing||execution.paused()||execution.busy())return;
+                            execution.retry();execution.requestObservation();
+                            startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                            speechHandler.postDelayed(()->{
+                                if(retryGeneration==execution.generation()&&!closing&&!execution.paused()&&!execution.busy())sendAgentTurn(null,true);
+                            },500L);
+                        });
+                        taskFlowCollapsed=false;updateFloatingVisibility();placeTaskFlow(null,true);
                     }
                     }
                     return;
@@ -4233,6 +4247,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void executeAutomaticAction(AgentTurnContract.GuideCommand command, JSONObject metadata,
                                         ScreenSnapshot screen, String stateId) {
+        if (!com.click.BuildConfig.SETTINGS_EXPERIMENT_ARM.isEmpty()) return;
         if (screen != null) automationGuard.observe(screen.contentFingerprint());
         if (!execution.canAct() || !execution.matchesGuide(command,lastSubmittedScreen) || navigationRecovery.hint() != NavigationRecovery.Action.NONE
                 || !command.requiresUserAction
@@ -4985,6 +5000,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     /** Navigation searches do not authorize taps or setting changes. Keep the logo visible. */
     private boolean startAutomaticHomeSearch(ScreenSnapshot expected) {
+        if (!com.click.BuildConfig.SETTINGS_EXPERIMENT_ARM.isEmpty()) return false;
         if (expected.activeWindowId == null || expected.nodes.isEmpty()) return false;
         com.click.data.snapshot.NavigationState frame = navigationFrame(expected);
         // Node paths/window IDs can change during paging. They must not reset
@@ -5084,6 +5100,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     /** Finding a Settings item is navigation, independent of automatic button/slider changes. */
     private boolean startAutomaticSettingsSearch(String stateId, ScreenSnapshot screen) {
+        if (!com.click.BuildConfig.SETTINGS_EXPERIMENT_ARM.isEmpty()) return false;
         if (waitingForTargetHelp()) return false;
         if (stateId==null || screen==null || screen.activeWindowId==null) return false;
         // A repeated reply joins the queued search instead of spending another page attempt.
@@ -5474,6 +5491,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private boolean automaticTouchEnabled() {
+        if (!com.click.BuildConfig.SETTINGS_EXPERIMENT_ARM.isEmpty()) return false;
         if (execution.acceptedGoal() != null && "coupang".equals(execution.acceptedGoal().optString("target_app"))) return false;
         return new com.click.data.local.TouchAutomationSettings(this).isEnabled();
     }
