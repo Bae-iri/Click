@@ -39,7 +39,7 @@ public class AppGuideControllerTest {
     }
     @Test public void unchangedScreenDoesNotSpendAnotherModelCall() throws Exception {
         var gateway=mock(AppGuideGateway.class);var listener=new Listener();listener.current=screen("com.example.first","검색");
-        var controller=new AppGuideController(gateway,"검색 열어줘",listener);
+        var controller=new AppGuideController(gateway,"보고 싶은 노래 찾아줘",listener);
         controller.refresh();var callbacks=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);
         verify(gateway).send(any(),callbacks.capture());
         callbacks.getValue().success(new JSONObject().put("status","needs_input"));
@@ -49,7 +49,7 @@ public class AppGuideControllerTest {
     }
     @Test public void staleResponseIsDiscardedAndNewAppGetsFreshObservation() throws Exception {
         var gateway=mock(AppGuideGateway.class);var listener=new Listener();listener.current=screen("com.example.first","검색");
-        var controller=new AppGuideController(gateway,"검색 열어줘",listener);controller.refresh();
+        var controller=new AppGuideController(gateway,"보고 싶은 노래 찾아줘",listener);controller.refresh();
         var callbacks=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway).send(any(),callbacks.capture());
         listener.current=screen("org.mozilla.firefox","메뉴");callbacks.getValue().success(new JSONObject().put("status","guide"));
         assertEquals(0,listener.presents);shadowOf(Looper.getMainLooper()).idle();
@@ -59,16 +59,26 @@ public class AppGuideControllerTest {
     }
     @Test public void cancelledGuideCannotPresentALateModelResult() throws Exception {
         var gateway=mock(AppGuideGateway.class);var listener=new Listener();listener.current=screen("com.example.first","검색");
-        var controller=new AppGuideController(gateway,"검색 열어줘",listener);controller.refresh();
+        var controller=new AppGuideController(gateway,"보고 싶은 노래 찾아줘",listener);controller.refresh();
         var callbacks=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway).send(any(),callbacks.capture());
         controller.close();callbacks.getValue().success(new JSONObject().put("status","guide"));
         assertEquals(0,listener.presents);verify(gateway).close();
     }
     @Test public void pausingBeforeResponsePreventsGuidanceFromReappearing() throws Exception {
         var gateway=mock(AppGuideGateway.class);var listener=new Listener();listener.current=screen("com.example.first","검색");
-        var controller=new AppGuideController(gateway,"검색 열어줘",listener);controller.refresh();
+        var controller=new AppGuideController(gateway,"보고 싶은 노래 찾아줘",listener);controller.refresh();
         var callbacks=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway).send(any(),callbacks.capture());
         listener.allowed=false;callbacks.getValue().success(new JSONObject().put("status","guide"));
         assertEquals(0,listener.presents);assertFalse(listener.busy);controller.close();
+    }
+    @Test public void explicitControlsWorkEvenWithoutTheNewBackendRoute() throws Exception {
+        var gateway=mock(AppGuideGateway.class);var listener=new Listener();listener.current=screen("com.example.first","검색");
+        var controller=new AppGuideController(gateway,"검색 열어줘",listener,false);controller.refresh();
+        assertEquals(1,listener.presents);verify(gateway,never()).send(any(),any());controller.close();
+    }
+    @Test public void oldServerNeverReceivesAnUnadvertisedModelRequest() throws Exception {
+        var gateway=mock(AppGuideGateway.class);var listener=new Listener();listener.current=screen("com.example.first","검색");
+        var controller=new AppGuideController(gateway,"보고 싶은 노래 찾아줘",listener,false);controller.refresh();
+        assertEquals(1,listener.presents);verify(gateway,never()).send(any(),any());controller.close();
     }
 }

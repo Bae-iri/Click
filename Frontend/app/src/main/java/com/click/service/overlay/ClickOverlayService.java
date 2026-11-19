@@ -1036,10 +1036,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private boolean offerAppGuide() {
-        if(agentGateway==null||agentGateway.currentContract()==null||!agentGateway.currentContract().appGuide
+        if(agentGateway==null||agentGateway.currentContract()==null
                 ||initialGoal==null||initialGoal.trim().isEmpty())return false;
         ensureTaskFlow();
-        String message="현재 앱 화면에서 안내할까요? 버튼과 메뉴 이름을 AI로 확인해 다음에 누를 위치를 알려드려요. 화면 조작과 입력은 직접 진행해 주세요.";
+        String message=agentGateway.currentContract().appGuide
+            ?"현재 앱 화면에서 안내할까요? 버튼과 메뉴 이름을 AI로 확인해 다음에 누를 위치를 알려드려요. 화면 조작과 입력은 직접 진행해 주세요."
+            :"현재 앱 화면에서 안내할까요? 요청하신 버튼과 메뉴 이름을 찾아 다음에 누를 위치를 알려드려요. 화면 조작과 입력은 직접 진행해 주세요.";
         final int generation=execution.generation();
         taskFlowView.confirmation(message,accepted->{
             if(closing||generation!=execution.generation())return;
@@ -1073,7 +1075,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     +" http_status="+diagnostic.optInt("http_status"));
                 showAppGuideMessage(result.optString("message"),bounds);
             }
-        });
+        },agentGateway.currentContract().appGuide);
         showAppGuideMessage("도움이 필요한 앱을 열고 현재 화면 확인을 눌러주세요.",null);
         appGuide.refresh();
     }

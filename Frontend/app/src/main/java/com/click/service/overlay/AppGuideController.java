@@ -18,6 +18,7 @@ public final class AppGuideController {
     private final AppGuideGateway gateway;
     private final Listener listener;
     private final String goal;
+    private final boolean remoteEnabled;
     private final AppGuidePrivacy privacy=new AppGuidePrivacy();
     private final Handler handler=new Handler(Looper.getMainLooper());
     private String submitted;
@@ -25,7 +26,10 @@ public final class AppGuideController {
     private int steps;
     private final ArrayDeque<String> previous=new ArrayDeque<>();
     private final Runnable refresh=()->observe(false);
-    public AppGuideController(AppGuideGateway gateway,String goal,Listener listener){this.gateway=gateway;this.goal=goal;this.listener=listener;}
+    public AppGuideController(AppGuideGateway gateway,String goal,Listener listener){this(gateway,goal,listener,true);}
+    public AppGuideController(AppGuideGateway gateway,String goal,Listener listener,boolean remoteEnabled){
+        this.gateway=gateway;this.goal=goal;this.listener=listener;this.remoteEnabled=remoteEnabled;
+    }
     public void screenChanged(ScreenSnapshot screen){if(!closed){handler.removeCallbacks(refresh);handler.postDelayed(refresh,300);}}
     public boolean matches(ScreenSnapshot screen){return screen!=null&&submitted!=null&&submitted.equals(screen.contentFingerprint());}
     public void refresh(){observe(true);}
@@ -44,6 +48,12 @@ public final class AppGuideController {
                     "도움이 필요한 앱을 열고 현재 화면 확인을 눌러주세요."),screen);return;
             }
             if(steps>=32){listener.present(new JSONObject().put("status","needs_input").put("message","안내 횟수에 도달했어요. 안내를 끝내고 새 요청으로 시작해 주세요."),screen);return;}
+            JSONObject local=AppGuideLocalMatch.select(goal,safe);
+            if(local!=null){steps++;listener.present(local,screen);return;}
+            if(!remoteEnabled){
+                listener.present(new JSONObject().put("status","needs_input").put("message",
+                    "요청과 맞는 항목을 확실히 고르지 못했어요. 화면에 보이는 버튼 이름으로 다시 말씀하거나 직접 이동한 뒤 현재 화면을 확인해 주세요."),screen);return;
+            }
             JSONObject request=new JSONObject().put("protocol_version","app-guide.v1").put("request_id",UUID.randomUUID().toString())
                 .put("goal",goal).put("screen",safe).put("previous_targets",new JSONArray(previous));
             busy=true;steps++;listener.busy(true);
