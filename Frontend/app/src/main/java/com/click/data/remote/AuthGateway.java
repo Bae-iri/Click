@@ -100,11 +100,19 @@ public final class AuthGateway {
     }
 
     static synchronized boolean refresh(AuthTokenStore tokens) throws Exception {
+        return refresh(tokens, body -> post("/api/v1/auth/refresh", body, null));
+    }
+
+    interface RefreshSender { HttpResult send(String body) throws Exception; }
+
+    static synchronized boolean refresh(AuthTokenStore tokens, RefreshSender sender) throws Exception {
         if (!tokens.hasRefreshToken()) return false;
         JSONObject body = new JSONObject().put("refresh_token", tokens.refreshToken());
-        HttpResult result = post("/api/v1/auth/refresh", body.toString(), null);
+        HttpResult result = sender.send(body.toString());
         if (result.status < 200 || result.status >= 300) {
-            tokens.clear();
+            // Only an explicit rejection of the refresh credential ends the session.
+            // Rate limits, outages and transport failures must preserve tokens and the task journal.
+            if (result.status == 401) tokens.clear();
             throw apiError("/api/v1/auth/refresh", result);
         }
         tokens.save(new JSONObject(result.body));

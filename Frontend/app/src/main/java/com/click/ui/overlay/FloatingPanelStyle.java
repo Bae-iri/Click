@@ -30,7 +30,7 @@ final class FloatingPanelStyle {
         title.setIncludeFontPadding(false);
         title.setPadding(0, 0, 0, 0);
         title.setLineSpacing(2 * context.getResources().getDisplayMetrics().density, 1.05f);
-        title.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_BALANCED);
+        title.setBreakStrategy(android.graphics.text.LineBreaker.BREAK_STRATEGY_BALANCED);
         if (android.os.Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
     }
 

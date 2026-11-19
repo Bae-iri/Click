@@ -5,7 +5,7 @@ import pytest
 from app.models.runtime_event import RuntimeEvent
 from app.models.graph_proposal import GraphProposal
 from app.services.public_guide_policy import CIVIL_GRAPHS, CIVIL_OPTIONS
-from app.services.gov24_graphs import GovernmentGraphLearningService
+from scripts.gov24_graph_learning import GovernmentGraphLearningService
 from tests.test_gov24_navigation import CivilFlow, grant, view
 from tests.test_public_guide import login  # noqa: F401
 

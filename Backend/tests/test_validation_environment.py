@@ -21,7 +21,8 @@ from tests.test_runtime_recovery_events import follow
 def paired(monkeypatch, tmp_path):
     instance = tmp_path / 'validation'
     source = tmp_path / '.env'
-    source.write_text('DATABASE_URL=sqlite:///must-not-create.db\nTYPESAFE_API_KEY=PRIVATE_API_KEY\n', encoding='utf-8')
+    source.write_text('DATABASE_URL=sqlite:///must-not-create.db\nTYPESAFE_API_KEY=PRIVATE_API_KEY\n'
+        'AI1_UI_SELECTOR_PROVIDER=rules\nGOAL_CLASSIFIER_PROVIDER=self_hosted\n', encoding='utf-8')
     monkeypatch.setattr(validation, 'INSTANCE', instance)
     monkeypatch.delenv('DATABASE_URL', raising=False)
     validation.prepare(source, 8001)
@@ -57,7 +58,7 @@ def test_prepare_uses_isolated_migrated_db_and_only_current_approved_graphs(pair
                 goal['graph_id'] for goal in json.loads((Path(__file__).parents[2]
                     / 'AI-Agent/goal_catalog/legacy_coupang_goals.json').read_text(encoding='utf-8'))['goals']}
         assert len(response.json()['approved_graphs']) == 182
-        assert response.json()['database_migrations'] == ['20261117_20']
+        assert response.json()['database_migrations'] == ['20261119_21']
         assert '/validation/environment' not in client.get('/openapi.json').json()['paths']
     assert (instance / 'validation.db').is_file()
     assert 'PRIVATE_API_KEY' not in response.text + capsys.readouterr().out

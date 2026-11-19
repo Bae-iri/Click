@@ -59,6 +59,8 @@ def environment_manifest(factory, environment_id, *, runtime_settings=None):
     configuration = {key: settings.get(key, default) for key, default in {
         'CLICK_COUPANG_BROWSE_ENABLED': '0', 'CLICK_GOV24_GUIDE_ENABLED': '1', 'JEV_MODEL': 'jev-1.14.0',
         'JEV_MIN_CONFIDENCE': '0.8', 'AI1_UI_SELECTOR_PROVIDER': 'rules',
+        'GOAL_CLASSIFIER_PROVIDER': 'self_hosted', 'GEMINI_SETTINGS_MODEL': 'gemini-3.8-flash',
+        'CLICK_GOV24_PLANNER_ENABLED': '0',
     }.items()}
     manifest = {'schema_version': 'click-validation-environment.v1', 'environment_id': environment_id,
                 'runtime_configuration': configuration,

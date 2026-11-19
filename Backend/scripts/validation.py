@@ -21,12 +21,20 @@ def prepare(env_file, port, *, coupang_browse=False, gov24=False):
         raise ValueError('Invalid validation port')
     INSTANCE.mkdir(parents=True, exist_ok=True)
     values = dict(dotenv_values(env_file))
+    # The paired app and local backend use the same explicitly selected providers.
+    # Never inherit the unconfigured rules/self-hosted development defaults.
+    values.setdefault('AI1_UI_SELECTOR_PROVIDER', 'jev')
+    values.setdefault('GOAL_CLASSIFIER_PROVIDER', 'jev')
+    values.setdefault('JEV_MODEL', 'jev-1.14.0')
+    values.setdefault('GEMINI_SETTINGS_MODEL', 'gemini-3.8-flash')
     if coupang_browse:
         values['CLICK_COUPANG_BROWSE_ENABLED'] = '1'
     if gov24:
         values['CLICK_GOV24_GUIDE_ENABLED'] = '1'
     target = INSTANCE / '.env'
     previous = dotenv_values(target) if target.exists() else {}
+    if (INSTANCE / 'validation.db').exists() and not all(previous.get(k) for k in ('DATA_ENCRYPTION_KEYS','DATA_LOOKUP_KEY')):
+        raise ValueError('Existing validation database requires its original encryption keys')
     values.update(DATABASE_URL='sqlite+pysqlite:///' + (INSTANCE / 'validation.db').as_posix(),
         CLICK_VALIDATION_ENVIRONMENT_ID=previous.get('CLICK_VALIDATION_ENVIRONMENT_ID') or secrets.token_hex(16),
         CLICK_VALIDATION_DIAGNOSTICS='1',

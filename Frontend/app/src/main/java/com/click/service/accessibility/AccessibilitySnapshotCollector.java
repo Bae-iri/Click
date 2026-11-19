@@ -27,14 +27,25 @@ final class AccessibilitySnapshotCollector {
     ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, int width, int height, Float fontScale) {
         List<AccessibilityNodeSnapshot> nodes = new ArrayList<>();
         boolean[] maskReady = {true};
-        visit(root, "node_0", null, packageName, width, height, nodes, maskReady);
-        return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId(), maskReady[0], fontScale).withNavigation(NativeNavigationReader.read(root));
+        AccessibilityTraversalBudget budget=new AccessibilityTraversalBudget();
+        try {
+            visit(root, "node_0", null, packageName, width, height, nodes, maskReady,budget,0);
+            var navigation=root==null?null:NativeNavigationReader.read(root,budget);
+            budget.check();
+            return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes,
+                root==null?null:root.getWindowId(), root!=null&&maskReady[0], fontScale).withNavigation(navigation);
+        } catch(AccessibilityTraversalBudget.Exhausted incomplete) {
+            // Never send a partial tree as if it were a complete, privacy-checked screen.
+            return new ScreenSnapshot(packageName,Instant.now().toString(),width,height,List.of(),
+                root==null?null:root.getWindowId(),false,fontScale);
+        }
     }
 
     private void visit(AccessibilityNodeInfo node, String nodeId, String parentId, String packageName,
                        int screenWidth, int screenHeight,
-                       List<AccessibilityNodeSnapshot> output, boolean[] maskReady) {
+                       List<AccessibilityNodeSnapshot> output, boolean[] maskReady,AccessibilityTraversalBudget budget,int depth) {
         if (node == null) return;
+        budget.take(depth);
         Rect bounds = new Rect();
         node.getBoundsInScreen(bounds);
         String className = string(node.getClassName());
@@ -78,11 +89,12 @@ final class AccessibilitySnapshotCollector {
         }
         int childCount = node.getChildCount();
         for (int index = 0; index < childCount; index++) {
+            budget.check();
             AccessibilityNodeInfo child = node.getChild(index);
             if (child == null) continue;
             try {
                 visit(child, nodeId + "_" + index, nodeId, packageName,
-                        screenWidth, screenHeight, output, maskReady);
+                        screenWidth, screenHeight, output, maskReady,budget,depth+1);
             } finally {
                 child.recycle();
             }

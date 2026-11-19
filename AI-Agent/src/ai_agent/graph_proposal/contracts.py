@@ -15,12 +15,7 @@ class EvidenceRequired(ValueError):
     """A candidate needs new observations, rather than an evaluation tool repair."""
 
 
-def canonical(value):
-    return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
-
-
-def fingerprint(value):
-    return sha256(canonical(value).encode("utf-8")).hexdigest()
+from ai_agent.task_graph.fingerprints import canonical, fingerprint
 
 
 def identifier(value, name="identifier"):

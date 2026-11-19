@@ -7,7 +7,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.core.security import hash_password, new_token, token_hash, verify_password
-from app.models.auth import Account, AuthSession, KakaoIdentity
+from app.models.auth import Account, AuthSession, KakaoIdentity, LoginRateLimit
 from app.clients.kakao import KakaoTokenVerifier
 from app.models.user import User
 from app.core.data_encryption import cipher_for
@@ -15,6 +15,8 @@ from app.schemas.auth import TokenResponse
 
 ACCESS_TTL = 900
 REFRESH_TTL = 7 * 24 * 60 * 60
+LOGIN_WINDOW_SECONDS = 300
+LOGIN_ATTEMPTS_PER_WINDOW = 10
 
 
 @dataclass(frozen=True)
@@ -98,6 +100,7 @@ class AuthService:
             return tokens
 
     def login(self, request):
+        self.throttle_account(request.phone_number)
         with self.factory() as db:
             lookup = cipher_for(db.bind.dialect).lookup(request.phone_number, "accounts.phone_number")
             account = db.scalar(select(Account).where(Account.phone_lookup == lookup).with_for_update())
@@ -112,6 +115,29 @@ class AuthService:
             self.add_session(db, tokens)
             db.commit()
             return tokens
+
+    def throttle_account(self, phone_number):
+        """An atomic database counter survives restarts and applies across client IPs."""
+        now = int(time.time())
+        window = now - now % LOGIN_WINDOW_SECONDS
+        with self.factory() as db:
+            key = cipher_for(db.bind.dialect).lookup(phone_number, 'auth.login_rate_limit')
+            if db.bind.dialect.name == 'postgresql':
+                from sqlalchemy.dialects.postgresql import insert
+            elif db.bind.dialect.name == 'sqlite':
+                from sqlalchemy.dialects.sqlite import insert
+            else:
+                raise RuntimeError('Unsupported authentication database')
+            db.execute(delete(LoginRateLimit).where(LoginRateLimit.window_started_at < window))
+            statement = insert(LoginRateLimit).values(account_key=key, window_started_at=window, attempts=1)
+            statement = statement.on_conflict_do_update(
+                index_elements=['account_key', 'window_started_at'],
+                set_={'attempts':LoginRateLimit.attempts + 1},
+                where=LoginRateLimit.attempts < LOGIN_ATTEMPTS_PER_WINDOW)
+            changed = db.execute(statement).rowcount
+            db.commit()
+        if changed != 1:
+            raise HTTPException(429, headers={'Retry-After':str(window + LOGIN_WINDOW_SECONDS - now)})
 
     def authenticate(self, token):
         if not 40 <= len(token) <= 128:

@@ -36,8 +36,12 @@ def test_catalog_coverage_counts_goals_separately_from_release_versions(app):
     assert coverage["catalog_version"] == "2.5.0"
     assert coverage["total_goals"] == 131
     assert coverage["approved_goals"] == coverage["selectable_goals"] == 111
-    assert coverage["catalog_only_goals"] == 18
-    assert coverage["public_guide_goals"] == 2
+    assert coverage["catalog_only_goals"] == 13
+    assert coverage["public_guide_goals"] == 7
+    catalog=json.loads((Path(__file__).parents[1]/'app/task_graphs/goal_catalog.json').read_text(encoding='utf-8'))
+    public={g['goal_type'] for g in catalog['goals'] if g['execution_status']=='public_guide'}
+    assert public=={'gov24.login','gov24.resident_copy.open','gov24.resident_extract.open',
+        'gov24.building_register.open','gov24.land_register.open','gov24.vehicle_register.open','gov24.move_in.open'}
     assert coverage["legacy_graph_goals"] == 71
     assert {k:v for k,v in coverage["by_task_type"].items() if k.startswith("settings_")} == {
         "settings_change": {"approved": 56, "selectable": 56},

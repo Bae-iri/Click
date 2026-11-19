@@ -17,8 +17,10 @@ public class CoupangBrowseGateway {
     public CoupangBrowseGateway(Context context){this(context,PATH,"coupang-browse.v1");}
     public CoupangBrowseGateway(Context context,String path,String protocol){http=new AuthenticatedHttpClient(context);this.path=path;this.protocol=protocol;}
     public void send(JSONObject request,Callback callback) {
+        long total="public-guide.v1".equals(protocol)?RequestBudget.PUBLIC_GUIDE_TOTAL_MS:RequestBudget.TOTAL_MS;
+        final long deadline=SystemClock.elapsedRealtime()+total;
         executor.execute(()->{
-            try {
+            try (RequestBudget budget=new RequestBudget(deadline)) {
                 if("public-guide.v1".equals(protocol)&&!recoveryChecked) {
                     if(!supportsRecovery(new JSONObject(http.get("/openapi.json").body)))
                         throw new java.io.IOException("GOV24_SERVER_UPDATE_REQUIRED");
@@ -26,7 +28,7 @@ public class CoupangBrowseGateway {
                 }
                 // The opt-in Government24 planner may wait on a model call (25s budget).
                 JSONObject response=new JSONObject(http.post(path,request.toString(),
-                    "public-guide.v1".equals(protocol)?45000:15000).body);
+                    "public-guide.v1".equals(protocol)?RequestBudget.PUBLIC_GUIDE_READ_MS:15000).body);
                 validate(request,response,protocol);
                 main.post(()->callback.success(response));
             }catch(Exception error){main.post(()->callback.failure(error));}

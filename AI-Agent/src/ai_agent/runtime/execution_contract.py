@@ -5,7 +5,7 @@ from pathlib import Path
 
 @lru_cache(maxsize=1)
 def policy():
-    return json.loads((Path(__file__).resolve().parents[3]/'goal_catalog/execution_state_contract.json').read_text())
+    return json.loads((Path(__file__).resolve().parents[3]/'goal_catalog/execution_state_contract.json').read_text(encoding="utf-8"))
 
 def validate_context(context, *, session_id, request_id, episode_id, observation_id, version=None):
     if context is None:
