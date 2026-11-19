@@ -122,6 +122,7 @@ public final class AuthGateway {
         requireValidationEnvironment(path);
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
         java.util.concurrent.ScheduledFuture<?> watchdog=null;
+        HttpDiagnostics diagnostics=new HttpDiagnostics("POST",path);
         try {
             connection.setRequestMethod("POST");
             RequestBudget.configure(connection,readTimeout);
@@ -134,6 +135,7 @@ public final class AuthGateway {
             try (OutputStream output = connection.getOutputStream()) { output.write(bytes); }
             connection.setReadTimeout(RequestBudget.remaining(readTimeout));
             int status = connection.getResponseCode();
+            diagnostics.status(status);
             InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
             return new HttpResult(status, read(stream), connection.getHeaderField("X-Conflict-Code"),
                     connection.getHeaderField("X-Request-ID"));
@@ -141,6 +143,7 @@ public final class AuthGateway {
             if(watchdog!=null)watchdog.cancel(false);
             RequestBudget.finished(connection);
             connection.disconnect();
+            diagnostics.finish();
         }
     }
 
@@ -160,12 +163,14 @@ public final class AuthGateway {
         requireValidationEnvironment(path);
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
         java.util.concurrent.ScheduledFuture<?> watchdog=null;
+        HttpDiagnostics diagnostics=new HttpDiagnostics(method,path);
         try {
             connection.setRequestMethod(method);
             RequestBudget.configure(connection,readTimeout);
             watchdog=RequestBudget.watch(connection);
             if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
             int status = connection.getResponseCode();
+            diagnostics.status(status);
             InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
             String response = read(stream);
             String conflict = connection.getHeaderField("X-Conflict-Code");
@@ -174,6 +179,7 @@ public final class AuthGateway {
             if(watchdog!=null)watchdog.cancel(false);
             RequestBudget.finished(connection);
             connection.disconnect();
+            diagnostics.finish();
         }
     }
 

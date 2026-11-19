@@ -34,7 +34,7 @@ public final class CandidateDiagnosticLog {
                 }
                 Files.write(current().toPath(), bytes, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             }
-            if (BuildConfig.DEBUG) android.util.Log.i("ClickCandidates", report.toString());
+            android.util.Log.i("ClickCandidates", report.toString());
         } catch (Exception ignored) { /* Diagnostics must not change execution behavior. */ }
     }
 

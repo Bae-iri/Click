@@ -103,11 +103,20 @@ final class AccessibilitySnapshotCollector {
     private static boolean searchHint(AccessibilityNodeInfo node) {
         if (!(node.isEditable() || String.valueOf(node.getClassName()).contains("EditText")) || node.isPassword()) return false;
         CharSequence hint = node.getHintText();
+        if (publicSearchHint(hint, node)) return true;
+        // WebView placeholders may be exposed as hint text or an accessibility
+        // description instead of getHintText(). Never inspect a filled value.
+        return com.click.data.snapshot.Gov24LoginPrivacy.PACKAGE.contentEquals(String.valueOf(node.getPackageName()))
+                && (publicSearchHint(node.getContentDescription(), node)
+                    || node.isShowingHintText() && publicSearchHint(node.getText(), node));
+    }
+
+    private static boolean publicSearchHint(CharSequence hint, AccessibilityNodeInfo node) {
         if (hint == null) return false;
         String text = hint.toString().trim().toLowerCase(java.util.Locale.ROOT);
-        if(com.click.data.snapshot.Gov24LoginPrivacy.PACKAGE.contentEquals(String.valueOf(node.getPackageName()))
-                &&com.click.data.snapshot.Gov24LoginPrivacy.isPublicSearchHint(text))return true;
-        return "검색".equals(text) || "search".equals(text);
+        return "검색".equals(text) || "search".equals(text)
+                || com.click.data.snapshot.Gov24LoginPrivacy.PACKAGE.contentEquals(String.valueOf(node.getPackageName()))
+                    && com.click.data.snapshot.Gov24LoginPrivacy.isPublicSearchHint(text);
     }
 
     private String inferRole(String className, AccessibilityNodeInfo node) {

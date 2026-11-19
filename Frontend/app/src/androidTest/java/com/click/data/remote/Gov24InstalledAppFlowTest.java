@@ -160,8 +160,11 @@ public class Gov24InstalledAppFlowTest {
         automation.setServiceInfo(info);
         JSONObject safe=com.click.service.accessibility.Gov24PublicTestTarget.inspect(automation,instrumentation.getTargetContext(),targetPackage);
         if("handoff".equals(safe.optString("status")))assertEquals(0,safe.getJSONArray("nodes").length());
+        String expected=InstrumentationRegistry.getArguments().getString("expectedGov24Status");
+        if(expected!=null)assertEquals("Observed native Government24 privacy boundary",expected,safe.getString("status"));
         Bundle report=new Bundle();report.putString("gov24_boundary_probe",new JSONObject()
             .put("status",safe.optString("status")).put("reason",safe.optString("handoff_reason"))
+            .put("privacy_reason",safe.optString("privacy_reason")).put("local_diagnostics",safe.optJSONObject("local_diagnostics"))
             .put("exported_nodes",safe.getJSONArray("nodes").length()).put("provider_choice_count",safe.getInt("provider_choice_count"))
             .put("visible_input_count",safe.getInt("visible_input_count")).put("selected_provider_count",safe.getInt("selected_provider_count")).toString());
         instrumentation.sendStatus(0,report);

@@ -916,6 +916,12 @@ public final class TaskFlowOverlayView extends LinearLayout {
             java.util.function.BiConsumer<String,Boolean> answer,Runnable observe,Runnable openApp,Runnable finish) {
         publicGuide(message,terminal,question,false,answer,finish);
     }
+    public void publicGuideRecovery(String message, Runnable refresh, Runnable openApp) {
+        progress(null, null, message, false);
+        recoveryActions.addView(primaryButton("화면 다시 읽기", refresh), spaced(0));
+        recoveryActions.addView(secondaryButton("정부24 열기", openApp), spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
+    }
     public void publicGuide(String message,boolean terminal,org.json.JSONObject question,boolean civil,
             java.util.function.BiConsumer<String,Boolean> answer,Runnable finish) {
         publicGuide(message,terminal,question,civil,"주민등록등본",answer,finish);
