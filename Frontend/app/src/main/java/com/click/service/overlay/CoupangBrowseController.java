@@ -36,6 +36,7 @@ public final class CoupangBrowseController {
     private Runnable privateRecheck;
     private ScreenSnapshot verifyingPrivateRead;
     private String responseStatus,responseOutcome,confirmedPrivateReason;
+    private String waitingFor;
     public CoupangBrowseController(CoupangBrowseGateway gateway,CoupangBrowsePrivacy privacy,Listener listener) {
         this(gateway,privacy::filter,"com.coupang.mobile","coupang-browse.v1",listener);
     }
@@ -46,7 +47,7 @@ public final class CoupangBrowseController {
     public void restore(String session,int version) {this.session=session;this.version=version;send("snapshot",null,null);}
     public void observe(ScreenSnapshot screen) {
         if(!closed&&!busy&&!terminal&&listener.canObserve()&&!listener.localGuide(screen)) {
-            try {if(deferPrivateInput(screen))return;}
+            try {if(!canResume(screen)||deferPrivateInput(screen))return;}
             catch(Exception error){listener.failed(error,()->observe(screen));return;}
             if(screen!=null && packageName.equals(screen.packageName))entryObserved=true;
             send("observe",screen,null);
@@ -56,7 +57,7 @@ public final class CoupangBrowseController {
     public void answer(ScreenSnapshot screen,String value,boolean button) {
         if(closed||busy||terminal||!listener.canObserve()||!awaitingAnswer())return;
         try {
-            if(deferPrivateInput(screen))return;
+            if(!canResume(screen)||deferPrivateInput(screen))return;
             JSONObject request=request("observe",screen,null);
             request.put("question_id",question.getString("id"))
                 .put(button?"choice":"answer",value);
@@ -65,12 +66,21 @@ public final class CoupangBrowseController {
     }
     public void finish() {if(!busy&&!terminal)send("finish",null,null);}
     public boolean terminal(){return terminal;}
+    public boolean waitingForUser(){return waitingFor!=null;}
+    public boolean ready(){return version>0;}
+    public boolean guideMatches(ScreenSnapshot current) {
+        if(current==null||guidedScreen==null)return false;
+        if(!"public-guide.v1".equals(protocol))return guidedScreen.contentFingerprint().equals(current.contentFingerprint());
+        try{return nativeScene(guidedScreen).equals(nativeScene(current));}
+        catch(Exception invalid){return false;}
+    }
     public String status(){return responseStatus;}
     public String outcome(){return responseOutcome;}
     public String handoffReason(){return confirmedPrivateReason;}
     public boolean settlingPrivateScreen(){return pendingPrivateKey!=null;}
     public void screenChanged(ScreenSnapshot current) {
         entryScreen=current;
+        try {if(!canResume(current))return;}catch(Exception invalid){return;}
         if(pendingPrivateKey!=null) {
             try {
                 JSONObject safe=current==null?null:privacy.filter(current);
@@ -78,16 +88,16 @@ public final class CoupangBrowseController {
                         ||!"credential_input".equals(safe.optString("handoff_reason")))clearPrivateRecheck();
             }catch(Exception invalid){clearPrivateRecheck();}
         }
-        if("public-guide.v1".equals(protocol)&&!closed&&!terminal&&listener.canObserve()&&listener.localGuide(current)) {
+        if(version>0&&"public-guide.v1".equals(protocol)&&!closed&&!terminal&&listener.canObserve()&&listener.localGuide(current)) {
             clearPrivateRecheck();
             guide=question=null;guidedScreen=null;entryObserved=false;observedPublicScene=null;return;
         }
-        if(guidedScreen!=null && (current==null || !guidedScreen.contentFingerprint().equals(current.contentFingerprint())))guide=null;
+        if(guidedScreen!=null && !guideMatches(current)){guide=null;observedPublicScene=null;}
         if("public-guide.v1".equals(protocol)&&current!=null&&!closed&&!busy&&!terminal&&listener.canObserve()) {
             try {
                 JSONObject safe=privacy.filter(current);
                 if("handoff".equals(safe.optString("status")) || action!=null&&guidedScreen!=null
-                        &&!guidedScreen.contentFingerprint().equals(current.contentFingerprint())&&packageName.equals(current.packageName)) {
+                        &&!guideMatches(current)&&packageName.equals(current.packageName)) {
                     observe(current);return;
                 }
             }catch(Exception ignored){}
@@ -97,6 +107,7 @@ public final class CoupangBrowseController {
     private void observeEntry() {
         if(closed || busy || terminal || entryScreen==null || !listener.canObserve())return;
         try {
+            if(!canResume(entryScreen))return;
             if("public-guide.v1".equals(protocol)&&listener.localGuide(entryScreen)) {
                 clearPrivateRecheck();
                 guide=question=null;guidedScreen=null;entryObserved=false;observedPublicScene=null;return;
@@ -109,12 +120,24 @@ public final class CoupangBrowseController {
                     observe(entryScreen);return;
                 }
                 if("public".equals(safe.optString("status")) && packageName.equals(entryScreen.packageName)
-                        && !publicScene(safe).equals(observedPublicScene))observe(entryScreen);
+                        && !nativeScene(entryScreen).equals(observedPublicScene))observe(entryScreen);
                 return;
             }
             if(!entryObserved && packageName.equals(entryScreen.packageName)
                     && "public".equals(safe.optString("status")))observe(entryScreen);
         } catch(Exception ignored) { /* Explicit screen check remains available. */ }
+    }
+    private boolean canResume(ScreenSnapshot screen) throws Exception {
+        if(waitingFor==null)return true;
+        JSONObject safe=privacy.filter(screen);
+        if(!"public".equals(safe.optString("status")))return false;
+        if(!"await_login".equals(waitingFor)||!"unknown".equals(safe.optString("auth_state","unknown")))return true;
+        JSONArray nodes=safe.optJSONArray("nodes");
+        for(int i=0;nodes!=null&&i<nodes.length();i++) {
+            String key=nodes.getJSONObject(i).optString("option_id");
+            if(key.startsWith("method_")||key.startsWith("provider_")||"entry_login".equals(key))return true;
+        }
+        return false;
     }
     /** A partial WebView can briefly expose the home search as an authentication field.
      * Keep it local until fresh native reads prove a stable private surface. */
@@ -160,10 +183,13 @@ public final class CoupangBrowseController {
         java.util.List<String> options=new java.util.ArrayList<>();
         JSONArray nodes=safe.optJSONArray("nodes");
         for(int i=0;nodes!=null&&i<nodes.length();i++) {
-            JSONObject node=nodes.optJSONObject(i);if(node!=null)options.add(node.optString("option_id"));
+            JSONObject node=nodes.optJSONObject(i);if(node!=null)options.add(node.optString("option_id")+":"+node.optString("node_id")+":"+node.optJSONArray("bounds"));
         }
         java.util.Collections.sort(options);
-        return safe.optString("package_name")+":"+safe.optInt("width")+":"+safe.optInt("height")+":"+options;
+        return safe.optString("status")+":"+safe.optString("auth_state","unknown")+":"+safe.optString("package_name")+":"+safe.optInt("width")+":"+safe.optInt("height")+":"+options;
+    }
+    private String nativeScene(ScreenSnapshot screen) throws Exception {
+        return publicScene(privacy.filter(screen))+":"+(screen==null?null:screen.activeWindowId);
     }
     public void tap(String pkg,int window,String node,long occurredAt) {
         if(guide==null || guidedScreen==null || !guidedScreen.packageName.equals(pkg)
@@ -177,6 +203,7 @@ public final class CoupangBrowseController {
         JSONObject request=new JSONObject().put("protocol_version",protocol)
             .put("request_id",UUID.randomUUID().toString()).put("session_id",session)
             .put("expected_version",version).put("command",command);
+        if("public-guide.v1".equals(protocol))request.put("recovery_version","gov24-recovery.v1");
         if(resolution!=null)request.put("goal_resolution_id",resolution);
         if(screen!=null)request.put("screen",privacy.filter(screen));
         if("observe".equals(command)&&action!=null)request.put("action",action);
@@ -191,7 +218,7 @@ public final class CoupangBrowseController {
         if(closed||busy)return;
         JSONObject safe=request.optJSONObject("screen");
         if("public-guide.v1".equals(protocol) && safe!=null && "public".equals(safe.optString("status")))
-            observedPublicScene=publicScene(safe);
+            try{observedPublicScene=nativeScene(screen);}catch(Exception invalid){observedPublicScene=null;}
         busy=true;listener.busy(true);final int owner=generation;
         gateway.send(request,new CoupangBrowseGateway.Callback(){
             public void success(JSONObject response) {
@@ -199,10 +226,12 @@ public final class CoupangBrowseController {
                 busy=false;listener.busy(false);version=response.optInt("session_version");
                 responseStatus=response.optString("status",null);responseOutcome=response.optString("outcome",null);
                 terminal=!"IN_PROGRESS".equals(responseStatus);action=null;
+                String subgoal=response.optString("subgoal");
+                waitingFor=!terminal&&("await_login".equals(subgoal)||"await_public".equals(subgoal))?subgoal:null;
                 JSONObject submitted=request.optJSONObject("screen");
                 if(submitted!=null&&"handoff".equals(submitted.optString("status")))
                     confirmedPrivateReason=submitted.optString("handoff_reason",null);
-                if(terminal)clearPrivateRecheck();
+                if(terminal||waitingFor!=null)clearPrivateRecheck();
                 guide=response;question=response.optJSONObject("question");guidedScreen=screen;listener.present(response,screen);
                 observeEntry();
             }

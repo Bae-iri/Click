@@ -6,6 +6,7 @@
   "goal_type": "gov24.login",
   "max_turns": 24,
   "max_nodes": 24,
+  "home_authentication": {"logout_aliases": ["로그아웃", "로그아웃하기"]},
   "civil_navigation": {
     "version": "gov24-resident-navigation.v1",
     "goal_type": "gov24.resident_copy.open",
@@ -249,7 +250,7 @@
       "label": "로그인",
       "group": "entry",
       "aliases": [
-        "로그인"
+        "로그인", "로그인하기"
       ]
     },
     "method_mobile_id": {

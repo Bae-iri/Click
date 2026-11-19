@@ -5,6 +5,7 @@ plugins {
 def validationFile = rootProject.file(providers.gradleProperty("CLICK_VALIDATION_MANIFEST")
         .getOrElse("../Backend/instance/validation/environment.json"))
 def validationRequested = gradle.startParameter.taskNames.any { it.toLowerCase().contains("validation") }
+def uiTestDriverRequested = gradle.startParameter.taskNames.any { it.toLowerCase().contains("uitestdriver") }
 if (validationRequested && !validationFile.isFile()) {
     throw new GradleException("Prepare the paired backend first: Backend/scripts/validation.py prepare")
 }
@@ -30,7 +31,8 @@ def hasReleaseSigning = ["storeFile", "storePassword", "keyAlias", "keyPassword"
 if (!releaseSigning.isEmpty() && !hasReleaseSigning) throw new GradleException("Incomplete release signing properties")
 if (providers.gradleProperty("CLICK_REQUIRE_RELEASE_SIGNING").getOrElse("false") == "true" && !hasReleaseSigning)
     throw new GradleException("Play upload signing is required; configure CLICK_RELEASE_SIGNING_FILE")
-def gov24Pilot = clickApplicationId in ["com.click.gov24pilot", "com.click.gov24planner"]
+if (clickApplicationId == "com.click.gov24pilot") throw new GradleException("Government24 guidance is part of com.clueclick.app; use uiTestDriver for instrumentation")
+def gov24Pilot = false
 // Keep machine-local Kakao setup across builds without committing an app key.
 def localSettings = new Properties()
 def localSettingsFile = rootProject.file("local.properties")
@@ -82,6 +84,14 @@ android {
     }
 
     buildTypes {
+        uiTestDriver {
+            initWith debug
+            buildConfigField "String", "KAKAO_NATIVE_APP_KEY", '\"\"'
+            manifestPlaceholders.kakaoRedirectScheme = "kakaounconfigureduitestdriver"
+            applicationIdSuffix ".uitestdriver"
+            matchingFallbacks = ["debug"]
+            signingConfig signingConfigs.debug
+        }
         validation {
             initWith debug
             // A paired test app must never receive the normal app's Kakao OAuth redirect.
@@ -102,7 +112,7 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
-    testBuildType(validationRequested ? "validation" : "debug")
+    testBuildType(validationRequested ? "validation" : uiTestDriverRequested ? "uiTestDriver" : "debug")
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -238,11 +248,12 @@ android.buildTypes.each { kind ->
     def generateIdentity = tasks.register("generate${title}ReleaseIdentity") {
         inputs.property("apiBaseUrl", apiOrigin)
         inputs.property("taskTerminationVersion", "task-termination.v1")
+        inputs.property("gov24RecoveryVersion", "gov24-recovery.v1")
         outputs.dir(identityAssets)
         doLast {
             def output = new File(identityAssets.get().asFile, "click_release_identity.json")
             output.parentFile.mkdirs()
-            output.setText(groovy.json.JsonOutput.toJson([api_base_url: apiOrigin, task_termination_version: "task-termination.v1"]), "UTF-8")
+            output.setText(groovy.json.JsonOutput.toJson([api_base_url: apiOrigin, task_termination_version: "task-termination.v1", gov24_recovery_version: "gov24-recovery.v1"]), "UTF-8")
         }
     }
     android.sourceSets.getByName(kind.name).assets.srcDir(identityAssets)

@@ -10715,6 +10715,18 @@
               }
             ]
           },
+          "recovery_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "gov24-recovery.v1"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Version"
+          },
           "answer": {
             "anyOf": [
               {
@@ -10919,12 +10931,20 @@
             ],
             "title": "Experiment"
           },
+          "recovery_version": {
+            "type": "string",
+            "const": "gov24-recovery.v1",
+            "title": "Recovery Version",
+            "default": "gov24-recovery.v1"
+          },
           "subgoal": {
             "type": "string",
             "enum": [
               "open_login",
               "choose_method",
               "choose_provider",
+              "await_login",
+              "await_public",
               "handoff",
               "find_resident_service",
               "resident_service",
@@ -10933,6 +10953,24 @@
             ],
             "title": "Subgoal",
             "default": "open_login"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "navigation_limit",
+                  "authentication_required",
+                  "private_input",
+                  "screen_unrecognized",
+                  "no_candidates"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
           },
           "service_label": {
             "anyOf": [
@@ -11072,6 +11110,16 @@
               }
             ],
             "title": "Handoff Reason"
+          },
+          "auth_state": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "signed_out",
+              "signed_in"
+            ],
+            "title": "Auth State",
+            "default": "unknown"
           },
           "privacy_reason": {
             "anyOf": [

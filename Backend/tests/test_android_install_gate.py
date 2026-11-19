@@ -11,12 +11,14 @@ SOURCE=Path(__file__).resolve().parents[2]/'Frontend/scripts/install_verified_de
 spec=importlib.util.spec_from_file_location('install_gate',SOURCE)
 gate=importlib.util.module_from_spec(spec);spec.loader.exec_module(gate)
 
-def package(tmp_path,protocol='execution-state.v1'):
+def package(tmp_path,protocol='execution-state.v1',recovery=False):
     path=tmp_path/'test.apk'
     with zipfile.ZipFile(path,'w') as archive:
         if protocol:
             archive.writestr('assets/execution_state_contract.json',json.dumps({'version':protocol}))
-            archive.writestr('assets/click_release_identity.json',json.dumps({'api_base_url':'https://test.example','task_termination_version':'task-termination.v1'}))
+            identity={'api_base_url':'https://test.example','task_termination_version':'task-termination.v1'}
+            if recovery:identity['gov24_recovery_version']='gov24-recovery.v1'
+            archive.writestr('assets/click_release_identity.json',json.dumps(identity))
     return path
 
 def schema():
@@ -53,3 +55,27 @@ def test_a_different_render_host_cannot_authorize_this_apk_installation(tmp_path
     with pytest.raises(gate.IncompatibleServer,match='API origin'):
         gate.install(package(tmp_path),schema(),'adb','device',runner,base_url='https://another.example')
     runner.assert_not_called()
+
+
+@pytest.mark.parametrize('fault',['old_server','missing_wait','missing_request_version','missing_auth_state','wrong_recovery_version'])
+def test_government24_recovery_requires_matching_server_before_install(tmp_path,fault):
+    from app.main import create_app
+    document=schema() if fault=='old_server' else create_app().openapi()
+    models=document['components']['schemas']
+    if fault=='old_server':
+        models.get('PublicGuideRequest',{}).get('properties',{}).pop('recovery_version',None)
+    if fault=='missing_wait':models['PublicGuideResponse']['properties']['subgoal']['enum'].remove('await_login')
+    if fault=='missing_request_version':models['PublicGuideRequest']['properties'].pop('recovery_version')
+    if fault=='missing_auth_state':models['PublicGuideScreen']['properties'].pop('auth_state')
+    if fault=='wrong_recovery_version':models['PublicGuideResponse']['properties']['recovery_version']['const']='gov24-recovery.v2'
+    runner=Mock()
+    with pytest.raises(gate.IncompatibleServer,match='gov24-recovery.v1'):
+        gate.install(package(tmp_path,recovery=True),document,'adb','device',runner,base_url='https://test.example')
+    runner.assert_not_called()
+
+
+def test_matching_government24_recovery_schema_allows_data_preserving_install(tmp_path):
+    from app.main import create_app
+    runner=Mock(return_value=SimpleNamespace(returncode=0,stdout='Success\n'))
+    assert gate.install(package(tmp_path,recovery=True),create_app().openapi(),'adb','device',runner,base_url='https://test.example')['compatible']
+    assert '-r' in runner.call_args.args[0] and 'uninstall' not in runner.call_args.args[0]

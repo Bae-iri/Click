@@ -45,6 +45,13 @@ public final class Gov24LoginPrivacy {
         for(var keys=services.keys();keys.hasNext();)if(services.optJSONObject(keys.next()).optString("graph_id").equals(value))return true;
         return false;
     }
+    public static String goalForBaseline(String value) {
+        JSONObject services=POLICY.optJSONObject("civil_navigation").optJSONObject("services");
+        for(var keys=services.keys();keys.hasNext();) {
+            String goal=keys.next();if(services.optJSONObject(goal).optString("graph_id").equals(value))return goal;
+        }
+        return null;
+    }
     private boolean publicHome(ScreenSnapshot screen) {
         boolean brand=false,services=false;
         for(var node:screen.nodes) {
@@ -54,7 +61,37 @@ public final class Gov24LoginPrivacy {
                 if("자주찾는서비스".equals(normalize(value))||"민원서비스".equals(normalize(value)))services=true;
             }
         }
-        return civil&&brand&&services;
+        return brand&&services;
+    }
+    private static String label(AccessibilityNodeSnapshot node) {
+        return node.text==null||node.text.isBlank()?node.contentDescription:node.text;
+    }
+    private boolean publicSearchContext(ScreenSnapshot screen) {
+        boolean anchor=publicHome(screen);int inputs=0;
+        for(var node:screen.nodes) {
+            if(!node.visibleToUser)continue;
+            if(node.sensitiveInput) {
+                if(!node.publicSearchInput()||++inputs>1)return false;
+                continue;
+            }
+            String login=option(label(node));
+            if(login!=null&&(login.startsWith("method_")||login.startsWith("provider_")))return false;
+            String navigation=civilOption(label(node),true),marker=civilOption(label(node),false);
+            anchor|=navigation!=null||marker!=null;
+        }
+        return anchor;
+    }
+    private JSONObject specs() throws JSONException {
+        JSONObject result=new JSONObject(POLICY.getJSONObject("options").toString());
+        if(civil) {
+            JSONObject navigation=POLICY.getJSONObject("civil_navigation").getJSONObject("options");
+            for(var keys=navigation.keys();keys.hasNext();) {String key=keys.next();result.put(key,navigation.get(key));}
+        }
+        return result;
+    }
+    private JSONObject specification(String key) {
+        JSONObject spec=POLICY.optJSONObject("options").optJSONObject(key);
+        return spec!=null?spec:POLICY.optJSONObject("civil_navigation").optJSONObject("options").optJSONObject(key);
     }
     private String civilOption(String label,boolean clickable) {
         JSONObject specs=POLICY.optJSONObject("civil_navigation").optJSONObject("options");
@@ -83,10 +120,12 @@ public final class Gov24LoginPrivacy {
             ?blocked(base,"handoff","external_auth","external_auth_app"):blocked(base,"outside_app",null,"outside_gov24_app");
         base.put("package_name",PACKAGE);
         boolean publicHome=publicHome(screen);
+        boolean publicSearch=publicSearchContext(screen);
         Map<String,AccessibilityNodeSnapshot> byId=new HashMap<>();
         for(var node:screen.nodes)byId.put(node.nodeId,node);
         Map<String,Map<String,JSONObject>> options=new LinkedHashMap<>();
-        JSONObject specs=civil?POLICY.getJSONObject("civil_navigation").getJSONObject("options"):POLICY.getJSONObject("options");
+        JSONObject specs=specs();
+        Map<String,AccessibilityNodeSnapshot> logouts=new LinkedHashMap<>();
         int visible=0;
         for(AccessibilityNodeSnapshot n:screen.nodes) {
             if(!n.visibleToUser)continue;
@@ -94,16 +133,21 @@ public final class Gov24LoginPrivacy {
             if(!PACKAGE.equals(n.packageName))return blocked(base,"sensitive",null,"foreign_package_node");
             if(screen.activeWindowId!=null&&n.windowId!=screen.activeWindowId)return blocked(base,"sensitive",null,"inactive_window_node");
             if(n.sensitiveInput||n.passwordInput()) {
-                if(publicHome&&n.emptySearchInput())continue;
-                return blocked(base,"handoff","credential_input",
-                    n.passwordInput()?"password_field":n.emptySearchInput()?"empty_search_field":"sensitive_input_field");
+                if(publicSearch&&n.publicSearchInput())continue; // Query values stay local even when filled.
+                return blocked(base,"handoff","credential_input",n.passwordInput()?"password_field":n.emptySearchInput()?"empty_search_field":"sensitive_input_field");
             }
-            String label=n.text!=null?n.text:n.contentDescription;
-            if(label!=null&&exact(POLICY.optJSONArray("consent_labels"),label))return blocked(base,"handoff","consent_required","consent_prompt");
-            if(label!=null&&exact(POLICY.optJSONArray("handoff_labels"),label))return blocked(base,"handoff","certificate_selection",
-                Set.of("이름","성명","생년월일","주민등록번호","휴대폰번호","인증번호","본인정보입력","개인정보입력").contains(normalize(label))
-                    ?"private_identity_label":"certificate_prompt");
+            String label=label(n);
+            for(String value:new String[]{n.text,n.contentDescription}) {
+                if(value!=null&&exact(POLICY.optJSONArray("consent_labels"),value))return blocked(base,"handoff","consent_required","consent_prompt");
+                if(value!=null&&exact(POLICY.optJSONArray("handoff_labels"),value))return blocked(base,"handoff","certificate_selection",
+                    Set.of("이름","성명","생년월일","주민등록번호","휴대폰번호","인증번호","본인정보입력","개인정보입력").contains(normalize(value))?"private_identity_label":"certificate_prompt");
+            }
+            if(publicHome&&exact(POLICY.getJSONObject("home_authentication").optJSONArray("logout_aliases"),label)) {
+                var logout=clickOwner(n,"auth_logout",screen,byId);
+                if(logout!=null&&onScreen(logout,screen))logouts.put(logout.nodeId,logout);
+            }
             String key=civil?civilOption(label,true):option(label);
+            if(key==null&&civil)key=option(label);
             if(key==null&&civil&&(!n.clickable||publicHome&&"정부24".equals(normalize(label))))key=civilOption(label,false);
             if(key==null||!n.enabled||n.checkable||n.scrollable)continue;
             boolean marker=civil&&"marker".equals(specs.getJSONObject(key).optString("group"));
@@ -122,13 +166,27 @@ public final class Gov24LoginPrivacy {
             options.computeIfAbsent(key,k->new LinkedHashMap<>()).put(target.nodeId,node);
         }
         // A modal provider grid takes precedence over the underlying login page.
-        boolean provider=!civil&&options.keySet().stream().anyMatch(k->k.startsWith("provider_"));
+        boolean provider=options.keySet().stream().anyMatch(k->k.startsWith("provider_"));
+        boolean choices=options.keySet().stream().anyMatch(k->k.startsWith("provider_")||k.startsWith("method_"));
+        Map<String,JSONObject> logins=options.get("entry_login");
+        String auth="unknown";
+        if(publicHome&&!choices) {
+            if(!logouts.isEmpty()&&logins!=null&&!logins.isEmpty())return reason(base,"ambiguous_public_options");
+            if(logouts.size()==1&&(logins==null||logins.isEmpty()))auth="signed_in";
+            else if(logouts.isEmpty()&&logins!=null&&logins.size()==1)auth="signed_out";
+        }
         JSONArray exported=new JSONArray();
         for(var entry:options.entrySet())if(entry.getValue().size()==1&&(!provider||entry.getKey().startsWith("provider_")))exported.put(entry.getValue().values().iterator().next());
-        if(exported.length()==0)return reason(base,screen.nodes.isEmpty()?"empty_accessibility_tree":visible==0?"no_visible_nodes":
-            options.isEmpty()?"no_public_options":"ambiguous_public_options");
         if(exported.length()>POLICY.getInt("max_nodes"))return reason(base,"public_options_limit");
-        return base.put("status","public").put("nodes",exported);
+        if(exported.length()==0&&"unknown".equals(auth))return reason(base,screen.nodes.isEmpty()?"empty_accessibility_tree":visible==0?"no_visible_nodes":
+            options.isEmpty()?"no_public_options":"ambiguous_public_options");
+        return base.put("status","public").put("nodes",exported).put("auth_state",auth);
+    }
+
+    private boolean onScreen(AccessibilityNodeSnapshot node,ScreenSnapshot screen) {
+        int[] b=node.bounds;
+        return node.visibleToUser&&node.enabled&&b!=null&&b.length==4&&b[0]>=0&&b[1]>=0&&b[2]<=screen.screenWidth
+            &&b[3]<=screen.screenHeight&&b[0]<b[2]&&b[1]<b[3];
     }
 
     /** A virtual text child may label a native button. Never promote a whole list or mixed row. */
@@ -155,8 +213,9 @@ public final class Gov24LoginPrivacy {
             if(child.sensitiveInput||child.checkable||child.scrollable)return null;
             for(String text:new String[]{child.text,child.contentDescription}) {
                 if(text==null||text.isBlank())continue;
-                String option=civil?civilOption(text,true):option(text);
-                if(!key.equals(option))return null;
+                JSONArray aliases="auth_logout".equals(key)?POLICY.optJSONObject("home_authentication").optJSONArray("logout_aliases")
+                    :specification(key).optJSONArray("aliases");
+                if(!exact(aliases,text))return null;
             }
         }
         return target;
