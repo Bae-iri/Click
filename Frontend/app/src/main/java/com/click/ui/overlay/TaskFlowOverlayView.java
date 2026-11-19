@@ -380,7 +380,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         progressMessage = null;
         guidanceProgress = null; progressBar = null; progressCount = null; guidanceTarget = null;
         content.removeAllViews();
-        adjustmentDelegationChoice=null;
         content.setPadding(0, 0, 0, dp(4));
         reviewConfirm.setVisibility(GONE);
         reviewNavigation.removeAllViews(); reviewNavigation.setVisibility(GONE);
@@ -820,19 +819,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         }), spaced(12));
         requestEditor("", null);
     }
-
-    private android.widget.CheckBox adjustmentDelegationChoice;
-    public void offerAdjustmentDelegation(boolean available) {
-        if(!available || !reviewScreen || reviewConfirm.getVisibility()!=VISIBLE)return;
-        adjustmentDelegationChoice=new android.widget.CheckBox(getContext());
-        adjustmentDelegationChoice.setText("이번 작업의 조절을 한 번 맡기기\n5분 안에 한 단계만, 전체 조절 범위의 최대 20%까지 바꿔요.");
-        adjustmentDelegationChoice.setTextSize(14);
-        adjustmentDelegationChoice.setTextColor(INK);
-        adjustmentDelegationChoice.setMinHeight(dp(48));
-        adjustmentDelegationChoice.setChecked(false);
-        content.addView(adjustmentDelegationChoice,spaced(12));
-    }
-    public boolean adjustmentDelegated(){return adjustmentDelegationChoice!=null && adjustmentDelegationChoice.isChecked();}
 
     public void preparation(com.click.domain.goal.GoalPreparationState state) {
         if (state.ready()) {
