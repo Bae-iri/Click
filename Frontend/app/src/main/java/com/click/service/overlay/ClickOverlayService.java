@@ -2816,6 +2816,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     String control = execution.pendingControl(); execution.clearControl();
                     sendAgentControl(control); return;
                 }
+                if (environmentWait != null && environmentWait.kind() == com.click.data.snapshot.ScreenEnvironment.Kind.SENSITIVE) {
+                    // A delayed reply from the former public screen cannot replace private-mode UI.
+                    agentConfirmationId = null; confirmationExpiresAt = 0;
+                    pendingPageScreen = null; return;
+                }
                 if(environmentWait!=null && !java.util.Set.of("COMPLETED","WAITING_RESULT","CANCELLED","EXPIRED","BLOCKED").contains(response.taskStatus)){pendingPageScreen=null;return;}
                 if (continueAfterPageChange(response)) return;
                 applyTaskFlowResponse(response);
@@ -2857,8 +2862,28 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     } else {
                     boolean sensitive = blocked.reason == com.click.data.snapshot.SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_INPUT
                             || blocked.reason == com.click.data.snapshot.SettingsScreenPrivacy.Blocked.Reason.SENSITIVE_SCREEN;
-                    showStoppedTask(goalAwarePrivacyMessage(ErrorDetails.requestMessage(error), sensitive),
-                            sensitive && hasAssistedSettingsGoal());
+                    if (sensitive) {
+                        // Keep the task/graph, discard stale UI bindings and stay local.
+                        // The next safe observation can resume without a new user goal.
+                        if (execution.sensitiveEnvironmentBlocked()) {
+                            environmentWait = new com.click.data.snapshot.ScreenEnvironment(
+                                    com.click.data.snapshot.ScreenEnvironment.Kind.SENSITIVE, "SENSITIVE_SCREEN");
+                            environmentWaitKey = null;
+                            automationGuard.interrupt(); actionTracker.clear(); clearVisionState();
+                            hideGuideOverlay(); hideConfirmation(); stopNarration();
+                            agentConfirmationId = null; confirmationExpiresAt = 0;
+                            automaticAdjustmentApprovalPending = false;
+                            adjustmentDelegation.clear(); pendingApprovalProvenance = null;
+                            pendingVerifiedAction = null; pendingActionType = null;
+                            lastGuideCommandId = lastTargetNodeId = null; lastTargetBounds = null;
+                            ensureTaskFlow();
+                            taskFlowView.privateSettingsStep(goalAwarePrivacyMessage(ErrorDetails.requestMessage(error), true));
+                            placeTaskFlow(null, false);
+                            execution.clearObservation();
+                        }
+                    } else {
+                        showStoppedTask(goalAwarePrivacyMessage(ErrorDetails.requestMessage(error), false), false);
+                    }
                     }
                     return;
                 }
@@ -4422,6 +4447,20 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         var scene=com.click.data.snapshot.ScreenEnvironment.classify(current,
                 ClickAccessibilityService.accessibilityWindowManager()!=null,
                 keyguard!=null && keyguard.isDeviceLocked(),getPackageName());
+        // Reuse the actual transmission policy, including sensitive titles that
+        // OEM window/dialog classification alone may not recognize.
+        if ("android_settings".equals(execution.acceptedGoal().optString("target_app"))) {
+            JSONObject privacySlots = execution.acceptedGoal().optJSONObject("slots");
+            var privacy = agentGateway == null ? com.click.data.snapshot.SettingsScreenPrivacy.Mode.UNVERIFIED
+                    : agentGateway.privacyMode(current, privacySlots == null ? null : privacySlots.optString("setting", null));
+            if (privacy == com.click.data.snapshot.SettingsScreenPrivacy.Mode.SENSITIVE)
+                scene = new com.click.data.snapshot.ScreenEnvironment(
+                        com.click.data.snapshot.ScreenEnvironment.Kind.SENSITIVE, "SENSITIVE_SCREEN");
+            // An unreadable redraw is not permission to leave sensitive mode.
+            if (environmentWait != null && environmentWait.kind() == com.click.data.snapshot.ScreenEnvironment.Kind.SENSITIVE
+                    && privacy != com.click.data.snapshot.SettingsScreenPrivacy.Mode.PUBLIC_MINIMIZED
+                    && privacy != com.click.data.snapshot.SettingsScreenPrivacy.Mode.SENSITIVE) return true;
+        }
         var kind=scene.kind();
         if(kind==com.click.data.snapshot.ScreenEnvironment.Kind.SELF)return false;
         if(kind==com.click.data.snapshot.ScreenEnvironment.Kind.UNOBSERVABLE)return environmentWait!=null;
@@ -4488,7 +4527,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String key=reason+"|"+(current==null?"":current.packageName)+"|"+(current==null?"":current.activeWindowId);
         if(offRoute)key+="|"+com.click.data.snapshot.ScreenIdentity.pageTitle(current);
         if(key.equals(environmentWaitKey))return true;
-        if(!execution.environmentBlocked())return true;
+        if(!(kind == com.click.data.snapshot.ScreenEnvironment.Kind.SENSITIVE
+                ? execution.sensitiveEnvironmentBlocked() : execution.environmentBlocked()))return true;
         environmentWait=scene;environmentWaitKey=key;
         if(execution.busy())pendingPageScreen=current!=null?current:observedPageScreen;
         clearTargetHelpWait();clearGuideResyncRetry();clearMissingScreenWait();
@@ -4506,8 +4546,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             case LOCKED:
                 taskFlowView.failureRecovery("잠금을 풀어주세요",message,null,null);break;
             case SYSTEM_DIALOG:
-            case SENSITIVE:
                 taskFlowView.failureRecovery("직접 진행해 주세요",message,null,null);break;
+            case SENSITIVE:
+                adjustmentDelegation.clear(); pendingApprovalProvenance = null;
+                taskFlowView.privateSettingsStep(goalAwarePrivacyMessage(message, true));break;
             case RECENTS:
                 navigationRecovery.forceHome();showSettingsEntryRecovery();return true;
             case OTHER_APP:

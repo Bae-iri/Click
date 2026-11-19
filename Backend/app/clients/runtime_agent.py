@@ -27,6 +27,8 @@ from app.clients.screen_state_llm import LocalScreenStateLlm
 from app.services.screen_jev import JevScreenResolver
 from app.services.jev_screen_judgments import screen_policy
 from ai_agent.runtime.capabilities import identity as capability_identity
+from ai_agent.runtime.verification_conditions import summarize_legacy
+from app.services.gpt_verifier import GptVerifier
 
 
 def runtime_configuration():
@@ -42,7 +44,8 @@ def runtime_configuration():
                 Path(__file__).parents[1] / "services/goal_jev.py",
                 Path(__file__).parents[1] / "services/commerce_jev.py",
                 Path(__file__).parents[1] / "services/jev_probabilities.py",
-                Path(__file__).parents[1] / "services/jev_screen_judgments.py"]
+                Path(__file__).parents[1] / "services/jev_screen_judgments.py",
+                Path(__file__).parents[1] / "services/gpt_verifier.py"]
     digest = sha256()
     for source in sources:
         digest.update(source.name.encode())
@@ -249,6 +252,15 @@ class RuntimeAgentAdapter:
             if runtime_session and runtime_session.last_snapshot else {}
         )
         verification = result.verification_result.to_dict() if result.verification_result else None
+        # A blocked guide caused by missing observations is still UNKNOWN,
+        # not evidence of a permission/authentication barrier.
+        private_boundary = result.debug.get("ui_selection", {}).get("observation_reason")
+        assessment = summarize_legacy(result.verification_result, blocker=(
+            "app_restriction" if command_type == "blocked" and private_boundary in
+            {"protected_screen", "credential_input"} else None))
+        model_review = GptVerifier().review_runtime(
+            result, graph, runtime_request, assessment=assessment,
+            previous_attempt=previous.pending_attempt if previous else None)
         return AgentTurnResponse(
             request_id=result.request_id,
             session_id=result.session_id,
@@ -284,6 +296,8 @@ class RuntimeAgentAdapter:
                 "typed_goal": result.typed_goal.to_dict() if result.typed_goal else None,
                 "verification": {
                     "result": verification,
+                    "assessment": assessment,
+                    "model_review": model_review,
                     "slider_value_increased": bool(
                         verification and verification.get("status") == "SUCCESS"
                         and verification.get("evidence") == "target_value_increased"

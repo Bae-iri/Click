@@ -57,6 +57,22 @@ public final class SettingsScreenPrivacy {
                 new JSONObject(data.toString(StandardCharsets.UTF_8.name())));
     }
 
+    public enum Mode { PUBLIC_MINIMIZED, SENSITIVE, UNVERIFIED }
+
+    /** Local-only decision; successful classification still requires filtering at send time. */
+    public Mode classify(JSONObject request, String setting, boolean imageMaskReady) {
+        try {
+            if (request == null || request.optJSONObject("accessibility_tree") == null) return Mode.UNVERIFIED;
+            filter(request, setting, imageMaskReady);
+            return Mode.PUBLIC_MINIMIZED;
+        } catch (Blocked blocked) {
+            return blocked.reason == Blocked.Reason.SENSITIVE_INPUT || blocked.reason == Blocked.Reason.SENSITIVE_SCREEN
+                    ? Mode.SENSITIVE : Mode.UNVERIFIED;
+        } catch (JSONException | Incomplete malformed) {
+            return Mode.UNVERIFIED;
+        }
+    }
+
     public JSONObject filter(JSONObject request) throws JSONException, Blocked, Incomplete {
         return filter(request,null);
     }

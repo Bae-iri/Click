@@ -77,4 +77,12 @@ public class TaskExecutionControllerTest {
   assertFalse(state.receiveStatus("WAITING_RESULT"));assertFalse(state.canAct());
  }
 
+ @Test public void sensitiveModeInterruptsExecutingButCannotResumeExplicitPause() {
+  var state=new TaskExecutionController();state.guidePresented(false);state.actionStarted();
+  assertEquals(TaskExecutionController.Phase.EXECUTING,state.phase());
+  assertFalse(state.environmentBlocked());assertTrue(state.sensitiveEnvironmentBlocked());
+  assertFalse(state.canAct());assertFalse(state.canObserve());
+  state.actionDispatched(true);assertEquals(TaskExecutionController.Phase.RECOVERY,state.phase());
+  state.pause();assertFalse(state.sensitiveEnvironmentBlocked());assertTrue(state.paused());
+ }
 }

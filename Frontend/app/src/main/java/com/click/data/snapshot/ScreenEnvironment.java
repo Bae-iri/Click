@@ -25,11 +25,12 @@ public record ScreenEnvironment(Kind kind,String reason) {
             if(has(screen,"home_tokens"))return new ScreenEnvironment(Kind.HOME,"HOME_VISIBLE");
             return new ScreenEnvironment(Kind.LAUNCHER,"LAUNCHER_VISIBLE");
         }
+        // A protected heading outranks a generic OEM dialog classification.
+        String title=ScreenIdentity.pageTitle(screen);
+        if(ScreenEnvironmentPolicy.contains("blocked_titles",title))return new ScreenEnvironment(Kind.SENSITIVE,"SENSITIVE_SCREEN");
         // Foreign app text is never inspected; sensitive Settings input cannot resume a task.
         if("DIALOG".equals(screen.windowContext.windowKind()))return new ScreenEnvironment(Kind.DIALOG,"DIALOG_VISIBLE");
         for(var node:screen.nodes)if(node.visibleToUser && ScreenEnvironmentPolicy.contains("dialog_classes",node.className))return new ScreenEnvironment(Kind.DIALOG,"DIALOG_VISIBLE");
-        String title=ScreenIdentity.pageTitle(screen);
-        if(ScreenEnvironmentPolicy.contains("blocked_titles",title))return new ScreenEnvironment(Kind.SENSITIVE,"SENSITIVE_SCREEN");
         if("SUBPAGE".equals(screen.windowContext.settingsActivity()))return new ScreenEnvironment(Kind.SETTINGS_SUBPAGE,"SETTINGS_SUBPAGE_VISIBLE");
         if(title!=null && !ScreenEnvironmentPolicy.contains("settings_home_titles",title))return new ScreenEnvironment(Kind.SETTINGS_SUBPAGE,"SETTINGS_SUBPAGE_VISIBLE");
         if("HOME".equals(screen.windowContext.settingsActivity()) || title!=null && has(screen,"settings_home_tokens"))return new ScreenEnvironment(Kind.SETTINGS_HOME,"SETTINGS_HOME_VISIBLE");

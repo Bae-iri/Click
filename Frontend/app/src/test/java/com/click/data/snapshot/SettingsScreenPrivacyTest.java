@@ -294,4 +294,20 @@ public class SettingsScreenPrivacyTest {
   slider.remove("parent_id");
   assertThrows(SettingsScreenPrivacy.Blocked.class,()->privacy.filter(input,"brightness"));
  }
+    @Test public void localModeRequiresVerifiedPublicScreenAndNeverMutatesRawInput() throws Exception {
+        JSONObject publicScreen = request(node("title", "설정"), node("owner", "owner@example.com"));
+        String before = publicScreen.toString();
+        assertEquals(SettingsScreenPrivacy.Mode.PUBLIC_MINIMIZED, privacy.classify(publicScreen, "font_size", true));
+        assertEquals(before, publicScreen.toString());
+        assertFalse(privacy.filter(publicScreen, "font_size").toString().contains("owner@example.com"));
+        JSONObject privateScreen = request(node("title", "설정"), node("secret", "1234")
+                .put("role", "text_field").put("class_name", "android.widget.EditText"));
+        assertEquals(SettingsScreenPrivacy.Mode.SENSITIVE, privacy.classify(privateScreen, "font_size", true));
+        assertThrows(SettingsScreenPrivacy.Blocked.class, () -> privacy.filter(privateScreen, "font_size"));
+        assertEquals(SettingsScreenPrivacy.Mode.SENSITIVE,
+                privacy.classify(request(node("title", "삼성 계정")), "font_size", true));
+        assertEquals(SettingsScreenPrivacy.Mode.UNVERIFIED,
+                privacy.classify(request(node("title", "알 수 없는 제조사 화면")), "font_size", true));
+        assertEquals(SettingsScreenPrivacy.Mode.UNVERIFIED, privacy.classify(new JSONObject(), "font_size", true));
+    }
 }
