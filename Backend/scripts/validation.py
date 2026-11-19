@@ -13,14 +13,21 @@ sys.path.insert(0, str(BACKEND.parent / 'AI-Agent/src'))
 INSTANCE = BACKEND / 'instance/validation'
 
 
-def prepare(env_file, port, *, coupang_browse=False, gov24=False):
+def prepare(env_file, port, *, coupang_browse=False, gov24=False, profile=None):
     from dotenv import dotenv_values, set_key
     from cryptography.fernet import Fernet
     from app.core.data_encryption import DataCipher
     if not 1 <= port <= 65535:
         raise ValueError('Invalid validation port')
-    INSTANCE.mkdir(parents=True, exist_ok=True)
+    INSTANCE.mkdir(parents=True, exist_ok=True, mode=0o700)
     values = dict(dotenv_values(env_file))
+    if profile == 'jev':
+        if not (values.get('TYPESAFE_API_KEY') or '').strip():
+            raise ValueError('The Jev profile requires TYPESAFE_API_KEY')
+        values.update(AI1_UI_SELECTOR_PROVIDER='jev', GOAL_CLASSIFIER_PROVIDER='jev',
+            JEV_MODEL=values.get('JEV_MODEL') or 'jev-1.14.0',
+            JEV_SCREEN_JUDGMENT_MODE=values.get('JEV_SCREEN_JUDGMENT_MODE') or 'atomic',
+            JEV_CHOICE_TEMPERATURE=values.get('JEV_CHOICE_TEMPERATURE') or '0.7')
     if coupang_browse:
         values['CLICK_COUPANG_BROWSE_ENABLED'] = '1'
     if gov24:
@@ -34,7 +41,8 @@ def prepare(env_file, port, *, coupang_browse=False, gov24=False):
         DATA_ENCRYPTION_KEYS=previous.get('DATA_ENCRYPTION_KEYS') or Fernet.generate_key().decode(),
         DATA_LOOKUP_KEY=previous.get('DATA_LOOKUP_KEY') or Fernet.generate_key().decode())
     if not target.exists():
-        target.touch()
+        target.touch(mode=0o600)
+    target.chmod(0o600)
     for key, value in values.items():
         if value is not None:
             set_key(target, key, value)
@@ -109,6 +117,7 @@ def main():
     prepare_cmd.add_argument('--port', type=int, default=8001)
     prepare_cmd.add_argument('--coupang-browse', action='store_true')
     prepare_cmd.add_argument('--gov24', action='store_true')
+    prepare_cmd.add_argument('--profile', choices=['jev'], help='Explicit production-equivalent model providers')
     parser.add_argument('--instance', type=Path, default=INSTANCE)
     commands.add_parser('check')
     commands.add_parser('serve', help='Serve the isolated paired instance on localhost')
@@ -122,7 +131,7 @@ def main():
         if args.command == 'prepare':
             if not args.env_file.is_file():
                 raise ValueError('Source environment file does not exist')
-            prepare(args.env_file, args.port, coupang_browse=args.coupang_browse, gov24=args.gov24)
+            prepare(args.env_file, args.port, coupang_browse=args.coupang_browse, gov24=args.gov24, profile=args.profile)
         elif args.command == 'check':
             check()
         elif args.command == 'serve':

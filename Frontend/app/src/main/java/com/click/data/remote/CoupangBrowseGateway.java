@@ -7,6 +7,7 @@ import java.util.concurrent.*;
 
 /** Manual browsing has its own negotiated contract; settings filters and graph IDs are not bypassed. */
 public class CoupangBrowseGateway {
+    private final RequestLifecycle lifecycle=new RequestLifecycle();
     public static final String PATH="/api/v1/agent/browse/commands";
     public interface Callback {void success(JSONObject response);void failure(Throwable error);}
     private final AuthenticatedHttpClient http;
@@ -17,8 +18,10 @@ public class CoupangBrowseGateway {
     public CoupangBrowseGateway(Context context){this(context,PATH,"coupang-browse.v1");}
     public CoupangBrowseGateway(Context context,String path,String protocol){http=new AuthenticatedHttpClient(context);this.path=path;this.protocol=protocol;}
     public void send(JSONObject request,Callback callback) {
+        final long deadline=SystemClock.elapsedRealtime()+
+            ("public-guide.v1".equals(protocol)?RequestBudget.PUBLIC_GUIDE_TOTAL_MS:RequestBudget.TOTAL_MS);
         executor.execute(()->{
-            try {
+            try (RequestBudget budget=new RequestBudget(deadline,lifecycle)) {
                 if("public-guide.v1".equals(protocol)&&!recoveryChecked) {
                     if(!supportsRecovery(new JSONObject(http.get("/openapi.json").body)))
                         throw new java.io.IOException("GOV24_SERVER_UPDATE_REQUIRED");
@@ -26,10 +29,10 @@ public class CoupangBrowseGateway {
                 }
                 // The opt-in Government24 planner may wait on a model call (25s budget).
                 JSONObject response=new JSONObject(http.post(path,request.toString(),
-                    "public-guide.v1".equals(protocol)?45000:15000).body);
+                    "public-guide.v1".equals(protocol)?RequestBudget.PUBLIC_GUIDE_READ_MS:15000).body);
                 validate(request,response,protocol);
-                main.post(()->callback.success(response));
-            }catch(Exception error){main.post(()->callback.failure(error));}
+                lifecycle.post(main,()->callback.success(response));
+            }catch(Exception error){lifecycle.post(main,()->callback.failure(error));}
         });
     }
     public static void validate(JSONObject request,JSONObject response) throws Exception {
@@ -78,5 +81,5 @@ public class CoupangBrowseGateway {
         for(int i=0;choices!=null&&i<choices.length();i++)if(declaresRecovery(choices.optJSONObject(i)))return true;
         return false;
     }
-    public void close(){executor.shutdownNow();}
+    public void close(){lifecycle.close();executor.shutdownNow();}
 }

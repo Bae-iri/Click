@@ -20,6 +20,10 @@ def javaString = { value -> groovy.json.JsonOutput.toJson(value ?: "") }
 
 def clickApiBaseUrl = providers.gradleProperty("CLICK_API_BASE_URL")
         .getOrElse("https://click-db.onrender.com")
+if (gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }
+        && new URI(clickApiBaseUrl).scheme != "https") {
+    throw new GradleException("Release builds require an HTTPS CLICK_API_BASE_URL")
+}
 def clickApplicationId = providers.gradleProperty("CLICK_APPLICATION_ID").getOrElse("com.clueclick.app")
 def candidateDiagnostics = providers.gradleProperty("CLICK_CANDIDATE_DIAGNOSTICS").getOrElse("false")
 if (!(candidateDiagnostics in ["true", "false"])) throw new GradleException("CLICK_CANDIDATE_DIAGNOSTICS must be true or false")

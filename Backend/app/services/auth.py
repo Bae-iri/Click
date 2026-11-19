@@ -3,11 +3,11 @@ from dataclasses import dataclass
 from threading import Lock
 
 from fastapi import HTTPException
-from sqlalchemy import delete, select, update
+from sqlalchemy import case, delete, select, update
 from sqlalchemy.exc import IntegrityError
 
 from app.core.security import hash_password, new_token, token_hash, verify_password
-from app.models.auth import Account, AuthSession, KakaoIdentity
+from app.models.auth import Account, AuthSession, KakaoIdentity, AuthLoginWindow
 from app.clients.kakao import KakaoTokenVerifier
 from app.models.user import User
 from app.core.data_encryption import cipher_for
@@ -15,6 +15,8 @@ from app.schemas.auth import TokenResponse
 
 ACCESS_TTL = 900
 REFRESH_TTL = 7 * 24 * 60 * 60
+LOGIN_ATTEMPTS = 5
+LOGIN_WINDOW_SECONDS = 300
 
 
 @dataclass(frozen=True)
@@ -98,6 +100,7 @@ class AuthService:
             return tokens
 
     def login(self, request):
+        attempt_key = self.reserve_login_attempt(request.phone_number)
         with self.factory() as db:
             lookup = cipher_for(db.bind.dialect).lookup(request.phone_number, "accounts.phone_number")
             account = db.scalar(select(Account).where(Account.phone_lookup == lookup).with_for_update())
@@ -110,8 +113,31 @@ class AuthService:
                 raise HTTPException(401)
             tokens = self.tokens(account.user_id)
             self.add_session(db, tokens)
+            db.execute(delete(AuthLoginWindow).where(AuthLoginWindow.identity_hash == attempt_key))
             db.commit()
             return tokens
+
+    def reserve_login_attempt(self, phone_number):
+        """Atomic across workers/restarts and independent of the caller's IP address."""
+        now = int(time.time())
+        with self.factory() as db:
+            key = cipher_for(db.bind.dialect).lookup(phone_number, "auth.login_limit")
+            if db.bind.dialect.name == "postgresql":
+                from sqlalchemy.dialects.postgresql import insert
+            else:
+                from sqlalchemy.dialects.sqlite import insert
+            expired = AuthLoginWindow.window_start <= now - LOGIN_WINDOW_SECONDS
+            db.execute(delete(AuthLoginWindow).where(expired))
+            statement = insert(AuthLoginWindow).values(identity_hash=key, window_start=now, attempts=1)
+            statement = statement.on_conflict_do_update(index_elements=[AuthLoginWindow.identity_hash], set_={
+                "window_start": case((expired, now), else_=AuthLoginWindow.window_start),
+                "attempts": case((expired, 1), else_=AuthLoginWindow.attempts + 1),
+            }).returning(AuthLoginWindow.window_start, AuthLoginWindow.attempts)
+            start, attempts = db.execute(statement).one()
+            db.commit()
+        if attempts > LOGIN_ATTEMPTS:
+            raise HTTPException(429, headers={"Retry-After": str(max(1, start + LOGIN_WINDOW_SECONDS - now))})
+        return key
 
     def authenticate(self, token):
         if not 40 <= len(token) <= 128:

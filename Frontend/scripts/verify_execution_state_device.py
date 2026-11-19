@@ -10,17 +10,18 @@ import shutil
 import subprocess
 import time
 
-COMPONENT='com.click/com.click.service.accessibility.ClickAccessibilityService'
-
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--serial',required=True)
     parser.add_argument('--adb',default=shutil.which('adb'))
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--application-id',default='com.clueclick.app')
     args=parser.parse_args()
+    component=args.application_id+'/com.click.service.accessibility.ClickAccessibilityService'
+    service_prefix=args.application_id+'/'
     if not args.adb:parser.error('Supply --adb or add Android platform-tools to PATH')
     report={'scope':'encrypted_device_journal_and_local_controller','server_events_sent':False,
-            'production_end_to_end':False,'steps':[]}
+            'production_end_to_end':False,'application_id':args.application_id,'steps':[]}
     logs=[]
     def adb(*command):
         result=subprocess.run([args.adb,'-s',args.serial,*command],capture_output=True,text=True,timeout=90)
@@ -29,17 +30,17 @@ def main():
         return result.stdout.strip()
     def phase(name):
         text=adb('shell','am','instrument','-w','-e','class','com.click.service.overlay.ExecutionStateDeviceTest',
-                 '-e','executionContractProbe',name,'com.click.test/androidx.test.runner.AndroidJUnitRunner')
+                 '-e','executionContractProbe',name,args.application_id+'.test/androidx.test.runner.AndroidJUnitRunner')
         if 'OK (1 test)' not in text or 'FAILURES!!!' in text:raise RuntimeError('Device probe failed: '+name)
         report['steps'].append({'phase':name,'passed':True})
         print(name+': passed',flush=True)
     wifi=adb('shell','settings','get','global','wifi_on')
     enabled=adb('shell','settings','get','secure','enabled_accessibility_services')
-    prior_click=any(x.startswith('com.click/') for x in enabled.split(':'))
+    prior_click=any(x.startswith(service_prefix) for x in enabled.split(':'))
     report.update(wifi_before=wifi,click_accessibility_before=prior_click)
     try:
         phase('stage')
-        adb('shell','am','force-stop','com.click')
+        adb('shell','am','force-stop',args.application_id)
         report['process_restarted']=True
         adb('shell','svc','wifi','disable')
         for _ in range(30):
@@ -61,11 +62,11 @@ def main():
         def restore_accessibility():
             current=adb('shell','settings','get','secure','enabled_accessibility_services')
             services=[] if current in ('null','') else current.split(':')
-            if prior_click and not any(x.startswith('com.click/') for x in services):
-                services.append(COMPONENT)
+            if prior_click and not any(x.startswith(service_prefix) for x in services):
+                services.append(component)
                 adb('shell','settings','put','secure','enabled_accessibility_services',':'.join(services))
                 adb('shell','settings','put','secure','accessibility_enabled','1')
-            report['click_accessibility_after']=any(x.startswith('com.click/') for x in
+            report['click_accessibility_after']=any(x.startswith(service_prefix) for x in
                 adb('shell','settings','get','secure','enabled_accessibility_services').split(':'))
         # Each cleanup is independent: a failed fixture cleanup must not skip restoration.
         for name,operation in [('wifi',restore_wifi),('fixture',lambda:phase('cleanup')),('accessibility',restore_accessibility)]:

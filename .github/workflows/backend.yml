@@ -24,8 +24,8 @@ jobs:
         working-directory: Frontend
       - run: bash gradlew :app:testDebugUnitTest :app:assembleDebug
         working-directory: Frontend
-      - name: Verify Android minSdk API compatibility
-        run: bash gradlew :app:lintDebug -PCLICK_API_COMPATIBILITY_ONLY=true
+      - name: Verify complete Debug and Release Android Lint
+        run: bash gradlew :app:lintDebug :app:lintRelease
         working-directory: Frontend
   backend:
     runs-on: ubuntu-24.04

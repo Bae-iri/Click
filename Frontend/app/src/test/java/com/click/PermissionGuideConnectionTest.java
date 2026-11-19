@@ -139,7 +139,7 @@ public class PermissionGuideConnectionTest {
         }
     }
 
-    @Test @Config(application = ClickApplication.class)
+    @Test @Config(application = com.click.testing.ClickTestApplication.class)
     public void startingAReviewCancelsAnAbandonedOnboardingReturn() {
         com.click.data.local.AccessibilityOnboardingState state =
             new com.click.data.local.AccessibilityOnboardingState(org.robolectric.RuntimeEnvironment.getApplication());

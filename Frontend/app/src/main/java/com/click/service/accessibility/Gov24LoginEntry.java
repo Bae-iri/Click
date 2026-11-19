@@ -20,10 +20,13 @@ public final class Gov24LoginEntry {
     private record ClickOwner(AccessibilityNodeInfo node,String path) {}
     public static Target inspect(AccessibilityNodeInfo root) {
         if(root==null || !Gov24LoginPrivacy.PACKAGE.contentEquals(String.valueOf(root.getPackageName())))return null;
-        Scan scan=new Scan();visit(root,"node_0",scan,null);
+        Scan scan=new Scan();
+        try{visit(root,"node_0",scan,null,new SnapshotTraversalBudget(),0);}
+        catch(SnapshotTraversalBudget.Incomplete incomplete){return null;}
         return scan.brand&&scan.services&&!scan.privateBoundary&&!scan.choices&&!scan.logout&&scan.inputs<=1&&scan.logins==1?scan.target:null;
     }
-    private static void visit(AccessibilityNodeInfo node,String path,Scan scan,ClickOwner owner) {
+    private static void visit(AccessibilityNodeInfo node,String path,Scan scan,ClickOwner owner,SnapshotTraversalBudget budget,int depth) {
+        budget.visit(depth);
         CharSequence pkg=node.getPackageName();
         if(pkg!=null&&!Gov24LoginPrivacy.PACKAGE.contentEquals(pkg)){scan.privateBoundary=true;return;}
         String type=String.valueOf(node.getClassName());
@@ -43,7 +46,7 @@ public final class Gov24LoginEntry {
                 if(node.isVisibleToUser()&&!bounds.isEmpty()&&option!=null
                         &&(option.startsWith("method_")||option.startsWith("provider_")))scan.choices=true;
                 if(owner!=null&&("로그인".equals(normalized)||"로그인하기".equals(normalized))
-                        &&(owner.node==node||onlyLoginLabel(owner.node))) {
+                        &&(owner.node==node||onlyLoginLabel(owner.node,budget,depth))) {
                     if(scan.target==null||!owner.path.equals(scan.target.nodeId)) {
                         Rect targetBounds=new Rect();owner.node.getBoundsInScreen(targetBounds);
                         scan.logins++;scan.target=new Target(owner.path,owner.node.getWindowId(),targetBounds,owner.node.isVisibleToUser());
@@ -52,12 +55,14 @@ public final class Gov24LoginEntry {
             }
         }
         for(int i=0;i<node.getChildCount();i++) {
+            budget.child();
             AccessibilityNodeInfo child=node.getChild(i);if(child==null)continue;
-            try{visit(child,path+"_"+i,scan,owner);}finally{child.recycle();}
+            try{visit(child,path+"_"+i,scan,owner,budget,depth+1);}finally{child.recycle();}
         }
     }
     /** A child label may name one button, never the surrounding page or a mixed control. */
-    private static boolean onlyLoginLabel(AccessibilityNodeInfo node) {
+    private static boolean onlyLoginLabel(AccessibilityNodeInfo node,SnapshotTraversalBudget budget,int depth) {
+        budget.visit(depth);
         CharSequence pkg=node.getPackageName();
         if(pkg!=null&&!Gov24LoginPrivacy.PACKAGE.contentEquals(pkg)||node.isEditable()||node.isPassword()
                 ||String.valueOf(node.getClassName()).contains("EditText")||node.isScrollable()||node.isCheckable())return false;
@@ -67,8 +72,9 @@ public final class Gov24LoginEntry {
             if(!"로그인".equals(label)&&!"로그인하기".equals(label))return false;
         }
         for(int i=0;i<node.getChildCount();i++) {
+            budget.child();
             AccessibilityNodeInfo child=node.getChild(i);if(child==null)continue;
-            try{if(!onlyLoginLabel(child))return false;}finally{child.recycle();}
+            try{if(!onlyLoginLabel(child,budget,depth+1))return false;}finally{child.recycle();}
         }
         return true;
     }

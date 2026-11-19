@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class AgentTurnGateway {
+    private final RequestLifecycle lifecycle=new RequestLifecycle();
     public interface Callback {
         void onSuccess(AgentTurnContract.Response response);
         void onFailure(Throwable error);
@@ -74,11 +75,11 @@ public final class AgentTurnGateway {
     public void send(AgentTurnContract.Request request, Callback callback) {
         final long deadline=android.os.SystemClock.elapsedRealtime()+RequestBudget.TOTAL_MS;
         executor.execute(() -> {
-            try (RequestBudget budget=new RequestBudget(deadline)) {
+            try (RequestBudget budget=new RequestBudget(deadline,lifecycle)) {
                 AgentTurnContract.Response response = execute(request);
-                mainHandler.post(() -> callback.onSuccess(response));
+                lifecycle.post(mainHandler,() -> callback.onSuccess(response));
             } catch (Throwable error) {
-                mainHandler.post(() -> callback.onFailure(classifyFailure(error)));
+                lifecycle.post(mainHandler,() -> callback.onFailure(classifyFailure(error)));
             }
         });
     }
@@ -160,7 +161,7 @@ public final class AgentTurnGateway {
     public void reconcileOffline(String sessionId,Callback callback) {
         final long deadline=android.os.SystemClock.elapsedRealtime()+RequestBudget.TOTAL_MS;
         executor.execute(()->{
-            try(RequestBudget budget=new RequestBudget(deadline)) {
+            try(RequestBudget budget=new RequestBudget(deadline,lifecycle)) {
                 loadContract();
                 org.json.JSONObject wire=journal.pending(sessionId);
                 if(wire!=null) {
@@ -184,8 +185,8 @@ public final class AgentTurnGateway {
                 AgentTurnContract.Response state=readSession(sessionId);
                 if(wire!=null && !java.util.Objects.equals(wire.optString("episode_id"),state.episodeId))
                     state.metadata.put("offline_receipt_superseded",true);
-                mainHandler.post(()->callback.onSuccess(state));
-            }catch(Throwable error){mainHandler.post(()->callback.onFailure(classifyFailure(error)));}
+                lifecycle.post(mainHandler,()->callback.onSuccess(state));
+            }catch(Throwable error){lifecycle.post(mainHandler,()->callback.onFailure(classifyFailure(error)));}
         });
     }
 
@@ -207,10 +208,10 @@ public final class AgentTurnGateway {
     public void loadContract(ContractCallback callback) {
         final long deadline=android.os.SystemClock.elapsedRealtime()+RequestBudget.TOTAL_MS;
         executor.execute(() -> {
-            try (RequestBudget budget=new RequestBudget(deadline)) {
+            try (RequestBudget budget=new RequestBudget(deadline,lifecycle)) {
                 AgentServerContract result = loadContract();
-                mainHandler.post(() -> callback.onSuccess(result));
-            } catch (Exception error) { mainHandler.post(() -> callback.onFailure(classifyFailure(error))); }
+                lifecycle.post(mainHandler,() -> callback.onSuccess(result));
+            } catch (Exception error) { lifecycle.post(mainHandler,() -> callback.onFailure(classifyFailure(error))); }
         });
     }
 
@@ -227,16 +228,16 @@ public final class AgentTurnGateway {
         return contract;
     }
 
-    public void close() { executor.shutdownNow(); }
+    public void close() { lifecycle.close(); executor.shutdownNow(); }
 
     /** Recover the authoritative version after a lost response; contains no replayable guide. */
     public void synchronize(String sessionId, Callback callback) {
         final long deadline=android.os.SystemClock.elapsedRealtime()+RequestBudget.TOTAL_MS;
         executor.execute(() -> {
-            try (RequestBudget budget=new RequestBudget(deadline)) {
+            try (RequestBudget budget=new RequestBudget(deadline,lifecycle)) {
                 AgentTurnContract.Response response=readSession(sessionId);
-                mainHandler.post(()->callback.onSuccess(response));
-            }catch(Throwable error){mainHandler.post(()->callback.onFailure(classifyFailure(error)));}
+                lifecycle.post(mainHandler,()->callback.onSuccess(response));
+            }catch(Throwable error){lifecycle.post(mainHandler,()->callback.onFailure(classifyFailure(error)));}
         });
     }
 
