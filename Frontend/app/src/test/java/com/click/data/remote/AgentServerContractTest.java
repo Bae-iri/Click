@@ -8,6 +8,17 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.*;
 
 public class AgentServerContractTest {
+    @Test public void privacyDiagnosticsRequireExplicitSupportFromTheConnectedBackend() throws Exception {
+        JSONObject api;
+        try(var input=getClass().getResourceAsStream("/openapi.json")) {
+            api=new JSONObject(new String(input.readAllBytes(),StandardCharsets.UTF_8));
+        }
+        assertTrue(AgentServerContract.fromOpenApi(api).gov24ObservationDiagnostics);
+        api.getJSONObject("components").getJSONObject("schemas").getJSONObject("PublicGuideScreen")
+            .getJSONObject("properties").remove("privacy_reason");
+        assertFalse(AgentServerContract.fromOpenApi(api).gov24ObservationDiagnostics);
+        assertFalse(AgentServerContract.fromOpenApi(deployed()).gov24ObservationDiagnostics);
+    }
     @Test public void naturalGoalResolutionAdvertisesPublicGuideWithoutPreexistingCapabilities() throws Exception {
         JSONObject api;
         try(var input=getClass().getResourceAsStream("/openapi.json")) {

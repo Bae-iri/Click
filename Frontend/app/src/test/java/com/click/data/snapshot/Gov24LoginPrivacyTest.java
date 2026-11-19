@@ -77,4 +77,59 @@ public class Gov24LoginPrivacyTest {
         assertTrue(Gov24LoginPrivacy.isPlannerGoal("gov24.move_in.open"));
         assertFalse(Gov24LoginPrivacy.isPlannerGoal("gov24.login"));
     }
+
+    private AccessibilityNodeSnapshot diagnosticNode(String label,boolean input,boolean password,
+            String pkg,int window,String resource,boolean visible) {
+        return new AccessibilityNodeSnapshot("private-node",null,visible,pkg,label,"private-description",resource,
+            input?"android.widget.EditText":"android.widget.TextView",input?"text_field":"text",
+            new int[]{30,100,400,200},false,true,false,false,false,null,window,input,null,null,password);
+    }
+
+    private void assertDiagnostic(ScreenSnapshot source,String expected,String status,String handoff) throws Exception {
+        JSONObject result=new Gov24LoginPrivacy(true,true).filter(source);
+        assertEquals(expected,result.getString("privacy_reason"));
+        assertEquals(status,result.getString("status"));
+        assertEquals(handoff,result.optString("handoff_reason",null));
+        assertEquals(0,result.getJSONArray("nodes").length());
+        for(String secret:new String[]{"홍길동","010-1234-5678","private-node","private-description","other.private.app"})
+            assertFalse(result.toString().contains(secret));
+        // No new field is sent until the connected server advertises support.
+        assertFalse(new Gov24LoginPrivacy(true).filter(source).has("privacy_reason"));
+    }
+
+    @Test public void diagnosticDistinguishesPasswordInputSearchAndBoundaryTextWithoutContent() throws Exception {
+        assertDiagnostic(screen(diagnosticNode("010-1234-5678",true,true,Gov24LoginPrivacy.PACKAGE,42,null,true)),
+            "password_field","handoff","credential_input");
+        assertDiagnostic(screen(diagnosticNode("홍길동",true,false,Gov24LoginPrivacy.PACKAGE,42,null,true)),
+            "sensitive_input_field","handoff","credential_input");
+        assertDiagnostic(screen(diagnosticNode(null,true,false,Gov24LoginPrivacy.PACKAGE,42,"android:id/search_src_text",true)),
+            "empty_search_field","handoff","credential_input");
+        assertDiagnostic(screen(node("private","인증서 선택",false,false)),"certificate_prompt","handoff","certificate_selection");
+        assertDiagnostic(screen(node("private","주민등록번호",false,false)),"private_identity_label","handoff","certificate_selection");
+        assertDiagnostic(screen(node("private","서비스 이용에 대한 동의",false,false)),"consent_prompt","handoff","consent_required");
+    }
+
+    @Test public void diagnosticDistinguishesMixedAppAndWindowFromAuthentication() throws Exception {
+        assertDiagnostic(screen(diagnosticNode("홍길동",false,false,"other.private.app",42,null,true)),
+            "foreign_package_node","sensitive",null);
+        assertDiagnostic(screen(diagnosticNode("홍길동",false,false,Gov24LoginPrivacy.PACKAGE,99,null,true)),
+            "inactive_window_node","sensitive",null);
+        assertDiagnostic(new ScreenSnapshot("com.kakao.talk",java.time.Instant.now().toString(),1080,2400,List.of(),42),
+            "external_auth_app","handoff","external_auth");
+        assertDiagnostic(new ScreenSnapshot("other.private.app",java.time.Instant.now().toString(),1080,2400,List.of(),42),
+            "outside_gov24_app","outside_app",null);
+    }
+
+    @Test public void diagnosticSeparatesMissingTreeFromFilteredAndDuplicatePublicOptions() throws Exception {
+        assertDiagnostic(null,"snapshot_missing","unrecognized",null);
+        assertDiagnostic(screen(),"empty_accessibility_tree","unrecognized",null);
+        assertDiagnostic(screen(diagnosticNode("홍길동",false,false,Gov24LoginPrivacy.PACKAGE,42,null,false)),
+            "no_visible_nodes","unrecognized",null);
+        assertDiagnostic(screen(node("private","홍길동",false,false)),"no_public_options","unrecognized",null);
+        assertDiagnostic(screen(node("a","주민등록등본",false,true),node("b","주민등록등본",false,true)),
+            "ambiguous_public_options","unrecognized",null);
+        JSONObject publicScreen=new Gov24LoginPrivacy(true,true).filter(screen(node("a","주민등록등본",false,true)));
+        assertEquals("public",publicScreen.getString("status"));
+        assertFalse(publicScreen.has("privacy_reason"));
+    }
 }

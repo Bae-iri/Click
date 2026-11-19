@@ -11,6 +11,8 @@ from sqlalchemy import select
 from app.models.agent_session import AgentSession
 from app.models.runtime_event import RuntimeEvent
 from app.schemas.public_guide import PublicGuideRequest
+from app.schemas.public_guide import PRIVACY_REASONS, PublicGuideScreen
+from pydantic import ValidationError
 from app.services.gov24_experiment import decide
 from app.services.gov24_planner import GeminiGovernmentPlanner, SERVICES
 from app.services.gov24_jev import JevGovernmentSelector
@@ -227,3 +229,175 @@ def test_http_preparation_overlay_trace_and_final_verdict_persist(login, monkeyp
         assert event.payload['public_guide']['experiment']['verification']['action']['status'] == 'SUCCESS'
         row = db.get(AgentSession, f.session)
         assert row.task_outcome['verification']['final']['status'] == 'SUCCESS'
+
+
+@pytest.mark.parametrize('detail,pair', PRIVACY_REASONS.items())
+def test_guard_reasons_remain_distinct_and_do_not_reach_models(detail, pair):
+    status, handoff_reason = pair
+    screen = dict(view(), status=status, privacy_reason=detail)
+    if handoff_reason:
+        screen['handoff_reason'] = handoff_reason
+    service, state = harness()
+    result, evidence, state = turn(service, state, screen)
+    trace = result.experiment
+    expected = 'BLOCKED' if status in {'handoff', 'sensitive'} else 'UNKNOWN'
+    assert trace['verification']['subgoal']['status'] == expected
+    assert trace['verification']['subgoal']['reason'] == detail
+    assert trace['diagnostic']['code'] == detail
+    assert trace['diagnostic']['category'] == ('privacy' if expected == 'BLOCKED' else 'observation')
+    assert trace['observation_check']['native_detail_available'] is True
+    assert trace['observation_check']['exported_node_count'] == 0
+    assert trace['planner'] == trace['jev'] == {'called': False, 'reason': detail}
+    assert evidence['reason'] == detail
+    assert state['experiment']['history'][-1]['diagnostic'] == trace['diagnostic']
+    assert result.target_node_id is None and state['experiment']['failures'] == []
+    service.government_planner.plan.assert_not_called()
+    service.government_selector.select.assert_not_called()
+    encoded = json.dumps(trace, ensure_ascii=False)
+    for forbidden in (screen['observation_id'], 'node_id', 'bounds', 'resource_id'):
+        assert forbidden not in encoded
+
+
+@pytest.mark.parametrize('handoff_reason', ['credential_input', 'certificate_selection', 'external_auth', 'consent_required'])
+def test_old_app_reports_only_known_boundary_without_guessing_specific_input(handoff_reason):
+    service, state = harness()
+    result, _, _ = turn(service, state, dict(view(), status='handoff', handoff_reason=handoff_reason))
+    trace = result.experiment
+    assert trace['diagnostic']['code'] == handoff_reason
+    assert trace['observation_check']['native_detail_available'] is False
+    assert trace['verification']['subgoal']['reason'] == handoff_reason
+    assert 'private_boundary' not in json.dumps(trace)
+    if handoff_reason == 'credential_input':
+        assert '구분해 보고하지 않아요' in result.message
+
+
+@pytest.mark.parametrize('change,expected', [
+    ({'captured_at_ms': 0}, 'stale_observation'),
+    ({'captured_at_ms': 9999999999999}, 'future_observation'),
+    ({'package_name': 'other.private.app'}, 'package_mismatch'),
+    ({'status': 'outside_app', 'nodes': []}, 'outside_gov24_app'),
+    ({'status': 'unrecognized', 'nodes': []}, 'unrecognized_screen'),
+    ({'nodes': []}, 'no_exported_nodes'),
+])
+def test_unusable_observations_are_unknown_with_the_exact_rejection_reason(change, expected):
+    service, state = harness()
+    screen = dict(view('nav_resident'), **change)
+    result, evidence, _ = turn(service, state, screen)
+    assert result.experiment['diagnostic']['code'] == expected
+    assert result.experiment['verification']['subgoal']['status'] == 'UNKNOWN'
+    assert result.experiment['verification']['subgoal']['reason'] == expected
+    assert evidence['reason'] == expected
+    service.government_planner.plan.assert_not_called()
+    service.government_selector.select.assert_not_called()
+    assert 'other.private.app' not in json.dumps(result.experiment)
+
+
+def test_missing_observation_and_invalid_semantic_node_have_different_reasons():
+    service, state = harness()
+    missing, _, _ = turn(service, state, command='start')
+    assert missing.experiment['diagnostic']['code'] == 'observation_missing'
+    screen = view('nav_resident')
+    screen['nodes'][0]['label'] = '홍길동 010-1234-5678'
+    invalid, _, _ = turn(service, state, screen)
+    assert invalid.experiment['diagnostic']['code'] == 'invalid_public_option'
+    assert '홍길동' not in json.dumps(invalid.experiment, ensure_ascii=False)
+    service.government_planner.plan.assert_not_called()
+
+
+def test_stale_handoff_is_unknown_while_sensitive_guard_still_stops_safely():
+    service, state = harness()
+    stale = dict(view(), status='handoff', handoff_reason='credential_input', privacy_reason='password_field', captured_at_ms=0)
+    result, _, _ = turn(service, state, stale)
+    assert result.experiment['diagnostic']['code'] == 'stale_observation'
+    assert result.experiment['verification']['subgoal']['status'] == 'UNKNOWN'
+    sensitive = dict(view(), status='sensitive', privacy_reason='foreign_package_node', captured_at_ms=0)
+    result, _, _ = turn(service, state, sensitive)
+    assert result.experiment['diagnostic']['code'] == 'foreign_package_node'
+    assert result.experiment['observation_check']['code'] == 'stale_observation'
+    assert result.outcome == 'handoff'
+    service.government_planner.plan.assert_not_called()
+
+
+@pytest.mark.parametrize('screen', [
+    dict(view('nav_resident'), privacy_reason='password_field'),
+    dict(view(), status='handoff', handoff_reason='external_auth', privacy_reason='consent_prompt'),
+    dict(view(), status='unrecognized', privacy_reason='홍길동 010-1234-5678'),
+])
+def test_diagnostic_field_rejects_raw_text_and_conflicting_guard_status(screen):
+    with pytest.raises(ValidationError):
+        PublicGuideScreen.model_validate(screen)
+
+
+def test_session_budget_does_not_masquerade_as_authentication_or_task_failure():
+    service, state = harness()
+    state['steps'] = 24
+    result, evidence, _ = turn(service, state, view('nav_resident'))
+    assert result.status == 'BLOCKED' and result.experiment['diagnostic']['category'] == 'budget'
+    assert result.experiment['diagnostic']['facts'] == {'step': 25, 'max_turns': 24}
+    assert result.experiment['verification']['final']['status'] == 'UNKNOWN'
+    assert evidence['reason'] == 'turn_limit'
+    service.government_planner.plan.assert_not_called()
+
+
+def test_planner_budget_is_a_separate_blocker():
+    service, state = harness()
+    _, _, state = turn(service, state, view('nav_resident'))
+    state['experiment'].update(planner_calls=3, local_failures=2)
+    state.pop('pending', None)
+    result, evidence, _ = turn(service, state, view('nav_services'))
+    assert result.experiment['diagnostic']['code'] == 'planning_budget_exhausted'
+    assert result.experiment['diagnostic']['facts'] == {'planner_calls': 3, 'max_planner_calls': 3}
+    assert evidence['reason'] == 'planning_budget_exhausted'
+    assert service.government_planner.plan.call_count == 1
+
+
+def test_original_three_step_pattern_explains_the_gate_before_any_model_call():
+    service, state = harness()
+    first, _, state = turn(service, state, command='start')
+    second, _, state = turn(service, state, dict(view(), status='unrecognized', privacy_reason='no_public_options'))
+    third, _, state = turn(service, state, dict(view(), status='handoff', handoff_reason='credential_input',
+                                               privacy_reason='sensitive_input_field'))
+    assert [r.experiment['diagnostic']['code'] for r in (first, second, third)] == [
+        'observation_missing', 'no_public_options', 'sensitive_input_field']
+    assert [r.experiment['verification']['subgoal']['status'] for r in (first, second, third)] == [
+        'UNKNOWN', 'UNKNOWN', 'BLOCKED']
+    assert third.experiment['next'] == 'user_handoff'
+    assert third.experiment['plan'] is None and third.experiment['planner_calls'] == 0
+    assert state['experiment']['failures'] == []
+    service.government_planner.plan.assert_not_called()
+    service.government_selector.select.assert_not_called()
+
+
+def test_missing_model_key_reason_is_not_overwritten_by_guard_diagnostics():
+    service, state = harness()
+    service.government_planner.plan.return_value = (None, {'called': False, 'reason': 'missing_api_key'})
+    result, _, _ = turn(service, state, view('nav_resident'))
+    assert result.experiment['planner']['reason'] == 'missing_api_key'
+    assert result.experiment['observation_check']['code'] == 'public_observation'
+    assert result.experiment['verification']['subgoal']['reason'] == 'missing_api_key'
+
+
+def test_boundary_diagnostic_survives_http_persistence_replay_and_snapshot(login, monkeypatch):
+    monkeypatch.setenv('CLICK_GOV24_PLANNER_ENABLED', '1')
+    f = CivilFlow(login.client, login.app, '정부24 주민등록등본 화면 찾아줘')
+    prepared = f.resolve()['preparation']
+    first = f.command('start', goal_resolution_id=prepared['id'])
+    assert first['experiment']['diagnostic']['code'] == 'observation_missing'
+    screen = dict(view(), status='handoff', handoff_reason='credential_input', privacy_reason='sensitive_input_field')
+    body = dict(request_id='diagnostic-replay', session_id=f.session, expected_version=f.version,
+                command='observe', screen=screen)
+    path = '/api/v1/agent/public-guide/commands'
+    response = login.client.post(path, json=body)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result['experiment']['diagnostic']['code'] == 'sensitive_input_field'
+    assert login.client.post(path, json=body).json() == result
+    f.version = result['session_version']
+    snapshot = f.command('snapshot')
+    assert snapshot['experiment'] == result['experiment']
+    assert snapshot['message'] == result['message'] and snapshot['subgoal'] == 'handoff'
+    assert snapshot['target_node_id'] is None
+    with login.app.state.session_factory() as db:
+        event = db.scalars(select(RuntimeEvent).where(RuntimeEvent.session_id == f.session)
+                           .order_by(RuntimeEvent.sequence.desc())).first()
+        assert event.payload['public_guide']['experiment'] == result['experiment']

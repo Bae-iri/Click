@@ -1118,7 +1118,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             goalPreparation=null;goalResolutionId=null;requirementReview=null;goalSelection=null;
             var gateway=gov24Guide?new com.click.data.remote.CoupangBrowseGateway(this,"/api/v1/agent/public-guide/commands","public-guide.v1")
                 :new com.click.data.remote.CoupangBrowseGateway(this);
-            CoupangBrowseController.ScreenFilter privacy=gov24Guide?new com.click.data.snapshot.Gov24LoginPrivacy(gov24Civil)::filter
+            boolean gov24Diagnostics=agentGateway.currentContract()!=null && agentGateway.currentContract().gov24ObservationDiagnostics;
+            CoupangBrowseController.ScreenFilter privacy=gov24Guide?new com.click.data.snapshot.Gov24LoginPrivacy(gov24Civil,gov24Diagnostics)::filter
                 :new com.click.data.snapshot.CoupangBrowsePrivacy(this)::filter;
             coupangBrowse=new CoupangBrowseController(gateway,privacy,gov24Guide?"kr.go.minwon.m":"com.coupang.mobile",
                 gov24Guide?"public-guide.v1":"coupang-browse.v1",new CoupangBrowseController.Listener(){

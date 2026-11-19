@@ -11011,6 +11011,35 @@
               }
             ],
             "title": "Handoff Reason"
+          },
+          "privacy_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "snapshot_missing",
+                  "empty_accessibility_tree",
+                  "no_visible_nodes",
+                  "no_public_options",
+                  "ambiguous_public_options",
+                  "public_options_limit",
+                  "outside_gov24_app",
+                  "external_auth_app",
+                  "foreign_package_node",
+                  "inactive_window_node",
+                  "password_field",
+                  "sensitive_input_field",
+                  "empty_search_field",
+                  "consent_prompt",
+                  "certificate_prompt",
+                  "private_identity_label"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Privacy Reason"
           }
         },
         "additionalProperties": false,
