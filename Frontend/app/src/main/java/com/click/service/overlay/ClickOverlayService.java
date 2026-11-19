@@ -1156,10 +1156,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean offerAppGuide() {
         if(agentGateway==null||agentGateway.currentContract()==null
                 ||initialGoal==null||initialGoal.trim().isEmpty())return false;
+        if(requestedApp()!=null){startAppGuide();return true;}
         ensureTaskFlow();
-        String message=agentGateway.currentContract().appTask
-            ?"현재 앱에서 단계별로 도와드릴까요? 버튼과 메뉴 정보를 AI로 확인하고, 각 동작은 실행 버튼을 눌렀을 때 진행해요. 입력할 검색어는 직접 확인해 주세요."
-            :"현재 앱에서 단계별로 도와드릴까요? 보이는 항목과 공통 동작으로 안내하고 진행 상태를 보관해요. 각 동작은 실행 버튼을 눌렀을 때 진행해요.";
+        String message="이 작업을 도와드릴까요?";
         final int generation=execution.generation();
         taskFlowView.confirmation(message,accepted->{
             if(closing||generation!=execution.generation())return;
@@ -1167,6 +1166,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             startAppGuide();
         });
         updateRequestStatus(true,false);placeTaskFlow(null,true);speak(message);return true;
+    }
+
+    private RequestedApp requestedApp(){
+        try{return RequestedApp.find(this,initialGoal);}catch(Exception error){android.util.Log.w("ClickAgent","app_task_target_lookup_failed");return null;}
     }
 
     private void startAppGuide() {
@@ -1187,6 +1190,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             public String scope(String pkg){try{android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(pkg,0);return pkg+"|"+(android.os.Build.VERSION.SDK_INT>=28?info.getLongVersionCode():info.versionCode)+"|"+android.os.Build.VERSION.SDK_INT+"|app-task.v2";}catch(Exception e){return pkg+"|app-task.v2";}}
             public void present(JSONObject result,ScreenSnapshot screen){
                 JSONObject action=result.optJSONObject("action");
+                android.util.Log.i("ClickAgent","app_task_state status="+result.optString("status")+" tool="+(action==null?"none":action.optString("tool"))+" verifying="+result.optBoolean("verifying"));
                 int[] bounds=null;org.json.JSONArray target=action==null?null:action.optJSONArray("bounds");
                 if("proposed".equals(result.optString("status"))&&target!=null&&target.length()==4) {
                     bounds=new int[]{target.optInt(0),target.optInt(1),target.optInt(2),target.optInt(3)};
@@ -1194,14 +1198,16 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     showGuideOverlay(bounds,action.optString("tool").startsWith("scroll_")?"scroll":"tap",GuideDragDirection.UNKNOWN);
                 }else hideGuideOverlay();
                 JSONObject diagnostic=result.optJSONObject("diagnostic");
-                if(diagnostic!=null)android.util.Log.i("ClickAppGuide","model="+diagnostic.optString("model")
+                if(diagnostic!=null)android.util.Log.i("ClickAgent","app_task model="+diagnostic.optString("model")
                     +" called="+diagnostic.optBoolean("called")+" latency_ms="+diagnostic.optLong("latency_ms")
                     +" status="+result.optString("status")+" reason="+diagnostic.optString("reason")
                     +" http_status="+diagnostic.optInt("http_status"));
                 renderAppTask(result,bounds);
             }
         },agentGateway.currentContract().appTask);
-        showAppGuideMessage("도움이 필요한 앱을 열고 현재 화면 확인을 눌러주세요.",null);
+        RequestedApp target=requestedApp();
+        if(target!=null)appGuide.targetApp(target.packageName,target.label);
+        android.util.Log.i("ClickAgent","app_task_start target_resolved="+(target!=null)+" remote="+agentGateway.currentContract().appTask);
         appGuide.refresh();
     }
 
@@ -1215,7 +1221,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         JSONObject action=result.optJSONObject("action");final String actionId=action==null?"":action.optString("id");
         taskFlowView.appTask(result,value->{if(appGuide==owner)owner.execute(actionId,value);},()->{if(appGuide==owner)owner.refresh();},
             this::showAppTaskTools,this::readAppTaskVisual,()->{
-                if(appGuide!=owner||endingTask)return;endingTask=true;owner.confirmResult();clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest(null);
+                if(appGuide!=owner||endingTask)return;
+                // Ending guidance does not prove an order or complete the server's agent session.
+                endingTask=true;advanceAfterUserEnd=true;clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest("USER_ABORTED");
             });
         taskFlowCollapsed=false;if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(bounds,true);
         if(!result.optBoolean("verifying"))speak(result.optString("message"));
@@ -2694,7 +2702,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String finishedId = activeVoiceRequestId;
         VoiceQueueGateway.Callback callback = new VoiceQueueGateway.Callback() {
             @Override public void onSuccess(VoiceQueueGateway.Response response) {
-                if (generation != execution.generation()) return;
+                if (closing || generation != execution.generation() || !finishedId.equals(activeVoiceRequestId)) return;
                 presentQueueSnapshot(response);
                 quickHelpSelections.remove(finishedId);
                 activeVoiceRequestId = null;
@@ -2718,10 +2726,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
 
             @Override public void onFailure(Throwable error) {
-                if(generation!=execution.generation())return;
+                if(closing || generation!=execution.generation() || !finishedId.equals(activeVoiceRequestId))return;
                 endingTask=false;
-                if(completedSuccessfully){waitingForCompletedEnd=true;taskFlowView.completed("다음 작업을 확인하지 못했어요. 끝내기를 눌러 다시 확인해 주세요.",false,ClickOverlayService.this::finishCompletedTask);}
-                else showQueueError(error);
+                ensureTaskFlow();
+                if(taskFlowView==null)return;
+                taskFlowView.queueEndRetry(()->{
+                    if(closing||endingTask||generation!=execution.generation()||!finishedId.equals(activeVoiceRequestId))return;
+                    endingTask=true;advanceAfterUserEnd=advanceOnEnd;finishActiveQueueRequest(failureCode);
+                });
+                placeTaskFlow(null,true);
             }
         };
         if (failureCode == null) queueGateway.complete(finishedId, callback);

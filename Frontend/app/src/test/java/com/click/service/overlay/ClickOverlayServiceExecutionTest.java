@@ -4041,6 +4041,30 @@ public class ClickOverlayServiceExecutionTest {
         method.setAccessible(true); method.invoke(service, text);
     }
 
+    @Test public void endingAppGuidanceDoesNotClaimAnUnverifiedOrderCompleted()throws Exception {
+        var queue=prepareResultWithQueue();var owner=mock(AppTaskController.class);set("appGuide",owner);
+        Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);render.setAccessible(true);
+        render.invoke(service,new JSONObject().put("status","needs_input").put("message","상품을 골라주세요."),null);
+        var end=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView")).appTask(any(),any(),any(),any(),any(),end.capture());
+        end.getValue().run();end.getValue().run();
+        verify(queue,times(1)).cancel(eq("finished-request"),eq("USER_ABORTED"),any());
+        verify(queue,never()).complete(anyString(),any());verify(queue,never()).interrupt(anyString(),any());
+        verify(owner,never()).confirmResult();assertNull(get("appGuide"));
+    }
+
+    @Test public void queueFailureAfterPanelRemovalRecreatesRetryAndLateCallbackCannotReplaceAnotherTask()throws Exception {
+        var queue=prepareResultWithQueue();set("windowManager",mock(WindowManager.class));
+        Method finish=ClickOverlayService.class.getDeclaredMethod("finishActiveQueueRequest",String.class);finish.setAccessible(true);finish.invoke(service,new Object[]{null});
+        var callback=org.mockito.ArgumentCaptor.forClass(com.click.data.remote.VoiceQueueGateway.Callback.class);verify(queue).complete(eq("finished-request"),callback.capture());
+        invoke("clearTaskFlow");assertNull(get("taskFlowView"));
+        callback.getValue().onFailure(new java.io.IOException("HTTP 409"));assertNotNull(get("taskFlowView"));
+        var retry=feedbackChild((android.view.View)get("taskFlowView"),android.widget.TextView.class,"다시 시도");assertNotNull(retry);
+        retry.performClick();verify(queue,times(2)).complete(eq("finished-request"),any());
+        invoke("clearTaskFlow");set("activeVoiceRequestId","different-request");
+        callback.getValue().onFailure(new java.io.IOException("late 409"));assertNull(get("taskFlowView"));
+    }
+
     private com.click.data.remote.InteractionGateway.Response feedbackResponse(boolean positive, String id) throws Exception {
         return new com.click.data.remote.InteractionGateway.Response(new JSONObject()
                 .put("intent", positive ? "positive_feedback" : "negative_feedback")
