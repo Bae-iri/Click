@@ -22,6 +22,8 @@ public final class TutorialNarrator {
     private boolean active = true, closed, speaking, unavailable;
     private String lastMessage, suppression;
     private Listener listener;
+    private float speechRate=.92f;
+    public void setSpeechRate(float rate){speechRate=Float.isFinite(rate)?Math.max(.7f,Math.min(1.1f,rate)):.92f;}
 
     public TutorialNarrator(Context context) { this(context, true); }
     public TutorialNarrator(Context context, boolean foregroundScreen) {
@@ -150,6 +152,7 @@ public final class TutorialNarrator {
                 fail("audio_focus"); return;
             }
             focused = audio != null;
+            tts.setSpeechRate(owner.speechRate);
             if (tts.speak(message, TextToSpeech.QUEUE_FLUSH, null, utterance) == TextToSpeech.ERROR) fail("submit");
             else armTimeout(utterance, 10000L);
         }

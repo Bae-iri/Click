@@ -1,6 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends
-from app.schemas.voice_queue import EnqueueVoiceRequest, InterruptVoiceRequest, FailVoiceRequest, CancelVoiceRequest, VoiceQueueResponse
+from app.schemas.voice_queue import EnqueueVoiceRequest, InterruptVoiceRequest, FailVoiceRequest, CancelVoiceRequest, ReviseVoiceRequest, VoiceQueueResponse
 
 
 def build_router(service, principal):
@@ -29,6 +29,10 @@ def build_router(service, principal):
     @router.post("/{request_id}/complete", response_model=VoiceQueueResponse)
     def complete(request_id: UUID, user=Depends(principal)):
         return service.finish(user.user_id, request_id)
+
+    @router.post("/{request_id}/revise", response_model=VoiceQueueResponse)
+    def revise(request_id: UUID, body: ReviseVoiceRequest, user=Depends(principal)):
+        return service.revise(user.user_id, request_id, body)
 
     @router.post("/{request_id}/cancel", response_model=VoiceQueueResponse)
     def cancel(request_id: UUID, body: CancelVoiceRequest, user=Depends(principal)):

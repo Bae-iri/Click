@@ -61,6 +61,15 @@ public class TutorialNarratorTest {
             assertEquals(List.of("최종 화면"), f.spoken);
         }
     }
+    @Test public void rememberedRateAppliesPerNarrationOwnerWithoutSlowingTutorials() {
+        try(Fixture f=new Fixture()) {
+            TutorialNarrator service=f.client(false);service.setSpeechRate(.75f);service.speak("실제 안내");f.ready();
+            verify(f.tts()).setSpeechRate(.75f);
+            TutorialNarrator tutorial=f.client(true);tutorial.speak("연습 안내");advance(220);
+            verify(f.tts(),atLeastOnce()).setSpeechRate(.92f);
+            org.mockito.InOrder order=inOrder(f.tts());order.verify(f.tts()).setSpeechRate(.75f);order.verify(f.tts()).setSpeechRate(.92f);
+        }
+    }
     @Test public void layoutUpdatesDoNotRestartSpeechAndReplayIsExplicit() {
         try (Fixture f = new Fixture()) {
             TutorialNarrator narrator = f.client(false); narrator.speak("디스플레이를 눌러주세요."); f.ready();

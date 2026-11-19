@@ -239,10 +239,10 @@ public class FloatingHeaderConsistencyTest {
             assertNotNull(findText(flow, "‘다시 시도하기’를 눌러 안내를 이어가 주세요."));
             assertFalse(flow.guidanceMessage().contains("팝업"));
             assertFalse(flow.guidanceMessage().contains("잠금"));
-            assertNull(findText(flow, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
+            assertNull(findText(flow, "현재 화면에서 안내할 위치를 확인하지 못했어요. 다시 확인하거나 요청을 고쳐 주세요."));
             flow.recoveryApology(() -> {});
             geometry(flow, width);
-            assertNotNull(findText(flow, "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요."));
+            assertNotNull(findText(flow, "현재 화면에서 안내할 위치를 확인하지 못했어요. 다시 확인하거나 요청을 고쳐 주세요."));
             for (int repeat = 0; repeat < 2; repeat++) {
                 flow.setMinimizedProgress(true);
                 TextView compact = (TextView) findDescription(flow, "죄송합니다.. 눌러서 안내 펼치기");
