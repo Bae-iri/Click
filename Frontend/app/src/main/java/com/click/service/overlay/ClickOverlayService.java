@@ -217,6 +217,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int gov24EntryRevealCount;
     private long gov24EntryRevealAt;
     private int gov24TargetRefreshes;
+    private int gov24ServiceReveals;
     private WindowManager.LayoutParams guideOverlayParams;
     private ConfirmationOverlayView confirmationView;
     private WindowManager.LayoutParams confirmationParams;
@@ -232,7 +233,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if (showCoupangNativeGuide(LatestScreenSnapshot.get())) return;
                 if (coupangBrowse != null) {
                     ScreenSnapshot current=LatestScreenSnapshot.get();
-                    if (lastSubmittedScreen==null || current==null || !lastSubmittedScreen.contentFingerprint().equals(current.contentFingerprint())) hideGuideOverlay();
+                    if (!coupangBrowse.guideMatches(current)) hideGuideOverlay();
                     return;
                 }
                 if (handleEnvironment(LatestScreenSnapshot.get())) return;
@@ -794,7 +795,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void clearTaskFlow() {
         if (coupangBrowse != null) { coupangBrowse.close(); coupangBrowse=null; }
-        gov24Guide=false;gov24Civil=false;gov24EntryPresentation=null;gov24EntryRevealCount=0;gov24EntryRevealAt=0;gov24TargetRefreshes=0;
+        gov24Guide=false;gov24Civil=false;gov24EntryPresentation=null;gov24EntryRevealCount=0;gov24EntryRevealAt=0;gov24TargetRefreshes=0;gov24ServiceReveals=0;
         adjustmentDelegation.clear();pendingApprovalProvenance=null;
         environmentWaitKey=null;environmentWait=null;lastNavigableEnvironment=null;
         observedPageScreen=pendingPageScreen=null;
@@ -1141,7 +1142,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 public void failed(Throwable error,Runnable retry){
                     if(closing || coupangBrowse==null || execution.paused())return;
                     hideGuideOverlay();ensureTaskFlow();
-                    taskFlowView.resolutionUnavailable(initialGoal,gov24Guide?"정부24 안내에 연결하지 못했어요. 다시 확인해 주세요.":"쿠팡 화면 안내에 연결하지 못했어요. 다시 확인해 주세요.",retry);
+                    String message=gov24Guide?"정부24 안내에 연결하지 못했어요. 다시 확인해 주세요.":"쿠팡 화면 안내에 연결하지 못했어요. 다시 확인해 주세요.";
+                    if(gov24Guide&&"GOV24_SERVER_UPDATE_REQUIRED".equals(error.getMessage()))message="정부24 안내 서버 업데이트가 필요해요. 서버와 앱 버전을 맞춘 뒤 다시 시도해 주세요.";
+                    taskFlowView.resolutionUnavailable(initialGoal,message,retry);
                     placeTaskFlow(null,true);
                 }
                 public void present(JSONObject response,ScreenSnapshot submitted){
@@ -1158,6 +1161,17 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void showCoupangBrowse(JSONObject response,ScreenSnapshot submitted) {
+        if(gov24Civil&&"IN_PROGRESS".equals(response.optString("status"))&&"no_candidates".equals(response.optString("reason_code"))
+                &&gov24ServiceReveals<6&&coupangBrowse!=null&&!coupangBrowse.waitingForUser()) {
+            String goal=com.click.data.snapshot.Gov24LoginPrivacy.goalForBaseline(response.optString("baseline_graph_id"));
+            gov24ServiceReveals++;
+            if(goal!=null&&ClickAccessibilityService.revealGov24Service(goal)) {
+                hideGuideOverlay();ensureTaskFlow();taskFlowView.waitingProgress("민원 메뉴를 찾아 화면을 이동하고 있어요.");
+                placeTaskFlow(null,false);CoupangBrowseController owner=coupangBrowse;
+                speechHandler.postDelayed(()->{if(!closing&&coupangBrowse==owner&&!owner.terminal())owner.observe(ClickAccessibilityService.freshSnapshot());},500);
+                return;
+            }
+        }
         if(gov24Guide&&com.click.data.local.CandidateDiagnosticLog.enabled()
                 &&com.click.data.snapshot.Gov24LoginPrivacy.knownBaselineGraph(response.optString("baseline_graph_id"))) {
             try {
@@ -1176,7 +1190,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         boolean terminal=!"IN_PROGRESS".equals(response.optString("status"));
         String message=response.optString("message");
         JSONObject publicQuestion=response.optJSONObject("question");
-        boolean nativeProviderSelection=gov24Guide&&!gov24Civil&&publicQuestion!=null
+        boolean nativeProviderSelection=gov24Guide&&publicQuestion!=null
                 &&"인증기관".equals(publicQuestion.optString("label"));
         if(nativeProviderSelection)message="원하는 민간 인증서를 선택해 주세요.";
         int[] publicTarget=null;
@@ -1187,13 +1201,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 message=gov24Civil&&"verified_navigation".equals(response.optString("outcome"))?message
                     :"handoff".equals(response.optString("outcome"))
                     ?(message.contains("동의")?"동의를 확인해 주세요.":"직접 인증해 주세요.")
-                    :"BLOCKED".equals(response.optString("status"))?"안내를 계속할 수 없어요.":"안내를 마쳤어요.";
+                    :"BLOCKED".equals(response.optString("status"))?message
+                    :!gov24Civil&&"verified_navigation".equals(response.optString("outcome"))?message:"안내를 마쳤어요.";
             } else if(!gov24Civil&&message.contains("현재 화면 확인"))message="kr.go.minwon.m".equals(foregroundPackage())
                 ?"로그인 버튼을 찾고 있어요.":"정부24를 여는 중이에요.";
         }
         ScreenSnapshot current=ClickAccessibilityService.freshSnapshot();
         if(!terminal && !response.isNull("target_node_id") && submitted!=null && current!=null
-                && submitted.contentFingerprint().equals(current.contentFingerprint())) {
+                && coupangBrowse!=null&&coupangBrowse.guideMatches(current)) {
             org.json.JSONArray bounds=response.optJSONArray("target_bounds");
             if(bounds!=null && bounds.length()==4) {
                 gov24TargetRefreshes=0;
@@ -1230,14 +1245,16 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         speak(message);
         if(nativeProviderSelection)collapseTaskFlow();
         if(gov24Guide&&terminal)voiceReplyEnabled=false;
+        if(gov24Guide&&coupangBrowse!=null&&coupangBrowse.waitingForUser()){stopListening();voiceReplyEnabled=false;}
     }
 
     private boolean showGov24EntryGuide() {
-        if(!gov24Guide||gov24Civil||closing)return false;
+        if(!gov24Guide||closing||coupangBrowse==null||!coupangBrowse.ready()||coupangBrowse.waitingForUser())return false;
         var target=ClickAccessibilityService.gov24LoginEntry();
         if(target==null){gov24EntryPresentation=null;return false;}
         boolean visible=target.visible&&target.bounds[0]>=0&&target.bounds[1]>=0
                 &&target.bounds[2]<=screenWidth()&&target.bounds[3]<=screenHeight();
+        if(gov24Civil&&visible)return false;
         if(!visible&&gov24EntryRevealCount<3&&SystemClock.uptimeMillis()-gov24EntryRevealAt>=500) {
             gov24EntryRevealAt=SystemClock.uptimeMillis();gov24EntryRevealCount++;
             ClickAccessibilityService.revealGov24LoginEntry();

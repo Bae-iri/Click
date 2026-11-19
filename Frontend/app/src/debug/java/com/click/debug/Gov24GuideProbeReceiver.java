@@ -20,6 +20,7 @@ public final class Gov24GuideProbeReceiver extends BroadcastReceiver {
             var screen=ClickAccessibilityService.freshSnapshot();
             JSONObject safe=new Gov24LoginPrivacy().filter(screen);
             report.put("screen_status",safe.optString("status")).put("public_node_count",safe.getJSONArray("nodes").length());
+            report.put("government24_auth_state",safe.optString("auth_state","unknown"));
             report.put("handoff_reason",safe.optString("handoff_reason"));
             var home=ClickAccessibilityService.gov24LoginEntry();
             if(home!=null) {
@@ -37,7 +38,8 @@ public final class Gov24GuideProbeReceiver extends BroadcastReceiver {
                 if(controller!=null) {
                     if(controller instanceof com.click.service.overlay.CoupangBrowseController flow)
                         report.put("controller_status",flow.status()).put("controller_outcome",flow.outcome())
-                            .put("confirmed_handoff_reason",flow.handoffReason()).put("settling_private_screen",flow.settlingPrivateScreen());
+                            .put("confirmed_handoff_reason",flow.handoffReason()).put("settling_private_screen",flow.settlingPrivateScreen())
+                            .put("waiting_for_user",flow.waitingForUser());
                     for(String key:new String[]{"busy","terminal","entryObserved","version"})
                         report.put(key,field(controller.getClass(),key,controller));
                     report.put("awaiting_answer",field(controller.getClass(),"question",controller)!=null);

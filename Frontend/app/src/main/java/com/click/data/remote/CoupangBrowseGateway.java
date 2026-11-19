@@ -11,6 +11,7 @@ public class CoupangBrowseGateway {
     public interface Callback {void success(JSONObject response);void failure(Throwable error);}
     private final AuthenticatedHttpClient http;
     private final String path,protocol;
+    private boolean recoveryChecked;
     private final ExecutorService executor=Executors.newSingleThreadExecutor();
     private final Handler main=new Handler(Looper.getMainLooper());
     public CoupangBrowseGateway(Context context){this(context,PATH,"coupang-browse.v1");}
@@ -18,6 +19,11 @@ public class CoupangBrowseGateway {
     public void send(JSONObject request,Callback callback) {
         executor.execute(()->{
             try {
+                if("public-guide.v1".equals(protocol)&&!recoveryChecked) {
+                    if(!supportsRecovery(new JSONObject(http.get("/openapi.json").body)))
+                        throw new java.io.IOException("GOV24_SERVER_UPDATE_REQUIRED");
+                    recoveryChecked=true;
+                }
                 JSONObject response=new JSONObject(http.post(path,request.toString(),15000).body);
                 validate(request,response,protocol);
                 main.post(()->callback.success(response));
@@ -28,6 +34,8 @@ public class CoupangBrowseGateway {
         validate(request,response,"coupang-browse.v1");
     }
     public static void validate(JSONObject request,JSONObject response,String protocol) throws Exception {
+        if("gov24-recovery.v1".equals(request.optString("recovery_version"))
+                &&!"gov24-recovery.v1".equals(response.optString("recovery_version")))throw new java.io.IOException("GOV24_SERVER_UPDATE_REQUIRED");
         boolean snapshot="snapshot".equals(request.getString("command"));
         if(!protocol.equals(response.getString("protocol_version")) || !response.getBoolean("manual_only")
                 || !request.getString("session_id").equals(response.getString("session_id"))
@@ -45,6 +53,28 @@ public class CoupangBrowseGateway {
             }
             if(!found)throw new java.io.IOException("UNGROUNDED_BROWSE_TARGET");
         }
+    }
+    public static boolean supportsRecovery(JSONObject document) {
+        JSONObject components=document.optJSONObject("components"),schemas=components==null?null:components.optJSONObject("schemas");
+        JSONObject response=schemas==null?null:schemas.optJSONObject("PublicGuideResponse");
+        JSONObject request=schemas==null?null:schemas.optJSONObject("PublicGuideRequest");
+        JSONObject properties=response==null?null:response.optJSONObject("properties");
+        JSONArray subgoals=properties==null||properties.optJSONObject("subgoal")==null?null:properties.optJSONObject("subgoal").optJSONArray("enum");
+        java.util.Set<String> values=new java.util.HashSet<>();
+        for(int i=0;subgoals!=null&&i<subgoals.length();i++)values.add(subgoals.optString(i));
+        JSONObject screen=schemas==null?null:schemas.optJSONObject("PublicGuideScreen");
+        return values.containsAll(java.util.Set.of("await_login","await_public"))&&properties!=null&&declaresRecovery(properties.optJSONObject("recovery_version"))
+            &&request!=null&&request.optJSONObject("properties")!=null&&declaresRecovery(request.optJSONObject("properties").optJSONObject("recovery_version"))
+            &&screen!=null&&screen.optJSONObject("properties")!=null&&screen.optJSONObject("properties").has("auth_state");
+    }
+    private static boolean declaresRecovery(JSONObject schema) {
+        if(schema==null)return false;
+        if("gov24-recovery.v1".equals(schema.optString("const")))return true;
+        JSONArray values=schema.optJSONArray("enum");
+        for(int i=0;values!=null&&i<values.length();i++)if("gov24-recovery.v1".equals(values.optString(i)))return true;
+        JSONArray choices=schema.optJSONArray("anyOf");
+        for(int i=0;choices!=null&&i<choices.length();i++)if(declaresRecovery(choices.optJSONObject(i)))return true;
+        return false;
     }
     public void close(){executor.shutdownNow();}
 }
