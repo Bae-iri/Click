@@ -20,6 +20,7 @@ public final class AgentServerContract {
     public boolean coupangBrowse;
     public boolean appGuide;
     public boolean appTask;
+    public boolean appTaskMemory;
     public boolean gov24Login;
     public boolean reviseRequest;
     public boolean gov24Civil;
@@ -111,6 +112,7 @@ public final class AgentServerContract {
         JSONObject capabilities=schemas.optJSONObject("DeviceCapabilities");
         result.appGuide=document.getJSONObject("paths").has(AppGuideGateway.PATH);
         result.appTask=document.getJSONObject("paths").has(AppGuideGateway.TASK_PATH);
+        result.appTaskMemory=document.getJSONObject("paths").has(AppGuideGateway.MEMORY_PATH)&&document.getJSONObject("paths").has(AppGuideGateway.EVENTS_PATH)&&document.getJSONObject("paths").has(AppGuideGateway.RESULT_PATH);
         result.coupangBrowse=document.getJSONObject("paths").has(CoupangBrowseGateway.PATH)
             && capabilities!=null && capabilities.getJSONObject("properties").has("coupang_browse");
         result.gov24Login=document.getJSONObject("paths").has("/api/v1/agent/public-guide/commands")

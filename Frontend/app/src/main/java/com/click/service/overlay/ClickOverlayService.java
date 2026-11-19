@@ -1187,6 +1187,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             public void failure(Throwable error){showAppGuideMessage(ErrorDetails.requestMessage(error),null);}
             public boolean execute(ScreenSnapshot baseline,JSONObject observation,JSONObject action,String input,String selectedPackage){return ClickAccessibilityService.performAppTask(baseline,observation,action,input,selectedPackage);}
             public boolean inputMatches(String target,String hash){return ClickAccessibilityService.appTaskInputMatches(target,hash);}
+            public String sessionId(){return execution.sessionId();}
             public String scope(String pkg){try{android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(pkg,0);return pkg+"|"+(android.os.Build.VERSION.SDK_INT>=28?info.getLongVersionCode():info.versionCode)+"|"+android.os.Build.VERSION.SDK_INT+"|app-task.v2";}catch(Exception e){return pkg+"|app-task.v2";}}
             public void present(JSONObject result,ScreenSnapshot screen){
                 JSONObject action=result.optJSONObject("action");
@@ -1204,7 +1205,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     +" http_status="+diagnostic.optInt("http_status"));
                 renderAppTask(result,bounds);
             }
-        },agentGateway.currentContract().appTask);
+        },agentGateway.currentContract().appTask,agentGateway.currentContract().appTaskMemory);
         RequestedApp target=requestedApp();
         if(target!=null)appGuide.targetApp(target.packageName,target.label);
         android.util.Log.i("ClickAgent","app_task_start target_resolved="+(target!=null)+" remote="+agentGateway.currentContract().appTask);
@@ -1224,7 +1225,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if(appGuide!=owner||endingTask)return;
                 // Ending guidance does not prove an order or complete the server's agent session.
                 endingTask=true;advanceAfterUserEnd=true;clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest("USER_ABORTED");
-            });
+            },agentGateway!=null&&agentGateway.currentContract()!=null&&agentGateway.currentContract().appTaskMemory?()->{
+                if(appGuide!=owner||endingTask)return;endingTask=true;
+                owner.confirmResultOnServer(()->{if(appGuide!=owner)return;advanceAfterUserEnd=true;clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest(null);},
+                    error->{if(appGuide!=owner)return;endingTask=false;showAppGuideMessage(ErrorDetails.requestMessage(error),null);});
+            }:null);
         taskFlowCollapsed=false;if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(bounds,true);
         if(!result.optBoolean("verifying"))speak(result.optString("message"));
     }

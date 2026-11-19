@@ -88,6 +88,16 @@ class AppTaskRequest(BaseModel):
     state: TaskState
     # Only apps explicitly selected on the device; never an installed-app inventory.
     apps: list[TaskApp] = Field(default_factory=list, max_length=1)
+    # Optional for older v2 clients; learned selectors never cross app versions.
+    environment: dict[str, str | int] = Field(default_factory=dict, max_length=3)
+    path_prefix: list[str] = Field(default_factory=list,max_length=64)
+
+    @model_validator(mode='after')
+    def valid_prefix(self):
+        import re
+        if any(not re.fullmatch('[0-9a-f]{64}',p) for p in self.path_prefix):
+            raise ValueError('Invalid execution prefix')
+        return self
 
 
 class TaskExpectation(BaseModel):
@@ -95,6 +105,7 @@ class TaskExpectation(BaseModel):
     kind: Literal['screen_changed','target_visible','input_present','selection_changed','package_opened']
     label: str = Field(default='', max_length=80)
     package: str = Field(default='', max_length=200)
+    screen_key: str = Field(default='', pattern=r'^(?:[0-9a-f]{64})?$')
 
 
 class TaskAction(BaseModel):

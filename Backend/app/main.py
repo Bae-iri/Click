@@ -49,6 +49,8 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
         worker = asyncio.create_task(application.state.browse_graph_jobs.serve(stop)) if enabled() else None
         settings_worker = (asyncio.create_task(application.state.settings_graph_jobs.serve(stop))
             if application.state.settings_graph_jobs.is_enabled() else None)
+        app_task_worker = (asyncio.create_task(application.state.app_task_learning_jobs.serve(stop))
+            if application.state.app_task_learning_jobs.is_enabled() else None)
         try:
             yield
         finally:
@@ -58,6 +60,8 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
                     await worker
                 if settings_worker:
                     await settings_worker
+                if app_task_worker:
+                    await app_task_worker
             finally:
                 application.state.engine.dispose()
 
@@ -134,8 +138,13 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
     from app.api.v1.endpoints.app_guide import build_router as build_app_guide_router
     app.state.app_guide_service = AppGuideService()
     from app.services.app_task import AppTaskService
-    app.state.app_task_service = AppTaskService()
-    app.include_router(build_app_guide_router(app.state.app_guide_service, principal, app.state.app_task_service), prefix="/api/v1")
+    from app.services.app_task_experience import AppTaskExperienceService
+    from app.services.browse_graph_jobs import AppTaskLearningJobs
+    app.state.app_task_experience = AppTaskExperienceService(session_factory)
+    app.state.app_task_learning_jobs = AppTaskLearningJobs(session_factory)
+    app.state.app_task_service = AppTaskService(memory=app.state.app_task_experience)
+    app.include_router(build_app_guide_router(app.state.app_guide_service, principal, app.state.app_task_service,
+        app.state.app_task_experience, app.state.app_task_learning_jobs), prefix="/api/v1")
     app.include_router(build_history_router(turn_service, principal), prefix="/api/v1")
     app.include_router(build_voice_queue_router(voice_queue, principal), prefix="/api/v1")
     app.include_router(build_interactions_router(app.state.interactions, principal), prefix="/api/v1")

@@ -10,7 +10,7 @@ import java.net.URLEncoder;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Optional participation in shared route improvement; never uploads UI behavior. */
+/** Optional task-experience improvement; raw input and screen contents are excluded. */
 public final class GraphImprovementConsentGateway {
     public interface Callback {
         void onResult(boolean consented);
@@ -42,6 +42,7 @@ public final class GraphImprovementConsentGateway {
                     if ("model_training".equals(row.optString("purpose"))) consented = row.optBoolean("consented");
                 }
                 final boolean result = consented;
+                tokens.noteGraphConsent(result);
                 main.post(() -> callback.onResult(result));
             } catch (Exception error) { main.post(callback::onFailure); }
         });
@@ -52,6 +53,7 @@ public final class GraphImprovementConsentGateway {
             try {
                 http.post(path(), new JSONObject().put("purpose", "model_training")
                         .put("consented", consented).put("policy_version", "graph-improvement.v1").toString());
+                tokens.noteGraphConsent(consented);
                 main.post(() -> callback.onResult(consented));
             } catch (Exception error) { main.post(callback::onFailure); }
         });

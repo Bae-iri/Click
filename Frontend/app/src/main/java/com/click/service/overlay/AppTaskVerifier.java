@@ -9,6 +9,8 @@ public final class AppTaskVerifier {
     public static Verdict check(JSONObject before,JSONObject after,JSONObject action,boolean actionObserved,boolean inputMatches){
         if(after==null||!actionObserved||!AppTaskPolicy.validExpectation(action))return Verdict.WAITING;
         JSONObject expectation=action.optJSONObject("expectation");if(expectation==null)return Verdict.WAITING;
+        String expectedScreen=expectation.optString("screen_key");
+        if(!expectedScreen.isEmpty())try{if(!expectedScreen.equals(AppTaskObservation.learningKey(after)))return Verdict.WAITING;}catch(JSONException invalid){return Verdict.WAITING;}
         String kind=expectation.optString("kind");
         if("package_opened".equals(kind))return expectation.optString("package").equals(after.optString("package"))?Verdict.VERIFIED:Verdict.WAITING;
         if("protected".equals(after.optString("status")))return Verdict.PROTECTED;
@@ -20,6 +22,7 @@ public final class AppTaskVerifier {
             &&(old.optBoolean("selected")!=current.optBoolean("selected")||!String.valueOf(old.opt("checked")).equals(String.valueOf(current.opt("checked"))))?Verdict.VERIFIED:Verdict.WAITING;
         if("back".equals(action.optString("tool"))&&before.optBoolean("keyboard_visible")&&!after.optBoolean("keyboard_visible"))return Verdict.VERIFIED;
         if(before.optString("fingerprint").equals(after.optString("fingerprint")))return Verdict.WAITING;
+        if("screen_changed".equals(kind))try{if(AppTaskObservation.learningKey(before).equals(AppTaskObservation.learningKey(after)))return Verdict.WAITING;}catch(JSONException invalid){return Verdict.WAITING;}
         if("target_visible".equals(kind)){
             String label=expectation.optString("label");if(label.isEmpty())return Verdict.WAITING;
             JSONArray nodes=after.optJSONArray("nodes");for(int i=0;nodes!=null&&i<nodes.length();i++)if(label.equals(nodes.optJSONObject(i).optString("label"))){

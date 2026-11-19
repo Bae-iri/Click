@@ -935,6 +935,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     public void appTask(JSONObject result,java.util.function.Consumer<String> execute,Runnable refresh,Runnable tools,Runnable visual,Runnable finish) {
+        appTask(result,execute,refresh,tools,visual,finish,null);
+    }
+    public void appTask(JSONObject result,java.util.function.Consumer<String> execute,Runnable refresh,Runnable tools,Runnable visual,Runnable finish,Runnable confirmed) {
         progress(null,null,result.optString("message"),false);controls.setVisibility(GONE);divider.setVisibility(GONE);
         JSONObject action=result.optJSONObject("action");
         if("proposed".equals(result.optString("status"))&&!result.optString("target_label").isBlank())setGuidanceEvidence(action!=null&&"open_app".equals(action.optString("tool"))
@@ -960,6 +963,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
                 recoveryActions.addView(secondaryButton("다시 확인",refresh),spaced(8));
                 recoveryActions.addView(secondaryButton("직접 동작 선택",tools),spaced(8));
                 recoveryActions.addView(quietButton("화면 글자 읽기",visual),spaced(8));
+                if(confirmed!=null)recoveryActions.addView(quietButton("결과를 확인했어요",confirmed),spaced(8));
                 recoveryActions.addView(quietButton("안내 끝내기",finish),spaced(8));
             });
             recoveryActions.addView(more,spaced(8));
