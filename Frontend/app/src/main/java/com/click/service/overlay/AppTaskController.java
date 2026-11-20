@@ -2,6 +2,8 @@ package com.click.service.overlay;
 
 import android.os.*;
 import com.click.data.remote.AppGuideGateway;
+import com.click.data.remote.AppTaskCompletionDiagnostics;
+import com.click.data.remote.AppTaskDiagnostics;
 import com.click.data.local.AppTaskStore;
 import com.click.data.snapshot.*;
 import org.json.*;
@@ -40,6 +42,7 @@ public final class AppTaskController {
     private boolean checkingResult,resultOffered;
     private JSONObject resultAssessment;
     private String ignoredResultFingerprint;
+    private String completionRequestRef;
     private final GuidedActionTracker manualActions=new GuidedActionTracker();
     private final Runnable refresh=()->observe(false);
     private final Runnable verify=()->verifyNow();
@@ -103,6 +106,16 @@ public final class AppTaskController {
         return false;
     }
     private void save(){if(store!=null)store.save(memory);}
+    private void completionTrace(String stage,String reason,JSONObject candidate,JSONObject current,ScreenSnapshot nativeScreen,
+            String requestRef,String verdict,String freshness,Long ageMs,long elapsedMs,int frames){
+        if(!completionSupported||!com.click.data.local.CandidateDiagnosticLog.enabled())return;
+        try{
+            String key=AppTaskCompletion.valid(candidate)?AppTaskCompletion.key(candidate):null;
+            int checks=candidate==null||candidate.optJSONArray("checks")==null?0:candidate.optJSONArray("checks").length();
+            gateway.recordCompletion(AppTaskCompletionDiagnostics.event(memory.id(),requestRef,key,current,nativeScreen,
+                memory.evidenceVersion(),checks,stage,reason,verdict,freshness,ageMs,elapsedMs,frames));
+        }catch(Exception ignored){ /* Completion diagnostics must never change the task. */ }
+    }
     private void show(String status,String message)throws JSONException {
         JSONObject target=proposal==null||observation==null?null:AppTaskObservation.find(observation,proposal.optString("target_id"));
         JSONObject result=new JSONObject().put("status",status).put("message",message).put("subgoals",memory.state().getJSONArray("subgoals"))
@@ -120,43 +133,61 @@ public final class AppTaskController {
     private boolean discardUnsafeCompletion(JSONObject current,ScreenSnapshot screen)throws JSONException {
         if(!completionSupported||memory.finished()||memory.completionSupported()||memory.completion()==null
                 ||!AppTaskCompletion.unsafeForGoal(memory.goal(),memory.completion(),current,screen))return false;
+        completionTrace("discarded","unsafe_prediction_discarded",memory.completion(),current,screen,completionRequestRef,"unknown","not_checked",null,0,0);
         memory.discardCompletion();save();
+        completionRequestRef=null;
         resetResultEvidence();
         return true;
     }
     private boolean observeResult(JSONObject current,ScreenSnapshot screen)throws JSONException {
-        if(!completionSupported||memory.completion()==null)return false;
+        if(!completionSupported)return false;
+        if(memory.completion()==null){
+            completionTrace("goal_check","candidate_missing",null,current,screen,completionRequestRef,"not_checked","not_checked",null,0,0);return false;
+        }
         if(discardUnsafeCompletion(current,screen))return false;
         int version=memory.evidenceVersion();String candidateKey=AppTaskCompletion.key(memory.completion());
         if(version!=resultEvidenceVersion||!candidateKey.equals(resultEvidenceKey)){
             resetResultEvidence();resultEvidenceVersion=version;resultEvidenceKey=candidateKey;
         }
-        if(Objects.equals(ignoredResultFingerprint,current.optString("fingerprint")))return false;
+        if(Objects.equals(ignoredResultFingerprint,current.optString("fingerprint"))){
+            completionTrace("goal_check","ignored_frame",memory.completion(),current,screen,completionRequestRef,"not_checked","not_checked",null,0,0);return false;
+        }
         ignoredResultFingerprint=null;
         AppTaskCompletion.Verdict verdict=AppTaskCompletion.checkForGoal(memory.goal(),memory.completion(),current,screen);
         long captured=current.optLong("captured_at_ms"),now=System.currentTimeMillis();
+        String freshness=captured>now+2000?"future":now-captured>15000?"stale":"fresh";
+        completionTrace("goal_check","checked",memory.completion(),current,screen,completionRequestRef,verdict.name().toLowerCase(Locale.ROOT),freshness,
+            now-captured,resultObservation==null?0:SystemClock.elapsedRealtime()-resultStarted,resultObservation==null?0:1);
         if(verdict!=AppTaskCompletion.Verdict.MATCHED||captured>now+2000||now-captured>15000){
             checkingResult=resultOffered=false;resultObservation=null;resultAssessment=null;return false;
         }
         if(resultOffered)return true;
         if(resultObservation==null){
             resultObservation=current.optString("observation_id");resultCapturedAt=captured;resultStarted=SystemClock.elapsedRealtime();checkingResult=true;
+            completionTrace("evidence","first_frame",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,0,1);
             show("checking_result","요청하신 결과가 반영됐는지 확인하고 있어요.");
         }
         if(!resultObservation.equals(current.optString("observation_id"))&&captured-resultCapturedAt>=350){
-            if(!memory.supportCompletion(resultEvidenceVersion)){resetResultEvidence();return false;}
+            completionTrace("evidence","second_frame",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,2);
+            if(!memory.supportCompletion(resultEvidenceVersion)){
+                completionTrace("unavailable","support_rejected",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,2);
+                resetResultEvidence();return false;
+            }
             save();
             checkingResult=false;resultOffered=true;proposal=null;submitted=current.optString("fingerprint");
             resultAssessment=new JSONObject().put("status","verified").put("reason","goal_postconditions_observed")
                 .put("source","device_observation").put("observation_id",current.optString("observation_id"))
                 .put("check_count",memory.completion().getJSONArray("checks").length()).put("evidence_version",memory.evidenceVersion());
+            completionTrace("verified","fresh_native_observations",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,2);
             show("confirm_result","요청하신 결과가 화면에 반영된 것을 확인했어요. 원하신 결과가 맞나요?");return true;
         }
         if(SystemClock.elapsedRealtime()-resultStarted>=5000){
             checkingResult=false;resultObservation=null;
             resultAssessment=new JSONObject().put("status","unknown").put("reason","fresh_result_observation_unavailable");
+            completionTrace("unavailable","fresh_frame_unavailable",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,1);
             show("needs_input","결과를 확인할 새 화면을 읽지 못했어요. 현재 화면을 다시 확인해 주세요.");return true;
         }
+        completionTrace("evidence","waiting_second_frame",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,1);
         handler.removeCallbacks(refresh);handler.postDelayed(refresh,400);return true;
     }
     private void observe(boolean force){
@@ -206,16 +237,30 @@ public final class AppTaskController {
             show("planning",resultOnly?"요청하신 결과가 나왔는지 확인하고 있어요.":"현재 화면에서 다음 단계를 찾고 있어요.");
             gateway.send(request,new AppGuideGateway.Callback(){
                 public void success(JSONObject response){
-                    if(closed||finishing)return;busy=false;listener.busy(false);if(!listener.canObserve())return;
+                    String requestRef=AppTaskDiagnostics.ref(request.optString("request_id"));
+                    JSONObject receivedCandidate=response.optJSONObject("completion");
+                    completionTrace("response","received",receivedCandidate,request.optJSONObject("screen"),screen,requestRef,"not_checked","not_checked",null,0,0);
+                    if(closed||finishing){
+                        completionTrace("discarded",closed?"closed":"finishing",receivedCandidate,request.optJSONObject("screen"),screen,requestRef,"not_checked","not_checked",null,0,0);return;
+                    }
+                    busy=false;listener.busy(false);if(!listener.canObserve()){
+                        completionTrace("discarded","not_observable",receivedCandidate,request.optJSONObject("screen"),screen,requestRef,"not_checked","not_checked",null,0,0);return;
+                    }
                     try{
-                        ScreenSnapshot fresh=listener.fresh();if(fresh==null||!fingerprint.equals(capture(fresh).optString("fingerprint"))){handler.post(refresh);return;}
+                        ScreenSnapshot fresh=listener.fresh();JSONObject freshObservation=fresh==null?null:capture(fresh);
+                        if(fresh==null||!fingerprint.equals(freshObservation.optString("fingerprint"))){
+                            completionTrace("discarded",fresh==null?"no_frame":"changed_frame",receivedCandidate,freshObservation,fresh,requestRef,"not_checked","not_checked",null,0,0);
+                            handler.post(refresh);return;
+                        }
                         diagnostic=response.optJSONObject("diagnostic");memory.plan(response.optJSONArray("subgoals"));
                         JSONObject candidate=response.optJSONObject("completion");
                         if(completionSupported&&candidate!=null){
                             Set<String> labels=AppTaskCompletion.labels(memory.completion());labels.addAll(AppTaskCompletion.labels(candidate));
                             JSONObject candidateScreen=AppTaskObservation.capture(fresh,labels);int oldVersion=memory.evidenceVersion();
-                            memory.offerCompletion(candidate,candidateScreen,fresh);
+                            boolean accepted=memory.offerCompletion(candidate,candidateScreen,fresh);
+                            completionTrace(accepted?"candidate_accepted":"candidate_rejected",memory.lastCompletionOfferReason(),candidate,candidateScreen,fresh,requestRef,"not_checked","not_checked",null,0,0);
                             if(oldVersion!=memory.evidenceVersion())resetResultEvidence();
+                            if(accepted)completionRequestRef=requestRef;
                         }
                         save();
                         if(observeResult(capture(fresh),fresh))return;

@@ -1,0 +1,61 @@
+{
+  "schema_version": "click.completion-title-fix.v1",
+  "base_commit": "f5a28b11b2189c0a4dfcdff01bb12745d3b8a248",
+  "baseline_production_observation_sha256": "f89a9874c4b63eeac893356f46b08e2eef5d6a8e4eb408cce51b684de0ea301c",
+  "baseline_regression_tests": {
+    "total": 13,
+    "failed": 3,
+    "failure_cases": [
+      "passiveScrollableTitleAncestorDoesNotEraseTheExactNativeHeadingProof",
+      "currentArmVerifiesTheDeliveredHeadingCandidateOnlyAfterTwoFreshFrames",
+      "metaArmVerifiesTheDeliveredHeadingCandidateOnlyAfterTwoFreshFrames"
+    ]
+  },
+  "initial_fixed_guard_suite": {
+    "total": 34,
+    "failed": 0
+  },
+  "scope": "deterministic projection defect and focused native completion bridge; not a rerun of36 A/B episodes",
+  "historical_candidate_identity": "not retained; this defect is established, not a retrospective proof of every historical failure",
+  "final_related_unit_tests": {
+    "classes": 22,
+    "total": 146,
+    "failed": 0,
+    "duration_seconds": 11
+  },
+  "debug_apk_build": "PASSED",
+  "instrumentation_apk_build": "PASSED",
+  "lint_debug": "PASSED",
+  "native_control_cases": {
+    "total": 6,
+    "passed": 6,
+    "model_attempts": 0
+  },
+  "bounded_live_cases": {
+    "total": 2,
+    "passed": 2,
+    "model_attempts": 2,
+    "full_end_to_end_trajectory": false
+  },
+  "source_sha256": {
+    "Frontend/app/src/main/java/com/click/data/snapshot/AppTaskObservation.java": "e52e1d4002430bc7250f99e56152e35f72bad6bc5c523a79bb216c2afc5afe6b",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java": "5efece57e72a9d32e2473c37a0743401f00db639d00cc48dc8525f5846d1bb99",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskMemory.java": "3933829c41990ee611f24f6e1db25271131c35f1aa161ecce7bd1a28f4118702",
+    "Frontend/app/src/main/java/com/click/data/remote/AppGuideGateway.java": "f0acef66f6051a0fc41fb8dd802b1cb1690fd637b10a102d939722d8c335fd52",
+    "Frontend/app/src/main/java/com/click/data/remote/AppTaskCompletionDiagnostics.java": "43f8934283630c919ceb61cdbcf2f580b4fb3f8b2d487bc250b69cc501bd989e",
+    "Frontend/app/src/androidTest/java/com/click/service/accessibility/MetaControllerCompletionProbeTest.java": "9753c722f2025aa6de990a03b5902baf7695318b2c6c94bf743481e2113fc2c5"
+  },
+  "apk_sha256": {
+    "app": "ec018ff87841bd168a902c5a225cda0641c439924737dc727067485e3145466f",
+    "instrumentation": "686a6b049349bab462440019909f303dc0712ec423159c6113a8b4a61582e946"
+  },
+  "remote_integration": {
+    "commit": "6f529b713ac446c77c1fdb0f50a53749f82cf904",
+    "scope": "preserved parallel app name/home icon changes; completion sources unchanged from native proof",
+    "requested_app_tests": 4,
+    "failures": 0,
+    "lint": "PASSED"
+  },
+  "apk_sha256_scope": "final APK used for live bridge; model-free method unchanged by live-only test state refinement",
+  "native_probe_test_before_live_only_edit_sha256": "fbd993638c95e6b6ed82562821ac40c0a6bf9714db594073c28027a4bfd4cd73"
+}

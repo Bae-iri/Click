@@ -3,6 +3,8 @@ package com.click.data.snapshot;
 import org.json.*;
 import org.junit.Test;
 import java.util.List;
+import java.util.Set;
+import com.click.service.overlay.AppTaskCompletion;
 import static org.junit.Assert.*;
 import static com.click.testing.AppTaskFixtures.*;
 
@@ -69,5 +71,66 @@ public class AppTaskObservationTest {
         assertEquals(1,one.getJSONArray("nodes").length());assertEquals(com.click.service.overlay.AppTaskCompletion.Verdict.MATCHED,com.click.service.overlay.AppTaskCompletion.check(result,one));
         JSONObject two=AppTaskObservation.capture(screen(pkg,node(pkg,"row","목록","button"),child,node(pkg,"other","목록","button")),java.util.Set.of("목록"));
         assertEquals(com.click.service.overlay.AppTaskCompletion.Verdict.UNKNOWN,com.click.service.overlay.AppTaskCompletion.check(result,two));
+    }
+
+    @Test public void passiveScrollableTitleAncestorDoesNotEraseTheExactNativeHeadingProof()throws Exception {
+        String pkg="org.example.unregistered",label="Display & touch";
+        AccessibilityNodeSnapshot container=new AccessibilityNodeSnapshot("node_0_0",null,true,pkg,null,label,
+            pkg+":id/content_parent","android.widget.FrameLayout",null,new int[]{0,0,1080,1200},
+            false,true,false,true,false,null,42,false,null,null,false,null,false,false);
+        AccessibilityNodeSnapshot heading=new AccessibilityNodeSnapshot("node_0_0_0","node_0_0",true,pkg,null,label,
+            pkg+":id/page_title","android.widget.FrameLayout",null,new int[]{0,63,1080,210},
+            false,true,false,false,false,null,42,false,null,null,false,null,true,false);
+        ScreenSnapshot nativePage=screen(pkg,container,heading);
+        JSONObject candidate=new JSONObject().put("checks",new JSONArray().put(new JSONObject()
+            .put("package",pkg).put("label",label).put("resource",pkg+":id/page_title").put("role","text")));
+        JSONObject plain=AppTaskObservation.capture(nativePage);
+        assertEquals("list",AppTaskObservation.find(plain,container.nodeId).getString("role"));
+        assertEquals(AppTaskCompletion.Verdict.MATCHED,AppTaskCompletion.checkForGoal("Display & touch 화면 열어줘",candidate,plain,nativePage));
+
+        JSONObject projected=AppTaskObservation.capture(nativePage,AppTaskCompletion.labels(candidate));
+        assertNotNull("A passive list borrowing its title label cannot own and erase the native heading",AppTaskObservation.find(projected,heading.nodeId));
+        assertEquals(AppTaskCompletion.Verdict.MATCHED,AppTaskCompletion.checkForGoal("Display & touch 화면 열어줘",candidate,projected,nativePage));
+        assertTrue(AppTaskCompletion.distinctProofTargets(candidate,projected));
+        assertEquals(plain.getString("observation_id"),projected.getString("observation_id"));
+        assertEquals(projected.getString("fingerprint"),AppTaskObservation.recaptureLike(nativePage,projected).getString("fingerprint"));
+    }
+
+    @Test public void nestedStaticLabelKeepsItsSingleStaticOwnerAndSeparateHeadingsStayAmbiguous()throws Exception {
+        String pkg="org.example.unregistered",label="공개 목적 제목";
+        AccessibilityNodeSnapshot owner=new AccessibilityNodeSnapshot("title",null,true,pkg,label,null,
+            pkg+":id/title","android.widget.TextView",null,new int[]{10,20,400,120},
+            false,true,false,false,false,null,42,false,null,null,false,null,true,false);
+        AccessibilityNodeSnapshot child=new AccessibilityNodeSnapshot("title_child","title",true,pkg,label,null,
+            pkg+":id/title_child","android.widget.TextView",null,new int[]{20,30,300,100},false,true,false,false,false,null,42);
+        JSONObject one=AppTaskObservation.capture(screen(pkg,owner,child),Set.of(label));
+        assertNotNull(AppTaskObservation.find(one,"title"));assertNull(AppTaskObservation.find(one,"title_child"));
+        JSONObject candidate=new JSONObject().put("checks",new JSONArray().put(new JSONObject().put("package",pkg).put("label",label)));
+        assertEquals(AppTaskCompletion.Verdict.MATCHED,AppTaskCompletion.check(candidate,one));
+        AccessibilityNodeSnapshot other=new AccessibilityNodeSnapshot("other",null,true,pkg,label,null,
+            pkg+":id/other","android.widget.TextView",null,new int[]{10,180,400,280},
+            false,true,false,false,false,null,42,false,null,null,false,null,true,false);
+        JSONObject two=AppTaskObservation.capture(screen(pkg,owner,child,other),Set.of(label));
+        assertEquals(AppTaskCompletion.Verdict.UNKNOWN,AppTaskCompletion.check(candidate,two));
+    }
+
+    @Test public void passiveScrollContainerDoesNotTurnItsNestedMenuButtonIntoGoalProof()throws Exception {
+        String pkg="org.example.unregistered",label="목적 화면";
+        AccessibilityNodeSnapshot container=new AccessibilityNodeSnapshot("container",null,true,pkg,null,label,
+            pkg+":id/container","android.widget.FrameLayout",null,new int[]{0,0,1080,1200},false,true,false,true,false,null,42);
+        AccessibilityNodeSnapshot button=new AccessibilityNodeSnapshot("button","container",true,pkg,label,null,
+            pkg+":id/open_destination","android.widget.Button",null,new int[]{10,20,400,120},true,true,false,false,false,null,42);
+        AccessibilityNodeSnapshot text=new AccessibilityNodeSnapshot("button_label","button",true,pkg,label,null,
+            pkg+":id/button_label","android.widget.TextView",null,new int[]{20,30,300,100},false,true,false,false,false,null,42);
+        ScreenSnapshot nativeMenu=screen(pkg,container,button,text);
+        JSONObject projected=AppTaskObservation.capture(nativeMenu,Set.of(label));
+        assertNotNull(AppTaskObservation.find(projected,"container"));assertNotNull(AppTaskObservation.find(projected,"button"));
+        assertNull("The actual button still owns its ordinary label child",AppTaskObservation.find(projected,"button_label"));
+        JSONObject buttonProof=new JSONObject().put("checks",new JSONArray().put(new JSONObject().put("package",pkg)
+            .put("label",label).put("resource",pkg+":id/open_destination").put("role","button")));
+        assertEquals(AppTaskCompletion.Verdict.UNKNOWN,AppTaskCompletion.checkForGoal("목적 화면 열어줘",buttonProof,projected,nativeMenu));
+        JSONObject childProof=new JSONObject().put("checks",new JSONArray().put(new JSONObject().put("package",pkg)
+            .put("label",label).put("resource",pkg+":id/button_label").put("role","text")));
+        assertEquals(AppTaskCompletion.Verdict.NOT_MET,AppTaskCompletion.checkForGoal("목적 화면 열어줘",childProof,projected,nativeMenu));
     }
 }

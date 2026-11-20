@@ -13,6 +13,7 @@ public final class AppGuideGateway {
     public interface Callback {void success(JSONObject result);void failure(Throwable error);}
     private final AuthenticatedHttpClient http;
     private final AppTaskDiagnostics taskDiagnostics;
+    private final AppTaskCompletionDiagnostics completionDiagnostics;
     private final RequestLifecycle lifecycle=new RequestLifecycle();
     private final RequestLifecycle memoryLifecycle=new RequestLifecycle();
     private volatile boolean closed;
@@ -22,7 +23,8 @@ public final class AppGuideGateway {
     private final java.util.concurrent.atomic.AtomicInteger memoryGeneration=new java.util.concurrent.atomic.AtomicInteger();
     private final java.util.concurrent.atomic.AtomicBoolean flushing=new java.util.concurrent.atomic.AtomicBoolean();
     private final Handler main=new Handler(Looper.getMainLooper());
-    public AppGuideGateway(Context context){http=new AuthenticatedHttpClient(context);taskDiagnostics=new AppTaskDiagnostics(context);}
+    public AppGuideGateway(Context context){http=new AuthenticatedHttpClient(context);taskDiagnostics=new AppTaskDiagnostics(context);completionDiagnostics=new AppTaskCompletionDiagnostics(context);}
+    public void recordCompletion(JSONObject event){completionDiagnostics.record(event);}
     public void send(JSONObject request,Callback callback) {
         final long queuedAt=SystemClock.elapsedRealtime();
         final boolean task="app-task.v2".equals(request.optString("protocol_version"));

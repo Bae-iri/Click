@@ -1,0 +1,18 @@
+{
+  "README.md": "62ac0182940f0b0c9a73aeaaf6acac4a5523854faab0366690f94378f8c5bff9",
+  "before-fix-tests.log": "415cc6bff2bd77fec89fb374c6a83a585d185c70495a295979320d281f320cd1",
+  "bridge-audit.json": "a2db78ad4493f1f02b07ff4fb47d4e9214a5d318ba34b405ae625f7e0891da41",
+  "cleanup.json": "338ae6ea139215c1812f0331c6b6aa58986ad465ae7e08e4f99c696c6d1e0a08",
+  "completion-events.jsonl": "c93067f8fb67c8d24ab9647a758bab8bacb7e66926ffed1debf76703d151d8e6",
+  "core-fixed-tests.log": "45bc7c761c28abb30ba328c26f9027251e791fe3299c9a8173d2accb5bbb79e8",
+  "integration-tests.log": "d96757758c1fa42fcc1d87563c3463ddeb3f00247b721984ae48a69f7e02a925",
+  "live-instrumentation.log": "3786b088d70367025fa5ab88b017495fbd60d1654143712411e330950bf066aa",
+  "live-report.json": "f5454713111ae2465733afa6081d67c2528998b2676d12a7ff91f9e556053db3",
+  "native-instrumentation.log": "0fdbc08a3c186d8d41d7b6ad40e7d955bf672c4a4dc4eb2d81dc4545e82fdfd6",
+  "native-report.json": "27cc0b48b5f0ac2ff376a7a75bea6314a621b32f9f37f696e7deca1c2e6fe619",
+  "native-safe-trace.jsonl": "f4a39d090b6b846b373a993127dbf0b5d6742ff35eab0d1cb9f4c6d6115aa281",
+  "provider-terminal.jsonl": "38c043fd81435494b8d0b20de4ab84ff7c9f71010543624bcbde7a4e9f9c53f4",
+  "request-receipts.jsonl": "29be4dd41276abefe8c6832ba9d0c544877293d35f4870f0c8f1e402e58c81fe",
+  "verification.json": "9c6ee69ecc3475f34109518acefd91431320897728b5f903d4848b090489d97e",
+  "verified-tests.log": "94c1c837ba22007ad1cd23bb53f787b1b4134a1b61633275efc4ab6f88249090"
+}
