@@ -159,6 +159,12 @@ public final class AppTaskController {
         String freshness=captured>now+2000?"future":now-captured>15000?"stale":"fresh";
         completionTrace("goal_check","checked",memory.completion(),current,screen,completionRequestRef,verdict.name().toLowerCase(Locale.ROOT),freshness,
             now-captured,resultObservation==null?0:SystemClock.elapsedRealtime()-resultStarted,resultObservation==null?0:1);
+        if(verdict==AppTaskCompletion.Verdict.UNKNOWN&&"public".equals(current.optString("status"))&&!memory.completionSupported()&&!memory.finished()){
+            // A predicted check that is ambiguous or unusable on a readable screen can never
+            // become evidence here; release it so the destination's own title can be bound.
+            completionTrace("discarded","ambiguous_prediction_discarded",memory.completion(),current,screen,completionRequestRef,"unknown",freshness,now-captured,0,0);
+            memory.discardCompletion();save();completionRequestRef=null;resetResultEvidence();return false;
+        }
         if(verdict!=AppTaskCompletion.Verdict.MATCHED||captured>now+2000||now-captured>15000){
             checkingResult=resultOffered=false;resultObservation=null;resultAssessment=null;return false;
         }
