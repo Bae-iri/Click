@@ -96,6 +96,13 @@ def test_frozen_execution_mask_reaches_planner_and_is_still_enforced_after_plann
     assert exposed['label'] == 'Search Settings' and exposed['clickable'] is True
     assert exposed['editable'] is False and exposed['has_value'] is False
     assert exposed['allowed_tools'] == []
+    assert result.diagnostic['recovery_context_used'] is False and result.diagnostic['capabilities_applied'] is True
+    assert result.diagnostic['allowed_actions_context_used'] is True
+    assert result.diagnostic['allowed_action_count'] == len(context['allowed_actions'])
+    assert result.diagnostic['recovery_blocked_action_count'] == 0 and 'recovery_attempt' not in result.diagnostic
+    assert record['recovery_context_used'] is False and record['capabilities_applied'] is True
+    assert record['allowed_actions_context_used'] is True
+    assert record['allowed_action_count'] == len(context['allowed_actions']) and record['recovery_blocked_action_count'] == 0
     display = next(control for control in context['controls'] if control['id'] == captured[0]['display'])
     assert display['allowed_tools'] == ['tap']
     schema = captured[0]['payload']['generationConfig']['responseJsonSchema']['properties']

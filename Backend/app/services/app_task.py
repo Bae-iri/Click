@@ -109,10 +109,11 @@ class AppTaskService:
 
     def step(self,request,user_id=None,*,action_capabilities: ActionCapabilities | None=None):
         screen,state=request.screen,request.state
+        execution_diagnostic=dict(recovery_context_used=False,capabilities_applied=False,allowed_actions_context_used=False)
         response=AppTaskResponse(request_id=request.request_id,task_id=state.task_id,
             observation_id=screen.observation_id,fingerprint=screen.fingerprint,status='needs_input',
             subgoals=state.subgoals,completion=state.completion,message='현재 화면을 다시 확인해 주세요.',
-            diagnostic={'called':False,'failure_stage':'none'})
+            diagnostic={'called':False,'failure_stage':'none',**execution_diagnostic})
         if screen.status!='public':
             response.status='protected' if screen.status=='protected' else 'needs_input'
             response.message='입력·인증은 직접 진행한 뒤 화면을 다시 확인해 주세요.' if screen.status=='protected' else '도움이 필요한 앱을 열어 주세요.'
@@ -138,14 +139,18 @@ class AppTaskService:
         allowed_pairs=native_action_pairs(request,safe.values()) if constrained else None
         if allowed_pairs is not None:
             if action_capabilities is not None:allowed_pairs=allowed_pairs & action_capabilities.pairs
+            removed_pairs=allowed_pairs & blocked_pairs
             allowed_pairs=allowed_pairs-blocked_pairs
+            execution_diagnostic.update(capabilities_applied=action_capabilities is not None,
+                allowed_action_count=len(allowed_pairs),recovery_blocked_action_count=len(removed_pairs))
+            response.diagnostic.update(execution_diagnostic)
             if not allowed_pairs and not result_only:
                 response.message='현재 화면에서 실행할 수 있는 다음 동작을 확인하지 못했어요. 화면을 직접 이동한 뒤 다시 확인해 주세요.'
                 response.diagnostic.update(failure_stage='observation',failure_kind='observation',reason_code='no_allowed_actions')
                 return response
         if result_only and state.completion is not None:
             response.status='confirm_result';response.message='요청하신 결과가 나왔나요? 직접 확인한 뒤 안내를 끝내 주세요.'
-            response.diagnostic={'called':False,'reason_code':'bound_result_available','failure_stage':'none'}
+            response.diagnostic={'called':False,'reason_code':'bound_result_available','failure_stage':'none',**execution_diagnostic}
             return response
         recalled=self.memory.recall(request,user_id) if self.memory and user_id else None
         if recalled and recalled.action and state.completion is not None:
@@ -156,9 +161,9 @@ class AppTaskService:
                 response.status='proposed';response.action=action
                 response.message='이전에 확인한 실행 경험으로 다음 단계를 준비했어요. 동작을 확인해 주세요.'
                 response.active_subgoal=pending[0].id if pending else None
-                response.diagnostic={'called':False,'model':'agent2-experience','reason':'ai2_remembered'}
+                response.diagnostic={'called':False,'model':'agent2-experience','reason':'ai2_remembered',**execution_diagnostic}
                 return response
-        diagnostic={'called':False,'failure_stage':'none','planning_mode':'result_only' if result_only else 'next_action'}
+        diagnostic={'called':False,'failure_stage':'none','planning_mode':'result_only' if result_only else 'next_action',**execution_diagnostic}
         response.diagnostic=diagnostic
         try: model=model_name()
         except ValueError:
@@ -274,18 +279,22 @@ class AppTaskService:
         payload={'contents':[{'parts':[{'text':prompt}]}],'generationConfig':{'maxOutputTokens':2048,
             'thinkingConfig':{'thinkingBudget':0} if model.startswith('gemini-2.5-') else {'thinkingLevel':'low'},
             'responseMimeType':'application/json','responseJsonSchema':schema}}
+        payload_diagnostic=dict(recovery_context_used=recovery is not None,
+            allowed_actions_context_used=allowed_pairs is not None and not result_only)
+        if recovery is not None:payload_diagnostic['recovery_attempt']=request.recovery.attempt
         started=time.monotonic()
         stage='provider'
         try:
             if self.sender:
                 # Trusted injection is a deterministic test seam; production I/O
                 # always uses the killable, single-attempt boundary below.
-                available=remaining(8);diagnostic['called']=True
+                available=remaining(8);diagnostic['called']=True;diagnostic.update(payload_diagnostic)
                 r=self.sender(payload,timeout=available)
             else:
                 try:available=remaining(9)
                 except TimeoutError:raise ProviderError('provider_deadline_exceeded','not_started') from None
                 diagnostic.update(called=None,provider_budget_ms=round(available*1000),provider_attempt_limit=1)
+                diagnostic.update(payload_diagnostic)
                 r=generate(model,token,payload,timeout=available)
                 diagnostic['called']=True
             if r.status_code!=200:
@@ -379,6 +388,9 @@ class AppTaskService:
         except (ValueError,KeyError,TypeError,IndexError,AttributeError,TimeoutError,httpx.HTTPError,ProviderError) as error:
             if isinstance(error,ProviderError):
                 diagnostic['called']={'observed':True,'not_started':False,'unknown':None}[error.model_call_state]
+                if error.model_call_state=='not_started':
+                    diagnostic.update(recovery_context_used=False,allowed_actions_context_used=False)
+                    diagnostic.pop('recovery_attempt',None)
             response.action=None;response.subgoals=state.subgoals;response.completion=state.completion
             response.status='confirm_result' if result_only else 'unavailable'
             response.message='요청하신 결과가 나왔나요? 직접 확인한 뒤 안내를 끝내 주세요.' if result_only else '다음 단계를 준비하지 못했어요. 잠시 후 화면을 다시 확인해 주세요.'

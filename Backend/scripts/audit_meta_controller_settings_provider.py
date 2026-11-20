@@ -24,8 +24,40 @@ def _calls(value,wanted):
     return type(value) is int and value==wanted
 
 
-def audit(episodes,terminal):
-    if any(row.get('schema_version')!='click.native-settings.v1' or row.get('evidence_mode')!='live_native_settings' for row in episodes):
+EPISODE_SCHEMAS=('click.native-settings.v1','click.native-settings.v2')
+CONTEXT_BOOLEANS=('recovery_context_used','capabilities_applied','allowed_actions_context_used')
+CONTEXT_COUNTS={'allowed_action_count':322,'recovery_blocked_action_count':16}
+
+
+def _episode_schema(episodes,explicit=None):
+    versions={row.get('schema_version') for row in episodes}
+    if len(versions)>1:raise ValueError('Mixed native Settings episode versions')
+    version=next(iter(versions),explicit or EPISODE_SCHEMAS[0])
+    if version not in EPISODE_SCHEMAS or explicit is not None and explicit!=version:
+        raise ValueError('Actual native Settings episode schema required')
+    return version
+
+
+def _context_metadata(record):
+    copied={};invalid=[]
+    for key in CONTEXT_BOOLEANS:
+        if key in record:
+            if type(record[key]) is bool:copied[key]=record[key]
+            else:invalid.append(key)
+    for key,limit in CONTEXT_COUNTS.items():
+        if key in record:
+            if type(record[key]) is int and 0<=record[key]<=limit:copied[key]=record[key]
+            else:invalid.append(key)
+    if 'recovery_attempt' in record:
+        if copied.get('recovery_context_used') is True and type(record['recovery_attempt']) is int and 1<=record['recovery_attempt']<=3:
+            copied['recovery_attempt']=record['recovery_attempt']
+        else:invalid.append('recovery_attempt')
+    return copied,invalid
+
+
+def audit(episodes,terminal,*,episode_schema=None):
+    version=_episode_schema(episodes,episode_schema)
+    if any(row.get('evidence_mode')!='live_native_settings' for row in episodes):
         raise ValueError('Actual native Settings episodes required')
     expected,actual,issues={}, {}, []
     for row in episodes:
@@ -61,7 +93,7 @@ def audit(episodes,terminal):
     missing,orphan=sorted(set(expected)-set(actual)),sorted(set(actual)-set(expected))
     if missing:issues.append('missing_terminal_records')
     if orphan:issues.append('orphan_terminal_records')
-    unknown=set(missing);known_calls=0;known_wait=0;timing_unknown=False;associations=[]
+    unknown=set(missing);known_calls=0;known_wait=0;timing_unknown=False;associations=[];context_invalid=[]
     for key,record in actual.items():
         state,calls,wait=record.get('model_call_state'),record.get('model_calls'),record.get('model_wait_ms')
         if state=='observed' and _calls(calls,1):
@@ -83,7 +115,7 @@ def audit(episodes,terminal):
         # Client unknown can be resolved by an exactly joined server record;
         # it is not a mismatch merely because a connection was lost.
         issues.extend(problems)
-        associations.append(dict(episode_id=row.get('episode_id'),pair_id=row.get('pair_id'),arm=row.get('arm'),
+        association=dict(episode_id=row.get('episode_id'),pair_id=row.get('pair_id'),arm=row.get('arm'),
             condition=row.get('condition'),
             request_ref=key,task_ref=trace.get('task_ref'),server_ref=record.get('server_ref'),
             http_status=record.get('http_status'),error_code=record.get('error_code'),model_call_state=state,
@@ -92,12 +124,16 @@ def audit(episodes,terminal):
             service_reason_code=record.get('service_reason_code'),response_delivery=record.get('response_delivery'),
             provider_error=record.get('provider_error') is True,
             plan_or_parse_error=record.get('plan_or_parse_error') is True,
-            direct_checks_passed=not problems))
+            direct_checks_passed=not problems)
+        if version==EPISODE_SCHEMAS[1]:
+            metadata,invalid=_context_metadata(record);association.update(metadata)
+            context_invalid.extend(dict(request_ref=key,field=field) for field in invalid)
+        associations.append(association)
     joined=not issues;complete=joined and not unknown
     status=('DIRECT_JOIN_RECONCILED' if complete and not timing_unknown else
         'DIRECT_JOIN_COMPLETE_TIMING_UNKNOWN' if complete else
         'DIRECT_JOIN_COMPLETE_MODEL_COUNTS_UNKNOWN' if joined else 'INDETERMINATE_OR_MISMATCHED')
-    return dict(schema_version='click.native-settings-provider-audit.v1',evidence_mode='live_native_settings',
+    result=dict(schema_version='click.native-settings-provider-audit.'+version.rsplit('.',1)[1],evidence_mode='live_native_settings',
         status=status,direct_request_id_join_available=True,direct_join_complete=joined,
         model_call_count_complete=complete,model_wait_measurement_complete=complete and not timing_unknown,
         episodes=len(episodes),planner_requests=sum(row.get('planner_requests',0) for row in episodes),
@@ -110,6 +146,10 @@ def audit(episodes,terminal):
         http_status_counts=dict(Counter(str(record.get('http_status')) for record in terminal)),
         request_associations=associations,issues=sorted(set(issues)),
         note='Direct joining establishes transport accounting, not goal success or default deployment. Classified failures stay in performance outcomes; unknown calls are a lower bound.')
+    if version==EPISODE_SCHEMAS[1]:
+        result.update(episode_schema=version,context_diagnostic_invalid_fields=context_invalid,
+            context_diagnostic_scope='Optional typed payload-boundary metadata; forwarding requires joined observed model call. Missing metadata does not invalidate transport accounting.')
+    return result
 
 
 def main(argv=None):
@@ -117,9 +157,10 @@ def main(argv=None):
     parser.add_argument('--episodes',type=Path,required=True)
     parser.add_argument('--terminal','--provider',dest='terminal',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--episode-schema',choices=EPISODE_SCHEMAS)
     args=parser.parse_args(argv)
     result=audit([json.loads(x) for x in args.episodes.read_text().splitlines() if x.strip()],
-        [json.loads(x) for x in args.terminal.read_text().splitlines() if x.strip()])
+        [json.loads(x) for x in args.terminal.read_text().splitlines() if x.strip()],episode_schema=args.episode_schema)
     args.output.write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps({key:result[key] for key in ('status','episodes','terminal_records','provider_model_calls','unknown_model_call_requests','issues')}))
 

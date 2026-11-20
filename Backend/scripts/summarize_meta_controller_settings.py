@@ -13,6 +13,8 @@ from statistics import mean, median
 
 
 VERSION = 'click.native-settings.v1'
+VERSION2 = 'click.native-settings.v2'
+REVISION2 = 'equal_independent_observation_window_v2'
 MODE = 'live_native_settings'
 TASKS = frozenset(('settings_display', 'settings_sound', 'settings_accessibility',
     'settings_bluetooth', 'settings_datetime', 'settings_language'))
@@ -37,10 +39,60 @@ def _fault_realized(row):
     return row.get('condition') == 'delayed_transition' and row.get('delayed_dispatch_accepted') is True
 
 
+def _episode_version(rows,manifest):
+    versions={row.get('schema_version') for row in rows}
+    if len(versions)>1:raise ValueError('Mixed native Settings episode versions')
+    version=next(iter(versions),manifest.get('schema_version',VERSION))
+    if version not in {VERSION,VERSION2}:raise ValueError('Native Settings evidence only')
+    if VERSION2 in {version,manifest.get('schema_version')} and manifest.get('schema_version')!=version:
+        raise ValueError('Episode/manifest version mismatch')
+    return version
+
+
+def _v2_row_issues(row,budget):
+    if row.get('setup_valid') is not True:return []
+    issues=[];elapsed=row.get('elapsed_ms');joint=row.get('ms_to_joint_success')
+    samples,known,unknown=(row.get(key) for key in ('oracle_samples','oracle_known_samples','oracle_unknown_samples'))
+    counts_valid=all(type(value) is int and value>=0 for value in (samples,known,unknown))
+    if not counts_valid or not samples or known+unknown!=samples:issues.append('invalid_oracle_sample_counts')
+    elif not known:issues.append('no_known_measurement_oracle')
+    last=row.get('last_oracle_sample_ms')
+    if not _number(last) or last>budget or not _number(elapsed) or last>elapsed:issues.append('invalid_last_oracle_sample_time')
+    times={}
+    for flag,key in (('ever_independent_goal_stable','first_independent_stable_goal_ms'),
+            ('ever_runtime_verified_offer','first_runtime_verified_ms')):
+        seen,value=row.get(flag),row.get(key)
+        if type(seen) is not bool or seen != (value is not None):issues.append('inconsistent_'+key)
+        if value is not None and (not _number(value) or value>budget or not _number(elapsed) or value>elapsed):
+            issues.append('invalid_'+key)
+        times[key]=value
+    stable=times['first_independent_stable_goal_ms']
+    if _number(stable) and stable<700:issues.append('stable_goal_before_required_window')
+    if _number(stable) and _number(last) and stable>last:issues.append('stable_goal_after_last_sample')
+    cleanup_status,cleanup_goal=row.get('cleanup_oracle_status'),row.get('goal_present_after_cleanup')
+    if not (cleanup_status=='known' and type(cleanup_goal) is bool or cleanup_status=='unknown' and cleanup_goal is None):
+        issues.append('inconsistent_cleanup_oracle')
+    claimed=row.get('joint_success')
+    if type(claimed) is not bool:issues.append('missing_joint_success_flag')
+    if claimed is False:
+        if joint is not None:issues.append('joint_time_without_success')
+        if not _number(elapsed) or elapsed<budget:issues.append('nonjoint_observation_ended_early')
+    elif claimed is True:
+        first_verified=times['first_runtime_verified_ms']
+        if not (_number(joint) and joint<=budget and _number(elapsed) and joint<=elapsed
+                and _number(stable) and stable<=joint and _number(first_verified) and first_verified<=joint
+                and row.get('oracle_status')=='known' and row.get('independent_goal_reached') is True
+                and row.get('independent_goal_stable') is True and row.get('runtime_verified_offer') is True
+                and not row.get('pending_native_actions_at_end',0) and not any(row.get(key,0) for key in SAFETY_COUNTERS)):
+            issues.append('inconsistent_joint_success')
+    return issues
+
+
 def _primary(row, budget):
     """Unknown/setup failure is not silently converted to a known negative."""
     if not row.get('setup_valid') or row.get('oracle_status') != 'known':
         return None
+    if row.get('schema_version')==VERSION2 and _v2_row_issues(row,budget):return None
     if not isinstance(row.get('independent_goal_reached'), bool) or not isinstance(row.get('independent_goal_stable'), bool):
         return None
     if any(row.get(k, 0) for k in SAFETY_COUNTERS) or row.get('pending_native_actions_at_end', 0):
@@ -97,7 +149,7 @@ def _arm(rows, budget, scheduled):
         recovery_count=_total(rows, 'recovery_count'))
 
 
-def _add_audited(data, rows, request_audit, audit_ok):
+def _add_audited(data, rows, request_audit, audit_ok,version=VERSION):
     """Group directly joined server facts by their bound episode's cohort."""
     episode_ids={r['episode_id'] for r in rows}
     associated=[item for item in (request_audit or {}).get('request_associations',[])
@@ -116,10 +168,42 @@ def _add_audited(data, rows, request_audit, audit_ok):
             or item.get('service_reason_code')=='unsafe_navigation_proposal' for item in associated))
     data.update({key:value if audit_ok else None for key,value in metrics.items()})
     data['audited_metric_scope']='directly_joined_server_terminal_records' if audit_ok else 'direct_join_unverified'
+    if version==VERSION2:
+        observed=[item for item in associated if item.get('model_call_state')=='observed' and type(item.get('model_calls')) is int and item['model_calls']==1]
+        required=('recovery_context_used','capabilities_applied','allowed_actions_context_used','allowed_action_count','recovery_blocked_action_count')
+        missing=sum(any(key not in item for key in required) or item.get('recovery_context_used') is True and 'recovery_attempt' not in item for item in observed)
+        data['audited_payload_context_evidence']=dict(
+            observed_model_attempts=len(observed),
+            recovery_context_forwarded_attempts=sum(item.get('recovery_context_used') is True for item in observed),
+            trusted_capabilities_applied_attempts=sum(item.get('capabilities_applied') is True for item in observed),
+            allowed_actions_context_forwarded_attempts=sum(item.get('allowed_actions_context_used') is True for item in observed),
+            metadata_missing_or_invalid_observed_attempts=missing,
+            unknown_model_state_requests=sum(item.get('model_call_state')=='unknown' for item in associated),
+            allowed_action_count_sum=sum(item['allowed_action_count'] for item in observed if type(item.get('allowed_action_count')) is int),
+            removed_blocked_pair_count_sum=sum(item['recovery_blocked_action_count'] for item in observed if type(item.get('recovery_blocked_action_count')) is int),
+            recovery_attempt_counts=dict(Counter(str(item['recovery_attempt']) for item in observed if item.get('recovery_context_used') is True and type(item.get('recovery_attempt')) is int)),
+            scope='Joined observed calls and typed payload metadata establish forwarding, not model attention or benefit.') if audit_ok else None
+
+
+def _add_v2_timelines(data,rows,budget):
+    valid=[row for row in rows if row.get('setup_valid') is True and not _v2_row_issues(row,budget)]
+    for key in ('first_independent_stable_goal_ms','first_runtime_verified_ms'):
+        times=[row[key] for row in valid if _number(row.get(key))]
+        data[key+'_observed_episodes']=len(times)
+        data[key+'_median']=median(times) if times else None
+    data['ever_independent_goal_stable']=sum(row.get('ever_independent_goal_stable') is True for row in rows)
+    for key in ('oracle_samples','oracle_known_samples','oracle_unknown_samples'):
+        data[key]=sum(row[key] for row in rows if type(row.get(key)) is int and row[key]>=0)
+    data['oracle_unknown_sample_fraction']=data['oracle_unknown_samples']/data['oracle_samples'] if data['oracle_samples'] else None
+    data['goal_present_after_cleanup']=sum(row.get('goal_present_after_cleanup') is True for row in rows)
+    data['unknown_cleanup_oracle_episodes']=sum(row.get('cleanup_oracle_status')!='known' for row in rows)
+    tails=[budget-row['last_oracle_sample_ms'] for row in valid if row.get('joint_success') is False]
+    data['max_oracle_tail_gap_ms']=max(tails) if tails else None
 
 
 def summarize(rows, manifest=None, readiness=None, request_audit=None):
     manifest = manifest or {}
+    version=_episode_version(rows,manifest)
     budget = manifest.get('budget_ms', 30000)
     if not _number(budget) or budget <= 0:
         raise ValueError('A finite positive frozen budget is required')
@@ -128,7 +212,7 @@ def summarize(rows, manifest=None, readiness=None, request_audit=None):
     issues = []
     timing_issues = []
     for row in rows:
-        if row.get('schema_version') != VERSION or row.get('evidence_mode') != MODE:
+        if row.get('schema_version') != version or row.get('evidence_mode') != MODE:
             raise ValueError('Native Settings evidence only')
         if row.get('task') not in TASKS or row.get('condition') not in CONDITIONS or row.get('arm') not in {'A', 'B'}:
             raise ValueError('Unknown frozen task, condition or arm')
@@ -171,7 +255,13 @@ def summarize(rows, manifest=None, readiness=None, request_audit=None):
     normal_rows = [r for r in rows if r['condition'] == 'normal']
     normal_complete = len(normal_rows) == 12 and {(r['task'], r['arm']) for r in normal_rows} == {(t, a) for t in TASKS for a in ('A', 'B')}
     readiness_ok = isinstance(readiness, dict) and readiness.get('passed') is True
-    audit_ok = (isinstance(request_audit, dict) and request_audit.get('schema_version') == 'click.native-settings-provider-audit.v1'
+    if version==VERSION2:
+        readiness_ok=(readiness_ok and readiness.get('schema_version')==VERSION2
+            and readiness.get('measurement_revision')==manifest.get('measurement_revision')==REVISION2
+            and bool(manifest.get('measurement_context_key'))
+            and readiness.get('measurement_context_key')==manifest['measurement_context_key']
+            and all(row.get('measurement_context_key')==manifest['measurement_context_key'] for row in rows))
+    audit_ok = (isinstance(request_audit, dict) and request_audit.get('schema_version') == 'click.native-settings-provider-audit.'+version.rsplit('.',1)[1]
         and request_audit.get('direct_join_complete') is True)
     if audit_ok:
         expected_refs={trace.get('request_ref'):(r.get('episode_id'),r.get('arm'),r.get('task_ref'))
@@ -187,6 +277,7 @@ def summarize(rows, manifest=None, readiness=None, request_audit=None):
     pending = [r['episode_id'] for r in rows if r.get('pending_native_actions_at_end', 0)]
     pending_gateway = [r['episode_id'] for r in rows if r.get('pending_gateway_callback_at_end') is True]
     guard_unknown = [r['episode_id'] for r in rows if r.get('setup_valid') and r.get('settings_guard_observable') is False]
+    v2_issues=[dict(episode_id=row['episode_id'],issues=problems) for row in rows if (problems:=_v2_row_issues(row,budget))] if version==VERSION2 else []
     if not readiness_ok: issues.append('readiness_not_passed')
     if invalid_pairs: issues.append('invalid_or_unmatched_pairs')
     if unknown_oracles: issues.append('unknown_oracle')
@@ -195,6 +286,7 @@ def summarize(rows, manifest=None, readiness=None, request_audit=None):
     if pending: issues.append('native_actions_unsettled_after_cleanup')
     if pending_gateway: issues.append('gateway_callback_unsettled_after_cleanup')
     if guard_unknown: issues.append('final_settings_guard_unknown')
+    if v2_issues: issues.append('v2_observation_contract_invalid')
     if not audit_ok: issues.append('direct_request_join_incomplete')
     unsafe = any(_total(rows, key) for key in SAFETY_COUNTERS)
     measurement_valid = not issues
@@ -236,16 +328,20 @@ def summarize(rows, manifest=None, readiness=None, request_audit=None):
         exposure[condition]['status'] = 'DESCRIPTIVE_EXPOSED_NATIVE_PAIRS' if counts['both'] else 'NOT_TESTED'
     arms = {arm: _arm([r for r in rows if r['arm'] == arm], budget, 18) for arm in ('A', 'B')}
     for arm,data in arms.items():
-        _add_audited(data,[r for r in rows if r['arm']==arm],request_audit,audit_ok)
+        scoped=[r for r in rows if r['arm']==arm]
+        _add_audited(data,scoped,request_audit,audit_ok,version)
+        if version==VERSION2:_add_v2_timelines(data,scoped,budget)
     conditions = {condition: {arm: _arm([r for r in rows if r['condition'] == condition and r['arm'] == arm], budget, 6)
         for arm in ('A', 'B')} for condition in sorted(CONDITIONS)}
     for condition,condition_arms in conditions.items():
         for arm,data in condition_arms.items():
-            _add_audited(data,[r for r in rows if r['condition']==condition and r['arm']==arm],request_audit,audit_ok)
+            scoped=[r for r in rows if r['condition']==condition and r['arm']==arm]
+            _add_audited(data,scoped,request_audit,audit_ok,version)
+            if version==VERSION2:_add_v2_timelines(data,scoped,budget)
     can_compare = matrix_complete and measurement_valid and not unsafe
     has_fault_exposure = all(exposure[c]['both'] > 0 for c in CONDITIONS-{'normal'})
     actual_app_exercised = any(r.get('setup_valid') is True for r in rows)
-    return dict(schema_version='click.native-settings-summary.v1', evidence_mode=MODE,
+    result=dict(schema_version='click.native-settings-summary.'+version.rsplit('.',1)[1], evidence_mode=MODE,
         real_apps_tested=actual_app_exercised, distinct_apps_tested=1 if actual_app_exercised else 0, participants_tested=0, budget_ms=budget,
         scheduled_episodes=36, observed_episodes=len(rows), unexecuted_episodes=36-len(rows),
         frozen_matrix_complete=matrix_complete, valid_matched_pairs=len(valid_pairs), invalid_pairs=invalid_pairs,
@@ -273,6 +369,14 @@ def summarize(rows, manifest=None, readiness=None, request_audit=None):
             'Delayed fault exposure requires an accepted delayed native dispatch; scheduling alone is not realized exposure.',
             'Normal twelve are the first stratum of the frozen thirty-six, not a separately selected pilot.',
             'One Settings app and one repetition do not establish generality, significance or middle-aged user benefit.'])
+    if version==VERSION2:
+        result.update(measurement_revision=REVISION2,v2_observation_issues=v2_issues,
+            historical_comparison_scope='Descriptive only: shared completion/context/capability changes and observation-window changes are bundled; v1/v2 differences do not isolate a causal change.')
+        result['notes'] += ['Nonjoint v2 episodes observe the independent oracle through the common budget despite terminal product status.',
+            'First stable-goal, first runtime-verified, joint-success, and cleanup goal presence are distinct; cleanup presence is not first arrival.',
+            'Transient unknown oracle polls reset stability and are disclosed; they are not known negatives.',
+            'Optional context metadata proves technical forwarding only with an exactly joined observed model attempt.']
+    return result
 
 
 def render(result):
@@ -293,6 +397,12 @@ def render(result):
     lines += ['', f"Goal/time interpretation: {result['goal_time_comparison']}",
         f"Model cost: {result['model_cost_comparison']}", f"Next validation: {result['next_validation_stage']}",
         f"Default B: {result['default_enablement_verdict']}", '']
+    if result['schema_version'].endswith('.v2'):
+        lines += ['| Arm | First stable-goal median ms | First verified median ms | Oracle unknown/total polls | Cleanup goal present |',
+            '|---|---:|---:|---:|---:|']
+        for arm,data in result['arms'].items():
+            lines.append(f"| {arm} | {data['first_independent_stable_goal_ms_median']} | {data['first_runtime_verified_ms_median']} | {data['oracle_unknown_samples']}/{data['oracle_samples']} | {data['goal_present_after_cleanup']} |")
+        lines += ['',result['historical_comparison_scope'],'']
     lines.extend('- '+item for item in result['notes'])
     return '\n'.join(lines)+'\n'
 

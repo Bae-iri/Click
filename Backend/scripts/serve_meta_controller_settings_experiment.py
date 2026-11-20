@@ -205,6 +205,13 @@ def _diagnostic_metadata(request, response, record, elapsed):
         record['provider_budget_ms'] = budget
     if diagnostic.get('provider_attempt_limit') == 1:
         record['provider_attempt_limit'] = 1
+    for key in ('recovery_context_used','capabilities_applied','allowed_actions_context_used'):
+        if type(diagnostic.get(key)) is bool:record[key] = diagnostic[key]
+    for key, high in (('allowed_action_count',322),('recovery_blocked_action_count',16),('recovery_attempt',3)):
+        value = diagnostic.get(key)
+        if (type(value) is int and (1 if key == 'recovery_attempt' else 0) <= value <= high
+                and (key != 'recovery_attempt' or diagnostic.get('recovery_context_used') is True)):
+            record[key] = value
     errors = diagnostic.get('validation_errors')
     if isinstance(errors, list):
         clean = []

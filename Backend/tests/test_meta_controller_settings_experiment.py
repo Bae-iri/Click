@@ -186,7 +186,32 @@ def test_service_exception_or_wrong_identity_cannot_claim_zero_model_calls(tmp_p
         log = records(output)[0]
         assert log['model_call_state'] == 'unknown' and log['model_calls'] is None and log['model_wait_ms'] is None
         assert 0 <= log['service_elapsed_ms'] <= log['request_total_handler_ms']
+        assert 'recovery_context_used' not in log and 'allowed_action_count' not in log
         assert 'PRIVATE' not in output.read_text()
+
+
+@pytest.mark.parametrize('case', ['valid','malformed','no_recovery'])
+def test_terminal_copies_only_typed_bounded_context_diagnostics(case,tmp_path):
+    with server(tmp_path) as (port,req,service,output):
+        diagnostic=service.step.return_value.diagnostic
+        diagnostic.update(recovery_context_used=True,capabilities_applied=True,allowed_actions_context_used=True,
+            allowed_action_count=322,recovery_blocked_action_count=16,recovery_attempt=3,raw_recovery='PRIVATE controls')
+        if case=='malformed':
+            diagnostic.update(recovery_context_used='true',capabilities_applied=1,allowed_actions_context_used=[],
+                allowed_action_count=322.0,recovery_blocked_action_count=17,recovery_attempt=4)
+        elif case=='no_recovery':diagnostic.update(recovery_context_used=False,recovery_attempt=2)
+        assert post(port,req.model_dump(mode='json'))[0]==200
+        log=records(output)[0]
+        keys=('recovery_context_used','capabilities_applied','allowed_actions_context_used',
+            'allowed_action_count','recovery_blocked_action_count','recovery_attempt')
+        if case=='malformed':assert all(key not in log for key in keys)
+        else:
+            assert log['recovery_context_used'] is (case=='valid') and log['capabilities_applied'] is True
+            assert log['allowed_actions_context_used'] is True and log['allowed_action_count']==322
+            assert log['recovery_blocked_action_count']==16
+            if case=='valid':assert log['recovery_attempt']==3
+            else:assert 'recovery_attempt' not in log
+        assert 'PRIVATE' not in output.read_text() and 'raw_recovery' not in log
 
 
 def test_unsafe_setting_value_proposal_is_blocked_after_recording_its_model_attempt(tmp_path):

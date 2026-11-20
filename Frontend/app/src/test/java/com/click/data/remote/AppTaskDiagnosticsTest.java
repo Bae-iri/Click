@@ -80,4 +80,27 @@ public class AppTaskDiagnosticsTest {
         assertEquals("unknown",record.getString("model_call_state"));assertTrue(record.isNull("observed_model_calls"));
         assertEquals("provider_startup_failed",record.getString("reason_code"));assertFalse(record.has("provider_budget_ms"));assertFalse(record.has("provider_attempt_limit"));
     }
+    @Test public void boundContextDiagnosticsCopyOnlyTypedFlagsAndBoundedCounts()throws Exception {
+        JSONObject diagnostic=new JSONObject().put("called",true).put("recovery_context_used",true).put("capabilities_applied",true)
+            .put("allowed_actions_context_used",true).put("allowed_action_count",322).put("recovery_blocked_action_count",16)
+            .put("recovery_attempt",3).put("raw_recovery","PRIVATE controls and input");
+        JSONObject response=bound(new JSONObject().put("status","proposed").put("diagnostic",diagnostic));
+        JSONObject record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
+        assertTrue(record.getBoolean("recovery_context_used"));assertTrue(record.getBoolean("capabilities_applied"));assertTrue(record.getBoolean("allowed_actions_context_used"));
+        assertEquals(322,record.getInt("allowed_action_count"));assertEquals(16,record.getInt("recovery_blocked_action_count"));assertEquals(3,record.getInt("recovery_attempt"));
+        assertFalse(record.has("raw_recovery"));assertFalse(record.toString().contains("PRIVATE"));
+        diagnostic.put("recovery_context_used",false).put("recovery_attempt",2);
+        record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
+        assertFalse(record.getBoolean("recovery_context_used"));assertFalse(record.has("recovery_attempt"));
+    }
+    @Test public void malformedOrUnboundContextMetadataCannotBecomeForwardingEvidence()throws Exception {
+        JSONObject diagnostic=new JSONObject().put("called",true).put("recovery_context_used","true").put("capabilities_applied",1)
+            .put("allowed_actions_context_used","PRIVATE").put("allowed_action_count",322.0).put("recovery_blocked_action_count",17).put("recovery_attempt",4);
+        JSONObject response=bound(new JSONObject().put("status","proposed").put("diagnostic",diagnostic));
+        JSONObject record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
+        for(String key:java.util.Set.of("recovery_context_used","capabilities_applied","allowed_actions_context_used","allowed_action_count","recovery_blocked_action_count","recovery_attempt"))assertFalse(record.has(key));
+        diagnostic.put("recovery_context_used",true).put("allowed_action_count",2).put("recovery_attempt",1);response.put("task_id","unrelated-task");
+        record=AppTaskDiagnostics.receipt(request(),response,200,new java.io.IOException("INVALID_APP_TASK_RESPONSE"),0,1,1);
+        assertEquals("unknown",record.getString("model_call_state"));assertFalse(record.has("recovery_context_used"));assertFalse(record.has("allowed_action_count"));
+    }
 }

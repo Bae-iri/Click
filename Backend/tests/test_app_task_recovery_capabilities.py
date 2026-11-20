@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from app.schemas.app_task import AppTaskRequest, TaskAction, TaskCompletion, TaskExpectation, TaskSubgoal
 from app.services.app_task import AppTaskService
 from app.services.app_task_capabilities import ActionCapabilities, recovery_blocked_pairs
+from app.services.app_task_provider import ProviderError
 
 
 PACKAGE = 'com.android.settings'
@@ -65,6 +66,8 @@ def test_legacy_request_without_recovery_or_trusted_cap_keeps_existing_context()
     assert result.status=='proposed' and result.action.target_id==req.screen.nodes[1].id
     context=send.seen[0]['context'];assert 'recovery' not in context and 'allowed_actions' not in context
     assert all('allowed_tools' not in control for control in context['controls'])
+    assert result.diagnostic['recovery_context_used'] is False and result.diagnostic['capabilities_applied'] is False
+    assert result.diagnostic['allowed_actions_context_used'] is False and 'recovery_attempt' not in result.diagnostic
 
 
 @pytest.mark.parametrize('case', ['wrong_observation','extra','policy','reason','verdict','negative_wait','float_wait',
@@ -99,6 +102,10 @@ def test_recovery_reaches_the_single_planner_call_as_aliases_and_removes_only_bl
     assert recovery['last_action']==dict(tool='tap',target='c0',app='none',same_screen=True)
     assert recovery['blocked_actions']==[recovery['last_action']]
     assert context['controls'][0]['allowed_tools']==[] and context['controls'][1]['allowed_tools']==['tap']
+    assert result.diagnostic['recovery_context_used'] is True and result.diagnostic['capabilities_applied'] is True
+    assert result.diagnostic['allowed_actions_context_used'] is True
+    assert result.diagnostic['allowed_action_count']==len(context['allowed_actions'])==2
+    assert result.diagnostic['recovery_blocked_action_count']==1 and result.diagnostic['recovery_attempt']==1
     properties=send.seen[0]['schema']['properties']
     assert 'c0' not in properties['target']['enum'] and 'c1' in properties['target']['enum']
     assert 'c0' in properties['completion_checks']['items']['properties']['target']['enum']
@@ -156,6 +163,9 @@ def test_empty_trusted_execution_capability_stops_unfinished_plan_without_provid
     send=sender();result=AppTaskService(sender=send).step(request(),action_capabilities=ActionCapabilities(frozenset()))
     send.assert_not_called();assert result.status=='needs_input' and result.action is None
     assert result.diagnostic['called'] is False and result.diagnostic['reason_code']=='no_allowed_actions'
+    assert result.diagnostic['recovery_context_used'] is False and result.diagnostic['allowed_actions_context_used'] is False
+    assert result.diagnostic['capabilities_applied'] is True and result.diagnostic['allowed_action_count']==0
+    assert 'recovery_attempt' not in result.diagnostic
 
 
 def test_empty_execution_mask_preserves_result_only_readable_evidence_discovery():
@@ -165,10 +175,13 @@ def test_empty_execution_mask_preserves_result_only_readable_evidence_discovery(
     send.assert_called_once();assert result.status=='confirm_result' and result.action is None and result.completion is not None
     assert result.completion.checks[0].label=='Display' and result.diagnostic['called'] is True
     assert send.seen[0]['context']['controls'][0]['allowed_tools']==[]
+    assert result.diagnostic['recovery_context_used'] is False and result.diagnostic['allowed_actions_context_used'] is False
+    assert result.diagnostic['capabilities_applied'] is True and result.diagnostic['allowed_action_count']==0
     assert send.seen[0]['schema']['properties']['completion_checks']['items']['properties']['target']['enum']==['c0','none']
     result=AppTaskService(sender=sender()).step(req.model_copy(update={'state':req.state.model_copy(update={'completion':result.completion})}),
         action_capabilities=ActionCapabilities(frozenset()))
     assert result.status=='confirm_result' and result.diagnostic['called'] is False
+    assert result.diagnostic['recovery_context_used'] is False and result.diagnostic['allowed_actions_context_used'] is False
 
 
 @pytest.mark.parametrize('restriction', ['trusted_cap','recovery'])
@@ -182,3 +195,31 @@ def test_recalled_fast_path_cannot_bypass_execution_ceiling_or_current_recovery_
     send=sender();result=AppTaskService(sender=send,memory=memory).step(req,user_id='test-user',action_capabilities=cap)
     send.assert_called_once();assert result.status=='proposed' and result.action.target_id==req.screen.nodes[1].id
     assert result.diagnostic['called'] is True
+
+
+def test_removed_count_excludes_duplicates_stale_refs_and_actions_already_outside_trusted_cap():
+    base=request();blocked=[reference(base),reference(base),reference(base,tool='back',target_id=None),
+        reference(base,target_id='private-native-display-id',fingerprint='b'*64)]
+    req=recovering(base,blocked=blocked)
+    cap=ActionCapabilities(frozenset({('tap',req.screen.nodes[1].id),('back','')}))
+    send=sender();result=AppTaskService(sender=send).step(req,action_capabilities=cap)
+    assert result.diagnostic['recovery_blocked_action_count']==1  # back only; Search was never authorized.
+    assert result.diagnostic['allowed_action_count']==len(send.seen[0]['context']['allowed_actions'])==1
+
+
+@pytest.mark.parametrize('state,called,used', [('not_started',False,False),('unknown',None,True),('observed',True,True)])
+def test_provider_handshake_state_controls_interpretation_of_payload_boundary_flags(monkeypatch,state,called,used):
+    monkeypatch.setenv('GEMINI_API_KEY','test-only-key-never-sent')
+    def boundary(*_args,**_kwargs):raise ProviderError('provider_capacity_exhausted',state)
+    monkeypatch.setattr('app.services.app_task.generate',boundary)
+    req=recovering(request());cap=ActionCapabilities(frozenset({('tap',n.id) for n in req.screen.nodes}|{('back','')}))
+    result=AppTaskService().step(req,action_capabilities=cap)
+    assert result.diagnostic['called'] is called
+    assert result.diagnostic['recovery_context_used'] is used and result.diagnostic['allowed_actions_context_used'] is used
+    assert result.diagnostic['capabilities_applied'] is True
+    assert result.diagnostic['allowed_action_count']==2 and result.diagnostic['recovery_blocked_action_count']==1
+    if state=='not_started':assert 'recovery_attempt' not in result.diagnostic
+    else:assert result.diagnostic['recovery_attempt']==1
+    # Unknown provider state plus a prepared-payload flag is never observed forwarding evidence.
+    forwarding_proven=result.diagnostic['called'] is True and result.diagnostic['recovery_context_used'] is True
+    assert forwarding_proven is (state=='observed')
