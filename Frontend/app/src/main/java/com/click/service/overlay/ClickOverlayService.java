@@ -180,6 +180,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean awaitingExitConfirmation;
     private String lastSnapshotFingerprint;
     private final AutomaticScrollSearch homeScrollSearch = new AutomaticScrollSearch(AutomaticScrollSearch.Mode.LAUNCHER);
+    /** App-task open_app: page through the home screen for the requested app's icon. */
+    private final AutomaticScrollSearch appTaskHomeSearch = new AutomaticScrollSearch(AutomaticScrollSearch.Mode.LAUNCHER);
+    private int appTaskHomeSearchToken;
+    private boolean appTaskHomeSearchPending;
     private int homeSearchToken;
     private long adjustmentSettlingUntil;
     private String pendingActionType;
@@ -1269,7 +1273,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     bounds=icon.bounds;lastSubmittedScreen=screen;
                     showGuideOverlay(bounds,"tap",GuideDragDirection.UNKNOWN);
                     try{result=new JSONObject(result.toString()).put("message","표시한 "+result.optString("target_label","앱")+" 앱을 누르거나 아래 열기 버튼을 눌러주세요.");}catch(org.json.JSONException ignored){}
-                }else hideGuideOverlay();
+                }else{
+                    hideGuideOverlay();
+                    if("proposed".equals(result.optString("status"))&&action!=null&&"open_app".equals(action.optString("tool"))){
+                        String message=searchAppTaskHome(appGuide,screen,action,result.optString("target_label","앱"));
+                        if(message!=null)try{result=new JSONObject(result.toString()).put("message",message);}catch(org.json.JSONException ignored){}
+                    }
+                }
                 JSONObject diagnostic=result.optJSONObject("diagnostic");
                 if(diagnostic!=null)android.util.Log.i("ClickAgent","app_task model="+diagnostic.optString("model")
                     +" called="+diagnostic.optBoolean("called")+" latency_ms="+diagnostic.optLong("latency_ms")
@@ -3808,6 +3818,33 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             labels.add(String.valueOf(pm.getApplicationLabel(pm.getApplicationInfo(packageName,0))));
         }catch(Exception ignored){}
         return labels;
+    }
+
+    /**
+     * The requested app's icon is not on this home page. Swipe to the next page within the
+     * launcher search budget; each new page is re-observed by the app task and presented again.
+     * Returns the message to show, or null to keep the proposal's own message.
+     */
+    private String searchAppTaskHome(AppTaskController owner,ScreenSnapshot screen,JSONObject action,String app) {
+        if(owner==null||screen==null||screen.activeWindowId==null||!NavigationRecovery.isHomeScreen(screen))return null;
+        if(appTaskHomeSearchPending)return app+" 앱을 찾기 위해 홈 화면을 넘겨 보고 있어요.";
+        AutomaticScrollSearch.Plan plan=appTaskHomeSearch.plan(System.identityHashCode(owner)+":"+action.optString("package"),navigationFrame(screen));
+        android.util.Log.i("ClickScroll","app_task_home status="+plan.status+" forward="+plan.forward+" reason="+plan.reason);
+        if(plan.status==AutomaticScrollSearch.Status.FINISHED)
+            return "홈 화면에서 "+app+" 앱을 찾지 못했어요. 폴더 안에 있을 수 있어요. 아래 ‘"+app+" 열기’를 눌러주세요.";
+        final int token=++appTaskHomeSearchToken;appTaskHomeSearchPending=true;
+        final String pkg=screen.packageName;final Integer window=screen.activeWindowId;final boolean forward=plan.forward;
+        final boolean move=plan.status==AutomaticScrollSearch.Status.MOVE;
+        speechHandler.postDelayed(()->{
+            if(token!=appTaskHomeSearchToken||appGuide!=owner||closing||execution.paused()){appTaskHomeSearchPending=false;return;}
+            boolean moved=move&&ClickAccessibilityService.swipeHomePage(forward,pkg,window);
+            android.util.Log.i("ClickScroll","app_task_home forward="+forward+" dispatched="+moved);
+            speechHandler.postDelayed(()->{
+                if(token!=appTaskHomeSearchToken)return;appTaskHomeSearchPending=false;
+                if(appGuide==owner&&!closing&&!execution.paused())owner.refresh();
+            },moved?800L:300L);
+        },400L);
+        return app+" 앱을 찾기 위해 홈 화면을 넘겨 보고 있어요.";
     }
 
     private java.util.function.Predicate<String> openAppNames(JSONObject action) {
