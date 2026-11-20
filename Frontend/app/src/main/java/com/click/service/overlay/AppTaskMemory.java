@@ -133,6 +133,16 @@ public final class AppTaskMemory {
             if(completesSubgoal&&AppTaskPolicy.provesSubgoal(action)){String id=active();JSONArray goals=data.getJSONArray("subgoals");for(int i=0;i<goals.length();i++)if(goals.getJSONObject(i).getString("id").equals(id))goals.getJSONObject(i).put("status","verified");}
         }
     }
+    /** Append the last observed-but-unverified action to the route once the user confirmed its result screen. */
+    public void confirmLastEffect(JSONObject before,JSONObject action,String afterKey)throws JSONException {
+        JSONArray route=data.getJSONArray("route");if(route.length()!=actions()-1||route.length()>=32)return;
+        JSONObject node=AppTaskObservation.find(before,action.optString("target_id"));
+        route.put(new JSONObject().put("package",before.optString("package")).put("tool",action.getString("tool"))
+            .put("resource",node==null?"":node.optString("resource")).put("label",node==null?"":node.optString("label"))
+            .put("open_package",action.optString("package"))
+            .put("expectation",new JSONObject().put("kind","screen_changed").put("screen_key",afterKey))
+            .put("advances_subgoal",false).put("effect_evidence","user_confirmed_result"));
+    }
     private static String target(JSONObject action){return "open_app".equals(action.optString("tool"))?action.optString("package",""):action.isNull("target_id")?"":action.optString("target_id","");}
     public boolean repeated(JSONObject before,JSONObject action){int count=0;JSONArray attempts=data.optJSONArray("attempts");for(int i=0;attempts!=null&&i<attempts.length();i++){JSONObject a=attempts.optJSONObject(i);if("failed".equals(a.optString("outcome"))&&before.optString("fingerprint").equals(a.optString("fingerprint"))&&action.optString("tool").equals(a.optString("tool"))&&target(action).equals(a.optString("target")))count++;}return count>=2;}
     public boolean finished(){return data.optBoolean("completed");}

@@ -13,7 +13,7 @@ public final class AppTaskExperience {
             .put("event_id",UUID.randomUUID().toString()).put("task_id",memory.experienceId()).put("sequence",sequence)
             .put("observed_at_ms",System.currentTimeMillis()).put("goal_key",AppTaskObservation.hash(memory.goal()))
             .put("subgoal_key",AppTaskObservation.hash(memory.activeTitle())).put("environment",environment)
-            .put("screen_key",AppTaskObservation.learningKey(before)).put("after_key",AppTaskObservation.learningKey(after))
+            .put("screen_key",AppTaskObservation.routeKey(before)).put("after_key",AppTaskObservation.routeKey(after))
             .put("after_package",after.optString("package")).put("kind",action==null?"result":"attempt")
             .put("starts_task",memory.actions()==0).put("outcome",outcome).put("action_observed",observed).put("condition_met",condition);
         if(action!=null){

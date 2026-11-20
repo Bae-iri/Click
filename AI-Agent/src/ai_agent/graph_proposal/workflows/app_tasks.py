@@ -26,6 +26,15 @@ def analyze_app_task(records, policy_hash):
     if terminals and terminals != [len(events)-1]:
         return {'schema_version':VERSION,'policy_hash':policy_hash,'status':'NEEDS_DATA',
                 'reason':'invalid_terminal_order','steps':[],'route':[],'tactics':[]}
+    # A user-confirmed result on exactly the screen the last observed action produced is
+    # evidence of that action's effect, even when its own expectation was not verifiable.
+    attempt_ids = [r['event_id'] for r in records if r['evidence']['kind'] == 'attempt']
+    last, result = (events[-2] if len(events) > 1 else None), events[-1]
+    promoted = (attempt_ids[-1] if attempt_ids and last and last['kind'] == 'attempt'
+        and result['kind'] == 'result' and result['outcome'] == 'user_confirmed'
+        and last['outcome'] == 'unconfirmed' and last['action_observed']
+        and last['after_key'] == result['screen_key'] and last['screen_key'] != last['after_key']
+        and last['after_package'] == result['environment']['package'] else None)
     steps, route_steps, tactics, seen, prefix = [], [], Counter(), set(), []
     for record in records:
         e=record['evidence']
@@ -41,11 +50,14 @@ def analyze_app_task(records, policy_hash):
             # Keyboard dismissal is intentionally not part of structural fingerprints.
             if a['tool'] != 'back':
                 outcome = 'unconfirmed'
+        evidence = 'device_verified' if outcome == 'verified' else None
+        if record['event_id'] == promoted and outcome == 'unconfirmed':
+            outcome, evidence = 'verified', 'user_confirmed_result'
         step={'environment':e['environment'],'goal_key':e['goal_key'],
             'subgoal_key':e['subgoal_key'],'screen_key':e['screen_key'],'after_key':e['after_key'],
             'after_package':e['after_package'],'action':a,'outcome':outcome,
             'sequence':e['sequence'],'observed_at_ms':e['observed_at_ms'],'received_at_ms':arrivals[record['event_id']],
-            'path_prefix':list(prefix),'has_initial_context':first.get('starts_task') is True}
+            'path_prefix':list(prefix),'has_initial_context':first.get('starts_task') is True,'effect_evidence':evidence}
         route_steps.append(step)
         identity = (e['screen_key'],a['tool'],a['target_key'],outcome,tuple(prefix))
         if outcome=='verified':
@@ -61,7 +73,7 @@ def analyze_app_task(records, policy_hash):
     linked = all(a['after_key']==b['screen_key'] and a['after_package']==b['environment']['package']
                  for a,b in zip(attempts,attempts[1:]))
     complete = (first.get('starts_task') is True and events[-1]['kind']=='result' and events[-1]['outcome']=='user_confirmed'
-                and bool(attempts) and all(e['outcome']=='verified' for e in attempts) and linked
+                and bool(attempts) and linked
                 and all(s['outcome']=='verified' for s in route_steps)
                 and events[-1]['screen_key']==attempts[-1]['after_key']
                 and events[-1]['environment']['package']==attempts[-1]['after_package'])
