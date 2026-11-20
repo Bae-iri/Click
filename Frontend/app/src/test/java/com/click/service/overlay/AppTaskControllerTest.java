@@ -49,6 +49,24 @@ public class AppTaskControllerTest {
         l.current=screen(pkg,node(pkg,"node_0_1","검색","button"),node(pkg,"node_0_2","상품 검색","button"));c.refresh();
         assertTrue(l.result.isNull("action"));assertEquals(0,l.executions);c.close();
     }
+    @Test public void authenticationPreservesTheSameTaskAndResumesAcrossDifferentApps()throws Exception {
+        for(String pkg:List.of("kr.go.minwon.m","com.coupang.mobile","org.example.reader")){
+            Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","검색","button"));
+            var gateway=mock(AppGuideGateway.class);AppTaskMemory memory=new AppTaskMemory("검색 열기 그리고 검색어 입력");
+            var controller=new AppTaskController(gateway,memory,null,l,false);controller.targetApp(pkg,"요청한 앱");
+            controller.refresh();String id=memory.id(),active=memory.active();
+            String plan=memory.state().getJSONArray("subgoals").toString();
+            l.current=screen(pkg,node(pkg,"node_0_1","PRIVATE_PASSWORD","password"));controller.refresh();
+            assertEquals("protected",l.result.getString("status"));assertEquals(active,memory.active());
+            assertEquals(plan,memory.state().getJSONArray("subgoals").toString());assertFalse(memory.finished());
+            assertFalse(memory.stored().toString().contains("PRIVATE_PASSWORD"));
+            l.current=screen(pkg,node(pkg,"node_0_1","검색","button"));controller.screenChanged(l.current);
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+            assertEquals(id,memory.id());assertEquals(active,memory.active());
+            assertEquals("proposed",l.result.getString("status"));assertEquals("tap",l.result.getJSONObject("action").getString("tool"));
+            assertEquals(0,l.executions);verify(gateway,never()).send(any(),any());controller.close();
+        }
+    }
     @Test public void searchUsesTheQueryTheUserEditedAndApproved()throws Exception {
         String pkg="com.coupang.mobile";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","","search"));
         var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("쿠팡에서 물 주문하고 싶어"),null,l,false);c.targetApp(pkg,"쿠팡");c.refresh();

@@ -983,7 +983,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         for(int i=0;i<apps.length();i++){JSONObject app=apps.optJSONObject(i);if(app==null)continue;content.addView(secondaryButton(app.optString("label"),()->selected.accept(app.optString("package"),app.optString("label"))),spaced(4));}
         content.addView(secondaryButton("안내로 돌아가기",back),spaced(8));
     }
-    public void browsing(String message, boolean terminal, Runnable observe, Runnable openApp, Runnable finish) {
+    public void browsing(String message, boolean terminal, Runnable observe, Runnable finish) {
         reviewStage(1, "쿠팡 상품 찾기", "검색과 상품 상세 화면을 안내해요.");
         narrationMessage = message;
         content.addView(text(message, 16), spaced(12));
@@ -991,7 +991,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
             content.addView(primaryButton("안내 끝내기", finish), spaced(12));
         } else {
             content.addView(primaryButton("현재 화면 확인", observe), spaced(12));
-            content.addView(secondaryButton("쿠팡 열기", openApp), spaced(8));
             content.addView(quietButton("원하는 상품을 확인했어요", finish), spaced(8));
         }
     }
@@ -1335,10 +1334,12 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     public void appEntryRecovery(String appName, Runnable open) {
-        narrationMessage = "쿠팡".equals(appName)
-                ? "현재 화면에서 쿠팡 아이콘을 확인하지 못했어요. ‘쿠팡 열기’를 누르면 앱에서 이어서 안내할게요."
-                : "‘" + appName + " 열기’를 눌러주세요. 앱 화면에서 이어서 안내할게요.";
+        narrationMessage = "‘" + appName + " 열기’를 눌러주세요. 앱 화면에서 이어서 안내할게요.";
         appEntryRecovery(appName, narrationMessage, open, true);
+    }
+
+    public void appEntryRecovery(String appName, String message, Runnable open) {
+        appEntryRecovery(appName, message, open, true);
     }
 
     private void appEntryRecovery(String appName, String message, Runnable open, boolean once) {
