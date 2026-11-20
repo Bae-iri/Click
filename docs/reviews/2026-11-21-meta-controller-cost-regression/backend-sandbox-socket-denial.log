@@ -1,0 +1,1585 @@
+........................................................................ [ 16%]
+........................................................................ [ 32%]
+........................................................................ [ 48%]
+.........................................................FFFFFFF........ [ 64%]
+........................................................FF......FFFFFFFF [ 80%]
+FFFF.FFF....................................................FF.FFFFFF..F [ 96%]
+..............                                                           [100%]
+=================================== FAILURES ===================================
+_ test_exact_catalogue_request_preserves_protocol_and_logs_only_bounded_diagnostics _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_exact_catalogue_request_p0')
+
+    def test_exact_catalogue_request_preserves_protocol_and_logs_only_bounded_diagnostics(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_experiment_server.py:53: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_experiment_server.py:29: in server
+    httpd = create_server(catalogue=frozenset({(req.screen.package, req.goal)}),
+scripts/serve_meta_controller_experiment.py:192: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None), catalogue, output_path))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x109275e80>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_other_goals_packages_and_unselected_apps_are_rejected_before_service[<lambda>-403_0] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_other_goals_packages_and_0')
+mutation = <function <lambda> at 0x109195e40>, expected = 403
+
+    @pytest.mark.parametrize('mutation,expected', [
+        (lambda r: r.update(goal='Send a message with PRIVATE'), 403),
+        (lambda r: r['screen'].update(package='com.private.bank'), 403),
+        (lambda r: r.update(apps=[dict(package='com.android.chrome', label='Chrome')]), 403),
+        (lambda r: r.update(unexpected='PRIVATE'), 422)])
+    def test_other_goals_packages_and_unselected_apps_are_rejected_before_service(tmp_path, mutation, expected):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_experiment_server.py:71: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_experiment_server.py:29: in server
+    httpd = create_server(catalogue=frozenset({(req.screen.package, req.goal)}),
+scripts/serve_meta_controller_experiment.py:192: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None), catalogue, output_path))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10fa99a90>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_other_goals_packages_and_unselected_apps_are_rejected_before_service[<lambda>-403_1] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_other_goals_packages_and_1')
+mutation = <function <lambda> at 0x109195ee0>, expected = 403
+
+    @pytest.mark.parametrize('mutation,expected', [
+        (lambda r: r.update(goal='Send a message with PRIVATE'), 403),
+        (lambda r: r['screen'].update(package='com.private.bank'), 403),
+        (lambda r: r.update(apps=[dict(package='com.android.chrome', label='Chrome')]), 403),
+        (lambda r: r.update(unexpected='PRIVATE'), 422)])
+    def test_other_goals_packages_and_unselected_apps_are_rejected_before_service(tmp_path, mutation, expected):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_experiment_server.py:71: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_experiment_server.py:29: in server
+    httpd = create_server(catalogue=frozenset({(req.screen.package, req.goal)}),
+scripts/serve_meta_controller_experiment.py:192: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None), catalogue, output_path))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10fa99950>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_other_goals_packages_and_unselected_apps_are_rejected_before_service[<lambda>-403_2] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_other_goals_packages_and_2')
+mutation = <function <lambda> at 0x109195f80>, expected = 403
+
+    @pytest.mark.parametrize('mutation,expected', [
+        (lambda r: r.update(goal='Send a message with PRIVATE'), 403),
+        (lambda r: r['screen'].update(package='com.private.bank'), 403),
+        (lambda r: r.update(apps=[dict(package='com.android.chrome', label='Chrome')]), 403),
+        (lambda r: r.update(unexpected='PRIVATE'), 422)])
+    def test_other_goals_packages_and_unselected_apps_are_rejected_before_service(tmp_path, mutation, expected):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_experiment_server.py:71: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_experiment_server.py:29: in server
+    httpd = create_server(catalogue=frozenset({(req.screen.package, req.goal)}),
+scripts/serve_meta_controller_experiment.py:192: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None), catalogue, output_path))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10e99d350>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_other_goals_packages_and_unselected_apps_are_rejected_before_service[<lambda>-422] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_other_goals_packages_and_3')
+mutation = <function <lambda> at 0x109196020>, expected = 422
+
+    @pytest.mark.parametrize('mutation,expected', [
+        (lambda r: r.update(goal='Send a message with PRIVATE'), 403),
+        (lambda r: r['screen'].update(package='com.private.bank'), 403),
+        (lambda r: r.update(apps=[dict(package='com.android.chrome', label='Chrome')]), 403),
+        (lambda r: r.update(unexpected='PRIVATE'), 422)])
+    def test_other_goals_packages_and_unselected_apps_are_rejected_before_service(tmp_path, mutation, expected):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_experiment_server.py:71: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_experiment_server.py:29: in server
+    httpd = create_server(catalogue=frozenset({(req.screen.package, req.goal)}),
+scripts/serve_meta_controller_experiment.py:192: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None), catalogue, output_path))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x109dd5e00>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+____________ test_static_test_authorization_and_only_one_post_route ____________
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_static_test_authorization0')
+
+    def test_static_test_authorization_and_only_one_post_route(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_experiment_server.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_experiment_server.py:29: in server
+    httpd = create_server(catalogue=frozenset({(req.screen.package, req.goal)}),
+scripts/serve_meta_controller_experiment.py:192: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None), catalogue, output_path))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10fc76690>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_____________________ test_health_does_not_invoke_provider _____________________
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_health_does_not_invoke_pr0')
+
+    def test_health_does_not_invoke_provider(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_experiment_server.py:90: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_experiment_server.py:29: in server
+    httpd = create_server(catalogue=frozenset({(req.screen.package, req.goal)}),
+scripts/serve_meta_controller_experiment.py:192: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None), catalogue, output_path))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10fae5ae0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_actual_handler_preserves_native_request_clock_and_applies_trusted_mask __
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_actual_handler_preserves_0')
+
+    def test_actual_handler_preserves_native_request_clock_and_applies_trusted_mask(tmp_path):
+        req=request();service=Mock();service.step.return_value=response(req)
+>       with server(tmp_path,service) as (port,output):
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_public_apps_experiment.py:110: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_public_apps_experiment.py:102: in server
+    httpd=create_server(manifest=path,output_path=output,port=0,allow_live=True,service=service)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_public_apps_experiment.py:383: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x1092774d0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_unknown_package_is_rejected_before_service_with_confirmed_zero_attempt __
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_unknown_package_is_reject0')
+
+    def test_unknown_package_is_rejected_before_service_with_confirmed_zero_attempt(tmp_path):
+        service=Mock();req=request();body=req.model_dump(mode='json');body['screen']['package']='org.unselected.app'
+>       with server(tmp_path,service) as (port,output):
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_public_apps_experiment.py:126: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_public_apps_experiment.py:102: in server
+    httpd=create_server(manifest=path,output_path=output,port=0,allow_live=True,service=service)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_public_apps_experiment.py:383: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10cfc82d0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_native_request_and_clock_are_passed_verbatim_and_receipts_have_only_hashes _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_native_request_and_clock_0')
+
+    def test_native_request_and_clock_are_passed_verbatim_and_receipts_have_only_hashes(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:147: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10fa0b4d0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls[private-403] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_pre_service_rejections_ha0')
+case = 'private', status = 403
+
+    @pytest.mark.parametrize('case,status',[('private',403), ('schema',422), ('auth',401), ('route',404), ('budget',400)])
+    def test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls(tmp_path,case,status):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:163: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10e99c640>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls[schema-422] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_pre_service_rejections_ha1')
+case = 'schema', status = 422
+
+    @pytest.mark.parametrize('case,status',[('private',403), ('schema',422), ('auth',401), ('route',404), ('budget',400)])
+    def test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls(tmp_path,case,status):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:163: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10e99c9d0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls[auth-401] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_pre_service_rejections_ha2')
+case = 'auth', status = 401
+
+    @pytest.mark.parametrize('case,status',[('private',403), ('schema',422), ('auth',401), ('route',404), ('budget',400)])
+    def test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls(tmp_path,case,status):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:163: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10fc768d0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls[route-404] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_pre_service_rejections_ha3')
+case = 'route', status = 404
+
+    @pytest.mark.parametrize('case,status',[('private',403), ('schema',422), ('auth',401), ('route',404), ('budget',400)])
+    def test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls(tmp_path,case,status):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:163: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10fae5ae0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls[budget-400] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_pre_service_rejections_ha4')
+case = 'budget', status = 400
+
+    @pytest.mark.parametrize('case,status',[('private',403), ('schema',422), ('auth',401), ('route',404), ('budget',400)])
+    def test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls(tmp_path,case,status):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:163: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10fae4d10>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_service_exception_or_wrong_identity_cannot_claim_zero_model_calls[raise-500] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_service_exception_or_wron0')
+case = 'raise', status = 500
+
+    @pytest.mark.parametrize('case,status',[('raise',500), ('identity',502)])
+    def test_service_exception_or_wrong_identity_cannot_claim_zero_model_calls(tmp_path,case,status):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10fc71350>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_service_exception_or_wrong_identity_cannot_claim_zero_model_calls[identity-502] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_service_exception_or_wron1')
+case = 'identity', status = 502
+
+    @pytest.mark.parametrize('case,status',[('raise',500), ('identity',502)])
+    def test_service_exception_or_wrong_identity_cannot_claim_zero_model_calls(tmp_path,case,status):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10fc71850>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+______ test_terminal_copies_only_typed_bounded_context_diagnostics[valid] ______
+
+case = 'valid'
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_terminal_copies_only_type0')
+
+    @pytest.mark.parametrize('case', ['valid','malformed','no_recovery'])
+    def test_terminal_copies_only_typed_bounded_context_diagnostics(case,tmp_path):
+>       with server(tmp_path) as (port,req,service,output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10f88fc50>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+____ test_terminal_copies_only_typed_bounded_context_diagnostics[malformed] ____
+
+case = 'malformed'
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_terminal_copies_only_type1')
+
+    @pytest.mark.parametrize('case', ['valid','malformed','no_recovery'])
+    def test_terminal_copies_only_typed_bounded_context_diagnostics(case,tmp_path):
+>       with server(tmp_path) as (port,req,service,output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10fc61310>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+___ test_terminal_copies_only_typed_bounded_context_diagnostics[no_recovery] ___
+
+case = 'no_recovery'
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_terminal_copies_only_type2')
+
+    @pytest.mark.parametrize('case', ['valid','malformed','no_recovery'])
+    def test_terminal_copies_only_typed_bounded_context_diagnostics(case,tmp_path):
+>       with server(tmp_path) as (port,req,service,output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10fa833f0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_unsafe_setting_value_proposal_is_blocked_after_recording_its_model_attempt _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_unsafe_setting_value_prop0')
+
+    def test_unsafe_setting_value_proposal_is_blocked_after_recording_its_model_attempt(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:218: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10fa444b0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+__ test_health_stays_responsive_during_provider_work_and_never_calls_provider __
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_health_stays_responsive_d0')
+
+    def test_health_stays_responsive_during_provider_work_and_never_calls_provider(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:250: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10e87db20>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_drain_waits_for_service_and_terminal_append_while_health_remains_immediate _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_drain_waits_for_service_a0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10e863f50>
+
+    def test_drain_waits_for_service_and_terminal_append_while_health_remains_immediate(tmp_path, monkeypatch):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:268: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10e918d10>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_________ test_drain_is_authorized_bounded_and_does_not_call_provider __________
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_drain_is_authorized_bound0')
+
+    def test_drain_is_authorized_bounded_and_does_not_call_provider(tmp_path):
+>       with server(tmp_path, drain_timeout_ms=25) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_settings_experiment.py:306: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_settings_experiment.py:59: in server
+    httpd = create_server(manifest=path, output_path=output, port=0, allow_live=True, service=service, **options)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_settings_experiment.py:386: in create_server
+    return ThreadingHTTPServer((host, port), make_handler(service or AppTaskService(memory=None), contract, output,
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x10e918f50>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_real_service_receives_evolving_request_with_only_freshness_clock_translation _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_real_service_receives_evo0')
+
+    def test_real_service_receives_evolving_request_with_only_freshness_clock_translation(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_synthetic_experiment.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_synthetic_experiment.py:34: in server
+    httpd = create_server(output_path=output, port=0, allow_live=True, service=service)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_synthetic_experiment.py:271: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None),
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10fae6cf0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+____ test_private_label_authentication_and_other_route_never_reach_service _____
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_private_label_authenticat0')
+
+    def test_private_label_authentication_and_other_route_never_reach_service(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_synthetic_experiment.py:121: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_synthetic_experiment.py:34: in server
+    httpd = create_server(output_path=output, port=0, allow_live=True, service=service)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_synthetic_experiment.py:271: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None),
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10e446d50>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+________ test_schema_rejection_keeps_hashed_ids_and_never_reaches_model ________
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_schema_rejection_keeps_ha0')
+
+    def test_schema_rejection_keeps_hashed_ids_and_never_reaches_model(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_synthetic_experiment.py:152: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_synthetic_experiment.py:34: in server
+    httpd = create_server(output_path=output, port=0, allow_live=True, service=service)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_synthetic_experiment.py:271: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None),
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10fc71d50>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+______ test_service_exception_has_terminal_500_and_unknown_provider_count ______
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_service_exception_has_ter0')
+
+    def test_service_exception_has_terminal_500_and_unknown_provider_count(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_synthetic_experiment.py:164: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_synthetic_experiment.py:34: in server
+    httpd = create_server(output_path=output, port=0, allow_live=True, service=service)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_synthetic_experiment.py:271: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None),
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x106fe8f50>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_______ test_response_for_another_task_cannot_claim_zero_provider_calls ________
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_response_for_another_task0')
+
+    def test_response_for_another_task_cannot_claim_zero_provider_calls(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_synthetic_experiment.py:175: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_synthetic_experiment.py:34: in server
+    httpd = create_server(output_path=output, port=0, allow_live=True, service=service)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_synthetic_experiment.py:271: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None),
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10f3b27b0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_missing_provider_instrumentation_cannot_be_reported_as_zero[diagnostic0-not_started-0] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_missing_provider_instrume0')
+diagnostic = {'called': False}, state = 'not_started', calls = 0
+
+    @pytest.mark.parametrize('diagnostic,state,calls', [({'called': False}, 'not_started', 0), ({}, 'unknown', None)])
+    def test_missing_provider_instrumentation_cannot_be_reported_as_zero(tmp_path, diagnostic, state, calls):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_synthetic_experiment.py:188: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_synthetic_experiment.py:34: in server
+    httpd = create_server(output_path=output, port=0, allow_live=True, service=service)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_synthetic_experiment.py:271: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None),
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10fb14210>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+_ test_missing_provider_instrumentation_cannot_be_reported_as_zero[diagnostic1-unknown-None] _
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_missing_provider_instrume1')
+diagnostic = {}, state = 'unknown', calls = None
+
+    @pytest.mark.parametrize('diagnostic,state,calls', [({'called': False}, 'not_started', 0), ({}, 'unknown', None)])
+    def test_missing_provider_instrumentation_cannot_be_reported_as_zero(tmp_path, diagnostic, state, calls):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_synthetic_experiment.py:188: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_synthetic_experiment.py:34: in server
+    httpd = create_server(output_path=output, port=0, allow_live=True, service=service)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_synthetic_experiment.py:271: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None),
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10fa80210>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+______ test_malformed_body_terminal_uses_only_hash_headers_and_server_ref ______
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_malformed_body_terminal_u0')
+
+    def test_malformed_body_terminal_uses_only_hash_headers_and_server_ref(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_synthetic_experiment.py:196: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_synthetic_experiment.py:34: in server
+    httpd = create_server(output_path=output, port=0, allow_live=True, service=service)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_synthetic_experiment.py:271: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None),
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10dbb6ea0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+__________ test_result_only_plan_failure_diagnostics_are_whitelisted ___________
+
+tmp_path = PosixPath('/private/var/folders/1r/1whfmty13l96v2089s3tc4n80000gn/T/pytest-of-kimleewon/pytest-103/test_result_only_plan_failure_0')
+
+    def test_result_only_plan_failure_diagnostics_are_whitelisted(tmp_path):
+>       with server(tmp_path) as (port, req, service, output):
+             ^^^^^^^^^^^^^^^^
+
+tests/test_meta_controller_synthetic_experiment.py:231: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.13/contextlib.py:141: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+tests/test_meta_controller_synthetic_experiment.py:34: in server
+    httpd = create_server(output_path=output, port=0, allow_live=True, service=service)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/serve_meta_controller_synthetic_experiment.py:271: in create_server
+    return HTTPServer((host, port), make_handler(service or AppTaskService(memory=None),
+/opt/anaconda3/lib/python3.13/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/anaconda3/lib/python3.13/http/server.py:136: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.HTTPServer object at 0x10e91bdd0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/anaconda3/lib/python3.13/socketserver.py:478: PermissionError
+=============================== warnings summary ===============================
+../../../../../../private/tmp/click-stability-venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /private/tmp/click-stability-venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_meta_controller_experiment_server.py::test_exact_catalogue_request_preserves_protocol_and_logs_only_bounded_diagnostics
+FAILED tests/test_meta_controller_experiment_server.py::test_other_goals_packages_and_unselected_apps_are_rejected_before_service[<lambda>-403_0]
+FAILED tests/test_meta_controller_experiment_server.py::test_other_goals_packages_and_unselected_apps_are_rejected_before_service[<lambda>-403_1]
+FAILED tests/test_meta_controller_experiment_server.py::test_other_goals_packages_and_unselected_apps_are_rejected_before_service[<lambda>-403_2]
+FAILED tests/test_meta_controller_experiment_server.py::test_other_goals_packages_and_unselected_apps_are_rejected_before_service[<lambda>-422]
+FAILED tests/test_meta_controller_experiment_server.py::test_static_test_authorization_and_only_one_post_route
+FAILED tests/test_meta_controller_experiment_server.py::test_health_does_not_invoke_provider
+FAILED tests/test_meta_controller_public_apps_experiment.py::test_actual_handler_preserves_native_request_clock_and_applies_trusted_mask
+FAILED tests/test_meta_controller_public_apps_experiment.py::test_unknown_package_is_rejected_before_service_with_confirmed_zero_attempt
+FAILED tests/test_meta_controller_settings_experiment.py::test_native_request_and_clock_are_passed_verbatim_and_receipts_have_only_hashes
+FAILED tests/test_meta_controller_settings_experiment.py::test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls[private-403]
+FAILED tests/test_meta_controller_settings_experiment.py::test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls[schema-422]
+FAILED tests/test_meta_controller_settings_experiment.py::test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls[auth-401]
+FAILED tests/test_meta_controller_settings_experiment.py::test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls[route-404]
+FAILED tests/test_meta_controller_settings_experiment.py::test_pre_service_rejections_have_terminal_receipts_and_confirmed_zero_calls[budget-400]
+FAILED tests/test_meta_controller_settings_experiment.py::test_service_exception_or_wrong_identity_cannot_claim_zero_model_calls[raise-500]
+FAILED tests/test_meta_controller_settings_experiment.py::test_service_exception_or_wrong_identity_cannot_claim_zero_model_calls[identity-502]
+FAILED tests/test_meta_controller_settings_experiment.py::test_terminal_copies_only_typed_bounded_context_diagnostics[valid]
+FAILED tests/test_meta_controller_settings_experiment.py::test_terminal_copies_only_typed_bounded_context_diagnostics[malformed]
+FAILED tests/test_meta_controller_settings_experiment.py::test_terminal_copies_only_typed_bounded_context_diagnostics[no_recovery]
+FAILED tests/test_meta_controller_settings_experiment.py::test_unsafe_setting_value_proposal_is_blocked_after_recording_its_model_attempt
+FAILED tests/test_meta_controller_settings_experiment.py::test_health_stays_responsive_during_provider_work_and_never_calls_provider
+FAILED tests/test_meta_controller_settings_experiment.py::test_drain_waits_for_service_and_terminal_append_while_health_remains_immediate
+FAILED tests/test_meta_controller_settings_experiment.py::test_drain_is_authorized_bounded_and_does_not_call_provider
+FAILED tests/test_meta_controller_synthetic_experiment.py::test_real_service_receives_evolving_request_with_only_freshness_clock_translation
+FAILED tests/test_meta_controller_synthetic_experiment.py::test_private_label_authentication_and_other_route_never_reach_service
+FAILED tests/test_meta_controller_synthetic_experiment.py::test_schema_rejection_keeps_hashed_ids_and_never_reaches_model
+FAILED tests/test_meta_controller_synthetic_experiment.py::test_service_exception_has_terminal_500_and_unknown_provider_count
+FAILED tests/test_meta_controller_synthetic_experiment.py::test_response_for_another_task_cannot_claim_zero_provider_calls
+FAILED tests/test_meta_controller_synthetic_experiment.py::test_missing_provider_instrumentation_cannot_be_reported_as_zero[diagnostic0-not_started-0]
+FAILED tests/test_meta_controller_synthetic_experiment.py::test_missing_provider_instrumentation_cannot_be_reported_as_zero[diagnostic1-unknown-None]
+FAILED tests/test_meta_controller_synthetic_experiment.py::test_malformed_body_terminal_uses_only_hash_headers_and_server_ref
+FAILED tests/test_meta_controller_synthetic_experiment.py::test_result_only_plan_failure_diagnostics_are_whitelisted
+33 failed, 413 passed, 1 warning in 17.01s
