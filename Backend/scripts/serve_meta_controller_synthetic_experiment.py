@@ -37,7 +37,7 @@ SERVICE_STAGES = frozenset(('none', 'observation', 'configuration', 'provider', 
     'model_output', 'plan_validation', 'completion_contract', 'subgoal_contract', 'action_contract'))
 SERVICE_KINDS = frozenset(('observation', 'configuration', 'provider', 'parse', 'plan'))
 SERVICE_CODES = frozenset(PLAN_ERROR_CODES) | PROVIDER_CODES | frozenset(('protected_observation', 'public_observation_unavailable',
-    'stale_observation', 'no_public_controls', 'unusable_goal', 'bound_result_available',
+    'stale_observation', 'no_public_controls', 'no_allowed_actions', 'unusable_goal', 'bound_result_available',
     'invalid_model_configuration', 'missing_api_key', 'provider_timeout', 'provider_http_error',
     'provider_transport_error', 'contract_validation_failed', 'invalid_json', 'provider_response_invalid',
     'model_output_invalid', 'plan_validation_failed', 'result_evidence_candidate', 'result_evidence_unavailable'))

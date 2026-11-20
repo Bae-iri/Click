@@ -52,7 +52,7 @@ public final class AppTaskController {
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm){this.gateway=gateway;this.memory=memory;this.store=store;this.listener=listener;this.remote=remote;this.learning=learning;this.completionSupported=completionSupported;this.meta=new AppTaskMetaController(arm);}
     public AppTaskMetaController metaController(){return meta;}
     public AppTaskMemory memory(){return memory;}
-    public void targetApp(String packageName,String label){selectedPackage=packageName;selectedLabel=RequestedApp.shortName(label);searchQuery=AppTaskSearchIntent.query(memory.goal(),label);scope=null;cached=null;submitted=null;proposal=null;searchPrepared=false;recalled=null;recallFingerprint=null;pendingRecall=null;}
+    public void targetApp(String packageName,String label){meta.clearRecoveryContext();selectedPackage=packageName;selectedLabel=RequestedApp.shortName(label);searchQuery=AppTaskSearchIntent.query(memory.goal(),label);scope=null;cached=null;submitted=null;proposal=null;searchPrepared=false;recalled=null;recallFingerprint=null;pendingRecall=null;}
     public boolean matches(ScreenSnapshot screen){try{return screen!=null&&submitted!=null&&submitted.equals(capture(screen).optString("fingerprint"));}catch(Exception e){return false;}}
     private JSONObject capture(ScreenSnapshot screen)throws JSONException {
         Set<String> labels=AppTaskCompletion.labels(memory.completion());
@@ -286,6 +286,7 @@ public final class AppTaskController {
             .put("goal",memory.goal()).put("screen",current).put("state",new JSONObject(memory.state().toString()))
             .put("apps",new JSONArray());
         if(!completionSupported)request.getJSONObject("state").remove("completion");
+        JSONObject recovery=meta.recoveryContext(current);if(recovery!=null)request.put("recovery",recovery);
         if(learning){JSONObject env=environment(current);env.remove("package");request.put("environment",env).put("path_prefix",new JSONArray(memory.pathPrefix().toString()));}
         if(selectedPackage!=null)request.getJSONArray("apps").put(new JSONObject().put("package",selectedPackage).put("label",selectedLabel));return request;
     }
@@ -399,7 +400,7 @@ public final class AppTaskController {
         return AppTaskPolicy.allowed(current,current,result,selectedPackage)&&!memory.repeated(current,result)&&!previouslyRejected(current,result)?result:null;
     }
     private void propose(JSONObject action)throws JSONException {
-        if(meta.blocked(observation,action)){proposal=null;show("needs_input","이 화면에서 반영되지 않은 동작이에요. 다른 방법을 선택하거나 직접 진행해 주세요.");return;}
+        if(meta.blocked(observation,action)){meta.clearRecoveryContext();proposal=null;show("needs_input","이 화면에서 반영되지 않은 동작이에요. 다른 방법을 선택하거나 직접 진행해 주세요.");return;}
         if(!AppTaskPolicy.allowed(observation,observation,action,selectedPackage)&&!("tap".equals(action.optString("tool"))&&AppTaskPolicy.manualTapAllowed(observation,action))){proposal=null;show("needs_input","이 동작은 직접 진행해 주세요. 이후 현재 화면을 다시 확인할 수 있어요.");return;}
         proposal=new JSONObject(action.toString()).put("id",UUID.randomUUID().toString());proposedAt=System.currentTimeMillis();
         observation=capture(baseline);submitted=observation.getString("fingerprint");
@@ -450,6 +451,7 @@ public final class AppTaskController {
             inputHash=input==null?null:AppTaskObservation.hash(input);
             if("set_text".equals(proposal.optString("tool"))&&searchQuery!=null)searchQuery=input;
             actionAt=System.currentTimeMillis();
+            meta.clearRecoveryContext();
             boolean accepted=listener.execute(baseline,observation,proposal,input,selectedPackage);
             if(!accepted){record(observation,current,proposal,"failed",false,false,false);invalidateReplay();proposal=null;show("needs_input","동작을 실행하지 못했어요. 화면을 다시 확인하거나 직접 진행해 주세요.");return;}
             beginVerification();
@@ -463,7 +465,7 @@ public final class AppTaskController {
         if(closed||busy||verifying||checkingResult||resultOffered||proposal==null||!listener.canObserve()||memory.actions()>=64||!AppTaskPolicy.manualTapAllowed(observation,proposal))return;
         if(manualActions.record(com.click.data.remote.AgentActionEvents.TAP_COMPLETED,pkg,window,id,resource,bounds,occurredAt)!=null){actionAt=occurredAt;beginVerification();}
     }
-    private void beginVerification(){manualActions.clear();actionObserved=true;verifying=true;actionStarted=SystemClock.elapsedRealtime();try{show("verifying","동작이 반영됐는지 확인하고 있어요.");}catch(Exception e){listener.failure(e);}handler.postDelayed(verify,250);}
+    private void beginVerification(){meta.clearRecoveryContext();manualActions.clear();actionObserved=true;verifying=true;actionStarted=SystemClock.elapsedRealtime();try{show("verifying","동작이 반영됐는지 확인하고 있어요.");}catch(Exception e){listener.failure(e);}handler.postDelayed(verify,250);}
     private void verifyNow(){
         if(closed||!verifying||!listener.canObserve())return;
         try{

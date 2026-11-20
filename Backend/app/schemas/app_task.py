@@ -112,6 +112,27 @@ class TaskApp(BaseModel):
     label: str = Field(min_length=1, max_length=80)
 
 
+class TaskRecoveryAction(BaseModel):
+    """Untrusted prior execution evidence; it can restrict, never grant, tools."""
+    model_config = ConfigDict(extra='forbid')
+    tool: Literal['tap','set_text','scroll_forward','scroll_backward','back','open_app']
+    package: str = Field(pattern=r'^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$', max_length=200)
+    target_id: str | None = Field(max_length=200)
+    fingerprint: str = Field(pattern=r'^[0-9a-f]{64}$')
+
+
+class TaskRecovery(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    policy: Literal['mc_v0']
+    reason: Literal['accepted_action_unconfirmed']
+    last_verdict: Literal['waiting']
+    waited_ms: int = Field(strict=True, ge=0, le=120000)
+    attempt: int = Field(strict=True, ge=1, le=3)
+    observation_id: str = Field(min_length=1, max_length=200)
+    last_action: TaskRecoveryAction
+    blocked_actions: list[TaskRecoveryAction] = Field(max_length=16)
+
+
 class AppTaskRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     protocol_version: Literal['app-task.v2'] = 'app-task.v2'
@@ -124,12 +145,15 @@ class AppTaskRequest(BaseModel):
     # Optional for older v2 clients; learned selectors never cross app versions.
     environment: dict[str, str | int] = Field(default_factory=dict, max_length=3)
     path_prefix: list[str] = Field(default_factory=list,max_length=64)
+    recovery: TaskRecovery | None = None
 
     @model_validator(mode='after')
     def valid_prefix(self):
         import re
         if any(not re.fullmatch('[0-9a-f]{64}',p) for p in self.path_prefix):
             raise ValueError('Invalid execution prefix')
+        if self.recovery is not None and self.recovery.observation_id != self.screen.observation_id:
+            raise ValueError('Recovery must describe the current observation')
         return self
 
 
