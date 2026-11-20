@@ -1,0 +1,41 @@
+INSTRUMENTATION_STATUS: class=com.click.service.accessibility.AppTaskSharedFixNativeTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+com.click.service.accessibility.AppTaskSharedFixNativeTest:
+INSTRUMENTATION_STATUS: test=enrichedObservationExecutesAndMenuCannotCompleteNavigation
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=com.click.service.accessibility.AppTaskSharedFixNativeTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: Same physical screen must execute under the proposal's sealed projection
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.click.service.accessibility.AppTaskSharedFixNativeTest.enrichedObservationExecutesAndMenuCannotCompleteNavigation(AppTaskSharedFixNativeTest.java:66)
+
+INSTRUMENTATION_STATUS: stream=
+Error in enrichedObservationExecutesAndMenuCannotCompleteNavigation(com.click.service.accessibility.AppTaskSharedFixNativeTest):
+java.lang.AssertionError: Same physical screen must execute under the proposal's sealed projection
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.click.service.accessibility.AppTaskSharedFixNativeTest.enrichedObservationExecutesAndMenuCannotCompleteNavigation(AppTaskSharedFixNativeTest.java:66)
+
+INSTRUMENTATION_STATUS: test=enrichedObservationExecutesAndMenuCannotCompleteNavigation
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_RESULT: stream=
+
+Time: 1.958
+There was 1 failure:
+1) enrichedObservationExecutesAndMenuCannotCompleteNavigation(com.click.service.accessibility.AppTaskSharedFixNativeTest)
+java.lang.AssertionError: Same physical screen must execute under the proposal's sealed projection
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at com.click.service.accessibility.AppTaskSharedFixNativeTest.enrichedObservationExecutesAndMenuCannotCompleteNavigation(AppTaskSharedFixNativeTest.java:66)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+
+INSTRUMENTATION_CODE: -1
