@@ -201,6 +201,7 @@ public final class AppTaskController {
             if(memory.finished()){proposal=null;show("completed","요청한 결과를 확인했어요.");return;}
             if(observeResult(current,screen))return;
             if(!force&&fingerprint.equals(submitted))return;
+            if(!force&&rebindInput(current,screen))return;
             if(proposal!=null&&!fingerprint.equals(submitted))proposal=null;
             baseline=screen;observation=current;submitted=fingerprint;diagnostic=null;
             if(memory.state().getJSONArray("subgoals").length()==0||memory.active()!=null)maybeRecall(current);
@@ -445,6 +446,7 @@ public final class AppTaskController {
         if(closed||busy||verifying||checkingResult||resultOffered||proposal==null||memory.actions()>=64||!listener.canObserve())return;
         try{
             ScreenSnapshot fresh=listener.fresh();JSONObject current=capture(fresh);
+            rebindInput(current,fresh);
             if(previouslyRejected(current,proposal)){proposal=null;show("needs_input","이전에 이 화면에서 동작을 확인하지 못했어요. 현재 화면을 다시 확인해 다른 방법을 준비해 주세요.");return;}
             if(!AppTaskPolicy.allowed(observation,current,proposal,selectedPackage)){proposal=null;submitted=null;show("needs_input","화면이나 대상이 바뀌었어요. 현재 화면을 다시 확인해 주세요.");return;}
             if("set_text".equals(proposal.optString("tool"))&&(input==null||input.isEmpty()||input.length()>200)){show("needs_input","입력할 검색어를 확인해 주세요.");return;}
@@ -456,6 +458,23 @@ public final class AppTaskController {
             if(!accepted){record(observation,current,proposal,"failed",false,false,false);invalidateReplay();proposal=null;show("needs_input","동작을 실행하지 못했어요. 화면을 다시 확인하거나 직접 진행해 주세요.");return;}
             beginVerification();
         }catch(Exception e){listener.failure(e);}
+    }
+    /**
+     * Typing into the panel raises the keyboard, which resizes the app and reshuffles its
+     * suggestions. That moves the search field without changing it, so keep a set_text proposal
+     * bound to the same unique field instead of discarding it and re-planning mid-typing.
+     */
+    private boolean rebindInput(JSONObject current,ScreenSnapshot screen)throws JSONException {
+        if(proposal==null||!"set_text".equals(proposal.optString("tool"))||observation==null||screen==null)return false;
+        if(current.optString("fingerprint").equals(observation.optString("fingerprint")))return false;
+        if(!"public".equals(current.optString("status"))||!current.optString("package").equals(observation.optString("package")))return false;
+        JSONObject old=AppTaskObservation.find(observation,proposal.optString("target_id"));if(old==null)return false;
+        String key=AppTaskObservation.targetKey(old);JSONObject match=null;JSONArray nodes=current.getJSONArray("nodes");
+        for(int i=0;i<nodes.length();i++){JSONObject n=nodes.getJSONObject(i);if(n.optBoolean("editable")&&key.equals(AppTaskObservation.targetKey(n))){if(match!=null)return false;match=n;}}
+        if(match==null)return false;
+        proposal.put("target_id",match.getString("id")).put("bounds",match.getJSONArray("bounds"));
+        observation=current;baseline=screen;submitted=current.getString("fingerprint");
+        return true;
     }
     public void manualTap(String pkg,int window,String id,long occurredAt){
         if(baseline==null)return;
