@@ -1,9 +1,9 @@
-"""Read-only retained Government24 graphs, fenced by consent and retention."""
+"""Agent2 Government24 graph drafts and live, consent/retention-fenced candidates."""
 from datetime import timezone
 import time
 from sqlalchemy import and_, cast, Float, func, select
-from ai_agent.task_graph.fingerprints import fingerprint
-from ai_agent.task_graph.gov24 import VERSION, validate_graph
+from ai_agent.task_graph.serialization import fingerprint
+from ai_agent.task_graph.gov24 import VERSION, SCHEMA, validate_graph
 from app.models.agent_session import AgentSession
 from app.models.graph_proposal import GOV24_GRAPH_CONSUMER, GraphProposal
 from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption

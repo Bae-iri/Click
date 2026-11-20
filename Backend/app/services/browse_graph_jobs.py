@@ -18,6 +18,12 @@ def enabled():
 
 
 class BrowseGraphJobs:
+    worker_script = 'browse_graph_learning.py'
+    worker_args = ()
+
+    def is_enabled(self):
+        return enabled()
+
     def __init__(self, factory, runner=None):
         self.factory, self.runner = factory, runner or self._run_process
         self.slots = BoundedSemaphore(1)
@@ -35,7 +41,7 @@ class BrowseGraphJobs:
         # Credentials use the worker's environment, never process arguments or logs.
         env = {**os.environ, 'DATABASE_URL': url.render_as_string(hide_password=False)}
         backend = Path(__file__).resolve().parents[2]
-        result = subprocess.run([sys.executable, str(backend / 'scripts/browse_graph_learning.py')],
+        result = subprocess.run([sys.executable, str(backend / 'scripts' / self.worker_script), *self.worker_args],
             input=json.dumps(job), text=True, capture_output=True, cwd=backend, env=env, timeout=30)
         if result.returncode or len(result.stdout) > 65536:
             raise RuntimeError('Graph learning worker failed')
@@ -45,7 +51,7 @@ class BrowseGraphJobs:
         return report
 
     def run_safely(self, session_id=None, user_id=None):
-        if not enabled() or not self.slots.acquire(blocking=False):
+        if not self.is_enabled() or not self.slots.acquire(blocking=False):
             return {'status': 'DEFERRED'}
         try:
             if session_id is not None:
@@ -68,3 +74,19 @@ class BrowseGraphJobs:
                 await asyncio.wait_for(stop.wait(), timeout=self.interval)
             except TimeoutError:
                 await asyncio.to_thread(self.run_safely)
+
+
+class SettingsGraphJobs(BrowseGraphJobs):
+    worker_script = 'settings_experiment_learning.py'
+    worker_args = ('--worker',)
+
+    def is_enabled(self):
+        return (os.getenv('CLICK_SETTINGS_EXPERIMENT_ENABLED','0') == '1'
+            and os.getenv('CLICK_AI2_SETTINGS_GRAPH_ENABLED','0') == '1')
+
+
+class AppTaskLearningJobs(BrowseGraphJobs):
+    worker_script = 'app_task_learning.py'
+
+    def is_enabled(self):
+        return os.getenv('CLICK_AI2_APP_TASK_ENABLED','1') == '1'

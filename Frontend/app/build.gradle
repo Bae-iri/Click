@@ -20,7 +20,16 @@ def javaString = { value -> groovy.json.JsonOutput.toJson(value ?: "") }
 
 def clickApiBaseUrl = providers.gradleProperty("CLICK_API_BASE_URL")
         .getOrElse("https://click-db.onrender.com")
+if (gradle.startParameter.taskNames.any { it.toLowerCase().contains("release") }
+        && new URI(clickApiBaseUrl).scheme != "https") {
+    throw new GradleException("Release builds require an HTTPS CLICK_API_BASE_URL")
+}
 def clickApplicationId = providers.gradleProperty("CLICK_APPLICATION_ID").getOrElse("com.clueclick.app")
+def settingsExperimentArm = providers.gradleProperty("CLICK_SETTINGS_EXPERIMENT_ARM").getOrElse("")
+if (!(settingsExperimentArm in ["", "graph", "llm"])) throw new GradleException("Invalid settings experiment arm")
+if (settingsExperimentArm && !(clickApplicationId in ["com.click.settingsgraph", "com.click.settingsllm"]))
+    throw new GradleException("Settings experiment requires its own application ID")
+def settingsExperimentLabel = settingsExperimentArm == "llm" ? "클릭 LLM 실험" : "클릭 그래프 실험"
 def candidateDiagnostics = providers.gradleProperty("CLICK_CANDIDATE_DIAGNOSTICS").getOrElse("false")
 if (!(candidateDiagnostics in ["true", "false"])) throw new GradleException("CLICK_CANDIDATE_DIAGNOSTICS must be true or false")
 def releaseSigning = new Properties()
@@ -49,11 +58,12 @@ android {
     compileSdk 36
 
     defaultConfig {
-        buildConfigField "String", "KAKAO_NATIVE_APP_KEY", javaString(gov24Pilot ? "" : kakaoNativeAppKey)
-        manifestPlaceholders.kakaoRedirectScheme = gov24Pilot ? "kakaounconfiguredgov24pilot" : "kakao${kakaoNativeAppKey ?: 'unconfigured'}"
+        buildConfigField "String", "KAKAO_NATIVE_APP_KEY", javaString(gov24Pilot || settingsExperimentArm ? "" : kakaoNativeAppKey)
+        buildConfigField "String", "SETTINGS_EXPERIMENT_ARM", javaString(settingsExperimentArm)
+        manifestPlaceholders.kakaoRedirectScheme = settingsExperimentArm ? "kakaosettingsexperiment${settingsExperimentArm}" : gov24Pilot ? "kakaounconfiguredgov24pilot" : "kakao${kakaoNativeAppKey ?: 'unconfigured'}"
         applicationId clickApplicationId
-        manifestPlaceholders.clickAppLabel = gov24Pilot ? "클릭 정부24 테스트" : "@string/app_name"
-        manifestPlaceholders.clickAccessibilityLabel = gov24Pilot ? "클릭 정부24 테스트" : "@string/accessibility_service_label"
+        manifestPlaceholders.clickAppLabel = settingsExperimentArm ? settingsExperimentLabel : gov24Pilot ? "클릭 정부24 테스트" : "@string/app_name"
+        manifestPlaceholders.clickAccessibilityLabel = settingsExperimentArm ? settingsExperimentLabel : gov24Pilot ? "클릭 정부24 테스트" : "@string/accessibility_service_label"
         minSdk 26
         targetSdk 36
         versionCode providers.gradleProperty("CLICK_VERSION_CODE").getOrElse("4").toInteger()

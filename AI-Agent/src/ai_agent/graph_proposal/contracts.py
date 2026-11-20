@@ -1,7 +1,6 @@
 """Versioned, privacy-minimized offline inputs. Runtime decisions are weak evidence."""
 from copy import deepcopy
-from hashlib import sha256
-import json
+from ai_agent.task_graph.serialization import canonical, fingerprint
 import math
 import re
 
@@ -13,9 +12,6 @@ SPLITS = {"train", "validation", "holdout"}
 
 class EvidenceRequired(ValueError):
     """A candidate needs new observations, rather than an evaluation tool repair."""
-
-
-from ai_agent.task_graph.fingerprints import canonical, fingerprint
 
 
 def identifier(value, name="identifier"):

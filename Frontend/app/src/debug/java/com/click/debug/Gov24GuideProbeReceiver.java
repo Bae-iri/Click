@@ -11,6 +11,7 @@ import org.json.JSONObject;
 /** Shell-only debug probe. Reports public states and counts, never credentials or screen text. */
 public final class Gov24GuideProbeReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context,Intent intent) {
+        if(intent.getBooleanExtra("settings_probe",false)){probeSettings(context);return;}
         JSONObject report=new JSONObject();
         try {
             report.put("application_id",context.getPackageName());
@@ -51,6 +52,30 @@ public final class Gov24GuideProbeReceiver extends BroadcastReceiver {
                 }
             }
         }catch(Exception error){try{report.put("probe_error",error.getClass().getSimpleName());}catch(Exception ignored){}}
+        setResultData(report.toString());
+    }
+    private void probeSettings(Context context) {
+        JSONObject report=new JSONObject();
+        try {
+            var screen=ClickAccessibilityService.freshSnapshot();
+            report.put("node_count",screen==null?0:screen.nodes.size());
+            report.put("screen_scope",screen==null?"missing":java.util.Set.of("com.android.settings","com.samsung.android.settings")
+                .contains(screen.packageName)?"settings":"other");
+            Object service=((java.lang.ref.WeakReference<?>)field(ClickOverlayService.class,"runningService",null)).get();
+            if(service!=null){
+                Object gateway=field(ClickOverlayService.class,"agentGateway",service);
+                report.put("gateway_policy_loaded",gateway!=null&&field(gateway.getClass(),"screenPrivacy",gateway)!=null);
+            }
+            try(var vocabulary=context.getAssets().open("vision_vocabulary.json");var policy=context.getAssets().open("screen_privacy_policy.json")) {
+                var guard=com.click.data.snapshot.SettingsScreenPrivacy.load(vocabulary,policy);
+                report.put("asset_policy_loaded",true);
+                if(screen!=null)try {
+                    guard.filter(new JSONObject().put("accessibility_tree",new JSONObject(screen.toJson())),"font_size");
+                    report.put("result","PUBLIC_MINIMIZED");
+                } catch(com.click.data.snapshot.SettingsScreenPrivacy.Blocked blocked){report.put("result",blocked.reason.name());}
+                  catch(com.click.data.snapshot.SettingsScreenPrivacy.Incomplete incomplete){report.put("result","INCOMPLETE");}
+            }
+        }catch(Exception error){try{report.put("error_class",error.getClass().getSimpleName());}catch(Exception ignored){}}
         setResultData(report.toString());
     }
     private Object field(Class<?> type,String name,Object owner) throws Exception {

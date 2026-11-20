@@ -244,7 +244,6 @@ public class ClickOverlayServiceExecutionTest {
         invoke("showGoalPreparation");
         var panel=(TaskFlowOverlayView)get("taskFlowView");
         verify(panel).preparation(state);
-        verify(panel).offerAdjustmentDelegation(false);
         verify(panel,never()).disruptiveTaskNotice(anyBoolean());
         assertNull(get("acceptedGoal"));
     }
@@ -358,16 +357,17 @@ public class ClickOverlayServiceExecutionTest {
         assertFalse((boolean) get("agentPaused"));
     }
 
-    @Test public void privacyBlockPausesScreenRequestsAndShowsManualGuidance() throws Exception {
+    @Test public void unverifiedPrivacyBlockWaitsForSettingsRecoveryWithoutResending() throws Exception {
         resolve();
         confirm();
         assertTrue(sent.size() >= 2);
         int count = sent.size();
+        // Unverified is missing evidence: offer Settings recovery instead of stopping the task.
         callbacks.get(callbacks.size() - 1).onFailure(new com.click.data.snapshot.SettingsScreenPrivacy.Blocked());
-        assertTrue((boolean) get("agentPaused"));
         assertFalse((boolean) get("turnInFlight"));
-        verify((TaskFlowOverlayView) get("taskFlowView")).failed(contains("직접 진행"));
-        send(null);
+        TaskFlowOverlayView view = (TaskFlowOverlayView) get("taskFlowView");
+        verify(view, never()).failed(anyString());
+        verify(view).failureRecovery(eq("설정 화면을 다시 확인할게요"), anyString(), eq("설정 화면 열기"), any());
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2));
         assertEquals(count, sent.size());
     }
@@ -4041,6 +4041,39 @@ public class ClickOverlayServiceExecutionTest {
         method.setAccessible(true); method.invoke(service, text);
     }
 
+    @Test public void endingAppGuidanceDoesNotClaimAnUnverifiedOrderCompleted()throws Exception {
+        var queue=prepareResultWithQueue();var owner=mock(AppTaskController.class);set("appGuide",owner);
+        Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);render.setAccessible(true);
+        render.invoke(service,new JSONObject().put("status","needs_input").put("message","상품을 골라주세요."),null);
+        var end=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView")).appTask(any(),any(),any(),any(),any(),end.capture(),any());
+        end.getValue().run();end.getValue().run();
+        verify(queue,times(1)).cancel(eq("finished-request"),eq("USER_ABORTED"),any());
+        verify(queue,never()).complete(anyString(),any());verify(queue,never()).interrupt(anyString(),any());
+        verify(owner,never()).confirmResult();assertNull(get("appGuide"));
+    }
+
+    @Test public void explicitAppResultCompletesTheQueueOnlyAfterServerAcknowledgesIt()throws Exception {
+        var queue=prepareResultWithQueue();var owner=mock(AppTaskController.class);set("appGuide",owner);contract.appTaskMemory=true;
+        Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);render.setAccessible(true);
+        render.invoke(service,new JSONObject().put("status","confirm_result").put("message","결과를 확인해 주세요."),null);
+        var confirmed=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify((TaskFlowOverlayView)get("taskFlowView")).appTask(any(),any(),any(),any(),any(),any(),confirmed.capture());
+        confirmed.getValue().run();verify(queue,never()).complete(anyString(),any());var receipt=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify(owner).confirmResultOnServer(receipt.capture(),any());
+        receipt.getValue().run();verify(queue).complete(eq("finished-request"),any());verify(queue,never()).cancel(anyString(),anyString(),any());
+    }
+
+    @Test public void queueFailureAfterPanelRemovalRecreatesRetryAndLateCallbackCannotReplaceAnotherTask()throws Exception {
+        var queue=prepareResultWithQueue();set("windowManager",mock(WindowManager.class));
+        Method finish=ClickOverlayService.class.getDeclaredMethod("finishActiveQueueRequest",String.class);finish.setAccessible(true);finish.invoke(service,new Object[]{null});
+        var callback=org.mockito.ArgumentCaptor.forClass(com.click.data.remote.VoiceQueueGateway.Callback.class);verify(queue).complete(eq("finished-request"),callback.capture());
+        invoke("clearTaskFlow");assertNull(get("taskFlowView"));
+        callback.getValue().onFailure(new java.io.IOException("HTTP 409"));assertNotNull(get("taskFlowView"));
+        var retry=feedbackChild((android.view.View)get("taskFlowView"),android.widget.TextView.class,"다시 시도");assertNotNull(retry);
+        retry.performClick();verify(queue,times(2)).complete(eq("finished-request"),any());
+        invoke("clearTaskFlow");set("activeVoiceRequestId","different-request");
+        callback.getValue().onFailure(new java.io.IOException("late 409"));assertNull(get("taskFlowView"));
+    }
+
     private com.click.data.remote.InteractionGateway.Response feedbackResponse(boolean positive, String id) throws Exception {
         return new com.click.data.remote.InteractionGateway.Response(new JSONObject()
                 .put("intent", positive ? "positive_feedback" : "negative_feedback")
@@ -4402,6 +4435,18 @@ public class ClickOverlayServiceExecutionTest {
         when(gateway.privacyMode(any(), any())).thenReturn(com.click.data.snapshot.SettingsScreenPrivacy.Mode.PUBLIC_MINIMIZED);
         currentScreen=displaySettingsPage(); broadcastCurrentPage();
         assertEquals(before,requests.size()); assertTrue(state.paused());
+    }
+    @Test public void unverifiedPrivacyFailureKeepsAcceptedGoalForFreshSettingsObservation() throws Exception {
+        prepareGuideResponse();
+        Object accepted=get("acceptedGoal");
+        callbacks.get(1).onFailure(new com.click.data.snapshot.SettingsScreenPrivacy.Blocked(
+                com.click.data.snapshot.SettingsScreenPrivacy.Blocked.Reason.UNVERIFIED_SCREEN));
+        assertSame(accepted,get("acceptedGoal"));
+        var state=(TaskExecutionController)fieldValue("execution");
+        assertNotEquals(TaskExecutionController.Phase.STOPPED,state.phase());
+        var panel=(TaskFlowOverlayView)get("taskFlowView");
+        verify(panel,never()).failed(anyString());
+        verify(panel).failureRecovery(eq("설정 화면을 다시 확인할게요"),anyString(),eq("설정 화면 열기"),any());
     }
     @Test public void latePublicReplyCannotReplaceSensitiveModeWithConfirmation() throws Exception {
         prepareGuideResponse();

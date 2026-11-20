@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class AgentTurnGateway {
+    private final RequestLifecycle lifecycle=new RequestLifecycle();
     public interface Callback {
         void onSuccess(AgentTurnContract.Response response);
         void onFailure(Throwable error);
@@ -32,16 +33,25 @@ public final class AgentTurnGateway {
         try (java.io.InputStream vocabulary = context.getAssets().open("vision_vocabulary.json");
              java.io.InputStream policy = context.getAssets().open("screen_privacy_policy.json")) {
             loaded = com.click.data.snapshot.SettingsScreenPrivacy.load(vocabulary, policy);
-        } catch (Exception ignored) { /* Missing policy fails closed before screen HTTP. */ }
+        } catch (Exception error) {
+            com.click.data.local.SettingsExperimentDiagnostics.record("policy_load","BLOCKED",
+                error.getClass().getSimpleName(),null,false);
+        }
         screenPrivacy = loaded;
+        if(loaded!=null)com.click.data.local.SettingsExperimentDiagnostics.record("policy_load","SUCCESS","policy_loaded",null,true);
     }
 
     /** Run before action events or one-use approvals are consumed by a request. */
     public boolean needsFreshObservation(com.click.data.snapshot.ScreenSnapshot screen) {
+        return needsFreshObservation(screen, null);
+    }
+
+    public boolean needsFreshObservation(com.click.data.snapshot.ScreenSnapshot screen, String observationSetting) {
         if (screenPrivacy == null || screen == null) return false;
         logSettingsCandidates(screen, null, null, "preflight");
         try {
-            screenPrivacy.filter(new org.json.JSONObject().put("accessibility_tree", new org.json.JSONObject(screen.toJson())));
+            screenPrivacy.filter(new org.json.JSONObject().put("accessibility_tree", new org.json.JSONObject(screen.toJson())),
+                    observationSetting);
         } catch (com.click.data.snapshot.SettingsScreenPrivacy.Incomplete incomplete) {
             logPreflightResult(screen, "incomplete");
             return true;
@@ -74,11 +84,11 @@ public final class AgentTurnGateway {
     public void send(AgentTurnContract.Request request, Callback callback) {
         final long deadline=android.os.SystemClock.elapsedRealtime()+RequestBudget.TOTAL_MS;
         executor.execute(() -> {
-            try (RequestBudget budget=new RequestBudget(deadline)) {
+            try (RequestBudget budget=new RequestBudget(deadline,lifecycle)) {
                 AgentTurnContract.Response response = execute(request);
-                mainHandler.post(() -> callback.onSuccess(response));
+                lifecycle.post(mainHandler,() -> callback.onSuccess(response));
             } catch (Throwable error) {
-                mainHandler.post(() -> callback.onFailure(classifyFailure(error)));
+                lifecycle.post(mainHandler,() -> callback.onFailure(classifyFailure(error)));
             }
         });
     }
@@ -89,6 +99,12 @@ public final class AgentTurnGateway {
         if (!server.supports(request.commandType()))
             throw new java.io.IOException("현재 서버에서 이 작업 단계를 지원하지 않아요.");
         org.json.JSONObject body = new org.json.JSONObject(server.encode(request));
+        if("resolve_goal".equals(request.commandType())&&com.click.data.local.CandidateDiagnosticLog.enabled()) {
+            org.json.JSONObject context=body.optJSONObject("device_context");
+            org.json.JSONObject caps=context==null?null:context.optJSONObject("capabilities");
+            android.util.Log.i("ClickAgent","goal_prepare_start gov24_login="+(caps!=null&&caps.optBoolean("gov24_login"))
+                +" gov24_civil="+(caps!=null&&caps.optBoolean("gov24_civil")));
+        }
         if ("cancel_task".equals(request.commandType()) || "pause_task".equals(request.commandType())) {
             body.remove("accessibility_tree");
             body.remove("vision_snapshot");
@@ -102,10 +118,19 @@ public final class AgentTurnGateway {
             logSettingsCandidates(request, body, "filtered");
         }
         journal.stage(body);
+        if(com.click.BuildConfig.DEBUG) android.util.Log.i("ClickAgent", "agent.turn.dispatch command="
+                + request.commandType() + " scope=" + request.observationSetting);
         HttpResult result = http.post(AgentTurnContract.PATH, body.toString(),25000);
         AgentTurnContract.Response response = new AgentTurnContract.Response(result.body);
         if(!request.requestId.equals(response.requestId) || !request.sessionId.equals(response.sessionId))throw new java.io.IOException("INVALID_TURN_RESPONSE");
         ExecutionState.validate(response,request,false);
+        if("resolve_goal".equals(request.commandType())&&com.click.data.local.CandidateDiagnosticLog.enabled()) {
+            org.json.JSONObject preparation=response.preparation;
+            String status=preparation==null?"missing":preparation.optString("status");
+            String mode=preparation==null?"missing":preparation.optString("execution_mode");
+            android.util.Log.i("ClickAgent","goal_prepare_end status="+(java.util.Set.of("ready","needs_input","unsupported","missing").contains(status)?status:"unknown")
+                +" mode="+(java.util.Set.of("graph","browse","public_guide","missing").contains(mode)?mode:"unknown"));
+        }
         if (com.click.data.local.CandidateDiagnosticLog.enabled() && request.accessibilityTree != null
                 && com.click.service.accessibility.TouchAutomationPolicy.settingsPackage(request.accessibilityTree.packageName)) {
             org.json.JSONObject debug = response.metadata == null ? null : response.metadata.optJSONObject("debug");
@@ -160,7 +185,7 @@ public final class AgentTurnGateway {
     public void reconcileOffline(String sessionId,Callback callback) {
         final long deadline=android.os.SystemClock.elapsedRealtime()+RequestBudget.TOTAL_MS;
         executor.execute(()->{
-            try(RequestBudget budget=new RequestBudget(deadline)) {
+            try(RequestBudget budget=new RequestBudget(deadline,lifecycle)) {
                 loadContract();
                 org.json.JSONObject wire=journal.pending(sessionId);
                 if(wire!=null) {
@@ -184,8 +209,8 @@ public final class AgentTurnGateway {
                 AgentTurnContract.Response state=readSession(sessionId);
                 if(wire!=null && !java.util.Objects.equals(wire.optString("episode_id"),state.episodeId))
                     state.metadata.put("offline_receipt_superseded",true);
-                mainHandler.post(()->callback.onSuccess(state));
-            }catch(Throwable error){mainHandler.post(()->callback.onFailure(classifyFailure(error)));}
+                lifecycle.post(mainHandler,()->callback.onSuccess(state));
+            }catch(Throwable error){lifecycle.post(mainHandler,()->callback.onFailure(classifyFailure(error)));}
         });
     }
 
@@ -207,10 +232,10 @@ public final class AgentTurnGateway {
     public void loadContract(ContractCallback callback) {
         final long deadline=android.os.SystemClock.elapsedRealtime()+RequestBudget.TOTAL_MS;
         executor.execute(() -> {
-            try (RequestBudget budget=new RequestBudget(deadline)) {
+            try (RequestBudget budget=new RequestBudget(deadline,lifecycle)) {
                 AgentServerContract result = loadContract();
-                mainHandler.post(() -> callback.onSuccess(result));
-            } catch (Exception error) { mainHandler.post(() -> callback.onFailure(classifyFailure(error))); }
+                lifecycle.post(mainHandler,() -> callback.onSuccess(result));
+            } catch (Exception error) { lifecycle.post(mainHandler,() -> callback.onFailure(classifyFailure(error))); }
         });
     }
 
@@ -227,16 +252,16 @@ public final class AgentTurnGateway {
         return contract;
     }
 
-    public void close() { executor.shutdownNow(); }
+    public void close() { lifecycle.close(); executor.shutdownNow(); }
 
     /** Recover the authoritative version after a lost response; contains no replayable guide. */
     public void synchronize(String sessionId, Callback callback) {
         final long deadline=android.os.SystemClock.elapsedRealtime()+RequestBudget.TOTAL_MS;
         executor.execute(() -> {
-            try (RequestBudget budget=new RequestBudget(deadline)) {
+            try (RequestBudget budget=new RequestBudget(deadline,lifecycle)) {
                 AgentTurnContract.Response response=readSession(sessionId);
-                mainHandler.post(()->callback.onSuccess(response));
-            }catch(Throwable error){mainHandler.post(()->callback.onFailure(classifyFailure(error)));}
+                lifecycle.post(mainHandler,()->callback.onSuccess(response));
+            }catch(Throwable error){lifecycle.post(mainHandler,()->callback.onFailure(classifyFailure(error)));}
         });
     }
 

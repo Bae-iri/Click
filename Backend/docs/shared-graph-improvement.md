@@ -28,6 +28,16 @@ the newer application is running. No production database was changed by tests.
 
 ## Evidence and ranking
 
+App-independent tasks also feed Agent 2 through consented `app_task` events.
+The isolated `app_task_learning.py` worker creates encrypted, source-linked
+experience receipts and candidates. Online `/agent/app-guide/task/memory` and
+`AppTaskService` read them without running the analyzer inside a user request.
+Reuse is owner-scoped, matched to app version and current execution context,
+and remains a per-step suggestion requiring native revalidation and approval.
+Two complete, user-confirmed examples are a development heuristic, not an
+independent target-correctness result or a global model release. See the
+[connection and lifecycle details](../../docs/reviews/2026-11-20-ai2-app-task-memory.md).
+
 The durable `runtime_events` outbox records immutable graph references, hashed
 guide/target/observation links, verification outcomes and bounded durations. Target
 hashes use the same semantic binding as action verification. Repeated pending

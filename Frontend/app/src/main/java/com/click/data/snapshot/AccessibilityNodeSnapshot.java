@@ -34,6 +34,7 @@ public final class AccessibilityNodeSnapshot {
     private final boolean searchInput;
     private final boolean passwordInput;
     private final boolean inputContentPresent;
+    private final boolean nativeEnabled;
 
     public AccessibilityNodeSnapshot(
             String nodeId,
@@ -107,6 +108,7 @@ public final class AccessibilityNodeSnapshot {
             int windowId, boolean sensitiveInput, Float rangeMin, Float rangeMax, boolean passwordInput,
             Boolean checked, boolean heading, boolean searchInput) {
         this.heading = !sensitiveInput && heading;
+        this.nativeEnabled = enabled;
         this.searchInput = sensitiveInput && !passwordInput && searchInput;
         this.checked = !sensitiveInput && checkable ? checked : null;
         this.passwordInput = passwordInput;
@@ -142,7 +144,9 @@ public final class AccessibilityNodeSnapshot {
     }
 
     public boolean passwordInput() { return passwordInput; }
-    boolean publicSearchInput() { return sensitiveInput && !passwordInput && searchInput; }
+    public boolean hasInputContent() { return inputContentPresent; }
+    public boolean publicSearchEnabled() { return sensitiveInput && !passwordInput && nativeEnabled; }
+    public boolean publicSearchInput() { return sensitiveInput && !passwordInput && searchInput; }
     boolean emptySearchInput() {
         return sensitiveInput && !passwordInput && !inputContentPresent
                 && (searchInput || ScreenEnvironmentPolicy.contains("empty_search_resources",resourceId));

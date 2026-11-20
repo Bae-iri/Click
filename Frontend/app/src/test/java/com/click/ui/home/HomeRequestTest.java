@@ -50,6 +50,20 @@ public class HomeRequestTest {
             assertFalse(intent.getBooleanExtra(ClickOverlayService.EXTRA_OPEN_MENU, false));
         });
     }
+    @Test public void resumeOffersTheExistingRequestWithoutEnqueueingItsTextAgain() throws Exception {
+        var response=org.robolectric.util.ReflectionHelpers.callConstructor(com.click.data.remote.VoiceQueueGateway.Response.class,
+            org.robolectric.util.ReflectionHelpers.ClassParameter.from(String.class,"{\"queue_version\":1,\"running\":{\"id\":\"existing-request\",\"raw_goal\":\"글씨 키워줘\",\"status\":\"RUNNING\",\"agent_session_id\":\"existing-session\"},\"queued\":[]}"));
+        try(var queues=mockConstruction(com.click.data.remote.VoiceQueueGateway.class,(queue,context)->{
+            doAnswer(call->{((com.click.data.remote.VoiceQueueGateway.Callback)call.getArgument(0)).onSuccess(response);return null;}).when(queue).read(any());
+        })) {
+            withHome(activity->{
+                android.view.ViewGroup row=activity.findViewById(android.R.id.content).findViewWithTag("resume_request");
+                assertEquals(android.view.View.VISIBLE,row.getVisibility());row.getChildAt(1).performClick();
+                Intent intent=shadowOf(activity).getNextStartedService();assertEquals("existing-request",intent.getStringExtra(ClickOverlayService.EXTRA_RESUME_REQUEST_ID));
+                assertFalse(intent.hasExtra(ClickOverlayService.EXTRA_INITIAL_GOAL));verify(queues.constructed().get(0),never()).enqueue(anyString(),anyString(),any());
+            });
+        }
+    }
 
     @Test public void keyboardSendSubmitsTrimmedTextDirectlyAndPreventsDuplicateSubmission() {
         withHome(activity -> {

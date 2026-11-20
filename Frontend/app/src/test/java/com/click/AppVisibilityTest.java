@@ -19,7 +19,7 @@ import static org.mockito.Mockito.*;
 import static org.robolectric.Shadows.shadowOf;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 34, application = ClickApplication.class)
+@Config(sdk = 34, application = com.click.testing.ClickTestApplication.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class AppVisibilityTest {
     @Test public void appExitDoesNotRestartGuidanceStoppedOnEntry() {

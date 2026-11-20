@@ -32,11 +32,12 @@ class UserRepository:
         self.lock_user(user_id)
         if purpose == 'model_training':
             from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
-            from app.models.graph_proposal import BROWSE_GRAPH_CONSUMER, GOV24_GRAPH_CONSUMER
+            from app.models.graph_proposal import BROWSE_GRAPH_CONSUMER, GOV24_GRAPH_CONSUMER, SETTINGS_GRAPH_CONSUMER
             # A new grant is also a new evidence boundary, not permission to reuse
             # records preceding it. Receipt deletion cascades to generated drafts.
             self.session.execute(delete(RuntimeEventConsumption).where(
-                RuntimeEventConsumption.consumer.in_((BROWSE_GRAPH_CONSUMER, GOV24_GRAPH_CONSUMER)),
+                RuntimeEventConsumption.consumer.in_((BROWSE_GRAPH_CONSUMER, GOV24_GRAPH_CONSUMER, SETTINGS_GRAPH_CONSUMER,
+                    'ai2-app-tasks.v1','ai2-app-tasks-seen.v1')),
                 RuntimeEventConsumption.event_id.in_(select(RuntimeEvent.id).where(RuntimeEvent.user_id == user_id))))
         if purpose == "model_training" and not consented:
             from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption

@@ -245,6 +245,8 @@ class AgentSessionRepository:
                 row.graph_hash = graph_reference["sha256"]
             from app.repositories.runtime_events import append
             append(db, row, request.request_id, {"runtime": execution_event or {},
+                **({'settings_experiment': response.metadata['settings_experiment']}
+                   if response.metadata.get('settings_experiment') else {}),
                 "reselection": response.metadata.get("reselection")}, now=now,
                 episode_id=claim["episode_id"], graph_hash=(execution_event or {}).get("graph_hash"),
                 graph_reference=execution_reference,

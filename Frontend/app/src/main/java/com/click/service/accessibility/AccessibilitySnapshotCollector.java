@@ -27,25 +27,24 @@ final class AccessibilitySnapshotCollector {
     ScreenSnapshot collect(AccessibilityNodeInfo root, String packageName, int width, int height, Float fontScale) {
         List<AccessibilityNodeSnapshot> nodes = new ArrayList<>();
         boolean[] maskReady = {true};
-        AccessibilityTraversalBudget budget=new AccessibilityTraversalBudget();
+        if(root==null)return null;
+        SnapshotTraversalBudget budget=new SnapshotTraversalBudget();
         try {
             visit(root, "node_0", null, packageName, width, height, nodes, maskReady,budget,0);
-            var navigation=root==null?null:NativeNavigationReader.read(root,budget);
+            var navigation=NativeNavigationReader.read(root,budget);
             budget.check();
-            return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes,
-                root==null?null:root.getWindowId(), root!=null&&maskReady[0], fontScale).withNavigation(navigation);
-        } catch(AccessibilityTraversalBudget.Exhausted incomplete) {
-            // Never send a partial tree as if it were a complete, privacy-checked screen.
-            return new ScreenSnapshot(packageName,Instant.now().toString(),width,height,List.of(),
-                root==null?null:root.getWindowId(),false,fontScale);
+            return new ScreenSnapshot(packageName, Instant.now().toString(), width, height, nodes, root.getWindowId(), maskReady[0], fontScale).withNavigation(navigation);
+        } catch(SnapshotTraversalBudget.Incomplete incomplete) {
+            // Never expose a prefix that could omit a private field or the real target.
+            return null;
         }
     }
 
     private void visit(AccessibilityNodeInfo node, String nodeId, String parentId, String packageName,
                        int screenWidth, int screenHeight,
-                       List<AccessibilityNodeSnapshot> output, boolean[] maskReady,AccessibilityTraversalBudget budget,int depth) {
+                       List<AccessibilityNodeSnapshot> output, boolean[] maskReady,SnapshotTraversalBudget budget,int depth) {
         if (node == null) return;
-        budget.take(depth);
+        budget.visit(depth);
         Rect bounds = new Rect();
         node.getBoundsInScreen(bounds);
         String className = string(node.getClassName());
@@ -89,7 +88,7 @@ final class AccessibilitySnapshotCollector {
         }
         int childCount = node.getChildCount();
         for (int index = 0; index < childCount; index++) {
-            budget.check();
+            budget.child();
             AccessibilityNodeInfo child = node.getChild(index);
             if (child == null) continue;
             try {
@@ -104,11 +103,20 @@ final class AccessibilitySnapshotCollector {
     private static boolean searchHint(AccessibilityNodeInfo node) {
         if (!(node.isEditable() || String.valueOf(node.getClassName()).contains("EditText")) || node.isPassword()) return false;
         CharSequence hint = node.getHintText();
+        if (publicSearchHint(hint, node)) return true;
+        // WebView placeholders may be exposed as hint text or an accessibility
+        // description instead of getHintText(). Never inspect a filled value.
+        return com.click.data.snapshot.Gov24LoginPrivacy.PACKAGE.contentEquals(String.valueOf(node.getPackageName()))
+                && (publicSearchHint(node.getContentDescription(), node)
+                    || node.isShowingHintText() && publicSearchHint(node.getText(), node));
+    }
+
+    private static boolean publicSearchHint(CharSequence hint, AccessibilityNodeInfo node) {
         if (hint == null) return false;
         String text = hint.toString().trim().toLowerCase(java.util.Locale.ROOT);
-        if(com.click.data.snapshot.Gov24LoginPrivacy.PACKAGE.contentEquals(String.valueOf(node.getPackageName()))
-                &&com.click.data.snapshot.Gov24LoginPrivacy.isPublicSearchHint(text))return true;
-        return "검색".equals(text) || "search".equals(text);
+        return "검색".equals(text) || "search".equals(text)
+                || com.click.data.snapshot.Gov24LoginPrivacy.PACKAGE.contentEquals(String.valueOf(node.getPackageName()))
+                    && com.click.data.snapshot.Gov24LoginPrivacy.isPublicSearchHint(text);
     }
 
     private String inferRole(String className, AccessibilityNodeInfo node) {

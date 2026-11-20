@@ -8,6 +8,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.services.goal_llm import _unique_object
+from app.services.settings_planner import provider_error
 
 MODEL = 'gemini-3.8-flash'
 TIMEOUT = 25.0
@@ -71,6 +72,7 @@ class GeminiGovernmentPlanner:
             token = os.getenv('GEMINI_API_KEY', '').strip()
             if not self.sender and not token:
                 diagnostic['reason'] = 'missing_api_key'
+                diagnostic.update(failure_kind='configuration', retryable=False)
                 return None, diagnostic
             service = SERVICES[goal_type]
             context = dict(goal_type=goal_type, page=page, visible_options=visible,
@@ -101,8 +103,12 @@ class GeminiGovernmentPlanner:
                             if len(content) > 65536 or time.monotonic() - started > TIMEOUT:
                                 raise ValueError('Provider response exceeded budget')
                         response = httpx.Response(upstream.status_code, content=bytes(content))
-            if response.status_code != 200 or len(response.content) > 65536:
-                diagnostic.update(reason='provider_error', http_status=response.status_code)
+            if response.status_code != 200:
+                diagnostic.update(reason='provider_error', **provider_error(response, token))
+                return None, diagnostic
+            if len(response.content) > 65536:
+                diagnostic.update(reason='invalid_or_unavailable_plan', failure_kind='plan',
+                                  retryable=False, error_type='OversizedResponse')
                 return None, diagnostic
             body = json.loads(response.content, object_pairs_hook=_unique_object)
             candidate, = body['candidates']
@@ -119,6 +125,8 @@ class GeminiGovernmentPlanner:
         except (ValueError, KeyError, TypeError, IndexError, httpx.HTTPError) as error:
             diagnostic['reason'] = 'invalid_or_unavailable_plan'
             diagnostic['error_type'] = type(error).__name__
+            diagnostic['failure_kind'] = 'provider' if isinstance(error, httpx.HTTPError) else 'plan'
+            diagnostic['retryable'] = isinstance(error, httpx.HTTPError)
             return None, diagnostic
         finally:
             diagnostic['latency_ms'] = round((time.monotonic() - started) * 1000)

@@ -35,6 +35,20 @@ class CancelVoiceRequest(BaseModel):
     reason: Literal["USER_ABORTED", "USER_DECLINED"]
 
 
+class ReviseVoiceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: UUID
+    expected_version: int = Field(ge=0)
+    raw_goal: str = Field(min_length=1, max_length=500)
+
+    @field_validator("raw_goal")
+    @classmethod
+    def nonblank(cls, value):
+        if not value.strip():
+            raise ValueError("A goal is required")
+        return value.strip()
+
+
 class VoiceRequestResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str

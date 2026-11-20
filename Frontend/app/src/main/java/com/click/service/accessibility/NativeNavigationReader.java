@@ -28,11 +28,12 @@ final class NativeNavigationReader {
     }
     private static final class Candidate { String id;long score=-1; }
     static NavigationState read(AccessibilityNodeInfo root) {
-        if(root==null)return null;
-        try{return read(root,new AccessibilityTraversalBudget());}
-        catch(AccessibilityTraversalBudget.Exhausted incomplete){return null;}
+        try{return read(root,new SnapshotTraversalBudget());}
+        catch(SnapshotTraversalBudget.Incomplete incomplete){return null;}
     }
-    static NavigationState read(AccessibilityNodeInfo root,AccessibilityTraversalBudget budget) {
+    static NavigationState read(AccessibilityNodeInfo root,SnapshotTraversalBudget budget) {
+        if(root==null)return null;
+        budget.nextPass();
         Candidate best=new Candidate();find(root,"node_0",best,com.click.service.overlay.NavigationRecovery.isHome(String.valueOf(root.getPackageName())),budget,0);
         String id=best.id==null?"node_0":best.id;
         AccessibilityNodeInfo selected=nodeAt(root,id);boolean recycle=selected!=root;
@@ -57,6 +58,7 @@ final class NativeNavigationReader {
                     || has(selected,AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.getId());
             int[] indices={Integer.MAX_VALUE,-1};
             int count=info==null?-1:axis==NavigationState.Axis.HORIZONTAL?info.getColumnCount():info.getRowCount();
+            budget.nextPass();
             List<String> parts=new ArrayList<>();readContent(selected,axis,indices,parts,true,true,true,budget,0);
             Collections.sort(parts);String digest;
             try {digest=Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-256")
@@ -66,8 +68,8 @@ final class NativeNavigationReader {
                     indices[0]==Integer.MAX_VALUE?-1:indices[0],indices[1],count,digest);
         } finally {if(recycle)selected.recycle();}
     }
-    private static void find(AccessibilityNodeInfo n,String id,Candidate best,boolean launcher,AccessibilityTraversalBudget budget,int depth) {
-        budget.take(depth);
+    private static void find(AccessibilityNodeInfo n,String id,Candidate best,boolean launcher,SnapshotTraversalBudget budget,int depth) {
+        budget.visit(depth);
         if(!n.isVisibleToUser() || !n.isEnabled())return;
         // A launcher widget's list is not the app-page collection.
         if(launcher && String.valueOf(n.getClassName()).toLowerCase(Locale.ROOT).contains("appwidget"))return;
@@ -79,7 +81,7 @@ final class NativeNavigationReader {
             if(score>best.score){best.id=id;best.score=score;}
         }
         for(int i=0;i<n.getChildCount();i++) {
-            budget.check();
+            budget.child();
             AccessibilityNodeInfo child=n.getChild(i);if(child==null)continue;
             try{find(child,id+"_"+i,best,launcher,budget,depth+1);}finally{child.recycle();}
         }
@@ -94,8 +96,8 @@ final class NativeNavigationReader {
     }
     /** Read indices and page identity in one walk while retaining their separate privacy rules. */
     private static void readContent(AccessibilityNodeInfo n,NavigationState.Axis axis,int[] out,
-                                    List<String> parts,boolean includeLabels,boolean includeIndices,boolean selectedRoot,AccessibilityTraversalBudget budget,int depth) {
-        budget.take(depth);
+                                    List<String> parts,boolean includeLabels,boolean includeIndices,boolean selectedRoot,SnapshotTraversalBudget budget,int depth) {
+        budget.visit(depth);
         if(!n.isVisibleToUser())return;
         AccessibilityNodeInfo.CollectionItemInfo item=selectedRoot?null:n.getCollectionItemInfo();
         if(includeIndices && item!=null) {
@@ -120,7 +122,7 @@ final class NativeNavigationReader {
         int childCount=n.getChildCount();
         boolean childIndices=includeIndices && (selectedRoot || n.getCollectionInfo()==null);
         for(int i=0;i<childCount;i++) {
-            budget.check();
+            budget.child();
             AccessibilityNodeInfo child=n.getChild(i);if(child==null)continue;
             try{readContent(child,axis,out,parts,includeLabels,childIndices,false,budget,depth+1);}finally{child.recycle();}
         }

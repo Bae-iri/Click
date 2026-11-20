@@ -113,10 +113,9 @@ def test_agent_and_legacy_sessions_require_and_enforce_ownership():
 
 def test_rate_limit():
     with TestClient(create_app(enable_legacy=True)) as client:
-        # Vary accounts to exercise the IP limit independently of the stricter
-        # persistent per-account limit.
         for index in range(20):
-            assert client.post("/api/v1/auth/login", json={"phone_number": f"0108958{index:04d}", "password": "9999"}).status_code == 401
+            # Distinct accounts exercise the independent per-IP guard.
+            assert client.post("/api/v1/auth/login", json={"phone_number": f"010{index:08d}", "password": "9999"}).status_code == 401
         response = client.post("/api/v1/auth/login", json={"phone_number": "01089580331", "password": "9999"})
         assert response.status_code == 429
         assert response.headers["retry-after"] == "60"

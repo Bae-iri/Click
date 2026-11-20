@@ -232,6 +232,40 @@ class VoiceQueueService:
             row = self.owned(db, user_id, request_id) if request_id else None
             return self.snapshot(db, state, row)
 
+    def revise(self, user_id, request_id, request):
+        """Explicit correction of one running task; keep other requests and FIFO order."""
+        digest = sha256(json.dumps({'operation': 'revise', 'target': str(request_id),
+            **request.model_dump(mode='json')}, sort_keys=True).encode()).hexdigest()
+        with self.transaction(user_id) as (db, state, now):
+            self.expire(db, state, now)
+            row = self.owned(db, user_id, request_id)
+            existing = db.get(VoiceRequest, str(request.id))
+            if existing:
+                if existing.user_id != user_id:
+                    raise HTTPException(404)
+                if existing.payload_hash != digest:
+                    conflict('REQUEST_ID_REUSED')
+                return self.snapshot(db, state, existing)
+            if state.version != request.expected_version:
+                conflict('QUEUE_CHANGED')
+            session = db.get(AgentSession, row.agent_session_id) if row.agent_session_id else None
+            if row.status != 'RUNNING' or row.priority != 'NORMAL' or not session or session.status not in ACTIVE_SESSION:
+                conflict('REQUEST_NOT_RUNNING')
+            self.cancel_session(db, row.agent_session_id, now)
+            self.end(row, 'CANCELLED', now, 'USER_ABORTED')
+            db.flush()  # Release the single-running-request constraint first.
+            replacement = AgentSession(id=str(uuid4()), user_id=user_id, status='IN_PROGRESS', version=0,
+                created_at=now, updated_at=now, expires_at=now + self.idle_seconds)
+            db.add(replacement)
+            db.flush()
+            state.last_sequence += 1
+            revised = VoiceRequest(id=str(request.id), user_id=user_id, raw_goal=request.raw_goal,
+                priority='NORMAL', status='RUNNING', sequence=state.last_sequence, agent_session_id=replacement.id,
+                payload_hash=digest, created_at=now, updated_at=now, expires_at=now + 86400)
+            db.add(revised)
+            state.version += 1
+            return self.snapshot(db, state, revised, claimed=True)
+
     def cleanup(self, retention=86400):
         if retention <= 0:
             raise ValueError("Retention must be positive")

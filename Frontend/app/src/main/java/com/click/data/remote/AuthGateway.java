@@ -110,8 +110,9 @@ public final class AuthGateway {
         JSONObject body = new JSONObject().put("refresh_token", tokens.refreshToken());
         HttpResult result = sender.send(body.toString());
         if (result.status < 200 || result.status >= 300) {
-            // Only an explicit rejection of the refresh credential ends the session.
-            // Rate limits, outages and transport failures must preserve tokens and the task journal.
+            // Only the refresh endpoint's explicit invalid-token response revokes
+            // local credentials. Rate limits, outages and transport failures must
+            // also preserve the task journal stored with these credentials.
             if (result.status == 401) tokens.clear();
             throw apiError("/api/v1/auth/refresh", result);
         }
@@ -127,6 +128,7 @@ public final class AuthGateway {
         requireValidationEnvironment(path);
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
         java.util.concurrent.ScheduledFuture<?> watchdog=null;
+        HttpDiagnostics diagnostics=new HttpDiagnostics("POST",path);
         try {
             connection.setRequestMethod("POST");
             RequestBudget.configure(connection,readTimeout);
@@ -139,12 +141,15 @@ public final class AuthGateway {
             try (OutputStream output = connection.getOutputStream()) { output.write(bytes); }
             connection.setReadTimeout(RequestBudget.remaining(readTimeout));
             int status = connection.getResponseCode();
+            diagnostics.status(status);
             InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
             return new HttpResult(status, read(stream), connection.getHeaderField("X-Conflict-Code"),
                     connection.getHeaderField("X-Request-ID"));
         } finally {
             if(watchdog!=null)watchdog.cancel(false);
+            RequestBudget.finished(connection);
             connection.disconnect();
+            diagnostics.finish();
         }
     }
 
@@ -164,19 +169,23 @@ public final class AuthGateway {
         requireValidationEnvironment(path);
         HttpURLConnection connection = (HttpURLConnection) new URL(BuildConfig.CLICK_API_BASE_URL + path).openConnection();
         java.util.concurrent.ScheduledFuture<?> watchdog=null;
+        HttpDiagnostics diagnostics=new HttpDiagnostics(method,path);
         try {
             connection.setRequestMethod(method);
             RequestBudget.configure(connection,readTimeout);
             watchdog=RequestBudget.watch(connection);
             if (bearer != null) connection.setRequestProperty("Authorization", "Bearer " + bearer);
             int status = connection.getResponseCode();
+            diagnostics.status(status);
             InputStream stream = status >= 200 && status < 300 ? connection.getInputStream() : connection.getErrorStream();
             String response = read(stream);
             String conflict = connection.getHeaderField("X-Conflict-Code");
             return new HttpResult(status, response, conflict, connection.getHeaderField("X-Request-ID"));
         } finally {
             if(watchdog!=null)watchdog.cancel(false);
+            RequestBudget.finished(connection);
             connection.disconnect();
+            diagnostics.finish();
         }
     }
 

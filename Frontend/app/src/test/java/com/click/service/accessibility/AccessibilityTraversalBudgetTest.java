@@ -21,9 +21,7 @@ public class AccessibilityTraversalBudgetTest {
             parent=child;
         }
         var screen=new AccessibilitySnapshotCollector().collect(root,"com.android.settings",1080,2400,null);
-        assertTrue(screen.nodes.isEmpty());
-        assertFalse(screen.privacyMaskingReady);
-        assertNull(screen.navigation);
+        assertNull(screen);
         verify(root,never()).recycle();
     }
     @Test public void nodeLimitStopsWideTreesBeforeAllChildrenAreRead() {
@@ -31,7 +29,7 @@ public class AccessibilityTraversalBudgetTest {
         when(root.getChildCount()).thenReturn(1000000);
         when(root.getChild(anyInt())).thenReturn(child);
         var screen=new AccessibilitySnapshotCollector().collect(root,"com.android.settings",1080,2400,null);
-        assertTrue(screen.nodes.isEmpty());assertFalse(screen.privacyMaskingReady);
+        assertNull(screen);
         verify(root,atMost(AccessibilityTraversalBudget.MAX_NODES)).getChild(anyInt());
         verify(root,never()).recycle();
     }
