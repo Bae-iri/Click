@@ -782,32 +782,41 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String evidence=taskFlowView==null?com.click.ui.overlay.GuidanceExplanation.DEFAULT:taskFlowView.guidanceEvidence();
         if(lastTargetNodeId!=null&&lastSubmittedScreen!=null&&execution.phase()==TaskExecutionController.Phase.GUIDING)
             evidence=com.click.ui.overlay.GuidanceExplanation.target(lastSubmittedScreen,lastTargetNodeId);
-        final int owner=execution.generation();
+        final String supportSession=execution.sessionId();
         final boolean retry=execution.sessionId()!=null&&!waitingForCompletedEnd&&!waitingForDeclinedEnd
             &&execution.phase()!=TaskExecutionController.Phase.STOPPED&&execution.phase()!=TaskExecutionController.Phase.COMPLETED
             &&(coupangBrowse==null||!coupangBrowse.terminal())&&(appGuide==null||!appGuide.memory().finished());
         if(retry)sendAgentControl("pause_task");else stopNarration();
         revisionId=revisionText=null;
+        final com.click.ui.overlay.GuidanceSupportView[] ownerPanel={null};
         var view=new com.click.ui.overlay.GuidanceSupportView(this,initialGoal,evidence,retry,
             retry&&activeVoiceRequestId!=null&&agentGateway!=null&&agentGateway.currentContract()!=null&&agentGateway.currentContract().reviseRequest,
             personalization().remembers(),personalization().detailed(),new com.click.ui.overlay.GuidanceSupportView.Listener(){
-            public void close(){dismissGuidanceSupport();}
+            private boolean current(){return !closing&&guidanceSupport==ownerPanel[0]
+                &&java.util.Objects.equals(supportSession,execution.sessionId());}
+            public void close(){if(current())dismissGuidanceSupport();}
             public void retry(){
-                if(!retry||closing||owner!=execution.generation())return;dismissGuidanceSupport();
-                speechHandler.postDelayed(()->{if(!closing&&owner==execution.generation())sendAgentControl("resume_task");},250);
+                if(!retry||!current()||waitingForCompletedEnd||waitingForDeclinedEnd
+                    ||execution.phase()==TaskExecutionController.Phase.STOPPED
+                    ||execution.phase()==TaskExecutionController.Phase.COMPLETED)return;
+                dismissGuidanceSupport();
+                // Pausing deliberately invalidates old execution callbacks. The
+                // same panel/session still owns this explicit retry after that change.
+                if(!closing&&java.util.Objects.equals(supportSession,execution.sessionId()))sendAgentControl("resume_task");
             }
-            public void revise(String text){reviseCurrentRequest(text,owner);}
+            public void revise(String text){if(current())reviseCurrentRequest(text,execution.generation());}
             public void enqueue(String text){
-                if(closing||owner!=execution.generation())return;dismissGuidanceSupport();
+                if(!current())return;dismissGuidanceSupport();
                 enqueueConfirmedRequest(text,null);
             }
             public String feedback(com.click.data.local.GuidancePreferences.Feedback feedback,boolean remember){
-                if(closing||owner!=execution.generation())return "작업이 바뀌었어요. 현재 안내에서 다시 선택해 주세요.";
+                if(!current())return "작업이 바뀌었어요. 현재 안내에서 다시 선택해 주세요.";
                 if(feedback==com.click.data.local.GuidancePreferences.Feedback.WRONG_TARGET){guidanceNeedsManualReview=true;adjustmentDelegation.clear();pendingApprovalProvenance=null;}
                 String effect=personalization().feedback(feedback,remember);
                 if(taskFlowView!=null)taskFlowView.setDetailedExplanations(personalization().detailed());return effect;
             }
         });
+        ownerPanel[0]=view;
         guidanceSupport=view;
         var params=new WindowManager.LayoutParams(Math.min(dp(390),screenWidth()-dp(24)),WindowManager.LayoutParams.WRAP_CONTENT,
             overlayWindowType,WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,PixelFormat.TRANSLUCENT);
