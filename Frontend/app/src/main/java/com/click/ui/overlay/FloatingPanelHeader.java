@@ -82,7 +82,7 @@ final class FloatingPanelHeader extends LinearLayout {
         button.setTextColor(0xFF3478F6);
         button.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         button.setIncludeFontPadding(false); button.setGravity(Gravity.CENTER);
-        button.setMinWidth(0); button.setMinimumWidth(0);
+        button.setMinWidth(dp(48)); button.setMinimumWidth(dp(48));
         button.setMinHeight(dp(48)); button.setMinimumHeight(dp(48));
         GradientDrawable fill = new GradientDrawable();
         fill.setColor(primary ? 0xFFEAF2FF : Color.WHITE); fill.setCornerRadius(dp(10));

@@ -16,15 +16,16 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=34,application=Application.class) @LooperMode(LooperMode.Mode.PAUSED)
 public class GuidanceSupportTest {
     private TextView find(View view,String label){if(view instanceof TextView&&label.contentEquals(((TextView)view).getText()))return (TextView)view;if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++){var result=find(((ViewGroup)view).getChildAt(i),label);if(result!=null)return result;}return null;}
+    private int count(View view,String label){int matches=view instanceof TextView&&label.contentEquals(((TextView)view).getText())?1:0;if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++)matches+=count(((ViewGroup)view).getChildAt(i),label);return matches;}
     private boolean visible(View view){while(view!=null){if(view.getVisibility()!=View.VISIBLE)return false;view=view.getParent() instanceof View?(View)view.getParent():null;}return true;}
     @Test public void secondaryFeedbackStaysHiddenUntilAskedAndUnknownServerCannotRevise(){
         var callback=mock(GuidanceSupportView.Listener.class);
         var panel=new GuidanceSupportView(RuntimeEnvironment.getApplication(),"글씨 키워줘",GuidanceExplanation.DEFAULT,true,false,false,false,callback);
         assertFalse(visible(find(panel,"천천히 읽어주세요")));
-        assertTrue(find(panel,"수정한 요청 보내기").isEnabled());
-        find(panel,"요청 수정").performClick();find(panel,"다음 작업으로 추가").performClick();
+        assertNull(find(panel,"요청 수정"));assertNull(find(panel,"수정한 요청 보내기"));
+        assertEquals(1,count(panel,"다음 작업으로 추가"));
+        find(panel,"다음 요청 작성").performClick();assertTrue(visible(find(panel,"다음 작업으로 추가")));find(panel,"다음 작업으로 추가").performClick();
         verify(callback).enqueue("글씨 키워줘");verify(callback,never()).revise(anyString());
-        find(panel,"수정한 요청 보내기").performClick();verify(callback,times(2)).enqueue("글씨 키워줘");
         find(panel,"안내 평가·방식 바꾸기").performClick();assertTrue(visible(find(panel,"천천히 읽어주세요")));
         find(panel,"천천히 읽어주세요").performClick();verify(callback).feedback(com.click.data.local.GuidancePreferences.Feedback.SLOWER,false);
     }
@@ -57,7 +58,7 @@ public class GuidanceSupportTest {
         var listener=mock(GuidanceSupportView.Listener.class);
         var panel=new GuidanceSupportView(RuntimeEnvironment.getApplication(),"원래 요청",null,false,false,false,false,listener);
         assertFalse(visible(find(panel,"다시 확인")));
-        find(panel,"요청 수정").performClick();panel.editRequest("새 요청");find(panel,"수정한 요청 보내기").performClick();
+        assertNull(find(panel,"다음 작업으로 추가"));find(panel,"새 요청 작성").performClick();panel.editRequest("새 요청");find(panel,"새 요청 보내기").performClick();
         verify(listener).enqueue("새 요청");verify(listener,never()).retry();verify(listener,never()).revise(anyString());
     }
     @Test public void oldLoadingHelpCannotAppearOnANewerInstruction(){
@@ -72,9 +73,23 @@ public class GuidanceSupportTest {
         var panel=new GuidanceSupportView(RuntimeEnvironment.getApplication(),"글씨 키워줘",GuidanceExplanation.DEFAULT,true,true,false,false,callback);
         panel.editRequest("밝기 올려줘");panel.saving();assertTrue(panel.isSaving());
         assertFalse(find(panel,"수정한 요청 확인").isEnabled());assertFalse(find(panel,"다음 작업으로 추가").isEnabled());
+        find(panel,"수정한 요청 확인").performClick();find(panel,"다음 작업으로 추가").performClick();find(panel,"닫기").performClick();find(panel,"다시 확인").performClick();
+        find(panel,"천천히 읽어주세요").performClick();panel.editRequest("변경되면 안 되는 내용");
+        verifyNoInteractions(callback);
         panel.dispatchKeyEvent(new android.view.KeyEvent(android.view.KeyEvent.ACTION_UP,android.view.KeyEvent.KEYCODE_BACK));verify(callback,never()).close();
         panel.error("연결을 다시 확인해 주세요.");assertFalse(panel.isSaving());assertTrue(find(panel,"수정한 요청 확인").isEnabled());
         find(panel,"수정한 요청 확인").performClick();verify(callback).revise("밝기 올려줘");
+    }
+    @Test public void blankRequestsCannotSubmitAndRecoveryRechecksCurrentDraft(){
+        var callback=mock(GuidanceSupportView.Listener.class);
+        var panel=new GuidanceSupportView(RuntimeEnvironment.getApplication(),"",null,true,true,false,false,callback);
+        assertFalse(find(panel,"수정한 요청 확인").isEnabled());assertFalse(find(panel,"다음 작업으로 추가").isEnabled());
+        panel.editRequest("   ");find(panel,"수정한 요청 확인").performClick();find(panel,"다음 작업으로 추가").performClick();verifyNoInteractions(callback);
+        panel.editRequest(" 밝기 올려줘 ");assertTrue(find(panel,"수정한 요청 확인").isEnabled());
+        panel.saving();panel.error("다시 연결해 주세요.");assertTrue(find(panel,"수정한 요청 확인").isEnabled());
+        find(panel,"다음 작업으로 추가").performClick();verify(callback).enqueue("밝기 올려줘");
+        panel.editRequest(" ");panel.saving();panel.error("다시 연결해 주세요.");
+        assertFalse(find(panel,"수정한 요청 확인").isEnabled());assertFalse(find(panel,"다음 작업으로 추가").isEnabled());
     }
     @Test public void detailedReasonsAreOptionalAndDoNotReplaceTheAction(){
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));

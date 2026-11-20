@@ -24,23 +24,23 @@ public class AppTaskPanelTest {
             for(float scale:new float[]{1f,1.5f})scenario.onActivity(activity->{
                 var config=new android.content.res.Configuration(activity.getResources().getConfiguration());config.fontScale=scale;
                 var panel=new TaskFlowOverlayView(activity.createConfigurationContext(config),new Answers());int[] count={0,0,0};panel.appTask(result,v->count[0]++,()->{},()->{},()->{},()->count[1]++,()->count[2]++);activity.setContentView(panel);measure(panel);
-                assertEquals(0,count[0]);TextView execute=find(panel,"검색 누르기");assertNotNull(execute);assertTrue(execute.isEnabled());assertTrue(execute.getHeight()>=48*activity.getResources().getDisplayMetrics().density);execute.performClick();assertEquals(1,count[0]);
-                assertNull(find(panel,"결과를 확인했어요"));find(panel,"더 보기").performClick();assertEquals(0,count[1]+count[2]);find(panel,"결과를 확인했어요").performClick();assertEquals(1,count[2]);assertEquals(0,count[1]);find(panel,"안내 끝내기").performClick();assertEquals(1,count[1]);
+                assertEquals(0,count[0]);TextView execute=find(panel,"클릭이 대신 누르기");assertNotNull(execute);assertTrue(execute.isEnabled());assertTrue(execute.getHeight()>=48*activity.getResources().getDisplayMetrics().density);execute.performClick();assertEquals(1,count[0]);
+                assertNull(find(panel,"결과를 확인했어요"));find(panel,"다른 방법").performClick();assertEquals(0,count[1]+count[2]);find(panel,"결과를 확인했어요").performClick();assertEquals(1,count[2]);assertEquals(0,count[1]);find(panel,"안내 끝내기").performClick();assertEquals(1,count[1]);
             });
         }
     }
     @Test public void searchInputStaysLocalAndWaitsForItsOwnButton()throws Exception {
         JSONObject result=proposal("set_text");String[] entered={null};TaskFlowOverlayView[] panel={null};
         try(ActivityScenario<HomeActivity> scenario=ActivityScenario.launch(HomeActivity.class)){
-            scenario.onActivity(activity->{panel[0]=new TaskFlowOverlayView(activity,new Answers());panel[0].appTask(result,v->entered[0]=v,()->{},()->{},()->{},()->{});activity.setContentView(panel[0]);assertTrue(panel[0].needsPublicGuideInput());EditText input=findInput(panel[0]);assertNotNull(input);input.setText("클릭 테스트");assertNull(entered[0]);find(panel[0],"검색어 입력").performClick();});
+            scenario.onActivity(activity->{panel[0]=new TaskFlowOverlayView(activity,new Answers());panel[0].appTask(result,v->entered[0]=v,()->{},()->{},()->{},()->{});activity.setContentView(panel[0]);assertTrue(panel[0].needsPublicGuideInput());EditText input=findInput(panel[0]);assertNotNull(input);input.setText("클릭 테스트");assertNull(entered[0]);find(panel[0],"검색창에 입력").performClick();});
             android.os.SystemClock.sleep(450);InstrumentationRegistry.getInstrumentation().waitForIdleSync();assertEquals("클릭 테스트",entered[0]);
         }
     }
     @Test public void verifyingAndOcrOnlyTargetsHaveNoExecutionButton()throws Exception {
         JSONObject result=proposal("tap");result.put("execute_allowed",false);
         try(ActivityScenario<HomeActivity> scenario=ActivityScenario.launch(HomeActivity.class)){
-            scenario.onActivity(activity->{var panel=new TaskFlowOverlayView(activity,new Answers());panel.appTask(result,v->fail("OCR executed"),()->{},()->{},()->{},()->{});activity.setContentView(panel);assertNull(find(panel,"검색 누르기"));assertNotNull(find(panel,"‘검색’ 항목을 직접 눌러주세요."));});
-            result.put("verifying",true);scenario.onActivity(activity->{var panel=new TaskFlowOverlayView(activity,new Answers());panel.appTask(result,v->fail("Executed while verifying"),()->{},()->{},()->{},()->{},()->{});activity.setContentView(panel);assertNull(find(panel,"검색 누르기"));assertNull(find(panel,"더 보기"));assertNull(find(panel,"결과를 확인했어요"));});
+            scenario.onActivity(activity->{var panel=new TaskFlowOverlayView(activity,new Answers());panel.appTask(result,v->fail("OCR executed"),()->{},()->{},()->{},()->{});activity.setContentView(panel);assertNull(find(panel,"클릭이 대신 누르기"));assertNotNull(find(panel,"‘검색’ 항목을 직접 눌러주세요."));});
+            result.put("verifying",true);scenario.onActivity(activity->{var panel=new TaskFlowOverlayView(activity,new Answers());panel.appTask(result,v->fail("Executed while verifying"),()->{},()->{},()->{},()->{},()->{});activity.setContentView(panel);assertNull(find(panel,"클릭이 대신 누르기"));assertNull(find(panel,"다른 방법"));assertNull(find(panel,"결과를 확인했어요"));});
         }
     }
     private static void measure(TaskFlowOverlayView view){view.measure(View.MeasureSpec.makeMeasureSpec(view.getWindowWidth(view.getResources().getDisplayMetrics().widthPixels),View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(1600,View.MeasureSpec.AT_MOST));view.layout(0,0,view.getMeasuredWidth(),view.getMeasuredHeight());}

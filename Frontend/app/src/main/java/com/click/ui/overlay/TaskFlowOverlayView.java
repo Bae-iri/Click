@@ -82,6 +82,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private final TextView queuedRequests;
     private final LinearLayout content;
     private final Button pause;
+    private final Button stop;
     private final Button reviewConfirm;
     private final LinearLayout reviewNavigation;
     private final Button headerReplay;
@@ -214,7 +215,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         LayoutParams pauseParams = new LayoutParams(0, -2, 1f);
         pauseParams.rightMargin = dp(6);
         controls.addView(pause, pauseParams);
-        Button stop = FloatingPanelStyle.compactButton(context, "끝내기", () -> listener.control("cancel_task"));
+        stop = FloatingPanelStyle.compactButton(context, "끝내기", () -> listener.control("cancel_task"));
         stop.setContentDescription("진행 중인 안내 끝내기");
         stop.setTextColor(0xFF536885);
         LayoutParams stopParams = new LayoutParams(0, -2, 1f);
@@ -419,6 +420,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         FloatingPanelStyle.styleTitle(heading);
         setNarrationState(false, narrationUnavailable);
         pause.setText("일시정지"); pause.setOnClickListener(v -> listener.control("pause_task"));
+        stop.setText("끝내기"); stop.setOnClickListener(v -> listener.control("cancel_task"));
         ClickUiSpeed.reveal(content);
     }
 
@@ -939,56 +941,89 @@ public final class TaskFlowOverlayView extends LinearLayout {
         appTask(result,execute,refresh,tools,visual,finish,null);
     }
     public void appTask(JSONObject result,java.util.function.Consumer<String> execute,Runnable refresh,Runnable tools,Runnable visual,Runnable finish,Runnable confirmed) {
-        progress(null,null,result.optString("message"),false);controls.setVisibility(GONE);divider.setVisibility(GONE);
-        if("unavailable".equals(result.optString("status")))showFailureAssistance(result.optString("message"));
-        JSONObject action=result.optJSONObject("action");
-        if("proposed".equals(result.optString("status"))&&!result.optString("target_label").isBlank())setGuidanceEvidence(action!=null&&"open_app".equals(action.optString("tool"))
-            ?"요청하신 ‘"+result.optString("target_label")+"’ 앱이 설치되어 있어요.":"현재 화면에서 ‘"+result.optString("target_label")+"’ 항목을 찾았어요.");
-        if("protected".equals(result.optString("status")))setGuidanceEvidence("입력·인증 화면을 감지해 안내를 멈췄어요.");
-        boolean verifying=result.optBoolean("verifying");
-        if("confirm_result".equals(result.optString("status"))&&!verifying){
-            if(confirmed!=null)recoveryActions.addView(primaryButton("결과가 맞아요 · 끝내기",confirmed),spaced(0));
-            recoveryActions.addView(secondaryButton("더 도와주세요",tools),spaced(8));
-            recoveryActions.addView(secondaryButton("다시 확인",refresh),spaced(8));
-            recoveryActions.addView(quietButton("안내 끝내기",finish),spaced(8));
-            recoveryActions.setVisibility(VISIBLE);return;
+        String state=result.optString("status");
+        progress(null,null,result.optString("message"),false);
+        final int revision=presentationRevision;
+        Runnable refreshCurrent=()->{if(revision==presentationRevision)refresh.run();};
+        Runnable toolsCurrent=()->{if(revision==presentationRevision)tools.run();};
+        Runnable visualCurrent=()->{if(revision==presentationRevision)visual.run();};
+        Runnable finishCurrent=()->{if(revision==presentationRevision)finish.run();};
+        stop.setText("안내 끝내기");stop.setOnClickListener(view->finishCurrent.run());
+        // Keep actions inside the scrollable body so large text cannot push stop off-screen.
+        LinearLayout actions=new LinearLayout(getContext());actions.setOrientation(VERTICAL);content.addView(actions,spaced(8));
+        boolean waiting=result.optBoolean("verifying")||java.util.Set.of("planning","verifying","checking_result").contains(state);
+        if(waiting)return;
+        if("protected".equals(state)){
+            setGuidanceEvidence("입력·인증은 직접 진행해 주세요. 화면이 바뀌면 안내를 이어가요.");
+            actions.addView(primaryButton("입력 후 안내 이어가기",refreshCurrent),spaced(0));return;
         }
-        if(action!=null&&!verifying){
+        if("completed".equals(state)){
+            controls.setVisibility(GONE);divider.setVisibility(GONE);
+            actions.addView(primaryButton("안내 닫기",finishCurrent),spaced(0));return;
+        }
+        JSONArray available=result.optJSONArray("available_tools");
+        boolean hasTools=available!=null&&available.length()>0;
+        if("confirm_result".equals(state)){
+            controls.setVisibility(GONE);divider.setVisibility(GONE);
+            if(confirmed!=null)actions.addView(primaryButton("결과가 맞아요 · 끝내기",()->{if(revision==presentationRevision)confirmed.run();}),spaced(0));
+            actions.addView(secondaryButton("아직 안 됐어요",hasTools?toolsCurrent:refreshCurrent),spaced(8));
+            actions.addView(quietButton("안내만 끝내기",finishCurrent),spaced(8));return;
+        }
+        if("unavailable".equals(state))showFailureAssistance(result.optString("message"));
+        JSONObject action="proposed".equals(state)?result.optJSONObject("action"):null;
+        if(action!=null){
             String tool=action.optString("tool"),label=result.optString("target_label","");
-            String actionLabel="tap".equals(tool)?label+" 누르기":"scroll_forward".equals(tool)?"아래로 이동":"scroll_backward".equals(tool)?"위로 이동":"back".equals(tool)?"뒤로가기":label+" 열기";
+            if(!label.isBlank())setGuidanceEvidence("open_app".equals(tool)?"요청하신 ‘"+label+"’ 앱이 설치되어 있어요.":"현재 화면에서 ‘"+label+"’ 항목을 찾았어요.");
             if(result.optBoolean("execute_allowed")){
                 if("set_text".equals(tool)){
-                    publicGuideInput=true;EditText input=new EditText(getContext());input.setHint("입력할 검색어를 적어 주세요");input.setSingleLine(true);input.setTextSize(ClickTextScale.size(getContext(),16));
-                    input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(200)});input.setText(result.optString("suggested_query"));content.addView(input,spaced(8));
-                    recoveryActions.addView(primaryButton("검색어 입력",()->{String value=input.getText().toString();if(value.isEmpty())return;hideKeyboard(input);input.postDelayed(()->execute.accept(value),350);}),spaced(0));
-                }else recoveryActions.addView(primaryButton(actionLabel,()->execute.accept(null)),spaced(0));
-            }else content.addView(text("‘"+label+"’ 항목을 직접 눌러주세요.",14),spaced(8));
-            if("open_app".equals(tool)){recoveryActions.setVisibility(VISIBLE);return;}
-        }
-        if(!verifying){
-            Button more=quietButton("더 보기",()->{});
+                    publicGuideInput=true;EditText input=new EditText(getContext());input.setHint("입력할 검색어를 적어 주세요");input.setSingleLine(true);input.setTextSize(ClickTextScale.size(getContext(),16));input.setMinHeight(dp(48));
+                    input.setContentDescription("검색창에 넣을 검색어");
+                    input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(200)});input.setText(result.optString("suggested_query"));actions.addView(input,spaced(0));
+                    actions.addView(text("검색어만 넣어요. 검색 실행은 직접 눌러주세요.",14),spaced(4));
+                    Button enter=primaryButton("검색창에 입력",()->{});
+                    enter.setEnabled(!input.getText().toString().trim().isEmpty());
+                    input.addTextChangedListener(new android.text.TextWatcher(){
+                        public void beforeTextChanged(CharSequence s,int start,int count,int after){}
+                        public void onTextChanged(CharSequence s,int start,int before,int count){enter.setEnabled(!s.toString().trim().isEmpty());}
+                        public void afterTextChanged(android.text.Editable value){}
+                    });
+                    enter.setOnClickListener(view->{String value=input.getText().toString().trim();if(value.isEmpty()||revision!=presentationRevision||!enter.isEnabled())return;
+                        enter.setEnabled(false);input.setEnabled(false);hideKeyboard(input);
+                        input.postDelayed(()->{if(revision==presentationRevision)execute.accept(value);},350);});
+                    actions.addView(enter,spaced(8));
+                }else{
+                    String actionLabel=switch(tool){case "tap"->"클릭이 대신 누르기";case "scroll_forward"->"클릭이 아래로 이동";case "scroll_backward"->"클릭이 위로 이동";case "back"->"클릭이 뒤로 이동";default->label+" 열기";};
+                    actions.addView(primaryButton(actionLabel,()->{if(revision==presentationRevision)execute.accept(null);}),spaced(0));
+                }
+                if("open_app".equals(tool))return;
+            }
+            Button more=quietButton("다른 방법",()->{});
             more.setOnClickListener(view->{
-                more.setVisibility(GONE);
-                recoveryActions.addView(secondaryButton("다시 확인",refresh),spaced(8));
-                recoveryActions.addView(secondaryButton("직접 동작 선택",tools),spaced(8));
-                recoveryActions.addView(quietButton("화면 글자 읽기",visual),spaced(8));
-                if(confirmed!=null)recoveryActions.addView(quietButton("결과를 확인했어요",confirmed),spaced(8));
-                recoveryActions.addView(quietButton("안내 끝내기",finish),spaced(8));
-            });
-            recoveryActions.addView(more,spaced(8));
+                if(revision!=presentationRevision||more.getVisibility()!=VISIBLE)return;more.setVisibility(GONE);
+                actions.addView(secondaryButton("화면 다시 읽기",refreshCurrent),spaced(8));
+                if(hasTools)actions.addView(secondaryButton("직접 진행할 방법",toolsCurrent),spaced(8));
+                if(result.optBoolean("can_read_labels"))actions.addView(quietButton("버튼 이름 찾기",visualCurrent),spaced(8));
+                if(confirmed!=null)actions.addView(quietButton("결과를 확인했어요",()->{if(revision==presentationRevision)confirmed.run();}),spaced(8));
+            });actions.addView(more,spaced(8));return;
         }
-        recoveryActions.setVisibility(VISIBLE);
+        actions.addView(primaryButton("화면 다시 읽기",refreshCurrent),spaced(0));
+        if(hasTools)actions.addView(secondaryButton(available.length()==1&&"open_app".equals(available.optString(0))?"앱 선택":"다른 방법",toolsCurrent),spaced(8));
+        if(result.optBoolean("can_read_labels"))actions.addView(quietButton("버튼 이름 찾기",visualCurrent),spaced(8));
     }
     public void appTaskTools(java.util.function.Consumer<String> choice,Runnable back) {
-        clear("어떻게 진행할까요?");
+        appTaskTools(new JSONArray(java.util.List.of("set_text","scroll_forward","scroll_backward","back","open_app")),choice,back);
+    }
+    public void appTaskTools(JSONArray available,java.util.function.Consumer<String> choice,Runnable back) {
+        clear("직접 진행할 방법");final int revision=presentationRevision;
         String[] labels={"검색어 입력","아래로 이동","위로 이동","뒤로가기","앱 열기"};String[] values={"set_text","scroll_forward","scroll_backward","back","open_app"};
-        for(int i=0;i<labels.length;i++){final String value=values[i];content.addView(primaryButton(labels[i],()->choice.accept(value)),spaced(8));}
-        content.addView(secondaryButton("안내로 돌아가기",back),spaced(8));
+        java.util.Set<String> allowed=new java.util.HashSet<>();for(int i=0;available!=null&&i<available.length();i++)allowed.add(available.optString(i));
+        for(int i=0;i<labels.length;i++)if(allowed.contains(values[i])){final String value=values[i];content.addView(primaryButton(labels[i],()->{if(revision==presentationRevision)choice.accept(value);}),spaced(8));}
+        content.addView(secondaryButton("안내로 돌아가기",()->{if(revision==presentationRevision)back.run();}),spaced(8));
     }
     public void appTaskApps(JSONArray apps,java.util.function.BiConsumer<String,String> selected,Runnable back) {
-        clear("어떤 앱을 열까요?");
-        for(int i=0;i<apps.length();i++){JSONObject app=apps.optJSONObject(i);if(app==null)continue;content.addView(secondaryButton(app.optString("label"),()->selected.accept(app.optString("package"),app.optString("label"))),spaced(4));}
-        content.addView(secondaryButton("안내로 돌아가기",back),spaced(8));
+        clear("어떤 앱을 열까요?");final int revision=presentationRevision;
+        for(int i=0;i<apps.length();i++){JSONObject app=apps.optJSONObject(i);if(app==null)continue;content.addView(secondaryButton(app.optString("label"),()->{if(revision==presentationRevision)selected.accept(app.optString("package"),app.optString("label"));}),spaced(4));}
+        content.addView(secondaryButton("안내로 돌아가기",()->{if(revision==presentationRevision)back.run();}),spaced(8));
     }
     public void browsing(String message, boolean terminal, Runnable observe, Runnable finish) {
         reviewStage(1, "쿠팡 상품 찾기", "검색과 상품 상세 화면을 안내해요.");
