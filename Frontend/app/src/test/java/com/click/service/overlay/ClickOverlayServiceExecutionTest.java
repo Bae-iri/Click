@@ -148,6 +148,36 @@ public class ClickOverlayServiceExecutionTest {
         });
     }
 
+    @Test public void helpRetrySurvivesItsOwnPauseAndActuallySendsResume() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        int before=(int)get("executionGeneration");
+        invoke("showGuidanceSupport");
+        assertTrue((int)get("executionGeneration")>before);
+        var help=(com.click.ui.overlay.GuidanceSupportView)get("guidanceSupport");assertNotNull(help);
+        var matches=new ArrayList<android.view.View>();help.findViewsWithText(matches,"다시 확인",android.view.View.FIND_VIEWS_WITH_TEXT);
+        assertEquals(1,matches.size());assertTrue(matches.get(0).isEnabled());matches.get(0).performClick();
+        assertNull(get("guidanceSupport"));assertEquals("resume_task",get("pendingControl"));
+        assertEquals("pause_task",requests.get(2).commandType());
+        callbacks.get(2).onSuccess(sessionState(8,"episode","PAUSED","MVP-01",false));
+        assertEquals("resume_task",requests.get(3).commandType());
+    }
+
+    @Test public void helpFromAReplacedSessionCannotResumeTheNewTask() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);invoke("showGuidanceSupport");
+        var help=(com.click.ui.overlay.GuidanceSupportView)get("guidanceSupport");
+        set("agentSessionId","other-session");int count=requests.size();
+        var matches=new ArrayList<android.view.View>();help.findViewsWithText(matches,"다시 확인",android.view.View.FIND_VIEWS_WITH_TEXT);
+        matches.get(0).performClick();assertEquals(count,requests.size());assertFalse((boolean)get("resumeAfterPause"));
+    }
+
+    @Test public void helpCannotResumeAStoppedTaskEvenIfTheSessionIdIsUnchanged() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);invoke("showGuidanceSupport");
+        var help=(com.click.ui.overlay.GuidanceSupportView)get("guidanceSupport");
+        ((TaskExecutionController)fieldValue("execution")).stop();int count=requests.size();
+        var matches=new ArrayList<android.view.View>();help.findViewsWithText(matches,"다시 확인",android.view.View.FIND_VIEWS_WITH_TEXT);
+        matches.get(0).performClick();assertEquals(count,requests.size());
+    }
+
     @Test public void otherHelpClearsCurrentTaskAndOpensFreshRequestMenu() throws Exception {
         com.click.data.remote.VoiceQueueGateway queue = mock(com.click.data.remote.VoiceQueueGateway.class);
         ClickOverlayLayout input = mock(ClickOverlayLayout.class);
@@ -281,6 +311,63 @@ public class ClickOverlayServiceExecutionTest {
             assertNull(get("coupangBrowse"));assertTrue(sent.isEmpty());
         }
     }
+    @Test public void automaticCoupangAndGovernmentGuidesEnterTheAppBeforeContactingTheServer() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        try(var nativeEntry=mockStatic(AppEntryController.class,CALLS_REAL_METHODS)) {
+            nativeEntry.when(()->AppEntryController.launch(eq(service),anyString())).thenReturn(AppEntryController.Launch.STARTED);
+            for(boolean government:new boolean[]{false,true}){
+                set("taskFlowView",mock(TaskFlowOverlayView.class));
+                String pkg=government?"kr.go.minwon.m":"com.coupang.mobile";
+                currentScreen=screen;
+                JSONObject data=new JSONObject().put("version","goal-inputs.v1").put("id","entry-prepared")
+                    .put("source_text",government?"정부24 로그인 도와줘":"쿠팡 상품 검색해줘")
+                    .put("status","ready").put("execution_mode",government?"public_guide":"browse")
+                    .put("missing_fields",new JSONArray()).put(government?"public_guide_goal":"browse_goal",
+                        new JSONObject().put("goal_type",government?"gov24.login":"coupang.product.search").put("query","이어폰"));
+                set("goalPreparation",new com.click.domain.goal.GoalPreparationState(data,null,"안내를 시작할까요?"));
+                try(var browse=mockConstruction(com.click.data.remote.CoupangBrowseGateway.class)){
+                    confirm();
+                    assertNotNull(get("appEntry"));assertNull(get("coupangBrowse"));assertTrue(browse.constructed().isEmpty());
+                    nativeEntry.verify(()->AppEntryController.launch(service,pkg));
+                    currentScreen=new ScreenSnapshot(pkg,Instant.now().toString(),1080,2400,List.of(),42);
+                    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(250));
+                    assertNull(get("appEntry"));assertNotNull(get("coupangBrowse"));assertEquals(1,browse.constructed().size());
+                    var payload=org.mockito.ArgumentCaptor.forClass(JSONObject.class);
+                    verify(browse.constructed().get(0)).send(payload.capture(),any());
+                    assertEquals("start",payload.getValue().getString("command"));
+                    assertEquals("entry-prepared",payload.getValue().getString("goal_resolution_id"));
+                    assertFalse(payload.getValue().has("screen"));
+                    service.onStopRequested();
+                }
+            }
+        }
+    }
+
+    @Test public void namedAppsUseTheSameLocalEntryAndStoppingCannotContinueALateLaunch() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        Method enter=ClickOverlayService.class.getDeclaredMethod("enterRequestedApp",RequestedApp.class,Runnable.class);
+        enter.setAccessible(true);Runnable next=mock(Runnable.class);
+        try(var nativeEntry=mockStatic(AppEntryController.class,CALLS_REAL_METHODS)){
+            nativeEntry.when(()->AppEntryController.launch(eq(service),anyString())).thenReturn(AppEntryController.Launch.STARTED);
+            enter.invoke(service,new RequestedApp("com.example.reader","리더"),next);
+            assertNotNull(get("appEntry"));verifyNoInteractions(next);
+            service.onStopRequested();assertNull(get("appEntry"));
+            currentScreen=new ScreenSnapshot("com.example.reader",Instant.now().toString(),1080,2400,List.of(),42);
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6));
+            verifyNoInteractions(next);nativeEntry.verify(()->AppEntryController.launch(service,"com.example.reader"),times(1));
+        }
+    }
+
+    @Test public void manualGuidancePreferenceDoesNotAutomaticallyLaunchAnotherApp() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
+        Method enter=ClickOverlayService.class.getDeclaredMethod("enterRequestedApp",RequestedApp.class,Runnable.class);
+        enter.setAccessible(true);Runnable next=mock(Runnable.class);
+        try(var nativeEntry=mockStatic(AppEntryController.class,CALLS_REAL_METHODS)){
+            enter.invoke(service,new RequestedApp("com.example.reader","리더"),next);
+            verify(next).run();assertNull(get("appEntry"));nativeEntry.verifyNoInteractions();
+        }
+    }
+
     @Test public void replacedEditorCannotTurnALateTranscriptIntoANewTask() throws Exception {
         checkEditorSpeech(true,false);
     }
@@ -2085,6 +2172,37 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("request_result", requests.get(3).commandType());
         assertNull(requests.get(3).userActionEvent);
         assertNull(requests.get(3).userResult);
+    }
+
+    @Test public void changedValueSurvivesSettingsPageNavigationAndPreemptsAppEntryRecovery()throws Exception {
+        screen=fontScreen(2f,1f,1000);currentScreen=screen;prepareGuideResponse();deliver(1,"highlight","drag","right");
+        ScreenSnapshot page=displaySettingsPage();
+        currentScreen=new ScreenSnapshot(page.packageName,Instant.ofEpochMilli(2000).toString(),1080,2400,page.nodes,42,true,1.15f);
+        broadcastCurrentPage();
+        assertTrue(((AdjustmentResultCheck)get("adjustmentResultCheck")).changed("episode","settings.font_size.increase",currentScreen));
+        int observation=requests.size()-1;
+        deliver(observation,"highlight","observe_only",null);
+        AgentTurnContract.Request result=requests.get(requests.size()-1);
+        assertEquals("request_result",result.commandType());
+        assertNull(result.accessibilityTree);assertNull(result.userResult);
+        assertNull(shadowOf(service).getNextStartedActivity());
+    }
+
+    @Test public void persistedRingtoneChangeAsksOnceAndAnUnchangedSelectionDoesNot()throws Exception {
+        android.provider.Settings.System.putString(service.getContentResolver(),android.provider.Settings.System.RINGTONE,"content://test/ringtone/one");
+        prepareGuideResponse();deliver(1,"highlight","tap",null);set("acceptedGoal",catalog.executableGoal("settings.ringtone.change").toTypedGoalJson());
+        ((RingtoneResultCheck)get("ringtoneResultCheck")).bind(RingtoneResultCheck.read(service));
+        currentScreen=environmentScene("com.android.settings","벨소리",new com.click.data.snapshot.NativeWindowContext("SUBPAGE","APPLICATION",false));
+        set("turnInFlight",false);set("firstTurnSent",true);int before=requests.size();
+        assertEquals(false,invokeRingtoneResult());assertEquals(before,requests.size());
+        android.provider.Settings.System.putString(service.getContentResolver(),android.provider.Settings.System.RINGTONE,"content://test/ringtone/two");
+        assertEquals(false,invokeRingtoneResult());shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600));
+        assertEquals(before+1,requests.size());assertEquals("request_result",requests.get(before).commandType());
+        assertNull(requests.get(before).userResult);assertNull(requests.get(before).accessibilityTree);
+        set("turnInFlight",false);assertEquals(false,invokeRingtoneResult());assertEquals(before+1,requests.size());
+    }
+    private boolean invokeRingtoneResult()throws Exception {
+        Method method=ClickOverlayService.class.getDeclaredMethod("requestRingtoneResult",ScreenSnapshot.class);method.setAccessible(true);return (boolean)method.invoke(service,currentScreen);
     }
 
     @Test public void staleRetryLimitStillStopsUnchangedOrOppositeFontChanges() throws Exception {
@@ -4074,6 +4192,13 @@ public class ClickOverlayServiceExecutionTest {
         var confirmed=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify((TaskFlowOverlayView)get("taskFlowView")).appTask(any(),any(),any(),any(),any(),any(),confirmed.capture());
         confirmed.getValue().run();verify(queue,never()).complete(anyString(),any());var receipt=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify(owner).confirmResultOnServer(receipt.capture(),any());
         receipt.getValue().run();verify(queue).complete(eq("finished-request"),any());verify(queue,never()).cancel(anyString(),anyString(),any());
+    }
+    @Test public void explicitAppResultRemainsAvailableWithoutExperienceLearningCapability()throws Exception {
+        prepareResultWithQueue();var owner=mock(AppTaskController.class);set("appGuide",owner);contract.appTaskMemory=false;
+        Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);render.setAccessible(true);
+        render.invoke(service,new JSONObject().put("status","confirm_result").put("message","결과를 확인해 주세요."),null);
+        var confirmed=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify((TaskFlowOverlayView)get("taskFlowView")).appTask(any(),any(),any(),any(),any(),any(),confirmed.capture());
+        assertNotNull(confirmed.getValue());confirmed.getValue().run();verify(owner).confirmResultOnServer(any(),any());
     }
 
     @Test public void queueFailureAfterPanelRemovalRecreatesRetryAndLateCallbackCannotReplaceAnotherTask()throws Exception {

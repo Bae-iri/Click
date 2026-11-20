@@ -7,6 +7,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class AgentTurnGateway {
+    private static final AgentContractLoader CONTRACTS = new AgentContractLoader(
+            () -> AuthGateway.get("/openapi.json", null), () -> java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(System.nanoTime()));
     private final RequestLifecycle lifecycle=new RequestLifecycle();
     public interface Callback {
         void onSuccess(AgentTurnContract.Response response);
@@ -77,7 +79,10 @@ public final class AgentTurnGateway {
     }
 
     private static Throwable classifyFailure(Throwable error){
-        if(error instanceof ApiException && "CONTRACT_MISMATCH".equals(((ApiException)error).conflictCode))return new ExecutionState.ContractMismatch();
+        if(error instanceof ApiException && "CONTRACT_MISMATCH".equals(((ApiException)error).conflictCode)) {
+            CONTRACTS.invalidate();
+            return new ExecutionState.ContractMismatch();
+        }
         return error;
     }
 
@@ -240,15 +245,13 @@ public final class AgentTurnGateway {
     }
 
     private AgentServerContract loadContract() throws Exception {
-        if (contract == null) {
-            HttpResult result = AuthGateway.get("/openapi.json", null);
-            if (result.status < 200 || result.status >= 300) throw new ApiException("GET", "/openapi.json", result);
-            contract = AgentServerContract.fromOpenApi(new org.json.JSONObject(result.body));
-        }
-        if(!contract.executionState || !contract.userDecline) {
+        if(contract != null && (!contract.executionState || !contract.userDecline)) {
             contract=null; // An explicit retry must be able to discover a newly deployed server.
+            CONTRACTS.invalidate();
             throw new ExecutionState.ContractMismatch(ExecutionState.ContractMismatch.SERVER_UPGRADE_REQUIRED);
         }
+        try { contract = CONTRACTS.load(); }
+        catch (Exception error) { contract = null; throw error; }
         return contract;
     }
 

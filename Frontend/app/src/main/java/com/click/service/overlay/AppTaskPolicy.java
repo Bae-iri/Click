@@ -2,6 +2,7 @@ package com.click.service.overlay;
 
 import com.click.data.snapshot.*;
 import org.json.*;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /** Per-step approval never authorizes a stale or sensitive target. */
@@ -27,10 +28,20 @@ public final class AppTaskPolicy {
             ||("scroll_forward".equals(tool)||"scroll_backward".equals(tool))&&node.optBoolean("scrollable");
     }
     public static boolean validExpectation(JSONObject action){
+        if(action==null)return false;
         JSONObject e=action.optJSONObject("expectation");if(e==null)return false;String tool=action.optString("tool"),kind=e.optString("kind");
+        if(!"selection_changed".equals(kind)&&(!e.isNull("checked")||!e.isNull("selected")))return false;
         if("open_app".equals(tool))return "package_opened".equals(kind)&&!action.optString("package").isEmpty()&&action.optString("package").equals(e.optString("package"));
         if("set_text".equals(tool))return "input_present".equals(kind);
-        if("selection_changed".equals(kind))return "tap".equals(tool);
+        if("selection_changed".equals(kind))return "tap".equals(tool)
+            &&(e.isNull("checked")||e.opt("checked") instanceof Boolean)&&(e.isNull("selected")||e.opt("selected") instanceof Boolean);
         return "screen_changed".equals(kind)||"target_visible".equals(kind)&&!e.optString("label").isEmpty();
+    }
+    /** A generic transition or list movement is progress, not a subgoal's requested result. */
+    public static boolean provesSubgoal(JSONObject action){
+        if(!validExpectation(action)||!action.optBoolean("advances_subgoal")||action.optString("tool").startsWith("scroll_"))return false;
+        JSONObject e=action.optJSONObject("expectation");String kind=e.optString("kind");
+        return Set.of("target_visible","input_present","package_opened").contains(kind)
+            ||"selection_changed".equals(kind)&&(!e.isNull("checked")||!e.isNull("selected"));
     }
 }

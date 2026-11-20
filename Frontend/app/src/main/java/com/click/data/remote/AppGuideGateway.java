@@ -23,13 +23,21 @@ public final class AppGuideGateway {
     private final Handler main=new Handler(Looper.getMainLooper());
     public AppGuideGateway(Context context){http=new AuthenticatedHttpClient(context);}
     public void send(JSONObject request,Callback callback) {
+        final long queuedAt=SystemClock.elapsedRealtime();
+        final boolean task="app-task.v2".equals(request.optString("protocol_version"));
         executor.execute(()->{
-            try(RequestBudget budget=new RequestBudget(SystemClock.elapsedRealtime()+15000,lifecycle)) {
-                boolean task="app-task.v2".equals(request.optString("protocol_version"));
+            long startedAt=SystemClock.elapsedRealtime();
+            try(RequestBudget budget=new RequestBudget(queuedAt+15000,lifecycle)) {
+                RequestBudget.remaining(12000);
                 JSONObject result=new JSONObject(http.post(task?TASK_PATH:PATH,request.toString(),12000).body);
                 if(task)validateTask(request,result);else validate(request,result);
                 lifecycle.post(main,()->callback.success(result));
             }catch(Exception error){lifecycle.post(main,()->callback.failure(error));}
+            finally {
+                if(com.click.data.local.CandidateDiagnosticLog.enabled())android.util.Log.i("ClickAppGuide",
+                    "request_timing protocol="+(task?"app-task.v2":"app-guide.v1")+" queue_ms="+(startedAt-queuedAt)
+                    +" work_ms="+(SystemClock.elapsedRealtime()-startedAt)+" total_ms="+(SystemClock.elapsedRealtime()-queuedAt));
+            }
         });
     }
     public static void validate(JSONObject request,JSONObject result)throws Exception {
@@ -54,6 +62,14 @@ public final class AppGuideGateway {
                 ||!request.getJSONObject("state").getString("task_id").equals(result.getString("task_id"))
                 ||!screen.getString("observation_id").equals(result.getString("observation_id"))
                 ||!screen.getString("fingerprint").equals(result.getString("fingerprint")))throw new java.io.IOException("INVALID_APP_TASK_RESPONSE");
+        JSONObject completion=result.optJSONObject("completion"),bound=request.getJSONObject("state").optJSONObject("completion");
+        if(completion!=null){
+            if(!com.click.service.overlay.AppTaskCompletion.valid(completion))throw new java.io.IOException("INVALID_TASK_COMPLETION");
+            java.util.Set<String> packages=new java.util.HashSet<>();packages.add(screen.optString("package"));
+            JSONArray apps=request.optJSONArray("apps");for(int i=0;apps!=null&&i<apps.length();i++)packages.add(apps.getJSONObject(i).optString("package"));
+            JSONArray checks=completion.getJSONArray("checks");for(int i=0;i<checks.length();i++)if(!packages.contains(checks.getJSONObject(i).getString("package"))&&bound==null)throw new java.io.IOException("UNBOUND_TASK_COMPLETION");
+        }
+        if(bound!=null&&(completion==null||!com.click.service.overlay.AppTaskCompletion.key(bound).equals(com.click.service.overlay.AppTaskCompletion.key(completion))))throw new java.io.IOException("CHANGED_TASK_COMPLETION");
         JSONObject action=result.optJSONObject("action");if(action==null)return;
         if(!"proposed".equals(result.getString("status"))||action.optString("id").isEmpty()
                 ||!java.util.Set.of("tap","set_text","scroll_forward","scroll_backward","back","open_app").contains(action.optString("tool"))
@@ -83,7 +99,8 @@ public final class AppGuideGateway {
     public static void validateMemory(JSONObject request,JSONObject result)throws Exception {
         if(!"app-task-memory.v1".equals(result.optString("protocol_version")))throw new java.io.IOException("INVALID_TASK_MEMORY");
         JSONObject envelope=new JSONObject(result.toString()).put("protocol_version","app-task.v2").put("task_id",request.getJSONObject("state").getString("task_id"))
-            .put("status",result.optJSONObject("action")==null?"needs_input":"proposed");
+            .put("status",result.optJSONObject("action")==null?"needs_input":"proposed")
+            .put("completion",request.getJSONObject("state").optJSONObject("completion"));
         validateTask(request,envelope);
         if(result.optBoolean("collection_enabled")&&(!result.optString("consent_id","").matches("[0-9a-f-]{36}")||result.optLong("consent_recorded_at_ms")<=0))throw new java.io.IOException("INVALID_MEMORY_CONSENT");
     }
