@@ -23,6 +23,10 @@ final class NativeScrollExecutor {
     }
 
     boolean swipeHomePage(boolean towardNextPage, String expectedPackage, Integer expectedWindow) {
+        return swipeHomePage(towardNextPage,expectedPackage,expectedWindow,com.click.data.snapshot.NavigationState.Axis.HORIZONTAL);
+    }
+    boolean swipeHomePage(boolean towardNextPage, String expectedPackage, Integer expectedWindow,
+            com.click.data.snapshot.NavigationState.Axis fallbackAxis) {
         AccessibilityNodeInfo root = ForegroundWindowReader.readRoot(service);
         if (root == null) return false;
         String capturedPackage; int capturedWindow;
@@ -59,8 +63,8 @@ final class NativeScrollExecutor {
             String pkg=String.valueOf(fresh.getPackageName());
             if(!pkg.equals(capturedPackage) || fresh.getWindowId()!=capturedWindow)return false;
             com.click.data.snapshot.NavigationState navigation=NativeNavigationReader.read(fresh);
-            axis=navigation==null?com.click.data.snapshot.NavigationState.Axis.HORIZONTAL:navigation.axis;
-            if(axis==com.click.data.snapshot.NavigationState.Axis.UNKNOWN)axis=com.click.data.snapshot.NavigationState.Axis.HORIZONTAL;
+            axis=navigation==null?fallbackAxis:navigation.axis;
+            if(axis==com.click.data.snapshot.NavigationState.Axis.UNKNOWN)axis=fallbackAxis;
             AccessibilityNodeInfo list=navigation==null?fresh:NativeNavigationReader.nodeAt(fresh,navigation.containerId);
             if(list==null)return false;
             try{list.getBoundsInScreen(viewport);}finally{if(list!=fresh)list.recycle();}
@@ -79,6 +83,28 @@ final class NativeScrollExecutor {
         }
         android.accessibilityservice.GestureDescription gesture = new android.accessibilityservice.GestureDescription.Builder()
                 .addStroke(new android.accessibilityservice.GestureDescription.StrokeDescription(path,0L,420L)).build();
+        return service.dispatchGesture(gesture,new GestureResultCallback(){
+            @Override public void onCompleted(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.postDelayed(captureSnapshot,450L);}
+            @Override public void onCancelled(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.post(captureSnapshot);}
+        },handler);
+    }
+
+    /** A home-to-drawer gesture, deliberately independent of the home pager's horizontal axis. */
+    boolean openAppDrawer(String expectedPackage, int expectedWindow) {
+        AccessibilityNodeInfo root=ForegroundWindowReader.readRoot(service);
+        if(root==null)return false;
+        Rect viewport=new Rect();
+        try {
+            if(!com.click.service.overlay.NavigationRecovery.isHome(expectedPackage)
+                    || !expectedPackage.equals(String.valueOf(root.getPackageName())) || root.getWindowId()!=expectedWindow)return false;
+            root.getBoundsInScreen(viewport);
+        } finally { root.recycle(); }
+        if(viewport.isEmpty())return false;
+        float x=uncoveredLine(viewport,true);if(x<0)return false;
+        Path path=new Path();path.moveTo(x,viewport.top+viewport.height()*.82f);
+        path.lineTo(x,viewport.top+viewport.height()*.22f);
+        var gesture=new android.accessibilityservice.GestureDescription.Builder().addStroke(
+                new android.accessibilityservice.GestureDescription.StrokeDescription(path,0L,420L)).build();
         return service.dispatchGesture(gesture,new GestureResultCallback(){
             @Override public void onCompleted(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.postDelayed(captureSnapshot,450L);}
             @Override public void onCancelled(android.accessibilityservice.GestureDescription value){if(handler!=null)handler.post(captureSnapshot);}

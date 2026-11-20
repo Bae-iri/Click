@@ -10,11 +10,14 @@ import com.click.data.snapshot.ScreenSnapshot;
 
 /** One local app launch followed by foreground verification, shared by guidance modes. */
 public final class AppEntryController implements AutoCloseable {
-    public enum Launch { STARTED, UNAVAILABLE, FAILED, LOCKED }
+    public enum Launch { STARTED, SEARCHING, UNAVAILABLE, FAILED, LOCKED }
     public interface Listener {
         boolean canProceed();
         ScreenSnapshot freshScreen();
         Launch launch();
+        default void searchPaused() {}
+        default void searchResumed() {}
+        default boolean searchStep(ScreenSnapshot screen) { return false; }
         void waiting();
         void recovery(String message, Runnable retry);
         void entered();
@@ -25,7 +28,7 @@ public final class AppEntryController implements AutoCloseable {
     private final Listener listener;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable recheck = this::check;
-    private boolean closed, completed, opening, paused;
+    private boolean closed, completed, opening, paused, searching;
     private long deadline, remaining;
 
     public AppEntryController(String packageName, String label, Listener listener) {
@@ -61,14 +64,15 @@ public final class AppEntryController implements AutoCloseable {
         if (!active() || opening) return;
         if (reached(listener.freshScreen())) { complete(); return; }
         Launch result = listener.launch();
-        if (result != Launch.STARTED) {
+        if (result != Launch.STARTED && result != Launch.SEARCHING) {
             recover(result == Launch.LOCKED ? "화면 잠금을 해제한 뒤 다시 시도해 주세요."
                     : result == Launch.UNAVAILABLE ? label + " 앱의 실행 경로를 찾지 못했어요. 앱이 설치되어 있는지 확인해 주세요."
                     : label + " 앱을 열지 못했어요. 다시 시도해 주세요.");
             return;
         }
         opening = true;
-        deadline = SystemClock.uptimeMillis() + TIMEOUT_MS;
+        searching = result == Launch.SEARCHING;
+        deadline = SystemClock.uptimeMillis() + (searching ? 45000L : TIMEOUT_MS);
         listener.waiting();
         check();
     }
@@ -84,7 +88,11 @@ public final class AppEntryController implements AutoCloseable {
         handler.removeCallbacks(recheck);
         if (!active() || !opening) return;
         screenChanged(listener.freshScreen());
-        if (active() && opening) handler.postDelayed(recheck, 250L);
+        if (active() && opening && searching && !listener.searchStep(listener.freshScreen())) {
+            recover(label + " 앱 아이콘을 확인하지 못했어요. 앱을 직접 연 뒤 다시 시도해 주세요.");
+            return;
+        }
+        if (active() && opening) handler.postDelayed(recheck, searching ? 1000L : 250L);
     }
 
     private void complete() {
@@ -102,6 +110,7 @@ public final class AppEntryController implements AutoCloseable {
 
     public void pause() {
         paused = true;
+        listener.searchPaused();
         remaining = Math.max(0, deadline - SystemClock.uptimeMillis());
         handler.removeCallbacks(recheck);
     }
@@ -109,6 +118,7 @@ public final class AppEntryController implements AutoCloseable {
     public void resume() {
         if (closed || completed) return;
         paused = false;
+        listener.searchResumed();
         if (opening) {
             deadline = SystemClock.uptimeMillis() + remaining;
             listener.waiting();
