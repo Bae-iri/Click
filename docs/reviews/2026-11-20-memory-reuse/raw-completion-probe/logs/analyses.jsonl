@@ -1,0 +1,3 @@
+{"arm": "C", "effect_evidence": ["device_verified"], "experience_ref": "6a13d103a6906e20ecb890f8", "goal_ref": "0084892055ff0c0e7f811d29", "route_steps": 0, "status": "ANALYZED", "step_outcomes": ["verified"], "task_id": "settings_display"}
+{"arm": "C", "effect_evidence": ["device_verified"], "experience_ref": "eaa432272e687c8a288a250b", "goal_ref": "4a99c1b7096972fc8ceea437", "route_steps": 1, "status": "ANALYZED", "step_outcomes": ["verified"], "task_id": "settings_notifications"}
+{"arm": "B", "effect_evidence": ["device_verified"], "experience_ref": "2473f7bcb7bd9f6696466eb6", "goal_ref": "4a99c1b7096972fc8ceea437", "route_steps": 1, "status": "ANALYZED", "step_outcomes": ["verified"], "task_id": "settings_notifications"}

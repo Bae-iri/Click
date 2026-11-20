@@ -17,6 +17,25 @@ public class AppTaskObservationTest {
             for(int i=0;i<roles.length;i++)assertEquals(roles[i],nodes.getJSONObject(i).getString("role"));
         }
     }
+    private static AccessibilityNodeSnapshot raw(String pkg,String id,String parent,String text,String resource,String cls,int[] b,boolean clickable){
+        return new AccessibilityNodeSnapshot(id,parent,true,pkg,text,null,resource,cls,null,b,clickable,true,false,false,false,null,42,false,null,null,false,null,false,false);
+    }
+    @Test public void appBarTitleIsExportedAsDestinationTextButBodyTextIsNot()throws Exception {
+        String pkg="com.android.settings";
+        JSONObject out=AppTaskObservation.capture(new ScreenSnapshot(pkg,java.time.Instant.now().toString(),1080,2400,List.of(
+            raw(pkg,"node_0",null,null,pkg+":id/app_bar","android.widget.LinearLayout",new int[]{0,92,1080,317},false),
+            raw(pkg,"node_0_0","node_0",null,pkg+":id/action_bar","android.view.ViewGroup",new int[]{0,92,1080,317},false),
+            raw(pkg,"node_0_0_0","node_0_0","디스플레이",null,"android.widget.TextView",new int[]{158,179,468,274},false),
+            raw(pkg,"node_1",null,"밝기 설명 본문",null,"android.widget.TextView",new int[]{40,400,1000,480},false),
+            raw(pkg,"node_2",null,"화면 모드",pkg+":id/item","android.widget.Button",new int[]{0,500,1080,640},true)),42));
+        JSONArray nodes=out.getJSONArray("nodes");JSONObject title=null;
+        for(int i=0;i<nodes.length();i++)if("디스플레이".equals(nodes.getJSONObject(i).optString("label")))title=nodes.getJSONObject(i);
+        assertNotNull(title);assertEquals("text",title.getString("role"));assertFalse(title.getBoolean("clickable"));
+        assertFalse(out.toString().contains("밝기 설명 본문"));
+        JSONObject completion=new JSONObject().put("checks",new JSONArray().put(new JSONObject().put("package",pkg).put("label","디스플레이")
+            .put("resource","").put("role","text").put("checked",JSONObject.NULL).put("selected",JSONObject.NULL)));
+        assertEquals(AppTaskCompletion.Verdict.MATCHED,AppTaskCompletion.checkForGoal("디스플레이 설정 열어줘",completion,out,null));
+    }
     @Test public void inputContentIsBooleanAndNeverExportsText()throws Exception {
         String pkg="org.example.app",secret="PRIVATE_QUERY_검색어";
         JSONObject out=AppTaskObservation.capture(screen(pkg,node(pkg,"s",secret,"search")));
