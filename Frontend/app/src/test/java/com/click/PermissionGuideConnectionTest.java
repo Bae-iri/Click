@@ -27,7 +27,7 @@ public class PermissionGuideConnectionTest {
              ActivityController<PermissionGuideActivity> controller = Robolectric.buildActivity(PermissionGuideActivity.class, intent)) {
             bridge.when(() -> ClickHost.from(any(PermissionGuideActivity.class))).thenReturn(host);
             controller.setup();
-            for (int i = 0; i < 3; i++) controller.get().findViewById(com.click.designpreview.R.id.guide_action).performClick();
+            for (int i = 0; i < 5; i++) controller.get().findViewById(com.click.designpreview.R.id.guide_action).performClick();
             controller.recreate();
             assertFalse(controller.get().isFinishing());
             when(host.accessibilityConnected()).thenReturn(true);
@@ -41,14 +41,14 @@ public class PermissionGuideConnectionTest {
         try (ActivityController<PermissionGuideActivity> controller = Robolectric.buildActivity(PermissionGuideActivity.class).setup()) {
             PermissionGuideActivity activity = controller.get();
             android.view.View screenshot = activity.findViewById(com.click.designpreview.R.id.guide_screenshot);
-            assertEquals("위쪽 스위치를 켜주세요", ((android.widget.TextView) activity.findViewById(
+            assertEquals("‘설치된 앱’을 눌러주세요", ((android.widget.TextView) activity.findViewById(
                     com.click.designpreview.R.id.guide_card_title)).getText().toString());
             assertFalse(screenshot.isClickable());
             assertFalse(screenshot.performClick());
             android.app.Dialog dialog = org.robolectric.shadows.ShadowDialog.getLatestDialog();
             assertTrue(dialog == null || !dialog.isShowing());
             assertNull(activity.findViewById(com.click.designpreview.R.id.guide_step_counter));
-            assertEquals("접근성 안내, 3단계 중 1단계", activity.findViewById(
+            assertEquals("접근성 안내, 5단계 중 1단계", activity.findViewById(
                     com.click.designpreview.R.id.guide_progress_bars).getContentDescription());
             assertFalse(activity.isFinishing());
         }
@@ -61,7 +61,7 @@ public class PermissionGuideConnectionTest {
             PermissionGuideActivity activity = controller.get();
             bridge.when(() -> ClickHost.from(activity)).thenReturn(host);
             controller.setup();
-            for (int i = 0; i < 3; i++) activity.findViewById(com.click.designpreview.R.id.guide_action).performClick();
+            for (int i = 0; i < 5; i++) activity.findViewById(com.click.designpreview.R.id.guide_action).performClick();
             verify(host).openAccessibilitySettings(activity);
             controller.pause().resume();
             assertFalse(activity.isFinishing());
@@ -81,7 +81,7 @@ public class PermissionGuideConnectionTest {
             PermissionGuideActivity activity = controller.get();
             bridge.when(() -> ClickHost.from(activity)).thenReturn(host);
             controller.setup();
-            for (int i = 0; i < 3; i++) activity.findViewById(com.click.designpreview.R.id.guide_action).performClick();
+            for (int i = 0; i < 5; i++) activity.findViewById(com.click.designpreview.R.id.guide_action).performClick();
             controller.pause().resume();
             org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500));
             assertFalse(activity.isFinishing());
@@ -107,7 +107,7 @@ public class PermissionGuideConnectionTest {
                  ActivityController<PermissionGuideActivity> controller = Robolectric.buildActivity(PermissionGuideActivity.class)) {
                 bridge.when(() -> ClickHost.from(any(PermissionGuideActivity.class))).thenReturn(host);
                 controller.setup();
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 5; i++)
                     controller.get().findViewById(com.click.designpreview.R.id.guide_action).performClick();
                 controller.recreate();
                 assertFalse(controller.get().isFinishing());

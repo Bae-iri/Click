@@ -2,10 +2,8 @@ package com.click;
 
 import android.app.Activity;
 import android.app.Application;
-import android.content.ComponentName;
 import android.content.Intent;
 import android.provider.Settings;
-import android.os.Build;
 import android.util.Log;
 import com.click.core.permission.PermissionStatus;
 import com.click.data.local.AccessibilityOnboardingState;
@@ -127,7 +125,9 @@ public class ClickApplication extends Application implements ClickHost {
     }
 
     @Override public void openHome(Activity activity) {
-        activity.startActivity(new Intent(activity, HomeActivity.class)
+        activity.startActivity(new Intent(activity, PermissionStatus.areRequiredPermissionsGranted(this)
+                    ? HomeActivity.class : RequiredPermissionsActivity.class)
+                .putExtra(RequiredPermissionsActivity.EXTRA_DESTINATION, "home")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
     }
 
@@ -170,40 +170,18 @@ public class ClickApplication extends Application implements ClickHost {
                 com.click.designpreview.PermissionGuideActivity.EXTRA_ONBOARDING, false)) {
             onboarding.beginOnboarding();
         } else onboarding.beginReview(settings);
-        String service = new ComponentName(this, ClickAccessibilityService.class).flattenToString();
-        // One UI owns its service details screen in a separate Settings package.
-        // The AOSP action can open only the accessibility homepage on these devices.
-        if ("samsung".equalsIgnoreCase(Build.MANUFACTURER)) {
-            Intent samsung = new Intent("com.samsung.accessibility.ACCESSIBILITY_DETAILS_SETTINGS")
-                    .setPackage("com.samsung.accessibility")
-                    .putExtra(Intent.EXTRA_COMPONENT_NAME, service);
-            if (tryOpenAccessibilityDetails(activity, samsung)) return;
-        }
-        // Neither details action is a public SDK guarantee.
-        Intent intent = new Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
-                .putExtra(Intent.EXTRA_COMPONENT_NAME, service);
-        if (!tryOpenAccessibilityDetails(activity, intent)) {
-            activity.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
-        }
-    }
-
-    private boolean tryOpenAccessibilityDetails(Activity activity, Intent intent) {
-        try {
-            activity.startActivity(intent);
-            return true;
-        } catch (android.content.ActivityNotFoundException | SecurityException unavailable) {
-            Log.w("ClickAccessibility", "Settings route unavailable: " + intent.getAction(), unavailable);
-            return false;
-        }
+        activity.startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
     }
 
     @Override public void openPostPermissionTutorial(Activity activity) {
-        activity.startActivity(new Intent(activity, TutorialReadyActivity.class)
+        activity.startActivity(new Intent(activity, RequiredPermissionsActivity.class)
+                .putExtra(RequiredPermissionsActivity.EXTRA_DESTINATION, "tutorial")
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
     }
 
     @Override public void returnToSettingsAfterAccessibility(Activity activity) {
-        activity.startActivity(new Intent(activity, MenuActivity.class)
+        activity.startActivity(new Intent(activity, RequiredPermissionsActivity.class)
+                .putExtra(RequiredPermissionsActivity.EXTRA_DESTINATION, "settings")
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
     }
 
@@ -212,7 +190,8 @@ public class ClickApplication extends Application implements ClickHost {
     }
 
     @Override public void returnToHomeAfterAccessibility(Activity activity) {
-        activity.startActivity(new Intent(activity, HomeActivity.class)
+        activity.startActivity(new Intent(activity, RequiredPermissionsActivity.class)
+                .putExtra(RequiredPermissionsActivity.EXTRA_DESTINATION, "home")
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
     }
 

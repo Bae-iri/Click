@@ -23,6 +23,8 @@ import static org.junit.Assert.*;
 public class TutorialReadyFlowTest {
     @Test public void welcomeWaitsForStartEvenAfterRecreation() throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
+        org.junit.Assume.assumeTrue("Grant all three required permissions before testing the welcome screen",
+                com.click.core.permission.PermissionStatus.areRequiredPermissionsGranted(instrumentation.getTargetContext()));
         Instrumentation.ActivityMonitor tutorial = instrumentation.addMonitor(
                 TutorialActivity.class.getName(), null, false);
         Activity opened = null;

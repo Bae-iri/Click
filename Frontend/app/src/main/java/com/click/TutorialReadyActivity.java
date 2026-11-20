@@ -25,6 +25,12 @@ public final class TutorialReadyActivity extends AppCompatActivity {
     private com.click.designpreview.TutorialNarrator narrator;
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (!com.click.core.permission.PermissionStatus.areRequiredPermissionsGranted(this)) {
+            startActivity(new Intent(this, RequiredPermissionsActivity.class)
+                    .putExtra(RequiredPermissionsActivity.EXTRA_DESTINATION, "tutorial"));
+            finish();
+            return;
+        }
         narrator = new com.click.designpreview.TutorialNarrator(this);
         narrator.speak("이제 클릭이 도와드릴 수 있어요! 사용법 보기를 누르면 그림과 설명으로 알려드릴게요.");
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
@@ -106,13 +112,19 @@ public final class TutorialReadyActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume();
+        if (isFinishing()) return;
+        if (!com.click.core.permission.PermissionStatus.areRequiredPermissionsGranted(this)) {
+            startActivity(new Intent(this, RequiredPermissionsActivity.class)
+                    .putExtra(RequiredPermissionsActivity.EXTRA_DESTINATION, "tutorial"));
+            finish(); return;
+        }
         com.click.data.local.AccessibilityOnboardingState onboarding =
                 new com.click.data.local.AccessibilityOnboardingState(this);
         if (onboarding.isPending() && onboarding.opensTutorial()) onboarding.markTutorialLaunched();
         narrator.resume();
     }
-    @Override protected void onPause() { narrator.pause(); super.onPause(); }
-    @Override protected void onDestroy() { narrator.close(); super.onDestroy(); }
+    @Override protected void onPause() { if (narrator != null) narrator.pause(); super.onPause(); }
+    @Override protected void onDestroy() { if (narrator != null) narrator.close(); super.onDestroy(); }
 
     private LinearLayout vertical() {
         LinearLayout view = new LinearLayout(this);
