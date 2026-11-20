@@ -183,7 +183,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int homeSearchToken;
     private long adjustmentSettlingUntil;
     private String pendingActionType;
-    private long automaticTapDispatchedAt;
+    private long automaticTapDispatchedAt = -2500L;
     private long pendingActionOccurredAtMs;
     private Runnable missingScreenRetry;
     private Runnable actionEvidenceWait;
@@ -4673,7 +4673,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 : ClickAccessibilityService.performGuidedSlider(screen,command.targetNodeId,command.targetBounds,direction,
                         SettingsAdjustment.from(execution.acceptedGoal()).setting,fraction);
         execution.actionDispatched(performed);
+        android.util.Log.i("ClickAutomation","native_dispatch action="+command.actionType+" performed="+performed);
+        if (performed && tap) automaticTapDispatchedAt = SystemClock.uptimeMillis();
         if (!performed) {
+            try { deviceJournal.notDispatched(execution.sessionId(),execution.episodeId(),command.guideCommandId); }
+            catch(java.io.IOException failed) { automationNeedsHelp("조작 기록을 저장하지 못했어요. 직접 진행해 주세요.");return; }
             automationGuard.finish(command.guideCommandId);
             automationNeedsHelp("자동 조작을 실행하지 못했어요. 표시된 곳을 직접 조작해 주세요.");
             return;
@@ -4686,11 +4690,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             speechHandler.postDelayed(() -> {
                 if (generation != execution.generation() || execution.paused() || execution.pendingControl() != null
                         || !automationGuard.awaiting(command.guideCommandId)) return;
-        android.util.Log.i("ClickAutomation","native_dispatch action="+command.actionType+" performed="+performed);
-        if (performed && tap) automaticTapDispatchedAt = SystemClock.uptimeMillis();
                 ScreenSnapshot after = ClickAccessibilityService.freshSnapshot();
-            try { deviceJournal.notDispatched(execution.sessionId(),execution.episodeId(),command.guideCommandId); }
-            catch(java.io.IOException failed) { automationNeedsHelp("조작 기록을 저장하지 못했어요. 직접 진행해 주세요.");return; }
                 if (after != null && !after.nodes.isEmpty()) automationGuard.observe(after.contentFingerprint());
                 if (!automationGuard.awaiting(command.guideCommandId)) {
                     execution.requestObservation();
@@ -5033,6 +5033,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String setting=slots==null?null:slots.optString("setting",null);
         ScreenSnapshot before=observedPageScreen!=null?observedPageScreen:lastSubmittedScreen;
         SettingsPageNavigation.Change change=pages.changed(before,current,setting);
+        // Preserve the dispatched tap before pageChanged/clear can retire its binding.
+        if(change!=SettingsPageNavigation.Change.NONE && pendingVerifiedAction==null
+                && actionTracker.hasTapBinding()
+                && SystemClock.uptimeMillis()-automaticTapDispatchedAt<2500L){
+            awaitNativeActionEvidence(current);return true;
+        }
         if(change==SettingsPageNavigation.Change.NONE || !execution.pageChanged())return false;
         JSONObject navigationEvent=change==SettingsPageNavigation.Change.ON_ROUTE && pendingVerifiedAction!=null
                 && AgentActionEvents.TAP_COMPLETED.equals(pendingVerifiedAction.optString("action_type"))
@@ -5047,11 +5053,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         lastGuideCommandId=lastTargetNodeId=null;lastTargetBounds=null;
         staleGuideDrops=freshObservationRetries=0;assistedRecoveryGeneration=-1;
         scrollSearchGeneration=-1;homeSearchToken++;
-        // The native click callback follows the window change. Keep its exact guide
-        // binding until that callback can attach the observed tap to the new page.
-        if(change!=SettingsPageNavigation.Change.NONE && pendingVerifiedAction==null
-                && actionTracker.hasTapBinding()
-                && SystemClock.uptimeMillis()-automaticTapDispatchedAt<2500L)return false;
         pendingVerifiedAction=navigationEvent;
         if(navigationEvent==null && !AgentActionEvents.BACK_NAVIGATED.equals(pendingActionType) && !AgentActionEvents.HOME_NAVIGATED.equals(pendingActionType)) {
             pendingActionType=AgentActionEvents.MANUAL_OVERRIDE;
