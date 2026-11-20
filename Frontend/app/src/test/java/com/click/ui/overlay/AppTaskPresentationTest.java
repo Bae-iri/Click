@@ -31,6 +31,14 @@ public class AppTaskPresentationTest {
             .put("action",new JSONObject().put("tool","tap")),v->{},()->{},()->{},()->{},()->{});
         assertNotNull(find(panel,"유튜브에서 구독 탭 열어줘"));assertNotNull(find(panel,"클릭이 대신 누르기"));
     }
+    @Test public void receivedRequestStaysVisibleWhileOpeningAppsAndGuidingSteps()throws Exception {
+        var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
+        panel.setRequestSummary("정부24 열어줘");
+        panel.waitingProgress("정부24 앱을 열고 있어요.");
+        assertNotNull(find(panel,"정부24 열어줘"));
+        panel.progress("정부24 열어줘",null,"표시한 버튼을 눌러주세요.",false);
+        assertNotNull(find(panel,"정부24 열어줘"));
+    }
     @Test public void searchTextIsReviewableAndRecoveryChoicesStayFolded()throws Exception {
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
         panel.appTask(new JSONObject().put("status","proposed").put("message","검색어를 확인해 주세요.").put("execute_allowed",true).put("available_tools",new JSONArray().put("back")).put("suggested_query","물").put("action",new JSONObject().put("tool","set_text")),v->{},()->{},()->{},()->{},()->{});
