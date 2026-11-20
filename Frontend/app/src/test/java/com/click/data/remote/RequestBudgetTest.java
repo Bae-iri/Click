@@ -53,4 +53,27 @@ public class RequestBudgetTest {
    verify(connection).setRequestProperty("X-Click-Turn-Budget-Ms","20000");
   }
  }
+ @Test public void longGovernmentReadIsNotCutOffByTheDefaultWatchdog() throws Exception {
+  var connection=mock(HttpURLConnection.class);
+  when(connection.getURL()).thenReturn(new URL("https://example.test/api/v1/public-guide/commands"));
+  when(connection.getConnectTimeout()).thenReturn(6000);
+  when(connection.getReadTimeout()).thenReturn(RequestBudget.PUBLIC_GUIDE_READ_MS);
+  try(var budget=new RequestBudget(SystemClock.elapsedRealtime()+RequestBudget.PUBLIC_GUIDE_TOTAL_MS)) {
+   RequestBudget.configure(connection,RequestBudget.PUBLIC_GUIDE_READ_MS);
+   var watch=RequestBudget.watch(connection);
+   try {assertTrue(watch.getDelay(java.util.concurrent.TimeUnit.MILLISECONDS)>44000);}
+   finally {watch.cancel(false);}
+   verify(connection).setReadTimeout(45000);
+   shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(50000));
+   assertEquals(10000,RequestBudget.remaining(45000));
+  }
+ }
+ @Test public void nestedCallsCannotExtendTheOriginalDeadline() throws Exception {
+  try(var outer=new RequestBudget(SystemClock.elapsedRealtime()+1000)) {
+   try(var inner=new RequestBudget(SystemClock.elapsedRealtime()+90000)) {
+    assertEquals(1000,RequestBudget.remaining(45000));
+   }
+   assertEquals(1000,RequestBudget.remaining(45000));
+  }
+ }
 }

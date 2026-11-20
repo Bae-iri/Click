@@ -70,7 +70,7 @@ def run(service, python, env_file, port):
             if stopping:
                 return True
             try:
-                return json.loads(stop_file.read_text())['run_id'] == state['run_id']
+                return json.loads(stop_file.read_text(encoding="utf-8"))['run_id'] == state['run_id']
             except (OSError, ValueError, KeyError):
                 return False
         child = None
@@ -114,7 +114,7 @@ def main():
     args = parser.parse_args()
     try:
         if args.command == 'stop':
-            state = json.loads((STATE / f'{args.service}.json').read_text())
+            state = json.loads((STATE / f'{args.service}.json').read_text(encoding="utf-8"))
             write_state(STATE / f'stop-{args.service}.json', {'run_id': state['run_id']})
             print('Stop requested for this supervisor run only.')
         else:

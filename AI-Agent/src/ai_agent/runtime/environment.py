@@ -6,7 +6,7 @@ import json
 
 @lru_cache(maxsize=1)
 def policy():
-    value=json.loads((Path(__file__).resolve().parents[3]/'goal_catalog/screen_environment_policy.json').read_text())
+    value=json.loads((Path(__file__).resolve().parents[3]/'goal_catalog/screen_environment_policy.json').read_text(encoding="utf-8"))
     if value['schema_version']!='screen-environment.v1':raise ValueError('Unsupported environment policy')
     return value
 

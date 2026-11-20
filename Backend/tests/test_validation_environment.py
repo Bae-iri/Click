@@ -21,7 +21,8 @@ from tests.test_runtime_recovery_events import follow
 def paired(monkeypatch, tmp_path):
     instance = tmp_path / 'validation'
     source = tmp_path / '.env'
-    source.write_text('DATABASE_URL=sqlite:///must-not-create.db\nTYPESAFE_API_KEY=PRIVATE_API_KEY\n', encoding='utf-8')
+    source.write_text('DATABASE_URL=sqlite:///must-not-create.db\nTYPESAFE_API_KEY=PRIVATE_API_KEY\n'
+        'AI1_UI_SELECTOR_PROVIDER=rules\nGOAL_CLASSIFIER_PROVIDER=self_hosted\n', encoding='utf-8')
     monkeypatch.setattr(validation, 'INSTANCE', instance)
     monkeypatch.delenv('DATABASE_URL', raising=False)
     validation.prepare(source, 8001)

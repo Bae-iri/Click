@@ -25,6 +25,31 @@ class Planner:
         return {'subgoals': [t['id'] for t in kwargs['targets'] if t['id'] not in kwargs['completed']]}, {'called': True, 'status': 'SUCCESS'}
 
 
+def test_all_existing_settings_graphs_have_reviewed_completion_vocabulary():
+    from app.task_graphs import approved_graphs
+    from app.services.settings_planner import completion_key, supports_graph
+    for graph in approved_graphs().values():
+        if not supports_graph(graph):
+            continue
+        targets, bindings = catalogue(graph)
+        assert completion_key(graph) in bindings, graph.definition.goal_type
+        assert all(edge in {e.transition_id for e in graph.transitions} for edges in bindings.values() for edge in edges)
+
+
+def test_gemini_plans_wallpaper_navigation_and_manual_handoff():
+    from app.task_graphs import approved_graphs
+    graph = approved_graphs()['settings.wallpaper.change']
+    targets, _ = catalogue(graph)
+    steps = [t['id'] for t in targets]
+    def sender(payload, **kwargs):
+        assert 'end with complete_setting' in payload['contents'][0]['parts'][0]['text']
+        return httpx.Response(200, json={'candidates':[{'finishReason':'STOP','content':{'parts':[{'text':json.dumps({'subgoals':steps})}]}}]})
+    plan, diagnostic = GeminiSettingsPlanner(sender).plan(goal=graph.definition.goal_type,
+        targets=targets, current_page='S1_SETTINGS_HOME', visible_targets=[], completed=[], failures=[])
+    assert plan['subgoals'][-1] == 'complete_setting'
+    assert diagnostic['status'] == 'SUCCESS'
+
+
 @pytest.fixture(autouse=True)
 def config(monkeypatch):
     monkeypatch.setenv('TYPESAFE_API_KEY', 'test-only-key')
