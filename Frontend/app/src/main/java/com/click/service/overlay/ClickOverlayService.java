@@ -708,7 +708,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             @Override public void collapse() { collapseTaskFlow(); }
             @Override public void expand() { onOpenRequested(); }
             @Override public void openInput() { if (overlayView != null) overlayView.openVoice(); }
-            @Override public void assistance(){showGuidanceSupport();}
             @Override public void chooseGoal(JSONObject goal) { chooseResolvedGoal(goal); }
             @Override public void clarify(String choice) { resolveGoal(initialGoal, choice); }
             @Override public void rephrase(String text) { voiceReplyEnabled = true; initialGoal = text; resolveGoal(text, null); }

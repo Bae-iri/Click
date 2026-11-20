@@ -76,7 +76,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         default void collapse() {}
         default void expand() {}
         default void openInput() {}
-        default void assistance() {}
     }
     private final Listener listener;
     private final TextView queuedRequests;
@@ -126,7 +125,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private String requestSummary;
     private String preparationMessage;
     private String guidanceEvidence=GuidanceExplanation.DEFAULT;
-    private Button assistanceEntry;
     private TextView evidenceView;
     private boolean detailedExplanations;
     public String guidanceEvidence(){return guidanceEvidence;}
@@ -222,8 +220,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         stopParams.leftMargin = dp(6);
         controls.addView(stop, stopParams);
         addView(controls);
-        assistanceEntry=quietButton("이유·다시 확인",listener::assistance);
-        assistanceEntry.setTextSize(ClickTextScale.size(context,13));assistanceEntry.setVisibility(GONE);addView(assistanceEntry);
     }
 
     // Background status callbacks must never add a banner to a floating guide.
@@ -266,7 +262,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public boolean hasOpenedTargetHelp() { return isTargetHelp() && targetHelpOpened; }
     private View[] expandedSections() {
         return new View[]{header, scroll, controls, divider, reviewConfirm, recoveryActions,
-                reviewNavigation, assistanceEntry};
+                reviewNavigation};
     }
     // [UI 수정] 줄이기 상태의 표시 항목/배경. 말풍선 꼬리 모양은 CompactBubbleBackground에서 그린다.
     public void setMinimizedProgress(boolean minimized) {
@@ -390,7 +386,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         reviewScreen = false;
         reviewStep = 0;
         setMinimizedProgress(false);
-        if(assistanceEntry!=null)assistanceEntry.setVisibility(GONE);
         updateBubblePadding();
         reviewChoices = null; reviewEditor = null; reviewRequestInput = null; requestEditorToggle = null;
         reviewSummaryCard = reviewSummarySection = null;
@@ -478,7 +473,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         clear(getResources().getConfiguration().fontScale >= 1.4f
                 ? "작업을 마치지\n못했어요" : "작업을 마치지 못했어요");
         narrationMessage = message;
-        showFailureAssistance(message);
+        setGuidanceEvidence(message);
         controls.setVisibility(GONE);
         divider.setVisibility(GONE);
         recoveryActions.addView(primaryButton("끝내기", () -> listener.control("cancel_task")), spaced(0));
@@ -932,7 +927,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     public void queueEndRetry(Runnable retry){
         clear("종료하지 못했어요");
-        showFailureAssistance("안내 종료 결과를 확인하지 못했어요.");
+        setGuidanceEvidence("안내 종료 결과를 확인하지 못했어요.");
         recoveryActions.addView(primaryButton("다시 시도",retry),spaced(8));
         recoveryActions.setVisibility(VISIBLE);
     }
@@ -969,7 +964,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             actions.addView(secondaryButton("아직 안 됐어요",hasTools?toolsCurrent:refreshCurrent),spaced(8));
             actions.addView(quietButton("안내만 끝내기",finishCurrent),spaced(8));return;
         }
-        if("unavailable".equals(state))showFailureAssistance(result.optString("message"));
+        if("unavailable".equals(state))setGuidanceEvidence(result.optString("message"));
         JSONObject action="proposed".equals(state)?result.optJSONObject("action"):null;
         if(action!=null){
             String tool=action.optString("tool"),label=result.optString("target_label","");
@@ -1043,7 +1038,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public void publicGuideRecovery(String message, Runnable refresh, Runnable openApp) {
         progress(null, null, message, false);
-        showFailureAssistance(message);
+        setGuidanceEvidence(message);
         recoveryActions.addView(primaryButton("화면 다시 읽기", refresh), spaced(0));
         recoveryActions.addView(secondaryButton("정부24 열기", openApp), spaced(8));
         recoveryActions.setVisibility(VISIBLE);
@@ -1429,14 +1424,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
         progress(null, null, message, false);
     }
     /** Authored, cause-specific help. Diagnostic strings never become user instructions. */
-    private void showFailureAssistance(String message) {
-        setGuidanceEvidence(message);
-        assistanceEntry.setVisibility(VISIBLE);
-    }
 
     public void failureRecovery(String title,String message,String actionLabel,Runnable action) {
         clear(title);
-        showFailureAssistance(message);
+        setGuidanceEvidence(message);
         narrationMessage=message;
         compactSummary=title;
         content.addView(text(message,17),spaced(8));
@@ -1451,7 +1442,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public void observationRecovery(String goal, String message, Runnable retry) {
         clear("");
-        showFailureAssistance(message);
+        setGuidanceEvidence(message);
         compactSummary = "도움이 필요해요!";
         narrationMessage = "‘다시 시도하기’를 눌러 안내를 이어가 주세요.";
         content.addView(text(narrationMessage, 17), spaced(8));
@@ -1460,7 +1451,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     public void selectionRecovery(String message, String requiredChange, Runnable retry) {
         clear("");
-        showFailureAssistance(message);
+        setGuidanceEvidence(message);
         compactSummary = "도움이 필요해요!";
         narrationMessage = message;
         content.addView(text(message, 17), spaced(8));
@@ -1473,7 +1464,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     public void recoveryApology(Runnable retry) {
         clear("");
-        showFailureAssistance(HELP_EXPLANATION);
+        setGuidanceEvidence(HELP_EXPLANATION);
         compactSummary = "죄송합니다.";
         narrationMessage = HELP_EXPLANATION;
         addFailureClue(HELP_EXPLANATION);
@@ -1489,7 +1480,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
 
     public void accessibilityRecovery(String message, Runnable guide, Runnable retry) {
         clear("접근성 연결을 확인해 주세요");
-        showFailureAssistance(message);
+        setGuidanceEvidence(message);
         narrationMessage = message;
         content.addView(text(message, 16), spaced(8));
         recoveryActions.setVisibility(VISIBLE);
