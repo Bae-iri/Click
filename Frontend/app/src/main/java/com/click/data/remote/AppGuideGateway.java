@@ -23,13 +23,21 @@ public final class AppGuideGateway {
     private final Handler main=new Handler(Looper.getMainLooper());
     public AppGuideGateway(Context context){http=new AuthenticatedHttpClient(context);}
     public void send(JSONObject request,Callback callback) {
+        final long queuedAt=SystemClock.elapsedRealtime();
+        final boolean task="app-task.v2".equals(request.optString("protocol_version"));
         executor.execute(()->{
-            try(RequestBudget budget=new RequestBudget(SystemClock.elapsedRealtime()+15000,lifecycle)) {
-                boolean task="app-task.v2".equals(request.optString("protocol_version"));
+            long startedAt=SystemClock.elapsedRealtime();
+            try(RequestBudget budget=new RequestBudget(queuedAt+15000,lifecycle)) {
+                RequestBudget.remaining(12000);
                 JSONObject result=new JSONObject(http.post(task?TASK_PATH:PATH,request.toString(),12000).body);
                 if(task)validateTask(request,result);else validate(request,result);
                 lifecycle.post(main,()->callback.success(result));
             }catch(Exception error){lifecycle.post(main,()->callback.failure(error));}
+            finally {
+                if(com.click.data.local.CandidateDiagnosticLog.enabled())android.util.Log.i("ClickAppGuide",
+                    "request_timing protocol="+(task?"app-task.v2":"app-guide.v1")+" queue_ms="+(startedAt-queuedAt)
+                    +" work_ms="+(SystemClock.elapsedRealtime()-startedAt)+" total_ms="+(SystemClock.elapsedRealtime()-queuedAt));
+            }
         });
     }
     public static void validate(JSONObject request,JSONObject result)throws Exception {

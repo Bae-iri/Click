@@ -148,6 +148,36 @@ public class ClickOverlayServiceExecutionTest {
         });
     }
 
+    @Test public void helpRetrySurvivesItsOwnPauseAndActuallySendsResume() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        int before=(int)get("executionGeneration");
+        invoke("showGuidanceSupport");
+        assertTrue((int)get("executionGeneration")>before);
+        var help=(com.click.ui.overlay.GuidanceSupportView)get("guidanceSupport");assertNotNull(help);
+        var matches=new ArrayList<android.view.View>();help.findViewsWithText(matches,"다시 확인",android.view.View.FIND_VIEWS_WITH_TEXT);
+        assertEquals(1,matches.size());assertTrue(matches.get(0).isEnabled());matches.get(0).performClick();
+        assertNull(get("guidanceSupport"));assertEquals("resume_task",get("pendingControl"));
+        assertEquals("pause_task",requests.get(2).commandType());
+        callbacks.get(2).onSuccess(sessionState(8,"episode","PAUSED","MVP-01",false));
+        assertEquals("resume_task",requests.get(3).commandType());
+    }
+
+    @Test public void helpFromAReplacedSessionCannotResumeTheNewTask() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);invoke("showGuidanceSupport");
+        var help=(com.click.ui.overlay.GuidanceSupportView)get("guidanceSupport");
+        set("agentSessionId","other-session");int count=requests.size();
+        var matches=new ArrayList<android.view.View>();help.findViewsWithText(matches,"다시 확인",android.view.View.FIND_VIEWS_WITH_TEXT);
+        matches.get(0).performClick();assertEquals(count,requests.size());assertFalse((boolean)get("resumeAfterPause"));
+    }
+
+    @Test public void helpCannotResumeAStoppedTaskEvenIfTheSessionIdIsUnchanged() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);invoke("showGuidanceSupport");
+        var help=(com.click.ui.overlay.GuidanceSupportView)get("guidanceSupport");
+        ((TaskExecutionController)fieldValue("execution")).stop();int count=requests.size();
+        var matches=new ArrayList<android.view.View>();help.findViewsWithText(matches,"다시 확인",android.view.View.FIND_VIEWS_WITH_TEXT);
+        matches.get(0).performClick();assertEquals(count,requests.size());
+    }
+
     @Test public void otherHelpClearsCurrentTaskAndOpensFreshRequestMenu() throws Exception {
         com.click.data.remote.VoiceQueueGateway queue = mock(com.click.data.remote.VoiceQueueGateway.class);
         ClickOverlayLayout input = mock(ClickOverlayLayout.class);

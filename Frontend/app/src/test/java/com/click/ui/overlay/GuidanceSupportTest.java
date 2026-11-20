@@ -21,11 +21,44 @@ public class GuidanceSupportTest {
         var callback=mock(GuidanceSupportView.Listener.class);
         var panel=new GuidanceSupportView(RuntimeEnvironment.getApplication(),"글씨 키워줘",GuidanceExplanation.DEFAULT,true,false,false,false,callback);
         assertFalse(visible(find(panel,"천천히 읽어주세요")));
-        assertFalse(find(panel,"수정한 요청 확인").isEnabled());
+        assertTrue(find(panel,"수정한 요청 보내기").isEnabled());
         find(panel,"요청 수정").performClick();find(panel,"다음 작업으로 추가").performClick();
         verify(callback).enqueue("글씨 키워줘");verify(callback,never()).revise(anyString());
+        find(panel,"수정한 요청 보내기").performClick();verify(callback,times(2)).enqueue("글씨 키워줘");
         find(panel,"안내 평가·방식 바꾸기").performClick();assertTrue(visible(find(panel,"천천히 읽어주세요")));
         find(panel,"천천히 읽어주세요").performClick();verify(callback).feedback(com.click.data.local.GuidancePreferences.Feedback.SLOWER,false);
+    }
+    @Test public void normalProgressQuestionsPauseAndWaitingDoNotOfferFailureHelp() throws Exception {
+        var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
+        panel.progress(null,null,"디스플레이를 눌러주세요.",false);assertFalse(visible(find(panel,"이유·다시 확인")));
+        panel.paused();assertFalse(visible(find(panel,"이유·다시 확인")));
+        panel.waiting("요청 확인 중");shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofSeconds(5));
+        assertFalse(visible(find(panel,"이유·다시 확인")));
+        panel.publicGuide("어떤 인증서를 쓸까요?",false,new org.json.JSONObject().put("field","login_choice").put("label","인증서"),false,(s,b)->{},()->{});
+        assertFalse(visible(find(panel,"이유·다시 확인")));
+        panel.appTask(new org.json.JSONObject().put("status","needs_input").put("message","원하는 앱을 열어주세요."),s->{},()->{},()->{},()->{},()->{});
+        assertFalse(visible(find(panel,"이유·다시 확인")));
+    }
+    @Test public void failureControlsRemainClickableAndCollapseCannotLeaveOnlyHelpVisible() {
+        var listener=mock(TaskFlowOverlayView.Listener.class);var retry=mock(Runnable.class);
+        var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),listener);
+        panel.observationRecovery("화면을 읽지 못했어요.",retry);
+        assertTrue(visible(find(panel,"이유·다시 확인")));assertTrue(find(panel,"다시 시도하기").isEnabled());
+        find(panel,"다시 시도하기").performClick();verify(retry).run();
+        panel.setMinimizedProgress(true);
+        assertFalse(visible(find(panel,"이유·다시 확인")));assertFalse(visible(find(panel,"다시 시도하기")));
+        panel.setMinimizedProgress(false);
+        assertTrue(visible(find(panel,"다시 시도하기")));assertTrue(visible(find(panel,"이유·다시 확인")));
+        find(panel,"이유·다시 확인").performClick();verify(listener).assistance();
+        panel.setMinimizedProgress(true);panel.progress(null,null,"화면을 확인했어요.",false);
+        assertFalse(visible(find(panel,"이유·다시 확인")));
+    }
+    @Test public void finishedHelpHidesRetryAndStillAllowsAnExplicitNewRequest() {
+        var listener=mock(GuidanceSupportView.Listener.class);
+        var panel=new GuidanceSupportView(RuntimeEnvironment.getApplication(),"원래 요청",null,false,false,false,false,listener);
+        assertFalse(visible(find(panel,"다시 확인")));
+        find(panel,"요청 수정").performClick();panel.editRequest("새 요청");find(panel,"수정한 요청 보내기").performClick();
+        verify(listener).enqueue("새 요청");verify(listener,never()).retry();verify(listener,never()).revise(anyString());
     }
     @Test public void oldLoadingHelpCannotAppearOnANewerInstruction(){
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
