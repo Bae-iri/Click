@@ -95,6 +95,14 @@ public final class AppTaskDiagnostics {
                 Object budget=diagnostic.opt("provider_budget_ms");
                 if(budget instanceof Number){double n=((Number)budget).doubleValue();if(Double.isFinite(n)&&n>=0&&n<=9000)out.put("provider_budget_ms",n);}
                 if(Integer.valueOf(1).equals(diagnostic.opt("provider_attempt_limit")))out.put("provider_attempt_limit",1);
+                for(String key:Set.of("recovery_context_used","capabilities_applied","allowed_actions_context_used"))
+                    if(diagnostic.opt(key) instanceof Boolean)out.put(key,diagnostic.opt(key));
+                for(String key:Set.of("allowed_action_count","recovery_blocked_action_count","recovery_attempt")){
+                    Object value=diagnostic.opt(key);int high=key.equals("allowed_action_count")?322:key.equals("recovery_blocked_action_count")?16:3;
+                    int low=key.equals("recovery_attempt")?1:0;
+                    if((value instanceof Integer||value instanceof Long)&&((Number)value).longValue()>=low&&((Number)value).longValue()<=high
+                        &&(!key.equals("recovery_attempt")||Boolean.TRUE.equals(diagnostic.opt("recovery_context_used"))))out.put(key,value);
+                }
                 JSONArray errors=diagnostic.optJSONArray("validation_errors"),safeErrors=new JSONArray();
                 for(int i=0;errors!=null&&i<Math.min(4,errors.length());i++){
                     JSONObject error=errors.optJSONObject(i);if(error==null)continue;
