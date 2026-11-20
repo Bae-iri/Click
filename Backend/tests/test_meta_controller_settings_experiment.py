@@ -224,7 +224,7 @@ def test_only_exact_navigation_targets_back_and_scroll_are_authorized(tmp_path):
 def test_health_stays_responsive_during_provider_work_and_never_calls_provider(tmp_path):
     with server(tmp_path) as (port, req, service, output):
         entered, release = Event(), Event()
-        def blocked(_request):
+        def blocked(_request, **_kwargs):
             entered.set();assert release.wait(2);return response(req)
         service.step.side_effect = blocked
         result = []
@@ -254,7 +254,7 @@ def test_drain_waits_for_service_and_terminal_append_while_health_remains_immedi
             if path == output and args and args[0] == 'a':return gated_append(path, *args, **kwargs)
             return original_open(path, *args, **kwargs)
         monkeypatch.setattr(Path, 'open', open_path)
-        def blocked(_request):
+        def blocked(_request, **_kwargs):
             entered.set();assert release.wait(2);return response(req)
         service.step.side_effect = blocked
         result, drain_result = [], []
@@ -282,7 +282,7 @@ def test_drain_is_authorized_bounded_and_does_not_call_provider(tmp_path):
         assert get(port, '/drain', authorization='invalid')[0] == 401
         assert get(port, '/drain')[0] == 200;service.step.assert_not_called()
         entered, release = Event(), Event()
-        def blocked(_request):
+        def blocked(_request, **_kwargs):
             entered.set();assert release.wait(2);return response(req)
         service.step.side_effect = blocked
         client = Thread(target=lambda: post(port, req.model_dump(mode='json')), daemon=True);client.start()

@@ -24,6 +24,7 @@ from fastapi import HTTPException
 from app.api.v1.endpoints.app_guide import task_request_budget
 from app.schemas.app_task import AppTaskRequest
 from app.services.app_task import AppTaskService, VALIDATION_FIELDS, VALIDATION_TYPES
+from app.services.app_task_capabilities import ActionCapabilities
 from app.services.app_guide import public_label, PRIVATE, BOUNDARY
 from app.services.goal_llm import _unique_object
 from serve_meta_controller_experiment import diagnostic_record, MAX_BODY_BYTES, TASK_PATH
@@ -161,6 +162,23 @@ def navigation_action_allowed(request, response, contract):
         contract.navigation_controls is None or pair in contract.navigation_controls)
 
 
+def navigation_capabilities(request, contract):
+    """Trusted execution ceiling; retain every readonly observation for result checks."""
+    if request.screen.package != PACKAGE or request.screen.status != 'public':
+        return ActionCapabilities(frozenset())
+    pairs = {('back', '')}
+    if any(app.package == PACKAGE for app in request.apps):pairs.add(('open_app', PACKAGE))
+    for node in request.screen.nodes:
+        if node.source != 'accessibility' or node.editable or node.has_value:continue
+        if node.scrollable and node.role == 'list':
+            pairs.update((tool, node.id) for tool in ('scroll_forward', 'scroll_backward'))
+        if (node.clickable and node.role in {'button', 'tab'} and node.checked is None
+                and not _VALUE_CONTROL.search(node.resource) and node.label in contract.navigation_labels
+                and (contract.navigation_controls is None or (node.label, node.resource) in contract.navigation_controls)):
+            pairs.add(('tap', node.id))
+    return ActionCapabilities(frozenset(pairs))
+
+
 def _diagnostic_metadata(request, response, record, elapsed):
     diagnostic = response.diagnostic if isinstance(response.diagnostic, dict) else {}
     compatible = dict(diagnostic)
@@ -256,7 +274,7 @@ def make_handler(service, contract, output_path, *, drain_timeout_ms=DRAIN_TIMEO
             started = monotonic()
             record.update(service_state='entered', model_call_state='unknown', model_calls=None, model_wait_ms=None)
             try:
-                response = service.step(request)
+                response = service.step(request, action_capabilities=navigation_capabilities(request, contract))
                 record['service_state'] = 'returned'
                 if not (response.protocol_version == 'app-task.v2' and response.requires_confirmation is True
                         and response.request_id == request.request_id and response.task_id == request.state.task_id

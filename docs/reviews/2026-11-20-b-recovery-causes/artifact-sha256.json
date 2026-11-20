@@ -1,0 +1,14 @@
+{
+  "README.md": "89683578ff6af2831fd16d4c4705f56972082c5c8312f583d5200706a89b8ef0",
+  "backend-tests.log": "6c557da4505ebfa9106d13d91588017421295934232e300e3c4d5dd7f323735b",
+  "capability-gap-before.log": "f6b6e232e0345fa742cf57cbc60c8884709a6f029bd43161ca6e812c9175f2a8",
+  "findings.json": "f1d60c9f13e41306900375ca64b999e894b97958b677f1ab8046ced8defe24aa",
+  "fixed-tests.log": "5e7c952f2eb40f43a8d5d18895770f5b01c86320e908795604fe9038cb2522f3",
+  "frontend-context-tests.log": "68ee660e6fadd53fe99a40e38d5ceb0cf7dc0297a5e2ab2935b116ead1d3ae81",
+  "frontend-recovery-request.json": "2176c72767b667e129ba86148acc121567b3d138dd783397ff287ca6e290c6d0",
+  "integration-contract.json": "c620b01b0964274b0537d9429ab672c8b46d3199e36a9a2d2f0844e067e64653",
+  "integration-tests.log": "f01f0693f24a4745bed894008f5d9c3c95f295e12f0b6f12fba6307bf603cbda",
+  "mechanism-probes.jsonl": "93855f09ef6a1b1f1de547666b31576813b8deda4f753c3a091d27ecc7f62d43",
+  "mechanism-tests.log": "e46aeea455619f69ce5bc1648f379e0149f2c608248f8114d0910dd5ef3013ad",
+  "verification.json": "ee101decadebe1e65e3cb0bae6d7d2ea6ffa406b03fedc329a5574fded1d85c9"
+}

@@ -30,7 +30,8 @@ public final class AppTaskDiagnostics {
         "completion_shape","completion_target","completion_label","completion_app","completion_target_app",
         "ungrounded_result_state","completion_control","subgoals","changed_existing_plan","unknown_target",
         "not_clickable","not_editable","not_scrollable","unknown_tool","unselected_app","repeated_failed_action",
-        "expectation","ungrounded_expected_state","result_only_action_forbidden","result_only_progress_forbidden");
+        "expectation","ungrounded_expected_state","result_only_action_forbidden","result_only_progress_forbidden",
+        "no_allowed_actions","action_not_allowed_by_capabilities","recovery_action_blocked");
     private static final Set<String> PROVIDER_CODES=Set.of("provider_invalid_request","provider_invalid_budget",
         "provider_capacity_exhausted","provider_startup_failed","provider_deadline_exceeded","provider_timeout",
         "provider_transport_error","provider_response_too_large","provider_protocol_error","provider_worker_failed","provider_cleanup_failed");
