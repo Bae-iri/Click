@@ -1,0 +1,3615 @@
+{
+  "schema_version": "click.native-settings.v1",
+  "model_calls": 0,
+  "source": "actual_android_settings_public_probe",
+  "sdk": 37,
+  "locale": "en-US",
+  "hardware": "ranchu",
+  "pages": [
+    {
+      "task": "home",
+      "intent": "android.settings.SETTINGS",
+      "available": true,
+      "controls": [
+        {
+          "label": "Search Settings",
+          "resource": "com.android.settings:id\/search_bar_title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            189,
+            143,
+            578,
+            214
+          ]
+        },
+        {
+          "label": "Google",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            352,
+            354,
+            409
+          ]
+        },
+        {
+          "label": "Services & preferences",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            409,
+            600,
+            460
+          ]
+        },
+        {
+          "label": "Network & internet",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            586,
+            566,
+            643
+          ]
+        },
+        {
+          "label": "Mobile, Wi‐Fi, hotspot",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            643,
+            572,
+            694
+          ]
+        },
+        {
+          "label": "Connected devices",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            783,
+            574,
+            840
+          ]
+        },
+        {
+          "label": "Bluetooth, pairing",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            840,
+            508,
+            891
+          ]
+        },
+        {
+          "label": "Apps",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1017,
+            318,
+            1074
+          ]
+        },
+        {
+          "label": "Assistant, recent apps, default apps",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1074,
+            806,
+            1125
+          ]
+        },
+        {
+          "label": "Notifications",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1214,
+            460,
+            1271
+          ]
+        },
+        {
+          "label": "Notification history, conversations",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1271,
+            777,
+            1322
+          ]
+        },
+        {
+          "label": "Sound & vibration",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1411,
+            548,
+            1468
+          ]
+        },
+        {
+          "label": "Volume and haptics",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1468,
+            546,
+            1519
+          ]
+        },
+        {
+          "label": "Modes",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1608,
+            350,
+            1665
+          ]
+        },
+        {
+          "label": "Do Not Disturb, Bedtime, Driving",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1665,
+            744,
+            1716
+          ]
+        },
+        {
+          "label": "Display & touch",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1805,
+            510,
+            1862
+          ]
+        },
+        {
+          "label": "Dark theme, font size, touch",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1862,
+            675,
+            1913
+          ]
+        },
+        {
+          "label": "Wallpaper & style",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            2002,
+            542,
+            2059
+          ]
+        },
+        {
+          "label": "Colors, themed icons, app grid",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            2059,
+            717,
+            2110
+          ]
+        },
+        {
+          "label": "Storage",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            2236,
+            366,
+            2293
+          ]
+        },
+        {
+          "label": "45% used - 4.40 GB free",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            2293,
+            612,
+            2344
+          ]
+        }
+      ],
+      "controller_observation": {
+        "status": "public",
+        "package": "com.android.settings",
+        "observation_id": "b1dc1508-a23f-437f-9cab-e62f1c895206",
+        "captured_at_ms": 1795174606061,
+        "keyboard_visible": false,
+        "width": 1080,
+        "height": 2400,
+        "nodes": [
+          {
+            "id": "node_0_0_0",
+            "label": "Search Settings",
+            "resource": "com.android.settings:id\/search_action_bar",
+            "role": "button",
+            "bounds": [
+              42,
+              84,
+              1038,
+              273
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1",
+            "label": "목록",
+            "resource": "com.android.settings:id\/main_content_scrollable_container",
+            "role": "list",
+            "bounds": [
+              0,
+              294,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "e9fc7440186051d2dbf17a22523da88cadb618bdde29bde87962646411c6a57e"
+          },
+          {
+            "id": "node_0_0_1_0_0",
+            "label": "Google",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              310,
+              1080,
+              502
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_0_1",
+            "label": "Network & internet",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              544,
+              1080,
+              736
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_0_2",
+            "label": "Connected devices",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              741,
+              1080,
+              933
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_0_3",
+            "label": "Apps",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              975,
+              1080,
+              1167
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_0_4",
+            "label": "Notifications",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1172,
+              1080,
+              1364
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_0_5",
+            "label": "Sound & vibration",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1369,
+              1080,
+              1561
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_0_6",
+            "label": "Modes",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1566,
+              1080,
+              1758
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_0_7",
+            "label": "Display & touch",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1763,
+              1080,
+              1955
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_0_8",
+            "label": "Wallpaper & style",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1960,
+              1080,
+              2152
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_0_9",
+            "label": "Storage",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              2194,
+              1080,
+              2386
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_0_10",
+            "label": "",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              2391,
+              1080,
+              2400
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          }
+        ],
+        "fingerprint": "8faac4c95e28abf1a1d49510bd45f99e00765c7e5c420a97846d0bffe19bfd22"
+      }
+    },
+    {
+      "task": "settings_display",
+      "intent": "android.settings.DISPLAY_SETTINGS",
+      "available": true,
+      "controls": [
+        {
+          "label": "Display & touch",
+          "resource": "com.android.settings:id\/collapsing_toolbar",
+          "class": "android.widget.FrameLayout",
+          "clickable": false,
+          "checkable": false,
+          "heading": true,
+          "bounds": [
+            0,
+            63,
+            1080,
+            210
+          ]
+        },
+        {
+          "label": "Navigate up",
+          "class": "android.widget.ImageButton",
+          "clickable": true,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            42,
+            63,
+            189,
+            210
+          ]
+        },
+        {
+          "label": "Brightness",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            273,
+            1038,
+            324
+          ]
+        },
+        {
+          "label": "Brightness level",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            392,
+            378,
+            449
+          ]
+        },
+        {
+          "label": "83%",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            449,
+            153,
+            500
+          ]
+        },
+        {
+          "label": "Lock display",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            610,
+            1038,
+            661
+          ]
+        },
+        {
+          "label": "Lock screen",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            729,
+            309,
+            786
+          ]
+        },
+        {
+          "label": "Show all notification content",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            786,
+            548,
+            837
+          ]
+        },
+        {
+          "label": "Screen timeout",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            926,
+            366,
+            983
+          ]
+        },
+        {
+          "label": "Not set",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            983,
+            203,
+            1034
+          ]
+        },
+        {
+          "label": "Appearance",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            1144,
+            1038,
+            1195
+          ]
+        },
+        {
+          "label": "Dark theme",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1263,
+            298,
+            1320
+          ]
+        },
+        {
+          "label": "Will turn on when Bedtime starts",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1320,
+            616,
+            1371
+          ]
+        },
+        {
+          "label": "Dark theme",
+          "resource": "com.android.settings:id\/switchWidget",
+          "class": "android.widget.Switch",
+          "clickable": true,
+          "checkable": true,
+          "heading": false,
+          "bounds": [
+            859,
+            1254,
+            996,
+            1380
+          ]
+        },
+        {
+          "label": "Display size & text",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1460,
+            423,
+            1517
+          ]
+        },
+        {
+          "label": "Font size, display size, bold text, outline text",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1517,
+            796,
+            1568
+          ]
+        },
+        {
+          "label": "Navigation mode",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1657,
+            402,
+            1714
+          ]
+        },
+        {
+          "label": "Gesture navigation",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1714,
+            392,
+            1765
+          ]
+        },
+        {
+          "label": "Screen saver",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1854,
+            323,
+            1911
+          ]
+        },
+        {
+          "label": "On \/ Clock",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1911,
+            254,
+            1962
+          ]
+        },
+        {
+          "label": "Color",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            2072,
+            1038,
+            2123
+          ]
+        },
+        {
+          "label": "Colors",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2215,
+            205,
+            2272
+          ]
+        },
+        {
+          "label": "Color contrast",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2385,
+            349,
+            2400
+          ]
+        }
+      ],
+      "controller_observation": {
+        "status": "public",
+        "package": "com.android.settings",
+        "observation_id": "f555c224-8eea-4dcd-954f-5b2adbb2e119",
+        "captured_at_ms": 1795174607878,
+        "keyboard_visible": false,
+        "width": 1080,
+        "height": 2400,
+        "nodes": [
+          {
+            "id": "node_0_0",
+            "label": "Display & touch",
+            "resource": "com.android.settings:id\/content_parent",
+            "role": "list",
+            "bounds": [
+              0,
+              63,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "6eff92addb44a7bd388c7aee172654af43f332b93ebfa31651b33b22a3bb6d54"
+          },
+          {
+            "id": "node_0_0_0",
+            "label": "Display & touch",
+            "resource": "com.android.settings:id\/collapsing_toolbar",
+            "role": "text",
+            "bounds": [
+              0,
+              63,
+              1080,
+              210
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_0_0",
+            "label": "Navigate up",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              42,
+              63,
+              189,
+              210
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1",
+            "label": "목록",
+            "resource": "com.android.settings:id\/recycler_view",
+            "role": "list",
+            "bounds": [
+              0,
+              210,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "d5df90084e3886c48e061ef5b9e32abc953d5e0f3a25d30be142da0b474275c9"
+          },
+          {
+            "id": "node_0_0_1_0",
+            "label": "Brightness",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              210,
+              1080,
+              345
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_1",
+            "label": "Brightness level",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              350,
+              1080,
+              542
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_2",
+            "label": "Lock display",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              547,
+              1080,
+              682
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_3",
+            "label": "Lock screen",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              687,
+              1080,
+              879
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_4",
+            "label": "Screen timeout",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              884,
+              1080,
+              1076
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_5",
+            "label": "Appearance",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              1081,
+              1080,
+              1216
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_6",
+            "label": "Dark theme",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1221,
+              1080,
+              1413
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_6_2",
+            "label": "Dark theme",
+            "resource": "com.android.settings:id\/switchWidget",
+            "role": "toggle",
+            "bounds": [
+              859,
+              1254,
+              996,
+              1380
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": false,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_7",
+            "label": "Display size & text",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1418,
+              1080,
+              1610
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_8",
+            "label": "Navigation mode",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1615,
+              1080,
+              1807
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_9",
+            "label": "Screen saver",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1812,
+              1080,
+              2004
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_10",
+            "label": "Color",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              2009,
+              1080,
+              2144
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_11",
+            "label": "Colors",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              2149,
+              1080,
+              2338
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_12",
+            "label": "Color contrast",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              2343,
+              1080,
+              2400
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          }
+        ],
+        "fingerprint": "9e36ae2cfcd9040db5ddd9553c8e3eeb9d8fa983bd865aa3b180d2e88b0a9583"
+      }
+    },
+    {
+      "task": "settings_sound",
+      "intent": "android.settings.SOUND_SETTINGS",
+      "available": true,
+      "controls": [
+        {
+          "label": "Sound & vibration",
+          "resource": "com.android.settings:id\/collapsing_toolbar",
+          "class": "android.widget.FrameLayout",
+          "clickable": false,
+          "checkable": false,
+          "heading": true,
+          "bounds": [
+            0,
+            63,
+            1080,
+            210
+          ]
+        },
+        {
+          "label": "Navigate up",
+          "class": "android.widget.ImageButton",
+          "clickable": true,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            42,
+            63,
+            189,
+            210
+          ]
+        },
+        {
+          "label": "Audio will play on",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            289,
+            408,
+            346
+          ]
+        },
+        {
+          "label": "This phone",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            346,
+            265,
+            397
+          ]
+        },
+        {
+          "label": "Media volume",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            486,
+            346,
+            543
+          ]
+        },
+        {
+          "label": "Media volume,",
+          "class": "android.widget.SeekBar",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            302,
+            543,
+            428,
+            669
+          ]
+        },
+        {
+          "label": "Call volume",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            758,
+            300,
+            815
+          ]
+        },
+        {
+          "label": "Call volume,",
+          "class": "android.widget.SeekBar",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            174,
+            815,
+            300,
+            941
+          ]
+        },
+        {
+          "label": "Ring volume",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1030,
+            313,
+            1087
+          ]
+        },
+        {
+          "label": "Ring volume,",
+          "class": "android.widget.SeekBar",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            558,
+            1087,
+            684,
+            1213
+          ]
+        },
+        {
+          "label": "Notification volume",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1302,
+            447,
+            1359
+          ]
+        },
+        {
+          "label": "Notification volume,",
+          "class": "android.widget.SeekBar",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            558,
+            1359,
+            684,
+            1485
+          ]
+        },
+        {
+          "label": "Alarm volume",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1574,
+            341,
+            1631
+          ]
+        },
+        {
+          "label": "Alarm volume,",
+          "class": "android.widget.SeekBar",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            638,
+            1631,
+            764,
+            1757
+          ]
+        },
+        {
+          "label": "Assistant volume",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1846,
+            407,
+            1903
+          ]
+        },
+        {
+          "label": "Assistant volume,",
+          "class": "android.widget.SeekBar",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            302,
+            1903,
+            428,
+            2029
+          ]
+        },
+        {
+          "label": "Vibration & haptics",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2155,
+            437,
+            2212
+          ]
+        },
+        {
+          "label": "On \/ Control vibration levels for calls, notifications, and alarms",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2212,
+            954,
+            2306
+          ]
+        }
+      ],
+      "controller_observation": {
+        "status": "public",
+        "package": "com.android.settings",
+        "observation_id": "6f977453-6d6d-454e-b42f-4423a833d560",
+        "captured_at_ms": 1795174610091,
+        "keyboard_visible": false,
+        "width": 1080,
+        "height": 2400,
+        "nodes": [
+          {
+            "id": "node_0_0",
+            "label": "Sound & vibration",
+            "resource": "com.android.settings:id\/content_parent",
+            "role": "list",
+            "bounds": [
+              0,
+              63,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "f5e22e81e6583a6976f4f10e243e88bafac8b5a18913d1bf270d0e9e1efcf734"
+          },
+          {
+            "id": "node_0_0_0",
+            "label": "Sound & vibration",
+            "resource": "com.android.settings:id\/collapsing_toolbar",
+            "role": "text",
+            "bounds": [
+              0,
+              63,
+              1080,
+              210
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_0_0",
+            "label": "Navigate up",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              42,
+              63,
+              189,
+              210
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1",
+            "label": "목록",
+            "resource": "com.android.settings:id\/recycler_view",
+            "role": "list",
+            "bounds": [
+              0,
+              210,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "88236cec99b6d699d0352fca4ed86e0c3e37e95f1f859227644de8113f2fea0c"
+          },
+          {
+            "id": "node_0_0_1_0",
+            "label": "Audio will play on",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              247,
+              1080,
+              439
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_7",
+            "label": "Vibration & haptics",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              2113,
+              1080,
+              2348
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          }
+        ],
+        "fingerprint": "58181660c59699937a9f9f8e8c647c2f1d86b718aa8af9e2a4c991244d599301"
+      }
+    },
+    {
+      "task": "settings_accessibility",
+      "intent": "android.settings.ACCESSIBILITY_SETTINGS",
+      "available": true,
+      "controls": [
+        {
+          "label": "Accessibility",
+          "resource": "com.android.settings:id\/collapsing_toolbar",
+          "class": "android.widget.FrameLayout",
+          "clickable": false,
+          "checkable": false,
+          "heading": true,
+          "bounds": [
+            0,
+            63,
+            1080,
+            210
+          ]
+        },
+        {
+          "label": "Navigate up",
+          "class": "android.widget.ImageButton",
+          "clickable": true,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            42,
+            63,
+            189,
+            210
+          ]
+        },
+        {
+          "label": "Downloaded apps",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            273,
+            1038,
+            324
+          ]
+        },
+        {
+          "label": "클릭 화면 안내",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            392,
+            475,
+            454
+          ]
+        },
+        {
+          "label": "On",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            454,
+            266,
+            505
+          ]
+        },
+        {
+          "label": "Screen reader",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            615,
+            1038,
+            666
+          ]
+        },
+        {
+          "label": "TalkBack",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            734,
+            391,
+            791
+          ]
+        },
+        {
+          "label": "Off \/ Use a screen reader to hear items spoken aloud",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            791,
+            954,
+            885
+          ]
+        },
+        {
+          "label": "Display",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            995,
+            1038,
+            1046
+          ]
+        },
+        {
+          "label": "Display size & text",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1114,
+            560,
+            1171
+          ]
+        },
+        {
+          "label": "Font size, display size, bold text, outline text",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1171,
+            933,
+            1222
+          ]
+        },
+        {
+          "label": "Color & motion",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1311,
+            498,
+            1368
+          ]
+        },
+        {
+          "label": "Dark theme, color correction, remove animations",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1368,
+            954,
+            1462
+          ]
+        },
+        {
+          "label": "Magnification",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1551,
+            477,
+            1608
+          ]
+        },
+        {
+          "label": "Off \/ Zoom in to make content larger on your screen",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1608,
+            954,
+            1702
+          ]
+        },
+        {
+          "label": "Select to Speak",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1791,
+            510,
+            1848
+          ]
+        },
+        {
+          "label": "Off \/ Hear selected text",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            1848,
+            604,
+            1899
+          ]
+        },
+        {
+          "label": "Interaction controls",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            2009,
+            1038,
+            2060
+          ]
+        },
+        {
+          "label": "Accessibility Menu",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            2128,
+            571,
+            2185
+          ]
+        },
+        {
+          "label": "Off \/ Control volume, brightness, and more with a large menu",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            2185,
+            954,
+            2279
+          ]
+        },
+        {
+          "label": "Voice Access",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            2368,
+            473,
+            2400
+          ]
+        }
+      ],
+      "controller_observation": {
+        "status": "public",
+        "package": "com.android.settings",
+        "observation_id": "fb783c90-ed17-4313-8af5-d62d3eaa9114",
+        "captured_at_ms": 1795174612436,
+        "keyboard_visible": false,
+        "width": 1080,
+        "height": 2400,
+        "nodes": [
+          {
+            "id": "node_0_0",
+            "label": "Accessibility",
+            "resource": "com.android.settings:id\/content_parent",
+            "role": "list",
+            "bounds": [
+              0,
+              63,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "746a78195b9085eeb74a2cca2c500a2fbf1aa29c61e4b02a96cbf613fe193f2c"
+          },
+          {
+            "id": "node_0_0_0",
+            "label": "Accessibility",
+            "resource": "com.android.settings:id\/collapsing_toolbar",
+            "role": "text",
+            "bounds": [
+              0,
+              63,
+              1080,
+              210
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_0_0",
+            "label": "Navigate up",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              42,
+              63,
+              189,
+              210
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1",
+            "label": "목록",
+            "resource": "com.android.settings:id\/recycler_view",
+            "role": "list",
+            "bounds": [
+              0,
+              210,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "3fa8d3cbd4f0df4d908794bf71b5fbfcd6f9c9c0619f61bc58b06ab0f93146ac"
+          },
+          {
+            "id": "node_0_0_1_0",
+            "label": "Downloaded apps",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              210,
+              1080,
+              345
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_1",
+            "label": "클릭 화면 안내",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              350,
+              1080,
+              547
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_2",
+            "label": "Screen reader",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              552,
+              1080,
+              687
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_3",
+            "label": "TalkBack",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              692,
+              1080,
+              927
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_4",
+            "label": "Display",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              932,
+              1080,
+              1067
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_5",
+            "label": "Display size & text",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1072,
+              1080,
+              1264
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_6",
+            "label": "Color & motion",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1269,
+              1080,
+              1504
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_7",
+            "label": "Magnification",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1509,
+              1080,
+              1744
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_8",
+            "label": "Select to Speak",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1749,
+              1080,
+              1941
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_9",
+            "label": "Interaction controls",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              1946,
+              1080,
+              2081
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_10",
+            "label": "Accessibility Menu",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              2086,
+              1080,
+              2321
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_11",
+            "label": "Voice Access",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              2326,
+              1080,
+              2400
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          }
+        ],
+        "fingerprint": "47f7512eca39128b183542c044db63ffa1e7c8f0b76ae5afc59f9df9f739f88c"
+      }
+    },
+    {
+      "task": "settings_bluetooth",
+      "intent": "android.settings.BLUETOOTH_SETTINGS",
+      "available": true,
+      "controls": [
+        {
+          "label": "Connected devices",
+          "resource": "com.android.settings:id\/collapsing_toolbar",
+          "class": "android.widget.FrameLayout",
+          "clickable": false,
+          "checkable": false,
+          "heading": true,
+          "bounds": [
+            0,
+            63,
+            1080,
+            210
+          ]
+        },
+        {
+          "label": "Navigate up",
+          "class": "android.widget.ImageButton",
+          "clickable": true,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            42,
+            63,
+            189,
+            210
+          ]
+        },
+        {
+          "label": "Pair new device",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            355,
+            512,
+            412
+          ]
+        },
+        {
+          "label": "Saved devices",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            546,
+            1038,
+            597
+          ]
+        },
+        {
+          "label": "See all",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            689,
+            343,
+            746
+          ]
+        },
+        {
+          "label": "Connection preferences",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            896,
+            527,
+            953
+          ]
+        },
+        {
+          "label": "Bluetooth, Android Auto",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            953,
+            472,
+            1004
+          ]
+        },
+        {
+          "label": "Visible as “sdk_gphone16k_arm64” to other devices",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            1193,
+            911,
+            1265
+          ]
+        }
+      ],
+      "controller_observation": {
+        "status": "public",
+        "package": "com.android.settings",
+        "observation_id": "fdf18d57-306e-4b37-ac2b-485f42ec4519",
+        "captured_at_ms": 1795174614660,
+        "keyboard_visible": false,
+        "width": 1080,
+        "height": 2400,
+        "nodes": [
+          {
+            "id": "node_0_0",
+            "label": "Connected devices",
+            "resource": "com.android.settings:id\/content_parent",
+            "role": "list",
+            "bounds": [
+              0,
+              63,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "5ebc977dd714f7e8d2a7337db46d5e84095521c81896d4bc47bfbac8aaf0bd43"
+          },
+          {
+            "id": "node_0_0_0",
+            "label": "Connected devices",
+            "resource": "com.android.settings:id\/collapsing_toolbar",
+            "role": "text",
+            "bounds": [
+              0,
+              63,
+              1080,
+              210
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_0_0",
+            "label": "Navigate up",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              42,
+              63,
+              189,
+              210
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_0",
+            "label": "Pair new device",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              289,
+              1080,
+              478
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_1",
+            "label": "Saved devices",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              483,
+              1080,
+              618
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_2",
+            "label": "See all",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              623,
+              1080,
+              812
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_3",
+            "label": "Connection preferences",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              854,
+              1080,
+              1046
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          }
+        ],
+        "fingerprint": "f55079fa94b614059907f934f237f4f6a0c551666f9a9d7df963bdcd3441cf04"
+      }
+    },
+    {
+      "task": "settings_datetime",
+      "intent": "android.settings.DATE_SETTINGS",
+      "available": true,
+      "controls": [
+        {
+          "label": "Date & time",
+          "resource": "com.android.settings:id\/collapsing_toolbar",
+          "class": "android.widget.FrameLayout",
+          "clickable": false,
+          "checkable": false,
+          "heading": true,
+          "bounds": [
+            0,
+            63,
+            1080,
+            210
+          ]
+        },
+        {
+          "label": "Navigate up",
+          "class": "android.widget.ImageButton",
+          "clickable": true,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            42,
+            63,
+            189,
+            210
+          ]
+        },
+        {
+          "label": "Automatic date and time",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            252,
+            544,
+            309
+          ]
+        },
+        {
+          "label": "Set automatically using your network and wireless signals",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            309,
+            817,
+            403
+          ]
+        },
+        {
+          "label": "Date",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            492,
+            171,
+            549
+          ]
+        },
+        {
+          "label": "November 20, 2026",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            549,
+            406,
+            600
+          ]
+        },
+        {
+          "label": "Time",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            689,
+            178,
+            746
+          ]
+        },
+        {
+          "label": "8:36 PM",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            746,
+            220,
+            797
+          ]
+        },
+        {
+          "label": "Time zone",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            907,
+            1038,
+            958
+          ]
+        },
+        {
+          "label": "Automatic time zone",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1026,
+            471,
+            1083
+          ]
+        },
+        {
+          "label": "Set automatically based on mobile networks near you",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1083,
+            817,
+            1177
+          ]
+        },
+        {
+          "label": "Use location for time zone",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1266,
+            571,
+            1323
+          ]
+        },
+        {
+          "label": "If your device location is available, it may be used to set your time zone",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1323,
+            817,
+            1417
+          ]
+        },
+        {
+          "label": "Time zone",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1506,
+            278,
+            1563
+          ]
+        },
+        {
+          "label": "GMT+09:00 Korean Standard Time",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1563,
+            652,
+            1614
+          ]
+        },
+        {
+          "label": "Home time zone",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1703,
+            390,
+            1760
+          ]
+        },
+        {
+          "label": "Set a home time zone for when you are away",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1760,
+            816,
+            1811
+          ]
+        },
+        {
+          "label": "More settings",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            1921,
+            1038,
+            1972
+          ]
+        },
+        {
+          "label": "12-hour \/ 24-hour format",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2040,
+            546,
+            2097
+          ]
+        },
+        {
+          "label": "Automatic",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2097,
+            253,
+            2148
+          ]
+        },
+        {
+          "label": "Notifications",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2237,
+            323,
+            2294
+          ]
+        },
+        {
+          "label": "Get notified when your time changes automatically",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2294,
+            912,
+            2345
+          ]
+        }
+      ],
+      "controller_observation": {
+        "status": "public",
+        "package": "com.android.settings",
+        "observation_id": "c908fd6b-2f78-4f4c-b085-206769ff2c60",
+        "captured_at_ms": 1795174616512,
+        "keyboard_visible": false,
+        "width": 1080,
+        "height": 2400,
+        "nodes": [
+          {
+            "id": "node_0_0",
+            "label": "Date & time",
+            "resource": "com.android.settings:id\/content_parent",
+            "role": "list",
+            "bounds": [
+              0,
+              63,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "75a49a7e0cf385489c574bcbe9c428be6f203bd72a9ddae81ac7f38a23fe9970"
+          },
+          {
+            "id": "node_0_0_0",
+            "label": "Date & time",
+            "resource": "com.android.settings:id\/collapsing_toolbar",
+            "role": "text",
+            "bounds": [
+              0,
+              63,
+              1080,
+              210
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_0_0",
+            "label": "Navigate up",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              42,
+              63,
+              189,
+              210
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1",
+            "label": "목록",
+            "resource": "com.android.settings:id\/recycler_view",
+            "role": "list",
+            "bounds": [
+              0,
+              210,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "3eee1dd99c6d06ddb20ac11a2286af0251f0c94516b13b55d4e2832de6ffeb1b"
+          },
+          {
+            "id": "node_0_0_1_2",
+            "label": "Time zone",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              844,
+              1080,
+              979
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_3",
+            "label": "Use location for time zone",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1224,
+              1080,
+              1459
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_5",
+            "label": "Home time zone",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1661,
+              1080,
+              1853
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_6",
+            "label": "More settings",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              1858,
+              1080,
+              1993
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_7",
+            "label": "12-hour \/ 24-hour format",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1998,
+              1080,
+              2190
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_8",
+            "label": "Notifications",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              2195,
+              1080,
+              2387
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          }
+        ],
+        "fingerprint": "9eb6cdceb5f5e0c53b88ed1494b187b12865737461eb5a9189638a2335b33e8b"
+      }
+    },
+    {
+      "task": "settings_language",
+      "intent": "android.settings.LOCALE_SETTINGS",
+      "available": true,
+      "controls": [
+        {
+          "label": "Language & region",
+          "resource": "com.android.settings:id\/collapsing_toolbar",
+          "class": "android.widget.FrameLayout",
+          "clickable": false,
+          "checkable": false,
+          "heading": true,
+          "bounds": [
+            0,
+            63,
+            1080,
+            210
+          ]
+        },
+        {
+          "label": "Navigate up",
+          "class": "android.widget.ImageButton",
+          "clickable": true,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            42,
+            63,
+            189,
+            210
+          ]
+        },
+        {
+          "label": "Preferred Languages",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            496,
+            1038,
+            547
+          ]
+        },
+        {
+          "label": "1",
+          "resource": "com.android.settings:id\/number",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            119,
+            626,
+            154,
+            711
+          ]
+        },
+        {
+          "label": "English (United States)",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            615,
+            646,
+            672
+          ]
+        },
+        {
+          "label": "Not available as system language",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            221,
+            672,
+            772,
+            723
+          ]
+        },
+        {
+          "label": "Add a language",
+          "resource": "com.android.settings:id\/settingslib_button",
+          "class": "android.widget.Button",
+          "clickable": true,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            42,
+            812,
+            507,
+            959
+          ]
+        },
+        {
+          "label": "More language settings",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            1069,
+            1038,
+            1120
+          ]
+        },
+        {
+          "label": "App languages",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1188,
+            363,
+            1245
+          ]
+        },
+        {
+          "label": "Choose the language for each app",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1245,
+            645,
+            1296
+          ]
+        },
+        {
+          "label": "Speech",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1385,
+            222,
+            1442
+          ]
+        },
+        {
+          "label": "Control speech recognition and output",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1442,
+            711,
+            1493
+          ]
+        },
+        {
+          "label": "Regional preferences",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            63,
+            1603,
+            1038,
+            1654
+          ]
+        },
+        {
+          "label": "Region",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1722,
+            213,
+            1779
+          ]
+        },
+        {
+          "label": "United States",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1779,
+            304,
+            1830
+          ]
+        },
+        {
+          "label": "Temperature",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1919,
+            321,
+            1976
+          ]
+        },
+        {
+          "label": "Use default",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            1976,
+            271,
+            2027
+          ]
+        },
+        {
+          "label": "Measurement system",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2116,
+            490,
+            2173
+          ]
+        },
+        {
+          "label": "Use default",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2173,
+            271,
+            2224
+          ]
+        },
+        {
+          "label": "First day of week",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2313,
+            401,
+            2370
+          ]
+        },
+        {
+          "label": "Use default",
+          "resource": "android:id\/summary",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "checkable": false,
+          "heading": false,
+          "bounds": [
+            84,
+            2370,
+            271,
+            2400
+          ]
+        }
+      ],
+      "controller_observation": {
+        "status": "public",
+        "package": "com.android.settings",
+        "observation_id": "8ec1c461-ddbf-4d39-9848-4fb6fa0a4c19",
+        "captured_at_ms": 1795174618864,
+        "keyboard_visible": false,
+        "width": 1080,
+        "height": 2400,
+        "nodes": [
+          {
+            "id": "node_0_0",
+            "label": "Language & region",
+            "resource": "com.android.settings:id\/content_parent",
+            "role": "list",
+            "bounds": [
+              0,
+              63,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "8e3388d1452811612c80f051d0571470d247fc1832220ca46b3a837d4981a494"
+          },
+          {
+            "id": "node_0_0_0",
+            "label": "Language & region",
+            "resource": "com.android.settings:id\/collapsing_toolbar",
+            "role": "text",
+            "bounds": [
+              0,
+              63,
+              1080,
+              210
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_0_0",
+            "label": "Navigate up",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              42,
+              63,
+              189,
+              210
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1",
+            "label": "목록",
+            "resource": "com.android.settings:id\/recycler_view",
+            "role": "list",
+            "bounds": [
+              0,
+              210,
+              1080,
+              2400
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": true,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility",
+            "viewport_hash": "00a133348d9e8bd13ef0eaa41f9de649d3c86e5563bf7f742ed11701ed01ba95"
+          },
+          {
+            "id": "node_0_0_1_0",
+            "label": "Preferred Languages",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              433,
+              1080,
+              568
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_1",
+            "label": "1",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              573,
+              1080,
+              765
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_2",
+            "label": "More language settings",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              1006,
+              1080,
+              1141
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_3",
+            "label": "App languages",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1146,
+              1080,
+              1338
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_4",
+            "label": "Speech",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1343,
+              1080,
+              1535
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_5",
+            "label": "Regional preferences",
+            "resource": "",
+            "role": "text",
+            "bounds": [
+              0,
+              1540,
+              1080,
+              1675
+            ],
+            "clickable": false,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_6",
+            "label": "Region",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1680,
+              1080,
+              1872
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_7",
+            "label": "Temperature",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              1877,
+              1080,
+              2069
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_8",
+            "label": "Measurement system",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              2074,
+              1080,
+              2266
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          },
+          {
+            "id": "node_0_0_1_9",
+            "label": "First day of week",
+            "resource": "",
+            "role": "button",
+            "bounds": [
+              0,
+              2271,
+              1080,
+              2400
+            ],
+            "clickable": true,
+            "editable": false,
+            "scrollable": false,
+            "selected": false,
+            "checked": null,
+            "has_value": false,
+            "source": "accessibility"
+          }
+        ],
+        "fingerprint": "6f6b95a397d9d7acc574a78f97a73f79882b8e8da7f5866d6589e3b4f66d9d33"
+      }
+    }
+  ]
+}

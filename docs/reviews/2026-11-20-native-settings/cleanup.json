@@ -1,0 +1,20 @@
+{
+  "schema_version": "click.native-settings-cleanup.v1",
+  "captured_at_utc": "2026-11-20T12:09:06.849100+00:00",
+  "provider_drain": {
+    "status": "idle",
+    "schema_version": "local-meta-controller-settings-facade.v1",
+    "evidence_mode": "live_native_settings",
+    "terminal_receipts_complete": true,
+    "provider_connectivity": "NOT_CHECKED_BY_DRAIN"
+  },
+  "guest_utc": "2026-11-20T12:09:07Z",
+  "host_midpoint_utc": "2026-11-20T12:09:06.835222+00:00",
+  "accessibility_enabled_after_session": "0",
+  "source_and_normal_prefix_integrity_checked": true,
+  "owned_emulator_stop_requested": true,
+  "owned_loopback_facade_stop_requested": true,
+  "owned_emulator_exit_observed": true,
+  "owned_loopback_facade_exit_observed": true,
+  "temporary_avd_removed": true
+}

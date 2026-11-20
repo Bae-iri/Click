@@ -1,0 +1,38 @@
+{
+  "schema_version": "click.native-settings-environment.v1",
+  "captured_at_utc": "2026-11-20T11:46:53.097662+00:00",
+  "base_commit": "32041e5f79c5366be35d184e7b8b22657318c3da",
+  "serial": "emulator-5560",
+  "isolated_application_id": "com.click.metaexperiment.settings",
+  "settings_package": "com.android.settings",
+  "fresh_accountless_emulator": true,
+  "android": {
+    "ro.build.fingerprint": "google/sdk_gphone16k_arm64/emu64a16k:17/CP41.260828.004.A7/16296984:user/dev-keys",
+    "ro.build.version.sdk": "37",
+    "ro.build.version.release": "17",
+    "ro.hardware": "ranchu",
+    "ro.product.cpu.abi": "arm64-v8a",
+    "ro.product.locale": "en-US",
+    "persist.sys.locale": ""
+  },
+  "clock": {
+    "host_midpoint_utc": "2026-11-20T11:46:53.073624+00:00",
+    "guest_utc": "2026-11-20T11:46:53Z",
+    "guest_minus_host_midpoint_seconds": -0.074,
+    "adb_round_trip_seconds": 0.042,
+    "guest_precision_seconds": 1,
+    "native_clock_rewritten": false
+  },
+  "build_flags": {
+    "CLICK_APPLICATION_ID": "com.click.metaexperiment.settings",
+    "CLICK_API_BASE_URL": "http://127.0.0.1:8768",
+    "CLICK_CANDIDATE_DIAGNOSTICS": true,
+    "KAKAO_NATIVE_APP_KEY": ""
+  },
+  "locale": {
+    "goal": "ko-KR",
+    "ui": "en-US"
+  },
+  "primary_scope": "actual Settings navigation on emulator; scripted action approval; no human participants",
+  "private_guard_scope": "separate instrumentation-only native empty password fixture; not a benchmark app"
+}
