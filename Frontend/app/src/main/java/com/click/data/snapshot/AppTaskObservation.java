@@ -110,7 +110,12 @@ public final class AppTaskObservation {
             JSONObject n=nodes.getJSONObject(i);boolean represented=false;
             if(resultTextIds.contains(n.getString("id")))for(int j=0;j<nodes.length();j++){
                 JSONObject owner=nodes.getJSONObject(j);
+                // A passive scroll layout can repeat a descendant page title;
+                // its borrowed label does not replace the descendant's proof.
+                boolean passiveScrollContainer=owner.optBoolean("scrollable")&&!owner.optBoolean("clickable")
+                    &&!owner.optBoolean("editable")&&!Set.of("toggle","tab").contains(owner.optString("role"));
                 if(i!=j&&n.optString("label").equals(owner.optString("label"))
+                        &&!passiveScrollContainer
                         &&descendantOf(byId.get(n.getString("id")),owner.getString("id"),byId)){represented=true;break;}
             }
             if(!represented)distinct.put(n);

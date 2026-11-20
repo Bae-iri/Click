@@ -8,6 +8,9 @@ import com.click.data.snapshot.ScreenSnapshot;
 /** Bounded task state; only the verifier or explicit user result can advance it. */
 public final class AppTaskMemory {
     private final JSONObject data;
+    private String lastCompletionOfferReason="missing_candidate";
+    public String lastCompletionOfferReason(){return lastCompletionOfferReason;}
+    private boolean completionOffer(boolean accepted,String reason){lastCompletionOfferReason=reason;return accepted;}
     public AppTaskMemory(String goal)throws JSONException {
         data=new JSONObject().put("task_id",UUID.randomUUID().toString()).put("goal",goal)
             .put("revision",0).put("subgoals",new JSONArray()).put("attempts",new JSONArray()).put("route",new JSONArray()).put("completed",false);
@@ -59,20 +62,25 @@ public final class AppTaskMemory {
     }
     /** A model can refine only an unsupported prediction using public evidence present now. */
     public boolean offerCompletion(JSONObject condition,JSONObject observed,ScreenSnapshot nativeScreen)throws JSONException {
-        if(condition==null||!AppTaskCompletion.valid(condition)||AppTaskCompletion.unsafeForGoal(goal(),condition,observed,nativeScreen))return false;
+        if(condition==null)return completionOffer(false,"missing_candidate");
+        if(!AppTaskCompletion.valid(condition))return completionOffer(false,"invalid_contract");
+        if(AppTaskCompletion.unsafeForGoal(goal(),condition,observed,nativeScreen))return completionOffer(false,"unsafe_for_goal");
         JSONObject old=completion();String key=AppTaskCompletion.key(condition);
-        if(old!=null&&AppTaskCompletion.key(old).equals(key))return true;
-        if(finished()||completionSupported()||evidenceVersion()>=32)return false;
+        if(old!=null&&AppTaskCompletion.key(old).equals(key))return completionOffer(true,"same_candidate");
+        if(finished())return completionOffer(false,"immutable_finished");
+        if(completionSupported())return completionOffer(false,"immutable_supported");
+        if(evidenceVersion()>=32)return completionOffer(false,"version_limit");
         JSONObject requirements=data.getJSONObject("completion_evidence").optJSONObject("requirements");
         boolean matched=AppTaskCompletion.checkForGoal(goal(),condition,observed,nativeScreen)==AppTaskCompletion.Verdict.MATCHED
             &&AppTaskCompletion.distinctProofTargets(condition,observed);
         if(old!=null||requirements!=null){
             if(!matched||requirements!=null&&!AppTaskCompletion.preservesRequirements(requirements,condition)){
-                evidenceEvent("replacement_rejected",observed==null?null:observed.optString("observation_id"),old==null?null:AppTaskCompletion.key(old),key);return false;
+                evidenceEvent("replacement_rejected",observed==null?null:observed.optString("observation_id"),old==null?null:AppTaskCompletion.key(old),key);
+                return completionOffer(false,!matched?"replacement_unmatched":"requirements_not_preserved");
             }
         }
         setEvidence(condition,old==null&&requirements==null?"initial_prediction":"observed_prediction_refined",observed==null?null:observed.optString("observation_id"));
-        return true;
+        return completionOffer(true,old==null&&requirements==null?"initial_prediction":"observed_prediction_refined");
     }
     /** Called only after the controller checks the same candidate on two fresh native frames. */
     public boolean supportCompletion(int expectedVersion)throws JSONException {

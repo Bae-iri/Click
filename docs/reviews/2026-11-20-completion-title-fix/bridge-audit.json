@@ -1,0 +1,12 @@
+{
+  "schema_version": "click.completion-bridge-audit.v1",
+  "request_pairs": 2,
+  "model_attempts": 2,
+  "unknown_model_attempts": 0,
+  "direct_request_and_task_join": true,
+  "waits_match": true,
+  "native_model_free_passed": true,
+  "live_controlled_bridge_passed": true,
+  "full_end_to_end_trajectory": false,
+  "completion_event_count": 28
+}

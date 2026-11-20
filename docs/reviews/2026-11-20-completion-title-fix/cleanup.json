@@ -1,0 +1,10 @@
+{
+  "completed_at_utc": "2026-11-20T12:44:20.267341+00:00",
+  "provider_drained": true,
+  "owned_emulator_stop_requested": true,
+  "owned_facade_stop_requested": true,
+  "production_device_touched": false,
+  "owned_emulator_exit_observed": true,
+  "owned_facade_exit_observed": true,
+  "temporary_avd_removed": true
+}
