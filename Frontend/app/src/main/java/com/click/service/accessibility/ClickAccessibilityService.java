@@ -592,6 +592,18 @@ public final class ClickAccessibilityService extends AccessibilityService {
                 .swipeHomePage(towardNextPage, expectedPackage, expectedWindow);
     }
 
+    /** Re-observe and validate each local launcher action immediately before dispatch. */
+    public static boolean performLauncherSearch(com.click.data.snapshot.ScreenSnapshot expected,
+            com.click.service.overlay.LauncherAppSearch.Step step, java.util.Collection<String> appNames) {
+        ClickAccessibilityService service=connectedService.get();
+        if(service==null || expected==null || step==null)return false;
+        AccessibilityNodeInfo root=ForegroundWindowReader.readRoot(service);if(root==null)return false;
+        try {
+            return LauncherSearchExecutor.execute(service,service.mainHandler,service.captureRunnable,
+                    root,expected,service.readCurrentScreen(root),step,appNames);
+        } finally {root.recycle();}
+    }
+
     /** Executes a scroll on the current screen's scrollable container ({@code action_type: scroll},
      * whose {@code execution_owner} is the frontend accessibility service). */
     public static boolean performScroll(boolean forward) {

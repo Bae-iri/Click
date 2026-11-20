@@ -26,7 +26,9 @@ public class AppEntryControllerTest {
         ScreenSnapshot current=screen("com.example.launcher");
         AppEntryController.Launch result=AppEntryController.Launch.STARTED;
         boolean allowed=true;
-        int launches,entered,recoveries,waiting;
+        int launches,entered,recoveries,waiting,searches;
+        boolean searchAccepted=true;
+        public boolean searchStep(ScreenSnapshot screen){searches++;return searchAccepted;}
         Runnable retry;
         String message;
         public boolean canProceed(){return allowed;}
@@ -38,6 +40,23 @@ public class AppEntryControllerTest {
     }
     private static void advance(long ms){shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms));}
 
+    @Test public void launcherSearchWaitsForActualAppAndPausesNativeActions() {
+        Host host=new Host();host.result=AppEntryController.Launch.SEARCHING;
+        try(var entry=new AppEntryController("com.example.reader","읽기",host)) {
+            entry.start();assertEquals(1,host.searches);advance(6000);
+            assertEquals(0,host.recoveries);assertEquals(0,host.entered);
+            entry.pause();int count=host.searches;advance(60000);assertEquals(count,host.searches);
+            entry.resume();host.current=screen("com.example.reader");entry.screenChanged(host.current);
+            advance(10000);assertEquals(1,host.entered);
+        }
+    }
+    @Test public void rejectedLauncherActionStopsWithoutClaimingEntryOrRepeatedClicks() {
+        Host host=new Host();host.result=AppEntryController.Launch.SEARCHING;host.searchAccepted=false;
+        try(var entry=new AppEntryController("com.example.reader","읽기",host)) {
+            entry.start();advance(5000);assertEquals(1,host.searches);
+            assertEquals(0,host.entered);assertEquals(1,host.recoveries);
+        }
+    }
     @Test public void allPackagesUseOneVerifiedEntryWithoutAnotherApproval() {
         for(String pkg:List.of("com.coupang.mobile","kr.go.minwon.m","com.example.reader","com.android.settings")){
             Host host=new Host();
