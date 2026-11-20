@@ -87,11 +87,13 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--env-file',type=Path,default=BACKEND/'instance/settings-experiment/.env')
     parser.add_argument('--follow',action='store_true')
+    parser.add_argument('--history',action='store_true',help='With --follow, include records from before this watcher started')
     parser.add_argument('--summary',action='store_true')
     parser.add_argument('--compare',action='store_true',help='Matched conditions and descriptive A/B metrics')
     parser.add_argument('--output-dir',type=Path,help='With --compare: save comparison.json and comparison.md')
     parser.add_argument('--arm',choices=('graph','llm'))
     args=parser.parse_args()
+    watch_started = int(time.time())
     if args.compare and (args.follow or args.summary or args.arm):
         parser.error('--compare must include both arms; do not combine with --follow/--summary/--arm')
     if args.output_dir and not args.compare:parser.error('--output-dir requires --compare')
@@ -120,7 +122,8 @@ def main():
         if args.follow and not args.summary:
             device,device_queue=device_logs()
             print(json.dumps({'event':'watching','backend':True,'device_logs':device is not None,
-                'message':'작업 준비·실행 로그 대기 중. USB 연결 시 앱 내부 차단 사유도 표시합니다.'},ensure_ascii=False),flush=True)
+                'since':None if args.history else watch_started,
+                'message':'새 작업 준비·실행 로그 대기 중. 이전 기록은 --history로 확인합니다.'},ensure_ascii=False),flush=True)
         while True:
             records=[]
             with factory() as db:
@@ -128,7 +131,8 @@ def main():
                     for prep in db.scalars(select(AgentGoalResolution).where(AgentGoalResolution.expires_at>int(time.time()))):
                         record=preparation_record(prep)
                         identity=('preparation',prep.id,prep.status)
-                        if record and identity not in seen and (not args.arm or record['arm']==args.arm):
+                        if record and identity not in seen and (not args.arm or record['arm']==args.arm) and (
+                                not args.follow or args.history or record['at'] >= watch_started):
                             print(json.dumps(record,ensure_ascii=False),flush=True)
                             seen.add(identity)
                 events=list(db.scalars(select(RuntimeEvent).where(RuntimeEvent.kind=='turn',
@@ -141,7 +145,8 @@ def main():
                     if row and row.episode_id==event.episode_id:
                         record['latest_user_result']=(row.task_outcome or {}).get('final')
                     records.append(record)
-                    if not args.summary and not args.compare and event.id not in seen:
+                    if not args.summary and not args.compare and event.id not in seen and (
+                            not args.follow or args.history or event.created_at >= watch_started):
                         print(json.dumps(record,ensure_ascii=False),flush=True)
                         seen.add(event.id)
             if args.summary:print(json.dumps(summarize(records),ensure_ascii=False,indent=2),flush=True)

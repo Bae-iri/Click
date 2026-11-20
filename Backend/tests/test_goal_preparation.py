@@ -297,3 +297,17 @@ def test_new_service_instance_restores_answers_from_database(flow):
     assert body['preparation']['values'] == {'scope': 'app', 'direction': 'increase'}
     assert body['preparation']['question']['field'] == 'app_name'
     assert flow.answer('카카오톡')['preparation']['status'] == 'unsupported'
+
+
+@pytest.mark.parametrize('arm', ['graph', 'llm'])
+@pytest.mark.parametrize('text', ['배경 화면 바꿀래', '배경화면 바꾸고 싶어'])
+def test_experiment_preserves_existing_wallpaper_goal_without_model(flow, arm, text):
+    flow.text = text
+    class NoModel:
+        def interpret_inputs(self, *args):
+            raise AssertionError('An explicit supported wallpaper request needs no model')
+    flow.app.state.turn_service.goal_preparation.llm = NoModel()
+    response = flow.resolve(device_context={'platform':'android', 'locale':'ko-KR', 'capabilities':{'settings_experiment_arm':arm}})
+    assert response['resolution_status'] == 'confirmation_required'
+    assert response['goal']['goal_type'] == 'settings.wallpaper.change'
+    assert response['preparation']['graph_reference'] is not None

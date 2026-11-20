@@ -1,4 +1,4 @@
-param([switch]$Install)
+param([switch]$Install, [ValidateSet('graph', 'llm')][string]$Arm = 'graph')
 $ErrorActionPreference = 'Stop'
 $backendRoot = Split-Path $PSScriptRoot -Parent
 $repoRoot = Split-Path $backendRoot -Parent
@@ -49,12 +49,13 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Connect one USB debugging device and authorize this PC first' }
         & $adb reverse tcp:8110 tcp:8110
         if ($LASTEXITCODE -ne 0) { throw 'ADB reverse failed' }
-        foreach ($arm in @('graph', 'llm')) {
-            $apk = Join-Path $repoRoot "Frontend/app/build/outputs/settings-experiment/$arm.apk"
+        foreach ($apkArm in @('graph', 'llm')) {
+            $apk = Join-Path $repoRoot "Frontend/app/build/outputs/settings-experiment/$apkArm.apk"
             if (-not (Test-Path -LiteralPath $apk)) { throw "Missing APK: $apk" }
             & $adb install -r $apk
-            if ($LASTEXITCODE -ne 0) { throw "Install failed: $arm" }
+            if ($LASTEXITCODE -ne 0) { throw "Install failed: $apkArm" }
         }
+        & (Join-Path $repoRoot 'Frontend/scripts/select-settings-experiment.ps1') -Arm $Arm
     }
     $plannerOutput = & $python -X utf8 scripts/check_settings_planner.py
     $plannerExit = $LASTEXITCODE

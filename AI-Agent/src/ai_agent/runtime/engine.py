@@ -355,7 +355,7 @@ class ClickAgentEngine:
         current_snapshot = build_screen_snapshot(current_state_id, normalized_nodes,
             observation_id=request.observation_id or request.request_id,
             captured_at_ms=request.captured_at_ms, applied_settings=request.applied_settings)
-        relocated_session = observe_page_navigation(existing_session,current_snapshot,normalized_nodes,graph)
+        relocated_session = observe_page_navigation(existing_session,current_snapshot,normalized_nodes,graph,request)
         user_retry = user_retry or relocated_session is not existing_session
         existing_session = relocated_session
         previous_transition = next((t for t in graph.transitions if existing_session

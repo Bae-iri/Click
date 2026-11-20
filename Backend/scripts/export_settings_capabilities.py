@@ -22,8 +22,8 @@ def normalized(value):
     return ' '.join(value.strip().lower().split())
 
 def build():
-    privacy=json.loads((ROOT/'AI-Agent/goal_catalog/screen_privacy_policy.json').read_text())
-    execution=json.loads((ROOT/'AI-Agent/goal_catalog/settings_execution.json').read_text())['goals']
+    privacy=json.loads((ROOT/'AI-Agent/goal_catalog/screen_privacy_policy.json').read_text(encoding="utf-8"))
+    execution=json.loads((ROOT/'AI-Agent/goal_catalog/settings_execution.json').read_text(encoding="utf-8"))['goals']
     goals={}; labels=set(); states=set()
     def safe(label):return not any(w in normalized(label) for w in RISKY)
     for release,graph in releases():
@@ -76,6 +76,6 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--check',action='store_true');a=p.parse_args()
     data=json.dumps(build(),ensure_ascii=False,indent=2,sort_keys=True)+'\n'
     if a.check:
-        if not OUTPUT.is_file() or OUTPUT.read_text()!=data:raise SystemExit('settings_capabilities.json is stale; run export_settings_capabilities.py')
-    else:OUTPUT.write_text(data)
+        if not OUTPUT.is_file() or OUTPUT.read_text(encoding="utf-8")!=data:raise SystemExit('settings_capabilities.json is stale; run export_settings_capabilities.py')
+    else:OUTPUT.write_text(data,encoding='utf-8')
 if __name__=='__main__':main()

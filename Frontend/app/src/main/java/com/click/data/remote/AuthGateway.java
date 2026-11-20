@@ -100,9 +100,15 @@ public final class AuthGateway {
     }
 
     static synchronized boolean refresh(AuthTokenStore tokens) throws Exception {
+        return refresh(tokens, body -> post("/api/v1/auth/refresh", body, null));
+    }
+
+    interface RefreshSender { HttpResult send(String body) throws Exception; }
+
+    static synchronized boolean refresh(AuthTokenStore tokens, RefreshSender sender) throws Exception {
         if (!tokens.hasRefreshToken()) return false;
         JSONObject body = new JSONObject().put("refresh_token", tokens.refreshToken());
-        HttpResult result = post("/api/v1/auth/refresh", body.toString(), null);
+        HttpResult result = sender.send(body.toString());
         if (result.status < 200 || result.status >= 300) {
             // Only the refresh endpoint's explicit invalid-token response revokes
             // local credentials. Rate limits, outages and transport failures must

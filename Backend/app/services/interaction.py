@@ -31,7 +31,7 @@ class InteractionService:
     def __init__(self, factory, classifier=None, clock=time.time):
         self.factory, self.clock = factory, clock
         self.classifier = classifier if classifier is not None else configured_goal_classifier()
-        self.catalog = json.loads((Path(__file__).parents[1] / 'task_graphs/goal_catalog.json').read_text())['goals']
+        self.catalog = json.loads((Path(__file__).parents[1] / 'task_graphs/goal_catalog.json').read_text(encoding="utf-8"))['goals']
 
     @staticmethod
     def _owned(db, user_id, identifier):

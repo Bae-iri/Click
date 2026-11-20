@@ -42,7 +42,7 @@ def retry_session(request, session):
                    pending_confirmation_transition_id=None, recovery_state={})
 
 
-def observe_page_navigation(session, snapshot, nodes, graph):
+def observe_page_navigation(session, snapshot, nodes, graph, request=None):
     """Retire stale guidance on an actual native page change, preserving all action budgets."""
     previous=session.last_snapshot if session else None
     if (not previous or session.task_completed or session.total_failed_attempts>=graph.policy.max_failed_attempts
@@ -52,6 +52,15 @@ def observe_page_navigation(session, snapshot, nodes, graph):
             or snapshot.captured_at_ms<=previous.captured_at_ms):
         return session
     edge=next((edge for edge in graph.transitions if edge.transition_id==session.pending_transition_id),None)
+    if edge and edge.verification_predicate=='state_reached':
+        from ai_agent.runtime.verification import correlate_action
+        attempt = session.pending_attempt
+        if request is not None:
+            attempt, _ = correlate_action(session, request, edge)
+        if attempt and attempt.get('event_key'):
+            # A native tap can precede a partially rendered destination heading.
+            # Keep its verifier; it will confirm progress or reject a settled wrong page.
+            return session
     if edge and edge.verification_predicate=='state_reached' and not session.recovery_state.get('waiting_for_user'):
         from ai_agent.runtime.verification import navigation_reachable
         if snapshot.state_id==edge.to_state or navigation_reachable(graph,edge.to_state,snapshot.state_id):

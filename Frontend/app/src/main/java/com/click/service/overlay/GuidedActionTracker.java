@@ -8,6 +8,7 @@ import org.json.JSONObject;
 
 /** Binds real accessibility events to the exact displayed guide, never to spoken claims. */
 public final class GuidedActionTracker {
+    public boolean hasTapBinding() { return target != null && "tap".equals(action) && !consumed; }
     private String session, episode, guide, action;
     private AccessibilityNodeSnapshot target;
     private int[] sliderTrackBounds;

@@ -3835,6 +3835,20 @@ public class ClickOverlayServiceExecutionTest {
         prepareGuideResponse();deliver(1,"highlight","tap",null);
         ((TaskExecutionController)fieldValue("execution")).recovery();
         set("targetHelpGeneration",get("executionGeneration"));set("recoveryApologyGeneration",get("executionGeneration"));
+    @Test public void automaticTapKeepsItsBindingWhileTheNativeWindowChangeCallbackArrives() throws Exception {
+        prepareGuideResponse();deliver(1,"highlight","tap",null);
+        GuidedActionTracker tracker=(GuidedActionTracker)get("actionTracker");
+        assertTrue(tracker.hasTapBinding());
+        String guide=(String)get("lastGuideCommandId");
+        AutomationRunGuard guard=(AutomationRunGuard)get("automationGuard");
+        assertEquals(AutomationRunGuard.Decision.ALLOW,guard.begin("frontend-session","episode",guide,currentScreen.contentFingerprint(),"tap"));
+        set("automaticTapDispatchedAt",android.os.SystemClock.uptimeMillis());
+        int before=requests.size();currentScreen=displaySettingsPage();broadcastCurrentPage();
+        assertEquals("Do not submit manual_override before the native tap callback",before,requests.size());
+        assertTrue("Keep the exact guide for the arriving tap event",tracker.hasTapBinding());
+        assertEquals(guide,get("lastGuideCommandId"));
+    }
+
         set("targetHelpScreen",currentScreen);
         var heading=new AccessibilityNodeSnapshot("heading",null,true,"com.android.settings","디스플레이",null,null,
             "android.view.View","container",new int[]{20,20,900,100},false,true,false,false,false,null,42,

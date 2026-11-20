@@ -65,6 +65,16 @@ def navigation_key(state_id):
     return 'nav_' + sha256(state_id.encode()).hexdigest()[:10]
 
 
+def supports_graph(graph):
+    return (graph.definition.target_app == 'android_settings'
+            and graph.definition.task_type in {'settings_change', 'settings_assisted'})
+
+
+def completion_key(graph):
+    return 'adjust_setting' if any(e.completes_task and e.action_type.value == 'drag'
+                                  for e in graph.transitions) else 'complete_setting'
+
+
 def catalogue(graph):
     """A vocabulary of reviewed atomic capabilities, without route edges/order."""
     targets = {}
@@ -72,15 +82,17 @@ def catalogue(graph):
     for edge in graph.transitions:
         if edge.safety_level.value == 'BLOCKED' or graph.states[edge.from_state].verification_only:
             continue
-        if edge.completes_task and edge.action_type.value == 'drag':
-            key = 'adjust_setting'
-            description = graph.definition.required_slots['setting'] + ':' + graph.definition.required_slots['direction']
+        if edge.completes_task:
+            key = completion_key(graph)
+            description = graph.definition.name
+            if graph.definition.task_type == 'settings_assisted':
+                description += ' (user completes the change; hand off on the target screen)'
         elif not edge.completes_task and edge.action_type.value == 'tap':
             key = navigation_key(edge.to_state)
             description = graph.states[edge.to_state].name
         else:
             continue
-        targets.setdefault(key, {'id': key, 'kind': 'adjust' if key == 'adjust_setting' else 'navigate',
+        targets.setdefault(key, {'id': key, 'kind': 'adjust' if key == 'adjust_setting' else 'complete' if edge.completes_task else 'navigate',
                                  'target': description})
         bindings.setdefault(key, []).append(edge.transition_id)
     return list(targets.values()), bindings
@@ -147,13 +159,14 @@ class GeminiSettingsPlanner:
                 diagnostic.update(reason_code='missing_api_key', failure_kind='provider', retryable=False)
                 return None, diagnostic
             allowed = {t['id'] for t in targets}
+            terminal = 'adjust_setting' if 'adjust_setting' in allowed else 'complete_setting'
             schema = {'type': 'object', 'properties': {'subgoals': {'type': 'array', 'minItems': 1, 'maxItems': 8,
                 'items': {'type': 'string', 'enum': sorted(allowed)}}}, 'required': ['subgoals'], 'additionalProperties': False}
             context = dict(goal_type=goal, atomic_capabilities=sorted(targets,key=lambda t:t['id']), current_page=current_page,
                 currently_visible_targets=visible_targets, completed=completed, recent_failures=failures[-4:])
             prompt = ('Plan the remaining Android Settings subgoals for the requested change. '
                 'Choose their order yourself; the capabilities are an unordered vocabulary, not a route. '
-                'Use at most 8 unique IDs and end with adjust_setting. Omit completed navigation goals. '
+                f'Use at most 8 unique IDs and end with {terminal}. Omit completed navigation goals. '
                 'Prefer the current screen when the adjustment control is visible. '
                 'A separate Jev model will choose an actually visible native UI element per subgoal; '
                 'the user operates it. Do not claim success, generate coordinates, code, input values or permissions. '
@@ -179,7 +192,7 @@ class GeminiSettingsPlanner:
             steps = plan['subgoals']
             if (not isinstance(steps, list) or not 1 <= len(steps) <= 8
                     or any(not isinstance(s, str) or s not in allowed for s in steps)
-                    or len(set(steps)) != len(steps) or steps[-1] != 'adjust_setting'
+                    or len(set(steps)) != len(steps) or steps[-1] != terminal
                     or any(s in completed for s in steps)):
                 raise ValueError('Unsupported plan')
             usage = body.get('usageMetadata', {})

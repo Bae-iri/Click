@@ -31,7 +31,9 @@ LLM 실패 시 그래프 방식으로 대체하지 않는다. 단순 대기·UNK
 * 미디어 음량 높여줘 / 낮춰줘
 
 먼저 글자 크기 증가 하나를 두 앱에서 같은 조건으로 비교한 뒤 밝기·음량으로 넓힌다.
-다른 설정·앱은 이번 비교 범위가 아니다. 일반 앱의 기존 기능 범위를 변경하지 않는다.
+두 실험 앱은 기존 클릭의 승인된 설정 작업도 그대로 지원한다. 배경화면 변경 같은 직접 진행 안내는
+대상 화면까지 안내하며, 사진 선택·최종 적용은 사용자가 한다. LLM도 같은 승인 동작 목록에서 계획한다.
+숫자 변화로 직접 비교하는 기본 측정 목표는 위 여섯 가지이며, 직접 진행 안내는 별도로 기록한다.
 
 ## 빠른 실행과 비교 보고서
 
@@ -125,6 +127,11 @@ python -X utf8 -m uvicorn app.main:app --env-file instance/settings-experiment/.
 생성 파일은 `Frontend/app/build/outputs/settings-experiment/graph.apk`, `llm.apk`다.
 USB 디버깅을 허용한 폰을 연결하고 PC PowerShell에서 실행한다.
 
+빌드·서버 연결 점검 후 실제 기기 준비 검증은 Frontend에서 `./scripts/verify-settings-experiment.ps1`로 실행한다.
+각 앱에서 설정 첫 화면부터 실제 글자 크기 증가와 `CHANGED` 판정을 확인하고 원래 값을 복원한다.
+중단된 검증의 동일 요청만 정리하며 다른 작업이 실행 중이면 진행하지 않는다. 결과는
+`Backend/instance/settings-experiment/device-readiness`에 저장한다. API 연결 성공만으로 기기 준비 완료를 표시하지 않는다.
+
 ```powershell
 $adb='C:\click_server\.android-sdk\platform-tools\adb.exe'
 & $adb devices
@@ -133,14 +140,22 @@ $adb='C:\click_server\.android-sdk\platform-tools\adb.exe'
 & $adb install -r C:\click_server\Click\Frontend\app\build\outputs\settings-experiment\llm.apk
 ```
 
-접근성 서비스는 시험하는 앱 하나만 켠다. 기존 클릭·정부24 테스트·다른 비교 앱 서비스는 시험 중 끈다.
-두 실험 앱에서는 자동 탭·자동 드래그·자동 홈/설정 스크롤을 막고 사용자가 직접 조작한다.
+접근성 서비스는 시험하는 앱 하나만 켠다. 아래 선택 명령은 다른 클릭 서비스들을 끄고 해당 앱만 켜며,
+USB 연결과 자동 조작 설정을 두 방식에 동일하게 맞춘다. 기존 클릭과 같은 탐색·스크롤·조작 코드를 사용한다.
+설정 변경에 필요한 승인과 직접 진행 경계도 기존 클릭과 같다. 수동 조건은 `-Manual`로 양쪽 모두 맞춘다.
+
+```powershell
+cd C:\click_server\Click\Frontend
+.\scripts\select-settings-experiment.ps1 -Arm graph
+# 그래프 시험을 끝내고 시작값을 복원한 뒤:
+.\scripts\select-settings-experiment.ps1 -Arm llm
+```
 
 ## 실제 진행
 
 1. 비교할 설정값을 같은 시작값으로 맞추고 Android **설정 앱의 첫 화면**을 직접 연다.
 2. ‘클릭 그래프 실험’ 접근성을 켜고 오버레이에서 ‘휴대폰 글자 크기 키워줘’를 요청한다.
-3. 표시된 메뉴를 직접 누르고, 조절 승인을 확인한 뒤 슬라이더도 직접 조절한다.
+3. 메뉴 탐색을 진행하고, 조절 승인 질문에 응답한다. 수동 조건에서는 표시된 항목과 슬라이더를 직접 조작한다.
 4. 결과 확인 질문에 응답한다. 원래 설정값과 시작 화면으로 되돌린다.
 5. 그래프 실험 접근성을 끄고 LLM 실험 접근성을 켠 뒤 같은 요청을 반복한다.
 
@@ -161,6 +176,7 @@ python -X utf8 scripts/settings_experiment_log.py --follow
 이미 실행 중인 로그 터미널은 `Ctrl+C`로 종료하고 같은 명령을 다시 실행한다.
 시작 시 `event=watching`이 표시된다. 실행 전 요청 준비는 `event=goal_preparation`,
 USB 연결 기기의 화면 검사 사유는 `event=device_preflight`로 표시된다.
+`--follow`는 실행한 시점 이후 기록만 출력한다. 과거 기록도 보려면 `--follow --history`를 사용한다.
 기기 로그는 PC에서 연결된 폰의 로컬 logcat을 읽으며 서버에 업로드하지 않는다.
 화면을 확인하지 못한 경우 앱의 **설정 화면 열기**를 누르면 요청을 유지한 채 새 화면으로 다시 확인한다.
 인증·민감 화면은 사용자 직접 진행 원칙을 유지한다.
