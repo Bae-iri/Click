@@ -1,8 +1,19 @@
 {
   "schema_version": "click.native-settings-integration.v1",
-  "status": "PENDING_MERGE_VERIFICATION",
+  "status": "VERIFIED",
   "measured_base_commit": "32041e5f79c5366be35d184e7b8b22657318c3da",
-  "frozen_source_commit": "PENDING_RESULT_COMMIT",
-  "incoming_remote_commit": "40f2470",
-  "performance_rerun_after_integration": false
+  "frozen_source_commit": "8d3a3f046b7949e005b6b565edf9d4ff9a3ad0e9",
+  "incoming_remote_commit": "40f2470d93f6099b5a2c5405f65868f0e7d4c7e2",
+  "performance_rerun_after_integration": false,
+  "integrated_source_commit": "7b448d811ea2a641fd5c1ea0ce6b7c104f0a6af7",
+  "checks": {
+    "debug_apk": "PASSED",
+    "instrumentation_apk": "PASSED",
+    "lint_debug": "PASSED",
+    "unit_test_classes": 22,
+    "unit_tests_passed": 142,
+    "unit_tests_failed": 0,
+    "duration_seconds": 22
+  },
+  "scope_note": "Original36 performance episodes used frozen_source_commit; merged onboarding code was build/unit/lint checked, not performance rerun"
 }

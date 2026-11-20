@@ -70,3 +70,5 @@
 [사전 프로토콜](../../../experiments/metacontroller/native-settings-protocol-v1.md) · [고정 카탈로그](../../../experiments/metacontroller/native-settings-catalogue-v1.json) · [전체 일정](manifest.json) · [환경](environment.json) · [소스/APK 동결](source-freeze.json) · [준비 검사](readiness.json) · [native 거절 검사](guard-readiness.json) · [36회 원자료](episodes.jsonl) · [클라이언트 원장](client-receipts.jsonl) · [서버 원장](provider-terminal.jsonl) · [직접 대조](request-audit.json) · [정량 요약](summary.json) · [재현 절차](reproduce.md) · [종료·정리](cleanup.json)
 
 실험 소스는 기준 `32041e5`와 동결 기록의 추가 파일이다. 이후 원격 온보딩 변경을 보존해 통합하므로, 정확한 성능 재현에는 [통합 기록](integration.json)의 `frozen_source_commit`을 사용한다. 통합 후 빌드 검증과 원래 36회 성능 측정은 구분한다.
+
+원격 온보딩 변경을 보존한 통합 소스에서는 별도 출력 경로로 debug/계측 APK 빌드, lint, 관련 22개 클래스 142개 테스트가 통과했다. 36회 성능 결과를 통합 후 코드에서 재측정한 것은 아니다. 전체 보고 자료의 무결성은 [파일 해시](artifact-sha256.json)로 확인할 수 있다.

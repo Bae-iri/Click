@@ -50,5 +50,14 @@
     "status": "SAME_THREE_FAILURES_REPRODUCED_OUTSIDE_ISOLATED_EXPERIMENT_CONFIG",
     "duration_seconds": 7,
     "cause": "NOT_ESTABLISHED; static-mock/overload interaction is a hypothesis; no source fix included"
+  },
+  "merged_source_verification": {
+    "debug_apk": "PASSED",
+    "instrumentation_apk": "PASSED",
+    "lint_debug": "PASSED",
+    "unit_test_classes": 22,
+    "unit_tests_passed": 142,
+    "unit_tests_failed": 0,
+    "duration_seconds": 22
   }
 }
