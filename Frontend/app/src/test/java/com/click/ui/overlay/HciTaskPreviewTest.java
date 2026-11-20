@@ -155,7 +155,10 @@ public class HciTaskPreviewTest {
             assertTrue(label + " text clipped vertically",
                     layout.getLineBottom(layout.getLineCount() - 1) <= button.getHeight()
                             - button.getCompoundPaddingTop() - button.getCompoundPaddingBottom() + 2);
-            Rect bounds = new Rect(0, 0, button.getWidth(), button.getHeight());
+            // TextView's single-line centering scrolls its internal text canvas.
+            // Map the clickable viewport, not that scrolled content origin.
+            Rect bounds = new Rect(button.getScrollX(), button.getScrollY(),
+                    button.getScrollX()+button.getWidth(), button.getScrollY()+button.getHeight());
             panel.offsetDescendantRectToMyCoords(button, bounds);
             assertTrue(label + " extends outside panel", bounds.left >= 0 && bounds.top >= 0
                     && bounds.right <= panel.getWidth() && bounds.bottom <= panel.getHeight());
