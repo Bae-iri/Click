@@ -1,0 +1,54 @@
+{
+  "schema_version": "click.meta-retest-context.v1",
+  "frozen_at_utc": "2026-11-20T07:55:26.314152+00:00",
+  "git_base": "d2ec9eff816ef2d5203128c4c9e9367f664a1224",
+  "common_fixes_both_arms": true,
+  "meta_policy_changed": false,
+  "default_arm": "CURRENT",
+  "evidence_modes": [
+    "native_android_emulator_regression_no_model",
+    "controlled_full_controller_conformance",
+    "live_model_synthetic_closed_loop"
+  ],
+  "physical_device_used": false,
+  "emulator": {
+    "api": "37.2",
+    "architecture": "arm64-v8a",
+    "avd": "temporary /private/tmp/click-mc-retest-avd",
+    "serial": "emulator-5560"
+  },
+  "source_sha256": {
+    "Frontend/app/src/main/java/com/click/data/snapshot/AppTaskObservation.java": "944db88e06d4c63a9d037d15a60200c576dfef7fcd5926fae57efb20097930a3",
+    "Frontend/app/src/main/java/com/click/service/accessibility/AppTaskExecutor.java": "7d30aa2d6b1e494f10857b7781a88a59eecc016620d31b9d756423b1dadcd8b4",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java": "da9923af46dbc3fb06934859517ec69d3fac1e40dd92be5eaf21722313928cfb",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskCompletion.java": "ca55e44d3c6877c92ed511f00a23f51655798757eed97b719731316404ab0ecb",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskMemory.java": "5f18f519701b8cb0513cb47fa8299f1c486bff36d794e91c863c426cd17f0b2e",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskMetaController.java": "b6c75b69438e677964069d08693de8267eb55887c4820bf6a9e41c9f754d324c",
+    "Frontend/app/src/test/java/com/click/service/overlay/MetaControllerClosedLoopExperimentTest.java": "4f4b28b873b3f048904e04241b1f168e8bffc071b6d19e71005e557704d177a8",
+    "Backend/app/services/app_task.py": "913fdec3f0188e5bd007b6638975888a0b20231ffa1326f03433ebd698d7e9ac",
+    "Backend/scripts/serve_meta_controller_synthetic_experiment.py": "df75e9b8953f68ff9b85da629ec3b75cfd71252ff5d8cdcb5f289507e5998f75",
+    "experiments/metacontroller/closed-loop-fixture-v1.json": "1e233e90958fa18ca5800afd575c8df870c52e03ee848be17a443e9f080ad116",
+    "Backend/scripts/summarize_meta_controller_closed_loop.py": "2b1671dfd5e2072f3d113f3ea526f60a8bda6606b977e9c6116336af9c270b90"
+  },
+  "timing": {
+    "ui": "Robolectric PAUSED virtual time",
+    "provider": "actual Gemini latency in monotonic wall time, separate from virtual UI waits",
+    "human_time_measured": false
+  },
+  "model": "gemini-3.8-flash",
+  "api_key_available": true,
+  "native_apk_sha256": {
+    "app-debug.apk": "f37bf52addfe0db6d00a0dff349a98cbff730bc1ac8e352dc341536d8cc9a096",
+    "app-debug-androidTest.apk": "4e4c1f561d29b62563f0f8831c8e8f925304d1581e451d2d7b2c2962d01fa8a0"
+  },
+  "common_fix_commit": "a19bd5ae44c845307bd1981254ddd9420e20665a",
+  "postrun_audit_sha256": {
+    "Backend/scripts/audit_meta_controller_closed_loop_provider.py": "af1403c413acfba2719b3b891dd55f49d51eb9bf742f1dc9b1535f2baa51b457"
+  },
+  "final_run_source_drift": false,
+  "cleanup": {
+    "temporary_emulator_stopped": true,
+    "temporary_facade_stopped": true,
+    "physical_device_modified": false
+  }
+}
