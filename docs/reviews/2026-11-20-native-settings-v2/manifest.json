@@ -1,0 +1,566 @@
+{
+  "schema_version": "click.native-settings.v2",
+  "evidence_mode": "live_native_settings",
+  "run_id": "settings-native-v2-20261120",
+  "budget_ms": 30000,
+  "delay_ms": 5500,
+  "measurement_revision": "equal_independent_observation_window_v2",
+  "observation_window_policy": "until_30000ms_or_joint_success",
+  "terminal_state_stops_measurement": false,
+  "false_offer_stops_measurement": false,
+  "oracle_sampling_scope": "independent_poll_samples_obtained_within_budget",
+  "scripted_settle_ms": 750,
+  "goal_stable_ms": 700,
+  "conditions": [
+    "normal",
+    "accepted_no_effect",
+    "delayed_transition"
+  ],
+  "scheduled_pairs": [
+    {
+      "pair_id": "settings-native-v2-20261120:settings_display:normal",
+      "task": "settings_display",
+      "condition": "normal",
+      "arms": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_sound:normal",
+      "task": "settings_sound",
+      "condition": "normal",
+      "arms": [
+        "B",
+        "A"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_accessibility:normal",
+      "task": "settings_accessibility",
+      "condition": "normal",
+      "arms": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_bluetooth:normal",
+      "task": "settings_bluetooth",
+      "condition": "normal",
+      "arms": [
+        "B",
+        "A"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_datetime:normal",
+      "task": "settings_datetime",
+      "condition": "normal",
+      "arms": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_language:normal",
+      "task": "settings_language",
+      "condition": "normal",
+      "arms": [
+        "B",
+        "A"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_display:accepted_no_effect",
+      "task": "settings_display",
+      "condition": "accepted_no_effect",
+      "arms": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_sound:accepted_no_effect",
+      "task": "settings_sound",
+      "condition": "accepted_no_effect",
+      "arms": [
+        "B",
+        "A"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_accessibility:accepted_no_effect",
+      "task": "settings_accessibility",
+      "condition": "accepted_no_effect",
+      "arms": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_bluetooth:accepted_no_effect",
+      "task": "settings_bluetooth",
+      "condition": "accepted_no_effect",
+      "arms": [
+        "B",
+        "A"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_datetime:accepted_no_effect",
+      "task": "settings_datetime",
+      "condition": "accepted_no_effect",
+      "arms": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_language:accepted_no_effect",
+      "task": "settings_language",
+      "condition": "accepted_no_effect",
+      "arms": [
+        "B",
+        "A"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_display:delayed_transition",
+      "task": "settings_display",
+      "condition": "delayed_transition",
+      "arms": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_sound:delayed_transition",
+      "task": "settings_sound",
+      "condition": "delayed_transition",
+      "arms": [
+        "B",
+        "A"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_accessibility:delayed_transition",
+      "task": "settings_accessibility",
+      "condition": "delayed_transition",
+      "arms": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_bluetooth:delayed_transition",
+      "task": "settings_bluetooth",
+      "condition": "delayed_transition",
+      "arms": [
+        "B",
+        "A"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_datetime:delayed_transition",
+      "task": "settings_datetime",
+      "condition": "delayed_transition",
+      "arms": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "pair_id": "settings-native-v2-20261120:settings_language:delayed_transition",
+      "task": "settings_language",
+      "condition": "delayed_transition",
+      "arms": [
+        "B",
+        "A"
+      ]
+    }
+  ],
+  "measurement_context_key": "72e4963ea2c52262d1d4b32817c0f4cf8f3e5bcbee5a12304bb248daf9a61069",
+  "catalogue": {
+    "schema_version": "click.native-settings.v1",
+    "app_id": "com.android.settings",
+    "locale": "en-US",
+    "oracle_revision": "settings-ax-title-landmark-v1",
+    "goal_locale": "ko-KR",
+    "tasks": [
+      {
+        "task_id": "settings_display",
+        "goal": "설정에서 디스플레이 및 터치 화면을 열어줘.",
+        "intent": "android.settings.DISPLAY_SETTINGS",
+        "gui_path": [
+          "Display & touch"
+        ],
+        "oracle_title": "Display & touch",
+        "oracle_landmarks": [
+          "Brightness level"
+        ],
+        "oracle_title_resources": [
+          "com.android.settings:id\/collapsing_toolbar"
+        ]
+      },
+      {
+        "task_id": "settings_sound",
+        "goal": "설정에서 소리 및 진동 화면을 열어줘.",
+        "intent": "android.settings.SOUND_SETTINGS",
+        "gui_path": [
+          "Sound & vibration"
+        ],
+        "oracle_title": "Sound & vibration",
+        "oracle_landmarks": [
+          "Media volume"
+        ],
+        "oracle_title_resources": [
+          "com.android.settings:id\/collapsing_toolbar"
+        ]
+      },
+      {
+        "task_id": "settings_accessibility",
+        "goal": "설정에서 접근성 화면을 열어줘.",
+        "intent": "android.settings.ACCESSIBILITY_SETTINGS",
+        "gui_path": [
+          "Accessibility"
+        ],
+        "oracle_title": "Accessibility",
+        "oracle_landmarks": [
+          "TalkBack"
+        ],
+        "oracle_title_resources": [
+          "com.android.settings:id\/collapsing_toolbar"
+        ]
+      },
+      {
+        "task_id": "settings_bluetooth",
+        "goal": "설정에서 블루투스 화면을 열어줘.",
+        "intent": "android.settings.BLUETOOTH_SETTINGS",
+        "gui_path": [
+          "Connected devices",
+          "Connection preferences",
+          "Bluetooth"
+        ],
+        "oracle_title": "Bluetooth",
+        "oracle_landmarks": [
+          "Use Bluetooth"
+        ],
+        "oracle_title_resources": [
+          "com.android.settings:id\/collapsing_toolbar"
+        ],
+        "positive_intent_path": [
+          "Connection preferences",
+          "Bluetooth"
+        ]
+      },
+      {
+        "task_id": "settings_datetime",
+        "goal": "설정에서 날짜 및 시간 화면을 열어줘.",
+        "intent": "android.settings.DATE_SETTINGS",
+        "gui_path": [
+          "System",
+          "Date & time"
+        ],
+        "oracle_title": "Date & time",
+        "oracle_landmarks": [
+          "Automatic date and time"
+        ],
+        "oracle_title_resources": [
+          "com.android.settings:id\/collapsing_toolbar"
+        ]
+      },
+      {
+        "task_id": "settings_language",
+        "goal": "설정에서 언어 및 지역 화면을 열어줘.",
+        "intent": "android.settings.LOCALE_SETTINGS",
+        "gui_path": [
+          "System",
+          "Language & region"
+        ],
+        "oracle_title": "Language & region",
+        "oracle_landmarks": [
+          "Preferred Languages"
+        ],
+        "oracle_title_resources": [
+          "com.android.settings:id\/collapsing_toolbar"
+        ]
+      }
+    ],
+    "navigation_labels": [
+      "Display & touch",
+      "Sound & vibration",
+      "Accessibility",
+      "Connected devices",
+      "Connection preferences",
+      "Bluetooth",
+      "System",
+      "Date & time",
+      "Language & region",
+      "Navigate up"
+    ],
+    "navigation_controls": [
+      {
+        "label": "Display & touch",
+        "resource": ""
+      },
+      {
+        "label": "Sound & vibration",
+        "resource": ""
+      },
+      {
+        "label": "Accessibility",
+        "resource": ""
+      },
+      {
+        "label": "Connected devices",
+        "resource": ""
+      },
+      {
+        "label": "Connection preferences",
+        "resource": ""
+      },
+      {
+        "label": "Bluetooth",
+        "resource": ""
+      },
+      {
+        "label": "System",
+        "resource": ""
+      },
+      {
+        "label": "Date & time",
+        "resource": ""
+      },
+      {
+        "label": "Language & region",
+        "resource": ""
+      },
+      {
+        "label": "Navigate up",
+        "resource": ""
+      }
+    ],
+    "public_labels": [
+      "",
+      "0 rules",
+      "1",
+      "1 print service on",
+      "100%",
+      "12-hour \/ 24-hour format",
+      "45% used - 4.40 GB free",
+      "83%",
+      "8:30 PM",
+      "8:36 PM",
+      "About emulated device",
+      "Accessibility",
+      "Accessibility Menu",
+      "Accounts and backup",
+      "Add a language",
+      "Alarm volume",
+      "Alarm volume,",
+      "Android Auto",
+      "App languages",
+      "App security, device lock, permissions",
+      "Appearance",
+      "Apps",
+      "Assistant volume",
+      "Assistant volume,",
+      "Assistant, recent apps, default apps",
+      "Audio will play on",
+      "Automatic",
+      "Automatic date and time",
+      "Automatic time zone",
+      "Automation & Intelligence",
+      "Back up data, copy data from another device",
+      "Battery & charging",
+      "Bluetooth",
+      "Bluetooth, Android Auto",
+      "Bluetooth, pairing",
+      "Brightness",
+      "Brightness level",
+      "Call casting, internet sharing",
+      "Call volume",
+      "Call volume,",
+      "Choose the language for each app",
+      "Chromebook",
+      "Color",
+      "Color & motion",
+      "Color contrast",
+      "Colors",
+      "Colors, themed icons, app grid",
+      "Connected devices",
+      "Connection preferences",
+      "Control speech recognition and output",
+      "Cross-device services",
+      "Dark theme",
+      "Dark theme, color correction, remove animations",
+      "Dark theme, font size, touch",
+      "Date",
+      "Date & time",
+      "Device name",
+      "Digital Wellbeing",
+      "Digital ground rules & screen time limits",
+      "Display",
+      "Display & touch",
+      "Display size & text",
+      "Display, interaction, audio",
+      "Do Not Disturb, Bedtime, Driving",
+      "Downloaded apps",
+      "Emergency SOS, medical info, alerts",
+      "English (United States)",
+      "First day of week",
+      "Font size, display size, bold text, outline text",
+      "GMT+09:00 Korean Standard Time",
+      "Gesture navigation",
+      "Gestures",
+      "Get notified when your time changes automatically",
+      "Google",
+      "Google Cast",
+      "Helps identify the relative position of nearby devices that have UWB",
+      "Home time zone",
+      "If your device location is available, it may be used to set your time zone",
+      "Interaction",
+      "Interaction controls",
+      "Keyboard",
+      "Keyboard apps, physical keyboards, tools",
+      "Language & region",
+      "Languages & input",
+      "Languages, gestures, time",
+      "Live Translate",
+      "Location",
+      "Lock display",
+      "Lock screen",
+      "Magnification",
+      "Measurement system",
+      "Media volume",
+      "Media volume,",
+      "Mobile, Wi‐Fi, hotspot",
+      "Modes",
+      "More language settings",
+      "More settings",
+      "NFC",
+      "Navigate up",
+      "Navigation mode",
+      "Network & internet",
+      "Not available as system language",
+      "Not connected",
+      "Not set",
+      "Notification history, conversations",
+      "Notification volume",
+      "Notification volume,",
+      "Notifications",
+      "November 20, 2026",
+      "Off \/ Control device with voice commands",
+      "Off \/ Control volume, brightness, and more with a large menu",
+      "Off \/ Hear selected text",
+      "Off \/ Use a screen reader to hear items spoken aloud",
+      "Off \/ Zoom in to make content larger on your screen",
+      "On",
+      "On \/ 5 apps have access to location",
+      "On \/ Clock",
+      "On \/ Control vibration levels for calls, notifications, and alarms",
+      "Pair new device",
+      "Parental controls",
+      "Passwords & passkeys",
+      "Preferred Languages",
+      "Printing",
+      "Quick Share",
+      "Region",
+      "Regional preferences",
+      "Ring volume",
+      "Ring volume,",
+      "Rules",
+      "Safety & emergency",
+      "Saved devices",
+      "Screen reader",
+      "Screen saver",
+      "Screen time, app timers, bedtime schedules",
+      "Screen timeout",
+      "Search Settings",
+      "Security & privacy",
+      "See all",
+      "Select to Speak",
+      "Services & preferences",
+      "Set a home time zone for when you are away",
+      "Set automatically based on mobile networks near you",
+      "Set automatically using your network and wireless signals",
+      "Share files with nearby devices",
+      "Show all notification content",
+      "Software updates",
+      "Sound & vibration",
+      "Speech",
+      "Storage",
+      "Suggestions for sign-in & autofill",
+      "System",
+      "System languages, app languages, regional preferences, speech",
+      "System management",
+      "TalkBack",
+      "Temperature",
+      "This phone",
+      "Time",
+      "Time zone",
+      "Tips & support",
+      "Ultra-Wideband (UWB)",
+      "United States",
+      "Update device",
+      "Use Bluetooth",
+      "Use apps on your vehicle screen",
+      "Use default",
+      "Use location for time zone",
+      "Vibration & haptics",
+      "Visible as “sdk_gphone16k_arm64” to other devices",
+      "Voice Access",
+      "Volume and haptics",
+      "Wallpaper & style",
+      "Will turn on when Bedtime starts",
+      "Your Pixel is up to date",
+      "Your phone is not linked to a Chromebook",
+      "sdk_gphone16k_arm64",
+      "검색어 입력",
+      "목록",
+      "클릭 화면 안내"
+    ],
+    "public_resources": [
+      "",
+      "android:id\/content",
+      "android:id\/icon",
+      "android:id\/list_container",
+      "android:id\/summary",
+      "android:id\/switch_widget",
+      "android:id\/title",
+      "android:id\/widget_frame",
+      "com.android.settings:id\/action_bar",
+      "com.android.settings:id\/app_bar",
+      "com.android.settings:id\/app_bar_container",
+      "com.android.settings:id\/collapsable_text_view",
+      "com.android.settings:id\/collapsing_toolbar",
+      "com.android.settings:id\/container_material",
+      "com.android.settings:id\/content_frame",
+      "com.android.settings:id\/content_parent",
+      "com.android.settings:id\/frame",
+      "com.android.settings:id\/homepage_container",
+      "com.android.settings:id\/icon_frame",
+      "com.android.settings:id\/imageView",
+      "com.android.settings:id\/main_content",
+      "com.android.settings:id\/main_content_scrollable_container",
+      "com.android.settings:id\/number",
+      "com.android.settings:id\/number_frame",
+      "com.android.settings:id\/recycler_view",
+      "com.android.settings:id\/search_action_bar",
+      "com.android.settings:id\/search_bar_title",
+      "com.android.settings:id\/settings_homepage_container",
+      "com.android.settings:id\/settingslib_button",
+      "com.android.settings:id\/slider_frame",
+      "com.android.settings:id\/switchWidget",
+      "com.android.settings:id\/switch_bar",
+      "com.android.settings:id\/switch_text",
+      "com.android.settings:id\/text_frame",
+      "com.android.settings:id\/two_target_divider"
+    ]
+  },
+  "source": "actual_android_settings_emulator",
+  "oracle_source": "independent_ui_automation_title_and_landmarks",
+  "real_app": true,
+  "human_study": false
+}

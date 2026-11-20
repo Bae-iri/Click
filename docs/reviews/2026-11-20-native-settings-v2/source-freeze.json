@@ -1,0 +1,51 @@
+{
+  "schema_version": "click.native-settings-source-freeze.v2",
+  "frozen_at_utc": "2026-11-20T13:22:53.116306+00:00",
+  "frozen_source_commit": "0ed757454abae3696c4c48d24b51e05d2853f8d3",
+  "frozen_source_tree": "1c7d994dd9f45bf67c58146e85746df294c6deff",
+  "model": "gemini-3.8-flash",
+  "full_schedule_episodes": 36,
+  "source_sha256": {
+    "Frontend/app/src/androidTest/java/com/click/service/accessibility/MetaControllerPrivateGuardFixtureActivity.java": "5d1b3cd656bab83f79f7020ab8b4715566d0d0d83abbc3d064eb9268845034e7",
+    "Frontend/app/src/androidTest/AndroidManifest.xml": "e9e11d56757735fc9623c7fd3cb0882a19e73ff174a16a2c668e0345c1cd8c28",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java": "73005c81b9081fee9f56543d9fc493cda10d0116f119f656799d8ae8878a849a",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskMetaController.java": "81cd192cc94abb3c33d1cb352fa559a6dbbdd21de9d591c324ffc138c5bfa8cd",
+    "Frontend/app/src/main/java/com/click/service/accessibility/AppTaskExecutor.java": "7d30aa2d6b1e494f10857b7781a88a59eecc016620d31b9d756423b1dadcd8b4",
+    "Frontend/app/src/main/java/com/click/data/snapshot/AppTaskObservation.java": "e52e1d4002430bc7250f99e56152e35f72bad6bc5c523a79bb216c2afc5afe6b",
+    "Frontend/app/src/main/java/com/click/data/remote/AppGuideGateway.java": "f0acef66f6051a0fc41fb8dd802b1cb1690fd637b10a102d939722d8c335fd52",
+    "Backend/scripts/serve_meta_controller_settings_experiment.py": "c9c53aa1e33218569c3c727dafc396137895c8f234a45a9f3bcfcc1924828c83",
+    "Backend/app/services/app_task.py": "da193a051eabe2422c69cf6ee43a839a3479bd8d7203bfb31702a3f64f4f2eec",
+    "Backend/app/services/app_task_provider.py": "5b69597ef97afa7d0d5caca7f9cfeb2f62f002ed5d566ab4933271887ca01151",
+    "Backend/app/services/app_task_completion.py": "17e212dc7272c4e521d9146cb980a235a334bfb132264c23692defc86b578d5b",
+    "experiments/metacontroller/native-settings-catalogue-v1.json": "351b85001243a9600225ba15bac5b2cde3f691c630ca942c27e66dbd3bbc6991",
+    "Frontend/app/src/androidTest/java/com/click/service/accessibility/MetaControllerSettingsRetestTest.java": "342ea2eb9a25337a545c75e0f8d8fc46e008772dbddd7f2f27c2c3e1f13b0044",
+    "experiments/metacontroller/native-settings-protocol-v2.md": "970c6cb00fa5bf9654018ea0e93bb8053e6a6a30453664b55c474e8e3b076e02",
+    "Backend/app/services/app_task_capabilities.py": "bb7ce10ffc59fec4d40661e3f2e16a973be96842bf1b9c9bd0d87c3ad5a68b5e",
+    "Backend/app/schemas/app_task.py": "e4c4ef0222bb5322e26d4edc794b35b0f4bada4f99d92f9eb36d649bb124c230",
+    "Frontend/app/src/main/java/com/click/data/remote/AppTaskDiagnostics.java": "db085bc38b99d73cba5b359f31feeaa58e839dcf7e4df6a4096c4f66871ce694",
+    "Frontend/app/src/main/java/com/click/data/remote/AppTaskCompletionDiagnostics.java": "43f8934283630c919ceb61cdbcf2f580b4fb3f8b2d487bc250b69cc501bd989e",
+    "Backend/scripts/audit_meta_controller_settings_provider.py": "f4c59af4092d13bb004aecb6b7c184f8794e4c41fe3cdee2dfa2691a482577f9",
+    "Backend/scripts/summarize_meta_controller_settings.py": "f618db350a49011969cf12c9894c824a393c3772e1991090b7b1c64d91005e1d"
+  },
+  "apk_sha256": {
+    "isolated_debug": "0e95e57ca82d04a7ba4f044bde0076c1e4b502b5e6353f832bbf3a538b4cd8ea",
+    "instrumentation": "141f07b5d5ad775d45a72309ffb8f4ba7ac37754f7bf96faa51f7cad3abc8281"
+  },
+  "prepared_artifact_sha256": {
+    "environment.json": "a4e909fa9d89970a3829f4c94194545da6c59cec6ade03086503309e6b443582",
+    "manifest.json": "e48f8ff4db4e52ce94a89b36eeed6097e2c221c7f876c334337371bb9235664f",
+    "manifest-freeze.json": "b9f2e2d71c64661969bb9ea7868a62326a85710df1ccf05cc47d9fccff38a2bd",
+    "readiness.json": "c941d9a5e9409f1c51fd638772d65f0e438a4dfd43b5f8ece7bca9f2f5b32840",
+    "guard-readiness.json": "218c4ec52ecdc3b222256590acea403ec5f7aff2ee72f42daf1abae59ea5d5be"
+  },
+  "historical_cohort": "unchanged docs/reviews/2026-11-20-native-settings; v1 measurement differs; no component causal estimate",
+  "terminal_records_at_aggregation": 0,
+  "model_requests_started_before_aggregation": "unknown; first request may have been in flight",
+  "pre_call_registration": {
+    "source": "0ed757454abae3696c4c48d24b51e05d2853f8d3 committed before instrumentation start",
+    "apks": "both hashes captured in tool output at 2026-11-20 13:20:38 UTC; final test APK installed before final readiness",
+    "full_schedule": "freeze-only instrumentation and artifact extraction completed before normal instrumentation start",
+    "protocol": "committed with source before any calls; no post-outcome edits"
+  },
+  "aggregation_deviation": "The freeze helper failed to import ai_agent twice. The normal instrumentation was inadvertently launched after the failed helper. This aggregate file was completed after launch while no terminal record yet existed; zero terminal records does not prove zero in-flight model calls. Source commit, both APK hashes, protocol, environment and full schedule were fixed and recorded before launch. No source, goal, oracle, schedule or criterion was changed after launch. Treat this as a registration-record assembly deviation, not a claim of a fully pre-call aggregate timestamp."
+}

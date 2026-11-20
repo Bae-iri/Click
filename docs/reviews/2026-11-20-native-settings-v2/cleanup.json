@@ -1,0 +1,9 @@
+{
+  "captured_at_utc": "2026-11-20T13:47:38.215668+00:00",
+  "v2_provider": "drained idle and owned PID 15002 stopped",
+  "v2_output": "archived36episodes108terminalrecords",
+  "v2_emulator": "retained accountless emulator-5560 for separately registered broader follow-up; no personal device used",
+  "runtime_improvement_start": "after cohort-closure.json",
+  "merge_base_after_v2": "11f63f56e8684f6e5b664f9e3853d6c6ddea7472",
+  "measured_source_commit": "0ed757454abae3696c4c48d24b51e05d2853f8d3"
+}
