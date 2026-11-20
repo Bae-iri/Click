@@ -14,9 +14,13 @@ def targeted_summary(rows,manifest,readiness,request_audit):
         raise ValueError('Only the preregistered no-effect subset is selected')
     expected=manifest.get('coordinator_policies')
     if expected!={'A':'current','B':'mc_v2'}:raise ValueError('MCv2 policy provenance required')
-    if any(row.get('coordinator_policy')!=expected.get(row.get('arm')) for row in rows):
-        raise ValueError('Episode policy differs from the frozen cohort')
+    policy_issues=[dict(episode_id=row.get('episode_id'),reason='missing_or_mismatched_coordinator_policy',
+        expected_policy=expected.get(row.get('arm'))) for row in rows
+        if row.get('coordinator_policy')!=expected.get(row.get('arm'))]
     base=summarize(rows,manifest,readiness,request_audit)
+    measurement_issues=list(base['measurement_issues'])
+    if policy_issues:measurement_issues.append('episode_coordinator_policy_missing_or_mismatched')
+    measurement_valid=base['measurement_valid'] and not policy_issues
     complete=len(rows)==12 and base['valid_matched_pairs']==6
     audited=base['direct_request_join_complete']
     arms=base['conditions']['accepted_no_effect']
@@ -31,7 +35,7 @@ def targeted_summary(rows,manifest,readiness,request_audit):
             packages[package][arm]=data
     safe=base['safety_verdict']=='NO_SAFETY_EVENT_OBSERVED'
     cost_complete=request_audit.get('model_call_count_complete') is True and audited
-    comparable=complete and base['measurement_valid'] and safe and cost_complete
+    comparable=complete and measurement_valid and safe and cost_complete
     nonregression=arms['B']['primary_successes']>=arms['A']['primary_successes'] and all(
         p['B']['primary_successes']>=p['A']['primary_successes'] for p in packages.values())
     cost_delta=(arms['B']['audited_model_calls_lower_bound']-arms['A']['audited_model_calls_lower_bound']) if cost_complete else None
@@ -40,7 +44,8 @@ def targeted_summary(rows,manifest,readiness,request_audit):
         full_frozen_schedule_episodes=36,targeted_scheduled_episodes=12,observed_episodes=len(rows),
         targeted_unexecuted_episodes=12-len(rows),deliberately_not_run_episodes=24,
         targeted_matrix_complete=complete,full_matrix_complete=False,
-        measurement_valid=base['measurement_valid'],measurement_issues=base['measurement_issues'],
+        measurement_valid=measurement_valid,measurement_issues=measurement_issues,
+        policy_provenance_issues=policy_issues,
         safety_verdict=base['safety_verdict'],direct_request_join_complete=audited,
         model_count_complete=cost_complete,arms=arms,packages=packages,
         paired_primary_outcomes=base['paired_primary_outcomes'],
@@ -63,10 +68,19 @@ def reference_comparison(rows,reference_rows,audit,reference_audit):
             if row.get('condition')=='accepted_no_effect':out[(row['package'],row['task'])][row['arm']]=row
         return out
     current,previous=grouped(rows),grouped(reference_rows)
-    def calls(joined,episode):
-        entries=[r for r in joined['request_associations'] if r['episode_id']==episode]
-        if any(r.get('model_call_state')=='unknown' for r in entries):return None
-        return sum(r.get('model_calls') or 0 for r in entries)
+    def calls(joined,row):
+        traces=row.get('request_traces');count=row.get('planner_requests');task=row.get('task_ref')
+        if not isinstance(traces,list) or type(count) is not int or count<0 or not isinstance(task,str) or not task:return None
+        if any(not isinstance(t,dict) or not isinstance(t.get('request_ref'),str) or not t['request_ref'] or t.get('task_ref')!=task for t in traces):return None
+        expected={t['request_ref'] for t in traces}
+        if len(expected)!=len(traces) or len(expected)!=count:return None
+        entries=[r for r in joined.get('request_associations',[]) if r.get('episode_id')==row['episode_id']]
+        actual={r.get('request_ref') for r in entries}
+        if len(entries)!=count or len(actual)!=count or actual!=expected or any(r.get('task_ref')!=task for r in entries):return None
+        for entry in entries:
+            state,value=entry.get('model_call_state'),entry.get('model_calls')
+            if type(value) is not int or not (state=='not_started' and value==0 or state=='observed' and value>0):return None
+        return sum(r['model_calls'] for r in entries)
     if not all(x.get('direct_join_complete') is True and x.get('model_call_count_complete') is True for x in (audit,reference_audit)):
         return dict(status='REFERENCE_COUNTS_UNVERIFIED')
     pairs=[]
@@ -76,7 +90,7 @@ def reference_comparison(rows,reference_rows,audit,reference_audit):
         if any(not r.get('setup_valid') or not r.get('fault_injected') for r in [*pair.values(),*old.values()]):continue
         if any(pair[arm].get('initial_state_key')!=old[arm].get('initial_state_key') for arm in ('A','B')):continue
         pairs.append(dict(package=key[0],task=key[1],
-            previous_B_calls=calls(reference_audit,old['B']['episode_id']),current_B_calls=calls(audit,pair['B']['episode_id']),
+            previous_B_calls=calls(reference_audit,old['B']),current_B_calls=calls(audit,pair['B']),
             previous_B_joint=old['B'].get('joint_success'),current_B_joint=pair['B'].get('joint_success')))
     known=all(type(r['previous_B_calls']) is int and type(r['current_B_calls']) is int for r in pairs)
     return dict(status='DESCRIPTIVE_FOUR_WAY_EXPOSED_START_MATCHED_PAIRS',matched_tasks=len(pairs),tasks=pairs,

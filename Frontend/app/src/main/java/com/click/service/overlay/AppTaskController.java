@@ -604,7 +604,7 @@ public final class AppTaskController {
             if(!verified)invalidateReplay();
             String previousActive=memory.active();
             record(observation,after,proposal,verified?"verified":decision==AppTaskMetaController.Decision.REOBSERVE_PROGRESS?"waiting":verdict==AppTaskVerifier.Verdict.PROTECTED?"protected":verdict==AppTaskVerifier.Verdict.STALE?"stale":verdict==AppTaskVerifier.Verdict.UNKNOWN?"waiting":"failed",actionObserved,verified,verified&&AppTaskPolicy.provesSubgoal(proposal));
-            meta.nativeSubgoalAdvanced(previousActive,memory.active(),proposal,verdict);
+            meta.nativeSubgoalAdvanced(previousActive,memory.active(),proposal,verdict,observation,after);
             proposal=null;verifying=false;inputHash=null;submitted=null;
             if(observeResult(after,fresh))return;
             if(verified||decision==AppTaskMetaController.Decision.REOBSERVE||decision==AppTaskMetaController.Decision.REOBSERVE_PROGRESS){handler.post(refresh);}else{baseline=fresh;observation=after;show("needs_input",verdict==AppTaskVerifier.Verdict.PROTECTED?"입력·인증은 직접 진행해 주세요. 진행 상태는 보관했어요.":verdict==AppTaskVerifier.Verdict.UNKNOWN?"결과를 확인할 화면이나 대상을 읽지 못했어요. 현재 화면을 다시 확인해 주세요.":"아직 변화를 확인하지 못했어요. 같은 동작을 반복하지 않고 다른 방법을 확인해 주세요.");}

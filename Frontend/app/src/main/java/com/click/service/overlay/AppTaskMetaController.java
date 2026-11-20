@@ -51,10 +51,41 @@ public final class AppTaskMetaController {
     public void subgoal(String id){activeSubgoal=id;subgoalInitialized=true;}
     /** Called only after native verification has advanced the immutable task plan. */
     public void nativeSubgoalAdvanced(String previous,String current,JSONObject action,AppTaskVerifier.Verdict verdict){
+        nativeSubgoalAdvanced(previous,current,action,verdict,null,null);
+    }
+    /** Action-level satisfaction releases no budget unless this action newly established its native predicate. */
+    public void nativeSubgoalAdvanced(String previous,String current,JSONObject action,AppTaskVerifier.Verdict verdict,JSONObject before,JSONObject after){
         if(arm!=Arm.META||verdict!=AppTaskVerifier.Verdict.VERIFIED||!AppTaskPolicy.provesSubgoal(action)
-                ||previous==null||Objects.equals(previous,current)||!subgoalInitialized||!Objects.equals(activeSubgoal,previous))return;
+                ||previous==null||Objects.equals(previous,current)||!subgoalInitialized||!Objects.equals(activeSubgoal,previous)
+                ||!newlyEstablished(before,after,action))return;
         resetScopedBudget(ResetReason.NATIVE_SUBGOAL_ADVANCED);
         activeSubgoal=current;subgoalInitialized=true;
+    }
+    private boolean newlyEstablished(JSONObject before,JSONObject after,JSONObject action){
+        if(before==null||after==null||!"public".equals(before.optString("status"))||!"public".equals(after.optString("status"))
+                ||before.optString("observation_id").isEmpty()||after.optString("observation_id").isEmpty()
+                ||before.optString("observation_id").equals(after.optString("observation_id"))
+                ||after.optLong("captured_at_ms")<before.optLong("captured_at_ms")
+                ||after.optLong("captured_at_ms")>wallClock.getAsLong()+2000
+                ||wallClock.getAsLong()-after.optLong("captured_at_ms")>15000)return false;
+        JSONObject expectation=action.optJSONObject("expectation");String kind=expectation.optString("kind");
+        if("package_opened".equals(kind))return !before.optString("package").equals(expectation.optString("package"))
+            &&after.optString("package").equals(expectation.optString("package"));
+        if(!before.optString("package").equals(after.optString("package")))return false;
+        if("target_visible".equals(kind))return AppTaskVerifier.check(before,after,action,true,false)==AppTaskVerifier.Verdict.VERIFIED;
+        JSONObject old=com.click.data.snapshot.AppTaskObservation.find(before,action.optString("target_id"));
+        JSONObject next=AppTaskVerifier.resolveTarget(before,after,action.optString("target_id"));
+        if(old==null||next==null)return false;
+        if("input_present".equals(kind))return old.optBoolean("editable")&&next.optBoolean("editable")
+            &&Boolean.FALSE.equals(old.opt("has_value"))&&Boolean.TRUE.equals(next.opt("has_value"));
+        if(!"selection_changed".equals(kind))return false;
+        boolean changed=false;
+        for(String state:List.of("checked","selected"))if(!expectation.isNull(state)){
+            if(!(old.opt(state) instanceof Boolean)||!(next.opt(state) instanceof Boolean)
+                    ||!expectation.opt(state).equals(next.opt(state)))return false;
+            changed|=!old.opt(state).equals(next.opt(state));
+        }
+        return changed;
     }
     /** Explicit app selection starts fresh local observation bookkeeping, not new action authority. */
     public void resetTargetContext(){
