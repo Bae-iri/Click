@@ -296,8 +296,9 @@ def test_verified_steps_without_completion_discover_current_final_evidence_witho
     assert diagnostic['called'] and diagnostic['planning_mode']=='result_only'
     assert diagnostic['reason_code']=='result_evidence_candidate'
     payload=send.call_args.args[0]
-    assert payload['generationConfig']['responseJsonSchema']['properties']['tool']['enum']==['ask','confirm']
-    assert payload['generationConfig']['responseJsonSchema']['properties']['advances_subgoal']['enum']==[False]
+    assert payload['generationConfig']['responseJsonSchema']['required']==['completion_checks']
+    assert set(payload['generationConfig']['responseJsonSchema']['properties'])=={'completion_checks'}
+    assert payload['generationConfig']['maxOutputTokens']==2048
     assert 'RESULT EVIDENCE DISCOVERY ONLY' in payload['contents'][0]['parts'][0]['text']
 
 
@@ -359,11 +360,12 @@ def test_contract_error_diagnostic_has_only_bounded_stage_field_and_type_metadat
     req=request();req.screen.nodes[0].role='button'
     check=dict(target='c0',label='',app='none',checked='true',selected='unknown')
     result=AppTaskService(sender(completion_checks=[check])).step(req)
-    assert result.status=='unavailable' and result.action is None
+    assert result.status=='proposed' and result.action is not None and result.completion is None
     diagnostic=result.diagnostic
-    assert diagnostic['called'] and diagnostic['reason_code']=='contract_validation_failed'
-    assert diagnostic['failure_stage']=='completion_contract' and diagnostic['failure_kind']=='plan'
-    assert diagnostic['validation_errors']==[{'field':'contract','type':'value_error'}]
+    assert diagnostic['called'] and diagnostic['completion_deferred_reason']=='completion_contract_invalid'
+    assert diagnostic['completion_grounding']=='deferred_invalid_contract'
+    assert 'failure_kind' not in diagnostic
+    assert diagnostic['validation_errors']==[{'field':'checks.index.checked','type':'value_error'}]
     assert 'input' not in json.dumps(diagnostic) and 'ctx' not in json.dumps(diagnostic)
 
 
@@ -383,3 +385,65 @@ def test_unknown_exception_text_is_never_used_as_a_diagnostic_code():
     assert result.status=='unavailable' and result.diagnostic['called']
     assert result.diagnostic['reason_code']=='plan_validation_failed'
     assert 'PRIVATE' not in str(result) and 'SECRET' not in str(result)
+
+
+def compact_sender(answer):
+    return Mock(return_value=httpx.Response(200,json={'candidates':[
+        dict(finishReason='STOP',content=dict(parts=[dict(text=json.dumps(answer))]))]}))
+
+
+def test_result_only_compact_response_reuses_server_plan_without_action_or_extra_call():
+    req=finished_plan_request();send=compact_sender({'completion_checks':[
+        dict(target='c0',label='',app='none',checked='unknown',selected='unknown')]})
+    result=AppTaskService(send).step(req)
+    assert result.status=='confirm_result' and result.action is None and result.subgoals==req.state.subgoals
+    assert result.completion.checks[0].label=='목록';send.assert_called_once()
+
+
+def test_retained_plan_schema_and_response_do_not_repeat_or_replace_subgoals():
+    req=request();req.state.subgoals=[TaskSubgoal(id='g0',title='검색 열기')]
+    answer=dict(tool='tap',target='c0',expected_label='검색어 입력',app='none',expected_checked='unknown',
+        expected_selected='unknown',advances_subgoal=False,completion_checks=[])
+    send=compact_sender(answer);result=AppTaskService(send).step(req)
+    schema=send.call_args.args[0]['generationConfig']['responseJsonSchema']
+    assert 'subgoals' not in schema['properties'] and 'subgoals' not in schema['required']
+    assert result.status=='proposed' and result.subgoals==req.state.subgoals;send.assert_called_once()
+
+
+def test_one_invalid_native_clause_defers_the_entire_candidate_but_keeps_valid_action():
+    checks=[dict(target='none',label='목록',app='none',checked='unknown',selected='unknown'),
+        dict(target='c0',label='',app='none',checked='true',selected='unknown')]
+    send=sender(completion_checks=checks);result=AppTaskService(send).step(request())
+    assert result.status=='proposed' and result.action is not None and result.completion is None
+    assert result.diagnostic['completion_grounding']=='deferred_invalid_contract';send.assert_called_once()
+
+
+def test_deferred_completion_never_repairs_invalid_action_expectation():
+    send=sender(expected_checked='true',completion_checks=[dict(target='c0',label='',app='none',checked='true',selected='unknown')])
+    result=AppTaskService(send).step(request())
+    assert result.status=='unavailable' and result.action is None and result.completion is None
+    assert result.diagnostic['reason_code']=='ungrounded_expected_state';send.assert_called_once()
+
+
+@pytest.mark.parametrize('state,called',[('observed',True),('not_started',False),('unknown',None)])
+def test_production_boundary_failure_keeps_truthful_attempt_state_without_retry(monkeypatch,state,called):
+    from app.services.app_task_provider import ProviderError
+    import app.services.app_task as module
+    monkeypatch.setenv('GEMINI_API_KEY','local-test-key')
+    generate=Mock(side_effect=ProviderError('provider_deadline_exceeded',state,9000));monkeypatch.setattr(module,'generate',generate)
+    result=AppTaskService().step(request())
+    assert result.status=='unavailable' and result.action is None
+    assert result.diagnostic['called'] is called and result.diagnostic['reason_code']=='provider_deadline_exceeded'
+    assert result.diagnostic['provider_attempt_limit']==1;generate.assert_called_once()
+    assert 0<generate.call_args.kwargs['timeout']<=9
+
+
+def test_expired_enclosing_budget_never_starts_production_provider(monkeypatch):
+    from ai_agent.runtime.budget import deadline
+    import app.services.app_task as module
+    monkeypatch.setenv('GEMINI_API_KEY','local-test-key');generate=Mock();monkeypatch.setattr(module,'generate',generate)
+    token=deadline.set(time.monotonic()-1)
+    try:result=AppTaskService().step(request())
+    finally:deadline.reset(token)
+    assert result.diagnostic['called'] is False and result.diagnostic['reason_code']=='provider_deadline_exceeded'
+    generate.assert_not_called()
