@@ -1,0 +1,8 @@
+{
+  "schema_version": "click.native-settings-integration.v1",
+  "status": "PENDING_MERGE_VERIFICATION",
+  "measured_base_commit": "32041e5f79c5366be35d184e7b8b22657318c3da",
+  "frozen_source_commit": "PENDING_RESULT_COMMIT",
+  "incoming_remote_commit": "40f2470",
+  "performance_rerun_after_integration": false
+}
