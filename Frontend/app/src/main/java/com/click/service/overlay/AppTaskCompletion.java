@@ -16,7 +16,7 @@ public final class AppTaskCompletion {
         if(completion==null||completion.length()!=1)return false;
         JSONArray checks=completion.optJSONArray("checks");
         if(checks==null||checks.length()<1||checks.length()>8)return false;
-        String packageName=null;
+        String packageName=null;Set<String> unique=new HashSet<>();
         for(int i=0;i<checks.length();i++){
             JSONObject c=checks.optJSONObject(i);if(c==null)return false;
             for(Iterator<String> k=c.keys();k.hasNext();)if(!FIELDS.contains(k.next()))return false;
@@ -30,6 +30,7 @@ public final class AppTaskCompletion {
                     ||!Set.of("","button","text_field","list","tab","toggle","text","image","unknown").contains(role))return false;
             if(!c.isNull("checked")&&(!(c.opt("checked") instanceof Boolean)||!"toggle".equals(role)))return false;
             if(!c.isNull("selected")&&(!(c.opt("selected") instanceof Boolean)||!Set.of("tab","toggle","button").contains(role)))return false;
+            if(!unique.add(checkKey(c)))return false;
         }
         return true;
     }
@@ -50,6 +51,66 @@ public final class AppTaskCompletion {
             checks.add(key.toString());
         }
         Collections.sort(checks);return AppTaskObservation.hash(String.join("\n",checks));
+    }
+
+    private static String checkKey(JSONObject check){
+        StringBuilder key=new StringBuilder();
+        for(String field:List.of("package","label","resource","role","checked","selected"))
+            key.append(check.isNull(field)?"":check.optString(field)).append('\n');
+        return key.toString();
+    }
+
+    /** Refining an unseen selector cannot drop clauses or reverse a desired native state. */
+    public static boolean preservesRequirements(JSONObject previous,JSONObject candidate){
+        if(!valid(previous)||!valid(candidate))return false;
+        JSONArray old=previous.optJSONArray("checks"),next=candidate.optJSONArray("checks");
+        if(next.length()<old.length()||!old.optJSONObject(0).optString("package").equals(next.optJSONObject(0).optString("package")))return false;
+        Set<Integer> used=new HashSet<>();
+        for(int i=0;i<old.length();i++){
+            JSONObject requirement=old.optJSONObject(i);
+            if(requirement.isNull("checked")&&requirement.isNull("selected"))continue;
+            boolean retained=false;
+            for(int j=0;j<next.length();j++){
+                if(used.contains(j))continue;
+                JSONObject check=next.optJSONObject(j);
+                if(!requirement.optString("role").equals(check.optString("role")))continue;
+                if(!requirement.optString("resource").isEmpty()){
+                    if(!requirement.optString("resource").equals(check.optString("resource")))continue;
+                }else if(!requirement.optString("label").equals(check.optString("label")))continue;
+                boolean same=true;
+                for(String state:List.of("checked","selected"))if(!requirement.isNull(state)&&!requirement.opt(state).equals(check.opt(state)))same=false;
+                if(same){used.add(j);retained=true;break;}
+            }
+            if(!retained)return false;
+        }
+        return true;
+    }
+
+    /** A prediction's known wrong direction is not part of the immutable user goal. */
+    public static JSONObject releaseInvalidNativeDirections(String goal,JSONObject requirements)throws JSONException {
+        JSONObject copy=new JSONObject(requirements.toString());JSONArray checks=copy.getJSONArray("checks");
+        if(!deselectionGoal(goal))for(int i=0;i<checks.length();i++){
+            JSONObject check=checks.getJSONObject(i);
+            if(Boolean.FALSE.equals(check.opt("selected")))check.remove("selected");
+        }
+        return copy;
+    }
+
+    /** Different selector spellings for the same native fact cannot manufacture extra clauses. */
+    public static boolean distinctProofTargets(JSONObject completion,JSONObject screen){
+        if(!valid(completion)||screen==null)return false;
+        Set<String> used=new HashSet<>();JSONArray checks=completion.optJSONArray("checks"),nodes=screen.optJSONArray("nodes");
+        for(int i=0;i<checks.length();i++){
+            JSONObject check=checks.optJSONObject(i),found=null;
+            for(int j=0;nodes!=null&&j<nodes.length();j++){
+                JSONObject node=nodes.optJSONObject(j);if(node==null||!"accessibility".equals(node.optString("source")))continue;
+                boolean matches=true;
+                for(String field:List.of("label","resource","role"))if(!check.optString(field).isEmpty()&&!check.optString(field).equals(node.optString(field)))matches=false;
+                if(matches){if(found!=null)return false;found=node;}
+            }
+            if(found==null||!used.add(found.optString("id")))return false;
+        }
+        return true;
     }
 
     public static Verdict check(JSONObject completion,JSONObject screen) {
@@ -86,7 +147,7 @@ public final class AppTaskCompletion {
      */
     public static Verdict checkForGoal(String goal,JSONObject completion,JSONObject screen,ScreenSnapshot nativeScreen) {
         Verdict verdict=check(completion,screen);
-        return verdict==Verdict.MATCHED&&unsafeForGoal(goal,completion,screen,nativeScreen)?Verdict.UNKNOWN:verdict;
+        return verdict==Verdict.MATCHED&&(unsafeForGoal(goal,completion,screen,nativeScreen)||!distinctProofTargets(completion,screen))?Verdict.UNKNOWN:verdict;
     }
 
     /** Only reject known unsafe evidence; an unseen future destination can bind. */

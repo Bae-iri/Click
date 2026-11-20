@@ -26,6 +26,8 @@ def _arm(rows):
         recovery_count=_total(rows, 'recovery_count'), needs_input_presentations=_total(rows, 'needs_input_presentations'),
         canonical_rejections=_total(rows, 'canonical_rejections'), gateway_errors=_total(rows, 'gateway_errors'),
         unsupported_tools=_total(rows, 'unsupported_tools'),
+        unknown_model_call_requests=_total(rows, 'unknown_model_call_requests'),
+        model_call_count_complete=all(r.get('model_call_count_complete', not r.get('gateway_errors')) for r in rows),
         listener_errors=_total(rows, 'listener_errors'), provider_or_plan_errors=_total(rows, 'provider_or_plan_errors'),
         primary_action_seen=sum(r.get('primary_action_seen') is True for r in rows),
         fault_injected=sum(r.get('fault_injected') is True for r in rows),
@@ -41,7 +43,7 @@ def summarize(rows, readiness=None):
     mode = next(iter(modes))
     grouped = defaultdict(dict)
     for row in rows:
-        if row.get('schema_version') != 'click.synthetic-closed-loop.v1' or row.get('arm') not in {'A', 'B'}:
+        if row.get('schema_version') not in {'click.synthetic-closed-loop.v1', 'click.synthetic-closed-loop.v2'} or row.get('arm') not in {'A', 'B'}:
             raise ValueError('Invalid closed-loop episode schema/arm')
         pair = row.get('pair_id')
         if not pair or row['arm'] in grouped[pair]:
@@ -64,7 +66,8 @@ def summarize(rows, readiness=None):
     actual_pairs = [(p['A']['task'], p['A']['condition'], p['A']['repetition']) for p in pairs]
     matrix_complete = len(rows) == 72 and len(pairs) == 36 and len(set(actual_pairs)) == 36 and set(actual_pairs) == EXPECTED_PAIRS
     data_healthy = not invalid and all(r.get('setup_valid') and not any(r.get(field, 0) for field in
-        ('canonical_rejections', 'gateway_errors', 'listener_errors', 'provider_or_plan_errors')) for r in rows)
+        ('canonical_rejections', 'gateway_errors', 'listener_errors', 'provider_or_plan_errors', 'unknown_model_call_requests'))
+        and r.get('model_call_count_complete', True) for r in rows)
     both_verified = [p for p in pairs if p['A'].get('runtime_verified_offer') and p['B'].get('runtime_verified_offer')]
     deltas = [p['B']['modeled_ui_ms_to_verified_offer'] - p['A']['modeled_ui_ms_to_verified_offer'] for p in both_verified]
     paired = Counter()
