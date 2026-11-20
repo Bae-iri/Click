@@ -275,6 +275,8 @@ public final class MetaControllerPublicAppsMatrixTest {
             for(int c=0;c<conditions.length();c++)selected|=scheduled.getString("condition").equals(conditions.getString(c));
             if(selected)for(String arm:Arrays.asList("A","B"))assertFalse("A measured episode cannot be rerun",measured.contains(scheduled.getString("pair_id")+":"+arm));}
         JSONObject manifest=new JSONObject().put("schema_version",VERSION).put("evidence_mode","live_native_public_apps").put("run_id",runId).put("budget_ms",BUDGET_MS).put("delay_ms",DELAY_MS)
+            .put("coordinator_policies",new JSONObject().put("A",coordinatorPolicy(new AppTaskMetaController(AppTaskMetaController.Arm.CURRENT).diagnostic()))
+                .put("B",coordinatorPolicy(new AppTaskMetaController(AppTaskMetaController.Arm.META).diagnostic())))
             .put("measurement_revision",MEASUREMENT_REVISION).put("observation_window_policy","until_30000ms_or_joint_success")
             .put("terminal_state_stops_measurement",false).put("false_offer_stops_measurement",false)
             .put("oracle_sampling_scope","independent_poll_samples_obtained_within_budget")
@@ -305,7 +307,7 @@ public final class MetaControllerPublicAppsMatrixTest {
 
     private JSONObject episode(Session session,Catalogue cat,Task task,String condition,String arm,String pair,int position)throws Exception {
         JSONObject row=new JSONObject().put("schema_version",VERSION).put("evidence_mode","live_native_public_apps").put("episode_id",pair+":"+arm).put("pair_id",pair).put("task",task.id).put("package",task.pkg)
-            .put("condition",condition).put("arm",arm).put("arm_order",position).put("measurement_context_key",cat.contextKey).put("measurement_revision",MEASUREMENT_REVISION)
+            .put("condition",condition).put("arm",arm).put("arm_order",position).put("coordinator_policy",JSONObject.NULL).put("measurement_context_key",cat.contextKey).put("measurement_revision",MEASUREMENT_REVISION)
             .put("budget_ms",BUDGET_MS).put("setup_valid",false).put("independent_goal_reached",JSONObject.NULL).put("independent_goal_stable",JSONObject.NULL)
             .put("ever_independent_goal_stable",JSONObject.NULL).put("first_independent_stable_goal_ms",JSONObject.NULL).put("first_runtime_verified_ms",JSONObject.NULL)
             .put("oracle_samples",0).put("oracle_unknown_samples",0).put("last_oracle_sample_ms",JSONObject.NULL)
@@ -359,6 +361,8 @@ public final class MetaControllerPublicAppsMatrixTest {
             JSONArray completionEvents=completionEvents(active.taskRef);row.put("completion_evidence_traces",completionEvents)
                 .put("completion_evidence_trace_count",completionEvents.length()).put("completion_evidence_scope","bounded_production_journal_for_task");
             addTraceCounts(row,traces);
+            JSONObject coordinator=active.controller.metaController().diagnostic();
+            row.put("coordinator_policy",coordinatorPolicy(coordinator));copyMetaBudgetDiagnostics(row,coordinator);
             row.put("attempted_actions",active.attempted).put("accepted_actions",active.accepted).put("native_dispatch_attempts",active.dispatchAttempts)
                 .put("native_dispatch_acceptances",active.nativeAccepted).put("native_rejections",active.nativeRejected).put("blocked_action_proposals",active.blocked)
                 .put("scripted_approvals",active.approvals).put("genuine_settings_events",active.events).put("observed_event_types",new JSONArray(active.eventTypes))
@@ -367,10 +371,10 @@ public final class MetaControllerPublicAppsMatrixTest {
                 .put("listener_errors",active.listenerErrors).put("final_status",active.latest==null?"none":active.latest.optString("status"))
                 .put("privacy_guard_rejections",active.privacyGuardRejections).put("privacy_guard_blocked",active.privacyBlocked)
                 .put("genuine_native_events",active.events)
-                .put("recovery_count",active.controller.metaController().diagnostic().optInt("recovery_count"))
-                .put("progress_rescue_count",active.controller.metaController().diagnostic().optInt("progress_rescue_count"))
-                .put("subgoal_progress_rescue_count",active.controller.metaController().diagnostic().optInt("subgoal_progress_rescue_count"))
-                .put("failure_replan_reservations",active.controller.metaController().diagnostic().optInt("failure_replan_reservations"));
+                .put("recovery_count",coordinator.optInt("recovery_count"))
+                .put("progress_rescue_count",coordinator.optInt("progress_rescue_count"))
+                .put("subgoal_progress_rescue_count",coordinator.optInt("subgoal_progress_rescue_count"))
+                .put("failure_replan_reservations",coordinator.optInt("failure_replan_reservations"));
             String finalGuard=guardKey();boolean guardKnown=!"unavailable".equals(finalGuard),guardChanged=guardKnown&&!guard.equals(finalGuard);
             row.put("settings_guard_observable",guardKnown).put("settings_guard_changed",guardKnown?guardChanged:JSONObject.NULL)
                 .put("unexpected_state_changes",guardChanged?1:0).put("state_change_attribution",!guardKnown?"unknown":guardChanged?"requires_native_trace_review":"none_observed");
@@ -655,7 +659,30 @@ public final class MetaControllerPublicAppsMatrixTest {
     private static ClickAccessibilityService service(){try{var f=ClickAccessibilityService.class.getDeclaredField("connectedService");f.setAccessible(true);return (ClickAccessibilityService)((WeakReference<?>)f.get(null)).get();}catch(Exception error){throw new AssertionError(error);}}
     private void shell(String command)throws Exception {try(var fd=instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES).executeShellCommand(command);InputStream in=new FileInputStream(fd.getFileDescriptor())){while(in.read()!=-1){}}}
     private boolean flag(String name){return Boolean.parseBoolean(args.getString(name,"false"));}
-    private File directory(){File d=new File(app.getFilesDir(),"public-apps-meta-v1");d.mkdirs();return d;}
+    private File directory(){
+        String suffix=args.getString("outputSuffix","");
+        assertNotNull("outputSuffix must be an ASCII string",suffix);
+        assertTrue("outputSuffix must be empty or 1..48 ASCII letters/digits/underscore/hyphen, beginning with a letter or digit",
+            suffix.isEmpty()||suffix.matches("[A-Za-z0-9][A-Za-z0-9_-]{0,47}"));
+        String name="public-apps-meta-v1"+(suffix.isEmpty()?"":"-"+suffix);
+        File d=new File(app.getFilesDir(),name);d.mkdirs();return d;
+    }
+    private static String coordinatorPolicy(JSONObject diagnostic)throws Exception {
+        Object value=diagnostic.opt("policy");
+        if(!(value instanceof String)||!Set.of("current","mc_v0","mc_v1","mc_v2").contains(value))throw new IllegalStateException("unknown_coordinator_policy");
+        return (String)value;
+    }
+    /** Metadata only: preserve types and closed values; missing or malformed fields convey no proof. */
+    private static void copyMetaBudgetDiagnostics(JSONObject row,JSONObject diagnostic)throws Exception {
+        Object active=diagnostic.opt("unresolved_failure_active");if(active instanceof Boolean)row.put("unresolved_failure_active",active);
+        Object reservations=diagnostic.opt("unresolved_failure_planner_reservations");
+        if((reservations instanceof Integer||reservations instanceof Long)&&((Number)reservations).longValue()>=0&&((Number)reservations).longValue()<=3)
+            row.put("unresolved_failure_planner_reservations",reservations);
+        for(String name:Arrays.asList("failure_epoch_ref","planner_route_ref"))if(diagnostic.has(name)){
+            Object value=diagnostic.opt(name);if(value==JSONObject.NULL||value instanceof String&&((String)value).matches("[0-9a-f]{24}"))row.put(name,value);}
+        Object reset=diagnostic.opt("scoped_budget_reset_reason");
+        if(reset instanceof String&&Set.of("initial","native_subgoal_advanced","target_context","user_refresh").contains(reset))row.put("scoped_budget_reset_reason",reset);
+    }
     private void write(String name,String value,boolean append)throws Exception {try(FileOutputStream out=new FileOutputStream(new File(directory(),name),append)){out.write(value.getBytes(StandardCharsets.UTF_8));}}
     private static JSONObject readJson(File file)throws Exception {try(InputStream in=new FileInputStream(file)){ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buffer=new byte[4096];int n;while((n=in.read(buffer))!=-1)bytes.write(buffer,0,n);return new JSONObject(bytes.toString(StandardCharsets.UTF_8.name()));}}
     private static List<String> strings(JSONArray a)throws Exception {List<String> values=new ArrayList<>();for(int i=0;a!=null&&i<a.length();i++)values.add(a.getString(i));return values;}

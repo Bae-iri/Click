@@ -35,7 +35,7 @@ public final class AppTaskDiagnostics {
     private static final Set<String> PROVIDER_CODES=Set.of("provider_invalid_request","provider_invalid_budget",
         "provider_capacity_exhausted","provider_startup_failed","provider_deadline_exceeded","provider_timeout",
         "provider_transport_error","provider_response_too_large","provider_protocol_error","provider_worker_failed","provider_cleanup_failed");
-    private static final Set<String> RECOVERY_POLICIES=Set.of("mc_v0","mc_v1");
+    private static final Set<String> RECOVERY_POLICIES=Set.of("mc_v0","mc_v1","mc_v2");
     private static final Set<String> RECOVERY_REASONS=Set.of("accepted_action_unconfirmed","observed_transition_unconfirmed");
     private static final Set<String> VALIDATION_FIELDS=Set.of("checks","package","label","resource","role","checked","selected",
         "id","title","status","expectation","kind","bounds","tool","target_id","advances_subgoal","screen_key","index","other","contract");
@@ -138,7 +138,7 @@ public final class AppTaskDiagnostics {
         if(!(rawAttempt instanceof Integer||rawAttempt instanceof Long)||!(rawPolicy instanceof String)||!(rawReason instanceof String))return;
         long attempt=((Number)rawAttempt).longValue();String policy=(String)rawPolicy,reason=(String)rawReason;
         if(attempt<1||attempt>3||!RECOVERY_POLICIES.contains(policy)||!RECOVERY_REASONS.contains(reason)
-            ||reason.equals("observed_transition_unconfirmed")&&(!policy.equals("mc_v1")||attempt>2))return;
+            ||reason.equals("observed_transition_unconfirmed")&&(!Set.of("mc_v1","mc_v2").contains(policy)||attempt>2))return;
         out.put("recovery_policy",policy).put("recovery_reason",reason);
     }
     private static Object nullable(String value){return value==null?JSONObject.NULL:value;}

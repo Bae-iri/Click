@@ -170,7 +170,7 @@ def _add_audited(data, rows, request_audit, audit_ok,version=VERSION):
         required=('recovery_context_used','capabilities_applied','allowed_actions_context_used','allowed_action_count','recovery_blocked_action_count')
         missing=sum(any(key not in item for key in required) or item.get('recovery_context_used') is True and 'recovery_attempt' not in item for item in observed)
         reasons=Counter(item['recovery_reason'] for item in observed if item.get('recovery_context_used') is True
-            and item.get('recovery_policy') in {'mc_v0','mc_v1'} and item.get('recovery_reason') in {'accepted_action_unconfirmed','observed_transition_unconfirmed'})
+            and item.get('recovery_policy') in {'mc_v0','mc_v1','mc_v2'} and item.get('recovery_reason') in {'accepted_action_unconfirmed','observed_transition_unconfirmed'})
         data['audited_token_usage']={key:dict(
             observed_sum=sum(item[key] for item in observed if type(item.get(key)) is int),
             observed_attempts_with_usage=sum(type(item.get(key)) is int for item in observed),

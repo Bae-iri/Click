@@ -21,6 +21,15 @@ public class AppTaskMetaControllerV1Test {
         var verdict=AppTaskVerifier.check(original,observed,action,true,false,java.time.Instant.parse(before.capturedAt).toEpochMilli()+1);
         return meta.after(original,observed,action,verdict,elapsed,at-WALL+10000,before,current);
     }
+    private void advanceSubgoal(AppTaskMetaController meta,AtomicLong clock,String previous,String current,String pkg,long at)throws Exception {
+        var before=frame(pkg,at,42,"Before proof");var reached=frame(pkg,at+400,42,"New proof");
+        JSONObject action=action(before,"native_subgoal").put("advances_subgoal",true);
+        action.getJSONObject("expectation").put("label","New proof");
+        var verdict=AppTaskVerifier.check(AppTaskObservation.capture(before),AppTaskObservation.capture(reached),action,true,false,WALL+at+1);
+        assertEquals(AppTaskVerifier.Verdict.VERIFIED,verdict);clock.set(WALL+at+400);
+        meta.after(AppTaskObservation.capture(before),AppTaskObservation.capture(reached),action,verdict,400,10000+at+400,before,reached);
+        meta.nativeSubgoalAdvanced(previous,current,action,verdict);
+    }
     @Test public void stableNativeTransitionReobservesEarlyWithoutClaimingStepOrGoalSuccess()throws Exception {
         for(String pkg:PACKAGES){
             AtomicLong clock=new AtomicLong(WALL);var meta=new AppTaskMetaController(Arm.META,clock::get);meta.subgoal("g0");
@@ -30,7 +39,7 @@ public class AppTaskMetaControllerV1Test {
             assertFalse(meta.blocked(AppTaskObservation.capture(before),action));assertEquals(0,meta.diagnostic().getInt("recovery_count"));
             assertEquals(1,meta.diagnostic().getInt("progress_rescue_count"));
             JSONObject context=meta.recoveryContext(AppTaskObservation.capture(current));
-            assertEquals("mc_v1",context.getString("policy"));assertEquals("observed_transition_unconfirmed",context.getString("reason"));
+            assertEquals("mc_v2",context.getString("policy"));assertEquals("observed_transition_unconfirmed",context.getString("reason"));
             assertEquals("waiting",context.getString("last_verdict"));assertEquals(1,context.getInt("attempt"));
             assertEquals(0,context.getJSONArray("blocked_actions").length());
             assertEquals(AppTaskObservation.capture(before).getString("fingerprint"),context.getJSONObject("last_action").getString("fingerprint"));
@@ -45,7 +54,7 @@ public class AppTaskMetaControllerV1Test {
             assertEquals(i<2?Decision.REOBSERVE_PROGRESS:Decision.HANDOFF,
                 after(meta,clock,before,frame(pkg,i*1000+450,42,routes[i+1]),action,450));
         }
-        assertEquals(2,meta.diagnostic().getInt("progress_rescue_count"));meta.subgoal("g1");
+        assertEquals(2,meta.diagnostic().getInt("progress_rescue_count"));advanceSubgoal(meta,clock,"g0","g1",pkg,3000);
         var before=frame(pkg,4000,42,"Delta");var action=action(before,"new_subgoal");
         after(meta,clock,before,frame(pkg,4100,42,"Epsilon"),action,100);
         assertEquals(Decision.REOBSERVE_PROGRESS,after(meta,clock,before,frame(pkg,4450,42,"Epsilon"),action,450));
@@ -93,7 +102,7 @@ public class AppTaskMetaControllerV1Test {
         clock.set(WALL+8400);assertFalse(meta.claimPlannerRequest(frame(pkg,8400,42,"Route3")));
         assertEquals(3,meta.diagnostic().getInt("failure_replan_reservations"));
     }
-    @Test public void nativeVerifiedStepAndNewSubgoalReleaseOnlyScopedStagnationBudget()throws Exception {
+    @Test public void actionOnlyVerificationKeepsBudgetUntilANativeProvenSubgoalAdvances()throws Exception {
         String pkg=PACKAGES[2];AtomicLong clock=new AtomicLong(WALL);var meta=new AppTaskMetaController(Arm.META,clock::get);meta.subgoal("g0");
         var before=frame(pkg,0,42,"Alpha");var action=action(before,"failure1");var current=frame(pkg,8000,42,"Alpha");
         after(meta,clock,before,current,action,8000);assertTrue(meta.claimPlannerRequest(current));assertFalse(meta.claimPlannerRequest(current));
@@ -103,9 +112,9 @@ public class AppTaskMetaControllerV1Test {
         assertEquals(AppTaskVerifier.Verdict.VERIFIED,verified);clock.set(WALL+8500);
         meta.after(AppTaskObservation.capture(verifiedBefore),AppTaskObservation.capture(verifiedAfter),verifiedAction,verified,400,18500,verifiedBefore,verifiedAfter);
         before=frame(pkg,9000,42,"Alpha");action=action(before,"failure2");current=frame(pkg,17000,42,"Alpha");
-        after(meta,clock,before,current,action,8000);assertTrue(meta.claimPlannerRequest(current));
-        meta.subgoal("g1");before=frame(pkg,18000,42,"Alpha");action=action(before,"failure3");current=frame(pkg,26000,42,"Alpha");
-        after(meta,clock,before,current,action,8000);assertTrue(meta.claimPlannerRequest(current));assertEquals(3,meta.diagnostic().getInt("failure_replan_reservations"));
+        assertEquals(Decision.HANDOFF,after(meta,clock,before,current,action,8000));assertFalse(meta.claimPlannerRequest(current));
+        advanceSubgoal(meta,clock,"g0","g1",pkg,17500);before=frame(pkg,18000,42,"Alpha");action=action(before,"failure3");current=frame(pkg,26000,42,"Alpha");
+        after(meta,clock,before,current,action,8000);assertTrue(meta.claimPlannerRequest(current));assertEquals(2,meta.diagnostic().getInt("failure_replan_reservations"));
     }
     @Test public void projectionOnlyChangesCriticalStateAndMissingNativeProofCannotRescue()throws Exception {
         String pkg=PACKAGES[0];AtomicLong clock=new AtomicLong(WALL+450);var before=frame(pkg,0,42,"Alpha");var action=action(before,"none");

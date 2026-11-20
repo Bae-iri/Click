@@ -80,6 +80,8 @@ public final class AppTaskController {
     public void screenChanged(ScreenSnapshot screen){if(!closed){plannerGateArmed=true;if(meta.enabled())try{meta.observeEvent(capture(screen),SystemClock.elapsedRealtime());}catch(JSONException ignored){}
         schedulePlannerCheck();}}
     public void refresh(){resultObservation=null;resultAssessment=null;checkingResult=resultOffered=false;observe(true);}
+    /** Explicit panel/voice refresh; automatic observation keeps the scoped recovery budget. */
+    public void userRefresh(){if(closed||finishing||!listener.canObserve())return;meta.resetUserContext();refresh();}
     /** Only offer tools which can act on the current public screen. */
     public JSONArray availableTools(){
         JSONArray tools=new JSONArray();
@@ -266,8 +268,9 @@ public final class AppTaskController {
                 else{schedulePlannerCheck();if(!wasWaiting)show("planning","화면을 확인하고 있어요.");}
                 return;
             }
-            meta.subgoal(memory.active());JSONObject request=request(current);
+            meta.subgoal(memory.active());
             if(!resultOnly&&!meta.claimPlannerRequest(screen)){cancelPlannerWait();submitted=fingerprint;meta.clearRecoveryContext();proposal=null;manualActions.clear();show("needs_input","이 화면에서 더 진행할 단계를 확인하지 못했어요. 다른 방법을 선택하거나 직접 진행해 주세요.");return;}
+            JSONObject request=request(current);
             cancelPlannerWait();submitted=fingerprint;if(resultOnly)resultDiscoveryScreen=resultDiscoveryKey;
             long requestSelectionGeneration=selectionGeneration;String requestSelectedPackage=selectedPackage;
             proposal=null;manualActions.clear();busy=true;turns++;listener.busy(true);
@@ -593,7 +596,9 @@ public final class AppTaskController {
             if(decision==AppTaskMetaController.Decision.WAIT){handler.removeCallbacks(verify);handler.postDelayed(verify,400);return;}
             boolean verified=verdict==AppTaskVerifier.Verdict.VERIFIED;
             if(!verified)invalidateReplay();
+            String previousActive=memory.active();
             record(observation,after,proposal,verified?"verified":decision==AppTaskMetaController.Decision.REOBSERVE_PROGRESS?"waiting":verdict==AppTaskVerifier.Verdict.PROTECTED?"protected":verdict==AppTaskVerifier.Verdict.STALE?"stale":verdict==AppTaskVerifier.Verdict.UNKNOWN?"waiting":"failed",actionObserved,verified,verified&&AppTaskPolicy.provesSubgoal(proposal));
+            meta.nativeSubgoalAdvanced(previousActive,memory.active(),proposal,verdict);
             proposal=null;verifying=false;inputHash=null;submitted=null;
             if(observeResult(after,fresh))return;
             if(verified||decision==AppTaskMetaController.Decision.REOBSERVE||decision==AppTaskMetaController.Decision.REOBSERVE_PROGRESS){handler.post(refresh);}else{baseline=fresh;observation=after;show("needs_input",verdict==AppTaskVerifier.Verdict.PROTECTED?"입력·인증은 직접 진행해 주세요. 진행 상태는 보관했어요.":verdict==AppTaskVerifier.Verdict.UNKNOWN?"결과를 확인할 화면이나 대상을 읽지 못했어요. 현재 화면을 다시 확인해 주세요.":"아직 변화를 확인하지 못했어요. 같은 동작을 반복하지 않고 다른 방법을 확인해 주세요.");}
