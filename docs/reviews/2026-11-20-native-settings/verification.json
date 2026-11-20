@@ -1,0 +1,65 @@
+{
+  "schema_version": "click.native-settings-verification.v1",
+  "scope": "new experiment infrastructure and existing AppTask path; no production source edits",
+  "related_backend_tests": {
+    "passed": 190,
+    "failed": 0,
+    "duration_seconds": 3.35
+  },
+  "focused_android_tests": {
+    "classes": 19,
+    "passed": 130,
+    "failed": 0,
+    "duration_seconds": 6
+  },
+  "android_debug_and_instrumentation_build": "PASSED",
+  "android_lint_debug": "PASSED",
+  "native_readiness": {
+    "tasks_passed": 6,
+    "tasks_total": 6,
+    "final_fixture_duration_seconds": 82.905,
+    "native_guard_passed": true,
+    "model_calls": 0
+  },
+  "interrupted_full_backend_sweep": {
+    "passed_before_interrupt": 363,
+    "observed_failures": 0,
+    "duration_seconds": 136.81,
+    "status": "INTERRUPTED_NOT_FULL_PASS"
+  },
+  "interrupted_full_android_sweep": {
+    "status": "INTERRUPTED_WITH_FAILURES",
+    "observed_failures": [
+      "AuthRefreshRecoveryTest.temporaryHttpFailuresPreserveCredentialsAndTheirTaskJournal",
+      "AuthRefreshRecoveryTest.explicitInvalidRefreshRevokesCredentials",
+      "AuthRefreshRecoveryTest.offlineFailurePreservesCredentials"
+    ],
+    "cause": "NOT_ESTABLISHED; no unrelated source edits"
+  },
+  "standard_id_auth_baseline": {
+    "application_id": "com.clueclick.app",
+    "main_source_unchanged_from_base_commit": true,
+    "AuthRefreshTest": {
+      "passed": 3,
+      "failed": 0
+    },
+    "AuthRefreshRecoveryTest": {
+      "passed": 0,
+      "failed": 3
+    },
+    "status": "SAME_THREE_FAILURES_REPRODUCED_OUTSIDE_ISOLATED_EXPERIMENT_CONFIG",
+    "duration_seconds": 7,
+    "cause": "NOT_ESTABLISHED; static-mock/overload interaction is a hypothesis; no source fix included"
+  },
+  "merged_source_verification": {
+    "debug_apk": "PASSED",
+    "instrumentation_apk": "PASSED",
+    "lint_debug": "PASSED",
+    "unit_test_classes": 22,
+    "unit_tests_passed": 144,
+    "unit_tests_failed": 0,
+    "android_duration_seconds": 15,
+    "related_backend_tests_passed": 191,
+    "experience_tests_passed": 16
+  }
+}

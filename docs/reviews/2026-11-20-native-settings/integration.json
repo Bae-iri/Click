@@ -1,0 +1,34 @@
+{
+  "schema_version": "click.native-settings-integration.v1",
+  "status": "VERIFIED",
+  "measured_base_commit": "32041e5f79c5366be35d184e7b8b22657318c3da",
+  "frozen_source_commit": "8d3a3f046b7949e005b6b565edf9d4ff9a3ad0e9",
+  "incoming_remote_commit": "b381abd7c07826d81cbce2f6f675d6bbdbdd6f47",
+  "performance_rerun_after_integration": false,
+  "integrated_source_commit": "2fe78e4f9717fc761b0f484df444f16996569b8c",
+  "checks": {
+    "debug_apk": "PASSED",
+    "instrumentation_apk": "PASSED",
+    "lint_debug": "PASSED",
+    "unit_test_classes": 22,
+    "unit_tests_passed": 144,
+    "unit_tests_failed": 0,
+    "android_duration_seconds": 15,
+    "related_backend_tests_passed": 191,
+    "experience_tests_passed": 16
+  },
+  "scope_note": "Original36 performance episodes used frozen_source_commit; later onboarding, completion prompt and route-evidence changes were merged and build/unit/lint checked, not performance rerun",
+  "first_onboarding_merge_verification": {
+    "incoming_remote_commit": "40f2470d93f6099b5a2c5405f65868f0e7d4c7e2",
+    "integrated_source_commit": "7b448d811ea2a641fd5c1ea0ce6b7c104f0a6af7",
+    "checks": {
+      "debug_apk": "PASSED",
+      "instrumentation_apk": "PASSED",
+      "lint_debug": "PASSED",
+      "unit_test_classes": 22,
+      "unit_tests_passed": 142,
+      "unit_tests_failed": 0,
+      "duration_seconds": 22
+    }
+  }
+}

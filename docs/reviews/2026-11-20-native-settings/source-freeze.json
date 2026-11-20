@@ -1,0 +1,34 @@
+{
+  "schema_version": "click.native-settings-source-freeze.v1",
+  "frozen_at_utc": "2026-11-20T11:48:44.794889+00:00",
+  "base_commit": "32041e5f79c5366be35d184e7b8b22657318c3da",
+  "model": "gemini-3.8-flash",
+  "model_requests_before_freeze": 0,
+  "full_schedule_episodes": 36,
+  "source_sha256": {
+    "Frontend/app/src/androidTest/java/com/click/service/accessibility/MetaControllerSettingsExperimentTest.java": "37a971ad8ec5897f24b529731b2f857066f32d75aa64732d2b540539837569cb",
+    "Frontend/app/src/androidTest/java/com/click/service/accessibility/MetaControllerPrivateGuardFixtureActivity.java": "5d1b3cd656bab83f79f7020ab8b4715566d0d0d83abbc3d064eb9268845034e7",
+    "Frontend/app/src/androidTest/AndroidManifest.xml": "e9e11d56757735fc9623c7fd3cb0882a19e73ff174a16a2c668e0345c1cd8c28",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java": "83c2a39cd6a68fdef61a370edd6d2a25f81b651c1f0006a8a29fdb1e7596a3e6",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskMetaController.java": "b6c75b69438e677964069d08693de8267eb55887c4820bf6a9e41c9f754d324c",
+    "Frontend/app/src/main/java/com/click/service/accessibility/AppTaskExecutor.java": "7d30aa2d6b1e494f10857b7781a88a59eecc016620d31b9d756423b1dadcd8b4",
+    "Frontend/app/src/main/java/com/click/data/snapshot/AppTaskObservation.java": "944db88e06d4c63a9d037d15a60200c576dfef7fcd5926fae57efb20097930a3",
+    "Frontend/app/src/main/java/com/click/data/remote/AppGuideGateway.java": "df802d27139671c8cb27f3039775f68d4492b812bca231dce6273cb6a816af73",
+    "Backend/scripts/serve_meta_controller_settings_experiment.py": "d9e095aac06d5508f58441d9faf45fb0bfe53f93d90699aa1f7704d26df0a755",
+    "Backend/app/services/app_task.py": "3f40009edddf6adb97cce79c683b695fdd39ac96b375733b98191382c39cf9be",
+    "Backend/app/services/app_task_provider.py": "5b69597ef97afa7d0d5caca7f9cfeb2f62f002ed5d566ab4933271887ca01151",
+    "Backend/app/services/app_task_completion.py": "17e212dc7272c4e521d9146cb980a235a334bfb132264c23692defc86b578d5b",
+    "experiments/metacontroller/native-settings-protocol-v1.md": "433d492f996ad5a0f0ef622dcca55101afd2b42daa1e93f21a30e3de6ba85ede",
+    "experiments/metacontroller/native-settings-catalogue-v1.json": "351b85001243a9600225ba15bac5b2cde3f691c630ca942c27e66dbd3bbc6991"
+  },
+  "apk_sha256": {
+    "isolated_debug": "285fc4feff44cd3b4c75a67086cd6004371a7f24b8672095e1b1caa97dfd3455",
+    "instrumentation": "e8900a938fea8bd4e675bf4c7ddcd6008d5d0025380bc8d0a2befad121cc7ad1"
+  },
+  "prepared_artifact_sha256": {
+    "environment.json": "54394555d753aa56c4a9cd0d0d097e5aa81be4a762abeb41bf1c0611616b050c",
+    "manifest.json": "9a41d5206e9416fc3bb47f8e1efc58a3e9f5077d9dbb7715f098556b00b1d486",
+    "readiness.json": "b9d307e9fa54649b4c156ca150b42f871b0d921c9ff9a029a29b024460f00924",
+    "guard-readiness.json": "bca67a9b2af907cb509a13d121cad249fc00b2455883c81b613a85ef9567ff6f"
+  }
+}
