@@ -28,7 +28,8 @@ public class AccessibilityServiceConnectionTest {
      var connected=ClickAccessibilityService.class.getDeclaredMethod("onServiceConnected");connected.setAccessible(true);
      connected.invoke(controller.get());
      Intent destination=org.robolectric.Shadows.shadowOf(app).getNextStartedActivity();
-     assertEquals((entry==0?TutorialReadyActivity.class:entry==2?MenuActivity.class:HomeActivity.class).getName(),destination.getComponent().getClassName());
+     assertEquals(RequiredPermissionsActivity.class.getName(),destination.getComponent().getClassName());
+     assertEquals(entry==0?"tutorial":entry==2?"settings":"home", destination.getStringExtra(RequiredPermissionsActivity.EXTRA_DESTINATION));
      assertTrue(state.isPending());
      org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
        .idleFor(java.time.Duration.ofSeconds(1));
@@ -64,7 +65,9 @@ public class AccessibilityServiceConnectionTest {
   var state=new com.click.data.local.AccessibilityOnboardingState(
     org.robolectric.RuntimeEnvironment.getApplication());
   state.begin();
-  try(var activity=Robolectric.buildActivity(TutorialReadyActivity.class)) {
+  try(var granted=mockStatic(com.click.core.permission.PermissionStatus.class);
+      var activity=Robolectric.buildActivity(TutorialReadyActivity.class)) {
+   granted.when(()->com.click.core.permission.PermissionStatus.areRequiredPermissionsGranted(any())).thenReturn(true);
    activity.create().start();
    assertTrue(state.isPending());
    activity.resume();
