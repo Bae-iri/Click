@@ -134,17 +134,17 @@ public class AppTaskControllerTest {
         for(String pkg:List.of("com.spotify.music","org.mozilla.firefox","org.example.newapp")){
             Listener l=new Listener();l.advanceObservationClock=true;l.current=screen(pkg,node(pkg,"start","검색","button"));AppTaskMemory m=new AppTaskMemory("목록 열어줘");m.localPlan();m.completion(AppTaskCompletionTest.completion(pkg,"목록"));
             var gateway=mock(AppGuideGateway.class);var c=new AppTaskController(gateway,m,null,l,false,false,true);c.refresh();
-            l.current=screen(pkg,node(pkg,"result","목록","button"));c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
+            l.current=screen(pkg,AppTaskGoalCompletionTest.heading(pkg,"result","목록"));c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
             assertEquals("confirm_result",l.result.getString("status"));assertEquals("verified",l.result.getJSONObject("result_assessment").getString("status"));
             assertEquals("g0",m.active());assertFalse(m.finished());assertEquals(0,l.executions);verify(gateway,never()).send(any(),any());
             int before=l.presents;c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));assertEquals(before,l.presents);c.close();
         }
     }
     @Test public void transientResultOrOldObservationDoesNotConfirmOrCountAsFailedAction()throws Exception {
-        String pkg="org.example.app";Listener l=new Listener();l.current=screen(pkg,node(pkg,"result","목록","button"));AppTaskMemory m=new AppTaskMemory("목록 열어줘");m.completion(AppTaskCompletionTest.completion(pkg,"목록"));
+        String pkg="org.example.app";Listener l=new Listener();l.current=screen(pkg,AppTaskGoalCompletionTest.heading(pkg,"result","목록"));AppTaskMemory m=new AppTaskMemory("목록 열어줘");m.completion(AppTaskCompletionTest.completion(pkg,"목록"));
         var c=new AppTaskController(mock(AppGuideGateway.class),m,null,l,false,false,true);c.refresh();assertEquals("checking_result",l.result.getString("status"));
         l.current=screen(pkg,node(pkg,"other","홈","button"));shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));assertNotEquals("confirm_result",l.result.getString("status"));
-        l.current=screen(pkg,node(pkg,"result","목록","button"));l.freshReads=false;c.refresh();shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6));
+        l.current=screen(pkg,AppTaskGoalCompletionTest.heading(pkg,"result","목록"));l.freshReads=false;c.refresh();shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6));
         assertEquals("needs_input",l.result.getString("status"));assertEquals("unknown",l.result.getJSONObject("result_assessment").getString("status"));assertEquals(0,m.actions());c.close();
     }
     @Test public void missingFreshActionEvidenceIsUnknownInsteadOfAFailedAttempt()throws Exception {
@@ -160,6 +160,35 @@ public class AppTaskControllerTest {
             .put("completion",AppTaskCompletionTest.completion(pkg,"검색어 입력")).put("action",a));
         c.execute(l.result.getJSONObject("action").getString("id"),null);l.current=screen(pkg,node(pkg,"field","","search"));shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
         assertEquals("confirm_result",l.result.getString("status"));assertEquals("verified",l.result.getJSONObject("result_assessment").getString("status"));assertEquals(1,l.executions);verify(gateway,times(1)).send(any(),any());c.close();
+    }
+    @Test public void modelCannotBindCurrentNavigationMenuAsFinalProofInEitherArm()throws Exception {
+        for(AppTaskMetaController.Arm arm:List.of(AppTaskMetaController.Arm.CURRENT,AppTaskMetaController.Arm.META)){
+            String pkg="org.example.app";Listener l=new Listener();l.advanceObservationClock=true;l.current=screen(pkg,node(pkg,"display","디스플레이","button"));
+            var gateway=mock(AppGuideGateway.class);AppTaskMemory m=new AppTaskMemory("디스플레이 열어줘");
+            var c=new AppTaskController(gateway,m,null,l,true,false,true,arm);c.refresh();
+            var callback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway).send(any(),callback.capture());
+            JSONObject a=action(AppTaskObservation.capture(l.current),"tap","target_visible");a.getJSONObject("expectation").put("label","밝기");
+            callback.getValue().success(new JSONObject().put("status","proposed").put("subgoals",new JSONArray().put(new JSONObject().put("title","디스플레이 열기")))
+                .put("completion",AppTaskCompletionTest.completion(pkg,"디스플레이")).put("action",a));
+            assertNull(m.completion());assertEquals("proposed",l.result.getString("status"));assertFalse(l.result.has("result_assessment"));assertEquals(0,l.executions);
+            c.close();
+        }
+    }
+    @Test public void unsafeRestoredContractIsDiscardedAndReboundWithoutLosingProgress()throws Exception {
+        String pkg="org.example.app";Listener l=new Listener();l.advanceObservationClock=true;l.current=screen(pkg,node(pkg,"display","디스플레이","button"));
+        AppTaskMemory original=new AppTaskMemory("디스플레이 열어줘");original.localPlan();original.completion(AppTaskCompletionTest.completion(pkg,"디스플레이"));
+        AppTaskMemory m=new AppTaskMemory(original.stored());String id=m.id(),plan=m.state().getJSONArray("subgoals").toString();
+        var gateway=mock(AppGuideGateway.class);var c=new AppTaskController(gateway,m,null,l,true,false,true);c.refresh();
+        assertNull(m.completion());assertEquals("planning",l.result.getString("status"));assertEquals(id,m.id());assertEquals(plan,m.state().getJSONArray("subgoals").toString());
+        var callback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway).send(any(),callback.capture());
+        JSONObject a=action(AppTaskObservation.capture(l.current),"tap","target_visible");a.getJSONObject("expectation").put("label","밝기");
+        callback.getValue().success(new JSONObject().put("status","proposed").put("subgoals",m.state().getJSONArray("subgoals"))
+            .put("completion",AppTaskCompletionTest.completion(pkg,"디스플레이 화면")).put("action",a));
+        assertNotNull(m.completion());assertEquals("proposed",l.result.getString("status"));
+        l.current=screen(pkg,AppTaskGoalCompletionTest.heading(pkg,"title","디스플레이 화면"));c.screenChanged(l.current);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
+        assertEquals("confirm_result",l.result.getString("status"));assertEquals("verified",l.result.getJSONObject("result_assessment").getString("status"));
+        assertEquals(id,m.id());assertEquals(plan,m.state().getJSONArray("subgoals").toString());assertFalse(m.finished());assertEquals(0,l.executions);c.close();
     }
     @Test public void manualTapOnATargetsLabelChildIsCorrelatedButAnUnrelatedChildIsIgnored()throws Exception {
         String pkg="org.example.app";Listener l=new Listener();l.advanceObservationClock=true;

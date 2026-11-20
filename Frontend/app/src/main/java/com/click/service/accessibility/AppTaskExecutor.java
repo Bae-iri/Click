@@ -17,13 +17,13 @@ public final class AppTaskExecutor {
         try{
             String tool=action.getString("tool");
             if("open_app".equals(tool)){
-                if(!AppTaskPolicy.allowed(observation,AppTaskObservation.capture(current),action,selectedPackage))return reject("app_not_selected");
+                if(!AppTaskPolicy.allowed(observation,AppTaskObservation.recaptureLike(current,observation),action,selectedPackage))return reject("app_not_selected");
                 Intent launch=service.getPackageManager().getLaunchIntentForPackage(selectedPackage);if(launch==null)return reject("launch_intent_unavailable");
                 service.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));return true;
             }
             if(baseline==null||current==null||!java.util.Objects.equals(baseline.packageName,current.packageName)
                     ||!java.util.Objects.equals(baseline.activeWindowId,current.activeWindowId))return reject("window_changed");
-            if(!AppTaskPolicy.allowed(observation,AppTaskObservation.capture(current),action,selectedPackage))return reject("observation_or_policy_changed");
+            if(!AppTaskPolicy.allowed(observation,AppTaskObservation.recaptureLike(current,observation),action,selectedPackage))return reject("observation_or_policy_changed");
             if("back".equals(tool))return service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
             AccessibilityNodeSnapshot target=null;for(var n:current.nodes)if(n.nodeId.equals(action.optString("target_id")))target=n;
             if(target==null||!target.nodeId.matches("node_0(_[0-9]+)*"))return false;

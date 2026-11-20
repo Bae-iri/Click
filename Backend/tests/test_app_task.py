@@ -209,3 +209,65 @@ def test_unobservable_unbound_or_private_final_results_are_rejected(check):
 def test_unobservable_result_remains_manual_and_confirm_is_not_technical_success():
     result=AppTaskService(sender(tool='confirm',completion_checks=[])).step(request())
     assert result.status=='confirm_result' and result.completion is None and result.action is None
+
+
+@pytest.mark.parametrize('target',['c0','none'])
+def test_visible_navigation_menu_is_not_final_result_but_next_action_survives(target):
+    req=request();req.goal='검색 열어줘'
+    result=AppTaskService(sender(completion_checks=[dict(target=target,label='검색',app='none',checked='unknown',selected='unknown')])).step(req)
+    assert result.status=='proposed' and result.action.target_id=='node_0_1'
+    assert result.completion is None
+    assert result.diagnostic['completion_grounding']=='deferred_actionable_proof'
+
+
+def test_one_unsafe_goal_clause_defers_whole_conjunction_instead_of_weakening_it():
+    checks=[dict(target='none',label='목록',app='none',checked='unknown',selected='unknown'),
+            dict(target='c0',label='검색',app='none',checked='unknown',selected='unknown')]
+    result=AppTaskService(sender(completion_checks=checks)).step(request())
+    assert result.status=='proposed' and result.action is not None and result.completion is None
+
+
+def test_not_yet_observed_destination_can_bind_and_already_open_destination_text_is_valid():
+    check=dict(target='none',label='디스플레이 화면',app='none',checked='unknown',selected='unknown')
+    req=request();req.goal='디스플레이 화면 열어줘'
+    result=AppTaskService(sender(completion_checks=[check])).step(req)
+    assert result.completion.checks[0].label=='디스플레이 화면'
+    req.screen.nodes[0].label='디스플레이 화면';req.screen.nodes[0].role='text';req.screen.nodes[0].clickable=False
+    check['target']='c0'
+    result=AppTaskService(sender(tool='confirm',completion_checks=[check])).step(req)
+    assert result.status=='confirm_result' and result.completion.checks[0].role=='text'
+
+
+@pytest.mark.parametrize('selected',['true','false'])
+def test_navigation_tab_requires_selected_state_in_the_requested_direction(selected):
+    req=request();req.goal='기록 탭 열어줘';req.screen.nodes[0].label='기록';req.screen.nodes[0].role='tab'
+    check=dict(target='c0',label='기록',app='none',checked='unknown',selected=selected)
+    result=AppTaskService(sender(completion_checks=[check])).step(req)
+    assert result.status=='proposed' and result.action is not None
+    assert (result.completion is not None)==(selected=='true')
+
+
+def test_unselected_tab_cannot_prove_a_selection_paraphrase_without_open_verb():
+    req=request();req.goal='기록 탭 선택해줘';req.screen.nodes[0].label='기록';req.screen.nodes[0].role='tab'
+    check=dict(target='c0',label='기록',app='none',checked='unknown',selected='false')
+    result=AppTaskService(sender(completion_checks=[check])).step(req)
+    assert result.status=='proposed' and result.action is not None and result.completion is None
+
+
+def test_turning_off_a_native_toggle_is_valid_even_with_navigation_in_the_goal():
+    req=request();req.goal='알림 화면 열고 알림 꺼줘';req.screen.nodes[0].label='알림';req.screen.nodes[0].role='toggle'
+    check=dict(target='c0',label='알림',app='none',checked='false',selected='false')
+    result=AppTaskService(sender(completion_checks=[check])).step(req)
+    assert result.status=='proposed' and result.completion.checks[0].checked is False
+
+
+@pytest.mark.parametrize('goal,allowed',[
+    ('검색창 열어줘',True),('검색창 보여줘',True),('검색창 띄워줘',True),('show search',True),
+    ('검색 결과 열어줘',False),('검색어 입력해줘',False),('검색 열고 목록 확인',False)])
+@pytest.mark.parametrize('target',['c0','none'])
+def test_search_input_exposure_only_proves_explicit_search_open_goal(goal,allowed,target):
+    req=request();req.goal=goal;req.screen.nodes[0].label='검색어 입력';req.screen.nodes[0].role='text_field';req.screen.nodes[0].editable=True
+    check=dict(target=target,label='검색어 입력',app='none',checked='unknown',selected='unknown')
+    result=AppTaskService(sender(tool='set_text',completion_checks=[check])).step(req)
+    assert result.status=='proposed' and result.action is not None
+    assert (result.completion is not None)==allowed

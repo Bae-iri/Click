@@ -23,6 +23,8 @@ public final class AppTaskMemory {
         if(completion()!=null&&!AppTaskCompletion.key(completion()).equals(AppTaskCompletion.key(condition)))throw new JSONException("Changed result condition");
         data.put("completion",new JSONObject(condition.toString()));
     }
+    /** Migration of a locally rejected model predicate; user-confirmed results stay immutable. */
+    public void discardCompletion(){if(!finished())data.remove("completion");}
     public String active(){JSONArray goals=data.optJSONArray("subgoals");for(int i=0;goals!=null&&i<goals.length();i++)if("pending".equals(goals.optJSONObject(i).optString("status")))return goals.optJSONObject(i).optString("id");return null;}
     public void plan(JSONArray incoming)throws JSONException {
         if(incoming==null||incoming.length()==0||incoming.length()>8)return;

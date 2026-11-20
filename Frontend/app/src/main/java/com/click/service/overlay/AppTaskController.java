@@ -114,11 +114,19 @@ public final class AppTaskController {
         listener.present(result,baseline);
     }
     /** A result can be reached manually, by a restored task, or already be present. */
-    private boolean observeResult(JSONObject current)throws JSONException {
+    private boolean discardUnsafeCompletion(JSONObject current,ScreenSnapshot screen){
+        if(!completionSupported||memory.finished()||memory.completion()==null
+                ||!AppTaskCompletion.unsafeForGoal(memory.goal(),memory.completion(),current,screen))return false;
+        memory.discardCompletion();save();
+        checkingResult=resultOffered=false;resultObservation=null;resultAssessment=null;
+        return true;
+    }
+    private boolean observeResult(JSONObject current,ScreenSnapshot screen)throws JSONException {
         if(!completionSupported||memory.completion()==null)return false;
+        if(discardUnsafeCompletion(current,screen))return false;
         if(Objects.equals(ignoredResultFingerprint,current.optString("fingerprint")))return false;
         ignoredResultFingerprint=null;
-        AppTaskCompletion.Verdict verdict=AppTaskCompletion.check(memory.completion(),current);
+        AppTaskCompletion.Verdict verdict=AppTaskCompletion.checkForGoal(memory.goal(),memory.completion(),current,screen);
         long captured=current.optLong("captured_at_ms"),now=System.currentTimeMillis();
         if(verdict!=AppTaskCompletion.Verdict.MATCHED||captured>now+2000||now-captured>15000){
             checkingResult=resultOffered=false;resultObservation=null;resultAssessment=null;return false;
@@ -147,9 +155,11 @@ public final class AppTaskController {
         if(verifying){verifyNow();return;}
         ScreenSnapshot screen=listener.fresh();if(screen==null&&selectedPackage==null)return;
         try{
-            JSONObject current=capture(screen);String fingerprint=current.getString("fingerprint");
+            JSONObject current=capture(screen);
+            if(discardUnsafeCompletion(current,screen))current=capture(screen);
+            String fingerprint=current.getString("fingerprint");
             if(memory.finished()){proposal=null;show("completed","요청한 결과를 확인했어요.");return;}
-            if(observeResult(current))return;
+            if(observeResult(current,screen))return;
             if(!force&&fingerprint.equals(submitted))return;
             if(proposal!=null&&!fingerprint.equals(submitted))proposal=null;
             baseline=screen;observation=current;submitted=fingerprint;diagnostic=null;
@@ -181,8 +191,11 @@ public final class AppTaskController {
                     try{
                         ScreenSnapshot fresh=listener.fresh();if(fresh==null||!fingerprint.equals(capture(fresh).optString("fingerprint"))){handler.post(refresh);return;}
                         diagnostic=response.optJSONObject("diagnostic");memory.plan(response.optJSONArray("subgoals"));
-                        if(completionSupported)memory.completion(response.optJSONObject("completion"));save();
-                        if(observeResult(capture(fresh)))return;
+                        JSONObject candidate=response.optJSONObject("completion");
+                        if(completionSupported&&candidate!=null
+                                &&!AppTaskCompletion.unsafeForGoal(memory.goal(),candidate,capture(fresh),fresh))memory.completion(candidate);
+                        save();
+                        if(observeResult(capture(fresh),fresh))return;
                         JSONObject action=response.optJSONObject("action");
                         if(action!=null){if(memory.repeated(observation,action)){show("needs_input","같은 동작이 반복해서 실패했어요. 다른 동작을 선택하거나 직접 화면을 이동해 주세요.");return;}propose(action);}
                         else show(response.optString("status"),response.optString("message"));
@@ -392,7 +405,7 @@ public final class AppTaskController {
             if(!verified)invalidateReplay();
             record(observation,after,proposal,verified?"verified":verdict==AppTaskVerifier.Verdict.PROTECTED?"protected":verdict==AppTaskVerifier.Verdict.STALE?"stale":verdict==AppTaskVerifier.Verdict.UNKNOWN?"waiting":"failed",actionObserved,verified,verified&&AppTaskPolicy.provesSubgoal(proposal));
             proposal=null;verifying=false;inputHash=null;submitted=null;
-            if(observeResult(after))return;
+            if(observeResult(after,fresh))return;
             if(verified||decision==AppTaskMetaController.Decision.REOBSERVE){handler.post(refresh);}else{baseline=fresh;observation=after;show("needs_input",verdict==AppTaskVerifier.Verdict.PROTECTED?"입력·인증은 직접 진행해 주세요. 진행 상태는 보관했어요.":verdict==AppTaskVerifier.Verdict.UNKNOWN?"결과를 확인할 화면이나 대상을 읽지 못했어요. 현재 화면을 다시 확인해 주세요.":"아직 변화를 확인하지 못했어요. 같은 동작을 반복하지 않고 다른 방법을 확인해 주세요.");}
         }catch(Exception e){verifying=false;listener.failure(e);}
     }

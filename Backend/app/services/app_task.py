@@ -12,6 +12,35 @@ from app.services.goal_llm import _unique_object
 from app.services.settings_planner import model_name,provider_error
 
 
+def _navigation_goal(goal):
+    return bool(re.search(r'열|이동|진입|들어|접속|화면|보여|보기|띄워|켜|확인|open|show|view|navigate|go to|switch to|bring up|launch',goal,re.I))
+
+
+def _search_open_goal(goal):
+    return (_navigation_goal(goal) and re.search(r'검색|search',goal,re.I)
+        and not re.search(r'입력|검색어|결과|찾아|그리고|다음|하고|열고|열어서|한 뒤|type|enter|query|results|then|and ',goal,re.I))
+
+
+def _unsafe_goal_check(goal,check,nodes):
+    """A menu's presence is action availability, not reaching its destination."""
+    if check.selected is False and not re.search(r'해제|취소|끄|꺼|닫|접어|접기|unselect|deselect|disable|turn off|close|collapse',goal,re.I):
+        return True
+    if check.checked is not None or check.selected is not None:
+        return False
+    if check.role in {'button','tab','toggle','list'}:
+        return True
+    if check.role=='text_field' and not _search_open_goal(goal):
+        return True
+    found=[n for n in nodes if n.source=='accessibility'
+        and (not check.label or n.label==check.label) and (not check.resource or n.resource==check.resource)
+        and (not check.role or n.role==check.role)]
+    # Do not reject a not-yet-observed destination label. The native verifier
+    # checks its actual role and context when it eventually appears.
+    return bool(found) and not any(
+        n.role=='text' and not n.clickable and not n.editable and not n.scrollable
+        or (n.role=='text_field' or n.editable) and _search_open_goal(goal) for n in found)
+
+
 class AppTaskService:
     def __init__(self,sender=None,memory=None): self.sender,self.memory=sender,memory
 
@@ -92,6 +121,10 @@ class AppTaskService:
             'if only a screen/selection change can be checked. Do not repeat failed tool/target pairs on the same screen. '
             'Define completion_checks for the FINAL requested result, not an intermediate page or the next button. '
             'All checks must hold together in the final app: exact public labels, or a native target with its required checked/selected state. '
+            'For opening or navigating, require a non-actionable destination heading or unique destination text, '
+            'or the requested tab selected=true. A currently visible menu entry/button is NEVER evidence that its destination is open, '
+            'even if its label equals the goal or expected_label. Do not disguise that entry with target none. '
+            'Showing a search input proves only an explicit search-open goal, never entered text or search results. '
             'Use target none for a future visible label. Never use private text, input values or authentication as a check. '
             'Native state checks must name an observed target; if it is not visible yet, leave completion_checks empty until it is observable. '
             'Return an empty completion_checks array if the result cannot be observed, or if completion_bound is true; never replace a bound result. '
@@ -146,10 +179,15 @@ class AppTaskService:
                 if target and package!=screen.package:raise ValueError('completion_target_app')
                 want_checked,want_selected=state_value(check['checked']),state_value(check['selected'])
                 if target is None and (not label or want_checked is not None or want_selected is not None):raise ValueError('ungrounded_result_state')
-                if target and (target.editable or not target.label or label not in {'',target.label}):raise ValueError('completion_control')
+                if target and (not target.label or label not in {'',target.label}):raise ValueError('completion_control')
                 bound.append(TaskResultCheck(package=package,label=target.label if target else label,
                     resource=target.resource if target else '',role=target.role if target else '',checked=want_checked,selected=want_selected))
-            if bound:response.completion=TaskCompletion(checks=bound)
+            if bound:
+                # Defer the WHOLE conjunction rather than dropping a clause and
+                # weakening the requested result. A valid next action survives.
+                if any(c.package==screen.package and _unsafe_goal_check(goal,c,safe.values()) for c in bound):
+                    diagnostic['completion_grounding']='deferred_actionable_proof'
+                else:response.completion=TaskCompletion(checks=bound)
             titles=answer['subgoals']
             if not isinstance(titles,list) or not 1<=len(titles)<=8 or any(not public_label(t) for t in titles):raise ValueError('subgoals')
             if state.subgoals:
