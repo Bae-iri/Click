@@ -1,0 +1,4051 @@
+{
+  "schema_version": "meta-controller-pilot-summary.v1",
+  "instrumentation_version": "native-navigation.v4",
+  "run_id": "native-v4-20261120",
+  "completeness": {
+    "expected_episodes": 216,
+    "actual_episodes": 216,
+    "complete": true,
+    "tasks": 12,
+    "apps": 4,
+    "assigned_conditions": 3,
+    "repetitions": 2,
+    "arms": [
+      "A",
+      "B",
+      "C"
+    ]
+  },
+  "frozen_scope": {
+    "experiment_patch_sha": "4ab62b73276f64337672677468c22b2a8d9e366d275c2923cb6cb342a2ed16a3",
+    "base_code_revision": "ea226a605a1b1abd95f4666542c977b2a87d5f1e",
+    "device_scope": "Samsung_SM_N981N_Android13_single_device",
+    "configured_model": "gemini-3.8-flash"
+  },
+  "budget_s": 15,
+  "arm_order_scheme": "deterministic_rotation_and_reversal_repeat_offset_not_random_assignment",
+  "overall": {
+    "A": {
+      "trials": 72,
+      "verified_successes": 7,
+      "success_rate": 0.09722222222222222,
+      "independent_oracle_trials": 72,
+      "unknown_oracle_trials": 20,
+      "ambiguous_oracle_trials": 0,
+      "final_oracle_observable_trials": 52,
+      "final_oracle_unobservable_trials": 0,
+      "final_oracle_coverage_unmeasured_trials": 20,
+      "positive_goal_evidence_with_final_unobservable": 0,
+      "runtime_verified_offers": 22,
+      "runtime_verified_offer_measured_trials": 72,
+      "false_verified_offers": 21,
+      "adjudicated_verified_offers": 22,
+      "false_verified_offer_rate_per_adjudicated_offer": 0.9545454545454546,
+      "false_verified_offer_measured_trials": 72,
+      "unknown_verified_offers": 0,
+      "false_verified_offer_evidence_rejected": 0,
+      "false_done": 0,
+      "unverifiable_done": 0,
+      "provider_error_trials": 3,
+      "fault_injected_trials": 8,
+      "mean_penalized_time_ms": 14431.972222222223,
+      "elapsed_p50_ms": 5950.0,
+      "elapsed_p95_ms": 15237.0,
+      "model_wait_ms_measured_trials": 72,
+      "model_wait_ms_total": 250395.0,
+      "model_calls_measured_trials": 72,
+      "model_calls_total": 59,
+      "tokens_measured_trials": 0,
+      "tokens_total": null,
+      "wrong_target_count_measured_trials": 0,
+      "wrong_target_count_total": null,
+      "recovery_attempts_measured_trials": 0,
+      "recovery_attempts_total": null,
+      "recovery_successes_measured_trials": 0,
+      "recovery_successes_total": null,
+      "unnecessary_recovery_count_measured_trials": 0,
+      "unnecessary_recovery_count_total": null,
+      "mean_penalized_time_s": 14.431972222222223,
+      "goal_observed_time": {
+        "eligible_episodes": 7,
+        "measured_episodes": 7,
+        "unmeasured_episodes": 0,
+        "mean_s": 8.376428571428571,
+        "p50_s": 9.304,
+        "p95_s": 11.2
+      },
+      "runtime_verified_offer_time": {
+        "eligible_episodes": 22,
+        "measured_episodes": 22,
+        "unmeasured_episodes": 0,
+        "mean_s": 5.343545454545454,
+        "p50_s": 4.500500000000001,
+        "p95_s": 12.257
+      },
+      "runtime_done_time": {
+        "eligible_episodes": 0,
+        "measured_episodes": 0,
+        "unmeasured_episodes": 0,
+        "mean_s": null,
+        "p50_s": null,
+        "p95_s": null
+      },
+      "first_action_proposal_time": {
+        "eligible_episodes": 72,
+        "measured_episodes": 33,
+        "unmeasured_episodes": 39,
+        "mean_s": 4.266151515151515,
+        "p50_s": 3.751,
+        "p95_s": 6.992
+      },
+      "server_provider_work_ms": {
+        "total": 250395,
+        "measured_episodes": 72
+      },
+      "episodes_with_provider_work_outside_window": 0,
+      "opportunities": {
+        "episodes": 72,
+        "assigned_fault_episodes": 48,
+        "realized_fault_episodes": 8,
+        "realized_fault_rate_per_assigned_fault": 0.16666666666666666,
+        "episodes_reaching_native_dispatch": 33,
+        "native_dispatch_count": {
+          "total": 33,
+          "measured_episodes": 52
+        },
+        "native_acceptance_count": {
+          "total": 12,
+          "measured_episodes": 52
+        },
+        "native_rejection_count": {
+          "total": 17,
+          "measured_episodes": 52
+        },
+        "false_verified_offer_before_any_native_dispatch": 18,
+        "false_verified_offer_with_unknown_dispatch_count": 0,
+        "false_verified_offer_without_action_proposal": 18,
+        "controller_recovery_count": {
+          "total": 0,
+          "measured_episodes": 52
+        },
+        "episodes_with_controller_recovery": 0,
+        "verified_goal_after_any_controller_recovery": 0,
+        "controller_rejected_state_count": {
+          "total": 0,
+          "measured_episodes": 52
+        },
+        "event_buffer_occupancy_at_end": {
+          "total": 0,
+          "measured_episodes": 52
+        },
+        "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+      },
+      "setup_statuses": {
+        "failed": 20,
+        "ready": 52
+      },
+      "runtime_outcomes": {
+        "budget_exhausted": 24,
+        "goal_observed": 7,
+        "runtime_offer_without_goal": 21,
+        "setup_failure": 20
+      }
+    },
+    "B": {
+      "trials": 72,
+      "verified_successes": 7,
+      "success_rate": 0.09722222222222222,
+      "independent_oracle_trials": 72,
+      "unknown_oracle_trials": 20,
+      "ambiguous_oracle_trials": 0,
+      "final_oracle_observable_trials": 52,
+      "final_oracle_unobservable_trials": 0,
+      "final_oracle_coverage_unmeasured_trials": 20,
+      "positive_goal_evidence_with_final_unobservable": 0,
+      "runtime_verified_offers": 23,
+      "runtime_verified_offer_measured_trials": 72,
+      "false_verified_offers": 22,
+      "adjudicated_verified_offers": 23,
+      "false_verified_offer_rate_per_adjudicated_offer": 0.9565217391304348,
+      "false_verified_offer_measured_trials": 72,
+      "unknown_verified_offers": 0,
+      "false_verified_offer_evidence_rejected": 0,
+      "false_done": 0,
+      "unverifiable_done": 0,
+      "provider_error_trials": 6,
+      "fault_injected_trials": 8,
+      "mean_penalized_time_ms": 14388.319444444445,
+      "elapsed_p50_ms": 5773.5,
+      "elapsed_p95_ms": 15214.0,
+      "model_wait_ms_measured_trials": 70,
+      "model_wait_ms_total": 252260.0,
+      "model_calls_measured_trials": 72,
+      "model_calls_total": 66,
+      "tokens_measured_trials": 0,
+      "tokens_total": null,
+      "wrong_target_count_measured_trials": 0,
+      "wrong_target_count_total": null,
+      "recovery_attempts_measured_trials": 0,
+      "recovery_attempts_total": null,
+      "recovery_successes_measured_trials": 0,
+      "recovery_successes_total": null,
+      "unnecessary_recovery_count_measured_trials": 0,
+      "unnecessary_recovery_count_total": null,
+      "mean_penalized_time_s": 14.388319444444445,
+      "goal_observed_time": {
+        "eligible_episodes": 7,
+        "measured_episodes": 7,
+        "unmeasured_episodes": 0,
+        "mean_s": 7.886142857142858,
+        "p50_s": 9.657,
+        "p95_s": 11.032
+      },
+      "runtime_verified_offer_time": {
+        "eligible_episodes": 23,
+        "measured_episodes": 23,
+        "unmeasured_episodes": 0,
+        "mean_s": 5.469739130434783,
+        "p50_s": 4.442,
+        "p95_s": 8.479
+      },
+      "runtime_done_time": {
+        "eligible_episodes": 0,
+        "measured_episodes": 0,
+        "unmeasured_episodes": 0,
+        "mean_s": null,
+        "p50_s": null,
+        "p95_s": null
+      },
+      "first_action_proposal_time": {
+        "eligible_episodes": 72,
+        "measured_episodes": 34,
+        "unmeasured_episodes": 38,
+        "mean_s": 3.9367647058823527,
+        "p50_s": 3.6639999999999997,
+        "p95_s": 5.468
+      },
+      "server_provider_work_ms": {
+        "total": 275325,
+        "measured_episodes": 72
+      },
+      "episodes_with_provider_work_outside_window": 2,
+      "opportunities": {
+        "episodes": 72,
+        "assigned_fault_episodes": 48,
+        "realized_fault_episodes": 8,
+        "realized_fault_rate_per_assigned_fault": 0.16666666666666666,
+        "episodes_reaching_native_dispatch": 34,
+        "native_dispatch_count": {
+          "total": 34,
+          "measured_episodes": 52
+        },
+        "native_acceptance_count": {
+          "total": 13,
+          "measured_episodes": 52
+        },
+        "native_rejection_count": {
+          "total": 17,
+          "measured_episodes": 52
+        },
+        "false_verified_offer_before_any_native_dispatch": 18,
+        "false_verified_offer_with_unknown_dispatch_count": 0,
+        "false_verified_offer_without_action_proposal": 18,
+        "controller_recovery_count": {
+          "total": 8,
+          "measured_episodes": 52
+        },
+        "episodes_with_controller_recovery": 8,
+        "verified_goal_after_any_controller_recovery": 4,
+        "controller_rejected_state_count": {
+          "total": 8,
+          "measured_episodes": 52
+        },
+        "event_buffer_occupancy_at_end": {
+          "total": 27,
+          "measured_episodes": 52
+        },
+        "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+      },
+      "setup_statuses": {
+        "failed": 20,
+        "ready": 52
+      },
+      "runtime_outcomes": {
+        "budget_exhausted": 24,
+        "goal_observed": 7,
+        "runtime_offer_without_goal": 21,
+        "setup_failure": 20
+      }
+    },
+    "C": {
+      "trials": 72,
+      "verified_successes": 7,
+      "success_rate": 0.09722222222222222,
+      "independent_oracle_trials": 72,
+      "unknown_oracle_trials": 21,
+      "ambiguous_oracle_trials": 0,
+      "final_oracle_observable_trials": 51,
+      "final_oracle_unobservable_trials": 0,
+      "final_oracle_coverage_unmeasured_trials": 21,
+      "positive_goal_evidence_with_final_unobservable": 0,
+      "runtime_verified_offers": 22,
+      "runtime_verified_offer_measured_trials": 72,
+      "false_verified_offers": 21,
+      "adjudicated_verified_offers": 22,
+      "false_verified_offer_rate_per_adjudicated_offer": 0.9545454545454546,
+      "false_verified_offer_measured_trials": 72,
+      "unknown_verified_offers": 0,
+      "false_verified_offer_evidence_rejected": 0,
+      "false_done": 0,
+      "unverifiable_done": 0,
+      "provider_error_trials": 9,
+      "fault_injected_trials": 7,
+      "mean_penalized_time_ms": 14396.305555555555,
+      "elapsed_p50_ms": 5514.0,
+      "elapsed_p95_ms": 15244.0,
+      "model_wait_ms_measured_trials": 69,
+      "model_wait_ms_total": 241883.0,
+      "model_calls_measured_trials": 72,
+      "model_calls_total": 64,
+      "tokens_measured_trials": 0,
+      "tokens_total": null,
+      "wrong_target_count_measured_trials": 0,
+      "wrong_target_count_total": null,
+      "recovery_attempts_measured_trials": 0,
+      "recovery_attempts_total": null,
+      "recovery_successes_measured_trials": 0,
+      "recovery_successes_total": null,
+      "unnecessary_recovery_count_measured_trials": 0,
+      "unnecessary_recovery_count_total": null,
+      "mean_penalized_time_s": 14.396305555555555,
+      "goal_observed_time": {
+        "eligible_episodes": 7,
+        "measured_episodes": 7,
+        "unmeasured_episodes": 0,
+        "mean_s": 7.958285714285714,
+        "p50_s": 9.302,
+        "p95_s": 11.61
+      },
+      "runtime_verified_offer_time": {
+        "eligible_episodes": 22,
+        "measured_episodes": 22,
+        "unmeasured_episodes": 0,
+        "mean_s": 4.973272727272727,
+        "p50_s": 4.24,
+        "p95_s": 8.51
+      },
+      "runtime_done_time": {
+        "eligible_episodes": 0,
+        "measured_episodes": 0,
+        "unmeasured_episodes": 0,
+        "mean_s": null,
+        "p50_s": null,
+        "p95_s": null
+      },
+      "first_action_proposal_time": {
+        "eligible_episodes": 72,
+        "measured_episodes": 31,
+        "unmeasured_episodes": 41,
+        "mean_s": 4.041741935483871,
+        "p50_s": 3.739,
+        "p95_s": 5.919
+      },
+      "server_provider_work_ms": {
+        "total": 276816,
+        "measured_episodes": 72
+      },
+      "episodes_with_provider_work_outside_window": 3,
+      "opportunities": {
+        "episodes": 72,
+        "assigned_fault_episodes": 48,
+        "realized_fault_episodes": 7,
+        "realized_fault_rate_per_assigned_fault": 0.14583333333333334,
+        "episodes_reaching_native_dispatch": 31,
+        "native_dispatch_count": {
+          "total": 31,
+          "measured_episodes": 51
+        },
+        "native_acceptance_count": {
+          "total": 13,
+          "measured_episodes": 51
+        },
+        "native_rejection_count": {
+          "total": 15,
+          "measured_episodes": 51
+        },
+        "false_verified_offer_before_any_native_dispatch": 19,
+        "false_verified_offer_with_unknown_dispatch_count": 0,
+        "false_verified_offer_without_action_proposal": 19,
+        "controller_recovery_count": {
+          "total": 7,
+          "measured_episodes": 51
+        },
+        "episodes_with_controller_recovery": 7,
+        "verified_goal_after_any_controller_recovery": 4,
+        "controller_rejected_state_count": {
+          "total": 7,
+          "measured_episodes": 51
+        },
+        "event_buffer_occupancy_at_end": {
+          "total": 0,
+          "measured_episodes": 51
+        },
+        "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+      },
+      "setup_statuses": {
+        "failed": 21,
+        "ready": 51
+      },
+      "runtime_outcomes": {
+        "budget_exhausted": 23,
+        "goal_observed": 7,
+        "runtime_offer_without_goal": 21,
+        "setup_failure": 21
+      }
+    }
+  },
+  "ready_only_auxiliary": {
+    "A": {
+      "trials": 52,
+      "verified_successes": 7,
+      "success_rate": 0.1346153846153846,
+      "independent_oracle_trials": 52,
+      "unknown_oracle_trials": 0,
+      "ambiguous_oracle_trials": 0,
+      "final_oracle_observable_trials": 52,
+      "final_oracle_unobservable_trials": 0,
+      "final_oracle_coverage_unmeasured_trials": 0,
+      "positive_goal_evidence_with_final_unobservable": 0,
+      "runtime_verified_offers": 22,
+      "runtime_verified_offer_measured_trials": 52,
+      "false_verified_offers": 21,
+      "adjudicated_verified_offers": 22,
+      "false_verified_offer_rate_per_adjudicated_offer": 0.9545454545454546,
+      "false_verified_offer_measured_trials": 52,
+      "unknown_verified_offers": 0,
+      "false_verified_offer_evidence_rejected": 0,
+      "false_done": 0,
+      "unverifiable_done": 0,
+      "provider_error_trials": 3,
+      "fault_injected_trials": 8,
+      "mean_penalized_time_ms": 14213.5,
+      "elapsed_p50_ms": 12751.0,
+      "elapsed_p95_ms": 15253.0,
+      "model_wait_ms_measured_trials": 52,
+      "model_wait_ms_total": 250395.0,
+      "model_calls_measured_trials": 52,
+      "model_calls_total": 59,
+      "tokens_measured_trials": 0,
+      "tokens_total": null,
+      "wrong_target_count_measured_trials": 0,
+      "wrong_target_count_total": null,
+      "recovery_attempts_measured_trials": 0,
+      "recovery_attempts_total": null,
+      "recovery_successes_measured_trials": 0,
+      "recovery_successes_total": null,
+      "unnecessary_recovery_count_measured_trials": 0,
+      "unnecessary_recovery_count_total": null,
+      "mean_penalized_time_s": 14.2135,
+      "goal_observed_time": {
+        "eligible_episodes": 7,
+        "measured_episodes": 7,
+        "unmeasured_episodes": 0,
+        "mean_s": 8.376428571428571,
+        "p50_s": 9.304,
+        "p95_s": 11.2
+      },
+      "runtime_verified_offer_time": {
+        "eligible_episodes": 22,
+        "measured_episodes": 22,
+        "unmeasured_episodes": 0,
+        "mean_s": 5.343545454545454,
+        "p50_s": 4.500500000000001,
+        "p95_s": 12.257
+      },
+      "runtime_done_time": {
+        "eligible_episodes": 0,
+        "measured_episodes": 0,
+        "unmeasured_episodes": 0,
+        "mean_s": null,
+        "p50_s": null,
+        "p95_s": null
+      },
+      "first_action_proposal_time": {
+        "eligible_episodes": 52,
+        "measured_episodes": 33,
+        "unmeasured_episodes": 19,
+        "mean_s": 4.266151515151515,
+        "p50_s": 3.751,
+        "p95_s": 6.992
+      },
+      "server_provider_work_ms": {
+        "total": 250395,
+        "measured_episodes": 52
+      },
+      "episodes_with_provider_work_outside_window": 0,
+      "opportunities": {
+        "episodes": 52,
+        "assigned_fault_episodes": 35,
+        "realized_fault_episodes": 8,
+        "realized_fault_rate_per_assigned_fault": 0.22857142857142856,
+        "episodes_reaching_native_dispatch": 33,
+        "native_dispatch_count": {
+          "total": 33,
+          "measured_episodes": 52
+        },
+        "native_acceptance_count": {
+          "total": 12,
+          "measured_episodes": 52
+        },
+        "native_rejection_count": {
+          "total": 17,
+          "measured_episodes": 52
+        },
+        "false_verified_offer_before_any_native_dispatch": 18,
+        "false_verified_offer_with_unknown_dispatch_count": 0,
+        "false_verified_offer_without_action_proposal": 18,
+        "controller_recovery_count": {
+          "total": 0,
+          "measured_episodes": 52
+        },
+        "episodes_with_controller_recovery": 0,
+        "verified_goal_after_any_controller_recovery": 0,
+        "controller_rejected_state_count": {
+          "total": 0,
+          "measured_episodes": 52
+        },
+        "event_buffer_occupancy_at_end": {
+          "total": 0,
+          "measured_episodes": 52
+        },
+        "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+      },
+      "setup_statuses": {
+        "ready": 52
+      },
+      "runtime_outcomes": {
+        "budget_exhausted": 24,
+        "goal_observed": 7,
+        "runtime_offer_without_goal": 21
+      }
+    },
+    "B": {
+      "trials": 52,
+      "verified_successes": 7,
+      "success_rate": 0.1346153846153846,
+      "independent_oracle_trials": 52,
+      "unknown_oracle_trials": 0,
+      "ambiguous_oracle_trials": 0,
+      "final_oracle_observable_trials": 52,
+      "final_oracle_unobservable_trials": 0,
+      "final_oracle_coverage_unmeasured_trials": 0,
+      "positive_goal_evidence_with_final_unobservable": 0,
+      "runtime_verified_offers": 23,
+      "runtime_verified_offer_measured_trials": 52,
+      "false_verified_offers": 22,
+      "adjudicated_verified_offers": 23,
+      "false_verified_offer_rate_per_adjudicated_offer": 0.9565217391304348,
+      "false_verified_offer_measured_trials": 52,
+      "unknown_verified_offers": 0,
+      "false_verified_offer_evidence_rejected": 0,
+      "false_done": 0,
+      "unverifiable_done": 0,
+      "provider_error_trials": 6,
+      "fault_injected_trials": 8,
+      "mean_penalized_time_ms": 14153.057692307691,
+      "elapsed_p50_ms": 10923.0,
+      "elapsed_p95_ms": 15225.0,
+      "model_wait_ms_measured_trials": 50,
+      "model_wait_ms_total": 252260.0,
+      "model_calls_measured_trials": 52,
+      "model_calls_total": 66,
+      "tokens_measured_trials": 0,
+      "tokens_total": null,
+      "wrong_target_count_measured_trials": 0,
+      "wrong_target_count_total": null,
+      "recovery_attempts_measured_trials": 0,
+      "recovery_attempts_total": null,
+      "recovery_successes_measured_trials": 0,
+      "recovery_successes_total": null,
+      "unnecessary_recovery_count_measured_trials": 0,
+      "unnecessary_recovery_count_total": null,
+      "mean_penalized_time_s": 14.15305769230769,
+      "goal_observed_time": {
+        "eligible_episodes": 7,
+        "measured_episodes": 7,
+        "unmeasured_episodes": 0,
+        "mean_s": 7.886142857142858,
+        "p50_s": 9.657,
+        "p95_s": 11.032
+      },
+      "runtime_verified_offer_time": {
+        "eligible_episodes": 23,
+        "measured_episodes": 23,
+        "unmeasured_episodes": 0,
+        "mean_s": 5.469739130434783,
+        "p50_s": 4.442,
+        "p95_s": 8.479
+      },
+      "runtime_done_time": {
+        "eligible_episodes": 0,
+        "measured_episodes": 0,
+        "unmeasured_episodes": 0,
+        "mean_s": null,
+        "p50_s": null,
+        "p95_s": null
+      },
+      "first_action_proposal_time": {
+        "eligible_episodes": 52,
+        "measured_episodes": 34,
+        "unmeasured_episodes": 18,
+        "mean_s": 3.9367647058823527,
+        "p50_s": 3.6639999999999997,
+        "p95_s": 5.468
+      },
+      "server_provider_work_ms": {
+        "total": 275325,
+        "measured_episodes": 52
+      },
+      "episodes_with_provider_work_outside_window": 2,
+      "opportunities": {
+        "episodes": 52,
+        "assigned_fault_episodes": 35,
+        "realized_fault_episodes": 8,
+        "realized_fault_rate_per_assigned_fault": 0.22857142857142856,
+        "episodes_reaching_native_dispatch": 34,
+        "native_dispatch_count": {
+          "total": 34,
+          "measured_episodes": 52
+        },
+        "native_acceptance_count": {
+          "total": 13,
+          "measured_episodes": 52
+        },
+        "native_rejection_count": {
+          "total": 17,
+          "measured_episodes": 52
+        },
+        "false_verified_offer_before_any_native_dispatch": 18,
+        "false_verified_offer_with_unknown_dispatch_count": 0,
+        "false_verified_offer_without_action_proposal": 18,
+        "controller_recovery_count": {
+          "total": 8,
+          "measured_episodes": 52
+        },
+        "episodes_with_controller_recovery": 8,
+        "verified_goal_after_any_controller_recovery": 4,
+        "controller_rejected_state_count": {
+          "total": 8,
+          "measured_episodes": 52
+        },
+        "event_buffer_occupancy_at_end": {
+          "total": 27,
+          "measured_episodes": 52
+        },
+        "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+      },
+      "setup_statuses": {
+        "ready": 52
+      },
+      "runtime_outcomes": {
+        "budget_exhausted": 24,
+        "goal_observed": 7,
+        "runtime_offer_without_goal": 21
+      }
+    },
+    "C": {
+      "trials": 51,
+      "verified_successes": 7,
+      "success_rate": 0.13725490196078433,
+      "independent_oracle_trials": 51,
+      "unknown_oracle_trials": 0,
+      "ambiguous_oracle_trials": 0,
+      "final_oracle_observable_trials": 51,
+      "final_oracle_unobservable_trials": 0,
+      "final_oracle_coverage_unmeasured_trials": 0,
+      "positive_goal_evidence_with_final_unobservable": 0,
+      "runtime_verified_offers": 22,
+      "runtime_verified_offer_measured_trials": 51,
+      "false_verified_offers": 21,
+      "adjudicated_verified_offers": 22,
+      "false_verified_offer_rate_per_adjudicated_offer": 0.9545454545454546,
+      "false_verified_offer_measured_trials": 51,
+      "unknown_verified_offers": 0,
+      "false_verified_offer_evidence_rejected": 0,
+      "false_done": 0,
+      "unverifiable_done": 0,
+      "provider_error_trials": 9,
+      "fault_injected_trials": 7,
+      "mean_penalized_time_ms": 14147.725490196079,
+      "elapsed_p50_ms": 11651.0,
+      "elapsed_p95_ms": 15246.0,
+      "model_wait_ms_measured_trials": 48,
+      "model_wait_ms_total": 241883.0,
+      "model_calls_measured_trials": 51,
+      "model_calls_total": 64,
+      "tokens_measured_trials": 0,
+      "tokens_total": null,
+      "wrong_target_count_measured_trials": 0,
+      "wrong_target_count_total": null,
+      "recovery_attempts_measured_trials": 0,
+      "recovery_attempts_total": null,
+      "recovery_successes_measured_trials": 0,
+      "recovery_successes_total": null,
+      "unnecessary_recovery_count_measured_trials": 0,
+      "unnecessary_recovery_count_total": null,
+      "mean_penalized_time_s": 14.147725490196079,
+      "goal_observed_time": {
+        "eligible_episodes": 7,
+        "measured_episodes": 7,
+        "unmeasured_episodes": 0,
+        "mean_s": 7.958285714285714,
+        "p50_s": 9.302,
+        "p95_s": 11.61
+      },
+      "runtime_verified_offer_time": {
+        "eligible_episodes": 22,
+        "measured_episodes": 22,
+        "unmeasured_episodes": 0,
+        "mean_s": 4.973272727272727,
+        "p50_s": 4.24,
+        "p95_s": 8.51
+      },
+      "runtime_done_time": {
+        "eligible_episodes": 0,
+        "measured_episodes": 0,
+        "unmeasured_episodes": 0,
+        "mean_s": null,
+        "p50_s": null,
+        "p95_s": null
+      },
+      "first_action_proposal_time": {
+        "eligible_episodes": 51,
+        "measured_episodes": 31,
+        "unmeasured_episodes": 20,
+        "mean_s": 4.041741935483871,
+        "p50_s": 3.739,
+        "p95_s": 5.919
+      },
+      "server_provider_work_ms": {
+        "total": 276816,
+        "measured_episodes": 51
+      },
+      "episodes_with_provider_work_outside_window": 3,
+      "opportunities": {
+        "episodes": 51,
+        "assigned_fault_episodes": 34,
+        "realized_fault_episodes": 7,
+        "realized_fault_rate_per_assigned_fault": 0.20588235294117646,
+        "episodes_reaching_native_dispatch": 31,
+        "native_dispatch_count": {
+          "total": 31,
+          "measured_episodes": 51
+        },
+        "native_acceptance_count": {
+          "total": 13,
+          "measured_episodes": 51
+        },
+        "native_rejection_count": {
+          "total": 15,
+          "measured_episodes": 51
+        },
+        "false_verified_offer_before_any_native_dispatch": 19,
+        "false_verified_offer_with_unknown_dispatch_count": 0,
+        "false_verified_offer_without_action_proposal": 19,
+        "controller_recovery_count": {
+          "total": 7,
+          "measured_episodes": 51
+        },
+        "episodes_with_controller_recovery": 7,
+        "verified_goal_after_any_controller_recovery": 4,
+        "controller_rejected_state_count": {
+          "total": 7,
+          "measured_episodes": 51
+        },
+        "event_buffer_occupancy_at_end": {
+          "total": 0,
+          "measured_episodes": 51
+        },
+        "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+      },
+      "setup_statuses": {
+        "ready": 51
+      },
+      "runtime_outcomes": {
+        "budget_exhausted": 23,
+        "goal_observed": 7,
+        "runtime_offer_without_goal": 21
+      }
+    }
+  },
+  "assigned_conditions": [
+    {
+      "condition": "normal",
+      "by_arm": {
+        "A": {
+          "trials": 24,
+          "verified_successes": 3,
+          "success_rate": 0.125,
+          "independent_oracle_trials": 24,
+          "unknown_oracle_trials": 7,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 17,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 7,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 8,
+          "runtime_verified_offer_measured_trials": 24,
+          "false_verified_offers": 7,
+          "adjudicated_verified_offers": 8,
+          "false_verified_offer_rate_per_adjudicated_offer": 0.875,
+          "false_verified_offer_measured_trials": 24,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 1,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 13964.75,
+          "elapsed_p50_ms": 5969.5,
+          "elapsed_p95_ms": 15218.0,
+          "model_wait_ms_measured_trials": 24,
+          "model_wait_ms_total": 86072.0,
+          "model_calls_measured_trials": 24,
+          "model_calls_total": 19,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 13.96475,
+          "goal_observed_time": {
+            "eligible_episodes": 3,
+            "measured_episodes": 3,
+            "unmeasured_episodes": 0,
+            "mean_s": 5.967666666666666,
+            "p50_s": 5.385,
+            "p95_s": 7.664
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 8,
+            "measured_episodes": 8,
+            "unmeasured_episodes": 0,
+            "mean_s": 6.0315,
+            "p50_s": 4.965999999999999,
+            "p95_s": 13.214
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 24,
+            "measured_episodes": 11,
+            "unmeasured_episodes": 13,
+            "mean_s": 4.460181818181819,
+            "p50_s": 4.266,
+            "p95_s": 6.992
+          },
+          "server_provider_work_ms": {
+            "total": 86072,
+            "measured_episodes": 24
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 24,
+            "assigned_fault_episodes": 0,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": null,
+            "episodes_reaching_native_dispatch": 11,
+            "native_dispatch_count": {
+              "total": 11,
+              "measured_episodes": 17
+            },
+            "native_acceptance_count": {
+              "total": 5,
+              "measured_episodes": 17
+            },
+            "native_rejection_count": {
+              "total": 6,
+              "measured_episodes": 17
+            },
+            "false_verified_offer_before_any_native_dispatch": 6,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 6,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 7,
+            "ready": 17
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 7,
+            "goal_observed": 3,
+            "runtime_offer_without_goal": 7,
+            "setup_failure": 7
+          }
+        },
+        "B": {
+          "trials": 24,
+          "verified_successes": 3,
+          "success_rate": 0.125,
+          "independent_oracle_trials": 24,
+          "unknown_oracle_trials": 7,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 17,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 7,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 9,
+          "runtime_verified_offer_measured_trials": 24,
+          "false_verified_offers": 8,
+          "adjudicated_verified_offers": 9,
+          "false_verified_offer_rate_per_adjudicated_offer": 0.8888888888888888,
+          "false_verified_offer_measured_trials": 24,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 0,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 13821.333333333334,
+          "elapsed_p50_ms": 5351.5,
+          "elapsed_p95_ms": 15210.0,
+          "model_wait_ms_measured_trials": 24,
+          "model_wait_ms_total": 74469.0,
+          "model_calls_measured_trials": 24,
+          "model_calls_total": 19,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 13.821333333333333,
+          "goal_observed_time": {
+            "eligible_episodes": 3,
+            "measured_episodes": 3,
+            "unmeasured_episodes": 0,
+            "mean_s": 4.757333333333333,
+            "p50_s": 4.554,
+            "p95_s": 5.837
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 9,
+            "measured_episodes": 9,
+            "unmeasured_episodes": 0,
+            "mean_s": 6.047666666666666,
+            "p50_s": 4.821,
+            "p95_s": 14.918
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 24,
+            "measured_episodes": 11,
+            "unmeasured_episodes": 13,
+            "mean_s": 4.114454545454546,
+            "p50_s": 3.636,
+            "p95_s": 5.918
+          },
+          "server_provider_work_ms": {
+            "total": 74469,
+            "measured_episodes": 24
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 24,
+            "assigned_fault_episodes": 0,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": null,
+            "episodes_reaching_native_dispatch": 11,
+            "native_dispatch_count": {
+              "total": 11,
+              "measured_episodes": 17
+            },
+            "native_acceptance_count": {
+              "total": 5,
+              "measured_episodes": 17
+            },
+            "native_rejection_count": {
+              "total": 6,
+              "measured_episodes": 17
+            },
+            "false_verified_offer_before_any_native_dispatch": 6,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 6,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 10,
+              "measured_episodes": 17
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 7,
+            "ready": 17
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 7,
+            "goal_observed": 3,
+            "runtime_offer_without_goal": 7,
+            "setup_failure": 7
+          }
+        },
+        "C": {
+          "trials": 24,
+          "verified_successes": 3,
+          "success_rate": 0.125,
+          "independent_oracle_trials": 24,
+          "unknown_oracle_trials": 7,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 17,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 7,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 8,
+          "runtime_verified_offer_measured_trials": 24,
+          "false_verified_offers": 7,
+          "adjudicated_verified_offers": 8,
+          "false_verified_offer_rate_per_adjudicated_offer": 0.875,
+          "false_verified_offer_measured_trials": 24,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 2,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 13839.5,
+          "elapsed_p50_ms": 5386.5,
+          "elapsed_p95_ms": 15244.0,
+          "model_wait_ms_measured_trials": 24,
+          "model_wait_ms_total": 86616.0,
+          "model_calls_measured_trials": 24,
+          "model_calls_total": 19,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 13.8395,
+          "goal_observed_time": {
+            "eligible_episodes": 3,
+            "measured_episodes": 3,
+            "unmeasured_episodes": 0,
+            "mean_s": 4.865,
+            "p50_s": 4.518,
+            "p95_s": 6.364
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 8,
+            "measured_episodes": 8,
+            "unmeasured_episodes": 0,
+            "mean_s": 5.699,
+            "p50_s": 4.715999999999999,
+            "p95_s": 10.73
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 24,
+            "measured_episodes": 10,
+            "unmeasured_episodes": 14,
+            "mean_s": 4.3606,
+            "p50_s": 3.8005,
+            "p95_s": 6.628
+          },
+          "server_provider_work_ms": {
+            "total": 86616,
+            "measured_episodes": 24
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 24,
+            "assigned_fault_episodes": 0,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": null,
+            "episodes_reaching_native_dispatch": 10,
+            "native_dispatch_count": {
+              "total": 10,
+              "measured_episodes": 17
+            },
+            "native_acceptance_count": {
+              "total": 5,
+              "measured_episodes": 17
+            },
+            "native_rejection_count": {
+              "total": 5,
+              "measured_episodes": 17
+            },
+            "false_verified_offer_before_any_native_dispatch": 6,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 6,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 7,
+            "ready": 17
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 7,
+            "goal_observed": 3,
+            "runtime_offer_without_goal": 7,
+            "setup_failure": 7
+          }
+        }
+      }
+    },
+    {
+      "condition": "no_effect",
+      "by_arm": {
+        "A": {
+          "trials": 24,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 24,
+          "unknown_oracle_trials": 7,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 17,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 7,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 7,
+          "runtime_verified_offer_measured_trials": 24,
+          "false_verified_offers": 7,
+          "adjudicated_verified_offers": 7,
+          "false_verified_offer_rate_per_adjudicated_offer": 1.0,
+          "false_verified_offer_measured_trials": 24,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 1,
+          "fault_injected_trials": 4,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 5878.0,
+          "elapsed_p95_ms": 15237.0,
+          "model_wait_ms_measured_trials": 24,
+          "model_wait_ms_total": 79962.0,
+          "model_calls_measured_trials": 24,
+          "model_calls_total": 19,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 7,
+            "measured_episodes": 7,
+            "unmeasured_episodes": 0,
+            "mean_s": 5.371428571428572,
+            "p50_s": 4.466,
+            "p95_s": 12.257
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 24,
+            "measured_episodes": 11,
+            "unmeasured_episodes": 13,
+            "mean_s": 4.169181818181818,
+            "p50_s": 3.734,
+            "p95_s": 6.853
+          },
+          "server_provider_work_ms": {
+            "total": 79962,
+            "measured_episodes": 24
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 24,
+            "assigned_fault_episodes": 24,
+            "realized_fault_episodes": 4,
+            "realized_fault_rate_per_assigned_fault": 0.16666666666666666,
+            "episodes_reaching_native_dispatch": 11,
+            "native_dispatch_count": {
+              "total": 11,
+              "measured_episodes": 17
+            },
+            "native_acceptance_count": {
+              "total": 2,
+              "measured_episodes": 17
+            },
+            "native_rejection_count": {
+              "total": 5,
+              "measured_episodes": 17
+            },
+            "false_verified_offer_before_any_native_dispatch": 6,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 6,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 7,
+            "ready": 17
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 10,
+            "runtime_offer_without_goal": 7,
+            "setup_failure": 7
+          }
+        },
+        "B": {
+          "trials": 24,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 24,
+          "unknown_oracle_trials": 7,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 17,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 7,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 7,
+          "runtime_verified_offer_measured_trials": 24,
+          "false_verified_offers": 7,
+          "adjudicated_verified_offers": 7,
+          "false_verified_offer_rate_per_adjudicated_offer": 1.0,
+          "false_verified_offer_measured_trials": 24,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 3,
+          "fault_injected_trials": 4,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 7285.5,
+          "elapsed_p95_ms": 15230.0,
+          "model_wait_ms_measured_trials": 24,
+          "model_wait_ms_total": 100710.0,
+          "model_calls_measured_trials": 24,
+          "model_calls_total": 23,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 7,
+            "measured_episodes": 7,
+            "unmeasured_episodes": 0,
+            "mean_s": 5.297142857142857,
+            "p50_s": 4.18,
+            "p95_s": 8.479
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 24,
+            "measured_episodes": 11,
+            "unmeasured_episodes": 13,
+            "mean_s": 3.9634545454545456,
+            "p50_s": 3.711,
+            "p95_s": 5.468
+          },
+          "server_provider_work_ms": {
+            "total": 100710,
+            "measured_episodes": 24
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 24,
+            "assigned_fault_episodes": 24,
+            "realized_fault_episodes": 4,
+            "realized_fault_rate_per_assigned_fault": 0.16666666666666666,
+            "episodes_reaching_native_dispatch": 11,
+            "native_dispatch_count": {
+              "total": 11,
+              "measured_episodes": 17
+            },
+            "native_acceptance_count": {
+              "total": 2,
+              "measured_episodes": 17
+            },
+            "native_rejection_count": {
+              "total": 5,
+              "measured_episodes": 17
+            },
+            "false_verified_offer_before_any_native_dispatch": 6,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 6,
+            "controller_recovery_count": {
+              "total": 4,
+              "measured_episodes": 17
+            },
+            "episodes_with_controller_recovery": 4,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 4,
+              "measured_episodes": 17
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 3,
+              "measured_episodes": 17
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 7,
+            "ready": 17
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 10,
+            "runtime_offer_without_goal": 7,
+            "setup_failure": 7
+          }
+        },
+        "C": {
+          "trials": 24,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 24,
+          "unknown_oracle_trials": 7,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 17,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 7,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 7,
+          "runtime_verified_offer_measured_trials": 24,
+          "false_verified_offers": 7,
+          "adjudicated_verified_offers": 7,
+          "false_verified_offer_rate_per_adjudicated_offer": 1.0,
+          "false_verified_offer_measured_trials": 24,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 3,
+          "fault_injected_trials": 3,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 5572.0,
+          "elapsed_p95_ms": 15259.0,
+          "model_wait_ms_measured_trials": 24,
+          "model_wait_ms_total": 90529.0,
+          "model_calls_measured_trials": 24,
+          "model_calls_total": 22,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 7,
+            "measured_episodes": 7,
+            "unmeasured_episodes": 0,
+            "mean_s": 4.278142857142857,
+            "p50_s": 4.126,
+            "p95_s": 5.718
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 24,
+            "measured_episodes": 10,
+            "unmeasured_episodes": 14,
+            "mean_s": 3.822,
+            "p50_s": 3.635,
+            "p95_s": 5.172
+          },
+          "server_provider_work_ms": {
+            "total": 90529,
+            "measured_episodes": 24
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 24,
+            "assigned_fault_episodes": 24,
+            "realized_fault_episodes": 3,
+            "realized_fault_rate_per_assigned_fault": 0.125,
+            "episodes_reaching_native_dispatch": 10,
+            "native_dispatch_count": {
+              "total": 10,
+              "measured_episodes": 17
+            },
+            "native_acceptance_count": {
+              "total": 2,
+              "measured_episodes": 17
+            },
+            "native_rejection_count": {
+              "total": 5,
+              "measured_episodes": 17
+            },
+            "false_verified_offer_before_any_native_dispatch": 7,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 7,
+            "controller_recovery_count": {
+              "total": 3,
+              "measured_episodes": 17
+            },
+            "episodes_with_controller_recovery": 3,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 3,
+              "measured_episodes": 17
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 7,
+            "ready": 17
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 10,
+            "runtime_offer_without_goal": 7,
+            "setup_failure": 7
+          }
+        }
+      }
+    },
+    {
+      "condition": "dispatch_delay",
+      "by_arm": {
+        "A": {
+          "trials": 24,
+          "verified_successes": 4,
+          "success_rate": 0.16666666666666666,
+          "independent_oracle_trials": 24,
+          "unknown_oracle_trials": 6,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 18,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 6,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 7,
+          "runtime_verified_offer_measured_trials": 24,
+          "false_verified_offers": 7,
+          "adjudicated_verified_offers": 7,
+          "false_verified_offer_rate_per_adjudicated_offer": 1.0,
+          "false_verified_offer_measured_trials": 24,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 1,
+          "fault_injected_trials": 4,
+          "mean_penalized_time_ms": 14331.166666666666,
+          "elapsed_p50_ms": 6160.5,
+          "elapsed_p95_ms": 15223.0,
+          "model_wait_ms_measured_trials": 24,
+          "model_wait_ms_total": 84361.0,
+          "model_calls_measured_trials": 24,
+          "model_calls_total": 21,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 14.331166666666666,
+          "goal_observed_time": {
+            "eligible_episodes": 4,
+            "measured_episodes": 4,
+            "unmeasured_episodes": 0,
+            "mean_s": 10.183,
+            "p50_s": 10.114,
+            "p95_s": 11.2
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 7,
+            "measured_episodes": 7,
+            "unmeasured_episodes": 0,
+            "mean_s": 4.529428571428571,
+            "p50_s": 4.414,
+            "p95_s": 5.486
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 24,
+            "measured_episodes": 11,
+            "unmeasured_episodes": 13,
+            "mean_s": 4.169090909090909,
+            "p50_s": 3.585,
+            "p95_s": 7.111
+          },
+          "server_provider_work_ms": {
+            "total": 84361,
+            "measured_episodes": 24
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 24,
+            "assigned_fault_episodes": 24,
+            "realized_fault_episodes": 4,
+            "realized_fault_rate_per_assigned_fault": 0.16666666666666666,
+            "episodes_reaching_native_dispatch": 11,
+            "native_dispatch_count": {
+              "total": 11,
+              "measured_episodes": 18
+            },
+            "native_acceptance_count": {
+              "total": 5,
+              "measured_episodes": 18
+            },
+            "native_rejection_count": {
+              "total": 6,
+              "measured_episodes": 18
+            },
+            "false_verified_offer_before_any_native_dispatch": 6,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 6,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 6,
+            "ready": 18
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 7,
+            "goal_observed": 4,
+            "runtime_offer_without_goal": 7,
+            "setup_failure": 6
+          }
+        },
+        "B": {
+          "trials": 24,
+          "verified_successes": 4,
+          "success_rate": 0.16666666666666666,
+          "independent_oracle_trials": 24,
+          "unknown_oracle_trials": 6,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 18,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 6,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 7,
+          "runtime_verified_offer_measured_trials": 24,
+          "false_verified_offers": 7,
+          "adjudicated_verified_offers": 7,
+          "false_verified_offer_rate_per_adjudicated_offer": 1.0,
+          "false_verified_offer_measured_trials": 24,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 3,
+          "fault_injected_trials": 4,
+          "mean_penalized_time_ms": 14343.625,
+          "elapsed_p50_ms": 7471.0,
+          "elapsed_p95_ms": 15207.0,
+          "model_wait_ms_measured_trials": 22,
+          "model_wait_ms_total": 77081.0,
+          "model_calls_measured_trials": 24,
+          "model_calls_total": 24,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 14.343625,
+          "goal_observed_time": {
+            "eligible_episodes": 4,
+            "measured_episodes": 4,
+            "unmeasured_episodes": 0,
+            "mean_s": 10.23275,
+            "p50_s": 10.121,
+            "p95_s": 11.032
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 7,
+            "measured_episodes": 7,
+            "unmeasured_episodes": 0,
+            "mean_s": 4.899285714285714,
+            "p50_s": 4.562,
+            "p95_s": 8.012
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 24,
+            "measured_episodes": 12,
+            "unmeasured_episodes": 12,
+            "mean_s": 3.749416666666667,
+            "p50_s": 3.439,
+            "p95_s": 5.096
+          },
+          "server_provider_work_ms": {
+            "total": 100146,
+            "measured_episodes": 24
+          },
+          "episodes_with_provider_work_outside_window": 2,
+          "opportunities": {
+            "episodes": 24,
+            "assigned_fault_episodes": 24,
+            "realized_fault_episodes": 4,
+            "realized_fault_rate_per_assigned_fault": 0.16666666666666666,
+            "episodes_reaching_native_dispatch": 12,
+            "native_dispatch_count": {
+              "total": 12,
+              "measured_episodes": 18
+            },
+            "native_acceptance_count": {
+              "total": 6,
+              "measured_episodes": 18
+            },
+            "native_rejection_count": {
+              "total": 6,
+              "measured_episodes": 18
+            },
+            "false_verified_offer_before_any_native_dispatch": 6,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 6,
+            "controller_recovery_count": {
+              "total": 4,
+              "measured_episodes": 18
+            },
+            "episodes_with_controller_recovery": 4,
+            "verified_goal_after_any_controller_recovery": 4,
+            "controller_rejected_state_count": {
+              "total": 4,
+              "measured_episodes": 18
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 14,
+              "measured_episodes": 18
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 6,
+            "ready": 18
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 7,
+            "goal_observed": 4,
+            "runtime_offer_without_goal": 7,
+            "setup_failure": 6
+          }
+        },
+        "C": {
+          "trials": 24,
+          "verified_successes": 4,
+          "success_rate": 0.16666666666666666,
+          "independent_oracle_trials": 24,
+          "unknown_oracle_trials": 7,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 17,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 7,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 7,
+          "runtime_verified_offer_measured_trials": 24,
+          "false_verified_offers": 7,
+          "adjudicated_verified_offers": 7,
+          "false_verified_offer_rate_per_adjudicated_offer": 1.0,
+          "false_verified_offer_measured_trials": 24,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 4,
+          "fault_injected_trials": 4,
+          "mean_penalized_time_ms": 14349.416666666666,
+          "elapsed_p50_ms": 5593.5,
+          "elapsed_p95_ms": 15195.0,
+          "model_wait_ms_measured_trials": 21,
+          "model_wait_ms_total": 64738.0,
+          "model_calls_measured_trials": 24,
+          "model_calls_total": 23,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 14.349416666666666,
+          "goal_observed_time": {
+            "eligible_episodes": 4,
+            "measured_episodes": 4,
+            "unmeasured_episodes": 0,
+            "mean_s": 10.27825,
+            "p50_s": 10.1005,
+            "p95_s": 11.61
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 7,
+            "measured_episodes": 7,
+            "unmeasured_episodes": 0,
+            "mean_s": 4.839,
+            "p50_s": 4.257,
+            "p95_s": 8.51
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 24,
+            "measured_episodes": 11,
+            "unmeasured_episodes": 13,
+            "mean_s": 3.9516363636363634,
+            "p50_s": 3.762,
+            "p95_s": 5.66
+          },
+          "server_provider_work_ms": {
+            "total": 99671,
+            "measured_episodes": 24
+          },
+          "episodes_with_provider_work_outside_window": 3,
+          "opportunities": {
+            "episodes": 24,
+            "assigned_fault_episodes": 24,
+            "realized_fault_episodes": 4,
+            "realized_fault_rate_per_assigned_fault": 0.16666666666666666,
+            "episodes_reaching_native_dispatch": 11,
+            "native_dispatch_count": {
+              "total": 11,
+              "measured_episodes": 17
+            },
+            "native_acceptance_count": {
+              "total": 6,
+              "measured_episodes": 17
+            },
+            "native_rejection_count": {
+              "total": 5,
+              "measured_episodes": 17
+            },
+            "false_verified_offer_before_any_native_dispatch": 6,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 6,
+            "controller_recovery_count": {
+              "total": 4,
+              "measured_episodes": 17
+            },
+            "episodes_with_controller_recovery": 4,
+            "verified_goal_after_any_controller_recovery": 4,
+            "controller_rejected_state_count": {
+              "total": 4,
+              "measured_episodes": 17
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 17
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 7,
+            "ready": 17
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 6,
+            "goal_observed": 4,
+            "runtime_offer_without_goal": 7,
+            "setup_failure": 7
+          }
+        }
+      }
+    }
+  ],
+  "applications": [
+    {
+      "app_id": "com.android.chrome",
+      "by_arm": {
+        "A": {
+          "trials": 18,
+          "verified_successes": 7,
+          "success_rate": 0.3888888888888889,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 0,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 18,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 0,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 4,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 3,
+          "adjudicated_verified_offers": 4,
+          "false_verified_offer_rate_per_adjudicated_offer": 0.75,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 3,
+          "fault_injected_trials": 8,
+          "mean_penalized_time_ms": 12727.888888888889,
+          "elapsed_p50_ms": 13756.0,
+          "elapsed_p95_ms": 15258.0,
+          "model_wait_ms_measured_trials": 18,
+          "model_wait_ms_total": 121246.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 25,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 12.727888888888888,
+          "goal_observed_time": {
+            "eligible_episodes": 7,
+            "measured_episodes": 7,
+            "unmeasured_episodes": 0,
+            "mean_s": 8.376428571428571,
+            "p50_s": 9.304,
+            "p95_s": 11.2
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 4,
+            "measured_episodes": 4,
+            "unmeasured_episodes": 0,
+            "mean_s": 9.2075,
+            "p50_s": 9.065,
+            "p95_s": 13.214
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 17,
+            "unmeasured_episodes": 1,
+            "mean_s": 4.405764705882353,
+            "p50_s": 4.604,
+            "p95_s": 6.992
+          },
+          "server_provider_work_ms": {
+            "total": 121246,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 8,
+            "realized_fault_rate_per_assigned_fault": 0.6666666666666666,
+            "episodes_reaching_native_dispatch": 17,
+            "native_dispatch_count": {
+              "total": 17,
+              "measured_episodes": 18
+            },
+            "native_acceptance_count": {
+              "total": 12,
+              "measured_episodes": 18
+            },
+            "native_rejection_count": {
+              "total": 1,
+              "measured_episodes": 18
+            },
+            "false_verified_offer_before_any_native_dispatch": 0,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 0,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "ready": 18
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 8,
+            "goal_observed": 7,
+            "runtime_offer_without_goal": 3
+          }
+        },
+        "B": {
+          "trials": 18,
+          "verified_successes": 7,
+          "success_rate": 0.3888888888888889,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 0,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 18,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 0,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 5,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 4,
+          "adjudicated_verified_offers": 5,
+          "false_verified_offer_rate_per_adjudicated_offer": 0.8,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 6,
+          "fault_injected_trials": 8,
+          "mean_penalized_time_ms": 12553.277777777777,
+          "elapsed_p50_ms": 11465.5,
+          "elapsed_p95_ms": 15230.0,
+          "model_wait_ms_measured_trials": 16,
+          "model_wait_ms_total": 127741.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 32,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 12.553277777777778,
+          "goal_observed_time": {
+            "eligible_episodes": 7,
+            "measured_episodes": 7,
+            "unmeasured_episodes": 0,
+            "mean_s": 7.886142857142858,
+            "p50_s": 9.657,
+            "p95_s": 11.032
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 5,
+            "measured_episodes": 5,
+            "unmeasured_episodes": 0,
+            "mean_s": 8.9426,
+            "p50_s": 8.012,
+            "p95_s": 14.918
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 18,
+            "unmeasured_episodes": 0,
+            "mean_s": 4.049277777777778,
+            "p50_s": 3.8209999999999997,
+            "p95_s": 5.918
+          },
+          "server_provider_work_ms": {
+            "total": 150806,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 2,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 8,
+            "realized_fault_rate_per_assigned_fault": 0.6666666666666666,
+            "episodes_reaching_native_dispatch": 18,
+            "native_dispatch_count": {
+              "total": 18,
+              "measured_episodes": 18
+            },
+            "native_acceptance_count": {
+              "total": 13,
+              "measured_episodes": 18
+            },
+            "native_rejection_count": {
+              "total": 1,
+              "measured_episodes": 18
+            },
+            "false_verified_offer_before_any_native_dispatch": 0,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 0,
+            "controller_recovery_count": {
+              "total": 8,
+              "measured_episodes": 18
+            },
+            "episodes_with_controller_recovery": 8,
+            "verified_goal_after_any_controller_recovery": 4,
+            "controller_rejected_state_count": {
+              "total": 8,
+              "measured_episodes": 18
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 27,
+              "measured_episodes": 18
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "ready": 18
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 8,
+            "goal_observed": 7,
+            "runtime_offer_without_goal": 3
+          }
+        },
+        "C": {
+          "trials": 18,
+          "verified_successes": 7,
+          "success_rate": 0.3888888888888889,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 0,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 18,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 0,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 4,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 3,
+          "adjudicated_verified_offers": 4,
+          "false_verified_offer_rate_per_adjudicated_offer": 0.75,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 9,
+          "fault_injected_trials": 7,
+          "mean_penalized_time_ms": 12585.222222222223,
+          "elapsed_p50_ms": 12022.0,
+          "elapsed_p95_ms": 15294.0,
+          "model_wait_ms_measured_trials": 15,
+          "model_wait_ms_total": 118518.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 31,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 12.585222222222223,
+          "goal_observed_time": {
+            "eligible_episodes": 7,
+            "measured_episodes": 7,
+            "unmeasured_episodes": 0,
+            "mean_s": 7.958285714285714,
+            "p50_s": 9.302,
+            "p95_s": 11.61
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 4,
+            "measured_episodes": 4,
+            "unmeasured_episodes": 0,
+            "mean_s": 7.39425,
+            "p50_s": 7.6955,
+            "p95_s": 10.73
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 16,
+            "unmeasured_episodes": 2,
+            "mean_s": 4.04,
+            "p50_s": 3.8005,
+            "p95_s": 5.919
+          },
+          "server_provider_work_ms": {
+            "total": 153451,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 3,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 7,
+            "realized_fault_rate_per_assigned_fault": 0.5833333333333334,
+            "episodes_reaching_native_dispatch": 16,
+            "native_dispatch_count": {
+              "total": 16,
+              "measured_episodes": 18
+            },
+            "native_acceptance_count": {
+              "total": 13,
+              "measured_episodes": 18
+            },
+            "native_rejection_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "false_verified_offer_before_any_native_dispatch": 1,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 1,
+            "controller_recovery_count": {
+              "total": 7,
+              "measured_episodes": 18
+            },
+            "episodes_with_controller_recovery": 7,
+            "verified_goal_after_any_controller_recovery": 4,
+            "controller_rejected_state_count": {
+              "total": 7,
+              "measured_episodes": 18
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "ready": 18
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 8,
+            "goal_observed": 7,
+            "runtime_offer_without_goal": 3
+          }
+        }
+      }
+    },
+    {
+      "app_id": "com.android.settings",
+      "by_arm": {
+        "A": {
+          "trials": 18,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 0,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 18,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 0,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 18,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 18,
+          "adjudicated_verified_offers": 18,
+          "false_verified_offer_rate_per_adjudicated_offer": 1.0,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 0,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 5350.5,
+          "elapsed_p95_ms": 8121.0,
+          "model_wait_ms_measured_trials": 18,
+          "model_wait_ms_total": 67513.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 18,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 18,
+            "unmeasured_episodes": 0,
+            "mean_s": 4.4848888888888885,
+            "p50_s": 4.371499999999999,
+            "p95_s": 7.177
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 18,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "server_provider_work_ms": {
+            "total": 67513,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": 0.0,
+            "episodes_reaching_native_dispatch": 0,
+            "native_dispatch_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "native_acceptance_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "native_rejection_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "false_verified_offer_before_any_native_dispatch": 18,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 18,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "ready": 18
+          },
+          "runtime_outcomes": {
+            "runtime_offer_without_goal": 18
+          }
+        },
+        "B": {
+          "trials": 18,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 0,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 18,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 0,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 18,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 18,
+          "adjudicated_verified_offers": 18,
+          "false_verified_offer_rate_per_adjudicated_offer": 1.0,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 0,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 5192.5,
+          "elapsed_p95_ms": 9388.0,
+          "model_wait_ms_measured_trials": 18,
+          "model_wait_ms_total": 67870.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 18,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 18,
+            "unmeasured_episodes": 0,
+            "mean_s": 4.505055555555556,
+            "p50_s": 4.18,
+            "p95_s": 8.479
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 18,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "server_provider_work_ms": {
+            "total": 67870,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": 0.0,
+            "episodes_reaching_native_dispatch": 0,
+            "native_dispatch_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "native_acceptance_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "native_rejection_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "false_verified_offer_before_any_native_dispatch": 18,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 18,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "ready": 18
+          },
+          "runtime_outcomes": {
+            "runtime_offer_without_goal": 18
+          }
+        },
+        "C": {
+          "trials": 18,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 0,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 18,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 0,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 18,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 18,
+          "adjudicated_verified_offers": 18,
+          "false_verified_offer_rate_per_adjudicated_offer": 1.0,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 0,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 5147.5,
+          "elapsed_p95_ms": 7809.0,
+          "model_wait_ms_measured_trials": 18,
+          "model_wait_ms_total": 66749.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 18,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 18,
+            "unmeasured_episodes": 0,
+            "mean_s": 4.435277777777777,
+            "p50_s": 4.1745,
+            "p95_s": 6.799
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 18,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "server_provider_work_ms": {
+            "total": 66749,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": 0.0,
+            "episodes_reaching_native_dispatch": 0,
+            "native_dispatch_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "native_acceptance_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "native_rejection_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "false_verified_offer_before_any_native_dispatch": 18,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 18,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 18
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "ready": 18
+          },
+          "runtime_outcomes": {
+            "runtime_offer_without_goal": 18
+          }
+        }
+      }
+    },
+    {
+      "app_id": "com.google.android.youtube",
+      "by_arm": {
+        "A": {
+          "trials": 18,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 18,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 0,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 18,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 0,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 0,
+          "adjudicated_verified_offers": 0,
+          "false_verified_offer_rate_per_adjudicated_offer": null,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 0,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 0.0,
+          "elapsed_p95_ms": 0.0,
+          "model_wait_ms_measured_trials": 18,
+          "model_wait_ms_total": 0.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 0,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 18,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "server_provider_work_ms": {
+            "total": 0,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": 0.0,
+            "episodes_reaching_native_dispatch": 0,
+            "native_dispatch_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "native_acceptance_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "native_rejection_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "false_verified_offer_before_any_native_dispatch": 0,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 0,
+            "controller_recovery_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 18
+          },
+          "runtime_outcomes": {
+            "setup_failure": 18
+          }
+        },
+        "B": {
+          "trials": 18,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 18,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 0,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 18,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 0,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 0,
+          "adjudicated_verified_offers": 0,
+          "false_verified_offer_rate_per_adjudicated_offer": null,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 0,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 0.0,
+          "elapsed_p95_ms": 0.0,
+          "model_wait_ms_measured_trials": 18,
+          "model_wait_ms_total": 0.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 0,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 18,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "server_provider_work_ms": {
+            "total": 0,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": 0.0,
+            "episodes_reaching_native_dispatch": 0,
+            "native_dispatch_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "native_acceptance_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "native_rejection_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "false_verified_offer_before_any_native_dispatch": 0,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 0,
+            "controller_recovery_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 18
+          },
+          "runtime_outcomes": {
+            "setup_failure": 18
+          }
+        },
+        "C": {
+          "trials": 18,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 18,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 0,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 18,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 0,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 0,
+          "adjudicated_verified_offers": 0,
+          "false_verified_offer_rate_per_adjudicated_offer": null,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 0,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 0.0,
+          "elapsed_p95_ms": 0.0,
+          "model_wait_ms_measured_trials": 18,
+          "model_wait_ms_total": 0.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 0,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 18,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "server_provider_work_ms": {
+            "total": 0,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": 0.0,
+            "episodes_reaching_native_dispatch": 0,
+            "native_dispatch_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "native_acceptance_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "native_rejection_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "false_verified_offer_before_any_native_dispatch": 0,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 0,
+            "controller_recovery_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": null,
+              "measured_episodes": 0
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 18
+          },
+          "runtime_outcomes": {
+            "setup_failure": 18
+          }
+        }
+      }
+    },
+    {
+      "app_id": "com.sec.android.app.clockpackage",
+      "by_arm": {
+        "A": {
+          "trials": 18,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 2,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 16,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 2,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 0,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 0,
+          "adjudicated_verified_offers": 0,
+          "false_verified_offer_rate_per_adjudicated_offer": null,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 0,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 15179.5,
+          "elapsed_p95_ms": 15265.0,
+          "model_wait_ms_measured_trials": 18,
+          "model_wait_ms_total": 61636.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 16,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 16,
+            "unmeasured_episodes": 2,
+            "mean_s": 4.1178125,
+            "p50_s": 3.581,
+            "p95_s": 7.111
+          },
+          "server_provider_work_ms": {
+            "total": 61636,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": 0.0,
+            "episodes_reaching_native_dispatch": 16,
+            "native_dispatch_count": {
+              "total": 16,
+              "measured_episodes": 16
+            },
+            "native_acceptance_count": {
+              "total": 0,
+              "measured_episodes": 16
+            },
+            "native_rejection_count": {
+              "total": 16,
+              "measured_episodes": 16
+            },
+            "false_verified_offer_before_any_native_dispatch": 0,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 0,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 16
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 16
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 16
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 2,
+            "ready": 16
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 16,
+            "setup_failure": 2
+          }
+        },
+        "B": {
+          "trials": 18,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 2,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 16,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 2,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 0,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 0,
+          "adjudicated_verified_offers": 0,
+          "false_verified_offer_rate_per_adjudicated_offer": null,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 0,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 15151.5,
+          "elapsed_p95_ms": 15266.0,
+          "model_wait_ms_measured_trials": 18,
+          "model_wait_ms_total": 56649.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 16,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 16,
+            "unmeasured_episodes": 2,
+            "mean_s": 3.8101875,
+            "p50_s": 3.658,
+            "p95_s": 5.457
+          },
+          "server_provider_work_ms": {
+            "total": 56649,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": 0.0,
+            "episodes_reaching_native_dispatch": 16,
+            "native_dispatch_count": {
+              "total": 16,
+              "measured_episodes": 16
+            },
+            "native_acceptance_count": {
+              "total": 0,
+              "measured_episodes": 16
+            },
+            "native_rejection_count": {
+              "total": 16,
+              "measured_episodes": 16
+            },
+            "false_verified_offer_before_any_native_dispatch": 0,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 0,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 16
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 16
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 16
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 2,
+            "ready": 16
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 16,
+            "setup_failure": 2
+          }
+        },
+        "C": {
+          "trials": 18,
+          "verified_successes": 0,
+          "success_rate": 0.0,
+          "independent_oracle_trials": 18,
+          "unknown_oracle_trials": 3,
+          "ambiguous_oracle_trials": 0,
+          "final_oracle_observable_trials": 15,
+          "final_oracle_unobservable_trials": 0,
+          "final_oracle_coverage_unmeasured_trials": 3,
+          "positive_goal_evidence_with_final_unobservable": 0,
+          "runtime_verified_offers": 0,
+          "runtime_verified_offer_measured_trials": 18,
+          "false_verified_offers": 0,
+          "adjudicated_verified_offers": 0,
+          "false_verified_offer_rate_per_adjudicated_offer": null,
+          "false_verified_offer_measured_trials": 18,
+          "unknown_verified_offers": 0,
+          "false_verified_offer_evidence_rejected": 0,
+          "false_done": 0,
+          "unverifiable_done": 0,
+          "provider_error_trials": 0,
+          "fault_injected_trials": 0,
+          "mean_penalized_time_ms": 15000.0,
+          "elapsed_p50_ms": 15159.5,
+          "elapsed_p95_ms": 15259.0,
+          "model_wait_ms_measured_trials": 18,
+          "model_wait_ms_total": 56616.0,
+          "model_calls_measured_trials": 18,
+          "model_calls_total": 15,
+          "tokens_measured_trials": 0,
+          "tokens_total": null,
+          "wrong_target_count_measured_trials": 0,
+          "wrong_target_count_total": null,
+          "recovery_attempts_measured_trials": 0,
+          "recovery_attempts_total": null,
+          "recovery_successes_measured_trials": 0,
+          "recovery_successes_total": null,
+          "unnecessary_recovery_count_measured_trials": 0,
+          "unnecessary_recovery_count_total": null,
+          "mean_penalized_time_s": 15.0,
+          "goal_observed_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_verified_offer_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "runtime_done_time": {
+            "eligible_episodes": 0,
+            "measured_episodes": 0,
+            "unmeasured_episodes": 0,
+            "mean_s": null,
+            "p50_s": null,
+            "p95_s": null
+          },
+          "first_action_proposal_time": {
+            "eligible_episodes": 18,
+            "measured_episodes": 15,
+            "unmeasured_episodes": 3,
+            "mean_s": 4.0436,
+            "p50_s": 3.694,
+            "p95_s": 6.628
+          },
+          "server_provider_work_ms": {
+            "total": 56616,
+            "measured_episodes": 18
+          },
+          "episodes_with_provider_work_outside_window": 0,
+          "opportunities": {
+            "episodes": 18,
+            "assigned_fault_episodes": 12,
+            "realized_fault_episodes": 0,
+            "realized_fault_rate_per_assigned_fault": 0.0,
+            "episodes_reaching_native_dispatch": 15,
+            "native_dispatch_count": {
+              "total": 15,
+              "measured_episodes": 15
+            },
+            "native_acceptance_count": {
+              "total": 0,
+              "measured_episodes": 15
+            },
+            "native_rejection_count": {
+              "total": 15,
+              "measured_episodes": 15
+            },
+            "false_verified_offer_before_any_native_dispatch": 0,
+            "false_verified_offer_with_unknown_dispatch_count": 0,
+            "false_verified_offer_without_action_proposal": 0,
+            "controller_recovery_count": {
+              "total": 0,
+              "measured_episodes": 15
+            },
+            "episodes_with_controller_recovery": 0,
+            "verified_goal_after_any_controller_recovery": 0,
+            "controller_rejected_state_count": {
+              "total": 0,
+              "measured_episodes": 15
+            },
+            "event_buffer_occupancy_at_end": {
+              "total": 0,
+              "measured_episodes": 15
+            },
+            "caveat": "Pre-dispatch false offers have no execution/recovery exposure. Counts after recovery are descriptive, not its causal success rate; event-buffer occupancy is not event coverage."
+          },
+          "setup_statuses": {
+            "failed": 3,
+            "ready": 15
+          },
+          "runtime_outcomes": {
+            "budget_exhausted": 15,
+            "setup_failure": 3
+          }
+        }
+      }
+    }
+  ],
+  "strict_matched_comparisons": [
+    {
+      "left": "A",
+      "right": "B",
+      "paired_episodes": 52,
+      "task_clusters": 9,
+      "difference_right_minus_left": {
+        "success_rate_pp": 0,
+        "mean_penalized_time_ms": -60.44230769230769
+      },
+      "cluster_bootstrap_95ci": {
+        "success_rate_pp": [
+          0,
+          0
+        ],
+        "mean_penalized_time_ms": [
+          -179.01923076923077,
+          0.0
+        ]
+      },
+      "rejected_pairs": [
+        {
+          "pair_id": "native-v4-20261120:clock_stopwatch:noeffect:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:clock_stopwatch:normal:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:delay:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:delay:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:noeffect:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:noeffect:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:normal:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:normal:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:delay:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:delay:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:noeffect:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:noeffect:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:normal:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:normal:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:delay:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:delay:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:noeffect:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:noeffect:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:normal:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:normal:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        }
+      ],
+      "realized_injection_mismatch_pairs": 0,
+      "interpretation": "EXPLORATORY_NOT_POWERED_SUPERIORITY",
+      "left_metrics": {
+        "trials": 52,
+        "verified_successes": 7,
+        "success_rate": 0.1346153846153846,
+        "independent_oracle_trials": 52,
+        "unknown_oracle_trials": 0,
+        "ambiguous_oracle_trials": 0,
+        "final_oracle_observable_trials": 52,
+        "final_oracle_unobservable_trials": 0,
+        "final_oracle_coverage_unmeasured_trials": 0,
+        "positive_goal_evidence_with_final_unobservable": 0,
+        "runtime_verified_offers": 22,
+        "runtime_verified_offer_measured_trials": 52,
+        "false_verified_offers": 21,
+        "adjudicated_verified_offers": 22,
+        "false_verified_offer_rate_per_adjudicated_offer": 0.9545454545454546,
+        "false_verified_offer_measured_trials": 52,
+        "unknown_verified_offers": 0,
+        "false_verified_offer_evidence_rejected": 0,
+        "false_done": 0,
+        "unverifiable_done": 0,
+        "provider_error_trials": 3,
+        "fault_injected_trials": 8,
+        "mean_penalized_time_ms": 14213.5,
+        "elapsed_p50_ms": 12751.0,
+        "elapsed_p95_ms": 15253.0,
+        "model_wait_ms_measured_trials": 52,
+        "model_wait_ms_total": 250395.0,
+        "model_calls_measured_trials": 52,
+        "model_calls_total": 59,
+        "tokens_measured_trials": 0,
+        "tokens_total": null,
+        "wrong_target_count_measured_trials": 0,
+        "wrong_target_count_total": null,
+        "recovery_attempts_measured_trials": 0,
+        "recovery_attempts_total": null,
+        "recovery_successes_measured_trials": 0,
+        "recovery_successes_total": null,
+        "unnecessary_recovery_count_measured_trials": 0,
+        "unnecessary_recovery_count_total": null
+      },
+      "right_metrics": {
+        "trials": 52,
+        "verified_successes": 7,
+        "success_rate": 0.1346153846153846,
+        "independent_oracle_trials": 52,
+        "unknown_oracle_trials": 0,
+        "ambiguous_oracle_trials": 0,
+        "final_oracle_observable_trials": 52,
+        "final_oracle_unobservable_trials": 0,
+        "final_oracle_coverage_unmeasured_trials": 0,
+        "positive_goal_evidence_with_final_unobservable": 0,
+        "runtime_verified_offers": 23,
+        "runtime_verified_offer_measured_trials": 52,
+        "false_verified_offers": 22,
+        "adjudicated_verified_offers": 23,
+        "false_verified_offer_rate_per_adjudicated_offer": 0.9565217391304348,
+        "false_verified_offer_measured_trials": 52,
+        "unknown_verified_offers": 0,
+        "false_verified_offer_evidence_rejected": 0,
+        "false_done": 0,
+        "unverifiable_done": 0,
+        "provider_error_trials": 6,
+        "fault_injected_trials": 8,
+        "mean_penalized_time_ms": 14153.057692307691,
+        "elapsed_p50_ms": 10923.0,
+        "elapsed_p95_ms": 15225.0,
+        "model_wait_ms_measured_trials": 50,
+        "model_wait_ms_total": 252260.0,
+        "model_calls_measured_trials": 52,
+        "model_calls_total": 66,
+        "tokens_measured_trials": 0,
+        "tokens_total": null,
+        "wrong_target_count_measured_trials": 0,
+        "wrong_target_count_total": null,
+        "recovery_attempts_measured_trials": 0,
+        "recovery_attempts_total": null,
+        "recovery_successes_measured_trials": 0,
+        "recovery_successes_total": null,
+        "unnecessary_recovery_count_measured_trials": 0,
+        "unnecessary_recovery_count_total": null
+      }
+    },
+    {
+      "left": "B",
+      "right": "C",
+      "paired_episodes": 51,
+      "task_clusters": 9,
+      "difference_right_minus_left": {
+        "success_rate_pp": 0,
+        "mean_penalized_time_ms": 11.27450980392157
+      },
+      "cluster_bootstrap_95ci": {
+        "success_rate_pp": [
+          0,
+          0
+        ],
+        "mean_penalized_time_ms": [
+          -60.333333333333336,
+          95.82692307692308
+        ]
+      },
+      "rejected_pairs": [
+        {
+          "pair_id": "native-v4-20261120:clock_stopwatch:noeffect:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:clock_stopwatch:normal:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:clock_world:delay:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": [
+            "initial_state_hash"
+          ]
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:delay:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:delay:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:noeffect:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:noeffect:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:normal:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_search:normal:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:delay:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:delay:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:noeffect:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:noeffect:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:normal:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_shorts:normal:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:delay:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:delay:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:noeffect:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:noeffect:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:normal:0",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        },
+        {
+          "pair_id": "native-v4-20261120:youtube_subscriptions:normal:1",
+          "reason": "INCOMPLETE_OR_DIFFERENT_CONTEXT",
+          "missing_fields": [
+            "initial_state_hash"
+          ],
+          "mismatched_fields": []
+        }
+      ],
+      "realized_injection_mismatch_pairs": 1,
+      "interpretation": "EXPLORATORY_NOT_POWERED_SUPERIORITY",
+      "left_metrics": {
+        "trials": 51,
+        "verified_successes": 7,
+        "success_rate": 0.13725490196078433,
+        "independent_oracle_trials": 51,
+        "unknown_oracle_trials": 0,
+        "ambiguous_oracle_trials": 0,
+        "final_oracle_observable_trials": 51,
+        "final_oracle_unobservable_trials": 0,
+        "final_oracle_coverage_unmeasured_trials": 0,
+        "positive_goal_evidence_with_final_unobservable": 0,
+        "runtime_verified_offers": 23,
+        "runtime_verified_offer_measured_trials": 51,
+        "false_verified_offers": 22,
+        "adjudicated_verified_offers": 23,
+        "false_verified_offer_rate_per_adjudicated_offer": 0.9565217391304348,
+        "false_verified_offer_measured_trials": 51,
+        "unknown_verified_offers": 0,
+        "false_verified_offer_evidence_rejected": 0,
+        "false_done": 0,
+        "unverifiable_done": 0,
+        "provider_error_trials": 6,
+        "fault_injected_trials": 8,
+        "mean_penalized_time_ms": 14136.450980392157,
+        "elapsed_p50_ms": 10907.0,
+        "elapsed_p95_ms": 15225.0,
+        "model_wait_ms_measured_trials": 49,
+        "model_wait_ms_total": 249026.0,
+        "model_calls_measured_trials": 51,
+        "model_calls_total": 65,
+        "tokens_measured_trials": 0,
+        "tokens_total": null,
+        "wrong_target_count_measured_trials": 0,
+        "wrong_target_count_total": null,
+        "recovery_attempts_measured_trials": 0,
+        "recovery_attempts_total": null,
+        "recovery_successes_measured_trials": 0,
+        "recovery_successes_total": null,
+        "unnecessary_recovery_count_measured_trials": 0,
+        "unnecessary_recovery_count_total": null
+      },
+      "right_metrics": {
+        "trials": 51,
+        "verified_successes": 7,
+        "success_rate": 0.13725490196078433,
+        "independent_oracle_trials": 51,
+        "unknown_oracle_trials": 0,
+        "ambiguous_oracle_trials": 0,
+        "final_oracle_observable_trials": 51,
+        "final_oracle_unobservable_trials": 0,
+        "final_oracle_coverage_unmeasured_trials": 0,
+        "positive_goal_evidence_with_final_unobservable": 0,
+        "runtime_verified_offers": 22,
+        "runtime_verified_offer_measured_trials": 51,
+        "false_verified_offers": 21,
+        "adjudicated_verified_offers": 22,
+        "false_verified_offer_rate_per_adjudicated_offer": 0.9545454545454546,
+        "false_verified_offer_measured_trials": 51,
+        "unknown_verified_offers": 0,
+        "false_verified_offer_evidence_rejected": 0,
+        "false_done": 0,
+        "unverifiable_done": 0,
+        "provider_error_trials": 9,
+        "fault_injected_trials": 7,
+        "mean_penalized_time_ms": 14147.725490196079,
+        "elapsed_p50_ms": 11651.0,
+        "elapsed_p95_ms": 15246.0,
+        "model_wait_ms_measured_trials": 48,
+        "model_wait_ms_total": 241883.0,
+        "model_calls_measured_trials": 51,
+        "model_calls_total": 64,
+        "tokens_measured_trials": 0,
+        "tokens_total": null,
+        "wrong_target_count_measured_trials": 0,
+        "wrong_target_count_total": null,
+        "recovery_attempts_measured_trials": 0,
+        "recovery_attempts_total": null,
+        "recovery_successes_measured_trials": 0,
+        "recovery_successes_total": null,
+        "unnecessary_recovery_count_measured_trials": 0,
+        "unnecessary_recovery_count_total": null
+      }
+    }
+  ],
+  "go_no_go": {
+    "scope": "opt_in_native_policy_pilot",
+    "deployment": "NO_GO",
+    "reason": "PRODUCTION_PROTOCOL_AND_EXTERNAL_VALIDATION_INCOMPLETE",
+    "experiment_continuation": "NO_GO_FIX_COMPLETION_GROUNDING",
+    "stage_gates": [
+      {
+        "source": "real_device_scripted_driver",
+        "planner_arm": "live_app_task",
+        "driver_mode": "scripted_approvals",
+        "status": "NO_GO_FIX_COMPLETION_GROUNDING",
+        "matched_pairs": 52,
+        "task_clusters": 9,
+        "enough_matched_episodes": true,
+        "independent_oracles_complete": true,
+        "wrong_target_measurement_complete": false,
+        "verified_offer_measurement_complete": true,
+        "false_verified_offers_current": 21,
+        "false_verified_offers_candidate": 22,
+        "unknown_verified_offers_current": 0,
+        "unknown_verified_offers_candidate": 0,
+        "safety_pass": false,
+        "observed_benefit_without_regression": true,
+        "cluster_ci_supports_benefit": false,
+        "normal_path_p95_within_10_percent": true
+      }
+    ],
+    "continuation_authorizes_only_an_expanded_experiment": true,
+    "pilot_rule": {
+      "minimum_matched_pairs": 6,
+      "minimum_task_clusters": 2,
+      "independent_oracle_required": true,
+      "measured_wrong_targets_required": true,
+      "candidate_false_verified_offers_must_be_zero": true,
+      "verified_offer_measurement_required": true,
+      "maximum_normal_path_p95_overhead_percent": 10,
+      "positive_cluster_ci_required_for_expansion": true
+    },
+    "product_settings_trials": 0,
+    "settings_matrix_complete": false,
+    "product_multi_app_trials": 0,
+    "multi_app_matrix_complete": false,
+    "planned_product_settings_trials": 108,
+    "planned_product_multi_app_trials": 144,
+    "multi_app_task_assignment": "MUST_BE_FROZEN_BEFORE_PRODUCT_EVALUATION",
+    "older_adult_user_study": "NOT_ASSESSED_BY_THIS_EPISODE_ANALYZER"
+  },
+  "evidence_status": {
+    "original_252_trial_product_design": "NOT_COMPLETED_BY_THIS_PILOT",
+    "settings_value_change_108": "NOT_RUN",
+    "full_uianchor_reproduction": false,
+    "lsposed_and_trained_reflector": "NOT_IMPLEMENTED",
+    "always_reflect_arm_D": "NOT_IMPLEMENTED",
+    "formal_holdout_apps": "NOT_ESTABLISHED",
+    "older_adult_user_study": "NOT_RUN",
+    "independent_wrong_target_judgment": "MEASURED_ONLY_WHERE_EXPLICITLY_RECORDED"
+  },
+  "limitations": [
+    "This is 216 scripted navigation episodes (144 A/B plus 72 C), not the originally proposed 252-trial product experiment.",
+    "All assigned trials, including setup, transport and provider failures, remain in primary denominators.",
+    "Assigned-condition tables use intention to treat; realized injection is an opportunity diagnostic, not an exclusion criterion.",
+    "The dispatch-delay condition delays native execution by 5.5 seconds; it does not simulate UI rendering delay.",
+    "Goal observation, runtime verified offer, first proposal and user-confirmed DONE are different events and clocks.",
+    "Unavailable final oracle reads are unknown, not observed absence. Earlier stable positive goal evidence remains distinct from final-read availability.",
+    "No user-result confirmation is simulated; zero false DONE alone is not evidence of correct completion grounding.",
+    "False verified offers before any native dispatch do not test MC execution/recovery mechanisms.",
+    "Recovery/dispatch counts expose whether the mechanism was exercised; subsequent success is not a causal recovery rate.",
+    "Strict matching may exclude changing start-state hashes; excluded episodes remain in all-trial summaries.",
+    "The 15-second budget, single phone, deterministic order and shallow public-navigation goals limit generalization.",
+    "App names appearing in this pilot do not establish formal held-out generalization.",
+    "This is a nonroot MC-v0 adaptation, not UIAnchor LSPosed, model training or its complete reflector architecture.",
+    "Scripted approvals do not measure middle/older-adult performance, understanding, satisfaction or trust.",
+    "Server provider work may extend beyond an episode; null latency/safety measurements are not zeros.",
+    "Episode timing starts after scripted setup; setup/navigation preparation is not end-to-end user waiting time.",
+    "Go/no-go flags are scoped data gates; research-question interpretations require reviewing exposure, uncertainty and limitations."
+  ],
+  "input_sha256": {
+    "manifest": "b356867341d611c066d67d47781d0e910fa8eb514926aa2c2dc6163bd4f9c0a1",
+    "normalized_episodes": "f6869dd19e828a9373eb27398142f27925ee83702e3baca6e0329024fa341638"
+  }
+}

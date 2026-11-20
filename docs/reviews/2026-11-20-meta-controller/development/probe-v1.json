@@ -1,0 +1,540 @@
+{
+  "schema_version": "native-navigation.v1",
+  "source": "real_device_public_control_probe",
+  "raw_screen_saved": false,
+  "model_calls": 0,
+  "frozen_catalogue": [
+    {
+      "task_id": "settings_display",
+      "app_id": "com.android.settings",
+      "goal": "디스플레이",
+      "start_label": "",
+      "open_menu_in_setup": false,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.android.settings",
+            "label": "밝기"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "settings_sound",
+      "app_id": "com.android.settings",
+      "goal": "소리 및 진동",
+      "start_label": "",
+      "open_menu_in_setup": false,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.android.settings",
+            "label": "소리 모드"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "settings_notifications",
+      "app_id": "com.android.settings",
+      "goal": "알림",
+      "start_label": "",
+      "open_menu_in_setup": false,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.android.settings",
+            "label": "앱 알림"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "clock_world",
+      "app_id": "com.sec.android.app.clockpackage",
+      "goal": "세계시각",
+      "start_label": "알람",
+      "open_menu_in_setup": false,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.sec.android.app.clockpackage",
+            "label": "세계시각",
+            "role": "tab",
+            "selected": true
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "clock_stopwatch",
+      "app_id": "com.sec.android.app.clockpackage",
+      "goal": "스톱워치",
+      "start_label": "알람",
+      "open_menu_in_setup": false,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.sec.android.app.clockpackage",
+            "label": "스톱워치",
+            "role": "tab",
+            "selected": true
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "clock_timer",
+      "app_id": "com.sec.android.app.clockpackage",
+      "goal": "타이머",
+      "start_label": "알람",
+      "open_menu_in_setup": false,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.sec.android.app.clockpackage",
+            "label": "타이머",
+            "role": "tab",
+            "selected": true
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "chrome_menu",
+      "app_id": "com.android.chrome",
+      "goal": "Chrome 맞춤설정 및 제어",
+      "start_label": "",
+      "open_menu_in_setup": false,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.android.chrome",
+            "label": "새 탭"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "chrome_new_tab",
+      "app_id": "com.android.chrome",
+      "goal": "새 탭",
+      "start_label": "",
+      "open_menu_in_setup": true,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.android.chrome",
+            "resource": "com.android.chrome:id\/search_box_text"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "chrome_settings",
+      "app_id": "com.android.chrome",
+      "goal": "설정",
+      "start_label": "",
+      "open_menu_in_setup": true,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.android.chrome",
+            "label": "검색엔진"
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "youtube_shorts",
+      "app_id": "com.google.android.youtube",
+      "goal": "Shorts",
+      "start_label": "홈",
+      "open_menu_in_setup": false,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.google.android.youtube",
+            "label": "Shorts",
+            "role": "button",
+            "selected": true
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "youtube_subscriptions",
+      "app_id": "com.google.android.youtube",
+      "goal": "구독",
+      "start_label": "홈",
+      "open_menu_in_setup": false,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.google.android.youtube",
+            "label": "구독",
+            "role": "button",
+            "selected": true
+          }
+        ]
+      }
+    },
+    {
+      "task_id": "youtube_search",
+      "app_id": "com.google.android.youtube",
+      "goal": "검색",
+      "start_label": "홈",
+      "open_menu_in_setup": false,
+      "completion": {
+        "checks": [
+          {
+            "package": "com.google.android.youtube",
+            "resource": "com.google.android.youtube:id\/search_edit_text",
+            "role": "text_field"
+          }
+        ]
+      }
+    }
+  ],
+  "pages": [
+    {
+      "app_id": "com.android.settings",
+      "controls": [
+        {
+          "label": "설정",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "selected": false,
+          "bounds": [
+            67,
+            183,
+            181,
+            270
+          ]
+        },
+        {
+          "label": "소리 및 진동",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "selected": false,
+          "bounds": [
+            180,
+            1577,
+            441,
+            1648
+          ]
+        },
+        {
+          "label": "알림",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "selected": false,
+          "bounds": [
+            180,
+            1780,
+            274,
+            1851
+          ]
+        },
+        {
+          "label": "디스플레이",
+          "resource": "android:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "selected": false,
+          "bounds": [
+            180,
+            2039,
+            415,
+            2110
+          ]
+        }
+      ],
+      "setup_status": "opened"
+    },
+    {
+      "app_id": "com.sec.android.app.clockpackage",
+      "controls": [
+        {
+          "label": "알람",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "selected": false,
+          "bounds": [
+            67,
+            805,
+            181,
+            892
+          ]
+        },
+        {
+          "label": "알람",
+          "class": "android.widget.LinearLayout",
+          "clickable": false,
+          "selected": true,
+          "bounds": [
+            68,
+            2096,
+            254,
+            2265
+          ]
+        },
+        {
+          "label": "알람",
+          "resource": "com.sec.android.app.clockpackage:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "selected": true,
+          "bounds": [
+            120,
+            2149,
+            202,
+            2211
+          ]
+        },
+        {
+          "label": "세계시각",
+          "class": "android.widget.LinearLayout",
+          "clickable": true,
+          "selected": false,
+          "bounds": [
+            254,
+            2096,
+            522,
+            2265
+          ]
+        },
+        {
+          "label": "세계시각",
+          "resource": "com.sec.android.app.clockpackage:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "selected": false,
+          "bounds": [
+            306,
+            2149,
+            470,
+            2211
+          ]
+        },
+        {
+          "label": "스톱워치",
+          "class": "android.widget.LinearLayout",
+          "clickable": true,
+          "selected": false,
+          "bounds": [
+            522,
+            2096,
+            790,
+            2265
+          ]
+        },
+        {
+          "label": "스톱워치",
+          "resource": "com.sec.android.app.clockpackage:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "selected": false,
+          "bounds": [
+            574,
+            2149,
+            738,
+            2211
+          ]
+        },
+        {
+          "label": "타이머",
+          "class": "android.widget.LinearLayout",
+          "clickable": true,
+          "selected": false,
+          "bounds": [
+            790,
+            2096,
+            1012,
+            2265
+          ]
+        },
+        {
+          "label": "타이머",
+          "resource": "com.sec.android.app.clockpackage:id\/title",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "selected": false,
+          "bounds": [
+            839,
+            2149,
+            962,
+            2211
+          ]
+        }
+      ],
+      "setup_status": "opened"
+    },
+    {
+      "app_id": "com.android.chrome",
+      "controls": [
+        {
+          "label": "새 탭",
+          "resource": "com.android.chrome:id\/optional_toolbar_button",
+          "class": "android.widget.ImageButton",
+          "clickable": true,
+          "selected": false,
+          "bounds": [
+            664,
+            92,
+            810,
+            250
+          ]
+        },
+        {
+          "label": "Chrome 맞춤설정 및 제어",
+          "resource": "com.android.chrome:id\/menu_button",
+          "class": "android.widget.ImageButton",
+          "clickable": true,
+          "selected": false,
+          "bounds": [
+            945,
+            92,
+            1080,
+            250
+          ]
+        }
+      ],
+      "setup_status": "opened"
+    },
+    {
+      "app_id": "com.google.android.youtube",
+      "controls": [
+        {
+          "label": "알림",
+          "resource": "com.google.android.youtube:id\/menu_item_view",
+          "class": "android.widget.ImageView",
+          "clickable": true,
+          "selected": false,
+          "bounds": [
+            810,
+            92,
+            945,
+            227
+          ]
+        },
+        {
+          "label": "검색",
+          "resource": "com.google.android.youtube:id\/menu_item_view",
+          "class": "android.widget.ImageView",
+          "clickable": true,
+          "selected": false,
+          "bounds": [
+            945,
+            92,
+            1080,
+            227
+          ]
+        },
+        {
+          "label": "홈",
+          "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+          "class": "android.widget.Button",
+          "clickable": true,
+          "selected": true,
+          "bounds": [
+            45,
+            227,
+            180,
+            362
+          ]
+        },
+        {
+          "label": "홈",
+          "resource": "com.google.android.youtube:id\/text",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "selected": true,
+          "bounds": [
+            45,
+            261,
+            180,
+            328
+          ]
+        },
+        {
+          "label": "구독",
+          "resource": "com.google.android.youtube:id\/tabs_bar_text_tab_view",
+          "class": "android.widget.Button",
+          "clickable": true,
+          "selected": false,
+          "bounds": [
+            180,
+            227,
+            363,
+            362
+          ]
+        },
+        {
+          "label": "구독",
+          "resource": "com.google.android.youtube:id\/text",
+          "class": "android.widget.TextView",
+          "clickable": false,
+          "selected": false,
+          "bounds": [
+            228,
+            261,
+            363,
+            328
+          ]
+        },
+        {
+          "label": "Shorts",
+          "class": "android.view.ViewGroup",
+          "clickable": false,
+          "selected": false,
+          "bounds": [
+            180,
+            1730,
+            348,
+            1799
+          ]
+        },
+        {
+          "label": "Shorts",
+          "class": "android.view.ViewGroup",
+          "clickable": false,
+          "selected": false,
+          "bounds": [
+            180,
+            1730,
+            348,
+            1799
+          ]
+        },
+        {
+          "label": "홈",
+          "class": "android.widget.Button",
+          "clickable": true,
+          "selected": true,
+          "bounds": [
+            0,
+            2130,
+            270,
+            2265
+          ]
+        },
+        {
+          "label": "Shorts",
+          "class": "android.widget.Button",
+          "clickable": true,
+          "selected": false,
+          "bounds": [
+            270,
+            2130,
+            540,
+            2265
+          ]
+        }
+      ],
+      "setup_status": "opened"
+    }
+  ]
+}

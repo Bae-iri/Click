@@ -1,0 +1,90 @@
+{
+  "schema_version": "native-navigation.v3",
+  "model_calls": 0,
+  "checks": [
+    {
+      "task_id": "settings_display",
+      "app_id": "com.android.settings",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    },
+    {
+      "task_id": "settings_sound",
+      "app_id": "com.android.settings",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    },
+    {
+      "task_id": "settings_notifications",
+      "app_id": "com.android.settings",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    },
+    {
+      "task_id": "clock_world",
+      "app_id": "com.sec.android.app.clockpackage",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    },
+    {
+      "task_id": "clock_stopwatch",
+      "app_id": "com.sec.android.app.clockpackage",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    },
+    {
+      "task_id": "clock_timer",
+      "app_id": "com.sec.android.app.clockpackage",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    },
+    {
+      "task_id": "chrome_menu",
+      "app_id": "com.android.chrome",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    },
+    {
+      "task_id": "chrome_new_tab",
+      "app_id": "com.android.chrome",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    },
+    {
+      "task_id": "chrome_settings",
+      "app_id": "com.android.chrome",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    },
+    {
+      "task_id": "youtube_shorts",
+      "app_id": "com.google.android.youtube",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    },
+    {
+      "task_id": "youtube_subscriptions",
+      "app_id": "com.google.android.youtube",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    },
+    {
+      "task_id": "youtube_search",
+      "app_id": "com.google.android.youtube",
+      "initial_goal_matches": 0,
+      "native_status": "public",
+      "ready": true
+    }
+  ]
+}

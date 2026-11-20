@@ -1,0 +1,23 @@
+{
+  "observed_at_utc": "2026-11-20T05:08:34.236345+00:00",
+  "api": "generate",
+  "model": "gemini-3.8-flash",
+  "shape": "schema",
+  "thinking": "low",
+  "api_version": "v1beta",
+  "success": true,
+  "http_status": 200,
+  "headers_ms": 1879,
+  "content_type": "application/json; charset=UTF-8",
+  "served_model": "gemini-3.8-flash",
+  "usage": {
+    "promptTokenCount": 13,
+    "candidatesTokenCount": 8
+  },
+  "finish_reasons": [
+    "STOP"
+  ],
+  "output_characters": 31,
+  "schema_valid": true,
+  "latency_ms": 1880
+}

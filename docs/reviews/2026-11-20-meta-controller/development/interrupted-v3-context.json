@@ -1,0 +1,39 @@
+{
+  "device_scope": "Samsung_SM_N981N_Android13_single_device",
+  "base_code_revision": "ea226a605a1b1abd95f4666542c977b2a87d5f1e",
+  "patch_sha": "2ec0c04b8035ff081943c9ec7de06ac88eca3d61fc024597590073281416a0ee",
+  "configured_model": "gemini-3.8-flash",
+  "provider_capture_complete": false,
+  "source_hashes": {
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java": "f905afaf2d113b7ea32fdfd8e4433784ff3f441405b824acf462bf96ca90ae29",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskMetaController.java": "b6c75b69438e677964069d08693de8267eb55887c4820bf6a9e41c9f754d324c",
+    "Frontend/app/src/androidTest/java/com/click/service/accessibility/MetaControllerDeviceExperimentTest.java": "19f3b0f48dc0d1f0b272133cfb7440bd5bbdcf7364f54d171af74ff3a7a8cf51",
+    "Backend/scripts/serve_meta_controller_experiment.py": "c0ccbe37dab2fe5399796d578b3354046a7b6ffd70a7741da60945c26d758372",
+    "docs/reviews/2026-11-20-meta-controller/pilot-catalogue.json": "de5d4186ffe2928ebdeff5fe7eb9d40d33adeff439e417212ca15fe652926a65"
+  },
+  "experiment_scope": "native_navigation_v3_live_scripted_pilot_216",
+  "settings_value_trials": "NOT_RUN",
+  "reflector_arm_D": "NOT_IMPLEMENTED",
+  "human_study": "NOT_RUN",
+  "stay_on_while_plugged_in_original": "7",
+  "setup_probe_ready": 12,
+  "app_versions": {
+    "com.android.settings": {
+      "versionCode": "33",
+      "versionName": "13"
+    },
+    "com.sec.android.app.clockpackage": {
+      "versionCode": "1221512100",
+      "versionName": "12.2.15.12"
+    },
+    "com.android.chrome": {
+      "versionCode": "810307804",
+      "versionName": "157.0.8103.78"
+    },
+    "com.google.android.youtube": {
+      "versionCode": "1561310996",
+      "versionName": "21.45.82"
+    }
+  },
+  "policy_unchanged_since_v2": true
+}
