@@ -53,6 +53,7 @@
         <activity android:name=".MenuActivity" android:exported="false" />
         <activity android:name=".DisplaySettingsActivity" android:exported="false" />
         <activity android:name=".AboutClueActivity" android:exported="false" />
+        <activity android:name=".RequiredPermissionsActivity" android:exported="false" />
         <activity android:name=".TutorialReadyActivity" android:exported="false" />
         <activity android:name=".TutorialActivity" android:exported="false" />
         <activity android:name=".OverlayTutorialActivity" android:exported="false" />
