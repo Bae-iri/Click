@@ -1,0 +1,37 @@
+{
+  "schema_version": "click.meta-retest-context.v1",
+  "frozen_at_utc": "2026-11-20T07:52:59.874831+00:00",
+  "git_base": "d2ec9eff816ef2d5203128c4c9e9367f664a1224",
+  "common_fixes_both_arms": true,
+  "meta_policy_changed": false,
+  "default_arm": "CURRENT",
+  "evidence_modes": [
+    "native_android_emulator_regression_no_model",
+    "controlled_full_controller_conformance",
+    "live_model_synthetic_closed_loop"
+  ],
+  "physical_device_used": false,
+  "emulator": {
+    "api": "37.2",
+    "architecture": "arm64-v8a",
+    "avd": "temporary /private/tmp/click-mc-retest-avd",
+    "serial": "emulator-5560"
+  },
+  "source_sha256": {
+    "Frontend/app/src/main/java/com/click/data/snapshot/AppTaskObservation.java": "944db88e06d4c63a9d037d15a60200c576dfef7fcd5926fae57efb20097930a3",
+    "Frontend/app/src/main/java/com/click/service/accessibility/AppTaskExecutor.java": "7d30aa2d6b1e494f10857b7781a88a59eecc016620d31b9d756423b1dadcd8b4",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java": "da9923af46dbc3fb06934859517ec69d3fac1e40dd92be5eaf21722313928cfb",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskCompletion.java": "ca55e44d3c6877c92ed511f00a23f51655798757eed97b719731316404ab0ecb",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskMemory.java": "5f18f519701b8cb0513cb47fa8299f1c486bff36d794e91c863c426cd17f0b2e",
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskMetaController.java": "b6c75b69438e677964069d08693de8267eb55887c4820bf6a9e41c9f754d324c",
+    "Frontend/app/src/test/java/com/click/service/overlay/MetaControllerClosedLoopExperimentTest.java": "4f5edfdcb677d09156dba87c352173dfe4d49912467e58c744d2e2921dec6398",
+    "Backend/app/services/app_task.py": "913fdec3f0188e5bd007b6638975888a0b20231ffa1326f03433ebd698d7e9ac",
+    "Backend/scripts/serve_meta_controller_synthetic_experiment.py": "df75e9b8953f68ff9b85da629ec3b75cfd71252ff5d8cdcb5f289507e5998f75",
+    "experiments/metacontroller/closed-loop-fixture-v1.json": "4c66ea613726898133d70b2f94b3afa44c607c49e32b5c13b6882ce2f94e0bc2"
+  },
+  "timing": {
+    "ui": "Robolectric PAUSED virtual time",
+    "provider": "actual Gemini latency in monotonic wall time, separate from virtual UI waits",
+    "human_time_measured": false
+  }
+}

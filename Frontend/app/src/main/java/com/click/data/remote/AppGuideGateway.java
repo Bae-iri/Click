@@ -12,6 +12,7 @@ public final class AppGuideGateway {
     public static final String RESULT_PATH=TASK_PATH+"/result";
     public interface Callback {void success(JSONObject result);void failure(Throwable error);}
     private final AuthenticatedHttpClient http;
+    private final AppTaskDiagnostics taskDiagnostics;
     private final RequestLifecycle lifecycle=new RequestLifecycle();
     private final RequestLifecycle memoryLifecycle=new RequestLifecycle();
     private volatile boolean closed;
@@ -21,19 +22,24 @@ public final class AppGuideGateway {
     private final java.util.concurrent.atomic.AtomicInteger memoryGeneration=new java.util.concurrent.atomic.AtomicInteger();
     private final java.util.concurrent.atomic.AtomicBoolean flushing=new java.util.concurrent.atomic.AtomicBoolean();
     private final Handler main=new Handler(Looper.getMainLooper());
-    public AppGuideGateway(Context context){http=new AuthenticatedHttpClient(context);}
+    public AppGuideGateway(Context context){http=new AuthenticatedHttpClient(context);taskDiagnostics=new AppTaskDiagnostics(context);}
     public void send(JSONObject request,Callback callback) {
         final long queuedAt=SystemClock.elapsedRealtime();
         final boolean task="app-task.v2".equals(request.optString("protocol_version"));
         executor.execute(()->{
             long startedAt=SystemClock.elapsedRealtime();
+            JSONObject taskResponse=null;Integer taskHttpStatus=null;Exception taskFailure=null;
             try(RequestBudget budget=new RequestBudget(queuedAt+15000,lifecycle)) {
                 RequestBudget.remaining(12000);
-                JSONObject result=new JSONObject(http.post(task?TASK_PATH:PATH,request.toString(),12000).body);
+                HttpResult reply=http.post(task?TASK_PATH:PATH,request.toString(),12000);
+                taskHttpStatus=reply.status;
+                JSONObject result=new JSONObject(reply.body);taskResponse=result;
                 if(task)validateTask(request,result);else validate(request,result);
                 lifecycle.post(main,()->callback.success(result));
-            }catch(Exception error){lifecycle.post(main,()->callback.failure(error));}
+            }catch(Exception error){taskFailure=error;lifecycle.post(main,()->callback.failure(error));}
             finally {
+                if(task&&com.click.data.local.CandidateDiagnosticLog.enabled()){long finishedAt=SystemClock.elapsedRealtime();taskDiagnostics.record(AppTaskDiagnostics.receipt(
+                    request,taskResponse,taskHttpStatus,taskFailure,startedAt-queuedAt,finishedAt-startedAt,finishedAt-queuedAt));}
                 if(com.click.data.local.CandidateDiagnosticLog.enabled())android.util.Log.i("ClickAppGuide",
                     "request_timing protocol="+(task?"app-task.v2":"app-guide.v1")+" queue_ms="+(startedAt-queuedAt)
                     +" work_ms="+(SystemClock.elapsedRealtime()-startedAt)+" total_ms="+(SystemClock.elapsedRealtime()-queuedAt));
