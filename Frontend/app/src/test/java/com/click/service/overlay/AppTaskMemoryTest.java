@@ -15,6 +15,16 @@ public class AppTaskMemoryTest {
         AppTaskMemory restored=new AppTaskMemory(m.stored());assertEquals(m.id(),restored.id());assertEquals("g1",restored.active());assertEquals(3,restored.actions());assertFalse(restored.finished());
         restored.record(screen,action,"verified",true);assertNull(restored.active());assertFalse(restored.finished());restored.confirmResult();assertTrue(restored.finished());
     }
+    @Test public void confirmedResultCompletesRouteOnlyForTheLastUnverifiedAction()throws Exception {
+        AppTaskMemory m=new AppTaskMemory("메뉴 열기");JSONObject screen=observation("org.example.app","메뉴"),action=action(screen,"tap","target_visible");
+        m.record(screen,action,"failed",false);assertEquals(0,m.route().length());
+        m.confirmLastEffect(screen,action,"f".repeat(64));assertEquals(1,m.route().length());
+        JSONObject step=m.route().getJSONObject(0);assertEquals("user_confirmed_result",step.getString("effect_evidence"));
+        assertEquals("screen_changed",step.getJSONObject("expectation").getString("kind"));assertEquals("f".repeat(64),step.getJSONObject("expectation").getString("screen_key"));
+        m.confirmLastEffect(screen,action,"f".repeat(64));assertEquals(1,m.route().length());
+        AppTaskMemory gap=new AppTaskMemory("메뉴 열기");gap.record(screen,action,"failed",false);gap.record(screen,action,"failed",false);
+        gap.confirmLastEffect(screen,action,"f".repeat(64));assertEquals(0,gap.route().length());
+    }
     @Test public void modelCannotMarkStepsCompleteOrRewritePlan()throws Exception {
         AppTaskMemory m=new AppTaskMemory("검색 열기");JSONArray plan=new JSONArray().put(new JSONObject().put("id","g0").put("title","검색 열기").put("status","verified"));m.plan(plan);assertEquals("g0",m.active());
         m.plan(plan);assertEquals("g0",m.active());

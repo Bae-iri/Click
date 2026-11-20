@@ -1,0 +1,56 @@
+{
+  "device_scope": "Samsung_SM_N981N_Android13_single_device",
+  "base_code_revision": "d2ec9eff816ef2d5203128c4c9e9367f664a1224",
+  "working_tree_note": "develop with unrelated uncommitted commerce/coupang WIP present; experiment files listed below are hashed",
+  "configured_model": "gemini-3.8-flash",
+  "experiment_scope": "memory_reuse_v1_and_v2_live_216_each",
+  "budget_ms": 25000,
+  "run_id": "mem-v1-20261120",
+  "instrumentation_result": "OK (INSTRUMENTATION_CODE -1 = RESULT_OK), 216 episodes",
+  "setup_fixture_note": "clock app manually returned to the alarm tab before the setup probe; harness restores alarm tab after each clock trial",
+  "run_v1": {
+    "run_id": "mem-v1-20261120",
+    "source_hashes": {
+      "Backend/scripts/serve_memory_experiment.py": "de09f4e3b53ed1b835f841240e8d9300d92ced40e94e959db84064f5aa99d485",
+      "Backend/scripts/summarize_memory_experiment.py": "f3ec18cf6d43ad017557a46dd8de71a1ccdc733a88f97d019f5d2804e62ac608",
+      "Frontend/app/src/androidTest/java/com/click/service/accessibility/MemoryDeviceExperimentTest.java": "f16ed528dc41256907f6debe64c4b6c0f5bd9392e54bb675d232d66332e3919e",
+      "docs/reviews/2026-11-20-memory-reuse/catalogue.json": "39326e2a97a795fe6f249f0d14b1a65d918c94b000000c83cee23eb4daacec2c",
+      "docs/reviews/2026-11-20-memory-reuse/protocol.md": "3c73ee7f39002ec263616c2112077db5e1df179d8ed2a73d96d04129bfda02ec",
+      "Backend/app/services/app_task.py": "888df694292b38155eedda0e6f4df0c10fc91383d65744bd8fa1537bb8831629",
+      "Backend/app/services/app_task_experience.py": "2119c65f57887017c1ea94eef1d25f6ab5b242a220722a5185101cd0c1f228e1",
+      "AI-Agent/src/ai_agent/graph_proposal/workflows/app_tasks.py": "874aff815a3b8aa4c49517cdedcafb80827aa2ef92a699c56635fa4275063353",
+      "Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java": "a3b2f4d196bc9ffb192ff24ac9a27cf92d78bd99ea98aeac75e1c072c5ee33b8",
+      "Frontend/app/src/main/java/com/click/data/local/AppTaskStore.java": "dca9781c5a5b464c4d7ec80e1d9ed10dd8a11b16a305a86722c6007dc8f07641"
+    },
+    "measured_local_apk_sha256": {
+      "app_apk": "d419d154bcb73531e311c92bf7b9937ee8fed69d0704894cab08053dd76c5295",
+      "instrumentation_apk": "02a71a108c18796d828fcb7a0dc24f612bdf25eb627dad36cd85b958ce9454ca"
+    },
+    "raw": "raw/",
+    "results": "results/"
+  },
+  "run_v2": {
+    "run_id": "mem-v2-20261120",
+    "product_changes": "completion binding rule + prompt, route key v2, user-confirmed last-step effect",
+    "source_hashes": {
+      "Backend/app/services/app_task.py": "89a809d124765208f79b7d0887ce3f55c745fe61df3f37a16eaa4a3eab4262c0",
+      "Backend/app/services/app_task_learning_policy.py": "6aa107005fb36bf03e27a1258401b9ceb71397e4144303b8bf9a881aeb31a9a6",
+      "AI-Agent/src/ai_agent/graph_proposal/workflows/app_tasks.py": "a920a789b3373a5759893841950f8ea5865946fea86e07d55c1b60672b492d02",
+      "Frontend/app/src/main/java/com/click/data/snapshot/AppTaskObservation.java": "b99761fd1f7095d26590865e8839fcdadbd5a5e108e1a03509da63b0911fea32",
+      "Frontend/app/src/main/java/com/click/data/snapshot/AppTaskExperience.java": "1d138552a486e040b286239576cc91f816174c2d3bf6ee4b8d3d24641c3cd296",
+      "Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java": "be683491d6096684996bfae7d817219836036f930624fc0e200c9707d16536f2",
+      "Frontend/app/src/main/java/com/click/service/overlay/AppTaskMemory.java": "fb7f78ff3c752a38c609a1c082f22cf6cf426a784e8fcd9f482e6c2ffb0e4798",
+      "Frontend/app/src/main/java/com/click/service/overlay/AppTaskVerifier.java": "105a0a1c95f0faa8d72e3e050d3c2496d5c1f72b57e50efbc2f27fb2ad39ca9f",
+      "Backend/scripts/serve_memory_experiment.py": "8a6565292c9620efd2c660c61b328beaf14da5a74af3fb4fe12620a7dea82805",
+      "docs/reviews/2026-11-20-memory-reuse/protocol-v2.md": "c6bce974b1a3e71044a58595236f851ff228c60fc78fa05e3b40ea8746e7b84a"
+    },
+    "measured_local_apk_sha256": {
+      "app_apk": "0ee19950e47632a7a061ac3029da1cf393271213287b0bde874803700dc303ed",
+      "instrumentation_apk": "02a71a108c18796d828fcb7a0dc24f612bdf25eb627dad36cd85b958ce9454ca"
+    },
+    "instrumentation_result": "OK (INSTRUMENTATION_CODE -1), 216 episodes",
+    "raw": "raw-v2/",
+    "results": "results-v2/",
+    "pre_run_fixture": "YouTube returned from search screen to home with two BACK presses before the setup probe"
+  }
+}

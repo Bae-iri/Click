@@ -1,0 +1,1578 @@
+{
+ "schema_version": "memory-chain-audit.v1",
+ "source": "facade experience-events.jsonl (device-reported, hashed); ai2_route_eligible mirrors analyze_app_task route rules",
+ "by_arm": {
+  "B": {
+   "chains": 43,
+   "user_confirmed": 12,
+   "route_eligible": 1,
+   "confirmed_but_attempt_unconfirmed": 6,
+   "confirmed_all_verified_but_result_screen_drift": 5,
+   "unconfirmed_chains_with_rejection": 25
+  },
+  "C": {
+   "chains": 38,
+   "user_confirmed": 9,
+   "route_eligible": 1,
+   "confirmed_but_attempt_unconfirmed": 5,
+   "confirmed_all_verified_but_result_screen_drift": 3,
+   "unconfirmed_chains_with_rejection": 23
+  }
+ },
+ "confirmed_by_goal": [
+  {
+   "arm": "B",
+   "task_id": "chrome_menu",
+   "goal_ref": "526a740cade34cc0ddbb8ea1",
+   "user_confirmed_tasks": 1,
+   "route_eligible_tasks": 0
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_menu",
+   "goal_ref": "f30bee0b69510643e400d738",
+   "user_confirmed_tasks": 3,
+   "route_eligible_tasks": 0
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "user_confirmed_tasks": 4,
+   "route_eligible_tasks": 0
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "e6bfc71899910fa6adba06cb",
+   "user_confirmed_tasks": 2,
+   "route_eligible_tasks": 0
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_stopwatch",
+   "goal_ref": "0db657db8f091e1350b4e714",
+   "user_confirmed_tasks": 1,
+   "route_eligible_tasks": 1
+  },
+  {
+   "arm": "B",
+   "task_id": "settings_display",
+   "goal_ref": "0084892055ff0c0e7f811d29",
+   "user_confirmed_tasks": 1,
+   "route_eligible_tasks": 0
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_menu",
+   "goal_ref": "f30bee0b69510643e400d738",
+   "user_confirmed_tasks": 3,
+   "route_eligible_tasks": 0
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "user_confirmed_tasks": 1,
+   "route_eligible_tasks": 0
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "e6bfc71899910fa6adba06cb",
+   "user_confirmed_tasks": 2,
+   "route_eligible_tasks": 0
+  },
+  {
+   "arm": "C",
+   "task_id": "settings_display",
+   "goal_ref": "0084892055ff0c0e7f811d29",
+   "user_confirmed_tasks": 2,
+   "route_eligible_tasks": 0
+  },
+  {
+   "arm": "C",
+   "task_id": "settings_notifications",
+   "goal_ref": "4a99c1b7096972fc8ceea437",
+   "user_confirmed_tasks": 1,
+   "route_eligible_tasks": 1
+  }
+ ],
+ "goals_reaching_two_route_eligible": 0,
+ "goals_with_two_user_confirmed": 6,
+ "native_rejections_by_arm": {
+  "A": 21,
+  "B": 25,
+  "C": 23
+ },
+ "max_model_calls_per_episode": {
+  "A": 2,
+  "B": 1,
+  "C": 1
+ },
+ "episodes_with_more_than_one_action": {
+  "A": 0,
+  "B": 0,
+  "C": 0
+ },
+ "chains": [
+  {
+   "arm": "B",
+   "task_id": "settings_display",
+   "goal_ref": "0084892055ff0c0e7f811d29",
+   "canonical_goal_ref": "0084892055ff0c0e7f811d29",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "settings_display",
+   "goal_ref": "0084892055ff0c0e7f811d29",
+   "canonical_goal_ref": "0084892055ff0c0e7f811d29",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "settings_display",
+   "goal_ref": "0084892055ff0c0e7f811d29",
+   "canonical_goal_ref": "0084892055ff0c0e7f811d29",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "screen_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "settings_notifications",
+   "goal_ref": "4a99c1b7096972fc8ceea437",
+   "canonical_goal_ref": "4a99c1b7096972fc8ceea437",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": true
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_world",
+   "goal_ref": "bf287154d282f3c56b967654",
+   "canonical_goal_ref": "bf287154d282f3c56b967654",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_world",
+   "goal_ref": "bf287154d282f3c56b967654",
+   "canonical_goal_ref": "bf287154d282f3c56b967654",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_world",
+   "goal_ref": "bf287154d282f3c56b967654",
+   "canonical_goal_ref": "bf287154d282f3c56b967654",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_world",
+   "goal_ref": "bf287154d282f3c56b967654",
+   "canonical_goal_ref": "bf287154d282f3c56b967654",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_world",
+   "goal_ref": "bf287154d282f3c56b967654",
+   "canonical_goal_ref": "bf287154d282f3c56b967654",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_world",
+   "goal_ref": "bf287154d282f3c56b967654",
+   "canonical_goal_ref": "bf287154d282f3c56b967654",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_world",
+   "goal_ref": "bf287154d282f3c56b967654",
+   "canonical_goal_ref": "bf287154d282f3c56b967654",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_world",
+   "goal_ref": "1091daaebe9f1e1b6ccc8d02",
+   "canonical_goal_ref": "bf287154d282f3c56b967654",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_world",
+   "goal_ref": "1091daaebe9f1e1b6ccc8d02",
+   "canonical_goal_ref": "bf287154d282f3c56b967654",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_stopwatch",
+   "goal_ref": "07beddf9f477a53a8cf0d311",
+   "canonical_goal_ref": "07beddf9f477a53a8cf0d311",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_stopwatch",
+   "goal_ref": "07beddf9f477a53a8cf0d311",
+   "canonical_goal_ref": "07beddf9f477a53a8cf0d311",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_stopwatch",
+   "goal_ref": "07beddf9f477a53a8cf0d311",
+   "canonical_goal_ref": "07beddf9f477a53a8cf0d311",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_stopwatch",
+   "goal_ref": "07beddf9f477a53a8cf0d311",
+   "canonical_goal_ref": "07beddf9f477a53a8cf0d311",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_stopwatch",
+   "goal_ref": "07beddf9f477a53a8cf0d311",
+   "canonical_goal_ref": "07beddf9f477a53a8cf0d311",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_stopwatch",
+   "goal_ref": "07beddf9f477a53a8cf0d311",
+   "canonical_goal_ref": "07beddf9f477a53a8cf0d311",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_stopwatch",
+   "goal_ref": "07beddf9f477a53a8cf0d311",
+   "canonical_goal_ref": "07beddf9f477a53a8cf0d311",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_stopwatch",
+   "goal_ref": "0db657db8f091e1350b4e714",
+   "canonical_goal_ref": "07beddf9f477a53a8cf0d311",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": true
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_stopwatch",
+   "goal_ref": "0db657db8f091e1350b4e714",
+   "canonical_goal_ref": "07beddf9f477a53a8cf0d311",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_stopwatch",
+   "goal_ref": "0db657db8f091e1350b4e714",
+   "canonical_goal_ref": "07beddf9f477a53a8cf0d311",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_timer",
+   "goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "canonical_goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_timer",
+   "goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "canonical_goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_timer",
+   "goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "canonical_goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_timer",
+   "goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "canonical_goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_timer",
+   "goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "canonical_goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "clock_timer",
+   "goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "canonical_goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_timer",
+   "goal_ref": "cef7efc0dee63ae4f0f28ee7",
+   "canonical_goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "clock_timer",
+   "goal_ref": "cef7efc0dee63ae4f0f28ee7",
+   "canonical_goal_ref": "e01b0f9c71388e3021e3bc7d",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_menu",
+   "goal_ref": "f30bee0b69510643e400d738",
+   "canonical_goal_ref": "f30bee0b69510643e400d738",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "screen_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_menu",
+   "goal_ref": "f30bee0b69510643e400d738",
+   "canonical_goal_ref": "f30bee0b69510643e400d738",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "unconfirmed"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_menu",
+   "goal_ref": "f30bee0b69510643e400d738",
+   "canonical_goal_ref": "f30bee0b69510643e400d738",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_menu",
+   "goal_ref": "f30bee0b69510643e400d738",
+   "canonical_goal_ref": "f30bee0b69510643e400d738",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_menu",
+   "goal_ref": "f30bee0b69510643e400d738",
+   "canonical_goal_ref": "f30bee0b69510643e400d738",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "unconfirmed"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_menu",
+   "goal_ref": "f30bee0b69510643e400d738",
+   "canonical_goal_ref": "f30bee0b69510643e400d738",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "screen_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_menu",
+   "goal_ref": "f30bee0b69510643e400d738",
+   "canonical_goal_ref": "f30bee0b69510643e400d738",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "screen_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_menu",
+   "goal_ref": "f30bee0b69510643e400d738",
+   "canonical_goal_ref": "f30bee0b69510643e400d738",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "screen_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_menu",
+   "goal_ref": "526a740cade34cc0ddbb8ea1",
+   "canonical_goal_ref": "f30bee0b69510643e400d738",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "canonical_goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "unconfirmed"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "canonical_goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "unconfirmed"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "canonical_goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "unconfirmed"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "canonical_goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "unconfirmed"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "canonical_goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "unconfirmed"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "e6bfc71899910fa6adba06cb",
+   "canonical_goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "unconfirmed"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "e6bfc71899910fa6adba06cb",
+   "canonical_goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "unconfirmed"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "e6bfc71899910fa6adba06cb",
+   "canonical_goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "unconfirmed"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_new_tab",
+   "goal_ref": "e6bfc71899910fa6adba06cb",
+   "canonical_goal_ref": "0cff7c0d0ac719dcaff7a80e",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "unconfirmed"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": true,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": true,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_settings",
+   "goal_ref": "4b941fb3fa75963f03985683",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_settings",
+   "goal_ref": "4b941fb3fa75963f03985683",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_settings",
+   "goal_ref": "4b941fb3fa75963f03985683",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_settings",
+   "goal_ref": "4b941fb3fa75963f03985683",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_settings",
+   "goal_ref": "4b941fb3fa75963f03985683",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_settings",
+   "goal_ref": "4b941fb3fa75963f03985683",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_settings",
+   "goal_ref": "4b941fb3fa75963f03985683",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_settings",
+   "goal_ref": "4b941fb3fa75963f03985683",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_settings",
+   "goal_ref": "34df0540d66a1509e4c96d5f",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_settings",
+   "goal_ref": "34df0540d66a1509e4c96d5f",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "chrome_settings",
+   "goal_ref": "34df0540d66a1509e4c96d5f",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "chrome_settings",
+   "goal_ref": "34df0540d66a1509e4c96d5f",
+   "canonical_goal_ref": "4b941fb3fa75963f03985683",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "verified"
+   ],
+   "attempt_expectations": [
+    "target_visible"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": true,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "youtube_shorts",
+   "goal_ref": "f6f9992b3348bc38a8542185",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "youtube_shorts",
+   "goal_ref": "f6f9992b3348bc38a8542185",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "youtube_shorts",
+   "goal_ref": "f6f9992b3348bc38a8542185",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "youtube_shorts",
+   "goal_ref": "f6f9992b3348bc38a8542185",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "youtube_shorts",
+   "goal_ref": "f6f9992b3348bc38a8542185",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "youtube_shorts",
+   "goal_ref": "f6f9992b3348bc38a8542185",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "youtube_shorts",
+   "goal_ref": "f6f9992b3348bc38a8542185",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "youtube_shorts",
+   "goal_ref": "f6f9992b3348bc38a8542185",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "youtube_shorts",
+   "goal_ref": "d9d8a0143c181282257b54e2",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "screen_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "youtube_shorts",
+   "goal_ref": "d9d8a0143c181282257b54e2",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "youtube_shorts",
+   "goal_ref": "d9d8a0143c181282257b54e2",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "youtube_shorts",
+   "goal_ref": "d9d8a0143c181282257b54e2",
+   "canonical_goal_ref": "f6f9992b3348bc38a8542185",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "youtube_subscriptions",
+   "goal_ref": "bf5c654c122391d7d866ef09",
+   "canonical_goal_ref": "bf5c654c122391d7d866ef09",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "youtube_subscriptions",
+   "goal_ref": "bf5c654c122391d7d866ef09",
+   "canonical_goal_ref": "bf5c654c122391d7d866ef09",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "youtube_subscriptions",
+   "goal_ref": "bf5c654c122391d7d866ef09",
+   "canonical_goal_ref": "bf5c654c122391d7d866ef09",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "youtube_subscriptions",
+   "goal_ref": "bf5c654c122391d7d866ef09",
+   "canonical_goal_ref": "bf5c654c122391d7d866ef09",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "youtube_subscriptions",
+   "goal_ref": "bf5c654c122391d7d866ef09",
+   "canonical_goal_ref": "bf5c654c122391d7d866ef09",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "youtube_subscriptions",
+   "goal_ref": "bf5c654c122391d7d866ef09",
+   "canonical_goal_ref": "bf5c654c122391d7d866ef09",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "C",
+   "task_id": "youtube_subscriptions",
+   "goal_ref": "bf5c654c122391d7d866ef09",
+   "canonical_goal_ref": "bf5c654c122391d7d866ef09",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  },
+  {
+   "arm": "B",
+   "task_id": "youtube_subscriptions",
+   "goal_ref": "49aa1c362bab4475a90d3962",
+   "canonical_goal_ref": "bf5c654c122391d7d866ef09",
+   "attempts": 1,
+   "attempt_outcomes": [
+    "rejected"
+   ],
+   "attempt_expectations": [
+    "selection_changed"
+   ],
+   "user_confirmed": false,
+   "all_attempts_verified": false,
+   "linked": true,
+   "result_screen_matches_last_after": false,
+   "ai2_route_eligible": false
+  }
+ ]
+}

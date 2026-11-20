@@ -60,7 +60,8 @@
         "6c170d4165b88a83aeb36828463ebd3165f402ccd1e31c0dabc810ad1a2bd1ad",
         "588f1596f1cbbe4ce6d0ece481944fc5985ad6f12c22022c1bb7d5b44dd371d2"
       ],
-      "screen_key": "02455e36cc98f28241e4b19600ae7c1de5b6902001181b471debc9b32d560214"
+      "screen_key": "02455e36cc98f28241e4b19600ae7c1de5b6902001181b471debc9b32d560214",
+      "route_key": "1db38f79369c6e714a4265bc2958d27e80658cea4b83d0404af461bee5d90bbb"
     },
     {
       "name": "viewport_change",
@@ -120,7 +121,8 @@
         "6c170d4165b88a83aeb36828463ebd3165f402ccd1e31c0dabc810ad1a2bd1ad",
         "588f1596f1cbbe4ce6d0ece481944fc5985ad6f12c22022c1bb7d5b44dd371d2"
       ],
-      "screen_key": "b37747816e9c3bfd8a2bf274d6a57244b45665fa05103665234caa3209522ce1"
+      "screen_key": "b37747816e9c3bfd8a2bf274d6a57244b45665fa05103665234caa3209522ce1",
+      "route_key": "1db38f79369c6e714a4265bc2958d27e80658cea4b83d0404af461bee5d90bbb"
     }
   ]
 }

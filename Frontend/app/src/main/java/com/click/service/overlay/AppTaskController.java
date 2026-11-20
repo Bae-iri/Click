@@ -32,6 +32,7 @@ public final class AppTaskController {
     private String searchQuery;private boolean searchPrepared;
     private boolean busy,closed,verifying,actionObserved,replaying,finishing;private long actionStarted,proposedAt;
     private JSONObject diagnostic;
+    private JSONObject lastUnverified;
     private int turns;private JSONObject cached;private JSONObject ocr;
     private String ocrNative;private long ocrAt;
     private String resultObservation;private long resultCapturedAt,resultStarted;
@@ -252,7 +253,11 @@ public final class AppTaskController {
             memory.experienceSequence(memory.experienceSequence()+1);
         }
         if(verified){JSONObject target=AppTaskObservation.find(before,action.optString("target_id"));String key=target==null?"0000000000000000000000000000000000000000000000000000000000000000":AppTaskObservation.targetKey(target);
-            memory.appendPath(AppTaskObservation.hash(AppTaskObservation.learningKey(before)+"\n"+action.getString("tool")+"\n"+key+"\n"+AppTaskObservation.learningKey(after)));}
+            memory.appendPath(AppTaskObservation.hash(AppTaskObservation.routeKey(before)+"\n"+action.getString("tool")+"\n"+key+"\n"+AppTaskObservation.routeKey(after)));}
+        // An observed action whose effect could not be verified may still be the step that produced
+        // the result the user confirms next; keep it only until the next recorded attempt.
+        lastUnverified=!verified&&observed&&("failed".equals(outcome)||"waiting".equals(outcome))
+            ?new JSONObject().put("before",before).put("action",action).put("after_key",AppTaskObservation.routeKey(after)):null;
         memory.record(before,action,outcome,advances);
         if(event!=null){store.saveExperience(memory,listener.sessionId(),consentId,event);gateway.flush(store);}else save();
     }
@@ -410,11 +415,20 @@ public final class AppTaskController {
     }
     public void confirmResult(){if(closed||verifying||memory.finished())return;try{
         refreshLearningConsent();
+        promoteConfirmedEffect();
         if(learning&&store!=null&&consentId!=null&&listener.sessionId()!=null&&observation!=null&&memory.experienceSequence()<66){
             JSONObject current=capture(listener.fresh());JSONObject event=AppTaskExperience.capture(memory,memory.experienceSequence()+1,current,current,environment(current),null,"user_confirmed",false,false);
             memory.experienceSequence(memory.experienceSequence()+1);memory.confirmResult();store.saveExperience(memory,listener.sessionId(),consentId,event);gateway.flush(store);
         }else{memory.confirmResult();save();}
         if(store!=null&&scope!=null)store.recordRoute(memory,scope);show("completed","요청한 결과를 확인했어요.");}catch(Exception e){listener.failure(e);}}
+    /** The user confirmed the screen this observed action produced: its effect is the confirmed result. */
+    private void promoteConfirmedEffect()throws JSONException {
+        JSONObject last=lastUnverified;lastUnverified=null;if(last==null)return;
+        ScreenSnapshot fresh=listener.fresh();if(fresh==null)return;
+        if(!last.getString("after_key").equals(AppTaskObservation.routeKey(last.getJSONObject("before")))
+                &&last.getString("after_key").equals(AppTaskObservation.routeKey(capture(fresh))))
+            memory.confirmLastEffect(last.getJSONObject("before"),last.getJSONObject("action"),last.getString("after_key"));
+    }
     public void resume(){resultObservation=null;checkingResult=resultOffered=false;if(verifying){handler.post(verify);}else refresh();}
     public void close(){closed=true;manualActions.clear();handler.removeCallbacks(refresh);handler.removeCallbacks(verify);gateway.close();save();}
 }
