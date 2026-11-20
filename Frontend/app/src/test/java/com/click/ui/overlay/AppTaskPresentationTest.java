@@ -22,6 +22,15 @@ public class AppTaskPresentationTest {
         assertNull(find(panel,"○ 쿠팡에서 물 주문하고 싶어"));find(panel,"쿠팡 열기").performClick();assertEquals(1,calls[0]);
         panel.setDetailedExplanations(true);assertNotNull(find(panel,"요청하신 ‘쿠팡’ 앱이 설치되어 있어요."));
     }
+    @Test public void receivedRequestStaysVisibleForGeneralAppTasks()throws Exception {
+        var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
+        panel.setRequestSummary("유튜브에서 구독 탭 열어줘");
+        panel.appTask(new JSONObject().put("status","planning").put("message","현재 화면에서 다음 단계를 찾고 있어요."),v->{},()->{},()->{},()->{},()->{});
+        assertNotNull(find(panel,"유튜브에서 구독 탭 열어줘"));
+        panel.appTask(new JSONObject().put("status","proposed").put("message","구독을 눌러주세요.").put("target_label","구독").put("execute_allowed",true)
+            .put("action",new JSONObject().put("tool","tap")),v->{},()->{},()->{},()->{},()->{});
+        assertNotNull(find(panel,"유튜브에서 구독 탭 열어줘"));assertNotNull(find(panel,"클릭이 대신 누르기"));
+    }
     @Test public void searchTextIsReviewableAndRecoveryChoicesStayFolded()throws Exception {
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
         panel.appTask(new JSONObject().put("status","proposed").put("message","검색어를 확인해 주세요.").put("execute_allowed",true).put("available_tools",new JSONArray().put("back")).put("suggested_query","물").put("action",new JSONObject().put("tool","set_text")),v->{},()->{},()->{},()->{},()->{});
