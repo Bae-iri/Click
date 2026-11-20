@@ -31,6 +31,7 @@ public final class AppTaskController {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private ScreenSnapshot baseline;private JSONObject observation,proposal;
     private String submitted,selectedPackage,selectedLabel,inputHash,scope;
+    private boolean protectedShown;
     private String searchQuery;private boolean searchPrepared;
     private boolean busy,closed,verifying,actionObserved,replaying,finishing;private long actionStarted,proposedAt;
     private JSONObject diagnostic;
@@ -209,7 +210,18 @@ public final class AppTaskController {
                 localDiagnostic("requested_app_entry");
                 propose(action("open_app",null,current,new JSONObject().put("kind","package_opened").put("package",selectedPackage),false).put("package",selectedPackage));return;
             }
-            if(!"public".equals(current.optString("status"))){show("protected".equals(current.optString("status"))?"protected":"needs_input","protected".equals(current.optString("status"))?"입력·인증은 직접 진행한 뒤 이어서 확인해 주세요.":selectedPackage!=null?"화면을 불러오고 있어요.":"도움이 필요한 앱을 열어주세요.");return;}
+            if(!"public".equals(current.optString("status"))){
+                boolean guarded="protected".equals(current.optString("status"));
+                // Private input stays unread. Asked to continue while it is still on screen, let the
+                // user say they finished it themselves instead of looping on the same notice.
+                if(guarded&&force&&protectedShown){show("confirm_result","입력 화면은 클릭이 읽지 않아요. 직접 입력과 전송을 마치셨다면 결과가 맞다고 눌러 끝내 주세요. 아직이면 입력을 마친 뒤 다시 눌러 주세요.");return;}
+                // Typing re-captures the same guarded screen many times a second; re-rendering it
+                // would invalidate the panel's buttons before they can be pressed.
+                if(guarded&&protectedShown)return;
+                protectedShown=guarded;
+                show(guarded?"protected":"needs_input",guarded?"입력·인증은 직접 진행한 뒤 이어서 확인해 주세요.":selectedPackage!=null?"화면을 불러오고 있어요.":"도움이 필요한 앱을 열어주세요.");return;
+            }
+            protectedShown=false;
             if(scope==null){scope=listener.scope(current.getString("package"));memory.scope(scope);if(store!=null&&memory.actions()==0)cached=store.reusable(memory.goal(),scope);if(cached!=null&&memory.state().getJSONArray("subgoals").length()==0)memory.plan(cached.optJSONArray("subgoals"));}
             if(memory.actions()>=64){show("needs_input","진행 단계가 많아졌어요. 현재 결과를 확인하고 새 작업으로 이어가 주세요.");return;}
             boolean allStepsVerified=memory.state().getJSONArray("subgoals").length()>0&&memory.active()==null;

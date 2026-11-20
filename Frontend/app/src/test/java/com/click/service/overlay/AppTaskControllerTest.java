@@ -42,6 +42,15 @@ public class AppTaskControllerTest {
         l.current=screen(pkg,node(pkg,"node_0_1","물 상품","button"));c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
         assertEquals("검색 결과에서 원하는 상품을 골라주세요.",l.result.getString("message"));assertEquals(1,l.executions);c.close();
     }
+    @Test public void guardedInputScreenKeepsItsPanelAndCanBeFinishedByTheUser()throws Exception {
+        String pkg="com.google.android.gm";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","","password"));
+        var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("지메일로 메일 보내줘"),null,l,false);c.targetApp(pkg,"지메일");c.refresh();
+        assertEquals("protected",l.result.getString("status"));int presents=l.presents;
+        for(int i=0;i<5;i++){l.current=screen(pkg,node(pkg,"node_0_"+(i+2),"","password"));c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));}
+        assertEquals(presents,l.presents);
+        c.refresh();assertEquals("confirm_result",l.result.getString("status"));
+        c.confirmResult();assertTrue(c.memory().finished());c.close();
+    }
     @Test public void keyboardLayoutChurnKeepsTheSearchInputProposal()throws Exception {
         String pkg="com.google.android.youtube";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","","search"));
         var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("유튜브에서 고양이 영상 검색해줘"),null,l,false);c.targetApp(pkg,"유튜브");c.refresh();
