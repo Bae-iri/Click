@@ -11,6 +11,20 @@ import java.security.MessageDigest;
 public final class AppTaskObservation {
     private static final Pattern PRIVATE=Pattern.compile("password|passwd|credential|otp|account_number|credit_card|message_body|sender|recipient|email|phone_number|chat_message",Pattern.CASE_INSENSITIVE);
     private static final Pattern PERSONAL=Pattern.compile("[\\w.+-]+@[\\w.-]+\\.[A-Za-z]{2,}|https?://|\\b\\d[\\d .-]{7,}\\d\\b");
+    /** Local-only contract: never add these options to the strict wire schema. */
+    private static final class ProjectionSpec {
+        final Set<String> resultLabels;
+        ProjectionSpec(Set<String> requested){
+            Set<String> copy=new LinkedHashSet<>();
+            if(requested!=null)for(String value:requested){String normalized=label(value);if(!normalized.isEmpty())copy.add(normalized);}
+            resultLabels=Collections.unmodifiableSet(copy);
+        }
+    }
+    /** JSONObject serialization contains only existing protocol fields, not the local spec. */
+    private static final class ProjectedObservation extends JSONObject {
+        final ProjectionSpec spec;
+        ProjectedObservation(ProjectionSpec spec){this.spec=spec;}
+    }
     public static String label(String value){
         if(value==null)return "";
         String s=Normalizer.normalize(value,Normalizer.Form.NFKC).replaceAll("\\p{Cf}","").replaceAll("\\s+"," ").trim();
@@ -42,7 +56,21 @@ public final class AppTaskObservation {
     }
     /** Export only requested public result labels, never all the page's static text. */
     public static JSONObject capture(ScreenSnapshot screen,Set<String> resultLabels)throws JSONException {
-        JSONObject out=new JSONObject().put("status","outside").put("package",screen==null||screen.packageName==null?"":screen.packageName)
+        return capture(screen,new ProjectionSpec(resultLabels));
+    }
+    /**
+     * Reobserve under the proposal's exact local projection, retaining every
+     * fingerprint check. Never infer the contract from model/copy JSON nodes.
+     * Legacy/plain JSON uses the default projection; a lost enriched contract
+     * therefore fails closed rather than silently weakening the comparison.
+     */
+    public static JSONObject recaptureLike(ScreenSnapshot screen,JSONObject reference)throws JSONException {
+        return reference instanceof ProjectedObservation
+            ?capture(screen,((ProjectedObservation)reference).spec):capture(screen);
+    }
+    private static JSONObject capture(ScreenSnapshot screen,ProjectionSpec spec)throws JSONException {
+        Set<String> resultLabels=spec.resultLabels;
+        JSONObject out=new ProjectedObservation(spec).put("status","outside").put("package",screen==null||screen.packageName==null?"":screen.packageName)
             .put("observation_id",screen==null?UUID.randomUUID().toString():screen.observationId)
             .put("captured_at_ms",screen==null?System.currentTimeMillis():java.time.Instant.parse(screen.capturedAt).toEpochMilli())
             .put("keyboard_visible",screen!=null&&screen.windowContext.keyboardVisible())

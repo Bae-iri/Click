@@ -58,10 +58,12 @@ def test_model_cannot_rewrite_existing_plan_or_progress():
     assert bad.subgoals==req.state.subgoals
 
 
-def test_verified_plan_asks_user_for_final_result_without_model():
+def test_verified_plan_with_supported_completion_asks_user_without_another_model_call():
     req=request(); req.state.subgoals=[TaskSubgoal(id='g0',title='검색 열기',status='verified')]
+    req.state.completion=AppTaskService(sender()).step(request()).completion
     send=sender(); result=AppTaskService(send).step(req)
     send.assert_not_called(); assert result.status=='confirm_result' and result.action is None
+    assert result.completion==req.state.completion and result.diagnostic['called'] is False
 
 
 @pytest.mark.parametrize('tool,target,extra', [
@@ -211,18 +213,182 @@ def test_unobservable_result_remains_manual_and_confirm_is_not_technical_success
     assert result.status=='confirm_result' and result.completion is None and result.action is None
 
 
-@pytest.mark.parametrize('check',[
-    dict(target='none',label='검색',app='none',checked='unknown',selected='unknown'),   # the control about to be tapped
-    dict(target='c0',label='검색',app='none',checked='unknown',selected='unknown')])    # bound to the visible control
-def test_completion_already_satisfied_where_it_is_bound_is_not_a_goal_contract(check):
-    result=AppTaskService(sender(completion_checks=[check])).step(request())
-    assert result.completion is None and result.action is not None
-    assert result.diagnostic['completion_rejected']=='satisfied_at_binding'
-
-
 def test_completion_needing_a_destination_label_or_state_change_is_kept():
-    req=request();req.screen.nodes[0].role='tab';req.screen.nodes[0].selected=False
+    req=request()
     future=AppTaskService(sender(completion_checks=[dict(target='none',label='목록',app='none',checked='unknown',selected='unknown')])).step(req)
-    assert future.completion.checks[0].label=='목록'
+    assert future.completion.checks[0].label=='목록' and 'completion_rejected' not in future.diagnostic
+    req.screen.nodes[0].role='tab';req.screen.nodes[0].selected=False
     change=AppTaskService(sender(expected_selected='true',completion_checks=[dict(target='c0',label='검색',app='none',checked='unknown',selected='true')])).step(req)
     assert change.completion.checks[0].selected is True and 'completion_rejected' not in change.diagnostic
+
+
+@pytest.mark.parametrize('target',['c0','none'])
+def test_visible_navigation_menu_is_not_final_result_but_next_action_survives(target):
+    req=request();req.goal='검색 열어줘'
+    result=AppTaskService(sender(completion_checks=[dict(target=target,label='검색',app='none',checked='unknown',selected='unknown')])).step(req)
+    assert result.status=='proposed' and result.action.target_id=='node_0_1'
+    assert result.completion is None
+    assert result.diagnostic['completion_grounding']=='deferred_actionable_proof'
+
+
+def test_one_unsafe_goal_clause_defers_whole_conjunction_instead_of_weakening_it():
+    checks=[dict(target='none',label='목록',app='none',checked='unknown',selected='unknown'),
+            dict(target='c0',label='검색',app='none',checked='unknown',selected='unknown')]
+    result=AppTaskService(sender(completion_checks=checks)).step(request())
+    assert result.status=='proposed' and result.action is not None and result.completion is None
+
+
+def test_not_yet_observed_destination_can_bind_and_already_open_destination_text_is_valid():
+    check=dict(target='none',label='디스플레이 화면',app='none',checked='unknown',selected='unknown')
+    req=request();req.goal='디스플레이 화면 열어줘'
+    result=AppTaskService(sender(completion_checks=[check])).step(req)
+    assert result.completion.checks[0].label=='디스플레이 화면'
+    req.screen.nodes[0].label='디스플레이 화면';req.screen.nodes[0].role='text';req.screen.nodes[0].clickable=False
+    check['target']='c0'
+    result=AppTaskService(sender(tool='confirm',completion_checks=[check])).step(req)
+    assert result.status=='confirm_result' and result.completion.checks[0].role=='text'
+
+
+@pytest.mark.parametrize('selected',['true','false'])
+def test_navigation_tab_requires_selected_state_in_the_requested_direction(selected):
+    req=request();req.goal='기록 탭 열어줘';req.screen.nodes[0].label='기록';req.screen.nodes[0].role='tab'
+    check=dict(target='c0',label='기록',app='none',checked='unknown',selected=selected)
+    result=AppTaskService(sender(completion_checks=[check])).step(req)
+    assert result.status=='proposed' and result.action is not None
+    assert (result.completion is not None)==(selected=='true')
+
+
+def test_unselected_tab_cannot_prove_a_selection_paraphrase_without_open_verb():
+    req=request();req.goal='기록 탭 선택해줘';req.screen.nodes[0].label='기록';req.screen.nodes[0].role='tab'
+    check=dict(target='c0',label='기록',app='none',checked='unknown',selected='false')
+    result=AppTaskService(sender(completion_checks=[check])).step(req)
+    assert result.status=='proposed' and result.action is not None and result.completion is None
+
+
+def test_turning_off_a_native_toggle_is_valid_even_with_navigation_in_the_goal():
+    req=request();req.goal='알림 화면 열고 알림 꺼줘';req.screen.nodes[0].label='알림';req.screen.nodes[0].role='toggle'
+    check=dict(target='c0',label='알림',app='none',checked='false',selected='false')
+    result=AppTaskService(sender(completion_checks=[check])).step(req)
+    assert result.status=='proposed' and result.completion.checks[0].checked is False
+
+
+@pytest.mark.parametrize('goal,allowed',[
+    ('검색창 열어줘',True),('검색창 보여줘',True),('검색창 띄워줘',True),('show search',True),
+    ('검색 결과 열어줘',False),('검색어 입력해줘',False),('검색 열고 목록 확인',False)])
+@pytest.mark.parametrize('target',['c0','none'])
+def test_search_input_exposure_only_proves_explicit_search_open_goal(goal,allowed,target):
+    req=request();req.goal=goal;req.screen.nodes[0].label='검색어 입력';req.screen.nodes[0].role='text_field';req.screen.nodes[0].editable=True
+    check=dict(target=target,label='검색어 입력',app='none',checked='unknown',selected='unknown')
+    result=AppTaskService(sender(tool='set_text',completion_checks=[check])).step(req)
+    assert result.status=='proposed' and result.action is not None
+    assert (result.completion is not None)==allowed
+
+
+def finished_plan_request():
+    req=request();req.goal='목록 화면 열어줘'
+    req.state.subgoals=[TaskSubgoal(id='g0',title='목록 열기',status='verified')]
+    req.screen.nodes[0].label='목록';req.screen.nodes[0].role='text';req.screen.nodes[0].clickable=False
+    return req
+
+
+def result_sender(**changes):
+    return sender(subgoals=['목록 열기'],tool='confirm',target='none',advances_subgoal=False,**changes)
+
+
+def test_verified_steps_without_completion_discover_current_final_evidence_without_an_action():
+    req=finished_plan_request();send=result_sender()
+    result=AppTaskService(send).step(req)
+    assert result.status=='confirm_result' and result.action is None and result.active_subgoal is None
+    assert result.subgoals==req.state.subgoals
+    assert result.completion.checks[0].label=='목록'
+    diagnostic=result.diagnostic
+    assert diagnostic['called'] and diagnostic['planning_mode']=='result_only'
+    assert diagnostic['reason_code']=='result_evidence_candidate'
+    payload=send.call_args.args[0]
+    assert payload['generationConfig']['responseJsonSchema']['properties']['tool']['enum']==['ask','confirm']
+    assert payload['generationConfig']['responseJsonSchema']['properties']['advances_subgoal']['enum']==[False]
+    assert 'RESULT EVIDENCE DISCOVERY ONLY' in payload['contents'][0]['parts'][0]['text']
+
+
+@pytest.mark.parametrize('case',['unseen','ambiguous','actionable','unsatisfied_state'])
+def test_result_discovery_never_binds_unseen_ambiguous_or_unsatisfied_evidence(case):
+    req=finished_plan_request()
+    checks=[dict(target='none',label='목록',app='none',checked='unknown',selected='unknown')]
+    if case=='unseen':req.screen.nodes[0].label='이전 화면'
+    elif case=='ambiguous':req.screen.nodes.append(req.screen.nodes[0].model_copy(update={'id':'other'}))
+    elif case=='actionable':req.screen.nodes[0].role='button';req.screen.nodes[0].clickable=True
+    else:
+        req.goal='목록 탭 열어줘';req.screen.nodes[0].role='tab';req.screen.nodes[0].selected=False
+        checks[0].update(target='c0',selected='true')
+    result=AppTaskService(result_sender(completion_checks=checks)).step(req)
+    assert result.status=='confirm_result' and result.action is None and result.completion is None
+    assert result.subgoals==req.state.subgoals
+    assert result.diagnostic['reason_code']=='result_evidence_unavailable'
+
+
+def test_result_discovery_keeps_the_whole_final_conjunction_or_none_of_it():
+    req=finished_plan_request()
+    checks=[dict(target='c0',label='목록',app='none',checked='unknown',selected='unknown'),
+        dict(target='none',label='미관찰 결과',app='none',checked='unknown',selected='unknown')]
+    result=AppTaskService(result_sender(completion_checks=checks)).step(req)
+    assert result.completion is None and result.action is None
+    assert result.diagnostic['completion_grounding']=='deferred_unobserved_result'
+
+
+@pytest.mark.parametrize('tool',['tap','back','open_app','set_text'])
+def test_result_discovery_locally_rejects_actions_even_if_the_model_ignores_its_schema(tool):
+    req=finished_plan_request();send=sender(subgoals=['목록 열기'],tool=tool)
+    result=AppTaskService(send).step(req)
+    assert result.status=='confirm_result' and result.action is None and result.completion is None
+    assert result.subgoals==req.state.subgoals
+    assert result.diagnostic['reason_code']=='result_only_action_forbidden'
+    assert result.diagnostic['failure_stage']=='plan_validation'
+
+
+@pytest.mark.parametrize('changes,code',[
+    (dict(subgoals=['다른 목표']), 'changed_existing_plan'),
+    (dict(advances_subgoal=True), 'result_only_progress_forbidden')])
+def test_result_discovery_cannot_replace_the_goal_plan_or_advance_progress(changes,code):
+    req=finished_plan_request();options=dict(subgoals=['목록 열기'],tool='confirm');options.update(changes)
+    result=AppTaskService(sender(**options)).step(req)
+    assert result.status=='confirm_result' and result.action is None and result.completion is None
+    assert result.subgoals==req.state.subgoals and result.diagnostic['reason_code']==code
+
+
+def test_result_discovery_provider_failure_retains_manual_result_check_and_truthful_call_metadata():
+    req=finished_plan_request()
+    result=AppTaskService(Mock(side_effect=httpx.ReadTimeout('PRIVATE@example.com API_SECRET'))).step(req)
+    assert result.status=='confirm_result' and result.action is None and result.completion is None
+    assert result.diagnostic['called'] is True
+    assert result.diagnostic['failure_kind']=='provider' and result.diagnostic['reason_code']=='provider_timeout'
+    assert 'PRIVATE' not in str(result) and 'API_SECRET' not in str(result)
+
+
+def test_contract_error_diagnostic_has_only_bounded_stage_field_and_type_metadata():
+    req=request();req.screen.nodes[0].role='button'
+    check=dict(target='c0',label='',app='none',checked='true',selected='unknown')
+    result=AppTaskService(sender(completion_checks=[check])).step(req)
+    assert result.status=='unavailable' and result.action is None
+    diagnostic=result.diagnostic
+    assert diagnostic['called'] and diagnostic['reason_code']=='contract_validation_failed'
+    assert diagnostic['failure_stage']=='completion_contract' and diagnostic['failure_kind']=='plan'
+    assert diagnostic['validation_errors']==[{'field':'contract','type':'value_error'}]
+    assert 'input' not in json.dumps(diagnostic) and 'ctx' not in json.dumps(diagnostic)
+
+
+@pytest.mark.parametrize('body,stage',[
+    ('NOT JSON PRIVATE@example.com','provider_response'),
+    (json.dumps({'candidates':[dict(finishReason='STOP',content=dict(parts=[dict(text='PRIVATE NOT JSON')]))]}),'model_output')])
+def test_invalid_json_diagnostic_reports_stage_without_raw_model_or_provider_text(body,stage):
+    result=AppTaskService(Mock(return_value=httpx.Response(200,content=body))).step(request())
+    assert result.status=='unavailable' and result.diagnostic['called']
+    assert result.diagnostic['failure_kind']=='parse' and result.diagnostic['failure_stage']==stage
+    assert result.diagnostic['reason_code']=='invalid_json'
+    assert 'PRIVATE' not in str(result)
+
+
+def test_unknown_exception_text_is_never_used_as_a_diagnostic_code():
+    result=AppTaskService(Mock(side_effect=ValueError('PRIVATE@example.com SECRET'))).step(request())
+    assert result.status=='unavailable' and result.diagnostic['called']
+    assert result.diagnostic['reason_code']=='plan_validation_failed'
+    assert 'PRIVATE' not in str(result) and 'SECRET' not in str(result)

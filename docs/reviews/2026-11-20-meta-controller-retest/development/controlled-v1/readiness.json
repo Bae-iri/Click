@@ -1,0 +1,10 @@
+{
+  "schema_version": "click.synthetic-closed-loop.v1",
+  "passed": true,
+  "positive_goal_controls": 6,
+  "negative_goal_controls": 6,
+  "same_frame": true,
+  "changed_frame": true,
+  "protected_frame": true,
+  "consistent_clock": true
+}

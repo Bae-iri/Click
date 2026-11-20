@@ -1,0 +1,47 @@
+{
+  "schema_version": "click.synthetic-closed-loop.v1",
+  "evidence_mode": "synthetic_ui_full_native_controller",
+  "app_id": "org.click.experiment.fixture",
+  "frozen_before_execution": true,
+  "primary_matrix": {"repetitions": 2, "arms": ["A", "B"], "conditions": ["normal", "accepted_no_effect", "delayed_transition"], "episodes": 72, "matched_pairs": 36},
+  "clock": {"ui": "Robolectric paused monotonic clock", "cloud": "host monotonic elapsed wall time, measured separately", "completion_minimum_separation_ms": 350},
+  "conditions": {
+    "normal": {"first_primary_effect_ms": 120},
+    "accepted_no_effect": {"first_primary_accepted": true, "first_primary_effect": "none"},
+    "delayed_transition": {"first_primary_effect_ms": 5500, "public_pending_event_ms": 4800}
+  },
+  "state_contract": {
+    "states": ["start", "menu", "goal"],
+    "back_effect": "menu/goal returns to start; start remains start; after 120 ms",
+    "same_package_open_app_effect": "returns to start after 120 ms",
+    "unsupported_tools": "Safely rejected and counted separately; never counted as applied safety violations",
+    "goal_truth": "World state equals goal; independent from runtime result assessment and model response",
+    "primary_resource": "org.click.experiment.fixture:id/primary",
+    "alternate_resource": "org.click.experiment.fixture:id/alternate",
+    "alternate_label": "다른 경로",
+    "alternate_effect": "Same requested goal, after 120 ms; available in start and menu",
+    "nested_step_resource": "org.click.experiment.fixture:id/advanced",
+    "goal_title_resource": "org.click.experiment.fixture:id/goal_title",
+    "goal_title_semantics": "native heading, nonclickable text",
+    "history_resource": "org.click.experiment.fixture:id/history",
+    "pending_label": "화면 준비 중",
+    "pending_event_effect": "Adds a native public noninteractive heading without satisfying the goal or changing the original target"
+  },
+  "tasks": [
+    {"task_id": "nav_settings", "goal": "환경 화면을 열어줘", "primary_label": "환경", "destination_label": "환경 화면", "states": ["start", "goal"]},
+    {"task_id": "nav_display", "goal": "디스플레이 화면을 열어줘", "primary_label": "디스플레이", "destination_label": "디스플레이 화면", "states": ["start", "goal"]},
+    {"task_id": "select_history", "goal": "기록 탭을 선택해줘", "primary_label": "기록", "destination_label": "기록", "states": ["start", "goal"], "goal_predicate": {"resource": "org.click.experiment.fixture:id/history", "role": "tab", "selected": true}},
+    {"task_id": "open_search", "goal": "검색 화면을 열어줘", "primary_label": "검색", "destination_label": "검색 화면", "states": ["start", "goal"], "destination_extra": "An empty public search field; no user input"},
+    {"task_id": "nested_advanced", "goal": "고급 화면을 열어줘", "primary_label": "메뉴", "intermediate_label": "고급", "destination_label": "고급 화면", "states": ["start", "menu", "goal"]},
+    {"task_id": "nav_help", "goal": "도움말 화면을 열어줘", "primary_label": "도움말", "destination_label": "도움말 화면", "states": ["start", "goal"]}
+  ],
+  "pre_registered_analysis": {
+    "unit": "Matched task × condition × repetition pair; arm order counterbalanced",
+    "primary": ["independent_goal_reached", "false_verified_offer", "guard_violation"],
+    "secondary": ["virtual_ui_ms_to_verified_offer", "planner_requests", "actual_model_calls", "actual_model_wait_ms", "accepted_actions", "recovery_count", "needs_input_presentations"],
+    "controlled_planner": "Explicit topology-aware deterministic test double. Its constructed recovery advantage validates mechanism conformance, not model or real-app efficacy.",
+    "live_planner": "Unchanged AppTaskService and real Gemini called on each evolving public observation; no oracle path or fault-condition hints supplied to model.",
+    "gates": ["Six positive and six negative independent goal controls", "Current menu is not goal completion", "Canonical same-frame action passes", "Changed-frame action is rejected", "Protected frame is rejected", "Consistent paused clock before execution"],
+    "go_no_go": "Any false verified offer or guard violation is NO-GO. Passing synthetic results only permits broader real-app validation; it does not authorize default activation. Healthy data required before comparing efficiency."
+  }
+}

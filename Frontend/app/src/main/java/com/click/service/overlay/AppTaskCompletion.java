@@ -1,6 +1,8 @@
 package com.click.service.overlay;
 
 import com.click.data.snapshot.AppTaskObservation;
+import com.click.data.snapshot.AccessibilityNodeSnapshot;
+import com.click.data.snapshot.ScreenSnapshot;
 import org.json.*;
 import java.util.*;
 
@@ -14,7 +16,7 @@ public final class AppTaskCompletion {
         if(completion==null||completion.length()!=1)return false;
         JSONArray checks=completion.optJSONArray("checks");
         if(checks==null||checks.length()<1||checks.length()>8)return false;
-        String packageName=null;
+        String packageName=null;Set<String> unique=new HashSet<>();
         for(int i=0;i<checks.length();i++){
             JSONObject c=checks.optJSONObject(i);if(c==null)return false;
             for(Iterator<String> k=c.keys();k.hasNext();)if(!FIELDS.contains(k.next()))return false;
@@ -28,6 +30,7 @@ public final class AppTaskCompletion {
                     ||!Set.of("","button","text_field","list","tab","toggle","text","image","unknown").contains(role))return false;
             if(!c.isNull("checked")&&(!(c.opt("checked") instanceof Boolean)||!"toggle".equals(role)))return false;
             if(!c.isNull("selected")&&(!(c.opt("selected") instanceof Boolean)||!Set.of("tab","toggle","button").contains(role)))return false;
+            if(!unique.add(checkKey(c)))return false;
         }
         return true;
     }
@@ -48,6 +51,66 @@ public final class AppTaskCompletion {
             checks.add(key.toString());
         }
         Collections.sort(checks);return AppTaskObservation.hash(String.join("\n",checks));
+    }
+
+    private static String checkKey(JSONObject check){
+        StringBuilder key=new StringBuilder();
+        for(String field:List.of("package","label","resource","role","checked","selected"))
+            key.append(check.isNull(field)?"":check.optString(field)).append('\n');
+        return key.toString();
+    }
+
+    /** Refining an unseen selector cannot drop clauses or reverse a desired native state. */
+    public static boolean preservesRequirements(JSONObject previous,JSONObject candidate){
+        if(!valid(previous)||!valid(candidate))return false;
+        JSONArray old=previous.optJSONArray("checks"),next=candidate.optJSONArray("checks");
+        if(next.length()<old.length()||!old.optJSONObject(0).optString("package").equals(next.optJSONObject(0).optString("package")))return false;
+        Set<Integer> used=new HashSet<>();
+        for(int i=0;i<old.length();i++){
+            JSONObject requirement=old.optJSONObject(i);
+            if(requirement.isNull("checked")&&requirement.isNull("selected"))continue;
+            boolean retained=false;
+            for(int j=0;j<next.length();j++){
+                if(used.contains(j))continue;
+                JSONObject check=next.optJSONObject(j);
+                if(!requirement.optString("role").equals(check.optString("role")))continue;
+                if(!requirement.optString("resource").isEmpty()){
+                    if(!requirement.optString("resource").equals(check.optString("resource")))continue;
+                }else if(!requirement.optString("label").equals(check.optString("label")))continue;
+                boolean same=true;
+                for(String state:List.of("checked","selected"))if(!requirement.isNull(state)&&!requirement.opt(state).equals(check.opt(state)))same=false;
+                if(same){used.add(j);retained=true;break;}
+            }
+            if(!retained)return false;
+        }
+        return true;
+    }
+
+    /** A prediction's known wrong direction is not part of the immutable user goal. */
+    public static JSONObject releaseInvalidNativeDirections(String goal,JSONObject requirements)throws JSONException {
+        JSONObject copy=new JSONObject(requirements.toString());JSONArray checks=copy.getJSONArray("checks");
+        if(!deselectionGoal(goal))for(int i=0;i<checks.length();i++){
+            JSONObject check=checks.getJSONObject(i);
+            if(Boolean.FALSE.equals(check.opt("selected")))check.remove("selected");
+        }
+        return copy;
+    }
+
+    /** Different selector spellings for the same native fact cannot manufacture extra clauses. */
+    public static boolean distinctProofTargets(JSONObject completion,JSONObject screen){
+        if(!valid(completion)||screen==null)return false;
+        Set<String> used=new HashSet<>();JSONArray checks=completion.optJSONArray("checks"),nodes=screen.optJSONArray("nodes");
+        for(int i=0;i<checks.length();i++){
+            JSONObject check=checks.optJSONObject(i),found=null;
+            for(int j=0;nodes!=null&&j<nodes.length();j++){
+                JSONObject node=nodes.optJSONObject(j);if(node==null||!"accessibility".equals(node.optString("source")))continue;
+                boolean matches=true;
+                for(String field:List.of("label","resource","role"))if(!check.optString(field).isEmpty()&&!check.optString(field).equals(node.optString(field)))matches=false;
+                if(matches){if(found!=null)return false;found=node;}
+            }
+            if(found==null||!used.add(found.optString("id")))return false;
+        }
+        return true;
     }
 
     public static Verdict check(JSONObject completion,JSONObject screen) {
@@ -75,5 +138,70 @@ public final class AppTaskCompletion {
             }
         }
         return Verdict.MATCHED;
+    }
+
+    /**
+     * Action expectations can describe a button becoming visible. A goal result
+     * needs destination evidence or a desired native state, not that same button.
+     * This gate is local: a model response cannot opt out of it.
+     */
+    public static Verdict checkForGoal(String goal,JSONObject completion,JSONObject screen,ScreenSnapshot nativeScreen) {
+        Verdict verdict=check(completion,screen);
+        return verdict==Verdict.MATCHED&&(unsafeForGoal(goal,completion,screen,nativeScreen)||!distinctProofTargets(completion,screen))?Verdict.UNKNOWN:verdict;
+    }
+
+    /** Only reject known unsafe evidence; an unseen future destination can bind. */
+    public static boolean unsafeForGoal(String goal,JSONObject completion,JSONObject screen,ScreenSnapshot nativeScreen) {
+        if(!valid(completion)||screen==null||!"public".equals(screen.optString("status")))return false;
+        JSONArray checks=completion.optJSONArray("checks"),nodes=screen.optJSONArray("nodes");
+        if(nodes==null)return false;
+        for(int i=0;i<checks.length();i++){
+            JSONObject c=checks.optJSONObject(i);
+            if(!c.optString("package").equals(screen.optString("package")))continue;
+            // A false selected state needs an explicit request to deselect/close.
+            // Otherwise an untouched tab could "prove" even a paraphrased open goal.
+            if(Boolean.FALSE.equals(c.opt("selected"))&&!deselectionGoal(goal))return true;
+            if(!c.isNull("checked")||!c.isNull("selected"))continue;
+            String role=c.optString("role");
+            if(Set.of("button","tab","toggle","list").contains(role))return true;
+            if("text_field".equals(role)&&!searchOpenGoal(goal))return true;
+            boolean found=false,safe=false;
+            for(int j=0;j<nodes.length();j++){
+                JSONObject n=nodes.optJSONObject(j);
+                if(n==null||!"accessibility".equals(n.optString("source")))continue;
+                boolean matches=true;for(String key:List.of("label","resource","role"))
+                    if(!c.optString(key).isEmpty()&&!c.optString(key).equals(n.optString(key)))matches=false;
+                if(!matches)continue;
+                found=true;
+                if("text_field".equals(n.optString("role"))||n.optBoolean("editable")){
+                    if(searchOpenGoal(goal))safe=true;
+                }else if("text".equals(n.optString("role"))&&!n.optBoolean("clickable")&&!n.optBoolean("scrollable")
+                        &&!actionableAncestor(n.optString("id"),nativeScreen))safe=true;
+            }
+            if(found&&!safe)return true;
+        }
+        return false;
+    }
+
+    private static boolean navigationGoal(String goal){return normalizedGoal(goal).matches(".*(?:열|이동|진입|들어|접속|화면|보여|보기|띄워|켜|확인|open|show|view|navigate|go to|switch to|bring up|launch).*");}
+    private static boolean deselectionGoal(String goal){return normalizedGoal(goal).matches(".*(?:해제|취소|끄|꺼|닫|접어|접기|unselect|deselect|disable|turn off|close|collapse).*");}
+    private static boolean searchOpenGoal(String goal){
+        String value=normalizedGoal(goal);
+        return navigationGoal(value)&&value.matches(".*(?:검색|search).*")
+            &&!value.matches(".*(?:입력|검색어|결과|찾아|그리고|다음|하고|열고|열어서|한 뒤|type|enter|query|results|then|and ).*");
+    }
+    private static String normalizedGoal(String goal){return goal==null?"":goal.toLowerCase(Locale.ROOT);}
+    private static boolean actionableAncestor(String id,ScreenSnapshot screen){
+        if(screen==null)return false;
+        Map<String,AccessibilityNodeSnapshot> byId=new HashMap<>();for(var n:screen.nodes)byId.put(n.nodeId,n);
+        AccessibilityNodeSnapshot current=byId.get(id);Set<String> seen=new HashSet<>();
+        // A native page heading may be under a broad clickable layout, such as
+        // a background listener that dismisses the keyboard. It is still a heading.
+        if(current!=null&&current.heading)return false;
+        while(current!=null&&current.parentId!=null&&seen.add(current.nodeId)){
+            current=byId.get(current.parentId);
+            if(current!=null&&(current.clickable||AppTaskObservation.searchField(current)))return true;
+        }
+        return false;
     }
 }
