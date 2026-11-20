@@ -1,0 +1,13 @@
+{
+  "schema_version": "click.native-settings-interpretation.v1",
+  "primary_and_cost_basis": "all36 frozen episodes and81 directly joined server terminal records",
+  "first_goal_arrival_time": "NOT_RECORDED",
+  "late_goal_after_budget": "GOAL_PRESENT_AFTER_CUTOFF; not necessarily first achieved late",
+  "stable_goal_secondary": "UNEQUAL_TERMINAL_OBSERVATION_DWELL; do not attribute 4vs6 to policy benefit",
+  "completion_failure_root_cause": "NOT_IDENTIFIABLE_FROM_RETAINED_CANDIDATE_OR_ASSESSMENT_REASONS",
+  "blocked_proposal_action_types": "NOT_RETAINED; do not equate contract rejection with setting mutation",
+  "false_verified_offer_zero": "NO_VERIFIED_OFFERS_OBSERVED; not precision proof",
+  "ui_changes": "NO_PRODUCTION_FE_CHANGES",
+  "primary_verdict": "NO_GO_FOR_DEFAULT_B",
+  "scope": "one actual Settings app on emulator; one repeat; no human participants"
+}

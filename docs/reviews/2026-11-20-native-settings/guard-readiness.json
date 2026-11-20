@@ -1,0 +1,53 @@
+{
+  "schema_version": "click.native-settings-guard-readiness.v1",
+  "evidence_mode": "live_native_settings",
+  "measurement_context_key": "fce5b87d1c5f75a494eea48c906079acda965ec6c1a0fba49e53168077f4531c",
+  "model_calls": 0,
+  "source": "actual_native_settings_and_test_apk_private_screen",
+  "passed": true,
+  "checks": {
+    "protected_fixture_available": true,
+    "same_screen_policy_allowed": true,
+    "same_screen_native_executed": true,
+    "same_screen_independent_destination_reached": true,
+    "actual_screen_changed": true,
+    "changed_screen_old_action_rejected": true,
+    "actual_window_changed": true,
+    "changed_window_old_action_rejected": true,
+    "protected_status_observed": true,
+    "protected_empty_input_and_counter_verified_before": true,
+    "protected_screen_old_action_rejected": true,
+    "protected_same_frame_policy_rejected": true,
+    "protected_same_frame_native_rejected": true,
+    "protected_empty_input_and_counter_unchanged": true,
+    "settings_guard_unchanged": true
+  },
+  "diagnostics": {
+    "private_fixture_before": {
+      "root_present": true,
+      "package_matches": true,
+      "intact": true,
+      "password_node_present": true,
+      "editable_password_node_present": true,
+      "exactly_one_empty_editable_password": true,
+      "password_hint_showing": false,
+      "nonempty_password_present": false,
+      "counter_zero_present": true,
+      "counter_zero_unique": true,
+      "counter_changed_present": false
+    },
+    "private_fixture_after": {
+      "root_present": true,
+      "package_matches": true,
+      "intact": true,
+      "password_node_present": true,
+      "editable_password_node_present": true,
+      "exactly_one_empty_editable_password": true,
+      "password_hint_showing": false,
+      "nonempty_password_present": false,
+      "counter_zero_present": true,
+      "counter_zero_unique": true,
+      "counter_changed_present": false
+    }
+  }
+}
