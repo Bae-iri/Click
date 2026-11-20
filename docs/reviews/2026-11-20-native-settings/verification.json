@@ -56,8 +56,10 @@
     "instrumentation_apk": "PASSED",
     "lint_debug": "PASSED",
     "unit_test_classes": 22,
-    "unit_tests_passed": 142,
+    "unit_tests_passed": 144,
     "unit_tests_failed": 0,
-    "duration_seconds": 22
+    "android_duration_seconds": 15,
+    "related_backend_tests_passed": 191,
+    "experience_tests_passed": 16
   }
 }
