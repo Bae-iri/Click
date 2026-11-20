@@ -269,11 +269,13 @@ public class MetaControllerClosedLoopExperimentTest {
         trace.put("response_identity_bound",bound);
         if(!bound){
             trace.put("model_call_state","unknown").put("model_calls",JSONObject.NULL).put("model_wait_ms",JSONObject.NULL);
-            for(String key:List.of("planning_mode","failure_kind","failure_stage","reason_code","validation_errors"))trace.remove(key);
+            for(String key:List.of("planning_mode","failure_kind","failure_stage","reason_code","validation_errors",
+                    "completion_grounding","completion_deferred_reason","provider_budget_ms","provider_attempt_limit"))trace.remove(key);
             return false;
         }
         JSONObject safe=AppTaskDiagnostics.receipt(request,response,200,null,0,0,0);
-        for(String key:List.of("planning_mode","failure_kind","failure_stage","reason_code","validation_errors"))
+        for(String key:List.of("planning_mode","failure_kind","failure_stage","reason_code","validation_errors",
+                "completion_grounding","completion_deferred_reason","provider_budget_ms","provider_attempt_limit"))
             if(safe.has(key))trace.put(key,safe.get(key));
         return true;
     }

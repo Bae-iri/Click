@@ -1,0 +1,150 @@
+{
+  "schema_version": "click.synthetic-closed-loop-summary.v1",
+  "evidence_mode": "live_model_synthetic_closed_loop",
+  "real_apps_tested": false,
+  "total_episodes": 12,
+  "valid_matched_pairs": 6,
+  "invalid_pairs": [],
+  "readiness_passed": true,
+  "frozen_matrix_complete": false,
+  "healthy_data": false,
+  "expected_episodes": 72,
+  "expected_matched_pairs": 36,
+  "arms": {
+    "A": {
+      "episodes": 6,
+      "goals": 6,
+      "verified_offers": 2,
+      "false_verified_offers": 0,
+      "guard_violations": 0,
+      "actual_model_calls": 11,
+      "actual_model_wait_ms": 56308,
+      "planner_requests": 11,
+      "accepted_actions": 7,
+      "recovery_count": 0,
+      "needs_input_presentations": 1,
+      "canonical_rejections": 0,
+      "gateway_errors": 0,
+      "unsupported_tools": 0,
+      "unknown_model_call_requests": 0,
+      "model_call_count_complete": true,
+      "listener_errors": 0,
+      "provider_or_plan_errors": 3,
+      "primary_action_seen": 6,
+      "fault_injected": 0,
+      "modeled_ui_median_ms_to_verified_offer": 650.0
+    },
+    "B": {
+      "episodes": 6,
+      "goals": 6,
+      "verified_offers": 1,
+      "false_verified_offers": 0,
+      "guard_violations": 0,
+      "actual_model_calls": 12,
+      "actual_model_wait_ms": 70835,
+      "planner_requests": 12,
+      "accepted_actions": 7,
+      "recovery_count": 0,
+      "needs_input_presentations": 0,
+      "canonical_rejections": 0,
+      "gateway_errors": 0,
+      "unsupported_tools": 0,
+      "unknown_model_call_requests": 0,
+      "model_call_count_complete": true,
+      "listener_errors": 0,
+      "provider_or_plan_errors": 5,
+      "primary_action_seen": 6,
+      "fault_injected": 0,
+      "modeled_ui_median_ms_to_verified_offer": 650
+    }
+  },
+  "conditions": {
+    "normal": {
+      "A": {
+        "episodes": 6,
+        "goals": 6,
+        "verified_offers": 2,
+        "false_verified_offers": 0,
+        "guard_violations": 0,
+        "actual_model_calls": 11,
+        "actual_model_wait_ms": 56308,
+        "planner_requests": 11,
+        "accepted_actions": 7,
+        "recovery_count": 0,
+        "needs_input_presentations": 1,
+        "canonical_rejections": 0,
+        "gateway_errors": 0,
+        "unsupported_tools": 0,
+        "unknown_model_call_requests": 0,
+        "model_call_count_complete": true,
+        "listener_errors": 0,
+        "provider_or_plan_errors": 3,
+        "primary_action_seen": 6,
+        "fault_injected": 0,
+        "modeled_ui_median_ms_to_verified_offer": 650.0
+      },
+      "B": {
+        "episodes": 6,
+        "goals": 6,
+        "verified_offers": 1,
+        "false_verified_offers": 0,
+        "guard_violations": 0,
+        "actual_model_calls": 12,
+        "actual_model_wait_ms": 70835,
+        "planner_requests": 12,
+        "accepted_actions": 7,
+        "recovery_count": 0,
+        "needs_input_presentations": 0,
+        "canonical_rejections": 0,
+        "gateway_errors": 0,
+        "unsupported_tools": 0,
+        "unknown_model_call_requests": 0,
+        "model_call_count_complete": true,
+        "listener_errors": 0,
+        "provider_or_plan_errors": 5,
+        "primary_action_seen": 6,
+        "fault_injected": 0,
+        "modeled_ui_median_ms_to_verified_offer": 650
+      }
+    }
+  },
+  "fault_exposure_by_assigned_condition": {
+    "accepted_no_effect": {
+      "both_exposed": 0,
+      "A_only_exposed": 0,
+      "B_only_exposed": 0,
+      "neither_exposed": 0,
+      "recovery_comparison_status": "NOT_TESTED"
+    },
+    "delayed_transition": {
+      "both_exposed": 0,
+      "A_only_exposed": 0,
+      "B_only_exposed": 0,
+      "neither_exposed": 0,
+      "recovery_comparison_status": "NOT_TESTED"
+    }
+  },
+  "efficiency_comparison_status": "NOT_INTERPRETABLE_INCOMPLETE_OR_UNHEALTHY_DATA",
+  "paired_goal_outcomes": {
+    "both": 6,
+    "A_only": 0,
+    "B_only": 0,
+    "neither": 0
+  },
+  "paired_both_verified_count": 1,
+  "paired_median_modeled_ui_delta_B_minus_A_ms": 0,
+  "actual_models": [
+    "gemini-3.8-flash"
+  ],
+  "default_enablement_verdict": "NO_GO_FOR_DEFAULT_ENABLEMENT",
+  "next_validation_stage": "NO_GO_FIX_OR_CHARACTERIZE_FAILURES",
+  "reasons": [
+    "Synthetic fixtures do not establish generality, real-app success, user benefit or wall-clock speed.",
+    "Gemini decisions use evolving synthetic observations; findings remain synthetic and model variability is retained.",
+    "Assigned fault conditions and actual first-primary fault exposure are reported separately.",
+    "A next-stage GO requires the complete 72/36 matrix, healthy data in every condition, successful normal controls and matched fault exposure in both injected conditions.",
+    "Modeled UI waits and actual cloud call latency use separate clocks and must not be described as observed real-app latency.",
+    "All assigned matched episodes are included; model/provider/gateway failures are reported, not silently removed.",
+    "Two repetitions of six constructed workflows do not support population-level significance claims."
+  ]
+}

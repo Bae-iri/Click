@@ -31,6 +31,9 @@ public final class AppTaskDiagnostics {
         "ungrounded_result_state","completion_control","subgoals","changed_existing_plan","unknown_target",
         "not_clickable","not_editable","not_scrollable","unknown_tool","unselected_app","repeated_failed_action",
         "expectation","ungrounded_expected_state","result_only_action_forbidden","result_only_progress_forbidden");
+    private static final Set<String> PROVIDER_CODES=Set.of("provider_invalid_request","provider_invalid_budget",
+        "provider_capacity_exhausted","provider_startup_failed","provider_deadline_exceeded","provider_timeout",
+        "provider_transport_error","provider_response_too_large","provider_protocol_error","provider_worker_failed","provider_cleanup_failed");
     private static final Set<String> VALIDATION_FIELDS=Set.of("checks","package","label","resource","role","checked","selected",
         "id","title","status","expectation","kind","bounds","tool","target_id","advances_subgoal","screen_key","index","other","contract");
     private static final Set<String> VALIDATION_TYPES=Set.of("missing","extra_forbidden","literal_error","value_error",
@@ -85,7 +88,12 @@ public final class AppTaskDiagnostics {
                 copyEnum(out,diagnostic,"planning_mode",Set.of("next_action","result_only"));
                 copyEnum(out,diagnostic,"failure_kind",FAILURE_KINDS);
                 copyEnum(out,diagnostic,"failure_stage",FAILURE_STAGES);
-                copyEnum(out,diagnostic,"reason_code",REASON_CODES);
+                copyEnum(out,diagnostic,"reason_code",REASON_CODES);copyEnum(out,diagnostic,"reason_code",PROVIDER_CODES);
+                copyEnum(out,diagnostic,"completion_grounding",Set.of("deferred_actionable_proof","deferred_unobserved_result","deferred_invalid_contract"));
+                copyEnum(out,diagnostic,"completion_deferred_reason",Set.of("completion_contract_invalid"));
+                Object budget=diagnostic.opt("provider_budget_ms");
+                if(budget instanceof Number){double n=((Number)budget).doubleValue();if(Double.isFinite(n)&&n>=0&&n<=9000)out.put("provider_budget_ms",n);}
+                if(Integer.valueOf(1).equals(diagnostic.opt("provider_attempt_limit")))out.put("provider_attempt_limit",1);
                 JSONArray errors=diagnostic.optJSONArray("validation_errors"),safeErrors=new JSONArray();
                 for(int i=0;errors!=null&&i<Math.min(4,errors.length());i++){
                     JSONObject error=errors.optJSONObject(i);if(error==null)continue;
