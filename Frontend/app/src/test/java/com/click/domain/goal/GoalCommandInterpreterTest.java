@@ -97,7 +97,7 @@ public class GoalCommandInterpreterTest {
 
     @Test public void classifiesSettingsAndGovernmentGoalsFromSharedCatalog() throws Exception {
         GoalCatalogClassifier catalog = loadCatalog();
-        assertEquals(131, catalog.size());
+        assertEquals(139, catalog.size());
 
         GoalCommandInterpreter.Result font = GoalCommandInterpreter.interpret(
                 "글씨가 너무 커서 좀 작게 해 줘", false, false, false, catalog, "com.android.settings");

@@ -203,7 +203,7 @@ class GoalPreparationService:
             rejection_reason = 'unsupported_app' if match['target_app'] not in supported_apps else 'unsupported'
             family, values = None, {}
         named_app = self.requirements.explicit_values(source).get('app_name')
-        if (not model_context and match is None and not public_guide_type and not any(g['target_app']=='coupang' for g in self.catalog['goals'])
+        if (not model_context and match is None and not public_guide_type and not any(g['target_app']=='coupang' and g.get('execution_status')=='approved' for g in self.catalog['goals'])
                 and (named_app=='쿠팡' or request.device_context.foreground_package=='com.coupang.mobile')):
             rejection_reason='unsupported_app'
             family, values=None, {}

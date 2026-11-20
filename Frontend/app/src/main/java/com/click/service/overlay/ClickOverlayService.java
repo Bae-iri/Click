@@ -3097,7 +3097,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         if (preserveTargetHelp(snapshot)) return;
         force = force || execution.observationRequested();
-        if (snapshot == null || (pendingVisionSnapshot == null && agentGateway.needsFreshObservation(snapshot))) {
+        boolean commerceObservation = execution.acceptedGoal() != null
+                && "coupang".equals(execution.acceptedGoal().optString("target_app"));
+        if (snapshot == null || (pendingVisionSnapshot == null && (commerceObservation
+                ? agentGateway.needsFreshObservation(snapshot, "commerce") : agentGateway.needsFreshObservation(snapshot)))) {
             waitForMissingScreen(); return;
         }
         // A fresh read is not yet an accepted observation. Preserve the retry

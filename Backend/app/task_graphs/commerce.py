@@ -10,10 +10,15 @@ from ai_agent.runtime.types import (
 def commerce_releases(catalog):
     tasks = DOCUMENT['tasks']
     goals = [g for g in catalog['goals'] if g['target_app'] == 'coupang']
-    if not goals and catalog.get('legacy_catalog') == 'legacy_coupang_goals.json':
-        # Preserve immutable releases for older clients and pinned sessions.
+    if catalog.get('legacy_catalog') == 'legacy_coupang_goals.json':
+        # Preserve immutable releases for older clients and pinned sessions. Goals the active
+        # catalog re-activates must be the archived contract unchanged, so one graph serves both.
         legacy = Path(__file__).resolve().parents[3] / 'AI-Agent/goal_catalog/legacy_coupang_goals.json'
-        goals = json.loads(legacy.read_text(encoding='utf-8'))['goals']
+        archived = json.loads(legacy.read_text(encoding='utf-8'))['goals']
+        by_type = {g['goal_type']: g for g in archived}
+        if any(by_type.get(g['goal_type']) != g for g in goals):
+            raise ValueError('Active Coupang goals must match their archived contract')
+        goals = archived
     if {g['goal_type'].removeprefix('coupang.') for g in goals} != set(tasks):
         raise ValueError('Coupang execution contract must cover the entire catalog')
     for goal in goals:
