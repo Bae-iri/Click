@@ -30,6 +30,8 @@ if (!(settingsExperimentArm in ["", "graph", "llm"])) throw new GradleException(
 if (settingsExperimentArm && !(clickApplicationId in ["com.click.settingsgraph", "com.click.settingsllm"]))
     throw new GradleException("Settings experiment requires its own application ID")
 def settingsExperimentLabel = settingsExperimentArm == "llm" ? "클릭 LLM 실험" : "클릭 그래프 실험"
+// Optional launcher/accessibility label for side-by-side test installs (e.g. "클릭 테스트").
+def clickAppLabelOverride = providers.gradleProperty("CLICK_APP_LABEL").getOrElse("").trim()
 def candidateDiagnostics = providers.gradleProperty("CLICK_CANDIDATE_DIAGNOSTICS").getOrElse("false")
 if (!(candidateDiagnostics in ["true", "false"])) throw new GradleException("CLICK_CANDIDATE_DIAGNOSTICS must be true or false")
 def releaseSigning = new Properties()
@@ -62,8 +64,8 @@ android {
         buildConfigField "String", "SETTINGS_EXPERIMENT_ARM", javaString(settingsExperimentArm)
         manifestPlaceholders.kakaoRedirectScheme = settingsExperimentArm ? "kakaosettingsexperiment${settingsExperimentArm}" : gov24Pilot ? "kakaounconfiguredgov24pilot" : "kakao${kakaoNativeAppKey ?: 'unconfigured'}"
         applicationId clickApplicationId
-        manifestPlaceholders.clickAppLabel = settingsExperimentArm ? settingsExperimentLabel : gov24Pilot ? "클릭 정부24 테스트" : "@string/app_name"
-        manifestPlaceholders.clickAccessibilityLabel = settingsExperimentArm ? settingsExperimentLabel : gov24Pilot ? "클릭 정부24 테스트" : "@string/accessibility_service_label"
+        manifestPlaceholders.clickAppLabel = clickAppLabelOverride ?: (settingsExperimentArm ? settingsExperimentLabel : gov24Pilot ? "클릭 정부24 테스트" : "@string/app_name")
+        manifestPlaceholders.clickAccessibilityLabel = clickAppLabelOverride ?: (settingsExperimentArm ? settingsExperimentLabel : gov24Pilot ? "클릭 정부24 테스트" : "@string/accessibility_service_label")
         minSdk 26
         targetSdk 36
         versionCode providers.gradleProperty("CLICK_VERSION_CODE").getOrElse("4").toInteger()

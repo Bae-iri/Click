@@ -938,6 +938,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void appTask(JSONObject result,java.util.function.Consumer<String> execute,Runnable refresh,Runnable tools,Runnable visual,Runnable finish,Runnable confirmed) {
         String state=result.optString("status");
         progress(null,null,result.optString("message"),false);
+        // General app tasks skip the review stage, so keep the received request visible here too.
+        if(requestSummary!=null){addRequestBox(requestSummary,null);View box=content.getChildAt(content.getChildCount()-1);content.removeView(box);content.addView(box,0);}
         final int revision=presentationRevision;
         Runnable refreshCurrent=()->{if(revision==presentationRevision)refresh.run();};
         Runnable toolsCurrent=()->{if(revision==presentationRevision)tools.run();};
