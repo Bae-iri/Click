@@ -96,6 +96,20 @@ public final class AppTaskObservation {
     public static JSONObject find(JSONObject screen,String id){JSONArray nodes=screen.optJSONArray("nodes");for(int i=0;nodes!=null&&i<nodes.length();i++){JSONObject n=nodes.optJSONObject(i);if(n!=null&&id.equals(n.optString("id")))return n;}return null;}
     public static String targetKey(JSONObject node){return hash(node.optString("role")+"\n"+node.optString("resource")+"\n"+node.optString("label"));}
     /** Stable across node paths, display geometry and clocks; no raw content is exported. */
+    /**
+     * Route-evidence key: interactive controls and their native state only. Static result/heading
+     * text (added when completion or expectation labels are projected) and scroll viewport hashes
+     * (animation, feed content) are excluded, so the same page keeps one key across the
+     * verification, result and recall projections. Mirrored by Backend screen_key().
+     */
+    public static String routeKey(JSONObject screen)throws JSONException {
+        List<String> keys=new ArrayList<>();JSONArray nodes=screen.getJSONArray("nodes");
+        for(int i=0;i<nodes.length();i++){JSONObject n=nodes.getJSONObject(i);String role=n.optString("role");
+            if(!n.optBoolean("clickable")&&!n.optBoolean("editable")&&!n.optBoolean("scrollable")&&!"toggle".equals(role)&&!"tab".equals(role))continue;
+            keys.add(targetKey(n)+"|"+(n.optBoolean("clickable")?"1":"0")+(n.optBoolean("editable")?"1":"0")+(n.optBoolean("scrollable")?"1":"0")
+                +"|"+(n.optBoolean("selected")?"1":"0")+"|"+(n.isNull("checked")?"null":String.valueOf(n.optBoolean("checked")))+"|"+(n.optBoolean("has_value")?"1":"0"));}
+        Collections.sort(keys);return hash("route.v2\n"+screen.optString("package")+"\n"+screen.optString("status")+"\n"+String.join("\n",keys));
+    }
     public static String learningKey(JSONObject screen)throws JSONException {
         List<String> keys=new ArrayList<>();JSONArray nodes=screen.getJSONArray("nodes");
         for(int i=0;i<nodes.length();i++){JSONObject n=nodes.getJSONObject(i);keys.add(targetKey(n)+"|"+(n.optBoolean("clickable")?"1":"0")+(n.optBoolean("editable")?"1":"0")+(n.optBoolean("scrollable")?"1":"0")

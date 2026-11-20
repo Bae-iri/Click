@@ -1,0 +1,12 @@
+{"arm": "A", "at_ms": 1795163188818, "experience_ref": null, "goal_variant": "original", "runtime_ref": "40afa72ae97279a135d9e9dc", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn1:A"}
+{"arm": "A", "at_ms": 1795163196722, "experience_ref": null, "goal_variant": "original", "runtime_ref": "40afa72ae97279a135d9e9dc", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn1:A"}
+{"arm": "B", "at_ms": 1795163200752, "experience_ref": null, "goal_variant": "original", "runtime_ref": "aa6b6711c54655b3fe0034ba", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn1:B"}
+{"arm": "B", "at_ms": 1795163225947, "experience_ref": "27e6d63ca4bc5a52dd678aed", "goal_variant": "original", "runtime_ref": "aa6b6711c54655b3fe0034ba", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn1:B"}
+{"arm": "C", "at_ms": 1795163228324, "experience_ref": null, "goal_variant": "original", "runtime_ref": "1a1575386e8846abe150edb8", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn1:C"}
+{"arm": "C", "at_ms": 1795163253522, "experience_ref": "0886e094522be2b3bd388a38", "goal_variant": "original", "runtime_ref": "1a1575386e8846abe150edb8", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn1:C"}
+{"arm": "B", "at_ms": 1795163255873, "experience_ref": null, "goal_variant": "original", "runtime_ref": "c1d57cd5ab76b88d9eeac885", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn2:B"}
+{"arm": "B", "at_ms": 1795163269217, "experience_ref": "affbc0ce9c6f75852bf091de", "goal_variant": "original", "runtime_ref": "c1d57cd5ab76b88d9eeac885", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn2:B"}
+{"arm": "C", "at_ms": 1795163271114, "experience_ref": null, "goal_variant": "original", "runtime_ref": "15aa0c2a20466f77210bc672", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn2:C"}
+{"arm": "C", "at_ms": 1795163296188, "experience_ref": "4ce1228fad73f41e9fd6f664", "goal_variant": "original", "runtime_ref": "15aa0c2a20466f77210bc672", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn2:C"}
+{"arm": "A", "at_ms": 1795163298544, "experience_ref": null, "goal_variant": "original", "runtime_ref": "d93d024c1e661282d40a288c", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn2:A"}
+{"arm": "A", "at_ms": 1795163305635, "experience_ref": null, "goal_variant": "original", "runtime_ref": "d93d024c1e661282d40a288c", "task_id": "chrome_menu", "trial_id": "devsmoke1:chrome_menu:learn2:A"}

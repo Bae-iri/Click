@@ -18,7 +18,7 @@ public final class AppTaskVerifier {
                 ||actionAt>0&&(before.optLong("captured_at_ms")>actionAt||after.optLong("captured_at_ms")<actionAt))return Verdict.UNKNOWN;
         JSONObject expectation=action.optJSONObject("expectation");if(expectation==null)return Verdict.WAITING;
         String expectedScreen=expectation.optString("screen_key");
-        if(!expectedScreen.isEmpty())try{if(!expectedScreen.equals(AppTaskObservation.learningKey(after)))return Verdict.WAITING;}catch(JSONException invalid){return Verdict.WAITING;}
+        if(!expectedScreen.isEmpty())try{if(!expectedScreen.equals(AppTaskObservation.routeKey(after)))return Verdict.WAITING;}catch(JSONException invalid){return Verdict.WAITING;}
         String kind=expectation.optString("kind");
         if("package_opened".equals(kind))return expectation.optString("package").equals(after.optString("package"))?Verdict.VERIFIED:Verdict.WAITING;
         if("protected".equals(after.optString("status")))return Verdict.PROTECTED;

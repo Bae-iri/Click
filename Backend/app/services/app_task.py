@@ -12,6 +12,18 @@ from app.services.goal_llm import _unique_object
 from app.services.settings_planner import model_name,provider_error
 
 
+def _holds(check,screen):
+    """True when the check already matches a visible native control on this screen."""
+    if check.package!=screen.package:return False
+    for n in screen.nodes:
+        if n.source!='accessibility':continue
+        if any(getattr(check,f) and getattr(check,f)!=getattr(n,f) for f in ('label','resource','role')):continue
+        if check.checked is not None and n.checked!=check.checked:continue
+        if check.selected is not None and n.selected!=check.selected:continue
+        return True
+    return False
+
+
 class AppTaskService:
     def __init__(self,sender=None,memory=None): self.sender,self.memory=sender,memory
 
@@ -91,6 +103,8 @@ class AppTaskService:
             'open_app can only use an explicitly selected app. For expected_label, name a control expected AFTER this action, or empty '
             'if only a screen/selection change can be checked. Do not repeat failed tool/target pairs on the same screen. '
             'Define completion_checks for the FINAL requested result, not an intermediate page or the next button. '
+            'A completion check must NOT already hold on the current screen: never use a label that is visible now, such as the menu item or button you are about to tap. '
+            'Use a label that only the destination shows, or a native target whose checked/selected state must change. '
             'All checks must hold together in the final app: exact public labels, or a native target with its required checked/selected state. '
             'Use target none for a future visible label. Never use private text, input values or authentication as a check. '
             'Native state checks must name an observed target; if it is not visible yet, leave completion_checks empty until it is observable. '
@@ -149,6 +163,10 @@ class AppTaskService:
                 if target and (target.editable or not target.label or label not in {'',target.label}):raise ValueError('completion_control')
                 bound.append(TaskResultCheck(package=package,label=target.label if target else label,
                     resource=target.resource if target else '',role=target.role if target else '',checked=want_checked,selected=want_selected))
+            # GoalContract: a postcondition already satisfied where it is bound cannot evidence
+            # the requested change (e.g. the menu item that is about to be tapped).
+            if bound and all(_holds(c,screen) for c in bound):
+                bound=[];diagnostic['completion_rejected']='satisfied_at_binding'
             if bound:response.completion=TaskCompletion(checks=bound)
             titles=answer['subgoals']
             if not isinstance(titles,list) or not 1<=len(titles)<=8 or any(not public_label(t) for t in titles):raise ValueError('subgoals')

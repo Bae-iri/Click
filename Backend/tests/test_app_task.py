@@ -209,3 +209,20 @@ def test_unobservable_unbound_or_private_final_results_are_rejected(check):
 def test_unobservable_result_remains_manual_and_confirm_is_not_technical_success():
     result=AppTaskService(sender(tool='confirm',completion_checks=[])).step(request())
     assert result.status=='confirm_result' and result.completion is None and result.action is None
+
+
+@pytest.mark.parametrize('check',[
+    dict(target='none',label='검색',app='none',checked='unknown',selected='unknown'),   # the control about to be tapped
+    dict(target='c0',label='검색',app='none',checked='unknown',selected='unknown')])    # bound to the visible control
+def test_completion_already_satisfied_where_it_is_bound_is_not_a_goal_contract(check):
+    result=AppTaskService(sender(completion_checks=[check])).step(request())
+    assert result.completion is None and result.action is not None
+    assert result.diagnostic['completion_rejected']=='satisfied_at_binding'
+
+
+def test_completion_needing_a_destination_label_or_state_change_is_kept():
+    req=request();req.screen.nodes[0].role='tab';req.screen.nodes[0].selected=False
+    future=AppTaskService(sender(completion_checks=[dict(target='none',label='목록',app='none',checked='unknown',selected='unknown')])).step(req)
+    assert future.completion.checks[0].label=='목록'
+    change=AppTaskService(sender(expected_selected='true',completion_checks=[dict(target='c0',label='검색',app='none',checked='unknown',selected='true')])).step(req)
+    assert change.completion.checks[0].selected is True and 'completion_rejected' not in change.diagnostic
