@@ -1,0 +1,8 @@
+{
+  "frozen_source_commit": "0ed757454abae3696c4c48d24b51e05d2853f8d3",
+  "source_sha256": {
+    "Backend/scripts/audit_meta_controller_settings_provider.py": "f4c59af4092d13bb004aecb6b7c184f8794e4c41fe3cdee2dfa2691a482577f9",
+    "Backend/scripts/summarize_meta_controller_settings.py": "f618db350a49011969cf12c9894c824a393c3772e1991090b7b1c64d91005e1d"
+  },
+  "analysis_completed_before_performance_improvement_edits": true
+}

@@ -1,0 +1,6 @@
+{
+  "measured_source_commit": "0ed757454abae3696c4c48d24b51e05d2853f8d3",
+  "user_remote_merge_after_measurement": "11f63f5",
+  "final_measurement_closure": "cohort-closure.json",
+  "performance_scope": "measured frozen source only; later integration and B2 changes are not retroactive performance results"
+}
