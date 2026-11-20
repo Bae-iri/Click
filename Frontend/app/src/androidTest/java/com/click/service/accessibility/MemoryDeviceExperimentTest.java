@@ -203,6 +203,14 @@ public class MemoryDeviceExperimentTest {
             long elapsed=SystemClock.elapsedRealtime()-started;int finalMatches=goalCount(session.automation,task);
             if(finalMatches<0&&!result.optBoolean("oracle_success"))result.put("oracle_success",JSONObject.NULL);
             if(result.optBoolean("oracle_success")){
+                // A real user reads the panel before answering: give the runtime up to verifyWaitMs
+                // on the reached goal to offer its own verified result before confirming.
+                long verifyWait=Long.parseLong(args.getString("verifyWaitMs","0")),goalAt=SystemClock.elapsedRealtime();
+                result.put("verify_wait_ms",verifyWait);
+                while(!current.runtimeVerifiedOffer&&SystemClock.elapsedRealtime()-goalAt<verifyWait&&current.error==null){
+                    instrumentation.runOnMainSync(current::poll);SystemClock.sleep(100);
+                }
+                result.put("runtime_verified_after_goal_ms",current.runtimeVerifiedOffer?SystemClock.elapsedRealtime()-goalAt:JSONObject.NULL);
                 // Truthful simulated user: confirm only what the independent oracle observed.
                 long until=SystemClock.elapsedRealtime()+5000;
                 while(!current.confirmed&&current.confirmFailure==null&&SystemClock.elapsedRealtime()<until){

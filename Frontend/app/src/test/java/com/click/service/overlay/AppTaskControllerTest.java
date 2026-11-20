@@ -215,6 +215,16 @@ public class AppTaskControllerTest {
         assertEquals("confirm_result",l.result.getString("status"));assertEquals("verified",l.result.getJSONObject("result_assessment").getString("status"));
         assertEquals(id,m.id());assertEquals(plan,m.state().getJSONArray("subgoals").toString());assertFalse(m.finished());assertEquals(0,l.executions);c.close();
     }
+    @Test public void ambiguousPredictedContractIsReleasedSoTheDestinationTitleCanBind()throws Exception {
+        String pkg="com.android.settings";Listener l=new Listener();l.advanceObservationClock=true;
+        // The predicted "밝기" appears twice on the reached page, so it can never become evidence there.
+        l.current=screen(pkg,AppTaskGoalCompletionTest.heading(pkg,"title","디스플레이"),
+            AppTaskGoalCompletionTest.heading(pkg,"a","밝기"),AppTaskGoalCompletionTest.heading(pkg,"b","밝기"));
+        AppTaskMemory original=new AppTaskMemory("디스플레이 설정 열어줘");original.localPlan();original.completion(AppTaskCompletionTest.completion(pkg,"밝기"));
+        AppTaskMemory m=new AppTaskMemory(original.stored());String id=m.id();
+        var c=new AppTaskController(mock(AppGuideGateway.class),m,null,l,true,false,true);c.refresh();
+        assertNull(m.completion());assertEquals(id,m.id());assertFalse(m.finished());assertEquals(0,l.executions);c.close();
+    }
     @Test public void manualTapOnATargetsLabelChildIsCorrelatedButAnUnrelatedChildIsIgnored()throws Exception {
         String pkg="org.example.app";Listener l=new Listener();l.advanceObservationClock=true;
         AccessibilityNodeSnapshot child=new AccessibilityNodeSnapshot("label","row",true,pkg,"검색",null,"label_resource","android.widget.TextView",null,new int[]{20,30,300,100},false,true,false,false,false,null,42);
