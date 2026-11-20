@@ -199,6 +199,8 @@ class AppTaskService:
             'open_app can only use an explicitly selected app. For expected_label, name a control expected AFTER this action, or empty '
             'if only a screen/selection change can be checked. Do not repeat failed tool/target pairs on the same screen. '
             'Define completion_checks for the FINAL requested result, not an intermediate page or the next button. '
+            'Never use the control you are about to tap, or a menu item that only leads to the result, as a completion check; '
+            'prefer a label that the destination itself shows, or a native target whose checked/selected state must change. '
             'All checks must hold together in the final app: exact public labels, or a native target with its required checked/selected state. '
             'For opening or navigating, require a non-actionable destination heading or unique destination text, '
             'or the requested tab selected=true. A currently visible menu entry/button is NEVER evidence that its destination is open, '

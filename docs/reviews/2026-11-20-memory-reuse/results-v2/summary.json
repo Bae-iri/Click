@@ -1,0 +1,1312 @@
+{
+  "schema_version": "memory-reuse-summary.v1",
+  "episodes": 216,
+  "budget_ms": 25000,
+  "by_arm_phase": {
+    "A/learn": {
+      "scheduled": 36,
+      "ready": 34,
+      "oracle_success": 11,
+      "success_rate": 0.3056,
+      "success_rate_ready": 0.3235,
+      "mean_penalized_time_ms": 19021.2,
+      "mean_success_time_ms": 5432.9,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 34,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 8,
+      "false_verified_offers": 4,
+      "user_confirmed": 11,
+      "outcomes": {
+        "goal_observed": 11,
+        "budget_exhausted": 19,
+        "runtime_offer_without_goal": 4,
+        "setup_failure": 2
+      }
+    },
+    "A/retain": {
+      "scheduled": 12,
+      "ready": 11,
+      "oracle_success": 4,
+      "success_rate": 0.3333,
+      "success_rate_ready": 0.3636,
+      "mean_penalized_time_ms": 18865.8,
+      "mean_success_time_ms": 6597.2,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 11,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 2,
+      "false_verified_offers": 1,
+      "user_confirmed": 4,
+      "outcomes": {
+        "goal_observed": 4,
+        "runtime_offer_without_goal": 1,
+        "budget_exhausted": 6,
+        "setup_failure": 1
+      }
+    },
+    "A/mirror": {
+      "scheduled": 24,
+      "ready": 22,
+      "oracle_success": 12,
+      "success_rate": 0.5,
+      "success_rate_ready": 0.5455,
+      "mean_penalized_time_ms": 15662.2,
+      "mean_success_time_ms": 6324.5,
+      "mean_model_calls": 1.091,
+      "total_model_calls": 24,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 9,
+      "false_verified_offers": 2,
+      "user_confirmed": 12,
+      "outcomes": {
+        "goal_observed": 12,
+        "runtime_offer_without_goal": 2,
+        "budget_exhausted": 8,
+        "setup_failure": 2
+      }
+    },
+    "B/learn": {
+      "scheduled": 36,
+      "ready": 33,
+      "oracle_success": 11,
+      "success_rate": 0.3056,
+      "success_rate_ready": 0.3333,
+      "mean_penalized_time_ms": 19429.1,
+      "mean_success_time_ms": 6767.8,
+      "mean_model_calls": 1.061,
+      "total_model_calls": 35,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 9,
+      "false_verified_offers": 3,
+      "user_confirmed": 11,
+      "outcomes": {
+        "budget_exhausted": 19,
+        "goal_observed": 11,
+        "runtime_offer_without_goal": 3,
+        "setup_failure": 3
+      }
+    },
+    "B/retain": {
+      "scheduled": 12,
+      "ready": 11,
+      "oracle_success": 3,
+      "success_rate": 0.25,
+      "success_rate_ready": 0.2727,
+      "mean_penalized_time_ms": 20081.2,
+      "mean_success_time_ms": 5324.7,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 11,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 4,
+      "false_verified_offers": 2,
+      "user_confirmed": 3,
+      "outcomes": {
+        "goal_observed": 3,
+        "runtime_offer_without_goal": 2,
+        "budget_exhausted": 6,
+        "setup_failure": 1
+      }
+    },
+    "B/mirror": {
+      "scheduled": 24,
+      "ready": 22,
+      "oracle_success": 6,
+      "success_rate": 0.25,
+      "success_rate_ready": 0.2727,
+      "mean_penalized_time_ms": 20395.3,
+      "mean_success_time_ms": 6581.3,
+      "mean_model_calls": 1.045,
+      "total_model_calls": 23,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 4,
+      "false_verified_offers": 2,
+      "user_confirmed": 6,
+      "outcomes": {
+        "goal_observed": 6,
+        "budget_exhausted": 14,
+        "runtime_offer_without_goal": 2,
+        "setup_failure": 2
+      }
+    },
+    "C/learn": {
+      "scheduled": 36,
+      "ready": 33,
+      "oracle_success": 12,
+      "success_rate": 0.3333,
+      "success_rate_ready": 0.3636,
+      "mean_penalized_time_ms": 18962.2,
+      "mean_success_time_ms": 6886.5,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 33,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 13,
+      "false_verified_offers": 5,
+      "user_confirmed": 12,
+      "outcomes": {
+        "goal_observed": 12,
+        "runtime_offer_without_goal": 5,
+        "budget_exhausted": 16,
+        "setup_failure": 3
+      }
+    },
+    "C/retain": {
+      "scheduled": 12,
+      "ready": 11,
+      "oracle_success": 4,
+      "success_rate": 0.3333,
+      "success_rate_ready": 0.3636,
+      "mean_penalized_time_ms": 19155.2,
+      "mean_success_time_ms": 7465.5,
+      "mean_model_calls": 1.091,
+      "total_model_calls": 12,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 3,
+      "false_verified_offers": 2,
+      "user_confirmed": 4,
+      "outcomes": {
+        "goal_observed": 4,
+        "runtime_offer_without_goal": 2,
+        "budget_exhausted": 5,
+        "setup_failure": 1
+      }
+    },
+    "C/mirror": {
+      "scheduled": 24,
+      "ready": 22,
+      "oracle_success": 9,
+      "success_rate": 0.375,
+      "success_rate_ready": 0.4091,
+      "mean_penalized_time_ms": 17758.5,
+      "mean_success_time_ms": 5689.4,
+      "mean_model_calls": 1.045,
+      "total_model_calls": 23,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 7,
+      "false_verified_offers": 2,
+      "user_confirmed": 9,
+      "outcomes": {
+        "goal_observed": 9,
+        "budget_exhausted": 11,
+        "runtime_offer_without_goal": 2,
+        "setup_failure": 2
+      }
+    }
+  },
+  "by_arm": {
+    "A": {
+      "scheduled": 72,
+      "ready": 67,
+      "oracle_success": 27,
+      "success_rate": 0.375,
+      "success_rate_ready": 0.403,
+      "mean_penalized_time_ms": 17875.6,
+      "mean_success_time_ms": 6001.7,
+      "mean_model_calls": 1.03,
+      "total_model_calls": 69,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 19,
+      "false_verified_offers": 7,
+      "user_confirmed": 27,
+      "outcomes": {
+        "goal_observed": 27,
+        "budget_exhausted": 33,
+        "runtime_offer_without_goal": 7,
+        "setup_failure": 5
+      }
+    },
+    "B": {
+      "scheduled": 72,
+      "ready": 66,
+      "oracle_success": 20,
+      "success_rate": 0.2778,
+      "success_rate_ready": 0.303,
+      "mean_penalized_time_ms": 19859.8,
+      "mean_success_time_ms": 6495.4,
+      "mean_model_calls": 1.045,
+      "total_model_calls": 69,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 17,
+      "false_verified_offers": 7,
+      "user_confirmed": 20,
+      "outcomes": {
+        "budget_exhausted": 39,
+        "goal_observed": 20,
+        "runtime_offer_without_goal": 7,
+        "setup_failure": 6
+      }
+    },
+    "C": {
+      "scheduled": 72,
+      "ready": 66,
+      "oracle_success": 25,
+      "success_rate": 0.3472,
+      "success_rate_ready": 0.3788,
+      "mean_penalized_time_ms": 18593.1,
+      "mean_success_time_ms": 6548.2,
+      "mean_model_calls": 1.03,
+      "total_model_calls": 68,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 23,
+      "false_verified_offers": 9,
+      "user_confirmed": 25,
+      "outcomes": {
+        "goal_observed": 25,
+        "runtime_offer_without_goal": 9,
+        "budget_exhausted": 32,
+        "setup_failure": 6
+      }
+    }
+  },
+  "by_arm_app": {
+    "A/com.android.chrome": {
+      "scheduled": 18,
+      "ready": 18,
+      "oracle_success": 11,
+      "success_rate": 0.6111,
+      "success_rate_ready": 0.6111,
+      "mean_penalized_time_ms": 13383.8,
+      "mean_success_time_ms": 5991.6,
+      "mean_model_calls": 1.111,
+      "total_model_calls": 20,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 4,
+      "false_verified_offers": 3,
+      "user_confirmed": 11,
+      "outcomes": {
+        "goal_observed": 11,
+        "budget_exhausted": 4,
+        "runtime_offer_without_goal": 3
+      }
+    },
+    "A/com.android.settings": {
+      "scheduled": 18,
+      "ready": 18,
+      "oracle_success": 11,
+      "success_rate": 0.6111,
+      "success_rate_ready": 0.6111,
+      "mean_penalized_time_ms": 13314.6,
+      "mean_success_time_ms": 5878.5,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 18,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 13,
+      "false_verified_offers": 4,
+      "user_confirmed": 11,
+      "outcomes": {
+        "goal_observed": 11,
+        "budget_exhausted": 3,
+        "runtime_offer_without_goal": 4
+      }
+    },
+    "A/com.google.android.youtube": {
+      "scheduled": 18,
+      "ready": 13,
+      "oracle_success": 1,
+      "success_rate": 0.0556,
+      "success_rate_ready": 0.0769,
+      "mean_penalized_time_ms": 23895.6,
+      "mean_success_time_ms": 5120.0,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 13,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 0,
+      "false_verified_offers": 0,
+      "user_confirmed": 1,
+      "outcomes": {
+        "budget_exhausted": 12,
+        "goal_observed": 1,
+        "setup_failure": 5
+      }
+    },
+    "A/com.sec.android.app.clockpackage": {
+      "scheduled": 18,
+      "ready": 18,
+      "oracle_success": 4,
+      "success_rate": 0.2222,
+      "success_rate_ready": 0.2222,
+      "mean_penalized_time_ms": 20908.6,
+      "mean_success_time_ms": 6588.5,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 18,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 2,
+      "false_verified_offers": 0,
+      "user_confirmed": 4,
+      "outcomes": {
+        "budget_exhausted": 14,
+        "goal_observed": 4
+      }
+    },
+    "B/com.android.chrome": {
+      "scheduled": 18,
+      "ready": 18,
+      "oracle_success": 9,
+      "success_rate": 0.5,
+      "success_rate_ready": 0.5,
+      "mean_penalized_time_ms": 15943.9,
+      "mean_success_time_ms": 6887.9,
+      "mean_model_calls": 1.111,
+      "total_model_calls": 20,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 5,
+      "false_verified_offers": 4,
+      "user_confirmed": 9,
+      "outcomes": {
+        "goal_observed": 9,
+        "budget_exhausted": 5,
+        "runtime_offer_without_goal": 4
+      }
+    },
+    "B/com.android.settings": {
+      "scheduled": 18,
+      "ready": 18,
+      "oracle_success": 11,
+      "success_rate": 0.6111,
+      "success_rate_ready": 0.6111,
+      "mean_penalized_time_ms": 13495.4,
+      "mean_success_time_ms": 6174.3,
+      "mean_model_calls": 1.056,
+      "total_model_calls": 19,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 12,
+      "false_verified_offers": 3,
+      "user_confirmed": 11,
+      "outcomes": {
+        "budget_exhausted": 4,
+        "goal_observed": 11,
+        "runtime_offer_without_goal": 3
+      }
+    },
+    "B/com.google.android.youtube": {
+      "scheduled": 18,
+      "ready": 12,
+      "oracle_success": 0,
+      "success_rate": 0.0,
+      "success_rate_ready": 0.0,
+      "mean_penalized_time_ms": 25000.0,
+      "mean_success_time_ms": null,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 12,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 0,
+      "false_verified_offers": 0,
+      "user_confirmed": 0,
+      "outcomes": {
+        "budget_exhausted": 12,
+        "setup_failure": 6
+      }
+    },
+    "B/com.sec.android.app.clockpackage": {
+      "scheduled": 18,
+      "ready": 18,
+      "oracle_success": 0,
+      "success_rate": 0.0,
+      "success_rate_ready": 0.0,
+      "mean_penalized_time_ms": 25000.0,
+      "mean_success_time_ms": null,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 18,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 0,
+      "false_verified_offers": 0,
+      "user_confirmed": 0,
+      "outcomes": {
+        "budget_exhausted": 18
+      }
+    },
+    "C/com.android.chrome": {
+      "scheduled": 18,
+      "ready": 18,
+      "oracle_success": 12,
+      "success_rate": 0.6667,
+      "success_rate_ready": 0.6667,
+      "mean_penalized_time_ms": 12808.9,
+      "mean_success_time_ms": 6713.4,
+      "mean_model_calls": 1.056,
+      "total_model_calls": 19,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 8,
+      "false_verified_offers": 5,
+      "user_confirmed": 12,
+      "outcomes": {
+        "goal_observed": 12,
+        "budget_exhausted": 1,
+        "runtime_offer_without_goal": 5
+      }
+    },
+    "C/com.android.settings": {
+      "scheduled": 18,
+      "ready": 18,
+      "oracle_success": 12,
+      "success_rate": 0.6667,
+      "success_rate_ready": 0.6667,
+      "mean_penalized_time_ms": 12572.3,
+      "mean_success_time_ms": 6358.4,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 18,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 14,
+      "false_verified_offers": 4,
+      "user_confirmed": 12,
+      "outcomes": {
+        "goal_observed": 12,
+        "runtime_offer_without_goal": 4,
+        "budget_exhausted": 2
+      }
+    },
+    "C/com.google.android.youtube": {
+      "scheduled": 18,
+      "ready": 12,
+      "oracle_success": 0,
+      "success_rate": 0.0,
+      "success_rate_ready": 0.0,
+      "mean_penalized_time_ms": 25000.0,
+      "mean_success_time_ms": null,
+      "mean_model_calls": 1.083,
+      "total_model_calls": 13,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 0,
+      "false_verified_offers": 0,
+      "user_confirmed": 0,
+      "outcomes": {
+        "budget_exhausted": 12,
+        "setup_failure": 6
+      }
+    },
+    "C/com.sec.android.app.clockpackage": {
+      "scheduled": 18,
+      "ready": 18,
+      "oracle_success": 1,
+      "success_rate": 0.0556,
+      "success_rate_ready": 0.0556,
+      "mean_penalized_time_ms": 23991.3,
+      "mean_success_time_ms": 6843.0,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 18,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 1,
+      "false_verified_offers": 0,
+      "user_confirmed": 1,
+      "outcomes": {
+        "budget_exhausted": 17,
+        "goal_observed": 1
+      }
+    }
+  },
+  "per_task": {
+    "A": {
+      "tasks": 12,
+      "pass_at_1": 5,
+      "pass_at_3": 5,
+      "learn_successes_ge_2": 4,
+      "failure_recovery": "0/7",
+      "per_task": {
+        "chrome_menu": "OOOOO.",
+        "chrome_new_tab": "OO.OOO",
+        "chrome_settings": "....O.",
+        "clock_stopwatch": "....OO",
+        "clock_timer": "....OO",
+        "clock_world": "......",
+        "settings_display": "OO.OOO",
+        "settings_notifications": "OOOOOO",
+        "settings_sound": "......",
+        "youtube_search": "O.....",
+        "youtube_shorts": "......",
+        "youtube_subscriptions": "......"
+      }
+    },
+    "B": {
+      "tasks": 12,
+      "pass_at_1": 3,
+      "pass_at_3": 5,
+      "learn_successes_ge_2": 4,
+      "failure_recovery": "2/9",
+      "per_task": {
+        "chrome_menu": "O.O...",
+        "chrome_new_tab": "OOOOOO",
+        "chrome_settings": "..O...",
+        "clock_stopwatch": "......",
+        "clock_timer": "......",
+        "clock_world": "......",
+        "settings_display": ".OOOOO",
+        "settings_notifications": "OOOOOO",
+        "settings_sound": "......",
+        "youtube_search": "......",
+        "youtube_shorts": "......",
+        "youtube_subscriptions": "......"
+      }
+    },
+    "C": {
+      "tasks": 12,
+      "pass_at_1": 4,
+      "pass_at_3": 5,
+      "learn_successes_ge_2": 4,
+      "failure_recovery": "1/8",
+      "per_task": {
+        "chrome_menu": "O.OOOO",
+        "chrome_new_tab": "OOOOOO",
+        "chrome_settings": ".....O",
+        "clock_stopwatch": "..O...",
+        "clock_timer": "......",
+        "clock_world": "......",
+        "settings_display": "OOOOOO",
+        "settings_notifications": "OOOOOO",
+        "settings_sound": "......",
+        "youtube_search": "......",
+        "youtube_shorts": "......",
+        "youtube_subscriptions": "......"
+      }
+    }
+  },
+  "paired": {
+    "B-A learn": {
+      "pairs": 33,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": 0.0303,
+        "cluster_bootstrap_95ci": [
+          -0.0606,
+          0.1212
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": -157.4545,
+        "cluster_bootstrap_95ci": [
+          -2188.3636,
+          1988.3939
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": 0.0606,
+        "cluster_bootstrap_95ci": [
+          0.0,
+          0.1818
+        ]
+      }
+    },
+    "B-A retain": {
+      "pairs": 11,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": -0.0909,
+        "cluster_bootstrap_95ci": [
+          -0.2727,
+          0.0
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": 1325.9091,
+        "cluster_bootstrap_95ci": [
+          -1066.5455,
+          5314.0909
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": 0.0,
+        "cluster_bootstrap_95ci": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "B-A mirror": {
+      "pairs": 22,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": -0.2727,
+        "cluster_bootstrap_95ci": [
+          -0.5,
+          -0.0455
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": 5163.3636,
+        "cluster_bootstrap_95ci": [
+          1442.5,
+          9702.9545
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": -0.0455,
+        "cluster_bootstrap_95ci": [
+          -0.2727,
+          0.1364
+        ]
+      }
+    },
+    "B-A retain+mirror": {
+      "pairs": 33,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": -0.2121,
+        "cluster_bootstrap_95ci": [
+          -0.3939,
+          -0.0606
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": 3884.2121,
+        "cluster_bootstrap_95ci": [
+          966.2121,
+          7389.7273
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": -0.0303,
+        "cluster_bootstrap_95ci": [
+          -0.1818,
+          0.0909
+        ]
+      }
+    },
+    "C-B learn": {
+      "pairs": 33,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": 0.0303,
+        "cluster_bootstrap_95ci": [
+          -0.0606,
+          0.1212
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": -509.3333,
+        "cluster_bootstrap_95ci": [
+          -2131.6667,
+          1029.7879
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": -0.0606,
+        "cluster_bootstrap_95ci": [
+          -0.1818,
+          0.0
+        ]
+      }
+    },
+    "C-B retain": {
+      "pairs": 11,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": 0.0909,
+        "cluster_bootstrap_95ci": [
+          0.0,
+          0.2727
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": -1010.1818,
+        "cluster_bootstrap_95ci": [
+          -4682.8182,
+          1244.0
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": 0.0909,
+        "cluster_bootstrap_95ci": [
+          0.0,
+          0.2727
+        ]
+      }
+    },
+    "C-B mirror": {
+      "pairs": 22,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": 0.1364,
+        "cluster_bootstrap_95ci": [
+          0.0,
+          0.3182
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": -2876.5,
+        "cluster_bootstrap_95ci": [
+          -6575.7727,
+          -342.2727
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": 0.0,
+        "cluster_bootstrap_95ci": [
+          -0.1364,
+          0.1364
+        ]
+      }
+    },
+    "C-B retain+mirror": {
+      "pairs": 33,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": 0.1212,
+        "cluster_bootstrap_95ci": [
+          0.0,
+          0.303
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": -2254.3939,
+        "cluster_bootstrap_95ci": [
+          -5727.2727,
+          0.0
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": 0.0303,
+        "cluster_bootstrap_95ci": [
+          -0.0606,
+          0.1515
+        ]
+      }
+    },
+    "C-A learn": {
+      "pairs": 33,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": 0.0606,
+        "cluster_bootstrap_95ci": [
+          -0.0606,
+          0.1818
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": -666.7879,
+        "cluster_bootstrap_95ci": [
+          -2712.0606,
+          1603.5758
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": 0.0,
+        "cluster_bootstrap_95ci": [
+          0.0,
+          0.0
+        ]
+      }
+    },
+    "C-A retain": {
+      "pairs": 11,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": 0.0,
+        "cluster_bootstrap_95ci": [
+          0.0,
+          0.0
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": 315.7273,
+        "cluster_bootstrap_95ci": [
+          -241.0,
+          845.6364
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": 0.0909,
+        "cluster_bootstrap_95ci": [
+          0.0,
+          0.2727
+        ]
+      }
+    },
+    "C-A mirror": {
+      "pairs": 22,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": -0.1364,
+        "cluster_bootstrap_95ci": [
+          -0.4091,
+          0.0909
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": 2286.8636,
+        "cluster_bootstrap_95ci": [
+          -1919.8636,
+          7413.7273
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": -0.0455,
+        "cluster_bootstrap_95ci": [
+          -0.1364,
+          0.0
+        ]
+      }
+    },
+    "C-A retain+mirror": {
+      "pairs": 33,
+      "task_clusters": 11,
+      "success": {
+        "mean_diff_right_minus_left": -0.0909,
+        "cluster_bootstrap_95ci": [
+          -0.2727,
+          0.0606
+        ]
+      },
+      "penalized_time_ms": {
+        "mean_diff_right_minus_left": 1629.8182,
+        "cluster_bootstrap_95ci": [
+          -1086.3939,
+          4981.3939
+        ]
+      },
+      "model_calls": {
+        "mean_diff_right_minus_left": 0.0,
+        "cluster_bootstrap_95ci": [
+          -0.0909,
+          0.0909
+        ]
+      }
+    }
+  },
+  "by_arm_validated_oracle": {
+    "A": {
+      "scheduled": 42,
+      "ready": 37,
+      "oracle_success": 24,
+      "success_rate": 0.5714,
+      "success_rate_ready": 0.6486,
+      "mean_penalized_time_ms": 14082.5,
+      "mean_success_time_ms": 5894.3,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 37,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 10,
+      "false_verified_offers": 0,
+      "user_confirmed": 24,
+      "outcomes": {
+        "goal_observed": 24,
+        "budget_exhausted": 13,
+        "setup_failure": 5
+      }
+    },
+    "B": {
+      "scheduled": 42,
+      "ready": 36,
+      "oracle_success": 19,
+      "success_rate": 0.4524,
+      "success_rate_ready": 0.5278,
+      "mean_penalized_time_ms": 16492.1,
+      "mean_success_time_ms": 6193.1,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 36,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 9,
+      "false_verified_offers": 0,
+      "user_confirmed": 19,
+      "outcomes": {
+        "budget_exhausted": 17,
+        "goal_observed": 19,
+        "setup_failure": 6
+      }
+    },
+    "C": {
+      "scheduled": 42,
+      "ready": 36,
+      "oracle_success": 23,
+      "success_rate": 0.5476,
+      "success_rate_ready": 0.6389,
+      "mean_penalized_time_ms": 14847.2,
+      "mean_success_time_ms": 6460.1,
+      "mean_model_calls": 1.0,
+      "total_model_calls": 36,
+      "episodes_with_memory_proposal": 0,
+      "memory_proposals": 0,
+      "memory_proposals_by_source": {},
+      "success_when_memory_proposed": "0/0",
+      "runtime_verified_offers": 13,
+      "false_verified_offers": 0,
+      "user_confirmed": 23,
+      "outcomes": {
+        "goal_observed": 23,
+        "budget_exhausted": 13,
+        "setup_failure": 6
+      }
+    }
+  },
+  "completion_binding": {
+    "A": {
+      "first_planner_responses": 63,
+      "bound": 50,
+      "rejected_satisfied_at_binding": 1
+    },
+    "B": {
+      "first_planner_responses": 63,
+      "bound": 49,
+      "rejected_satisfied_at_binding": 1
+    },
+    "C": {
+      "first_planner_responses": 61,
+      "bound": 52,
+      "rejected_satisfied_at_binding": 0
+    }
+  },
+  "ai2_analyses": {
+    "B": {
+      "user_confirmed_tasks": 20,
+      "route_formed": 14,
+      "promoted_by_user_confirmed_result": 7,
+      "goals_with_two_or_more_routes": [
+        "chrome_menu:f30bee",
+        "chrome_new_tab:0cff7c",
+        "chrome_new_tab:e6bfc7",
+        "settings_notifications:3e7fa8",
+        "settings_notifications:4a99c1"
+      ]
+    },
+    "C": {
+      "user_confirmed_tasks": 25,
+      "route_formed": 18,
+      "promoted_by_user_confirmed_result": 8,
+      "goals_with_two_or_more_routes": [
+        "chrome_menu:526a74",
+        "chrome_menu:f30bee",
+        "chrome_new_tab:0cff7c",
+        "chrome_new_tab:e6bfc7",
+        "settings_notifications:3e7fa8",
+        "settings_notifications:4a99c1"
+      ]
+    }
+  },
+  "recall_diagnostics": {
+    "B/learn": {
+      "all": {
+        "recalls": 75,
+        "gate_None": 75,
+        "completion_known": 3
+      },
+      "exact": {
+        "remembered": 1,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 51,
+        "has_two_confirmed_routes": 4,
+        "has_same_goal_screen_step": 42,
+        "blocked_by_adverse": 16
+      },
+      "exact_no_failure_memory": {
+        "remembered": 1,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 51,
+        "has_two_confirmed_routes": 4,
+        "has_same_goal_screen_step": 22,
+        "blocked_by_adverse": 0
+      },
+      "exact_support_one": {
+        "remembered": 10,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 51,
+        "has_two_confirmed_routes": 12,
+        "has_same_goal_screen_step": 42,
+        "blocked_by_adverse": 16
+      },
+      "normalized": {
+        "remembered": 1,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 51,
+        "has_two_confirmed_routes": 4,
+        "has_same_goal_screen_step": 42,
+        "blocked_by_adverse": 16
+      }
+    },
+    "B/mirror": {
+      "all": {
+        "recalls": 52,
+        "gate_None": 52,
+        "completion_known": 0
+      },
+      "exact": {
+        "remembered": 0,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 28,
+        "has_two_confirmed_routes": 0,
+        "has_same_goal_screen_step": 20,
+        "blocked_by_adverse": 10
+      },
+      "exact_no_failure_memory": {
+        "remembered": 0,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 28,
+        "has_two_confirmed_routes": 0,
+        "has_same_goal_screen_step": 8,
+        "blocked_by_adverse": 0
+      },
+      "exact_support_one": {
+        "remembered": 4,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 28,
+        "has_two_confirmed_routes": 6,
+        "has_same_goal_screen_step": 20,
+        "blocked_by_adverse": 10
+      },
+      "normalized": {
+        "remembered": 4,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 52,
+        "has_two_confirmed_routes": 14,
+        "has_same_goal_screen_step": 44,
+        "blocked_by_adverse": 18
+      }
+    },
+    "B/retain": {
+      "all": {
+        "recalls": 22,
+        "gate_None": 22,
+        "completion_known": 0
+      },
+      "exact": {
+        "remembered": 2,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 22,
+        "has_two_confirmed_routes": 6,
+        "has_same_goal_screen_step": 22,
+        "blocked_by_adverse": 8
+      },
+      "exact_no_failure_memory": {
+        "remembered": 2,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 22,
+        "has_two_confirmed_routes": 6,
+        "has_same_goal_screen_step": 12,
+        "blocked_by_adverse": 0
+      },
+      "exact_support_one": {
+        "remembered": 2,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 22,
+        "has_two_confirmed_routes": 6,
+        "has_same_goal_screen_step": 22,
+        "blocked_by_adverse": 8
+      },
+      "normalized": {
+        "remembered": 2,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 22,
+        "has_two_confirmed_routes": 6,
+        "has_same_goal_screen_step": 22,
+        "blocked_by_adverse": 8
+      }
+    },
+    "C/learn": {
+      "all": {
+        "recalls": 66,
+        "gate_None": 66,
+        "completion_known": 0
+      },
+      "exact": {
+        "remembered": 2,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 40,
+        "has_two_confirmed_routes": 4,
+        "has_same_goal_screen_step": 40,
+        "blocked_by_adverse": 14
+      },
+      "exact_no_failure_memory": {
+        "remembered": 2,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 40,
+        "has_two_confirmed_routes": 4,
+        "has_same_goal_screen_step": 24,
+        "blocked_by_adverse": 0
+      },
+      "exact_support_one": {
+        "remembered": 8,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 40,
+        "has_two_confirmed_routes": 12,
+        "has_same_goal_screen_step": 40,
+        "blocked_by_adverse": 14
+      },
+      "normalized": {
+        "remembered": 2,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 40,
+        "has_two_confirmed_routes": 4,
+        "has_same_goal_screen_step": 40,
+        "blocked_by_adverse": 14
+      }
+    },
+    "C/mirror": {
+      "all": {
+        "recalls": 50,
+        "gate_None": 50,
+        "completion_known": 0
+      },
+      "exact": {
+        "remembered": 0,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 22,
+        "has_two_confirmed_routes": 0,
+        "has_same_goal_screen_step": 16,
+        "blocked_by_adverse": 4
+      },
+      "exact_no_failure_memory": {
+        "remembered": 0,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 22,
+        "has_two_confirmed_routes": 0,
+        "has_same_goal_screen_step": 10,
+        "blocked_by_adverse": 0
+      },
+      "exact_support_one": {
+        "remembered": 6,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 22,
+        "has_two_confirmed_routes": 6,
+        "has_same_goal_screen_step": 16,
+        "blocked_by_adverse": 4
+      },
+      "normalized": {
+        "remembered": 6,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 50,
+        "has_two_confirmed_routes": 14,
+        "has_same_goal_screen_step": 44,
+        "blocked_by_adverse": 20
+      }
+    },
+    "C/retain": {
+      "all": {
+        "recalls": 26,
+        "gate_None": 26,
+        "completion_known": 2
+      },
+      "exact": {
+        "remembered": 2,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 26,
+        "has_two_confirmed_routes": 8,
+        "has_same_goal_screen_step": 22,
+        "blocked_by_adverse": 10
+      },
+      "exact_no_failure_memory": {
+        "remembered": 4,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 26,
+        "has_two_confirmed_routes": 8,
+        "has_same_goal_screen_step": 14,
+        "blocked_by_adverse": 0
+      },
+      "exact_support_one": {
+        "remembered": 6,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 26,
+        "has_two_confirmed_routes": 10,
+        "has_same_goal_screen_step": 22,
+        "blocked_by_adverse": 10
+      },
+      "normalized": {
+        "remembered": 2,
+        "remembered_with_completion": 0,
+        "has_same_goal_memory": 26,
+        "has_two_confirmed_routes": 8,
+        "has_same_goal_screen_step": 22,
+        "blocked_by_adverse": 10
+      }
+    }
+  },
+  "provider": {
+    "by_arm": {
+      "A": {
+        "calls": 74,
+        "errors": {
+          "ReadTimeout": 11
+        },
+        "ai2_server_proposals": 0
+      },
+      "B": {
+        "calls": 73,
+        "errors": {
+          "ReadTimeout": 10
+        },
+        "ai2_server_proposals": 0
+      },
+      "C": {
+        "calls": 71,
+        "errors": {
+          "ReadTimeout": 10
+        },
+        "ai2_server_proposals": 0
+      }
+    }
+  }
+}

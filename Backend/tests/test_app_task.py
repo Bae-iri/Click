@@ -213,6 +213,15 @@ def test_unobservable_result_remains_manual_and_confirm_is_not_technical_success
     assert result.status=='confirm_result' and result.completion is None and result.action is None
 
 
+def test_completion_needing_a_destination_label_or_state_change_is_kept():
+    req=request()
+    future=AppTaskService(sender(completion_checks=[dict(target='none',label='목록',app='none',checked='unknown',selected='unknown')])).step(req)
+    assert future.completion.checks[0].label=='목록' and 'completion_rejected' not in future.diagnostic
+    req.screen.nodes[0].role='tab';req.screen.nodes[0].selected=False
+    change=AppTaskService(sender(expected_selected='true',completion_checks=[dict(target='c0',label='검색',app='none',checked='unknown',selected='true')])).step(req)
+    assert change.completion.checks[0].selected is True and 'completion_rejected' not in change.diagnostic
+
+
 @pytest.mark.parametrize('target',['c0','none'])
 def test_visible_navigation_menu_is_not_final_result_but_next_action_survives(target):
     req=request();req.goal='검색 열어줘'

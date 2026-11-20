@@ -58,3 +58,25 @@ def test_terminal_result_cannot_be_inserted_in_the_middle_of_a_trace():
     data=records();extra=deepcopy(data[0]);extra['event_id']='after';extra['evidence']['sequence']=3
     result=analyze_app_task([*data,extra],'policy')
     assert result['status']=='NEEDS_DATA' and result['steps']==[]
+
+
+def test_user_confirmed_result_on_the_produced_screen_evidences_last_unverified_effect():
+    data=records();data[0]['evidence'].update(outcome='unconfirmed',condition_met=False)
+    result=analyze_app_task(data,'policy')
+    assert result['steps'][0]['outcome']=='verified' and result['steps'][0]['effect_evidence']=='user_confirmed_result'
+    assert len(result['route'])==1
+
+
+@pytest.mark.parametrize('problem',['not_observed','other_screen','no_change','rejected','not_last'])
+def test_unverified_effect_is_not_promoted_without_matching_confirmed_result(problem):
+    data=records();data[0]['evidence'].update(outcome='unconfirmed',condition_met=False)
+    if problem=='not_observed':data[0]['evidence']['action_observed']=False
+    elif problem=='other_screen':data[1]['evidence']['screen_key']='c'
+    elif problem=='no_change':data[0]['evidence']['after_key']='a';data[1]['evidence']['screen_key']='a'
+    elif problem=='rejected':data[0]['evidence']['outcome']='rejected'
+    else:
+        first=deepcopy(data[0]);first['event_id']='e0';data[0]['evidence'].update(sequence=2,screen_key='b',after_key='d',starts_task=False)
+        data[1]['evidence'].update(sequence=3,screen_key='d');first['evidence']['outcome']='unconfirmed'
+        data=[first,data[0]|{'evidence':{**data[0]['evidence'],'outcome':'verified','condition_met':True}},data[1]]
+    result=analyze_app_task(data,'policy')
+    assert result['route']==[]
