@@ -593,7 +593,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private static void recordGuidedAction(String type, String packageName, int windowId, String nodeId,
                                           String resourceId, int[] bounds, long occurredAt, boolean automatic) {
         ClickOverlayService service = runningService.get();
-        if(service!=null&&service.appGuide!=null){if(!automatic&&AgentActionEvents.TAP_COMPLETED.equals(type))service.appGuide.manualTap(packageName,windowId,nodeId,occurredAt);return;}
+        if(service!=null&&service.appGuide!=null){if(!automatic&&AgentActionEvents.TAP_COMPLETED.equals(type))service.appGuide.manualTap(packageName,windowId,nodeId,resourceId,bounds,occurredAt);return;}
         if (service == null || service.execution.paused() || service.execution.pendingControl() != null) return;
         if (service.coupangBrowse != null) {
             if (!automatic && AgentActionEvents.TAP_COMPLETED.equals(type)) service.coupangBrowse.tap(packageName,windowId,nodeId,occurredAt);
@@ -1254,6 +1254,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             public void present(JSONObject result,ScreenSnapshot screen){
                 JSONObject action=result.optJSONObject("action");
                 android.util.Log.i("ClickAgent","app_task_state status="+result.optString("status")+" tool="+(action==null?"none":action.optString("tool"))+" verifying="+result.optBoolean("verifying"));
+                JSONObject resultEvidence=result.optJSONObject("result_assessment");
+                if(resultEvidence!=null)android.util.Log.i("ClickAgent","app_task_result status="+resultEvidence.optString("status")
+                    +" reason="+resultEvidence.optString("reason")+" source="+resultEvidence.optString("source")+" check_count="+resultEvidence.optInt("check_count"));
                 int[] bounds=null;org.json.JSONArray target=action==null?null:action.optJSONArray("bounds");
                 if("proposed".equals(result.optString("status"))&&target!=null&&target.length()==4) {
                     bounds=new int[]{target.optInt(0),target.optInt(1),target.optInt(2),target.optInt(3)};
@@ -1267,7 +1270,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     +" http_status="+diagnostic.optInt("http_status"));
                 renderAppTask(result,bounds);
             }
-        },agentGateway.currentContract().appTask,agentGateway.currentContract().appTaskMemory);
+        },agentGateway.currentContract().appTask,agentGateway.currentContract().appTaskMemory,agentGateway.currentContract().appTaskCompletion);
         if(target!=null)appGuide.targetApp(target.packageName,target.label);
         android.util.Log.i("ClickAgent","app_task_start target_resolved="+(target!=null)+" remote="+agentGateway.currentContract().appTask);
         appGuide.refresh();
@@ -1286,11 +1289,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if(appGuide!=owner||endingTask)return;
                 // Ending guidance does not prove an order or complete the server's agent session.
                 endingTask=true;advanceAfterUserEnd=true;clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest("USER_ABORTED");
-            },agentGateway!=null&&agentGateway.currentContract()!=null&&agentGateway.currentContract().appTaskMemory?()->{
+            },()->{
                 if(appGuide!=owner||endingTask)return;endingTask=true;
                 owner.confirmResultOnServer(()->{if(appGuide!=owner)return;advanceAfterUserEnd=true;clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest(null);},
                     error->{if(appGuide!=owner)return;endingTask=false;showAppGuideMessage(ErrorDetails.requestMessage(error),null);});
-            }:null);
+            });
         taskFlowCollapsed=false;if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(bounds,true);
         if(!result.optBoolean("verifying"))speak(result.optString("message"));
     }

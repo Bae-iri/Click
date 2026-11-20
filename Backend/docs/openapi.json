@@ -9784,6 +9784,16 @@
               }
             ]
           },
+          "completion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskCompletion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "requires_confirmation": {
             "type": "boolean",
             "const": true,
@@ -12834,6 +12844,25 @@
         ],
         "title": "TaskAttempt"
       },
+      "TaskCompletion": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskResultCheck"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Checks"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "checks"
+        ],
+        "title": "TaskCompletion"
+      },
       "TaskEnvironment": {
         "properties": {
           "package": {
@@ -12893,6 +12922,28 @@
             "pattern": "^(?:[0-9a-f]{64})?$",
             "title": "Screen Key",
             "default": ""
+          },
+          "checked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked"
+          },
+          "selected": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected"
           }
         },
         "additionalProperties": false,
@@ -13310,6 +13361,73 @@
         ],
         "title": "TaskNode"
       },
+      "TaskResultCheck": {
+        "properties": {
+          "package": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[a-zA-Z0-9_]+(?:\\.[a-zA-Z0-9_]+)+$",
+            "title": "Package"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Label",
+            "default": ""
+          },
+          "resource": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Resource",
+            "default": ""
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "",
+              "button",
+              "text_field",
+              "list",
+              "tab",
+              "toggle",
+              "text",
+              "image",
+              "unknown"
+            ],
+            "title": "Role",
+            "default": ""
+          },
+          "checked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked"
+          },
+          "selected": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "package"
+        ],
+        "title": "TaskResultCheck",
+        "description": "A visible final-state invariant, independent of the action used to reach it."
+      },
       "TaskScreen": {
         "properties": {
           "status": {
@@ -13412,6 +13530,16 @@
             "type": "array",
             "maxItems": 8,
             "title": "Attempts"
+          },
+          "completion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskCompletion"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

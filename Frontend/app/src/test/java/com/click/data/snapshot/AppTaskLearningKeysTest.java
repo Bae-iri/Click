@@ -18,7 +18,7 @@ public class AppTaskLearningKeysTest {
         assertEquals(AppTaskVerifier.Verdict.WAITING,AppTaskVerifier.check(before,observation("org.example.reader","다른 화면"),a,true,false));assertEquals(AppTaskVerifier.Verdict.VERIFIED,AppTaskVerifier.check(before,after,a,true,false));
     }
     @Test public void nodeReindexingAndGeometryAloneNeverSupplySuccessEvidence()throws Exception {
-        JSONObject before=observation("org.example.reader","검색"),after=new JSONObject(before.toString());after.getJSONArray("nodes").getJSONObject(0).put("id","node_0_7").put("bounds",new JSONArray(new int[]{30,40,420,140}));AppTaskObservation.finish(after);
+        JSONObject before=observation("org.example.reader","검색"),after=new JSONObject(before.toString()).put("observation_id","redrawn");after.getJSONArray("nodes").getJSONObject(0).put("id","node_0_7").put("bounds",new JSONArray(new int[]{30,40,420,140}));AppTaskObservation.finish(after);
         assertNotEquals(before.getString("fingerprint"),after.getString("fingerprint"));assertEquals(AppTaskVerifier.Verdict.WAITING,AppTaskVerifier.check(before,after,action(before,"tap","screen_changed"),true,false));
     }
 }

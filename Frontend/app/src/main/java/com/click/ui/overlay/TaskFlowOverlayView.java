@@ -946,6 +946,13 @@ public final class TaskFlowOverlayView extends LinearLayout {
             ?"요청하신 ‘"+result.optString("target_label")+"’ 앱이 설치되어 있어요.":"현재 화면에서 ‘"+result.optString("target_label")+"’ 항목을 찾았어요.");
         if("protected".equals(result.optString("status")))setGuidanceEvidence("입력·인증 화면을 감지해 안내를 멈췄어요.");
         boolean verifying=result.optBoolean("verifying");
+        if("confirm_result".equals(result.optString("status"))&&!verifying){
+            if(confirmed!=null)recoveryActions.addView(primaryButton("결과가 맞아요 · 끝내기",confirmed),spaced(0));
+            recoveryActions.addView(secondaryButton("더 도와주세요",tools),spaced(8));
+            recoveryActions.addView(secondaryButton("다시 확인",refresh),spaced(8));
+            recoveryActions.addView(quietButton("안내 끝내기",finish),spaced(8));
+            recoveryActions.setVisibility(VISIBLE);return;
+        }
         if(action!=null&&!verifying){
             String tool=action.optString("tool"),label=result.optString("target_label","");
             String actionLabel="tap".equals(tool)?label+" 누르기":"scroll_forward".equals(tool)?"아래로 이동":"scroll_backward".equals(tool)?"위로 이동":"back".equals(tool)?"뒤로가기":label+" 열기";

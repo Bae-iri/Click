@@ -28,4 +28,10 @@ public class AppTaskPresentationTest {
         assertTrue(find(panel,"물") instanceof EditText);assertNotNull(find(panel,"검색어 입력"));assertNull(find(panel,"직접 동작 선택"));
         find(panel,"더 보기").performClick();assertNotNull(find(panel,"직접 동작 선택"));assertNotNull(find(panel,"안내 끝내기"));
     }
+    @Test public void resultConfirmationIsVisibleWithoutOpeningMoreActions()throws Exception {
+        var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));int[] confirmed={0},ended={0};
+        panel.appTask(new JSONObject().put("status","confirm_result").put("message","원하신 결과가 맞나요?"),v->{},()->{},()->{},()->{},()->ended[0]++,()->confirmed[0]++);
+        assertNotNull(find(panel,"결과가 맞아요 · 끝내기"));assertNull(find(panel,"더 보기"));
+        find(panel,"결과가 맞아요 · 끝내기").performClick();assertEquals(1,confirmed[0]);assertEquals(0,ended[0]);
+    }
 }

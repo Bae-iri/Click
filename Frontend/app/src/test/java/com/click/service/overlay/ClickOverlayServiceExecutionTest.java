@@ -4179,6 +4179,13 @@ public class ClickOverlayServiceExecutionTest {
         confirmed.getValue().run();verify(queue,never()).complete(anyString(),any());var receipt=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify(owner).confirmResultOnServer(receipt.capture(),any());
         receipt.getValue().run();verify(queue).complete(eq("finished-request"),any());verify(queue,never()).cancel(anyString(),anyString(),any());
     }
+    @Test public void explicitAppResultRemainsAvailableWithoutExperienceLearningCapability()throws Exception {
+        prepareResultWithQueue();var owner=mock(AppTaskController.class);set("appGuide",owner);contract.appTaskMemory=false;
+        Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);render.setAccessible(true);
+        render.invoke(service,new JSONObject().put("status","confirm_result").put("message","결과를 확인해 주세요."),null);
+        var confirmed=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify((TaskFlowOverlayView)get("taskFlowView")).appTask(any(),any(),any(),any(),any(),any(),confirmed.capture());
+        assertNotNull(confirmed.getValue());confirmed.getValue().run();verify(owner).confirmResultOnServer(any(),any());
+    }
 
     @Test public void queueFailureAfterPanelRemovalRecreatesRetryAndLateCallbackCannotReplaceAnotherTask()throws Exception {
         var queue=prepareResultWithQueue();set("windowManager",mock(WindowManager.class));
