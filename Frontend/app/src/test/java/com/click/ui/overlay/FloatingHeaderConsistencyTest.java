@@ -283,8 +283,12 @@ public class FloatingHeaderConsistencyTest {
         assertNull(header.findViewWithTag("floating_logo"));
         assertNull(findDescription(header, "이전 단계"));
         assertTrue(header.collapse.getMeasuredWidth() > 0);
-        if (header.replay.getVisibility() != View.GONE)
-            assertTrue(header.replay.getMeasuredWidth() > header.collapse.getMeasuredWidth());
+        int minimumTouchWidth=Math.round(48*header.getResources().getDisplayMetrics().density);
+        assertTrue(header.collapse.getMeasuredWidth()>=minimumTouchWidth);
+        if (header.replay.getVisibility() != View.GONE) {
+            assertTrue(header.replay.getMeasuredWidth()>=minimumTouchWidth);
+            assertTrue(header.replay.getMeasuredWidth()>=header.collapse.getMeasuredWidth());
+        }
         Rect titleBounds = new Rect(); header.title.getDrawingRect(titleBounds);
         header.offsetDescendantRectToMyCoords(header.title, titleBounds);
         View wordmark = header.findViewWithTag("floating_wordmark");

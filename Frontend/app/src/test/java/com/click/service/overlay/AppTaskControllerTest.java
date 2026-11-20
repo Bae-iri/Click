@@ -111,8 +111,8 @@ public class AppTaskControllerTest {
     @Test public void remotePlanningIsDebouncedAndLateResponsesCannotCrossApps()throws Exception {
         Listener l=new Listener();l.current=screen("org.first.app",node("org.first.app","node_0_1","검색","button"));var gateway=mock(AppGuideGateway.class);var c=new AppTaskController(gateway,new AppTaskMemory("노래를 찾아서 비교해 줘"),null,l,true);
         c.refresh();var callbacks=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway).send(any(),callbacks.capture());
-        l.current=screen("org.second.app",node("org.second.app","node_0_1","목록","button"));callbacks.getValue().success(new JSONObject().put("status","needs_input"));assertEquals(0,l.presents);shadowOf(Looper.getMainLooper()).idle();
-        verify(gateway,times(2)).send(any(),any());c.close();callbacks.getValue().success(new JSONObject().put("status","proposed"));assertEquals(0,l.presents);
+        l.current=screen("org.second.app",node("org.second.app","node_0_1","목록","button"));callbacks.getValue().success(new JSONObject().put("status","needs_input"));assertEquals(1,l.presents);assertEquals("planning",l.result.getString("status"));shadowOf(Looper.getMainLooper()).idle();
+        verify(gateway,times(2)).send(any(),any());c.close();int presents=l.presents;callbacks.getValue().success(new JSONObject().put("status","proposed"));assertEquals(presents,l.presents);
     }
     @Test public void pauseFreezesVerificationAndResumeUsesActualState()throws Exception {
         String pkg="org.example.app";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","검색","button"));AppTaskMemory m=new AppTaskMemory("검색 열기");var c=new AppTaskController(mock(AppGuideGateway.class),m,null,l,false);
@@ -171,4 +171,30 @@ public class AppTaskControllerTest {
         l.current=screen(pkg,node(pkg,"field","","search"));shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
         assertEquals("verified",c.memory().state().getJSONArray("attempts").getJSONObject(0).getString("outcome"));assertEquals("g0",c.memory().active());c.close();
     }
+    @Test public void planningClearsOldActionAndReportsOnlyAvailableRecoveryTools()throws Exception {
+        String pkg="org.example.app";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","검색","button"));
+        var gateway=mock(AppGuideGateway.class);var c=new AppTaskController(gateway,new AppTaskMemory("검색 열기"),null,l,true);
+        c.refresh();assertEquals("proposed",l.result.getString("status"));
+        assertTrue(l.result.getString("message").contains("직접 눌러주세요"));assertFalse(l.result.getBoolean("can_read_labels"));
+        assertEquals(2,l.result.getJSONArray("available_tools").length());
+        l.current=screen(pkg,node(pkg,"node_0_1","홈","button"));c.refresh();
+        assertEquals("planning",l.result.getString("status"));assertTrue(l.result.isNull("action"));assertEquals(0,l.result.getJSONArray("available_tools").length());
+        c.execute((String)null);assertEquals(0,l.executions);c.close();
+    }
+    @Test public void protectedAndAmbiguousScreensDoNotOfferInapplicableRecovery()throws Exception {
+        String pkg="org.example.app";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","PRIVATE","password"));
+        var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("다음 화면"),null,l,false);c.refresh();
+        assertEquals(0,c.availableTools().length());assertFalse(l.result.getBoolean("can_read_labels"));
+        l.current=screen(pkg,node(pkg,"node_0_1","목록","list"),node(pkg,"node_0_2","다른 목록","list"));c.refresh();
+        String tools=c.availableTools().toString();assertFalse(tools.contains("scroll_forward"));assertFalse(tools.contains("set_text"));assertTrue(tools.contains("back"));c.close();
+    }
+
+    @Test public void pausedPlanningIgnoresLateErrorsAndCanResume()throws Exception {
+        Listener l=new Listener();l.current=screen("org.example.app",node("org.example.app","node_0_1","검색","button"));
+        var gateway=mock(AppGuideGateway.class);var c=new AppTaskController(gateway,new AppTaskMemory("노래를 찾아서 비교해 줘"),null,l,true);
+        c.refresh();var callback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway).send(any(),callback.capture());
+        int shown=l.presents;l.allowed=false;callback.getValue().failure(new java.io.IOException("offline"));assertEquals(shown,l.presents);
+        l.allowed=true;c.resume();verify(gateway,times(2)).send(any(),any());assertEquals("planning",l.result.getString("status"));c.close();
+    }
+
 }

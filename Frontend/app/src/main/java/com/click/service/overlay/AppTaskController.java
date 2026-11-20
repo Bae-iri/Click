@@ -64,6 +64,39 @@ public final class AppTaskController {
     public void visualFailure(Throwable error){if(!closed){busy=false;listener.busy(false);listener.failure(error);}}
     public void screenChanged(ScreenSnapshot screen){if(!closed){handler.removeCallbacks(refresh);handler.postDelayed(refresh,250);}}
     public void refresh(){resultObservation=null;resultAssessment=null;checkingResult=resultOffered=false;observe(true);}
+    /** Only offer tools which can act on the current public screen. */
+    public JSONArray availableTools(){
+        JSONArray tools=new JSONArray();
+        if(closed||busy||verifying||checkingResult||!listener.canObserve())return tools;
+        try{
+            JSONObject screen=capture(listener.fresh());String status=screen.optString("status");
+            if("protected".equals(status))return tools;
+            if("public".equals(status)){
+                int inputs=0,lists=0;JSONArray nodes=screen.getJSONArray("nodes");
+                for(int i=0;i<nodes.length();i++){JSONObject n=nodes.getJSONObject(i);if(n.optBoolean("editable"))inputs++;if(n.optBoolean("scrollable"))lists++;}
+                if(inputs==1)tools.put("set_text");
+                if(lists==1){tools.put("scroll_forward");tools.put("scroll_backward");}
+                tools.put("back");
+            }
+            tools.put("open_app");
+        }catch(JSONException ignored){ }
+        return tools;
+    }
+    private boolean canReadLabels(){
+        if(Build.VERSION.SDK_INT<30||closed||busy||verifying||checkingResult||!listener.canObserve())return false;
+        ScreenSnapshot screen=listener.fresh();
+        if(screen==null||!VisionSafetyPolicy.assess(screen).allowed)return false;
+        try{
+            JSONObject current=capture(screen);if(!"public".equals(current.optString("status")))return false;
+            JSONArray nodes=current.getJSONArray("nodes");
+            for(int i=0;i<nodes.length();i++){
+                JSONObject n=nodes.getJSONObject(i);JSONArray b=n.getJSONArray("bounds");
+                if(n.optBoolean("clickable")&&!n.optBoolean("editable")&&!n.optBoolean("scrollable")&&n.optString("label").isEmpty()
+                    &&(long)(b.getInt(2)-b.getInt(0))*(b.getInt(3)-b.getInt(1))<=(long)screen.screenWidth*screen.screenHeight/8)return true;
+            }
+        }catch(JSONException ignored){ }
+        return false;
+    }
     private void save(){if(store!=null)store.save(memory);}
     private void show(String status,String message)throws JSONException {
         JSONObject target=proposal==null||observation==null?null:AppTaskObservation.find(observation,proposal.optString("target_id"));
@@ -71,6 +104,7 @@ public final class AppTaskController {
             .put("active_subgoal",memory.active()==null?JSONObject.NULL:memory.active()).put("action",proposal==null?JSONObject.NULL:proposal)
             .put("verifying",verifying||checkingResult).put("execute_allowed",proposal!=null&&AppTaskPolicy.allowed(observation,observation,proposal,selectedPackage))
             .put("target_label",target==null?selectedLabel:target.optString("label"));
+        result.put("available_tools",availableTools()).put("can_read_labels",canReadLabels());
         if(resultAssessment!=null)result.put("result_assessment",resultAssessment);
         if(proposal!=null&&"set_text".equals(proposal.optString("tool"))&&searchQuery!=null)result.put("suggested_query",searchQuery);
         if(diagnostic!=null)result.put("diagnostic",diagnostic);
@@ -136,7 +170,8 @@ public final class AppTaskController {
             if(!remote){memory.localPlan();save();show("needs_input",searchQuery!=null?(searchPrepared?searchMessage(current):"검색창을 눌러주세요. 화면이 바뀌면 이어서 안내할게요."):"원하는 항목을 눌러주세요. 화면이 바뀌면 이어서 안내할게요.");return;}
             if(turns>=32){show("needs_input","안내 횟수에 도달했어요. 진행 내용을 확인하고 새 요청으로 시작해 주세요.");return;}
             JSONObject request=request(current);
-            busy=true;turns++;listener.busy(true);
+            proposal=null;manualActions.clear();busy=true;turns++;listener.busy(true);
+            show("planning","현재 화면에서 다음 단계를 찾고 있어요.");
             gateway.send(request,new AppGuideGateway.Callback(){
                 public void success(JSONObject response){
                     if(closed||finishing)return;busy=false;listener.busy(false);if(!listener.canObserve())return;
@@ -150,7 +185,7 @@ public final class AppTaskController {
                         else show(response.optString("status"),response.optString("message"));
                     }catch(Exception error){listener.failure(error);}
                 }
-                public void failure(Throwable error){if(!closed&&!finishing){busy=false;listener.busy(false);listener.failure(error);}}
+                public void failure(Throwable error){if(!closed&&!finishing){busy=false;listener.busy(false);if(listener.canObserve())listener.failure(error);}}
             });
         }catch(Exception error){listener.failure(error);}
     }
@@ -282,8 +317,17 @@ public final class AppTaskController {
             if(target!=null){JSONArray b=target.getJSONArray("bounds");manualActions.bind(listener.sessionId(),memory.id(),proposal.getString("id"),"tap",target.getString("id"),new int[]{b.getInt(0),b.getInt(1),b.getInt(2),b.getInt(3)},baseline,proposedAt);}
         }else manualActions.clear();
         String tool=action.optString("tool");
-        String message="open_app".equals(tool)?RequestedApp.shortName(selectedLabel)+"을 열어주세요.":"set_text".equals(tool)?"검색어를 확인해 주세요.":"다음 항목을 눌러주세요.";
-        show("proposed",diagnostic!=null&&"agent2-experience".equals(diagnostic.optString("model"))?"이전에 확인한 실행 경험으로 준비했어요. "+message:message);
+        JSONObject target=AppTaskObservation.find(observation,proposal.optString("target_id"));
+        String label=target==null?"":target.optString("label");
+        String message=switch(tool){
+            case "open_app" -> "‘"+RequestedApp.shortName(selectedLabel)+" 열기’를 눌러 앱을 열어주세요.";
+            case "set_text" -> "검색창에 넣을 검색어를 확인해 주세요.";
+            case "scroll_forward" -> "‘클릭이 아래로 이동’을 누르면 목록을 내려요.";
+            case "scroll_backward" -> "‘클릭이 위로 이동’을 누르면 목록을 올려요.";
+            case "back" -> "‘클릭이 뒤로 이동’을 누르면 이전 화면으로 돌아가요.";
+            default -> "‘"+label+"’ 항목을 직접 눌러주세요.";
+        };
+        show("proposed",message);
     }
     public void chooseApp(String packageName,String label){
         if(closed||busy||verifying||!listener.canObserve())return;

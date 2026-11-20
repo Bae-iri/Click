@@ -1278,14 +1278,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void showAppGuideMessage(String message,int[] bounds) {
         if(appGuide==null||closing)return;
-        try{renderAppTask(new JSONObject().put("status","needs_input").put("message",message).put("subgoals",appGuide.memory().state().getJSONArray("subgoals")),bounds);}
+        try{renderAppTask(new JSONObject().put("status","needs_input").put("message",message).put("available_tools",appGuide.availableTools()).put("subgoals",appGuide.memory().state().getJSONArray("subgoals")),bounds);}
         catch(Exception error){showQueueError(error);}
     }
     private void renderAppTask(JSONObject result,int[] bounds){
-        if(appGuide==null||closing||appEntry!=null)return;final AppTaskController owner=appGuide;ensureTaskFlow();
+        if(appGuide==null||closing||appEntry!=null||execution.paused())return;final AppTaskController owner=appGuide;ensureTaskFlow();
         JSONObject action=result.optJSONObject("action");final String actionId=action==null?"":action.optString("id");
         taskFlowView.appTask(result,value->{if(appGuide==owner)owner.execute(actionId,value);},()->{if(appGuide==owner)owner.refresh();},
-            this::showAppTaskTools,this::readAppTaskVisual,()->{
+            ()->{if(appGuide==owner&&!execution.paused())showAppTaskTools();},()->{if(appGuide==owner&&!execution.paused())readAppTaskVisual();},()->{
                 if(appGuide!=owner||endingTask)return;
                 // Ending guidance does not prove an order or complete the server's agent session.
                 endingTask=true;advanceAfterUserEnd=true;clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest("USER_ABORTED");
@@ -1298,18 +1298,20 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if(!result.optBoolean("verifying"))speak(result.optString("message"));
     }
     private void showAppTaskTools(){
-        if(appGuide==null)return;final AppTaskController owner=appGuide;ensureTaskFlow();
-        taskFlowView.appTaskTools(tool->{if(appGuide!=owner)return;if("open_app".equals(tool))showAppTaskApps();else owner.chooseTool(tool);},()->{if(appGuide==owner)owner.refresh();});placeTaskFlow(null,true);
+        if(appGuide==null||execution.paused())return;final AppTaskController owner=appGuide;ensureTaskFlow();
+        org.json.JSONArray available=owner.availableTools();
+        if(available.length()==1&&"open_app".equals(available.optString(0))){showAppTaskApps();return;}
+        taskFlowView.appTaskTools(available,tool->{if(appGuide!=owner||execution.paused())return;if("open_app".equals(tool))showAppTaskApps();else owner.chooseTool(tool);},()->{if(appGuide==owner&&!execution.paused())owner.refresh();});placeTaskFlow(null,true);
     }
     private void showAppTaskApps(){
-        if(appGuide==null)return;final AppTaskController owner=appGuide;org.json.JSONArray apps=new org.json.JSONArray();
+        if(appGuide==null||execution.paused())return;final AppTaskController owner=appGuide;org.json.JSONArray apps=new org.json.JSONArray();
         try{
             java.util.List<android.content.pm.ResolveInfo> found=getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0);
             found.sort(java.util.Comparator.comparing(r->String.valueOf(r.loadLabel(getPackageManager()))));java.util.Set<String> seen=new java.util.HashSet<>();
             for(var r:found)if(r.activityInfo!=null&&!getPackageName().equals(r.activityInfo.packageName)&&seen.add(r.activityInfo.packageName))apps.put(new JSONObject().put("package",r.activityInfo.packageName).put("label",String.valueOf(r.loadLabel(getPackageManager()))));
         }catch(Exception error){showAppGuideMessage("설치된 앱 목록을 읽지 못했어요. 직접 앱을 열고 현재 화면을 확인해 주세요.",null);return;}
         taskFlowView.appTaskApps(apps,(pkg,label)->{
-            if(appGuide!=owner)return;
+            if(appGuide!=owner||execution.paused())return;
             if(!automaticTouchEnabled()){owner.chooseApp(pkg,label);return;}
             owner.targetApp(pkg,label);
             enterRequestedApp(new RequestedApp(pkg,label),()->{if(appGuide==owner)owner.refresh();});
