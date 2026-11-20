@@ -32,6 +32,13 @@ public class DeviceTaskJournalTest {
   journal.verified("session","guide");assertTrue(journal.begin("session","episode","new-guide","another-operation"));
   assertFalse(storage.getAll().toString().contains("safe-operation"));
  }
+ @Test public void rejectedNativeDispatchDoesNotBlockTheNextOperation() throws Exception {
+  assertTrue(journal.begin("session","episode","guide","operation","attempt"));
+  journal.notDispatched("session","another-episode","guide");
+  assertFalse(journal.begin("session","episode","next","next-operation"));
+  journal.notDispatched("session","episode","guide");
+  assertTrue(journal.begin("session","episode","next","next-operation"));
+ }
  @Test public void outboxSurvivesRestartAndIsAccountBound() throws Exception {
   journal.stage(wire("receipt"));
   assertEquals("receipt",new DeviceTaskJournal(storage,"owner-a").pending("session").getString("request_id"));

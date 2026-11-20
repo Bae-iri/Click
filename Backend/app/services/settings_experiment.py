@@ -9,7 +9,7 @@ from ai_agent.runtime.screen_privacy import assess_screen, minimize_nodes, finit
 from ai_agent.runtime.targeting import eligible_nodes, selector_evidence
 from ai_agent.runtime.verification import correlate_action, applied_value
 from ai_agent.runtime.verification_conditions import summarize_legacy
-from app.services.settings_planner import GOALS, VERSION, catalogue, navigation_key
+from app.services.settings_planner import GOALS, VERSION, catalogue, navigation_key, supports_graph, completion_key
 
 
 class SettingsExperimentResolver:
@@ -61,7 +61,7 @@ class SettingsExperimentResolver:
 
     def resolve(self, **kwargs):
         graph, goal = kwargs['graph'], kwargs['goal']
-        if graph.definition.goal_type not in GOALS:
+        if not supports_graph(graph):
             result = self.inner.resolve(**kwargs)
             self.last_diagnostics = self.inner.last_diagnostics
             return result
@@ -159,12 +159,13 @@ class SettingsExperimentResolver:
         steps = self.state['plan']['subgoals']
         # A native control or later page may already be open. Skip obsolete navigation;
         # do not count those skipped subgoals as observed successes.
-        reached = 'adjust_setting' if 'adjust_setting' in visible else navigation_key(page) if navigation_key(page) in steps else None
+        terminal = completion_key(graph)
+        reached = terminal if terminal in visible else navigation_key(page) if navigation_key(page) in steps else None
         if reached in steps:
             for step in steps[:steps.index(reached)]:
                 if step not in self.state['completed'] and step not in self.state['skipped']:
                     self.state['skipped'].append(step)
-            if reached != 'adjust_setting' and reached not in self.state['completed']:
+            if reached != terminal and reached not in self.state['completed']:
                 self.state['completed'].append(reached)
         active = next((s for s in steps if s not in self.state['completed'] and s not in self.state['skipped']), None)
         self.state['active_subgoal'] = active
@@ -188,7 +189,7 @@ class SettingsExperimentResolver:
         edge = by_edge.get(session.pending_transition_id)
         if not edge:
             return
-        key = 'adjust_setting' if edge.completes_task else navigation_key(edge.to_state)
+        key = ('adjust_setting' if edge.action_type.value == 'drag' else 'complete_setting') if edge.completes_task else navigation_key(edge.to_state)
         if verification.status.value == 'SUCCESS' and key not in self.state['completed']:
             self.state['completed'].append(key)
         elif verification.count_attempt and verification.status.value in {'NO_CHANGE', 'WRONG_STATE'}:
@@ -214,7 +215,7 @@ def verdict(status, reason_code, condition_type):
 
 def trace(resolver, request, result, before, after, graph, elapsed_ms):
     """No raw screen content, source text, coordinates or native node IDs in evidence."""
-    if graph is None or graph.definition.goal_type not in GOALS:
+    if graph is None or not supports_graph(graph):
         return None
     state = resolver.state
     first_observation = not state.get('trace_turns')
@@ -242,8 +243,9 @@ def trace(resolver, request, result, before, after, graph, elapsed_ms):
         'SUCCESS' if result.verification_result and result.verification_result.task_completed else 'UNKNOWN',
         'native_task_effect_verified' if result.verification_result and result.verification_result.task_completed else 'task_effect_not_verified',
         'task_completed')
-    if final['status'] == 'SUCCESS' and 'adjust_setting' not in state['completed']:
-        state['completed'].append('adjust_setting')
+    terminal = completion_key(graph)
+    if final['status'] == 'SUCCESS' and terminal not in state['completed']:
+        state['completed'].append(terminal)
     if final['status'] == 'SUCCESS':
         state['active_subgoal'] = None
     actual = result.debug.get('ui_selection', {})
@@ -251,13 +253,13 @@ def trace(resolver, request, result, before, after, graph, elapsed_ms):
     pending = before.pending_attempt if before else None
     snapshot = after.last_snapshot if after else None
     setting = graph.definition.required_slots['setting']
-    effect = {'setting':setting, 'requested_direction':graph.definition.required_slots['direction'],
+    effect = {'setting':setting, 'requested_direction':graph.definition.required_slots.get('direction'),
         'baseline_control_value':finite_number((pending or {}).get('baseline_value')),
         'current_control_value':finite_number(snapshot.slider_values.get(pending['target_node_id'])) if snapshot and pending else None,
         'baseline_system_value':finite_number((pending or {}).get('baseline_setting_value')),
         'current_system_value':finite_number(applied_value(snapshot.applied_settings,setting)) if snapshot else None,
         'range_min':finite_number((pending or {}).get('baseline_range_min')),
-        'range_max':finite_number((pending or {}).get('baseline_range_max'))} if not blocked else None
+        'range_max':finite_number((pending or {}).get('baseline_range_max'))} if not blocked and graph.definition.goal_type in GOALS else None
     verified_transition = (edge.transition_id if edge and action['status'] == 'SUCCESS'
         and subgoal['status'] == 'SUCCESS' and result.verification_result
         and result.verification_result.count_attempt else None)

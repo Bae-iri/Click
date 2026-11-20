@@ -4,7 +4,7 @@
 
 - Catalog version: `2.5.0`
 - 전체 Goal: **131개** (Android 설정 111개, 정부24 20개)
-- 그래프 실행 승인: **111개**, 공개 화면 안내 연결: **2개**, 분류 전용: **18개**
+- 그래프 실행 승인: **111개**, 공개 화면 안내 연결: **7개**, 분류 전용: **13개**
 - `키워드 그룹`의 각 괄호에서는 하나 이상, 괄호와 괄호 사이는 모두 충족해야 분류 후보가 된다.
 - 등록된 `utterances` 예문과 전체 문장이 일치하면 키워드 그룹이 빠져 있어도 후보로 인식한다. 띄어쓰기와 문장부호는 무시한다.
 - `catalog_only`는 Goal 추출만 가능하다는 뜻이다. 승인 Task Graph가 없으므로 실제 작업은 시작하지 않는다.
@@ -88,7 +88,7 @@
 | 67 | `settings.private_dns.change` | 프라이빗 DNS 변경 | (프라이빗dns / 개인dns / 비공개dns) + (바꿔 / 변경 / 설정) | approved · 직접 진행 (`SET-private_dns-change`) | normal |
 | 68 | `settings.sim.manage` | SIM 관리 | (sim / 심카드 / 유심 / esim) + (관리 / 변경 / 설정 / 전환 / 추가 / 등록) | approved · 직접 진행 (`SET-sim-manage`) | high |
 | 69 | `settings.hotspot.password.change` | 핫스팟 비밀번호 변경 | (핫스팟비밀번호 / 테더링비밀번호 / 핫스팟비번 / 테더링비번 / 하스팟비번 / 하스팟비밀번호) + (바꿔 / 변경 / 설정) | approved · 직접 진행 (`SET-hotspot-password-change`) | normal |
-| 70 | `settings.wallpaper.change` | 배경 화면 변경 | (배경화면 / 월페이퍼 / 잠금화면사진) + (바꿔 / 변경 / 설정) | approved · 직접 진행 (`SET-wallpaper-change`) | normal |
+| 70 | `settings.wallpaper.change` | 배경 화면 변경 | (배경화면 / 월페이퍼 / 잠금화면사진) + (바꿔 / 바꿀 / 바꾸 / 변경 / 설정) | approved · 직접 진행 (`SET-wallpaper-change`) | normal |
 | 71 | `settings.notification_sound.change` | 알림 소리 변경 | (알림소리 / 알림음 / 문자소리) + (바꿔 / 변경 / 선택) | approved · 직접 진행 (`SET-notification_sound-change`) | normal |
 | 72 | `settings.battery_percentage.enable` | 배터리 잔량 표시 켜기 | (배터리퍼센트 / 배터리잔량표시 / 배터리숫자 / 배터리잔량 / 배터리백분율 / 배터리비율) + (켜 / 보이게 / 나오게 / 키고 / 키는 / 킬 / 켤 / 표시해 / 표시하기) | approved (`SET-battery_percentage-enable`) | normal |
 | 73 | `settings.battery_percentage.disable` | 배터리 잔량 표시 끄기 | (배터리퍼센트 / 배터리잔량표시 / 배터리숫자 / 배터리잔량 / 배터리백분율 / 배터리비율) + (꺼 / 숨겨 / 안보이게 / 끄고 / 끄는 / 끌) | approved (`SET-battery_percentage-disable`) | normal |
@@ -137,16 +137,16 @@
 | ---: | --- | --- | --- | --- | --- |
 | 112 | `gov24.login` | 정부24 로그인 방법 선택 | (정부24 / 정부이십사 / gov24) + (로그인 / 인증 / 접속) | public_guide · 공개 화면까지만 안내 | normal |
 | 113 | `gov24.resident_copy.open` | 정부24 주민등록등본 발급 화면 찾기 | (정부24 / 정부이십사 / gov24) + (주민등록등본 / 주민등록표 등본 / 등본) | public_guide · 공개 화면까지만 안내 | normal |
-| 114 | `gov24.resident_extract.open` | 정부24 주민등록초본 발급 화면 찾기 | (정부24 / 정부이십사 / gov24) + (주민등록초본 / 주민등록표 초본 / 초본) | catalog_only | normal |
-| 115 | `gov24.move_in.open` | 정부24 전입신고 화면 찾기 | (정부24 / 정부이십사 / gov24) + (전입신고 / 전입 신고) | catalog_only | normal |
-| 116 | `gov24.building_register.open` | 정부24 건축물대장 발급·열람 화면 찾기 | (정부24 / 정부이십사 / gov24) + (건축물대장 / 건축물 대장) | catalog_only | normal |
-| 117 | `gov24.land_register.open` | 정부24 토지·임야대장 발급·열람 화면 찾기 | (정부24 / 정부이십사 / gov24) + (토지대장 / 임야대장 / 토지 대장) | catalog_only | normal |
+| 114 | `gov24.resident_extract.open` | 정부24 주민등록초본 발급 화면 찾기 | (정부24 / 정부이십사 / gov24) + (주민등록초본 / 주민등록표 초본 / 초본) | public_guide · 공개 화면까지만 안내 | normal |
+| 115 | `gov24.move_in.open` | 정부24 전입신고 화면 찾기 | (정부24 / 정부이십사 / gov24) + (전입신고 / 전입 신고) | public_guide · 공개 화면까지만 안내 | normal |
+| 116 | `gov24.building_register.open` | 정부24 건축물대장 발급·열람 화면 찾기 | (정부24 / 정부이십사 / gov24) + (건축물대장 / 건축물 대장) | public_guide · 공개 화면까지만 안내 | normal |
+| 117 | `gov24.land_register.open` | 정부24 토지·임야대장 발급·열람 화면 찾기 | (정부24 / 정부이십사 / gov24) + (토지대장 / 임야대장 / 토지 대장) | public_guide · 공개 화면까지만 안내 | normal |
 | 118 | `gov24.land_use_plan.open` | 정부24 토지이용계획 확인 화면 찾기 | (정부24 / 정부이십사 / gov24) + (토지이용계획 / 토지 이용 계획) | catalog_only | normal |
 | 119 | `gov24.local_tax_payment.open` | 정부24 지방세 납세증명 화면 찾기 | (정부24 / 정부이십사 / gov24) + (지방세 납세 / 지방세 완납) | catalog_only | normal |
 | 120 | `gov24.local_tax_assessment.open` | 정부24 지방세 세목별 과세증명 화면 찾기 | (정부24 / 정부이십사 / gov24) + (세목별 과세 / 세목별과세) | catalog_only | normal |
 | 121 | `gov24.national_tax_payment.open` | 정부24 국세 납세증명 화면 찾기 | (정부24 / 정부이십사 / gov24) + (국세 납세 / 국세 완납) | catalog_only | normal |
 | 122 | `gov24.income_certificate.open` | 정부24 소득금액증명 화면 찾기 | (정부24 / 정부이십사 / gov24) + (소득금액증명 / 소득 금액 증명) | catalog_only | normal |
-| 123 | `gov24.vehicle_register.open` | 정부24 자동차등록원부 발급·열람 화면 찾기 | (정부24 / 정부이십사 / gov24) + (자동차등록원부 / 자동차 등록 원부) | catalog_only | normal |
+| 123 | `gov24.vehicle_register.open` | 정부24 자동차등록원부 발급·열람 화면 찾기 | (정부24 / 정부이십사 / gov24) + (자동차등록원부 / 자동차 등록 원부) | public_guide · 공개 화면까지만 안내 | normal |
 | 124 | `gov24.resident_card.reissue.open` | 정부24 주민등록증 재발급 화면 찾기 | (정부24 / 정부이십사 / gov24) + (주민등록증 재발급 / 주민등록증 다시) | catalog_only | normal |
 | 125 | `gov24.passport.reissue.open` | 정부24 여권 재발급 화면 찾기 | (정부24 / 정부이십사 / gov24) + (여권 재발급 / 여권 다시) | catalog_only | normal |
 | 126 | `gov24.application.history.view` | 정부24 민원 신청 내역 화면 찾기 | (정부24 / 정부이십사 / gov24) + (신청내역 / 신청 내역 / 신청한 민원 / 신청 기록) | catalog_only | normal |

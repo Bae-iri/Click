@@ -53,6 +53,13 @@ public final class DeviceTaskJournal {
         if(action==null || !session.equals(action.optString("session")) || !guide.equals(action.optString("guide")))return;
         try {action.put("status","verified");write("_action",action);}catch(JSONException invalid){throw new IOException(invalid);}
     }
+    /** A rejected native dispatch has no effect to reconcile. Never releases another operation. */
+    public synchronized void notDispatched(String session,String episode,String guide) throws IOException {
+        JSONObject action=read("_action");
+        if(action==null || !session.equals(action.optString("session"))
+                || !episode.equals(action.optString("episode")) || !guide.equals(action.optString("guide")))return;
+        try {action.put("status","not_dispatched");write("_action",action);}catch(JSONException invalid){throw new IOException(invalid);}
+    }
     public synchronized void verifiedAttempt(String session,String episode,String attempt) throws IOException {
         if(session==null || episode==null || attempt==null || attempt.isEmpty())return;
         JSONObject action=read("_action");

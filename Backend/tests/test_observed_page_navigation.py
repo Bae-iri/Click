@@ -33,6 +33,21 @@ def test_same_heading_layout_and_value_changes_do_not_unlock_recovery():
     assert scenario.engine.session_store.get('s').recovery_state['waiting_for_user']
 
 
+def test_correlated_tap_survives_partial_destination_before_native_heading_settles():
+    from ai_agent.runtime.types import UserActionEvent, UserActionType
+    run=Run('font_size','increase');run.edge=run.home_edge;first=run.observe(run.home)
+    event=UserActionEvent(UserActionType.TAP_COMPLETED,first.guide_command.guide_command_id,
+        first.guide_command.target_node_id,occurred_at_ms=run.at+500,event_id='native-tap',episode_id='e',session_id='s')
+    run.observe((node('title','디스플레이'),),event=event)
+    pending=run.engine.session_store.get('s').pending_attempt
+    assert pending and pending.get('event_key')
+    original=pending['attempt_id']
+    run.edge=next(t for t in run.graph.transitions if t.from_state==run.home_edge.to_state)
+    result=run.observe((node('title','디스플레이'),node('next',run.edge.target_keywords[0])))
+    assert result.verification_result.status.value=='SUCCESS'
+    assert result.verification_result.attempt_id==original
+
+
 def test_unknown_or_synthetic_heading_and_exhausted_action_budget_cannot_reopen():
     run=Run('font_size','increase');run.edge=run.home_edge;run.observe(run.home)
     session=run.engine.session_store.get('s')

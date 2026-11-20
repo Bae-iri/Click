@@ -11,6 +11,12 @@ import org.json.JSONObject;
 /** Shell-only debug probe. Reports public states and counts, never credentials or screen text. */
 public final class Gov24GuideProbeReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context,Intent intent) {
+        if(intent.hasExtra("experiment_automatic") && !com.click.BuildConfig.SETTINGS_EXPERIMENT_ARM.isEmpty()) {
+            boolean enabled=intent.getBooleanExtra("experiment_automatic",false);
+            new com.click.data.local.TouchAutomationSettings(context).setEnabled(enabled);
+            setResultData("{\"automatic\":"+enabled+"}");
+            return;
+        }
         if(intent.getBooleanExtra("settings_probe",false)){probeSettings(context);return;}
         JSONObject report=new JSONObject();
         try {
