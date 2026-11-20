@@ -14,7 +14,6 @@ import android.view.accessibility.AccessibilityWindowInfo;
 import com.click.data.snapshot.ScreenSnapshot;
 import com.click.data.snapshot.VisionPrivacy;
 import com.click.data.snapshot.ScreenRevisionTracker;
-import com.click.TutorialReadyActivity;
 import com.click.data.local.AccessibilityOnboardingState;
 import com.click.service.overlay.OverlayActions;
 import com.click.service.overlay.ClickOverlayService;
@@ -61,9 +60,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
         AccessibilityOnboardingState onboarding = new AccessibilityOnboardingState(this);
         if (!onboarding.isPending() || onboardingReturnAttempts >= 4) return;
         onboardingReturnAttempts++;
-        Class<?> screen = onboarding.opensTutorial() ? TutorialReadyActivity.class
-                : onboarding.returnsToSettings() ? com.click.MenuActivity.class : com.click.HomeActivity.class;
+        Class<?> screen = com.click.RequiredPermissionsActivity.class;
         Intent destination = new Intent(this, screen)
+                .putExtra(com.click.RequiredPermissionsActivity.EXTRA_DESTINATION, onboarding.opensTutorial() ? "tutorial"
+                        : onboarding.returnsToSettings() ? "settings" : "home")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         try {

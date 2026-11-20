@@ -10,6 +10,14 @@ import com.click.service.accessibility.ClickAccessibilityService;
 public final class PermissionStatus {
     private PermissionStatus() {}
 
+    public static boolean areRequiredPermissionsGranted(Context context) {
+        return isAccessibilityEnabled(context)
+                && ClickAccessibilityService.accessibilityWindowManager() != null
+                && context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+                    == android.content.pm.PackageManager.PERMISSION_GRANTED
+                && Settings.canDrawOverlays(context);
+    }
+
     public static boolean isAccessibilityEnabled(Context context) {
         ComponentName expected = new ComponentName(context, ClickAccessibilityService.class);
         String enabledServices = Settings.Secure.getString(
