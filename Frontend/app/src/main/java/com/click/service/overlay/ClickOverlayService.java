@@ -1257,11 +1257,18 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 JSONObject resultEvidence=result.optJSONObject("result_assessment");
                 if(resultEvidence!=null)android.util.Log.i("ClickAgent","app_task_result status="+resultEvidence.optString("status")
                     +" reason="+resultEvidence.optString("reason")+" source="+resultEvidence.optString("source")+" check_count="+resultEvidence.optInt("check_count"));
-                int[] bounds=null;org.json.JSONArray target=action==null?null:action.optJSONArray("bounds");
+                int[] bounds=null;org.json.JSONArray target=action==null?null:action.optJSONArray("bounds");AccessibilityNodeSnapshot icon;
                 if("proposed".equals(result.optString("status"))&&target!=null&&target.length()==4) {
                     bounds=new int[]{target.optInt(0),target.optInt(1),target.optInt(2),target.optInt(3)};
                     lastSubmittedScreen=screen;
                     showGuideOverlay(bounds,action.optString("tool").startsWith("scroll_")?"scroll":"tap",GuideDragDirection.UNKNOWN);
+                }else if("proposed".equals(result.optString("status"))&&action!=null&&"open_app".equals(action.optString("tool"))
+                        &&(icon=homeIconTarget(screen,openAppNames(action)))!=null) {
+                    // Opening the app needs no screen target, but on the home screen point at its icon
+                    // so the user can tap it directly; the panel's open button still works.
+                    bounds=icon.bounds;lastSubmittedScreen=screen;
+                    showGuideOverlay(bounds,"tap",GuideDragDirection.UNKNOWN);
+                    try{result=new JSONObject(result.toString()).put("message","표시한 "+result.optString("target_label","앱")+" 앱을 누르거나 아래 열기 버튼을 눌러주세요.");}catch(org.json.JSONException ignored){}
                 }else hideGuideOverlay();
                 JSONObject diagnostic=result.optJSONObject("diagnostic");
                 if(diagnostic!=null)android.util.Log.i("ClickAgent","app_task model="+diagnostic.optString("model")
@@ -3758,6 +3765,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private AccessibilityNodeSnapshot coupangIconTarget(ScreenSnapshot screen) {
+        return homeIconTarget(screen,label->coupangAppLabel(label));
+    }
+
+    /** A single visible home/app-drawer icon whose label names the app. Folders and duplicates yield none. */
+    private AccessibilityNodeSnapshot homeIconTarget(ScreenSnapshot screen,java.util.function.Predicate<String> names) {
         if(screen==null || !NavigationRecovery.isHomeScreen(screen) || screen.activeWindowId==null)return null;
         AccessibilityNodeSnapshot selected=null;
         for(AccessibilityNodeSnapshot node:screen.nodes) {
@@ -3768,11 +3780,39 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     || node.bounds[0]>=node.bounds[2] || node.bounds[1]>=node.bounds[3]
                     || node.bounds[2]-node.bounds[0]>screen.screenWidth/2
                     || node.bounds[3]-node.bounds[1]>screen.screenHeight/2)continue;
-            if(!coupangAppLabel(node.text) && !coupangAppLabel(node.contentDescription))continue;
+            if(!names.test(node.text) && !names.test(node.contentDescription))continue;
             if(selected!=null)return null;
             selected=node;
         }
         return selected;
+    }
+
+    static boolean appIconLabel(String label,java.util.Collection<String> names) {
+        if(label==null)return false;
+        String value=label.trim().toLowerCase(java.util.Locale.ROOT);
+        for(String name:names){
+            if(name==null||name.isBlank())continue;String n=name.trim().toLowerCase(java.util.Locale.ROOT);
+            if(value.equals(n)||value.startsWith(n+","))return true;
+        }
+        return false;
+    }
+
+    /** Launcher labels for a package: the launch activity's and the application's, as the home screen shows them. */
+    private java.util.Set<String> launcherLabels(String packageName) {
+        java.util.Set<String> labels=new java.util.LinkedHashSet<>();
+        try{
+            var pm=getPackageManager();
+            Intent launch=pm.getLaunchIntentForPackage(packageName);
+            var info=launch==null?null:pm.resolveActivity(launch,0);
+            if(info!=null)labels.add(String.valueOf(info.loadLabel(pm)));
+            labels.add(String.valueOf(pm.getApplicationLabel(pm.getApplicationInfo(packageName,0))));
+        }catch(Exception ignored){}
+        return labels;
+    }
+
+    private java.util.function.Predicate<String> openAppNames(JSONObject action) {
+        java.util.Set<String> labels=launcherLabels(action.optString("package"));
+        return label->appIconLabel(label,labels);
     }
 
     private static boolean coupangAppLabel(String label) {
