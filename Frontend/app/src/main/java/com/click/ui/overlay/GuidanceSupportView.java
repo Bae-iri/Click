@@ -35,13 +35,13 @@ public final class GuidanceSupportView extends ScrollView {
         TextView detail=ClickUi.body(context,(full.equals(shortReason)?"":full.substring(shortReason.length()).trim()+"\n")+GuidanceExplanation.LIMITS);
         detail.setVisibility(detailed?VISIBLE:GONE);body.addView(detail,ClickUi.wrap(8));
         LinearLayout actions=new LinearLayout(context);
-        Button retry=ClickUi.primaryButton(context,"다시 확인");retry.setEnabled(canRetry);retry.setOnClickListener(view->listener.retry());actions.addView(retry,new LinearLayout.LayoutParams(0,-2,1));
+        Button retry=ClickUi.primaryButton(context,"다시 확인");retry.setVisibility(canRetry?VISIBLE:GONE);retry.setOnClickListener(view->listener.retry());actions.addView(retry,new LinearLayout.LayoutParams(0,-2,1));
         Button edit=ClickUi.secondaryButton(context,"요청 수정");LinearLayout.LayoutParams right=new LinearLayout.LayoutParams(0,-2,1);right.leftMargin=dp(8);actions.addView(edit,right);body.addView(actions,ClickUi.wrap(16));
         LinearLayout editor=column();editor.setVisibility(GONE);body.addView(editor,ClickUi.wrap(12));
         EditText input=ClickUi.input(context,"수정할 요청",InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE);input.setText(request==null?"":request);input.setSingleLine(false);input.setMinLines(2);input.setMaxLines(4);input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(500)});editor.addView(input);
         requestEditor=editor;requestInput=input;
         editor.addView(ClickUi.body(context,canRevise?"현재 작업만 고치거나 다음 작업으로 추가할 수 있어요. 이미 바꾼 설정은 되돌리지 않아요.":"현재 작업 수정은 서버 업데이트 후 사용할 수 있어요. 지금은 다음 작업으로 추가할 수 있어요."),ClickUi.wrap(8));
-        save=ClickUi.primaryButton(context,"수정한 요청 확인");save.setEnabled(canRevise);save.setOnClickListener(view->{String text=input.getText().toString().trim();if(!text.isEmpty())listener.revise(text);});editor.addView(save,ClickUi.wrap(12));
+        save=ClickUi.primaryButton(context,canRevise?"수정한 요청 확인":"수정한 요청 보내기");save.setOnClickListener(view->{String text=input.getText().toString().trim();if(!text.isEmpty()){if(canRevise)listener.revise(text);else listener.enqueue(text);}});editor.addView(save,ClickUi.wrap(12));
         Button queue=ClickUi.secondaryButton(context,"다음 작업으로 추가");queue.setOnClickListener(view->{String text=input.getText().toString().trim();if(!text.isEmpty())listener.enqueue(text);});editor.addView(queue,ClickUi.wrap(8));
         for(View control:new View[]{close,retry,edit,save,queue,input})lockedControls.put(control,control.isEnabled());
         edit.setOnClickListener(view->{editor.setVisibility(editor.getVisibility()==VISIBLE?GONE:VISIBLE);});

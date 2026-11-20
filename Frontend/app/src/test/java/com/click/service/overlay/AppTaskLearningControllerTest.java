@@ -99,6 +99,11 @@ public class AppTaskLearningControllerTest {
         listener.current=screen(PKG,node(PKG,"node_0_1","검색","button"));AppTaskController c=new AppTaskController(gateway,new AppTaskMemory("노래를 찾아서 비교해 줘"),store,listener,true,false);c.refresh();
         var request=ArgumentCaptor.forClass(JSONObject.class);verify(gateway).send(request.capture(),any());assertFalse(request.getValue().has("environment"));assertFalse(request.getValue().has("path_prefix"));verify(gateway,never()).recall(any(),any());c.close();
     }
+    @Test public void olderServerNeverReceivesRestoredCompletionFields()throws Exception {
+        listener.current=screen(PKG,node(PKG,"node_0_1","검색","button"));AppTaskMemory memory=new AppTaskMemory("노래를 찾아서 비교해 줘");memory.completion(AppTaskCompletionTest.completion(PKG,"목록"));
+        AppTaskController c=new AppTaskController(gateway,memory,store,listener,true,false,false);c.refresh();
+        var request=ArgumentCaptor.forClass(JSONObject.class);verify(gateway).send(request.capture(),any());assertFalse(request.getValue().getJSONObject("state").has("completion"));c.close();
+    }
     @Test public void explicitAppOpeningCanStartAConsentedExperienceOutsideTheTargetApp()throws Exception {
         listener.current=screen("com.clueclick.app",node("com.clueclick.app","node_0_1","홈","button"));
         AppTaskController c=new AppTaskController(gateway,new AppTaskMemory("테스트앱 열기"),store,listener,false,true);c.targetApp(PKG,"테스트앱");c.refresh();consent(true);

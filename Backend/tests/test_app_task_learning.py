@@ -116,6 +116,8 @@ def test_two_distinct_tasks_survive_restart_and_ground_a_fresh_app_step(flow,pac
     from app.services.app_task_experience import AppTaskExperienceService
     fresh=AppTaskExperienceService(flow.factory)
     assert fresh.recall(req,flow.user).status=='remembered'
+    # A remembered action must not replace defining the current goal's final result.
+    planned=AppTaskService(sender()).step(req);req.state.completion=planned.completion
     send=sender();result=AppTaskService(send,memory=fresh).step(req,user_id=flow.user)
     send.assert_not_called();assert result.status=='proposed' and result.diagnostic['model']=='agent2-experience'
 

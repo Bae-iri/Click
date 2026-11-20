@@ -22,4 +22,13 @@ public class AppTaskGatewayTest {
         JSONObject req=request(),res=response(req);res.getJSONObject("action").put("tool","open_app").put("package","org.other.app").put("expectation",new JSONObject().put("kind","package_opened").put("package","org.other.app"));rejects(req,res);
         req.getJSONArray("apps").put(new JSONObject().put("package","org.other.app").put("label","다른 앱"));AppGuideGateway.validateTask(req,res);
     }
+    @Test public void finalResultCannotChangePackagesDisappearOrBeReplacedDuringPlanning()throws Exception {
+        JSONObject req=request(),res=response(req),completion=com.click.service.overlay.AppTaskCompletionTest.completion("org.example.app","목록");
+        res.put("completion",completion);AppGuideGateway.validateTask(req,res);
+        req.getJSONObject("state").put("completion",new JSONObject(completion.toString()));
+        res.put("completion",com.click.service.overlay.AppTaskCompletionTest.completion("org.other.app","목록"));rejects(req,res);
+        res.put("completion",JSONObject.NULL);rejects(req,res);
+        res.put("completion",completion);AppGuideGateway.validateTask(req,res);
+        req.getJSONObject("state").remove("completion");res.put("completion",com.click.service.overlay.AppTaskCompletionTest.completion("org.other.app","목록"));rejects(req,res);
+    }
 }

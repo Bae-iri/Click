@@ -15,7 +15,14 @@ public final class AppTaskMemory {
     public String goal(){return data.optString("goal");}
     public String id(){return data.optString("task_id");}
     public JSONObject stored()throws JSONException{return new JSONObject(data.toString());}
-    public JSONObject state()throws JSONException{return new JSONObject().put("task_id",id()).put("revision",data.optInt("revision")).put("subgoals",data.getJSONArray("subgoals")).put("attempts",data.getJSONArray("attempts"));}
+    public JSONObject state()throws JSONException{JSONObject state=new JSONObject().put("task_id",id()).put("revision",data.optInt("revision")).put("subgoals",data.getJSONArray("subgoals")).put("attempts",data.getJSONArray("attempts"));if(completion()!=null)state.put("completion",completion());return state;}
+    public JSONObject completion(){return data.optJSONObject("completion");}
+    public void completion(JSONObject condition)throws JSONException {
+        if(condition==null)return;
+        if(!AppTaskCompletion.valid(condition))throw new JSONException("Invalid result condition");
+        if(completion()!=null&&!AppTaskCompletion.key(completion()).equals(AppTaskCompletion.key(condition)))throw new JSONException("Changed result condition");
+        data.put("completion",new JSONObject(condition.toString()));
+    }
     public String active(){JSONArray goals=data.optJSONArray("subgoals");for(int i=0;goals!=null&&i<goals.length();i++)if("pending".equals(goals.optJSONObject(i).optString("status")))return goals.optJSONObject(i).optString("id");return null;}
     public void plan(JSONArray incoming)throws JSONException {
         if(incoming==null||incoming.length()==0||incoming.length()>8)return;
@@ -47,8 +54,8 @@ public final class AppTaskMemory {
             if(data.getJSONArray("route").length()<32)data.getJSONArray("route").put(new JSONObject().put("package",before.optString("package")).put("tool",action.getString("tool"))
                 .put("resource",node==null?"":node.optString("resource")).put("label",node==null?"":node.optString("label"))
                 .put("open_package",action.optString("package")).put("expectation",action.getJSONObject("expectation"))
-                .put("advances_subgoal",action.optBoolean("advances_subgoal")));
-            if(completesSubgoal){String id=active();JSONArray goals=data.getJSONArray("subgoals");for(int i=0;i<goals.length();i++)if(goals.getJSONObject(i).getString("id").equals(id))goals.getJSONObject(i).put("status","verified");}
+                .put("advances_subgoal",completesSubgoal&&AppTaskPolicy.provesSubgoal(action)));
+            if(completesSubgoal&&AppTaskPolicy.provesSubgoal(action)){String id=active();JSONArray goals=data.getJSONArray("subgoals");for(int i=0;i<goals.length();i++)if(goals.getJSONObject(i).getString("id").equals(id))goals.getJSONObject(i).put("status","verified");}
         }
     }
     private static String target(JSONObject action){return "open_app".equals(action.optString("tool"))?action.optString("package",""):action.isNull("target_id")?"":action.optString("target_id","");}

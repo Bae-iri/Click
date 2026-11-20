@@ -51,4 +51,23 @@ public class AppTaskObservationTest {
         }
         assertNotEquals(fingerprints[0],fingerprints[1]);
     }
+    @Test public void onlyRequestedPublicResultTextIsAddedToTheObservation()throws Exception {
+        String pkg="org.example.app";
+        AccessibilityNodeSnapshot result=new AccessibilityNodeSnapshot("result",null,true,pkg,"다운로드 완료",null,"result_label","android.widget.TextView",null,new int[]{10,20,400,120},false,true,false,false,false,null,42);
+        AccessibilityNodeSnapshot body=new AccessibilityNodeSnapshot("body",null,true,pkg,"UNRELATED_PRIVATE_BODY",null,"body","android.widget.TextView",null,new int[]{10,200,400,320},false,true,false,false,false,null,42);
+        ScreenSnapshot screen=screen(pkg,result,body);
+        assertNull(AppTaskObservation.find(AppTaskObservation.capture(screen),"result"));
+        JSONObject observed=AppTaskObservation.capture(screen,java.util.Set.of("다운로드 완료"));
+        assertNotNull(AppTaskObservation.find(observed,"result"));assertFalse(observed.toString().contains("UNRELATED_PRIVATE_BODY"));
+        assertEquals("text",AppTaskObservation.find(observed,"result").getString("role"));
+    }
+    @Test public void nestedLabelDoesNotMakeOneResultAmbiguousButSeparateRowsStillDo()throws Exception {
+        String pkg="org.example.app";
+        AccessibilityNodeSnapshot child=new AccessibilityNodeSnapshot("label","row",true,pkg,"목록",null,"label_resource","android.widget.TextView",null,new int[]{20,30,300,100},false,true,false,false,false,null,42);
+        JSONObject result=com.click.service.overlay.AppTaskCompletionTest.completion(pkg,"목록");
+        JSONObject one=AppTaskObservation.capture(screen(pkg,node(pkg,"row","목록","button"),child),java.util.Set.of("목록"));
+        assertEquals(1,one.getJSONArray("nodes").length());assertEquals(com.click.service.overlay.AppTaskCompletion.Verdict.MATCHED,com.click.service.overlay.AppTaskCompletion.check(result,one));
+        JSONObject two=AppTaskObservation.capture(screen(pkg,node(pkg,"row","목록","button"),child,node(pkg,"other","목록","button")),java.util.Set.of("목록"));
+        assertEquals(com.click.service.overlay.AppTaskCompletion.Verdict.UNKNOWN,com.click.service.overlay.AppTaskCompletion.check(result,two));
+    }
 }

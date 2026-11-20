@@ -13,7 +13,7 @@ public final class AppTaskFixtures {
             input?"android.widget.EditText":kind.equals("tab")?"android.widget.TabWidget":kind.equals("list")?"androidx.recyclerview.widget.RecyclerView":"android.widget.Button",
             null,new int[]{10,20,400,120},!kind.equals("list"),true,selected,kind.equals("list"),toggle,null,42,input,null,null,kind.equals("password"),toggle?selected:null,false,input);
     }
-    public static ScreenSnapshot screen(String pkg,AccessibilityNodeSnapshot...nodes){return new ScreenSnapshot(pkg,Instant.now().toString(),1080,2400,List.of(nodes),42);}
+    public static ScreenSnapshot screen(String pkg,AccessibilityNodeSnapshot...nodes){return new ScreenSnapshot(pkg,Instant.ofEpochMilli(System.currentTimeMillis()).toString(),1080,2400,List.of(nodes),42);}
     public static JSONObject observation(String pkg,String label)throws Exception{return AppTaskObservation.capture(screen(pkg,node(pkg,"node_0_1",label,"button")));}
     public static JSONObject action(JSONObject screen,String tool,String kind)throws Exception {
         JSONObject n=screen.getJSONArray("nodes").length()==0?null:screen.getJSONArray("nodes").getJSONObject(0);
