@@ -311,6 +311,63 @@ public class ClickOverlayServiceExecutionTest {
             assertNull(get("coupangBrowse"));assertTrue(sent.isEmpty());
         }
     }
+    @Test public void automaticCoupangAndGovernmentGuidesEnterTheAppBeforeContactingTheServer() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        try(var nativeEntry=mockStatic(AppEntryController.class,CALLS_REAL_METHODS)) {
+            nativeEntry.when(()->AppEntryController.launch(eq(service),anyString())).thenReturn(AppEntryController.Launch.STARTED);
+            for(boolean government:new boolean[]{false,true}){
+                set("taskFlowView",mock(TaskFlowOverlayView.class));
+                String pkg=government?"kr.go.minwon.m":"com.coupang.mobile";
+                currentScreen=screen;
+                JSONObject data=new JSONObject().put("version","goal-inputs.v1").put("id","entry-prepared")
+                    .put("source_text",government?"정부24 로그인 도와줘":"쿠팡 상품 검색해줘")
+                    .put("status","ready").put("execution_mode",government?"public_guide":"browse")
+                    .put("missing_fields",new JSONArray()).put(government?"public_guide_goal":"browse_goal",
+                        new JSONObject().put("goal_type",government?"gov24.login":"coupang.product.search").put("query","이어폰"));
+                set("goalPreparation",new com.click.domain.goal.GoalPreparationState(data,null,"안내를 시작할까요?"));
+                try(var browse=mockConstruction(com.click.data.remote.CoupangBrowseGateway.class)){
+                    confirm();
+                    assertNotNull(get("appEntry"));assertNull(get("coupangBrowse"));assertTrue(browse.constructed().isEmpty());
+                    nativeEntry.verify(()->AppEntryController.launch(service,pkg));
+                    currentScreen=new ScreenSnapshot(pkg,Instant.now().toString(),1080,2400,List.of(),42);
+                    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(250));
+                    assertNull(get("appEntry"));assertNotNull(get("coupangBrowse"));assertEquals(1,browse.constructed().size());
+                    var payload=org.mockito.ArgumentCaptor.forClass(JSONObject.class);
+                    verify(browse.constructed().get(0)).send(payload.capture(),any());
+                    assertEquals("start",payload.getValue().getString("command"));
+                    assertEquals("entry-prepared",payload.getValue().getString("goal_resolution_id"));
+                    assertFalse(payload.getValue().has("screen"));
+                    service.onStopRequested();
+                }
+            }
+        }
+    }
+
+    @Test public void namedAppsUseTheSameLocalEntryAndStoppingCannotContinueALateLaunch() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(true);
+        Method enter=ClickOverlayService.class.getDeclaredMethod("enterRequestedApp",RequestedApp.class,Runnable.class);
+        enter.setAccessible(true);Runnable next=mock(Runnable.class);
+        try(var nativeEntry=mockStatic(AppEntryController.class,CALLS_REAL_METHODS)){
+            nativeEntry.when(()->AppEntryController.launch(eq(service),anyString())).thenReturn(AppEntryController.Launch.STARTED);
+            enter.invoke(service,new RequestedApp("com.example.reader","리더"),next);
+            assertNotNull(get("appEntry"));verifyNoInteractions(next);
+            service.onStopRequested();assertNull(get("appEntry"));
+            currentScreen=new ScreenSnapshot("com.example.reader",Instant.now().toString(),1080,2400,List.of(),42);
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6));
+            verifyNoInteractions(next);nativeEntry.verify(()->AppEntryController.launch(service,"com.example.reader"),times(1));
+        }
+    }
+
+    @Test public void manualGuidancePreferenceDoesNotAutomaticallyLaunchAnotherApp() throws Exception {
+        new com.click.data.local.TouchAutomationSettings(service).setEnabled(false);
+        Method enter=ClickOverlayService.class.getDeclaredMethod("enterRequestedApp",RequestedApp.class,Runnable.class);
+        enter.setAccessible(true);Runnable next=mock(Runnable.class);
+        try(var nativeEntry=mockStatic(AppEntryController.class,CALLS_REAL_METHODS)){
+            enter.invoke(service,new RequestedApp("com.example.reader","리더"),next);
+            verify(next).run();assertNull(get("appEntry"));nativeEntry.verifyNoInteractions();
+        }
+    }
+
     @Test public void replacedEditorCannotTurnALateTranscriptIntoANewTask() throws Exception {
         checkEditorSpeech(true,false);
     }
