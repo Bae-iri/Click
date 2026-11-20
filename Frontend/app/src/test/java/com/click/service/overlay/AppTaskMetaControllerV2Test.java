@@ -55,7 +55,7 @@ public class AppTaskMetaControllerV2Test {
             var opened=frame(pkg,8500,42,"Alpha");JSONObject open=new JSONObject().put("tool","open_app").put("package",pkg)
                 .put("target_id",JSONObject.NULL).put("advances_subgoal",true)
                 .put("expectation",new JSONObject().put("kind","package_opened").put("package",pkg));
-            verified(meta,clock,current,opened,open);meta.nativeSubgoalAdvanced("g0","g0",open,AppTaskVerifier.Verdict.VERIFIED);
+            verified(meta,clock,current,opened,open);meta.nativeSubgoalAdvanced("g0","g0",open,AppTaskVerifier.Verdict.VERIFIED,AppTaskObservation.capture(current),AppTaskObservation.capture(opened));
             assertFalse(meta.claimPlannerRequest(opened));meta.clearRecoveryContext();meta.subgoal("g0");
             assertFalse(meta.claimPlannerRequest(frame(pkg,8500,42,"Alpha",35,"Changed passive heading")));
             assertEquals(epoch,meta.diagnostic().getString("failure_epoch_ref"));assertEquals(1,meta.diagnostic().getInt("failure_replan_reservations"));
@@ -108,7 +108,7 @@ public class AppTaskMetaControllerV2Test {
         var reached=frame(pkg,8500,42,"Destination");JSONObject action=tap(current,"verified").put("advances_subgoal",true);
         action.getJSONObject("expectation").put("label","Destination");verified(meta,clock,current,reached,action);
         String previous=memory.active();memory.record(AppTaskObservation.capture(current),action,"verified",true);
-        assertEquals("g1",memory.active());meta.nativeSubgoalAdvanced(previous,memory.active(),action,AppTaskVerifier.Verdict.VERIFIED);
+        assertEquals("g1",memory.active());meta.nativeSubgoalAdvanced(previous,memory.active(),action,AppTaskVerifier.Verdict.VERIFIED,AppTaskObservation.capture(current),AppTaskObservation.capture(reached));
         assertEquals("native_subgoal_advanced",meta.diagnostic().getString("scoped_budget_reset_reason"));assertFalse(meta.diagnostic().getBoolean("unresolved_failure_active"));
         clock.set(WALL+9000);assertTrue(meta.claimPlannerRequest(frame(pkg,9000,42,"Hub")));
         assertEquals(1,meta.diagnostic().getInt("failure_replan_reservations"));assertTrue(meta.blocked(AppTaskObservation.capture(hub),failed));
@@ -148,5 +148,33 @@ public class AppTaskMetaControllerV2Test {
         assertEquals("current",new AppTaskMetaController(Arm.CURRENT).diagnostic().getString("policy"));
         assertEquals("mc_v2",new AppTaskMetaController(Arm.META).diagnostic().getString("policy"));
         assertEquals("mc_v0",new AppTaskMetaController(Arm.NO_EVENTS).diagnostic().getString("policy"));
+    }
+    @Test public void alreadySatisfiedPackageSelectionAndInputCannotReleaseBudgetEvenIfPlanAdvances()throws Exception {
+        for(String kind:List.of("package_opened","selection_changed","input_present"))for(boolean alreadySatisfied:List.of(true,false)){
+            String pkg=PACKAGES[0];AtomicLong clock=new AtomicLong(WALL);var meta=new AppTaskMetaController(Arm.META,clock::get);meta.subgoal("g0");
+            ScreenSnapshot start=frame(pkg,0,42,"Alpha"),current=frame(pkg,8000,42,"Alpha");
+            JSONObject failed=fail(meta,clock,start,current,"original");assertTrue(meta.claimPlannerRequest(current));
+            JSONObject before=AppTaskObservation.capture(frame(pkg,8500,42,"Alpha"));
+            JSONObject after=AppTaskObservation.capture(frame(pkg,8900,42,"Alpha"));
+            JSONObject action=tap(frame(pkg,8500,42,"Alpha"),"satisfied").put("advances_subgoal",true);
+            JSONObject expectation=new JSONObject().put("kind",kind);action.put("expectation",expectation);
+            JSONObject old=before.getJSONArray("nodes").getJSONObject(0),next=after.getJSONArray("nodes").getJSONObject(0);
+            if(kind.equals("package_opened")){
+                String destination=alreadySatisfied?pkg:PACKAGES[1];action.put("tool","open_app").put("package",destination).put("target_id",JSONObject.NULL);
+                expectation.put("package",destination);after.put("package",destination);
+            }else if(kind.equals("selection_changed")){
+                old.put("selected",alreadySatisfied);next.put("selected",true);expectation.put("selected",true);
+            }else{
+                action.put("tool","set_text");old.put("editable",true).put("has_value",alreadySatisfied);
+                next.put("editable",true).put("has_value",true);
+            }
+            var verdict=AppTaskVerifier.check(before,after,action,true,kind.equals("input_present"),WALL+8501);
+            assertEquals(AppTaskVerifier.Verdict.VERIFIED,verdict);clock.set(WALL+8900);
+            meta.nativeSubgoalAdvanced("g0","g1",action,verdict,before,after);
+            assertEquals(alreadySatisfied,meta.diagnostic().getBoolean("unresolved_failure_active"));
+            assertEquals(!alreadySatisfied,meta.claimPlannerRequest(frame(pkg,8900,42,"Alpha")));
+            assertEquals(1,meta.diagnostic().getInt("failure_replan_reservations"));
+            assertTrue(meta.blocked(AppTaskObservation.capture(start),failed));
+        }
     }
 }

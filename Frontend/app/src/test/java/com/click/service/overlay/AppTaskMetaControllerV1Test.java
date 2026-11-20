@@ -28,7 +28,7 @@ public class AppTaskMetaControllerV1Test {
         var verdict=AppTaskVerifier.check(AppTaskObservation.capture(before),AppTaskObservation.capture(reached),action,true,false,WALL+at+1);
         assertEquals(AppTaskVerifier.Verdict.VERIFIED,verdict);clock.set(WALL+at+400);
         meta.after(AppTaskObservation.capture(before),AppTaskObservation.capture(reached),action,verdict,400,10000+at+400,before,reached);
-        meta.nativeSubgoalAdvanced(previous,current,action,verdict);
+        meta.nativeSubgoalAdvanced(previous,current,action,verdict,AppTaskObservation.capture(before),AppTaskObservation.capture(reached));
     }
     @Test public void stableNativeTransitionReobservesEarlyWithoutClaimingStepOrGoalSuccess()throws Exception {
         for(String pkg:PACKAGES){
