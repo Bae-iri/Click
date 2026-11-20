@@ -39,7 +39,7 @@ public class AppTaskMetaIntegrationTest {
         assertEquals(AppTaskMetaController.Arm.CURRENT,c.metaController().arm());c.close();
     }
     @Test public void reobservationNeverAutomaticallyRepeatsAnAcceptedAction()throws Exception {
-        var l=new Listener();var c=controller(l,AppTaskMetaController.Arm.META);c.refresh();c.execute((String)null);idle(6000);
+        var l=new Listener();var c=controller(l,AppTaskMetaController.Arm.META);c.refresh();c.execute((String)null);idle(9000); // mc_v1 keeps the accepted action read-only for at most 8s.
         assertEquals(1,l.executed);assertFalse(c.memory().finished());assertEquals("g0",c.memory().active());
         assertEquals(1,c.metaController().diagnostic().getInt("recovery_count"));assertEquals("needs_input",l.response.getString("status"));
         assertTrue(l.response.isNull("action"));c.refresh();c.execute((String)null);assertEquals(1,l.executed);c.close();
