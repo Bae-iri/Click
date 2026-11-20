@@ -14,6 +14,30 @@ import static org.robolectric.Shadows.shadowOf;
 @Config(sdk=34,application=Application.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class RequestBudgetTest {
+ @Test public void appTaskHeaderNeverFallsBelowServerMinimum() throws Exception {
+  for(int available:new int[]{1001,1099,1100}){
+   var connection=mock(HttpURLConnection.class);when(connection.getURL()).thenReturn(new URL("https://example.test"+AppGuideGateway.TASK_PATH));
+   try(var budget=new RequestBudget(SystemClock.elapsedRealtime()+available)){
+    if(available<1100){
+     try{RequestBudget.configure(connection,12000);fail();}catch(java.io.IOException expected){assertEquals("REQUEST_DEADLINE_EXCEEDED",expected.getMessage());}
+     verify(connection,never()).setRequestProperty(eq("X-Click-App-Task-Budget-Ms"),anyString());
+    }else{RequestBudget.configure(connection,12000);verify(connection).setRequestProperty("X-Click-App-Task-Budget-Ms","100");}
+   }
+  }
+ }
+ @Test public void appTaskBudgetIncludesQueueAuthAndLeavesResponseReserve() throws Exception {
+  var connection=mock(HttpURLConnection.class);when(connection.getURL()).thenReturn(new URL("https://example.test"+AppGuideGateway.TASK_PATH));
+  try(var budget=new RequestBudget(SystemClock.elapsedRealtime()+15000)) {
+   RequestBudget.configure(connection,12000);
+   verify(connection).setRequestProperty("X-Click-App-Task-Budget-Ms","9000");
+   shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(12000));
+   var shorter=mock(HttpURLConnection.class);when(shorter.getURL()).thenReturn(new URL("https://example.test"+AppGuideGateway.TASK_PATH));
+   RequestBudget.configure(shorter,12000);
+   verify(shorter).setRequestProperty("X-Click-App-Task-Budget-Ms","2000");
+   shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(2100));
+   try{RequestBudget.configure(shorter,12000);fail();}catch(java.io.IOException expected){assertEquals("REQUEST_DEADLINE_EXCEEDED",expected.getMessage());}
+  }
+ }
  @Test public void publicGuideReadAndWatchdogUseOneLongerDeadlineIncludingPreparation() throws Exception {
   var connection=mock(HttpURLConnection.class);when(connection.getURL()).thenReturn(new URL("https://example.test/api/v1/agent/public-guide/commands"));
   try(var budget=new RequestBudget(SystemClock.elapsedRealtime()+RequestBudget.PUBLIC_GUIDE_TOTAL_MS)) {
