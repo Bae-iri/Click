@@ -47,6 +47,21 @@ public final class AppTaskObservation {
         while(id!=null&&seen.add(id)){if(parent.equals(id))return true;AccessibilityNodeSnapshot n=byId.get(id);id=n==null?null:n.parentId;}
         return false;
     }
+    private static final Pattern APP_BAR=Pattern.compile("(?:^|[:/_])(?:action_?bar|tool_?bar|app_?bar|collapsing_app_bar)(?:$|_)",Pattern.CASE_INSENSITIVE);
+    /**
+     * A page's own title: plain text inside the app bar/toolbar, with no actionable ancestor.
+     * It names the destination page (public UI), unlike body text, so it is exported like a heading.
+     */
+    static boolean pageTitle(AccessibilityNodeSnapshot n,Map<String,AccessibilityNodeSnapshot> byId){
+        if(n.clickable||n.scrollable||n.sensitiveInput||n.checkable||n.text==null||n.text.trim().isEmpty())return false;
+        Set<String> seen=new HashSet<>();boolean inBar=false;AccessibilityNodeSnapshot current=byId.get(n.parentId);int depth=0;
+        while(current!=null&&seen.add(current.nodeId)&&depth++<4){
+            if(current.clickable)return false;
+            if(current.resourceId!=null&&APP_BAR.matcher(current.resourceId).find())inBar=true;
+            current=byId.get(current.parentId);
+        }
+        return inBar;
+    }
     public static String hash(String text){
         try{byte[] digest=MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));StringBuilder s=new StringBuilder();for(byte b:digest)s.append(String.format(Locale.ROOT,"%02x",b&255));return s.toString();}
         catch(Exception e){throw new IllegalStateException(e);}
@@ -84,7 +99,7 @@ public final class AppTaskObservation {
         ordered.sort(Comparator.comparingInt(n->resultLabels.contains(label(n.contentDescription!=null?n.contentDescription:n.text))?0:1));
         for(var n:ordered){
             if(!n.visibleToUser||!(n.enabled||searchField(n)&&n.publicSearchEnabled())||hidden(n,byId)||!screen.packageName.equals(n.packageName)||screen.activeWindowId!=null&&n.windowId!=screen.activeWindowId)continue;
-            boolean editable=searchField(n),heading=n.heading&&headings<6;
+            boolean editable=searchField(n),heading=(n.heading||pageTitle(n,byId))&&headings<6;
             boolean resultLabel=!editable&&resultLabels.contains(label(n.contentDescription!=null?n.contentDescription:n.text));
             if(!n.clickable&&!n.scrollable&&!editable&&!heading&&!resultLabel)continue;
             int[] b=n.bounds;if(b==null||b.length!=4||b[0]<0||b[1]<0||b[2]>screen.screenWidth||b[3]>screen.screenHeight||b[0]>=b[2]||b[1]>=b[3])continue;
