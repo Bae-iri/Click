@@ -55,10 +55,10 @@ def _context_metadata(record):
     if 'recovery_policy' in record or 'recovery_reason' in record:
         policy,reason=record.get('recovery_policy'),record.get('recovery_reason')
         attempt=copied.get('recovery_attempt')
-        if (copied.get('recovery_context_used') is True and policy in {'mc_v0','mc_v1'}
+        if (copied.get('recovery_context_used') is True and policy in {'mc_v0','mc_v1','mc_v2'}
                 and reason in {'accepted_action_unconfirmed','observed_transition_unconfirmed'}
                 and type(attempt) is int and 1<=attempt<=(2 if reason=='observed_transition_unconfirmed' else 3)
-                and (reason!='observed_transition_unconfirmed' or policy=='mc_v1')):
+                and (reason!='observed_transition_unconfirmed' or policy in {'mc_v1','mc_v2'})):
             copied.update(recovery_policy=policy,recovery_reason=reason)
         else:invalid.append('recovery_policy_or_reason')
     for key in ('input_tokens','output_tokens','thinking_tokens','total_tokens'):

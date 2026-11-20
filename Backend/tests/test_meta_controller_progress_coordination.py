@@ -11,6 +11,9 @@ from tests.test_app_task_recovery_capabilities import request, recovering, sende
 @pytest.mark.parametrize('policy,reason,attempt,valid', [
     ('mc_v0','accepted_action_unconfirmed',3,True),
     ('mc_v1','accepted_action_unconfirmed',3,True),
+    ('mc_v2','accepted_action_unconfirmed',3,True),
+    ('mc_v2','observed_transition_unconfirmed',2,True),
+    ('mc_v2','observed_transition_unconfirmed',3,False),
     ('mc_v1','observed_transition_unconfirmed',1,True),
     ('mc_v1','observed_transition_unconfirmed',2,True),
     ('mc_v0','observed_transition_unconfirmed',1,False),

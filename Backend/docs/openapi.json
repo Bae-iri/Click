@@ -13377,7 +13377,8 @@
             "type": "string",
             "enum": [
               "mc_v0",
-              "mc_v1"
+              "mc_v1",
+              "mc_v2"
             ],
             "title": "Policy"
           },

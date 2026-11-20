@@ -34,34 +34,62 @@ public final class AppTaskMetaController {
     private boolean subgoalInitialized;
     private int progressRescues,subgoalProgressRescues;
     private int failureReplanReservations;
+    private boolean unresolvedFailure;
+    private int failureEpochSequence,unresolvedFailurePlannerReservations;
+    private String failureEpochRef,lastPlannerRouteRef;
+    private JSONObject unresolvedFailureAction;
+    private long unresolvedFailureWaitedMs;
+    private enum ResetReason { INITIAL, NATIVE_SUBGOAL_ADVANCED, TARGET_CONTEXT, USER_REFRESH }
+    private ResetReason scopedBudgetResetReason=ResetReason.INITIAL;
     private static final class Event {
         final String pkg;final long at;
         Event(String pkg,long at){this.pkg=pkg;this.at=at;}
     }
     public AppTaskMetaController(Arm arm){this(arm,()->System.currentTimeMillis());}
     AppTaskMetaController(Arm arm,LongSupplier wallClock){this.arm=Objects.requireNonNull(arm);this.wallClock=Objects.requireNonNull(wallClock);}
-    /** A native step can be verified without completing its active subgoal. */
-    public void subgoal(String id){
-        if(!subgoalInitialized||!Objects.equals(activeSubgoal,id)){
-            activeSubgoal=id;subgoalInitialized=true;subgoalProgressRescues=0;clearScopedRoutes();
-        }
+    /** Synchronizing a plan ID is not proof that the previous native subgoal advanced. */
+    public void subgoal(String id){activeSubgoal=id;subgoalInitialized=true;}
+    /** Called only after native verification has advanced the immutable task plan. */
+    public void nativeSubgoalAdvanced(String previous,String current,JSONObject action,AppTaskVerifier.Verdict verdict){
+        if(arm!=Arm.META||verdict!=AppTaskVerifier.Verdict.VERIFIED||!AppTaskPolicy.provesSubgoal(action)
+                ||previous==null||Objects.equals(previous,current)||!subgoalInitialized||!Objects.equals(activeSubgoal,previous))return;
+        resetScopedBudget(ResetReason.NATIVE_SUBGOAL_ADVANCED);
+        activeSubgoal=current;subgoalInitialized=true;
     }
     /** Explicit app selection starts fresh local observation bookkeeping, not new action authority. */
     public void resetTargetContext(){
-        clearRecoveryContext();clearScopedRoutes();activeSubgoal=null;subgoalInitialized=false;subgoalProgressRescues=0;
+        resetScopedBudget(ResetReason.TARGET_CONTEXT);activeSubgoal=null;subgoalInitialized=false;
     }
-    private void clearScopedRoutes(){progressRoutes.clear();failureRequestRoutes.clear();stagnantRoutes.clear();}
+    /** Existing explicit user refresh can leave a local dead end, within the taskwide ceiling. */
+    public void resetUserContext(){resetScopedBudget(ResetReason.USER_REFRESH);}
+    private void resetScopedBudget(ResetReason reason){
+        clearRecoveryContext();progressRoutes.clear();failureRequestRoutes.clear();stagnantRoutes.clear();
+        subgoalProgressRescues=0;unresolvedFailure=false;unresolvedFailurePlannerReservations=0;
+        unresolvedFailureAction=null;unresolvedFailureWaitedMs=0;
+        failureEpochRef=null;lastPlannerRouteRef=null;scopedBudgetResetReason=reason;
+    }
+    private void beginFailureEpisode(JSONObject before,JSONObject action,long waitedMs){
+        if(arm!=Arm.META)return;
+        if(!unresolvedFailure){
+            unresolvedFailure=true;failureEpochSequence++;
+            failureEpochRef=reference(failureEpochSequence+"|"+activeSubgoal+"|"+key(before,action));
+        }
+        unresolvedFailureAction=actionReference(before,action);unresolvedFailureWaitedMs=waitedMs;
+    }
+    private static String reference(String value){
+        return value==null?null:com.click.data.snapshot.AppTaskObservation.hash(value).substring(0,24);
+    }
     private void rememberStagnant(String route){if(route!=null)stagnantRoutes.add(route);while(stagnantRoutes.size()>MAX_MEMORY)stagnantRoutes.remove(stagnantRoutes.iterator().next());}
-    /** Reserve at the actual send boundary; repeated events/response discards cannot buy more calls. */
+    /** Charge every ordinary send in an unresolved failure episode, even after action-only success. */
     public boolean claimPlannerRequest(ScreenSnapshot current){
         if(arm!=Arm.META)return true;
-        String route=AppTaskTransitionDetector.currentRoute(current,wallClock.getAsLong());
+        String route=AppTaskTransitionDetector.currentRoute(current,wallClock.getAsLong());lastPlannerRouteRef=reference(route);
         if(route!=null&&stagnantRoutes.contains(route))return false;
-        if(recoveryAction==null||!"accepted_action_unconfirmed".equals(recoveryReason))return true;
+        if(!unresolvedFailure)return true;
         if(route==null||failureRequestRoutes.contains(route)||failureReplanReservations>=MAX_RECOVERIES){
             rememberStagnant(route);remember("stagnation_request_budget");return false;
         }
-        failureRequestRoutes.add(route);failureReplanReservations++;return true;
+        failureRequestRoutes.add(route);failureReplanReservations++;unresolvedFailurePlannerReservations++;return true;
     }
     public Arm arm(){return arm;}
     public boolean enabled(){return arm!=Arm.CURRENT;}
@@ -77,7 +105,7 @@ public final class AppTaskMetaController {
     }
     public Decision after(JSONObject before,JSONObject after,JSONObject action,AppTaskVerifier.Verdict verdict,long elapsedMs,long nowMs,
             ScreenSnapshot beforeNative,ScreenSnapshot afterNative){
-        if(verdict==AppTaskVerifier.Verdict.VERIFIED){if(arm==Arm.META)clearScopedRoutes();clearRecoveryContext();remember("native_verified");return Decision.CONTINUE;}
+        if(verdict==AppTaskVerifier.Verdict.VERIFIED){clearRecoveryContext();remember("native_verified");return Decision.CONTINUE;}
         if(verdict==AppTaskVerifier.Verdict.PROTECTED||verdict==AppTaskVerifier.Verdict.STALE){clearRecoveryContext();remember(verdict.name());return Decision.HANDOFF;}
         if(arm==Arm.META){
             String attempt=key(before,action)+"|"+(before==null?"":before.optString("observation_id"))+"|"+(action==null?"":action.optString("id"));
@@ -117,24 +145,29 @@ public final class AppTaskMetaController {
         if(key.isEmpty()||rejected.contains(key)||recoveries>=MAX_RECOVERIES){clearRecoveryContext();remember("recovery_budget");return Decision.HANDOFF;}
         // Accepted-but-unverified actions are not automatically performed again.
         rejected.addLast(key);while(rejected.size()>MAX_MEMORY)rejectedReferences.remove(rejected.removeFirst());
-        recoveries++;remember("reobserve_after_unconfirmed_action");
+        recoveries++;beginFailureEpisode(before,action,elapsedMs);remember("reobserve_after_unconfirmed_action");
         recoveryAction=actionReference(before,action);recoveryWaitedMs=elapsedMs;recoveryAttempt=recoveries;recoveryReason="accepted_action_unconfirmed";
         if(recoveryAction!=null)rejectedReferences.put(key,recoveryAction);
         return Decision.REOBSERVE;
     }
     /** Context is advisory and cannot authorize a tool or replace native verification. */
     public JSONObject recoveryContext(JSONObject current)throws JSONException {
-        if(!enabled()||recoveryAction==null||current==null||!"public".equals(current.optString("status"))
-                ||current.optString("observation_id").isEmpty()||recoveryWaitedMs<0||recoveryWaitedMs>120000
-                ||recoveryAttempt<1||recoveryAttempt>MAX_RECOVERIES)return null;
+        boolean failureContext=arm==Arm.META&&unresolvedFailure&&unresolvedFailureAction!=null;
+        JSONObject contextAction=failureContext?unresolvedFailureAction:recoveryAction;
+        long waitedMs=failureContext?unresolvedFailureWaitedMs:recoveryWaitedMs;
+        int attempt=failureContext?Math.max(1,unresolvedFailurePlannerReservations):recoveryAttempt;
+        String reason=failureContext?"accepted_action_unconfirmed":recoveryReason;
+        if(!enabled()||contextAction==null||current==null||!"public".equals(current.optString("status"))
+                ||current.optString("observation_id").isEmpty()||waitedMs<0||waitedMs>120000
+                ||attempt<1||attempt>MAX_RECOVERIES)return null;
         JSONArray references=new JSONArray();
         for(JSONObject reference:rejectedReferences.values())references.put(new JSONObject(reference.toString()));
-        return new JSONObject().put("policy",arm==Arm.META?"mc_v1":"mc_v0").put("reason",recoveryReason)
-            .put("last_verdict","waiting").put("waited_ms",recoveryWaitedMs).put("attempt",recoveryAttempt)
+        return new JSONObject().put("policy",arm==Arm.META?"mc_v2":"mc_v0").put("reason",reason)
+            .put("last_verdict","waiting").put("waited_ms",waitedMs).put("attempt",attempt)
             .put("observation_id",current.getString("observation_id"))
-            .put("last_action",new JSONObject(recoveryAction.toString())).put("blocked_actions",references);
+            .put("last_action",new JSONObject(contextAction.toString())).put("blocked_actions",references);
     }
-    /** Keep rejected-history policy intact, but a new action/result ends this recovery decision. */
+    /** End only the immediate action decision; an unresolved failure retains its advisory context. */
     public void clearRecoveryContext(){recoveryAction=null;recoveryWaitedMs=0;recoveryAttempt=0;recoveryReason="accepted_action_unconfirmed";transition.reset();transitionAttempt=null;}
     private static boolean navigationAction(JSONObject before,JSONObject action){
         if(action==null)return false;
@@ -173,10 +206,15 @@ public final class AppTaskMetaController {
     private void remember(String outcome){if(!enabled())return;outcomes.addLast(outcome);while(outcomes.size()>MAX_MEMORY)outcomes.removeFirst();}
     /** Counts only; public labels, text input and screenshots are never retained here. */
     public JSONObject diagnostic()throws JSONException {
-        return new JSONObject().put("arm",arm.name()).put("event_source","native_screen_change_only")
+        return new JSONObject().put("arm",arm.name()).put("policy",arm==Arm.META?"mc_v2":arm==Arm.CURRENT?"current":"mc_v0").put("event_source","native_screen_change_only")
             .put("event_count",events.size()).put("recovery_count",recoveries).put("blocked_count",rejected.size())
             .put("progress_rescue_count",progressRescues).put("subgoal_progress_rescue_count",subgoalProgressRescues)
             .put("failure_replan_reservations",failureReplanReservations)
+            .put("unresolved_failure_active",unresolvedFailure)
+            .put("unresolved_failure_planner_reservations",unresolvedFailurePlannerReservations)
+            .put("failure_epoch_ref",failureEpochRef==null?JSONObject.NULL:failureEpochRef)
+            .put("planner_route_ref",lastPlannerRouteRef==null?JSONObject.NULL:lastPlannerRouteRef)
+            .put("scoped_budget_reset_reason",scopedBudgetResetReason.name().toLowerCase(Locale.ROOT))
             .put("outcomes",new JSONArray(outcomes)).put("reflection_model_calls",0);
     }
 }

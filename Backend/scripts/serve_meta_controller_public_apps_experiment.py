@@ -200,10 +200,10 @@ def _diagnostic_metadata(request, response, record, elapsed):
             record[key] = value
     policy, reason = diagnostic.get('recovery_policy'), diagnostic.get('recovery_reason')
     attempt = diagnostic.get('recovery_attempt')
-    if (diagnostic.get('recovery_context_used') is True and policy in {'mc_v0','mc_v1'}
+    if (diagnostic.get('recovery_context_used') is True and policy in {'mc_v0','mc_v1','mc_v2'}
             and reason in {'accepted_action_unconfirmed','observed_transition_unconfirmed'}
             and type(attempt) is int and 1 <= attempt <= (2 if reason == 'observed_transition_unconfirmed' else 3)
-            and (reason != 'observed_transition_unconfirmed' or policy == 'mc_v1')):
+            and (reason != 'observed_transition_unconfirmed' or policy in {'mc_v1','mc_v2'})):
         record.update(recovery_policy=policy,recovery_reason=reason)
     if diagnostic.get('called') is True:
         for key in ('input_tokens','output_tokens','thinking_tokens','total_tokens'):

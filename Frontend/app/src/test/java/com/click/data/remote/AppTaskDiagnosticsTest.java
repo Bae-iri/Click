@@ -105,7 +105,9 @@ public class AppTaskDiagnosticsTest {
     }
     @Test public void recoveryAttributionCopiesOnlyCompatibleClosedPolicyReasonPairs()throws Exception {
         for(String[] pair:new String[][]{{"mc_v0","accepted_action_unconfirmed","3"},{"mc_v1","accepted_action_unconfirmed","3"},
-                {"mc_v1","observed_transition_unconfirmed","1"},{"mc_v1","observed_transition_unconfirmed","2"}}){
+                {"mc_v1","observed_transition_unconfirmed","1"},{"mc_v1","observed_transition_unconfirmed","2"},
+                {"mc_v2","accepted_action_unconfirmed","3"},{"mc_v2","observed_transition_unconfirmed","1"},
+                {"mc_v2","observed_transition_unconfirmed","2"}}){
             JSONObject diagnostic=new JSONObject().put("called",true).put("recovery_context_used",true)
                 .put("recovery_policy",pair[0]).put("recovery_reason",pair[1]).put("recovery_attempt",Integer.parseInt(pair[2]));
             JSONObject record=AppTaskDiagnostics.receipt(request(),bound(new JSONObject().put("status","proposed").put("diagnostic",diagnostic)),200,null,0,1,1);
@@ -114,7 +116,7 @@ public class AppTaskDiagnosticsTest {
     }
     @Test public void invalidRecoveryAttributionCannotLeakStringsOrMasqueradeAsProgress()throws Exception {
         for(String invalid:java.util.List.of("used_false","used_string","policy","reason","missing_policy","missing_reason",
-                "v0_progress","progress_attempt3","attempt_float","attempt_bool","attempt_missing","attempt4")){
+                "v0_progress","progress_attempt3","v2_progress_attempt3","future_policy","attempt_float","attempt_bool","attempt_missing","attempt4")){
             JSONObject diagnostic=new JSONObject().put("called",true).put("recovery_context_used",true)
                 .put("recovery_policy","mc_v1").put("recovery_reason","accepted_action_unconfirmed").put("recovery_attempt",1);
             switch(invalid){
@@ -126,6 +128,8 @@ public class AppTaskDiagnosticsTest {
                 case "missing_reason" -> diagnostic.remove("recovery_reason");
                 case "v0_progress" -> diagnostic.put("recovery_policy","mc_v0").put("recovery_reason","observed_transition_unconfirmed");
                 case "progress_attempt3" -> diagnostic.put("recovery_reason","observed_transition_unconfirmed").put("recovery_attempt",3);
+                case "v2_progress_attempt3" -> diagnostic.put("recovery_policy","mc_v2").put("recovery_reason","observed_transition_unconfirmed").put("recovery_attempt",3);
+                case "future_policy" -> diagnostic.put("recovery_policy","mc_v3");
                 case "attempt_float" -> diagnostic.put("recovery_attempt",1.0);
                 case "attempt_bool" -> diagnostic.put("recovery_attempt",true);
                 case "attempt_missing" -> diagnostic.remove("recovery_attempt");
