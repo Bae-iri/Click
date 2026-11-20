@@ -1,0 +1,20 @@
+{
+  "schema_version": "meta-controller-measurement-join.v1",
+  "episodes": 216,
+  "provider_rows": 189,
+  "matched_provider_rows": 189,
+  "unmatched_provider_episode_refs": [],
+  "unmatched_provider_rows": 0,
+  "provider_capture_complete": true,
+  "episodes_with_unknown_model_calls": 0,
+  "episodes_with_provider_work_outside_window": 5,
+  "setup_failures": 61,
+  "notes": [
+    "Setup/provider failures stay in the all-trial denominator.",
+    "Assigned condition and intervention seed define ITT blocks; realized injection is reported separately.",
+    "dispatch_delay delays native execution; it is not evidence about delayed UI rendering.",
+    "Missing model measurements stay null unless complete capture or pre-runtime/local execution establishes zero.",
+    "Summed server work may extend past the episode and is not necessarily user-visible waiting.",
+    "Wrong target count remains null unless directly measured; native rejection is not an accepted wrong target."
+  ]
+}
