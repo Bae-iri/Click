@@ -123,14 +123,20 @@ class TaskRecoveryAction(BaseModel):
 
 class TaskRecovery(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    policy: Literal['mc_v0']
-    reason: Literal['accepted_action_unconfirmed']
+    policy: Literal['mc_v0','mc_v1']
+    reason: Literal['accepted_action_unconfirmed','observed_transition_unconfirmed']
     last_verdict: Literal['waiting']
     waited_ms: int = Field(strict=True, ge=0, le=120000)
     attempt: int = Field(strict=True, ge=1, le=3)
     observation_id: str = Field(min_length=1, max_length=200)
     last_action: TaskRecoveryAction
     blocked_actions: list[TaskRecoveryAction] = Field(max_length=16)
+
+    @model_validator(mode='after')
+    def versioned_reason(self):
+        if self.reason == 'observed_transition_unconfirmed' and (self.policy != 'mc_v1' or self.attempt > 2):
+            raise ValueError('Observed-transition coordination requires mc_v1 and bounded progress attempts')
+        return self
 
 
 class AppTaskRequest(BaseModel):

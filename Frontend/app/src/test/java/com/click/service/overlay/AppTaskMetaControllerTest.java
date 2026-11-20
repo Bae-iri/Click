@@ -40,7 +40,7 @@ public class AppTaskMetaControllerTest {
         assertEquals(Decision.REOBSERVE,mc.after(before,after,action("target"),AppTaskVerifier.Verdict.WAITING,5000,7000));
         assertEquals(0,mc.diagnostic().getInt("event_count"));
     }
-    @Test public void absentStaleFutureAndOtherAppEventsCannotExtendWaiting()throws Exception {
+    @Test public void silentOrUnrelatedEventsDoNotShortenOrExtendTheAbsoluteLease()throws Exception {
         for(String event:new String[]{"none","stale","future","other_app","before_action","protected"}){
             var mc=new AppTaskMetaController(Arm.META);JSONObject before=observation("before",100),after=observation("after",200);
             if(!event.equals("none")){
@@ -50,7 +50,8 @@ public class AppTaskMetaControllerTest {
                 if(event.equals("stale"))at=5000;if(event.equals("future"))at=7001;if(event.equals("before_action"))at=1500;
                 mc.observeEvent(source,at);
             }
-            assertEquals(event,Decision.REOBSERVE,mc.after(before,after,action("target"),AppTaskVerifier.Verdict.WAITING,5000,7000));
+            assertEquals(event,Decision.WAIT,mc.after(before,after,action("target"),AppTaskVerifier.Verdict.WAITING,5000,7000));
+            assertEquals(event,Decision.REOBSERVE,mc.after(before,after,action("target"),AppTaskVerifier.Verdict.WAITING,8000,10000));
         }
     }
     @Test public void unknownOrInvalidObservationsNeverTriggerAutomaticRecovery()throws Exception {
@@ -62,7 +63,7 @@ public class AppTaskMetaControllerTest {
             if(invalid.equals("time_reversed"))after.put("captured_at_ms",99);
             if(invalid.equals("protected"))after.put("status","protected");
             if(invalid.equals("other_app"))after.put("package","org.other.app");
-            assertEquals(invalid,Decision.HANDOFF,mc.after(before,after,action("target"),verdict,5000,7000));
+            assertEquals(invalid,Decision.HANDOFF,mc.after(before,after,action("target"),verdict,8000,10000));
             assertEquals(0,mc.diagnostic().getInt("recovery_count"));
         }
     }
@@ -70,11 +71,11 @@ public class AppTaskMetaControllerTest {
         var mc=new AppTaskMetaController(Arm.META);JSONObject before=observation("before",100),after=observation("after",200);
         for(int i=0;i<3;i++){
             var action=action("target"+i);
-            assertEquals(Decision.REOBSERVE,mc.after(before,after,action,AppTaskVerifier.Verdict.WAITING,5000,7000));
+            assertEquals(Decision.REOBSERVE,mc.after(before,after,action,AppTaskVerifier.Verdict.WAITING,8000,10000));
             assertTrue(mc.blocked(before,action));
-            assertEquals(Decision.HANDOFF,mc.after(before,after,action,AppTaskVerifier.Verdict.WAITING,5000,7000));
+            assertEquals(Decision.HANDOFF,mc.after(before,after,action,AppTaskVerifier.Verdict.WAITING,8000,10000));
         }
-        assertEquals(Decision.HANDOFF,mc.after(before,after,action("fourth"),AppTaskVerifier.Verdict.WAITING,5000,7000));
+        assertEquals(Decision.HANDOFF,mc.after(before,after,action("fourth"),AppTaskVerifier.Verdict.WAITING,8000,10000));
         assertFalse(mc.blocked(new JSONObject(before.toString()).put("fingerprint","changed"),action("target0")));
     }
     @Test public void boundedMemoryDoesNotRetainPublicLabelsInputOrScreenshots()throws Exception {
