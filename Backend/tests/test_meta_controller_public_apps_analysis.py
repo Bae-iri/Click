@@ -97,6 +97,18 @@ def test_speed_cost_success_gate_requires_exposed_recovery_and_no_regression():
     assert not result['speed_cost_success_gate']['eligible_for_repeated_validation']
 
 
+def test_progress_only_exposed_joint_success_is_not_relabelled_as_a_failure():
+    rows,manifest,ready=fixtures()
+    index=next(i for i,r in enumerate(rows) if r['condition']=='delayed_transition' and r['arm']=='A')
+    old=rows[index];rows[index]=failure(**{key:old[key] for key in ('task','condition','arm','schema_version',
+        'evidence_mode','pair_id','episode_id','package','arm_order')})
+    counterpart=next(r for r in rows if r['pair_id']==old['pair_id'] and r['arm']=='B')
+    counterpart.update(recovery_count=0,progress_rescue_count=1,failure_replan_reservations=0)
+    result=summary(rows,manifest,ready)
+    assert result['b_only_exposed_success_pairs']==1
+    assert result['speed_cost_success_gate']['eligible_for_repeated_validation']
+
+
 def test_settings_cohorts_cannot_be_mixed_with_public_apps():
     rows,manifest,ready=fixtures();mixed=deepcopy(rows);mixed[0]['schema_version']='click.native-settings.v2'
     with pytest.raises(ValueError):audit(mixed,[])

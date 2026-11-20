@@ -350,7 +350,7 @@ def summarize(rows, manifest=None, readiness=None, request_audit=None):
             if pair['A']['condition'] != condition: continue
             ea, eb = _fault_realized(pair['A']), _fault_realized(pair['B'])
             counts['both' if ea and eb else 'A_only' if ea else 'B_only' if eb else 'neither'] += 1
-            if ea and eb and _primary(pair['A'], budget) is False and _primary(pair['B'], budget) is True and pair['B'].get('recovery_count', 0) > 0:
+            if ea and eb and _primary(pair['A'], budget) is False and _primary(pair['B'], budget) is True:
                 recovery_signal += 1
         exposure[condition] = {key: counts[key] for key in ('both', 'A_only', 'B_only', 'neither')}
         exposure[condition]['scheduled_without_realization'] = sum(r.get('fault_injected') is True and not _fault_realized(r) for r in rows if r['condition']==condition)
@@ -381,7 +381,7 @@ def summarize(rows, manifest=None, readiness=None, request_audit=None):
         unknown_final_settings_guards=guard_unknown, normal_stratum_gate=normal_gate,
         arms=arms, conditions=conditions, paired_primary_outcomes={key: paired[key] for key in ('both', 'A_only', 'B_only', 'neither')},
         paired_primary_unknown=paired_unknown, fault_exposure=exposure,
-        b_only_recovery_pairs=recovery_signal,
+        b_only_exposed_success_pairs=recovery_signal,
         paired_mean_penalized_delta_B_minus_A_ms=round(mean(penalized_deltas), 3) if penalized_deltas else None,
         paired_both_success_count=len(both_success_deltas),
         paired_both_success_median_delta_B_minus_A_ms=median(both_success_deltas) if both_success_deltas else None,
