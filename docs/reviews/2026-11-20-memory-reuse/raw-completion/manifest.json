@@ -1,0 +1,345 @@
+{
+  "schema_version": "memory-reuse.v1",
+  "run_id": "mem-completion-20261120",
+  "tasks": [
+    {
+      "task_id": "settings_display",
+      "app_id": "com.android.settings",
+      "goal_ref": "4bfac4841a7ded5005060c255c1e7f0a94d485c32a1521f2d4974952a28cbecc",
+      "mirror_goal_ref": "0db3b399d3d513dcf5294c5418dc89734c5a61665bc9f4b5ab8a51442e11cd69",
+      "start_label": "",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "밝기",
+        "resource": "",
+        "role": "",
+        "selected": false
+      }
+    },
+    {
+      "task_id": "settings_notifications",
+      "app_id": "com.android.settings",
+      "goal_ref": "b1a96459a4bd7ecaef7c901f72debbde70e334dde753aa117952a1a1ba86a34d",
+      "mirror_goal_ref": "7fa1c4fba6a85623f50155dafc328830d52e1c0f7a2581be59d16da53685dfa6",
+      "start_label": "",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "앱 알림",
+        "resource": "",
+        "role": "",
+        "selected": false
+      }
+    },
+    {
+      "task_id": "clock_timer",
+      "app_id": "com.sec.android.app.clockpackage",
+      "goal_ref": "eec265c072ff93d25e7273a786eeceae2caa7f4ce9321fdd649d543c150c1589",
+      "mirror_goal_ref": "6b1cb11963cd9527aa47d318ca5548b034b8b316693d415976e027047758842b",
+      "start_label": "알람",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "타이머",
+        "resource": "",
+        "role": "tab",
+        "selected": true
+      }
+    },
+    {
+      "task_id": "chrome_menu",
+      "app_id": "com.android.chrome",
+      "goal_ref": "69eef9b58e8e2e2f9b57c5c8997a732498b6797324cdb6da4d04c9b7b6f82471",
+      "mirror_goal_ref": "485534b9f64cfc651e37bc603cf41eadfde16c41a8b9f0082d5e2f6191c5542c",
+      "start_label": "",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "새 시크릿 탭",
+        "resource": "",
+        "role": "",
+        "selected": false
+      }
+    },
+    {
+      "task_id": "chrome_new_tab",
+      "app_id": "com.android.chrome",
+      "goal_ref": "8ca6349b46b709e0cf39f3f94d824ff7ff01ed9138e93e249fd9b73388124383",
+      "mirror_goal_ref": "9bea9a0d90b2021911e9bc6c3bda5d3743128eadcfdb71d4344105e0a795b8e3",
+      "start_label": "",
+      "open_menu_in_setup": true,
+      "oracle": {
+        "label": "",
+        "resource": "com.android.chrome:id\/search_box_text",
+        "role": "",
+        "selected": false
+      }
+    },
+    {
+      "task_id": "youtube_subscriptions",
+      "app_id": "com.google.android.youtube",
+      "goal_ref": "af8f8bc1f61111e77c1ca5b8fba654d333d1b13557c6eefdf130de0ca48acce3",
+      "mirror_goal_ref": "7a128c99388d81644ba428a5fd077419bb3022988ea38b54ab90ea511a436eb2",
+      "start_label": "홈",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "구독",
+        "resource": "",
+        "role": "button",
+        "selected": true
+      }
+    },
+    {
+      "task_id": "youtube_search",
+      "app_id": "com.google.android.youtube",
+      "goal_ref": "993a19a63f9541229e92669fac4c1dd2fd830ff9fbc0ed2f63d3a952089655dc",
+      "mirror_goal_ref": "2e0201167bef9860d0723f696e0ca82974f5e10912d408e0d9a8660ec0bdf8bf",
+      "start_label": "홈",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "",
+        "resource": "com.google.android.youtube:id\/search_edit_text",
+        "role": "text_field",
+        "selected": false
+      }
+    }
+  ],
+  "arms": [
+    "B",
+    "C"
+  ],
+  "sessions": [
+    "learn1",
+    "learn2",
+    "learn3",
+    "retain"
+  ],
+  "budget_ms": 25000,
+  "scheduled_arm_orders": [
+    {
+      "task_id": "settings_display",
+      "session": "learn1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "settings_display",
+      "session": "learn2",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "settings_display",
+      "session": "learn3",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "settings_display",
+      "session": "retain",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "settings_notifications",
+      "session": "learn1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "settings_notifications",
+      "session": "learn2",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "settings_notifications",
+      "session": "learn3",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "settings_notifications",
+      "session": "retain",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "clock_timer",
+      "session": "learn1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "clock_timer",
+      "session": "learn2",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "clock_timer",
+      "session": "learn3",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "clock_timer",
+      "session": "retain",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "chrome_menu",
+      "session": "learn1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "chrome_menu",
+      "session": "learn2",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "chrome_menu",
+      "session": "learn3",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "chrome_menu",
+      "session": "retain",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "chrome_new_tab",
+      "session": "learn1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "chrome_new_tab",
+      "session": "learn2",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "chrome_new_tab",
+      "session": "learn3",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "chrome_new_tab",
+      "session": "retain",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "youtube_subscriptions",
+      "session": "learn1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "youtube_subscriptions",
+      "session": "learn2",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "youtube_subscriptions",
+      "session": "learn3",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "youtube_subscriptions",
+      "session": "retain",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "youtube_search",
+      "session": "learn1",
+      "order": [
+        "B",
+        "C"
+      ]
+    },
+    {
+      "task_id": "youtube_search",
+      "session": "learn2",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "youtube_search",
+      "session": "learn3",
+      "order": [
+        "C",
+        "B"
+      ]
+    },
+    {
+      "task_id": "youtube_search",
+      "session": "retain",
+      "order": [
+        "B",
+        "C"
+      ]
+    }
+  ],
+  "arm_order_scheme": "deterministic_rotation_and_reversal_not_random",
+  "memory_isolation": "per_arm_device_store_and_facade_store",
+  "simulated_user": "confirms_only_after_independent_oracle_700ms",
+  "task_selection_frozen_before_run": true
+}
