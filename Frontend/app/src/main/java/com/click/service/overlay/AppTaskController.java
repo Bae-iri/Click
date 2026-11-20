@@ -31,6 +31,7 @@ public final class AppTaskController {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private ScreenSnapshot baseline;private JSONObject observation,proposal;
     private String submitted,selectedPackage,selectedLabel,inputHash,scope;
+    private boolean protectedShown;
     private String searchQuery;private boolean searchPrepared;
     private boolean busy,closed,verifying,actionObserved,replaying,finishing;private long actionStarted,proposedAt;
     private JSONObject diagnostic;
@@ -201,6 +202,7 @@ public final class AppTaskController {
             if(memory.finished()){proposal=null;show("completed","요청한 결과를 확인했어요.");return;}
             if(observeResult(current,screen))return;
             if(!force&&fingerprint.equals(submitted))return;
+            if(!force&&rebindInput(current,screen))return;
             if(proposal!=null&&!fingerprint.equals(submitted))proposal=null;
             baseline=screen;observation=current;submitted=fingerprint;diagnostic=null;
             if(memory.state().getJSONArray("subgoals").length()==0||memory.active()!=null)maybeRecall(current);
@@ -208,7 +210,18 @@ public final class AppTaskController {
                 localDiagnostic("requested_app_entry");
                 propose(action("open_app",null,current,new JSONObject().put("kind","package_opened").put("package",selectedPackage),false).put("package",selectedPackage));return;
             }
-            if(!"public".equals(current.optString("status"))){show("protected".equals(current.optString("status"))?"protected":"needs_input","protected".equals(current.optString("status"))?"입력·인증은 직접 진행한 뒤 이어서 확인해 주세요.":selectedPackage!=null?"화면을 불러오고 있어요.":"도움이 필요한 앱을 열어주세요.");return;}
+            if(!"public".equals(current.optString("status"))){
+                boolean guarded="protected".equals(current.optString("status"));
+                // Private input stays unread. Asked to continue while it is still on screen, let the
+                // user say they finished it themselves instead of looping on the same notice.
+                if(guarded&&force&&protectedShown){show("confirm_result","입력 화면은 클릭이 읽지 않아요. 직접 입력과 전송을 마치셨다면 결과가 맞다고 눌러 끝내 주세요. 아직이면 입력을 마친 뒤 다시 눌러 주세요.");return;}
+                // Typing re-captures the same guarded screen many times a second; re-rendering it
+                // would invalidate the panel's buttons before they can be pressed.
+                if(guarded&&protectedShown)return;
+                protectedShown=guarded;
+                show(guarded?"protected":"needs_input",guarded?"입력·인증은 직접 진행한 뒤 이어서 확인해 주세요.":selectedPackage!=null?"화면을 불러오고 있어요.":"도움이 필요한 앱을 열어주세요.");return;
+            }
+            protectedShown=false;
             if(scope==null){scope=listener.scope(current.getString("package"));memory.scope(scope);if(store!=null&&memory.actions()==0)cached=store.reusable(memory.goal(),scope);if(cached!=null&&memory.state().getJSONArray("subgoals").length()==0)memory.plan(cached.optJSONArray("subgoals"));}
             if(memory.actions()>=64){show("needs_input","진행 단계가 많아졌어요. 현재 결과를 확인하고 새 작업으로 이어가 주세요.");return;}
             boolean allStepsVerified=memory.state().getJSONArray("subgoals").length()>0&&memory.active()==null;
@@ -445,6 +458,7 @@ public final class AppTaskController {
         if(closed||busy||verifying||checkingResult||resultOffered||proposal==null||memory.actions()>=64||!listener.canObserve())return;
         try{
             ScreenSnapshot fresh=listener.fresh();JSONObject current=capture(fresh);
+            rebindInput(current,fresh);
             if(previouslyRejected(current,proposal)){proposal=null;show("needs_input","이전에 이 화면에서 동작을 확인하지 못했어요. 현재 화면을 다시 확인해 다른 방법을 준비해 주세요.");return;}
             if(!AppTaskPolicy.allowed(observation,current,proposal,selectedPackage)){proposal=null;submitted=null;show("needs_input","화면이나 대상이 바뀌었어요. 현재 화면을 다시 확인해 주세요.");return;}
             if("set_text".equals(proposal.optString("tool"))&&(input==null||input.isEmpty()||input.length()>200)){show("needs_input","입력할 검색어를 확인해 주세요.");return;}
@@ -456,6 +470,23 @@ public final class AppTaskController {
             if(!accepted){record(observation,current,proposal,"failed",false,false,false);invalidateReplay();proposal=null;show("needs_input","동작을 실행하지 못했어요. 화면을 다시 확인하거나 직접 진행해 주세요.");return;}
             beginVerification();
         }catch(Exception e){listener.failure(e);}
+    }
+    /**
+     * Typing into the panel raises the keyboard, which resizes the app and reshuffles its
+     * suggestions. That moves the search field without changing it, so keep a set_text proposal
+     * bound to the same unique field instead of discarding it and re-planning mid-typing.
+     */
+    private boolean rebindInput(JSONObject current,ScreenSnapshot screen)throws JSONException {
+        if(proposal==null||!"set_text".equals(proposal.optString("tool"))||observation==null||screen==null)return false;
+        if(current.optString("fingerprint").equals(observation.optString("fingerprint")))return false;
+        if(!"public".equals(current.optString("status"))||!current.optString("package").equals(observation.optString("package")))return false;
+        JSONObject old=AppTaskObservation.find(observation,proposal.optString("target_id"));if(old==null)return false;
+        String key=AppTaskObservation.targetKey(old);JSONObject match=null;JSONArray nodes=current.getJSONArray("nodes");
+        for(int i=0;i<nodes.length();i++){JSONObject n=nodes.getJSONObject(i);if(n.optBoolean("editable")&&key.equals(AppTaskObservation.targetKey(n))){if(match!=null)return false;match=n;}}
+        if(match==null)return false;
+        proposal.put("target_id",match.getString("id")).put("bounds",match.getJSONArray("bounds"));
+        observation=current;baseline=screen;submitted=current.getString("fingerprint");
+        return true;
     }
     public void manualTap(String pkg,int window,String id,long occurredAt){
         if(baseline==null)return;

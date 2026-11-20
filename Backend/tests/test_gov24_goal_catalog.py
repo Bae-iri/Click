@@ -15,9 +15,10 @@ GOVERNMENT=[g for g in CATALOG['goals'] if g['target_app']=='gov24']
 def test_catalog_copies_and_legacy_scope_are_separate():
     assert (ROOT/'AI-Agent/goal_catalog/mvp_goals.json').read_bytes()==(
         ROOT/'Backend/app/task_graphs/goal_catalog.json').read_bytes()
-    assert CATALOG['version']=='2.5.0'
+    assert CATALOG['version']=='2.6.0'
     assert len(GOVERNMENT)==20
-    assert not any(g['target_app']=='coupang' for g in CATALOG['goals'])
+    active_coupang=[g for g in CATALOG['goals'] if g['target_app']=='coupang']
+    assert len(active_coupang)==8
     archived=json.loads((ROOT/'AI-Agent/goal_catalog/legacy_coupang_goals.json').read_text(encoding='utf-8'))
     assert archived['version']=='2.4.1' and len(archived['goals'])==71
     assert all(g['target_app']=='coupang' for g in archived['goals'])
@@ -57,10 +58,25 @@ def test_document_history_is_not_a_new_document_navigation_request(login):
 def test_settings_use_the_new_catalog_while_coupang_is_legacy_only():
     TypedGoalRequest(catalog_version='2.5.0',goal_type='settings.volume.increase',
         target_app='android_settings',slots={'setting':'volume','direction':'increase'})
+    TypedGoalRequest(catalog_version='2.6.0',goal_type='settings.volume.increase',
+        target_app='android_settings',slots={'setting':'volume','direction':'increase'})
     TypedGoalRequest(catalog_version='2.4.1',goal_type='coupang.cart.view',
         target_app='coupang',slots={'action':'view'})
     with pytest.raises(ValueError):
         TypedGoalRequest(catalog_version='2.5.0',goal_type='coupang.cart.view',
+            target_app='coupang',slots={'action':'view'})
+
+
+def test_catalog_2_6_reactivates_only_coupang_page_navigation():
+    TypedGoalRequest(catalog_version='2.6.0',goal_type='coupang.order.list',
+        target_app='coupang',slots={'action':'list'})
+    TypedGoalRequest(catalog_version='2.6.0',goal_type='coupang.cart.view',
+        target_app='coupang',slots={'action':'view'})
+    for goal_type,slots in [('coupang.order.cancel',{'action':'cancel'}),('coupang.cart.add',{'action':'add'})]:
+        with pytest.raises(ValueError):
+            TypedGoalRequest(catalog_version='2.6.0',goal_type=goal_type,target_app='coupang',slots=slots)
+    with pytest.raises(ValueError):
+        TypedGoalRequest(catalog_version='2.6.0',goal_type='coupang.order.list',
             target_app='coupang',slots={'action':'view'})
 
 
@@ -71,3 +87,17 @@ def test_old_client_gets_update_guidance_for_a_known_public_guide(login):
     assert body['resolution_status']=='unsupported'
     assert body['metadata']['goal_interpretation']['reason']=='unsupported'
     assert '최신 앱' in body['message']
+
+
+def test_coupang_order_list_request_prepares_the_reactivated_goal(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app.main import create_app
+    from tests.helpers import register
+    from tests.test_goal_preparation import Flow
+    app = create_app()
+    with TestClient(app) as client:
+        register(client)
+        body = Flow(client, app, '쿠팡 주문목록 보여줘').resolve()
+        assert body['resolution_status'] != 'unsupported', body['message']
+        assert body['goal']['goal_type'] == 'coupang.order.list'
+        assert body['goal']['catalog_version'] == '2.6.0'
