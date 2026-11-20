@@ -3,6 +3,7 @@ package com.click.service.overlay;
 import org.json.*;
 import java.util.*;
 import com.click.data.snapshot.AppTaskObservation;
+import com.click.data.snapshot.ScreenSnapshot;
 
 /** Bounded task state; only the verifier or explicit user result can advance it. */
 public final class AppTaskMemory {
@@ -10,21 +11,93 @@ public final class AppTaskMemory {
     public AppTaskMemory(String goal)throws JSONException {
         data=new JSONObject().put("task_id",UUID.randomUUID().toString()).put("goal",goal)
             .put("revision",0).put("subgoals",new JSONArray()).put("attempts",new JSONArray()).put("route",new JSONArray()).put("completed",false);
+        initializeEvidence();
     }
-    public AppTaskMemory(JSONObject stored)throws JSONException {data=new JSONObject(stored.toString());data.getString("task_id");data.getJSONArray("subgoals");data.getJSONArray("attempts");}
+    public AppTaskMemory(JSONObject stored)throws JSONException {data=new JSONObject(stored.toString());data.getString("task_id");data.getJSONArray("subgoals");data.getJSONArray("attempts");initializeEvidence();}
     public String goal(){return data.optString("goal");}
     public String id(){return data.optString("task_id");}
     public JSONObject stored()throws JSONException{return new JSONObject(data.toString());}
-    public JSONObject state()throws JSONException{JSONObject state=new JSONObject().put("task_id",id()).put("revision",data.optInt("revision")).put("subgoals",data.getJSONArray("subgoals")).put("attempts",data.getJSONArray("attempts"));if(completion()!=null)state.put("completion",completion());return state;}
-    public JSONObject completion(){return data.optJSONObject("completion");}
+    public JSONObject state()throws JSONException{JSONObject state=new JSONObject().put("task_id",id()).put("revision",data.optInt("revision")).put("subgoals",data.getJSONArray("subgoals")).put("attempts",data.getJSONArray("attempts"));if(completionSupported()&&completion()!=null)state.put("completion",completion());return state;}
+    /** The local candidate is separate from the wire's supported completion contract. */
+    public JSONObject completion(){JSONObject result=data.optJSONObject("completion");try{return result==null?null:new JSONObject(result.toString());}catch(JSONException invalid){throw new IllegalStateException(invalid);}}
     public void completion(JSONObject condition)throws JSONException {
         if(condition==null)return;
         if(!AppTaskCompletion.valid(condition))throw new JSONException("Invalid result condition");
+        if(finished()&&completion()==null)throw new JSONException("Completed result is immutable");
         if(completion()!=null&&!AppTaskCompletion.key(completion()).equals(AppTaskCompletion.key(condition)))throw new JSONException("Changed result condition");
-        data.put("completion",new JSONObject(condition.toString()));
+        if(completion()==null)setEvidence(condition,"initial_prediction",null);
     }
-    /** Migration of a locally rejected model predicate; user-confirmed results stay immutable. */
-    public void discardCompletion(){if(!finished())data.remove("completion");}
+    private void initializeEvidence()throws JSONException {
+        String goalKey=AppTaskObservation.hash(goal());JSONObject contract=data.optJSONObject("goal_contract");
+        if(contract==null)data.put("goal_contract",new JSONObject().put("version",1).put("task_id",id()).put("goal_key",goalKey));
+        else if(contract.optInt("version")!=1||!id().equals(contract.optString("task_id"))||!goalKey.equals(contract.optString("goal_key")))throw new JSONException("Changed goal contract");
+        JSONObject evidence=data.optJSONObject("completion_evidence");
+        if(evidence==null){
+            evidence=new JSONObject().put("version",completion()==null?0:1).put("status",completion()==null?"missing":finished()?"user_confirmed":"provisional")
+                .put("goal_key",goalKey).put("history",new JSONArray());data.put("completion_evidence",evidence);
+            if(completion()!=null){evidence.put("requirements",completion());evidenceEvent("legacy_result_migrated",null,null,AppTaskCompletion.key(completion()));}
+            if(completion()!=null)evidence.put("candidate_key",AppTaskCompletion.key(completion()));
+        }else if(!goalKey.equals(evidence.optString("goal_key"))
+                ||completion()!=null&&!AppTaskCompletion.key(completion()).equals(evidence.optString("candidate_key")))throw new JSONException("Changed evidence goal or candidate");
+    }
+    public int evidenceVersion(){return data.optJSONObject("completion_evidence").optInt("version");}
+    public boolean completionSupported(){String status=data.optJSONObject("completion_evidence").optString("status");return completion()!=null&&(finished()||"supported".equals(status)||"user_confirmed".equals(status));}
+    public JSONObject evidenceState()throws JSONException{return new JSONObject(data.getJSONObject("completion_evidence").toString());}
+    private void evidenceEvent(String reason,String observation,String from,String to)throws JSONException {
+        JSONObject evidence=data.getJSONObject("completion_evidence");JSONArray history=evidence.getJSONArray("history");
+        JSONObject event=new JSONObject().put("version",evidenceVersion()).put("status",evidence.getString("status")).put("reason",reason);
+        if(observation!=null)event.put("observation_ref",AppTaskObservation.hash(observation));
+        if(from!=null)event.put("from_key",from);if(to!=null)event.put("to_key",to);
+        history.put(event);while(history.length()>8)history.remove(0);
+    }
+    private void setEvidence(JSONObject condition,String reason,String observation)throws JSONException {
+        JSONObject old=completion(),evidence=data.getJSONObject("completion_evidence");
+        data.put("completion",new JSONObject(condition.toString()));
+        if(evidence.optJSONObject("requirements")==null)evidence.put("requirements",new JSONObject(condition.toString()));
+        evidence.put("version",evidenceVersion()+1).put("status","provisional").put("candidate_key",AppTaskCompletion.key(condition));
+        evidenceEvent(reason,observation,old==null?null:AppTaskCompletion.key(old),AppTaskCompletion.key(condition));
+    }
+    /** A model can refine only an unsupported prediction using public evidence present now. */
+    public boolean offerCompletion(JSONObject condition,JSONObject observed,ScreenSnapshot nativeScreen)throws JSONException {
+        if(condition==null||!AppTaskCompletion.valid(condition)||AppTaskCompletion.unsafeForGoal(goal(),condition,observed,nativeScreen))return false;
+        JSONObject old=completion();String key=AppTaskCompletion.key(condition);
+        if(old!=null&&AppTaskCompletion.key(old).equals(key))return true;
+        if(finished()||completionSupported()||evidenceVersion()>=32)return false;
+        JSONObject requirements=data.getJSONObject("completion_evidence").optJSONObject("requirements");
+        boolean matched=AppTaskCompletion.checkForGoal(goal(),condition,observed,nativeScreen)==AppTaskCompletion.Verdict.MATCHED
+            &&AppTaskCompletion.distinctProofTargets(condition,observed);
+        if(old!=null||requirements!=null){
+            if(!matched||requirements!=null&&!AppTaskCompletion.preservesRequirements(requirements,condition)){
+                evidenceEvent("replacement_rejected",observed==null?null:observed.optString("observation_id"),old==null?null:AppTaskCompletion.key(old),key);return false;
+            }
+        }
+        setEvidence(condition,old==null&&requirements==null?"initial_prediction":"observed_prediction_refined",observed==null?null:observed.optString("observation_id"));
+        return true;
+    }
+    /** Called only after the controller checks the same candidate on two fresh native frames. */
+    public boolean supportCompletion(int expectedVersion)throws JSONException {
+        if(finished()||completion()==null||expectedVersion!=evidenceVersion())return false;
+        if(!completionSupported()){
+            data.getJSONObject("completion_evidence").put("status","supported");
+            evidenceEvent("fresh_native_observations",null,null,AppTaskCompletion.key(completion()));
+        }
+        return true;
+    }
+    /** Unsafe predictions may be discarded; supported and user-confirmed results stay immutable. */
+    public void discardCompletion()throws JSONException {
+        if(finished()||completionSupported()||completion()==null)return;
+        String previous=AppTaskCompletion.key(completion());data.remove("completion");
+        data.getJSONObject("completion_evidence").put("version",evidenceVersion()+1).put("status","missing").remove("candidate_key");
+        JSONObject requirements=data.getJSONObject("completion_evidence").optJSONObject("requirements");
+        if(requirements!=null){
+            JSONObject corrected=AppTaskCompletion.releaseInvalidNativeDirections(goal(),requirements);
+            if(!AppTaskCompletion.key(requirements).equals(AppTaskCompletion.key(corrected))){
+                data.getJSONObject("completion_evidence").put("requirements",corrected);
+                evidenceEvent("invalid_native_direction_released",null,AppTaskCompletion.key(requirements),AppTaskCompletion.key(corrected));
+            }
+        }
+        evidenceEvent("unsafe_prediction_discarded",null,previous,null);
+    }
     public String active(){JSONArray goals=data.optJSONArray("subgoals");for(int i=0;goals!=null&&i<goals.length();i++)if("pending".equals(goals.optJSONObject(i).optString("status")))return goals.optJSONObject(i).optString("id");return null;}
     public void plan(JSONArray incoming)throws JSONException {
         if(incoming==null||incoming.length()==0||incoming.length()>8)return;
@@ -74,6 +147,6 @@ public final class AppTaskMemory {
     }
     public String scope(){return data.optString("route_scope",null);}
     public void scope(String scope)throws JSONException{data.put("route_scope",scope);}
-    public void confirmResult()throws JSONException{data.put("completed",true);}
+    public void confirmResult()throws JSONException{data.put("completed",true);data.getJSONObject("completion_evidence").put("status","user_confirmed");evidenceEvent("user_confirmed",null,null,completion()==null?null:AppTaskCompletion.key(completion()));}
     public JSONArray route(){return data.optJSONArray("route");}
 }

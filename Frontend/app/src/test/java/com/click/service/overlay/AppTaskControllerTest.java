@@ -184,9 +184,14 @@ public class AppTaskControllerTest {
         JSONObject a=action(AppTaskObservation.capture(l.current),"tap","target_visible");a.getJSONObject("expectation").put("label","밝기");
         callback.getValue().success(new JSONObject().put("status","proposed").put("subgoals",m.state().getJSONArray("subgoals"))
             .put("completion",AppTaskCompletionTest.completion(pkg,"디스플레이 화면")).put("action",a));
-        assertNotNull(m.completion());assertEquals("proposed",l.result.getString("status"));
+        // A discarded prediction is not repaired with another unseen guess.
+        assertNull(m.completion());assertEquals("proposed",l.result.getString("status"));
         l.current=screen(pkg,AppTaskGoalCompletionTest.heading(pkg,"title","디스플레이 화면"));c.screenChanged(l.current);
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+        var observedCallback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway,times(2)).send(any(),observedCallback.capture());
+        observedCallback.getValue().success(new JSONObject().put("status","confirm_result").put("subgoals",m.state().getJSONArray("subgoals"))
+            .put("completion",AppTaskCompletionTest.completion(pkg,"디스플레이 화면")));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
         assertEquals("confirm_result",l.result.getString("status"));assertEquals("verified",l.result.getJSONObject("result_assessment").getString("status"));
         assertEquals(id,m.id());assertEquals(plan,m.state().getJSONArray("subgoals").toString());assertFalse(m.finished());assertEquals(0,l.executions);c.close();
     }

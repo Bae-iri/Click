@@ -5,11 +5,13 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import com.click.data.remote.AppGuideGateway;
+import com.click.data.remote.AppTaskDiagnostics;
 import com.click.data.snapshot.AccessibilityNodeSnapshot;
 import com.click.data.snapshot.AppTaskObservation;
 import com.click.data.snapshot.ScreenSnapshot;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.json.JSONException;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -48,7 +50,7 @@ import static org.robolectric.Shadows.shadowOf;
 @LooperMode(LooperMode.Mode.PAUSED)
 public class MetaControllerClosedLoopExperimentTest {
     static final String PKG="org.click.experiment.fixture", RES=PKG+":id/";
-    static final String VERSION="click.synthetic-closed-loop.v1";
+    static final String VERSION="click.synthetic-closed-loop.v2";
     static final long EPISODE_LIMIT_MS=14000;
     private static final Flow[] FLOWS={
         new Flow("nav_settings","환경 화면을 열어줘","환경","환경 화면",false,false),
@@ -67,6 +69,15 @@ public class MetaControllerClosedLoopExperimentTest {
         assertTrue("mode must be controlled or live",Set.of("controlled","live").contains(mode));
         String endpoint=System.getenv("CLICK_META_CLOSED_LOOP_ENDPOINT");
         if(mode.equals("live"))assertNotNull("Live mode requires explicit loopback endpoint",endpoint);
+        Set<String> wantedTasks=selection("CLICK_META_CLOSED_LOOP_TASKS");
+        Set<String> wantedConditions=selection("CLICK_META_CLOSED_LOOP_CONDITIONS");
+        List<Flow> flows=new ArrayList<>();for(Flow f:FLOWS)if(wantedTasks.isEmpty()||wantedTasks.contains(f.id))flows.add(f);
+        assertEquals("Unknown selected task",wantedTasks.size(),wantedTasks.isEmpty()?0:flows.size());
+        List<Condition> conditions=new ArrayList<>();for(Condition c:Condition.values())if(wantedConditions.isEmpty()||wantedConditions.contains(c.name()))conditions.add(c);
+        assertEquals("Unknown selected condition",wantedConditions.size(),wantedConditions.isEmpty()?0:conditions.size());
+        int repeats=Integer.parseInt(System.getenv().getOrDefault("CLICK_META_CLOSED_LOOP_REPETITIONS","2"));
+        assertTrue("Repetitions must be 1..10",repeats>=1&&repeats<=10);
+        int expectedEpisodes=flows.size()*conditions.size()*repeats*2;
         Path dir=Path.of(output);Files.createDirectories(dir);
         Path episodes=dir.resolve("episodes.jsonl");
         assertFalse("Refuse to overwrite a previous run",Files.exists(episodes));
@@ -74,7 +85,7 @@ public class MetaControllerClosedLoopExperimentTest {
         Files.write(dir.resolve("readiness.json"),gates.toString(2).getBytes(StandardCharsets.UTF_8));
         List<JSONObject> rows=new ArrayList<>();
         int pair=0;
-        for(Flow flow:FLOWS)for(Condition condition:Condition.values())for(int rep=0;rep<2;rep++){
+        for(Flow flow:flows)for(Condition condition:conditions)for(int rep=0;rep<repeats;rep++){
             String pairId=flow.id+"/"+condition+"/"+rep;
             AppTaskMetaController.Arm[] order=(pair++%2==0)
                 ?new AppTaskMetaController.Arm[]{AppTaskMetaController.Arm.CURRENT,AppTaskMetaController.Arm.META}
@@ -88,13 +99,18 @@ public class MetaControllerClosedLoopExperimentTest {
             assertEquals("A/B initial state must match",rows.get(rows.size()-2).getString("initial_state_key"),rows.get(rows.size()-1).getString("initial_state_key"));
         }
         JSONObject manifest=new JSONObject().put("schema_version",VERSION).put("mode",mode)
-            .put("episode_count",rows.size()).put("matched_pairs",36).put("readiness_passed",true)
+            .put("episode_count",rows.size()).put("matched_pairs",expectedEpisodes/2).put("readiness_passed",true)
+            .put("run_scope",flows.size()==6&&conditions.size()==3&&repeats==2?"primary_full_matrix":"preflight_subset")
+            .put("selected_tasks",new JSONArray(flows.stream().map(f->f.id).toArray()))
+            .put("selected_conditions",new JSONArray(conditions.stream().map(c->c.name()).toArray())).put("repetitions",repeats)
             .put("real_apps_tested",false).put("learning_enabled",false).put("shared_common_fixes",true)
             .put("ui_clock","Robolectric paused; modeled UI waits")
             .put("model_clock","host monotonic wall time; not added to virtual UI clock")
-            .put("controlled_model_calls",0).put("analysis_script","Backend/scripts/summarize_meta_controller_closed_loop.py");
+            .put("controlled_model_calls",0).put("request_join","direct_request_and_task_sha256_prefix24")
+            .put("model_call_count_rule","Observed calls are a lower bound whenever any request has unknown call state")
+            .put("analysis_script","Backend/scripts/summarize_meta_controller_closed_loop.py");
         Files.write(dir.resolve("run.json"),manifest.toString(2).getBytes(StandardCharsets.UTF_8));
-        assertEquals(72,rows.size());
+        assertEquals(expectedEpisodes,rows.size());
         for(JSONObject row:rows){
             assertEquals("False goal verification",0,row.getInt("false_verified_offers"));
             assertEquals("Unsafe execution",0,row.getInt("guard_violations"));
@@ -142,16 +158,31 @@ public class MetaControllerClosedLoopExperimentTest {
         AppGuideGateway gateway=mock(AppGuideGateway.class);Stats stats=new Stats();
         doAnswer(call->{
             JSONObject req=call.getArgument(0);AppGuideGateway.Callback callback=call.getArgument(1);stats.requests++;
+            JSONObject trace=new JSONObject().put("request_ref",reference(req.getString("request_id")))
+                .put("task_ref",reference(req.getJSONObject("state").getString("task_id")))
+                .put("http_status",JSONObject.NULL).put("error_code",JSONObject.NULL)
+                .put("outcome","started").put("model_call_state","unknown")
+                .put("model_calls",JSONObject.NULL).put("model_wait_ms",JSONObject.NULL);
+            stats.traces.put(trace);
             try{
                 JSONObject response;
                 if(mode.equals("live")){
-                    long begin=System.nanoTime();response=liveRequest(endpoint,req);stats.transportWallMs+=(System.nanoTime()-begin)/1_000_000.0;
-                    JSONObject diagnostic=response.optJSONObject("diagnostic");
-                    if(diagnostic!=null&&diagnostic.optBoolean("called")){stats.modelCalls++;stats.modelWaitMs+=diagnostic.optDouble("latency_ms",0);stats.model=diagnostic.optString("model","");}
-                    if(diagnostic!=null&&("provider".equals(diagnostic.optString("failure_kind"))||"unavailable".equals(response.optString("status"))))stats.providerOrPlanErrors++;
-                }else response=plan(req,flow);
+                    long begin=System.nanoTime();
+                    try{response=liveRequest(endpoint,req,trace);}finally{stats.transportWallMs+=(System.nanoTime()-begin)/1_000_000.0;}
+                    boolean bound=applyResponseTrace(req,response,trace);
+                    JSONObject diagnostic=bound?response.optJSONObject("diagnostic"):null;
+                    if(diagnostic!=null&&"observed".equals(trace.optString("model_call_state"))){
+                        stats.modelCalls++;double wait=trace.optDouble("model_wait_ms",Double.NaN);
+                        if(Double.isFinite(wait)&&wait>=0&&wait<=120000)stats.modelWaitMs+=wait;
+                        String name=diagnostic.optString("model","");if(name.matches("gemini-[a-zA-Z0-9.-]{1,100}"))stats.model=name;
+                    }
+                    if(diagnostic!=null&&(Set.of("configuration","provider","parse","plan").contains(diagnostic.optString("failure_kind"))||"unavailable".equals(response.optString("status"))))stats.providerOrPlanErrors++;
+                }else{response=plan(req,flow);trace.put("outcome","controlled_response").put("model_call_state","not_started").put("model_calls",0).put("model_wait_ms",0);}
                 AppGuideGateway.validateTask(req,response);callback.success(response);
-            }catch(Exception error){stats.errors++;callback.failure(error);}
+            }catch(Exception error){
+                if(Set.of("started","service_response","controlled_response").contains(trace.optString("outcome")))trace.put("outcome","response_validation_failed").put("error_code","response_validation_failed");
+                stats.errors++;callback.failure(error);
+            }
             return null;
         }).when(gateway).send(any(),any());
         AppTaskController controller=new AppTaskController(gateway,new AppTaskMemory(flow.goal),null,w,true,false,true,arm);
@@ -173,6 +204,7 @@ public class MetaControllerClosedLoopExperimentTest {
             JSONObject meta=controller.metaController().diagnostic();
             return new JSONObject().put("schema_version",VERSION).put("evidence_mode",mode.equals("live")?"live_model_synthetic_closed_loop":"controlled_full_controller_conformance")
                 .put("task",flow.id).put("condition",condition.name()).put("repetition",repetition).put("pair_id",pairId).put("arm_order",order)
+                .put("task_ref",reference(controller.memory().id())).put("request_traces",stats.traces)
                 .put("arm",arm==AppTaskMetaController.Arm.CURRENT?"A":"B").put("initial_state_key",initial)
                 .put("setup_valid",true).put("independent_goal_reached",w.goal()).put("runtime_verified_offer",w.verifiedAt>=0)
                 .put("false_verified_offers",w.falseVerified).put("guard_violations",w.guardViolations)
@@ -182,6 +214,8 @@ public class MetaControllerClosedLoopExperimentTest {
                 .put("delayed_effect_applied",w.delayedEffectApplied)
                 .put("planner_requests",stats.requests).put("controlled_planner_requests",mode.equals("controlled")?stats.requests:0)
                 .put("actual_model_calls",mode.equals("live")?stats.modelCalls:0).put("actual_model_wait_ms",stats.modelWaitMs)
+                .put("recorded_model_calls",mode.equals("live")?stats.modelCalls:0)
+                .put("unknown_model_call_requests",unknownCalls(stats.traces)).put("model_call_count_complete",unknownCalls(stats.traces)==0)
                 .put("actual_model",stats.model.isEmpty()?JSONObject.NULL:stats.model).put("transport_wall_ms",stats.transportWallMs)
                 .put("modeled_ui_elapsed_ms",SystemClock.uptimeMillis()-started)
                 .put("modeled_ui_ms_to_verified_offer",w.verifiedAt<0?JSONObject.NULL:w.verifiedAt-started)
@@ -221,25 +255,72 @@ public class MetaControllerClosedLoopExperimentTest {
     private static JSONObject request(World w,Flow flow)throws Exception{return new JSONObject().put("protocol_version","app-task.v2").put("request_id",UUID.randomUUID().toString())
         .put("goal",flow.goal).put("screen",AppTaskObservation.capture(w.fresh())).put("state",new AppTaskMemory(flow.goal).state()).put("apps",new JSONArray());}
 
-    private static JSONObject liveRequest(String endpoint,JSONObject request)throws Exception{
+    private static Set<String> selection(String name){
+        String raw=System.getenv().getOrDefault(name,"");Set<String> values=new java.util.LinkedHashSet<>();
+        for(String value:raw.split(","))if(!value.trim().isEmpty())values.add(value.trim());return values;
+    }
+    private static String reference(String id){return AppTaskObservation.hash(id).substring(0,24);}
+    private static int unknownCalls(JSONArray traces){int count=0;for(int i=0;i<traces.length();i++)if("unknown".equals(traces.optJSONObject(i).optString("model_call_state")))count++;return count;}
+    private static String safeCode(String code){return Set.of("not_found","test_authorization_required","bounded_content_length_required","body_too_large",
+        "json_body_required","request_read_timeout","invalid_app_task_request","outside_frozen_public_fixture","reference_mismatch",
+        "synthetic_experiment_service_error","synthetic_experiment_internal_error","service_identity_mismatch").contains(code)?code:"http_error_unclassified";}
+    static boolean applyResponseTrace(JSONObject request,JSONObject response,JSONObject trace)throws Exception{
+        boolean bound=AppTaskDiagnostics.identityBound(request,response);
+        trace.put("response_identity_bound",bound);
+        if(!bound){
+            trace.put("model_call_state","unknown").put("model_calls",JSONObject.NULL).put("model_wait_ms",JSONObject.NULL);
+            for(String key:List.of("planning_mode","failure_kind","failure_stage","reason_code","validation_errors"))trace.remove(key);
+            return false;
+        }
+        JSONObject safe=AppTaskDiagnostics.receipt(request,response,200,null,0,0,0);
+        for(String key:List.of("planning_mode","failure_kind","failure_stage","reason_code","validation_errors"))
+            if(safe.has(key))trace.put(key,safe.get(key));
+        return true;
+    }
+    private static JSONObject liveRequest(String endpoint,JSONObject request,JSONObject trace)throws Exception{
         URI uri=URI.create(endpoint);
         if(!"http".equals(uri.getScheme())||!Set.of("127.0.0.1","localhost").contains(uri.getHost())||!AppGuideGateway.TASK_PATH.equals(uri.getPath()))throw new IllegalArgumentException("Only explicit local fixture facade permitted");
         HttpURLConnection connection=(HttpURLConnection)uri.toURL().openConnection();
         connection.setConnectTimeout(3000);connection.setReadTimeout(30000);connection.setRequestMethod("POST");connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type","application/json");connection.setRequestProperty("Authorization","Bearer local-meta-synthetic-experiment");
+        connection.setRequestProperty("X-Click-Request-Ref",trace.getString("request_ref"));
+        connection.setRequestProperty("X-Click-Task-Ref",trace.getString("task_ref"));
         // The facade alone translates synthetic captured_at_ms to real provider freshness time.
         byte[] bytes=request.toString().getBytes(StandardCharsets.UTF_8);connection.setFixedLengthStreamingMode(bytes.length);
-        try{connection.getOutputStream().write(bytes);int status=connection.getResponseCode();if(status!=200)throw new java.io.IOException("fixture_facade_http_"+status);
-            try(InputStream stream=connection.getInputStream()){
+        return exchange(connection,bytes,trace);
+    }
+    /** Injectable connection boundary for deterministic, no-network receipt tests. */
+    static JSONObject exchange(HttpURLConnection connection,byte[] bytes,JSONObject trace)throws Exception{
+        try{connection.getOutputStream().write(bytes);int status=connection.getResponseCode();trace.put("http_status",status);
+            String server=connection.getHeaderField("X-Click-Server-Ref");if(server!=null&&server.matches("[0-9a-f]{24}"))trace.put("server_ref",server);
+            try(InputStream stream=status==200?connection.getInputStream():connection.getErrorStream()){
+                if(stream==null)throw new java.io.IOException("MISSING_FIXTURE_RESPONSE");
                 java.io.ByteArrayOutputStream buffer=new java.io.ByteArrayOutputStream();byte[] chunk=new byte[4096];int count;
                 while((count=stream.read(chunk))!=-1){buffer.write(chunk,0,count);if(buffer.size()>131072)throw new java.io.IOException("fixture_response_too_large");}
-                return new JSONObject(new String(buffer.toByteArray(),StandardCharsets.UTF_8));
+                JSONObject response=new JSONObject(new String(buffer.toByteArray(),StandardCharsets.UTF_8));
+                if(status!=200){
+                    String state=response.optString("model_call_state","unknown");if(!Set.of("not_started","observed","unknown").contains(state))state="unknown";
+                    trace.put("outcome","http_rejected").put("error_code",safeCode(response.optString("error"))).put("model_call_state",state);
+                    if(state.equals("not_started"))trace.put("model_calls",0).put("model_wait_ms",0);
+                    throw new java.io.IOException("SYNTHETIC_HTTP_ERROR");
+                }
+                JSONObject diagnostic=response.optJSONObject("diagnostic");
+                trace.put("outcome","service_response");
+                if(diagnostic!=null&&diagnostic.opt("called") instanceof Boolean){
+                    boolean called=diagnostic.optBoolean("called");trace.put("model_call_state",called?"observed":"not_started").put("model_calls",called?1:0);
+                    double wait=diagnostic.optDouble("latency_ms",Double.NaN);
+                    trace.put("model_wait_ms",!called?0:Double.isFinite(wait)&&wait>=0&&wait<=120000?wait:JSONObject.NULL);
+                }
+                return response;
             }
+        }catch(java.net.SocketTimeoutException error){trace.put("outcome","transport_timeout").put("error_code","transport_timeout");throw error;
+        }catch(java.io.IOException error){if(!"http_rejected".equals(trace.optString("outcome")))trace.put("outcome","transport_error").put("error_code","transport_io_error");throw error;
+        }catch(JSONException error){trace.put("outcome","malformed_response").put("error_code","malformed_response");throw error;
         }finally{connection.disconnect();}
     }
 
     private static long clock(){return ShadowSystem.currentTimeMillis();}
-    private static final class Stats{int requests,modelCalls,providerOrPlanErrors,errors;double modelWaitMs,transportWallMs;String model="";}
+    private static final class Stats{int requests,modelCalls,providerOrPlanErrors,errors;double modelWaitMs,transportWallMs;String model="";final JSONArray traces=new JSONArray();}
     private static final class Flow{
         final String id,goal,primary,destination;final boolean selection,nested;
         Flow(String id,String goal,String primary,String destination,boolean selection,boolean nested){this.id=id;this.goal=goal;this.primary=primary;this.destination=destination;this.selection=selection;this.nested=nested;}
