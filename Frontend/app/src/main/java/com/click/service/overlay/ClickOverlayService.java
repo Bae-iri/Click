@@ -182,6 +182,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int homeSearchToken;
     private long adjustmentSettlingUntil;
     private String pendingActionType;
+    private long automaticTapDispatchedAt;
     private long pendingActionOccurredAtMs;
     private Runnable missingScreenRetry;
     private Runnable actionEvidenceWait;
@@ -4526,7 +4527,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void executeAutomaticAction(AgentTurnContract.GuideCommand command, JSONObject metadata,
                                         ScreenSnapshot screen, String stateId) {
-        if (!com.click.BuildConfig.SETTINGS_EXPERIMENT_ARM.isEmpty()) return;
         if (screen != null) automationGuard.observe(screen.contentFingerprint());
         if (!execution.canAct() || !execution.matchesGuide(command,lastSubmittedScreen) || navigationRecovery.hint() != NavigationRecovery.Action.NONE
                 || !command.requiresUserAction
@@ -4600,7 +4600,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             speechHandler.postDelayed(() -> {
                 if (generation != execution.generation() || execution.paused() || execution.pendingControl() != null
                         || !automationGuard.awaiting(command.guideCommandId)) return;
+        android.util.Log.i("ClickAutomation","native_dispatch action="+command.actionType+" performed="+performed);
+        if (performed && tap) automaticTapDispatchedAt = SystemClock.uptimeMillis();
                 ScreenSnapshot after = ClickAccessibilityService.freshSnapshot();
+            try { deviceJournal.notDispatched(execution.sessionId(),execution.episodeId(),command.guideCommandId); }
+            catch(java.io.IOException failed) { automationNeedsHelp("조작 기록을 저장하지 못했어요. 직접 진행해 주세요.");return; }
                 if (after != null && !after.nodes.isEmpty()) automationGuard.observe(after.contentFingerprint());
                 if (!automationGuard.awaiting(command.guideCommandId)) {
                     execution.requestObservation();
@@ -4620,7 +4624,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if (waitingForTargetHelp()) return;
         // A redraw can precede a manual or automatic range event. Keep its exact
         // binding until the next validated guide or explicit cancel/navigation.
-        if (!automationGuard.awaiting(lastGuideCommandId) && !actionTracker.hasSliderBinding()) actionTracker.clear();
+        if (!automationGuard.awaiting(lastGuideCommandId) && !actionTracker.hasSliderBinding()
+                && !(actionTracker.hasTapBinding() && SystemClock.uptimeMillis()-automaticTapDispatchedAt<2500L)) actionTracker.clear();
         guideStepTimer.clear();
         lastGuideCommandId = lastTargetNodeId = null;
         lastTargetBounds = null;
@@ -4955,6 +4960,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         lastGuideCommandId=lastTargetNodeId=null;lastTargetBounds=null;
         staleGuideDrops=freshObservationRetries=0;assistedRecoveryGeneration=-1;
         scrollSearchGeneration=-1;homeSearchToken++;
+        // The native click callback follows the window change. Keep its exact guide
+        // binding until that callback can attach the observed tap to the new page.
+        if(change!=SettingsPageNavigation.Change.NONE && pendingVerifiedAction==null
+                && actionTracker.hasTapBinding()
+                && SystemClock.uptimeMillis()-automaticTapDispatchedAt<2500L)return false;
         pendingVerifiedAction=navigationEvent;
         if(navigationEvent==null && !AgentActionEvents.BACK_NAVIGATED.equals(pendingActionType) && !AgentActionEvents.HOME_NAVIGATED.equals(pendingActionType)) {
             pendingActionType=AgentActionEvents.MANUAL_OVERRIDE;
@@ -5198,10 +5208,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private boolean awaitNativeActionEvidence(ScreenSnapshot screen) {
-        if (pendingVerifiedAction != null || execution.acceptedGoal() == null || !actionTracker.hasSliderBinding()) {
+        boolean waitingForTap = actionTracker.hasTapBinding()
+                && SystemClock.uptimeMillis()-automaticTapDispatchedAt<2500L;
+        if (pendingVerifiedAction != null || execution.acceptedGoal() == null || (!actionTracker.hasSliderBinding() && !waitingForTap)) {
             clearActionEvidenceWait(); return false;
         }
-        long delay = adjustmentResultCheck.actionEvidenceDelay(execution.episodeId(),
+        long delay = waitingForTap ? 250L : adjustmentResultCheck.actionEvidenceDelay(execution.episodeId(),
                 execution.acceptedGoal().optString("goal_type"), screen, SystemClock.uptimeMillis());
         if (delay <= 0) { clearActionEvidenceWait(); return false; }
         if (actionEvidenceWait != null) return true;
@@ -5279,7 +5291,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     /** Navigation searches do not authorize taps or setting changes. Keep the logo visible. */
     private boolean startAutomaticHomeSearch(ScreenSnapshot expected) {
-        if (!com.click.BuildConfig.SETTINGS_EXPERIMENT_ARM.isEmpty()) return false;
         if (expected.activeWindowId == null || expected.nodes.isEmpty()) return false;
         com.click.data.snapshot.NavigationState frame = navigationFrame(expected);
         // Node paths/window IDs can change during paging. They must not reset
@@ -5379,7 +5390,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     /** Finding a Settings item is navigation, independent of automatic button/slider changes. */
     private boolean startAutomaticSettingsSearch(String stateId, ScreenSnapshot screen) {
-        if (!com.click.BuildConfig.SETTINGS_EXPERIMENT_ARM.isEmpty()) return false;
         if (waitingForTargetHelp()) return false;
         if (stateId==null || screen==null || screen.activeWindowId==null) return false;
         // A repeated reply joins the queued search instead of spending another page attempt.
@@ -5771,7 +5781,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private boolean automaticTouchEnabled() {
         if(guidanceNeedsManualReview)return false;
-        if (!com.click.BuildConfig.SETTINGS_EXPERIMENT_ARM.isEmpty()) return false;
         if (execution.acceptedGoal() != null && "coupang".equals(execution.acceptedGoal().optString("target_app"))) return false;
         return new com.click.data.local.TouchAutomationSettings(this).isEnabled();
     }
