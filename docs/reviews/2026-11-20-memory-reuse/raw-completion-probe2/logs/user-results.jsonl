@@ -1,0 +1,8 @@
+{"arm": "B", "at_ms": 1795185304294, "outcome": "user_confirmed", "runtime_ref": "bf9847cc3a906ada720cf33f"}
+{"arm": "C", "at_ms": 1795185317845, "outcome": "user_confirmed", "runtime_ref": "5505c4eca1e00288d90627ad"}
+{"arm": "C", "at_ms": 1795185330762, "outcome": "user_confirmed", "runtime_ref": "1397e33d1bc0853dd7bc263b"}
+{"arm": "B", "at_ms": 1795185347892, "outcome": "user_confirmed", "runtime_ref": "3ad7ca29d79f255de6cc2612"}
+{"arm": "C", "at_ms": 1795185361045, "outcome": "user_confirmed", "runtime_ref": "af29a1ee344eb395313cd056"}
+{"arm": "B", "at_ms": 1795185373344, "outcome": "user_confirmed", "runtime_ref": "8796f2ea857c18c64de68691"}
+{"arm": "B", "at_ms": 1795185388168, "outcome": "user_confirmed", "runtime_ref": "348d41ce2df77cd5552bd6b0"}
+{"arm": "C", "at_ms": 1795185406574, "outcome": "user_confirmed", "runtime_ref": "20f4fa6c5f0a697b9e0f2a53"}

@@ -16,6 +16,7 @@ No raw goal, label, screen or model output is written to disk. Logs carry only
 hashes, counts, tools and arm labels.
 """
 import argparse
+import contextlib
 from collections import defaultdict
 from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -286,6 +287,57 @@ class ExperimentState:
 _GOALS = {}
 
 
+# Completion comparison (protocol-completion.md): arm -> completion policy. Empty = develop as-is.
+COMPLETION = {}
+
+
+def _holds(check, screen):
+    """312ff36 GoalContract: the check already matches a visible native control on this screen."""
+    if check.package != screen.package:
+        return False
+    for n in screen.nodes:
+        if n.source != 'accessibility':
+            continue
+        if any(getattr(check, f) and getattr(check, f) != getattr(n, f) for f in ('label', 'resource', 'role')):
+            continue
+        if check.checked is not None and n.checked != check.checked:
+            continue
+        if check.selected is not None and n.selected != check.selected:
+            continue
+        return True
+    return False
+
+
+@contextlib.contextmanager
+def completion_policy(policy):
+    """'mine' replaces develop's actionable/observed guards with the 312ff36 binding rule.
+    Called only under the step lock, so the module patch never leaks into another arm."""
+    if policy != 'mine':
+        yield
+        return
+    from app.services import app_task as module
+    unsafe, observed = module._unsafe_goal_check, module._observed_goal_check
+    module._unsafe_goal_check = lambda goal, check, nodes: False
+    module._observed_goal_check = lambda goal, check, screen, nodes: check.package == screen.package
+    try:
+        yield
+    finally:
+        module._unsafe_goal_check, module._observed_goal_check = unsafe, observed
+
+
+def apply_binding_rule(policy, request, response):
+    """'mine': reject a newly bound contract that already holds where it is bound."""
+    if policy != 'mine' or response.completion is None or request.state.completion is not None:
+        return
+    diagnostic = response.diagnostic if isinstance(response.diagnostic, dict) else {}
+    if str(diagnostic.get('reason_code', '')).startswith('result_evidence'):
+        return   # result-only discovery verifies the current screen by design
+    if all(_holds(c, request.screen) for c in response.completion.checks):
+        response.completion = None
+        diagnostic['completion_rejected'] = 'satisfied_at_binding'
+        response.diagnostic = diagnostic
+
+
 class ArmMemory:
     """AppTaskService's memory dependency: user_id is the experiment arm."""
 
@@ -313,7 +365,12 @@ def diagnostic_record(request, response, elapsed_ms, arm, registration):
         error_type=diagnostic.get('error_type') if isinstance(diagnostic.get('error_type'), str) else None,
         action_tool=response.action.tool if response.action else None,
         completion_bound=response.completion is not None and request.state.completion is None,
-        completion_rejected=diagnostic.get('completion_rejected'))
+        completion_rejected=diagnostic.get('completion_rejected'),
+        completion_grounding=diagnostic.get('completion_grounding'),
+        completion_policy=COMPLETION.get(arm, 'develop'),
+        # Public control labels/roles only (catalogue apps' menus); never input values.
+        completion_checks=[dict(label=c.label, role=c.role, resource=c.resource, checked=c.checked, selected=c.selected)
+            for c in response.completion.checks] if response.completion is not None and request.state.completion is None else None)
 
 
 def make_handler(service, state, catalogue):
@@ -395,7 +452,9 @@ def make_handler(service, state, catalogue):
                         return
                     with step_lock:
                         started = time.monotonic()
-                        response = service.step(request, user_id=arm if arm in MEMORY_ARMS else None)
+                        with completion_policy(COMPLETION.get(arm)):
+                            response = service.step(request, user_id=arm if arm in MEMORY_ARMS else None)
+                        apply_binding_rule(COMPLETION.get(arm), request, response)
                         elapsed = (time.monotonic() - started) * 1000
                     with state.lock:
                         registration = state.registered.get(request.state.task_id)
@@ -419,7 +478,12 @@ def main(argv=None):
     parser.add_argument('--catalogue', type=Path, required=True)
     parser.add_argument('--log-dir', type=Path, required=True)
     parser.add_argument('--env-file', type=Path, default=BACKEND / '.env')
+    parser.add_argument('--completion-comparison', action='store_true',
+        help='B=exact memory + develop completion, C=exact memory + 312ff36 binding rule')
     args = parser.parse_args(argv)
+    if args.completion_comparison:
+        SERVED['C'] = 'exact'
+        COMPLETION.update(B='develop', C='mine')
     if not args.allow_live:
         parser.error('Explicit --allow-live is required')
     from dotenv import load_dotenv
