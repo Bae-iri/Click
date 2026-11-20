@@ -24,7 +24,7 @@ services:
       - key: DATA_LOOKUP_KEY
         sync: false
       - key: GEMINI_API_KEY
-        value: ""
+        sync: false
       - key: AI1_UI_SELECTOR_PROVIDER
         value: jev
       - key: GOAL_CLASSIFIER_PROVIDER
