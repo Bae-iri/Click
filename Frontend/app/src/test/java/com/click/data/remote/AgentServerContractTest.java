@@ -8,6 +8,15 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.Assert.*;
 
 public class AgentServerContractTest {
+    @Test public void completionConditionsRequireBothSidesOfTheAdvertisedTaskContract()throws Exception {
+        JSONObject api=deployed();api.getJSONObject("paths").put(AppGuideGateway.TASK_PATH,new JSONObject());
+        JSONObject schemas=api.getJSONObject("components").getJSONObject("schemas");
+        schemas.put("TaskState",new JSONObject().put("properties",new JSONObject().put("completion",new JSONObject())));
+        schemas.put("AppTaskResponse",new JSONObject().put("properties",new JSONObject().put("completion",new JSONObject())));
+        assertTrue(AgentServerContract.fromOpenApi(api).appTaskCompletion);
+        schemas.getJSONObject("TaskState").getJSONObject("properties").remove("completion");
+        assertFalse(AgentServerContract.fromOpenApi(api).appTaskCompletion);
+    }
     @Test public void correctingARunningRequestRequiresTheAdvertisedEndpoint() throws Exception {
         JSONObject api=deployed();assertFalse(AgentServerContract.fromOpenApi(api).reviseRequest);
         api.getJSONObject("paths").put("/api/v1/voice-requests/{request_id}/revise",new JSONObject());

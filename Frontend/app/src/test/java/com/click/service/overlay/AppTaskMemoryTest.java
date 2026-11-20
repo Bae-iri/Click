@@ -8,7 +8,7 @@ import static com.click.testing.AppTaskFixtures.*;
 public class AppTaskMemoryTest {
     @Test public void planAdvancesOnlyAfterVerifiedActionAndSurvivesRestore()throws Exception {
         AppTaskMemory m=new AppTaskMemory("검색 열기 그리고 목록 확인");m.localPlan();
-        JSONObject screen=observation("org.example.app","검색"),action=action(screen,"tap","screen_changed");
+        JSONObject screen=observation("org.example.app","검색"),action=action(screen,"tap","target_visible");action.getJSONObject("expectation").put("label","검색어 입력");
         m.record(screen,action,"failed",false);assertEquals("g0",m.active());
         m.record(screen,action,"verified",false);assertEquals("g0",m.active());
         m.record(screen,action,"verified",true);assertEquals("g1",m.active());
@@ -29,5 +29,14 @@ public class AppTaskMemoryTest {
     @Test public void learnedRoutesContainSemanticsAndNeverTextValuesOrCoordinates()throws Exception {
         AppTaskMemory m=new AppTaskMemory("검색어 입력");m.localPlan();JSONObject before=observation("org.example.app","검색"),a=action(before,"set_text","input_present").put("input","PRIVATE_QUERY");
         m.record(before,a,"verified",true);String route=m.route().toString();assertFalse(route.contains("PRIVATE_QUERY"));assertFalse(route.contains("bounds"));assertFalse(route.contains("target_id"));assertTrue(route.contains("resource"));
+    }
+    @Test public void screenMovementAndUnspecifiedToggleChangesCannotFinishASubgoal()throws Exception {
+        AppTaskMemory m=new AppTaskMemory("알림 꺼줘");m.localPlan();JSONObject before=observation("org.example.app","알림");
+        for(String kind:new String[]{"screen_changed","selection_changed"}){
+            m.record(before,action(before,"tap",kind),"verified",true);assertEquals("g0",m.active());
+        }
+        assertFalse(m.route().getJSONObject(0).getBoolean("advances_subgoal"));
+        JSONObject desired=action(before,"tap","selection_changed");desired.getJSONObject("expectation").put("checked",false);
+        m.record(before,desired,"verified",true);assertNull(m.active());assertFalse(m.finished());
     }
 }

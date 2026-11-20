@@ -60,12 +60,45 @@ class TaskAttempt(BaseModel):
     outcome: Literal['verified','failed','waiting','stale','protected']
 
 
+class TaskResultCheck(BaseModel):
+    """A visible final-state invariant, independent of the action used to reach it."""
+    model_config = ConfigDict(extra='forbid')
+    package: str = Field(pattern=r'^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$', max_length=200)
+    label: str = Field(default='', max_length=80)
+    resource: str = Field(default='', max_length=300)
+    role: Literal['', 'button','text_field','list','tab','toggle','text','image','unknown'] = ''
+    checked: bool | None = None
+    selected: bool | None = None
+
+    @model_validator(mode='after')
+    def observable(self):
+        if not self.label and not self.resource:
+            raise ValueError('Result needs an observable selector')
+        if self.checked is not None and self.role != 'toggle':
+            raise ValueError('Checked result needs a native toggle')
+        if self.selected is not None and self.role not in {'tab', 'toggle', 'button'}:
+            raise ValueError('Selected result needs a selectable control')
+        return self
+
+
+class TaskCompletion(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    checks: list[TaskResultCheck] = Field(min_length=1, max_length=8)
+
+    @model_validator(mode='after')
+    def one_final_app(self):
+        if len({c.package for c in self.checks}) != 1:
+            raise ValueError('Final checks must be observable together')
+        return self
+
+
 class TaskState(BaseModel):
     model_config = ConfigDict(extra='forbid')
     task_id: str = Field(min_length=1, max_length=100)
     revision: int = Field(default=0, ge=0, le=100)
     subgoals: list[TaskSubgoal] = Field(default_factory=list, max_length=8)
     attempts: list[TaskAttempt] = Field(default_factory=list, max_length=8)
+    completion: TaskCompletion | None = None
     @model_validator(mode='after')
     def unique(self):
         if len({s.id for s in self.subgoals}) != len(self.subgoals):
@@ -106,6 +139,14 @@ class TaskExpectation(BaseModel):
     label: str = Field(default='', max_length=80)
     package: str = Field(default='', max_length=200)
     screen_key: str = Field(default='', pattern=r'^(?:[0-9a-f]{64})?$')
+    checked: bool | None = None
+    selected: bool | None = None
+
+    @model_validator(mode='after')
+    def state_condition(self):
+        if self.kind != 'selection_changed' and (self.checked is not None or self.selected is not None):
+            raise ValueError('Native state belongs to a selection condition')
+        return self
 
 
 class TaskAction(BaseModel):
@@ -130,6 +171,7 @@ class AppTaskResponse(BaseModel):
     subgoals: list[TaskSubgoal] = Field(default_factory=list)
     active_subgoal: str | None = None
     action: TaskAction | None = None
+    completion: TaskCompletion | None = None
     # A proposal must be approved and revalidated locally before execution.
     requires_confirmation: Literal[True] = True
     diagnostic: dict = Field(default_factory=dict)

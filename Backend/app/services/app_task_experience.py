@@ -205,7 +205,7 @@ class AppTaskExperienceService:
                 continue
             last = max(successful,key=lambda s:s['observed_at_ms'])
             expectation = TaskExpectation(kind=kind if kind!='target_visible' else 'screen_changed',
-                package=package,screen_key=after_key if kind in {'screen_changed','target_visible'} else '')
+                package=package,screen_key=after_key if kind in {'screen_changed','target_visible','selection_changed'} else '')
             choices.append(TaskAction(id=str(uuid4()),tool=tool,target_id=node.id if node else None,
                 bounds=node.bounds if node else None,package=package if tool=='open_app' else screen.package,
                 expectation=expectation,advances_subgoal=bool(active and digest(active.title)==last['subgoal_key']

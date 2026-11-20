@@ -27,7 +27,8 @@ def request(package='com.example.reader', **changes):
 
 def sender(**changes):
     answer=dict(subgoals=['검색 열기', '목록 확인'], tool='tap', target='c0',
-                expected_label='검색어 입력', app='none')
+                expected_label='검색어 입력', app='none',expected_checked='unknown',expected_selected='unknown',
+                advances_subgoal=False,completion_checks=[dict(target='none',label='목록',app='none',checked='unknown',selected='unknown')])
     answer.update(changes)
     return Mock(return_value=httpx.Response(200, json={'candidates':[
         dict(finishReason='STOP', content=dict(parts=[dict(text=json.dumps(answer))]))]}))
@@ -81,7 +82,7 @@ def test_common_tools_require_native_capability(tool,capability,role,kind):
     req=request(); n=req.screen.nodes[0]; n.role=role; setattr(n,capability,True)
     result=AppTaskService(sender(tool=tool,expected_label='')).step(req)
     assert result.status=='proposed' and result.action.expectation.kind==kind
-    assert result.action.advances_subgoal==(kind!='screen_changed')
+    assert result.action.advances_subgoal is False
 
 
 def test_app_open_only_uses_one_explicitly_selected_package():
@@ -149,3 +150,62 @@ def test_real_app_rejects_unauthenticated_task():
     with TestClient(create_app('sqlite+pysqlite:///:memory:')) as client:
         response=client.post('/api/v1/agent/app-guide/task',json=request().model_dump(mode='json'))
     assert response.status_code==401
+
+
+@pytest.mark.parametrize('package',['org.example.reader','com.spotify.music','org.mozilla.firefox'])
+def test_final_result_is_a_separate_observable_contract_in_every_app(package):
+    req=request(package);result=AppTaskService(sender()).step(req)
+    assert result.completion.checks[0].package==package
+    assert result.completion.checks[0].label=='목록'
+    assert result.action.expectation.label=='검색어 입력'
+    assert result.action.advances_subgoal is False
+
+
+def test_intermediate_effect_never_implicitly_completes_a_subgoal():
+    req=request()
+    for tool in ['tap','scroll_forward']:
+        req.screen.nodes[0].scrollable=True
+        result=AppTaskService(sender(tool=tool)).step(req)
+        assert result.action.advances_subgoal is False
+    result=AppTaskService(sender(advances_subgoal=True)).step(req)
+    assert result.action.advances_subgoal is True
+    result=AppTaskService(sender(expected_label='',advances_subgoal=True)).step(req)
+    assert result.action.advances_subgoal is False
+
+
+def test_desired_native_state_is_explicit_and_bound_to_the_observed_control():
+    req=request();req.screen.nodes[0].role='toggle';req.screen.nodes[0].checked=True
+    send=sender(expected_label='',expected_checked='false',advances_subgoal=True,
+        completion_checks=[dict(target='c0',label='',app='none',checked='false',selected='unknown')])
+    result=AppTaskService(send).step(req)
+    assert result.action.expectation.checked is False and result.action.advances_subgoal
+    check=result.completion.checks[0]
+    assert check.resource==req.screen.nodes[0].resource and check.checked is False
+    req.screen.nodes[0].role='button'
+    result=AppTaskService(send).step(req)
+    assert result.status=='unavailable' and result.completion is None and result.action is None
+
+
+def test_bound_result_survives_planning_and_cannot_be_rewritten():
+    req=request();initial=AppTaskService(sender()).step(req)
+    req.state.subgoals=initial.subgoals;req.state.completion=initial.completion
+    result=AppTaskService(sender(completion_checks=[])).step(req)
+    assert result.completion==initial.completion and result.status=='proposed'
+    changed=AppTaskService(sender()).step(req)
+    assert changed.status=='unavailable' and changed.completion==initial.completion
+
+
+@pytest.mark.parametrize('check',[
+    dict(target='none',label='',app='none',checked='unknown',selected='unknown'),
+    dict(target='c9',label='목록',app='none',checked='unknown',selected='unknown'),
+    dict(target='none',label='목록',app='org.unselected.app',checked='unknown',selected='unknown'),
+    dict(target='none',label='PRIVATE@example.com',app='none',checked='unknown',selected='unknown'),
+    dict(target='none',label='목록',app='none',checked='true',selected='unknown')])
+def test_unobservable_unbound_or_private_final_results_are_rejected(check):
+    result=AppTaskService(sender(completion_checks=[check])).step(request())
+    assert result.status=='unavailable' and result.completion is None and result.action is None
+
+
+def test_unobservable_result_remains_manual_and_confirm_is_not_technical_success():
+    result=AppTaskService(sender(tool='confirm',completion_checks=[])).step(request())
+    assert result.status=='confirm_result' and result.completion is None and result.action is None
