@@ -21,6 +21,7 @@ sys.path.insert(0, str(BACKEND.parent / 'AI-Agent/src'))
 sys.path.insert(0, str(BACKEND / 'scripts'))
 from app.schemas.app_task import AppTaskRequest
 from app.services.app_task import AppTaskService, PLAN_ERROR_CODES, VALIDATION_FIELDS, VALIDATION_TYPES
+from app.services.app_task_provider import REASON_CODES as PROVIDER_CODES
 from app.services.app_guide import public_label, PRIVATE, BOUNDARY
 from serve_meta_controller_experiment import diagnostic_record, MAX_BODY_BYTES, TASK_PATH
 
@@ -35,7 +36,7 @@ ERROR_CODES = frozenset(('not_found', 'test_authorization_required', 'bounded_co
 SERVICE_STAGES = frozenset(('none', 'observation', 'configuration', 'provider', 'provider_response',
     'model_output', 'plan_validation', 'completion_contract', 'subgoal_contract', 'action_contract'))
 SERVICE_KINDS = frozenset(('observation', 'configuration', 'provider', 'parse', 'plan'))
-SERVICE_CODES = frozenset(PLAN_ERROR_CODES) | frozenset(('protected_observation', 'public_observation_unavailable',
+SERVICE_CODES = frozenset(PLAN_ERROR_CODES) | PROVIDER_CODES | frozenset(('protected_observation', 'public_observation_unavailable',
     'stale_observation', 'no_public_controls', 'unusable_goal', 'bound_result_available',
     'invalid_model_configuration', 'missing_api_key', 'provider_timeout', 'provider_http_error',
     'provider_transport_error', 'contract_validation_failed', 'invalid_json', 'provider_response_invalid',
@@ -190,6 +191,14 @@ def make_handler(service, contract, output_path):
                     value = diagnostic.get(key)
                     if isinstance(value, str) and value in permitted:
                         record['service_' + key] = value
+                grounding=diagnostic.get('completion_grounding')
+                if grounding in {'deferred_actionable_proof','deferred_unobserved_result','deferred_invalid_contract'}:
+                    record['completion_grounding']=grounding
+                if diagnostic.get('completion_deferred_reason')=='completion_contract_invalid':
+                    record['completion_deferred_reason']='completion_contract_invalid'
+                budget=diagnostic.get('provider_budget_ms')
+                if type(budget) in (int,float) and 0<=budget<=9000:record['provider_budget_ms']=budget
+                if diagnostic.get('provider_attempt_limit')==1:record['provider_attempt_limit']=1
                 errors = diagnostic.get('validation_errors')
                 if isinstance(errors, list):
                     clean = []

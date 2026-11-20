@@ -67,4 +67,17 @@ public class AppTaskDiagnosticsTest {
         record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
         assertEquals("unknown",record.getString("model_call_state"));assertTrue(record.isNull("model_wait_ms"));
     }
+    @Test public void recoveredCompletionAndProviderBudgetKeepOnlyClosedDiagnosticFields()throws Exception {
+        JSONObject response=bound(new JSONObject().put("status","proposed").put("diagnostic",new JSONObject()
+            .put("called",true).put("completion_grounding","deferred_invalid_contract")
+            .put("completion_deferred_reason","completion_contract_invalid").put("provider_budget_ms",9000).put("provider_attempt_limit",1)));
+        JSONObject record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
+        assertEquals("deferred_invalid_contract",record.getString("completion_grounding"));assertEquals(9000,record.getInt("provider_budget_ms"));
+        assertEquals(1,record.getInt("provider_attempt_limit"));
+        response.getJSONObject("diagnostic").put("called",JSONObject.NULL).put("reason_code","provider_startup_failed")
+            .put("failure_kind","provider").put("provider_budget_ms",99999).put("provider_attempt_limit",9);
+        record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
+        assertEquals("unknown",record.getString("model_call_state"));assertTrue(record.isNull("observed_model_calls"));
+        assertEquals("provider_startup_failed",record.getString("reason_code"));assertFalse(record.has("provider_budget_ms"));assertFalse(record.has("provider_attempt_limit"));
+    }
 }

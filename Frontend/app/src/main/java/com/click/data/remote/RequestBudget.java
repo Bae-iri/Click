@@ -46,6 +46,14 @@ final class RequestBudget implements AutoCloseable {
     static void configure(HttpURLConnection connection,int readTimeout) throws IOException {
         connection.setConnectTimeout(remaining(6000));
         connection.setReadTimeout(remaining(readTimeout));
+        if(AppGuideGateway.TASK_PATH.equals(connection.getURL().getPath())){
+            int available=remaining(12000);
+            // Advertise the remaining work cap with a response allowance.
+            // Connection/upload time after this header is outside the server's
+            // relative clock; the client's original watchdog still applies.
+            if(available<1100)throw new IOException("REQUEST_DEADLINE_EXCEEDED");
+            connection.setRequestProperty("X-Click-App-Task-Budget-Ms",String.valueOf(Math.min(9000,available-1000)));
+        }
         if(AgentTurnContract.PATH.equals(connection.getURL().getPath()) || "/api/v1/agent/turn".equals(connection.getURL().getPath())) {
             connection.setRequestProperty("X-Click-Execution-State",ExecutionState.version());
             connection.setRequestProperty("X-Click-Turn-Budget-Ms",String.valueOf(Math.max(100,remaining(22000)-2000)));
