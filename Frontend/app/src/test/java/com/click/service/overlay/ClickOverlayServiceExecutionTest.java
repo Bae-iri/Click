@@ -2087,6 +2087,37 @@ public class ClickOverlayServiceExecutionTest {
         assertNull(requests.get(3).userResult);
     }
 
+    @Test public void changedValueSurvivesSettingsPageNavigationAndPreemptsAppEntryRecovery()throws Exception {
+        screen=fontScreen(2f,1f,1000);currentScreen=screen;prepareGuideResponse();deliver(1,"highlight","drag","right");
+        ScreenSnapshot page=displaySettingsPage();
+        currentScreen=new ScreenSnapshot(page.packageName,Instant.ofEpochMilli(2000).toString(),1080,2400,page.nodes,42,true,1.15f);
+        broadcastCurrentPage();
+        assertTrue(((AdjustmentResultCheck)get("adjustmentResultCheck")).changed("episode","settings.font_size.increase",currentScreen));
+        int observation=requests.size()-1;
+        deliver(observation,"highlight","observe_only",null);
+        AgentTurnContract.Request result=requests.get(requests.size()-1);
+        assertEquals("request_result",result.commandType());
+        assertNull(result.accessibilityTree);assertNull(result.userResult);
+        assertNull(shadowOf(service).getNextStartedActivity());
+    }
+
+    @Test public void persistedRingtoneChangeAsksOnceAndAnUnchangedSelectionDoesNot()throws Exception {
+        android.provider.Settings.System.putString(service.getContentResolver(),android.provider.Settings.System.RINGTONE,"content://test/ringtone/one");
+        prepareGuideResponse();deliver(1,"highlight","tap",null);set("acceptedGoal",catalog.executableGoal("settings.ringtone.change").toTypedGoalJson());
+        ((RingtoneResultCheck)get("ringtoneResultCheck")).bind(RingtoneResultCheck.read(service));
+        currentScreen=environmentScene("com.android.settings","벨소리",new com.click.data.snapshot.NativeWindowContext("SUBPAGE","APPLICATION",false));
+        set("turnInFlight",false);set("firstTurnSent",true);int before=requests.size();
+        assertEquals(false,invokeRingtoneResult());assertEquals(before,requests.size());
+        android.provider.Settings.System.putString(service.getContentResolver(),android.provider.Settings.System.RINGTONE,"content://test/ringtone/two");
+        assertEquals(false,invokeRingtoneResult());shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600));
+        assertEquals(before+1,requests.size());assertEquals("request_result",requests.get(before).commandType());
+        assertNull(requests.get(before).userResult);assertNull(requests.get(before).accessibilityTree);
+        set("turnInFlight",false);assertEquals(false,invokeRingtoneResult());assertEquals(before+1,requests.size());
+    }
+    private boolean invokeRingtoneResult()throws Exception {
+        Method method=ClickOverlayService.class.getDeclaredMethod("requestRingtoneResult",ScreenSnapshot.class);method.setAccessible(true);return (boolean)method.invoke(service,currentScreen);
+    }
+
     @Test public void staleRetryLimitStillStopsUnchangedOrOppositeFontChanges() throws Exception {
         screen = fontScreen(2f, 1f, 1000); currentScreen = screen;
         prepareGuideResponse();

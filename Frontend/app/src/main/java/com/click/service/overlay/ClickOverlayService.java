@@ -163,6 +163,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private JSONObject followUp;
     private JSONObject pendingVerifiedAction;
     private final AdjustmentResultCheck adjustmentResultCheck = new AdjustmentResultCheck();
+    private final RingtoneResultCheck ringtoneResultCheck=new RingtoneResultCheck();
     private final GuidedActionTracker actionTracker = new GuidedActionTracker();
     private TaskFlowOverlayView taskFlowView;
     private boolean taskFlowCollapsed;
@@ -248,6 +249,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     if (!coupangBrowse.guideMatches(current)) hideGuideOverlay();
                     return;
                 }
+                if (requestRingtoneResult(LatestScreenSnapshot.get())||requestChangedAdjustmentResult(LatestScreenSnapshot.get()))return;
                 if (handleEnvironment(LatestScreenSnapshot.get())) return;
                 if (handleSettingsPageChange(LatestScreenSnapshot.get())) return;
                 if (waitingForTargetHelp() && preserveTargetHelp(ClickAccessibilityService.freshSnapshot())) return;
@@ -918,6 +920,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void clearTaskFlow() {
+        ringtoneResultCheck.bind(null);
+        if(ringtoneResultPoll!=null){speechHandler.removeCallbacks(ringtoneResultPoll);ringtoneResultPoll=null;}
         dismissGuidanceSupport();
         if(appGuide!=null){appGuide.close();appGuide=null;}
         if (coupangBrowse != null) { coupangBrowse.close(); coupangBrowse=null; }
@@ -1336,6 +1340,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void startSelectedTask() {
+        ringtoneResultCheck.bind(execution.acceptedGoal()!=null&&"settings.ringtone.change".equals(execution.acceptedGoal().optString("goal_type"))?RingtoneResultCheck.read(this):null);
         if(deviceJournal!=null && execution.acceptedGoal()!=null)try {
             JSONObject slots=execution.acceptedGoal().optJSONObject("slots");
             if(slots!=null)deviceJournal.prepare(execution.sessionId(),execution.episodeId(),execution.acceptedGoal().optString("goal_type"),slots.optString("setting"),slots.optString("state"));
@@ -3767,6 +3772,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void showSettingsEntryRecovery(String failure) {
         ScreenSnapshot entryScreen = ClickAccessibilityService.freshSnapshot();
+        if(requestRingtoneResult(entryScreen)||requestChangedAdjustmentResult(entryScreen))return;
         if (recoverObservedSettingsSubpage(entryScreen)) return;
         if (ObservationRecovery.canReturnFromSettings(entryScreen)) {
             recoverSettingsBack(entryScreen);
@@ -4033,14 +4039,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             // OCR still checks its revision in GuideFreshness because pixels may
             // change without appearing in the accessibility tree.
             displayedSnapshot = ClickAccessibilityService.freshSnapshot();
+            if(requestRingtoneResult(displayedSnapshot)||requestChangedAdjustmentResult(displayedSnapshot))return;
             if(handleEnvironment(displayedSnapshot))return;
             JSONObject entry=command.recoveryAction();
             boolean settingsEntry=entry!=null && "open_android_settings_or_show_app_drawer".equals(entry.optString("type"));
             if((settingsEntry || canOfferSettingsEntry(response,displayedSnapshot))
                     && showSettingsIconGuide(displayedSnapshot))return;
-            // A persisted setting change can outlive the SeekBar's window/node after a redraw.
-            // Check the submitted value and a fresh value before retrying or reissuing a drag guide.
-            if (requestChangedAdjustmentResult(displayedSnapshot)) return;
             if (lastSubmittedScreen == null || displayedSnapshot == null
                     || command.targetBounds == null
                         && !stableManualSettingsPage(command, displayedSnapshot)
@@ -4347,7 +4351,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             freshObservationRetries = staleGuideDrops = 0;
             scrollSearchGeneration = -1;
             if (observed == NavigationRecovery.Action.HOME) {
-                adjustmentResultCheck.clear(); clearActionEvidenceWait();
+                clearActionEvidenceWait();
                 homeSearchRestart = true;
                 homeSearchToken++;
                 lastTargetBounds = null; lastTargetNodeId = lastGuideCommandId = null;
@@ -4949,7 +4953,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         observedPageScreen=current;
         clearTargetHelpWait();clearGuideResyncRetry();clearMissingScreenWait();
         presentationGate.clear();stopNarration();guideStepTimer.clear();actionTracker.clear();
-        automationGuard.interrupt();clearVisionState();adjustmentResultCheck.clear();clearActionEvidenceWait();
+        // A redraw or page change does not undo the persisted setting change.
+        automationGuard.interrupt();clearVisionState();clearActionEvidenceWait();
         automaticAdjustmentApprovalPending=false;
         agentConfirmationId=null;confirmationExpiresAt=0;
         lastGuideCommandId=lastTargetNodeId=null;lastTargetBounds=null;
@@ -5270,6 +5275,24 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 execution.episodeId(), "request_result", null));
         return true;
     }
+
+    private boolean requestRingtoneResult(ScreenSnapshot current){
+        if(closing||!ringtoneResultCheck.active()||!execution.started()||execution.episodeId()==null||execution.paused()||execution.busy()||execution.pendingControl()!=null||execution.acceptedGoal()==null
+            ||!"settings.ringtone.change".equals(execution.acceptedGoal().optString("goal_type"))||current==null
+            ||!com.click.data.snapshot.SettingsCapabilities.settingsPackage(current.packageName)||resultPrompt!=null||followUp!=null
+            ||agentGateway==null||agentGateway.currentContract()==null||!agentGateway.currentContract().supports("request_result"))return false;
+        String value=RingtoneResultCheck.read(this);long now=SystemClock.uptimeMillis();
+        if(!ringtoneResultCheck.changed(value,now)){
+            final int generation=execution.generation();
+            if(ringtoneResultPoll!=null)speechHandler.removeCallbacks(ringtoneResultPoll);
+            ringtoneResultPoll=()->{if(!closing&&generation==execution.generation())requestRingtoneResult(ClickAccessibilityService.freshSnapshot());};
+            speechHandler.postDelayed(ringtoneResultPoll,500);return false;
+        }
+        ringtoneResultCheck.consume();hideGuideOverlay();hideConfirmation();
+        ensureTaskFlow();taskFlowView.waitingProgress("변경 결과를 확인할게요.");placeTaskFlow(null,false);
+        sendAgentControl("request_result");return true;
+    }
+    private Runnable ringtoneResultPoll;
 
     private com.click.data.snapshot.NavigationState navigationFrame(ScreenSnapshot screen) {
         if(screen.navigation!=null)return screen.navigation;
