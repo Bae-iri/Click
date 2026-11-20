@@ -260,7 +260,7 @@ class AgentTurnResponse(BaseModel):
 
 class TypedGoalRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    catalog_version: Literal["1.0.0", "1.1.0", "2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"]
+    catalog_version: Literal["1.0.0", "1.1.0", "2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"]
     goal_type: Literal["settings.font_size.increase", "settings.font_size.decrease",
                        "settings.wifi.enable", "settings.wifi.disable", "settings.wifi.connect",
                        "settings.bluetooth.enable", "settings.bluetooth.disable", "settings.bluetooth.connect",
@@ -339,12 +339,17 @@ class TypedGoalRequest(BaseModel):
         if self.goal_type.startswith('coupang.'):
             import json
             from pathlib import Path
-            legacy = Path(__file__).resolve().parents[3] / 'AI-Agent/goal_catalog/legacy_coupang_goals.json'
-            entries = json.loads(legacy.read_text(encoding='utf-8'))['goals']
+            # 2.4.x clients may send any archived goal; 2.6.0 re-activates only Coupang page navigation.
+            if self.catalog_version in {'2.4.0', '2.4.1'}:
+                source = Path(__file__).resolve().parents[3] / 'AI-Agent/goal_catalog/legacy_coupang_goals.json'
+            elif self.catalog_version == '2.6.0':
+                source = Path(__file__).parents[1] / 'task_graphs/goal_catalog.json'
+            else:
+                source = None
+            entries = json.loads(source.read_text(encoding='utf-8'))['goals'] if source else []
             entry = next((g for g in entries if g['goal_type'] == self.goal_type), None)
-            if (self.catalog_version not in {'2.4.0', '2.4.1'} or self.target_app != 'coupang'
-                    or entry is None or self.slots != entry['slots']):
-                raise ValueError('Coupang goals are legacy-only (catalog 2.4.0 or 2.4.1) and require matching slots')
+            if self.target_app != 'coupang' or entry is None or self.slots != entry['slots']:
+                raise ValueError('Coupang goals require catalog 2.4.x, or 2.6.0 for page navigation, and matching slots')
             return self
         if self.target_app != 'android_settings':
             raise ValueError('Settings goals require the settings app')
@@ -464,39 +469,39 @@ class TypedGoalRequest(BaseModel):
             "settings.navigation.captions": {"setting": "navigation_captions", "action": "open"},
             "settings.navigation.eye_comfort": {"setting": "navigation_eye_comfort", "action": "open"},
         })
-        if self.goal_type.startswith("settings.navigation.") and self.catalog_version not in {"2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith("settings.navigation.") and self.catalog_version not in {"2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Settings navigation requires catalog version 2.2.0")
-        if self.goal_type == "settings.theme.change" and self.catalog_version not in {"2.4.1", "2.5.0"}:
+        if self.goal_type == "settings.theme.change" and self.catalog_version not in {"2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Theme change requires catalog version 2.4.1 or newer")
         if self.slots != expected_slots[self.goal_type]:
             raise ValueError("goal_type and slots must match")
         if self.goal_type == "settings.font_size.decrease" and self.catalog_version == "1.0.0":
             raise ValueError("font-size decrease requires catalog version 1.1.0 or newer")
-        if self.goal_type.startswith("settings.wifi.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith("settings.wifi.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Wi-Fi goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith("settings.bluetooth.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith("settings.bluetooth.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Bluetooth goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith("settings.mobile_data.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith("settings.mobile_data.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Mobile data goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.airplane_mode.", "settings.hotspot.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith(("settings.airplane_mode.", "settings.hotspot.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Airplane mode and hotspot goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.brightness.", "settings.dark_mode.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith(("settings.brightness.", "settings.dark_mode.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Brightness and dark mode goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.screen_timeout.", "settings.display_size.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith(("settings.screen_timeout.", "settings.display_size.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Screen timeout and display size goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.volume.", "settings.mute.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith(("settings.volume.", "settings.mute.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Volume and mute goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.ringtone.", "settings.vibrate.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith(("settings.ringtone.", "settings.vibrate.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Ringtone and vibrate goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.notifications.", "settings.location.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith(("settings.notifications.", "settings.location.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Notifications and location goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.power_saving.", "settings.screen_lock.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith(("settings.power_saving.", "settings.screen_lock.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Power saving and screen lock goals require catalog version 2.0.0 or newer")
-        if self.goal_type.startswith(("settings.biometric.", "settings.apps.", "settings.app_permissions.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith(("settings.biometric.", "settings.apps.", "settings.app_permissions.")) and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Biometric and app management goals require catalog version 2.0.0 or newer")
-        if self.goal_type == "settings.storage.cleanup" and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type == "settings.storage.cleanup" and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Storage cleanup requires catalog version 2.0.0 or newer")
-        if self.goal_type.startswith("settings.talkback.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type.startswith("settings.talkback.") and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("TalkBack goals require catalog version 2.0.0 or newer")
         remaining_settings = {
             "settings.magnification.enable",
@@ -548,7 +553,7 @@ class TypedGoalRequest(BaseModel):
             "settings.factory_reset",
             "settings.device_name.change",
         }
-        if self.goal_type in remaining_settings and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0"}:
+        if self.goal_type in remaining_settings and self.catalog_version not in {"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.3.2", "2.4.0", "2.4.1", "2.5.0", "2.6.0"}:
             raise ValueError("Remaining settings goals require catalog version 2.0.0 or newer")
         return self
 

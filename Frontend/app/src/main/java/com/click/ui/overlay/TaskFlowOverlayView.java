@@ -938,8 +938,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void appTask(JSONObject result,java.util.function.Consumer<String> execute,Runnable refresh,Runnable tools,Runnable visual,Runnable finish,Runnable confirmed) {
         String state=result.optString("status");
         progress(null,null,result.optString("message"),false);
-        // General app tasks skip the review stage, so keep the received request visible here too.
-        if(requestSummary!=null){addRequestBox(requestSummary,null);View box=content.getChildAt(content.getChildCount()-1);content.removeView(box);content.addView(box,0);}
         final int revision=presentationRevision;
         Runnable refreshCurrent=()->{if(revision==presentationRevision)refresh.run();};
         Runnable toolsCurrent=()->{if(revision==presentationRevision)tools.run();};
@@ -1150,6 +1148,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void setChecklist(JSONArray checklist) {}
 
     // [UI 수정] 사용자가 요청한 내용을 담는 박스: 배경, 글자, 여백과 요약 표시.
+    private void pinRequestBox() {
+        if(requestSummary==null)return;
+        addRequestBox(requestSummary,null);
+        View box=content.getChildAt(content.getChildCount()-1);content.removeView(box);content.addView(box,0);
+    }
     private void addRequestBox(String request, String resolved) {
         LinearLayout box = new LinearLayout(getContext());
         box.setGravity(Gravity.TOP);
@@ -1255,6 +1258,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
             content.addView(progressCompletion, spaced(12));
         }
         setDetailedExplanations(detailedExplanations);
+        // Keep the received request visible on every progress panel (app entry, launcher search,
+        // guided steps), not only in the review stage.
+        pinRequestBox();
     }
     public void result(JSONObject prompt) {
         result(prompt, false);
@@ -1385,6 +1391,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         clear(appName + " 앱에서 이어갈게요");
         narrationMessage = message;
         content.addView(text(narrationMessage, 17), spaced(8));
+        pinRequestBox();
         Button action = primaryButton(appName + " 열기", () -> {});
         action.setOnClickListener(view -> {
             if (!action.isEnabled()) return;

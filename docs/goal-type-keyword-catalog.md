@@ -2,9 +2,9 @@
 
 > 이 문서는 `AI-Agent/goal_catalog/mvp_goals.json`에서 자동 생성한다. 직접 수정하지 말고 JSON 수정 후 `cd AI-Agent && python scripts/export_goal_catalog_markdown.py`를 실행한다.
 
-- Catalog version: `2.5.0`
-- 전체 Goal: **131개** (Android 설정 111개, 정부24 20개)
-- 그래프 실행 승인: **111개**, 공개 화면 안내 연결: **7개**, 분류 전용: **13개**
+- Catalog version: `2.6.0`
+- 전체 Goal: **139개** (Android 설정 111개, 정부24 20개, 쿠팡 8개)
+- 그래프 실행 승인: **119개**, 공개 화면 안내 연결: **7개**, 분류 전용: **13개**
 - `키워드 그룹`의 각 괄호에서는 하나 이상, 괄호와 괄호 사이는 모두 충족해야 분류 후보가 된다.
 - 등록된 `utterances` 예문과 전체 문장이 일치하면 키워드 그룹이 빠져 있어도 후보로 인식한다. 띄어쓰기와 문장부호는 무시한다.
 - `catalog_only`는 Goal 추출만 가능하다는 뜻이다. 승인 Task Graph가 없으므로 실제 작업은 시작하지 않는다.
@@ -12,6 +12,7 @@
 - 설정 변경 상태 검증 경로: **56개**, 직접 진행 안내: **34개**. 승인 표시는 실행 안내를 시작할 수 있다는 뜻이며 실기기 검증 완료를 뜻하지 않는다.
 - `settings_assisted`는 화면 안내 뒤 사용자가 직접 선택·입력한다. 사용자 완료 응답은 기술 검증과 별도 기록한다.
 - v2.5.0부터 쿠팡 71개 목표는 활성 목록에서 제외했다. 기존 버전의 기록·그래프 호환용 목록은 `legacy_coupang_goals.json`에 보존한다.
+- v2.6.0은 쿠팡 화면 이동 목표 8개(장바구니·주문목록·찜·쿠폰함·카테고리·고객센터·최근 검색어·와우 혜택)만 보관 목록의 계약 그대로 다시 활성화했다. 주문·결제·취소 같은 나머지 63개는 계속 보관 목록에만 있다.
 - 정부24는 로그인 방법 선택·주민등록등본 발급 안내 화면 찾기 두 목표가 연결되어 있다. 나머지 민원은 준비 중이며 실제 화면 경로를 임의 생성하지 않는다.
 - 이전 v2.0은 82개였고, v2.1은 160개였고, v2.2는 설정 화면 열기 경로를 추가했다.
 
@@ -155,3 +156,16 @@
 | 129 | `gov24.documents.electronic.view` | 정부24 전자문서지갑 화면 찾기 | (정부24 / 정부이십사 / gov24) + (전자문서지갑 / 전자 문서 지갑 / 전자증명서) | catalog_only | normal |
 | 130 | `gov24.benefits.view` | 정부24 보조금24 혜택 화면 찾기 | (정부24 / 정부이십사 / gov24) + (보조금24 / 보조금 이십사 / 받을 수 있는 혜택) | catalog_only | normal |
 | 131 | `gov24.service.search` | 정부24 민원서비스 검색 화면 찾기 | (정부24 / 정부이십사 / gov24) + (민원 검색 / 서비스 검색 / 민원 찾기) | catalog_only | normal |
+
+## 쿠팡 화면 이동
+
+| # | Goal Type | 표시 이름 | 키워드 그룹 | 실행 상태 | 위험도 |
+| ---: | --- | --- | --- | --- | --- |
+| 132 | `coupang.cart.view` | 쿠팡 장바구니 보기 | (장바구니 / 카트) + (보여 / 열어 / 확인 / 목록) | approved (`CP-cart-view`) | normal |
+| 133 | `coupang.order.list` | 쿠팡 주문 목록 보기 | (주문목록 / 주문내역 / 구매내역) + (보여 / 열어 / 확인) | approved (`CP-order-list`) | normal |
+| 134 | `coupang.wishlist.view` | 쿠팡 찜 목록 보기 | (찜목록 / 찜한상품 / 위시리스트) + (보여 / 열어 / 확인) | approved (`CP-wishlist-view`) | normal |
+| 135 | `coupang.coupon.view` | 쿠팡 쿠폰함 보기 | (쿠폰 / 할인쿠폰) + (보여 / 쿠폰함 / 확인) | approved (`CP-coupon-view`) | normal |
+| 136 | `coupang.category.browse` | 쿠팡 카테고리 둘러보기 | (카테고리 / 상품분류) + (열어 / 보여 / 둘러) | approved (`CP-category-browse`) | normal |
+| 137 | `coupang.customer_service.open` | 쿠팡 고객센터 열기 | (고객센터 / 상담원 / 문의) + (열어 / 연결 / 채팅 / 전화) | approved (`CP-customer-service-open`) | normal |
+| 138 | `coupang.search.recent.view` | 쿠팡 최근 검색어 보기 | (최근검색 / 검색기록 / 검색내역) + (보여 / 확인 / 열어) | approved (`CP-search-recent-view`) | normal |
+| 139 | `coupang.rocket_wow.benefits` | 쿠팡 와우 혜택 보기 | (와우혜택 / 로켓와우혜택 / 멤버십혜택) + (보여 / 확인 / 뭐야) | approved (`CP-rocket-wow-benefits`) | normal |

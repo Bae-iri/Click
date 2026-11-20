@@ -1609,6 +1609,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private boolean showGov24EntryGuide() {
         if(!gov24Guide||closing||coupangBrowse==null||!coupangBrowse.ready()||coupangBrowse.waitingForUser())return false;
+        if(showGov24LauncherEntry(LatestScreenSnapshot.get()))return true;
         var target=ClickAccessibilityService.gov24LoginEntry();
         if(target==null){gov24EntryPresentation=null;return false;}
         boolean visible=target.visible&&target.bounds[0]>=0&&target.bounds[1]>=0
@@ -1627,6 +1628,31 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowView.progress(null,null,message,false);taskFlowView.setAutomaticProgress(false);taskFlowCollapsed=false;
         if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();placeTaskFlow(visible?target.bounds:null,false);
         if(visible)showGuideOverlay(target.bounds,"tap",GuideDragDirection.UNKNOWN);
+        speak(message);return true;
+    }
+
+    /**
+     * The Gov24 guide starts outside the app when automatic touch is off. On the home screen,
+     * highlight the Gov24 icon; when it is not on this page, offer the open button instead of
+     * leaving the panel silent.
+     */
+    private boolean showGov24LauncherEntry(ScreenSnapshot screen) {
+        if(screen==null||"kr.go.minwon.m".equals(screen.packageName)||!LauncherAppSearch.safe(screen))return false;
+        java.util.Set<String> names=launcherLabels("kr.go.minwon.m");names.add("정부24");
+        AccessibilityNodeSnapshot icon=homeIconTarget(screen,label->appIconLabel(label,names));
+        String key="launcher:"+screen.packageName+":"+(icon==null?"none":java.util.Arrays.toString(icon.bounds));
+        if(key.equals(gov24EntryPresentation)&&taskFlowView!=null)return true;
+        gov24EntryPresentation=key;
+        hideGuideOverlay();ensureTaskFlow();
+        String message=icon!=null?"표시한 정부24 앱을 눌러주세요.":"이 화면에서 정부24 앱이 보이지 않아요. 아래 ‘정부24 열기’를 눌러주세요.";
+        if(icon!=null) {
+            taskFlowView.progress(null,null,message,false);taskFlowView.setAutomaticProgress(false);
+            showGuideOverlay(icon.bounds,"tap",GuideDragDirection.UNKNOWN);placeTaskFlow(icon.bounds,false);
+        } else {
+            taskFlowView.appEntryRecovery("정부24",message,this::openCoupang);taskFlowView.setAutomaticProgress(false);
+            taskFlowCollapsed=false;placeTaskFlow(null,true);
+        }
+        if(overlayView!=null)overlayView.collapse();updateFloatingVisibility();
         speak(message);return true;
     }
 
@@ -3097,7 +3123,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         if (preserveTargetHelp(snapshot)) return;
         force = force || execution.observationRequested();
-        if (snapshot == null || (pendingVisionSnapshot == null && agentGateway.needsFreshObservation(snapshot))) {
+        boolean commerceObservation = execution.acceptedGoal() != null
+                && "coupang".equals(execution.acceptedGoal().optString("target_app"));
+        if (snapshot == null || (pendingVisionSnapshot == null && (commerceObservation
+                ? agentGateway.needsFreshObservation(snapshot, "commerce") : agentGateway.needsFreshObservation(snapshot)))) {
             waitForMissingScreen(); return;
         }
         // A fresh read is not yet an accepted observation. Preserve the retry
