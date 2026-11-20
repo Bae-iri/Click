@@ -26,6 +26,25 @@ import static org.junit.Assert.*;
 
 @RunWith(AndroidJUnit4.class)
 public class TaskFlowOverlayTest {
+    @Test public void governmentRecoveryOffersFreshReadAndReopenWithLargeText() {
+        try(ActivityScenario<HomeActivity> scenario=ActivityScenario.launch(HomeActivity.class)) {
+            for(float scale:new float[]{1f,1.5f}) {
+                scenario.onActivity(activity->{
+                    var config=new android.content.res.Configuration(activity.getResources().getConfiguration());config.fontScale=scale;
+                    var panel=new TaskFlowOverlayView(activity.createConfigurationContext(config),new Answers());
+                    int[] clicks={0,0};
+                    panel.publicGuideRecovery("공개 화면을 다시 확인해 주세요.",()->clicks[0]++,()->clicks[1]++);
+                    activity.setContentView(panel);
+                    snapshot(panel,"gov24-recovery-"+scale);
+                    assertFullyInside(panel,find(panel,"화면 다시 읽기"));assertFullyInside(panel,find(panel,"정부24 열기"));
+                    find(panel,"화면 다시 읽기").performClick();find(panel,"정부24 열기").performClick();
+                    assertEquals(1,clicks[0]);assertEquals(1,clicks[1]);
+                    panel.publicGuideRecovery("다시 확인해 주세요.",()->clicks[0]++,()->clicks[1]++);
+                    find(panel,"화면 다시 읽기").performClick();assertEquals(2,clicks[0]);
+                });
+            }
+        }
+    }
     @Test public void voiceInputHidesTaskStatusAndCentersItsControls() {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
             for (float scale : new float[]{1f, 1.5f}) {
@@ -184,6 +203,7 @@ public class TaskFlowOverlayTest {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
             scenario.onActivity(activity -> {
                 ClickOverlayLayout voice = new ClickOverlayLayout(activity);
+                voice.setOnLibraryRequested(() -> {});
                 activity.setContentView(voice);
                 voice.openVoice();
                 int width = voice.getWindowWidth(ClickOverlayLayout.Mode.VOICE, activity.getResources().getDisplayMetrics().widthPixels);

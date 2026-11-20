@@ -28,6 +28,8 @@ DB·사용자 동의·삭제 연계와 실제 AI1 replay adapter는 `Backend/scr
 
 탐색 그래프의 DB 생성은 `Backend/scripts/browse_graph_learning.py`, 온라인 응답 이후의 별도 프로세스 실행·재처리는 `Backend/app/services/browse_graph_jobs.py`가 담당합니다. 사용자 실행 프로세스는 Agent 2 모듈을 import하지 않습니다.
 
+앱 공통 작업 경험은 `workflows/app_tasks.py`와 `Backend/scripts/app_task_learning.py`가 처리합니다. Backend의 `app_task` runtime 이벤트에서 입력값·화면 원문·좌표 없이 기록된 구조적 증거를 읽고, 만료·동의·원천 ID에 연결된 분석 receipt와 `app_task_experience` 후보를 만듭니다. 다음 `AppTaskService` 요청과 `/task/memory` 조회가 이를 참고합니다. 재시작 후에도 DB에서 조회하며, 다른 계정이나 앱 버전에 선택자를 옮기지 않습니다. 기존 graph replay 분석은 이 새 이벤트를 별도로 분리합니다.
+
 `proposals/browse_repairs.py`는 성공 경로뿐 아니라 실패·반복·Jev 보류 로그에서 재관측·후보 범위 점검 등 개선 후보를 만듭니다. Backend는 최신 세션 분석만 다음 Jev의 참고 정보로 투영하며, 성공으로 회복한 세션의 이전 개선 요청을 해제합니다. `list-browse-improvements`로 현재 후보를 확인할 수 있습니다. 미확인 탭은 실패 확정이나 새 selector 생성 근거로 사용하지 않습니다.
 
 ## 구현된 범위
@@ -57,6 +59,7 @@ Backend 디렉터리에서 DATABASE_URL을 설정하고 실행합니다.
 ```powershell
 python scripts/agent2.py process --limit 100
 python scripts/agent2.py learn-browse --limit 100
+python scripts/agent2.py learn-app-tasks --limit 100
 python scripts/agent2.py list-browse-graphs --limit 100
 python scripts/agent2.py assess-jev --limit 100
 python scripts/agent2.py assess-jev --reviews target-reviews.json --format json
@@ -66,6 +69,8 @@ python scripts/maintenance.py
 ```
 
 process는 세션별 재구성·분석 결과를 원천 event에 연결된 DB receipt로 저장합니다. 같은 입력은 중복 처리하지 않고, 최신 세션 결과 하나를 유지합니다. 원문 화면·목표·토큰을 출력하거나 사용자 데이터를 파일로 반출하지 않습니다. 동의 전 기록을 소급 사용하지 않으며 철회·탈퇴·세션 삭제·가장 오래된 근거 만료 시 결과를 삭제합니다.
+
+`process`는 앱 공통 경험 처리도 실행합니다. API의 응답 이후 작업과 기본 60초 재처리로 누락된 업로드를 보완하며 `CLICK_AI2_APP_TASK_ENABLED=0`으로 자동 분석을 끌 수 있습니다. 공통 경험의 제안은 사용자별 참고 정보입니다. 같은 목표·환경·화면과 단계 또는 진행 경로가 맞고, 서로 다른 두 완료 확인 작업이 최신 불확실·거절 기록 이후에도 이를 뒷받침할 때만 기존 방법을 다시 제안합니다. 다른 앱에는 확인된 도구 종류와 재관측 같은 일반 전략만 전달하며 새 선택자나 조작 권한을 만들지 않습니다.
 
 audit는 `structural_valid`(구조·참조 무결성), `static_valid`(현재 runtime 실행 조건 포함), `execution_enabled`(승인·활성·검사 통과)를 구분합니다. 미지원 완료 predicate와 담당 영역을 별도 보고하며 `device_validation`은 항상 `NOT_ASSESSED`입니다. 초안의 미지원 기능을 DB 손상과 혼동하지 않습니다.
 

@@ -1,6 +1,6 @@
-"""Offline Government24 proposals from correlated public navigation evidence."""
-from ai_agent.task_graph.fingerprints import fingerprint
-from ai_agent.task_graph.gov24 import VERSION, SCHEMA, PAGES, hashed, identity, contract, validate_graph
+"""Build public Government24 graphs from correlated successful navigation."""
+from ai_agent.task_graph.serialization import fingerprint
+from ai_agent.task_graph.gov24 import (VERSION, SCHEMA, PAGES, hashed, identity, contract, validate_graph)
 
 
 class IncompleteGovernmentTrace(ValueError):

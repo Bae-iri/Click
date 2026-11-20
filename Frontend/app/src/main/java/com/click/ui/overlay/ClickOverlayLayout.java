@@ -313,7 +313,7 @@ public final class ClickOverlayLayout extends ViewGroup {
             LinearLayout choices = new LinearLayout(getContext());
             choices.setOrientation(LinearLayout.VERTICAL);
             choices.addView(feature("말로 입력", true, () -> changeMode(Mode.VOICE)), spaced(0));
-            choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(8));
+            choices.addView(feature("글로 입력", false, () -> changeMode(Mode.TEXT)), spaced(4));
             if (openLibrary != null) {
                 com.click.ui.home.HomeIconView star = new com.click.ui.home.HomeIconView(
                         getContext(), com.click.ui.home.HomeIconView.Kind.STAR);
@@ -321,9 +321,9 @@ public final class ClickOverlayLayout extends ViewGroup {
                 star.setPadding(dp(6), dp(6), dp(6), dp(6));
                 View library = feature("즐겨찾기", star, "즐겨찾기. 앱 보관함 열기", openLibrary);
                 library.setTag("overlay_open_library");
-                choices.addView(library, spaced(8));
+                choices.addView(library, spaced(4));
             }
-            addScrollableBody(choices, 0);
+            addScrollableBody(choices, 12);
             // 진행 중인 요청에서 입력 메뉴를 다시 열어도 중지 버튼에 접근할 수 있다.
             panel.addView(requestRow, spaced(4));
         } else if (mode == Mode.VOICE) {
@@ -430,14 +430,14 @@ public final class ClickOverlayLayout extends ViewGroup {
     private View feature(String title, View icon, String description, Runnable action) {
         LinearLayout row = new LinearLayout(getContext());
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(12), dp(8), dp(12), dp(8));
-        row.setMinimumHeight(dp(52));
+        row.setPadding(dp(12), dp(4), dp(12), dp(4));
+        row.setMinimumHeight(dp(48));
         row.setBackground(new RippleDrawable(ColorStateList.valueOf(0x223478F6),
                 ClickUi.rounded(Color.WHITE, dp(18)),
                 ClickUi.rounded(Color.WHITE, dp(20))));
         row.setElevation(0);
         icon.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-        row.addView(icon, new LinearLayout.LayoutParams(dp(36), dp(36)));
+        row.addView(icon, new LinearLayout.LayoutParams(dp(32), dp(32)));
         TextView copy = label(title, 17, ClickUi.TEXT, true);
         copy.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         LinearLayout.LayoutParams copyParams = new LinearLayout.LayoutParams(0, -2, 1);

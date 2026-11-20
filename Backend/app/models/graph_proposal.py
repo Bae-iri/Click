@@ -7,6 +7,7 @@ from app.core.data_encryption import EncryptedJSON
 
 BROWSE_GRAPH_CONSUMER = 'ai2-browse-graphs.v1'
 GOV24_GRAPH_CONSUMER = 'ai2-gov24-graphs.v1'
+SETTINGS_GRAPH_CONSUMER = 'ai2-settings-graphs.v1'
 
 
 class GraphProposal(Base):

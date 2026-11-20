@@ -33,11 +33,12 @@ class KakaoIdentity(Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), unique=True)
 
 
-class LoginRateLimit(Base):
-    __tablename__ = 'login_rate_limits'
-    account_key: Mapped[str] = mapped_column(String(64), primary_key=True)
-    window_started_at: Mapped[int] = mapped_column(BigInteger, primary_key=True)
-    attempts: Mapped[int] = mapped_column(Integer, nullable=False)
+class AuthLoginWindow(Base):
+    """Short-lived account limiter; stores an HMAC lookup, never a phone number or PIN."""
+    __tablename__ = "auth_login_windows"
+    identity_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    window_start: Mapped[int] = mapped_column(BigInteger, index=True)
+    attempts: Mapped[int] = mapped_column(Integer)
 
 
 @event.listens_for(Account, "before_insert")

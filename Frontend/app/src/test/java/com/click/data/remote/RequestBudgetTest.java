@@ -14,6 +14,28 @@ import static org.robolectric.Shadows.shadowOf;
 @Config(sdk=34,application=Application.class)
 @LooperMode(LooperMode.Mode.PAUSED)
 public class RequestBudgetTest {
+ @Test public void publicGuideReadAndWatchdogUseOneLongerDeadlineIncludingPreparation() throws Exception {
+  var connection=mock(HttpURLConnection.class);when(connection.getURL()).thenReturn(new URL("https://example.test/api/v1/agent/public-guide/commands"));
+  try(var budget=new RequestBudget(SystemClock.elapsedRealtime()+RequestBudget.PUBLIC_GUIDE_TOTAL_MS)) {
+   shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(12000));
+   try(var auth=RequestBudget.ifAbsent()) {
+    RequestBudget.configure(connection,RequestBudget.PUBLIC_GUIDE_READ_MS);
+    verify(connection).setReadTimeout(45000);
+    var watchdog=RequestBudget.watch(connection);
+    assertTrue(watchdog.getDelay(java.util.concurrent.TimeUnit.MILLISECONDS)>47000);
+    assertTrue(watchdog.getDelay(java.util.concurrent.TimeUnit.MILLISECONDS)<=48000);
+    watchdog.cancel(false);
+   }
+   shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(48001));
+   try{RequestBudget.remaining(45000);fail();}catch(java.io.IOException expected){}
+  }
+ }
+ @Test public void nestedOperationCannotExtendAnExistingDeadline() throws Exception {
+  try(var outer=new RequestBudget(SystemClock.elapsedRealtime()+1000);
+      var inner=new RequestBudget(SystemClock.elapsedRealtime()+60000)) {
+   assertEquals(1000,RequestBudget.remaining(45000));
+  }
+ }
  @Test public void queueAndEarlierHttpCallsSpendTheSameMonotonicDeadline() throws Exception {
   try(var budget=new RequestBudget(SystemClock.elapsedRealtime()+1000)) {
    assertEquals(1000,RequestBudget.remaining(25000));
@@ -43,7 +65,7 @@ public class RequestBudgetTest {
    finally {watch.cancel(false);}
    verify(connection).setReadTimeout(45000);
    shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(50000));
-   assertEquals(40000,RequestBudget.remaining(45000));
+   assertEquals(10000,RequestBudget.remaining(45000));
   }
  }
  @Test public void nestedCallsCannotExtendTheOriginalDeadline() throws Exception {

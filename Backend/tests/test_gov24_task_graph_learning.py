@@ -6,7 +6,7 @@ from sqlalchemy import select, func
 from app.models.graph_proposal import GraphProposal, GOV24_GRAPH_CONSUMER
 from app.models.runtime_event import RuntimeEvent, RuntimeEventConsumption
 from app.repositories.users import UserRepository
-from scripts.gov24_graph_learning import GovernmentGraphLearningService
+from operations.gov24_graph_learning import GovernmentGraphLearningService
 from app.services.gov24_graphs import graph_candidates
 from app.services.gov24_navigation import CODE_HASH, digest
 from app.services.public_guide_policy import CIVIL, POLICY

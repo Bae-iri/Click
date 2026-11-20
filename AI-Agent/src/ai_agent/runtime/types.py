@@ -454,6 +454,7 @@ class AgentSessionState:
     recovery_state: JsonDict = field(default_factory=dict)
     state_candidates: tuple[JsonDict, ...] = ()
     vision_state: JsonDict = field(default_factory=dict)
+    settings_experiment: JsonDict = field(default_factory=dict)
 
     def to_dict(self) -> JsonDict:
         return asdict(self)

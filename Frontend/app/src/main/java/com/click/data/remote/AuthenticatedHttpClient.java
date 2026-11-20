@@ -14,40 +14,28 @@ final class AuthenticatedHttpClient {
     }
 
     HttpResult post(String path, String body, int readTimeout) throws Exception {
-        if (tokens.accessToken() == null || (tokens.accessExpired() && !AuthGateway.refresh(tokens))) {
-            throw new java.io.IOException("AUTH_REQUIRED");
-        }
-        HttpResult result = AuthGateway.post(path, body, tokens.accessToken(), readTimeout);
-        if (result.status == 401 && AuthGateway.refresh(tokens)) {
-            result = AuthGateway.post(path, body, tokens.accessToken(), readTimeout);
-        }
-        if (result.status < 200 || result.status >= 300) throw AuthGateway.apiError(path, result);
-        return result;
+        return execute("POST",path,token->AuthGateway.post(path,body,token,readTimeout));
     }
 
     HttpResult get(String path) throws Exception {
-        if (tokens.accessToken() == null || (tokens.accessExpired() && !AuthGateway.refresh(tokens))) {
-            throw new java.io.IOException("AUTH_REQUIRED");
-        }
-        HttpResult result = AuthGateway.get(path, tokens.accessToken());
-        if (result.status == 401 && AuthGateway.refresh(tokens)) {
-            result = AuthGateway.get(path, tokens.accessToken());
-        }
-        if (result.status < 200 || result.status >= 300) {
-            throw new ApiException("GET", path, result);
-        }
-        return result;
+        return execute("GET",path,token->AuthGateway.get(path,token));
     }
 
     HttpResult delete(String path) throws Exception {
-        if (tokens.accessToken() == null || (tokens.accessExpired() && !AuthGateway.refresh(tokens))) {
-            throw new java.io.IOException("AUTH_REQUIRED");
+        return execute("DELETE",path,token->AuthGateway.delete(path,token));
+    }
+
+    private interface Call { HttpResult send(String token) throws Exception; }
+
+    private HttpResult execute(String method,String path,Call call) throws Exception {
+        // Preserve an enclosing route deadline, including auth refresh and retry.
+        try (RequestBudget budget=RequestBudget.ifAbsent()) {
+            if (tokens.accessToken()==null || (tokens.accessExpired()&&!AuthGateway.refresh(tokens)))
+                throw new java.io.IOException("AUTH_REQUIRED");
+            HttpResult result=call.send(tokens.accessToken());
+            if(result.status==401 && AuthGateway.refresh(tokens))result=call.send(tokens.accessToken());
+            if(result.status<200 || result.status>=300)throw new ApiException(method,path,result);
+            return result;
         }
-        HttpResult result = AuthGateway.delete(path, tokens.accessToken());
-        if (result.status == 401 && AuthGateway.refresh(tokens)) {
-            result = AuthGateway.delete(path, tokens.accessToken());
-        }
-        if (result.status < 200 || result.status >= 300) throw new ApiException("DELETE", path, result);
-        return result;
     }
 }

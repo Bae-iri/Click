@@ -18,11 +18,16 @@ public final class AgentServerContract {
     public boolean executionState;
     public boolean userDecline;
     public boolean coupangBrowse;
+    public boolean appGuide;
+    public boolean appTask;
+    public boolean appTaskMemory;
     public boolean gov24Login;
+    public boolean reviseRequest;
     public boolean gov24Civil;
     public boolean gov24Services;
     public boolean gov24Planner;
     public boolean gov24ObservationDiagnostics;
+    public boolean settingsExperiment;
 
     private AgentServerContract(Set<String> commands, Set<String> goals, Set<String> appliedSettingFields,
                                 String version, boolean interactive, boolean preparation) {
@@ -44,7 +49,7 @@ public final class AgentServerContract {
         request.interactiveWorkflow = interactiveWorkflow;
         JSONObject body = new JSONObject(request.toJson());
         JSONObject context = body.optJSONObject("device_context");
-        if(context!=null && (coupangBrowse || gov24Login || gov24Civil)) {
+        if(context!=null && (coupangBrowse || gov24Login || gov24Civil || settingsExperiment)) {
             JSONObject capabilities=context.optJSONObject("capabilities");
             if(capabilities==null) {
                 capabilities=new JSONObject();
@@ -55,6 +60,8 @@ public final class AgentServerContract {
             if(gov24Civil)capabilities.put("gov24_civil",true);
             if(gov24Services)capabilities.put("gov24_services",true);
             if(gov24Planner)capabilities.put("gov24_planner",true);
+            if(settingsExperiment && !com.click.BuildConfig.SETTINGS_EXPERIMENT_ARM.isEmpty())
+                capabilities.put("settings_experiment_arm",com.click.BuildConfig.SETTINGS_EXPERIMENT_ARM);
         }
         JSONObject screen = body.optJSONObject("accessibility_tree");
         JSONObject settings = screen == null ? null : screen.optJSONObject("applied_settings");
@@ -100,8 +107,12 @@ public final class AgentServerContract {
                 AgentTurnContract.CONTRACT_VERSION.equals(selected) && commands.contains("resolve_goal")
                         && properties.has("preparation_version") && properties.has("clarification_answer")
                         && properties.has("goal_resolution_id"));
+        result.reviseRequest=document.getJSONObject("paths").has("/api/v1/voice-requests/{request_id}/revise");
         JSONObject schemas=document.getJSONObject("components").getJSONObject("schemas");
         JSONObject capabilities=schemas.optJSONObject("DeviceCapabilities");
+        result.appGuide=document.getJSONObject("paths").has(AppGuideGateway.PATH);
+        result.appTask=document.getJSONObject("paths").has(AppGuideGateway.TASK_PATH);
+        result.appTaskMemory=document.getJSONObject("paths").has(AppGuideGateway.MEMORY_PATH)&&document.getJSONObject("paths").has(AppGuideGateway.EVENTS_PATH)&&document.getJSONObject("paths").has(AppGuideGateway.RESULT_PATH);
         result.coupangBrowse=document.getJSONObject("paths").has(CoupangBrowseGateway.PATH)
             && capabilities!=null && capabilities.getJSONObject("properties").has("coupang_browse");
         result.gov24Login=document.getJSONObject("paths").has("/api/v1/agent/public-guide/commands")
@@ -113,6 +124,7 @@ public final class AgentServerContract {
         result.gov24ObservationDiagnostics=result.gov24Login && publicScreen!=null
             && publicScreen.optJSONObject("properties")!=null
             && publicScreen.getJSONObject("properties").has("privacy_reason");
+        result.settingsExperiment=capabilities!=null && capabilities.getJSONObject("properties").has("settings_experiment_arm");
         JSONObject guide=schemas.optJSONObject("GuideCommandResponse"),cancel=schemas.optJSONObject("CancelVoiceRequest");
         result.userDecline=document.getJSONObject("paths").has("/api/v1/voice-requests/{request_id}/cancel")
             && guide!=null && cancel!=null

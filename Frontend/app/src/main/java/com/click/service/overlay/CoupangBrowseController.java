@@ -37,6 +37,8 @@ public final class CoupangBrowseController {
     private ScreenSnapshot verifyingPrivateRead;
     private String responseStatus,responseOutcome,confirmedPrivateReason;
     private String waitingFor;
+    private int recoveryReads;
+    private Runnable recoveryRead;
     public CoupangBrowseController(CoupangBrowseGateway gateway,CoupangBrowsePrivacy privacy,Listener listener) {
         this(gateway,privacy::filter,"com.coupang.mobile","coupang-browse.v1",listener);
     }
@@ -68,6 +70,28 @@ public final class CoupangBrowseController {
     public boolean terminal(){return terminal;}
     public boolean waitingForUser(){return waitingFor!=null;}
     public boolean ready(){return version>0;}
+    /** Recollect on the device; a manual retry never bypasses the privacy filter. */
+    public void refreshScreen() {
+        if (closed || busy || terminal || !listener.canObserve()) return;
+        observedPublicScene = null;
+        ScreenSnapshot current = listener.freshScreen();
+        if (current != null) screenChanged(current);
+    }
+    private void scheduleRecoveryRead() {
+        if (recoveryRead != null || recoveryReads >= 5 || !"await_public".equals(waitingFor)
+                || closed || terminal || !listener.canObserve()) return;
+        recoveryRead = () -> {
+            recoveryRead = null;
+            recoveryReads++;
+            refreshScreen();
+            scheduleRecoveryRead();
+        };
+        observationHandler.postDelayed(recoveryRead, recoveryReads == 0 ? 500L : 1500L);
+    }
+    private void clearRecoveryRead() {
+        if (recoveryRead != null) observationHandler.removeCallbacks(recoveryRead);
+        recoveryRead = null;
+    }
     public boolean guideMatches(ScreenSnapshot current) {
         if(current==null||guidedScreen==null)return false;
         if(!"public-guide.v1".equals(protocol))return guidedScreen.contentFingerprint().equals(current.contentFingerprint());
@@ -205,7 +229,13 @@ public final class CoupangBrowseController {
             .put("expected_version",version).put("command",command);
         if("public-guide.v1".equals(protocol))request.put("recovery_version","gov24-recovery.v1");
         if(resolution!=null)request.put("goal_resolution_id",resolution);
-        if(screen!=null)request.put("screen",privacy.filter(screen));
+        if(screen!=null) {
+            JSONObject safe=privacy.filter(screen);request.put("screen",safe);
+            if("public-guide.v1".equals(protocol)&&com.click.data.local.CandidateDiagnosticLog.enabled())
+                android.util.Log.i("ClickAgent","gov24_observe status="+safe.optString("status")
+                    +" handoff="+safe.optString("handoff_reason","none")+" privacy="+safe.optString("privacy_reason","unavailable")
+                    +" exported_nodes="+(safe.optJSONArray("nodes")==null?0:safe.optJSONArray("nodes").length()));
+        }
         if("observe".equals(command)&&action!=null)request.put("action",action);
         return request;
     }
@@ -228,6 +258,8 @@ public final class CoupangBrowseController {
                 terminal=!"IN_PROGRESS".equals(responseStatus);action=null;
                 String subgoal=response.optString("subgoal");
                 waitingFor=!terminal&&("await_login".equals(subgoal)||"await_public".equals(subgoal))?subgoal:null;
+                if (waitingFor == null || terminal) { clearRecoveryRead(); recoveryReads = 0; }
+                else scheduleRecoveryRead();
                 JSONObject submitted=request.optJSONObject("screen");
                 if(submitted!=null&&"handoff".equals(submitted.optString("status")))
                     confirmedPrivateReason=submitted.optString("handoff_reason",null);
@@ -242,5 +274,5 @@ public final class CoupangBrowseController {
             }
         });
     }
-    public void close(){closed=true;generation++;clearPrivateRecheck();guide=action=question=null;gateway.close();}
+    public void close(){closed=true;generation++;clearPrivateRecheck();clearRecoveryRead();guide=action=question=null;gateway.close();}
 }

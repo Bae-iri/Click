@@ -1,7 +1,7 @@
-"""Validate retained public Government24 graphs without loading offline learning."""
+"""Government24 public graph schema and validation, shared without either agent."""
 from copy import deepcopy
 import re
-from ai_agent.task_graph.fingerprints import fingerprint
+from ai_agent.task_graph.serialization import fingerprint
 
 VERSION = 'gov24-graph-learner.v1'
 SCHEMA = 'gov24-task-graph.v1'

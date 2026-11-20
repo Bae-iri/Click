@@ -1,5 +1,6 @@
 from hashlib import sha256
 import json
+import logging
 import os
 
 from fastapi import HTTPException
@@ -21,12 +22,16 @@ from app.services.task_outcome import follow_up
 from app.services.guide_narration import GuideNarrator
 from uuid import uuid4
 
+logger = logging.getLogger(__name__)
+
 
 def request_identity(request):
     payload = request.model_dump(mode="json")
     capabilities = (payload.get('device_context') or {}).get('capabilities')
     if capabilities is not None and not capabilities.get('coupang_browse'):
         capabilities.pop('coupang_browse', None)
+    if capabilities is not None and capabilities.get('settings_experiment_arm') is None:
+        capabilities.pop('settings_experiment_arm', None)
     # Adding optional approval metadata must not change pre-upgrade request IDs.
     if payload.get("approval_provenance") is None:
         payload.pop("approval_provenance", None)
@@ -49,6 +54,19 @@ class AgentTurnService:
         self.goal_preparation = GoalPreparationService(session_factory, self.graphs, self.repository)
         if not 0 < self.timeout_seconds < self.repository.lease_seconds:
             raise ValueError("Turn timeout must be positive and shorter than the lease")
+
+    def learned_settings_routes(self, graph):
+        """AI2-validated Settings routes; the runtime process itself has no DB access."""
+        from app.services.settings_graphs import GOALS, reusable_routes, reuse_enabled
+        from app.services.settings_planner import enabled
+        if graph is None or graph.definition.goal_type not in GOALS or not (enabled() and reuse_enabled()):
+            return ()
+        try:
+            return tuple(reusable_routes(self.session_factory, graph.definition.goal_type,
+                                         now=int(self.repository.clock())))
+        except Exception:
+            logger.exception("Settings route lookup failed; planning without learned routes")
+            return ()
 
     def handle_turn(self, request, *, command_context=None, prepared_reference=None):
         selected_graph = None
@@ -111,7 +129,8 @@ class AgentTurnService:
             if self.engine_factory is RuntimeAgentAdapter:
                 result = run_runtime(RuntimeWork(request, selected_graph,
                     capture(store, request.session_id, selected_graph),
-                    request.request_id if approved and approved.get("purpose") == "vision" else None), timeout)
+                    request.request_id if approved and approved.get("purpose") == "vision" else None,
+                    self.learned_settings_routes(selected_graph)), timeout)
                 response = safe_response(AgentTurnResponse.model_validate(result["response"]))
                 checkpoint = result["checkpoint"]
                 execution_event = result["execution_event"]

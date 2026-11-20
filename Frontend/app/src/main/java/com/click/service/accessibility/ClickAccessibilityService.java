@@ -210,9 +210,14 @@ public final class ClickAccessibilityService extends AccessibilityService {
     public static ScreenSnapshot freshSnapshot() {
         ClickAccessibilityService service = connectedService.get();
         ScreenSnapshot fresh = service == null ? null : service.readCurrentScreen();
-        if (fresh != null) LatestScreenSnapshot.set(fresh);
+        LatestScreenSnapshot.set(fresh);
         return fresh;
     }
+    public static boolean performAppTask(ScreenSnapshot expected,org.json.JSONObject observation,org.json.JSONObject action,String input,String selectedPackage){
+        return AppTaskExecutor.execute(connectedService.get(),expected,freshSnapshot(),observation,action,input,selectedPackage);
+    }
+    public static boolean appTaskInputMatches(String targetId,String expectedHash){return AppTaskExecutor.inputMatches(connectedService.get(),targetId,expectedHash);}
+    public static void captureAppTaskVision(AppTaskVision.Callback callback){AppTaskVision.capture(connectedService.get(),freshSnapshot(),callback);}
 
     public static void captureVision(ScreenSnapshot expected, String vocabularyKey, OnDeviceVision.Callback callback) {
         captureVision(expected, vocabularyKey, "full_frame", null, callback);
@@ -510,6 +515,11 @@ public final class ClickAccessibilityService extends AccessibilityService {
     }
 
     private static int[] findNavigationBounds(AccessibilityNodeInfo node, boolean back) {
+        try{return findNavigationBounds(node,back,new SnapshotTraversalBudget(),0);}
+        catch(SnapshotTraversalBudget.Incomplete incomplete){return null;}
+    }
+    private static int[] findNavigationBounds(AccessibilityNodeInfo node,boolean back,SnapshotTraversalBudget budget,int depth) {
+        budget.visit(depth);
         String id = node.getViewIdResourceName();
         String pkg = node.getPackageName() == null ? "" : node.getPackageName().toString();
         if ("com.android.systemui".equals(pkg) && node.isVisibleToUser() && node.isEnabled()
@@ -519,9 +529,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
             if (!box.isEmpty()) return new int[]{box.left, box.top, box.right, box.bottom};
         }
         for (int i = 0; i < node.getChildCount(); i++) {
+            budget.child();
             AccessibilityNodeInfo child = node.getChild(i);
             if (child == null) continue;
-            try { int[] found = findNavigationBounds(child, back); if (found != null) return found; }
+            try { int[] found = findNavigationBounds(child, back,budget,depth+1); if (found != null) return found; }
             finally { child.recycle(); }
         }
         return null;
@@ -543,7 +554,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         try {
             if(root==null)return false;
             var screen=service.collector.collect(root,com.click.data.snapshot.Gov24LoginPrivacy.PACKAGE,service,null);
-            return Gov24PublicNavigation.reveal(root,screen,goalType);
+            return screen!=null && Gov24PublicNavigation.reveal(root,screen,goalType);
         }finally{if(root!=null)root.recycle();}
     }
 
@@ -684,7 +695,8 @@ public final class ClickAccessibilityService extends AccessibilityService {
         }
         com.click.data.snapshot.NativeWindowContext windowContext=NativeWindowContextReader.read(
                 this,root,lastForegroundPackage,lastForegroundWindow,lastForegroundClass);
-        return collector.collect(root, packageName, this, appliedScale)
+        ScreenSnapshot captured=collector.collect(root, packageName, this, appliedScale);
+        return captured==null?null:captured
                 .withWindowContext(windowContext)
                 .withAdjustmentValues(brightness, mediaVolume)
                 .withWifiState(wifiState)
@@ -722,13 +734,20 @@ public final class ClickAccessibilityService extends AccessibilityService {
     }
 
     private static String findNodeId(AccessibilityNodeInfo node, AccessibilityNodeInfo target, String id) {
-        if (node == null) return null;
+        try{return findNodeId(node,target,id,new SnapshotTraversalBudget(),0);}
+        catch(SnapshotTraversalBudget.Incomplete incomplete){return null;}
+    }
+    private static String findNodeId(AccessibilityNodeInfo node,AccessibilityNodeInfo target,String id,SnapshotTraversalBudget budget,int depth) {
+        if(node==null)return null;
+        budget.visit(depth);
         if (node.equals(target)) return id;
         for (int index = 0; index < node.getChildCount(); index++) {
             AccessibilityNodeInfo child = node.getChild(index);
-            String found = findNodeId(child, target, id + "_" + index);
-            if (child != null) child.recycle();
-            if (found != null) return found;
+            try {
+                budget.child();
+                String found=findNodeId(child,target,id+"_"+index,budget,depth+1);
+                if(found!=null)return found;
+            } finally {if(child!=null)child.recycle();}
         }
         return null;
     }

@@ -35,6 +35,7 @@ public final class Gov24PublicTestTarget {
             }
             if (foreground == null) throw new AssertionError("Government24 is not in an observed native window");
             var screen = new AccessibilitySnapshotCollector().collect(foreground, Gov24LoginPrivacy.PACKAGE, context, null);
+            if (screen == null) throw new AssertionError("Government24 snapshot was incomplete; retry after loading");
             java.util.Set<String> providers = new java.util.HashSet<>();
             int inputs=0, selected=0;
             for(var node:screen.nodes)if(node.visibleToUser) {
@@ -44,13 +45,32 @@ public final class Gov24PublicTestTarget {
                     providers.add(option);if(node.selected||Boolean.TRUE.equals(node.checked))selected++;
                 }
             }
-            JSONObject result = new Gov24LoginPrivacy().filter(screen);
+            JSONObject result = new Gov24LoginPrivacy(false,true).filter(screen);
             result.put("provider_choice_count",providers.size()).put("visible_input_count",inputs)
                     .put("selected_provider_count",selected);
             result.put("local_diagnostics",new JSONObject().put("provider_choices",providers.size())
-                .put("visible_input_fields",inputs).put("selected_provider_markers",selected));
+                .put("visible_input_fields",inputs).put("selected_provider_markers",selected)
+                .put("search_inputs",screen.nodes.stream().filter(n->n.visibleToUser&&n.publicSearchInput()).count())
+                .put("password_inputs",screen.nodes.stream().filter(n->n.visibleToUser&&n.passwordInput()).count())
+                .put("native_inputs",inputMetadata(foreground,new SnapshotTraversalBudget(),0)));
             result.put("click_windows", overlays);
             return result;
         } finally { if (foreground != null) foreground.recycle(); }
+    }
+    /** Only boolean native metadata, never text/value, hints or accessibility descriptions. */
+    private static JSONArray inputMetadata(AccessibilityNodeInfo node,SnapshotTraversalBudget budget,int depth) throws Exception {
+        budget.visit(depth);JSONArray result=new JSONArray();
+        if(node.isVisibleToUser()&&(node.isEditable()||String.valueOf(node.getClassName()).contains("EditText"))) {
+            CharSequence hint=node.getHintText();
+            result.put(new JSONObject().put("public_search_hint",hint!=null&&Gov24LoginPrivacy.isPublicSearchHint(hint.toString()))
+                .put("showing_hint",node.isShowingHintText()).put("has_description",node.getContentDescription()!=null)
+                .put("password",node.isPassword()).put("public_search_description",Gov24LoginPrivacy.isPublicSearchHint(String.valueOf(node.getContentDescription()))));
+        }
+        for(int i=0;i<node.getChildCount();i++) {
+            budget.child();AccessibilityNodeInfo child=node.getChild(i);if(child==null)continue;
+            try {JSONArray nested=inputMetadata(child,budget,depth+1);for(int j=0;j<nested.length();j++)result.put(nested.get(j));}
+            finally{child.recycle();}
+        }
+        return result;
     }
 }

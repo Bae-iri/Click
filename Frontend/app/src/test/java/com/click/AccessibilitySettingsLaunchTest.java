@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 34, application = ClickApplication.class)
+@Config(sdk = 34, application = com.click.testing.ClickTestApplication.class)
 public class AccessibilitySettingsLaunchTest {
     @Test public void samsungUsesItsOwnDetailsScreenInsteadOfAospHomepage() {
         ShadowBuild.setManufacturer("samsung");

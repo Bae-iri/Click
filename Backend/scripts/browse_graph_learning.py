@@ -219,7 +219,7 @@ def main():
         validate_database_keys(engine)
         factory = build_session_factory(engine)
         learner = BrowseGraphLearningService(factory)
-        from scripts.gov24_graph_learning import GovernmentGraphLearningService
+        from operations.gov24_graph_learning import GovernmentGraphLearningService
         government = GovernmentGraphLearningService(factory)
         if 'session_id' in job:
             if any(not isinstance(job[k], str) or not 1 <= len(job[k]) <= 200 for k in ('session_id', 'user_id')):

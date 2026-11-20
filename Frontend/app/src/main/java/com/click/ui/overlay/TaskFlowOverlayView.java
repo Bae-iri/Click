@@ -76,6 +76,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         default void collapse() {}
         default void expand() {}
         default void openInput() {}
+        default void assistance() {}
     }
     private final Listener listener;
     private final TextView queuedRequests;
@@ -111,7 +112,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private final TextView compactMessage;
     private String progressMessage;
     private String compactSummary;
-    private static final String HELP_EXPLANATION = "죄송합니다. 클릭이 아직 성장하는 중이라 찾지 못했어요.";
+    private static final String HELP_EXPLANATION = "현재 화면에서 안내할 위치를 확인하지 못했어요. 다시 확인하거나 요청을 고쳐 주세요.";
     private String targetHelpInstruction;
     private boolean targetHelpOpened;
     private boolean minimizedProgress;
@@ -123,6 +124,17 @@ public final class TaskFlowOverlayView extends LinearLayout {
     private int[] expandedVisibility;
     private String requestSummary;
     private String preparationMessage;
+    private String guidanceEvidence=GuidanceExplanation.DEFAULT;
+    private Button assistanceEntry;
+    private TextView evidenceView;
+    private boolean detailedExplanations;
+    public String guidanceEvidence(){return guidanceEvidence;}
+    public void setGuidanceEvidence(String evidence){guidanceEvidence=evidence==null?GuidanceExplanation.DEFAULT:evidence;if(evidenceView!=null)evidenceView.setText(guidanceEvidence);}
+    public void setDetailedExplanations(boolean enabled){
+        detailedExplanations=enabled;
+        if(enabled&&hasProgress()&&evidenceView==null){evidenceView=text(guidanceEvidence,14);content.addView(evidenceView,spaced(8));}
+        if(evidenceView!=null)evidenceView.setVisibility(enabled?VISIBLE:GONE);
+    }
     private final CompactBubbleBackground compactBackground = new CompactBubbleBackground();
 
     // [UI 수정] 공통 틀을 만드는 곳: 배경/모서리 → 헤더 → 스크롤 본문 → 하단 버튼.
@@ -209,6 +221,8 @@ public final class TaskFlowOverlayView extends LinearLayout {
         stopParams.leftMargin = dp(6);
         controls.addView(stop, stopParams);
         addView(controls);
+        assistanceEntry=quietButton("이유·다시 확인",listener::assistance);
+        assistanceEntry.setTextSize(ClickTextScale.size(context,13));assistanceEntry.setVisibility(GONE);addView(assistanceEntry);
     }
 
     // Background status callbacks must never add a banner to a floating guide.
@@ -300,6 +314,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         guidanceTarget = null;
         if (label == null || label.trim().isEmpty()) return;
         String target = label.trim();
+        setGuidanceEvidence("안내를 만들 때 읽은 화면의 ‘"+target.substring(0,Math.min(60,target.length()))+"’ 항목을 대상으로 사용했어요. 작업 완료 여부는 따로 확인해요.");
         if (target.equals("설정") || target.equals("설정 앱") || target.startsWith("설정,")
                 || target.equalsIgnoreCase("settings") || target.equalsIgnoreCase("settings app")
                 || target.toLowerCase(java.util.Locale.ROOT).startsWith("settings,")) return;
@@ -364,6 +379,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
         super.onMeasure(width, MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST));
     }
     private void clear(String title) {
+        presentationRevision++;
+        guidanceEvidence=GuidanceExplanation.DEFAULT;
+        evidenceView=null;
+        if(assistanceEntry!=null)assistanceEntry.setVisibility(GONE);
         publicGuideInput=false;
         compactSummary = null;
         targetHelpInstruction = null;
@@ -380,7 +399,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         progressMessage = null;
         guidanceProgress = null; progressBar = null; progressCount = null; guidanceTarget = null;
         content.removeAllViews();
-        adjustmentDelegationChoice=null;
         content.setPadding(0, 0, 0, dp(4));
         reviewConfirm.setVisibility(GONE);
         reviewNavigation.removeAllViews(); reviewNavigation.setVisibility(GONE);
@@ -405,6 +423,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
 
     @Override protected void onDetachedFromWindow() {
+        presentationRevision++;
         ClickUiSpeed.finishReveal(content);
         ClickUiSpeed.finishReveal(compactMessage);
         super.onDetachedFromWindow();
@@ -457,6 +476,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         clear(getResources().getConfiguration().fontScale >= 1.4f
                 ? "작업을 마치지\n못했어요" : "작업을 마치지 못했어요");
         narrationMessage = message;
+        guidanceEvidence=message;assistanceEntry.setVisibility(VISIBLE);
         controls.setVisibility(GONE);
         divider.setVisibility(GONE);
         recoveryActions.addView(primaryButton("끝내기", () -> listener.control("cancel_task")), spaced(0));
@@ -821,19 +841,6 @@ public final class TaskFlowOverlayView extends LinearLayout {
         requestEditor("", null);
     }
 
-    private android.widget.CheckBox adjustmentDelegationChoice;
-    public void offerAdjustmentDelegation(boolean available) {
-        if(!available || !reviewScreen || reviewConfirm.getVisibility()!=VISIBLE)return;
-        adjustmentDelegationChoice=new android.widget.CheckBox(getContext());
-        adjustmentDelegationChoice.setText("이번 작업의 조절을 한 번 맡기기\n5분 안에 한 단계만, 전체 조절 범위의 최대 20%까지 바꿔요.");
-        adjustmentDelegationChoice.setTextSize(14);
-        adjustmentDelegationChoice.setTextColor(INK);
-        adjustmentDelegationChoice.setMinHeight(dp(48));
-        adjustmentDelegationChoice.setChecked(false);
-        content.addView(adjustmentDelegationChoice,spaced(12));
-    }
-    public boolean adjustmentDelegated(){return adjustmentDelegationChoice!=null && adjustmentDelegationChoice.isChecked();}
-
     public void preparation(com.click.domain.goal.GoalPreparationState state) {
         if (state.ready()) {
             reviewStage(2, "", "");
@@ -913,6 +920,67 @@ public final class TaskFlowOverlayView extends LinearLayout {
         requestEditor(state.data.optString("source_text"), null);
     }
 
+    public void appGuidance(String message, Runnable refresh, Runnable finish) {
+        progress(null, null, message, false);
+        controls.setVisibility(GONE); divider.setVisibility(GONE);
+        recoveryActions.addView(primaryButton("현재 화면 확인", refresh), spaced(0));
+        recoveryActions.addView(secondaryButton("안내 끝내기", finish), spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
+    }
+
+    public void queueEndRetry(Runnable retry){
+        clear("종료하지 못했어요");
+        recoveryActions.addView(primaryButton("다시 시도",retry),spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
+    }
+
+    public void appTask(JSONObject result,java.util.function.Consumer<String> execute,Runnable refresh,Runnable tools,Runnable visual,Runnable finish) {
+        appTask(result,execute,refresh,tools,visual,finish,null);
+    }
+    public void appTask(JSONObject result,java.util.function.Consumer<String> execute,Runnable refresh,Runnable tools,Runnable visual,Runnable finish,Runnable confirmed) {
+        progress(null,null,result.optString("message"),false);controls.setVisibility(GONE);divider.setVisibility(GONE);
+        JSONObject action=result.optJSONObject("action");
+        if("proposed".equals(result.optString("status"))&&!result.optString("target_label").isBlank())setGuidanceEvidence(action!=null&&"open_app".equals(action.optString("tool"))
+            ?"요청하신 ‘"+result.optString("target_label")+"’ 앱이 설치되어 있어요.":"현재 화면에서 ‘"+result.optString("target_label")+"’ 항목을 찾았어요.");
+        if("protected".equals(result.optString("status")))setGuidanceEvidence("입력·인증 화면을 감지해 안내를 멈췄어요.");
+        boolean verifying=result.optBoolean("verifying");
+        if(action!=null&&!verifying){
+            String tool=action.optString("tool"),label=result.optString("target_label","");
+            String actionLabel="tap".equals(tool)?label+" 누르기":"scroll_forward".equals(tool)?"아래로 이동":"scroll_backward".equals(tool)?"위로 이동":"back".equals(tool)?"뒤로가기":label+" 열기";
+            if(result.optBoolean("execute_allowed")){
+                if("set_text".equals(tool)){
+                    publicGuideInput=true;EditText input=new EditText(getContext());input.setHint("입력할 검색어를 적어 주세요");input.setSingleLine(true);input.setTextSize(ClickTextScale.size(getContext(),16));
+                    input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(200)});input.setText(result.optString("suggested_query"));content.addView(input,spaced(8));
+                    recoveryActions.addView(primaryButton("검색어 입력",()->{String value=input.getText().toString();if(value.isEmpty())return;hideKeyboard(input);input.postDelayed(()->execute.accept(value),350);}),spaced(0));
+                }else recoveryActions.addView(primaryButton(actionLabel,()->execute.accept(null)),spaced(0));
+            }else content.addView(text("‘"+label+"’ 항목을 직접 눌러주세요.",14),spaced(8));
+            if("open_app".equals(tool)){recoveryActions.setVisibility(VISIBLE);return;}
+        }
+        if(!verifying){
+            Button more=quietButton("더 보기",()->{});
+            more.setOnClickListener(view->{
+                more.setVisibility(GONE);
+                recoveryActions.addView(secondaryButton("다시 확인",refresh),spaced(8));
+                recoveryActions.addView(secondaryButton("직접 동작 선택",tools),spaced(8));
+                recoveryActions.addView(quietButton("화면 글자 읽기",visual),spaced(8));
+                if(confirmed!=null)recoveryActions.addView(quietButton("결과를 확인했어요",confirmed),spaced(8));
+                recoveryActions.addView(quietButton("안내 끝내기",finish),spaced(8));
+            });
+            recoveryActions.addView(more,spaced(8));
+        }
+        recoveryActions.setVisibility(VISIBLE);
+    }
+    public void appTaskTools(java.util.function.Consumer<String> choice,Runnable back) {
+        clear("어떻게 진행할까요?");
+        String[] labels={"검색어 입력","아래로 이동","위로 이동","뒤로가기","앱 열기"};String[] values={"set_text","scroll_forward","scroll_backward","back","open_app"};
+        for(int i=0;i<labels.length;i++){final String value=values[i];content.addView(primaryButton(labels[i],()->choice.accept(value)),spaced(8));}
+        content.addView(secondaryButton("안내로 돌아가기",back),spaced(8));
+    }
+    public void appTaskApps(JSONArray apps,java.util.function.BiConsumer<String,String> selected,Runnable back) {
+        clear("어떤 앱을 열까요?");
+        for(int i=0;i<apps.length();i++){JSONObject app=apps.optJSONObject(i);if(app==null)continue;content.addView(secondaryButton(app.optString("label"),()->selected.accept(app.optString("package"),app.optString("label"))),spaced(4));}
+        content.addView(secondaryButton("안내로 돌아가기",back),spaced(8));
+    }
     public void browsing(String message, boolean terminal, Runnable observe, Runnable openApp, Runnable finish) {
         reviewStage(1, "쿠팡 상품 찾기", "검색과 상품 상세 화면을 안내해요.");
         narrationMessage = message;
@@ -929,6 +997,12 @@ public final class TaskFlowOverlayView extends LinearLayout {
     public void publicLogin(String message,boolean terminal,org.json.JSONObject question,
             java.util.function.BiConsumer<String,Boolean> answer,Runnable observe,Runnable openApp,Runnable finish) {
         publicGuide(message,terminal,question,false,answer,finish);
+    }
+    public void publicGuideRecovery(String message, Runnable refresh, Runnable openApp) {
+        progress(null, null, message, false);
+        recoveryActions.addView(primaryButton("화면 다시 읽기", refresh), spaced(0));
+        recoveryActions.addView(secondaryButton("정부24 열기", openApp), spaced(8));
+        recoveryActions.setVisibility(VISIBLE);
     }
     public void publicGuide(String message,boolean terminal,org.json.JSONObject question,boolean civil,
             java.util.function.BiConsumer<String,Boolean> answer,Runnable finish) {
@@ -947,6 +1021,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         }
         reviewStage(1,civilChoice?"정부24 "+serviceLabel+" 안내":"정부24 로그인 안내",
             civil?(loginChoice?"로그인 후 원래 민원 안내를 이어가요.":"발급 안내 화면까지 함께 이동해요. 신청서 작성과 제출은 직접 진행해요."):"");
+        assistanceEntry.setVisibility(VISIBLE);
         publicGuideInput=true;
         narrationMessage=message;content.addView(text(message,16),spaced(12));
         if(question!=null) {
@@ -1110,6 +1185,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public void progress(String goal, JSONArray checklist, String instruction, boolean canRequestResult) {
         clear(null);
+        assistanceEntry.setVisibility(VISIBLE);
         progressMessage = instruction == null || instruction.trim().isEmpty() ? "작업을 진행하고 있어요." : instruction;
         narrationMessage = progressMessage;
         guidanceProgress = new LinearLayout(getContext());
@@ -1139,6 +1215,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             progressCompletion = primaryButton("다 했어요", () -> listener.control("request_result"));
             content.addView(progressCompletion, spaced(12));
         }
+        setDetailedExplanations(detailedExplanations);
     }
     public void result(JSONObject prompt) {
         result(prompt, false);
@@ -1238,6 +1315,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
     }
     public void paused() {
         clear("작업을 잠시 멈췄어요"); content.addView(text("이어서 진행하거나 그만할 수 있어요.", 16));
+        assistanceEntry.setVisibility(VISIBLE);
         pause.setText("이어서 진행"); pause.setOnClickListener(v -> listener.control("resume_task"));
     }
     public void expired(Runnable newRequest) {
@@ -1296,7 +1374,15 @@ public final class TaskFlowOverlayView extends LinearLayout {
         content.addView(text("강조한 버튼을 누르거나 휴대폰의 내비게이션 버튼·제스처를 사용해 주세요.", 14), spaced(10));
     }
 
-    public void waiting(String message) { clear(message); }
+    private int presentationRevision;
+    public void waiting(String message) {
+        clear(message);final int owner=++presentationRevision;
+        postDelayed(()->{if(owner==presentationRevision&&heading.getText().toString().equals(message)){
+            content.addView(text("응답을 기다리고 있어요. 일시정지하거나 요청을 다시 확인할 수 있어요.",14),spaced(8));
+            guidanceEvidence="요청 또는 화면 확인 결과를 기다리고 있어요. 기다리는 중이라는 이유만으로 작업을 완료 처리하지 않아요.";
+            assistanceEntry.setVisibility(VISIBLE);
+        }},4000);
+    }
     public void waitingProgress(String message) {
         progress(null, null, message, false);
     }
@@ -1413,7 +1499,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
             tail.quadTo(baseX + dp(5), bendY, baseX + dp(10), edge);
             tail.close();
             shape.op(tail, Path.Op.UNION);
-            paint.setStyle(Paint.Style.FILL); paint.setColor(Color.WHITE);
+            paint.setStyle(Paint.Style.FILL); paint.setColor(0xE6FFFFFF);
             canvas.drawPath(shape, paint);
             paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(1)); paint.setColor(BORDER);
             canvas.drawPath(shape, paint);

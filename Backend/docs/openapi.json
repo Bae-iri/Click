@@ -2907,6 +2907,836 @@
         ]
       }
     },
+    "/api/v1/agent/app-guide/step": {
+      "post": {
+        "tags": [
+          "app-independent-guidance"
+        ],
+        "summary": "Step",
+        "operationId": "step_api_v1_agent_app_guide_step_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppGuideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppGuideResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Content Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/app-guide/task": {
+      "post": {
+        "tags": [
+          "app-independent-guidance"
+        ],
+        "summary": "Task",
+        "operationId": "task_api_v1_agent_app_guide_task_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppTaskResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Content Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/app-guide/task/result": {
+      "post": {
+        "tags": [
+          "app-independent-guidance"
+        ],
+        "summary": "Result",
+        "operationId": "result_api_v1_agent_app_guide_task_result_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskUserResult"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskUserResultReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Content Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/app-guide/task/events": {
+      "post": {
+        "tags": [
+          "app-independent-guidance"
+        ],
+        "summary": "Events",
+        "operationId": "events_api_v1_agent_app_guide_task_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskExperienceBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskExperienceReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Content Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/agent/app-guide/task/memory": {
+      "post": {
+        "tags": [
+          "app-independent-guidance"
+        ],
+        "summary": "Memory",
+        "operationId": "memory_api_v1_agent_app_guide_task_memory_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskMemoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Content Too Large",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Gateway Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/agent/sessions": {
       "get": {
         "tags": [
@@ -4272,6 +5102,184 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceQueueResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Content Too Large"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "504": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Gateway Timeout"
+          }
+        }
+      }
+    },
+    "/api/v1/voice-requests/{request_id}/revise": {
+      "post": {
+        "tags": [
+          "voice-queue"
+        ],
+        "summary": "Revise",
+        "operationId": "revise_api_v1_voice_requests__request_id__revise_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Request Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviseVoiceRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -8495,6 +9503,310 @@
         ],
         "title": "AgentTurnResponse"
       },
+      "AppGuideRequest": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "app-guide.v1",
+            "title": "Protocol Version",
+            "default": "app-guide.v1"
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Request Id"
+          },
+          "goal": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Goal"
+          },
+          "screen": {
+            "$ref": "#/components/schemas/BrowseScreen"
+          },
+          "previous_targets": {
+            "items": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Previous Targets"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "goal",
+          "screen"
+        ],
+        "title": "AppGuideRequest"
+      },
+      "AppGuideResponse": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "app-guide.v1",
+            "title": "Protocol Version",
+            "default": "app-guide.v1"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "observation_id": {
+            "type": "string",
+            "title": "Observation Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "guide",
+              "needs_input",
+              "unavailable",
+              "protected"
+            ],
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "manual_only": {
+            "type": "boolean",
+            "const": true,
+            "title": "Manual Only",
+            "default": true
+          },
+          "target_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Node Id"
+          },
+          "target_bounds": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 4,
+                "minItems": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Bounds"
+          },
+          "action_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "tap",
+                  "scroll"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Kind"
+          },
+          "diagnostic": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Diagnostic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "observation_id",
+          "status",
+          "message"
+        ],
+        "title": "AppGuideResponse"
+      },
+      "AppTaskRequest": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "app-task.v2",
+            "title": "Protocol Version",
+            "default": "app-task.v2"
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Request Id"
+          },
+          "goal": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Goal"
+          },
+          "screen": {
+            "$ref": "#/components/schemas/TaskScreen"
+          },
+          "state": {
+            "$ref": "#/components/schemas/TaskState"
+          },
+          "apps": {
+            "items": {
+              "$ref": "#/components/schemas/TaskApp"
+            },
+            "type": "array",
+            "maxItems": 1,
+            "title": "Apps"
+          },
+          "environment": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "object",
+            "maxProperties": 3,
+            "title": "Environment"
+          },
+          "path_prefix": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 64,
+            "title": "Path Prefix"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "goal",
+          "screen",
+          "state"
+        ],
+        "title": "AppTaskRequest"
+      },
+      "AppTaskResponse": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "app-task.v2",
+            "title": "Protocol Version",
+            "default": "app-task.v2"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "observation_id": {
+            "type": "string",
+            "title": "Observation Id"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "proposed",
+              "needs_input",
+              "confirm_result",
+              "unavailable",
+              "protected"
+            ],
+            "title": "Status"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "subgoals": {
+            "items": {
+              "$ref": "#/components/schemas/TaskSubgoal"
+            },
+            "type": "array",
+            "title": "Subgoals"
+          },
+          "active_subgoal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Subgoal"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requires_confirmation": {
+            "type": "boolean",
+            "const": true,
+            "title": "Requires Confirmation",
+            "default": true
+          },
+          "diagnostic": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Diagnostic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request_id",
+          "task_id",
+          "observation_id",
+          "fingerprint",
+          "status",
+          "message"
+        ],
+        "title": "AppTaskResponse"
+      },
       "AppliedSettings": {
         "properties": {
           "source": {
@@ -9454,6 +10766,21 @@
             "title": "Gov24 Civil",
             "default": false
           },
+          "settings_experiment_arm": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "graph",
+                  "llm"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Experiment Arm"
+          },
           "gov24_services": {
             "type": "boolean",
             "title": "Gov24 Services",
@@ -9836,6 +11163,76 @@
           "source"
         ],
         "title": "ExecutionState"
+      },
+      "ExperienceAction": {
+        "properties": {
+          "tool": {
+            "type": "string",
+            "enum": [
+              "tap",
+              "set_text",
+              "scroll_forward",
+              "scroll_backward",
+              "back",
+              "open_app"
+            ],
+            "title": "Tool"
+          },
+          "target_key": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Target Key"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "button",
+              "text_field",
+              "list",
+              "tab",
+              "toggle",
+              "none"
+            ],
+            "title": "Role"
+          },
+          "expectation": {
+            "type": "string",
+            "enum": [
+              "screen_changed",
+              "target_visible",
+              "input_present",
+              "selection_changed",
+              "package_opened"
+            ],
+            "title": "Expectation"
+          },
+          "expected_label_key": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-f]{64})?$",
+            "title": "Expected Label Key",
+            "default": ""
+          },
+          "expected_package": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Expected Package",
+            "default": ""
+          },
+          "advances_subgoal": {
+            "type": "boolean",
+            "title": "Advances Subgoal",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tool",
+          "target_key",
+          "role",
+          "expectation"
+        ],
+        "title": "ExperienceAction"
       },
       "FailVoiceRequest": {
         "properties": {
@@ -11267,6 +12664,864 @@
           "new_password"
         ],
         "title": "ResetPassword"
+      },
+      "ReviseVoiceRequest": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "expected_version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Version"
+          },
+          "raw_goal": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Raw Goal"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "expected_version",
+          "raw_goal"
+        ],
+        "title": "ReviseVoiceRequest"
+      },
+      "TaskAction": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "tool": {
+            "type": "string",
+            "enum": [
+              "tap",
+              "set_text",
+              "scroll_forward",
+              "scroll_backward",
+              "back",
+              "open_app"
+            ],
+            "title": "Tool"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "bounds": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 4,
+                "minItems": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bounds"
+          },
+          "package": {
+            "type": "string",
+            "title": "Package",
+            "default": ""
+          },
+          "expectation": {
+            "$ref": "#/components/schemas/TaskExpectation"
+          },
+          "advances_subgoal": {
+            "type": "boolean",
+            "title": "Advances Subgoal",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "tool",
+          "expectation"
+        ],
+        "title": "TaskAction"
+      },
+      "TaskApp": {
+        "properties": {
+          "package": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[a-zA-Z0-9_]+(?:\\.[a-zA-Z0-9_]+)+$",
+            "title": "Package"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "package",
+          "label"
+        ],
+        "title": "TaskApp"
+      },
+      "TaskAttempt": {
+        "properties": {
+          "fingerprint": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fingerprint"
+          },
+          "tool": {
+            "type": "string",
+            "maxLength": 30,
+            "title": "Tool"
+          },
+          "target": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Target",
+            "default": ""
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "failed",
+              "waiting",
+              "stale",
+              "protected"
+            ],
+            "title": "Outcome"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "fingerprint",
+          "tool",
+          "outcome"
+        ],
+        "title": "TaskAttempt"
+      },
+      "TaskEnvironment": {
+        "properties": {
+          "package": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[\\w]+(?:\\.[\\w]+)+$",
+            "title": "Package"
+          },
+          "app_version": {
+            "type": "string",
+            "pattern": "^(?:[0-9]{1,20}|unknown)$",
+            "title": "App Version"
+          },
+          "android_api": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 26.0,
+            "title": "Android Api"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "package",
+          "app_version",
+          "android_api"
+        ],
+        "title": "TaskEnvironment"
+      },
+      "TaskExpectation": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "screen_changed",
+              "target_visible",
+              "input_present",
+              "selection_changed",
+              "package_opened"
+            ],
+            "title": "Kind"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Label",
+            "default": ""
+          },
+          "package": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Package",
+            "default": ""
+          },
+          "screen_key": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-f]{64})?$",
+            "title": "Screen Key",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "TaskExpectation"
+      },
+      "TaskExperience": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "app-task-experience.v1",
+            "title": "Protocol Version",
+            "default": "app-task-experience.v1"
+          },
+          "event_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f-]{36}$",
+            "title": "Event Id"
+          },
+          "task_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f-]{36}$",
+            "title": "Task Id"
+          },
+          "sequence": {
+            "type": "integer",
+            "maximum": 66.0,
+            "minimum": 1.0,
+            "title": "Sequence"
+          },
+          "observed_at_ms": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Observed At Ms"
+          },
+          "goal_key": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Goal Key"
+          },
+          "subgoal_key": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Subgoal Key"
+          },
+          "environment": {
+            "$ref": "#/components/schemas/TaskEnvironment"
+          },
+          "screen_key": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Screen Key"
+          },
+          "after_key": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "After Key"
+          },
+          "after_package": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "After Package"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "attempt",
+              "result"
+            ],
+            "title": "Kind"
+          },
+          "starts_task": {
+            "type": "boolean",
+            "title": "Starts Task",
+            "default": false
+          },
+          "action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperienceAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "rejected",
+              "unconfirmed",
+              "stale",
+              "protected",
+              "user_confirmed",
+              "stopped"
+            ],
+            "title": "Outcome"
+          },
+          "action_observed": {
+            "type": "boolean",
+            "title": "Action Observed",
+            "default": false
+          },
+          "condition_met": {
+            "type": "boolean",
+            "title": "Condition Met",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event_id",
+          "task_id",
+          "sequence",
+          "observed_at_ms",
+          "goal_key",
+          "subgoal_key",
+          "environment",
+          "screen_key",
+          "after_key",
+          "after_package",
+          "kind",
+          "outcome"
+        ],
+        "title": "TaskExperience"
+      },
+      "TaskExperienceBatch": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "app-task-experience-batch.v1",
+            "title": "Protocol Version",
+            "default": "app-task-experience-batch.v1"
+          },
+          "session_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Session Id"
+          },
+          "consent_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Consent Id"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/TaskExperience"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Events"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "session_id",
+          "consent_id",
+          "events"
+        ],
+        "title": "TaskExperienceBatch"
+      },
+      "TaskExperienceReceipt": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "app-task-experience-receipt.v1",
+            "title": "Protocol Version",
+            "default": "app-task-experience-receipt.v1"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted",
+              "ineligible"
+            ],
+            "title": "Status"
+          },
+          "acknowledged": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Acknowledged"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "acknowledged"
+        ],
+        "title": "TaskExperienceReceipt"
+      },
+      "TaskMemoryResponse": {
+        "properties": {
+          "protocol_version": {
+            "type": "string",
+            "const": "app-task-memory.v1",
+            "title": "Protocol Version",
+            "default": "app-task-memory.v1"
+          },
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "observation_id": {
+            "type": "string",
+            "title": "Observation Id"
+          },
+          "fingerprint": {
+            "type": "string",
+            "title": "Fingerprint"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "remembered",
+              "needs_data",
+              "disabled",
+              "unavailable"
+            ],
+            "title": "Status",
+            "default": "needs_data"
+          },
+          "collection_enabled": {
+            "type": "boolean",
+            "title": "Collection Enabled",
+            "default": false
+          },
+          "consent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Id"
+          },
+          "consent_recorded_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Recorded At Ms"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "tactics": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Tactics"
+          },
+          "requires_confirmation": {
+            "type": "boolean",
+            "const": true,
+            "title": "Requires Confirmation",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "observation_id",
+          "fingerprint"
+        ],
+        "title": "TaskMemoryResponse"
+      },
+      "TaskNode": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Label",
+            "default": ""
+          },
+          "resource": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Resource",
+            "default": ""
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "button",
+              "text_field",
+              "list",
+              "tab",
+              "toggle",
+              "text",
+              "image",
+              "unknown"
+            ],
+            "title": "Role",
+            "default": "unknown"
+          },
+          "bounds": {
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 4,
+            "title": "Bounds"
+          },
+          "clickable": {
+            "type": "boolean",
+            "title": "Clickable",
+            "default": false
+          },
+          "editable": {
+            "type": "boolean",
+            "title": "Editable",
+            "default": false
+          },
+          "scrollable": {
+            "type": "boolean",
+            "title": "Scrollable",
+            "default": false
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "Selected",
+            "default": false
+          },
+          "checked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked"
+          },
+          "has_value": {
+            "type": "boolean",
+            "title": "Has Value",
+            "default": false
+          },
+          "viewport_hash": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Viewport Hash",
+            "default": ""
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "accessibility",
+              "ocr"
+            ],
+            "title": "Source",
+            "default": "accessibility"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "bounds"
+        ],
+        "title": "TaskNode"
+      },
+      "TaskScreen": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "public",
+              "protected",
+              "outside",
+              "empty"
+            ],
+            "title": "Status"
+          },
+          "package": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Package",
+            "default": ""
+          },
+          "observation_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Observation Id"
+          },
+          "captured_at_ms": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Captured At Ms"
+          },
+          "fingerprint": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fingerprint"
+          },
+          "width": {
+            "type": "integer",
+            "maximum": 20000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Width"
+          },
+          "height": {
+            "type": "integer",
+            "maximum": 20000.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Height"
+          },
+          "keyboard_visible": {
+            "type": "boolean",
+            "title": "Keyboard Visible",
+            "default": false
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/TaskNode"
+            },
+            "type": "array",
+            "maxItems": 80,
+            "title": "Nodes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "observation_id",
+          "captured_at_ms",
+          "fingerprint",
+          "width",
+          "height"
+        ],
+        "title": "TaskScreen"
+      },
+      "TaskState": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Task Id"
+          },
+          "revision": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Revision",
+            "default": 0
+          },
+          "subgoals": {
+            "items": {
+              "$ref": "#/components/schemas/TaskSubgoal"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Subgoals"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/TaskAttempt"
+            },
+            "type": "array",
+            "maxItems": 8,
+            "title": "Attempts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "task_id"
+        ],
+        "title": "TaskState"
+      },
+      "TaskSubgoal": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^g[0-7]$",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "verified"
+            ],
+            "title": "Status",
+            "default": "pending"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "TaskSubgoal"
+      },
+      "TaskUserResult": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Request Id"
+          },
+          "session_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Session Id"
+          },
+          "task_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f-]{36}$",
+            "title": "Task Id"
+          },
+          "outcome": {
+            "type": "string",
+            "const": "user_confirmed",
+            "title": "Outcome"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "session_id",
+          "task_id",
+          "outcome"
+        ],
+        "title": "TaskUserResult"
+      },
+      "TaskUserResultReceipt": {
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "title": "Request Id"
+          },
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "task_id": {
+            "type": "string",
+            "title": "Task Id"
+          },
+          "status": {
+            "type": "string",
+            "const": "confirmed",
+            "title": "Status",
+            "default": "confirmed"
+          },
+          "technical_source": {
+            "type": "string",
+            "const": "user_reported",
+            "title": "Technical Source",
+            "default": "user_reported"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request_id",
+          "session_id",
+          "task_id"
+        ],
+        "title": "TaskUserResultReceipt"
       },
       "TokenResponse": {
         "properties": {

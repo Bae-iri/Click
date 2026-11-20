@@ -5,12 +5,9 @@ param(
 $ErrorActionPreference = "Stop"
 Push-Location (Split-Path $PSScriptRoot -Parent)
 try {
-    if (-not $env:DATABASE_URL) {
-        $env:DATABASE_URL = "sqlite+pysqlite:///./click-dev.db"
-    }
-    & $Python -c "from dotenv import load_dotenv; from alembic.config import main; load_dotenv('.env'); main(argv=['upgrade', 'head'])"
-    if ($LASTEXITCODE -ne 0) { throw "Database migration failed." }
-    & $Python -m uvicorn app.main:app --env-file .env --host 127.0.0.1 --port $Port --reload --no-access-log --no-proxy-headers --log-config logging.json
+    & $Python scripts/validation.py prepare --env-file .env --profile jev --gov24 --port $Port
+    if ($LASTEXITCODE -ne 0) { throw "Paired Jev environment preparation failed." }
+    & $Python scripts/validation.py serve
     if ($LASTEXITCODE -ne 0) { throw "Server exited with an error." }
 }
 finally { Pop-Location }

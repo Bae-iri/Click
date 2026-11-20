@@ -128,5 +128,17 @@ public final class VoiceQueueGateway {
         });
     }
 
+    /** Read without claiming or changing a running request. */
+    public void read(Callback callback) {
+        executor.execute(()->{
+            try {Response response=new Response(http.get("/api/v1/voice-requests").body);main.post(()->callback.onSuccess(response));}
+            catch(Throwable error){main.post(()->callback.onFailure(error));}
+        });
+    }
+    public void revise(String requestId,String revisionId,long version,String text,Callback callback) {
+        try {post("/api/v1/voice-requests/"+requestId+"/revise",new JSONObject().put("id",revisionId)
+            .put("expected_version",version).put("raw_goal",text),callback);}
+        catch(Exception error){callback.onFailure(error);}
+    }
     public void close() { executor.shutdownNow(); }
 }
