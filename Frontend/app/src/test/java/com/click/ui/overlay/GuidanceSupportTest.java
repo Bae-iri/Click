@@ -31,28 +31,27 @@ public class GuidanceSupportTest {
     }
     @Test public void normalProgressQuestionsPauseAndWaitingDoNotOfferFailureHelp() throws Exception {
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
-        panel.progress(null,null,"디스플레이를 눌러주세요.",false);assertFalse(visible(find(panel,"이유·다시 확인")));
-        panel.paused();assertFalse(visible(find(panel,"이유·다시 확인")));
+        panel.progress(null,null,"디스플레이를 눌러주세요.",false);assertNull(find(panel,"이유·다시 확인"));
+        panel.paused();assertNull(find(panel,"이유·다시 확인"));
         panel.waiting("요청 확인 중");shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofSeconds(5));
-        assertFalse(visible(find(panel,"이유·다시 확인")));
+        assertNull(find(panel,"이유·다시 확인"));
         panel.publicGuide("어떤 인증서를 쓸까요?",false,new org.json.JSONObject().put("field","login_choice").put("label","인증서"),false,(s,b)->{},()->{});
-        assertFalse(visible(find(panel,"이유·다시 확인")));
+        assertNull(find(panel,"이유·다시 확인"));
         panel.appTask(new org.json.JSONObject().put("status","needs_input").put("message","원하는 앱을 열어주세요."),s->{},()->{},()->{},()->{},()->{});
-        assertFalse(visible(find(panel,"이유·다시 확인")));
+        assertNull(find(panel,"이유·다시 확인"));
     }
     @Test public void failureControlsRemainClickableAndCollapseCannotLeaveOnlyHelpVisible() {
         var listener=mock(TaskFlowOverlayView.Listener.class);var retry=mock(Runnable.class);
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),listener);
         panel.observationRecovery("화면을 읽지 못했어요.",retry);
-        assertTrue(visible(find(panel,"이유·다시 확인")));assertTrue(find(panel,"다시 시도하기").isEnabled());
+        assertNull(find(panel,"이유·다시 확인"));assertTrue(find(panel,"다시 시도하기").isEnabled());
         find(panel,"다시 시도하기").performClick();verify(retry).run();
         panel.setMinimizedProgress(true);
-        assertFalse(visible(find(panel,"이유·다시 확인")));assertFalse(visible(find(panel,"다시 시도하기")));
+        assertNull(find(panel,"이유·다시 확인"));assertFalse(visible(find(panel,"다시 시도하기")));
         panel.setMinimizedProgress(false);
-        assertTrue(visible(find(panel,"다시 시도하기")));assertTrue(visible(find(panel,"이유·다시 확인")));
-        find(panel,"이유·다시 확인").performClick();verify(listener).assistance();
+        assertTrue(visible(find(panel,"다시 시도하기")));assertNull(find(panel,"이유·다시 확인"));
         panel.setMinimizedProgress(true);panel.progress(null,null,"화면을 확인했어요.",false);
-        assertFalse(visible(find(panel,"이유·다시 확인")));
+        assertNull(find(panel,"이유·다시 확인"));
     }
     @Test public void finishedHelpHidesRetryAndStillAllowsAnExplicitNewRequest() {
         var listener=mock(GuidanceSupportView.Listener.class);
