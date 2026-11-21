@@ -13,6 +13,7 @@ from app.services.goal_llm import _unique_object
 from app.services.settings_planner import model_name,provider_error
 from app.services.app_task_completion import bind_completion_candidate
 from app.services.app_task_provider import generate, ProviderError
+from app.services.app_task_jev_completion import select_completion as jev_completion
 from app.services.app_task_capabilities import (ActionCapabilities, action_pair, native_action_pairs,
     recovery_blocked_pairs, recovery_context, aliased_actions)
 from ai_agent.runtime.budget import remaining
@@ -115,7 +116,7 @@ def _observed_goal_contract(goal,checks,screen,nodes):
 
 
 class AppTaskService:
-    def __init__(self,sender=None,memory=None): self.sender,self.memory=sender,memory
+    def __init__(self,sender=None,memory=None,*,jev_sender=None): self.sender,self.memory,self.jev_sender=sender,memory,jev_sender
 
     def step(self,request,user_id=None,*,action_capabilities: ActionCapabilities | None=None):
         screen,state=request.screen,request.state
@@ -164,6 +165,14 @@ class AppTaskService:
             response.status='confirm_result';response.message='요청하신 결과가 나왔나요? 직접 확인한 뒤 안내를 끝내 주세요.'
             response.diagnostic={'called':False,'reason_code':'bound_result_available','failure_stage':'none',**execution_diagnostic}
             return response
+        if result_only and os.getenv('APP_TASK_COMPLETION_PROVIDER','gemini').strip().lower()=='jev':
+            selected=jev_completion(request,tuple(safe.values()),sender=self.jev_sender)
+            if selected is not None:
+                response.completion=selected.completion
+                response.status='confirm_result' if selected.completion is not None else 'needs_input'
+                response.message='요청하신 결과가 화면에 있는지 확인하고 있어요.' if selected.completion is not None else '현재 화면에서 요청하신 결과를 확실히 확인하지 못했어요. 화면을 확인해 주세요.'
+                response.diagnostic=dict(execution_diagnostic,**selected.diagnostic)
+                return response
         recalled=self.memory.recall(request,user_id) if self.memory and user_id and not result_only else None
         if recalled and recalled.action and state.completion is not None and not goal_first:
             action=recalled.action
@@ -175,7 +184,7 @@ class AppTaskService:
                 response.active_subgoal=pending[0].id if pending else None
                 response.diagnostic={'called':False,'model':'agent2-experience','reason':'ai2_remembered',**execution_diagnostic}
                 return response
-        diagnostic={'called':False,'failure_stage':'none','planning_mode':'result_only' if result_only else 'goal_first' if goal_first else 'next_action',**execution_diagnostic}
+        diagnostic={'called':False,'completion_provider':'gemini','failure_stage':'none','planning_mode':'result_only' if result_only else 'goal_first' if goal_first else 'next_action',**execution_diagnostic}
         response.diagnostic=diagnostic
         try: model=model_name()
         except ValueError:

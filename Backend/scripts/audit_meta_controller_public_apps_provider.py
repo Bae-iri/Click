@@ -41,7 +41,8 @@ def _episode_schema(episodes,explicit=None):
 def _context_metadata(record):
     copied={};invalid=[]
     for key,permitted in (('planning_mode',{'next_action','goal_first','result_only'}),
-            ('goal_assessment',{'satisfied','not_satisfied','uncertain'})):
+            ('goal_assessment',{'satisfied','not_satisfied','uncertain'}),
+            ('completion_provider',{'gemini','jev'})):
         if key in record:
             value=record[key]
             if isinstance(value,str) and value in permitted:copied[key]=value
