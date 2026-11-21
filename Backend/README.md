@@ -2,9 +2,9 @@
 
 FastAPI 기반 Android 사용 안내 서버입니다.
 
-범용 앱의 다음 동작 계획과 완료 근거 확인(`/api/v1/agent/app-guide/task`)에는 개발 환경 예시의 `APP_TASK_PROVIDER=openrouter`, `APP_TASK_OPENROUTER_COMPACT=1`과 서버의 `OPENROUTER_API_KEY`를 사용합니다. 첫 메뉴, 후속 동작, 복구, 완료 판정에서 모델이 필요하면 OpenRouter의 `qwen/qwen3.8-flash`를 한 번 호출합니다. 단순 메뉴는 관찰한 버튼이나 스크롤 ID, 완료 근거는 현재 화면에서 관찰한 근거 ID로 응답합니다. 하나의 목적지를 여는 요청은 다음 동작이나 현재 도착 근거 한 개로 답할 수 있고, 복합 작업에서는 계획과 기대 상태를 함께 요청합니다. 기기에서 동작과 완료 근거를 검증합니다.
+설정 실험의 LLM 방식은 `CLICK_SETTINGS_PLANNER_PROVIDER=openrouter`와 서버의 `OPENROUTER_API_KEY`를 사용합니다. Qwen3.8-Flash가 허용된 하위 목표의 순서를 정하고, Jev가 현재 하위 목표와 접근성 화면을 보고 조작 대상을 고릅니다. 기존 Gemini 조건은 `CLICK_SETTINGS_PLANNER_PROVIDER=gemini`로 재현할 수 있습니다. [설정 실험 실행 방법](../docs/settings-planning-experiment.md)
 
-같은 Qwen 모델로 기존 응답 형식을 비교하려면 `APP_TASK_OPENROUTER_COMPACT=0`과 `APP_TASK_OPENROUTER_SHORT_MENU=0`을 지정합니다. GPT 비교에는 `APP_TASK_PROVIDER=openai`와 `OPENAI_API_KEY`를 사용합니다. 기본 GPT 모델은 `gpt-6.2-sol`이며 `APP_TASK_OPENAI_MODEL`로 바꿀 수 있습니다. Gemini 비교는 `APP_TASK_PROVIDER=gemini`로 실행합니다.
+범용 앱 안내(`/api/v1/agent/app-guide/task`)는 독립된 경로입니다. 개발 예시의 `APP_TASK_PROVIDER=openai`는 GPT를 사용합니다. 화면 요소까지 Qwen이 직접 고르는 실험을 재현하려면 `APP_TASK_PROVIDER=openrouter`와 `APP_TASK_OPENROUTER_COMPACT=1`을 지정합니다.
 
 GPT를 주 플래너로 쓰면서 단순한 첫 메뉴만 Qwen에 맡기려면 `APP_TASK_PROVIDER=openai`에서 `OPENROUTER_API_KEY`를 설정하고 `APP_TASK_OPENROUTER_SHORT_MENU=1`을 켭니다. 이때 화면에 보이는 버튼 ID 하나를 요청하고 기존 검증을 거칩니다. 같은 옵션은 `APP_TASK_PROVIDER=openrouter`에서도 첫 메뉴의 응답을 줄입니다.
 

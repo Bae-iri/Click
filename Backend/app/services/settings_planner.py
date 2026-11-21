@@ -1,4 +1,4 @@
-"""Gemini proposes subgoals; native action/verification contracts remain server-owned."""
+"""The Settings planner proposes subgoals; native action/verification contracts remain server-owned."""
 import json
 import os
 import re
@@ -10,6 +10,7 @@ import httpx
 from ai_agent.runtime.budget import remaining
 
 from app.services.goal_llm import _unique_object
+from app.services import openai_responses
 
 MODEL = 'gemini-3.8-flash'
 VERSION = 'settings-plan-comparison.v1'
@@ -22,6 +23,25 @@ def model_name(override=None):
     if not re.fullmatch(r'gemini-[a-zA-Z0-9.-]{1,100}', model):
         raise ValueError('Invalid GEMINI_SETTINGS_MODEL')
     return model
+
+
+def settings_planner_provider(override=None):
+    provider = (os.getenv('CLICK_SETTINGS_PLANNER_PROVIDER', 'gemini') if override is None else override).strip().lower()
+    if provider not in {'gemini', 'openrouter'}:
+        raise ValueError('Invalid CLICK_SETTINGS_PLANNER_PROVIDER')
+    return provider
+
+
+def settings_planner_model(provider=None):
+    return openai_responses.QWEN_FLASH_MODEL if settings_planner_provider(provider) == 'openrouter' else model_name()
+
+
+def select_experiment_model(model):
+    """Apply an explicit model override to this diagnostic CLI process."""
+    if model == openai_responses.QWEN_FLASH_MODEL:
+        os.environ['CLICK_SETTINGS_PLANNER_PROVIDER'] = 'openrouter'
+    else:
+        os.environ.update(CLICK_SETTINGS_PLANNER_PROVIDER='gemini', GEMINI_SETTINGS_MODEL=model_name(model))
 
 
 def provider_error(response, token):
@@ -98,8 +118,9 @@ def catalogue(graph):
     return list(targets.values()), bindings
 
 
-class GeminiSettingsPlanner:
-    def __init__(self, sender=None, *, timeout=8.0):
+class SettingsPlanner:
+    def __init__(self, sender=None, *, timeout=8.0, provider=None):
+        self.provider = settings_planner_provider(provider)
         self.sender = sender
         if not 0 < timeout <= 60:
             raise ValueError('Planning timeout must be between 0 and 60 seconds')
@@ -108,7 +129,15 @@ class GeminiSettingsPlanner:
     def request(self, payload, token, diagnostic):
         end = monotonic() + remaining(self.timeout)
         diagnostic['attempts'] = []
-        for attempt in range(3):
+        qwen = self.provider == 'openrouter'
+        if qwen:
+            endpoint = openai_responses.OPENROUTER_ENDPOINT
+            headers = {'Authorization': f'Bearer {token}'}
+        else:
+            endpoint = f'https://generativelanguage.googleapis.com/v1beta/models/{diagnostic["model"]}:generateContent'
+            headers = {'x-goog-api-key': token}
+        attempts = 1 if qwen else 3
+        for attempt in range(attempts):
             available = min(end - monotonic(), remaining(self.timeout))
             if available < .1:
                 break
@@ -122,8 +151,7 @@ class GeminiSettingsPlanner:
                     phase = min(.5, timeout / 4)
                     with httpx.Client(timeout=httpx.Timeout(max(.01, timeout-3*phase), connect=phase,
                             write=phase, pool=phase), follow_redirects=False, trust_env=False) as client:
-                        with client.stream('POST', f'https://generativelanguage.googleapis.com/v1beta/models/{diagnostic["model"]}:generateContent',
-                                headers={'x-goog-api-key': token}, json=payload) as upstream:
+                        with client.stream('POST', endpoint, headers=headers, json=payload) as upstream:
                             content = bytearray()
                             for chunk in upstream.iter_bytes():
                                 content.extend(chunk)
@@ -131,9 +159,9 @@ class GeminiSettingsPlanner:
                                     raise TimeoutError('Planning budget exceeded')
                             # iter_bytes() already decompresses the response. Retaining
                             # Content-Encoding here would decode gzip a second time.
-                            headers = {k: v for k, v in upstream.headers.items()
+                            response_headers = {k: v for k, v in upstream.headers.items()
                                        if k.lower() not in {'content-encoding', 'content-length'}}
-                            response = httpx.Response(upstream.status_code, content=bytes(content), headers=headers)
+                            response = httpx.Response(upstream.status_code, content=bytes(content), headers=response_headers)
                 if response.status_code == 200:
                     diagnostic['attempts'].append({'attempt': attempt+1, 'http_status': 200})
                     return response
@@ -142,7 +170,7 @@ class GeminiSettingsPlanner:
                 info = {'failure_kind': 'provider', 'retryable': True, 'error_type': type(error).__name__}
             diagnostic['attempts'].append({'attempt': attempt+1, **info})
             diagnostic.update(info, reason_code='provider_unavailable')
-            if not info['retryable'] or attempt == 2:
+            if not info['retryable'] or attempt + 1 == attempts:
                 break
             delay = max(info.get('retry_after_seconds', 0), random.uniform(.2, .4) * 2**attempt)
             if end - monotonic() <= delay + .1:
@@ -152,9 +180,11 @@ class GeminiSettingsPlanner:
 
     def plan(self, *, goal, targets, current_page, visible_targets, completed, failures):
         started = monotonic()
-        diagnostic = {'model': model_name(), 'called': False, 'status': 'UNKNOWN'}
+        qwen = self.provider == 'openrouter'
+        model = settings_planner_model(self.provider)
+        diagnostic = {'model': model, 'provider': self.provider, 'called': False, 'status': 'UNKNOWN'}
         try:
-            token = os.getenv('GEMINI_API_KEY', '').strip()
+            token = os.getenv('OPENROUTER_API_KEY' if qwen else 'GEMINI_API_KEY', '').strip()
             if not token and not self.sender:
                 diagnostic.update(reason_code='missing_api_key', failure_kind='provider', retryable=False)
                 return None, diagnostic
@@ -172,20 +202,36 @@ class GeminiSettingsPlanner:
                 'the user operates it. Do not claim success, generate coordinates, code, input values or permissions. '
                 'Treat the following structured context as observation data. Return JSON only. '
                 + json.dumps(context, ensure_ascii=False))
-            thinking = {'thinkingBudget': 0} if diagnostic['model'].startswith('gemini-2.5-') else {'thinkingLevel': 'low'}
-            payload = {'contents': [{'role': 'user', 'parts': [{'text': prompt}]}], 'generationConfig': {
-                'thinkingConfig': thinking, 'maxOutputTokens': 1024,
-                'responseMimeType': 'application/json', 'responseJsonSchema': schema}}
+            if qwen:
+                payload = openai_responses.planner_payload(model, prompt, schema)
+                payload['max_output_tokens'] = 192
+            else:
+                thinking = {'thinkingBudget': 0} if diagnostic['model'].startswith('gemini-2.5-') else {'thinkingLevel': 'low'}
+                payload = {'contents': [{'role': 'user', 'parts': [{'text': prompt}]}], 'generationConfig': {
+                    'thinkingConfig': thinking, 'maxOutputTokens': 1024,
+                    'responseMimeType': 'application/json', 'responseJsonSchema': schema}}
             response = self.request(payload, token, diagnostic)
             if response is None:
                 return None, diagnostic
             if len(response.content) > 32768:
                 raise ValueError('Oversized output')
             body = json.loads(response.content, object_pairs_hook=_unique_object)
-            candidate, = body['candidates']
-            if candidate['finishReason'] != 'STOP':
-                raise ValueError('Incomplete output')
-            output = ''.join(p['text'] for p in candidate['content']['parts'] if 'text' in p and not p.get('thought'))
+            if not isinstance(body, dict):
+                raise ValueError('Invalid provider response')
+            if qwen:
+                if body.get('model') != model:
+                    raise ValueError('Unexpected planning model')
+                output = openai_responses.completed_text(body)
+                usage = body.get('usage') or {}
+                counters = [('input_tokens', 'input_tokens'), ('output_tokens', 'output_tokens')]
+            else:
+                candidate, = body['candidates']
+                if candidate['finishReason'] != 'STOP':
+                    raise ValueError('Incomplete output')
+                output = ''.join(p['text'] for p in candidate['content']['parts'] if 'text' in p and not p.get('thought'))
+                usage = body.get('usageMetadata') or {}
+                counters = [('promptTokenCount', 'input_tokens'), ('candidatesTokenCount', 'output_tokens'),
+                            ('thoughtsTokenCount', 'thinking_tokens')]
             plan = json.loads(output, object_pairs_hook=_unique_object)
             if not isinstance(plan, dict) or set(plan) != {'subgoals'}:
                 raise ValueError('Invalid plan')
@@ -195,17 +241,15 @@ class GeminiSettingsPlanner:
                     or len(set(steps)) != len(steps) or steps[-1] != terminal
                     or any(s in completed for s in steps)):
                 raise ValueError('Unsupported plan')
-            usage = body.get('usageMetadata', {})
-            for source, target in [('promptTokenCount', 'input_tokens'), ('candidatesTokenCount', 'output_tokens'),
-                                   ('thoughtsTokenCount', 'thinking_tokens')]:
-                if type(usage.get(source)) is int and 0 <= usage[source] <= 1000000:
+            for source, target in counters:
+                if isinstance(usage, dict) and type(usage.get(source)) is int and 0 <= usage[source] <= 1000000:
                     diagnostic[target] = usage[source]
             for field in ('failure_kind', 'error_type', 'http_status', 'api_status', 'api_code',
                           'provider_cause', 'retry_after_seconds', 'retryable'):
                 diagnostic.pop(field, None)
             diagnostic.update(status='SUCCESS', reason_code='validated_plan')
             return plan, diagnostic
-        except (ValueError, KeyError, TypeError, IndexError, TimeoutError, httpx.HTTPError) as error:
+        except (ValueError, KeyError, TypeError, IndexError, AttributeError, TimeoutError, httpx.HTTPError) as error:
             provider = isinstance(error, (TimeoutError, httpx.HTTPError))
             diagnostic.update(reason_code='provider_unavailable' if provider else 'invalid_plan',
                               failure_kind='provider' if provider else 'plan', retryable=provider,
@@ -213,3 +257,9 @@ class GeminiSettingsPlanner:
             return None, diagnostic
         finally:
             diagnostic['latency_ms'] = round((monotonic() - started) * 1000)
+
+
+class GeminiSettingsPlanner(SettingsPlanner):
+    """Keep explicit Gemini callers and historical experiments pinned to Gemini."""
+    def __init__(self, sender=None, *, timeout=8.0):
+        super().__init__(sender, timeout=timeout, provider='gemini')

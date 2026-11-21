@@ -62,8 +62,12 @@ try {
     $plannerOutput | Set-Content -Encoding UTF8 -LiteralPath (Join-Path $experimentRoot 'planner-preflight.json')
     Write-Output $plannerOutput
     if ($plannerExit -ne 0) {
-        Write-Warning 'LLM_NOT_READY: Gemini did not return a valid plan. Graph backend remains available. Do not interpret this as a planning-quality comparison.'
+        Write-Warning 'LLM_NOT_READY: the configured Settings planner did not return a valid plan.'
         exit 1
+    }
+    $checkedModel = ($plannerOutput | ConvertFrom-Json).diagnostic.model
+    if ($version.runtime_configuration.settings_planner_model -ne $checkedModel) {
+        throw 'The server on port 8110 uses a different planner than the experiment environment. Restart that server.'
     }
     Write-Output 'PLANNER_READY: valid live plan. Device comparison still requires both app trials.'
 } finally { Pop-Location }
