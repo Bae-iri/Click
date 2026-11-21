@@ -90,16 +90,21 @@ def _search_open_goal(goal):
         and not re.search(r'입력|검색어|결과|찾아|그리고|다음|하고|열고|열어서|한 뒤|type|enter|query|results|then|and ',goal,re.I))
 
 
-def _unsafe_goal_check(goal,check,nodes):
-    """A menu's presence is action availability, not reaching its destination."""
+def _intrinsically_unsafe_goal_check(goal,check):
+    """Unsafe on every screen, not only because of what is visible now."""
     if check.selected is False and not re.search(r'해제|취소|끄|꺼|닫|접어|접기|unselect|deselect|disable|turn off|close|collapse',goal,re.I):
         return True
     if check.checked is not None or check.selected is not None:
         return False
-    if check.role in {'button','tab','toggle','list'}:
+    return check.role in {'button','tab','toggle','list'} or check.role=='text_field' and not _search_open_goal(goal)
+
+
+def _unsafe_goal_check(goal,check,nodes):
+    """A menu's presence is action availability, not reaching its destination."""
+    if _intrinsically_unsafe_goal_check(goal,check):
         return True
-    if check.role=='text_field' and not _search_open_goal(goal):
-        return True
+    if check.checked is not None or check.selected is not None:
+        return False
     found=[n for n in nodes if n.source=='accessibility'
         and (not check.label or n.label==check.label) and (not check.resource or n.resource==check.resource)
         and (not check.role or n.role==check.role)]
@@ -415,6 +420,12 @@ class AppTaskService:
                 # weakening the requested result. A valid next action survives.
                 if any(c.package==screen.package and _unsafe_goal_check(goal,c,safe.values()) for c in bound):
                     diagnostic['completion_grounding']='deferred_actionable_proof'
+                    # Usually the destination title is still this screen's menu entry. Keep it as a
+                    # future-only candidate instead of paying a result_only request after arrival.
+                    if (not result_only and state.completion is None
+                            and not any(_intrinsically_unsafe_goal_check(goal,c) for c in bound)):
+                        response.deferred_completion=candidate.completion
+                        diagnostic['completion_deferred_future']=True
                 elif result_only and not all(_observed_goal_check(goal,c,screen,safe.values()) for c in bound):
                     diagnostic['completion_grounding']='deferred_unobserved_result'
                 else:
@@ -497,7 +508,7 @@ class AppTaskService:
                     diagnostic.update(recovery_context_used=False,allowed_actions_context_used=False)
                     diagnostic.pop('recovery_attempt',None)
                     diagnostic.pop('recovery_policy',None);diagnostic.pop('recovery_reason',None)
-            response.action=None;response.subgoals=state.subgoals;response.completion=state.completion
+            response.action=None;response.subgoals=state.subgoals;response.completion=state.completion;response.deferred_completion=None
             response.active_subgoal=next((s.id for s in state.subgoals if s.status=='pending'),None)
             if goal_first:diagnostic.pop('goal_assessment',None)
             response.status='confirm_result' if result_only else 'unavailable'

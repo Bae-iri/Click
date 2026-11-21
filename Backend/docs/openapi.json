@@ -9822,6 +9822,16 @@
             "maxItems": 3,
             "title": "Planned Steps"
           },
+          "deferred_completion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskCompletion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "requires_confirmation": {
             "type": "boolean",
             "const": true,

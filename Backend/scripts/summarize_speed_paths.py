@@ -3,7 +3,6 @@ import argparse
 import json
 from pathlib import Path
 
-ARMS = ['base', 'reoffer_prediction', 'memory_first', 'memory_first+remembered_result', 'rebind', 'planned_route', 'all']
 
 
 def summarize(root):
@@ -11,16 +10,19 @@ def summarize(root):
     keys = [(r['depth'], r['condition'], r['lookahead'], r['memory_available'], r['arm']) for r in rows]
     if len(set(keys)) != len(keys):
         raise ValueError('Duplicate episode key')
+    arms = list(dict.fromkeys(r['arm'] for r in rows))
+    conditions = list(dict.fromkeys(r['condition'] for r in rows))
     groups = []
     for repeat in (False, True):
-        for condition in ('normal', 'churn', 'prediction_miss'):
-            for arm in ARMS:
+        for condition in conditions:
+            for arm in arms:
                 g = sorted((r for r in rows if r['arm'] == arm and r['memory_available'] == repeat
                             and r['condition'] == condition and r['lookahead'] == 'accurate'), key=lambda r: r['depth'])
                 ok = [r for r in g if r['goal_reached'] and r['verified_offer']]
                 groups.append(dict(memory_available=repeat, condition=condition, arm=arm, episodes=len(g),
                     planner_requests_by_depth=[r['planner_requests'] for r in g],
                     planner_requests=sum(r['planner_requests'] for r in g), verified_goal=len(ok),
+                    result_only_requests=sum(r.get('result_only_requests', 0) for r in g),
                     ms_to_verified_by_depth=[r['ms_to_verified_offer'] for r in g],
                     false_verified=sum(r['false_verified'] for r in g), wrong_taps=sum(r['wrong_taps'] for r in g)))
     robustness = [dict(lookahead=r['lookahead'], arm=r['arm'], planner_requests=r['planner_requests'], wrong_taps=r['wrong_taps'],

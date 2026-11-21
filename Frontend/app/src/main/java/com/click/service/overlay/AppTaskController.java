@@ -42,20 +42,25 @@ public final class AppTaskController {
         public final boolean rebindChangedFrame;
         /** Ground the planner's later-step labels locally instead of asking again. */
         public final boolean plannedRoute;
+        /** Re-ask once, on the same screen, after a provider timeout or transport failure. */
+        public final boolean retryProviderFailure;
         public SpeedOptions(boolean memoryBeforeCompletion,boolean rememberedCompletion,boolean reofferPrediction,boolean rebindChangedFrame,boolean plannedRoute){
-            this.memoryBeforeCompletion=memoryBeforeCompletion;this.rememberedCompletion=rememberedCompletion;this.reofferPrediction=reofferPrediction;this.rebindChangedFrame=rebindChangedFrame;this.plannedRoute=plannedRoute;}
-        public static final SpeedOptions ALL=new SpeedOptions(true,true,true,true,true),NONE=new SpeedOptions(false,false,false,false,false);
+            this(memoryBeforeCompletion,rememberedCompletion,reofferPrediction,rebindChangedFrame,plannedRoute,false);}
+        public SpeedOptions(boolean memoryBeforeCompletion,boolean rememberedCompletion,boolean reofferPrediction,boolean rebindChangedFrame,boolean plannedRoute,boolean retryProviderFailure){
+            this.memoryBeforeCompletion=memoryBeforeCompletion;this.rememberedCompletion=rememberedCompletion;this.reofferPrediction=reofferPrediction;this.rebindChangedFrame=rebindChangedFrame;this.plannedRoute=plannedRoute;this.retryProviderFailure=retryProviderFailure;}
+        public static final SpeedOptions ALL=new SpeedOptions(true,true,true,true,true,true),NONE=new SpeedOptions(false,false,false,false,false,false);
         /**
          * Production default. Memory-first (removes the deliberate result-binding gate) and planned
          * routes (taps proposed from labels the model has not seen) stay off until a device A/B
          * (SpeedOptions.NONE vs ALL) shows a benefit; the result-proof paths only accept native proof.
          */
-        public static final SpeedOptions PRODUCTION=new SpeedOptions(false,true,true,true,false);
+        public static final SpeedOptions PRODUCTION=new SpeedOptions(false,true,true,true,false,true);
     }
     private SpeedOptions speed=SpeedOptions.PRODUCTION;
     private String recallWaitFingerprint;private long recallWaitDeadline;
     private JSONArray planned;private boolean plannedReady;
     private JSONObject parkedCompletion;private boolean parkedRemembered;
+    private String providerRetryFingerprint;
     private final boolean goalFirstSupported;
     private final AppTaskMetaController meta;
     private JSONObject recalled;
@@ -98,7 +103,7 @@ public final class AppTaskController {
     public SpeedOptions speedOptions(){return speed;}
     public AppTaskMetaController metaController(){return meta;}
     public AppTaskMemory memory(){return memory;}
-    public void targetApp(String packageName,String label){selectionGeneration++;recallWaitFingerprint=null;recallWaitDeadline=0;planned=null;plannedReady=false;parkedCompletion=null;parkedRemembered=false;cancelPlannerWait();resetResultEvidence();resultDiscoveryScreen=null;meta.resetTargetContext();selectedPackage=packageName;selectedLabel=RequestedApp.shortName(label);searchQuery=AppTaskSearchIntent.query(memory.goal(),label);scope=null;cached=null;submitted=null;proposal=null;searchPrepared=false;recalled=null;recallFingerprint=null;pendingRecall=null;}
+    public void targetApp(String packageName,String label){selectionGeneration++;recallWaitFingerprint=null;recallWaitDeadline=0;planned=null;plannedReady=false;parkedCompletion=null;parkedRemembered=false;providerRetryFingerprint=null;cancelPlannerWait();resetResultEvidence();resultDiscoveryScreen=null;meta.resetTargetContext();selectedPackage=packageName;selectedLabel=RequestedApp.shortName(label);searchQuery=AppTaskSearchIntent.query(memory.goal(),label);scope=null;cached=null;submitted=null;proposal=null;searchPrepared=false;recalled=null;recallFingerprint=null;pendingRecall=null;}
     public boolean matches(ScreenSnapshot screen){try{return screen!=null&&submitted!=null&&submitted.equals(capture(screen).optString("fingerprint"));}catch(Exception e){return false;}}
     private JSONObject capture(ScreenSnapshot screen)throws JSONException {
         Set<String> labels=AppTaskCompletion.labels(memory.completion());
@@ -419,6 +424,9 @@ public final class AppTaskController {
                             if(oldVersion!=memory.evidenceVersion())resetResultEvidence();
                             if(accepted)completionRequestRef=requestRef;
                         }
+                        // A destination title that is still this screen's menu entry: future-only, never proof here.
+                        JSONObject deferred=response.optJSONObject("deferred_completion");
+                        if(completionSupported&&deferred!=null&&memory.completion()==null&&!memory.finished())park(deferred);
                         save();
                         if(observeResult(capture(fresh),fresh))return;
                         if(resultOnly){show("confirm_result","요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.");return;}
@@ -426,6 +434,11 @@ public final class AppTaskController {
                         JSONObject action=rebound!=null?rebound:response.optJSONObject("action");
                         planned=action!=null&&speed.plannedRoute?plannedSteps(response,request.getJSONObject("screen")):null;plannedReady=false;
                         if(action!=null){if(memory.repeated(observation,action)){planned=null;show("needs_input","같은 동작이 반복해서 실패했어요. 다른 동작을 선택하거나 직접 화면을 이동해 주세요.");return;}propose(action);}
+                        else if(retryableProviderFailure(response)&&!fingerprint.equals(providerRetryFingerprint)){
+                            // One bounded retry: a single slow provider answer otherwise ends the task.
+                            providerRetryFingerprint=fingerprint;submitted=null;
+                            show("planning","응답이 늦어 한 번 더 확인하고 있어요.");handler.post(()->observe(true));
+                        }
                         else show(response.optString("status"),response.optString("message"));
                     }catch(Exception error){listener.failure(error);}
                 }
@@ -437,6 +450,12 @@ public final class AppTaskController {
     }
     private static String goalAssessment(JSONObject response){
         JSONObject diagnostic=response.optJSONObject("diagnostic");return diagnostic==null?"":diagnostic.optString("goal_assessment");
+    }
+    private boolean retryableProviderFailure(JSONObject response){
+        if(!speed.retryProviderFailure||!"unavailable".equals(response.optString("status"))||!response.isNull("action"))return false;
+        JSONObject d=response.optJSONObject("diagnostic");
+        return d!=null&&"provider".equals(d.optString("failure_kind"))
+            &&Set.of("provider_timeout","provider_deadline_exceeded","provider_transport_error").contains(d.optString("reason_code"));
     }
     private static boolean satisfiedGoalResponse(JSONObject response){return "satisfied".equals(goalAssessment(response));}
     private enum PlannerFrameState {READY,WAIT,UNAVAILABLE}
@@ -637,7 +656,7 @@ public final class AppTaskController {
         JSONObject parked=parkedCompletion;
         if(parked==null||screen==null||!completionSupported||memory.finished()||memory.completionSupported())return false;
         // A bound candidate that differs may still be replaced, but only by memory's own refinement rule.
-        if(memory.completion()!=null&&AppTaskCompletion.key(memory.completion()).equals(AppTaskCompletion.key(parked))){parkedCompletion=null;return false;}
+        if(memory.completion()!=null&&AppTaskCompletion.key(memory.completion()).equals(AppTaskCompletion.key(parked))){parkedCompletion=null;parkedRemembered=false;return false;}
         if(selectedPackage!=null&&!selectedPackage.equals(screen.packageName))return false;
         JSONObject observed=AppTaskObservation.capture(screen,AppTaskCompletion.labels(parked));
         if(AppTaskCompletion.checkForGoal(memory.goal(),parked,observed,screen)!=AppTaskCompletion.Verdict.MATCHED)return false;
