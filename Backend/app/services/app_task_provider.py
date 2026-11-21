@@ -16,9 +16,12 @@ from threading import BoundedSemaphore
 from time import monotonic
 
 import httpx
+from app.services import openai_responses
 
 
 MAX_TOTAL_SECONDS = 9.0
+LOCAL_RESPONSES_URL = 'http://127.0.0.1:18769/v1/responses'
+LOCAL_MODEL = 'qwen3-1.7b'
 MAX_BODY_BYTES = 16 * 1024
 _MAX_PAYLOAD_BYTES = 128 * 1024
 _MAX_FRAME_BYTES = 400
@@ -63,7 +66,7 @@ def _send(connection, message):
     connection.send_bytes(data)
 
 
-def _provider_worker(connection, model, token, payload, end):
+def _provider_worker(connection, model, token, payload, end, provider='gemini'):
     try:
         left = end - monotonic()
         if left <= 0:
@@ -72,11 +75,18 @@ def _provider_worker(connection, model, token, payload, end):
         transport = httpx.HTTPTransport(retries=0, trust_env=False)
         with httpx.Client(transport=transport, timeout=httpx.Timeout(left, connect=min(2, left)),
                           trust_env=False, follow_redirects=False) as client:
+            if provider == 'openai':
+                url = openai_responses.ENDPOINT
+                headers = {'Authorization': 'Bearer ' + token}
+            elif provider == 'local':
+                url, headers = LOCAL_RESPONSES_URL, {}
+            else:
+                url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent'
+                headers = {'x-goog-api-key': token}
+            headers['Content-Type'] = 'application/json'
             # This is an attempted provider operation, not proof of remote billing.
             _send(connection, {'kind': 'started'})
-            with client.stream('POST',
-                    f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
-                    headers={'x-goog-api-key': token, 'Content-Type': 'application/json'}, content=payload) as upstream:
+            with client.stream('POST', url, headers=headers, content=payload) as upstream:
                 body = bytearray()
                 for chunk in upstream.iter_bytes():
                     if monotonic() >= end:
@@ -127,7 +137,7 @@ def _reap(process, end, clock):
     return True
 
 
-def generate(model, token, payload, *, timeout=MAX_TOTAL_SECONDS,
+def generate(model, token, payload, *, provider='gemini', timeout=MAX_TOTAL_SECONDS,
              _context=None, _clock=None, _worker=None, _capacity=None):
     """Return one bounded response; test seams never change the production path.
 
@@ -145,9 +155,21 @@ def generate(model, token, payload, *, timeout=MAX_TOTAL_SECONDS,
         return ProviderError(code, state, (clock() - started) * 1000)
     if work_end <= started:
         raise failed('provider_deadline_exceeded', 'not_started')
-    if (not isinstance(model, str) or not re.fullmatch(r'gemini-[A-Za-z0-9.-]{1,100}', model)
-            or not isinstance(token, str) or not 0 < len(token) <= 4096
-            or any(ord(c) < 33 or ord(c) > 126 for c in token) or not isinstance(payload, dict)):
+    if provider == 'openai':
+        pattern = openai_responses.MODEL_PATTERN
+    elif provider == 'local':
+        pattern = re.escape(LOCAL_MODEL)
+    elif provider == 'gemini':
+        pattern = r'gemini-[A-Za-z0-9.-]{1,100}'
+    else:
+        raise failed('provider_invalid_request', 'not_started')
+    if provider == 'local':
+        valid_token = token == ''
+    else:
+        valid_token = isinstance(token, str) and 0 < len(token) <= 4096 and all(33 <= ord(c) <= 126 for c in token)
+    if (not isinstance(model, str) or not re.fullmatch(pattern, model)
+            or not valid_token or not isinstance(payload, dict)
+            or provider in ('openai','local') and payload.get('model') != model):
         raise failed('provider_invalid_request', 'not_started')
     try:
         encoded = json.dumps(payload, allow_nan=False, separators=(',', ':')).encode()
@@ -169,7 +191,7 @@ def generate(model, token, payload, *, timeout=MAX_TOTAL_SECONDS,
         context = _context or multiprocessing.get_context('spawn')
         receive, send = context.Pipe(duplex=False)
         process = context.Process(target=_worker or _provider_worker,
-            args=(send, model, token, encoded, work_end), daemon=True, name='click-task-provider')
+            args=(send, model, token, encoded, work_end, provider), daemon=True, name='click-task-provider')
         process.start()
         process_started = True
         call_state = 'unknown'

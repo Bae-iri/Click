@@ -93,7 +93,7 @@ public final class AppTaskDiagnostics {
                 out.put("model_ref",nullable(model.length()<=200?ref(model):null));
                 copyEnum(out,diagnostic,"planning_mode",Set.of("next_action","goal_first","result_only"));
                 copyEnum(out,diagnostic,"goal_assessment",Set.of("satisfied","not_satisfied","uncertain"));
-                copyEnum(out,diagnostic,"completion_provider",Set.of("gemini","jev"));
+                copyEnum(out,diagnostic,"completion_provider",Set.of("gemini","jev","openai","local"));
                 copyEnum(out,diagnostic,"failure_kind",FAILURE_KINDS);
                 copyEnum(out,diagnostic,"failure_stage",FAILURE_STAGES);
                 copyEnum(out,diagnostic,"reason_code",REASON_CODES);copyEnum(out,diagnostic,"reason_code",PROVIDER_CODES);

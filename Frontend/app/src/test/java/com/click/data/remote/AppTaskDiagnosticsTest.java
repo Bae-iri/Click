@@ -26,6 +26,10 @@ public class AppTaskDiagnosticsTest {
         JSONObject response=bound(new JSONObject().put("status","confirm_result").put("diagnostic",diagnostic));
         JSONObject record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
         assertEquals("goal_first",record.getString("planning_mode"));assertEquals("satisfied",record.getString("goal_assessment"));assertEquals("jev",record.getString("completion_provider"));
+        for (String provider : new String[]{"openai", "local"}) {
+            diagnostic.put("completion_provider", provider);
+            assertEquals(provider, AppTaskDiagnostics.receipt(request(), response, 200, null, 0, 1, 1).getString("completion_provider"));
+        }
         for(Object bad:new Object[]{true,"PRIVATE",1,JSONObject.NULL}){
             diagnostic.put("goal_assessment",bad);record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);assertFalse(record.has("goal_assessment"));
         }

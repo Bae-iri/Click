@@ -71,7 +71,7 @@ def diagnostic_record(request, response, elapsed_ms):
     diagnostic = response.diagnostic if isinstance(response.diagnostic, dict) else {}
     called = diagnostic.get('called') is True
     model = diagnostic.get('model')
-    if not isinstance(model, str) or not re.fullmatch(r'gemini-[a-zA-Z0-9.-]{1,100}', model):
+    if not isinstance(model, str) or not re.fullmatch(r'(?:gemini-[a-zA-Z0-9.-]{1,100}|gpt-[a-zA-Z0-9._-]{1,80}|qwen3-1\.7b)', model):
         model = None
     reason = diagnostic.get('reason')
     record = dict(schema_version=VERSION, request_ref=_ref(request.request_id),

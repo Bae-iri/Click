@@ -16,9 +16,8 @@ from ai_agent.runtime.normalizer import normalize_accessibility_tree
 from ai_agent.runtime.screen_privacy import assess_screen, filter_nodes, minimize_nodes
 from ai_agent.runtime.task_success import success_contract
 from app.services.goal_llm import _unique_object
+from app.services.openai_responses import ENDPOINT, DEFAULT_MODEL, MODEL_PATTERN, completed_text
 
-ENDPOINT = 'https://api.openai.com/v1/responses'
-DEFAULT_MODEL = 'gpt-6.2-sol'
 MAX_BYTES = 32768
 REVIEW_REASONS = frozenset({'target_value_unobservable', 'native_switch_unobservable',
     'mode_choice_unobservable', 'observation_timeout'})
@@ -42,7 +41,7 @@ class GptVerifier:
         timeout = float(os.getenv('OPENAI_VERIFIER_TIMEOUT_SECONDS', '8'))
         if not token or not token.isascii() or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in token):
             raise ValueError('Missing OpenAI key')
-        if not re.fullmatch(r'gpt-[A-Za-z0-9._-]{1,80}', model): raise ValueError('Invalid GPT model')
+        if not re.fullmatch(MODEL_PATTERN, model): raise ValueError('Invalid GPT model')
         if not math.isfinite(timeout) or not 0 < timeout <= 8: raise ValueError('Invalid GPT timeout')
         return token, model, timeout
 
@@ -126,12 +125,7 @@ class GptVerifier:
             if response.status_code != 200: return output('provider_error', True)
             if len(response.content) > MAX_BYTES: return output('invalid_response', True)
             body = json.loads(response.content, object_pairs_hook=_unique_object)
-            if body.get('status') != 'completed': return output('invalid_response', True)
-            messages = [m for m in body['output'] if m.get('type') == 'message']
-            if len(messages) != 1 or messages[0].get('role') != 'assistant': return output('invalid_response', True)
-            content = messages[0]['content']
-            if len(content) != 1 or content[0].get('type') != 'output_text': return output('invalid_response', True)
-            advice = json.loads(content[0]['text'], object_pairs_hook=_unique_object)
+            advice = json.loads(completed_text(body), object_pairs_hook=_unique_object)
             if not isinstance(advice, dict) or set(advice) != set(SCHEMA['required']):
                 return output('invalid_response', True)
             ids = advice['evidence_ids']
