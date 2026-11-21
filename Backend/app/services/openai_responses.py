@@ -6,6 +6,8 @@ import re
 ENDPOINT = 'https://api.openai.com/v1/responses'
 DEFAULT_MODEL = 'gpt-6.2-sol'
 MODEL_PATTERN = r'gpt-[A-Za-z0-9._-]{1,80}'
+OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/responses'
+QWEN_FLASH_MODEL = 'qwen/qwen3.8-flash'
 
 
 def app_task_model():
@@ -24,6 +26,8 @@ def planner_payload(model, prompt, schema):
                                    'strict': True, 'schema': strict_schema}}}
     if model == DEFAULT_MODEL:
         payload['reasoning'] = {'effort': 'low'}
+    elif model == QWEN_FLASH_MODEL:
+        payload['reasoning'] = {'effort': 'none'}
     return payload
 
 

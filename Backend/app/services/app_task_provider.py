@@ -77,6 +77,7 @@ class ProviderResponse:
     elapsed_ms: float
     headers: dict = field(default_factory=dict)
     model_call_state: str = 'observed'
+    http_round_trip_ms: float | None = None
 
     def json(self):
         return json.loads(self.content)
@@ -103,6 +104,9 @@ def _provider_worker(connection, model, token, payload, end, provider='gemini'):
             if provider == 'openai':
                 url = openai_responses.ENDPOINT
                 headers = {'Authorization': 'Bearer ' + token}
+            elif provider == 'openrouter':
+                url = openai_responses.OPENROUTER_ENDPOINT
+                headers = {'Authorization': 'Bearer ' + token}
             elif provider == 'local':
                 url, headers = LOCAL_RESPONSES_URL, {}
             else:
@@ -111,6 +115,7 @@ def _provider_worker(connection, model, token, payload, end, provider='gemini'):
             headers['Content-Type'] = 'application/json'
             # This is an attempted provider operation, not proof of remote billing.
             _send(connection, {'kind': 'started'})
+            http_start = monotonic()
             with client.stream('POST', url, headers=headers, content=payload) as upstream:
                 body = bytearray()
                 for chunk in upstream.iter_bytes():
@@ -123,7 +128,9 @@ def _provider_worker(connection, model, token, payload, end, provider='gemini'):
                 status = upstream.status_code
                 retry = upstream.headers.get('retry-after', '')
                 headers = {'retry-after': retry} if re.fullmatch(r'[0-9]{1,8}(?:\.[0-9]{1,3})?', retry) else {}
-        _send(connection, {'kind': 'response', 'status_code': status, 'body_bytes': len(body), 'headers': headers})
+            round_trip_ms = round((monotonic() - http_start) * 1000, 3)
+        _send(connection, {'kind': 'response', 'status_code': status, 'body_bytes': len(body),
+                           'headers': headers, 'http_round_trip_ms': round_trip_ms})
         for offset in range(0, len(body), _BODY_CHUNK_BYTES):
             _send(connection, {'kind': 'data', 'body': b64encode(body[offset:offset + _BODY_CHUNK_BYTES]).decode('ascii')})
         _send(connection, {'kind': 'complete'})
@@ -182,6 +189,8 @@ def generate(model, token, payload, *, provider='gemini', timeout=MAX_TOTAL_SECO
         raise failed('provider_deadline_exceeded', 'not_started')
     if provider == 'openai':
         pattern = openai_responses.MODEL_PATTERN
+    elif provider == 'openrouter':
+        pattern = re.escape(openai_responses.QWEN_FLASH_MODEL)
     elif provider == 'local':
         pattern = re.escape(LOCAL_MODEL)
     elif provider == 'gemini':
@@ -194,7 +203,7 @@ def generate(model, token, payload, *, provider='gemini', timeout=MAX_TOTAL_SECO
         valid_token = isinstance(token, str) and 0 < len(token) <= 4096 and all(33 <= ord(c) <= 126 for c in token)
     if (not isinstance(model, str) or not re.fullmatch(pattern, model)
             or not valid_token or not isinstance(payload, dict)
-            or provider in ('openai','local') and payload.get('model') != model):
+            or provider in ('openai','openrouter','local') and payload.get('model') != model):
         raise failed('provider_invalid_request', 'not_started')
     try:
         encoded = json.dumps(payload, allow_nan=False, separators=(',', ':')).encode()
@@ -248,6 +257,10 @@ def generate(model, token, payload, *, provider='gemini', timeout=MAX_TOTAL_SECO
                 if type(status) is not int or not 100 <= status <= 599 or type(expected_bytes) is not int or not 0 <= expected_bytes <= MAX_BODY_BYTES:
                     raise failed('provider_protocol_error', call_state)
                 candidate_headers = message.get('headers', {})
+                round_trip_ms = message.get('http_round_trip_ms')
+                if round_trip_ms is not None and (type(round_trip_ms) not in (int, float)
+                        or not 0 <= round_trip_ms <= total * 1000):
+                    raise failed('provider_protocol_error', call_state)
                 retry = candidate_headers.get('retry-after') if isinstance(candidate_headers, dict) else None
                 if isinstance(retry, str) and re.fullmatch(r'[0-9]{1,8}(?:\.[0-9]{1,3})?', retry):
                     headers['retry-after'] = retry
@@ -302,4 +315,5 @@ def generate(model, token, payload, *, provider='gemini', timeout=MAX_TOTAL_SECO
         raise error from None
     if clock() >= end:
         raise failed('provider_deadline_exceeded', call_state)
-    return ProviderResponse(response.status_code, response.content, (clock() - started) * 1000, response.headers)
+    return ProviderResponse(response.status_code, response.content, (clock() - started) * 1000,
+                            response.headers, http_round_trip_ms=round_trip_ms)

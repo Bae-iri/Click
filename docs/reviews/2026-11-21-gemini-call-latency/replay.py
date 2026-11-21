@@ -1,4 +1,4 @@
-"""Replay six public menus with Gemini (12 calls), GPT (6), or loopback Qwen (6 local calls)."""
+"""Replay six public menus with Gemini (12 calls), GPT, OpenRouter or loopback Qwen (6 each)."""
 import argparse
 import json
 import os
@@ -14,7 +14,7 @@ sys.path[:0] = [str(ROOT / 'Backend'), str(ROOT / 'AI-Agent/src')]
 from app.schemas.app_task import AppTaskRequest
 from app.services.app_task import AppTaskService
 from app.services.app_task_provider import LOCAL_MODEL
-from app.services.openai_responses import app_task_model
+from app.services.openai_responses import QWEN_FLASH_MODEL, app_task_model
 
 BASE = 'gemini-3.8-flash'
 LITE = 'gemini-3.5-flash-lite'
@@ -23,13 +23,18 @@ LITE = 'gemini-3.5-flash-lite'
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', required=True, type=Path)
-    parser.add_argument('--provider', choices=('gemini', 'openai', 'local'), default='gemini')
+    parser.add_argument('--provider', choices=('gemini', 'openai', 'openrouter', 'local'), default='gemini')
+    parser.add_argument('--short-menu', action='store_true', help='Use a button-ID response with OpenRouter.')
     args = parser.parse_args()
+    if args.short_menu and args.provider != 'openrouter':
+        parser.error('--short-menu requires --provider openrouter')
     load_dotenv(ROOT / 'Backend/.env')
-    key = {'gemini': 'GEMINI_API_KEY', 'openai': 'OPENAI_API_KEY'}.get(args.provider)
+    key = {'gemini': 'GEMINI_API_KEY', 'openai': 'OPENAI_API_KEY',
+           'openrouter': 'OPENROUTER_API_KEY'}.get(args.provider)
     if key and not os.getenv(key, '').strip():
         parser.error(f'{key} is required')
     os.environ['APP_TASK_PROVIDER'] = args.provider
+    os.environ['APP_TASK_OPENROUTER_SHORT_MENU'] = '1' if args.short_menu else '0'
     os.environ['GEMINI_SETTINGS_MODEL'] = BASE
     os.environ['APP_TASK_COMPLETION_PROVIDER'] = 'gemini'
     fixtures = json.loads((HERE / 'menu-fixtures.json').read_text())
@@ -40,6 +45,8 @@ def main():
                 models = (LOCAL_MODEL,)
             elif args.provider == 'openai':
                 models = (app_task_model(),)
+            elif args.provider == 'openrouter':
+                models = (QWEN_FLASH_MODEL,)
             else:
                 models = (BASE, LITE) if index % 2 == 0 else (LITE, BASE)
             for model in models:
@@ -56,7 +63,8 @@ def main():
                     raise RuntimeError(f'Expected one {model} call for case {index}: {diagnostic.get("reason_code")}')
                 correct = result.status == 'proposed' and result.action.tool == 'tap' and label == case['expected']
                 print(json.dumps(dict(index=index, model=model, goal=case['goal'], expected=case['expected'],
-                                      target=label, ms=diagnostic['latency_ms'], correct=correct), ensure_ascii=False),
+                                      target=label, ms=diagnostic['latency_ms'], correct=correct,
+                                      http_round_trip_ms=diagnostic.get('http_round_trip_ms')), ensure_ascii=False),
                       file=output, flush=True)
 
 

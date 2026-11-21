@@ -1,4 +1,4 @@
-"""Choose one public button on a fresh menu using the local model."""
+"""Choose one public button on a fresh menu with a constrained model response."""
 import json
 import re
 
@@ -18,7 +18,7 @@ def tap_choices(request, goal, indexed, allowed_pairs):
     }
 
 
-def choice_payload(goal, choices):
+def choice_payload(goal, choices, *, model=LOCAL_MODEL):
     controls = [
         dict(id=alias, label=label, role='button', clickable=True, selected=False)
         for alias, label in choices.items()
@@ -31,7 +31,7 @@ def choice_payload(goal, choices):
         'required': ['choice'],
         'additionalProperties': False,
     }
-    payload = planner_payload(LOCAL_MODEL, prompt, schema)
+    payload = planner_payload(model, prompt, schema)
     payload['max_output_tokens'] = 32
     return payload
 
