@@ -63,6 +63,40 @@ public final class Gov24LoginPrivacy {
         }
         return brand&&services;
     }
+    /** The local home navigator can point to Login without classifying or reading its search box.
+     * Only that one public button is returned; input subtrees and all other page content stay local. */
+    static JSONObject homeLoginEntry(ScreenSnapshot screen) {
+        if(screen==null||!PACKAGE.equals(screen.packageName)||!screen.privacyMaskingReady)return null;
+        Gov24LoginPrivacy privacy=new Gov24LoginPrivacy();
+        if(!privacy.publicHome(screen))return null;
+        Map<String,AccessibilityNodeSnapshot> byId=new HashMap<>();
+        int inputs=0;
+        for(var node:screen.nodes) {
+            byId.put(node.nodeId,node);
+            if(!node.visibleToUser)continue;
+            if(!PACKAGE.equals(node.packageName)||screen.activeWindowId!=null&&node.windowId!=screen.activeWindowId)return null;
+            if(node.passwordInput())return null;
+            if(node.sensitiveInput&&++inputs>1)return null;
+        }
+        List<AccessibilityNodeSnapshot> publicNodes=new ArrayList<>();
+        for(var node:screen.nodes) {
+            Set<String> seen=new HashSet<>();var ancestor=node;boolean input=false;
+            while(ancestor!=null&&seen.add(ancestor.nodeId)) {
+                if(ancestor.sensitiveInput||ancestor.passwordInput()){input=true;break;}
+                ancestor=byId.get(ancestor.parentId);
+            }
+            if(!input)publicNodes.add(node);
+        }
+        try {
+            JSONObject safe=privacy.filter(new ScreenSnapshot(screen.packageName,screen.capturedAt,
+                screen.screenWidth,screen.screenHeight,publicNodes,screen.activeWindowId));
+            if(!"public".equals(safe.optString("status"))||!"signed_out".equals(safe.optString("auth_state")))return null;
+            JSONArray nodes=safe.getJSONArray("nodes");
+            if(nodes.length()!=1)return null;
+            JSONObject entry=nodes.getJSONObject(0);
+            return "entry_login".equals(entry.optString("option_id"))?entry:null;
+        }catch(Exception invalid){return null;}
+    }
     private static String label(AccessibilityNodeSnapshot node) {
         return node.text==null||node.text.isBlank()?node.contentDescription:node.text;
     }

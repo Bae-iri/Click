@@ -37,7 +37,7 @@ public final class Gov24LoginEntry {
             for(CharSequence value:new CharSequence[]{node.getText(),node.getContentDescription()}) {
                 if(value==null)continue;String label=value.toString(),normalized=Gov24LoginPrivacy.normalize(label);
                 if("정부24".equals(normalized))scan.brand=true;
-                if("자주찾는서비스".equals(normalized))scan.services=true;
+                if("자주찾는서비스".equals(normalized)||"민원서비스".equals(normalized))scan.services=true;
                 if(node.isVisibleToUser()&&("로그아웃".equals(normalized)||"로그아웃하기".equals(normalized)))scan.logout=true;
                 if(node.isVisibleToUser()&&(exact(POLICY.optJSONArray("consent_labels"),label)
                         ||exact(POLICY.optJSONArray("handoff_labels"),label)))scan.privateBoundary=true;
