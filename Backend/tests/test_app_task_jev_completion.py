@@ -206,3 +206,14 @@ def test_expired_outer_budget_never_starts_jev(monkeypatch):
     send=Mock();result=select_completion(req(),req().screen.nodes,sender=send)
     assert result.completion is None and result.diagnostic['called'] is False
     assert result.diagnostic['reason_code']=='jev_completion_timeout';send.assert_not_called()
+
+
+@pytest.mark.parametrize('provider',['openrouter','openai'])
+def test_jev_keeps_the_result_check_when_qwen_or_gpt_plans(monkeypatch,provider):
+    # Gemini is retired: the planner provider must not take the read-only result check from Jev.
+    monkeypatch.setenv('APP_TASK_PROVIDER',provider);monkeypatch.setenv('OPENROUTER_API_KEY','test-router')
+    monkeypatch.setenv('OPENAI_API_KEY','test-openai')
+    send=jev_sender();planner=Mock(side_effect=AssertionError('planner must not run the result check'))
+    result=AppTaskService(planner,jev_sender=send).step(req())
+    assert result.status=='confirm_result' and result.completion.checks[0].label=='목적 화면'
+    assert result.diagnostic['completion_provider']=='jev';send.assert_called_once();planner.assert_not_called()

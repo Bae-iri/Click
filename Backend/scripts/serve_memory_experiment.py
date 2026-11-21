@@ -372,7 +372,7 @@ def diagnostic_record(request, response, elapsed_ms, arm, registration):
     diagnostic = response.diagnostic if isinstance(response.diagnostic, dict) else {}
     called = diagnostic.get('called') is True
     model = diagnostic.get('model')
-    if not isinstance(model, str) or not re.fullmatch(r'(gemini-[a-zA-Z0-9.-]{1,100}|gpt-[a-zA-Z0-9._-]{1,80}|qwen3-1\.7b|agent2-experience)', model):
+    if not isinstance(model, str) or not re.fullmatch(r'(gemini-[a-zA-Z0-9.-]{1,100}|gpt-[a-zA-Z0-9._-]{1,80}|qwen3-1\.7b|qwen/qwen[a-zA-Z0-9._-]{1,40}|agent2-experience)', model):
         model = None
     return dict(schema_version=VERSION, at_ms=int(time.time() * 1000), request_ref=_ref(request.request_id),
         runtime_ref=_ref(request.state.task_id), arm=arm,
@@ -484,6 +484,7 @@ def make_handler(service, state, catalogue):
                             cfg = ARM_CONFIG.get(arm)
                             if cfg is not None:
                                 os.environ['APP_TASK_PROVIDER'] = cfg.get('provider', 'gemini')
+                                os.environ['APP_TASK_COMPLETION_PROVIDER'] = cfg.get('completion', 'gemini')
                                 if cfg.get('timeout_first') and request.state.task_id not in _TIMED_OUT:
                                     _TIMED_OUT.add(request.state.task_id);response = injected_timeout(request)
                                 else:
@@ -525,7 +526,7 @@ def main(argv=None):
     if args.arm_config:
         ARM_CONFIG.update(json.loads(args.arm_config.read_text()))
         SERVED['C'] = 'exact'  # both memory arms use the production exact recall
-        assert set(ARM_CONFIG) <= {'A', 'B', 'C'} and all(c.get('provider', 'gemini') in {'gemini', 'openai'} for c in ARM_CONFIG.values())
+        assert set(ARM_CONFIG) <= {'A', 'B', 'C'} and all(c.get('provider', 'gemini') in {'gemini', 'openai', 'openrouter'} for c in ARM_CONFIG.values())
     if args.speed_ab:
         global SPEED_AB
         SPEED_AB = True

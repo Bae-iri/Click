@@ -1,0 +1,1 @@
+com.clueclick.app/com.click.service.accessibility.ClickAccessibilityService

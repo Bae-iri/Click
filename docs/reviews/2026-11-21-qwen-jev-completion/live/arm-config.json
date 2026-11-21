@@ -1,0 +1,4 @@
+{
+ "A": {"provider": "openrouter", "completion": "jev", "triage": true},
+ "B": {"provider": "openrouter", "completion": "jev", "triage": false}
+}
