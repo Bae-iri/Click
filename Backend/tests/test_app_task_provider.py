@@ -206,3 +206,21 @@ def test_worker_uses_one_no_retry_request_and_enforces_response_limit(monkeypatc
     provider._provider_worker(Sender(), 'gemini-test', 'fake-key', b'{}', monotonic() + 1)
     assert len(calls) == 1 and options['follow_redirects'] is False and options['trust_env'] is False
     assert frames == [{'kind': 'started'}, {'kind': 'error', 'reason_code': 'provider_response_too_large'}]
+
+
+@pytest.mark.parametrize('raw,expected', [(None, 4), ('', 4), ('1', 1), ('6', 6), (' 8 ', 8),
+                                          ('0', 4), ('9', 4), ('-2', 4), ('many', 4), ('2.5', 4)])
+def test_capacity_is_configurable_within_bounds(monkeypatch, raw, expected):
+    if raw is None:
+        monkeypatch.delenv('APP_TASK_PROVIDER_CAPACITY', raising=False)
+    else:
+        monkeypatch.setenv('APP_TASK_PROVIDER_CAPACITY', raw)
+    assert provider.configured_capacity() == expected
+
+
+def test_default_capacity_admits_four_concurrent_calls_and_rejects_the_fifth():
+    capacity = BoundedSemaphore(provider.configured_capacity('4'))
+    assert all(capacity.acquire(blocking=False) for _ in range(4))
+    context = Context(); context.capacity = capacity
+    with pytest.raises(provider.ProviderError) as failed: generate(context)
+    assert failed.value.reason_code == 'provider_capacity_exhausted' and context.process_calls == 0
