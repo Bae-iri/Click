@@ -20,12 +20,15 @@ import com.click.designpreview.ClickHost;
 import com.click.designpreview.PermissionGuideActivity;
 import com.click.designpreview.TutorialNarrator;
 import com.click.ui.common.ClickUi;
+import com.click.ui.onboarding.PermissionReadyView;
 
 /** Continues accessibility setup with microphone and overlay; readiness uses live OS grants. */
 public final class RequiredPermissionsActivity extends AppCompatActivity {
     public static final String EXTRA_DESTINATION = "required_permissions_destination";
     private static final int MICROPHONE_REQUEST = 41;
     private TutorialNarrator narrator;
+    private ScrollView permissionForm;
+    private PermissionReadyView readyPage;
     private TextView title, description, progress;
     private Button action;
     private String spoken;
@@ -36,15 +39,15 @@ public final class RequiredPermissionsActivity extends AppCompatActivity {
         super.onCreate(state);
         narrator = new TutorialNarrator(this);
         connectionWatcher = new com.click.designpreview.AccessibilityConnectionWatcher(this);
-        ScrollView scroll = new ScrollView(this);
-        scroll.setFillViewport(true);
-        scroll.setBackground(new com.click.designpreview.ClickBackgroundDrawable(getResources()));
+        permissionForm = new ScrollView(this);
+        permissionForm.setFillViewport(true);
+        permissionForm.setBackground(new com.click.designpreview.ClickBackgroundDrawable(getResources()));
         LinearLayout column = new LinearLayout(this);
         column.setOrientation(LinearLayout.VERTICAL);
         column.setGravity(Gravity.CENTER);
         int padding = ClickUi.dp(this, 28);
         column.setPadding(padding, padding, padding, padding);
-        scroll.addView(column);
+        permissionForm.addView(column);
         progress = ClickUi.body(this, "");
         progress.setGravity(Gravity.CENTER);
         column.addView(progress, ClickUi.wrap(16));
@@ -57,7 +60,7 @@ public final class RequiredPermissionsActivity extends AppCompatActivity {
         action = ClickUi.primaryButton(this, "허용하기");
         column.addView(action, ClickUi.wrap(24));
         action.setOnClickListener(v -> advance());
-        setContentView(scroll);
+        setContentView(permissionForm);
         getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
                 // Leave setup without granting anything or bouncing through the finished guide.
@@ -109,12 +112,21 @@ public final class RequiredPermissionsActivity extends AppCompatActivity {
             body = "다른 앱에서도 클릭의 안내를 보여드리기 위한 권한이에요.\n설정 화면에서 클릭을 선택하고 표시 허용 스위치를 켜주세요.\n설정 후 뒤로 돌아와 주세요.";
             label = "표시 권한 설정하기";
         } else {
-            step = "필수 권한 3개 확인 완료";
             heading = "이제 클릭을 사용할 수 있어요!";
             body = "접근성, 마이크, 다른 앱 위에 표시가 모두 허용되었어요.";
-            label = "tutorial".equals(destination()) ? "사용법 보기" : "클릭 시작하기";
+            label = "tutorial".equals(destination()) ? getString(R.string.tutorial_ready_start) : "클릭 시작하기";
+            if (readyPage == null) readyPage = new PermissionReadyView(this);
+            readyPage.bind(heading, body, label, v -> advance());
+            if (readyPage.getParent() == null) setContentView(readyPage);
+            narrate(heading, body);
+            return;
         }
+        if (permissionForm.getParent() == null) setContentView(permissionForm);
         title.setText(heading); description.setText(body); progress.setText(step); action.setText(label);
+        narrate(heading, body);
+    }
+
+    private void narrate(String heading, String body) {
         String next = heading + ". " + body;
         if (!next.equals(spoken)) { spoken = next; narrator.speak(next); }
     }
@@ -122,6 +134,7 @@ public final class RequiredPermissionsActivity extends AppCompatActivity {
     private String destination() { return getIntent().getStringExtra(EXTRA_DESTINATION); }
 
     private void advance() {
+        if (navigating) return;
         if (!accessibilityReady()) {
             Intent guide = new Intent(this, PermissionGuideActivity.class);
             guide.putExtra(PermissionGuideActivity.EXTRA_ONBOARDING, "tutorial".equals(destination()));
