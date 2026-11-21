@@ -117,6 +117,36 @@ public class MetaControllerClosedLoopExperimentTest {
         }
     }
 
+    /** Interaction conformance audit; recall is a controlled fixture, not measured training. */
+    @Test public void runMemoryInteractionMatrix() throws Exception {
+        String output=System.getenv("CLICK_META_MEMORY_OUTPUT");
+        Assume.assumeTrue("Opt in with CLICK_META_MEMORY_OUTPUT",output!=null&&!output.isBlank());
+        Path dir=Path.of(output);Files.createDirectories(dir);Path rows=dir.resolve("episodes.jsonl");
+        assertFalse("Refuse to overwrite a previous run",Files.exists(rows));
+        Files.write(dir.resolve("readiness.json"),readiness().toString(2).getBytes(StandardCharsets.UTF_8));int count=0;
+        for(Flow flow:FLOWS)for(Condition condition:Condition.values())for(int rep=0;rep<2;rep++)
+            for(boolean remembered:new boolean[]{false,true})for(AppTaskMetaController.Arm arm:
+                new AppTaskMetaController.Arm[]{AppTaskMetaController.Arm.CURRENT,AppTaskMetaController.Arm.META}){
+                JSONObject row=episode(flow,condition,rep,flow.id+"/"+condition+"/"+rep,0,arm,"controlled",null,remembered);
+                row.put("memory_enabled",remembered).put("memory_source","controlled_grounded_recall_fixture").put("training_measured",false);
+                Files.write(rows,(row+"\n").getBytes(StandardCharsets.UTF_8),java.nio.file.StandardOpenOption.CREATE,java.nio.file.StandardOpenOption.APPEND);
+                assertEquals(0,row.getInt("false_verified_offers"));assertEquals(0,row.getInt("guard_violations"));count++;
+            }
+        assertEquals(144,count);
+        Files.write(dir.resolve("run.json"),new JSONObject().put("episodes",count)
+            .put("real_device",false).put("real_model_calls",0).put("training_measured",false)
+            .put("design","6 flows x 3 conditions x 2 repetitions x A/B x memory off/on")
+            .put("scope","production Android controller, verifier and MCv2; controlled planner and recall fixture").toString(2).getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Test public void blockedRememberedActionFallsThroughToRecoveryPlanner() throws Exception {
+        JSONObject row=episode(FLOWS[1],Condition.accepted_no_effect,0,"remembered-recovery",0,
+            AppTaskMetaController.Arm.META,"controlled",null,true);
+        assertTrue("Remembered blocked action must not swallow replanning",row.getBoolean("independent_goal_reached"));
+        assertTrue("Recovery must call planner after excluding old memory",row.getInt("planner_requests")>=2);
+        assertEquals(1,row.getInt("recovery_count"));assertEquals(0,row.getInt("false_verified_offers"));
+    }
+
     private static JSONObject readiness() throws Exception {
         int positive=0,negative=0,unsafeMenus=0;
         for(Flow flow:FLOWS){
@@ -153,6 +183,10 @@ public class MetaControllerClosedLoopExperimentTest {
 
     private static JSONObject episode(Flow flow,Condition condition,int repetition,String pairId,int order,
                                      AppTaskMetaController.Arm arm,String mode,String endpoint) throws Exception {
+        return episode(flow,condition,repetition,pairId,order,arm,mode,endpoint,false);
+    }
+    private static JSONObject episode(Flow flow,Condition condition,int repetition,String pairId,int order,
+            AppTaskMetaController.Arm arm,String mode,String endpoint,boolean remembered) throws Exception {
         long started=SystemClock.uptimeMillis(),hostStarted=System.nanoTime();
         World w=new World(flow,condition);String initial=AppTaskObservation.capture(w.fresh()).getString("fingerprint");
         AppGuideGateway gateway=mock(AppGuideGateway.class);Stats stats=new Stats();
@@ -185,7 +219,20 @@ public class MetaControllerClosedLoopExperimentTest {
             }
             return null;
         }).when(gateway).send(any(),any());
-        AppTaskController controller=new AppTaskController(gateway,new AppTaskMemory(flow.goal),null,w,true,false,true,arm);
+        com.click.data.local.AppTaskStore store=remembered?mock(com.click.data.local.AppTaskStore.class):null;
+        if(remembered)doAnswer(call->{
+            JSONObject req=call.getArgument(0),screen=req.getJSONObject("screen");
+            JSONObject clean=new JSONObject(req.toString());clean.getJSONObject("state").put("attempts",new JSONArray());
+            JSONObject action=plan(clean,flow).optJSONObject("action");
+            JSONObject reply=new JSONObject().put("protocol_version","app-task-memory.v1")
+                .put("request_id",req.getString("request_id")).put("observation_id",screen.getString("observation_id"))
+                .put("fingerprint",screen.getString("fingerprint")).put("status",action==null?"needs_data":"remembered")
+                .put("collection_enabled",true).put("consent_id","12345678-1234-1234-1234-123456789abc")
+                .put("consent_recorded_at_ms",clock()-1000).put("requires_confirmation",true)
+                .put("action",action==null?JSONObject.NULL:action).put("evidence",new JSONArray());
+            ((AppGuideGateway.Callback)call.getArgument(1)).success(reply);return null;
+        }).when(gateway).recall(any(),any());
+        AppTaskController controller=new AppTaskController(gateway,new AppTaskMemory(flow.goal),store,w,true,remembered,true,arm);
         w.controller=controller;controller.targetApp(PKG,"실험 화면");
         try{
             controller.refresh();Set<String> approved=new HashSet<>();
@@ -208,7 +255,7 @@ public class MetaControllerClosedLoopExperimentTest {
                 .put("arm",arm==AppTaskMetaController.Arm.CURRENT?"A":"B").put("initial_state_key",initial)
                 .put("setup_valid",true).put("independent_goal_reached",w.goal()).put("runtime_verified_offer",w.verifiedAt>=0)
                 .put("false_verified_offers",w.falseVerified).put("guard_violations",w.guardViolations)
-                .put("canonical_rejections",w.canonicalRejections).put("accepted_actions",w.accepted).put("attempted_actions",w.attempted)
+                .put("remembered_proposals",w.rememberedProposals).put("canonical_rejections",w.canonicalRejections).put("accepted_actions",w.accepted).put("attempted_actions",w.attempted)
                 .put("unsupported_tools",w.unsupportedTools)
                 .put("primary_action_seen",!w.firstPrimary).put("fault_injected",condition!=Condition.normal&&!w.firstPrimary)
                 .put("delayed_effect_applied",w.delayedEffectApplied)
@@ -335,7 +382,7 @@ public class MetaControllerClosedLoopExperimentTest {
     private static final class World implements AppTaskController.Listener{
         final Flow flow;final Condition condition;final Handler handler=new Handler(Looper.getMainLooper());
         String state="start";boolean pending,firstPrimary=true,closed,delayedEffectApplied;int pendingEvents,attempted,accepted,canonicalRejections,guardViolations,falseVerified,handoffs,errors,unsupportedTools;
-        long verifiedAt=-1;JSONObject latest;AppTaskController controller;
+        int rememberedProposals;long verifiedAt=-1;JSONObject latest;AppTaskController controller;
         World(Flow flow,Condition condition){this.flow=flow;this.condition=condition;}
         boolean goal(){return state.equals("goal");}
         public ScreenSnapshot fresh(){
@@ -353,7 +400,10 @@ public class MetaControllerClosedLoopExperimentTest {
             return new ScreenSnapshot(PKG,Instant.ofEpochMilli(clock()).toString(),1080,2400,nodes,42);
         }
         public boolean canObserve(){return !closed;}public void busy(boolean value){}public boolean inputMatches(String target,String expected){return false;}
+        public String sessionId(){return "controlled-memory-session";}
         public void present(JSONObject response,ScreenSnapshot submitted){
+            if("proposed".equals(response.optString("status"))&&response.optJSONObject("diagnostic")!=null
+                &&"retained_experience".equals(response.optJSONObject("diagnostic").optString("reason")))rememberedProposals++;
             latest=response;
             if("needs_input".equals(response.optString("status")))handoffs++;
             if(response.optJSONObject("result_assessment")!=null&&"verified".equals(response.optJSONObject("result_assessment").optString("status"))){

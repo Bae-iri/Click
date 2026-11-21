@@ -260,7 +260,7 @@ public final class AppTaskController {
             }
             if(!remote){memory.localPlan();save();}
             if(!resultOnly&&(!completionSupported||memory.completion()!=null)&&fingerprint.equals(recallFingerprint)&&recalled!=null&&recalled.optJSONObject("action")!=null){
-                JSONObject learned=recalled.getJSONObject("action");if(!memory.repeated(current,learned)){
+                JSONObject learned=recalled.getJSONObject("action");if(!memory.repeated(current,learned)&&!previouslyRejected(current,learned)){
                     diagnostic=new JSONObject().put("model","agent2-experience").put("called",false).put("reason","retained_experience");propose(learned);return;
                 }
             }
