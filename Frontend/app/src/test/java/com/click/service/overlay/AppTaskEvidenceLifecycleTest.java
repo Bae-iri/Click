@@ -71,6 +71,24 @@ public class AppTaskEvidenceLifecycleTest {
         verify(gateway,times(2)).send(any(),any());controller.close();
     }
 
+    @Test public void completedPlanAndTitleOnlyReplyCannotOfferSwitchSuccess()throws Exception{
+        AppTaskMemory memory=new AppTaskMemory("알림 켜줘");finishPlan(memory);
+        Listener listener=new Listener();listener.current=page(title("title","알림"),node(PKG,"switch","사용","toggle",false));
+        AppGuideGateway gateway=mock(AppGuideGateway.class);
+        AppTaskController controller=new AppTaskController(gateway,memory,null,listener,true,false,true);
+        try {
+            controller.refresh();
+            var callback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);
+            verify(gateway).send(any(),callback.capture());
+            callback.getValue().success(new JSONObject().put("status","confirm_result").put("completion",result("알림"))
+                .put("subgoals",memory.state().getJSONArray("subgoals")));
+            assertEquals("needs_input",listener.latest.getString("status"));
+            controller.refresh();
+            assertEquals("needs_input",listener.latest.getString("status"));
+            assertFalse(memory.completionSupported());assertFalse(memory.finished());assertEquals(0,listener.executions);
+        }finally{controller.close();}
+    }
+
     @Test public void unseenReplacementOrWeakerConjunctionCannotRepairAFalsePrediction()throws Exception{
         AppTaskMemory memory=new AppTaskMemory("화면 열고 알림 꺼줘");JSONObject old=result("추측한 제목");
         JSONObject toggle=new JSONObject().put("package",PKG).put("label","알림").put("resource",PKG+":id/notifications").put("role","toggle").put("checked",false);

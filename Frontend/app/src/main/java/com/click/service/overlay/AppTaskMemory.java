@@ -16,7 +16,23 @@ public final class AppTaskMemory {
             .put("revision",0).put("subgoals",new JSONArray()).put("attempts",new JSONArray()).put("route",new JSONArray()).put("completed",false);
         initializeEvidence();
     }
-    public AppTaskMemory(JSONObject stored)throws JSONException {data=new JSONObject(stored.toString());data.getString("task_id");data.getJSONArray("subgoals");data.getJSONArray("attempts");initializeEvidence();}
+    public AppTaskMemory(JSONObject stored)throws JSONException {
+        data=new JSONObject(stored.toString());
+        data.getString("task_id");data.getJSONArray("subgoals");data.getJSONArray("attempts");
+        initializeEvidence();
+        JSONObject candidate=completion();
+        if(!finished()&&candidate!=null){
+            AppTaskSwitchGoal requested=AppTaskSwitchGoal.parse(goal());
+            if(requested!=null&&!requested.possible(candidate.getJSONArray("checks"))){
+                // Older builds could mark a page title as a supported switch result.
+                JSONObject evidence=data.getJSONObject("completion_evidence");
+                evidence.put("status","provisional");
+                JSONObject requirements=evidence.optJSONObject("requirements");
+                if(requirements!=null&&!requested.possible(requirements.getJSONArray("checks")))evidence.remove("requirements");
+                discardCompletion();
+            }
+        }
+    }
     public String goal(){return data.optString("goal");}
     public String id(){return data.optString("task_id");}
     public JSONObject stored()throws JSONException{return new JSONObject(data.toString());}
@@ -130,10 +146,16 @@ public final class AppTaskMemory {
         data.put("action_count",actions()+1);
         JSONObject row=new JSONObject().put("fingerprint",before.getString("fingerprint")).put("tool",action.getString("tool"))
             .put("target",target(action)).put("outcome",outcome);
+        JSONObject node=AppTaskObservation.find(before,action.optString("target_id"));
+        if("verified".equals(outcome)&&"tap".equals(action.optString("tool"))&&node!=null
+                &&"accessibility".equals(node.optString("source"))&&"toggle".equals(node.optString("role"))
+                &&node.opt("checked") instanceof Boolean){
+            String key=AppTaskObservation.hash(before.getString("package")+"\n"+AppTaskObservation.targetKey(node));
+            row.put("switch_before",new JSONObject().put("key",key).put("checked",node.getBoolean("checked")));
+        }
         JSONArray attempts=data.getJSONArray("attempts");attempts.put(row);while(attempts.length()>8)attempts.remove(0);
         if("failed".equals(outcome))data.put("revision",data.optInt("revision")+1);
         if("verified".equals(outcome)) {
-            JSONObject node=AppTaskObservation.find(before,action.optString("target_id"));
             if(data.getJSONArray("route").length()<32)data.getJSONArray("route").put(new JSONObject().put("package",before.optString("package")).put("tool",action.getString("tool"))
                 .put("resource",node==null?"":node.optString("resource")).put("label",node==null?"":node.optString("label"))
                 .put("open_package",action.optString("package")).put("expectation",action.getJSONObject("expectation"))

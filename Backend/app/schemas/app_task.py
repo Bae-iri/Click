@@ -15,6 +15,7 @@ class TaskNode(BaseModel):
     scrollable: bool = False
     selected: bool = False
     checked: bool | None = None
+    native_heading: bool = False
     has_value: bool = False
     viewport_hash: str = Field(default='', max_length=64)
     source: Literal['accessibility','ocr'] = 'accessibility'
@@ -52,12 +53,19 @@ class TaskSubgoal(BaseModel):
     status: Literal['pending','verified'] = 'pending'
 
 
+class TaskSwitchBaseline(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    key: str = Field(pattern=r'^[0-9a-f]{64}$')
+    checked: bool = Field(strict=True)
+
+
 class TaskAttempt(BaseModel):
     model_config = ConfigDict(extra='forbid')
     fingerprint: str = Field(pattern=r'^[0-9a-f]{64}$')
     tool: str = Field(max_length=30)
     target: str = Field(default='', max_length=200)
     outcome: Literal['verified','failed','waiting','stale','protected']
+    switch_before: TaskSwitchBaseline | None = None
 
 
 class TaskResultCheck(BaseModel):

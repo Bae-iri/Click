@@ -95,6 +95,18 @@ def test_model_cannot_override_actionable_destination_guard(monkeypatch):
     assert result.diagnostic['completion_grounding'] == 'deferred_visible_destination_link'
 
 
+@pytest.mark.parametrize('native',[True,False])
+def test_destination_proof_choices_preserve_native_heading_inside_clickable_background(monkeypatch,native):
+    req=arrived(dict(label='배경',role='button',clickable=True),
+                dict(label='보관함',role='text',native_heading=native),goal='보관함 화면을 열어줘')
+    req.screen.nodes[0].bounds=(0,0,720,1100)
+    req.planning_mode='result_only'
+    result,payload=run(monkeypatch,req,{'proof':['c1'] if native else []})
+    proof=payload['text']['format']['schema']['properties']['proof']
+    assert proof['items'].get('enum',[]) == (['c1'] if native else [])
+    assert bool(result.completion) == native
+
+
 def test_unchecked_native_state_is_preserved(monkeypatch):
     req = arrived(dict(label='알림', role='toggle', clickable=True, checked=False), goal='알림을 꺼줘')
     req.planning_mode = 'result_only'

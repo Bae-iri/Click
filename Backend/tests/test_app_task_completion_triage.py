@@ -220,3 +220,52 @@ def test_title_outside_every_row_still_settles():
     result = AppTaskService(send).step(req, completion_triage=True)
     send.assert_not_called()
     assert [c.label for c in result.completion.checks] == ['앱 알림']
+
+
+@pytest.mark.parametrize('title', ['다크 모드', '알림', '자동 동기화'])
+@pytest.mark.parametrize('desired', [False, True])
+@pytest.mark.parametrize('actual', [False, True])
+def test_switch_goal_uses_current_value_even_when_the_model_proposes_only_the_title(title, desired, actual):
+    from tests.test_app_task_goal_first import answer, compact_sender
+    req = arrived(dict(label=title, role='text', native_heading=True),
+                  dict(label='사용', role='toggle', checked=actual, clickable=True),
+                  goal=title + (' 켜줘' if desired else ' 꺼줘'), package='org.example.viewer')
+    req.planning_mode = 'goal_first'
+    req.state.subgoals.append(TaskSubgoal(id='g1', title='사용 상태 확인'))
+    send = compact_sender(answer(req))
+    result = AppTaskService(send).step(req, completion_triage=True)
+    if actual == desired:
+        send.assert_not_called()
+        assert [(c.label,c.checked) for c in result.completion.checks] == [(title,None),('사용',desired)]
+    else:
+        send.assert_called_once()
+        assert result.completion is None and result.diagnostic['goal_assessment'] == 'uncertain'
+
+
+def test_native_heading_inside_background_settles_but_real_row_text_still_does_not():
+    req = arrived(dict(label='배경',role='button',clickable=True),
+                  dict(label='보관함',role='text',native_heading=True),goal='보관함 화면을 열어줘')
+    req.screen.nodes[0].bounds=(0,0,720,1100)
+    result=AppTaskService(Mock(side_effect=AssertionError('Unexpected model call'))).step(req,completion_triage=True)
+    assert [c.label for c in result.completion.checks]==['보관함']
+    req.screen.nodes[1].native_heading=False
+    fallback=sender(subgoals=['디스플레이 열기'],completion_checks=[])
+    assert AppTaskService(fallback).step(req,completion_triage=True).completion is None
+    fallback.assert_called_once()
+
+
+@pytest.mark.parametrize('goal', ['다크 모드로 변경해줘', '다크 모드를 열고 설정을 바꿔줘'])
+def test_title_alone_cannot_settle_setting_changes(goal):
+    req=arrived(dict(label='다크 모드',role='text'),MENU,goal=goal)
+    fallback=sender(subgoals=['디스플레이 열기'],completion_checks=[])
+    assert AppTaskService(fallback).step(req,completion_triage=True).completion is None
+    fallback.assert_called_once()
+
+
+def test_already_enabled_switch_finishes_without_a_tap_or_a_plan():
+    req=arrived(dict(label='동기화',role='toggle',checked=True,clickable=True),goal='동기화를 켜줘',verified=False)
+    req.state.subgoals=[]
+    req.planning_mode='goal_first'
+    result=AppTaskService(Mock(side_effect=AssertionError('Unexpected model call'))).step(req,completion_triage=True)
+    assert result.action is None and result.diagnostic['goal_assessment']=='satisfied'
+    assert [(c.label,c.checked) for c in result.completion.checks]==[('동기화',True)]
