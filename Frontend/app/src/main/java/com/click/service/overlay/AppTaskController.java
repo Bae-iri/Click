@@ -185,6 +185,13 @@ public final class AppTaskController {
     }
     /** A result can be reached manually, by a restored task, or already be present. */
     private void resetResultEvidence(){resultObservation=null;resultWindowId=null;resultPackage=null;resultAssessment=null;checkingResult=resultOffered=false;resultEvidenceVersion=-1;resultEvidenceKey=null;}
+    private void showUnverifiedResult()throws JSONException{
+        if(AppTaskSwitchGoal.parse(memory.goal())!=null){
+            show("needs_input","요청하신 스위치 상태를 확인하지 못했어요. 현재 설정을 확인해 주세요.");
+        }else{
+            show("confirm_result","요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.");
+        }
+    }
     private boolean discardUnsafeCompletion(JSONObject current,ScreenSnapshot screen)throws JSONException {
         if(!completionSupported||memory.finished()||memory.completionSupported()||memory.completion()==null
                 ||!AppTaskCompletion.unsafeForGoal(memory.goal(),memory.completion(),current,screen))return false;
@@ -325,7 +332,7 @@ public final class AppTaskController {
                 // Canonical native controls, rather than candidate-dependent projection, debounce it.
                 String canonical=AppTaskObservation.capture(screen).optString("fingerprint");
                 if(!resultOnly||canonical.equals(resultDiscoveryScreen)){
-                    show("confirm_result","요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.");return;
+                    showUnverifiedResult();return;
                 }
                 resultDiscoveryKey=canonical;
             }
@@ -429,7 +436,7 @@ public final class AppTaskController {
                         if(completionSupported&&deferred!=null&&memory.completion()==null&&!memory.finished())park(deferred);
                         save();
                         if(observeResult(capture(fresh),fresh))return;
-                        if(resultOnly){show("confirm_result","요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.");return;}
+                        if(resultOnly){showUnverifiedResult();return;}
                         if(goalSatisfied){proposal=null;manualActions.clear();show("needs_input","요청하신 결과를 확인할 화면 증거가 부족해요. 현재 화면을 확인해 주세요.");return;}
                         JSONObject action=rebound!=null?rebound:response.optJSONObject("action");
                         planned=action!=null&&speed.plannedRoute?plannedSteps(response,request.getJSONObject("screen")):null;plannedReady=false;

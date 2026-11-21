@@ -52,7 +52,27 @@ public class AppTaskGoalCompletionTest {
         AccessibilityNodeSnapshot title=new AccessibilityNodeSnapshot("title","background",true,PKG,"디스플레이",null,PKG+":id/title",
             "android.widget.TextView",null,new int[]{20,30,300,100},false,true,false,false,false,null,42,false,null,null,false,null,true,false);
         ScreenSnapshot destination=screen(PKG,node(PKG,"background","배경","button"),title);JSONObject condition=result("디스플레이");
-        assertEquals(MATCHED,AppTaskCompletion.checkForGoal("디스플레이 열어줘",condition,AppTaskObservation.capture(destination),destination));
+        JSONObject observed=AppTaskObservation.capture(destination);
+        assertTrue(AppTaskObservation.find(observed,"title").getBoolean("native_heading"));
+        assertEquals(MATCHED,AppTaskCompletion.checkForGoal("디스플레이 열어줘",condition,observed,destination));
+    }
+
+    @Test public void stateRequestNeedsTheRequestedSwitchAndRejectsLegacyTitleProof()throws Exception {
+        for(String name:new String[]{"다크 모드","알림"})for(boolean desired:new boolean[]{false,true}){
+            String goal=name+(desired?"를 켜줘":"를 꺼줘");
+            JSONObject title=result(name);
+            JSONObject condition=result(name);
+            condition.getJSONArray("checks").put(new JSONObject().put("package",PKG).put("label","사용").put("role","toggle").put("checked",desired));
+            for(boolean actual:new boolean[]{false,true}){
+                ScreenSnapshot frame=screen(PKG,heading(PKG,"title",name),node(PKG,"setting","사용","toggle",actual));
+                JSONObject observed=AppTaskObservation.capture(frame);
+                assertEquals(UNKNOWN,AppTaskCompletion.checkForGoal(goal,title,observed,frame));
+                assertEquals(actual==desired?MATCHED:NOT_MET,AppTaskCompletion.checkForGoal(goal,condition,observed,frame));
+            }
+            ScreenSnapshot other=screen(PKG,heading(PKG,"title",name),node(PKG,"setting","자동 재생","toggle",desired));
+            condition.getJSONArray("checks").getJSONObject(1).put("label","자동 재생");
+            assertEquals(UNKNOWN,AppTaskCompletion.checkForGoal(goal,condition,AppTaskObservation.capture(other),other));
+        }
     }
 
     @Test public void selectedDestinationAndDesiredToggleStatesRemainValidWithoutAnAction()throws Exception {
@@ -83,5 +103,43 @@ public class AppTaskGoalCompletionTest {
         memory.discardCompletion();assertNull(memory.completion());assertEquals(id,memory.id());assertEquals(plan,memory.state().getJSONArray("subgoals").toString());assertEquals("test-scope",memory.scope());
         memory.completion(result("디스플레이 화면"));memory.confirmResult();memory.discardCompletion();
         assertTrue(memory.finished());assertNotNull(memory.completion());assertEquals(id,memory.id());
+    }
+
+    @Test public void restoredSwitchTaskRechecksAnOldSupportedTitleAndKeepsUserConfirmation()throws Exception {
+        AppTaskMemory stored=new AppTaskMemory("알림 켜줘");
+        stored.localPlan();stored.completion(result("알림"));
+        assertTrue(stored.supportCompletion(stored.evidenceVersion()));
+        AppTaskMemory restored=new AppTaskMemory(stored.stored());
+        assertFalse(restored.completionSupported());
+        assertNull(restored.completion());
+        assertEquals(stored.id(),restored.id());
+        assertEquals(stored.active(),restored.active());
+        stored.confirmResult();
+        assertTrue(new AppTaskMemory(stored.stored()).finished());
+    }
+
+    @Test public void onlyAVerifiedTapCarriesTheOriginalSwitchValue()throws Exception {
+        JSONObject before=AppTaskObservation.capture(screen(PKG,node(PKG,"switch","알림","toggle",false)));
+        JSONObject tap=action(before,"tap","target_state");
+        AppTaskMemory memory=new AppTaskMemory("알림 켜줘");
+        memory.record(before,tap,"waiting",false);
+        memory.record(before,tap,"verified",false);
+        JSONArray attempts=memory.state().getJSONArray("attempts");
+        assertFalse(attempts.getJSONObject(0).has("switch_before"));
+        JSONObject old=attempts.getJSONObject(1).getJSONObject("switch_before");
+        assertFalse(old.getBoolean("checked"));
+        assertEquals(AppTaskObservation.hash(PKG+"\n"+AppTaskObservation.targetKey(AppTaskObservation.find(before,"switch"))),old.getString("key"));
+    }
+
+    @Test public void disabledNativeSwitchCanProveItsCurrentValueWithoutOfferingATap()throws Exception {
+        AccessibilityNodeSnapshot fixed=new AccessibilityNodeSnapshot("flag",null,true,PKG,"자동 동기화",null,PKG+":id/flag",
+            "android.widget.Switch",null,new int[]{10,20,400,120},true,false,false,false,true,null,42,
+            false,null,null,false,true,false,false);
+        ScreenSnapshot current=screen(PKG,fixed);JSONObject observed=AppTaskObservation.capture(current);
+        JSONObject flag=AppTaskObservation.find(observed,"flag");
+        assertNotNull(flag);assertFalse(flag.getBoolean("clickable"));assertTrue(flag.getBoolean("checked"));
+        JSONObject condition=result("자동 동기화");
+        condition.getJSONArray("checks").getJSONObject(0).put("role","toggle").put("checked",true);
+        assertEquals(MATCHED,AppTaskCompletion.checkForGoal("자동 동기화 좀 켜줘",condition,observed,current));
     }
 }

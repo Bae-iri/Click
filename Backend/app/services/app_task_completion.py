@@ -16,6 +16,20 @@ from app.services.app_guide import public_label
 
 
 CHECK_FIELDS=frozenset(('target','label','app','checked','selected'))
+
+
+def actionable_controls(nodes):
+    return [n for n in nodes if (n.clickable or n.editable) and not (n.role == 'tab' and n.selected)]
+
+
+def inside_actionable(node, containers):
+    if node.native_heading and node.source == 'accessibility' and node.role == 'text':
+        return False
+    left, top, right, bottom = node.bounds
+    return any(c is not node and c.bounds[0] <= left and c.bounds[1] <= top
+               and c.bounds[2] >= right and c.bounds[3] >= bottom for c in containers)
+
+
 VALIDATION_FIELDS=frozenset(('checks','package','label','resource','role','checked','selected',
     'index','contract','other'))
 VALIDATION_TYPES=frozenset(('missing','extra_forbidden','literal_error','value_error',

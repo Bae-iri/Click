@@ -1,0 +1,11 @@
+{
+  "forms": [
+    {"target": 1, "verb": 2, "pattern": "(.+?)(?:을|를)?(?:\\s+좀)?\\s*(켜기|끄기|켜|꺼|활성화|비활성화)(?:\\s*(?:해|시켜))?(?:\\s*(?:줘|주라|주세요|줄래요?|줘요|주십시오))?"},
+    {"target": 2, "verb": 1, "pattern": "(?:please\\s+)?turn\\s+(on|off)\\s+(?:the\\s+)?(.+)"},
+    {"target": 2, "verb": 1, "pattern": "(?:please\\s+)?(enable|disable)\\s+(?:the\\s+)?(.+)"},
+    {"target": 1, "verb": 2, "pattern": "(?:please\\s+)?turn\\s+(?:the\\s+)?(.+)\\s+(on|off)"}
+  ],
+  "on": ["켜", "켜기", "활성화", "enable", "on"],
+  "generic_switch_labels": ["사용", "사용 중", "사용 안 함", "켜기", "끄기", "켜짐", "꺼짐", "켜짐 또는 꺼짐", "on", "off", "enabled", "disabled", "use"],
+  "excluded_target": "(?:앱|어플|화면|창)$|그리고|그다음|한\\s*뒤|열고|열어서|켜고|끄고|하고|해서|말고|(?:^|\\s)(?:안|못)$|지\\s*마|[;,／/+&]|\\b(?:and|then|not|after|before)\\b"
+}

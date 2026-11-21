@@ -13,7 +13,8 @@ from app.services.goal_llm import _unique_object
 from app.services.settings_planner import model_name,provider_error
 from app.services import openai_responses
 from app.services import app_task_local_menu, app_task_qwen
-from app.services.app_task_completion import bind_completion_candidate
+from app.services.app_task_completion import actionable_controls as _actionable_controls, bind_completion_candidate, inside_actionable as _inside_actionable
+from app.services.app_task_switch import switch_goal
 from app.services.app_task_provider import generate, ProviderError, ProviderResponse, LOCAL_MODEL
 from app.services.app_task_jev_completion import pure_navigation_goal, select_completion as jev_completion
 from app.services.app_task_capabilities import (ActionCapabilities, action_pair, native_action_pairs,
@@ -199,15 +200,14 @@ def _goal_targets(goal):
     return targets
 
 
-def _inside_actionable(node,containers):
-    """True when a clickable/editable control's area holds this node: a row's own text, not a page title."""
-    l,t,r,b=node.bounds
-    return any(c is not node and c.bounds[0]<=l and c.bounds[1]<=t and c.bounds[2]>=r and c.bounds[3]>=b
-               for c in containers)
-
-
-def _actionable_controls(nodes):
-    return [n for n in nodes if (n.clickable or n.editable) and not (n.role == 'tab' and n.selected)]
+def _destination_request(goal, node):
+    # A conjunction inside a literal page name ("소리 및 진동") is part of the name.
+    # Leave every word outside that name intact when checking the requested action.
+    literal = r'\s*'.join(map(re.escape, node.label.split()))
+    intent = re.sub(literal, 'destination', goal, count=1, flags=re.I)
+    if node.role == 'tab' and node.selected:
+        intent = re.sub(r'(탭(?:을|으로)?\s*)선택(?:해|하기)', r'\1이동', intent)
+    return pure_navigation_goal(intent)
 
 
 def triage_completion(goal,screen,nodes,apps):
@@ -231,6 +231,7 @@ def triage_completion(goal,screen,nodes,apps):
     for n in nodes:
         label=_compact(n.label)
         if n.source!='accessibility' or len(label)<2 or label in generic or label not in targets:continue
+        if not _destination_request(goal,n):continue
         if label in actionable:continue
         if n.role=='text' and not (n.clickable or n.editable or n.scrollable):
             # The device can export a predicted result label found inside a tappable row
@@ -300,6 +301,14 @@ class AppTaskService:
                 response.message='현재 화면에서 실행할 수 있는 다음 동작을 확인하지 못했어요. 화면을 직접 이동한 뒤 다시 확인해 주세요.'
                 response.diagnostic.update(failure_stage='observation',failure_kind='observation',reason_code='no_allowed_actions')
                 return response
+        requested_switch = switch_goal(goal)
+        switch = requested_switch.bind(screen.package, safe.values()) if requested_switch else None
+        if requested_switch and state.completion is not None and (
+                not switch or not switch.covered_by(state.completion.checks) or result_only and not switch.satisfied):
+            # A legacy title-only contract can otherwise be replayed before any planner runs.
+            state = state.model_copy(update={'completion': None})
+            request = request.model_copy(update={'state': state})
+            response.completion = None
         if result_only and state.completion is not None:
             response.status='confirm_result';response.message='요청하신 결과가 나왔나요? 직접 확인한 뒤 안내를 끝내 주세요.'
             response.diagnostic={'called':False,'reason_code':'bound_result_available','failure_stage':'none',**execution_diagnostic}
@@ -324,9 +333,14 @@ class AppTaskService:
                 response.active_subgoal=pending[0].id if pending else None
                 response.diagnostic={'called':False,'model':'agent2-experience','reason':'ai2_remembered',**execution_diagnostic}
                 return response
-        if (completion_triage and state.completion is None and state.subgoals
-                and any(a.outcome=='verified' for a in state.attempts)):
-            triaged=triage_completion(goal,screen,safe.values(),request.apps)
+        arrived = state.subgoals and any(a.outcome=='verified' for a in state.attempts)
+        if completion_triage and state.completion is None and (arrived or requested_switch):
+            triaged = None
+            if requested_switch:
+                if switch and switch.satisfied and any(app.package == screen.package for app in request.apps):
+                    triaged = switch.completion
+            else:
+                triaged = triage_completion(goal,screen,safe.values(),request.apps)
             if triaged is not None:
                 response.status='confirm_result';response.completion=triaged
                 response.message='요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.'
@@ -646,7 +660,9 @@ class AppTaskService:
             if bound:
                 # Defer the WHOLE conjunction rather than dropping a clause and
                 # weakening the requested result. A valid next action survives.
-                if any(c.package==screen.package and _unsafe_goal_check(goal,c,safe.values()) for c in bound):
+                if requested_switch and (not switch or not switch.covered_by(bound)):
+                    diagnostic['completion_grounding'] = 'deferred_switch_proof'
+                elif any(c.package==screen.package and _unsafe_goal_check(goal,c,safe.values()) for c in bound):
                     diagnostic['completion_grounding']='deferred_actionable_proof'
                     # Usually the destination title is still this screen's menu entry. Keep it as a
                     # future-only candidate instead of paying a result_only request after arrival.
@@ -707,6 +723,9 @@ class AppTaskService:
                 response.status='confirm_result' if tool=='confirm' else 'needs_input'
                 response.message='요청한 결과가 나왔는지 확인해 주세요.' if tool=='confirm' else '다음 동작을 확실히 고르지 못했어요. 화면을 이동하거나 작업 내용을 구체적으로 알려주세요.'
                 if result_only:diagnostic['reason_code']='result_evidence_candidate' if response.completion else 'result_evidence_unavailable'
+                if requested_switch and response.completion is None:
+                    response.status='needs_input'
+                    response.message='요청하신 스위치 상태를 확인하지 못했어요. 현재 설정을 확인해 주세요.'
                 return response
             node=None if tool in {'back','open_app'} else indexed.get(answer['target'])
             if tool not in {'back','open_app'} and node is None:raise ValueError('unknown_target')

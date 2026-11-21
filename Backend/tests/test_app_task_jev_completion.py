@@ -9,6 +9,8 @@ import pytest
 from app.services.app_task import AppTaskService
 from app.services.app_task_jev_completion import pure_navigation_goal, select_completion
 from app.services.app_task_capabilities import ActionCapabilities
+from app.services.app_task_learning_policy import digest, target_key
+from app.schemas.app_task import TaskApp, TaskAttempt
 from tests.test_app_task import compact_sender
 from tests.test_app_task_goal_first import current_goal, check
 
@@ -74,6 +76,45 @@ def test_default_provider_remains_gemini(monkeypatch):
     monkeypatch.delenv('APP_TASK_COMPLETION_PROVIDER');value=req();jev=Mock();gemini=compact_sender({'completion_checks':[check()]})
     result=AppTaskService(gemini,jev_sender=jev).step(value)
     assert result.diagnostic['completion_provider']=='gemini';gemini.assert_called_once();jev.assert_not_called()
+
+
+@pytest.mark.parametrize('before,actual,goal,expected', [
+    (False, True, 'Turn on Dark theme', True), (False, False, 'Turn Dark theme on', False),
+    (True, False, 'Disable Dark theme', True), (True, True, 'Turn off Dark theme', False)])
+def test_switch_choice_receives_correlated_baseline_but_cannot_verify_the_wrong_value(before,actual,goal,expected):
+    value=req()
+    value.goal=goal
+    node=value.screen.nodes[0]
+    node.role='toggle';node.label='Dark theme';node.checked=actual;node.clickable=True
+    value.apps=[TaskApp(package=value.screen.package,label='Settings')]
+    key=digest(value.screen.package+'\n'+target_key(node))
+    value.state.attempts=[TaskAttempt(fingerprint='b'*64,tool='tap',target=node.id,outcome='verified',
+                                     switch_before={'key':key,'checked':before})]
+    send=jev_sender()
+    result=AppTaskService(Mock(side_effect=AssertionError('Unexpected planner')),jev_sender=send).step(value)
+    assert bool(result.completion) == expected
+    observed=send.call_args.args[0]['state']['switch']
+    assert observed==dict(target='Dark theme',requested_checked='on' in goal.lower(),observed_checked=actual,
+                          previous_tap=dict(before_checked=before))
+    if not expected:assert result.diagnostic['reason_code']=='jev_completion_state_mismatch'
+    value.state.attempts[0].switch_before.key='a'*64
+    send=jev_sender()
+    select_completion(value,value.screen.nodes,sender=send)
+    assert 'previous_tap' not in send.call_args.args[0]['state']['switch']
+
+
+def test_unrelated_or_ambiguous_switch_cannot_be_selected():
+    value=req();value.goal='Enable alerts'
+    value.apps=[TaskApp(package=value.screen.package,label='Viewer')]
+    node=value.screen.nodes[0]
+    node.role='toggle';node.label='Sound';node.checked=True
+    send=jev_sender()
+    result=select_completion(value,value.screen.nodes,sender=send)
+    assert result.completion is None
+    node.label='alerts'
+    value.screen.nodes.append(node.model_copy(update={'id':'other'}))
+    assert select_completion(value,value.screen.nodes,sender=send).completion is None
+    send.assert_not_called()
 
 
 @pytest.mark.parametrize('change',[

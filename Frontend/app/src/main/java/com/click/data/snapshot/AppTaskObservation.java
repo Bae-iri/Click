@@ -109,12 +109,13 @@ public final class AppTaskObservation {
         List<AccessibilityNodeSnapshot> ordered=new ArrayList<>(screen.nodes);
         ordered.sort(Comparator.comparingInt(n->resultLabels.contains(label(n.contentDescription!=null?n.contentDescription:n.text))?0:1));
         for(var n:ordered){
-            boolean selectedEvidence=selectedTabEvidence(n),readOnlySelected=selectedEvidence&&!n.enabled;
-            if(!n.visibleToUser||!(n.enabled||searchField(n)&&n.publicSearchEnabled()||selectedEvidence)||hidden(n,byId)||!screen.packageName.equals(n.packageName)||screen.activeWindowId!=null&&n.windowId!=screen.activeWindowId)continue;
-            boolean editable=!readOnlySelected&&searchField(n),clickable=!readOnlySelected&&n.clickable,scrollable=!readOnlySelected&&n.scrollable;
+            boolean selectedEvidence=selectedTabEvidence(n),switchEvidence=n.checkable&&n.checked!=null;
+            boolean readOnlyState=(selectedEvidence||switchEvidence)&&!n.enabled;
+            if(!n.visibleToUser||!(n.enabled||searchField(n)&&n.publicSearchEnabled()||selectedEvidence||switchEvidence)||hidden(n,byId)||!screen.packageName.equals(n.packageName)||screen.activeWindowId!=null&&n.windowId!=screen.activeWindowId)continue;
+            boolean editable=!readOnlyState&&searchField(n),clickable=!readOnlyState&&n.clickable,scrollable=!readOnlyState&&n.scrollable;
             boolean heading=(n.heading||pageTitle(n,byId))&&headings<6;
             boolean resultLabel=!editable&&resultLabels.contains(label(n.contentDescription!=null?n.contentDescription:n.text));
-            if(!clickable&&!scrollable&&!editable&&!heading&&!resultLabel&&!selectedEvidence)continue;
+            if(!clickable&&!scrollable&&!editable&&!heading&&!resultLabel&&!selectedEvidence&&!switchEvidence)continue;
             int[] b=n.bounds;if(b==null||b.length!=4||b[0]<0||b[1]<0||b[2]>screen.screenWidth||b[3]>screen.screenHeight||b[0]>=b[2]||b[1]>=b[3])continue;
             String text=editable?"검색어 입력":label(n.contentDescription!=null?n.contentDescription:n.text);
             if(text.isEmpty())for(var child:screen.nodes)if(n.nodeId.equals(child.parentId)&&child.visibleToUser&&!hidden(child,byId)){
@@ -127,6 +128,7 @@ public final class AppTaskObservation {
             JSONObject node=new JSONObject().put("id",n.nodeId).put("label",text).put("resource",resource).put("role",role)
                 .put("bounds",new JSONArray(b)).put("clickable",clickable).put("editable",editable).put("scrollable",scrollable)
                 .put("selected",n.selected).put("checked",n.checked==null?JSONObject.NULL:n.checked).put("has_value",editable&&n.hasInputContent()).put("source","accessibility");
+            if(n.heading&&"text".equals(role))node.put("native_heading",true);
             if(resultLabel&&!clickable&&!scrollable&&!editable)resultTextIds.add(n.nodeId);
             if(scrollable){StringBuilder viewport=new StringBuilder();for(var child:screen.nodes)if(child.visibleToUser&&descendantOf(child,n.nodeId,byId)&&!hidden(child,byId))viewport.append(child.nodeId).append(Arrays.toString(child.bounds)).append(hash(String.valueOf(child.text)));node.put("viewport_hash",hash(viewport.toString()));}
             nodes.put(node);if(heading)headings++;if(nodes.length()==80)break;

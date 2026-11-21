@@ -155,6 +155,9 @@ public final class AppTaskCompletion {
         if(!valid(completion)||screen==null||!"public".equals(screen.optString("status")))return false;
         JSONArray checks=completion.optJSONArray("checks"),nodes=screen.optJSONArray("nodes");
         if(nodes==null)return false;
+        AppTaskSwitchGoal requested=AppTaskSwitchGoal.parse(goal);
+        if(requested!=null&&(!requested.possible(checks)
+                ||check(completion,screen)==Verdict.MATCHED&&!requested.accepts(checks,nodes)))return true;
         for(int i=0;i<checks.length();i++){
             JSONObject c=checks.optJSONObject(i);
             if(!c.optString("package").equals(screen.optString("package")))continue;

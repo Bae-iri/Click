@@ -137,6 +137,7 @@ android {
 
     sourceSets {
         main.assets.srcDir "../../AI-Agent/goal_catalog"
+        main.resources.srcDir "../../AI-Agent/goal_catalog/app_completion"
         test.resources.srcDir "../../Backend/docs"
         test.resources.srcDir "../../AI-Agent/goal_catalog"
         test.resources.srcDir "../../AI-Agent/tests/fixtures"
