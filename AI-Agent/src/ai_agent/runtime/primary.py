@@ -193,7 +193,8 @@ def decide_primary(*, resolver, request, session, snapshot, nodes, raw_nodes, gr
     pending_result = bool(attempt and attempt.get("event_key") and verification
         and verification.status in {Status.WAITING_FOR_OBSERVATION, Status.UNKNOWN,
                                     Status.NO_CHANGE, Status.WRONG_STATE})
-    if settling or (same_screen and pending_result) or recovery.get("jev_wait_fingerprint") == snapshot.fingerprint:
+    if (settling or (pending_result and (same_screen or verification.evidence == 'setting_value_signals_disagree'))
+            or recovery.get("jev_wait_fingerprint") == snapshot.fingerprint):
         info["status"] = "waiting"
         failure = selection_failure(info, cause="settling" if settling else "result_unobservable",
             outcome_uncertain=bool(attempt and attempt.get("event_key") and verification

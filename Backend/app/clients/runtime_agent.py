@@ -302,9 +302,9 @@ class RuntimeAgentAdapter:
                 and experiment['jev'].get('status') == 'provider_error'
                 and (not experiment['plan'] or self.experiment_resolver.state.get('replan_requested'))
                 and experiment['planner'].get('reason_code') != 'planning_budget_exhausted'):
-            guide_message = ("Gemini의 하루 요청 한도를 초과했어요. 한도가 초기화된 뒤 다시 시도해 주세요."
+            guide_message = ("안내 서비스의 하루 요청 한도를 초과했어요. 한도가 초기화된 뒤 다시 시도해 주세요."
                 if self.experiment_resolver.state.get('planner_error_cause') == 'daily_quota_exceeded'
-                else "Gemini 계획 서비스에서 응답을 받지 못했어요. 잠시 후 다시 시도해 주세요.")
+                else "안내 순서를 정하는 서비스에서 응답을 받지 못했어요. 잠시 후 다시 시도해 주세요.")
         return AgentTurnResponse(
             request_id=result.request_id,
             session_id=result.session_id,
