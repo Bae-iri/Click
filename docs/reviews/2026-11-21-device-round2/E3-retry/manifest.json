@@ -1,0 +1,105 @@
+{
+  "schema_version": "memory-reuse.v1",
+  "run_id": "round2-E3-retry",
+  "tasks": [
+    {
+      "task_id": "settings_display",
+      "app_id": "com.android.settings",
+      "goal_ref": "4bfac4841a7ded5005060c255c1e7f0a94d485c32a1521f2d4974952a28cbecc",
+      "mirror_goal_ref": "0db3b399d3d513dcf5294c5418dc89734c5a61665bc9f4b5ab8a51442e11cd69",
+      "start_label": "",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "밝기",
+        "resource": "",
+        "role": "",
+        "selected": false
+      }
+    },
+    {
+      "task_id": "settings_notifications",
+      "app_id": "com.android.settings",
+      "goal_ref": "b1a96459a4bd7ecaef7c901f72debbde70e334dde753aa117952a1a1ba86a34d",
+      "mirror_goal_ref": "7fa1c4fba6a85623f50155dafc328830d52e1c0f7a2581be59d16da53685dfa6",
+      "start_label": "",
+      "open_menu_in_setup": false,
+      "oracle": {
+        "label": "앱 알림",
+        "resource": "",
+        "role": "",
+        "selected": false
+      }
+    }
+  ],
+  "arms": [
+    "A",
+    "B"
+  ],
+  "sessions": [
+    "r1",
+    "r2",
+    "r3"
+  ],
+  "budget_ms": 25000,
+  "meta_arm": "CURRENT",
+  "meta_memory_integration": false,
+  "first_step_cost_experiment": false,
+  "speed_ab_experiment": false,
+  "configured_experiment": true,
+  "arm_speed": "A:PRODUCTION_NO_RETRY,B:PRODUCTION",
+  "arm_learning": "A:false,B:false",
+  "scheduled_arm_orders": [
+    {
+      "task_id": "settings_display",
+      "session": "r1",
+      "order": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "task_id": "settings_display",
+      "session": "r2",
+      "order": [
+        "B",
+        "A"
+      ]
+    },
+    {
+      "task_id": "settings_display",
+      "session": "r3",
+      "order": [
+        "B",
+        "A"
+      ]
+    },
+    {
+      "task_id": "settings_notifications",
+      "session": "r1",
+      "order": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "task_id": "settings_notifications",
+      "session": "r2",
+      "order": [
+        "A",
+        "B"
+      ]
+    },
+    {
+      "task_id": "settings_notifications",
+      "session": "r3",
+      "order": [
+        "B",
+        "A"
+      ]
+    }
+  ],
+  "arm_order_scheme": "deterministic_rotation_and_reversal_not_random",
+  "memory_isolation": "per_arm_device_store_and_facade_store",
+  "simulated_user": "confirms_only_after_independent_oracle_700ms",
+  "task_selection_frozen_before_run": true
+}

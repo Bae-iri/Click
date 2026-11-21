@@ -65,7 +65,11 @@ public class MemoryDeviceExperimentTest {
     // Same tasks, start states and oracles as the MetaController v4 pilot; mirror goals frozen in catalogue.json.
     private static List<Task> catalogue(){return Arrays.asList(
         new Task("settings_display",SETTINGS,"디스플레이 설정 화면을 열어줘","설정에서 디스플레이 메뉴로 들어가줘","","밝기","","",false,false),
-        new Task("settings_sound",SETTINGS,"소리 및 진동 설정 화면을 열어줘","설정에서 소리 및 진동 메뉴로 들어가줘","","소리 모드","","",false,false),
+        // One UI 5 (SM-N981N) shows no "소리 모드" text; "벨소리" is the page's unique row (device dump 2026-11-21).
+        new Task("settings_sound",SETTINGS,"소리 및 진동 설정 화면을 열어줘","설정에서 소리 및 진동 메뉴로 들어가줘","","벨소리","","",false,false),
+        // Two-step destinations; landmarks exist only on the destination page (device dump 2026-11-21).
+        new Task("settings_font",SETTINGS,"글자 크기와 스타일 화면을 열어줘","설정에서 글자 크기와 스타일 메뉴로 들어가줘","","글자 굵게","","",false,false),
+        new Task("settings_app_notifications",SETTINGS,"앱 알림 화면을 열어줘","설정에서 앱 알림 메뉴로 들어가줘","","전체","","",false,false),
         new Task("settings_notifications",SETTINGS,"알림 설정 화면을 열어줘","설정에서 알림 메뉴로 들어가줘","","앱 알림","","",false,false),
         new Task("clock_world",CLOCK,"세계시각 탭으로 이동해줘","시계 앱에서 세계시각 화면 보여줘","알람","세계시각","","tab",true,false),
         new Task("clock_stopwatch",CLOCK,"스톱워치 탭으로 이동해줘","시계 앱에서 스톱워치 화면 보여줘","알람","스톱워치","","tab",true,false),
@@ -113,7 +117,7 @@ public class MemoryDeviceExperimentTest {
 
     @Test public void runMemoryExperiment()throws Exception {
         Assume.assumeTrue("Opt in with -e memoryExperiment true",Boolean.parseBoolean(args.getString("memoryExperiment","false")));
-        Assert.assertEquals("Live facade requires isolated test app",(Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"))||Boolean.parseBoolean(args.getString("firstStepCostExperiment","false"))||Boolean.parseBoolean(args.getString("speedAbExperiment","false")))?"com.click.metamemoryexperiment.uitestdriver":"com.click.memoryexperiment.uitestdriver",app.getPackageName());
+        Assert.assertEquals("Live facade requires isolated test app",(Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"))||Boolean.parseBoolean(args.getString("firstStepCostExperiment","false"))||Boolean.parseBoolean(args.getString("speedAbExperiment","false"))||Boolean.parseBoolean(args.getString("configuredExperiment","false")))?"com.click.metamemoryexperiment.uitestdriver":"com.click.memoryexperiment.uitestdriver",app.getPackageName());
         Assert.assertEquals("Live facade must be loopback only",BASE,com.click.BuildConfig.CLICK_API_BASE_URL.replaceAll("/$",""));
         long budget=Long.parseLong(args.getString("budgetMs","25000"));
         Assert.assertTrue("budgetMs must be 8000..180000",budget>=8000&&budget<=180000);
@@ -125,13 +129,15 @@ public class MemoryDeviceExperimentTest {
         boolean integrated=Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"));
         boolean firstStepCost=Boolean.parseBoolean(args.getString("firstStepCostExperiment","false"));
         boolean speedAb=Boolean.parseBoolean(args.getString("speedAbExperiment","false"));
+        boolean configured=Boolean.parseBoolean(args.getString("configuredExperiment","false"));
+        if(configured){Assert.assertFalse(speedAb||integrated||firstStepCost);for(String arm:arms){Assert.assertNotNull("armSpeed for "+arm,speedFor(arm));armLearning(arm);}}
         if(speedAb){Assert.assertFalse(integrated||firstStepCost);Assert.assertEquals(Arrays.asList("A","B","C"),arms);Assert.assertEquals("CURRENT",args.getString("metaArm","CURRENT"));}
         if(firstStepCost){Assert.assertFalse(integrated);Assert.assertEquals(Arrays.asList("A","B","C"),arms);Assert.assertEquals("CURRENT",args.getString("metaArm","CURRENT"));}
-        String[] schedule=speedAb?new String[]{"r1","r2","r3"}:firstStepCost?new String[]{"learn1","learn2","learn3","learn4","eval1","eval2","eval3"}:integrated?new String[]{"learn1","learn2","eval_normal","eval_no_effect","eval_delayed"}:SESSIONS;
+        String[] schedule=configured?args.getString("schedule","r1,r2,r3").split(","):speedAb?new String[]{"r1","r2","r3"}:firstStepCost?new String[]{"learn1","learn2","learn3","learn4","eval1","eval2","eval3"}:integrated?new String[]{"learn1","learn2","eval_normal","eval_no_effect","eval_delayed"}:SESSIONS;
         AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT"));
         if(integrated)Assert.assertEquals("Integrated comparison uses memory off/on only",Arrays.asList("A","B"),arms);
         int sessions=Integer.parseInt(args.getString("sessions",String.valueOf(schedule.length)));
-        Assert.assertTrue("sessions must be 1..6",sessions>=1&&sessions<=schedule.length);
+        Assert.assertTrue("sessions must be 1..schedule",sessions>=1&&sessions<=schedule.length);
         String runId=args.getString("runId",UUID.randomUUID().toString().substring(0,8));
         Assert.assertTrue("runId must be short and safe",runId.matches("[0-9a-zA-Z_.-]{1,40}"));
         JSONObject status=get("/experiment/status");
@@ -142,7 +148,8 @@ public class MemoryDeviceExperimentTest {
             .put("refresh_token","local-meta-experiment-unused").put("expires_in",36000).put("refresh_expires_in",36000));
         SharedPreferences prefs=app.getSharedPreferences("memory-experiment-"+runId,Context.MODE_PRIVATE);prefs.edit().clear().commit();
         Map<String,AppTaskStore> stores=new HashMap<>();
-        if(!speedAb)for(String arm:arms)if(!"A".equals(arm))stores.put(arm,store(prefs,"memexp-"+arm+"-"+runId));
+        if(configured){for(String arm:arms)if(armLearning(arm))stores.put(arm,store(prefs,"memexp-"+arm+"-"+runId));}
+        else if(!speedAb)for(String arm:arms)if(!"A".equals(arm))stores.put(arm,store(prefs,"memexp-"+arm+"-"+runId));
         JSONArray manifest=new JSONArray(),orders=new JSONArray();for(Task task:tasks)manifest.put(task.describe());
         int index=0;
         for(Task task:tasks)for(int s=0;s<sessions;s++){
@@ -150,7 +157,7 @@ public class MemoryDeviceExperimentTest {
         }
         write("manifest.json",new JSONObject().put("schema_version",VERSION).put("run_id",runId).put("tasks",manifest)
             .put("arms",new JSONArray(arms)).put("sessions",new JSONArray(Arrays.copyOf(schedule,sessions))).put("budget_ms",budget)
-            .put("meta_arm",args.getString("metaArm","CURRENT")).put("meta_memory_integration",integrated).put("first_step_cost_experiment",firstStepCost).put("speed_ab_experiment",speedAb).put("scheduled_arm_orders",orders).put("arm_order_scheme","deterministic_rotation_and_reversal_not_random")
+            .put("meta_arm",args.getString("metaArm","CURRENT")).put("meta_memory_integration",integrated).put("first_step_cost_experiment",firstStepCost).put("speed_ab_experiment",speedAb).put("configured_experiment",configured).put("arm_speed",args.getString("armSpeed","")).put("arm_learning",args.getString("armLearning","")).put("scheduled_arm_orders",orders).put("arm_order_scheme","deterministic_rotation_and_reversal_not_random")
             .put("memory_isolation","per_arm_device_store_and_facade_store").put("simulated_user","confirms_only_after_independent_oracle_700ms")
             .put("task_selection_frozen_before_run",true).toString(2),false);
         if(Boolean.parseBoolean(args.getString("clearOutput","true")))write("episodes.jsonl","",false);
@@ -167,6 +174,21 @@ public class MemoryDeviceExperimentTest {
         Assert.assertEquals(tasks.size()*sessions*arms.size(),count);
     }
 
+    /** configuredExperiment: -e armSpeed A:PRODUCTION,B:ALL (NONE, PRODUCTION, PRODUCTION_NO_RETRY, ALL). */
+    private AppTaskController.SpeedOptions speedFor(String arm){
+        for(String part:args.getString("armSpeed","").split(",")){String[] kv=part.split(":");if(kv.length!=2||!kv[0].equals(arm))continue;
+            switch(kv[1]){case "NONE":return AppTaskController.SpeedOptions.NONE;case "PRODUCTION":return AppTaskController.SpeedOptions.PRODUCTION;
+                case "ALL":return AppTaskController.SpeedOptions.ALL;
+                case "PRODUCTION_NO_RETRY":{AppTaskController.SpeedOptions p=AppTaskController.SpeedOptions.PRODUCTION;
+                    return new AppTaskController.SpeedOptions(p.memoryBeforeCompletion,p.rememberedCompletion,p.reofferPrediction,p.rebindChangedFrame,p.plannedRoute,false);}
+                default:throw new AssertionError("Unknown speed "+kv[1]);}}
+        return null;
+    }
+    /** configuredExperiment: -e armLearning A:false,B:true (default false). */
+    private boolean armLearning(String arm){
+        for(String part:args.getString("armLearning","").split(",")){String[] kv=part.split(":");if(kv.length==2&&kv[0].equals(arm))return Boolean.parseBoolean(kv[1]);}
+        return false;
+    }
     private static List<String> order(List<String> arms,int index){
         List<String> order=new ArrayList<>(arms);Collections.rotate(order,-(index%order.size()));
         if((index/order.size())%2!=0)Collections.reverse(order);return order;
@@ -303,10 +325,12 @@ public class MemoryDeviceExperimentTest {
         void create(){try{
             memory=new AppTaskMemory(goal);runtimeTaskId=memory.id();
             boolean speedAb=Boolean.parseBoolean(args.getString("speedAbExperiment","false"));
-            boolean learning=!speedAb&&!"A".equals(arm);
+            boolean configured=Boolean.parseBoolean(args.getString("configuredExperiment","false"));
+            boolean learning=configured?armLearning(arm):!speedAb&&!"A".equals(arm);
             AppTaskMetaController.Arm meta=AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT"));
             // Speed A/B: A,B = every device speed path off (B differs only by server triage); C = production paths.
-            controller=speedAb?new AppTaskController(new AppGuideGateway(app),memory,null,this,true,false,true,meta,true,"C".equals(arm)?AppTaskController.SpeedOptions.PRODUCTION:AppTaskController.SpeedOptions.NONE)
+            controller=configured?new AppTaskController(new AppGuideGateway(app),memory,learning?store:null,this,true,learning,true,meta,true,speedFor(arm))
+                :speedAb?new AppTaskController(new AppGuideGateway(app),memory,null,this,true,false,true,meta,true,"C".equals(arm)?AppTaskController.SpeedOptions.PRODUCTION:AppTaskController.SpeedOptions.NONE)
                 :new AppTaskController(new AppGuideGateway(app),memory,learning?store:null,this,true,learning,true,meta,true,firstStep);
         }catch(Exception failed){error=failed.getClass().getSimpleName();}}
         void start(){try{

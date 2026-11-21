@@ -1,0 +1,12 @@
+{
+ "B": {
+  "provider": "gemini",
+  "triage": true,
+  "memory": true
+ },
+ "C": {
+  "provider": "gemini",
+  "triage": true,
+  "memory": true
+ }
+}
