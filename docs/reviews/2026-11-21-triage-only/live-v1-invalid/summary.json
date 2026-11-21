@@ -1,0 +1,367 @@
+{
+  "B": {
+    "all": {
+      "episodes": 18,
+      "goal_observed": 14,
+      "runtime_verified": 11,
+      "false_verified": 3,
+      "setup_failures": 0,
+      "model_calls": 30,
+      "mean_elapsed_ms": 9145,
+      "verified_after_goal_ms": [
+        0,
+        0,
+        339,
+        4294,
+        4381,
+        4956,
+        5173,
+        5330
+      ],
+      "proposals_by_source": {
+        "planner_model": 18
+      },
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 14
+    },
+    "learn": {
+      "episodes": 0,
+      "goal_observed": 0,
+      "runtime_verified": 0,
+      "false_verified": 0,
+      "setup_failures": 0,
+      "model_calls": 0,
+      "mean_elapsed_ms": null,
+      "verified_after_goal_ms": [],
+      "proposals_by_source": {},
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 0
+    },
+    "eval": {
+      "episodes": 0,
+      "goal_observed": 0,
+      "runtime_verified": 0,
+      "false_verified": 0,
+      "setup_failures": 0,
+      "model_calls": 0,
+      "mean_elapsed_ms": null,
+      "verified_after_goal_ms": [],
+      "proposals_by_source": {},
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 0
+    },
+    "by_task": {
+      "chrome_menu": {
+        "episodes": 3,
+        "goal_observed": 3,
+        "runtime_verified": 0,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 6,
+        "mean_elapsed_ms": 6215,
+        "verified_after_goal_ms": [],
+        "proposals_by_source": {
+          "planner_model": 3
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 3
+      },
+      "chrome_new_tab": {
+        "episodes": 3,
+        "goal_observed": 3,
+        "runtime_verified": 0,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 3,
+        "mean_elapsed_ms": 6942,
+        "verified_after_goal_ms": [],
+        "proposals_by_source": {
+          "planner_model": 3
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 3
+      },
+      "settings_display": {
+        "episodes": 3,
+        "goal_observed": 2,
+        "runtime_verified": 2,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 5,
+        "mean_elapsed_ms": 13230,
+        "verified_after_goal_ms": [
+          4294,
+          5173
+        ],
+        "proposals_by_source": {
+          "planner_model": 2
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 2
+      },
+      "settings_notifications": {
+        "episodes": 3,
+        "goal_observed": 3,
+        "runtime_verified": 3,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 6,
+        "mean_elapsed_ms": 6476,
+        "verified_after_goal_ms": [
+          4381,
+          4956,
+          5330
+        ],
+        "proposals_by_source": {
+          "planner_model": 3
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 3
+      },
+      "settings_sound": {
+        "episodes": 3,
+        "goal_observed": 0,
+        "runtime_verified": 3,
+        "false_verified": 3,
+        "setup_failures": 0,
+        "model_calls": 7,
+        "mean_elapsed_ms": 14471,
+        "verified_after_goal_ms": [],
+        "proposals_by_source": {
+          "planner_model": 4
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 0
+      },
+      "youtube_subscriptions": {
+        "episodes": 3,
+        "goal_observed": 3,
+        "runtime_verified": 3,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 3,
+        "mean_elapsed_ms": 7537,
+        "verified_after_goal_ms": [
+          0,
+          0,
+          339
+        ],
+        "proposals_by_source": {
+          "planner_model": 3
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 3
+      }
+    },
+    "server": {
+      "requests": 30,
+      "model_calls": 30,
+      "provider_errors": 1,
+      "completion_triage": 0,
+      "completion_bound": 12,
+      "input_tokens": 40953,
+      "output_tokens": 3044,
+      "calls_with_usage": 29,
+      "planning_modes": {
+        "goal_first": 20,
+        "result_only": 10
+      }
+    },
+    "recall": {
+      "needs_data": 38,
+      "remembered": 4
+    }
+  },
+  "C": {
+    "all": {
+      "episodes": 18,
+      "goal_observed": 15,
+      "runtime_verified": 10,
+      "false_verified": 2,
+      "setup_failures": 0,
+      "model_calls": 20,
+      "mean_elapsed_ms": 7524,
+      "verified_after_goal_ms": [
+        0,
+        0,
+        1,
+        466,
+        476,
+        530,
+        720,
+        722
+      ],
+      "proposals_by_source": {
+        "planner_model": 19
+      },
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 15
+    },
+    "learn": {
+      "episodes": 0,
+      "goal_observed": 0,
+      "runtime_verified": 0,
+      "false_verified": 0,
+      "setup_failures": 0,
+      "model_calls": 0,
+      "mean_elapsed_ms": null,
+      "verified_after_goal_ms": [],
+      "proposals_by_source": {},
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 0
+    },
+    "eval": {
+      "episodes": 0,
+      "goal_observed": 0,
+      "runtime_verified": 0,
+      "false_verified": 0,
+      "setup_failures": 0,
+      "model_calls": 0,
+      "mean_elapsed_ms": null,
+      "verified_after_goal_ms": [],
+      "proposals_by_source": {},
+      "changed_frame_discards": 0,
+      "changed_frame_rebinds": 0,
+      "memory_ingested": 0
+    },
+    "by_task": {
+      "chrome_menu": {
+        "episodes": 3,
+        "goal_observed": 3,
+        "runtime_verified": 0,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 4,
+        "mean_elapsed_ms": 6662,
+        "verified_after_goal_ms": [],
+        "proposals_by_source": {
+          "planner_model": 3
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 3
+      },
+      "chrome_new_tab": {
+        "episodes": 3,
+        "goal_observed": 3,
+        "runtime_verified": 0,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 3,
+        "mean_elapsed_ms": 7785,
+        "verified_after_goal_ms": [],
+        "proposals_by_source": {
+          "planner_model": 3
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 3
+      },
+      "settings_display": {
+        "episodes": 3,
+        "goal_observed": 3,
+        "runtime_verified": 3,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 3,
+        "mean_elapsed_ms": 7007,
+        "verified_after_goal_ms": [
+          466,
+          476,
+          530
+        ],
+        "proposals_by_source": {
+          "planner_model": 3
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 3
+      },
+      "settings_notifications": {
+        "episodes": 3,
+        "goal_observed": 3,
+        "runtime_verified": 2,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 4,
+        "mean_elapsed_ms": 9044,
+        "verified_after_goal_ms": [
+          720,
+          722
+        ],
+        "proposals_by_source": {
+          "planner_model": 4
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 3
+      },
+      "settings_sound": {
+        "episodes": 3,
+        "goal_observed": 0,
+        "runtime_verified": 2,
+        "false_verified": 2,
+        "setup_failures": 0,
+        "model_calls": 3,
+        "mean_elapsed_ms": 7167,
+        "verified_after_goal_ms": [],
+        "proposals_by_source": {
+          "planner_model": 3
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 0
+      },
+      "youtube_subscriptions": {
+        "episodes": 3,
+        "goal_observed": 3,
+        "runtime_verified": 3,
+        "false_verified": 0,
+        "setup_failures": 0,
+        "model_calls": 3,
+        "mean_elapsed_ms": 7481,
+        "verified_after_goal_ms": [
+          0,
+          0,
+          1
+        ],
+        "proposals_by_source": {
+          "planner_model": 3
+        },
+        "changed_frame_discards": 0,
+        "changed_frame_rebinds": 0,
+        "memory_ingested": 3
+      }
+    },
+    "server": {
+      "requests": 31,
+      "model_calls": 22,
+      "provider_errors": 2,
+      "completion_triage": 9,
+      "completion_bound": 15,
+      "input_tokens": 32447,
+      "output_tokens": 2937,
+      "calls_with_usage": 20,
+      "planning_modes": {
+        "goal_first": 19,
+        "completion_triage": 9,
+        "result_only": 3
+      }
+    },
+    "recall": {
+      "needs_data": 42,
+      "remembered": 4
+    }
+  }
+}

@@ -212,8 +212,12 @@ class AppTaskService:
             if triaged is not None:
                 response.status='confirm_result';response.completion=triaged
                 response.message='요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.'
+                response.active_subgoal=pending[0].id if pending else None
                 response.diagnostic={'called':False,'failure_stage':'none','reason_code':'completion_triage',
                     'planning_mode':'completion_triage',**execution_diagnostic}
+                # Same read-only contract as a model's goal_first 'satisfied' answer: the device
+                # rejects a goal_first response without an assessment.
+                if goal_first:response.diagnostic['goal_assessment']='satisfied'
                 return response
         diagnostic={'called':False,'failure_stage':'none','planning_mode':'result_only' if result_only else 'goal_first' if goal_first else 'next_action',**execution_diagnostic}
         response.diagnostic=diagnostic

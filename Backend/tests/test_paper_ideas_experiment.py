@@ -122,3 +122,14 @@ def test_m3_replayed_expectation_no_longer_splits_support_only_when_enabled():
     assert ground(req, memories).action is None  # two competing groups of two
     merged = ground(req, memories, merge_visible_expectation=True)
     assert merged.status == 'remembered' and merged.action.target_id == 'n0'
+
+
+@pytest.mark.parametrize('mode', ['goal_first', 'next_action'])
+def test_triage_answers_with_the_read_only_contract_the_device_validates(mode):
+    req = arrived(TITLE, MENU)
+    req.state.subgoals = [TaskSubgoal(id='g0', title='설정 열기', status='verified'), TaskSubgoal(id='g1', title='디스플레이 열기')]
+    req.planning_mode = mode
+    result = AppTaskService(sender()).step(req, completion_triage=True)
+    assert result.status == 'confirm_result' and result.action is None and result.completion is not None
+    assert result.subgoals == req.state.subgoals and result.active_subgoal == 'g1'
+    assert result.diagnostic.get('goal_assessment') == ('satisfied' if mode == 'goal_first' else None)
