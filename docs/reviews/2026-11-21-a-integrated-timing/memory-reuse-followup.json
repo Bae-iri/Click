@@ -1,0 +1,20 @@
+{
+  "schema_version": "click.memory-reuse-followup.v1",
+  "applied_after_primary_cohort_closed": true,
+  "separate_from_24_timing_results": true,
+  "model_calls": 0,
+  "baseline_source_commit": "0ee53cf98b36ccd1d3e59640432e3f1c1beb0421",
+  "fixed_source_commit": "f68df38032d1fd124809b822a18b2fc893344c4e",
+  "related_tests_passed": 132,
+  "related_failures": 0,
+  "related_errors": 0,
+  "baseline_new_regressions_failed": 3,
+  "baseline_new_regressions_passed": 5,
+  "repeated_successful_replays": 7,
+  "production_policy": "CURRENT unchanged; firstStepMemory opt-in remainsfalse; Gemini completion default unchanged",
+  "source_sha256": {
+    "Backend/app/services/app_task_experience.py": "47a5410d76217efc1a036d25ffa7607a26897d59026237007a8c6ef617f63f0d",
+    "Backend/tests/test_app_task_memory_replay_identity.py": "26ff1da1ae3aba504c812a26be5911d1ee56b2bff51a10a583620c4facad6c6d"
+  },
+  "limits": "Deterministic real-analyzer replay verifiescontinuedreuse andsafety; no newnative/live latency or billed-cost improvement asserted."
+}
