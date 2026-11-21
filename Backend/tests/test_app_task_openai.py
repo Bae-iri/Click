@@ -29,6 +29,8 @@ def gpt(monkeypatch):
 
 @pytest.mark.parametrize('mode', ['goal_first', 'result_only'])
 def test_one_openai_response_retains_native_evidence_and_metering(monkeypatch, mode):
+    # The Qwen first-menu experiment must leave non-menu planning and result checks on GPT.
+    monkeypatch.setenv('APP_TASK_OPENROUTER_SHORT_MENU', '1')
     req = current_goal(planned=False)
     req.planning_mode = mode
     result = answer(req)
@@ -84,6 +86,8 @@ def test_incomplete_refused_or_ambiguous_reply_cannot_propose_an_action(body):
 
 @pytest.mark.parametrize('provider,model,key,url,headers', [
     ('openai','gpt-6.2-sol','test-openai',openai_responses.ENDPOINT,{'Authorization':'Bearer test-openai'}),
+    ('openrouter', openai_responses.QWEN_FLASH_MODEL, 'test-router', openai_responses.OPENROUTER_ENDPOINT,
+     {'Authorization': 'Bearer test-router'}),
     ('local',app_task_provider.LOCAL_MODEL,'',app_task_provider.LOCAL_RESPONSES_URL,{}),
 ])
 def test_worker_posts_to_the_correct_endpoint(monkeypatch, provider, model, key, url, headers):
@@ -96,6 +100,29 @@ def test_worker_posts_to_the_correct_endpoint(monkeypatch, provider, model, key,
     monkeypatch.setattr(app_task_provider.httpx, 'HTTPTransport', Mock())
     app_task_provider._provider_worker(Mock(), model, key, b'{}', monotonic()+2, provider)
     client.stream.assert_called_once_with('POST', url, headers={**headers,'Content-Type':'application/json'}, content=b'{}')
+
+
+def test_openrouter_uses_its_own_key_and_reports_round_trip(monkeypatch):
+    monkeypatch.setenv('APP_TASK_PROVIDER', 'openrouter')
+    monkeypatch.delenv('OPENROUTER_API_KEY', raising=False)
+    req = current_goal()
+    transport = Mock()
+    monkeypatch.setattr('app.services.app_task.generate', transport)
+    assert AppTaskService().step(req).diagnostic['reason_code'] == 'missing_api_key'
+    transport.assert_not_called()
+
+    monkeypatch.setenv('OPENROUTER_API_KEY', 'test-router')
+    data = {'status': 'completed', 'output': [message(json.dumps(answer(req)))]}
+    transport.return_value = app_task_provider.ProviderResponse(
+        200, json.dumps(data).encode(), 42.0, http_round_trip_ms=31.0)
+    result = AppTaskService().step(req)
+    model, key, payload = transport.call_args.args
+    assert (model, key, transport.call_args.kwargs['provider']) == (
+        openai_responses.QWEN_FLASH_MODEL, 'test-router', 'openrouter')
+    assert payload['reasoning'] == {'effort': 'none'}
+    assert payload['text']['format']['strict'] and payload['model'] == model
+    assert result.diagnostic['http_round_trip_ms'] == 31.0
+    assert result.status == 'confirm_result' and result.completion
 
 
 def test_local_completion_never_invokes_a_cloud_provider(monkeypatch):
@@ -133,11 +160,14 @@ def test_provider_and_model_must_match_before_a_worker_starts(provider, model, p
     ('none', 'needs_input'),
     ('another', 'unavailable'),
 ])
-def test_local_menu_only_proposes_a_grounded_button(monkeypatch, choice, expected_status):
+@pytest.mark.parametrize('provider', ['local', 'openrouter', 'openai'])
+def test_short_menu_only_proposes_a_grounded_button(monkeypatch, provider, choice, expected_status):
     from app.schemas.app_task import TaskApp
     from tests.test_app_task import request
 
-    monkeypatch.setenv('APP_TASK_PROVIDER', 'local')
+    monkeypatch.setenv('APP_TASK_PROVIDER', provider)
+    monkeypatch.setenv('OPENROUTER_API_KEY', 'test-router')
+    monkeypatch.setenv('APP_TASK_OPENROUTER_SHORT_MENU', '1')
     req = request()
     req.goal = '검색 화면을 열어줘'
     req.planning_mode = 'goal_first'
@@ -150,7 +180,11 @@ def test_local_menu_only_proposes_a_grounded_button(monkeypatch, choice, expecte
 
     transport.assert_called_once()
     model, key, payload = transport.call_args.args
-    assert (model, key, transport.call_args.kwargs['provider']) == (app_task_provider.LOCAL_MODEL, '', 'local')
+    expected_model, expected_key = ((app_task_provider.LOCAL_MODEL, '') if provider == 'local'
+                                    else (openai_responses.QWEN_FLASH_MODEL, 'test-router'))
+    assert (model, key) == (expected_model, expected_key)
+    assert transport.call_args.kwargs['provider'] == ('local' if provider == 'local' else 'openrouter')
+    assert payload['model'] == model
     schema = payload['text']['format']['schema']
     assert schema['properties']['choice']['enum'] == ['c0', 'none']
     assert payload['max_output_tokens'] == 32
