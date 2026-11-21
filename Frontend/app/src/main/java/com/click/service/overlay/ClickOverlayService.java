@@ -186,6 +186,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private int assistedRecoveryGeneration = -1, recoveryApologyGeneration = -1;
     private ScreenSnapshot targetHelpScreen;
     private boolean appIconGuide;
+    private AccessibilityNodeSnapshot appIconGuideNode;
+    private LauncherAppSearch settingsEntrySearch;
+    private String settingsEntrySearchScope;
+    private boolean settingsEntrySearchExhausted, settingsNavigationUnavailable;
     private com.click.data.snapshot.CoupangScreenGuide coupangNativeGuide;
     private WindowManager.LayoutParams taskFlowParams;
     private Runnable resultTimeout;
@@ -3959,6 +3963,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         navigationRecovery.clear();
         homeSearchRestart = false;
         if ("cancel_task".equals(commandType) || "pause_task".equals(commandType)) execution.pause();
+        if (settingsEntrySearch != null && ("pause_task".equals(commandType) || "cancel_task".equals(commandType)))
+            settingsEntrySearch.pause();
         clearVisionState(); actionTracker.clear(); pendingVerifiedAction = null;
         hideConfirmation(); hideGuideOverlay();
         if (resultTimeout != null) speechHandler.removeCallbacks(resultTimeout);
@@ -3976,23 +3982,31 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private AccessibilityNodeSnapshot settingsIconTarget(ScreenSnapshot snapshot) {
-        if (snapshot == null || !NavigationRecovery.isHomeScreen(snapshot)) return null;
-        AccessibilityNodeSnapshot selected = null;
-        for (AccessibilityNodeSnapshot node : snapshot.nodes) {
-            if (!node.visibleToUser || !node.enabled || node.sensitiveInput
-                    || !snapshot.packageName.equals(node.packageName)
-                    || node.bounds == null || node.bounds.length != 4
-                    || node.bounds[2] <= 0 || node.bounds[3] <= 0
-                    || node.bounds[0] >= snapshot.screenWidth || node.bounds[1] >= snapshot.screenHeight
-                    || node.bounds[0] >= node.bounds[2] || node.bounds[1] >= node.bounds[3]) continue;
-            if (!(containsSettingsLabel(node.text) || containsSettingsLabel(node.contentDescription))) continue;
-            AccessibilityNodeSnapshot target=com.click.service.accessibility.TouchAutomationPolicy.clickableTarget(snapshot,node.nodeId,node.bounds);
-            if(target==null)continue;
-            if(selected!=null && (!selected.nodeId.equals(target.nodeId)
-                    || selected.windowId!=target.windowId || !java.util.Arrays.equals(selected.bounds,target.bounds)))return null;
-            selected=target;
+        if (snapshot == null) return null;
+        if ("com.android.systemui".equals(snapshot.packageName)) return settingsPanelTarget(snapshot);
+        if (!NavigationRecovery.isHomeScreen(snapshot)) return null;
+        return homeIconTarget(snapshot, this::containsSettingsLabel);
+    }
+
+    /** Only the actual System UI gear, never notification text that happens to say Settings. */
+    private AccessibilityNodeSnapshot settingsPanelTarget(ScreenSnapshot screen) {
+        if (screen.activeWindowId == null || !screen.privacyMaskingReady || screen.windowContext.keyboardVisible()) return null;
+        AccessibilityNodeSnapshot found = null;
+        for (var node : screen.nodes) {
+            if (!node.visibleToUser || !node.enabled || !node.clickable || node.sensitiveInput || node.checkable
+                    || node.scrollable || node.progress != null || !screen.packageName.equals(node.packageName)
+                    || node.windowId != screen.activeWindowId || node.resourceId == null
+                    || !java.util.Set.of("com.android.systemui:id/settings_button", "com.android.systemui:id/settings")
+                            .contains(node.resourceId)
+                    || !(containsSettingsLabel(node.text) || containsSettingsLabel(node.contentDescription)
+                        || "설정 열기".equals(node.contentDescription) || "Open settings".equalsIgnoreCase(node.contentDescription))
+                    || node.bounds == null || node.bounds.length != 4 || node.bounds[0] < 0 || node.bounds[1] < 0
+                    || node.bounds[2] > screen.screenWidth || node.bounds[3] > screen.screenHeight
+                    || node.bounds[2] <= node.bounds[0] || node.bounds[3] <= node.bounds[1]) continue;
+            if (found != null) return null;
+            found = node;
         }
-        return selected;
+        return found;
     }
 
     /** Native, user-activated app navigation; not a fabricated Jev choice or auto tap. */
@@ -4000,7 +4014,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         if(!hasConfirmedGoal() || execution.acceptedGoal()==null || !"android_settings".equals(execution.acceptedGoal().optString("target_app")))return false;
         AccessibilityNodeSnapshot target=settingsIconTarget(screen);
         if(target==null)return false;
-        showAppIconGuide(screen,target,"설정");
+        if (settingsEntrySearch != null) settingsEntrySearch.pause();
+        if ("com.android.systemui".equals(screen.packageName))
+            showNativeEntryGuide(screen,target,"표시한 설정 버튼을 눌러주세요.");
+        else showAppIconGuide(screen,target,"설정");
         return true;
     }
 
@@ -4070,10 +4087,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void showAppIconGuide(ScreenSnapshot screen,AccessibilityNodeSnapshot target,String app) {
+        showNativeEntryGuide(screen, target, "표시한 " + app + " 앱을 눌러주세요.");
+    }
+
+    private void showNativeEntryGuide(ScreenSnapshot screen,AccessibilityNodeSnapshot target,String message) {
+        ++settingsEntryPresentation;
         ensureTaskFlow();hideConfirmation();stopNarration();guideStepTimer.clear();actionTracker.clear();automationGuard.interrupt();
         clearTargetHelpWait();targetHelpGeneration=execution.generation();targetHelpScreen=screen;appIconGuide=true;
+        appIconGuideNode=target;
         clearMissingScreenWait();execution.clearObservation();execution.retry();
-        String message="표시한 "+app+" 앱을 눌러주세요.";
         taskFlowView.progress(initialGoal,null,message,false);taskFlowView.setAutomaticProgress(false);
         showGuideOverlay(target.bounds,"tap",0);nativeGuideScreen=screen;
         placeTaskFlow(target.bounds,false);
@@ -4133,12 +4155,49 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private long settingsEntryPresentation;
 
+    private void bindSettingsEntrySearch() {
+        String scope = activeVoiceRequestId != null ? activeVoiceRequestId : execution.sessionId();
+        if (java.util.Objects.equals(scope, settingsEntrySearchScope)) return;
+        settingsEntrySearchScope = scope;
+        settingsEntrySearch = null;
+        settingsEntrySearchExhausted = settingsNavigationUnavailable = false;
+    }
+
     private void showSettingsEntryRecovery() { showSettingsEntryRecovery(null); }
 
     private void showSettingsEntryRecovery(String failure) {
+        if (closing || execution.paused() || execution.pendingControl() != null) return;
+        ++settingsEntryPresentation;
+        bindSettingsEntrySearch();
         ScreenSnapshot entryScreen = ClickAccessibilityService.freshSnapshot();
         if(requestRingtoneResult(entryScreen)||requestChangedAdjustmentResult(entryScreen))return;
         if (recoverObservedSettingsPage(entryScreen) || recoverSettingsBack(entryScreen)) return;
+        if (entryScreen != null && com.click.data.snapshot.SettingsCapabilities.settingsPackage(entryScreen.packageName)
+                && screenEnvironment(entryScreen).kind() == ScreenEnvironment.Kind.DIALOG) {
+            execution.recovery();
+            showNavigationRecovery(navigationRecovery.recommendBackFrom(entryScreen), entryScreen);
+            return;
+        }
+        if (showSettingsIconGuide(entryScreen)) return;
+        if (entryScreen == null || entryScreen.nodes.isEmpty() || getPackageName().equals(entryScreen.packageName)) {
+            ensureTaskFlow(); execution.retry(); waitForFreshGuide(); return;
+        }
+        if (NavigationRecovery.isHomeScreen(entryScreen)) {
+            if (!settingsEntrySearchExhausted && startSettingsEntrySearch(entryScreen)) return;
+            if (!settingsEntrySearchExhausted) {
+                ensureTaskFlow(); execution.retry(); waitForFreshGuide(); return;
+            }
+        } else if (com.click.data.snapshot.SettingsCapabilities.settingsPackage(entryScreen.packageName)) {
+            // Being inside Settings is not a reason to restart it with an Intent.
+            ensureTaskFlow(); execution.retry(); waitForFreshGuide(); return;
+        } else if (!settingsNavigationUnavailable) {
+            execution.recovery();
+            NavigationRecovery.Action action = navigationRecovery.hint();
+            if (action == NavigationRecovery.Action.NONE) action = navigationRecovery.recommend(entryScreen);
+            if (action == NavigationRecovery.Action.HOME) navigationRecovery.forceHome();
+            showNavigationRecovery(action);
+            return;
+        }
         guideStepTimer.clear(); actionTracker.clear(); automationGuard.interrupt();
         clearVisionState();agentConfirmationId=null;confirmationExpiresAt=0;
         automaticAdjustmentApprovalPending=false;
@@ -4150,13 +4209,18 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         final String session=execution.sessionId();
         execution.recovery();
         taskFlowView.setAutomaticProgress(false);
-        String message=failure==null ? "‘설정 열기’를 눌러주세요." : failure;
+        String message=failure==null ? "화면에서 설정 앱을 찾지 못했어요. 마지막 방법으로 ‘설정 열기’를 사용할 수 있어요." : failure;
         Runnable open=()->{
             if(presentation!=settingsEntryPresentation || generation!=execution.generation()
                     || !java.util.Objects.equals(session,execution.sessionId()) || closing
                     || execution.paused() || execution.pendingControl()!=null)return;
             ScreenSnapshot latest = ClickAccessibilityService.freshSnapshot();
+            if (showSettingsIconGuide(latest)) return;
             if (recoverObservedSettingsPage(latest) || recoverSettingsBack(latest)) return;
+            if (latest != null && (com.click.data.snapshot.SettingsCapabilities.settingsPackage(latest.packageName)
+                    || NavigationRecovery.isHomeScreen(latest) && !settingsEntrySearchExhausted)) {
+                showSettingsEntryRecovery(); return;
+            }
             try {
                 startActivity(new Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             } catch(RuntimeException unavailable) {
@@ -4548,9 +4612,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             handleVisionFallback(command, visionFallback);
             return;
         }
-        // Older servers may omit open-settings recovery on a primary-model wait.
-        // Offer the same user-activated OS entry after their bounded retries;
-        // never turn a model abstention into an automatic icon tap.
+        // Older servers may omit app-entry recovery on a primary-model wait.
+        // Continue native navigation and launcher exploration before the final OS shortcut.
         if (canOfferSettingsEntry(response, displayedSnapshot)) {
             if (present) {
                 hideConfirmation(); hideGuideOverlay();
@@ -4764,9 +4827,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 navigationRecovery.forceHome();
                 showSettingsEntryRecovery();
             } else if (action == NavigationRecovery.Action.HOME && navigationRecovery.awaiting() == action) {
+                bindSettingsEntrySearch();
+                settingsNavigationUnavailable = true;
                 navigationRecovery.forceHome();
                 showSettingsEntryRecovery();
-                automationNeedsHelp("홈 화면을 아직 확인하지 못했어요. 휴대폰의 홈 버튼이나 제스처를 사용해 주세요.");
             }
         }, 2500L);
     }
@@ -4776,6 +4840,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void showNavigationRecovery(NavigationRecovery.Action action,ScreenSnapshot recoveryScreen) {
+        ++settingsEntryPresentation;
         guideStepTimer.clear(); actionTracker.clear();
         hideGuideOverlay(); hideConfirmation();
         ensureTaskFlow();
@@ -4798,6 +4863,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             requestRecoveryNavigation(action, current, false);
             if (!ClickAccessibilityService.performRecoveryNavigation(back)) {
+                if (!back) {
+                    bindSettingsEntrySearch(); settingsNavigationUnavailable = true;
+                    showSettingsEntryRecovery(); return;
+                }
                 automationNeedsHelp("이동하지 못했어요. 휴대폰의 뒤로가기·홈 버튼이나 제스처를 사용해 주세요.");
             }
         });
@@ -5138,6 +5207,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         recoveryApologyGeneration = -1;
         targetHelpScreen = null;
         appIconGuide = false;
+        appIconGuideNode = null;
         coupangNativeGuide = null;
     }
 
@@ -5226,7 +5296,19 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         String reason=offRoute?(kind==com.click.data.snapshot.ScreenEnvironment.Kind.CONTROL_SURFACE?"SYSTEM_PANEL_VISIBLE":"SETTINGS_OFF_PATH"):scene.reason();
         String key=reason+"|"+(current==null?"":current.packageName)+"|"+(current==null?"":current.activeWindowId);
         if(offRoute)key+="|"+com.click.data.snapshot.ScreenIdentity.pageTitle(current);
-        if(key.equals(environmentWaitKey))return true;
+        if(key.equals(environmentWaitKey)) {
+            if (kind == com.click.data.snapshot.ScreenEnvironment.Kind.SYSTEM_PANEL) {
+                var gear = settingsIconTarget(current);
+                if (gear != null) {
+                    if (!appIconGuide) showSettingsIconGuide(current);
+                    else { showGuideOverlay(gear.bounds,"tap",0); nativeGuideScreen=current; }
+                } else if (appIconGuide) {
+                    hideGuideOverlay(); clearTargetHelpWait();
+                    navigationRecovery.offPathPage(current); showSettingsEntryRecovery();
+                }
+            }
+            return true;
+        }
         if(!(kind == com.click.data.snapshot.ScreenEnvironment.Kind.SENSITIVE
                 ? execution.sensitiveEnvironmentBlocked() : execution.environmentBlocked()))return true;
         environmentWait=scene;environmentWaitKey=key;
@@ -5433,7 +5515,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             }
             hideGuideOverlay();
         } else if(wasAppIcon) {
-            AccessibilityNodeSnapshot previous=appIconTarget(targetHelpScreen),visible=appIconTarget(current);
+            AccessibilityNodeSnapshot previous=appIconGuideNode,visible=appIconTarget(current);
+            if (visible == null) for (var node : current.nodes) if (previous != null && node.visibleToUser && node.enabled && !node.sensitiveInput
+                    && current.activeWindowId != null && node.windowId == current.activeWindowId
+                    && java.util.Objects.equals(current.packageName,node.packageName)
+                    && java.util.Objects.equals(previous.nodeId,node.nodeId)
+                    && java.util.Objects.equals(previous.resourceId,node.resourceId)
+                    && java.util.Objects.equals(previous.text,node.text)
+                    && java.util.Objects.equals(previous.contentDescription,node.contentDescription)
+                    && java.util.Objects.equals(previous.className,node.className)) visible=node;
             if(previous!=null && visible!=null && java.util.Objects.equals(targetHelpScreen.activeWindowId,current.activeWindowId)
                     && previous.nodeId.equals(visible.nodeId) && java.util.Arrays.equals(previous.bounds,visible.bounds)) {
                 showGuideOverlay(visible.bounds,"tap",0);nativeGuideScreen=current;
@@ -5689,6 +5779,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     /** Navigation searches do not authorize taps or setting changes. Keep the logo visible. */
     private boolean startAutomaticHomeSearch(ScreenSnapshot expected) {
         if (expected.activeWindowId == null || expected.nodes.isEmpty()) return false;
+        if (execution.acceptedGoal() != null && "android_settings".equals(execution.acceptedGoal().optString("target_app")))
+            return startSettingsEntrySearch(expected);
         com.click.data.snapshot.NavigationState frame = navigationFrame(expected);
         // Node paths/window IDs can change during paging. They must not reset
         // the search budget; each gesture still validates its actual window.
@@ -5735,6 +5827,71 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 execution.requestObservation();
                 sendAgentTurn(null, true);
             }, moved ? 700L : 250L);
+        }, 200L);
+        return true;
+    }
+
+    /** Explore the actual app drawer and pages before offering an Intent shortcut. */
+    private boolean startSettingsEntrySearch(ScreenSnapshot expected) {
+        bindSettingsEntrySearch();
+        if (waitingForTargetHelp() || scrollSearchGeneration == execution.generation()) return true;
+        if (closing || execution.paused() || execution.pendingControl() != null || execution.sessionId() == null) return true;
+        if (execution.manual() || resultPrompt != null || followUp != null || endingTask || waitingForCompletedEnd) return true;
+        if (!LauncherAppSearch.safe(expected) || expected.nodes.isEmpty()) return false;
+        if (settingsEntrySearchExhausted) { showSettingsEntryRecovery(); return true; }
+        var names = launcherLabels("com.android.settings");
+        names.add("설정"); names.add("Settings");
+        if (settingsEntrySearch == null) settingsEntrySearch = new LauncherAppSearch(names);
+        settingsEntrySearch.resume();
+        var step = settingsEntrySearch.next(expected);
+        android.util.Log.i("ClickScroll", "settings_entry_search action=" + step.kind() + " reason=" + step.reason());
+        if (step.kind() == LauncherAppSearch.Kind.TAP_APP) return showSettingsIconGuide(expected);
+        if (step.kind() == LauncherAppSearch.Kind.TAP_FOLDER
+                || step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER && step.target() != null) {
+            settingsEntrySearch.pause();
+            showNativeEntryGuide(expected, step.target(), step.kind() == LauncherAppSearch.Kind.TAP_FOLDER
+                    ? "설정 앱이 들어 있는 표시한 폴더를 눌러주세요." : "표시한 앱 목록 버튼을 눌러주세요.");
+            return true;
+        }
+        if (step.kind() == LauncherAppSearch.Kind.FINISHED) {
+            settingsEntrySearchExhausted = true;
+            showSettingsEntryRecovery(); return true;
+        }
+        ensureTaskFlow(); hideConfirmation(); hideGuideOverlay(); stopNarration();
+        execution.retry();
+        taskFlowView.waitingProgress(step.kind() == LauncherAppSearch.Kind.OPEN_DRAWER
+                ? "앱 목록에서 설정 앱을 찾고 있어요." : "설정 앱을 찾기 위해 화면을 살펴보고 있어요.");
+        taskFlowView.setAutomaticProgress(false);
+        updateFloatingVisibility(); placeTaskFlow(null, false);
+        final int generation = execution.generation(), token = ++homeSearchToken;
+        final String session = execution.sessionId();
+        scrollSearchGeneration = generation;
+        speechHandler.postDelayed(() -> {
+            if (generation != execution.generation() || token != homeSearchToken || closing || execution.paused()
+                    || execution.pendingControl() != null || resultPrompt != null || followUp != null || execution.manual()
+                    || !java.util.Objects.equals(session, execution.sessionId())) {
+                if (token == homeSearchToken && scrollSearchGeneration == generation) scrollSearchGeneration = -1;
+                return;
+            }
+            ScreenSnapshot observed = ClickAccessibilityService.freshSnapshot();
+            boolean eligible = LauncherAppSearch.safe(observed) && expected.packageName.equals(observed.packageName)
+                    && java.util.Objects.equals(expected.activeWindowId, observed.activeWindowId) && !hasSettingsTarget(observed);
+            boolean dispatched = eligible && step.kind() != LauncherAppSearch.Kind.WAIT
+                    && ClickAccessibilityService.performLauncherSearch(observed, step, names);
+            speechHandler.postDelayed(() -> {
+                if (generation != execution.generation() || token != homeSearchToken) return;
+                scrollSearchGeneration = -1;
+                if (closing || execution.paused() || execution.pendingControl() != null
+                        || resultPrompt != null || followUp != null || execution.manual()
+                        || !java.util.Objects.equals(session, execution.sessionId())) return;
+                // Inspect locally again. No launcher or notification contents are sent to a model.
+                ScreenSnapshot current = ClickAccessibilityService.freshSnapshot();
+                if (current != null && LauncherAppSearch.safe(current)) {
+                    startSettingsEntrySearch(current);
+                } else {
+                    execution.requestObservation(); sendAgentTurn(null, true);
+                }
+            }, dispatched ? 700L : 350L);
         }, 200L);
         return true;
     }
