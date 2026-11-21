@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="tour_welcome">안녕하세요! 저는 클루예요.\n저와 함께 실제 휴대폰의 글자 크기를 키우며 클릭 사용법을 배워봐요. 바뀐 크기는 휴대폰에 그대로 적용돼요.</string>
-    <string name="tour_pick">말로 부탁하려면 마이크를, 글로 쓰려면 입력칸을 눌러 보세요.</string>
-    <string name="tour_voice">클루와 글자 크기를 바꿔봐요! 마이크를 꾹 누르고 “글자 크기 키워줘”라고 말해 보세요.</string>
-    <string name="tour_listening">듣고 있어요. “글자 크기 키워줘”라고 말해 주세요.</string>
-    <string name="tour_processing">말씀하신 내용을 확인하고 있어요.</string>
-    <string name="tour_permission">마이크 권한이 필요해요. ‘취소’를 누른 뒤 홈 입력칸에서 글로 부탁할 수도 있어요.</string>
-    <string name="tour_text">클루와 함께 글자 크기를 바꿔봐요! 입력칸에 “글자 크기 키워줘”라고 적고 보내기 화살표를 눌러 주세요.</string>
-    <string name="tour_phrase">글자 크기 키워줘</string>
-    <string name="tour_retry">이번에는 실제 휴대폰의 글자를 키워볼 거예요. “글자 크기 키워줘”라고 다시 부탁해 주세요.</string>
+    <string name="tour_display">저는 펭귄 클루예요! 여기서는 제가 누를 곳을 파란 네모로 알려드려요. 뒤로가기를 누르면 다음 안내로 가요.</string>
+    <string name="tour_display_scroll">제가 누를 곳을 파란 네모로 알려드려요. 화면을 조금 내려 보세요. 뒤로가기를 누르면 다음 안내로 가요.</string>
+    <string name="tour_display_permission">휴대폰 설정 위에 파란 네모를 표시하려면 접근성 권한이 필요해요. 말풍선을 누르면 권한 설정을 열어 드릴게요.</string>
+    <string name="tour_display_unavailable">이 휴대폰에서는 디스플레이 화면을 열 수 없어요. 말풍선을 누르면 자동 모드 사용법을 보여 드릴게요.</string>
     <string name="tour_review">이제 실제 요청이에요. 내용을 고치려면 ‘내용 수정’, 맞으면 ‘안내 시작하기’를 눌러 주세요.</string>
-    <string name="tour_settings">클릭은 눌러야 할 곳을 알려드려요. 자동 모드도 알아볼까요? 오른쪽 위 톱니바퀴를 눌러 보세요.</string>
-    <string name="tour_automation">오른쪽 위 ‘자동 모드’를 누르면 자동 모드를 켤 수 있어요. 클릭은 %1$s님께서 직접 누르도록 돕지만, 원하실 경우 자동 모드를 사용하실 수 있어요.</string>
+    <string name="tour_settings">이번엔 제가 대신 눌러 드리는 자동 모드를 알아봐요. 파란 네모 안의 톱니바퀴를 눌러 보세요.</string>
+    <string name="tour_automation">자동 모드를 켜면 제가 메뉴를 대신 누르고 화면을 내려 드려요. 파란 네모 안의 ‘자동 모드’를 눌러 보세요.</string>
+    <string name="tour_auto_read">설명을 끝까지 내려 보세요. 마지막 줄까지 보면 ‘자동 모드 켜기’를 누를 수 있어요.</string>
+    <string name="tour_auto_read_enabled">이미 자동 모드를 쓰고 계시네요! 처음 켤 때는 설명을 끝까지 내려야 해요. 여기서도 끝까지 내려 보세요.</string>
+    <string name="tour_auto_ready">다 읽으셨어요! 자동 모드를 쓰려면 ‘자동 모드 켜기’를, 직접 누르려면 ‘닫기’를 눌러 주세요.</string>
+    <string name="tour_auto_ready_enabled">다 읽으셨어요! 지금처럼 자동 모드를 쓰면서 다음 안내로 가려면 ‘계속’을 눌러 주세요.</string>
     <string name="tour_library">다시 홈이에요. 아래쪽 ‘보관함’을 눌러 보세요. 자주 쓰는 요청을 모아 두고 다시 꺼내 쓸 수 있어요.</string>
     <string name="tour_saved">‘즐겨찾기’에는 별표로 보관한 항목이 모여요. ‘순서 바꾸기’로 자주 쓰는 항목을 위로 옮길 수 있어요. 옆의 ‘최근 질문’을 눌러 보세요.</string>
     <string name="tour_recent">최근 질문을 누르면 다시 요청할 수 있고, 별을 누르면 즐겨찾기에 담겨요. 아래 ‘홈’을 누르면 사용법 안내를 마쳐요.</string>

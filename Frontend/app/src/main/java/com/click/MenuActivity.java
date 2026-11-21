@@ -43,6 +43,8 @@ public final class MenuActivity extends AppCompatActivity {
     static final String EXTRA_TOUR = "com.click.extra.TOUR_SETTINGS";
     private com.click.ui.tutorial.ClueCoachView coach;
     private View automationRow, displayRow;
+    private Dialog tourNotice;
+    private boolean readTourNotice;
     private static final int BLUE = 0xFF3478F6;
     private static final int INK = 0xFF101A36;
     private static final int SECONDARY = 0xFF7182A4;
@@ -161,16 +163,27 @@ public final class MenuActivity extends AppCompatActivity {
                 @Override public void handleOnBackPressed() { previousTourStep(); }
             });
             showTourStep();
+            if (state != null && state.getBoolean("tour_notice")) {
+                showAutomationSettings();
+                ScrollView notice = tourNotice.getWindow().getDecorView().findViewWithTag("click_dialog_body_scroll");
+                notice.post(() -> notice.scrollTo(0, state.getBoolean("tour_notice_read")
+                        ? notice.getChildAt(0).getHeight() : state.getInt("tour_notice_y")));
+            }
         }
         root.requestApplyInsets();
     }
 
     private void showAutomationSettings() {
+        if (tourNotice != null) return;
         boolean enabled = automationSettings.isEnabled();
+        boolean teaching = coach != null;
         LinearLayout content = vertical();
+        int intro = enabled ? R.string.tour_auto_read_enabled : R.string.tour_auto_read;
+        int done = enabled ? R.string.tour_auto_ready_enabled : R.string.tour_auto_ready;
+        if (teaching) add(content, clueNotice(intro), 0);
         add(content, dialogNotice(MenuIconView.Kind.AUTOMATION,
                 enabled ? "지금은 자동 모드가 켜져 있어요" : "지금은 자동 모드가 꺼져 있어요"), 0);
-        if (!enabled) add(content, text("안내를 끝까지 읽고 자동 모드를 켜주세요.", 13, SECONDARY, regular), 14);
+        if (!teaching && !enabled) add(content, text("안내를 끝까지 읽고 자동 모드를 켜주세요.", 13, SECONDARY, regular), 14);
         add(content, dialogSection("자동 모드를 켜면",
                 "요청을 확인하고 시작하면 지원되는 앱 열기, 메뉴 이동, 스크롤과 설정 조절을 도와드려요.",
                 "직접 조작이 필요한 단계는 따로 안내해요."), 22);
@@ -186,9 +199,42 @@ public final class MenuActivity extends AppCompatActivity {
         add(content, dialogSection("기억해 주세요",
                 "진행 중에도 설정 화면 위의 스위치로 끌 수 있어요.",
                 "결제·전화 걸기·메시지 보내기는 자동으로 실행하지 않아요."), 22);
-        ClickDialog.show(this, "자동으로 도와주기", content,
-                enabled ? "자동 모드 끄기" : "자동 모드 켜기",
-                () -> applyAutomationSetting(!enabled), "닫기", !enabled);
+        if (!teaching) {
+            ClickDialog.show(this, "자동으로 도와주기", content,
+                    enabled ? "자동 모드 끄기" : "자동 모드 켜기",
+                    () -> applyAutomationSetting(!enabled), "닫기", !enabled);
+            return;
+        }
+        add(content, clueNotice(done), 20);
+        readTourNotice = false;
+        coach.setVisibility(View.INVISIBLE);
+        coach.status(getString(intro), true);
+        tourNotice = ClickDialog.show(this, "자동으로 도와주기", content,
+                enabled ? "계속" : "자동 모드 켜기", enabled ? null : () -> applyAutomationSetting(true), "닫기", true, () -> {
+                    readTourNotice = true;
+                    coach.status(getString(done), true);
+                });
+        tourNotice.setOnDismissListener(dialog -> {
+            tourNotice = null;
+            if (isFinishing() || isChangingConfigurations()) return;
+            if (readTourNotice) { setResult(RESULT_OK); finish(); }
+            else showTourStep();
+        });
+    }
+
+    private View clueNotice(int words) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        android.widget.ImageView penguin = new android.widget.ImageView(this);
+        penguin.setImageResource(com.click.designpreview.R.drawable.clue3_tutorial);
+        penguin.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.addView(penguin, new LinearLayout.LayoutParams(dp(48), dp(62)));
+        TextView bubble = text(getString(words), 15, INK, medium);
+        bubble.setBackground(new com.click.ui.overlay.SpeechBubbleDrawable(0xFFEEF5FF,
+                getResources().getDisplayMetrics().density, false));
+        bubble.setPadding(dp(24), dp(12), dp(10), dp(12));
+        row.addView(bubble, new LinearLayout.LayoutParams(0, -2, 1));
+        return row;
     }
 
     private void applyAutomationSetting(boolean enabled) {
@@ -282,7 +328,7 @@ public final class MenuActivity extends AppCompatActivity {
         automationToggle.setContentDescription("자동 모드");
         automationToggle.setOnCheckedChangeListener((button, enabled) -> {
             if (syncingAutomationToggle) return;
-            if (enabled) {
+            if (coach != null || enabled) {
                 syncAutomationToggle();
                 showAutomationSettings();
             } else applyAutomationSetting(false);
@@ -536,11 +582,9 @@ public final class MenuActivity extends AppCompatActivity {
     }
 
     private void showTourStep() {
-        String name = new com.click.data.local.LocalAccountStore(this).name().trim();
-        if (name.isEmpty()) name = "사용자";
-        coach.show(getString(R.string.tour_automation, name), com.click.designpreview.R.drawable.clue3_tutorial,
+        coach.setVisibility(View.VISIBLE);
+        coach.show(getString(R.string.tour_automation), com.click.designpreview.R.drawable.clue3_tutorial,
                 automationToggle, automationToggle);
-        coach.onContinue(() -> { setResult(RESULT_OK); finish(); });
     }
 
     private void previousTourStep() { finish(); }
@@ -549,7 +593,21 @@ public final class MenuActivity extends AppCompatActivity {
         if (coach != null) coach.pause();
         super.onPause();
     }
+    @Override protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        if (tourNotice != null) {
+            out.putBoolean("tour_notice", true);
+            out.putBoolean("tour_notice_read", readTourNotice);
+            ScrollView notice = tourNotice.getWindow().getDecorView().findViewWithTag("click_dialog_body_scroll");
+            out.putInt("tour_notice_y", notice.getScrollY());
+        }
+    }
     @Override protected void onDestroy() {
+        if (tourNotice != null) {
+            tourNotice.setOnDismissListener(null);
+            tourNotice.dismiss();
+            tourNotice = null;
+        }
         if (coach != null) coach.close();
         if (graphConsent != null) graphConsent.close();
         if (accountActions != null) accountActions.close();

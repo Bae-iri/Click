@@ -45,6 +45,12 @@ public final class ClickDialog {
     public static Dialog show(Activity activity, String title, View body,
                               String positive, Runnable action, String negative,
                               boolean requireScrollToEnd) {
+        return show(activity, title, body, positive, action, negative, requireScrollToEnd, null);
+    }
+
+    public static Dialog show(Activity activity, String title, View body,
+                              String positive, Runnable action, String negative,
+                              boolean requireScrollToEnd, Runnable onReadToEnd) {
         Dialog dialog = new Dialog(activity);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         int padding = ClickUi.dp(activity, 22);
@@ -126,11 +132,12 @@ public final class ClickDialog {
             confirm.setEnabled(false);
             confirm.setContentDescription(positive);
             scroll.setOnScrollChangeListener((view, x, y, oldX, oldY) -> {
-                if (y > 0 && !scroll.canScrollVertically(1)) {
+                if (y > 0 && y + scroll.getHeight() - scroll.getPaddingBottom() >= body.getBottom()) {
                     confirm.setEnabled(true);
                     confirm.setContentDescription(null);
                     // Reading is complete for this dialog; later request states control the button.
                     scroll.setOnScrollChangeListener(null);
+                    if (onReadToEnd != null) onReadToEnd.run();
                 }
             });
         }
