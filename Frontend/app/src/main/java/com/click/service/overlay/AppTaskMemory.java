@@ -40,6 +40,9 @@ public final class AppTaskMemory {
     public JSONObject state()throws JSONException{JSONObject state=new JSONObject().put("task_id",id()).put("revision",data.optInt("revision")).put("subgoals",data.getJSONArray("subgoals")).put("attempts",data.getJSONArray("attempts"));if(outcomeGoal()!=null)state.put("outcome_goal",new JSONObject(outcomeGoal().toString()));else if(completionSupported()&&completion()!=null)state.put("completion",completion());return state;}
     /** The local candidate is separate from the wire's supported completion contract. */
     JSONObject outcomeGoal(){return data.optJSONObject("outcome_goal");}
+    boolean hasPlanOrAttempts() throws JSONException {
+        return data.getJSONArray("subgoals").length() > 0 || data.getJSONArray("attempts").length() > 0;
+    }
     boolean installOutcome(JSONObject goal)throws JSONException {
         if(!AppTaskOutcomes.valid(goal)||finished())return false;
         if(outcomeGoal()!=null)return outcomeGoal().getString("seal").equals(goal.getString("seal"));

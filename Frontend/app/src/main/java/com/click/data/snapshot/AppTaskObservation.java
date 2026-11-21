@@ -23,8 +23,12 @@ public final class AppTaskObservation {
     /** JSONObject serialization contains only existing protocol fields, not the local spec. */
     private static final class ProjectedObservation extends JSONObject {
         final ProjectionSpec spec;
+        boolean capped;
         String publicLoginId;
         ProjectedObservation(ProjectionSpec spec){this.spec=spec;}
+    }
+    public static boolean controlsComplete(JSONObject observation) {
+        return observation instanceof ProjectedObservation projected && !projected.capped;
     }
     public static String label(String value){
         if(value==null)return "";
@@ -180,7 +184,8 @@ public final class AppTaskObservation {
             if(n.heading&&"text".equals(role))node.put("native_heading",true);
             if(resultLabel&&!clickable&&!scrollable&&!editable)resultTextIds.add(n.nodeId);
             if(scrollable){StringBuilder viewport=new StringBuilder();for(var child:screen.nodes)if(child.visibleToUser&&descendantOf(child,n.nodeId,byId)&&!hidden(child,byId))viewport.append(child.nodeId).append(Arrays.toString(child.bounds)).append(hash(String.valueOf(child.text)));node.put("viewport_hash",hash(viewport.toString()));}
-            nodes.put(node);if(heading)headings++;if(nodes.length()==80)break;
+            nodes.put(node);if(heading)headings++;
+            if(nodes.length()==80){((ProjectedObservation)out).capped=true;break;}
         }
         // A button and its label child describe one result, not two ambiguous targets.
         // Equal labels in separate rows remain distinct and therefore ambiguous.

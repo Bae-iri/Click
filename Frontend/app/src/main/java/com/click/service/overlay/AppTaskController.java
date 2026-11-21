@@ -499,6 +499,7 @@ public final class AppTaskController {
                 else{schedulePlannerCheck();if(!wasWaiting)show("planning","화면을 확인하고 있어요.");}
                 return;
             }
+            if(!disputed && !resultOnly && guideFirstOutcome(current,screen))return;
             meta.subgoal(memory.active());
             if(!resultOnly&&!meta.claimPlannerRequest(screen)){cancelPlannerWait();submitted=fingerprint;meta.clearRecoveryContext();proposal=null;manualActions.clear();show("needs_input","이 화면에서 더 진행할 단계를 확인하지 못했어요. 다른 방법을 선택하거나 직접 진행해 주세요.");return;}
             JSONObject request=request(current);
@@ -605,6 +606,25 @@ public final class AppTaskController {
     private static boolean satisfiedGoalResponse(JSONObject response){return "satisfied".equals(goalAssessment(response));}
     private enum PlannerFrameState {READY,WAIT,UNAVAILABLE}
     /** Planning debounce only. Native action approval still uses the complete observation. */
+    private boolean guideFirstOutcome(JSONObject current, ScreenSnapshot screen) throws JSONException {
+        if (!typedOutcomes || memory.outcomeGoal() == null || memory.hasPlanOrAttempts()
+                || selectedPackage == null || !selectedPackage.equals(current.optString("package"))
+                || screen == null || screen.activeWindowId == null || screen.activeWindowId < 0
+                || current.optBoolean("keyboard_visible") || !AppTaskObservation.controlsComplete(current)) return false;
+        long age = System.currentTimeMillis() - current.getLong("captured_at_ms");
+        if (age < -2000 || age > 15000) return false;
+        AppTaskOutcomes.FirstTap tap = AppTaskOutcomes.firstTap(memory.outcomeGoal(), current, screen, memory.arrivals());
+        if (tap == null) return false;
+        JSONObject first = action("tap", tap.node(), current, tap.expectation(), false);
+        if (!AppTaskPolicy.allowed(current, current, first, selectedPackage)
+                || previouslyRejected(current, first) || meta.blocked(current, first)) return false;
+        memory.localPlan();
+        save();
+        localDiagnostic("requested_native_control");
+        propose(first);
+        return true;
+    }
+
     private PlannerFrameState plannerFrameState(ScreenSnapshot screen,JSONObject current)throws JSONException {
         if(!plannerGateArmed)return PlannerFrameState.READY;
         long now=SystemClock.elapsedRealtime(),captured=current.optLong("captured_at_ms"),wall=System.currentTimeMillis();
