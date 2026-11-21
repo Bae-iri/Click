@@ -29,8 +29,8 @@ public final class GuidanceSupportView extends ScrollView {
         LinearLayout body=column();body.setPadding(dp(20),dp(16),dp(20),dp(16));addView(body);
         LinearLayout header=new LinearLayout(context);header.setGravity(Gravity.CENTER_VERTICAL);
         TextView title=ClickUi.sectionTitle(context,"안내 확인");header.addView(title,new LinearLayout.LayoutParams(0,-2,1));
-        Button close=ClickUi.secondaryButton(context,"닫기");requestClose=close;close.setBackgroundColor(android.graphics.Color.TRANSPARENT);close.setMinWidth(0);close.setMinimumWidth(0);close.setTextColor(ClickUi.SUBTEXT);close.setTextSize(com.click.ui.common.ClickTextScale.size(context,14));close.setPadding(dp(8),0,dp(8),0);close.setOnClickListener(view->{if(!saving)listener.close();});header.addView(close);body.addView(header);
-        if(request!=null&&!request.isBlank()){TextView summary=ClickUi.body(context,(canRetry?"잠시 멈춤 · ":"")+request.substring(0,Math.min(160,request.length())));summary.setTextSize(com.click.ui.common.ClickTextScale.size(context,14));body.addView(summary,ClickUi.wrap(8));}
+        Button close=ClickUi.secondaryButton(context,"닫기");requestClose=close;close.setBackgroundColor(android.graphics.Color.TRANSPARENT);close.setMinWidth(0);close.setMinimumWidth(0);close.setTextColor(ClickUi.SUBTEXT);close.setTextSize(com.click.ui.common.ClickTextScale.size(context,18));close.setPadding(dp(8),0,dp(8),0);close.setOnClickListener(view->{if(!saving)listener.close();});header.addView(close);body.addView(header);
+        if(request!=null&&!request.isBlank()){TextView summary=ClickUi.body(context,(canRetry?"잠시 멈춤 · ":"")+request.substring(0,Math.min(160,request.length())));summary.setTextSize(com.click.ui.common.ClickTextScale.size(context,18));body.addView(summary,ClickUi.wrap(8));}
         String full=evidence==null?GuidanceExplanation.DEFAULT:evidence;String shortReason=full.split("(?<=[.!?])\\s+",2)[0];
         TextView reason=ClickUi.body(context,shortReason);reason.setTextColor(ClickUi.TEXT);body.addView(reason,ClickUi.wrap(12));
         TextView detail=ClickUi.body(context,(full.equals(shortReason)?"":full.substring(shortReason.length()).trim()+"\n")+GuidanceExplanation.LIMITS);
@@ -55,7 +55,7 @@ public final class GuidanceSupportView extends ScrollView {
         });
         updateSubmissionState();
         edit.setOnClickListener(view->{if(!saving)editor.setVisibility(editor.getVisibility()==VISIBLE?GONE:VISIBLE);});
-        Button evaluate=ClickUi.secondaryButton(context,"안내 평가·방식 바꾸기");evaluate.setBackgroundColor(android.graphics.Color.TRANSPARENT);evaluate.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);evaluate.setTextSize(com.click.ui.common.ClickTextScale.size(context,13));evaluate.setPadding(0,0,0,0);body.addView(evaluate,ClickUi.wrap(8));
+        Button evaluate=ClickUi.secondaryButton(context,"안내 평가·방식 바꾸기");evaluate.setBackgroundColor(android.graphics.Color.TRANSPARENT);evaluate.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);evaluate.setTextSize(com.click.ui.common.ClickTextScale.size(context,18));evaluate.setPadding(0,0,0,0);body.addView(evaluate,ClickUi.wrap(8));
         LinearLayout feedback=column();feedback.setVisibility(GONE);body.addView(feedback,ClickUi.wrap(8));
         CheckBox remember=new CheckBox(context);remember.setText("다음 안내에도 기억하기");remember.setChecked(remembers);remember.setMinHeight(dp(48));feedback.addView(remember);
         lockedControls.put(evaluate,evaluate.isEnabled());lockedControls.put(remember,remember.isEnabled());

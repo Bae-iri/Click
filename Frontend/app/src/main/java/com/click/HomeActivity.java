@@ -81,16 +81,12 @@ public class HomeActivity extends AppCompatActivity {
     private float renderedTextScale;
     private com.click.designpreview.AccessibilityConnectionWatcher connectionWatcher;
     private com.click.data.local.GuidancePreferences guidanceChoices;
-    private com.click.data.remote.VoiceQueueGateway recentQueue;
-    private LinearLayout firstSuggestion, resumeRow;
-    private TextView resumeLabel;
-    private String resumeRequestId;
-    private int homeReadGeneration;
+    private LinearLayout firstSuggestion;
     private final android.os.Handler helpTiming=new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable offerFirstHelp=()->{
         if(!isFinishing()&&hasWindowFocus()&&!requestLaunching&&!favoritesVisible
                 &&requestInput!=null&&!requestInput.hasFocus()&&requestInput.length()==0
-                &&guidanceChoices.maySuggest()&&resumeRequestId==null&&library.entries(false).isEmpty()
+                &&guidanceChoices.maySuggest()&&library.entries(false).isEmpty()
                 &&firstSuggestion.getVisibility()!=View.VISIBLE) {
             firstSuggestion.setVisibility(View.VISIBLE);guidanceChoices.suggestionShown();
             firstSuggestion.announceForAccessibility("처음이라면 글씨 크기 도움부터 살펴보세요.");
@@ -104,7 +100,6 @@ public class HomeActivity extends AppCompatActivity {
         favorites = new HomeFavoritesStore(this);
         library = new RequestLibraryStore(this);
         guidanceChoices=new com.click.data.local.GuidancePreferences(this);
-        recentQueue=new com.click.data.remote.VoiceQueueGateway(this);
         if(savedInstanceState==null)guidanceChoices.visitHome();
         regular = getResources().getFont(com.click.designpreview.R.font.pretendard_regular);
         medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
@@ -217,7 +212,6 @@ public class HomeActivity extends AppCompatActivity {
     private void startTutorial(Bundle state) {
         if (tutorial != null) return;
         helpTiming.removeCallbacks(offerFirstHelp);
-        homeReadGeneration++;
         tutorial = new HomeTutorial(this, state);
         guidanceChoices.markHomeTutorialSeen();
         if (getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) tutorial.resume();
@@ -242,7 +236,6 @@ public class HomeActivity extends AppCompatActivity {
         if (getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
             refreshFavorites();
             scheduleFirstHelp();
-            readRecentTask();
         }
     }
 
@@ -270,13 +263,13 @@ public class HomeActivity extends AppCompatActivity {
         if (tutorial != null) tutorial.resume();
         else {
             refreshFavorites();
-            scheduleFirstHelp();readRecentTask();
+            scheduleFirstHelp();
         }
     }
 
     @Override protected void onPause() {
         if (tutorial != null) tutorial.pause();
-        homeReadGeneration++;helpTiming.removeCallbacks(offerFirstHelp);
+        helpTiming.removeCallbacks(offerFirstHelp);
         connectionWatcher.stop();
         super.onPause();
     }
@@ -284,28 +277,11 @@ public class HomeActivity extends AppCompatActivity {
     private void scheduleFirstHelp(){helpTiming.removeCallbacks(offerFirstHelp);if(tutorial==null&&guidanceChoices!=null&&guidanceChoices.maySuggest())helpTiming.postDelayed(offerFirstHelp,12000);}
     @Override protected void onDestroy(){
         if (tutorial != null) { HomeTutorial closing = tutorial; tutorial = null; closing.close(); }
-        helpTiming.removeCallbacksAndMessages(null);if(recentQueue!=null)recentQueue.close();super.onDestroy();
-    }
-    private void readRecentTask(){
-        final int owner=++homeReadGeneration;
-        recentQueue.read(new com.click.data.remote.VoiceQueueGateway.Callback(){
-            public void onSuccess(com.click.data.remote.VoiceQueueGateway.Response response){
-                if(owner!=homeReadGeneration||isFinishing())return;
-                var current=response.running;
-                if(current!=null&&(current.agentSessionId==null||current.rawGoal==null||current.rawGoal.isBlank()))current=null;
-                resumeRequestId=current==null?null:current.id;
-                resumeRow.setVisibility(resumeRequestId==null?View.GONE:View.VISIBLE);
-                if(current!=null){String request=current.rawGoal==null?"진행하던 안내":current.rawGoal;resumeLabel.setText("진행하던 작업\n"+request.substring(0,Math.min(80,request.length())));firstSuggestion.setVisibility(View.GONE);}
-            }
-            public void onFailure(Throwable error){/* Optional history never interrupts home input. */}
-        });
+        helpTiming.removeCallbacksAndMessages(null);super.onDestroy();
     }
     private void addAssistanceEntry(LinearLayout page){
         TextView scope=text("어떤 도움을 받을 수 있나요?",13,SECONDARY,medium);scope.setMinHeight(dp(44));scope.setGravity(Gravity.CENTER_VERTICAL);
         scope.setOnClickListener(view->com.click.ui.common.GuidanceDialogs.capabilities(this));add(page,scope,0);
-        resumeRow=new LinearLayout(this);resumeRow.setGravity(Gravity.CENTER_VERTICAL);resumeRow.setPadding(dp(14),dp(8),dp(10),dp(8));whiteCard(resumeRow,16,0);resumeRow.setVisibility(View.GONE);resumeRow.setTag("resume_request");
-        resumeLabel=text("",14,INK,medium);resumeRow.addView(resumeLabel,new LinearLayout.LayoutParams(0,-2,1));
-        android.widget.Button resume=com.click.ui.common.ClickUi.secondaryButton(this,"이어서 하기");resume.setOnClickListener(view->{if(resumeRequestId!=null)startOverlayWithPermission(null,null,false,resumeRequestId);});resumeRow.addView(resume);add(page,resumeRow,4);
         firstSuggestion=new LinearLayout(this);firstSuggestion.setGravity(Gravity.CENTER_VERTICAL);firstSuggestion.setTag("first_help_suggestion");firstSuggestion.setVisibility(View.GONE);
         TextView suggestion=text("처음이라면 글씨 크기 도움부터 살펴볼까요?",14,INK,medium);suggestion.setPadding(0,dp(8),dp(8),dp(8));suggestion.setMinHeight(dp(48));
         suggestion.setOnClickListener(view->{firstSuggestion.setVisibility(View.GONE);startQuickHelp(com.click.domain.goal.QuickHelpTask.FONT_SIZE);});firstSuggestion.addView(suggestion,new LinearLayout.LayoutParams(0,-2,1));
@@ -801,9 +777,6 @@ public class HomeActivity extends AppCompatActivity {
         if (homeScroll.isShown()) homeScroll.requestFocus();
     }
     private boolean startOverlayWithPermission(String goal, String selectedGoalType, boolean voice) {
-        return startOverlayWithPermission(goal,selectedGoalType,voice,null);
-    }
-    private boolean startOverlayWithPermission(String goal, String selectedGoalType, boolean voice,String resumeId) {
         if (requestLaunching) return false;
         if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return false; }
         if (com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() == null) {
@@ -811,19 +784,18 @@ public class HomeActivity extends AppCompatActivity {
             Toast.makeText(this, "클릭을 준비하고 있어요.", Toast.LENGTH_SHORT).show();
             connectionWatcher.start(() -> {
                 if (goal != null && goal.equals(requestInput.getText().toString().trim())) requestInput.setText("");
-                launchOverlay(goal, selectedGoalType, voice,resumeId);
+                launchOverlay(goal, selectedGoalType, voice);
             }, () -> { requestLaunching = false; openPermissionGuide(); });
             return false;
         }
-        launchOverlay(goal, selectedGoalType, voice,resumeId);
+        launchOverlay(goal, selectedGoalType, voice);
         return true;
     }
-    private void launchOverlay(String goal, String selectedGoalType, boolean voice,String resumeId) {
+    private void launchOverlay(String goal, String selectedGoalType, boolean voice) {
         Intent service = new Intent(this, ClickOverlayService.class);
         if (goal != null) service.putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL, goal);
         if (selectedGoalType != null) service.putExtra(ClickOverlayService.EXTRA_SELECTED_GOAL_TYPE, selectedGoalType);
         service.putExtra(ClickOverlayService.EXTRA_OPEN_VOICE, voice);
-        if(resumeId!=null)service.putExtra(ClickOverlayService.EXTRA_RESUME_REQUEST_ID,resumeId);
         requestLaunching = true;
         hideKeyboard();
         startService(service); moveTaskToBack(true);

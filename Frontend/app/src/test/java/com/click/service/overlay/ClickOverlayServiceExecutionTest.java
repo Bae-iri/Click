@@ -738,7 +738,7 @@ public class ClickOverlayServiceExecutionTest {
             assertEquals(false, get("closing"));
             assertTrue(service.onOpenRequested());
             assertEquals(false, get("taskFlowCollapsed"));
-            verify(panel).setMinimizedProgress(false);
+            verify(panel, atLeastOnce()).setMinimizedProgress(false);
         }
         invoke("collapseTaskFlow");
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(2));

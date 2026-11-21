@@ -114,7 +114,7 @@ public final class ClickOverlayLayout extends ViewGroup {
         dragSlop = Math.max(ViewConfiguration.get(context).getScaledTouchSlop(), dp(12));
         // [UI 수정] 글 입력칸의 글자 크기(sp), 안내 문구, 여백(dp), 높이, 테두리/둥근 모서리.
         goalInput = new EditText(context);
-        goalInput.setTextSize(ClickTextScale.size(context, 18));
+        goalInput.setTextSize(ClickTextScale.size(context, FloatingPanelStyle.INPUT_SIZE_SP));
         goalInput.setTextColor(ClickUi.TEXT);
         goalInput.setHintTextColor(ClickUi.SUBTEXT);
         goalInput.setTypeface(getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
@@ -358,12 +358,12 @@ public final class ClickOverlayLayout extends ViewGroup {
             microphoneLabel.setGravity(Gravity.CENTER);
             microphoneLabel.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
             listening.addView(microphoneLabel, spaced(10));
-            voiceHelp = label("", 13, ClickUi.SUBTEXT, false);
+            voiceHelp = label("", 16, ClickUi.SUBTEXT, false);
             voiceHelp.setGravity(Gravity.CENTER);
             voiceHelp.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
             listening.addView(voiceHelp, spaced(6));
             updateMicrophone();
-            transcript = label("", 14, ClickUi.SUBTEXT, false);
+            transcript = label("", FloatingPanelStyle.BODY_SIZE_SP, ClickUi.SUBTEXT, false);
             transcript.setGravity(Gravity.CENTER);
             transcript.setMaxLines(Integer.MAX_VALUE);
             transcript.setEllipsize(null);
@@ -419,7 +419,7 @@ public final class ClickOverlayLayout extends ViewGroup {
 
     // [UI 수정] 전송/취소/전환 버튼 공통 스타일. filled는 파란 채움 여부, 최소 터치 높이는 48dp.
     private TextView action(String title, boolean filled, Runnable onClick) {
-        TextView button = label(title, 17, filled ? Color.WHITE : ClickUi.BLUE_DARK, true);
+        TextView button = label(title, FloatingPanelStyle.ACTION_SIZE_SP, filled ? Color.WHITE : ClickUi.BLUE_DARK, true);
         button.setGravity(Gravity.CENTER);
         button.setMinHeight(dp(48));
         button.setPadding(dp(12), dp(12), dp(12), dp(12));

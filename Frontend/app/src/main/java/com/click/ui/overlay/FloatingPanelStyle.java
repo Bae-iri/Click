@@ -21,6 +21,10 @@ final class FloatingPanelStyle {
     static final int PANEL_WIDTH_DP = 340;
     static final int HEADER_DIVIDER_GAP_DP = 5;
     static final int TITLE_SIZE_SP = 22;
+    static final int BODY_SIZE_SP = 18;
+    static final int INPUT_SIZE_SP = 20;
+    static final int ACTION_SIZE_SP = 18;
+    static final int HEADER_ACTION_SIZE_SP = 15;
     private FloatingPanelStyle() {}
 
     static void styleTitle(TextView title) {
@@ -38,7 +42,7 @@ final class FloatingPanelStyle {
     static Button compactButton(Context context, String label, Runnable action) {
         float density = context.getResources().getDisplayMetrics().density;
         Button button = new Button(context);
-        button.setText(label); button.setTextSize(ClickTextScale.size(context, 13)); button.setAllCaps(false);
+        button.setText(label); button.setTextSize(ClickTextScale.size(context, 16)); button.setAllCaps(false);
         button.setTextColor(0xFF536885);
         button.setTypeface(context.getResources().getFont(com.click.designpreview.R.font.pretendard_medium));
         button.setIncludeFontPadding(false); button.setGravity(Gravity.CENTER);
