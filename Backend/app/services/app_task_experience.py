@@ -206,11 +206,22 @@ class AppTaskExperienceService:
             last = max(successful,key=lambda s:s['observed_at_ms'])
             expectation = TaskExpectation(kind=kind if kind!='target_visible' else 'screen_changed',
                 package=package,screen_key=after_key if kind in {'screen_changed','target_visible','selection_changed'} else '')
-            choices.append(TaskAction(id=str(uuid4()),tool=tool,target_id=node.id if node else None,
+            choices.append((after_key,TaskAction(id=str(uuid4()),tool=tool,target_id=node.id if node else None,
                 bounds=node.bounds if node else None,package=package if tool=='open_app' else screen.package,
                 expectation=expectation,advances_subgoal=bool(active and digest(active.title)==last['subgoal_key']
-                                                            and last['action']['advances_subgoal'])))
+                                                            and last['action']['advances_subgoal']))))
         result.evidence = result.evidence[:12]
-        if len(choices)==1:
-            result.action=choices[0];result.status='remembered'
+        # Eligibility and adverse evidence remain separate for every original route.
+        # target_visible is exported as screen_changed; its successful replay must not
+        # become a competing copy of that same native action. Keep original after_key
+        # even for expectations whose exported payload does not carry a route key.
+        equivalent = {}
+        for after_key,action in choices:
+            identity = (after_key,fingerprint(action.model_dump(mode='json',exclude={'id','advances_subgoal'})))
+            previous = equivalent.get(identity)
+            if previous is not None:
+                action = previous.model_copy(update={'advances_subgoal':previous.advances_subgoal and action.advances_subgoal})
+            equivalent[identity] = action
+        if len(equivalent)==1:
+            result.action=next(iter(equivalent.values()));result.status='remembered'
         return result
