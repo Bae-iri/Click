@@ -23,6 +23,7 @@ public final class AppTaskController {
     private final AppTaskStore store;private final boolean remote;
     private final boolean learning;
     private final boolean completionSupported;
+    private final boolean goalFirstSupported;
     private final AppTaskMetaController meta;
     private JSONObject recalled;
     private String recallFingerprint,pendingRecall,consentId;
@@ -56,7 +57,8 @@ public final class AppTaskController {
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote){this(gateway,memory,store,listener,remote,false);}
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning){this(gateway,memory,store,listener,remote,learning,false);}
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported){this(gateway,memory,store,listener,remote,learning,completionSupported,AppTaskMetaController.Arm.CURRENT);}
-    public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm){this.gateway=gateway;this.memory=memory;this.store=store;this.listener=listener;this.remote=remote;this.learning=learning;this.completionSupported=completionSupported;this.meta=new AppTaskMetaController(arm);}
+    public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm){this(gateway,memory,store,listener,remote,learning,completionSupported,arm,completionSupported);}
+    public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm,boolean goalFirstSupported){this.gateway=gateway;this.memory=memory;this.store=store;this.listener=listener;this.remote=remote;this.learning=learning;this.completionSupported=completionSupported;this.goalFirstSupported=goalFirstSupported;this.meta=new AppTaskMetaController(arm);}
     public AppTaskMetaController metaController(){return meta;}
     public AppTaskMemory memory(){return memory;}
     public void targetApp(String packageName,String label){selectionGeneration++;cancelPlannerWait();resetResultEvidence();resultDiscoveryScreen=null;meta.resetTargetContext();selectedPackage=packageName;selectedLabel=RequestedApp.shortName(label);searchQuery=AppTaskSearchIntent.query(memory.goal(),label);scope=null;cached=null;submitted=null;proposal=null;searchPrepared=false;recalled=null;recallFingerprint=null;pendingRecall=null;}
@@ -78,6 +80,7 @@ public final class AppTaskController {
     public boolean beginVisual(){if(closed||busy||verifying||!listener.canObserve())return false;busy=true;listener.busy(true);return true;}
     public void visualFailure(Throwable error){if(!closed){busy=false;listener.busy(false);listener.failure(error);}}
     public void screenChanged(ScreenSnapshot screen){if(!closed){plannerGateArmed=true;if(meta.enabled())try{meta.observeEvent(capture(screen),SystemClock.elapsedRealtime());}catch(JSONException ignored){}
+        if(busy&&goalFirstSupported&&completionSupported&&memory.completion()!=null){handler.removeCallbacks(refresh);handler.post(refresh);return;}
         schedulePlannerCheck();}}
     public void refresh(){resultObservation=null;resultAssessment=null;checkingResult=resultOffered=false;observe(true);}
     /** Explicit panel/voice refresh; automatic observation keeps the scoped recovery budget. */
@@ -151,6 +154,10 @@ public final class AppTaskController {
     }
     private boolean observeResult(JSONObject current,ScreenSnapshot screen)throws JSONException {
         if(!completionSupported)return false;
+        // A selected target change cannot let the previously visible app prove this context.
+        if(selectedPackage!=null&&(screen==null||!selectedPackage.equals(screen.packageName))){
+            checkingResult=resultOffered=false;resultObservation=null;resultAssessment=null;return false;
+        }
         if(memory.completion()==null){
             completionTrace("goal_check","candidate_missing",null,current,screen,completionRequestRef,"not_checked","not_checked",null,0,0);return false;
         }
@@ -212,8 +219,22 @@ public final class AppTaskController {
         completionTrace("evidence","waiting_second_frame",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,1);
         handler.removeCallbacks(refresh);handler.postDelayed(refresh,400);return true;
     }
+    /** A known local postcondition can finish proof while a paid planner response is still pending. */
+    private void observeKnownResultWhileBusy(){
+        if(!goalFirstSupported||!completionSupported||memory.completion()==null||memory.finished())return;
+        try{
+            ScreenSnapshot screen=listener.fresh();if(screen==null)return;JSONObject current=capture(screen);
+            boolean observed=observeResult(current,screen);
+            if(memory.completionSupported()){
+                listener.busy(false);
+                if(!observed){cancelPlannerWait();proposal=null;manualActions.clear();resultAssessment=null;
+                    show("confirm_result","확인한 결과가 요청하신 내용과 맞나요?");}
+            }
+        }catch(Exception error){listener.failure(error);}
+    }
     private void observe(boolean force){
-        if(closed||busy||finishing||!listener.canObserve())return;
+        if(closed||finishing||!listener.canObserve())return;
+        if(busy){observeKnownResultWhileBusy();return;}
         if(verifying){verifyNow();return;}
         ScreenSnapshot screen=listener.fresh();if(screen==null&&selectedPackage==null)return;
         try{
@@ -222,6 +243,12 @@ public final class AppTaskController {
             String fingerprint=current.getString("fingerprint");
             if(memory.finished()){proposal=null;show("completed","요청한 결과를 확인했어요.");return;}
             if(observeResult(current,screen)){cancelPlannerWait();return;}
+            // Once native goal evidence is supported, await the user's result decision even
+            // if a later redraw no longer matches it. Pending plan bits cannot restart actions.
+            if(goalFirstSupported&&memory.completionSupported()){
+                cancelPlannerWait();proposal=null;manualActions.clear();submitted=fingerprint;
+                resultAssessment=null;show("confirm_result","확인한 결과가 요청하신 내용과 맞나요?");return;
+            }
             if(!force&&fingerprint.equals(submitted)&&!plannerWaiting)return;
             if(!force&&rebindInput(current,screen))return;
             if(proposal!=null&&!fingerprint.equals(submitted))proposal=null;
@@ -277,6 +304,8 @@ public final class AppTaskController {
             meta.subgoal(memory.active());
             if(!resultOnly&&!meta.claimPlannerRequest(screen)){cancelPlannerWait();submitted=fingerprint;meta.clearRecoveryContext();proposal=null;manualActions.clear();show("needs_input","이 화면에서 더 진행할 단계를 확인하지 못했어요. 다른 방법을 선택하거나 직접 진행해 주세요.");return;}
             JSONObject request=request(current);
+            final boolean goalFirst=goalFirstSupported&&!resultOnly&&completionSupported&&!memory.completionSupported();
+            if(goalFirstSupported&&(resultOnly||goalFirst))request.put("planning_mode",resultOnly?"result_only":"goal_first");
             cancelPlannerWait();submitted=fingerprint;if(resultOnly)resultDiscoveryScreen=resultDiscoveryKey;
             long requestSelectionGeneration=selectionGeneration;String requestSelectedPackage=selectedPackage;
             proposal=null;manualActions.clear();busy=true;turns++;listener.busy(true);
@@ -295,14 +324,31 @@ public final class AppTaskController {
                     if(requestSelectionGeneration!=selectionGeneration||!Objects.equals(requestSelectedPackage,selectedPackage)){
                         completionTrace("discarded","changed_context",receivedCandidate,request.optJSONObject("screen"),screen,requestRef,"not_checked","not_checked",null,0,0);handler.post(refresh);return;
                     }
+                    if(goalFirstSupported&&memory.completionSupported()){
+                        completionTrace("discarded","immutable_supported",receivedCandidate,request.optJSONObject("screen"),screen,requestRef,"not_checked","not_checked",null,0,0);
+                        proposal=null;manualActions.clear();handler.post(refresh);return;
+                    }
                     try{
                         ScreenSnapshot fresh=listener.fresh();JSONObject freshObservation=fresh==null?null:capture(fresh);
-                        if(fresh==null||!fingerprint.equals(freshObservation.optString("fingerprint"))||resultOnly&&!sameNativeWindow(screen,fresh)){
-                            if(resultOnly&&revalidateResultCandidate(request,response,screen,fresh,requestSelectionGeneration,requestSelectedPackage,requestRef))return;
+                        boolean goalSatisfied=goalFirst&&satisfiedGoalResponse(response);
+                        boolean readOnlyResult=resultOnly||goalSatisfied;
+                        if(fresh==null||!fingerprint.equals(freshObservation.optString("fingerprint"))||readOnlyResult&&!sameNativeWindow(screen,fresh)){
+                            if(readOnlyResult&&revalidateResultCandidate(request,response,screen,fresh,requestSelectionGeneration,requestSelectedPackage,requestRef))return;
                             completionTrace("discarded",fresh==null?"no_frame":"changed_frame",receivedCandidate,freshObservation,fresh,requestRef,"not_checked","not_checked",null,0,0);
                             handler.post(refresh);return;
                         }
-                        diagnostic=response.optJSONObject("diagnostic");memory.plan(response.optJSONArray("subgoals"));
+                        diagnostic=response.optJSONObject("diagnostic");
+                        // A final-state assessment never edits the task plan or grants an action.
+                        if(readOnlyResult&&!response.isNull("action"))throw new JSONException("Action in result evidence response");
+                        if(goalFirst&&"uncertain".equals(goalAssessment(response))){
+                            if(!response.isNull("action"))throw new JSONException("Action with uncertain goal");
+                            // Ignore new predictions/progress from an uncertain assessment. A known
+                            // local condition may still be independently proved on fresh native frames.
+                            proposal=null;manualActions.clear();
+                            if(observeResult(capture(fresh),fresh))return;
+                            show("needs_input",response.optString("message","현재 화면에서 요청하신 결과를 확실히 확인하지 못했어요."));return;
+                        }
+                        if(!readOnlyResult)memory.plan(response.optJSONArray("subgoals"));
                         JSONObject candidate=response.optJSONObject("completion");
                         if(completionSupported&&candidate!=null){
                             Set<String> labels=AppTaskCompletion.labels(memory.completion());labels.addAll(AppTaskCompletion.labels(candidate));
@@ -315,15 +361,22 @@ public final class AppTaskController {
                         save();
                         if(observeResult(capture(fresh),fresh))return;
                         if(resultOnly){show("confirm_result","요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.");return;}
+                        if(goalSatisfied){proposal=null;manualActions.clear();show("needs_input","요청하신 결과를 확인할 화면 증거가 부족해요. 현재 화면을 확인해 주세요.");return;}
                         JSONObject action=response.optJSONObject("action");
                         if(action!=null){if(memory.repeated(observation,action)){show("needs_input","같은 동작이 반복해서 실패했어요. 다른 동작을 선택하거나 직접 화면을 이동해 주세요.");return;}propose(action);}
                         else show(response.optString("status"),response.optString("message"));
                     }catch(Exception error){listener.failure(error);}
                 }
-                public void failure(Throwable error){if(!closed&&!finishing){busy=false;listener.busy(false);if(listener.canObserve())listener.failure(error);}}
+                public void failure(Throwable error){if(!closed&&!finishing){busy=false;listener.busy(false);
+                    if(goalFirstSupported&&memory.completionSupported()){handler.post(refresh);return;}
+                    if(listener.canObserve())listener.failure(error);}}
             });
         }catch(Exception error){listener.failure(error);}
     }
+    private static String goalAssessment(JSONObject response){
+        JSONObject diagnostic=response.optJSONObject("diagnostic");return diagnostic==null?"":diagnostic.optString("goal_assessment");
+    }
+    private static boolean satisfiedGoalResponse(JSONObject response){return "satisfied".equals(goalAssessment(response));}
     private enum PlannerFrameState {READY,WAIT,UNAVAILABLE}
     /** Planning debounce only. Native action approval still uses the complete observation. */
     private PlannerFrameState plannerFrameState(ScreenSnapshot screen,JSONObject current)throws JSONException {

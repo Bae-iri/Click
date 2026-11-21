@@ -17,7 +17,8 @@ public final class AppTaskDiagnostics {
     private static final Set<String> STATUSES=Set.of("proposed","needs_input","confirm_result","unavailable","protected");
     private static final Set<String> VALIDATION_CODES=Set.of("INVALID_APP_TASK_RESPONSE","INVALID_TASK_COMPLETION",
         "UNBOUND_TASK_COMPLETION","CHANGED_TASK_COMPLETION","INVALID_APP_TASK_ACTION","UNSELECTED_APP",
-        "UNGROUNDED_APP_TASK_TARGET","UNSUPPORTED_APP_TASK_TOOL");
+        "UNGROUNDED_APP_TASK_TARGET","UNSUPPORTED_APP_TASK_TOOL","INVALID_TASK_PLANNING_MODE",
+        "INVALID_TASK_GOAL_ASSESSMENT","READ_ONLY_TASK_ACTION","CHANGED_READ_ONLY_TASK_PLAN");
     private static final Set<String> FAILURE_KINDS=Set.of("provider","plan","configuration","parse","observation");
     private static final Set<String> FAILURE_STAGES=Set.of("none","configuration","provider","provider_response",
         "model_output","plan_validation","completion_contract","subgoal_contract","action_contract","observation");
@@ -31,7 +32,8 @@ public final class AppTaskDiagnostics {
         "ungrounded_result_state","completion_control","subgoals","changed_existing_plan","unknown_target",
         "not_clickable","not_editable","not_scrollable","unknown_tool","unselected_app","repeated_failed_action",
         "expectation","ungrounded_expected_state","result_only_action_forbidden","result_only_progress_forbidden",
-        "no_allowed_actions","action_not_allowed_by_capabilities","recovery_action_blocked");
+        "no_allowed_actions","action_not_allowed_by_capabilities","recovery_action_blocked",
+        "goal_evidence_unavailable","goal_assessment_invalid","goal_result_candidate","goal_assessment_uncertain");
     private static final Set<String> PROVIDER_CODES=Set.of("provider_invalid_request","provider_invalid_budget",
         "provider_capacity_exhausted","provider_startup_failed","provider_deadline_exceeded","provider_timeout",
         "provider_transport_error","provider_response_too_large","provider_protocol_error","provider_worker_failed","provider_cleanup_failed");
@@ -88,11 +90,12 @@ public final class AppTaskDiagnostics {
             if(diagnostic!=null){
                 String model=diagnostic.optString("model");
                 out.put("model_ref",nullable(model.length()<=200?ref(model):null));
-                copyEnum(out,diagnostic,"planning_mode",Set.of("next_action","result_only"));
+                copyEnum(out,diagnostic,"planning_mode",Set.of("next_action","goal_first","result_only"));
+                copyEnum(out,diagnostic,"goal_assessment",Set.of("satisfied","not_satisfied","uncertain"));
                 copyEnum(out,diagnostic,"failure_kind",FAILURE_KINDS);
                 copyEnum(out,diagnostic,"failure_stage",FAILURE_STAGES);
                 copyEnum(out,diagnostic,"reason_code",REASON_CODES);copyEnum(out,diagnostic,"reason_code",PROVIDER_CODES);
-                copyEnum(out,diagnostic,"completion_grounding",Set.of("deferred_actionable_proof","deferred_unobserved_result","deferred_invalid_contract"));
+                copyEnum(out,diagnostic,"completion_grounding",Set.of("deferred_actionable_proof","deferred_unobserved_result","deferred_invalid_contract","deferred_goal_not_satisfied"));
                 copyEnum(out,diagnostic,"completion_deferred_reason",Set.of("completion_contract_invalid"));
                 Object budget=diagnostic.opt("provider_budget_ms");
                 if(budget instanceof Number){double n=((Number)budget).doubleValue();if(Double.isFinite(n)&&n>=0&&n<=9000)out.put("provider_budget_ms",n);}

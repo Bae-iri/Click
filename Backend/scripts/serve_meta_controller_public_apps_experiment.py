@@ -171,6 +171,14 @@ def _diagnostic_metadata(request, response, record, elapsed):
     for key in ('model', 'reason', 'provider_cause', 'error_type'):
         if not isinstance(compatible.get(key), str):compatible[key] = None
     record.update(diagnostic_record(request, response.model_copy(update={'diagnostic': compatible}), elapsed))
+    identity_bound=(response.request_id==request.request_id and response.task_id==request.state.task_id
+        and response.observation_id==request.screen.observation_id and response.fingerprint==request.screen.fingerprint
+        and response.requires_confirmation is True)
+    if identity_bound:
+        for key,permitted in (('planning_mode',{'next_action','goal_first','result_only'}),
+                ('goal_assessment',{'satisfied','not_satisfied','uncertain'})):
+            value=diagnostic.get(key)
+            if isinstance(value,str) and value in permitted:record[key]=value
     called = diagnostic.get('called')
     if called is True:
         record['model_call_state'] = 'observed'
@@ -182,7 +190,7 @@ def _diagnostic_metadata(request, response, record, elapsed):
         value = diagnostic.get(key)
         if isinstance(value, str) and value in permitted:
             record['service_' + key] = value
-    for key, permitted in (('completion_grounding', {'deferred_actionable_proof', 'deferred_unobserved_result', 'deferred_invalid_contract'}),
+    for key, permitted in (('completion_grounding', {'deferred_actionable_proof', 'deferred_unobserved_result', 'deferred_invalid_contract','deferred_goal_not_satisfied'}),
             ('completion_deferred_reason', {'completion_contract_invalid'})):
         if isinstance(diagnostic.get(key), str) and diagnostic[key] in permitted:
             record[key] = diagnostic[key]

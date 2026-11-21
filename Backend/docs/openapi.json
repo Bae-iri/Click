@@ -9675,6 +9675,16 @@
           "state": {
             "$ref": "#/components/schemas/TaskState"
           },
+          "planning_mode": {
+            "type": "string",
+            "enum": [
+              "next_action",
+              "goal_first",
+              "result_only"
+            ],
+            "title": "Planning Mode",
+            "default": "next_action"
+          },
           "apps": {
             "items": {
               "$ref": "#/components/schemas/TaskApp"
