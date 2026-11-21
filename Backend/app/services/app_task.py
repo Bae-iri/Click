@@ -12,6 +12,7 @@ from app.services.goal_input_privacy import classification_text
 from app.services.goal_llm import _unique_object
 from app.services.settings_planner import model_name,provider_error
 from app.services import openai_responses
+from app.services import app_task_local_menu
 from app.services.app_task_completion import bind_completion_candidate
 from app.services.app_task_provider import generate, ProviderError, LOCAL_MODEL
 from app.services.app_task_jev_completion import select_completion as jev_completion
@@ -420,7 +421,12 @@ class AppTaskService:
         elif state.subgoals:
             prompt=('The existing plan is immutable and stored by the server. Omit subgoals from the response; propose only its first pending step. '+prompt)
         uses_responses_api = provider in ('openai', 'local')
-        if uses_responses_api:
+        local_menu = {}
+        if provider == 'local' and goal_first and _first_navigation_menu(request, goal, recalled):
+            local_menu = app_task_local_menu.tap_choices(request, goal, indexed, allowed_pairs)
+        if local_menu:
+            payload = app_task_local_menu.choice_payload(goal, local_menu)
+        elif uses_responses_api:
             payload = openai_responses.planner_payload(model, prompt, schema)
         else:
             payload={'contents':[{'parts':[{'text':prompt}]}],'generationConfig':{'maxOutputTokens':2048,
@@ -473,6 +479,8 @@ class AppTaskService:
                 text=''.join(p['text'] for p in candidate['content']['parts'] if isinstance(p,dict) and isinstance(p.get('text'),str) and not p.get('thought'))
             stage='model_output'
             answer=json.loads(text,object_pairs_hook=_unique_object)
+            if local_menu:
+                answer = app_task_local_menu.as_plan(answer, local_menu)
             if not isinstance(answer,dict):raise ValueError('shape')
             keys=set(answer)-({'planned_steps'} if 'planned_steps' in schema['properties'] else set())
             if keys==set(schema['required']):

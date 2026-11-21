@@ -126,3 +126,37 @@ def test_provider_and_model_must_match_before_a_worker_starts(provider, model, p
         app_task_provider.generate(model, 'test-key', {'model':payload_model}, provider=provider, _context=context)
     assert failed.value.model_call_state == 'not_started'
     context.Process.assert_not_called()
+
+
+@pytest.mark.parametrize('choice,expected_status', [
+    ('c0', 'proposed'),
+    ('none', 'needs_input'),
+    ('another', 'unavailable'),
+])
+def test_local_menu_only_proposes_a_grounded_button(monkeypatch, choice, expected_status):
+    from app.schemas.app_task import TaskApp
+    from tests.test_app_task import request
+
+    monkeypatch.setenv('APP_TASK_PROVIDER', 'local')
+    req = request()
+    req.goal = '검색 화면을 열어줘'
+    req.planning_mode = 'goal_first'
+    req.apps = [TaskApp(package=req.screen.package, label='공개 앱')]
+    body = {'status': 'completed', 'output': [message(json.dumps({'choice': choice}))]}
+    transport = Mock(return_value=httpx.Response(200, json=body))
+    monkeypatch.setattr('app.services.app_task.generate', transport)
+
+    result = AppTaskService().step(req)
+
+    transport.assert_called_once()
+    model, key, payload = transport.call_args.args
+    assert (model, key, transport.call_args.kwargs['provider']) == (app_task_provider.LOCAL_MODEL, '', 'local')
+    schema = payload['text']['format']['schema']
+    assert schema['properties']['choice']['enum'] == ['c0', 'none']
+    assert payload['max_output_tokens'] == 32
+    assert result.status == expected_status and result.completion is None
+    if choice == 'c0':
+        assert result.requires_confirmation and result.action.tool == 'tap'
+        assert result.action.target_id == req.screen.nodes[0].id and not result.action.advances_subgoal
+    else:
+        assert result.action is None
