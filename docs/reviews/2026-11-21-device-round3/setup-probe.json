@@ -1,0 +1,106 @@
+{
+  "schema_version": "memory-reuse.v1",
+  "model_calls": 0,
+  "checks": [
+    {
+      "task_id": "settings_display",
+      "app_id": "com.android.settings",
+      "ready": true,
+      "initial_state_hash": "8a412921a5a3341bde02e590c8a1d4df98f62984c1df822797021023feac861c",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 1798,
+        "snapshot_reads": 11,
+        "retry_count": 1,
+        "start_control_retry_count": 0,
+        "stable_reads": 5,
+        "stable_span_ms": 753,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.android.settings"
+        ]
+      }
+    },
+    {
+      "task_id": "settings_sound",
+      "app_id": "com.android.settings",
+      "ready": true,
+      "initial_state_hash": "8a412921a5a3341bde02e590c8a1d4df98f62984c1df822797021023feac861c",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 2085,
+        "snapshot_reads": 13,
+        "retry_count": 3,
+        "start_control_retry_count": 0,
+        "stable_reads": 5,
+        "stable_span_ms": 748,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.android.settings"
+        ]
+      }
+    },
+    {
+      "task_id": "settings_font",
+      "app_id": "com.android.settings",
+      "ready": true,
+      "initial_state_hash": "8a412921a5a3341bde02e590c8a1d4df98f62984c1df822797021023feac861c",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 2046,
+        "snapshot_reads": 13,
+        "retry_count": 3,
+        "start_control_retry_count": 0,
+        "stable_reads": 5,
+        "stable_span_ms": 707,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.android.settings"
+        ]
+      }
+    },
+    {
+      "task_id": "settings_app_notifications",
+      "app_id": "com.android.settings",
+      "ready": true,
+      "initial_state_hash": "8a412921a5a3341bde02e590c8a1d4df98f62984c1df822797021023feac861c",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 1963,
+        "snapshot_reads": 12,
+        "retry_count": 3,
+        "start_control_retry_count": 0,
+        "stable_reads": 4,
+        "stable_span_ms": 616,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.android.settings"
+        ]
+      }
+    },
+    {
+      "task_id": "settings_notifications",
+      "app_id": "com.android.settings",
+      "ready": true,
+      "initial_state_hash": "8a412921a5a3341bde02e590c8a1d4df98f62984c1df822797021023feac861c",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 2057,
+        "snapshot_reads": 13,
+        "retry_count": 3,
+        "start_control_retry_count": 0,
+        "stable_reads": 5,
+        "stable_span_ms": 715,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.android.settings"
+        ]
+      }
+    }
+  ]
+}
