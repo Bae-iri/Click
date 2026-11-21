@@ -185,11 +185,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private String lastSnapshotFingerprint;
     private final AutomaticScrollSearch homeScrollSearch = new AutomaticScrollSearch(AutomaticScrollSearch.Mode.LAUNCHER);
     /** App-task open_app: page through the home screen for the requested app's icon. */
-    private LauncherAppSearch appTaskLauncherSearch;
-    private String appTaskLauncherScope, manualLauncherView;
-    private LauncherAppSearch.Step manualLauncherStep;
-    private int appTaskHomeSearchToken;
-    private boolean appTaskHomeSearchPending;
     private int homeSearchToken;
     private long adjustmentSettlingUntil;
     private String pendingActionType;
@@ -1206,14 +1201,15 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private boolean offerAppGuide() {
         if(agentGateway==null||agentGateway.currentContract()==null
                 ||initialGoal==null||initialGoal.trim().isEmpty())return false;
-        if(requestedApp()!=null){startAppGuide();return true;}
+        RequestedApp target=requestedApp();
+        if(target!=null){startAppGuide(target);return true;}
         ensureTaskFlow();
         String message="이 작업을 도와드릴까요?";
         final int generation=execution.generation();
         taskFlowView.confirmation(message,accepted->{
             if(closing||generation!=execution.generation())return;
             if(!accepted){taskFlowView.unresolvedGoal(initialGoal);placeTaskFlow(null,true);return;}
-            startAppGuide();
+            startAppGuide(null);
         });
         updateRequestStatus(true,false);placeTaskFlow(null,true);speak(message);return true;
     }
@@ -1233,20 +1229,23 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         final int generation=execution.generation();
         final String session=execution.sessionId();
         hideGuideOverlay();hideConfirmation();stopNarration();
-        java.util.Set<String> appNames=launcherLabels(target.packageName);appNames.add(target.label);
-        appEntry=new AppEntryController(target.packageName,target.label,new AppEntryController.Listener(){
+        java.util.Set<String> appNames=entryLabels(target);
+        appEntry=new AppEntryController(target,new AppEntryController.Listener(){
             private LauncherAppSearch search;
             public boolean canProceed(){return !closing&&generation==execution.generation()
                 &&java.util.Objects.equals(session,execution.sessionId())&&!execution.paused()&&execution.pendingControl()==null;}
             public ScreenSnapshot freshScreen(){return ClickAccessibilityService.freshSnapshot();}
             public AppEntryController.Launch launch(){
                 android.util.Log.i("ClickAgent","app_entry_launch package="+target.packageName);
-                if(LauncherAppSearch.safe(freshScreen())) {
+                if(!automaticTouchEnabled())return AppEntryController.Launch.FAILED;
+                var launch=AppEntryController.launch(ClickOverlayService.this,target);
+                search=null;
+                if((launch==AppEntryController.Launch.FAILED || launch==AppEntryController.Launch.UNAVAILABLE)
+                        && !target.dialpad && LauncherAppSearch.safe(freshScreen())) {
                     search=new LauncherAppSearch(appNames);
                     return AppEntryController.Launch.SEARCHING;
                 }
-                search=null;
-                return AppEntryController.launch(ClickOverlayService.this,target.packageName);
+                return launch;
             }
             public void searchPaused(){if(search!=null)search.pause();}
             public void searchResumed(){if(search!=null)search.resume();}
@@ -1279,10 +1278,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         appEntry.start();
     }
 
-    private void startAppGuide() {
+    private void startAppGuide(RequestedApp target) {
         if(appGuide!=null){appGuide.close();appGuide=null;}
         if(coupangBrowse!=null){coupangBrowse.close();coupangBrowse=null;}
-        RequestedApp target=requestedApp();
         enterRequestedApp(target,()->startAppGuideInApp(target));
     }
 
@@ -1299,7 +1297,13 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             public boolean canObserve(){return !closing&&!execution.paused()&&appEntry==null;}
             public void busy(boolean busy){setTurnInFlight(busy);updateRequestStatus(true,busy);}
             public void failure(Throwable error){showAppGuideMessage(ErrorDetails.requestMessage(error),null);}
-            public boolean execute(ScreenSnapshot baseline,JSONObject observation,JSONObject action,String input,String selectedPackage){return ClickAccessibilityService.performAppTask(baseline,observation,action,input,selectedPackage);}
+            public boolean execute(ScreenSnapshot baseline,JSONObject observation,JSONObject action,String input,String selectedPackage){
+                if ("open_app".equals(action.optString("tool"))) {
+                    try { return com.click.service.accessibility.AppTaskExecutor.open(ClickOverlayService.this,fresh(),observation,action,appGuide.selectedApp()); }
+                    catch (org.json.JSONException invalid) { return false; }
+                }
+                return ClickAccessibilityService.performAppTask(baseline,observation,action,input,selectedPackage);
+            }
             public boolean inputMatches(String target,String hash){return ClickAccessibilityService.appTaskInputMatches(target,hash);}
             public String sessionId(){return execution.sessionId();}
             public String scope(String pkg){try{android.content.pm.PackageInfo info=getPackageManager().getPackageInfo(pkg,0);return pkg+"|"+(android.os.Build.VERSION.SDK_INT>=28?info.getLongVersionCode():info.versionCode)+"|"+android.os.Build.VERSION.SDK_INT+"|app-task.v2";}catch(Exception e){return pkg+"|app-task.v2";}}
@@ -1309,13 +1313,23 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 JSONObject resultEvidence=result.optJSONObject("result_assessment");
                 if(resultEvidence!=null)android.util.Log.i("ClickAgent","app_task_result status="+resultEvidence.optString("status")
                     +" reason="+resultEvidence.optString("reason")+" source="+resultEvidence.optString("source")+" check_count="+resultEvidence.optInt("check_count"));
+                AppTaskController owner=appGuide;
+                RequestedApp destination=owner.selectedApp();
+                boolean openApp="proposed".equals(result.optString("status")) && action!=null
+                    && "open_app".equals(action.optString("tool")) && destination!=null && destination.packageName.equals(action.optString("package"));
+                JSONObject origin=result.optJSONObject("diagnostic");
+                if (openApp && automaticTouchEnabled() && screen!=null && screen.activeWindowId!=null
+                        && !destination.reached(screen) && origin!=null && "requested_app_entry".equals(origin.optString("reason"))
+                        && owner.takeAutomaticReturn()) {
+                    enterRequestedApp(destination,()->{if(appGuide==owner)owner.refresh();});
+                    return;
+                }
                 int[] bounds=null;org.json.JSONArray target=action==null?null:action.optJSONArray("bounds");AccessibilityNodeSnapshot icon;
                 if("proposed".equals(result.optString("status"))&&target!=null&&target.length()==4) {
                     bounds=new int[]{target.optInt(0),target.optInt(1),target.optInt(2),target.optInt(3)};
                     lastSubmittedScreen=screen;
                     showGuideOverlay(bounds,action.optString("tool").startsWith("scroll_")?"scroll":"tap",GuideDragDirection.UNKNOWN);
-                }else if("proposed".equals(result.optString("status"))&&action!=null&&"open_app".equals(action.optString("tool"))
-                        &&(icon=homeIconTarget(screen,openAppNames(action)))!=null) {
+                }else if(openApp && !destination.dialpad && (icon=LauncherAppSearch.app(screen,entryLabels(destination)))!=null) {
                     // Opening the app needs no screen target, but on the home screen point at its icon
                     // so the user can tap it directly; the panel's open button still works.
                     bounds=icon.bounds;lastSubmittedScreen=screen;
@@ -1323,10 +1337,6 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     try{result=new JSONObject(result.toString()).put("message","표시한 "+result.optString("target_label","앱")+" 앱을 누르거나 아래 열기 버튼을 눌러주세요.");}catch(org.json.JSONException ignored){}
                 }else{
                     hideGuideOverlay();
-                    if("proposed".equals(result.optString("status"))&&action!=null&&"open_app".equals(action.optString("tool"))){
-                        String message=searchAppTaskHome(appGuide,screen,action,result.optString("target_label","앱"));
-                        if(message!=null)try{result=new JSONObject(result.toString()).put("message",message);}catch(org.json.JSONException ignored){}
-                    }
                 }
                 JSONObject diagnostic=result.optJSONObject("diagnostic");
                 if(diagnostic!=null)android.util.Log.i("ClickAgent","app_task model="+diagnostic.optString("model")
@@ -1336,8 +1346,14 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 renderAppTask(result,bounds);
             }
         },agentGateway.currentContract().appTask,agentGateway.currentContract().appTaskMemory,agentGateway.currentContract().appTaskCompletion,AppTaskMetaController.Arm.CURRENT,agentGateway.currentContract().appTaskGoalFirst);
-        if(target!=null)appGuide.targetApp(target.packageName,target.label);
+        if(target!=null)appGuide.targetApp(target);
         android.util.Log.i("ClickAgent","app_task_start target_resolved="+(target!=null)+" remote="+agentGateway.currentContract().appTask);
+        if(target==null){
+            var screen=ClickAccessibilityService.freshSnapshot();
+            if(RequestedApp.needsDialpad(initialGoal) || screen!=null && NavigationRecovery.isHome(screen.packageName)){
+                showAppTaskApps();return;
+            }
+        }
         appGuide.refresh();
     }
 
@@ -1370,16 +1386,22 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
     private void showAppTaskApps(){
         if(appGuide==null||execution.paused())return;final AppTaskController owner=appGuide;org.json.JSONArray apps=new org.json.JSONArray();
+        java.util.Map<String,RequestedApp> choices=new java.util.LinkedHashMap<>();
         try{
-            java.util.List<android.content.pm.ResolveInfo> found=getPackageManager().queryIntentActivities(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),0);
-            found.sort(java.util.Comparator.comparing(r->String.valueOf(r.loadLabel(getPackageManager()))));java.util.Set<String> seen=new java.util.HashSet<>();
-            for(var r:found)if(r.activityInfo!=null&&!getPackageName().equals(r.activityInfo.packageName)&&seen.add(r.activityInfo.packageName))apps.put(new JSONObject().put("package",r.activityInfo.packageName).put("label",String.valueOf(r.loadLabel(getPackageManager()))));
+            var installed=RequestedApp.installed(this);
+            installed.sort(java.util.Comparator.comparing(app->app.label));
+            for(var app:installed){
+                if(choices.putIfAbsent(app.packageName+"|"+app.label,app)==null)
+                    apps.put(new JSONObject().put("package",app.packageName).put("label",app.label));
+            }
         }catch(Exception error){showAppGuideMessage("설치된 앱 목록을 읽지 못했어요. 직접 앱을 열고 현재 화면을 확인해 주세요.",null);return;}
         taskFlowView.appTaskApps(apps,(pkg,label)->{
             if(appGuide!=owner||execution.paused())return;
-            if(!automaticTouchEnabled()){owner.chooseApp(pkg,label);return;}
-            owner.targetApp(pkg,label);
-            enterRequestedApp(new RequestedApp(pkg,label),()->{if(appGuide==owner)owner.refresh();});
+            RequestedApp target=choices.get(pkg+"|"+label);
+            if(target==null)return;
+            if(!automaticTouchEnabled()){owner.chooseApp(target);return;}
+            owner.targetApp(target);
+            enterRequestedApp(target,()->{if(appGuide==owner)owner.refresh();});
         },()->{if(appGuide==owner)showAppTaskTools();});placeTaskFlow(null,true);
     }
     private void readAppTaskVisual(){
@@ -3884,66 +3906,20 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         return labels;
     }
 
-    /**
-     * The requested app's icon is not on this home page. Swipe to the next page within the
-     * launcher search budget; each new page is re-observed by the app task and presented again.
-     * Returns the message to show, or null to keep the proposal's own message.
-     */
-    private String searchAppTaskHome(AppTaskController owner,ScreenSnapshot screen,JSONObject action,String app) {
-        if(owner==null||!LauncherAppSearch.safe(screen))return null;
-        String scope=System.identityHashCode(owner)+":"+action.optString("package");
-        if(!scope.equals(appTaskLauncherScope)) {
-            appTaskLauncherScope=scope;appTaskLauncherSearch=new LauncherAppSearch(launcherLabels(action.optString("package")));
-            manualLauncherView=null;manualLauncherStep=null;appTaskHomeSearchPending=false;appTaskHomeSearchToken++;
+    private java.util.Set<String> entryLabels(RequestedApp target) {
+        // A package can publish distinct launcher entries (e.g. Phone and Contacts).
+        if (target.dialpad) return java.util.Set.of(target.label);
+        if (target.activity!=null) {
+            var names=new java.util.LinkedHashSet<String>();
+            names.add(target.label);
+            var pm=getPackageManager();
+            var info=pm.resolveActivity(target.intent(pm),0);
+            if(info!=null)names.add(String.valueOf(info.loadLabel(pm)));
+            return names;
         }
-        if(appTaskHomeSearchPending)return app+" 앱을 찾고 있어요.";
-        if(manualLauncherView!=null && manualLauncherView.equals(LauncherAppSearch.fingerprint(screen))) {
-            if(manualLauncherStep.target()!=null)showGuideOverlay(manualLauncherStep.target().bounds,"tap",GuideDragDirection.UNKNOWN);
-            return launcherSearchMessage(manualLauncherStep,app);
-        }
-        manualLauncherView=null;manualLauncherStep=null;
-        var step=appTaskLauncherSearch.next(screen);
-        android.util.Log.i("ClickScroll","app_task_launcher action="+step.kind()+" reason="+step.reason());
-        if(step.kind()==LauncherAppSearch.Kind.FINISHED)
-            return app+" 앱 아이콘을 확인하지 못했어요. 앱을 직접 열거나 아래 열기 버튼을 눌러주세요.";
-        if(!automaticTouchEnabled() && step.kind()!=LauncherAppSearch.Kind.WAIT) {
-            manualLauncherView=LauncherAppSearch.fingerprint(screen);manualLauncherStep=step;
-            if(step.target()!=null)showGuideOverlay(step.target().bounds,"tap",GuideDragDirection.UNKNOWN);
-            return launcherSearchMessage(step,app);
-        }
-        final int token=++appTaskHomeSearchToken;appTaskHomeSearchPending=true;
-        speechHandler.postDelayed(()->{
-            if(token!=appTaskHomeSearchToken||appGuide!=owner||closing||execution.paused()){appTaskHomeSearchPending=false;return;}
-            if(automaticTouchEnabled())collapseTaskFlow();
-            boolean moved=step.kind()!=LauncherAppSearch.Kind.WAIT && automaticTouchEnabled()
-                    && ClickAccessibilityService.performLauncherSearch(screen,step,launcherLabels(action.optString("package")));
-            speechHandler.postDelayed(()->{
-                if(token!=appTaskHomeSearchToken)return;appTaskHomeSearchPending=false;
-                if(appGuide==owner&&!closing&&!execution.paused())owner.refresh();
-            },moved?1000L:500L);
-        },300L);
-        return launcherSearchMessage(step,app);
-    }
-
-    private String launcherSearchMessage(LauncherAppSearch.Step step,String app) {
-        if(automaticTouchEnabled())return switch(step.kind()) {
-            case TAP_FOLDER -> "폴더를 열어 "+app+" 앱을 확인하고 있어요.";
-            case OPEN_DRAWER -> "앱 서랍을 열고 있어요.";
-            case BACK -> "폴더에서 나와 다른 앱을 확인하고 있어요.";
-            default -> app+" 앱을 찾고 있어요.";
-        };
-        return switch(step.kind()) {
-            case TAP_FOLDER -> "표시한 폴더를 열어주세요. 폴더 안에서 "+app+" 앱을 확인할게요.";
-            case OPEN_DRAWER -> step.target()!=null?"표시한 앱스 버튼을 눌러주세요.":"홈 화면을 아래에서 위로 밀어 앱 서랍을 열어주세요.";
-            case BACK -> "이 폴더에서 앱을 찾지 못했어요. 뒤로 가서 다른 폴더를 확인해주세요.";
-            case SCROLL -> step.forward()?"다음 앱 페이지로 넘겨주세요.":"이전 앱 페이지로 넘겨주세요.";
-            default -> app+" 앱을 찾고 있어요.";
-        };
-    }
-
-    private java.util.function.Predicate<String> openAppNames(JSONObject action) {
-        java.util.Set<String> labels=launcherLabels(action.optString("package"));
-        return label->appIconLabel(label,labels);
+        var names=launcherLabels(target.packageName);
+        names.add(target.label);
+        return names;
     }
 
     private static boolean coupangAppLabel(String label) {

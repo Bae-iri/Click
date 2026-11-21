@@ -32,6 +32,66 @@ public class AppTaskControllerTest {
         assertEquals("tap",l.result.getJSONObject("action").getString("tool"));assertEquals("com.coupang.mobile",c.memory().scope());
         c.execute(old,null);assertEquals(0,l.executions);verify(gateway,never()).send(any(),any());c.close();
     }
+    @Test public void wrongContactsAppReturnsToPhoneAndDoesNotSearchOrComplete() throws Exception {
+        var phone=new RequestedApp("org.phone","전화",null,true);
+        var gateway=mock(AppGuideGateway.class);
+        var listener=new Listener();
+        var memory=new AppTaskMemory("전화번호 키패드에 즐겨찾기 하고 싶어");
+        var controller=new AppTaskController(gateway,memory,null,listener,false);
+        try {
+            controller.targetApp(phone);
+            for(String pkg:List.of("org.contacts",phone.packageName)) {
+                listener.current=screen(pkg,node(pkg,"node_0_1","연락처","tab",true),node(pkg,"node_0_2","키패드","tab",false));
+                controller.refresh();
+                assertEquals("open_app",listener.result.getJSONObject("action").getString("tool"));
+                assertEquals(phone.packageName,listener.result.getJSONObject("action").getString("package"));
+            }
+            listener.current=screen(phone.packageName,node(phone.packageName,"node_0_1","키패드","tab",true),
+                node(phone.packageName,"node_0_2","검색","button"));
+            controller.refresh();
+            assertTrue(listener.result.isNull("action"));assertFalse(memory.finished());
+            // A later menu within Phone need not show the keypad again.
+            listener.current=screen(phone.packageName,node(phone.packageName,"node_0_1","설정","button"));
+            controller.refresh();assertTrue(listener.result.isNull("action"));
+            listener.current=screen("org.contacts",node("org.contacts","node_0_1","검색","button"));
+            controller.refresh();assertEquals("open_app",listener.result.getJSONObject("action").getString("tool"));
+            assertTrue(controller.takeAutomaticReturn());assertFalse(controller.takeAutomaticReturn());
+            assertFalse(memory.finished());verify(gateway,never()).send(any(),any());
+        } finally {controller.close();}
+    }
+    @Test public void verificationAfterAnUnexpectedAppSwitchReentersTheSameTask() throws Exception {
+        String pkg="org.phone";
+        var listener=new Listener();
+        var gateway=mock(AppGuideGateway.class);
+        var memory=new AppTaskMemory("전화에서 설정 메뉴 열어줘");
+        var controller=new AppTaskController(gateway,memory,null,listener,false);
+        try {
+            controller.targetApp(pkg,"전화");
+            listener.current=screen(pkg,node(pkg,"node_0_1","설정","button"));
+            controller.refresh();
+            assertEquals("tap",listener.result.getJSONObject("action").getString("tool"));
+            controller.execute((String)null);
+            listener.current=screen("org.contacts",node("org.contacts","node_0_1","설정","button"));
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
+            assertEquals("open_app",listener.result.getJSONObject("action").getString("tool"));
+            assertEquals(pkg,listener.result.getJSONObject("action").getString("package"));
+            assertFalse(memory.finished());assertNotNull(memory.active());assertEquals(1,listener.executions);
+            verify(gateway,never()).send(any(),any());
+        } finally {controller.close();}
+    }
+
+    @Test public void unknownAppOnLauncherDoesNotSendFoldersToPlanner() throws Exception {
+        var listener=new Listener();
+        var gateway=mock(AppGuideGateway.class);
+        String home="com.sec.android.app.launcher";
+        listener.current=screen(home,node(home,"node_0_1","도구 폴더","button"),node(home,"node_0_2","검색","button"));
+        var controller=new AppTaskController(gateway,new AppTaskMemory("목록을 정리하고 싶어"),null,listener,true);
+        try {
+            controller.refresh();
+            assertEquals("needs_input",listener.result.getString("status"));assertTrue(listener.result.isNull("action"));
+            assertEquals(0,listener.executions);verify(gateway,never()).send(any(),any());
+        } finally {controller.close();}
+    }
     @Test public void productRequestUsesVisibleSearchFieldWithoutCompletingTheOrder()throws Exception {
         String pkg="com.coupang.mobile";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","","search"));
         var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("쿠팡에서 물 주문하고 싶어"),null,l,false);c.targetApp(pkg,"쿠팡");c.refresh();
