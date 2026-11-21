@@ -24,6 +24,40 @@ public class AppTaskOutcomesTest {
     static JSONObject goal(JSONObject... clauses)throws Exception{
         return new JSONObject().put("seal","a".repeat(64)).put("clauses",new JSONArray(Arrays.asList(clauses)));
     }
+    @Test public void firstTapUsesAUniqueAliasAndRetainsRequestedState() throws Exception {
+        JSONObject page = clause("page","보관함").put("labels", new JSONArray(List.of("보관함","Library")));
+        JSONObject sync = clause("off","자동 동기화");
+        JSONObject task = goal(page,sync);
+        JSONObject entry = new JSONObject().put("role","button").put("label","Library")
+                .put("source","accessibility").put("clickable",true);
+        JSONObject toggle = new JSONObject().put("role","toggle").put("label","자동 동기화")
+                .put("source","accessibility").put("clickable",true).put("checked",true);
+        JSONObject current = new JSONObject().put("package",PKG).put("nodes",new JSONArray(List.of(entry,toggle)));
+        JSONObject visits = new JSONObject();
+        assertEquals(entry, AppTaskOutcomes.firstTap(task,current,null,visits).node());
+        current.getJSONArray("nodes").put(new JSONObject(entry.toString()));
+        assertNull(AppTaskOutcomes.firstTap(task,current,null,visits));
+        visits.put("0",PKG);
+        var tap = AppTaskOutcomes.firstTap(task,current,null,visits);
+        assertEquals(toggle,tap.node());
+        assertFalse(tap.expectation().getBoolean("checked"));
+        toggle.put("checked",false);
+        assertNull(AppTaskOutcomes.firstTap(task,current,null,visits));
+        toggle.remove("checked");
+        assertNull(AppTaskOutcomes.firstTap(task,current,null,visits));
+    }
+
+    @Test public void firstTapRequiresANativeUnselectedTab() throws Exception {
+        JSONObject task = goal(clause("selected","스톱워치"));
+        JSONObject item = new JSONObject().put("role","tab").put("label","스톱워치")
+                .put("source","accessibility").put("clickable",true).put("selected",false);
+        JSONObject current = new JSONObject().put("package",PKG).put("nodes",new JSONArray(List.of(item)));
+        assertTrue(AppTaskOutcomes.firstTap(task,current,null,new JSONObject()).expectation().getBoolean("selected"));
+        item.put("selected",true);
+        assertNull(AppTaskOutcomes.firstTap(task,current,null,new JSONObject()));
+        item.put("selected",false).put("source","ocr");
+        assertNull(AppTaskOutcomes.firstTap(task,current,null,new JSONObject()));
+    }
     private static AccessibilityNodeSnapshot node(String id,String label,boolean heading,Boolean checked,Float position,boolean discrete){
         return new AccessibilityNodeSnapshot(id,null,true,PKG,label,null,PKG+":id/"+id,
             position!=null?"android.widget.SeekBar":checked!=null?"android.widget.Switch":"android.widget.TextView",position!=null?"slider":null,

@@ -96,6 +96,47 @@ final class AppTaskOutcomes {
         for(int i=0;i<labels.length();i++) if(name.equals(normalize(labels.optString(i)))) return true;
         return false;
     }
+    record FirstTap(JSONObject node, JSONObject expectation) {}
+
+    /** Bind a signed subject to one visible control. The tap itself is never evidence of completion. */
+    static FirstTap firstTap(JSONObject goal, JSONObject current, ScreenSnapshot screen, JSONObject visits) throws JSONException {
+        JSONArray clauses = goal.getJSONArray("clauses");
+        JSONArray nodes = current.getJSONArray("nodes");
+        for (int i = 0; i < clauses.length(); i++) {
+            JSONObject clause = clauses.getJSONObject(i);
+            String kind = clause.getString("kind");
+            if (kind.equals("page") && i+1 < clauses.length()) {
+                // A live page lets us guide its next control immediately. Only Arrivals records a lasting visit.
+                if (current.getString("package").equals(visits.optString(Integer.toString(i)))
+                        || screen != null && visible(clause, current, screen, new HashSet<>(), null) == AppTaskCompletion.Verdict.MATCHED) continue;
+            }
+            if (!Set.of("page", "selected", "on", "off").contains(kind)) return null;
+            JSONObject target = null;
+            for (int j = 0; j < nodes.length(); j++) {
+                JSONObject node = nodes.getJSONObject(j);
+                if (!named(clause, node.optString("label"))) continue;
+                if (!node.optBoolean("clickable") && !Set.of("button","toggle","tab").contains(node.optString("role"))) continue;
+                if (target != null || !"accessibility".equals(node.optString("source"))
+                        || !node.optBoolean("clickable") || node.optBoolean("editable")) return null;
+                target = node;
+            }
+            if (target == null) return null;
+            String role = target.getString("role");
+            JSONObject expectation = new JSONObject();
+            if (kind.equals("on") || kind.equals("off")) {
+                boolean desired = kind.equals("on");
+                if (!role.equals("toggle") || !(target.opt("checked") instanceof Boolean checked) || checked == desired) return null;
+                expectation.put("kind", "selection_changed").put("checked", desired);
+            } else if (role.equals("tab") && Boolean.FALSE.equals(target.opt("selected"))) {
+                expectation.put("kind", "selection_changed").put("selected", true);
+            } else if (role.equals("button") && kind.equals("page") && !target.optBoolean("selected") && target.isNull("checked")) {
+                expectation.put("kind", "screen_changed");
+            } else return null;
+            return new FirstTap(target, expectation);
+        }
+        return null;
+    }
+
     private static AppTaskCompletion.Verdict visible(JSONObject c,JSONObject observed,ScreenSnapshot screen,Set<String> used,JSONObject binding) throws JSONException {
         String kind=c.getString("kind"); JSONArray nodes=observed.getJSONArray("nodes"); JSONObject target=null,generic=null;
         int switches=0,headings=0; boolean contextual=false;

@@ -13,6 +13,7 @@ def compound():
         dict(label='자동 동기화', role='toggle', checked=True, clickable=True)])
 
 def test_goal_compilation_sees_no_screen_and_is_bound_to_task(compound):
+    compound.goal = semantic_goal = '먼저 보관함에 가. 그다음 자동 동기화는 꺼진 상태로 해줘'
     clauses=[OutcomeClause(kind='page',labels=['보관함','Library']),OutcomeClause(kind='off',labels=['자동 동기화'])]
     def sender(payload, timeout):
         assert 'n1' not in payload['input'] and 'CURRENT SCREEN' not in payload['input']
@@ -26,9 +27,51 @@ def test_goal_compilation_sees_no_screen_and_is_bound_to_task(compound):
     assert outcome.authentic(compound)
     compound.goal='다른 요청'
     assert service.step(compound).diagnostic['reason_code']=='outcome_contract_changed'
-    compound.goal='보관함을 열고 자동 동기화를 꺼줘'
+    compound.goal=semantic_goal
     compound.state.outcome_goal=OutcomeGoal(clauses=clauses[:1],seal=compiled.seal)
     assert not outcome.authentic(compound)
+
+
+@pytest.mark.parametrize(('goal', 'effects'), [
+    ('시계에서 스톱워치 탭을 열어줘', [('selected', '스톱워치', 0)]),
+    ('open the Library page', [('page', 'Library', 0)]),
+    ('보관함을 열고 자동 동기화를 꺼줘', [('page', '보관함', 0), ('off', '자동동기화', 0)]),
+    ('글자 크기를 한 단계 키워줘', [('increase', '글자 크기', 1)]),
+])
+def test_literal_start_is_signed_without_model_or_screen(compound, goal, effects):
+    compound.goal = goal
+    compound.prepare_outcome = True
+    service = AppTaskService(lambda *a, **kw: pytest.fail('unnecessary model call'))
+    response = service.step(compound)
+    assert response.diagnostic['called'] is False
+    assert response.diagnostic['model'] == 'local'
+    assert outcome.authentic(compound, contract=response.outcome_goal)
+    assert [(c.kind, c.labels[0], c.steps) for c in response.outcome_goal.clauses] == effects
+    assert service.step(compound).outcome_goal == response.outcome_goal
+
+
+@pytest.mark.parametrize('goal', ['예전에 저장한 것들을 보여줘', 'A 말고 B 탭을 열어줘',
+                                 'open the Library page and turn off sync', '즐겨 보던 화면을 보여줘',
+                                 'open the next tab', '그 화면을 열어줘'])
+def test_semantic_or_compound_navigation_is_not_frozen_as_a_literal(goal):
+    assert not outcome.named_destination(goal)
+
+def test_paraphrased_display_keeps_flash_and_omits_numeric_fields(compound):
+    compound.goal = '예전에 저장한 것들을 보여줘'
+    compound.prepare_outcome = True
+    def sender(payload, timeout):
+        assert payload['model'] == 'qwen/qwen3.8-flash'
+        item = payload['text']['format']['schema']['properties']['clauses']['items']
+        assert set(item['required']) == {'kind', 'labels'}
+        assert 'n1' not in payload['input']
+        answer = json.dumps({'clauses': [{'kind':'page', 'labels':['보관함', 'Library']}]})
+        body = {'status':'completed', 'model':payload['model'],
+                'output':[{'type':'message','role':'assistant','content':[{'type':'output_text','text':answer}]}]}
+        return SimpleNamespace(status_code=200, content=json.dumps(body).encode())
+    result = AppTaskService(sender).step(compound)
+    assert result.diagnostic['called'] and outcome.authentic(compound, contract=result.outcome_goal)
+    assert result.outcome_goal.clauses == [OutcomeClause(kind='page', labels=['보관함', 'Library'])]
+
 
 def test_only_full_correct_native_proof_survives(compound):
     clauses=outcome.legacy_compound(compound.goal)
