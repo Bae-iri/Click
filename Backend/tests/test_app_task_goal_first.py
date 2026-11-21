@@ -5,10 +5,12 @@ from unittest.mock import Mock
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.app_task import AppTaskRequest, TaskSubgoal
+from app.schemas.app_task import AppTaskRequest, TaskAttempt, TaskCompletion, TaskResultCheck, TaskSubgoal
+from app.schemas.app_task_learning import TaskMemoryResponse
 from app.services.app_task import AppTaskService
 from app.services.app_task_capabilities import ActionCapabilities
 from tests.test_app_task import request, sender, compact_sender
+from tests.test_app_task_recovery_capabilities import recovering
 
 
 @pytest.fixture(autouse=True)
@@ -142,3 +144,64 @@ def test_request_mode_defaults_compatibly_and_rejects_unknown_values():
     assert AppTaskRequest.model_validate(body).planning_mode=='next_action'
     body['planning_mode']='invented'
     with pytest.raises(ValidationError):AppTaskRequest.model_validate(body)
+
+
+def test_menu_model_selects_one_gemini_call_with_identical_payload_and_action(monkeypatch):
+    req = request()
+    req.planning_mode, req.goal = 'goal_first', '검색 메뉴를 열어줘'
+    monkeypatch.setenv('GEMINI_API_KEY', 'test-key')
+    send = sender(goal_status='not_satisfied')
+    gateway = Mock(side_effect=lambda model, key, payload, **kwargs: send(payload, **kwargs))
+    monkeypatch.setattr('app.services.app_task.generate', gateway)
+    answers = []
+    for selected in ('', 'gemini-3.5-flash-lite'):
+        monkeypatch.setenv('APP_TASK_MENU_MODEL', selected)
+        answers.append(AppTaskService().step(req))
+    assert [call.args[0] for call in gateway.call_args_list] == ['gemini-3.8-flash', 'gemini-3.5-flash-lite']
+    assert gateway.call_args_list[0].args[2] == gateway.call_args_list[1].args[2]
+    assert all(r.diagnostic['called'] is True and r.status == 'proposed' and r.requires_confirmation
+               and r.action.target_id == req.screen.nodes[0].id for r in answers)
+
+
+@pytest.mark.parametrize('case', ['heading', 'ocr', 'tab', 'toggle', 'edit', 'value', 'selected', 'keyboard',
+                                  'deselect', 'result_only', 'verified_plan', 'next_action', 'bound', 'recovery',
+                                  'pending_plan', 'revision', 'attempt', 'path_prefix'])
+def test_potential_evidence_and_other_modes_use_main_gemini(monkeypatch, case):
+    monkeypatch.setenv('APP_TASK_MENU_MODEL', 'gemini-3.5-flash-lite')
+    req = request()
+    req.planning_mode, req.goal = 'goal_first', '메뉴 화면을 열어줘'
+    node = req.screen.nodes[0]
+    node_fields = {'heading': {'role': 'text', 'clickable': False}, 'ocr': {'source': 'ocr'},
+                   'tab': {'role': 'tab'}, 'toggle': {'role': 'toggle', 'checked': False},
+                   'edit': {'editable': True}, 'value': {'has_value': True}, 'selected': {'selected': True}}
+    if case in node_fields:
+        req.screen.nodes.append(node.model_copy(update={'id': 'second', **node_fields[case]}))
+    elif case == 'keyboard': req.screen.keyboard_visible = True
+    elif case == 'deselect': req.goal = '선택을 해제하고 메뉴를 열어줘'
+    elif case == 'verified_plan': req.state.subgoals = [TaskSubgoal(id='g0', title='메뉴 열기', status='verified')]
+    elif case == 'pending_plan': req.state.subgoals = [TaskSubgoal(id='g0', title='메뉴 열기')]
+    elif case == 'revision': req.state.revision = 1
+    elif case == 'path_prefix': req.path_prefix = ['button']
+    elif case == 'attempt': req.state.attempts = [TaskAttempt(fingerprint=req.screen.fingerprint, tool='tap',
+                                                             target=node.id, outcome='failed')]
+    elif case == 'bound': req.state.completion = TaskCompletion(checks=[TaskResultCheck(package=req.screen.package, label='목적 화면')])
+    elif case == 'recovery': req = recovering(req)
+    else: req.planning_mode = case
+    send = sender(goal_status='not_satisfied')
+    result = AppTaskService(send).step(req)
+    send.assert_called_once()
+    assert result.diagnostic['model'] == 'gemini-3.8-flash'
+
+
+@pytest.mark.parametrize('with_evidence', [False, True])
+def test_named_menu_model_with_authenticated_recall(monkeypatch, with_evidence):
+    monkeypatch.setenv('APP_TASK_MENU_MODEL', 'gemini-3.5-flash-lite')
+    req = request()
+    req.planning_mode, req.goal = 'goal_first', '메뉴를 열어줘'
+    memory = Mock()
+    memory.recall.return_value = TaskMemoryResponse(request_id=req.request_id, observation_id=req.screen.observation_id,
+        fingerprint=req.screen.fingerprint, evidence=[{'target_id': req.screen.nodes[0].id}] if with_evidence else [])
+    send = sender(goal_status='not_satisfied')
+    result = AppTaskService(send, memory).step(req, user_id='test-user')
+    send.assert_called_once()
+    assert result.diagnostic['model'] == ('gemini-3.8-flash' if with_evidence else 'gemini-3.5-flash-lite')
