@@ -281,9 +281,9 @@ public class MetaControllerClosedLoopExperimentTest {
     private static JSONObject plan(JSONObject request,Flow flow) throws Exception {
         JSONObject screen=request.getJSONObject("screen"),state=request.getJSONObject("state");
         JSONArray nodes=screen.getJSONArray("nodes"),attempts=state.getJSONArray("attempts");
-        String resource=flow.selection?RES+"history":RES+"primary";boolean failed=false;
-        for(int i=0;i<attempts.length();i++)if("failed".equals(attempts.getJSONObject(i).optString("outcome")))failed=true;
-        if(failed)resource=RES+"alternate";
+        String resource=flow.selection?RES+"history":RES+"primary";boolean unresolved=false;
+        for(int i=0;i<attempts.length();i++)if(Set.of("failed","waiting").contains(attempts.getJSONObject(i).optString("outcome")))unresolved=true;
+        if(unresolved)resource=RES+"alternate";
         else for(int i=0;i<nodes.length();i++)if((RES+"advanced").equals(nodes.getJSONObject(i).optString("resource")))resource=RES+"advanced";
         JSONObject target=null;for(int i=0;i<nodes.length();i++)if(resource.equals(nodes.getJSONObject(i).optString("resource")))target=nodes.getJSONObject(i);
         JSONObject result=new JSONObject().put("protocol_version","app-task.v2").put("request_id",request.getString("request_id"))

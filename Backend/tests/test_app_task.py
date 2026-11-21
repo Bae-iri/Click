@@ -94,9 +94,10 @@ def test_app_open_only_uses_one_explicitly_selected_package():
     assert result.action.target_id is None and result.action.bounds is None
 
 
-def test_recovery_history_uses_model_ids_and_blocks_two_failed_repeats():
+@pytest.mark.parametrize('outcomes', [('failed','failed'), ('waiting','waiting'), ('waiting','failed')])
+def test_recovery_history_uses_model_ids_and_blocks_two_unresolved_attempts(outcomes):
     req=request(); req.state.attempts=[TaskAttempt(fingerprint='a'*64,tool='tap',
-                    target='node_0_1',outcome='failed')]*2
+                    target='node_0_1',outcome=outcome) for outcome in outcomes]
     send=sender(); result=AppTaskService(send).step(req)
     assert result.status=='unavailable' and result.action is None
     prompt=send.call_args.args[0]['contents'][0]['parts'][0]['text']

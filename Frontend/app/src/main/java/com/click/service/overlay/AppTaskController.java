@@ -188,6 +188,9 @@ public final class AppTaskController {
     private void showUnverifiedResult()throws JSONException{
         if(AppTaskSwitchGoal.parse(memory.goal())!=null){
             show("needs_input","요청하신 스위치 상태를 확인하지 못했어요. 현재 설정을 확인해 주세요.");
+        }else if(completionSupported){
+            resultAssessment=new JSONObject().put("status","unknown").put("reason","goal_postconditions_unconfirmed");
+            show("needs_input","안내한 단계는 마쳤지만 요청하신 결과를 화면에서 확인하지 못했어요. 현재 화면을 다시 확인해 주세요.");
         }else{
             show("confirm_result","요청하신 결과가 나왔나요? 확인한 뒤 안내를 끝내 주세요.");
         }
@@ -250,6 +253,9 @@ public final class AppTaskController {
                 completionTrace("unavailable","support_rejected",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,2);
                 resetResultEvidence();return false;
             }
+            // The end state can be proven while the last action's prediction is still pending.
+            if(verifying)finishVerification(current,AppTaskVerifier.Verdict.WAITING);
+            lastUnverified=null;
             save();
             checkingResult=false;resultOffered=true;proposal=null;submitted=current.optString("fingerprint");
             resultAssessment=new JSONObject().put("status","verified").put("reason","goal_postconditions_observed")
@@ -260,13 +266,15 @@ public final class AppTaskController {
             show("confirm_result","요청하신 결과가 화면에 반영된 것을 확인했어요. 원하신 결과가 맞나요?");return true;
         }
         if(SystemClock.elapsedRealtime()-resultStarted>=5000){
+            if(verifying)finishVerification(current,AppTaskVerifier.Verdict.UNKNOWN);
             checkingResult=false;resultObservation=null;
             resultAssessment=new JSONObject().put("status","unknown").put("reason","fresh_result_observation_unavailable");
             completionTrace("unavailable","fresh_frame_unavailable",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,1);
             show("needs_input","결과를 확인할 새 화면을 읽지 못했어요. 현재 화면을 다시 확인해 주세요.");return true;
         }
         completionTrace("evidence","waiting_second_frame",memory.completion(),current,screen,completionRequestRef,"matched","fresh",now-captured,SystemClock.elapsedRealtime()-resultStarted,1);
-        handler.removeCallbacks(refresh);handler.postDelayed(refresh,400);return true;
+        Runnable next=verifying?verify:refresh;
+        handler.removeCallbacks(next);handler.postDelayed(next,400);return true;
     }
     /** A known local postcondition can finish proof while a paid planner response is still pending. */
     private void observeKnownResultWhileBusy(){
@@ -738,7 +746,7 @@ public final class AppTaskController {
     }
     private void propose(JSONObject action)throws JSONException {
         cancelPlannerWait();
-        if(meta.blocked(observation,action)){meta.clearRecoveryContext();proposal=null;show("needs_input","이 화면에서 반영되지 않은 동작이에요. 다른 방법을 선택하거나 직접 진행해 주세요.");return;}
+        if(meta.blocked(observation,action)||memory.repeated(observation,action)){meta.clearRecoveryContext();proposal=null;show("needs_input","이 화면에서 반영되지 않은 동작이에요. 다른 방법을 선택하거나 직접 진행해 주세요.");return;}
         if(!AppTaskPolicy.allowed(observation,observation,action,selectedPackage)&&!("tap".equals(action.optString("tool"))&&AppTaskPolicy.manualTapAllowed(observation,action))){proposal=null;show("needs_input","이 동작은 직접 진행해 주세요. 이후 현재 화면을 다시 확인할 수 있어요.");return;}
         proposal=new JSONObject(action.toString()).put("id",UUID.randomUUID().toString());proposedAt=System.currentTimeMillis();
         observation=capture(baseline);submitted=observation.getString("fingerprint");
@@ -793,7 +801,14 @@ public final class AppTaskController {
             actionAt=System.currentTimeMillis();
             meta.clearRecoveryContext();
             boolean accepted=listener.execute(baseline,observation,proposal,input,selectedPackage);
-            if(!accepted){record(observation,current,proposal,"failed",false,false,false);invalidateReplay();proposal=null;show("needs_input","동작을 실행하지 못했어요. 화면을 다시 확인하거나 직접 진행해 주세요.");return;}
+            if(!accepted){
+                record(observation,current,proposal,"failed",false,false,false);invalidateReplay();proposal=null;
+                if(goalFirstSupported&&completionSupported){
+                    ScreenSnapshot after=listener.fresh();
+                    if(after!=null){reofferParkedCompletion(after);if(observeResult(capture(after),after))return;}
+                }
+                show("needs_input","동작을 실행하지 못했어요. 화면을 다시 확인하거나 직접 진행해 주세요.");return;
+            }
             beginVerification();
         }catch(Exception e){listener.failure(e);}
     }
@@ -826,24 +841,39 @@ public final class AppTaskController {
     private void verifyNow(){
         if(closed||!verifying||!listener.canObserve())return;
         try{
-            ScreenSnapshot fresh=listener.fresh();JSONObject after=capture(fresh);
+            ScreenSnapshot fresh=listener.fresh();
+            if(goalFirstSupported)reofferParkedCompletion(fresh);
+            JSONObject after=capture(fresh);
             JSONObject target=AppTaskVerifier.resolveTarget(observation,after,proposal.optString("target_id"));
             boolean text="set_text".equals(proposal.optString("tool"))&&target!=null&&listener.inputMatches(target.optString("id"),inputHash);
             AppTaskVerifier.Verdict verdict=AppTaskVerifier.check(observation,after,proposal,actionObserved,text,actionAt);
             long now=SystemClock.elapsedRealtime();
             meta.subgoal(memory.active());AppTaskMetaController.Decision decision=meta.after(observation,after,proposal,verdict,now-actionStarted,now,baseline,fresh);
-            if(decision==AppTaskMetaController.Decision.WAIT){handler.removeCallbacks(verify);handler.postDelayed(verify,400);return;}
+            if(decision==AppTaskMetaController.Decision.WAIT){
+                if(goalFirstSupported&&observeResult(after,fresh))return;
+                handler.removeCallbacks(verify);handler.postDelayed(verify,400);return;
+            }
             boolean verified=verdict==AppTaskVerifier.Verdict.VERIFIED;
-            if(!verified)invalidateReplay();
-            // A later planned step is grounded only after the step before it was natively verified.
-            plannedReady=verified&&planned!=null&&planned.length()>0;if(!verified)planned=null;
-            String previousActive=memory.active();
-            record(observation,after,proposal,verified?"verified":decision==AppTaskMetaController.Decision.REOBSERVE_PROGRESS?"waiting":verdict==AppTaskVerifier.Verdict.PROTECTED?"protected":verdict==AppTaskVerifier.Verdict.STALE?"stale":verdict==AppTaskVerifier.Verdict.UNKNOWN?"waiting":"failed",actionObserved,verified,verified&&AppTaskPolicy.provesSubgoal(proposal));
-            meta.nativeSubgoalAdvanced(previousActive,memory.active(),proposal,verdict,observation,after);
-            proposal=null;verifying=false;inputHash=null;submitted=null;
+            finishVerification(after,verdict);
             if(observeResult(after,fresh))return;
             if(verified||decision==AppTaskMetaController.Decision.REOBSERVE||decision==AppTaskMetaController.Decision.REOBSERVE_PROGRESS){handler.post(refresh);}else{baseline=fresh;observation=after;show("needs_input",verdict==AppTaskVerifier.Verdict.PROTECTED?"입력·인증은 직접 진행해 주세요. 진행 상태는 보관했어요.":verdict==AppTaskVerifier.Verdict.UNKNOWN?"결과를 확인할 화면이나 대상을 읽지 못했어요. 현재 화면을 다시 확인해 주세요.":"아직 변화를 확인하지 못했어요. 같은 동작을 반복하지 않고 다른 방법을 확인해 주세요.");}
         }catch(Exception e){verifying=false;listener.failure(e);}
+    }
+    private void finishVerification(JSONObject after,AppTaskVerifier.Verdict verdict)throws JSONException {
+        boolean verified=verdict==AppTaskVerifier.Verdict.VERIFIED;
+        if(!verified){invalidateReplay();planned=null;}
+        plannedReady=verified&&planned!=null&&planned.length()>0;
+        String outcome=switch(verdict){
+            case VERIFIED -> "verified";
+            case PROTECTED -> "protected";
+            case STALE -> "stale";
+            case WAITING, UNKNOWN -> "waiting";
+        };
+        String previousActive=memory.active();
+        record(observation,after,proposal,outcome,actionObserved,verified,verified&&AppTaskPolicy.provesSubgoal(proposal));
+        meta.nativeSubgoalAdvanced(previousActive,memory.active(),proposal,verdict,observation,after);
+        handler.removeCallbacks(verify);
+        proposal=null;verifying=false;inputHash=null;submitted=null;
     }
     private void invalidateReplay(){if(replaying){if(store!=null)store.invalidateRoute(memory.goal(),scope);cached=null;replaying=false;}}
     public void confirmResultOnServer(Runnable confirmed,java.util.function.Consumer<Throwable> failed){
