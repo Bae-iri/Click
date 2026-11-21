@@ -55,9 +55,9 @@ public class HomeActivity extends AppCompatActivity {
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
     }
     private HomeTutorial tutorial;
-    private final ActivityResultLauncher<String> tutorialMic = registerForActivityResult(
-            new ActivityResultContracts.RequestPermission(), granted -> {
-                if (tutorial != null) tutorial.onMicrophonePermission(granted);
+    private final ActivityResultLauncher<Intent> tutorialDisplay = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (tutorial != null) tutorial.onDisplayResult();
             });
     private final ActivityResultLauncher<Intent> tutorialSettings = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -205,13 +205,13 @@ public class HomeActivity extends AppCompatActivity {
         boolean requested = intent.getBooleanExtra(EXTRA_START_TUTORIAL, false);
         intent.removeExtra(EXTRA_START_TUTORIAL);
         var liveCourse = new com.click.data.local.LiveTutorialStore(this);
-        if (requested && liveCourse.requestId() != null) {
-            startOverlayWithPermission(null, null, false, false, liveCourse.requestId());
-            return;
-        }
         Bundle practice = saved == null ? null : saved.getBundle(HomeTutorial.SAVED_STATE);
-        if (practice == null && new com.click.data.local.LiveTutorialStore(this).awaitingHomeTour())
-            practice = HomeTutorial.afterRealTask(requestInput.getText().toString(), requestInput.getSelectionEnd());
+        if (!requested && practice == null && liveCourse.displayPackage() != null) {
+            liveCourse.endDisplay();
+            com.click.service.accessibility.ClickAccessibilityService.refreshDisplayTutorial();
+        }
+        if (!requested && practice == null && liveCourse.awaitingHomeTour())
+            practice = HomeTutorial.afterDisplay();
         if (practice != null || requested || (saved == null && !guidanceChoices.hasSeenHomeTutorial()))
             startTutorial(practice);
     }
@@ -233,13 +233,13 @@ public class HomeActivity extends AppCompatActivity {
         tutorialSettings.launch(new Intent(this, MenuActivity.class).putExtra(MenuActivity.EXTRA_TOUR, true));
     }
 
-    void requestTutorialMicrophone() { tutorialMic.launch(android.Manifest.permission.RECORD_AUDIO); }
+    void openTourDisplay(Intent intent) { tutorialDisplay.launch(intent); }
 
     void closeTutorial() {
         HomeTutorial closing = tutorial;
         if (closing == null) return;
         tutorial = null;
-        closing.close();
+        closing.close(true);
         new com.click.data.local.LiveTutorialStore(this).finishHomeTour();
         showTutorialHome();
         if (getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
@@ -255,6 +255,16 @@ public class HomeActivity extends AppCompatActivity {
         state.putBoolean("library_reordering", reordering);
         if (tutorial != null) state.putBundle(HomeTutorial.SAVED_STATE, tutorial.save());
         super.onSaveInstanceState(state);
+    }
+
+    @Override protected void onRestoreInstanceState(Bundle state) {
+        super.onRestoreInstanceState(state);
+        Bundle previous = state.getBundle(HomeTutorial.SAVED_STATE);
+        // Old lessons stored practice text in the editor's view state and kept the real draft separately.
+        if (previous != null && previous.containsKey("home_draft")) {
+            requestInput.setText(previous.getString("home_draft", ""));
+            requestInput.setSelection(Math.max(0, Math.min(previous.getInt("home_cursor"), requestInput.length())));
+        }
     }
 
     @Override protected void onResume() {
@@ -285,7 +295,7 @@ public class HomeActivity extends AppCompatActivity {
     @Override public void onUserInteraction(){super.onUserInteraction();scheduleFirstHelp();}
     private void scheduleFirstHelp(){helpTiming.removeCallbacks(offerFirstHelp);if(tutorial==null&&guidanceChoices!=null&&guidanceChoices.maySuggest())helpTiming.postDelayed(offerFirstHelp,12000);}
     @Override protected void onDestroy(){
-        if (tutorial != null) { HomeTutorial closing = tutorial; tutorial = null; closing.close(); }
+        if (tutorial != null) { HomeTutorial closing = tutorial; tutorial = null; closing.close(isFinishing()); }
         helpTiming.removeCallbacksAndMessages(null);super.onDestroy();
     }
     private void addAssistanceEntry(LinearLayout page){
@@ -373,8 +383,7 @@ public class HomeActivity extends AppCompatActivity {
         card.addView(requestInput, new LinearLayout.LayoutParams(0, -2, 1));
         View microphone = iconButton(HomeIconView.Kind.MICROPHONE, "말로 입력", R.id.home_microphone);
         microphone.setOnClickListener(view -> {
-            if (tutorial != null) tutorial.chooseVoice();
-            else startOverlayWithPermission(null, null, true);
+            if (tutorial == null) startOverlayWithPermission(null, null, true);
         });
         card.addView(microphone, new LinearLayout.LayoutParams(dp(44), dp(44)));
         sendRequest = iconButton(HomeIconView.Kind.SEND, "요청 보내기", R.id.home_request_send);
@@ -385,7 +394,6 @@ public class HomeActivity extends AppCompatActivity {
             @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
                 sendRequest.setVisibility(text.toString().trim().isEmpty() ? View.GONE : View.VISIBLE);
-                if (tutorial != null) tutorial.onTextEdited();
             }
             @Override public void afterTextChanged(Editable text) {}
         });
@@ -393,7 +401,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     protected void submitHomeRequest() {
-        if (tutorial != null) { tutorial.submitHomeRequest(); return; }
+        if (tutorial != null) return;
         String request = requestInput.getText().toString().trim();
         if (request.isEmpty()) return;
         if (startOverlayWithPermission(request, null, false)) requestInput.setText("");
@@ -774,7 +782,7 @@ public class HomeActivity extends AppCompatActivity {
     private void showComingSoon(String feature) {
         Toast.makeText(this, feature + "을 준비하고 있어요.\n지금은 글씨 크기·화면 밝기·소리 조절을 도와드릴게요!", Toast.LENGTH_LONG).show();
     }
-    private void openPermissionGuide() {
+    void openPermissionGuide() {
         startActivity(new Intent(this, com.click.designpreview.PermissionGuideActivity.class)
                 .putExtra(com.click.designpreview.PermissionGuideActivity.EXTRA_RECONNECT,
                         PermissionStatus.isAccessibilityEnabled(this)));
@@ -786,39 +794,22 @@ public class HomeActivity extends AppCompatActivity {
         if (homeScroll.isShown()) homeScroll.requestFocus();
     }
     private boolean startOverlayWithPermission(String goal, String selectedGoalType, boolean voice) {
-        return startOverlayWithPermission(goal, selectedGoalType, voice, false);
-    }
-    void startLiveTutorial(String request) { startOverlayWithPermission(request, null, false, true); }
-
-    private boolean startOverlayWithPermission(String goal, String selectedGoalType, boolean voice, boolean liveTutorial) {
-        return startOverlayWithPermission(goal, selectedGoalType, voice, liveTutorial, null);
-    }
-    private boolean startOverlayWithPermission(String goal, String selectedGoalType, boolean voice, boolean liveTutorial, String resumeRequest) {
         if (requestLaunching) return false;
         if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return false; }
         if (com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() == null) {
             requestLaunching = true;
             Toast.makeText(this, "클릭을 준비하고 있어요.", Toast.LENGTH_SHORT).show();
             connectionWatcher.start(() -> {
-                if (liveTutorial && tutorial == null) { requestLaunching = false; return; }
-                if (!liveTutorial && goal != null && goal.equals(requestInput.getText().toString().trim())) requestInput.setText("");
-                launchOverlay(goal, selectedGoalType, voice, liveTutorial, resumeRequest);
+                if (goal != null && goal.equals(requestInput.getText().toString().trim())) requestInput.setText("");
+                launchOverlay(goal, selectedGoalType, voice);
             }, () -> { requestLaunching = false; openPermissionGuide(); });
             return false;
         }
-        launchOverlay(goal, selectedGoalType, voice, liveTutorial, resumeRequest);
+        launchOverlay(goal, selectedGoalType, voice);
         return true;
     }
-    private void launchOverlay(String goal, String selectedGoalType, boolean voice, boolean liveTutorial, String resumeRequest) {
+    private void launchOverlay(String goal, String selectedGoalType, boolean voice) {
         Intent service = new Intent(this, ClickOverlayService.class);
-        if (resumeRequest != null) {
-            service.putExtra(ClickOverlayService.EXTRA_RESUME_REQUEST_ID, resumeRequest);
-            closeTutorial();
-        }
-        if (liveTutorial) {
-            service.putExtra(ClickOverlayService.EXTRA_LIVE_TUTORIAL_ID, new com.click.data.local.LiveTutorialStore(this).begin(goal));
-            closeTutorial();
-        }
         if (goal != null) service.putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL, goal);
         if (selectedGoalType != null) service.putExtra(ClickOverlayService.EXTRA_SELECTED_GOAL_TYPE, selectedGoalType);
         service.putExtra(ClickOverlayService.EXTRA_OPEN_VOICE, voice);

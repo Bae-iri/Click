@@ -5,7 +5,6 @@ import android.annotation.SuppressLint;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -46,7 +45,6 @@ public final class ClueCoachView extends FrameLayout {
     private final TutorialNarrator narrator;
     private final boolean external;
     private final Paint ink = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Path mask = new Path(), corner = new Path();
     private final RectF hole = new RectF();
     private final Rect panelBounds = new Rect(), bounds = new Rect();
     private final Rect externalTarget = new Rect(), externalPanel = new Rect(), externalKeyboard = new Rect();
@@ -59,7 +57,7 @@ public final class ClueCoachView extends FrameLayout {
     private Insets safe = Insets.NONE;
     private Insets systemFloor = Insets.NONE;
     private int speakerBottom;
-    private boolean foreground, audioAvailable = true, emphasized, reminded, touching, pendingNarration;
+    private boolean foreground, emphasized, reminded, touching, pendingNarration;
     private String spokenWords;
     private ValueAnimator motion;
     private int externalArtwork;
@@ -67,13 +65,16 @@ public final class ClueCoachView extends FrameLayout {
     private final ViewTreeObserver.OnPreDrawListener trackAnchor = this::updateHole;
 
     public ClueCoachView(FrameLayout host) {
-        this(host, false);
+        this(host, false, true);
     }
 
     /** The live window passes every touch to the actual app and uses its existing narration. */
-    public static ClueCoachView liveOverlay(FrameLayout host) { return new ClueCoachView(host, true); }
+    public static ClueCoachView liveOverlay(FrameLayout host) { return new ClueCoachView(host, true, false); }
 
-    private ClueCoachView(FrameLayout host, boolean external) {
+    /** A read-only window over system Display, with Clue's own spoken explanation. */
+    public static ClueCoachView displayLesson(FrameLayout host) { return new ClueCoachView(host, true, true); }
+
+    private ClueCoachView(FrameLayout host, boolean external, boolean narrate) {
         super(host.getContext());
         this.host = host;
         this.external = external;
@@ -130,12 +131,12 @@ public final class ClueCoachView extends FrameLayout {
         bubble.addView(copy, new ScrollView.LayoutParams(-1, -2));
         speaker.addView(bubble, new LinearLayout.LayoutParams(0, -2, 1));
         addView(speaker);
-        narrator = external ? null : new TutorialNarrator(getContext());
+        narrator = narrate ? new TutorialNarrator(getContext()) : null;
         if (narrator != null) narrator.setListener((speaking, unavailable) -> {
             clearTimers();
             if (!speaking) noteActivity();
         });
-        if (external) {
+        if (external && !narrate) {
             setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
             message.setMaxLines(4);
             message.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -160,7 +161,10 @@ public final class ClueCoachView extends FrameLayout {
         externalKeyboard.set(keyboard == null ? new Rect() : keyboard);
         foreground = true;
         updateHole();
-        if (changed) requestLayout();
+        if (changed) {
+            requestLayout();
+            if (narrator != null) narrate(words);
+        }
         startMotion();
     }
 
@@ -175,7 +179,6 @@ public final class ClueCoachView extends FrameLayout {
         clue.setImageResource(artwork);
         onContinue(null);
         bubble.scrollTo(0, 0);
-        audioAvailable = true;
         narrate(words);
         if (anchor != null) {
             View target = anchor;
@@ -202,34 +205,27 @@ public final class ClueCoachView extends FrameLayout {
         requestLayout();
     }
 
-    public void keepPanelVisible(View view) { panel = view; requestLayout(); }
     public void status(String words, boolean speak) {
         message.setText(words);
         if (speak) { noteActivity(); narrate(words); }
         requestLayout();
     }
     private void narrate(String words) {
-        if (external) return;
+        if (narrator == null) return;
         spokenWords = words;
         pendingNarration = !foreground;
         if (foreground) narrator.speak(words);
     }
-    public void setAudioAvailable(boolean available) {
-        audioAvailable = available;
-        if (!available && narrator != null) narrator.stop();
-        noteActivity();
-    }
-    public void onTextEdited() { if (narrator != null) narrator.stop(); noteActivity(); }
     private void noteActivity() {
         clearTimers();
         if (external) return;
-        if (foreground && audioAvailable && !reminded && !touching && !narrator.isSpeaking())
+        if (foreground && isShown() && !reminded && !touching && !narrator.isSpeaking())
             postDelayed(idle, IDLE_HINT_MS);
     }
     private void clearTimers() { removeCallbacks(idle); }
     private void repeatIfIdle() {
         if (external) return;
-        if (!foreground || !audioAvailable || reminded || touching || narrator.isSpeaking()) return;
+        if (!foreground || !isShown() || reminded || touching || narrator.isSpeaking()) return;
         emphasized = reminded = true;
         invalidate();
         narrator.replay(spokenWords);
@@ -336,23 +332,15 @@ public final class ClueCoachView extends FrameLayout {
     }
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (external && hole.isEmpty()) return;
-        mask.rewind(); mask.setFillType(Path.FillType.EVEN_ODD);
-        mask.addRect(0, 0, getWidth(), getHeight(), Path.Direction.CW);
-        float radius = Math.min(Math.min(hole.width(), hole.height()) / 2f, dp(18));
-        if (!hole.isEmpty()) mask.addRoundRect(hole, radius, radius, Path.Direction.CW);
-        ink.setStyle(Paint.Style.FILL); ink.setColor(0x80FFFFFF); canvas.drawPath(mask, ink);
-        if (hole.isEmpty() || !external && allowed.length == 0) return;
-        ink.setStyle(Paint.Style.STROKE); ink.setStrokeWidth(dp(emphasized ? 4 : 2));
-        ink.setStrokeCap(Paint.Cap.ROUND); ink.setColor(emphasized ? 0xFF174DAA : 0xFF316BC5);
-        float leg = Math.min(dp(emphasized ? 32 : 24), Math.min(hole.width(), hole.height()) / 2f);
-        float bend = Math.min(radius, leg * .65f);
-        corner.rewind(); corner.moveTo(0, leg); corner.lineTo(0, bend); corner.quadTo(0, 0, bend, 0); corner.lineTo(leg, 0);
-        drawCorner(canvas, hole.left, hole.top, 1, 1); drawCorner(canvas, hole.right, hole.top, -1, 1);
-        drawCorner(canvas, hole.left, hole.bottom, 1, -1); drawCorner(canvas, hole.right, hole.bottom, -1, -1);
-    }
-    private void drawCorner(Canvas canvas, float x, float y, int sx, int sy) {
-        canvas.save(); canvas.translate(x, y); canvas.scale(sx, sy); canvas.drawPath(corner, ink); canvas.restore();
+        if (hole.isEmpty()) return;
+        float radius = Math.min(dp(8), Math.min(hole.width(), hole.height()) / 2f);
+        ink.setStyle(Paint.Style.FILL);
+        ink.setColor(0x203478F6);
+        canvas.drawRoundRect(hole, radius, radius, ink);
+        ink.setStyle(Paint.Style.STROKE);
+        ink.setStrokeWidth(dp(emphasized ? 4 : 3));
+        ink.setColor(0xFF3478F6);
+        canvas.drawRoundRect(hole, radius, radius, ink);
     }
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
         int w = MeasureSpec.getSize(widthSpec), h = MeasureSpec.getSize(heightSpec);

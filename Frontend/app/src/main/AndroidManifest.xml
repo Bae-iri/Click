@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
     <queries>
+        <intent><action android:name="android.settings.DISPLAY_SETTINGS" /></intent>
         <intent><action android:name="android.telecom.action.MANAGE_BLOCKED_NUMBERS" /></intent>
         <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.APP_CONTACTS" /></intent>
         <intent><action android:name="android.intent.action.DIAL" /></intent>

@@ -10,7 +10,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.SystemClock;
 import android.provider.Settings;
-import android.widget.TextView;
+import android.content.IntentFilter;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.click.core.permission.PermissionStatus;
@@ -33,7 +33,11 @@ public class TutorialReadyFlowTest {
                 PermissionStatus.isAccessibilityEnabled(context)
                         && context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
                         && Settings.canDrawOverlays(context));
-        if (PermissionStatus.areRequiredPermissionsGranted(context)) return;
+        reconnectIfNeeded(context, automation);
+    }
+
+    static void reconnectIfNeeded(Context context, UiAutomation automation) {
+        if (ClickAccessibilityService.accessibilityWindowManager() != null) return;
         // Instrumentation restarts the target app, disconnecting its previously enabled service.
         String key = Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES;
         String original = Settings.Secure.getString(context.getContentResolver(), key);
@@ -49,37 +53,26 @@ public class TutorialReadyFlowTest {
             automation.dropShellPermissionIdentity();
         }
         long deadline = SystemClock.uptimeMillis() + 10000;
-        while (!PermissionStatus.areRequiredPermissionsGranted(context) && SystemClock.uptimeMillis() < deadline) {
+        while (ClickAccessibilityService.accessibilityWindowManager() == null && SystemClock.uptimeMillis() < deadline) {
             SystemClock.sleep(100);
         }
-        assertTrue("The enabled accessibility service must be connected", PermissionStatus.areRequiredPermissionsGranted(context));
+        assertNotNull("The enabled accessibility service must be connected", ClickAccessibilityService.accessibilityWindowManager());
     }
 
-    @Test public void bothOnboardingEntriesOpenTheCoachOnHomeWithoutAnExtraTap() {
+    @Test public void bothOnboardingEntriesOpenSystemDisplayWithoutAnExtraTap() {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Context context = instrumentation.getTargetContext();
         for (Class<?> entry : new Class<?>[] {RequiredPermissionsActivity.class, TutorialReadyActivity.class}) {
-            Instrumentation.ActivityMonitor monitor = instrumentation.addMonitor(HomeActivity.class.getName(), null, false);
-            Activity home = null;
+            Instrumentation.ActivityMonitor display = instrumentation.addMonitor(new IntentFilter(Settings.ACTION_DISPLAY_SETTINGS),
+                    new Instrumentation.ActivityResult(Activity.RESULT_CANCELED, null), true);
             try {
                 context.startActivity(new Intent(context, entry)
                         .putExtra(RequiredPermissionsActivity.EXTRA_DESTINATION, "tutorial")
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
-                home = instrumentation.waitForMonitorWithTimeout(monitor, 8000);
-                assertNotNull("The permission gate must open home directly", home);
-                instrumentation.waitForIdleSync();
-                Activity opened = home;
-                instrumentation.runOnMainSync(() -> {
-                    assertTrue(opened.findViewById(R.id.home_request_input).isShown());
-                    assertTrue(opened.findViewById(R.id.tutorial_floating_control).isShown());
-                    assertEquals(opened.getString(R.string.tour_welcome),
-                            ((TextView) opened.findViewById(R.id.tutorial_title)).getText().toString());
-                    assertNull(opened.findViewById(R.id.tutorial_ready_start));
-                });
-            } finally {
-                instrumentation.removeMonitor(monitor);
-                if (home != null) instrumentation.runOnMainSync(home::finish);
-            }
+                long end = SystemClock.uptimeMillis() + 8000;
+                while (display.getHits() == 0 && SystemClock.uptimeMillis() < end) SystemClock.sleep(50);
+                assertEquals(1, display.getHits());
+            } finally { instrumentation.removeMonitor(display); }
         }
     }
 }

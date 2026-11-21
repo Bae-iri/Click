@@ -6,17 +6,48 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.UUID;
 
-/** The real request owns the course. A page change or local animation cannot complete it. */
+/** Account-scoped tutorial state, including real requests started by earlier app versions. */
 public final class LiveTutorialStore {
     private final SharedPreferences prefs;
+    private final SharedPreferences displayHost;
+    private final String courseFile;
+
+    private static SharedPreferences displayHost(Context context) {
+        return context.getSharedPreferences("clue_display_tutorial_host", Context.MODE_PRIVATE);
+    }
+
+    /** The accessibility service can reconnect without opening the user's secure sign-in store. */
+    public static String activeDisplayPackage(Context context) {
+        String owner = displayHost(context).getString("course", null);
+        if (owner == null) return null;
+        return new LiveTutorialStore(context.getSharedPreferences(owner, Context.MODE_PRIVATE)).displayPackage();
+    }
 
     public LiveTutorialStore(Context context) {
         String user = new AuthTokenStore(context).userId();
         String account = user == null || user.isEmpty() ? "guest"
                 : UUID.nameUUIDFromBytes(user.getBytes(StandardCharsets.UTF_8)).toString();
-        prefs = context.getSharedPreferences("live_clue_tutorial_" + account, Context.MODE_PRIVATE);
+        courseFile = "live_clue_tutorial_" + account;
+        displayHost = displayHost(context);
+        prefs = context.getSharedPreferences(courseFile, Context.MODE_PRIVATE);
     }
-    public LiveTutorialStore(SharedPreferences prefs) { this.prefs = prefs; }
+    public LiveTutorialStore(SharedPreferences prefs) {
+        this.prefs = prefs;
+        this.displayHost = null;
+        this.courseFile = null;
+    }
+
+    public void beginDisplay(String settingsPackage) {
+        prefs.edit().clear().putString("phase", "DISPLAY").putString("display_package", settingsPackage).apply();
+        if (displayHost != null) displayHost.edit().putString("course", courseFile).apply();
+    }
+    public String displayPackage() { return "DISPLAY".equals(phase()) ? prefs.getString("display_package", null) : null; }
+    public void endDisplay() {
+        if (!"DISPLAY".equals(phase())) return;
+        prefs.edit().remove("display_package").putString("phase", "HOME").apply();
+        if (displayHost != null && courseFile.equals(displayHost.getString("course", null)))
+            displayHost.edit().remove("course").apply();
+    }
 
     public String begin(String request) {
         String id = UUID.randomUUID().toString();

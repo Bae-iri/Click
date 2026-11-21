@@ -82,6 +82,49 @@ public class MenuAutomationConsentTest {
    }
   }
  }
+ @Test public void tutorialRequiresReadingAndKeepsTheModeWhenLeavingAfterTheExplanation() {
+  for (boolean enabled : new boolean[]{false, true}) {
+   var context = RuntimeEnvironment.getApplication();
+   TouchAutomationSettings settings = new TouchAutomationSettings(context);
+   settings.setEnabled(enabled);
+   var intent = new android.content.Intent(context, MenuActivity.class).putExtra(MenuActivity.EXTRA_TOUR, true);
+   try (var graph = mockConstruction(GraphImprovementConsentGateway.class);
+        var account = mockConstruction(AccountActionsGateway.class);
+        var narration = mockConstruction(com.click.designpreview.TutorialNarrator.class);
+        var controller = Robolectric.buildActivity(MenuActivity.class, intent).setup()) {
+    MenuActivity activity = controller.get();
+    View toggle = activity.findViewById(R.id.menu_automation_toggle);
+    assertFalse(activity.findViewById(R.id.tutorial_title).performClick());
+    toggle.performClick();
+    Dialog first = ShadowDialog.getLatestDialog();
+    layout(first);
+    assertEquals(enabled, settings.isEnabled());
+    assertFalse(first.findViewById(android.R.id.button1).isEnabled());
+    first.dismiss();
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+    assertFalse(activity.isFinishing());
+    toggle.performClick();
+    Dialog dialog = ShadowDialog.getLatestDialog();
+    layout(dialog);
+    ScrollView body = dialog.getWindow().getDecorView().findViewWithTag("click_dialog_body_scroll");
+    assertNotNull(find(body, activity.getString(enabled ? R.string.tour_auto_read_enabled : R.string.tour_auto_read)));
+    Button confirm = dialog.findViewById(android.R.id.button1);
+    assertEquals(enabled ? "계속" : "자동 모드 켜기", confirm.getText().toString());
+    int end = body.getChildAt(0).getHeight() - body.getHeight();
+    body.scrollTo(0, end / 2);
+    assertFalse(confirm.isEnabled());
+    body.scrollTo(0, end - 1);
+    assertFalse(confirm.isEnabled());
+    body.scrollTo(0, end);
+    assertTrue(confirm.isEnabled());
+    verify(narration.constructed().get(0)).speak(activity.getString(enabled ? R.string.tour_auto_ready_enabled : R.string.tour_auto_ready));
+    dialog.findViewById(enabled ? android.R.id.button1 : android.R.id.button2).performClick();
+    org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+    assertEquals(android.app.Activity.RESULT_OK, org.robolectric.Shadows.shadowOf(activity).getResultCode());
+    assertEquals(enabled, settings.isEnabled());
+   } finally { settings.setEnabled(false); }
+  }
+ }
  private void open(View root,boolean viaSwitch) {
   View view=find(root,viaSwitch?"자동 모드":"자동으로 도와주기");
   while(!view.isClickable()) view=(View)view.getParent();view.performClick();

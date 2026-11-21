@@ -42,6 +42,23 @@ public final class ClickAccessibilityService extends AccessibilityService {
     private VisionPrivacy visionPrivacy;
     private ScreenRevisionTracker screenRevisions;
 
+    private DisplayTutorialGuide displayTutorial;
+
+    public static void refreshDisplayTutorial() {
+        ClickAccessibilityService service = connectedService.get();
+        if (service == null) return;
+        String pkg = com.click.data.local.LiveTutorialStore.activeDisplayPackage(service);
+        if (service.displayTutorial != null) {
+            if (service.displayTutorial.settingsPackage.equals(pkg)) return;
+            service.displayTutorial.close();
+            service.displayTutorial = null;
+        }
+        if (pkg != null) {
+            service.displayTutorial = new DisplayTutorialGuide(service, pkg);
+            service.scheduleSnapshot(true);
+        }
+    }
+
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
@@ -50,6 +67,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
         mainHandler = new Handler(getMainLooper());
         Log.i(TAG, "Click accessibility service connected");
         ClickOverlayService.onAccessibilityOverlayAvailable();
+        refreshDisplayTutorial();
         mainHandler.removeCallbacks(onboardingReturn);
         onboardingReturnAttempts = 0;
         returnFromAccessibilitySettings();
@@ -108,6 +126,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
             return;
         }
         CharSequence packageName = event.getPackageName();
+        if (displayTutorial != null && event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                && (packageName == null || !displayTutorial.settingsPackage.contentEquals(packageName))) {
+            scheduleSnapshot(true);
+        }
         if (isSystemNavigationEvent(event, packageName == null ? "" : packageName.toString())) {
             ClickOverlayService.collapseIfRunning();
             Intent collapse = new Intent(OverlayActions.ACTION_COLLAPSE).setPackage(getPackageName());
@@ -180,6 +202,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
     }
 
     private void disconnect() {
+        if (displayTutorial != null) {
+            displayTutorial.close();
+            displayTutorial = null;
+        }
         if (mainHandler != null) mainHandler.removeCallbacks(onboardingReturn);
         if (mainHandler != null) mainHandler.removeCallbacks(captureRunnable);
         snapshotBurstStartedAt = -1L;
@@ -651,6 +677,12 @@ public final class ClickAccessibilityService extends AccessibilityService {
         snapshotBurstStartedAt = -1L;
         snapshotScheduledAt = -1L;
         ScreenSnapshot snapshot = readCurrentScreen();
+        if (displayTutorial != null) {
+            boolean displayActivity = snapshot != null && snapshot.packageName.equals(lastForegroundPackage)
+                    && java.util.Objects.equals(snapshot.activeWindowId, lastForegroundWindow)
+                    && lastForegroundClass != null && lastForegroundClass.endsWith("DisplaySettingsActivity");
+            displayTutorial.update(snapshot, displayActivity);
+        }
         if (snapshot == null) return;
         LatestScreenSnapshot.set(snapshot);
         sendBroadcast(new Intent(OverlayActions.ACTION_SNAPSHOT_UPDATED).setPackage(getPackageName()));

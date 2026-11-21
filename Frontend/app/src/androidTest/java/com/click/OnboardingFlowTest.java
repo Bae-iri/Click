@@ -789,10 +789,11 @@ public class OnboardingFlowTest {
             shown("로그아웃");
             screenshot("menu");
         }
-        try (ActivityScenario<OverlayTutorialActivity> s = ActivityScenario.launch(
-                OverlayTutorialActivity.class)) {
-            shown(instrumentation.getTargetContext().getString(R.string.tour_welcome));
-            screenshot("overlay-tutorial");
+        if (!com.click.core.permission.PermissionStatus.isAccessibilityEnabled(instrumentation.getTargetContext())) {
+            instrumentation.getTargetContext().startActivity(new android.content.Intent(instrumentation.getTargetContext(),
+                    OverlayTutorialActivity.class).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+            shown(instrumentation.getTargetContext().getString(R.string.tour_display_permission));
+            screenshot("overlay-tutorial-permission");
         }
     }
     private TextView shown(String text) {
