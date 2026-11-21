@@ -1586,34 +1586,21 @@ public class ClickOverlayServiceExecutionTest {
         }
     }
 
-    @Test public void redrawingTheSameProposalPreservesInputAndUsesItsCurrentActionId() throws Exception {
+    @Test public void redrawingAnInputGuideNeverTakesTheAppKeyboardOrRepeatsSpeech() throws Exception {
         prepareGuideResponse();
-        var owner=mock(AppTaskController.class);
-        var panel=new TaskFlowOverlayView(service,mock(TaskFlowOverlayView.Listener.class));
-        set("appGuide",owner);
-        set("taskFlowView",panel);
-        Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);
-        render.setAccessible(true);
+        var owner=mock(AppTaskController.class);set("appGuide",owner);
+        var panel=new TaskFlowOverlayView(service,mock(TaskFlowOverlayView.Listener.class));set("taskFlowView",panel);
+        Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);render.setAccessible(true);
+        String message="표시한 검색창에 이렇게 입력해 주세요.\n서울";
         var action=new JSONObject().put("id","old").put("tool","set_text");
-        var result=new JSONObject().put("status","proposed").put("action",action).put("execute_allowed",true)
-                .put("message","검색어를 입력해 주세요.");
-        render.invoke(service,result,null);
-        var host=Robolectric.buildActivity(android.app.Activity.class).setup();
-        host.get().setContentView(panel);
-        var input=feedbackChild(panel,android.widget.EditText.class,null);
-        input.setText("서울");
-        action.put("id","new");
-        render.invoke(service,result,null);
-        assertSame(input,feedbackChild(panel,android.widget.EditText.class,null));
-        assertEquals("서울",input.getText().toString());
-        feedbackChild(panel,android.widget.TextView.class,"검색창에 입력").performClick();
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(450));
-        verify(owner).execute("new","서울");
-        verify(owner,never()).execute(eq("old"),anyString());
-        verify((TutorialNarrator)get("narrator")).speak("검색어를 입력해 주세요.");
-        host.pause().stop().destroy();
+        var result=new JSONObject().put("status","proposed").put("action",action).put("execute_allowed",false).put("message",message);
+        render.invoke(service,result,new int[]{10,20,400,120});int revision=panel.presentationRevision();
+        action.put("id","new");render.invoke(service,result,new int[]{10,20,400,120});
+        assertEquals(revision,panel.presentationRevision());assertFalse(panel.needsPublicGuideInput());
+        assertNull(feedbackChild(panel,android.widget.EditText.class,null));
+        assertTrue((((WindowManager.LayoutParams)get("taskFlowParams")).flags&WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)!=0);
+        verify((TutorialNarrator)get("narrator"),times(1)).speak(message);verify(owner,never()).execute(anyString(),any());
     }
-
     @Test public void automaticStepsStayQuietWhileReplayAndResultQuestionsStillSpeak() throws Exception {
         prepareExpandedBluetoothNavigation();
         accessibility.when(()->ClickAccessibilityService.performGuidedTap(any(),eq("bluetooth"),any())).thenReturn(true);

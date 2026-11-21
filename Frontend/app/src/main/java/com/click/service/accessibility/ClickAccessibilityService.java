@@ -78,6 +78,10 @@ public final class ClickAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        if(event.getEventType()==AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED){
+            if(ClickOverlayService.onAppInputEdited(event))scheduleSnapshot(false);
+            return;
+        }
         if (screenRevisions == null) screenRevisions = new ScreenRevisionTracker(getPackageName());
         screenRevisions.onEvent(event.getEventType(),
                 event.getPackageName() == null ? null : event.getPackageName().toString(),
@@ -216,7 +220,7 @@ public final class ClickAccessibilityService extends AccessibilityService {
     public static boolean performAppTask(ScreenSnapshot expected,org.json.JSONObject observation,org.json.JSONObject action,String input,String selectedPackage){
         return AppTaskExecutor.execute(connectedService.get(),expected,freshSnapshot(),observation,action,input,selectedPackage);
     }
-    public static boolean appTaskInputMatches(String targetId,String expectedHash){return AppTaskExecutor.inputMatches(connectedService.get(),targetId,expectedHash);}
+    public static boolean appTaskInputMatches(String targetId,String expectedHash){return AppTaskExecutor.inputMatches(connectedService.get(),LatestScreenSnapshot.get(),targetId,expectedHash);}
     public static void captureAppTaskVision(AppTaskVision.Callback callback){AppTaskVision.capture(connectedService.get(),freshSnapshot(),callback);}
 
     public static void captureVision(ScreenSnapshot expected, String vocabularyKey, OnDeviceVision.Callback callback) {

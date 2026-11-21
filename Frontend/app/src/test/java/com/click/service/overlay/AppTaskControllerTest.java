@@ -96,11 +96,31 @@ public class AppTaskControllerTest {
         String pkg="com.coupang.mobile";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","","search"));
         var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("쿠팡에서 물 주문하고 싶어"),null,l,false);c.targetApp(pkg,"쿠팡");c.refresh();
         assertEquals("set_text",l.result.getJSONObject("action").getString("tool"));assertEquals("물",l.result.getString("suggested_query"));assertEquals(0,l.executions);
-        c.execute(l.result.getJSONObject("action").getString("id"),"물");l.current=screen(pkg,node(pkg,"node_0_1","물","search"));l.textMatches=true;
+        assertFalse(l.result.getBoolean("execute_allowed"));assertTrue(l.result.getString("message").endsWith("물"));
+        l.current=screen(pkg,node(pkg,"node_0_1","물","search"));l.textMatches=true;c.screenChanged(l.current);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600));
-        assertEquals("키보드의 검색을 눌러주세요.",l.result.getString("message"));assertFalse(c.memory().finished());assertNotNull(c.memory().active());assertEquals(1,l.executions);
+        assertEquals("키보드의 검색을 눌러주세요.",l.result.getString("message"));assertFalse(c.memory().finished());assertNotNull(c.memory().active());assertEquals(0,l.executions);
         l.current=screen(pkg,node(pkg,"node_0_1","물 상품","button"));c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
-        assertEquals("검색 결과에서 원하는 상품을 골라주세요.",l.result.getString("message"));assertEquals(1,l.executions);c.close();
+        assertEquals("검색 결과에서 원하는 상품을 골라주세요.",l.result.getString("message"));assertEquals(0,l.executions);c.close();
+    }
+    @Test public void calendarPointsToTheTitleWithoutExposingFormValues()throws Exception {
+        String pkg="org.example.calendar";
+        AccessibilityNodeSnapshot title=new AccessibilityNodeSnapshot("title",null,true,pkg,"개인 일정",null,pkg+":id/event_title",
+                "android.widget.EditText","text_field",new int[]{40,120,600,230},true,true,false,false,false,null,42,true,null,null,false);
+        AccessibilityNodeSnapshot location=new AccessibilityNodeSnapshot("place",null,true,pkg,"개인 장소",null,pkg+":id/event_location",
+                "android.widget.EditText","text_field",new int[]{40,280,600,390},true,true,false,false,false,null,42,true,null,null,false);
+        Listener listener=new Listener();listener.current=screen(pkg,title,location);var gateway=mock(AppGuideGateway.class);
+        var controller=new AppTaskController(gateway,new AppTaskMemory("캘린더에서 12월 25일에 일정 만들고 싶어"),null,listener,true);
+        controller.refresh();assertEquals("protected",listener.result.getString("status"));
+        assertEquals("표시한 칸에 제목을 입력해 주세요.",listener.result.getString("message"));
+        assertEquals(new JSONArray(title.bounds).toString(),listener.result.getJSONArray("input_bounds").toString());
+        assertTrue(listener.result.isNull("action"));assertFalse(listener.result.toString().contains("개인 일정"));
+        controller.userRefresh();assertEquals("protected",listener.result.getString("status"));assertFalse(listener.result.getBoolean("input_only"));
+        String goal="캘린더에서 제목에 ‘치과 예약’을 입력해 줘";
+        assertEquals("표시한 제목 칸에 이렇게 입력해 주세요.\n치과 예약",AppTaskFormInput.find(listener.current,goal).instruction(goal));
+        listener.current=screen(pkg,title,node(pkg,"password","private","password"));controller.screenChanged(listener.current);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(350));assertFalse(listener.result.has("input_bounds"));
+        assertFalse(controller.memory().finished());verify(gateway,never()).send(any(),any());controller.close();
     }
     @Test public void guardedInputScreenKeepsItsPanelAndCanBeFinishedByTheUser()throws Exception {
         String pkg="com.google.android.gm";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","","password"));
@@ -111,16 +131,21 @@ public class AppTaskControllerTest {
         c.refresh();assertEquals("confirm_result",l.result.getString("status"));
         c.confirmResult();assertTrue(c.memory().finished());c.close();
     }
-    @Test public void keyboardLayoutChurnKeepsTheSearchInputProposal()throws Exception {
+    @Test public void inputFollowsTheNativeFieldAcrossKeyboardRedrawsAndWaitsForTheWholeQuery()throws Exception {
         String pkg="com.google.android.youtube";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","","search"));
-        var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("유튜브에서 고양이 영상 검색해줘"),null,l,false);c.targetApp(pkg,"유튜브");c.refresh();
-        assertEquals("set_text",l.result.getJSONObject("action").getString("tool"));String id=l.result.getJSONObject("action").getString("id");int presents=l.presents;
-        // Opening the keyboard in the panel resizes the app and adds suggestion rows.
-        l.current=screen(pkg,node(pkg,"node_0_2","","search"),node(pkg,"node_0_3","고양이","button"));
-        c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
-        assertEquals(presents,l.presents);
-        l.current=screen(pkg,node(pkg,"node_0_4","","search"));
-        c.execute(id,"고양이 영상");assertEquals(1,l.executions);c.close();
+        var gateway=mock(AppGuideGateway.class);
+        var c=new AppTaskController(gateway,new AppTaskMemory("유튜브에서 공룡 검색해 줘"),null,l,true,false,true);
+        c.targetApp(pkg,"유튜브");c.refresh();String id=l.result.getJSONObject("action").getString("id");
+        assertEquals("표시한 검색창에 이렇게 입력해 주세요.\n공룡",l.result.getString("message"));
+        assertFalse(l.result.getBoolean("execute_allowed"));c.execute(id,"대신 입력");assertEquals(0,l.executions);
+        l.actualText="공";l.textMatches=true;l.current=screen(pkg,node(pkg,"node_0_2","공","search"),node(pkg,"suggestion","다른 추천","button"));
+        c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(350));
+        assertEquals(id,l.result.getJSONObject("action").getString("id"));assertEquals("node_0_2",l.result.getJSONObject("action").getString("target_id"));assertEquals(0,c.memory().actions());
+        // The two nonempty values have the same redacted fingerprint.
+        l.actualText="공룡";l.current=screen(pkg,node(pkg,"node_0_2","공룡","search"),node(pkg,"suggestion","다른 추천","button"));
+        c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(350));
+        assertEquals("키보드의 검색을 눌러주세요.",l.result.getString("message"));assertTrue(l.result.isNull("action"));
+        assertEquals(1,c.memory().actions());assertFalse(c.memory().finished());assertEquals(0,l.executions);verify(gateway,never()).send(any(),any());c.close();
     }
     @Test public void targetAuthenticationStillStopsAndAmbiguousSearchIsNeverClicked()throws Exception {
         String pkg="com.coupang.mobile";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","비밀번호","password"));
@@ -147,12 +172,13 @@ public class AppTaskControllerTest {
             assertEquals(0,l.executions);verify(gateway,never()).send(any(),any());controller.close();
         }
     }
-    @Test public void searchUsesTheQueryTheUserEditedAndApproved()throws Exception {
-        String pkg="com.coupang.mobile";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","","search"));
-        var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("쿠팡에서 물 주문하고 싶어"),null,l,false);c.targetApp(pkg,"쿠팡");c.refresh();
-        c.execute(l.result.getJSONObject("action").getString("id"),"생수");l.actualText="생수";l.textMatches=true;l.current=screen(pkg,node(pkg,"node_0_1","생수","search"));
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(600));
-        assertEquals("키보드의 검색을 눌러주세요.",l.result.getString("message"));assertTrue(l.result.isNull("action"));assertEquals(1,l.executions);c.close();
+    @Test public void explicitTypingRequestDoesNotAskTheUserToSubmitTheSearch()throws Exception {
+        String pkg="org.example.reader";Listener l=new Listener();l.current=screen(pkg,node(pkg,"field","","search"));
+        var c=new AppTaskController(mock(AppGuideGateway.class),new AppTaskMemory("검색창에 ‘서울역’을 입력해 줘"),null,l,false);
+        c.refresh();assertEquals("서울역",l.result.getString("suggested_query"));
+        l.current=screen(pkg,node(pkg,"field","서울역","search"));l.actualText="서울역";l.textMatches=true;c.screenChanged(l.current);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(350));assertEquals("confirm_result",l.result.getString("status"));
+        assertEquals(0,l.executions);assertFalse(c.memory().finished());c.close();
     }
     private static final class Listener implements AppTaskController.Listener {
         ScreenSnapshot current;JSONObject result;int executions,presents;boolean accepted=true,allowed=true,textMatches,freshReads=true,advanceObservationClock;String actualText;
@@ -172,8 +198,8 @@ public class AppTaskControllerTest {
             l.current=screen(pkg,node(pkg,"node_0_1","","search"));shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
             assertEquals("g0",m.active());c.chooseTool("set_text");assertEquals("set_text",l.result.getJSONObject("action").getString("tool"));
             c.execute(oldId,"stale approval");assertEquals(1,l.executions);
-            c.execute(l.result.getJSONObject("action").getString("id"),"PRIVATE_QUERY");assertEquals(2,l.executions);
-            l.current=screen(pkg,node(pkg,"node_0_1","PRIVATE_QUERY","search"));l.textMatches=true;shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+            c.execute(l.result.getJSONObject("action").getString("id"),"PRIVATE_QUERY");assertEquals(1,l.executions);
+            l.current=screen(pkg,node(pkg,"node_0_1","PRIVATE_QUERY","search"));l.textMatches=true;c.screenChanged(l.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
             assertEquals("g0",m.active());assertNotEquals("confirm_result",l.result.getString("status"));assertFalse(m.finished());assertFalse(m.stored().toString().contains("PRIVATE_QUERY"));
             c.confirmResult();assertTrue(m.finished());verify(gateway,never()).send(any(),any());c.close();
         }

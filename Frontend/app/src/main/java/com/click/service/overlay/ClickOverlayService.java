@@ -608,6 +608,18 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         recordGuidedAction(type, packageName, windowId, nodeId, resourceId, bounds, occurredAt, false);
     }
 
+    public static boolean onAppInputEdited(android.view.accessibility.AccessibilityEvent event) {
+        ClickOverlayService service=runningService.get();
+        AppTaskController owner=service==null?null:service.appGuide;
+        if(owner==null||event.isPassword()||event.getPackageName()==null
+                ||!owner.awaitingNativeInput(event.getPackageName().toString(),event.getWindowId()))return false;
+        android.view.accessibility.AccessibilityNodeInfo field=event.getSource();
+        if(field!=null)try{
+            if(field.isEditable()&&!field.isPassword())owner.nativeInputEdited(field.getViewIdResourceName());
+        }finally{field.recycle();}
+        return true;
+    }
+
     public static void onVerifiedAutomaticAction(String type, String packageName, int windowId, String nodeId,
                                                  String resourceId, int[] bounds, long occurredAt) {
         recordGuidedAction(type, packageName, windowId, nodeId, resourceId, bounds, occurredAt, true);
@@ -929,10 +941,11 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         taskFlowParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
         taskFlowParams.gravity = (atBottom ? Gravity.BOTTOM : Gravity.TOP) | Gravity.CENTER_HORIZONTAL;
         taskFlowParams.y = dp(24);
+        boolean needsKeyboard=appGuide!=null?taskFlowView.needsPublicGuideInput():goalSelection!=null||goalPreparation!=null
+            ||requirementReview!=null&&!requirementReview.confirmed()||gov24Guide&&taskFlowView.needsPublicGuideInput();
         taskFlowParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                 | WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
-                | (goalSelection == null && goalPreparation == null && (requirementReview == null || requirementReview.confirmed())
-                    && !((gov24Guide||appGuide!=null)&&taskFlowView!=null&&taskFlowView.needsPublicGuideInput()) ? WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE : 0);
+                | (needsKeyboard ? 0 : WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
         taskFlowHeightLimit = height;
         taskFlowRestingGravity = taskFlowParams.gravity;
         fitTaskFlowAboveKeyboard();
@@ -1351,11 +1364,12 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     enterRequestedApp(destination,()->{if(appGuide==owner)owner.refresh();});
                     return;
                 }
-                int[] bounds=null;org.json.JSONArray target=action==null?null:action.optJSONArray("bounds");AccessibilityNodeSnapshot icon;
-                if("proposed".equals(result.optString("status"))&&target!=null&&target.length()==4) {
+                boolean formField="protected".equals(result.optString("status"))&&result.has("input_bounds");
+                int[] bounds=null;org.json.JSONArray target=formField?result.optJSONArray("input_bounds"):action==null?null:action.optJSONArray("bounds");AccessibilityNodeSnapshot icon;
+                if((formField||"proposed".equals(result.optString("status")))&&target!=null&&target.length()==4) {
                     bounds=new int[]{target.optInt(0),target.optInt(1),target.optInt(2),target.optInt(3)};
                     lastSubmittedScreen=screen;
-                    showGuideOverlay(bounds,action.optString("tool").startsWith("scroll_")?"scroll":"tap",GuideDragDirection.UNKNOWN);
+                    showGuideOverlay(bounds,!formField&&action.optString("tool").startsWith("scroll_")?"scroll":"tap",GuideDragDirection.UNKNOWN);
                 }else if(openApp && !destination.dialpad && (icon=LauncherAppSearch.app(screen,entryLabels(destination)))!=null) {
                     // Opening the app needs no screen target, but on the home screen point at its icon
                     // so the user can tap it directly; the panel's open button still works.
@@ -1396,8 +1410,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         JSONObject action=result.optJSONObject("action");
         String state=result.optString("status");
         boolean waiting=TaskFlowOverlayView.appTaskWaitsForScreen(result);
-        // A redraw gives the same proposal a new execution ID. Keep the input, focus and panel
-        // position, but bind its button to the newest proposal the controller can still validate.
+        // A redraw can renew a proposal's execution ID without changing the visible guide.
+        // Keep the panel in place and bind its button to the current proposal.
         JSONObject visibleAction=null;
         if(action!=null)try{visibleAction=new JSONObject(action.toString());visibleAction.remove("id");}
         catch(org.json.JSONException invalid){return;}
@@ -1408,7 +1422,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         String key=new org.json.JSONArray().put(waiting).put(screen==null?null:screen.packageName)
             .put(screen==null?null:screen.activeWindowId).put(state).put(result.optString("active_subgoal"))
-            .put(result.optString("message")).put(result.optString("target_label")).put(visibleAction)
+            .put(result.optString("message")).put(result.optString("target_label")).put(result.optJSONArray("input_bounds")).put(visibleAction)
             .put(result.optBoolean("execute_allowed")).put(result.optString("suggested_query"))
             .put(result.optString("available_tools")).put(result.optBoolean("can_read_labels"))
             .put(result.optJSONObject("result_assessment")==null?"":result.optJSONObject("result_assessment").optString("reason")).toString();

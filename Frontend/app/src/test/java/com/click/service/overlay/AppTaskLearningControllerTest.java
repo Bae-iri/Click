@@ -58,8 +58,12 @@ public class AppTaskLearningControllerTest {
         JSONObject body=event.getValue();assertEquals("verified",body.getString("outcome"));assertTrue(body.getBoolean("action_observed"));assertTrue(body.getBoolean("starts_task"));assertFalse(body.toString().contains("검색"));assertFalse(body.toString().contains("bounds"));assertEquals(1,new AppTaskMemory(c.memory().stored()).experienceSequence());c.close();
     }
     @Test public void searchValueAndItsExactHashNeverEnterTrainingEvidence()throws Exception {
-        AppTaskController c=controller("검색어 입력","search");consent(true);c.execute("PRIVATE_QUERY");listener.textMatches=true;
-        listener.current=screen(PKG,node(PKG,"node_0_1","PRIVATE_QUERY","search"));shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+        AppTaskController c=controller("검색어 입력","search");consent(true);listener.textMatches=true;
+        listener.current=screen(PKG,node(PKG,"node_0_1","PRIVATE_QUERY","search"))
+                .withWindowContext(new NativeWindowContext("UNKNOWN","APPLICATION",true));
+        c.screenChanged(listener.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+        assertEquals("proposed",listener.result.getString("status"));verify(store,never()).saveExperience(any(),anyString(),anyString(),any());
+        listener.current=screen(PKG,node(PKG,"node_0_1","PRIVATE_QUERY","search"));c.screenChanged(listener.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
         var event=ArgumentCaptor.forClass(JSONObject.class);verify(store).saveExperience(any(),anyString(),anyString(),event.capture());String raw=event.getValue().toString();
         assertFalse(raw.contains("PRIVATE_QUERY"));assertFalse(raw.contains(AppTaskObservation.hash("PRIVATE_QUERY")));assertEquals("input_present",event.getValue().getJSONObject("action").getString("expectation"));c.close();
     }

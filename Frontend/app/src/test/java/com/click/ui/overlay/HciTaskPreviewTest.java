@@ -41,9 +41,8 @@ public class HciTaskPreviewTest {
                     "클릭이 대신 누르기", true);
             render("manual", fontScale, proposal("tap", false,
                     "현재 앱에서 강조한 ‘검색’ 항목을 직접 눌러주세요."), null, true);
-            render("search", fontScale, proposal("set_text", true,
-                    "검색어를 확인한 뒤 검색창에 입력해 주세요.")
-                    .put("suggested_query", "서울행 기차"), "검색창에 입력", true);
+            String search="표시한 검색창에 이렇게 입력해 주세요.\n서울행 기차";
+            render("search", fontScale, proposal("set_text", false,search), search, true);
             render("protected", fontScale, state("protected",
                     "입력·인증은 현재 앱에서 직접 진행해 주세요. 마치면 안내를 이어갈 수 있어요.")
                     .put("available_tools", new JSONArray()).put("can_read_labels", false),
