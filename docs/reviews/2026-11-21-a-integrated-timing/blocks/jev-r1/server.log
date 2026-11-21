@@ -1,0 +1,2 @@
+{"owned_pid": 72185, "completion_policy": "jev", "block_id": "jev-r1", "planner_model": "gemini-3.8-flash", "jev_model": "jev-1.14.0"}
+{"status": "listening", "host": "127.0.0.1", "port": 8769, "schema_version": "local-meta-controller-public-apps-facade.v1", "evidence_mode": "live_native_public_apps"}
