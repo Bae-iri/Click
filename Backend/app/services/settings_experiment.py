@@ -61,6 +61,9 @@ class SettingsExperimentResolver:
         self.arm = self.state.get('arm', arm if arm in {'graph', 'llm'} else 'graph')
         self.episode_id = episode_id
         self.turn = {'planner': {'called': False}, 'jev': {'called': False}}
+        if self.arm == 'llm' and self.state and not previous.task_completed:
+            # Old checkpoints could miss failures on turns that only observed the screen.
+            self.sync_failed_count(previous.total_failed_attempts)
 
     def resolve(self, **kwargs):
         graph, goal = kwargs['graph'], kwargs['goal']
@@ -108,7 +111,13 @@ class SettingsExperimentResolver:
         self.state['catalogue'] = targets
         self.state['catalogue_ids'] = sorted(bindings)
         by_edge = {e.transition_id: e for e in graph.transitions}
-        self.advance(kwargs.get('session'), kwargs.get('verification'), by_edge)
+        session, verified = kwargs.get('session'), kwargs.get('verification')
+        if session and verified and verified.status.value == 'SUCCESS':
+            edge = by_edge.get(session.pending_transition_id)
+            if edge:
+                key = completion_key(graph) if edge.completes_task else navigation_key(edge.to_state)
+                if key not in self.state['completed']:
+                    self.state['completed'].append(key)
         qwen_recovery = ((self.state.get('replan_requested') and getattr(self.planner, 'provider', None) == 'openrouter')
                          or (self.state['plan_source'] == 'qwen' and self.state['revision'] > 1))
         page_evidence = {} if qwen_recovery else None
@@ -216,23 +225,19 @@ class SettingsExperimentResolver:
             return None
         return selected
 
-    def advance(self, session, verification, by_edge):
-        if not session or not verification:
+    def sync_failed_count(self, total):
+        previous = self.state.get('failed_count', 0)
+        if total // 2 > previous // 2:
+            self.state['replan_requested'] = True
+        self.state['failed_count'] = total
+
+    def record_failed_attempt(self, graph, edge, verification, total):
+        if self.arm != 'llm' or not supports_graph(graph) or total <= self.state.get('failed_count', 0):
             return
-        edge = by_edge.get(session.pending_transition_id)
-        if not edge:
-            return
-        key = ('adjust_setting' if edge.action_type.value == 'drag' else 'complete_setting') if edge.completes_task else navigation_key(edge.to_state)
-        if verification.status.value == 'SUCCESS' and key not in self.state['completed']:
-            self.state['completed'].append(key)
-        elif verification.count_attempt and verification.status.value in {'NO_CHANGE', 'WRONG_STATE'}:
-            event = (session.pending_attempt or {}).get('attempt_id')
-            if event and event != self.state.get('last_failed_attempt'):
-                self.state['last_failed_attempt'] = event
-                self.state['failed_count'] += 1
-                self.state['failures'] = (self.state['failures'] + [{'subgoal': key, 'status': verification.status.value}])[-6:]
-                if self.state['failed_count'] % 2 == 0:
-                    self.state['replan_requested'] = True
+        key = completion_key(graph) if edge.completes_task else navigation_key(edge.to_state)
+        failure = {'subgoal': key, 'status': verification.status.value}
+        self.state['failures'] = (self.state.get('failures', []) + [failure])[-6:]
+        self.sync_failed_count(total)
 
 
 def decision_diagnostic(value):
