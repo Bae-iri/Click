@@ -31,6 +31,16 @@ public final class AppTaskStore {
         }catch(Exception ignored){}
     }
     public JSONObject reusable(String goal,String scope){if(!owned())return null;try{String raw=prefs.getString(key(goal)+"_route_"+AppTaskObservation.hash(scope),null);if(raw==null)return null;JSONObject r=new JSONObject(raw);return r.optInt("support")>=2&&System.currentTimeMillis()-r.optLong("saved_at")<604800000L?r:null;}catch(Exception ignored){return null;}}
+    /** A result condition that natively matched a user-confirmed screen; scope carries the app version. */
+    public void recordCompletion(String goal,String scope,JSONObject completion){
+        if(!owned()||scope==null||completion==null)return;
+        try{prefs.edit().putString(key(goal)+"_result_"+AppTaskObservation.hash(scope),new JSONObject().put("completion",completion).put("saved_at",System.currentTimeMillis()).toString()).apply();}catch(Exception ignored){}
+    }
+    public JSONObject rememberedCompletion(String goal,String scope){
+        if(!owned()||scope==null)return null;
+        try{String raw=prefs.getString(key(goal)+"_result_"+AppTaskObservation.hash(scope),null);if(raw==null)return null;JSONObject r=new JSONObject(raw);
+            return System.currentTimeMillis()-r.optLong("saved_at")<604800000L?r.optJSONObject("completion"):null;}catch(Exception ignored){return null;}
+    }
     public void invalidateRoute(String goal,String scope){if(owned()&&scope!=null)prefs.edit().remove(key(goal)+"_route_"+AppTaskObservation.hash(scope)).apply();}
     private String experienceKey(){return "app_task_experience_"+AppTaskObservation.hash(user==null?"":user);}
     private JSONArray experiences()throws JSONException {
