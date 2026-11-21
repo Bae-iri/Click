@@ -329,6 +329,11 @@ public final class AppTaskController {
                 show(guarded?"protected":"needs_input",guarded?"입력·인증은 직접 진행한 뒤 이어서 확인해 주세요.":selectedPackage!=null?"화면을 불러오고 있어요.":"도움이 필요한 앱을 열어주세요.");return;
             }
             protectedShown=false;
+            JSONObject publicLogin=AppTaskObservation.publicHomeLogin(current);
+            if(publicLogin!=null&&memory.goal().matches("(?is).*(?:로그인|login|sign\\s*in).*")) {
+                localDiagnostic("gov24_public_home_login");
+                propose(action("tap",publicLogin,current,new JSONObject().put("kind","screen_changed"),false));return;
+            }
             if(scope==null){scope=listener.scope(current.getString("package"));memory.scope(scope);if(store!=null&&memory.actions()==0)cached=store.reusable(memory.goal(),scope);if(cached!=null&&memory.state().getJSONArray("subgoals").length()==0)memory.plan(cached.optJSONArray("subgoals"));
                 if(seedRememberedCompletion()&&reofferParkedCompletion(screen)){handler.removeCallbacks(refresh);handler.post(refresh);return;}}
             if(memory.actions()>=64){show("needs_input","진행 단계가 많아졌어요. 현재 결과를 확인하고 새 작업으로 이어가 주세요.");return;}
