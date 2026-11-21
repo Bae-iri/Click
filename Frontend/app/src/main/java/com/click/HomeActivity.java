@@ -204,7 +204,14 @@ public class HomeActivity extends AppCompatActivity {
         }
         boolean requested = intent.getBooleanExtra(EXTRA_START_TUTORIAL, false);
         intent.removeExtra(EXTRA_START_TUTORIAL);
+        var liveCourse = new com.click.data.local.LiveTutorialStore(this);
+        if (requested && liveCourse.requestId() != null) {
+            startOverlayWithPermission(null, null, false, false, liveCourse.requestId());
+            return;
+        }
         Bundle practice = saved == null ? null : saved.getBundle(HomeTutorial.SAVED_STATE);
+        if (practice == null && new com.click.data.local.LiveTutorialStore(this).awaitingHomeTour())
+            practice = HomeTutorial.afterRealTask(requestInput.getText().toString(), requestInput.getSelectionEnd());
         if (practice != null || requested || (saved == null && !guidanceChoices.hasSeenHomeTutorial()))
             startTutorial(practice);
     }
@@ -230,8 +237,10 @@ public class HomeActivity extends AppCompatActivity {
 
     void closeTutorial() {
         HomeTutorial closing = tutorial;
+        if (closing == null) return;
         tutorial = null;
         closing.close();
+        new com.click.data.local.LiveTutorialStore(this).finishHomeTour();
         showTutorialHome();
         if (getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
             refreshFavorites();
@@ -777,22 +786,39 @@ public class HomeActivity extends AppCompatActivity {
         if (homeScroll.isShown()) homeScroll.requestFocus();
     }
     private boolean startOverlayWithPermission(String goal, String selectedGoalType, boolean voice) {
+        return startOverlayWithPermission(goal, selectedGoalType, voice, false);
+    }
+    void startLiveTutorial(String request) { startOverlayWithPermission(request, null, false, true); }
+
+    private boolean startOverlayWithPermission(String goal, String selectedGoalType, boolean voice, boolean liveTutorial) {
+        return startOverlayWithPermission(goal, selectedGoalType, voice, liveTutorial, null);
+    }
+    private boolean startOverlayWithPermission(String goal, String selectedGoalType, boolean voice, boolean liveTutorial, String resumeRequest) {
         if (requestLaunching) return false;
         if (!PermissionStatus.isAccessibilityEnabled(this)) { openPermissionGuide(); return false; }
         if (com.click.service.accessibility.ClickAccessibilityService.accessibilityWindowManager() == null) {
             requestLaunching = true;
             Toast.makeText(this, "클릭을 준비하고 있어요.", Toast.LENGTH_SHORT).show();
             connectionWatcher.start(() -> {
-                if (goal != null && goal.equals(requestInput.getText().toString().trim())) requestInput.setText("");
-                launchOverlay(goal, selectedGoalType, voice);
+                if (liveTutorial && tutorial == null) { requestLaunching = false; return; }
+                if (!liveTutorial && goal != null && goal.equals(requestInput.getText().toString().trim())) requestInput.setText("");
+                launchOverlay(goal, selectedGoalType, voice, liveTutorial, resumeRequest);
             }, () -> { requestLaunching = false; openPermissionGuide(); });
             return false;
         }
-        launchOverlay(goal, selectedGoalType, voice);
+        launchOverlay(goal, selectedGoalType, voice, liveTutorial, resumeRequest);
         return true;
     }
-    private void launchOverlay(String goal, String selectedGoalType, boolean voice) {
+    private void launchOverlay(String goal, String selectedGoalType, boolean voice, boolean liveTutorial, String resumeRequest) {
         Intent service = new Intent(this, ClickOverlayService.class);
+        if (resumeRequest != null) {
+            service.putExtra(ClickOverlayService.EXTRA_RESUME_REQUEST_ID, resumeRequest);
+            closeTutorial();
+        }
+        if (liveTutorial) {
+            service.putExtra(ClickOverlayService.EXTRA_LIVE_TUTORIAL_ID, new com.click.data.local.LiveTutorialStore(this).begin(goal));
+            closeTutorial();
+        }
         if (goal != null) service.putExtra(ClickOverlayService.EXTRA_INITIAL_GOAL, goal);
         if (selectedGoalType != null) service.putExtra(ClickOverlayService.EXTRA_SELECTED_GOAL_TYPE, selectedGoalType);
         service.putExtra(ClickOverlayService.EXTRA_OPEN_VOICE, voice);

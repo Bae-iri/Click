@@ -625,6 +625,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         reviewNavigation.removeAllViews(); reviewNavigation.setOrientation(HORIZONTAL);
         reviewNavigation.setVisibility(VISIBLE);
         Button forward = primaryButton("입력하기", next);
+        forward.setId(R.id.task_flow_answer);
         styleReviewButton(forward, true);
         LayoutParams params = new LayoutParams(0, -2, 1); params.topMargin = dp(8);
         reviewNavigation.addView(forward, params);

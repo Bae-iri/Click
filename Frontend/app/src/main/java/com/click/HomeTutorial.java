@@ -20,14 +20,11 @@ import com.click.domain.goal.RequirementReview;
 import com.click.service.overlay.DeviceSpeechInput;
 import com.click.service.overlay.SpeechErrorMessages;
 import com.click.service.overlay.SpeechInput;
-import com.click.ui.common.ClickTextScale;
 import com.click.ui.common.ClickUi;
 import com.click.ui.overlay.ClickOverlayLayout;
-import com.click.ui.overlay.TaskFlowOverlayView;
-import com.click.ui.tutorial.SettingsScreenshotPracticeView;
 import com.click.ui.tutorial.ClueCoachView;
 
-/** Runs the guided practice on the currently displayed home and its actual controls. */
+/** Teaches input on Home, then hands the request to the real cross-app task and floating coach. */
 final class HomeTutorial implements ClickOverlayLayout.Callback {
     static final String SAVED_STATE = "home_clue_tutorial";
     private final HomeActivity home;
@@ -35,13 +32,11 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
     private final OnBackPressedCallback backCallback;
     private final String originalDraft;
     private final int originalSelection;
-    private enum Step { WELCOME, INPUT, VOICE, TEXT, REVIEW, GUIDE, ADJUST, FONT, RESULT, SETTINGS, LIBRARY, SAVED, RECENT }
+    private enum Step { WELCOME, INPUT, VOICE, TEXT, SETTINGS, LIBRARY, SAVED, RECENT }
     private Step step, inputMethod = Step.VOICE;
     private final ClueCoachView coach;
     private final EditText input;
     private final View inputCard, mic, send, settings, library;
-    private TaskFlowOverlayView flow;
-    private SettingsScreenshotPracticeView photo;
     private ClickOverlayLayout voice;
     private SpeechInput speech;
     private boolean recording, processing;
@@ -61,14 +56,13 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
         home.showTutorialHome();
         input.setText(state == null ? "" : state.getString("practice_draft", ""));
         bindEditor();
-        createPracticePanels();
         coach = new ClueCoachView(root);
         backCallback = new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() { back(); }
         };
         home.getOnBackPressedDispatcher().addCallback(home, backCallback);
         if (state != null && state.getBoolean("typed")) inputMethod = Step.TEXT;
-        show(state == null ? Step.WELCOME : Step.valueOf(state.getString("step", Step.WELCOME.name())));
+        show(state == null ? Step.WELCOME : restoredStep(state));
     }
 
     void onTextEdited() { if (step == Step.TEXT) coach.onTextEdited(); }
@@ -95,30 +89,6 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
             if (step == Step.INPUT && event.getActionMasked() == MotionEvent.ACTION_DOWN) show(Step.TEXT);
             return false;
         });
-    }
-
-    private void createPracticePanels() {
-        photo = new SettingsScreenshotPracticeView(home, () -> {
-            if (step == Step.ADJUST) show(Step.FONT);
-            else if (step == Step.FONT) show(Step.RESULT);
-        });
-        root.addView(photo, new FrameLayout.LayoutParams(-1, -1));
-        photo.setVisibility(View.GONE);
-        flow = new TaskFlowOverlayView(home, new TaskFlowOverlayView.Listener() {
-            public void chooseGoal(org.json.JSONObject goal) {}
-            public void clarify(String choice) {}
-            public void rephrase(String text) { input.setText(text); review(text); }
-            public void result(String answer) {
-                if (step == Step.RESULT) show("satisfied".equals(answer) ? Step.SETTINGS : Step.FONT);
-            }
-            public void adjust(String reason) { show(Step.FONT); }
-            public void control(String command) {}
-            public void confirmRequirements() { if (step == Step.REVIEW) show(Step.GUIDE); }
-        });
-        flow.setId(R.id.tutorial_practice_panel);
-        addPracticePanel(flow, flow.getWindowWidth(home.getResources().getDisplayMetrics().widthPixels), -2);
-        flow.setAvailableHeight((int) (home.getResources().getDisplayMetrics().heightPixels * .52f));
-        flow.setVisibility(View.GONE);
     }
 
     private void addPracticePanel(View view, int width, int height) {
@@ -149,12 +119,6 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
         step = next;
         if (step != Step.TEXT) home.hideKeyboard();
         if (voice != null) voice.setVisibility(step == Step.VOICE ? View.VISIBLE : View.GONE);
-        boolean photographed = step == Step.ADJUST || step == Step.FONT;
-        photo.setVisibility(photographed ? View.VISIBLE : View.GONE);
-        boolean floating = step == Step.REVIEW || step == Step.GUIDE || photographed || step == Step.RESULT;
-        flow.setVisibility(floating ? View.VISIBLE : View.GONE);
-        home.findViewById(R.id.home_scroll).setVisibility(floating ? View.INVISIBLE : View.VISIBLE);
-        ((View) library.getParent()).setVisibility(floating ? View.INVISIBLE : View.VISIBLE);
         if (step == Step.SAVED || step == Step.RECENT) home.openLibraryTab(step == Step.RECENT);
         else if (home.findViewById(R.id.home_favorites_scroll).getVisibility() == View.VISIBLE)
             home.showTutorialHome();
@@ -179,39 +143,6 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
                 inputMethod = Step.TEXT;
                 describe(R.string.tour_text, inputCard, input, send, mic);
                 break;
-            case REVIEW:
-                flow.requestConfirmation(input.getText().toString().trim(), home.getString(R.string.tour_reenter), this::write);
-                flow.hideAuxiliaryControls();
-                View begin = flow.findViewById(R.id.task_flow_begin);
-                describe(R.string.tour_review, begin, begin, flow.findViewById(R.id.task_flow_edit));
-                coach.keepPanelVisible(flow);
-                break;
-            case GUIDE:
-                flow.progress(input.getText().toString(), null, home.getString(R.string.tour_floating_instruction), false);
-                flow.hideAuxiliaryControls();
-                View instruction = flow.findViewById(R.id.task_flow_instruction);
-                describe(R.string.tour_floating, instruction, instruction);
-                coach.keepPanelVisible(flow);
-                coach.onContinue(() -> show(Step.ADJUST));
-                break;
-            case ADJUST:
-            case FONT:
-                photo.showFontSize(step == Step.FONT);
-                flow.progress(input.getText().toString(), null,
-                        home.getString(step == Step.FONT ? R.string.tour_font_instruction : R.string.tour_display_instruction), false);
-                flow.hideAuxiliaryControls();
-                describe(step == Step.FONT ? R.string.tour_font_photo : R.string.tour_actual_screen, photo.target(), photo.target());
-                coach.keepPanelVisible(flow);
-                break;
-            case RESULT:
-                try {
-                    flow.result(new org.json.JSONObject().put("message", home.getString(R.string.tour_practice_result)), true);
-                } catch (org.json.JSONException error) { throw new IllegalStateException(error); }
-                flow.hideAuxiliaryControls();
-                View satisfied = flow.findViewById(R.id.task_flow_result_satisfied);
-                describe(R.string.tour_result, satisfied, satisfied, flow.findViewById(R.id.task_flow_result_help));
-                coach.keepPanelVisible(flow);
-                break;
             case SETTINGS:
                 describe(R.string.tour_settings, settings, settings);
                 break;
@@ -227,21 +158,7 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
                 describe(R.string.tour_recent, homeTab, homeTab);
                 break;
         }
-        if (flow.getVisibility() == View.VISIBLE) positionFlow();
         coach.bringToFront();
-    }
-
-    private void positionFlow() {
-        flow.post(() -> {
-            if (step == null || flow.getVisibility() != View.VISIBLE) return;
-            var insets = ViewCompat.getRootWindowInsets(root);
-            int top = insets == null ? dp(24) : insets.getInsets(WindowInsetsCompat.Type.systemBars()).top + dp(16);
-            if (step == Step.ADJUST && photo.target().getBottom() < root.getHeight() * .4f)
-                top = Math.max(top, photo.target().getBottom() + dp(16));
-            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) flow.getLayoutParams();
-            params.topMargin = top;
-            flow.setLayoutParams(params);
-        });
     }
 
     private View findText(View view, String text) {
@@ -262,7 +179,7 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
 
     private int guideArt() {
         if (step == Step.WELCOME) return com.click.designpreview.R.drawable.clue2_signup;
-        if (step == Step.RESULT || step == Step.RECENT) return com.click.designpreview.R.drawable.clue4_complete;
+        if (step == Step.RECENT) return com.click.designpreview.R.drawable.clue4_complete;
         return com.click.designpreview.R.drawable.clue3_tutorial;
     }
 
@@ -287,7 +204,9 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
             return;
         }
         input.setText(words.trim());
-        show(Step.REVIEW);
+        cancelCapture();
+        coach.status(home.getString(R.string.tour_live_wait), false);
+        home.startLiveTutorial(words.trim());
     }
 
     @Override public void onMicrophonePressed() {
@@ -344,7 +263,7 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
         if (coach != null) coach.setAudioAvailable(true);
     }
 
-    // Use the production microphone and cancellation controls without starting a real task.
+    // This local microphone teaches input; a successful transcript starts the real request.
     @Override public void onModeChanged(ClickOverlayLayout.Mode from, ClickOverlayLayout.Mode to) {
         if (step == Step.VOICE && (to == ClickOverlayLayout.Mode.COLLAPSED || to == ClickOverlayLayout.Mode.MENU))
             show(Step.INPUT);
@@ -360,18 +279,24 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
             case WELCOME: home.closeTutorial(); break;
             case INPUT: show(Step.WELCOME); break;
             case VOICE: case TEXT: show(Step.INPUT); break;
-            case REVIEW:
-                if (inputMethod == Step.TEXT) write(); else show(Step.VOICE);
-                break;
-            case GUIDE: show(Step.REVIEW); break;
-            case ADJUST: show(Step.GUIDE); break;
-            case FONT: show(Step.ADJUST); break;
-            case RESULT: show(Step.FONT); break;
-            case SETTINGS: show(Step.RESULT); break;
+            case SETTINGS: home.closeTutorial(); break;
             case LIBRARY: show(Step.SETTINGS); break;
             case SAVED: show(Step.LIBRARY); break;
             case RECENT: show(Step.SAVED); break;
         }
+    }
+
+    private static Step restoredStep(Bundle state) {
+        try { return Step.valueOf(state.getString("step", Step.WELCOME.name())); }
+        catch (IllegalArgumentException oldPhotoPractice) { return Step.TEXT; }
+    }
+
+    static Bundle afterRealTask(String draft, int selection) {
+        Bundle state = new Bundle();
+        state.putString("step", Step.SETTINGS.name());
+        state.putString("home_draft", draft);
+        state.putInt("home_cursor", selection);
+        return state;
     }
 
     Bundle save() {
@@ -397,9 +322,8 @@ final class HomeTutorial implements ClickOverlayLayout.Callback {
         backCallback.remove();
         coach.close();
         root.removeView(coach);
-        root.removeView(flow);
-        root.removeView(photo);
-        home.findViewById(R.id.home_scroll).setVisibility(View.VISIBLE);
+        View scroll = root.findViewById(R.id.home_scroll);
+        if (scroll != null) scroll.setVisibility(View.VISIBLE);
         ((View) library.getParent()).setVisibility(View.VISIBLE);
         if (voice != null) root.removeView(voice);
         input.setOnClickListener(null);

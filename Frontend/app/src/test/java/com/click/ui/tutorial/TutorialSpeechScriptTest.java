@@ -2,6 +2,13 @@ package com.click.ui.tutorial;
 
 import android.Manifest;
 import android.app.Application;
+import android.content.Intent;
+import android.view.WindowManager;
+import com.click.core.permission.PermissionStatus;
+import com.click.service.accessibility.ClickAccessibilityService;
+import com.click.service.overlay.ClickOverlayService;
+import com.click.data.local.LiveTutorialStore;
+import org.mockito.MockedStatic;
 import android.os.Bundle;
 import android.os.Looper;
 import android.view.View;
@@ -40,6 +47,8 @@ public class TutorialSpeechScriptTest {
     private MockedConstruction<TutorialNarrator> narrators;
     private MockedConstruction<DeviceSpeechInput> inputs;
     private MockedConstruction<AuthTokenStore> tokens;
+    private MockedStatic<PermissionStatus> permissions;
+    private MockedStatic<ClickAccessibilityService> accessibility;
     private ActivityController<HomeActivity> controller;
     private HomeActivity activity;
     private TutorialNarrator narrator;
@@ -48,6 +57,10 @@ public class TutorialSpeechScriptTest {
         narrators = mockConstruction(TutorialNarrator.class);
         inputs = mockConstruction(DeviceSpeechInput.class);
         tokens = mockConstruction(AuthTokenStore.class);
+        permissions = mockStatic(PermissionStatus.class);
+        permissions.when(() -> PermissionStatus.isAccessibilityEnabled(any())).thenReturn(true);
+        accessibility = mockStatic(ClickAccessibilityService.class);
+        accessibility.when(ClickAccessibilityService::accessibilityWindowManager).thenReturn(mock(WindowManager.class));
         controller = Robolectric.buildActivity(HomeActivity.class).setup();
         activity = controller.get();
         narrator = narrators.constructed().get(0);
@@ -55,48 +68,82 @@ public class TutorialSpeechScriptTest {
 
     @After public void cleanup() {
         controller.pause().stop().destroy();
-        inputs.close(); narrators.close(); tokens.close();
+        inputs.close(); narrators.close(); tokens.close(); accessibility.close(); permissions.close();
     }
 
-    @Test public void inputUsesRealFloatingActionsAndActualSettingsPhotosWithoutChangingThePhone() {
-        int original = ClickTextScale.level(activity);
+    @Test public void inputStartsTheRealServiceWithTheOriginalRequestAndNoSimulatedResult() {
         boolean auto = new TouchAutomationSettings(activity).isEnabled();
-        click(R.id.tutorial_title);
-        click(R.id.home_request_input);
+        click(R.id.tutorial_title); click(R.id.home_request_input);
         EditText editor = activity.findViewById(R.id.home_request_input);
         for (String wrong : new String[]{"밝기 올려줘", "글자 크기 줄여줘", "글자 키우지 말아줘"}) {
             editor.setText(wrong); editor.onEditorAction(EditorInfo.IME_ACTION_SEND);
             assertEquals(string(R.string.tour_retry), message());
+            assertNull(shadowOf(activity).getNextStartedService());
         }
         editor.setText("글씨 좀 크게 해줘"); click(R.id.home_request_send);
-        assertEquals(string(R.string.tour_review), message());
-        assertEquals("글씨 좀 크게 해줘", reviewText());
-        assertTrue(activity.findViewById(R.id.tutorial_practice_panel) instanceof com.click.ui.overlay.TaskFlowOverlayView);
-        assertEquals("다시 입력하기", ((TextView) activity.findViewById(R.id.task_flow_edit)).getText().toString());
-        click(R.id.task_flow_edit);
-        assertEquals(string(R.string.tour_text), message());
-        assertEquals("글씨 좀 크게 해줘", editor.getText().toString());
-        editor.onEditorAction(EditorInfo.IME_ACTION_SEND);
-        click(R.id.task_flow_begin);
-        assertEquals(string(R.string.tour_floating), message());
-        assertNotNull(activity.findViewById(R.id.task_flow_instruction));
-        click(R.id.tutorial_title);
-        assertEquals(string(R.string.tour_actual_screen), message());
-        assertTrue(activity.findViewById(R.id.tutorial_settings_photo) instanceof com.click.ui.tutorial.SettingsScreenshotPracticeView);
-        click(R.id.tutorial_settings_photo_target);
-        assertEquals(string(R.string.tour_font_photo), message());
-        click(R.id.tutorial_settings_photo_target);
-        assertEquals(string(R.string.tour_result), message());
+        Intent actual = shadowOf(activity).getNextStartedService();
+        assertEquals(ClickOverlayService.class.getName(), actual.getComponent().getClassName());
+        assertEquals("글씨 좀 크게 해줘", actual.getStringExtra(ClickOverlayService.EXTRA_INITIAL_GOAL));
+        var course = new LiveTutorialStore(activity);
+        assertTrue(course.accepts(actual.getStringExtra(ClickOverlayService.EXTRA_LIVE_TUTORIAL_ID), "글씨 좀 크게 해줘"));
+        assertFalse(course.awaitingHomeTour());
+        assertNull(activity.findViewById(R.id.tutorial_floating_host));
+        assertEquals(auto, new TouchAutomationSettings(activity).isEnabled());
+    }
+
+    @Test public void onlyAnAcknowledgedRealTaskResumesTheSettingsAndLibraryTour() {
+        activity.getOnBackPressedDispatcher().onBackPressed();
+        var course = new LiveTutorialStore(activity);
+        String launch = course.begin("글자 크기 키워줘");
+        course.bindRequest(launch, "글자 크기 키워줘", "real-request");
+        course.bindSession("real-request", "real-session");
+        assertFalse(course.awaitingHomeTour());
+        assertTrue(course.finish("real-request", "real-session", true));
+        controller.pause().stop().destroy();
+        controller = Robolectric.buildActivity(HomeActivity.class).setup(); activity = controller.get();
+        assertEquals(string(R.string.tour_settings), message());
         Bundle saved = new Bundle();
         controller.saveInstanceState(saved).pause().stop().destroy();
         controller = Robolectric.buildActivity(HomeActivity.class).setup(saved); activity = controller.get();
-        assertEquals(string(R.string.tour_result), message());
-        click(R.id.task_flow_result_satisfied);
         assertEquals(string(R.string.tour_settings), message());
-        assertEquals(original, ClickTextScale.level(activity));
-        assertEquals(auto, new TouchAutomationSettings(activity).isEnabled());
-        assertTrue(new RequestLibraryStore(activity).entries(false).isEmpty());
         assertNull(shadowOf(activity).getNextStartedService());
+        activity.getOnBackPressedDispatcher().onBackPressed();
+        assertFalse(course.awaitingHomeTour());
+    }
+
+    @Test public void missingAccessibilityKeepsTheRequestUntilTheActualServiceCanStart() {
+        permissions.when(() -> PermissionStatus.isAccessibilityEnabled(any())).thenReturn(false);
+        click(R.id.tutorial_title); click(R.id.home_request_input);
+        ((EditText) activity.findViewById(R.id.home_request_input)).setText("글자 크기 키워줘");
+        click(R.id.home_request_send);
+        assertNull(shadowOf(activity).getNextStartedService());
+        assertFalse(new LiveTutorialStore(activity).running());
+        assertNotNull(activity.findViewById(R.id.tutorial_floating_host));
+        assertEquals("글자 크기 키워줘", ((EditText) activity.findViewById(R.id.home_request_input)).getText().toString());
+    }
+
+    @Test public void restoringAnOldPhotoPracticeRequiresARealRequestInsteadOfClaimingCompletion() {
+        Bundle old = new Bundle(), saved = new Bundle();
+        old.putString("step", "RESULT"); old.putString("practice_draft", "글자 크기 키워줘");
+        saved.putBundle("home_clue_tutorial", old);
+        controller.pause().stop().destroy();
+        controller = Robolectric.buildActivity(HomeActivity.class).setup(saved); activity = controller.get();
+        assertEquals(string(R.string.tour_text), message());
+        assertFalse(new LiveTutorialStore(activity).awaitingHomeTour());
+        assertNull(shadowOf(activity).getNextStartedService());
+    }
+
+    @Test public void reopeningALiveTutorialResumesItsOwnedRequestWithoutEnqueuingAnother() {
+        var course = new LiveTutorialStore(activity);
+        String launch = course.begin("글자 크기 키워줘");
+        course.bindRequest(launch, "글자 크기 키워줘", "owned-request");
+        course.bindSession("owned-request", "owned-session");
+        controller.newIntent(new Intent(activity, HomeActivity.class).putExtra("com.click.extra.START_HOME_TUTORIAL", true));
+        Intent resume = shadowOf(activity).getNextStartedService();
+        assertEquals("owned-request", resume.getStringExtra(ClickOverlayService.EXTRA_RESUME_REQUEST_ID));
+        assertFalse(resume.hasExtra(ClickOverlayService.EXTRA_INITIAL_GOAL));
+        assertFalse(resume.hasExtra(ClickOverlayService.EXTRA_LIVE_TUTORIAL_ID));
+        assertTrue(course.presents("owned-request", "owned-session"));
     }
 
     @Test public void coachHasRegularTypeAndNoNavigationButtons() {
@@ -151,7 +198,7 @@ public class TutorialSpeechScriptTest {
         assertNull(shadowOf(activity).getNextStartedService());
     }
 
-    @Test public void speechErrorsKeepRetryAvailableAndValidSpeechUsesTheRealReview() {
+    @Test public void speechErrorsKeepRetryAvailableAndValidSpeechStartsTheRealRequest() {
         shadowOf(activity.getApplication()).grantPermissions(Manifest.permission.RECORD_AUDIO);
         click(R.id.tutorial_title); click(R.id.home_microphone); click(R.id.overlay_microphone);
         DeviceSpeechInput device = inputs.constructed().get(0);
@@ -160,9 +207,11 @@ public class TutorialSpeechScriptTest {
         callback.getValue().onFailure(new SecurityException()); assertTrue(message().contains("마이크"));
         click(R.id.overlay_microphone); verify(device, times(2)).start(callback.capture());
         callback.getValue().onSuccess("글자 크기 키워줘");
-        assertEquals(string(R.string.tour_review), message());
-        assertEquals("글자 크기 키워줘", reviewText());
-        assertTrue(activity.findViewById(R.id.task_flow_begin).isShown());
+        Intent actual = shadowOf(activity).getNextStartedService();
+        assertNotNull(actual);
+        assertEquals("글자 크기 키워줘", actual.getStringExtra(ClickOverlayService.EXTRA_INITIAL_GOAL));
+        assertNotNull(actual.getStringExtra(ClickOverlayService.EXTRA_LIVE_TUTORIAL_ID));
+        assertNull(activity.findViewById(R.id.tutorial_floating_host));
         assertNull(activity.findViewById(R.id.tutorial_next));
     }
 
@@ -178,8 +227,4 @@ public class TutorialSpeechScriptTest {
     private void click(int id) { assertTrue(activity.findViewById(id).performClick()); }
     private String string(int id) { return activity.getString(id); }
     private String message() { return ((TextView) activity.findViewById(R.id.tutorial_title)).getText().toString(); }
-    private String reviewText() {
-        TextView summary = activity.getWindow().getDecorView().findViewWithTag("review_summary_text");
-        return summary.getText().toString();
-    }
 }

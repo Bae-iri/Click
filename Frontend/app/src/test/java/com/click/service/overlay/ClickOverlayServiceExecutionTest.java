@@ -1863,6 +1863,59 @@ public class ClickOverlayServiceExecutionTest {
         assertEquals("A subsequent step keeps the user's minimized choice", true, get("taskFlowCollapsed"));
     }
 
+    @Test public void tutorialBindsTheActualQueuedRequestBeforeSendingIt() throws Exception {
+        var course = new com.click.data.local.LiveTutorialStore(service);
+        String launch = course.begin(SOURCE);
+        var tutorial = new LiveTutorialGuide(service, mock(LiveTutorialGuide.Host.class), course);
+        assertTrue(tutorial.accept(launch, SOURCE)); set("liveTutorial", tutorial);
+        var queue = mock(com.click.data.remote.VoiceQueueGateway.class); set("queueGateway", queue);
+        doAnswer(call -> {
+            assertTrue(course.presents(call.getArgument(0), null));
+            assertFalse(course.awaitingHomeTour());
+            return null;
+        }).when(queue).enqueue(anyString(), eq(SOURCE), any());
+        Method enqueue = ClickOverlayService.class.getDeclaredMethod("enqueueConfirmedRequest", String.class, String.class);
+        enqueue.setAccessible(true); enqueue.invoke(service, SOURCE, null);
+        verify(queue).enqueue(anyString(), eq(SOURCE), any());
+        assertTrue(course.running());
+    }
+
+    @Test public void tutorialReturnsHomeOnlyAfterTheRealQueueAckAndPreservesOtherQueuedRequests() throws Exception {
+        var queue = prepareResultWithQueue();
+        var course = new com.click.data.local.LiveTutorialStore(service);
+        String launch = course.begin(SOURCE); course.bindRequest(launch, SOURCE, "finished-request");
+        course.bindSession("finished-request", "frontend-session");
+        set("liveTutorial", new LiveTutorialGuide(service, mock(LiveTutorialGuide.Host.class), course));
+        Method finish = ClickOverlayService.class.getDeclaredMethod("finishActiveQueueRequest", String.class);
+        finish.setAccessible(true); finish.invoke(service, new Object[]{null});
+        var ack = org.mockito.ArgumentCaptor.forClass(com.click.data.remote.VoiceQueueGateway.Callback.class);
+        verify(queue).complete(eq("finished-request"), ack.capture());
+        assertFalse(course.awaitingHomeTour());
+        assertNull(shadowOf(service).getNextStartedActivity());
+        ack.getValue().onSuccess(queueResponseBody(new JSONObject().put("queued_count", 2).put("running", new JSONObject()
+                .put("id", "another-request").put("agent_session_id", "another-session").put("raw_goal", "밝기를 높여줘").put("status", "RUNNING"))));
+        assertTrue(course.awaitingHomeTour());
+        assertEquals(com.click.HomeActivity.class.getName(), shadowOf(service).getNextStartedActivity().getComponent().getClassName());
+        verify(queue, never()).interrupt(anyString(), anyBoolean(), any());
+        verify(queue, never()).cancel(eq("another-request"), anyString(), any());
+        assertNull(get("agentSessionId"));
+    }
+
+    @Test public void cancelledRealTutorialNeverContinuesAsACompletedCourse() throws Exception {
+        var queue = prepareResultWithQueue();
+        var course = new com.click.data.local.LiveTutorialStore(service);
+        String launch = course.begin(SOURCE); course.bindRequest(launch, SOURCE, "finished-request");
+        course.bindSession("finished-request", "frontend-session");
+        set("liveTutorial", new LiveTutorialGuide(service, mock(LiveTutorialGuide.Host.class), course));
+        Method finish = ClickOverlayService.class.getDeclaredMethod("finishActiveQueueRequest", String.class);
+        finish.setAccessible(true); finish.invoke(service, "USER_ABORTED");
+        var ack = org.mockito.ArgumentCaptor.forClass(com.click.data.remote.VoiceQueueGateway.Callback.class);
+        verify(queue).cancel(eq("finished-request"), eq("USER_ABORTED"), ack.capture());
+        ack.getValue().onSuccess(queueResponseBody(new JSONObject()));
+        assertFalse(course.awaitingHomeTour()); assertFalse(course.running());
+        verify(queue, never()).complete(anyString(), any());
+    }
+
     @Test public void appTaskUpdatesPreserveBothChoicesWithTheRealPanel() throws Exception {
         prepareGuideResponse();
         set("appGuide", mock(AppTaskController.class));

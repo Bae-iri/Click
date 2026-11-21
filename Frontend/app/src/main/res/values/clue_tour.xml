@@ -1,44 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="tour_welcome">안녕하세요! 저는 클루예요.\n저와 함께 클릭 사용법을 배워봐요!</string>
+    <string name="tour_welcome">안녕하세요! 저는 클루예요.\n저와 함께 실제 휴대폰의 글자 크기를 키우며 클릭 사용법을 배워봐요. 바뀐 크기는 휴대폰에 그대로 적용돼요.</string>
     <string name="tour_pick">말로 부탁하려면 마이크를, 글로 쓰려면 입력칸을 눌러 보세요.</string>
     <string name="tour_voice">클루와 글자 크기를 바꿔봐요! 마이크를 꾹 누르고 “글자 크기 키워줘”라고 말해 보세요.</string>
     <string name="tour_listening">듣고 있어요. “글자 크기 키워줘”라고 말해 주세요.</string>
     <string name="tour_processing">말씀하신 내용을 확인하고 있어요.</string>
-    <string name="tour_permission">마이크 권한이 필요해요. ‘취소’를 누른 뒤 홈 입력칸에서 글로 연습할 수 있어요.</string>
+    <string name="tour_permission">마이크 권한이 필요해요. ‘취소’를 누른 뒤 홈 입력칸에서 글로 부탁할 수도 있어요.</string>
     <string name="tour_text">클루와 함께 글자 크기를 바꿔봐요! 입력칸에 “글자 크기 키워줘”라고 적고 보내기 화살표를 눌러 주세요.</string>
     <string name="tour_phrase">글자 크기 키워줘</string>
-    <string name="tour_retry">이번 연습은 글자를 한 단계 키우는 거예요. “글자 크기 키워줘”라고 다시 부탁해 주세요.</string>
-    <string name="tour_review">입력하신 내용이 맞나요? 다시 입력하려면 ‘다시 입력하기’, 맞으면 ‘안내 시작하기’를 눌러 주세요.</string>
-    <string name="tour_begin_guide">안내 시작하기</string>
-    <string name="tour_result">안내가 끝나면 이 창에서 원하시는 결과인지 확인해요. ‘네, 원하는 상태예요’를 눌러 연습을 이어가세요.</string>
+    <string name="tour_retry">이번에는 실제 휴대폰의 글자를 키워볼 거예요. “글자 크기 키워줘”라고 다시 부탁해 주세요.</string>
+    <string name="tour_review">이제 실제 요청이에요. 내용을 고치려면 ‘내용 수정’, 맞으면 ‘안내 시작하기’를 눌러 주세요.</string>
     <string name="tour_settings">클릭은 눌러야 할 곳을 알려드려요. 자동 모드도 알아볼까요? 오른쪽 위 톱니바퀴를 눌러 보세요.</string>
     <string name="tour_automation">오른쪽 위 ‘자동 모드’를 누르면 자동 모드를 켤 수 있어요. 클릭은 %1$s님께서 직접 누르도록 돕지만, 원하실 경우 자동 모드를 사용하실 수 있어요.</string>
     <string name="tour_library">다시 홈이에요. 아래쪽 ‘보관함’을 눌러 보세요. 자주 쓰는 요청을 모아 두고 다시 꺼내 쓸 수 있어요.</string>
     <string name="tour_saved">‘즐겨찾기’에는 별표로 보관한 항목이 모여요. ‘순서 바꾸기’로 자주 쓰는 항목을 위로 옮길 수 있어요. 옆의 ‘최근 질문’을 눌러 보세요.</string>
-    <string name="tour_recent">최근 질문을 누르면 다시 요청할 수 있고, 별을 누르면 즐겨찾기에 담겨요. 아래 ‘홈’을 누르면 연습을 마쳐요.</string>
+    <string name="tour_recent">최근 질문을 누르면 다시 요청할 수 있고, 별을 누르면 즐겨찾기에 담겨요. 아래 ‘홈’을 누르면 사용법 안내를 마쳐요.</string>
 
     <item name="home_root" type="id" />
     <item name="home_library_tabs" type="id" />
     <item name="home_library_saved" type="id" />
     <item name="home_library_recent" type="id" />
-    <item name="tutorial_font_preview" type="id" />
-    <item name="tutorial_increase" type="id" />
     <string name="tour_continue_hint">말풍선이나 클루를 누르면 계속해요</string>
-    <string name="tour_reenter">다시 입력하기</string>
-    <string name="tour_floating">앞으로는 이 안내창에서 다음에 누를 곳을 알려드려요. 실제 설정 화면에서는 어떻게 보이는지 살펴볼까요?</string>
-    <string name="tour_floating_instruction">이곳에 다음에 누를 곳이 표시돼요.</string>
-    <string name="tour_actual_screen">실제 화면에서는 이렇게 알려드려요! 파란 표시 안의 ‘글자 크기와 스타일’을 눌러 보세요.</string>
-    <string name="tour_display_instruction">‘글자 크기와 스타일’을 눌러 주세요.</string>
-    <string name="tour_font_photo">실제 글자 크기 설정 화면이에요. 파란 표시 안의 조절 막대를 눌러 연습해 보세요. 연습에서는 휴대폰 설정을 바꾸지 않아요.</string>
-    <string name="tour_font_instruction">글자 크기 조절 막대를 눌러 주세요.</string>
-    <string name="tour_practice_result">연습 화면이에요. 실제 휴대폰 설정은 바꾸지 않았어요.</string>
+    <string name="tour_live_wait">부탁하신 내용을 실제 요청으로 보내고 있어요. 곧 뜨는 안내창에서 내용을 확인해 주세요.</string>
+    <string name="tour_live_edit">실제 안내창에서 내용을 입력하거나 고쳐 주세요. 확인이 끝나면 안내를 시작할 수 있어요.</string>
+    <string name="tour_live_follow">파란 표시를 따라 실제 화면에서 직접 눌러 보세요.</string>
+    <string name="tour_live_expand">줄인 안내창을 눌러 펼치면 다음 확인을 할 수 있어요.</string>
+    <string name="tour_live_result">지금 실제 휴대폰의 글자 크기가 편한지 확인해 주세요. 이 안내창에서 원하시는 결과인지 답해 주세요.</string>
+    <string name="tour_live_answer">선택하거나 입력한 내용이 맞으면 ‘%1$s’를 눌러 주세요.</string>
+    <string name="tour_live_finished">실제 설정에서 글자 크기 안내를 마쳤어요. ‘끝내기’를 누르면 클릭으로 돌아가 다음 사용법을 알아봐요.</string>
+    <item name="live_tutorial_window" type="id" />
     <item name="task_flow_begin" type="id" />
+    <item name="task_flow_answer" type="id" />
     <item name="task_flow_instruction" type="id" />
     <item name="task_flow_result_satisfied" type="id" />
     <item name="task_flow_result_help" type="id" />
-    <item name="tutorial_practice_panel" type="id" />
-    <item name="tutorial_settings_photo_target" type="id" />
-    <item name="tutorial_settings_photo" type="id" />
     <item name="menu_automation_toggle" type="id" />
 </resources>
