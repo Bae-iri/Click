@@ -27,6 +27,7 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=34,application=Application.class,instrumentedPackages={"com.click"})
 @LooperMode(LooperMode.Mode.PAUSED)
+// Exercises the planner-delivered result path; goal-derived completion is covered by AppTaskSpeedExperimentTest.
 public class AppTaskPassiveContainerCompletionTest {
     private static final String PKG="org.example.unregistered",TITLE="Display & touch";
     private static AccessibilityNodeSnapshot container(){return new AccessibilityNodeSnapshot("node_0_0",null,true,PKG,null,TITLE,
@@ -64,7 +65,7 @@ public class AppTaskPassiveContainerCompletionTest {
         AppTaskMemory memory=new AppTaskMemory("Display & touch 화면 열어줘");finishNavigationPlan(memory);
         String taskId=memory.id(),plan=memory.state().getJSONArray("subgoals").toString();
         Listener listener=new Listener();AppGuideGateway gateway=mock(AppGuideGateway.class);
-        AppTaskController controller=new AppTaskController(gateway,memory,null,listener,true,false,true,arm);
+        AppTaskController controller=new AppTaskController(gateway,memory,null,listener,true,false,true,arm,true,AppTaskController.SpeedOptions.PRODUCTION.withGoalDerived(false));
         try{
             controller.refresh();ArgumentCaptor<JSONObject> request=ArgumentCaptor.forClass(JSONObject.class);
             ArgumentCaptor<AppGuideGateway.Callback> callback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);

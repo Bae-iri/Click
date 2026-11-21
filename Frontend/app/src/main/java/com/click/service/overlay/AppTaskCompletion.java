@@ -175,6 +175,34 @@ public final class AppTaskCompletion {
      * screen is before the destination ("앱 알림" row on the "알림" page). Toggles and the selected
      * tab act in place and are not entries elsewhere.
      */
+    private static final Set<String> GOAL_GENERIC=new HashSet<>(Arrays.asList("설정","화면","메뉴","앱","홈","탭","더보기","검색","목록","settings","menu","home","search"));
+    /**
+     * A result condition derived from the goal itself when no planner supplied one: exactly one
+     * exported page title (app-bar text) or selected native tab whose label IS the goal's destination
+     * phrase. It is only a candidate; the controller still needs two fresh native matches and the
+     * user's confirmation. Device logs (galaxy-completion): 309/343 goal checks had no candidate.
+     */
+    public static JSONObject goalDerivedCompletion(String goal,JSONObject screen,String appLabel){
+        try{
+            if(screen==null||!"public".equals(screen.optString("status"))||goalEntryVisible(goal,screen))return null;
+            Set<String> forms=destinationForms(goal);JSONArray nodes=screen.optJSONArray("nodes");
+            if(forms.isEmpty()||nodes==null)return null;
+            JSONObject found=null;
+            for(int i=0;i<nodes.length();i++){JSONObject n=nodes.optJSONObject(i);if(n==null||!"accessibility".equals(n.optString("source","accessibility")))continue;
+                String label=compact(n.optString("label"));
+                if(label.length()<2||GOAL_GENERIC.contains(label)||label.equals(compact(appLabel))||!forms.contains(label))continue;
+                boolean title="text".equals(n.optString("role"))&&!n.optBoolean("clickable")&&!n.optBoolean("editable")&&!n.optBoolean("scrollable");
+                boolean tab="tab".equals(n.optString("role"))&&n.optBoolean("selected");
+                if(!title&&!tab)continue;
+                JSONObject check=new JSONObject().put("package",screen.optString("package")).put("label",n.optString("label")).put("role",tab?"tab":"text");
+                if(tab)check.put("selected",true);
+                if(found!=null&&!found.toString().equals(check.toString()))return null; // Two destinations: leave it to the planner.
+                found=check;
+            }
+            JSONObject completion=found==null?null:new JSONObject().put("checks",new JSONArray().put(found));
+            return completion!=null&&valid(completion)?completion:null;
+        }catch(JSONException invalid){return null;}
+    }
     public static boolean goalEntryVisible(String goal,JSONObject screen){
         Set<String> forms=destinationForms(goal);JSONArray nodes=screen==null?null:screen.optJSONArray("nodes");
         if(forms.isEmpty()||nodes==null)return false;

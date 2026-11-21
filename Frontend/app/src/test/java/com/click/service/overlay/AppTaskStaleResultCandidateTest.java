@@ -28,6 +28,7 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=34,application=Application.class,instrumentedPackages={"com.click"})
 @LooperMode(LooperMode.Mode.PAUSED)
+// Exercises the planner-delivered result path; goal-derived completion is covered by AppTaskSpeedExperimentTest.
 public class AppTaskStaleResultCandidateTest {
     private static final String PKG="org.example.unregistered",TITLE="Library overview",GOAL="Open library overview";
     private static JSONObject candidate()throws Exception {return new JSONObject().put("checks",new JSONArray().put(new JSONObject()
@@ -58,7 +59,7 @@ public class AppTaskStaleResultCandidateTest {
         final AppTaskController controller;JSONObject request;AppGuideGateway.Callback callback;
         Pending(AppTaskMetaController.Arm arm,boolean resultOnly,AppTaskMemory supplied)throws Exception {
             memory=supplied==null?new AppTaskMemory(GOAL):supplied;if(resultOnly)finishPlan(memory);
-            controller=new AppTaskController(gateway,memory,null,listener,true,false,true,arm);controller.targetApp(PKG,"Library");}
+            controller=new AppTaskController(gateway,memory,null,listener,true,false,true,arm,true,AppTaskController.SpeedOptions.PRODUCTION.withGoalDerived(false));controller.targetApp(PKG,"Library");}
         void send()throws Exception {controller.refresh();var requests=ArgumentCaptor.forClass(JSONObject.class);var callbacks=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);
             verify(gateway).send(requests.capture(),callbacks.capture());request=requests.getValue();callback=callbacks.getValue();}
         JSONObject response(JSONObject completion)throws Exception {JSONObject sent=request.getJSONObject("screen");return new JSONObject().put("protocol_version","app-task.v2")

@@ -184,7 +184,9 @@ public class MemoryDeviceExperimentTest {
             switch(kv[1]){case "NONE":return AppTaskController.SpeedOptions.NONE;case "PRODUCTION":return AppTaskController.SpeedOptions.PRODUCTION;
                 case "ALL":return AppTaskController.SpeedOptions.ALL;
                 case "PRODUCTION_NO_RETRY":{AppTaskController.SpeedOptions p=AppTaskController.SpeedOptions.PRODUCTION;
-                    return new AppTaskController.SpeedOptions(p.memoryBeforeCompletion,p.rememberedCompletion,p.reofferPrediction,p.rebindChangedFrame,p.plannedRoute,false);}
+                    return new AppTaskController.SpeedOptions(p.memoryBeforeCompletion,p.rememberedCompletion,p.reofferPrediction,p.rebindChangedFrame,p.plannedRoute,false,p.goalDerivedCompletion);}
+                case "PRODUCTION_NO_DERIVED":{AppTaskController.SpeedOptions p=AppTaskController.SpeedOptions.PRODUCTION;
+                    return new AppTaskController.SpeedOptions(p.memoryBeforeCompletion,p.rememberedCompletion,p.reofferPrediction,p.rebindChangedFrame,p.plannedRoute,p.retryProviderFailure,false);}
                 default:throw new AssertionError("Unknown speed "+kv[1]);}}
         return null;
     }

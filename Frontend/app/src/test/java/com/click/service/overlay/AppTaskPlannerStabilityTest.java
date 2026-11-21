@@ -25,6 +25,7 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=34,application=Application.class,instrumentedPackages={"com.click"})
 @LooperMode(LooperMode.Mode.PAUSED)
+// Exercises the planner-delivered result path; goal-derived completion is covered by AppTaskSpeedExperimentTest.
 public class AppTaskPlannerStabilityTest {
     private static final String PKG="org.example.reader";
     private static final class Listener implements AppTaskController.Listener {
@@ -42,7 +43,7 @@ public class AppTaskPlannerStabilityTest {
     private static final class Scenario implements AutoCloseable {
         final Listener listener=new Listener();final AppGuideGateway gateway=mock(AppGuideGateway.class);final AppTaskMemory memory=new AppTaskMemory("Open destination");
         final AppTaskController controller;
-        Scenario()throws Exception {controller=new AppTaskController(gateway,memory,null,listener,true,false,true);controller.targetApp(PKG,"Reader");}
+        Scenario()throws Exception {controller=new AppTaskController(gateway,memory,null,listener,true,false,true,AppTaskMetaController.Arm.CURRENT,true,AppTaskController.SpeedOptions.PRODUCTION.withGoalDerived(false));controller.targetApp(PKG,"Reader");}
         void initialRequest()throws Exception {controller.refresh();var callback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway).send(any(),callback.capture());
             callback.getValue().success(new JSONObject().put("status","needs_input").put("message","Continue"));}
         void event(){controller.screenChanged(listener.fresh());}
