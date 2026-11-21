@@ -37,110 +37,70 @@ import static org.junit.Assert.*;
 public class ClickTutorialFlowTest {
     private final Instrumentation device = InstrumentationRegistry.getInstrumentation();
 
-    @Test public void realHomeTouchesLeadThroughFontPracticeSettingsAndLibrary() throws Exception {
+    @Test public void actualFloatingPanelsAndPhotosLeadThroughSettingsAndLibraryWithoutCoachButtons() throws Exception {
+        assertEquals("tour_text", device.getTargetContext().getResources().getResourceEntryName(R.string.tour_text));
+        assertEquals("task_flow_edit", device.getTargetContext().getResources().getResourceEntryName(R.id.task_flow_edit));
         TouchAutomationSettings automation = new TouchAutomationSettings(device.getTargetContext());
         boolean initialMode = automation.isEnabled();
+        new com.click.data.local.LocalAccountStore(device.getTargetContext()).saveProfile("테스트", "");
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.tutorialIntent(device.getTargetContext()))) {
             words(R.string.tour_welcome);
-            int[] dock = new int[1];
-            scenario.onActivity(home -> {
-                View bubble = home.findViewById(R.id.tutorial_explanation_scroll);
-                assertEquals(0f, bubble.getElevation(), 0f);
-                assertNull(home.findViewById(R.id.tutorial_explanation_replay));
-                assertNull(find(bubble, v -> v instanceof android.widget.Button));
-                assertNull(find(home.findViewById(R.id.tutorial_floating_host),
-                        v -> v instanceof TextView && "닫기".contentEquals(((TextView) v).getText())));
-                Rect words = new Rect(), button = new Rect(), host = new Rect();
-                assertTrue(bubble.getGlobalVisibleRect(words));
-                assertTrue(home.findViewById(R.id.tutorial_next).getGlobalVisibleRect(button));
-                View coach = home.findViewById(R.id.tutorial_floating_host);
-                assertTrue(coach.getGlobalVisibleRect(host));
-                int safeBottom = host.bottom - ViewCompat.getRootWindowInsets(coach)
-                        .getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()).bottom;
-                assertTrue(button.top > words.bottom);
-                assertTrue(button.bottom <= safeBottom);
-                assertTrue(safeBottom - button.bottom <= 12 * home.getResources().getDisplayMetrics().density);
-                dock[0] = ((View) bubble.getParent()).getBottom();
-            });
+            assertNoCoachButtons();
             capture(scenario, "welcome");
-            tap(R.id.home_settings);
-            words(R.string.tour_welcome);
-            tap(R.id.tutorial_next);
-            scenario.onActivity(a -> assertEquals("The guide stays at its dock when input is highlighted",
-                    dock[0], ((View) a.findViewById(R.id.tutorial_explanation_scroll).getParent()).getBottom()));
-            capture(scenario, "input");
-            tap(R.id.home_nav_favorites);
-            words(R.string.tour_pick);
-            tap(R.id.home_request_input);
-            words(R.string.tour_text);
+            tap(R.id.home_settings); words(R.string.tour_welcome);
+            tap(R.id.tutorial_title); words(R.string.tour_pick);
+            tap(R.id.home_request_input); words(R.string.tour_text);
             scenario.onActivity(a -> {
                 EditText editor = a.findViewById(R.id.home_request_input);
-                assertTrue(editor.hasFocus());
-                editor.onCreateInputConnection(new EditorInfo()).commitText("글자 크기 키워줘", 1);
+                editor.setText("글자 크기 키워줘");
                 a.getSystemService(InputMethodManager.class).hideSoftInputFromWindow(editor.getWindowToken(), 0);
             });
-            visible(v -> v.getId() == R.id.home_request_send &&
-                    !ViewCompat.getRootWindowInsets(v).isVisible(WindowInsetsCompat.Type.ime()));
-            tap(R.id.home_request_send);
-            words(R.string.tour_review);
-            visible(v -> "review_summary_text".equals(v.getTag()) && "글자 크기 키워줘".contentEquals(((TextView) v).getText()));
+            visible(v -> v.getId() == R.id.home_request_send
+                    && !ViewCompat.getRootWindowInsets(v).isVisible(WindowInsetsCompat.Type.ime()));
+            tap(R.id.home_request_send); words(R.string.tour_review);
+            visible(v -> v.getId() == R.id.tutorial_practice_panel && v instanceof com.click.ui.overlay.TaskFlowOverlayView);
             capture(scenario, "review");
-            tap(R.id.tutorial_back);
-            words(R.string.tour_text);
-            scenario.onActivity(a -> ((EditText) a.findViewById(R.id.home_request_input)).onEditorAction(EditorInfo.IME_ACTION_SEND));
-            words(R.string.tour_review);
-            tap(R.id.tutorial_next);
-            words(R.string.tour_adjust);
+            assertNoCoachButtons();
+            tap(v -> v instanceof TextView && "다시 입력하기".contentEquals(((TextView) v).getText())); words(R.string.tour_text);
             scenario.onActivity(a -> {
-                View penguin = a.findViewById(R.id.tutorial_floating_control);
-                assertEquals("The penguin stays docked during the font exercise", dock[0],
-                        ((View) penguin.getParent()).getBottom());
-                Rect sample = new Rect(), guide = new Rect();
-                assertTrue(a.findViewById(R.id.tutorial_increase).getGlobalVisibleRect(sample));
-                assertTrue(penguin.getGlobalVisibleRect(guide));
-                assertTrue(sample.bottom < guide.top);
+                assertTrue(a.findViewById(R.id.home_request_input).isShown());
+                assertFalse(a.findViewById(R.id.tutorial_practice_panel).isShown());
             });
-            capture(scenario, "highlight");
-            tap(R.id.tutorial_increase);
-            words(R.string.tour_result);
-            scenario.recreate();
-            words(R.string.tour_result);
-            capture(scenario, "result");
-            tap(R.id.tutorial_next);
+            scenario.onActivity(a -> ((EditText) a.findViewById(R.id.home_request_input)).onEditorAction(EditorInfo.IME_ACTION_SEND));
+            words(R.string.tour_review); tap(v -> v instanceof TextView && "안내 시작하기".contentEquals(((TextView) v).getText()));
+            words(R.string.tour_floating); capture(scenario, "floating-guide");
+            tap(R.id.tutorial_title); words(R.string.tour_actual_screen);
+            assertPhoto(scenario); capture(scenario, "real-display-photo");
+            tap(R.id.tutorial_settings_photo_target); words(R.string.tour_font_photo);
+            assertPhoto(scenario); capture(scenario, "real-font-photo");
+            tap(R.id.tutorial_settings_photo_target); words(R.string.tour_result);
+            scenario.recreate(); words(R.string.tour_result); capture(scenario, "result");
+            tap(R.id.task_flow_result_satisfied); words(R.string.tour_settings);
             tap(R.id.home_settings);
-            words(R.string.tour_automation);
-            tap(v -> v.getContentDescription() != null && v.getContentDescription().toString().startsWith("자동으로 도와주기,"));
-            words(R.string.tour_settings_detail);
-            tap(R.id.tutorial_next);
-            words(R.string.tour_library);
-            tap(R.id.home_nav_favorites);
-            words(R.string.tour_saved);
-            tap(R.id.home_library_recent);
-            words(R.string.tour_recent);
-            capture(scenario, "library");
-            tap(R.id.tutorial_next);
-            visible(v -> v.getId() == R.id.home_request_input && v.getContext().getClass() == HomeActivity.class);
+            visible(v -> v.getId() == R.id.tutorial_title && ((TextView) v).getText().toString().contains("테스트님께서 직접"));
+            visible(v -> v.getId() == R.id.menu_automation_toggle);
+            assertNoCoachButtons(); assertSpotlight(R.id.menu_automation_toggle, false);
+            captureCurrent("automation");
+            tap(R.id.tutorial_title); words(R.string.tour_library);
+            assertSpotlight(R.id.home_nav_favorites, true); capture(scenario, "library-highlight");
+            tap(R.id.home_nav_favorites); words(R.string.tour_saved);
+            tap(R.id.home_library_recent); words(R.string.tour_recent);
+            assertSpotlight(R.id.home_nav_home, true);
+            capture(scenario, "recent");
+            tap(R.id.home_nav_home);
             scenario.onActivity(a -> assertNull(a.findViewById(R.id.tutorial_floating_host)));
             assertEquals(initialMode, automation.isEnabled());
         }
     }
 
-    @Test public void microphoneOpensRealVoiceControlAndCanSwitchToTyping() throws Exception {
+    @Test public void realVoiceControlCanBeCancelledToUseTheHomeEditor() throws Exception {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.tutorialIntent(device.getTargetContext()))) {
-            tap(R.id.tutorial_next);
-            tap(R.id.home_microphone);
-            words(R.string.tour_voice);
+            tap(R.id.tutorial_title); tap(R.id.home_microphone); words(R.string.tour_voice);
             visible(v -> v.getId() == R.id.overlay_microphone);
-            scenario.onActivity(a -> {
-                View collapse = a.findViewById(R.id.overlay_collapse);
-                assertTrue(collapse == null || !collapse.isShown());
-                assertNull(find(a.getWindow().getDecorView(), v -> v instanceof TextView
-                        && "취소".contentEquals(((TextView) v).getText())));
-            });
-            capture(scenario, "voice");
-            tap(v -> v instanceof TextView && ((TextView) v).getText().equals(device.getTargetContext().getString(R.string.tour_try_text)));
-            words(R.string.tour_text);
-            visible(v -> v.getId() == R.id.home_request_input && v.hasFocus());
+            visible(v -> v.getId() == R.id.overlay_collapse);
+            assertNoCoachButtons(); capture(scenario, "voice");
+            tap(v -> v instanceof TextView && "취소".contentEquals(((TextView) v).getText()));
+            words(R.string.tour_pick); tap(R.id.home_request_input); words(R.string.tour_text);
         }
     }
 
@@ -149,68 +109,102 @@ public class ClickTutorialFlowTest {
             scenario.onActivity(home -> home.getOnBackPressedDispatcher().onBackPressed());
             scenario.onActivity(home -> {
                 EditText editor = home.findViewById(R.id.home_request_input);
-                editor.setText("나중에 보낼 요청");
-                editor.setSelection(3);
+                editor.setText("나중에 보낼 요청"); editor.setSelection(3);
                 home.onNewIntent(HomeActivity.tutorialIntent(home));
-                assertSame(editor, home.findViewById(R.id.home_request_input));
                 assertEquals("", editor.getText().toString());
             });
-            tap(R.id.tutorial_next);
-            tap(R.id.home_request_input);
-            scenario.recreate();
-            words(R.string.tour_text);
-            tap(R.id.tutorial_back);
-            tap(R.id.tutorial_back);
-            scenario.onActivity(home -> home.getOnBackPressedDispatcher().onBackPressed());
+            tap(R.id.tutorial_title); tap(R.id.home_request_input);
+            scenario.recreate(); words(R.string.tour_text);
+            for (int i = 0; i < 3; i++) scenario.onActivity(home -> home.getOnBackPressedDispatcher().onBackPressed());
             scenario.onActivity(home -> {
                 EditText editor = home.findViewById(R.id.home_request_input);
                 assertNull(home.findViewById(R.id.tutorial_floating_host));
-                assertEquals("나중에 보낼 요청", editor.getText().toString());
-                assertEquals(3, editor.getSelectionEnd());
+                assertEquals("나중에 보낼 요청", editor.getText().toString()); assertEquals(3, editor.getSelectionEnd());
             });
-        }
-        try (ActivityScenario<HomeActivity> next = ActivityScenario.launch(HomeActivity.class)) {
-            next.onActivity(home -> assertNull(home.findViewById(R.id.tutorial_floating_host)));
         }
     }
 
-    @Test public void waitingStrengthensTheInputOutlineWhileOtherHomeActionsStayBlocked() throws Exception {
+    @Test public void penguinMovesAndRegularBubbleTextReplacesTheOldButtons() throws Exception {
         try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.tutorialIntent(device.getTargetContext()))) {
-            tap(R.id.tutorial_next);
-            words(R.string.tour_pick);
-            int[] edge = new int[2];
+            assertNoCoachButtons();
+            float[] rotation = {0};
             scenario.onActivity(a -> {
-                View card = a.findViewById(R.id.home_start);
-                card.getLocationInWindow(edge);
-                edge[0] += Math.round(17 * a.getResources().getDisplayMetrics().density);
+                TextView message = a.findViewById(R.id.tutorial_title);
+                assertEquals(a.getResources().getFont(com.click.designpreview.R.font.pretendard_regular), message.getTypeface());
+                rotation[0] = a.findViewById(R.id.tutorial_floating_control).getRotation();
             });
-            int original = blueStroke(snapshot(scenario), edge);
-            assertTrue(original > 0);
-            int[] center = {edge[0], edge[1]};
+            SystemClock.sleep(450);
             scenario.onActivity(a -> {
-                View card = a.findViewById(R.id.home_start);
-                int[] corner = new int[2];
-                card.getLocationInWindow(corner);
-                center[0] = corner[0] + card.getWidth() / 2;
+                if (android.animation.ValueAnimator.areAnimatorsEnabled())
+                    assertTrue(Math.abs(a.findViewById(R.id.tutorial_floating_control).getRotation() - rotation[0]) > .05f);
             });
-            assertEquals("Only the corners frame the target", 0, blueStroke(snapshot(scenario), center));
-            tap(R.id.home_settings);
-            tap(R.id.home_nav_favorites);
-            SystemClock.sleep(8250);
-            words(R.string.tour_pick);
-            assertTrue("The reminder must visibly strengthen the same corner",
-                    blueStroke(snapshot(scenario), edge) > original + 1);
+            tap(R.id.home_settings); words(R.string.tour_welcome);
+            tap(R.id.tutorial_title); words(R.string.tour_pick);
         }
     }
 
-    private int blueStroke(Bitmap image, int[] point) {
-        int pixels = 0;
-        for (int y = Math.max(0, point[1] - 40); y <= Math.min(point[1] + 6, image.getHeight() - 1); y++) {
-            int color = image.getPixel(point[0], y);
-            if (android.graphics.Color.blue(color) - android.graphics.Color.red(color) > 80) pixels++;
-        }
-        image.recycle();
-        return pixels;
+    private void assertNoCoachButtons() {
+        device.runOnMainSync(() -> {
+            for (Activity a : ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
+                View coach = a.findViewById(R.id.tutorial_floating_host);
+                assertNotNull(coach); assertNull(find(coach, v -> v instanceof android.widget.Button));
+                assertNull(a.findViewById(R.id.tutorial_next)); assertNull(a.findViewById(R.id.tutorial_back));
+            }
+        });
+    }
+
+    private void assertPhoto(ActivityScenario<HomeActivity> scenario) {
+        scenario.onActivity(a -> {
+            ViewGroup photo = a.findViewById(R.id.tutorial_settings_photo);
+            assertTrue(photo instanceof com.click.ui.tutorial.SettingsScreenshotPracticeView);
+            var image = (android.widget.ImageView) photo.getChildAt(0);
+            assertTrue(image.getDrawable() instanceof android.graphics.drawable.BitmapDrawable);
+            assertEquals(1080, image.getDrawable().getIntrinsicWidth());
+        });
+    }
+
+    private void assertSpotlight(int targetId, boolean childrenOnly) {
+        device.runOnMainSync(() -> {
+            for (Activity a : ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED)) {
+                try {
+                    View coach = a.findViewById(R.id.tutorial_floating_host), target = a.findViewById(targetId);
+                    java.lang.reflect.Field field = coach.getClass().getDeclaredField("hole"); field.setAccessible(true);
+                    android.graphics.RectF hole = new android.graphics.RectF((android.graphics.RectF) field.get(coach));
+                    int[] origin = new int[2]; coach.getLocationOnScreen(origin);
+                    Rect expected = new Rect(), child = new Rect();
+                    if (childrenOnly) {
+                        var group = (ViewGroup) target;
+                        for (int i = 0; i < group.getChildCount(); i++) { screenBounds(group.getChildAt(i), child); expected.union(child); }
+                    } else screenBounds(target, expected);
+                    expected.offset(-origin[0], -origin[1]);
+                    int pad = Math.round(5 * a.getResources().getDisplayMetrics().density); expected.inset(-pad, -pad);
+                    assertEquals(expected.left, hole.left, 2); assertEquals(expected.top, hole.top, 2);
+                    assertEquals(expected.right, hole.right, 2); assertEquals(expected.bottom, hole.bottom, 2);
+                } catch (ReflectiveOperationException error) { throw new AssertionError(error); }
+            }
+        });
+    }
+
+    private void screenBounds(View view, Rect bounds) {
+        int[] position = new int[2]; view.getLocationOnScreen(position);
+        assertTrue(view.getLocalVisibleRect(bounds));
+        bounds.offset(position[0], position[1]);
+    }
+
+    private void captureCurrent(String name) throws Exception {
+        device.waitForIdleSync();
+        Bitmap[] frame = {null}; int[] result = {-1};
+        CountDownLatch copied = new CountDownLatch(1);
+        device.runOnMainSync(() -> {
+            Activity current = ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).iterator().next();
+            View decor = current.getWindow().getDecorView();
+            frame[0] = Bitmap.createBitmap(decor.getWidth(), decor.getHeight(), Bitmap.Config.ARGB_8888);
+            PixelCopy.request(current.getWindow(), frame[0], status -> { result[0] = status; copied.countDown(); }, new Handler(Looper.getMainLooper()));
+        });
+        assertTrue(copied.await(3, TimeUnit.SECONDS)); assertEquals(PixelCopy.SUCCESS, result[0]);
+        try (var output = new FileOutputStream(new File(device.getTargetContext().getCacheDir(), "clue-tour-" + name + ".png"))) {
+            frame[0].compress(Bitmap.CompressFormat.PNG, 100, output);
+        } finally { frame[0].recycle(); }
     }
 
     private void tap(int id) { tap(v -> v.getId() == id); }
@@ -221,15 +215,22 @@ public class ClickTutorialFlowTest {
             Rect rect = new Rect();
             assertTrue(view.getLocalVisibleRect(rect));
             view.getLocationOnScreen(p);
-            p[0] += rect.centerX(); p[1] += rect.centerY();
+            // Local visible rectangles include a TextView's internal scroll offset.
+            // Single-line header labels can have a very wide virtual text layout.
+            p[0] += rect.centerX() - view.getScrollX(); p[1] += rect.centerY() - view.getScrollY();
         });
-        long down = SystemClock.uptimeMillis();
-        for (int action : new int[]{MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP}) {
-            MotionEvent touch = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, p[0], p[1], 0);
-            touch.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-            device.sendPointerSync(touch);
-            touch.recycle();
-        }
+        device.runOnMainSync(() -> {
+            // Dispatch real touch coordinates through this app's root, including the coach's
+            // spotlight gate. Unrelated system/experiment overlays must not receive test taps.
+            View root = view.getRootView(); int[] origin = new int[2]; root.getLocationOnScreen(origin);
+            long down = SystemClock.uptimeMillis();
+            for (int action : new int[]{MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP}) {
+                MotionEvent touch = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action,
+                        p[0] - origin[0], p[1] - origin[1], 0);
+                touch.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+                root.dispatchTouchEvent(touch); touch.recycle();
+            }
+        });
         device.waitForIdleSync();
     }
 

@@ -43,7 +43,6 @@ public final class MenuActivity extends AppCompatActivity {
     static final String EXTRA_TOUR = "com.click.extra.TOUR_SETTINGS";
     private com.click.ui.tutorial.ClueCoachView coach;
     private View automationRow, displayRow;
-    private boolean showingDisplay;
     private static final int BLUE = 0xFF3478F6;
     private static final int INK = 0xFF101A36;
     private static final int SECONDARY = 0xFF7182A4;
@@ -157,12 +156,11 @@ public final class MenuActivity extends AppCompatActivity {
 
         setContentView(root);
         if (getIntent().getBooleanExtra(EXTRA_TOUR, false)) {
-            coach = new com.click.ui.tutorial.ClueCoachView(root, this::previousTourStep);
-            automationRow.setOnClickListener(v -> showTourStep(true));
+            coach = new com.click.ui.tutorial.ClueCoachView(root);
             getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
                 @Override public void handleOnBackPressed() { previousTourStep(); }
             });
-            showTourStep(state != null && state.getBoolean("tour_display"));
+            showTourStep();
         }
         root.requestApplyInsets();
     }
@@ -263,6 +261,7 @@ public final class MenuActivity extends AppCompatActivity {
         row.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
 
         automationToggle = new androidx.appcompat.widget.SwitchCompat(this);
+        automationToggle.setId(R.id.menu_automation_toggle);
         automationToggle.setText("자동 모드");
         automationToggle.setTextSize(ClickTextScale.size(this, 13));
         automationToggle.setTypeface(medium);
@@ -536,27 +535,16 @@ public final class MenuActivity extends AppCompatActivity {
         });
     }
 
-    private void showTourStep(boolean display) {
-        showingDisplay = display;
-        if (display) {
-            coach.show(getString(R.string.tour_settings_detail), com.click.designpreview.R.drawable.clue3_tutorial,
-                    true, displayRow);
-            coach.action(R.string.tour_next_library, true, () -> { setResult(RESULT_OK); finish(); });
-        } else {
-            coach.show(getString(R.string.tour_automation), com.click.designpreview.R.drawable.clue3_tutorial,
-                    true, automationRow, automationRow);
-        }
+    private void showTourStep() {
+        String name = new com.click.data.local.LocalAccountStore(this).name().trim();
+        if (name.isEmpty()) name = "사용자";
+        coach.show(getString(R.string.tour_automation, name), com.click.designpreview.R.drawable.clue3_tutorial,
+                automationToggle, automationToggle);
+        coach.onContinue(() -> { setResult(RESULT_OK); finish(); });
     }
 
-    private void previousTourStep() {
-        if (showingDisplay) showTourStep(false);
-        else finish();
-    }
+    private void previousTourStep() { finish(); }
 
-    @Override protected void onSaveInstanceState(Bundle state) {
-        state.putBoolean("tour_display", showingDisplay);
-        super.onSaveInstanceState(state);
-    }
     @Override protected void onPause() {
         if (coach != null) coach.pause();
         super.onPause();

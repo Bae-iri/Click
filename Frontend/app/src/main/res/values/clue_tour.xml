@@ -1,39 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="tour_welcome">안녕하세요! 저는 클루에요!\n저와 함께 클릭 사용법을 배워봐요!</string>
-    <string name="tour_start">클루와 시작하기</string>
+    <string name="tour_welcome">안녕하세요! 저는 클루예요.\n저와 함께 클릭 사용법을 배워봐요!</string>
     <string name="tour_pick">말로 부탁하려면 마이크를, 글로 쓰려면 입력칸을 눌러 보세요.</string>
     <string name="tour_voice">클루와 글자 크기를 바꿔봐요! 마이크를 꾹 누르고 “글자 크기 키워줘”라고 말해 보세요.</string>
     <string name="tour_listening">듣고 있어요. “글자 크기 키워줘”라고 말해 주세요.</string>
     <string name="tour_processing">말씀하신 내용을 확인하고 있어요.</string>
-    <string name="tour_permission">마이크를 사용하려면 권한이 필요해요. ‘글로 입력하기’를 누르면 예시 문장으로도 연습할 수 있어요.</string>
+    <string name="tour_permission">마이크 권한이 필요해요. ‘취소’를 누른 뒤 홈 입력칸에서 글로 연습할 수 있어요.</string>
     <string name="tour_text">클루와 함께 글자 크기를 바꿔봐요! 입력칸에 “글자 크기 키워줘”라고 적고 보내기 화살표를 눌러 주세요.</string>
-    <string name="tour_try_text">글로 입력하기</string>
-    <string name="tour_sample">예시 문장 사용</string>
     <string name="tour_phrase">글자 크기 키워줘</string>
     <string name="tour_retry">이번 연습은 글자를 한 단계 키우는 거예요. “글자 크기 키워줘”라고 다시 부탁해 주세요.</string>
-    <string name="tour_review">부탁하신 내용이 맞나요? 맞으면 ‘안내 시작하기’를 눌러 주세요.</string>
+    <string name="tour_review">입력하신 내용이 맞나요? 다시 입력하려면 ‘다시 입력하기’, 맞으면 ‘안내 시작하기’를 눌러 주세요.</string>
     <string name="tour_begin_guide">안내 시작하기</string>
-    <string name="tour_edit">내용 수정</string>
-    <string name="tour_adjust">클릭이 이렇게 알려드려요! 파란 표시 안의 ‘＋ 글자 크게’를 눌러 보세요.</string>
-    <string name="tour_preview">글자 크기 미리보기</string>
-    <string name="tour_preview_sentence">오늘도 클루와 함께!</string>
-    <string name="tour_increase">＋ 글자 크게</string>
-    <string name="tour_result">연습 문장이 한 단계 커졌어요. 원하는 크기가 되었나요? 실제 안내에서도 결과를 보고 알려주세요.</string>
-    <string name="tour_satisfied">네, 잘 보여요</string>
-    <string name="tour_again">다시 연습하기</string>
-    <string name="tour_settings">직접 누르는 방법을 익혔어요! 클릭이 대신 도와주는 자동 모드도 있어요. 홈 오른쪽 위 톱니바퀴를 눌러 찾아봐요.</string>
-    <string name="tour_automation">여기가 ‘자동으로 도와주기’예요. 자동 모드를 켜고 요청을 확인하면 클릭이 지원되는 화면을 열고 이동하거나 설정을 조절해요. 표시된 항목을 눌러 더 알아봐요.</string>
-    <string name="tour_settings_detail">자동 모드는 설정 위쪽 스위치로 언제든 끌 수 있어요. 직접 확인할 단계에서는 클릭이 멈춰요. 여기 ‘화면 설정’에서는 클릭의 글자 크기와 화면 표시 속도를 바꿀 수 있어요.</string>
-    <string name="tour_next_library">보관함 살펴보기</string>
+    <string name="tour_result">안내가 끝나면 이 창에서 원하시는 결과인지 확인해요. ‘네, 원하는 상태예요’를 눌러 연습을 이어가세요.</string>
+    <string name="tour_settings">클릭은 눌러야 할 곳을 알려드려요. 자동 모드도 알아볼까요? 오른쪽 위 톱니바퀴를 눌러 보세요.</string>
+    <string name="tour_automation">오른쪽 위 ‘자동 모드’를 누르면 자동 모드를 켤 수 있어요. 클릭은 %1$s님께서 직접 누르도록 돕지만, 원하실 경우 자동 모드를 사용하실 수 있어요.</string>
     <string name="tour_library">다시 홈이에요. 아래쪽 ‘보관함’을 눌러 보세요. 자주 쓰는 요청을 모아 두고 다시 꺼내 쓸 수 있어요.</string>
     <string name="tour_saved">‘즐겨찾기’에는 별표로 보관한 항목이 모여요. ‘순서 바꾸기’로 자주 쓰는 항목을 위로 옮길 수 있어요. 옆의 ‘최근 질문’을 눌러 보세요.</string>
-    <string name="tour_recent">지난 질문을 누르면 다시 요청할 수 있어요. 별을 누르면 즐겨찾기에 담겨요. 이제 클릭을 사용할 수 있어요!</string>
-    <string name="tour_finish">홈에서 시작하기</string>
-    <string name="tour_close">닫기</string>
-    <string name="tour_back">이전</string>
-    <string name="tour_replay">클루의 안내 다시 듣기</string>
-    <string name="tour_stop_audio">클루의 음성 멈추기</string>
+    <string name="tour_recent">최근 질문을 누르면 다시 요청할 수 있고, 별을 누르면 즐겨찾기에 담겨요. 아래 ‘홈’을 누르면 연습을 마쳐요.</string>
 
     <item name="home_root" type="id" />
     <item name="home_library_tabs" type="id" />
@@ -41,4 +24,21 @@
     <item name="home_library_recent" type="id" />
     <item name="tutorial_font_preview" type="id" />
     <item name="tutorial_increase" type="id" />
+    <string name="tour_continue_hint">말풍선이나 클루를 누르면 계속해요</string>
+    <string name="tour_reenter">다시 입력하기</string>
+    <string name="tour_floating">앞으로는 이 안내창에서 다음에 누를 곳을 알려드려요. 실제 설정 화면에서는 어떻게 보이는지 살펴볼까요?</string>
+    <string name="tour_floating_instruction">이곳에 다음에 누를 곳이 표시돼요.</string>
+    <string name="tour_actual_screen">실제 화면에서는 이렇게 알려드려요! 파란 표시 안의 ‘글자 크기와 스타일’을 눌러 보세요.</string>
+    <string name="tour_display_instruction">‘글자 크기와 스타일’을 눌러 주세요.</string>
+    <string name="tour_font_photo">실제 글자 크기 설정 화면이에요. 파란 표시 안의 조절 막대를 눌러 연습해 보세요. 연습에서는 휴대폰 설정을 바꾸지 않아요.</string>
+    <string name="tour_font_instruction">글자 크기 조절 막대를 눌러 주세요.</string>
+    <string name="tour_practice_result">연습 화면이에요. 실제 휴대폰 설정은 바꾸지 않았어요.</string>
+    <item name="task_flow_begin" type="id" />
+    <item name="task_flow_instruction" type="id" />
+    <item name="task_flow_result_satisfied" type="id" />
+    <item name="task_flow_result_help" type="id" />
+    <item name="tutorial_practice_panel" type="id" />
+    <item name="tutorial_settings_photo_target" type="id" />
+    <item name="tutorial_settings_photo" type="id" />
+    <item name="menu_automation_toggle" type="id" />
 </resources>
