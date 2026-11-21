@@ -41,6 +41,11 @@ VALIDATION_TYPES=frozenset(('missing','extra_forbidden','literal_error','value_e
 _CONSENT=re.compile(r'동의|허용|승인|accept|allow',re.I)
 
 
+def _repeated_attempt(attempts, fingerprint, tool, target):
+    return sum(a.outcome in {'failed', 'waiting'} and a.fingerprint == fingerprint
+               and a.tool == tool and a.target == target for a in attempts) >= 2
+
+
 def _planned_steps(raw,visible):
     """Untrusted lookahead: plain public tap labels for LATER screens. A label already visible
     here names another control, not a future destination, and would be grounded to it."""
@@ -325,8 +330,8 @@ class AppTaskService:
         recalled=self.memory.recall(request,user_id) if self.memory and user_id and not result_only else None
         if recalled and recalled.action and state.completion is not None and not goal_first:
             action=recalled.action
-            repeated=sum(a.outcome=='failed' and a.fingerprint==screen.fingerprint and a.tool==action.tool
-                and a.target==(action.target_id or action.package if action.tool=='open_app' else action.target_id or '') for a in state.attempts)>=2
+            target = action.package if action.tool == 'open_app' else action.target_id or ''
+            repeated = _repeated_attempt(state.attempts, screen.fingerprint, action.tool, target)
             if not repeated and (allowed_pairs is None or action_pair(action.tool,action.target_id,action.package) in allowed_pairs):
                 response.status='proposed';response.action=action
                 response.message='이전에 확인한 실행 경험으로 다음 단계를 준비했어요. 동작을 확인해 주세요.'
@@ -735,8 +740,7 @@ class AppTaskService:
             if tool not in {'tap','set_text','scroll_forward','scroll_backward','back','open_app'}:raise ValueError('unknown_tool')
             package=answer['app'] if tool=='open_app' else screen.package
             if tool=='open_app' and package not in {a.package for a in request.apps}:raise ValueError('unselected_app')
-            if sum(a.outcome=='failed' and a.fingerprint==screen.fingerprint and a.tool==tool
-                    and a.target==(node.id if node else package if tool=='open_app' else '') for a in state.attempts)>=2:
+            if _repeated_attempt(state.attempts, screen.fingerprint, tool, node.id if node else package if tool=='open_app' else ''):
                 raise ValueError('repeated_failed_action')
             label=answer['expected_label']
             if not isinstance(label,str) or len(label)>80 or label and not public_label(label):raise ValueError('expectation')

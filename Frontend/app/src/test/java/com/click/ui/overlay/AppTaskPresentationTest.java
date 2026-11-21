@@ -51,6 +51,18 @@ public class AppTaskPresentationTest {
         assertNotNull(find(panel,"결과가 맞아요 · 끝내기"));assertNull(find(panel,"다른 방법"));
         find(panel,"결과가 맞아요 · 끝내기").performClick();assertEquals(1,confirmed[0]);assertEquals(0,ended[0]);
     }
+    @Test public void unprovenResultOffersAnotherReadAndAnExplicitManualConfirmation()throws Exception {
+        var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
+        int[] confirmed={0};
+        JSONObject result=new JSONObject().put("status","needs_input").put("result_assessment",new JSONObject()
+                .put("status","unknown").put("reason","goal_postconditions_unconfirmed"));
+        panel.appTask(result,v->{},()->{},()->{},()->{},()->{},()->confirmed[0]++);
+        assertNotNull(find(panel,"화면 다시 읽기"));
+        assertNull(find(panel,"결과가 맞아요 · 끝내기"));
+        assertEquals(0,confirmed[0]);
+        find(panel,"직접 결과를 확인했어요").performClick();
+        assertEquals(1,confirmed[0]);
+    }
     @Test public void planningAndProtectedScreensKeepStopWithoutIrrelevantTools()throws Exception {
         var listener=mock(TaskFlowOverlayView.Listener.class);int[] ends={0},refreshes={0};
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),listener);

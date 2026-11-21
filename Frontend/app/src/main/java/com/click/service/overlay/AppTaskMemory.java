@@ -174,7 +174,20 @@ public final class AppTaskMemory {
             .put("advances_subgoal",false).put("effect_evidence","user_confirmed_result"));
     }
     private static String target(JSONObject action){return "open_app".equals(action.optString("tool"))?action.optString("package",""):action.isNull("target_id")?"":action.optString("target_id","");}
-    public boolean repeated(JSONObject before,JSONObject action){int count=0;JSONArray attempts=data.optJSONArray("attempts");for(int i=0;attempts!=null&&i<attempts.length();i++){JSONObject a=attempts.optJSONObject(i);if("failed".equals(a.optString("outcome"))&&before.optString("fingerprint").equals(a.optString("fingerprint"))&&action.optString("tool").equals(a.optString("tool"))&&target(action).equals(a.optString("target")))count++;}return count>=2;}
+    public boolean repeated(JSONObject before,JSONObject action){
+        int count=0;
+        JSONArray attempts=data.optJSONArray("attempts");
+        for(int i=0;attempts!=null&&i<attempts.length();i++){
+            JSONObject attempt=attempts.optJSONObject(i);
+            if(attempt==null)continue;
+            String outcome=attempt.optString("outcome");
+            if(("failed".equals(outcome)||"waiting".equals(outcome))
+                    &&before.optString("fingerprint").equals(attempt.optString("fingerprint"))
+                    &&action.optString("tool").equals(attempt.optString("tool"))
+                    &&target(action).equals(attempt.optString("target")))count++;
+        }
+        return count>=2;
+    }
     public boolean finished(){return data.optBoolean("completed");}
     public int actions(){return data.optInt("action_count");}
     public int experienceSequence(){return data.optInt("experience_sequence");}

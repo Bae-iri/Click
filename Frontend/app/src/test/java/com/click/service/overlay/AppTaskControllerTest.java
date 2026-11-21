@@ -120,7 +120,7 @@ public class AppTaskControllerTest {
     }
     @Test public void unchangedScreenDoesNotAdvanceAndRepeatedFailureStops()throws Exception {
         String pkg="org.example.app";Listener l=new Listener();l.current=screen(pkg,node(pkg,"node_0_1","검색","button"));AppTaskMemory m=new AppTaskMemory("검색 열기");var c=new AppTaskController(mock(AppGuideGateway.class),m,null,l,false);
-        c.refresh();c.execute((String)null);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6));assertEquals("g0",m.active());assertEquals("failed",m.state().getJSONArray("attempts").getJSONObject(0).getString("outcome"));
+        c.refresh();c.execute((String)null);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6));assertEquals("g0",m.active());assertEquals("waiting",m.state().getJSONArray("attempts").getJSONObject(0).getString("outcome"));
         c.refresh();c.execute((String)null);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6));c.refresh();assertEquals("needs_input",l.result.getString("status"));assertEquals(2,l.executions);c.close();
     }
     @Test public void staleApprovalAndProtectedScreenDoNotExecute()throws Exception {
@@ -171,6 +171,64 @@ public class AppTaskControllerTest {
         String pkg="org.example.app";Listener l=new Listener();l.current=screen(pkg,node(pkg,"search","검색","button"));l.freshReads=false;AppTaskMemory m=new AppTaskMemory("검색 열기");
         var c=new AppTaskController(mock(AppGuideGateway.class),m,null,l,false);c.refresh();c.execute((String)null);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6));
         assertEquals("waiting",m.state().getJSONArray("attempts").getJSONObject(0).getString("outcome"));assertEquals("g0",m.active());c.close();
+    }
+    @Test public void finalGoalCanBeProvedWhileAnIntermediatePredictionIsStillMissing()throws Exception {
+        String pkg="org.example.app";
+        Listener listener=new Listener();
+        listener.advanceObservationClock=true;
+        listener.current=screen(pkg,node(pkg,"entry","메뉴","button"));
+        AppTaskMemory memory=new AppTaskMemory("목록 화면 열어줘");
+        var gateway=mock(AppGuideGateway.class);
+        var controller=new AppTaskController(gateway,memory,null,listener,true,false,true);
+        controller.refresh();
+        var callback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);
+        verify(gateway).send(any(),callback.capture());
+        JSONObject proposed=action(AppTaskObservation.capture(listener.current),"tap","target_visible");
+        proposed.getJSONObject("expectation").put("label","중간 메뉴");
+        callback.getValue().success(new JSONObject().put("status","proposed")
+                .put("subgoals",new JSONArray().put(new JSONObject().put("title","중간 메뉴 열기")))
+                .put("completion",AppTaskCompletionTest.completion(pkg,"목록")).put("action",proposed));
+        controller.execute(listener.result.getJSONObject("action").getString("id"),null);
+        listener.current=screen(pkg,AppTaskGoalCompletionTest.heading(pkg,"title","목록"));
+        var main=shadowOf(Looper.getMainLooper());
+        main.idleFor(Duration.ofMillis(300));
+        assertEquals("checking_result",listener.result.getString("status"));
+        assertFalse(memory.completionSupported());
+        listener.current=screen(pkg,node(pkg,"other","다른 화면","button"));
+        main.idleFor(Duration.ofMillis(400));
+        assertFalse(memory.completionSupported());
+        listener.current=screen(pkg,AppTaskGoalCompletionTest.heading(pkg,"title","목록"));
+        main.idleFor(Duration.ofMillis(850));
+        assertEquals("verified",listener.result.getJSONObject("result_assessment").getString("status"));
+        assertFalse(listener.result.getBoolean("verifying"));
+        assertFalse(memory.finished());
+        assertEquals("g0",memory.active());
+        assertEquals("waiting",memory.state().getJSONArray("attempts").getJSONObject(0).getString("outcome"));
+        main.idleFor(Duration.ofSeconds(6));
+        assertEquals(1,memory.actions());
+        controller.confirmResult();
+        assertTrue(memory.finished());
+        assertEquals(0,memory.stored().getJSONArray("route").length());
+        verify(gateway,times(1)).send(any(),any());
+        controller.close();
+    }
+    @Test public void completedPlanWithoutResultEvidenceKeepsRecoveryAvailable()throws Exception {
+        String pkg="org.example.app";
+        Listener listener=new Listener();
+        listener.current=screen(pkg,node(pkg,"entry","메뉴","button"));
+        AppTaskMemory memory=new AppTaskMemory("목록 화면 열어줘");
+        memory.localPlan();
+        JSONObject before=AppTaskObservation.capture(listener.current);
+        JSONObject step=action(before,"tap","target_visible");
+        step.getJSONObject("expectation").put("label","중간 메뉴");
+        memory.record(before,step,"verified",true);
+        assertNull(memory.active());
+        var controller=new AppTaskController(mock(AppGuideGateway.class),memory,null,listener,false,false,true);
+        controller.refresh();
+        assertEquals("needs_input",listener.result.getString("status"));
+        assertEquals("unknown",listener.result.getJSONObject("result_assessment").getString("status"));
+        assertFalse(memory.finished());
+        controller.close();
     }
     @Test public void remotePlanBindsFinalResultBeforeLocalShortcutsAndChecksItWithoutAnotherModelCall()throws Exception {
         String pkg="org.example.app";Listener l=new Listener();l.advanceObservationClock=true;l.current=screen(pkg,node(pkg,"search","검색","button"));var gateway=mock(AppGuideGateway.class);AppTaskMemory m=new AppTaskMemory("검색 열기");

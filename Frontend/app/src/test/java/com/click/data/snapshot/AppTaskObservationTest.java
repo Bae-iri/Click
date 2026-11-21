@@ -9,6 +9,29 @@ import static org.junit.Assert.*;
 import static com.click.testing.AppTaskFixtures.*;
 
 public class AppTaskObservationTest {
+    @Test public void selectedLayoutItemNeedsARealTabStripAndAnUnambiguousGroup()throws Exception {
+        String pkg="org.example.tabs";
+        for(String stripId:List.of("tabs","tab_contents")){
+            for(boolean ambiguous:List.of(false,true)){
+                var strip=layout(pkg,"strip",null,null,pkg+":id/"+stripId,false,false);
+                var row=layout(pkg,"row","strip",null,null,false,false);
+                var selected=layout(pkg,"a","row","최근 항목",null,false,true);
+                var other=layout(pkg,"b","row","즐겨찾기",null,true,ambiguous);
+                var nativeScreen=screen(pkg,strip,row,selected,other);
+                JSONObject observed=AppTaskObservation.capture(nativeScreen,Set.of("최근 항목","즐겨찾기"));
+                JSONObject proof=new JSONObject().put("checks",new JSONArray().put(new JSONObject()
+                        .put("package",pkg).put("role","tab").put("label","최근 항목").put("selected",true)));
+                assertEquals(stripId.equals("tabs")&&!ambiguous,
+                        AppTaskCompletion.checkForGoal("최근 항목 열어줘",proof,observed,nativeScreen)==AppTaskCompletion.Verdict.MATCHED);
+                proof.getJSONArray("checks").getJSONObject(0).put("label","즐겨찾기");
+                assertNotEquals(AppTaskCompletion.Verdict.MATCHED,AppTaskCompletion.checkForGoal("즐겨찾기 열어줘",proof,observed,nativeScreen));
+            }
+        }
+    }
+    private static AccessibilityNodeSnapshot layout(String pkg,String id,String parent,String name,String resource,boolean clickable,boolean selected){
+        return new AccessibilityNodeSnapshot(id,parent,true,pkg,null,name,resource,"android.widget.LinearLayout",
+                "unknown",new int[]{10,100,200,160},clickable,true,selected,false,false,null,42);
+    }
     @Test public void sameProjectionWorksAcrossUnregisteredAppsAndRoles()throws Exception {
         for(String pkg:List.of("com.spotify.music","org.mozilla.firefox","com.google.android.youtube","org.example.unregistered")){
             JSONObject out=AppTaskObservation.capture(screen(pkg,node(pkg,"b","검색","button"),node(pkg,"s","","search"),node(pkg,"l","","list"),node(pkg,"t","홈","tab"),node(pkg,"v","정렬","toggle")));

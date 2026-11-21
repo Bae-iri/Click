@@ -982,6 +982,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
         actions.addView(primaryButton("화면 다시 읽기",refreshCurrent),spaced(0));
         if(hasTools)actions.addView(secondaryButton(available.length()==1&&"open_app".equals(available.optString(0))?"앱 선택":"다른 방법",toolsCurrent),spaced(8));
         if(result.optBoolean("can_read_labels"))actions.addView(quietButton("버튼 이름 찾기",visualCurrent),spaced(8));
+        JSONObject assessment=result.optJSONObject("result_assessment");
+        if(confirmed!=null&&"needs_input".equals(state)&&assessment!=null
+                &&"goal_postconditions_unconfirmed".equals(assessment.optString("reason")))
+            actions.addView(quietButton("직접 결과를 확인했어요",()->{if(revision==presentationRevision)confirmed.run();}),spaced(8));
     }
     public void appTaskTools(java.util.function.Consumer<String> choice,Runnable back) {
         appTaskTools(new JSONArray(java.util.List.of("set_text","scroll_forward","scroll_backward","back","open_app")),choice,back);

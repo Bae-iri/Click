@@ -67,10 +67,38 @@ public final class AppTaskObservation {
         String resource=node.resourceId==null?"":node.resourceId.toLowerCase(Locale.ROOT);
         return cls.contains("tab")||resource.contains("tab_");
     }
+    private static final Pattern TAB_STRIP=Pattern.compile("(?:^|/)(?:tabs|tab_?bar|tab_?strip|tab_?layout|tab_?widget)$",Pattern.CASE_INSENSITIVE);
+    private static boolean tabStrip(AccessibilityNodeSnapshot node){
+        if(node==null)return false;
+        String cls=node.className==null?"":node.className;
+        return cls.endsWith("TabLayout")||cls.endsWith("TabWidget")||cls.endsWith("TabStrip")
+                ||node.resourceId!=null&&TAB_STRIP.matcher(node.resourceId).find();
+    }
+    /** Some tab strips expose plain layout children. Only the item's own selected flag is evidence. */
+    private static Set<String> tabStripItems(Map<String,AccessibilityNodeSnapshot> byId){
+        Map<String,List<AccessibilityNodeSnapshot>> groups=new HashMap<>();
+        for(var item:byId.values()){
+            if(!item.visibleToUser||(!item.selected&&!item.clickable)||item.scrollable||item.checkable||item.sensitiveInput)continue;
+            var parent=byId.get(item.parentId);
+            if(parent==null||parent.windowId!=item.windowId||!Objects.equals(parent.packageName,item.packageName))continue;
+            if(!tabStrip(parent)){
+                if(parent.clickable||parent.scrollable||parent.selected||parent.checkable
+                        ||!"android.widget.LinearLayout".equals(parent.className)||!tabStrip(byId.get(parent.parentId)))continue;
+            }
+            if(item.passwordInput()||label(item.contentDescription!=null?item.contentDescription:item.text).isEmpty())continue;
+            groups.computeIfAbsent(parent.nodeId,unused->new ArrayList<>()).add(item);
+        }
+        Set<String> result=new HashSet<>();
+        for(var group:groups.values()){
+            if(group.size()>=2&&group.stream().filter(n->n.selected).count()==1)
+                for(var item:group)result.add(item.nodeId);
+        }
+        return result;
+    }
     /** Selected tabs remain public result evidence even when Android disables their click action. */
-    private static boolean selectedTabEvidence(AccessibilityNodeSnapshot node){
+    private static boolean selectedTabEvidence(AccessibilityNodeSnapshot node,boolean tab){
         String cls=node.className==null?"":node.className.toLowerCase(Locale.ROOT);
-        return node.selected&&nativeTab(node)&&!node.clickable&&!node.scrollable&&!node.checkable&&!searchField(node)
+        return node.selected&&tab&&!node.clickable&&!node.scrollable&&!node.checkable&&!searchField(node)
             &&!cls.endsWith("tablayout")&&!cls.endsWith("tabwidget")&&!cls.contains("table");
     }
     public static String hash(String text){
@@ -105,11 +133,13 @@ public final class AppTaskObservation {
         if(!screen.privacyMaskingReady)return finish(out.put("status","protected"));
         Map<String,AccessibilityNodeSnapshot> byId=new HashMap<>();for(var n:screen.nodes)byId.put(n.nodeId,n);
         for(var n:screen.nodes)if(n.visibleToUser&&(n.passwordInput()||n.sensitiveInput&&!searchField(n)))return finish(out.put("status","protected"));
+        Set<String> stripItems=tabStripItems(byId);
         JSONArray nodes=new JSONArray();int headings=0;Set<String> resultTextIds=new HashSet<>();
         List<AccessibilityNodeSnapshot> ordered=new ArrayList<>(screen.nodes);
         ordered.sort(Comparator.comparingInt(n->resultLabels.contains(label(n.contentDescription!=null?n.contentDescription:n.text))?0:1));
         for(var n:ordered){
-            boolean selectedEvidence=selectedTabEvidence(n),switchEvidence=n.checkable&&n.checked!=null;
+            boolean tab=nativeTab(n)||stripItems.contains(n.nodeId);
+            boolean selectedEvidence=selectedTabEvidence(n,tab),switchEvidence=n.checkable&&n.checked!=null;
             boolean readOnlyState=(selectedEvidence||switchEvidence)&&!n.enabled;
             if(!n.visibleToUser||!(n.enabled||searchField(n)&&n.publicSearchEnabled()||selectedEvidence||switchEvidence)||hidden(n,byId)||!screen.packageName.equals(n.packageName)||screen.activeWindowId!=null&&n.windowId!=screen.activeWindowId)continue;
             boolean editable=!readOnlyState&&searchField(n),clickable=!readOnlyState&&n.clickable,scrollable=!readOnlyState&&n.scrollable;
@@ -122,7 +152,7 @@ public final class AppTaskObservation {
                 text=label(child.text!=null?child.text:child.contentDescription);if(!text.isEmpty())break;
             }
             String resource=n.resourceId==null?"":n.resourceId;
-            String role=editable?"text_field":n.checkable?"toggle":nativeTab(n)?"tab":scrollable?"list":clickable?"button":heading||resultLabel?"text":"unknown";
+            String role=editable?"text_field":n.checkable?"toggle":tab?"tab":scrollable?"list":clickable?"button":heading||resultLabel?"text":"unknown";
             if(text.isEmpty()&&scrollable)text="목록";
             if(text.isEmpty()&&!clickable&&!editable)continue;
             JSONObject node=new JSONObject().put("id",n.nodeId).put("label",text).put("resource",resource).put("role",role)
