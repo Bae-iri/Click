@@ -79,8 +79,12 @@ def test_each_arm_routes_and_requires_native_action_and_effect(setting, directio
     # Generate a new approved guide after waiting; use its binding.
     pending = run.engine.session_store.get('s').pending_attempt
     event = replace(event, guide_command_id=pending['guide_command_id'])
-    run.observe(changed, event=event, applied={**run.applied, key:run.applied[key] + sign * (.2 if setting=='font_size' else 1)})
+    applied = {**run.applied, key: run.applied[key] + sign * (.2 if setting == 'font_size' else 1)}
+    run.observe(changed, event=event, applied=applied)
     assert run.engine.session_store.get('s').task_completed
+    run.observe(changed, applied=applied)
+    assert run.engine.session_store.get('s').task_completed
+    assert not wrapper.state.get('replan_requested')
     assert len(planner.calls) == (1 if arm == 'llm' else 0)
 
 
@@ -136,21 +140,61 @@ def test_checkpoint_pins_arm_and_preserves_plan_without_new_call():
     assert second.state['planner_calls'] == 1
 
 
-def test_two_distinct_verified_failures_request_replan_without_erasing_completed():
-    graph, edge, _, _ = scene('font_size')
-    from app.services.settings_planner import navigation_key
-    wrapper=SettingsExperimentResolver(Mock(),Mock())
-    completed=navigation_key('S2_DISPLAY_MENU')
-    wrapper.state={'completed':[completed],'failed_count':0,'failures':[]}
-    failed=SimpleNamespace(status=SimpleNamespace(value='NO_CHANGE'),count_attempt=True)
-    session=SimpleNamespace(pending_transition_id=edge.transition_id,pending_attempt={'attempt_id':'first'})
-    wrapper.advance(session,failed,{edge.transition_id:edge})
-    wrapper.advance(session,failed,{edge.transition_id:edge})
-    assert wrapper.state['failed_count']==1
-    session.pending_attempt={'attempt_id':'second'}
-    wrapper.advance(session,failed,{edge.transition_id:edge})
-    assert wrapper.state['replan_requested']
-    assert wrapper.state['completed']==[completed]
+def test_two_settled_tap_failures_schedule_one_qwen_replan(monkeypatch):
+    from ai_agent.runtime.types import UserActionEvent, UserActionType
+    from scripts.run_settings_comparison import Replay, node
+
+    monkeypatch.setenv('CLICK_SETTINGS_ROUTE_REUSE_ENABLED', '0')
+    run = Replay('settings.font_size.increase', 'llm', 'controlled')
+    home = 'S1_SETTINGS_HOME'
+    run.edge = next(edge for edge in run.graph.transitions if edge.from_state == home)
+    steps = [target['id'] for target in catalogue(run.graph)[0]]
+    remaining = [step for step in steps if step != navigation_key(home)]
+    sender = Mock(side_effect=[qwen_reply({'subgoals': steps}), qwen_reply({'subgoals': remaining})])
+    run.resolver.planner = SettingsPlanner(sender, provider='openrouter')
+
+    def observe(label, event=None):
+        previous = run.engine.session_store.get(run.session)
+        run.resolver.prepare(previous, 'llm', 'replay')
+        return run.observe((node('title', '설정'), node('menu', label)), event=event)
+
+    for count, label in enumerate(('디스플레이', 'Display'), start=1):
+        guide = observe(label).guide_command
+        assert guide.action_type.value == 'tap'
+        event = UserActionEvent(UserActionType.TAP_COMPLETED, guide.guide_command_id, guide.target_node_id,
+            occurred_at_ms=run.at + 100, event_id=f'tap-{count}', episode_id='replay', session_id=run.session)
+        assert observe(label, event).verification_result.status.value == 'WAITING_FOR_OBSERVATION'
+        assert run.resolver.state['failed_count'] == count - 1
+        assert observe(label).verification_result.status.value == 'NO_CHANGE'
+        assert run.records[-1]['total_failed_attempts'] == run.resolver.state['failed_count'] == count
+        assert run.resolver.state['replan_requested'] == (count == 2)
+
+        observe(label, event)  # Same native tap delivered again, then an ordinary screen refresh.
+        observe(label)
+        assert run.resolver.state['failures'] == [
+            {'subgoal': navigation_key(run.edge.to_state), 'status': 'NO_CHANGE'}] * count
+        assert run.records[-1]['total_failed_attempts'] == run.resolver.state['failed_count'] == count
+        assert sender.call_count == 1
+
+    assert observe('디스플레이').guide_command.target_node_id == 'menu'
+    assert run.resolver.state['revision'] == 2
+    assert run.resolver.state['completed'] == [navigation_key(home)]
+    assert not run.resolver.state['replan_requested']
+    observe('디스플레이')
+    assert sender.call_count == 2
+
+
+def test_in_flight_legacy_checkpoint_recovers_missed_replan_only_in_same_episode():
+    resolver = SettingsExperimentResolver(Mock(), Mock())
+    previous = SimpleNamespace(settings_experiment={'arm': 'llm', 'episode_id': 'old', 'failed_count': 0},
+                               task_completed=False, total_failed_attempts=2)
+    resolver.prepare(previous, 'llm', 'old')
+    assert resolver.state['failed_count'] == 2 and resolver.state['replan_requested']
+    previous.settings_experiment = {**resolver.state, 'replan_requested': False}
+    resolver.prepare(previous, 'llm', 'old')
+    assert not resolver.state['replan_requested']
+    resolver.prepare(previous, 'llm', 'new')
+    assert not resolver.state.get('replan_requested')
 
 
 def test_declared_llm_trial_cannot_silently_run_when_experiment_disabled(monkeypatch):
