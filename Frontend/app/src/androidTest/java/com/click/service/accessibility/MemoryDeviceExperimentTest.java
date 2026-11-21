@@ -99,6 +99,7 @@ public class MemoryDeviceExperimentTest {
         JSONArray checks=new JSONArray();
         try(DeviceSession session=new DeviceSession()){
             for(Task task:catalogue()){
+                Set<String> wanted=csv(args.getString("tasks",""));if(!wanted.isEmpty()&&!wanted.contains(task.id))continue;
                 JSONObject check=new JSONObject().put("task_id",task.id).put("app_id",task.pkg);SetupTrace trace=new SetupTrace();
                 try{ScreenSnapshot initial=prepareStart(session,task,trace);check.put("ready",true).put("initial_state_hash",initialPublicHash(initial));}
                 catch(Exception failed){check.put("ready",false).put("reason",failed.getMessage()==null?failed.getClass().getSimpleName():failed.getMessage());}
@@ -112,7 +113,7 @@ public class MemoryDeviceExperimentTest {
 
     @Test public void runMemoryExperiment()throws Exception {
         Assume.assumeTrue("Opt in with -e memoryExperiment true",Boolean.parseBoolean(args.getString("memoryExperiment","false")));
-        Assert.assertEquals("Live facade requires isolated test app","com.click.memoryexperiment.uitestdriver",app.getPackageName());
+        Assert.assertEquals("Live facade requires isolated test app",Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"))?"com.click.metamemoryexperiment.uitestdriver":"com.click.memoryexperiment.uitestdriver",app.getPackageName());
         Assert.assertEquals("Live facade must be loopback only",BASE,com.click.BuildConfig.CLICK_API_BASE_URL.replaceAll("/$",""));
         long budget=Long.parseLong(args.getString("budgetMs","25000"));
         Assert.assertTrue("budgetMs must be 8000..180000",budget>=8000&&budget<=180000);
@@ -121,8 +122,12 @@ public class MemoryDeviceExperimentTest {
         Set<String> wanted=csv(args.getString("tasks",""));
         List<Task> tasks=new ArrayList<>();for(Task task:catalogue())if(wanted.isEmpty()||wanted.contains(task.id))tasks.add(task);
         for(String name:wanted)Assert.assertTrue("Unknown task "+name,tasks.stream().anyMatch(t->t.id.equals(name)));
-        int sessions=Integer.parseInt(args.getString("sessions",String.valueOf(SESSIONS.length)));
-        Assert.assertTrue("sessions must be 1..6",sessions>=1&&sessions<=SESSIONS.length);
+        boolean integrated=Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"));
+        String[] schedule=integrated?new String[]{"learn1","learn2","eval_normal","eval_no_effect","eval_delayed"}:SESSIONS;
+        AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT"));
+        if(integrated)Assert.assertEquals("Integrated comparison uses memory off/on only",Arrays.asList("A","B"),arms);
+        int sessions=Integer.parseInt(args.getString("sessions",String.valueOf(schedule.length)));
+        Assert.assertTrue("sessions must be 1..6",sessions>=1&&sessions<=schedule.length);
         String runId=args.getString("runId",UUID.randomUUID().toString().substring(0,8));
         Assert.assertTrue("runId must be short and safe",runId.matches("[0-9a-zA-Z_.-]{1,40}"));
         JSONObject status=get("/experiment/status");
@@ -137,11 +142,11 @@ public class MemoryDeviceExperimentTest {
         JSONArray manifest=new JSONArray(),orders=new JSONArray();for(Task task:tasks)manifest.put(task.describe());
         int index=0;
         for(Task task:tasks)for(int s=0;s<sessions;s++){
-            orders.put(new JSONObject().put("task_id",task.id).put("session",SESSIONS[s]).put("order",new JSONArray(order(arms,index++))));
+            orders.put(new JSONObject().put("task_id",task.id).put("session",schedule[s]).put("order",new JSONArray(order(arms,index++))));
         }
         write("manifest.json",new JSONObject().put("schema_version",VERSION).put("run_id",runId).put("tasks",manifest)
-            .put("arms",new JSONArray(arms)).put("sessions",new JSONArray(Arrays.copyOf(SESSIONS,sessions))).put("budget_ms",budget)
-            .put("scheduled_arm_orders",orders).put("arm_order_scheme","deterministic_rotation_and_reversal_not_random")
+            .put("arms",new JSONArray(arms)).put("sessions",new JSONArray(Arrays.copyOf(schedule,sessions))).put("budget_ms",budget)
+            .put("meta_arm",args.getString("metaArm","CURRENT")).put("meta_memory_integration",integrated).put("scheduled_arm_orders",orders).put("arm_order_scheme","deterministic_rotation_and_reversal_not_random")
             .put("memory_isolation","per_arm_device_store_and_facade_store").put("simulated_user","confirms_only_after_independent_oracle_700ms")
             .put("task_selection_frozen_before_run",true).toString(2),false);
         if(Boolean.parseBoolean(args.getString("clearOutput","true")))write("episodes.jsonl","",false);
@@ -149,7 +154,7 @@ public class MemoryDeviceExperimentTest {
         try(DeviceSession session=new DeviceSession()){
             for(Task task:tasks)for(int s=0;s<sessions;s++){
                 for(String arm:order(arms,index++)){
-                    JSONObject episode=episode(session,task,SESSIONS[s],arm,stores.get(arm),runId,budget);
+                    JSONObject episode=episode(session,task,schedule[s],arm,stores.get(arm),runId,budget);
                     write("episodes.jsonl",episode.toString()+"\n",true);
                     System.out.println("MEMORY_EPISODE "+episode.optString("trial_id")+" "+episode.optString("outcome"));count++;
                 }
@@ -183,7 +188,7 @@ public class MemoryDeviceExperimentTest {
             trace=new SetupTrace();ScreenSnapshot initial=prepareStart(session,task,trace);
             result.put("setup_status","ready").put("setup_elapsed_ms",SystemClock.elapsedRealtime()-setupAt).put("initial_state_hash",initialPublicHash(initial));
             int confirmedBefore=confirmedTasks(arm);
-            driver=new Driver(task,goal,arm,store,runId);final Driver current=driver;
+            driver=new Driver(task,goal,arm,store,runId,sessionName);final Driver current=driver;
             instrumentation.runOnMainSync(current::create);
             if(current.error!=null)throw new IllegalStateException(current.error);
             post("/experiment/register",new JSONObject().put("runtime_task_id",current.runtimeTaskId).put("arm",arm)
@@ -227,7 +232,7 @@ public class MemoryDeviceExperimentTest {
                     :stoppedForOffer?"runtime_offer_without_goal":finalMatches<0?"oracle_unobservable":"budget_exhausted")
                 .put("runtime_verified_offer",current.runtimeVerifiedOffer)
                 .put("false_verified_offer",finalMatches<0||finalMatches>1?JSONObject.NULL:current.runtimeVerifiedOffer&&finalMatches==0&&!result.optBoolean("oracle_success"))
-                .put("observed_model_calls",current.modelCalls).put("observed_model_wait_ms",current.modelWait)
+                .put("meta_arm",args.getString("metaArm","CURRENT")).put("condition",current.condition).put("fault_injected",current.injected).put("delayed_dispatch_accepted",current.delayedAccepted).put("recovery_count",current.controller.metaController().diagnostic().optInt("recovery_count")).put("observed_model_calls",current.modelCalls).put("observed_model_wait_ms",current.modelWait)
                 .put("proposals_by_source",current.proposalSources).put("approvals_by_source",current.approvalSources)
                 .put("native_acceptances",current.nativeAcceptances).put("native_rejections",current.nativeRejections)
                 .put("first_proposal_ms",current.firstProposalAt<0?JSONObject.NULL:current.firstProposalAt-started)
@@ -287,11 +292,13 @@ public class MemoryDeviceExperimentTest {
         AppTaskController controller;AppTaskMemory memory;JSONObject latest;String latestSource="none";
         String fingerprint,error,runtimeTaskId;volatile String confirmFailure;volatile boolean confirmed;boolean runtimeVerifiedOffer;
         int modelCalls,nativeAcceptances,nativeRejections;long modelWait,startedAt,firstProposalAt=-1;
-        Driver(Task task,String goal,String arm,AppTaskStore store,String runId){this.task=task;this.goal=goal;this.arm=arm;this.store=store;this.runId=runId;}
+        final String condition;boolean injected,delayedAccepted;final Handler delayed=new Handler(Looper.getMainLooper());
+        Driver(Task task,String goal,String arm,AppTaskStore store,String runId,String sessionName){this.task=task;this.goal=goal;this.arm=arm;this.store=store;this.runId=runId;
+            condition=sessionName.equals("eval_no_effect")?"accepted_no_effect":sessionName.equals("eval_delayed")?"delayed_transition":"normal";}
         void create(){try{
             memory=new AppTaskMemory(goal);runtimeTaskId=memory.id();
             boolean learning=!"A".equals(arm);
-            controller=new AppTaskController(new AppGuideGateway(app),memory,learning?store:null,this,true,learning,true);
+            controller=new AppTaskController(new AppGuideGateway(app),memory,learning?store:null,this,true,learning,true,AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT")));
         }catch(Exception failed){error=failed.getClass().getSimpleName();}}
         void start(){try{
             controller.targetApp(task.pkg,task.pkg);fingerprint=AppTaskObservation.capture(fresh()).optString("fingerprint");controller.refresh();
@@ -309,7 +316,7 @@ public class MemoryDeviceExperimentTest {
             if(confirmed||confirmFailure!=null||controller==null||closed.get())return;
             controller.confirmResultOnServer(()->confirmed=true,failed->confirmFailure=failed.getClass().getSimpleName());
         }
-        void close(){closed.set(true);if(controller!=null)controller.close();}
+        void close(){closed.set(true);delayed.removeCallbacksAndMessages(null);if(controller!=null)controller.close();}
         private void increment(JSONObject counts,String key){try{counts.put(key,counts.optInt(key)+1);}catch(JSONException ignored){}}
         private String source(JSONObject diagnostic){
             if(diagnostic==null)return "none";
@@ -352,6 +359,15 @@ public class MemoryDeviceExperimentTest {
             boolean safeOpen="open_app".equals(tool)&&task.pkg.equals(selectedPackage)&&task.pkg.equals(action.optString("package"));
             boolean safeNavigation=samePublic&&("back".equals(tool)||("scroll_forward".equals(tool)||"scroll_backward".equals(tool))&&target!=null&&target.optBoolean("scrollable"));
             if(!safeTap&&!safeOpen&&!safeNavigation){nativeRejections++;return false;}
+            if(safeTap&&!injected&&!condition.equals("normal")){
+                injected=true;
+                if(condition.equals("delayed_transition"))delayed.postDelayed(()->{
+                    if(closed.get())return;
+                    delayedAccepted=AppTaskExecutor.execute(service(),baseline,fresh(),observation,action,null,selectedPackage);
+                    if(delayedAccepted){nativeAcceptances++;acceptedPublicTargets.add(publicTarget);}
+                },5500);
+                return true; // controlled executor acknowledgement, never reported as a native dispatch
+            }
             boolean accepted=AppTaskExecutor.execute(service(),baseline,fresh(),observation,action,null,selectedPackage);
             if(!accepted)nativeRejections++;else{nativeAcceptances++;if("tap".equals(tool)&&!publicTarget.isEmpty())acceptedPublicTargets.add(publicTarget);}
             return accepted;

@@ -1,0 +1,8 @@
+{
+  "episodes": 144,
+  "real_device": false,
+  "real_model_calls": 0,
+  "training_measured": false,
+  "design": "6 flows x 3 conditions x 2 repetitions x A\/B x memory off\/on",
+  "scope": "production Android controller, verifier and MCv2; controlled planner and recall fixture"
+}
