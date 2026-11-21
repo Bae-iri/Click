@@ -1,0 +1,304 @@
+{
+  "schema_version": 1,
+  "source_revision": "8aa3aecd96f50fdc56e4cecdd9d2d1c12861be79",
+  "providers": {
+    "qwen": "qwen/qwen3.8-flash",
+    "jev": "jev-1.14.0",
+    "jev_minimum_confidence": 0.8,
+    "jev_judgment": "atomic"
+  },
+  "method": {
+    "entry_point": "POST /api/v1/agent/commands with a typed Settings goal in a fresh session for each episode",
+    "screen_inputs": "Generated Android Settings screens, user approvals, tap/drag events and observed setting values from Backend/scripts/run_settings_comparison.py. Brightness includes the intermediate Display menu and the tap that opens its slider.",
+    "transport": "Real OpenRouter Responses and TypeSafe SystemOne HTTPS requests counted at httpx.HTTPTransport. The local API used its threaded test executor for transport instrumentation.",
+    "learning": "A new SQLite database per goal, synthetic account with model_training consent, real SettingsGraphJobs subprocess after each episode, default two-run threshold.",
+    "protocol": "Train twice. If both runs qualify, repeat with reuse enabled, then repeat with reuse disabled and the same database and screens. A run without a verified final effect stops that goal.",
+    "elapsed_ms": "Local API episode time from the first simulated observation to the last response, excluding the AI2 analysis after the episode."
+  },
+  "trials": [
+    {
+      "goal_type": "settings.volume.increase",
+      "at_kst": "2026-11-21T21:23:18+09:00",
+      "episodes": [
+        {
+          "phase": "learn_1",
+          "plan_source": "qwen",
+          "elapsed_ms": 2957,
+          "http_200": {
+            "qwen": 1,
+            "jev": 3
+          },
+          "qwen_plans": [
+            {
+              "reason_code": "validated_plan",
+              "latency_ms": 1904,
+              "input_tokens": 299,
+              "output_tokens": 49
+            }
+          ],
+          "jev_decisions": [
+            {
+              "page": "S1_SETTINGS_HOME",
+              "status": "selected",
+              "confidence": 0.95,
+              "latency_ms": 334.062
+            },
+            {
+              "page": "S2_CATEGORY",
+              "status": "selected",
+              "confidence": 0.98,
+              "latency_ms": 216.879
+            },
+            {
+              "page": "S3_CONTROL",
+              "status": "low_confidence",
+              "confidence": 0.64,
+              "latency_ms": 214.649
+            }
+          ],
+          "verified_transitions": [
+            "OPEN_CATEGORY",
+            "OPEN_CONTROL"
+          ],
+          "final_effect": "UNKNOWN",
+          "stop_reason": "expected_confirmation",
+          "ai2_receipt": {
+            "status": "NEEDS_DATA",
+            "reason_code": "final_effect_unverified",
+            "route_hash": null,
+            "reused_route_hash": null
+          },
+          "route_after_learning": []
+        }
+      ]
+    },
+    {
+      "goal_type": "settings.brightness.increase",
+      "at_kst": "2026-11-21T21:23:45+09:00",
+      "episodes": [
+        {
+          "phase": "learn_1",
+          "plan_source": "qwen",
+          "elapsed_ms": 2655,
+          "http_200": {
+            "qwen": 1,
+            "jev": 3
+          },
+          "qwen_plans": [
+            {
+              "reason_code": "validated_plan",
+              "latency_ms": 1553,
+              "input_tokens": 300,
+              "output_tokens": 49
+            }
+          ],
+          "jev_decisions": [
+            {
+              "page": "S1_SETTINGS_HOME",
+              "status": "selected",
+              "confidence": 0.96,
+              "latency_ms": 396.677
+            },
+            {
+              "page": "S2_CATEGORY",
+              "status": "selected",
+              "confidence": 0.95,
+              "latency_ms": 186.154
+            },
+            {
+              "page": "S3_CONTROL",
+              "status": "selected",
+              "confidence": 0.91,
+              "latency_ms": 195.174
+            }
+          ],
+          "verified_transitions": [
+            "OPEN_CATEGORY",
+            "OPEN_CONTROL",
+            "ADJUST_BRIGHTNESS"
+          ],
+          "final_effect": "SUCCESS",
+          "stop_reason": null,
+          "ai2_receipt": {
+            "status": "DRAFT_CREATED",
+            "reason_code": null,
+            "route_hash": "a40daff792801fc22f759fc404b2b3d980eab9972bc6393d3c36695ec77f3bfd",
+            "reused_route_hash": null
+          },
+          "route_after_learning": [
+            {
+              "status": "CANDIDATE",
+              "independent_runs": 1,
+              "route_hash": "a40daff792801fc22f759fc404b2b3d980eab9972bc6393d3c36695ec77f3bfd"
+            }
+          ]
+        },
+        {
+          "phase": "learn_2",
+          "plan_source": "qwen",
+          "elapsed_ms": 2506,
+          "http_200": {
+            "qwen": 1,
+            "jev": 3
+          },
+          "qwen_plans": [
+            {
+              "reason_code": "validated_plan",
+              "latency_ms": 1499,
+              "input_tokens": 300,
+              "output_tokens": 49
+            }
+          ],
+          "jev_decisions": [
+            {
+              "page": "S1_SETTINGS_HOME",
+              "status": "selected",
+              "confidence": 0.96,
+              "latency_ms": 231.692
+            },
+            {
+              "page": "S2_CATEGORY",
+              "status": "selected",
+              "confidence": 0.97,
+              "latency_ms": 184.564
+            },
+            {
+              "page": "S3_CONTROL",
+              "status": "selected",
+              "confidence": 0.91,
+              "latency_ms": 269.837
+            }
+          ],
+          "verified_transitions": [
+            "OPEN_CATEGORY",
+            "OPEN_CONTROL",
+            "ADJUST_BRIGHTNESS"
+          ],
+          "final_effect": "SUCCESS",
+          "stop_reason": null,
+          "ai2_receipt": {
+            "status": "DRAFT_CREATED",
+            "reason_code": null,
+            "route_hash": "a40daff792801fc22f759fc404b2b3d980eab9972bc6393d3c36695ec77f3bfd",
+            "reused_route_hash": null
+          },
+          "route_after_learning": [
+            {
+              "status": "VALIDATED",
+              "independent_runs": 2,
+              "route_hash": "a40daff792801fc22f759fc404b2b3d980eab9972bc6393d3c36695ec77f3bfd"
+            }
+          ]
+        },
+        {
+          "phase": "reuse",
+          "plan_source": "learned_route",
+          "elapsed_ms": 913,
+          "http_200": {
+            "qwen": 0,
+            "jev": 3
+          },
+          "qwen_plans": [],
+          "jev_decisions": [
+            {
+              "page": "S1_SETTINGS_HOME",
+              "status": "selected",
+              "confidence": 0.97,
+              "latency_ms": 256.127
+            },
+            {
+              "page": "S2_CATEGORY",
+              "status": "selected",
+              "confidence": 0.96,
+              "latency_ms": 218.776
+            },
+            {
+              "page": "S3_CONTROL",
+              "status": "selected",
+              "confidence": 0.92,
+              "latency_ms": 181.646
+            }
+          ],
+          "verified_transitions": [
+            "OPEN_CATEGORY",
+            "OPEN_CONTROL",
+            "ADJUST_BRIGHTNESS"
+          ],
+          "final_effect": "SUCCESS",
+          "stop_reason": null,
+          "ai2_receipt": {
+            "status": "DRAFT_CREATED",
+            "reason_code": null,
+            "route_hash": "a40daff792801fc22f759fc404b2b3d980eab9972bc6393d3c36695ec77f3bfd",
+            "reused_route_hash": "a40daff792801fc22f759fc404b2b3d980eab9972bc6393d3c36695ec77f3bfd"
+          },
+          "route_after_learning": [
+            {
+              "status": "VALIDATED",
+              "independent_runs": 3,
+              "route_hash": "a40daff792801fc22f759fc404b2b3d980eab9972bc6393d3c36695ec77f3bfd"
+            }
+          ],
+          "matched_independent_runs": 2
+        },
+        {
+          "phase": "reuse_off_control",
+          "plan_source": "qwen",
+          "elapsed_ms": 2629,
+          "http_200": {
+            "qwen": 1,
+            "jev": 3
+          },
+          "qwen_plans": [
+            {
+              "reason_code": "validated_plan",
+              "latency_ms": 1383,
+              "input_tokens": 300,
+              "output_tokens": 49
+            }
+          ],
+          "jev_decisions": [
+            {
+              "page": "S1_SETTINGS_HOME",
+              "status": "selected",
+              "confidence": 0.97,
+              "latency_ms": 349.717
+            },
+            {
+              "page": "S2_CATEGORY",
+              "status": "selected",
+              "confidence": 0.96,
+              "latency_ms": 330.035
+            },
+            {
+              "page": "S3_CONTROL",
+              "status": "selected",
+              "confidence": 0.91,
+              "latency_ms": 191.736
+            }
+          ],
+          "verified_transitions": [
+            "OPEN_CATEGORY",
+            "OPEN_CONTROL",
+            "ADJUST_BRIGHTNESS"
+          ],
+          "final_effect": "SUCCESS",
+          "stop_reason": null,
+          "ai2_receipt": {
+            "status": "DRAFT_CREATED",
+            "reason_code": null,
+            "route_hash": "a40daff792801fc22f759fc404b2b3d980eab9972bc6393d3c36695ec77f3bfd",
+            "reused_route_hash": null
+          },
+          "route_after_learning": [
+            {
+              "status": "VALIDATED",
+              "independent_runs": 4,
+              "route_hash": "a40daff792801fc22f759fc404b2b3d980eab9972bc6393d3c36695ec77f3bfd"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
