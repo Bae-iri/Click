@@ -277,11 +277,11 @@ def test_unselected_tab_cannot_prove_a_selection_paraphrase_without_open_verb():
     assert result.status=='proposed' and result.action is not None and result.completion is None
 
 
-def test_turning_off_a_native_toggle_is_valid_even_with_navigation_in_the_goal():
+def test_toggle_action_remains_valid_but_does_not_prove_the_requested_page():
     req=request();req.goal='알림 화면 열고 알림 꺼줘';req.screen.nodes[0].label='알림';req.screen.nodes[0].role='toggle'
     check=dict(target='c0',label='알림',app='none',checked='false',selected='false')
     result=AppTaskService(sender(completion_checks=[check])).step(req)
-    assert result.status=='proposed' and result.completion.checks[0].checked is False
+    assert result.status=='proposed' and result.action is not None and result.completion is None
 
 
 @pytest.mark.parametrize('goal,allowed',[

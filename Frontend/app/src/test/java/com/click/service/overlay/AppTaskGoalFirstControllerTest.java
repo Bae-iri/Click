@@ -41,7 +41,7 @@ public class AppTaskGoalFirstControllerTest {
     private static final class Harness implements AppTaskController.Listener,AutoCloseable {
         final AppGuideGateway gateway=mock(AppGuideGateway.class);final AppTaskMemory memory=new AppTaskMemory(GOAL);
         final AppTaskController controller;final List<JSONObject> requests=new ArrayList<>();final List<AppGuideGateway.Callback> callbacks=new ArrayList<>();
-        String title=TITLE,footer="Before";int window=42,executions;boolean privateInput,presentedBusy;long clockOffset;JSONObject latest;Throwable failure;
+        String title=TITLE,footer="Before";int window=42,executions;Boolean sync;boolean privateInput,presentedBusy;long clockOffset;JSONObject latest;Throwable failure;
         Harness(AppTaskMetaController.Arm arm,boolean supported)throws Exception {this(arm,supported,true);}
         Harness(AppTaskMetaController.Arm arm,boolean supported,boolean withPlan)throws Exception {
             if(withPlan)memory.plan(new JSONArray().put(new JSONObject().put("title","Open section"))
@@ -51,6 +51,8 @@ public class AppTaskGoalFirstControllerTest {
         }
         public ScreenSnapshot fresh(){
             List<AccessibilityNodeSnapshot> nodes=new ArrayList<>();nodes.add(node("title",title,true,false,window));nodes.add(node("footer",footer,false,true,window));
+            if(sync!=null)nodes.add(new AccessibilityNodeSnapshot("sync",null,true,PKG,"Auto sync",null,PKG+":id/sync",
+                "android.widget.Switch",null,new int[]{10,150,500,240},true,true,false,false,true,null,window,false,null,null,false,sync));
             if(privateInput)nodes.add(new AccessibilityNodeSnapshot("private",null,true,PKG,"",null,PKG+":id/password",
                 "android.widget.EditText",null,new int[]{10,150,500,250},true,true,false,false,false,null,window,true));
             return new ScreenSnapshot(PKG,Instant.ofEpochMilli(ShadowSystem.currentTimeMillis()+clockOffset).toString(),1080,2400,nodes,window);
@@ -82,6 +84,28 @@ public class AppTaskGoalFirstControllerTest {
         public void close(){controller.close();}
     }
 
+    @Test public void rejectedResultReplansWithoutConfirmingOnAnUnrelatedRedraw()throws Exception{
+        try(Harness h=new Harness(AppTaskMetaController.Arm.META,true)){
+            h.controller.enableOutcomes(true);h.send();
+            assertTrue(h.requests.get(0).getBoolean("prepare_outcome"));
+            var goal=AppTaskOutcomesTest.goal(AppTaskOutcomesTest.clause("page",TITLE),AppTaskOutcomesTest.clause("off","Auto sync"));
+            h.sync=false;h.reply(h.response("uncertain",null).put("outcome_goal",goal),false);
+            idle(900);assertTrue(h.memory.completionSupported());assertEquals("confirm_result",h.latest.getString("status"));
+            int prior=h.requests.size();h.controller.rejectResult();h.footer="Different button";idle(1000);
+            assertFalse(h.memory.completionSupported());assertFalse(h.memory.finished());assertEquals(prior+1,h.requests.size());
+            assertTrue(h.requests.get(prior).getBoolean("rejected_outcome"));
+            assertEquals(0,h.executions);assertNotEquals("confirm_result",h.latest.getString("status"));assertNull(h.failure);
+        }
+    }
+    @Test public void confirmTapRechecksSameSwitchAndReopensTheDisputedResult()throws Exception{
+        try(Harness h=new Harness(AppTaskMetaController.Arm.META,true)){
+            h.controller.enableOutcomes(true);h.sync=false;h.send();
+            h.reply(h.response("uncertain",null).put("outcome_goal",AppTaskOutcomesTest.goal(AppTaskOutcomesTest.clause("off","Auto sync"))),false);
+            idle(900);assertTrue(h.memory.completionSupported());
+            h.sync=true;assertFalse(h.controller.mayConfirmResult());assertFalse(h.memory.completionSupported());
+            idle(800);assertFalse(h.memory.finished());assertEquals(0,h.executions);assertNull(h.failure);
+        }
+    }
     @Test public void pendingPlanCanVerifyCurrentGoalInTheSamePlanningCallWithoutAnotherAction()throws Exception {
         for(var arm:List.of(AppTaskMetaController.Arm.CURRENT,AppTaskMetaController.Arm.META))try(Harness h=new Harness(arm,true)){
             String plan=h.memory.state().getJSONArray("subgoals").toString(),active=h.memory.active();h.send();

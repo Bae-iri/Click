@@ -25,6 +25,7 @@ public final class AppTaskDiagnostics {
     private static final Set<String> REASON_CODES=Set.of("provider_unavailable","provider_timeout","provider_http_error",
         "provider_transport_error","missing_api_key","invalid_model_configuration","contract_validation_failed",
         "invalid_json","provider_response_invalid","model_output_invalid","plan_validation_failed",
+        "outcome_prepared","outcome_restored","outcome_action_conflict","outcome_contract_changed","outcome_unavailable","outcome_requirements_unproven",
         "result_evidence_candidate","result_evidence_unavailable","bound_result_available",
         "protected_observation","public_observation_unavailable","stale_observation","no_public_controls","unusable_goal",
         "oversized","incomplete","shape","subgoal_result","expected_state","completion","changed_completion",
@@ -93,7 +94,7 @@ public final class AppTaskDiagnostics {
                 out.put("model_ref",nullable(model.length()<=200?ref(model):null));
                 copyEnum(out,diagnostic,"planning_mode",Set.of("next_action","goal_first","result_only"));
                 copyEnum(out,diagnostic,"goal_assessment",Set.of("satisfied","not_satisfied","uncertain"));
-                copyEnum(out,diagnostic,"completion_provider",Set.of("gemini","jev","openai","local"));
+                copyEnum(out,diagnostic,"completion_provider",Set.of("gemini","jev","openai","openrouter","local","local_triage"));
                 copyEnum(out,diagnostic,"failure_kind",FAILURE_KINDS);
                 copyEnum(out,diagnostic,"failure_stage",FAILURE_STAGES);
                 copyEnum(out,diagnostic,"reason_code",REASON_CODES);copyEnum(out,diagnostic,"reason_code",PROVIDER_CODES);

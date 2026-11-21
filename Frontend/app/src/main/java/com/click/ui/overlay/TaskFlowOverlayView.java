@@ -951,6 +951,9 @@ public final class TaskFlowOverlayView extends LinearLayout {
         appTask(result,execute,refresh,tools,visual,finish,null);
     }
     public void appTask(JSONObject result,java.util.function.Consumer<String> execute,Runnable refresh,Runnable tools,Runnable visual,Runnable finish,Runnable confirmed) {
+        appTask(result,execute,refresh,tools,visual,finish,confirmed,null);
+    }
+    public void appTask(JSONObject result,java.util.function.Consumer<String> execute,Runnable refresh,Runnable tools,Runnable visual,Runnable finish,Runnable confirmed,Runnable rejected) {
         String state=result.optString("status");
         progress(null,null,result.optString("message"),false);
         final int revision=presentationRevision;
@@ -965,6 +968,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
             markWaitingForScreen();
             return;
         }
+        if("block_handoff".equals(state)){
+            if(confirmed!=null)actions.addView(primaryButton("차단 목록에서 확인했어요",()->{if(revision==presentationRevision)confirmed.run();}),spaced(0));
+            actions.addView(quietButton("화면 다시 확인",refreshCurrent),spaced(8));return;
+        }
         if("protected".equals(state)){
             setGuidanceEvidence("비밀번호와 인증번호는 직접 입력해 주세요.");
             actions.addView(primaryButton("입력을 마쳤어요",refreshCurrent),spaced(0));return;
@@ -978,7 +985,7 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if("confirm_result".equals(state)){
             controls.setVisibility(GONE);divider.setVisibility(GONE);
             if(confirmed!=null)actions.addView(primaryButton("네, 됐어요",()->{if(revision==presentationRevision)confirmed.run();}),spaced(0));
-            actions.addView(secondaryButton("아직 안 됐어요",hasTools?toolsCurrent:refreshCurrent),spaced(8));
+            actions.addView(secondaryButton("아직 안 됐어요",rejected==null?(hasTools?toolsCurrent:refreshCurrent):()->{if(revision==presentationRevision)rejected.run();}),spaced(8));
             actions.addView(quietButton("안내만 끝내기",finishCurrent),spaced(8));return;
         }
         if("unavailable".equals(state))setGuidanceEvidence(result.optString("message"));

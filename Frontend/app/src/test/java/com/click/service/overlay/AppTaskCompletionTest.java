@@ -15,9 +15,9 @@ public class AppTaskCompletionTest {
     @Test public void alreadyReachedOrManuallyReachedResultWorksWithoutAnyClickOrPlanBits()throws Exception {
         for(String pkg:List.of("com.spotify.music","org.mozilla.firefox","org.example.unregistered")){
             JSONObject result=completion(pkg,"목록");
-            assertEquals(NOT_MET,AppTaskCompletion.check(result,observation(pkg,"검색")));
+            assertEquals(NOT_OBSERVED,AppTaskCompletion.check(result,observation(pkg,"검색")));
             assertEquals(MATCHED,AppTaskCompletion.check(result,observation(pkg,"목록")));
-            assertEquals(NOT_MET,AppTaskCompletion.check(result,observation("org.wrong.app","목록")));
+            assertEquals(NOT_OBSERVED,AppTaskCompletion.check(result,observation("org.wrong.app","목록")));
         }
     }
     @Test public void allFinalStatesMustHoldTogetherAndInTheRequestedDirection()throws Exception {
@@ -25,13 +25,15 @@ public class AppTaskCompletionTest {
         result.getJSONArray("checks").put(new JSONObject().put("package",pkg).put("label","알림").put("role","toggle").put("checked",false));
         JSONObject wrong=AppTaskObservation.capture(screen(pkg,node(pkg,"list","목록","button"),node(pkg,"toggle","알림","toggle",true)));
         JSONObject right=AppTaskObservation.capture(screen(pkg,node(pkg,"new-list","목록","button"),node(pkg,"redrawn-toggle","알림","toggle",false)));
+        JSONObject subpage=AppTaskObservation.capture(screen(pkg,node(pkg,"toggle","알림","toggle",true)));
+        assertEquals(NOT_MET,AppTaskCompletion.check(result,subpage));
         assertEquals(NOT_MET,AppTaskCompletion.check(result,wrong));assertEquals(MATCHED,AppTaskCompletion.check(result,right));
     }
     @Test public void ambiguousOcrProtectedAndIncompleteEvidenceCannotClaimSuccess()throws Exception {
         String pkg="org.example.app";JSONObject result=completion(pkg,"목록");
         JSONObject ambiguous=AppTaskObservation.capture(screen(pkg,node(pkg,"one","목록","button"),node(pkg,"two","목록","button")));
         assertEquals(UNKNOWN,AppTaskCompletion.check(result,ambiguous));
-        JSONObject ocr=observation(pkg,"목록");ocr.getJSONArray("nodes").getJSONObject(0).put("source","ocr");assertEquals(NOT_MET,AppTaskCompletion.check(result,ocr));
+        JSONObject ocr=observation(pkg,"목록");ocr.getJSONArray("nodes").getJSONObject(0).put("source","ocr");assertEquals(NOT_OBSERVED,AppTaskCompletion.check(result,ocr));
         assertEquals(PROTECTED,AppTaskCompletion.check(result,AppTaskObservation.capture(screen(pkg,node(pkg,"secret","PRIVATE","password")))));
         assertEquals(UNKNOWN,AppTaskCompletion.check(result,null));assertFalse(AppTaskCompletion.valid(new JSONObject().put("checks",new JSONArray())));
         result.getJSONArray("checks").getJSONObject(0).put("predicate","arbitrary code");assertFalse(AppTaskCompletion.valid(result));

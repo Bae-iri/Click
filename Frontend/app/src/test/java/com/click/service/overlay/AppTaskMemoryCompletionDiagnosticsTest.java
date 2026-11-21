@@ -29,7 +29,7 @@ public class AppTaskMemoryCompletionDiagnosticsTest {
         first.getJSONArray("checks").put(new JSONObject().put("package",PKG).put("label","밝기 안내"));
         ScreenSnapshot start=screen(PKG,node(PKG,"home","홈","button"));
         assertTrue(memory.offerCompletion(first,observed(start,first),start));assertEquals("initial_prediction",memory.lastCompletionOfferReason());
-        assertEquals(AppTaskCompletion.Verdict.NOT_MET,AppTaskCompletion.checkForGoal(memory.goal(),first,observed(start,first),start));
+        assertEquals(AppTaskCompletion.Verdict.NOT_OBSERVED,AppTaskCompletion.checkForGoal(memory.goal(),first,observed(start,first),start));
         assertTrue(memory.offerCompletion(first,observed(start,first),start));assertEquals("same_candidate",memory.lastCompletionOfferReason());
         assertFalse(memory.offerCompletion(next,observed(start,next),start));assertEquals("replacement_unmatched",memory.lastCompletionOfferReason());
         ScreenSnapshot destination=screen(PKG,AppTaskGoalCompletionTest.heading(PKG,"title","다른 화면"));

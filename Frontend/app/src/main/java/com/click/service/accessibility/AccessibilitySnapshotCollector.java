@@ -83,7 +83,7 @@ final class AccessibilitySnapshotCollector {
                     range == null ? null : range.getMin(), range == null ? null : range.getMax(), node.isPassword(),
                     node.isCheckable() ? node.isChecked() : null,
                     androidx.core.view.accessibility.AccessibilityNodeInfoCompat.wrap(node).isHeading(),
-                    searchHint(node)
+                    searchHint(node), range != null && range.getType() == AccessibilityNodeInfo.RangeInfo.RANGE_TYPE_INT
             ));
         }
         int childCount = node.getChildCount();

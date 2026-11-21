@@ -137,12 +137,13 @@ def create_app(database_url: str | None = None, *, enable_legacy: bool = False) 
     from app.services.app_guide import AppGuideService
     from app.api.v1.endpoints.app_guide import build_router as build_app_guide_router
     app.state.app_guide_service = AppGuideService()
+    from app.services.app_task_outcome import OutcomeStore
     from app.services.app_task import AppTaskService
     from app.services.app_task_experience import AppTaskExperienceService
     from app.services.browse_graph_jobs import AppTaskLearningJobs
     app.state.app_task_experience = AppTaskExperienceService(session_factory)
     app.state.app_task_learning_jobs = AppTaskLearningJobs(session_factory)
-    app.state.app_task_service = AppTaskService(memory=app.state.app_task_experience)
+    app.state.app_task_service = AppTaskService(memory=app.state.app_task_experience, outcome_store=OutcomeStore(session_factory))
     app.include_router(build_app_guide_router(app.state.app_guide_service, principal, app.state.app_task_service,
         app.state.app_task_experience, app.state.app_task_learning_jobs), prefix="/api/v1")
     app.include_router(build_history_router(turn_service, principal), prefix="/api/v1")

@@ -53,12 +53,34 @@ public final class GoalOutcomeDeviceTest {
     private enum Case { NORMAL, WRONG_PREDICTION, LATE, UNCHANGED, WRONG_PAGE, REJECTED }
 
     private void connect() {
-        assertTrue("Use a separate diagnostic application ID", context.getPackageName().endsWith(".outcomestudy"));
+        assertTrue("Use a separate diagnostic application ID", context.getPackageName().endsWith(".outcomestudy")||context.getPackageName().endsWith(".outcomeaudit"));
         ui = instrumentation.getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES);
         AccessibilityServiceInfo info = ui.getServiceInfo();
         info.flags |= AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS;
         ui.setServiceInfo(info);
     }
+    @Test public void slowNativeArrivalKeepsObservingPastFiveSecondsWithoutReexecuting()throws Exception{
+        assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("recoveryTiming")));
+        connect();open(Settings.ACTION_SETTINGS);awaitForeground(Settings.ACTION_SETTINGS);
+        Trial trial=new Trial(Page.DISPLAY,Case.LATE);
+        try{
+            instrumentation.runOnMainSync(()->trial.start(com.click.service.overlay.AppTaskMetaController.Arm.META));
+            SystemClock.sleep(5800);
+            assertEquals("No early user handoff",0,trial.handoffAt);
+            open(Page.DISPLAY.action);awaitForeground(Page.DISPLAY.action);
+            long limit=SystemClock.elapsedRealtime()+5000;
+            while(trial.verifiedAt==0&&SystemClock.elapsedRealtime()<limit){
+                instrumentation.runOnMainSync(()->trial.controller.screenChanged(trial.fresh()));SystemClock.sleep(180);
+            }
+            assertTrue("Two native observations confirmed late arrival",trial.verifiedAt>trial.started+5800);
+            assertEquals(0,trial.handoffAt);assertEquals("One approved executor call",1,trial.executions);
+            android.util.Log.i("ClickOutcomeTiming","arrival_ms="+(trial.verifiedAt-trial.started)+" executions="+trial.executions);
+        }finally{
+            if(trial.controller!=null)instrumentation.runOnMainSync(trial.controller::close);
+            context.startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }
+    }
+
     @Test public void compareOutcomesOnDevice() throws Exception {
         String arm = InstrumentationRegistry.getArguments().getString("outcomeStudy", "");
         assumeTrue(List.of("baseline", "candidate").contains(arm));
@@ -378,9 +400,10 @@ public final class GoalOutcomeDeviceTest {
             JSONObject check = new JSONObject().put("package", PKG).put("label", page.label).put("role", "text");
             memory.completion(new JSONObject().put("checks", new JSONArray().put(check)));
         }
-        void start() {
+        void start() {start(com.click.service.overlay.AppTaskMetaController.Arm.CURRENT);}
+        void start(com.click.service.overlay.AppTaskMetaController.Arm arm) {
             try {
-                controller = new AppTaskController(new AppGuideGateway(context), memory, null, this, false, false, true);
+                controller = new AppTaskController(new AppGuideGateway(context), memory, null, this, false, false, true,arm);
                 controller.targetApp(PKG, "설정");
                 controller.chooseTool("back");
                 // Supply a deterministic planner expectation on the real proposal before approval.

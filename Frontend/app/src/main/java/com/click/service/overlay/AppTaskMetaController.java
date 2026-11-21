@@ -24,12 +24,14 @@ public final class AppTaskMetaController {
     private final LinkedHashSet<String> stagnantRoutes=new LinkedHashSet<>();
     private final ArrayDeque<Event> events=new ArrayDeque<>();
     private final ArrayDeque<String> rejected=new ArrayDeque<>();
+    private final Map<String,String> rejectedControls=new HashMap<>();
     private final Map<String,JSONObject> rejectedReferences=new LinkedHashMap<>();
     private final ArrayDeque<String> outcomes=new ArrayDeque<>();
     private int recoveries;
     private JSONObject recoveryAction;
     private long recoveryWaitedMs;
     private int recoveryAttempt;
+    private String failureReason="accepted_action_unconfirmed";
     private String recoveryReason="accepted_action_unconfirmed",activeSubgoal,transitionAttempt;
     private boolean subgoalInitialized;
     private int progressRescues,subgoalProgressRescues;
@@ -130,7 +132,29 @@ public final class AppTaskMetaController {
         events.addLast(new Event(observation.optString("package"),monotonicMs));
         while(events.size()>MAX_MEMORY)events.removeFirst();
     }
-    public boolean blocked(JSONObject before,JSONObject action){return enabled()&&rejected.contains(key(before,action));}
+    public boolean blocked(JSONObject before,JSONObject action){
+        if(!enabled()||before==null||action==null)return false;
+        if(rejected.contains(key(before,action)))return true;
+        String control=statefulControl(before,action);
+        return !control.isEmpty()&&rejectedControls.containsValue(control);
+    }
+    /** Bounds and accessibility path can move during redraws while a switch remains the same. */
+    private static String statefulControl(JSONObject screen,JSONObject action){
+        if(!"tap".equals(action.optString("tool"))||!"public".equals(screen.optString("status")))return "";
+        JSONObject node=com.click.data.snapshot.AppTaskObservation.find(screen,action.optString("target_id"));
+        if(node==null||!"accessibility".equals(node.optString("source"))||!Set.of("tab","toggle").contains(node.optString("role")))return "";
+        String key=com.click.data.snapshot.AppTaskObservation.targetKey(node);
+        JSONArray nodes=screen.optJSONArray("nodes");int matches=0;
+        List<String> headings=new ArrayList<>();
+        for(int i=0;nodes!=null&&i<nodes.length();i++){
+            JSONObject other=nodes.optJSONObject(i);
+            if(key.equals(com.click.data.snapshot.AppTaskObservation.targetKey(other)))matches++;
+            if(other.optBoolean("native_heading"))headings.add(other.optString("label"));
+        }
+        boolean generic=AppTaskSwitchGoal.genericLabel(node.optString("label"))||node.optString("label").isEmpty();
+        if(matches!=1||generic&&headings.size()!=1)return "";
+        return screen.optString("package")+"|"+key+"|"+(generic?headings.get(0):"");
+    }
     public Decision after(JSONObject before,JSONObject after,JSONObject action,AppTaskVerifier.Verdict verdict,long elapsedMs,long nowMs){
         return after(before,after,action,verdict,elapsedMs,nowMs,null,null);
     }
@@ -172,12 +196,20 @@ public final class AppTaskMetaController {
             clearRecoveryContext();remember("unobservable");return Decision.HANDOFF;
         }
         if(arm==Arm.NO_EVENTS&&elapsedMs<MAX_EVENT_WAIT_MS&&recentEvent(after.optString("package"),nowMs,nowMs-elapsedMs))return Decision.WAIT;
+        return replan(before,action,elapsedMs,"accepted_action_unconfirmed");
+    }
+    Decision replan(JSONObject before,JSONObject action,long elapsedMs,String reason){
+        if(!enabled())return Decision.HANDOFF;
         String key=key(before,action);
-        if(key.isEmpty()||rejected.contains(key)||recoveries>=MAX_RECOVERIES){clearRecoveryContext();remember("recovery_budget");return Decision.HANDOFF;}
+        if(key.isEmpty()||blocked(before,action)||recoveries>=MAX_RECOVERIES){clearRecoveryContext();remember("recovery_budget");return Decision.HANDOFF;}
         // Accepted-but-unverified actions are not automatically performed again.
-        rejected.addLast(key);while(rejected.size()>MAX_MEMORY)rejectedReferences.remove(rejected.removeFirst());
-        recoveries++;beginFailureEpisode(before,action,elapsedMs);remember("reobserve_after_unconfirmed_action");
-        recoveryAction=actionReference(before,action);recoveryWaitedMs=elapsedMs;recoveryAttempt=recoveries;recoveryReason="accepted_action_unconfirmed";
+        rejected.addLast(key);while(rejected.size()>MAX_MEMORY){
+            String stale=rejected.removeFirst();rejectedReferences.remove(stale);rejectedControls.remove(stale);
+        }
+        String control=statefulControl(before,action);
+        if(!control.isEmpty())rejectedControls.put(key,control);
+        recoveries++;beginFailureEpisode(before,action,elapsedMs);failureReason=reason;remember("accepted_action_unconfirmed".equals(reason)?"reobserve_after_unconfirmed_action":reason);
+        recoveryAction=actionReference(before,action);recoveryWaitedMs=elapsedMs;recoveryAttempt=recoveries;recoveryReason=reason;
         if(recoveryAction!=null)rejectedReferences.put(key,recoveryAction);
         return Decision.REOBSERVE;
     }
@@ -187,14 +219,29 @@ public final class AppTaskMetaController {
         JSONObject contextAction=failureContext?unresolvedFailureAction:recoveryAction;
         long waitedMs=failureContext?unresolvedFailureWaitedMs:recoveryWaitedMs;
         int attempt=failureContext?Math.max(1,unresolvedFailurePlannerReservations):recoveryAttempt;
-        String reason=failureContext?"accepted_action_unconfirmed":recoveryReason;
+        String reason=failureContext?failureReason:recoveryReason;
         if(!enabled()||contextAction==null||current==null||!"public".equals(current.optString("status"))
                 ||current.optString("observation_id").isEmpty()||waitedMs<0||waitedMs>120000
                 ||attempt<1||attempt>MAX_RECOVERIES)return null;
         JSONArray references=new JSONArray();
-        for(JSONObject reference:rejectedReferences.values())references.put(new JSONObject(reference.toString()));
+        for(var entry:rejectedReferences.entrySet()){
+            JSONObject reference=new JSONObject(entry.getValue().toString());
+            String control=rejectedControls.get(entry.getKey());
+            if(control!=null&&!reference.optString("fingerprint").equals(current.optString("fingerprint"))){
+                JSONArray nodes=current.getJSONArray("nodes");
+                for(int i=0;i<nodes.length();i++){
+                    JSONObject n=nodes.getJSONObject(i);
+                    if(!Set.of("toggle","tab").contains(n.optString("role")))continue;
+                    JSONObject target=new JSONObject().put("tool","tap").put("target_id",n.getString("id"));
+                    if(control.equals(statefulControl(current,target))){
+                        reference.put("target_id",n.getString("id")).put("fingerprint",current.getString("fingerprint"));break;
+                    }
+                }
+            }
+            references.put(reference);
+        }
         return new JSONObject().put("policy",arm==Arm.META?"mc_v2":"mc_v0").put("reason",reason)
-            .put("last_verdict","waiting").put("waited_ms",waitedMs).put("attempt",attempt)
+            .put("last_verdict","execution_rejected".equals(reason)?"rejected":"value_contradicted".equals(reason)?"contradicted":"waiting").put("waited_ms",waitedMs).put("attempt",attempt)
             .put("observation_id",current.getString("observation_id"))
             .put("last_action",new JSONObject(contextAction.toString())).put("blocked_actions",references);
     }

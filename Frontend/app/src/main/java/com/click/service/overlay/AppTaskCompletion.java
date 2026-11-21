@@ -8,7 +8,7 @@ import java.util.*;
 
 /** Goal postconditions are rechecked on the current screen, never inferred from a click or plan bits. */
 public final class AppTaskCompletion {
-    public enum Verdict { MATCHED, NOT_MET, UNKNOWN, PROTECTED }
+    public enum Verdict { MATCHED, NOT_MET, NOT_OBSERVED, UNKNOWN, PROTECTED }
     private static final Set<String> FIELDS=Set.of("package","label","resource","role","checked","selected");
     private AppTaskCompletion() {}
 
@@ -52,6 +52,8 @@ public final class AppTaskCompletion {
         }
         Collections.sort(checks);return AppTaskObservation.hash(String.join("\n",checks));
     }
+
+    static boolean sameCheck(JSONObject first,JSONObject second){return second!=null&&checkKey(first).equals(checkKey(second));}
 
     private static String checkKey(JSONObject check){
         StringBuilder key=new StringBuilder();
@@ -119,25 +121,27 @@ public final class AppTaskCompletion {
         if(!"public".equals(screen.optString("status")))return Verdict.UNKNOWN;
         JSONArray checks=completion.optJSONArray("checks"),nodes=screen.optJSONArray("nodes");
         if(nodes==null)return Verdict.UNKNOWN;
+        Verdict pending=Verdict.MATCHED;
         for(int i=0;i<checks.length();i++){
-            JSONObject c=checks.optJSONObject(i),found=null;
-            if(!c.optString("package").equals(screen.optString("package")))return Verdict.NOT_MET;
+            JSONObject c=checks.optJSONObject(i),found=null;boolean ambiguous=false;
+            if(!c.optString("package").equals(screen.optString("package")))return Verdict.NOT_OBSERVED;
             for(int j=0;j<nodes.length();j++){
                 JSONObject n=nodes.optJSONObject(j);
                 if(n==null||!"accessibility".equals(n.optString("source")))continue;
                 boolean matches=true;for(String key:List.of("label","resource","role"))
                     if(!c.optString(key).isEmpty()&&!c.optString(key).equals(n.optString(key)))matches=false;
                 if(!matches)continue;
-                if(found!=null)return Verdict.UNKNOWN;
+                if(found!=null){ambiguous=true;break;}
                 found=n;
             }
-            if(found==null)return Verdict.NOT_MET;
+            if(ambiguous){pending=Verdict.UNKNOWN;continue;}
+            if(found==null){if(pending==Verdict.MATCHED)pending=Verdict.NOT_OBSERVED;continue;}
             for(String state:List.of("checked","selected"))if(!c.isNull(state)){
-                if(!(found.opt(state) instanceof Boolean))return Verdict.UNKNOWN;
+                if(!(found.opt(state) instanceof Boolean)){pending=Verdict.UNKNOWN;continue;}
                 if(!c.opt(state).equals(found.opt(state)))return Verdict.NOT_MET;
             }
         }
-        return Verdict.MATCHED;
+        return pending;
     }
 
     /**

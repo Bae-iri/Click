@@ -1268,7 +1268,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 var launch=AppEntryController.launch(ClickOverlayService.this,target);
                 search=null;
                 if((launch==AppEntryController.Launch.FAILED || launch==AppEntryController.Launch.UNAVAILABLE)
-                        && !target.dialpad && LauncherAppSearch.safe(freshScreen())) {
+                        && target.entryIntent==null && !target.dialpad && LauncherAppSearch.safe(freshScreen())) {
                     search=new LauncherAppSearch(appNames);
                     return AppEntryController.Launch.SEARCHING;
                 }
@@ -1372,7 +1372,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     +" http_status="+diagnostic.optInt("http_status"));
                 renderAppTask(result,bounds,screen);
             }
-        },agentGateway.currentContract().appTask,agentGateway.currentContract().appTaskMemory,agentGateway.currentContract().appTaskCompletion,AppTaskMetaController.Arm.CURRENT,agentGateway.currentContract().appTaskGoalFirst);
+        },agentGateway.currentContract().appTask,agentGateway.currentContract().appTaskMemory,agentGateway.currentContract().appTaskCompletion,AppTaskMetaController.Arm.META,agentGateway.currentContract().appTaskGoalFirst);
+        appGuide.enableOutcomes(agentGateway.currentContract().appTaskOutcomes);
         if(target!=null)appGuide.targetApp(target);
         android.util.Log.i("ClickAgent","app_task_start target_resolved="+(target!=null)+" remote="+agentGateway.currentContract().appTask);
         if(target==null){
@@ -1430,10 +1431,10 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 // Ending guidance does not prove an order or complete the server's agent session.
                 endingTask=true;advanceAfterUserEnd=true;clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest("USER_ABORTED");
             },()->{
-                if(appGuide!=owner||endingTask)return;endingTask=true;
+                if(appGuide!=owner||endingTask||!owner.mayConfirmResult())return;endingTask=true;
                 owner.confirmResultOnServer(()->{if(appGuide!=owner)return;advanceAfterUserEnd=true;clearTaskFlow();hideGuideOverlay();setTurnInFlight(false);finishActiveQueueRequest(null);},
                     error->{if(appGuide!=owner)return;endingTask=false;showAppGuideMessage(ErrorDetails.requestMessage(error),null);});
-            });
+            },()->{if(appGuide==owner&&!endingTask)owner.rejectResult();});
         appPromptRevision=taskFlowView.presentationRevision();
         if(!waiting) {
             if(overlayView!=null)overlayView.collapse();

@@ -1,0 +1,81 @@
+package com.click.service.overlay;
+
+import android.app.Application;
+import com.click.data.snapshot.AccessibilityNodeSnapshot;
+import com.click.data.snapshot.AppTaskObservation;
+import com.click.data.snapshot.ScreenSnapshot;
+import java.time.Instant;
+import java.util.*;
+import org.json.*;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
+import static com.click.service.overlay.AppTaskCompletion.Verdict.*;
+import static org.junit.Assert.*;
+
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk=34,application=Application.class)
+public class AppTaskOutcomesTest {
+    static final String PKG="com.android.settings";
+    static JSONObject clause(String kind,String label)throws Exception {
+        return new JSONObject().put("kind",kind).put("labels",new JSONArray().put(label)).put("metric","none").put("steps",0);
+    }
+    static JSONObject goal(JSONObject... clauses)throws Exception{
+        return new JSONObject().put("seal","a".repeat(64)).put("clauses",new JSONArray(Arrays.asList(clauses)));
+    }
+    private static AccessibilityNodeSnapshot node(String id,String label,boolean heading,Boolean checked,Float position,boolean discrete){
+        return new AccessibilityNodeSnapshot(id,null,true,PKG,label,null,PKG+":id/"+id,
+            position!=null?"android.widget.SeekBar":checked!=null?"android.widget.Switch":"android.widget.TextView",position!=null?"slider":null,
+            new int[]{10,10,200,80},checked!=null,true,false,false,checked!=null,position,5,false,
+            position==null?null:0f,position==null?null:6f,false,checked,heading,false,discrete);
+    }
+    private static ScreenSnapshot frame(long millis,float scale,AccessibilityNodeSnapshot... nodes){
+        return new ScreenSnapshot(PKG,Instant.ofEpochMilli(millis).toString(),500,700,List.of(nodes),5,true,scale);
+    }
+    private static AppTaskCompletion.Verdict check(JSONObject g,ScreenSnapshot s,JSONObject baselines,AppTaskOutcomes.Arrivals visits,JSONObject receipts)throws Exception{
+        return AppTaskOutcomes.check(g,AppTaskObservation.capture(s,AppTaskOutcomes.labels(g)),s,baselines,null,visits,receipts).verdict();
+    }
+    @Test public void reversalReopensTheMatchingCompletedStageAndSurvivesRestore()throws Exception{
+        var task=new AppTaskMemory("자동 동기화를 끄고 보관함을 열어줘");
+        task.plan(new JSONArray().put(new JSONObject().put("title","자동 동기화 끄기")).put(new JSONObject().put("title","보관함 열기")));
+        assertTrue(task.installOutcome(goal(clause("off","자동동기화"),clause("page","보관함"))));
+        JSONObject saved=task.stored();JSONArray stages=saved.getJSONArray("subgoals");
+        for(int i=0;i<stages.length();i++)stages.getJSONObject(i).put("status","verified");
+        task=new AppTaskMemory(saved);
+        var frame=AppTaskObservation.capture(frame(1000,1,node("sync","자동 동기화",false,true,null,false)));
+        task.reopenResult("native_state_reversed",frame,0);
+        var restored=new AppTaskMemory(task.stored());JSONArray resumed=restored.state().getJSONArray("subgoals");
+        assertEquals("pending",resumed.getJSONObject(0).getString("status"));
+        assertEquals("verified",resumed.getJSONObject(1).getString("status"));
+        assertFalse(restored.completionSupported());assertTrue(restored.routeDisputed());
+    }
+    @Test public void exactOneStepNeedsBothAnIdentifiedDiscreteChangeAndAnAppliedValueChange()throws Exception{
+        JSONObject g=goal(clause("increase","글자 크기").put("metric","font_size").put("steps",1)),b=new JSONObject();
+        var title=node("heading","글자 크기",true,null,null,false);
+        assertEquals(NOT_OBSERVED,check(g,frame(1000,1f,title),b,null,null));
+        assertEquals(UNKNOWN,check(g,frame(1050,1f,title,node("font_size","글자 크기",false,null,1f,false)),b,null,null));
+        assertEquals(0,b.length());
+        assertEquals(NOT_MET,check(g,frame(1100,1f,title,node("font_size","글자 크기",false,null,1f,true)),b,null,null));
+        assertEquals(NOT_MET,check(g,frame(1200,1f,title,node("font_size","글자 크기",false,null,2f,true)),b,null,null));
+        assertEquals(NOT_MET,check(g,frame(1300,1.3f,title,node("font_size","글자 크기",false,null,3f,true)),b,null,null));
+        assertEquals(MATCHED,check(g,frame(1400,1.1f,title,node("font_size","글자 크기",false,null,2f,true)),b,null,null));
+        assertEquals(NOT_MET,check(g,frame(1500,1f,title,node("font_size","글자 크기",false,null,1f,true)),b,null,null));
+    }
+    @Test public void aVerifiedVisitCanPrecedeTheToggleOnADifferentSubpage()throws Exception{
+        JSONObject g=goal(clause("page","보관함"),clause("off","자동 동기화")),b=new JSONObject(),receipts=new JSONObject();
+        var visits=new AppTaskOutcomes.Arrivals();
+        var title=node("title","보관함",true,null,null,false);
+        assertEquals(NOT_OBSERVED,check(g,frame(1000,1,title),b,visits,receipts));
+        assertEquals(NOT_OBSERVED,check(g,frame(1200,1,title),b,visits,receipts));
+        assertEquals(0,receipts.length());
+        var off=node("sync","자동 동기화",false,false,null,false);
+        assertEquals(NOT_OBSERVED,check(g,frame(1300,1,off),b,visits,receipts));
+        assertEquals(NOT_OBSERVED,check(g,frame(1400,1,title),b,visits,receipts));
+        assertEquals(NOT_OBSERVED,check(g,frame(1800,1,title),b,visits,receipts));
+        assertEquals(1,receipts.length());
+        assertEquals(MATCHED,check(g,frame(1900,1,off),b,visits,receipts));
+        assertEquals(NOT_MET,check(g,frame(2000,1,node("sync","자동 동기화",false,true,null,false)),b,visits,receipts));
+        assertEquals(NOT_OBSERVED,check(g,frame(2100,1,node("other","설정",true,null,null,false)),b,visits,receipts));
+    }
+}

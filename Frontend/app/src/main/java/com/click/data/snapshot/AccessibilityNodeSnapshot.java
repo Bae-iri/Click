@@ -23,6 +23,7 @@ public final class AccessibilityNodeSnapshot {
     public final boolean checkable;
     public final Boolean checked;
     public final Float progress;
+    public final boolean discreteRange;
     public final Float rangeMin;
     public final Float rangeMax;
     public final boolean sensitiveInput;
@@ -107,6 +108,16 @@ public final class AccessibilityNodeSnapshot {
             boolean selected, boolean scrollable, boolean checkable, Float progress,
             int windowId, boolean sensitiveInput, Float rangeMin, Float rangeMax, boolean passwordInput,
             Boolean checked, boolean heading, boolean searchInput) {
+        this(nodeId,parentId,visibleToUser,packageName,text,contentDescription,resourceId,className,role,bounds,clickable,enabled,selected,
+            scrollable,checkable,progress,windowId,sensitiveInput,rangeMin,rangeMax,passwordInput,checked,heading,searchInput,false);
+    }
+
+    public AccessibilityNodeSnapshot(String nodeId, String parentId, boolean visibleToUser, String packageName,
+            String text, String contentDescription, String resourceId, String className, String role, int[] bounds,
+            boolean clickable, boolean enabled, boolean selected, boolean scrollable, boolean checkable, Float progress,
+            int windowId, boolean sensitiveInput, Float rangeMin, Float rangeMax, boolean passwordInput, Boolean checked,
+            boolean heading, boolean searchInput, boolean discreteRange) {
+        this.discreteRange = !sensitiveInput && discreteRange;
         this.heading = !sensitiveInput && heading;
         this.nativeEnabled = enabled;
         this.searchInput = sensitiveInput && !passwordInput && searchInput;
