@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 import json
 import math
 import multiprocessing
+import os
 import re
 from threading import BoundedSemaphore
 from time import monotonic
@@ -27,7 +28,26 @@ _MAX_PAYLOAD_BYTES = 128 * 1024
 _MAX_FRAME_BYTES = 400
 _BODY_CHUNK_BYTES = 256
 _CLEANUP_RESERVE_SECONDS = .4
-_CAPACITY = BoundedSemaphore(2)
+DEFAULT_CAPACITY = 4
+MAX_CAPACITY = 8
+
+
+def configured_capacity(value=None):
+    """Concurrent provider workers per API process (APP_TASK_PROVIDER_CAPACITY).
+
+    Each call is one spawned worker (about 33 MB measured locally next to a
+    ~120 MB API process), so a 512 MB instance stays well inside its memory at
+    the default. Invalid values fall back to the default; the range is 1..8.
+    """
+    raw = os.getenv('APP_TASK_PROVIDER_CAPACITY', '') if value is None else value
+    try:
+        count = int(str(raw).strip())
+    except ValueError:
+        return DEFAULT_CAPACITY
+    return count if 1 <= count <= MAX_CAPACITY else DEFAULT_CAPACITY
+
+
+_CAPACITY = BoundedSemaphore(configured_capacity())
 _UNREAPED = []  # An OS worker that will not exit never returns capacity.
 REASON_CODES = frozenset(('provider_invalid_request', 'provider_invalid_budget',
     'provider_capacity_exhausted', 'provider_startup_failed', 'provider_deadline_exceeded',
