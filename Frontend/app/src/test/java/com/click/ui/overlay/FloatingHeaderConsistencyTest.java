@@ -247,10 +247,10 @@ public class FloatingHeaderConsistencyTest {
             flow.progress("글자 크기", null, "디스플레이를 눌러주세요.", false);
             geometry(flow, width);
             flow.setGuidanceTarget("디스플레이");
-            assertNotNull(findDescription(flow, "디스플레이. 안내를 접고 화면에서 찾기"));
+            assertNotNull(findDescription(flow, "디스플레이"));
             flow.setGuidanceTarget("설정");
             assertNull(findDescription(flow, "설정. 안내를 접고 화면에서 찾기"));
-            assertNull(findDescription(flow, "디스플레이. 안내를 접고 화면에서 찾기"));
+            assertNull(findDescription(flow, "디스플레이"));
             flow.result(new JSONObject(), true);
             geometry(flow, width);
             flow.observationRecovery("화면을 확인해 주세요.", () -> {});

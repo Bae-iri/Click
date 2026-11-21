@@ -14,16 +14,21 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.click.HomeActivity;
+import com.click.data.local.GuidancePreferences;
 import com.click.domain.goal.GoalPreparationState;
 import java.io.File;
 import java.io.FileOutputStream;
 import org.json.JSONObject;
 import org.junit.Test;
+import org.junit.Before;
 import org.junit.runner.RunWith;
 import static org.junit.Assert.*;
 
 @RunWith(AndroidJUnit4.class)
 public class FloatingReferenceFlowTest {
+    @Before public void keepComponentTestsOutOfTheFirstRunTutorial() {
+        new GuidancePreferences(InstrumentationRegistry.getInstrumentation().getTargetContext()).markHomeTutorialSeen();
+    }
     private static GoalPreparationState question() throws Exception {
         return new GoalPreparationState(new JSONObject("{\"version\":\"goal-inputs.v1\",\"id\":\"scope\",\"source_text\":\"글자 크기 키워줘\",\"status\":\"needs_input\",\"values\":{},\"question\":{\"id\":\"scope\",\"kind\":\"choice\",\"message\":\"어디의 글자를 키울까요?\",\"choices\":[{\"label\":\"휴대폰 전체\",\"value\":\"system\"},{\"label\":\"특정 앱 안에서만\",\"value\":\"app\"}]}}"), null, "범위를 선택해 주세요.");
     }
@@ -137,7 +142,7 @@ public class FloatingReferenceFlowTest {
                     readable(find(panel, "2/3")); readable(find(panel, "디스플레이"));
                     controlsWork(panel, replies);
                     save(panel, "reference-guidance");
-                    description(panel, "디스플레이. 안내를 접고 화면에서 찾기").performClick(); assertTrue(replies.collapsed);
+                    assertFalse(description(panel, "디스플레이").performClick()); assertFalse(replies.collapsed);
                     panel.setMinimizedProgress(true); assertFalse(find(panel, "2/3").isShown());
                     panel.setMinimizedProgress(false); assertTrue(find(panel, "2/3").isShown());
                     panel.setGuidanceProgress(0, 0); assertFalse(find(panel, "2/3").isShown());
