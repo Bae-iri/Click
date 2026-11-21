@@ -1,0 +1,10 @@
+{
+ "A": {
+  "provider": "gemini",
+  "triage": true
+ },
+ "B": {
+  "provider": "openai",
+  "triage": true
+ }
+}

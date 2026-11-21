@@ -55,6 +55,22 @@ MEMORY_ARMS = ('B', 'C')
 # C = triage + device PRODUCTION speed paths (the device maps the same letters).
 SPEED_AB = False
 TRIAGE = {'A': False, 'B': True, 'C': True}
+# --arm-config FILE: {"A": {"provider": "gemini"|"openai", "triage": true, "memory": false, "timeout_first": false}, ...}
+ARM_CONFIG = {}
+_TIMED_OUT = set()
+
+
+def injected_timeout(request):
+    """A provider timeout on the trial's first planner request, as the service reports it."""
+    from app.schemas.app_task import AppTaskResponse
+    time.sleep(8.63)
+    return AppTaskResponse(request_id=request.request_id, task_id=request.state.task_id,
+        observation_id=request.screen.observation_id, fingerprint=request.screen.fingerprint, status='unavailable',
+        message='다음 단계를 준비하지 못했어요. 잠시 후 화면을 다시 확인해 주세요.', subgoals=request.state.subgoals,
+        active_subgoal=next((s.id for s in request.state.subgoals if s.status == 'pending'), None), completion=request.state.completion,
+        diagnostic=dict(called=True, failure_stage='provider', failure_kind='provider', reason_code='provider_timeout',
+                        reason='provider_or_plan_error', error_type='ProviderError', planning_mode=request.planning_mode,
+                        injected=True, latency_ms=8630))
 VARIANTS = ('exact', 'normalized', 'exact_no_failure_memory', 'exact_support_one')
 SERVED = {'B': 'exact', 'C': 'normalized'}
 
@@ -465,8 +481,17 @@ def make_handler(service, state, catalogue):
                     with step_lock:
                         started = time.monotonic()
                         with completion_policy(COMPLETION.get(arm)):
-                            response = (service.step(request, user_id=None, completion_triage=TRIAGE.get(arm, False)) if SPEED_AB
-                                        else service.step(request, user_id=arm if arm in MEMORY_ARMS else None))
+                            cfg = ARM_CONFIG.get(arm)
+                            if cfg is not None:
+                                os.environ['APP_TASK_PROVIDER'] = cfg.get('provider', 'gemini')
+                                if cfg.get('timeout_first') and request.state.task_id not in _TIMED_OUT:
+                                    _TIMED_OUT.add(request.state.task_id);response = injected_timeout(request)
+                                else:
+                                    response = service.step(request, user_id=arm if cfg.get('memory') else None,
+                                                            completion_triage=cfg.get('triage', True))
+                            else:
+                                response = (service.step(request, user_id=None, completion_triage=TRIAGE.get(arm, False)) if SPEED_AB
+                                            else service.step(request, user_id=arm if arm in MEMORY_ARMS else None))
                         apply_binding_rule(COMPLETION.get(arm), request, response)
                         elapsed = (time.monotonic() - started) * 1000
                     with state.lock:
@@ -493,9 +518,14 @@ def main(argv=None):
     parser.add_argument('--env-file', type=Path, default=BACKEND / '.env')
     parser.add_argument('--completion-comparison', action='store_true',
         help='B=exact memory + develop completion, C=exact memory + 312ff36 binding rule')
+    parser.add_argument('--arm-config', type=Path, help='Per-arm provider/triage/memory/timeout_first JSON')
     parser.add_argument('--speed-ab', action='store_true', help='Completion A/B: no memory, per-arm server triage (A off, B/C on)')
     parser.add_argument('--first-step-comparison', action='store_true', help='B and C both use exact production recall; device C opts into first-action recall')
     args = parser.parse_args(argv)
+    if args.arm_config:
+        ARM_CONFIG.update(json.loads(args.arm_config.read_text()))
+        SERVED['C'] = 'exact'  # both memory arms use the production exact recall
+        assert set(ARM_CONFIG) <= {'A', 'B', 'C'} and all(c.get('provider', 'gemini') in {'gemini', 'openai'} for c in ARM_CONFIG.values())
     if args.speed_ab:
         global SPEED_AB
         SPEED_AB = True

@@ -1,0 +1,12 @@
+{
+ "A": {
+  "provider": "gemini",
+  "triage": true,
+  "timeout_first": true
+ },
+ "B": {
+  "provider": "gemini",
+  "triage": true,
+  "timeout_first": true
+ }
+}

@@ -1,0 +1,16 @@
+{
+  "base_commit": "2575fc7",
+  "files": {
+    "Frontend/app/src/main/java/com/click/service/overlay/AppTaskController.java": "aa1b55855e343f866a02abc7fb0b1e9fa2ad1aa1526fcc5dd1743347b1752976",
+    "Frontend/app/src/androidTest/java/com/click/service/accessibility/MemoryDeviceExperimentTest.java": "8ba1c82187a2bf0a711e6ee5fee8a173c3cff82bbf686ed93c0d01ea9b6fba00",
+    "Backend/app/services/app_task.py": "0df5e45d9503d88f70a74f858a124e0c4d509cf566d39560d85960384af70708",
+    "Backend/app/services/app_task_provider.py": "53d600ab2d07a274f886763fb936b6c2082dbf19b3be0027f0b4333d44b1109e",
+    "Backend/app/services/openai_responses.py": "6c0407262c75aa76bd72628726c4fb25fcbf14496a2ac9ae3773a1f115f9d616",
+    "Backend/scripts/serve_memory_experiment.py": "0660334c2787f984efb6bf62cada8b4f77839735d2809e3c2d111ebbedba5d5d",
+    "docs/reviews/2026-11-21-device-round2/catalogue.json": "d60731fd0ba804b90482d2adff54f5bb30a9dcf113eff5943085e3f4e91a0e11"
+  },
+  "apks": {
+    "Frontend/app/build/outputs/apk/debug/app-debug.apk": "a4244df2f0facd4d496bddec5705b18bc43546d1195616a07aadffd570654195",
+    "Frontend/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk": "58a5ac462bbfeeb532ed5f71863b9f2b1dda0bb2e2d4c3dfeebc1be479974825"
+  }
+}
