@@ -9,7 +9,7 @@
 | 방식 | 앱 | 계획 | 실행·검증 |
 |---|---|---|---|
 | graph | 클릭 그래프 실험 (`com.click.settingsgraph`) | 기존 승인 Task Graph | 공통 Jev·Overlay·네이티브 검증 |
-| llm | 클릭 LLM 실험 (`com.click.settingsllm`) | Gemini 3.8 Flash가 하위 목표 순서 결정 | 같은 Jev·Overlay·네이티브 검증 |
+| llm | 클릭 LLM 실험 (`com.click.settingsllm`) | Qwen3.8-Flash가 하위 목표 순서 결정 | 같은 Jev·Overlay·네이티브 검증 |
 
 안전한 원자 동작·대상 식별·완료 조건 템플릿은 두 방식이 공유한다.
 LLM에는 해당 작업에서 허용된 하위 목표 이름과 현재 확인된 목표 후보를 주고, 기존 그래프의
@@ -24,6 +24,10 @@ LLM 실패 시 그래프 방식으로 대체하지 않는다. 단순 대기·UNK
 서로 다른 조작의 확인된 실패가 두 번이면 완료 목표를 보존한 채 재계획을 요청한다.
 계획 호출은 에피소드당 최대 3회, 계획 길이는 최대 8개다.
 
+## Qwen과 Jev 연동 확인
+
+2026-11-21에 글자 크기 확대 과제 하나를 모의 Android 화면과 조작 이벤트로 재생하며 두 API를 실제 호출했다. Qwen3.8-Flash가 디스플레이 메뉴 → 글자 관련 메뉴 → 글자 크기 조절 화면 → 글자 크기 확대 순서를 한 번에 반환했다. Qwen HTTP 왕복은 1.535초였다. Jev 1.14.0은 현재 하위 목표를 받아 메뉴 두 개와 조절 대상을 골랐고, 호출별 HTTP 왕복은 0.340초, 0.323초, 0.208초였다. 검증기는 모의 조작에 대응하는 글자 크기 값의 변화를 확인한 후 성공을 기록했다. 실기기 완료 시간과 동일 조건 Gemini 대비 속도는 이 재생의 측정 대상에서 제외했다.
+
 ## 시험 요청
 
 * 휴대폰 글자 크기 키워줘 / 줄여줘
@@ -37,9 +41,9 @@ LLM 실패 시 그래프 방식으로 대체하지 않는다. 단순 대기·UNK
 
 ## 빠른 실행과 비교 보고서
 
-Backend 폴더에서 아래 명령으로 실험 환경·서버·실제 Gemini 계획 생성을 점검한다.
+Backend 폴더에서 아래 명령으로 실험 환경·서버·실제 하위 목표 계획 생성을 점검한다.
 기존 두 APK를 USB 기기에 설치하려면 `-Install`을 추가한다.
-Gemini가 실패하면 `LLM_NOT_READY`와 종료 코드 1을 반환한다. 서버 정상만으로 LLM 정상이라고 표시하지 않는다.
+선택한 플래너가 실패하면 `LLM_NOT_READY`와 종료 코드 1을 반환한다. 서버 정상만으로 LLM 정상이라고 표시하지 않는다.
 
 ```powershell
 cd C:\click_server\Click\Backend
@@ -64,14 +68,14 @@ python -X utf8 scripts/settings_experiment_log.py --compare --output-dir instanc
 # 외부 API 없이: 여섯 목표 × 두 방식 × 순서 교대 2회 = 24회 통합 검증
 python -X utf8 scripts/run_settings_comparison.py --providers controlled --all-goals --repeat 2 --output-dir instance/settings-experiment/controlled-comparison
 
-# 실제 Jev/Gemini 사용: 같은 글자 크기 증가 화면을 두 방식에서 재생
+# 실제 Jev와 선택한 플래너 사용: 같은 글자 크기 증가 화면을 두 방식에서 재생
 python -X utf8 scripts/run_settings_comparison.py --providers live --output-dir instance/settings-experiment/live-comparison
 ```
 
 두 명령은 각각 별도 폴더에 보고서·진단 추적을 저장한다. 라이브 모드가 API 장애로 진행하지 못하면 종료 코드 1을 반환한다.
 통제 응답의 속도나 성공률은 LLM의 실제 성능 근거가 아니다.
 
-이번 도입 판단의 LLM 모델은 **Gemini 3.8 Flash (`gemini-3.8-flash`)**다.
+이전 Gemini 기준 실험의 LLM 모델은 **Gemini 3.8 Flash (`gemini-3.8-flash`)**다.
 다른 모델의 연결 성공은 키·네트워크 진단용이며, 3.8의 성능이나 연결 성공으로 대체하지 않는다.
 보고서 상단에 실제 시험 모델을 표시한다.
 
@@ -90,7 +94,8 @@ python -X utf8 scripts/probe_gemini_connection.py --model gemini-3.8-flash --api
 
 ## 준비
 
-Backend 폴더에서 원본 `.env`의 Gemini/Jev 키만 실험 환경에 복사한다.
+Backend 폴더에서 준비 스크립트를 실행하면 원본 `.env`에 설정한 플래너 키와 Jev 키가 실험 환경으로 복사된다.
+`CLICK_SETTINGS_PLANNER_PROVIDER=openrouter`는 `OPENROUTER_API_KEY`로 Qwen3.8-Flash를 호출하고, `gemini`는 `GEMINI_API_KEY`를 사용한다. Jev는 두 조건 모두 `TYPESAFE_API_KEY`를 사용한다.
 기존 데이터베이스는 건드리지 않고 `instance/settings-experiment/experiment.db`를 사용한다.
 재실행해도 실험 DB의 암호화 키는 유지한다. API 키는 앱/APK/로그에 포함하지 않는다.
 
@@ -101,7 +106,7 @@ python -X utf8 scripts/prepare_settings_experiment.py
 python -X utf8 scripts/check_settings_planner.py
 ```
 
-Gemini 모델 기본값은 `gemini-3.8-flash`다. 실험 `.env`의 `GEMINI_SETTINGS_MODEL`로 명시적으로 고정하며,
+Gemini 조건의 모델 기본값은 `gemini-3.8-flash`다. 실험 `.env`의 `GEMINI_SETTINGS_MODEL`로 명시적으로 고정하며,
 장애가 나도 다른 모델로 자동 변경하지 않는다. 모델 이름은 모든 시험 추적에 기록한다.
 계획의 응답 제한은 8초이며 공통 턴 제한 안에서 동작한다.
 실제 호출이 503/타임아웃이면 공급자 응답 문제로 따로 기록한다. 이 상태의 시험만으로 계획 품질을 비교하지 않는다.
@@ -235,15 +240,15 @@ Planner/Jev 호출 수·계획 지연 시간을 보여준다. `observed_wall_ms`
 `=1`로 켜면 LLM 방식이 다음 순서로 동작한다. 순수 비교 실험에서는 켜지 않는다.
 
 1. Backend가 AI2에 보존된 경로 중 **목표·기기 범위(scope)·기본 그래프·실행 코드·Jev 모델이 모두 같은** 검증 경로를 찾는다.
-   현재 화면이 그 경로의 시작 화면이거나 경로 위에 있을 때만 쓴다. 맞으면 Gemini를 호출하지 않는다.
-2. 맞는 경로가 없으면 Gemini가 계획한다. 실행 기록은 기존과 같이 AI2(`settings_graph_learning`)가 경로 초안으로 만든다.
+   현재 화면이 그 경로의 시작 화면이거나 경로 위에 있을 때만 쓴다. 일치하면 저장된 경로를 사용한다.
+2. 맞는 경로가 없으면 선택한 플래너가 계획한다. 실행 기록은 기존과 같이 AI2(`settings_graph_learning`)가 경로 초안으로 만든다.
 3. Jev 화면 판단과 네이티브 성공 검증은 어떤 경로든 동일하게 거친다.
-4. 재사용한 경로에서 확인된 실패가 두 번 나면 그 경로를 이번 에피소드에서 제외하고 Gemini로 재계획한다.
+4. 재사용한 경로에서 확인된 실패가 두 번 나면 그 경로를 이번 에피소드에서 제외하고 선택한 플래너로 재계획한다.
    AI2는 이 기록으로 해당 경로를 `QUARANTINED`로 격리해 다른 사용자에게 다시 내보내지 않는다.
 5. 서로 다른 실행 `CLICK_SETTINGS_ROUTE_MIN_SUPPORT`회(기본 2회)에서 같은 경로가 검증되면 `VALIDATED`가 되어 재사용 대상이 된다.
    재사용 실행의 성공도 같은 경로의 근거로 쌓인다.
 
-Gemini 공급자 장애나 계획 예산 소진 시에는 승인된 기본 그래프로 이어서 안내한다(`plan_source=approved_graph_fallback`).
+플래너 공급자 장애나 계획 예산 소진 시에는 승인된 기본 그래프로 이어서 안내한다(`plan_source=approved_graph_fallback`).
 이 실행은 경로 학습 근거로 쓰지 않으며, 비교 보고서에 `learned_route_trials`·`approved_graph_fallback_trials`로 따로 센다.
 
 현재 상태 확인: `python -X utf8 scripts/settings_experiment_learning.py` → `routes`의 `CANDIDATE/VALIDATED/QUARANTINED`.

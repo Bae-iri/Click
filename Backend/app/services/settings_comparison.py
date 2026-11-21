@@ -132,11 +132,11 @@ def write_report(report, output_dir):
     (output / 'comparison.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     mode = report.get('evidence_mode', 'device_runtime_logs')
     synthetic = 'replay' in mode
-    lines = ['# 설정 Graph / Gemini 비교', '', f'근거: `{mode}`', '']
+    lines = ['# 설정 그래프와 하위 목표 플래너 비교', '', f'근거: `{mode}`', '']
     models = {report['planner_model']} if report.get('planner_model') else {
         item['condition']['planner_model'] for group in report['groups'] for item in group['matched_conditions']
         if item['condition'].get('planner_model')}
-    lines += ['Gemini 모델: ' + (', '.join(f'`{model}`' for model in sorted(models)) if models else '기록 없음'), '']
+    lines += ['하위 목표 플래너 모델 ' + (', '.join(f'`{model}`' for model in sorted(models)) if models else '기록 없음'), '']
     if synthetic:
         lines += ['**화면·조작·설정값은 모의 데이터입니다. 실기기 성공률이나 LLM 도입 효과로 해석하지 마세요.**', '']
     lines += ['| 목표 | 방식 | 시험 | 검증 성공 | 미완료 | API 장애 시험 | 잘못된 계획 | 모델 대기 중앙값(ms) | 계획 토큰 |',

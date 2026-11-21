@@ -1,5 +1,5 @@
 # Settings graph-vs-LLM experiment server. Separate from click-dev-api so that the
-# Gemini key and experiment traces never affect regular users or their data.
+# planner key and experiment traces are isolated from regular users.
 # Create it from the Render dashboard: New > Blueprint > this file.
 # Use a database separate from click_db (DATABASE_URL), and new encryption keys.
 services:
@@ -25,11 +25,11 @@ services:
         sync: false
       - key: DATA_LOOKUP_KEY
         sync: false
-      # Paid Gemini key. Pinned model; no automatic fallback to another model.
-      - key: GEMINI_API_KEY
+      # Qwen plans subgoals. Jev selects each native target.
+      - key: CLICK_SETTINGS_PLANNER_PROVIDER
+        value: openrouter
+      - key: OPENROUTER_API_KEY
         sync: false
-      - key: GEMINI_SETTINGS_MODEL
-        value: gemini-3.8-flash
       - key: CLICK_SETTINGS_EXPERIMENT_ENABLED
         value: "1"
       # Pure A/B: keep route reuse off while comparing graph and LLM planning.

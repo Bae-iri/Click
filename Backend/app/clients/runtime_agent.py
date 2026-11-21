@@ -58,9 +58,9 @@ def runtime_configuration():
     for source in sorted((runtime_root.parents[2]/"goal_catalog").glob("*.json")):
         digest.update(source.name.encode());digest.update(source.read_bytes())
     configuration["code_hash"] = digest.hexdigest()
-    from app.services.settings_planner import enabled, model_name
+    from app.services.settings_planner import enabled, settings_planner_model
     if enabled():
-        configuration['settings_planner_model'] = model_name()
+        configuration['settings_planner_model'] = settings_planner_model()
     if provider == "jev":
         _, model, minimum = JevScreenResolver.configuration()
         judgment_mode, temperature = screen_policy()
@@ -87,12 +87,12 @@ class RuntimeAgentAdapter:
         if resolver:
             resolver.configuration()
             screen_policy()
-        from app.services.settings_planner import enabled, GeminiSettingsPlanner
+        from app.services.settings_planner import enabled, SettingsPlanner
         self.experiment_resolver = None
         if enabled() and resolver:
             from app.services.settings_experiment import SettingsExperimentResolver
             resolver = self.experiment_resolver = SettingsExperimentResolver(
-                resolver, GeminiSettingsPlanner(), learned_routes)
+                resolver, SettingsPlanner(), learned_routes)
         self.runtime = ClickAgentEngine(session_store=session_store, task_graphs=graphs,
             screen_resolver=resolver, ui_selector=None,
             state_resolver=None if resolver else LocalScreenStateLlm())

@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from app.clients.checkpoint import capture, restore
 from app.services.settings_experiment import SettingsExperimentResolver
-from app.services.settings_planner import GeminiSettingsPlanner, catalogue
+from app.services.settings_planner import GeminiSettingsPlanner, SettingsPlanner, catalogue
 from tests.test_settings_stability_matrix import Run, GOALS
 from tests.test_screen_jev import scene
 
@@ -330,7 +330,7 @@ def test_http_persists_arm_plan_and_three_verdicts(monkeypatch, arm):
     monkeypatch.setenv('CLICK_SETTINGS_EXPERIMENT_ENABLED', '1')
     monkeypatch.setenv('AI1_UI_SELECTOR_PROVIDER', 'jev')
     planner = Planner()
-    monkeypatch.setattr(GeminiSettingsPlanner, 'plan', lambda self, **kw: planner.plan(**kw))
+    monkeypatch.setattr(SettingsPlanner, 'plan', lambda self, **kw: planner.plan(**kw))
     graph = approved_graphs()['settings.font_size.increase']
     edge = next(e for e in graph.transitions if e.from_state == 'S1_SETTINGS_HOME')
     monkeypatch.setattr(JevScreenResolver, '_post', staticmethod(sender_for(edge)))
@@ -353,3 +353,104 @@ def test_http_persists_arm_plan_and_three_verdicts(monkeypatch, arm):
             assert event.payload['settings_experiment']['arm'] == arm
         text = json.dumps(info)
         assert '"display"' not in text  # Native node ID does not enter the diagnostic.
+
+
+def qwen_reply(plan, model='qwen/qwen3.8-flash'):
+    return httpx.Response(200, json={
+        'status': 'completed', 'model': model,
+        'output': [{'type': 'message', 'role': 'assistant',
+                    'content': [{'type': 'output_text', 'text': json.dumps(plan)}]}],
+        'usage': {'input_tokens': 300, 'output_tokens': 18},
+    })
+
+
+def test_qwen_hands_only_the_active_subgoal_to_jev_on_the_app_route(monkeypatch):
+    from app.main import create_app
+    from app.services.screen_jev import JevScreenResolver
+    from app.services.settings_planner import navigation_key
+    from app.task_graphs import approved_graphs
+    from tests.helpers import authenticated_client
+    from tests.test_screen_jev import sender_for
+    from tests.test_typed_agent_contract import start_payload
+
+    monkeypatch.setenv('CLICK_SETTINGS_EXPERIMENT_ENABLED', '1')
+    monkeypatch.setenv('CLICK_SETTINGS_PLANNER_PROVIDER', 'openrouter')
+    monkeypatch.setenv('AI1_UI_SELECTOR_PROVIDER', 'jev')
+    monkeypatch.setenv('OPENROUTER_API_KEY', 'test-qwen')
+    monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    graph = approved_graphs()['settings.font_size.increase']
+    edge = next(t for t in graph.transitions if t.from_state == 'S1_SETTINGS_HOME')
+    steps = [t['id'] for t in catalogue(graph)[0] if t['id'] != navigation_key('S1_SETTINGS_HOME')]
+    first = navigation_key(edge.to_state)
+    assert steps[0] == first
+    def qwen(self, payload, token, diagnostic):
+        assert token == 'test-qwen' and payload['model'] == 'qwen/qwen3.8-flash'
+        assert list(payload['text']['format']['schema']['properties']) == ['subgoals']
+        assert 'accessibility_tree' not in payload['input'] and edge.transition_id not in payload['input']
+        diagnostic.update(called=True, attempts=[{'attempt': 1, 'http_status': 200}])
+        return qwen_reply({'subgoals': steps})
+    planner = Mock(side_effect=qwen)
+    monkeypatch.setattr(SettingsPlanner, 'request', lambda self, *args: planner(self, *args))
+    jev = Mock(side_effect=sender_for(edge))
+    monkeypatch.setattr(JevScreenResolver, '_post', staticmethod(jev))
+    with authenticated_client(create_app()) as client:
+        body = start_payload()
+        body['device_context']['capabilities'] = {'settings_experiment_arm': 'llm'}
+        tree = body['accessibility_tree']
+        tree.update(captured_at_ms=1000, observation_id='settings-home')
+        tree['nodes'][0]['class_name'] = 'android.widget.TextView'
+        tree['nodes'].insert(0, dict(node_id='title', text='설정', clickable=False,
+            package_name='com.android.settings', class_name='android.widget.TextView', bounds_in_screen=[20,20,900,90]))
+        response = client.post('/api/v1/agent/commands', json=body)
+    assert response.status_code == 200
+    result = response.json()
+    trace = result['metadata']['settings_experiment']
+    planner.assert_called_once()
+    assert jev.call_count == 1, trace
+    assert jev.call_args.args[0]['state']['subgoal']['id'] == first
+    assert trace['plan_source'] == 'qwen' and trace['planner_model'] == 'qwen/qwen3.8-flash'
+    assert trace['active_subgoal'] == first and trace['jev']['called']
+    assert result['guide_command']['target_node_id'] == 'display'
+
+
+@pytest.mark.parametrize('reply', [
+    qwen_reply({'subgoals': ['adjust_setting'], 'target_id': 'display'}),
+    qwen_reply({'subgoals': ['tap:display', 'adjust_setting']}),
+    qwen_reply({'subgoals': ['adjust_setting']}, model='other'),
+    httpx.Response(503, json={'error': {'message': 'PRIVATE_PROVIDER_MESSAGE'}}),
+])
+def test_qwen_invalid_plan_or_outage_cannot_select_a_ui_target(monkeypatch, reply):
+    monkeypatch.setenv('CLICK_SETTINGS_PLANNER_PROVIDER', 'openrouter')
+    graph, _, node, goal = scene('font_size')
+    send, jev = Mock(return_value=reply), Mock()
+    resolver = SettingsExperimentResolver(jev, SettingsPlanner(send))
+    resolver.prepare(None, 'llm', 'e')
+    assert resolver.resolve(nodes=(node,), graph=graph, goal=goal) is None
+    send.assert_called_once()
+    jev.resolve.assert_not_called()
+    assert resolver.turn['planner']['failure_kind'] == ('provider' if reply.status_code == 503 else 'plan')
+    assert 'PRIVATE_PROVIDER_MESSAGE' not in str(resolver.turn)
+
+
+def test_qwen_transport_uses_only_the_router_endpoint_and_credential(monkeypatch):
+    from app.services.openai_responses import OPENROUTER_ENDPOINT
+    monkeypatch.setenv('CLICK_SETTINGS_PLANNER_PROVIDER', 'openrouter')
+    monkeypatch.setenv('GEMINI_API_KEY', 'test-other-key')
+    monkeypatch.delenv('OPENROUTER_API_KEY', raising=False)
+    graph, _, _, _ = scene('font_size')
+    params = dict(goal=graph.definition.goal_type, targets=catalogue(graph)[0], current_page='settings',
+                  visible_targets=[], completed=[], failures=[])
+    def upstream(req):
+        assert str(req.url) == OPENROUTER_ENDPOINT and req.headers['Authorization'] == 'Bearer test-router'
+        assert 'x-goog-api-key' not in req.headers
+        return qwen_reply({'subgoals': ['adjust_setting']})
+    transport = Mock(side_effect=upstream)
+    real_client = httpx.Client
+    monkeypatch.setattr(httpx, 'Client', lambda **kw: real_client(transport=httpx.MockTransport(transport), **kw))
+    planner = SettingsPlanner()
+    assert planner.plan(**params)[1]['reason_code'] == 'missing_api_key'
+    transport.assert_not_called()
+    monkeypatch.setenv('OPENROUTER_API_KEY', 'test-router')
+    plan, info = planner.plan(**params)
+    assert plan == {'subgoals': ['adjust_setting']} and info['output_tokens'] == 18
+    transport.assert_called_once()

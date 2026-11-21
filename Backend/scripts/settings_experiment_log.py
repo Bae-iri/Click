@@ -39,7 +39,7 @@ def device_logs():
     adb=BACKEND.parents[1]/'.android-sdk/platform-tools/adb.exe'
     if not adb.is_file():return None,queue
     child_env={k:v for k,v in os.environ.items() if k not in {
-        'GEMINI_API_KEY','TYPESAFE_API_KEY','DATA_ENCRYPTION_KEYS','DATA_LOOKUP_KEY','DATABASE_URL'}}
+        'GEMINI_API_KEY','OPENROUTER_API_KEY','TYPESAFE_API_KEY','DATA_ENCRYPTION_KEYS','DATA_LOOKUP_KEY','DATABASE_URL'}}
     process=subprocess.Popen([str(adb),'logcat','-T','1','-v','raw','-s','ClickExperiment:I','*:S'],
         stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True,encoding='utf-8',errors='replace',env=child_env)
     def read():

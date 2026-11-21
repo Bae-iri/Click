@@ -1,7 +1,7 @@
 """Paired Settings replay through the real runtime. No phone is changed.
 
 controlled: fixture answers for both providers (integration validation).
-live: real Jev and Gemini, synthetic screens/actions (provider replay).
+live: real Jev and the configured Settings planner, synthetic screens/actions (provider replay).
 Neither mode is evidence of success on a physical device.
 """
 import argparse
@@ -36,7 +36,7 @@ class Replay:
         from ai_agent.runtime.types import TypedGoal
         from app.services.screen_jev import JevScreenResolver
         from app.services.settings_experiment import SettingsExperimentResolver
-        from app.services.settings_planner import GeminiSettingsPlanner
+        from app.services.settings_planner import SettingsPlanner
         from app.task_graphs import approved_graphs
         self.graph = approved_graphs()[goal_type]
         self.arm, self.providers = arm, providers
@@ -47,7 +47,7 @@ class Replay:
             source_text='', confidence=1, task_id=self.graph.definition.task_id,
             is_supported=True, required_slots_filled=True)
         inner = JevScreenResolver(self.controlled_jev if providers == 'controlled' else None)
-        planner = GeminiSettingsPlanner(self.controlled_gemini if providers == 'controlled' else None)
+        planner = SettingsPlanner(self.controlled_plan if providers == 'controlled' else None)
         self.resolver = SettingsExperimentResolver(inner, planner)
         self.resolver.prepare(None, arm, 'replay')
         self.resolver.state['scope_hash'] = sha256(b'settings-synthetic-replay.v1').hexdigest()
@@ -56,11 +56,15 @@ class Replay:
             'brightness_source': 'android.provider.Settings.System.SCREEN_BRIGHTNESS', 'screen_brightness': 100,
             'media_volume_source': 'android.media.AudioManager.STREAM_MUSIC', 'media_volume': 4}
 
-    def controlled_gemini(self, payload, **kwargs):
+    def controlled_plan(self, payload, **kwargs):
         """An explicitly labelled oracle for integration checks, never live evidence."""
         import httpx
         from app.services.settings_planner import catalogue
         steps = [t['id'] for t in catalogue(self.graph)[0]]
+        if 'text' in payload:
+            return httpx.Response(200, json={'model': payload['model'], 'status': 'completed',
+                'output': [{'type': 'message', 'role': 'assistant',
+                            'content': [{'type': 'output_text', 'text': json.dumps({'subgoals': steps})}]}]})
         return httpx.Response(200, json={'candidates': [{'finishReason': 'STOP',
             'content': {'parts': [{'text': json.dumps({'subgoals': steps})}]}}]})
 
@@ -154,21 +158,24 @@ def main():
     parser.add_argument('--all-goals', action='store_true')
     parser.add_argument('--repeat', type=int, default=1)
     parser.add_argument('--env-file', type=Path, default=BACKEND / 'instance/settings-experiment/.env')
-    parser.add_argument('--model', help='Explicit Gemini model for this live replay only')
+    parser.add_argument('--model', help='Explicit Qwen or Gemini model for this live replay only')
     parser.add_argument('--output-dir', type=Path)
     args = parser.parse_args()
     if not 1 <= args.repeat <= 10:parser.error('--repeat must be between 1 and 10')
     if args.model and args.providers != 'live':parser.error('--model requires --providers live')
-    from dotenv import load_dotenv
+    from dotenv import dotenv_values, load_dotenv
     if args.providers == 'live' and not args.env_file.is_file():parser.error('Prepare experiment environment first')
     if args.providers == 'live':load_dotenv(args.env_file, override=True)
     else:
+        if args.env_file.is_file():
+            choice = dotenv_values(args.env_file).get('CLICK_SETTINGS_PLANNER_PROVIDER')
+            if choice:os.environ['CLICK_SETTINGS_PLANNER_PROVIDER'] = choice
         os.environ['TYPESAFE_API_KEY'] = 'controlled-not-a-real-key'
         os.environ['JEV_MODEL'] = 'jev-1.14.0'
-    if args.model:os.environ['GEMINI_SETTINGS_MODEL'] = args.model
     os.environ['AI1_UI_SELECTOR_PROVIDER'] = 'jev'
     from app.services.settings_comparison import compare, trial_summaries, write_report
-    from app.services.settings_planner import GOALS, model_name
+    from app.services.settings_planner import GOALS, select_experiment_model, settings_planner_model
+    if args.model:select_experiment_model(args.model)
     goals = sorted(GOALS) if args.all_goals else ['settings.font_size.increase']
     records, outcomes = [], []
     for repeat in range(args.repeat):
@@ -189,7 +196,7 @@ def main():
                 print(json.dumps(outcome), flush=True)
     report = compare(records)
     report.update(evidence_mode=args.providers + '_synthetic_replay', device_validation='NOT_RUN',
-        planner_model=model_name(), outcomes=outcomes)
+        planner_model=settings_planner_model(), outcomes=outcomes)
     output = args.output_dir or BACKEND / 'instance/settings-experiment' / (args.providers + '-replay-' + uuid4().hex[:8])
     write_report(report, output)
     with (output / 'traces.jsonl').open('w', encoding='utf-8') as stream:

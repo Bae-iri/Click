@@ -147,7 +147,7 @@ class SettingsExperimentResolver:
             else:
                 self.state['planning_attempts'] += 1
             if not plan and reuse and diagnostic.get('failure_kind') == 'provider':
-                # Reuse mode only: a Gemini outage must not block guidance. The switch is
+                # Reuse mode only: a planner outage must not block guidance. The switch is
                 # explicit in the trace and such runs never become learned routes.
                 self.state.update(plan_source='approved_graph_fallback', replan_requested=False)
                 return self.delegate(kwargs)
@@ -155,7 +155,8 @@ class SettingsExperimentResolver:
                 self.last_diagnostics = {'provider': 'jev', 'mode': 'primary', 'called': False, 'status': 'provider_error'}
                 return None  # A/B mode never silently executes the baseline after planner failure.
             self.state['plan'], self.state['revision'] = plan, self.state['revision'] + 1
-            self.state.update(replan_requested=False, plan_source='gemini', route_hash=None)
+            source = 'qwen' if diagnostic.get('provider') == 'openrouter' else 'gemini'
+            self.state.update(replan_requested=False, plan_source=source, planner_model=diagnostic.get('model'), route_hash=None)
         steps = self.state['plan']['subgoals']
         # A native control or later page may already be open. Skip obsolete navigation;
         # do not count those skipped subgoals as observed successes.
@@ -265,13 +266,16 @@ def trace(resolver, request, result, before, after, graph, elapsed_ms):
         and result.verification_result.count_attempt else None)
     from app.clients.checkpoint import graph_version
     from app.clients.runtime_agent import runtime_configuration
-    from app.services.settings_planner import model_name
+    from app.services.settings_planner import settings_planner_model
     configuration = runtime_configuration()
+    # Older checkpoints only recorded the plan source. Keep their Gemini
+    # provenance after a server switches to Qwen.
+    planner_model = state.get('planner_model') or settings_planner_model('gemini' if state.get('plan_source') == 'gemini' else None)
     return dict(version=VERSION, run_ref=sha256((request.session_id+str(request.episode_id)).encode()).hexdigest()[:16],
         trace_turn=state['trace_turns'], first_observation=first_observation,
         verified_transition=verified_transition, base_graph_hash=graph_version(graph),
         scope_hash=state.get('scope_hash'), runtime_code_hash=configuration['code_hash'],
-        jev_model=configuration.get('model'), planner_model=model_name(),
+        jev_model=configuration.get('model'), planner_model=planner_model,
         guide_ref=sha256(result.guide_command.guide_command_id.encode()).hexdigest()[:16],
         arm=state['arm'], goal_type=graph.definition.goal_type, base_task_id=graph.definition.task_id,
         plan=state['plan'], plan_source=state.get('plan_source'), route_hash=state.get('route_hash'),
