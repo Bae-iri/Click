@@ -2,7 +2,7 @@
 from base64 import b64encode
 import json
 import multiprocessing
-from threading import BoundedSemaphore
+from threading import BoundedSemaphore, Timer
 from time import monotonic, sleep
 from types import SimpleNamespace
 
@@ -93,11 +93,32 @@ def test_exhausted_cleanup_reserve_budget_never_starts_provider():
     assert failed.value.model_call_state == 'not_started' and context.process_calls == 0
 
 
-def test_capacity_rejection_is_nonblocking_and_does_not_spawn():
+def test_capacity_rejection_after_bounded_queue_wait_does_not_spawn(monkeypatch):
+    monkeypatch.setattr(provider, 'QUEUE_WAIT_SECONDS', .3)
     context = Context();assert context.capacity.acquire(blocking=False)
+    started = monotonic()
     with pytest.raises(provider.ProviderError) as failed: generate(context)
+    assert .25 <= monotonic() - started < 1.5
     assert failed.value.reason_code == 'provider_capacity_exhausted'
     assert failed.value.model_call_state == 'not_started' and context.process_calls == 0
+
+
+def test_queued_call_proceeds_when_a_slot_frees_within_the_wait(monkeypatch):
+    monkeypatch.setattr(provider, 'QUEUE_WAIT_SECONDS', 2)
+    context = Context(complete(b'{"ok":true}'));assert context.capacity.acquire(blocking=False)
+    Timer(.2, context.capacity.release).start()
+    reply = generate(context)
+    assert reply.status_code == 200 and reply.json() == {'ok': True} and context.process_calls == 1
+
+
+def test_no_queue_wait_when_it_could_not_leave_a_useful_call(monkeypatch):
+    monkeypatch.setattr(provider, 'QUEUE_WAIT_SECONDS', 5)
+    context = Context();assert context.capacity.acquire(blocking=False)
+    started = monotonic()
+    # 2.3 s budget - 0.4 s cleanup reserve leaves 1.9 s, under MIN_CALL_SECONDS: fail at once.
+    with pytest.raises(provider.ProviderError) as failed: generate(context, timeout=2.3)
+    assert monotonic() - started < .2
+    assert failed.value.reason_code == 'provider_capacity_exhausted' and context.process_calls == 0
 
 
 def test_startup_error_has_safe_code_and_returns_capacity():

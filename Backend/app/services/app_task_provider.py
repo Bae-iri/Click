@@ -48,6 +48,11 @@ def configured_capacity(value=None):
 
 
 _CAPACITY = BoundedSemaphore(configured_capacity())
+# A burst above capacity queues briefly instead of failing at once. The wait is
+# charged to the same wall budget, and is skipped when it could not leave a
+# useful call (MIN_CALL_SECONDS) afterwards.
+QUEUE_WAIT_SECONDS = 1.5
+MIN_CALL_SECONDS = 2.0
 _UNREAPED = []  # An OS worker that will not exit never returns capacity.
 REASON_CODES = frozenset(('provider_invalid_request', 'provider_invalid_budget',
     'provider_capacity_exhausted', 'provider_startup_failed', 'provider_deadline_exceeded',
@@ -198,7 +203,8 @@ def generate(model, token, payload, *, provider='gemini', timeout=MAX_TOTAL_SECO
     if len(encoded) > _MAX_PAYLOAD_BYTES:
         raise failed('provider_invalid_request', 'not_started')
     capacity = _capacity or _CAPACITY
-    if not capacity.acquire(blocking=False):
+    wait = min(QUEUE_WAIT_SECONDS, work_end - clock() - MIN_CALL_SECONDS)
+    if not (capacity.acquire(timeout=wait) if wait > 0 else capacity.acquire(blocking=False)):
         raise failed('provider_capacity_exhausted', 'not_started')
     receive = send = process = None
     process_started = False
