@@ -35,6 +35,8 @@ public final class AppTaskDiagnostics {
     private static final Set<String> PROVIDER_CODES=Set.of("provider_invalid_request","provider_invalid_budget",
         "provider_capacity_exhausted","provider_startup_failed","provider_deadline_exceeded","provider_timeout",
         "provider_transport_error","provider_response_too_large","provider_protocol_error","provider_worker_failed","provider_cleanup_failed");
+    private static final Set<String> RECOVERY_POLICIES=Set.of("mc_v0","mc_v1","mc_v2");
+    private static final Set<String> RECOVERY_REASONS=Set.of("accepted_action_unconfirmed","observed_transition_unconfirmed");
     private static final Set<String> VALIDATION_FIELDS=Set.of("checks","package","label","resource","role","checked","selected",
         "id","title","status","expectation","kind","bounds","tool","target_id","advances_subgoal","screen_key","index","other","contract");
     private static final Set<String> VALIDATION_TYPES=Set.of("missing","extra_forbidden","literal_error","value_error",
@@ -103,6 +105,12 @@ public final class AppTaskDiagnostics {
                     if((value instanceof Integer||value instanceof Long)&&((Number)value).longValue()>=low&&((Number)value).longValue()<=high
                         &&(!key.equals("recovery_attempt")||Boolean.TRUE.equals(diagnostic.opt("recovery_context_used"))))out.put(key,value);
                 }
+                copyRecoveryAttribution(out,diagnostic);
+                for(String key:Set.of("input_tokens","output_tokens","thinking_tokens","total_tokens")){
+                    Object value=diagnostic.opt(key);
+                    if((value instanceof Integer||value instanceof Long)&&((Number)value).longValue()>=0
+                        &&((Number)value).longValue()<=1000000)out.put(key,value);
+                }
                 JSONArray errors=diagnostic.optJSONArray("validation_errors"),safeErrors=new JSONArray();
                 for(int i=0;errors!=null&&i<Math.min(4,errors.length());i++){
                     JSONObject error=errors.optJSONObject(i);if(error==null)continue;
@@ -123,6 +131,15 @@ public final class AppTaskDiagnostics {
     }
     private static void copyEnum(JSONObject out,JSONObject source,String key,Set<String> allowed)throws Exception {
         String value=source.optString(key);if(allowed.contains(value))out.put(key,value);
+    }
+    private static void copyRecoveryAttribution(JSONObject out,JSONObject diagnostic)throws Exception {
+        if(!Boolean.TRUE.equals(diagnostic.opt("recovery_context_used")))return;
+        Object rawAttempt=diagnostic.opt("recovery_attempt"),rawPolicy=diagnostic.opt("recovery_policy"),rawReason=diagnostic.opt("recovery_reason");
+        if(!(rawAttempt instanceof Integer||rawAttempt instanceof Long)||!(rawPolicy instanceof String)||!(rawReason instanceof String))return;
+        long attempt=((Number)rawAttempt).longValue();String policy=(String)rawPolicy,reason=(String)rawReason;
+        if(attempt<1||attempt>3||!RECOVERY_POLICIES.contains(policy)||!RECOVERY_REASONS.contains(reason)
+            ||reason.equals("observed_transition_unconfirmed")&&(!Set.of("mc_v1","mc_v2").contains(policy)||attempt>2))return;
+        out.put("recovery_policy",policy).put("recovery_reason",reason);
     }
     private static Object nullable(String value){return value==null?JSONObject.NULL:value;}
     private static long bounded(long value){return Math.max(0,Math.min(120000,value));}

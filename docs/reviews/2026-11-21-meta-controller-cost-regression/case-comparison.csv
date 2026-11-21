@@ -1,0 +1,13 @@
+task,arm,previous_calls,current_calls,previous_joint,current_joint,previous_fault,current_fault,current_provider_errors,current_failure_reservations,current_unresolved_failure_active,current_reset_reason
+settings_display,A,1,1,False,False,True,True,0,0,False,target_context
+settings_display,B,4,2,False,False,True,True,0,1,True,target_context
+settings_language,B,4,5,False,False,True,True,1,3,True,target_context
+settings_language,A,1,2,False,False,False,True,0,0,False,target_context
+clock_timer,A,1,1,False,False,True,True,0,0,False,target_context
+clock_timer,B,2,2,False,False,True,True,0,1,True,target_context
+clock_stopwatch,B,2,2,False,False,True,True,0,1,True,target_context
+clock_stopwatch,A,1,1,False,False,True,True,0,0,False,target_context
+files_recent,A,1,1,False,False,True,False,1,0,False,target_context
+files_recent,B,3,2,False,False,True,True,1,1,True,target_context
+files_documents,B,2,6,False,False,True,True,0,3,False,native_subgoal_advanced
+files_documents,A,1,1,False,False,True,True,0,0,False,target_context

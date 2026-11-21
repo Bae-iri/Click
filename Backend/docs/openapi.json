@@ -9705,6 +9705,16 @@
             "type": "array",
             "maxItems": 64,
             "title": "Path Prefix"
+          },
+          "recovery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaskRecovery"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -13360,6 +13370,123 @@
           "bounds"
         ],
         "title": "TaskNode"
+      },
+      "TaskRecovery": {
+        "properties": {
+          "policy": {
+            "type": "string",
+            "enum": [
+              "mc_v0",
+              "mc_v1",
+              "mc_v2"
+            ],
+            "title": "Policy"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "accepted_action_unconfirmed",
+              "observed_transition_unconfirmed"
+            ],
+            "title": "Reason"
+          },
+          "last_verdict": {
+            "type": "string",
+            "const": "waiting",
+            "title": "Last Verdict"
+          },
+          "waited_ms": {
+            "type": "integer",
+            "maximum": 120000.0,
+            "minimum": 0.0,
+            "title": "Waited Ms"
+          },
+          "attempt": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Attempt"
+          },
+          "observation_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Observation Id"
+          },
+          "last_action": {
+            "$ref": "#/components/schemas/TaskRecoveryAction"
+          },
+          "blocked_actions": {
+            "items": {
+              "$ref": "#/components/schemas/TaskRecoveryAction"
+            },
+            "type": "array",
+            "maxItems": 16,
+            "title": "Blocked Actions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "policy",
+          "reason",
+          "last_verdict",
+          "waited_ms",
+          "attempt",
+          "observation_id",
+          "last_action",
+          "blocked_actions"
+        ],
+        "title": "TaskRecovery"
+      },
+      "TaskRecoveryAction": {
+        "properties": {
+          "tool": {
+            "type": "string",
+            "enum": [
+              "tap",
+              "set_text",
+              "scroll_forward",
+              "scroll_backward",
+              "back",
+              "open_app"
+            ],
+            "title": "Tool"
+          },
+          "package": {
+            "type": "string",
+            "maxLength": 200,
+            "pattern": "^[a-zA-Z0-9_]+(?:\\.[a-zA-Z0-9_]+)+$",
+            "title": "Package"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "fingerprint": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fingerprint"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tool",
+          "package",
+          "target_id",
+          "fingerprint"
+        ],
+        "title": "TaskRecoveryAction",
+        "description": "Untrusted prior execution evidence; it can restrict, never grant, tools."
       },
       "TaskResultCheck": {
         "properties": {

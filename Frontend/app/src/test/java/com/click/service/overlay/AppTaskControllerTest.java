@@ -207,7 +207,7 @@ public class AppTaskControllerTest {
         // A discarded prediction is not repaired with another unseen guess.
         assertNull(m.completion());assertEquals("proposed",l.result.getString("status"));
         l.current=screen(pkg,AppTaskGoalCompletionTest.heading(pkg,"title","디스플레이 화면"));c.screenChanged(l.current);
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(550)); // Event coalescing, then a stable planner frame pair.
         var observedCallback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway,times(2)).send(any(),observedCallback.capture());
         observedCallback.getValue().success(new JSONObject().put("status","confirm_result").put("subgoals",m.state().getJSONArray("subgoals"))
             .put("completion",AppTaskCompletionTest.completion(pkg,"디스플레이 화면")));
