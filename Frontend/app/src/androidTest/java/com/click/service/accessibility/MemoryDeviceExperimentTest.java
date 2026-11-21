@@ -113,7 +113,7 @@ public class MemoryDeviceExperimentTest {
 
     @Test public void runMemoryExperiment()throws Exception {
         Assume.assumeTrue("Opt in with -e memoryExperiment true",Boolean.parseBoolean(args.getString("memoryExperiment","false")));
-        Assert.assertEquals("Live facade requires isolated test app",Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"))?"com.click.metamemoryexperiment.uitestdriver":"com.click.memoryexperiment.uitestdriver",app.getPackageName());
+        Assert.assertEquals("Live facade requires isolated test app",(Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"))||Boolean.parseBoolean(args.getString("firstStepCostExperiment","false")))?"com.click.metamemoryexperiment.uitestdriver":"com.click.memoryexperiment.uitestdriver",app.getPackageName());
         Assert.assertEquals("Live facade must be loopback only",BASE,com.click.BuildConfig.CLICK_API_BASE_URL.replaceAll("/$",""));
         long budget=Long.parseLong(args.getString("budgetMs","25000"));
         Assert.assertTrue("budgetMs must be 8000..180000",budget>=8000&&budget<=180000);
@@ -123,7 +123,9 @@ public class MemoryDeviceExperimentTest {
         List<Task> tasks=new ArrayList<>();for(Task task:catalogue())if(wanted.isEmpty()||wanted.contains(task.id))tasks.add(task);
         for(String name:wanted)Assert.assertTrue("Unknown task "+name,tasks.stream().anyMatch(t->t.id.equals(name)));
         boolean integrated=Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"));
-        String[] schedule=integrated?new String[]{"learn1","learn2","eval_normal","eval_no_effect","eval_delayed"}:SESSIONS;
+        boolean firstStepCost=Boolean.parseBoolean(args.getString("firstStepCostExperiment","false"));
+        if(firstStepCost){Assert.assertFalse(integrated);Assert.assertEquals(Arrays.asList("A","B","C"),arms);Assert.assertEquals("CURRENT",args.getString("metaArm","CURRENT"));}
+        String[] schedule=firstStepCost?new String[]{"learn1","learn2","learn3","learn4","eval1","eval2","eval3"}:integrated?new String[]{"learn1","learn2","eval_normal","eval_no_effect","eval_delayed"}:SESSIONS;
         AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT"));
         if(integrated)Assert.assertEquals("Integrated comparison uses memory off/on only",Arrays.asList("A","B"),arms);
         int sessions=Integer.parseInt(args.getString("sessions",String.valueOf(schedule.length)));
@@ -146,7 +148,7 @@ public class MemoryDeviceExperimentTest {
         }
         write("manifest.json",new JSONObject().put("schema_version",VERSION).put("run_id",runId).put("tasks",manifest)
             .put("arms",new JSONArray(arms)).put("sessions",new JSONArray(Arrays.copyOf(schedule,sessions))).put("budget_ms",budget)
-            .put("meta_arm",args.getString("metaArm","CURRENT")).put("meta_memory_integration",integrated).put("scheduled_arm_orders",orders).put("arm_order_scheme","deterministic_rotation_and_reversal_not_random")
+            .put("meta_arm",args.getString("metaArm","CURRENT")).put("meta_memory_integration",integrated).put("first_step_cost_experiment",firstStepCost).put("scheduled_arm_orders",orders).put("arm_order_scheme","deterministic_rotation_and_reversal_not_random")
             .put("memory_isolation","per_arm_device_store_and_facade_store").put("simulated_user","confirms_only_after_independent_oracle_700ms")
             .put("task_selection_frozen_before_run",true).toString(2),false);
         if(Boolean.parseBoolean(args.getString("clearOutput","true")))write("episodes.jsonl","",false);
@@ -232,7 +234,7 @@ public class MemoryDeviceExperimentTest {
                     :stoppedForOffer?"runtime_offer_without_goal":finalMatches<0?"oracle_unobservable":"budget_exhausted")
                 .put("runtime_verified_offer",current.runtimeVerifiedOffer)
                 .put("false_verified_offer",finalMatches<0||finalMatches>1?JSONObject.NULL:current.runtimeVerifiedOffer&&finalMatches==0&&!result.optBoolean("oracle_success"))
-                .put("meta_arm",args.getString("metaArm","CURRENT")).put("condition",current.condition).put("fault_injected",current.injected).put("delayed_dispatch_accepted",current.delayedAccepted).put("recovery_count",current.controller.metaController().diagnostic().optInt("recovery_count")).put("observed_model_calls",current.modelCalls).put("observed_model_wait_ms",current.modelWait)
+                .put("meta_arm",args.getString("metaArm","CURRENT")).put("condition",current.condition).put("first_step_memory_enabled",current.firstStep).put("fault_injected",current.injected).put("delayed_dispatch_accepted",current.delayedAccepted).put("recovery_count",current.controller.metaController().diagnostic().optInt("recovery_count")).put("observed_model_calls",current.modelCalls).put("observed_model_wait_ms",current.modelWait)
                 .put("proposals_by_source",current.proposalSources).put("approvals_by_source",current.approvalSources)
                 .put("native_acceptances",current.nativeAcceptances).put("native_rejections",current.nativeRejections)
                 .put("first_proposal_ms",current.firstProposalAt<0?JSONObject.NULL:current.firstProposalAt-started)
@@ -292,13 +294,14 @@ public class MemoryDeviceExperimentTest {
         AppTaskController controller;AppTaskMemory memory;JSONObject latest;String latestSource="none";
         String fingerprint,error,runtimeTaskId;volatile String confirmFailure;volatile boolean confirmed;boolean runtimeVerifiedOffer;
         int modelCalls,nativeAcceptances,nativeRejections;long modelWait,startedAt,firstProposalAt=-1;
-        final String condition;boolean injected,delayedAccepted;final Handler delayed=new Handler(Looper.getMainLooper());
+        final String condition;final boolean firstStep;boolean injected,delayedAccepted;final Handler delayed=new Handler(Looper.getMainLooper());
         Driver(Task task,String goal,String arm,AppTaskStore store,String runId,String sessionName){this.task=task;this.goal=goal;this.arm=arm;this.store=store;this.runId=runId;
+            firstStep=Boolean.parseBoolean(args.getString("firstStepCostExperiment","false"))&&"C".equals(arm)&&sessionName.startsWith("eval");
             condition=sessionName.equals("eval_no_effect")?"accepted_no_effect":sessionName.equals("eval_delayed")?"delayed_transition":"normal";}
         void create(){try{
             memory=new AppTaskMemory(goal);runtimeTaskId=memory.id();
             boolean learning=!"A".equals(arm);
-            controller=new AppTaskController(new AppGuideGateway(app),memory,learning?store:null,this,true,learning,true,AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT")));
+            controller=new AppTaskController(new AppGuideGateway(app),memory,learning?store:null,this,true,learning,true,AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT")),firstStep);
         }catch(Exception failed){error=failed.getClass().getSimpleName();}}
         void start(){try{
             controller.targetApp(task.pkg,task.pkg);fingerprint=AppTaskObservation.capture(fresh()).optString("fingerprint");controller.refresh();

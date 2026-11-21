@@ -23,6 +23,8 @@ public final class AppTaskController {
     private final AppTaskStore store;private final boolean remote;
     private final boolean learning;
     private final boolean completionSupported;
+    private final boolean firstStepMemoryExperiment;
+    private long firstStepRecallDeadline;
     private final AppTaskMetaController meta;
     private JSONObject recalled;
     private String recallFingerprint,pendingRecall,consentId;
@@ -56,10 +58,12 @@ public final class AppTaskController {
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote){this(gateway,memory,store,listener,remote,false);}
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning){this(gateway,memory,store,listener,remote,learning,false);}
     public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported){this(gateway,memory,store,listener,remote,learning,completionSupported,AppTaskMetaController.Arm.CURRENT);}
-    public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm){this.gateway=gateway;this.memory=memory;this.store=store;this.listener=listener;this.remote=remote;this.learning=learning;this.completionSupported=completionSupported;this.meta=new AppTaskMetaController(arm);}
+    public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm){this(gateway,memory,store,listener,remote,learning,completionSupported,arm,false);}
+    /** Opt-in first-action recall audit; existing constructors keep production behavior. */
+    public AppTaskController(AppGuideGateway gateway,AppTaskMemory memory,AppTaskStore store,Listener listener,boolean remote,boolean learning,boolean completionSupported,AppTaskMetaController.Arm arm,boolean firstStepMemoryExperiment){this.gateway=gateway;this.memory=memory;this.store=store;this.listener=listener;this.remote=remote;this.learning=learning;this.completionSupported=completionSupported;this.meta=new AppTaskMetaController(arm);this.firstStepMemoryExperiment=firstStepMemoryExperiment&&learning&&remote&&arm==AppTaskMetaController.Arm.CURRENT;}
     public AppTaskMetaController metaController(){return meta;}
     public AppTaskMemory memory(){return memory;}
-    public void targetApp(String packageName,String label){selectionGeneration++;cancelPlannerWait();resetResultEvidence();resultDiscoveryScreen=null;meta.resetTargetContext();selectedPackage=packageName;selectedLabel=RequestedApp.shortName(label);searchQuery=AppTaskSearchIntent.query(memory.goal(),label);scope=null;cached=null;submitted=null;proposal=null;searchPrepared=false;recalled=null;recallFingerprint=null;pendingRecall=null;}
+    public void targetApp(String packageName,String label){selectionGeneration++;firstStepRecallDeadline=0;cancelPlannerWait();resetResultEvidence();resultDiscoveryScreen=null;meta.resetTargetContext();selectedPackage=packageName;selectedLabel=RequestedApp.shortName(label);searchQuery=AppTaskSearchIntent.query(memory.goal(),label);scope=null;cached=null;submitted=null;proposal=null;searchPrepared=false;recalled=null;recallFingerprint=null;pendingRecall=null;}
     public boolean matches(ScreenSnapshot screen){try{return screen!=null&&submitted!=null&&submitted.equals(capture(screen).optString("fingerprint"));}catch(Exception e){return false;}}
     private JSONObject capture(ScreenSnapshot screen)throws JSONException {
         Set<String> labels=AppTaskCompletion.labels(memory.completion());
@@ -259,8 +263,17 @@ public final class AppTaskController {
                 resultDiscoveryKey=canonical;
             }
             if(!remote){memory.localPlan();save();}
-            if(!resultOnly&&(!completionSupported||memory.completion()!=null)&&fingerprint.equals(recallFingerprint)&&recalled!=null&&recalled.optJSONObject("action")!=null){
+            boolean firstRecall=firstStepMemoryExperiment&&memory.actions()==0;
+            if(firstRecall&&fingerprint.equals(pendingRecall)){
+                if(firstStepRecallDeadline==0)firstStepRecallDeadline=SystemClock.elapsedRealtime()+2000;
+                if(SystemClock.elapsedRealtime()<firstStepRecallDeadline){
+                    handler.removeCallbacks(refresh);handler.postDelayed(refresh,100);
+                    show("planning","이전에 확인한 실행 경험을 확인하고 있어요.");return;
+                }
+            }
+            if(!resultOnly&&(!completionSupported||memory.completion()!=null||firstRecall)&&fingerprint.equals(recallFingerprint)&&recalled!=null&&recalled.optJSONObject("action")!=null){
                 JSONObject learned=recalled.getJSONObject("action");if(!memory.repeated(current,learned)&&!previouslyRejected(current,learned)){
+                    if(firstRecall)memory.localPlan();
                     diagnostic=new JSONObject().put("model","agent2-experience").put("called",false).put("reason","retained_experience");propose(learned);return;
                 }
             }

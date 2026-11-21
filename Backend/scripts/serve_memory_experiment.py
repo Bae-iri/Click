@@ -359,6 +359,9 @@ def diagnostic_record(request, response, elapsed_ms, arm, registration):
         task_id=(registration or {}).get('task_id'), goal_variant=(registration or {}).get('goal_variant'),
         trial_id=(registration or {}).get('episode'), model=model, model_calls=int(called),
         model_wait_ms=_bounded_ms(diagnostic.get('latency_ms')) if called else 0,
+        model_call_state='observed' if diagnostic.get('called') is True else 'not_started' if diagnostic.get('called') is False else 'unknown',
+        input_tokens=diagnostic.get('input_tokens'), output_tokens=diagnostic.get('output_tokens'),
+        thinking_tokens=diagnostic.get('thinking_tokens'), total_tokens=diagnostic.get('total_tokens'),
         request_total_handler_ms=round(elapsed_ms, 3), status=response.status,
         reason=diagnostic.get('reason') if isinstance(diagnostic.get('reason'), str) else None,
         provider_error=diagnostic.get('failure_kind') == 'provider',
@@ -480,7 +483,11 @@ def main(argv=None):
     parser.add_argument('--env-file', type=Path, default=BACKEND / '.env')
     parser.add_argument('--completion-comparison', action='store_true',
         help='B=exact memory + develop completion, C=exact memory + 312ff36 binding rule')
+    parser.add_argument('--first-step-comparison', action='store_true', help='B and C both use exact production recall; device C opts into first-action recall')
     args = parser.parse_args(argv)
+    if args.first_step_comparison:
+        if args.completion_comparison:parser.error('Comparison modes are mutually exclusive')
+        SERVED['C'] = 'exact'
     if args.completion_comparison:
         SERVED['C'] = 'exact'
         COMPLETION.update(B='develop', C='mine')
