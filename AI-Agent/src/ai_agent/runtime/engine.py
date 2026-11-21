@@ -418,6 +418,12 @@ class ClickAgentEngine:
                 failed_target_keys[previous_transition.transition_id] = tuple(sorted({
                     *failed_target_keys.get(previous_transition.transition_id, ()), attempt['target_key']}))
         total_failed_attempts = (existing_session.total_failed_attempts if existing_session else 0) + int(failed_attempt)
+        if failed_attempt:
+            # The resolver can be skipped while waiting for a settled screen. Report the
+            # final, correlated failure independently of whether a target was requested.
+            record_failure = getattr(self.screen_resolver, 'record_failed_attempt', None)
+            if record_failure:
+                record_failure(graph, previous_transition, verification_result, total_failed_attempts)
         task_completed = bool((existing_session and existing_session.task_completed)
                               or (verification_result and verification_result.task_completed))
         effective_state_id = _effective_state_id(current_state_id, verification_result)
