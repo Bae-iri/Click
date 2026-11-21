@@ -4,7 +4,8 @@ import json
 from pathlib import Path
 import re
 
-from app.schemas.app_task import TaskCompletion, TaskNode, TaskResultCheck
+from app.schemas.app_task import TaskCompletion, TaskResultCheck
+from app.services.app_task_completion import NativeStateGoal
 
 
 _RULES = json.loads((Path(__file__).resolve().parents[3] / 'AI-Agent/goal_catalog/app_completion/switch_goal.json').read_text(encoding='utf-8'))
@@ -46,22 +47,7 @@ class SwitchGoal:
             return None
         checks.append(TaskResultCheck(package=package, label=switch.label, resource=switch.resource,
                                       role='toggle', checked=self.checked))
-        return SwitchEvidence(switch, TaskCompletion(checks=checks))
-
-
-@dataclass(frozen=True)
-class SwitchEvidence:
-    node: TaskNode
-    completion: TaskCompletion
-
-    @property
-    def satisfied(self):
-        return self.node.checked == self.completion.checks[-1].checked
-
-    def covered_by(self, checks):
-        return all(any(c.package == needed.package and c.label == needed.label
-                       and c.role in ('', needed.role) and (not c.resource or c.resource == needed.resource)
-                       and c.checked == needed.checked for c in checks) for needed in self.completion.checks)
+        return NativeStateGoal(switch, TaskCompletion(checks=checks))
 
 
 def switch_goal(goal):
