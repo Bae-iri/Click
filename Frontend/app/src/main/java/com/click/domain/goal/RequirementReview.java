@@ -137,6 +137,7 @@ public final class RequirementReview {
     public boolean isPhone() { return "휴대폰 설정".equals(target); }
     public boolean needsTarget() { return font && target == null; }
     public boolean needsDirection() { return font && direction == null; }
+    public boolean requestsLargerText() { return font && !blocked && "increase".equals(direction); }
     public boolean appOnly() { return font && "앱 안에서만".equals(scope); }
     public String request() { return request; }
     /** Preserve the request and explicit selections when retrying server preparation. */

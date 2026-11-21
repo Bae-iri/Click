@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tour_welcome">안녕하세요! 저는 클루에요!\n저와 함께 클릭 사용법을 배워봐요!</string>
+    <string name="tour_start">클루와 시작하기</string>
+    <string name="tour_pick">여기에 하고 싶은 일을 입력해요. 마이크를 누르면 말로, 왼쪽 입력칸을 누르면 글로 부탁할 수 있어요. 한 번 해볼까요?</string>
+    <string name="tour_voice">클루와 함께 글자 크기를 바꿔봐요! 마이크를 꾹 누르고 “글자 크기 키워줘”라고 말한 뒤 손을 떼세요.</string>
+    <string name="tour_listening">듣고 있어요. “글자 크기 키워줘”라고 말해 주세요.</string>
+    <string name="tour_processing">말씀하신 내용을 확인하고 있어요.</string>
+    <string name="tour_permission">마이크를 사용하려면 권한이 필요해요. ‘글로 입력하기’를 누르면 예시 문장으로도 연습할 수 있어요.</string>
+    <string name="tour_text">클루와 함께 글자 크기를 바꿔봐요! 입력칸에 “글자 크기 키워줘”라고 적고 보내기 화살표를 눌러 주세요.</string>
+    <string name="tour_try_text">글로 입력하기</string>
+    <string name="tour_sample">예시 문장 사용</string>
+    <string name="tour_phrase">글자 크기 키워줘</string>
+    <string name="tour_retry">이번 연습은 글자를 한 단계 키우는 거예요. “글자 크기 키워줘”라고 다시 부탁해 주세요.</string>
+    <string name="tour_review">“%1$s”\n클릭은 이렇게 요청을 먼저 확인해요. 연습 화면의 글자를 키워볼까요?</string>
+    <string name="tour_begin_guide">안내 시작하기</string>
+    <string name="tour_edit">다시 입력하기</string>
+    <string name="tour_adjust">클릭이 이렇게 알려드려요! 파란 테두리가 다음에 누를 곳이에요. ‘＋ 글자 크게’를 눌러 보세요.</string>
+    <string name="tour_preview">글자 크기 미리보기</string>
+    <string name="tour_preview_sentence">오늘도 클루와 함께!</string>
+    <string name="tour_increase">＋ 글자 크게</string>
+    <string name="tour_result">연습 문장이 한 단계 커졌어요. 원하는 크기가 되었나요? 실제 안내에서도 결과를 보고 알려주세요.</string>
+    <string name="tour_satisfied">네, 잘 보여요</string>
+    <string name="tour_again">다시 연습하기</string>
+    <string name="tour_settings">직접 누르는 방법을 익혔어요! 클릭이 대신 도와주는 자동 모드도 있어요. 홈 오른쪽 위 톱니바퀴를 눌러 찾아봐요.</string>
+    <string name="tour_automation">여기가 ‘자동으로 도와주기’예요. 자동 모드를 켜고 요청을 확인하면 클릭이 지원되는 화면을 열고 이동하거나 설정을 조절해요. 표시된 항목을 눌러 더 알아봐요.</string>
+    <string name="tour_settings_detail">자동 모드는 설정 위쪽 스위치로 언제든 끌 수 있어요. 직접 확인할 단계에서는 클릭이 멈춰요. 여기 ‘화면 설정’에서는 클릭의 글자 크기와 화면 표시 속도를 바꿀 수 있어요.</string>
+    <string name="tour_next_library">보관함 살펴보기</string>
+    <string name="tour_library">다시 홈이에요. 아래쪽 ‘보관함’을 눌러 보세요. 자주 쓰는 요청을 모아 두고 다시 꺼내 쓸 수 있어요.</string>
+    <string name="tour_saved">‘즐겨찾기’에는 별표로 보관한 항목이 모여요. ‘순서 바꾸기’로 자주 쓰는 항목을 위로 옮길 수 있어요. 옆의 ‘최근 질문’을 눌러 보세요.</string>
+    <string name="tour_recent">여기서 지난 질문을 누르면 다시 요청할 수 있어요. 별을 누르면 즐겨찾기에 담겨요. 이제 홈에서 클루에게 첫 부탁을 해보세요!</string>
+    <string name="tour_finish">홈에서 시작하기</string>
+    <string name="tour_close">닫기</string>
+    <string name="tour_back">이전</string>
+    <string name="tour_replay">클루의 안내 다시 듣기</string>
+    <string name="tour_stop_audio">클루의 음성 멈추기</string>
+
+    <item name="home_root" type="id" />
+    <item name="home_library_tabs" type="id" />
+    <item name="home_library_saved" type="id" />
+    <item name="home_library_recent" type="id" />
+    <item name="tutorial_font_preview" type="id" />
+    <item name="tutorial_increase" type="id" />
+</resources>
