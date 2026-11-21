@@ -113,7 +113,7 @@ public class MemoryDeviceExperimentTest {
 
     @Test public void runMemoryExperiment()throws Exception {
         Assume.assumeTrue("Opt in with -e memoryExperiment true",Boolean.parseBoolean(args.getString("memoryExperiment","false")));
-        Assert.assertEquals("Live facade requires isolated test app",(Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"))||Boolean.parseBoolean(args.getString("firstStepCostExperiment","false"))||Boolean.parseBoolean(args.getString("paperIdeasExperiment","false")))?"com.click.metamemoryexperiment.uitestdriver":"com.click.memoryexperiment.uitestdriver",app.getPackageName());
+        Assert.assertEquals("Live facade requires isolated test app",Boolean.parseBoolean(args.getString("paperIdeasExperiment","false"))?"com.click.paperideasexperiment.uitestdriver":(Boolean.parseBoolean(args.getString("metaMemoryIntegration","false"))||Boolean.parseBoolean(args.getString("firstStepCostExperiment","false")))?"com.click.metamemoryexperiment.uitestdriver":"com.click.memoryexperiment.uitestdriver",app.getPackageName());
         Assert.assertEquals("Live facade must be loopback only",BASE,com.click.BuildConfig.CLICK_API_BASE_URL.replaceAll("/$",""));
         long budget=Long.parseLong(args.getString("budgetMs","25000"));
         Assert.assertTrue("budgetMs must be 8000..180000",budget>=8000&&budget<=180000);
