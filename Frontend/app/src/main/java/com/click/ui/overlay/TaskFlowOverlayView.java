@@ -973,7 +973,10 @@ public final class TaskFlowOverlayView extends LinearLayout {
             actions.addView(quietButton("화면 다시 확인",refreshCurrent),spaced(8));return;
         }
         if("protected".equals(state)){
-            setGuidanceEvidence("비밀번호와 인증번호는 직접 입력해 주세요.");
+            if(result.has("input_bounds")&&!result.optBoolean("input_only")){
+                setGuidanceEvidence("다 적으면 앱에서 다음 단계로 진행해 주세요.");return;
+            }
+            setGuidanceEvidence(result.has("input_bounds")?"다 적으면 ‘입력을 마쳤어요’를 눌러주세요.":"비밀번호와 인증번호는 직접 입력해 주세요.");
             actions.addView(primaryButton("입력을 마쳤어요",refreshCurrent),spaced(0));return;
         }
         if("completed".equals(state)){
@@ -993,27 +996,11 @@ public final class TaskFlowOverlayView extends LinearLayout {
         if(action!=null){
             String tool=action.optString("tool"),label=result.optString("target_label","");
             if(!label.isBlank())setGuidanceEvidence("open_app".equals(tool)?"요청하신 ‘"+label+"’ 앱이 설치되어 있어요.":"현재 화면에서 ‘"+label+"’ 항목을 찾았어요.");
+            // The highlighted field belongs to the other app and must keep keyboard focus.
+            if("set_text".equals(tool))return;
             if(result.optBoolean("execute_allowed")){
-                if("set_text".equals(tool)){
-                    publicGuideInput=true;EditText input=new EditText(getContext());input.setHint("입력할 검색어를 적어 주세요");input.setSingleLine(true);input.setTextSize(ClickTextScale.size(getContext(),16));input.setMinHeight(dp(48));
-                    input.setContentDescription("검색창에 넣을 검색어");
-                    input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(200)});input.setText(result.optString("suggested_query"));actions.addView(input,spaced(0));
-                    actions.addView(text("검색어를 넣은 뒤, 키보드에서 검색을 눌러주세요.",14),spaced(4));
-                    Button enter=primaryButton("검색창에 입력",()->{});
-                    enter.setEnabled(!input.getText().toString().trim().isEmpty());
-                    input.addTextChangedListener(new android.text.TextWatcher(){
-                        public void beforeTextChanged(CharSequence s,int start,int count,int after){}
-                        public void onTextChanged(CharSequence s,int start,int before,int count){enter.setEnabled(!s.toString().trim().isEmpty());}
-                        public void afterTextChanged(android.text.Editable value){}
-                    });
-                    enter.setOnClickListener(view->{String value=input.getText().toString().trim();if(value.isEmpty()||revision!=presentationRevision||!enter.isEnabled())return;
-                        enter.setEnabled(false);input.setEnabled(false);hideKeyboard(input);
-                        input.postDelayed(()->{if(revision==presentationRevision)execute.accept(value);},350);});
-                    actions.addView(enter,spaced(8));
-                }else{
-                    String actionLabel=switch(tool){case "tap"->"클릭이 대신 누르기";case "scroll_forward"->"아래로 이동";case "scroll_backward"->"위로 이동";case "back"->"뒤로가기";default->label+" 열기";};
-                    actions.addView(primaryButton(actionLabel,()->{if(revision==presentationRevision)execute.accept(null);}),spaced(0));
-                }
+                String actionLabel=switch(tool){case "tap"->"클릭이 대신 누르기";case "scroll_forward"->"아래로 이동";case "scroll_backward"->"위로 이동";case "back"->"뒤로가기";default->label+" 열기";};
+                actions.addView(primaryButton(actionLabel,()->{if(revision==presentationRevision)execute.accept(null);}),spaced(0));
                 if("open_app".equals(tool))return;
             }
             Button more=quietButton("다른 방법",()->{});

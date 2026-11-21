@@ -46,11 +46,15 @@ public class AppTaskPresentationTest {
         panel.progress("정부24 열어줘",null,"표시한 버튼을 눌러주세요.",false);
         assertNotNull(find(panel,"정부24 열어줘"));
     }
-    @Test public void searchTextIsReviewableAndRecoveryChoicesStayFolded()throws Exception {
+    @Test public void nativeInputInstructionNamesTheQueryWithoutTakingKeyboardFocus()throws Exception {
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));
-        panel.appTask(new JSONObject().put("status","proposed").put("message","검색어를 확인해 주세요.").put("execute_allowed",true).put("available_tools",new JSONArray().put("back")).put("suggested_query","물").put("action",new JSONObject().put("tool","set_text")),v->{},()->{},()->{},()->{},()->{});
-        assertTrue(find(panel,"물") instanceof EditText);assertNotNull(find(panel,"검색창에 입력"));assertNull(find(panel,"직접 진행할 방법"));
-        find(panel,"다른 방법").performClick();assertNotNull(find(panel,"직접 진행할 방법"));assertNotNull(find(panel,"안내 끝내기"));
+        String message="표시한 검색창에 이렇게 입력해 주세요.\n공룡";
+        JSONObject result=new JSONObject().put("status","proposed").put("message",message).put("action",new JSONObject().put("tool","set_text"));
+        for(boolean legacyAllowed:new boolean[]{false,true}){
+            panel.appTask(result.put("execute_allowed",legacyAllowed),v->fail(),()->{},()->{},()->{},()->{});
+            assertNotNull(find(panel,message));assertFalse(panel.needsPublicGuideInput());assertNull(findInput(panel));
+            assertNull(find(panel,"검색창에 입력"));assertNull(find(panel,"다른 방법"));assertNotNull(find(panel,"안내 끝내기"));
+        }
     }
     @Test public void resultConfirmationIsVisibleWithoutOpeningMoreActions()throws Exception {
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));int[] confirmed={0},ended={0};
@@ -79,17 +83,11 @@ public class AppTaskPresentationTest {
         panel.appTask(new JSONObject().put("status","protected").put("message","인증은 직접 진행해 주세요."),v->fail(),()->refreshes[0]++,()->fail(),()->fail(),()->{});
         assertNotNull(find(panel,"입력을 마쳤어요"));assertNull(find(panel,"버튼 이름 찾기"));assertNull(find(panel,"다른 방법"));
         find(panel,"입력을 마쳤어요").performClick();assertEquals(1,refreshes[0]);
+        panel.appTask(new JSONObject().put("status","protected").put("message","표시한 칸에 제목을 입력해 주세요.")
+                .put("input_bounds",new JSONArray().put(10).put(20).put(100).put(70)),v->fail(),()->fail(),()->fail(),()->fail(),()->{});
+        assertNull(findInput(panel));assertNull(find(panel,"입력을 마쳤어요"));
     }
     private EditText findInput(View v){if(v instanceof EditText)return (EditText)v;if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){EditText found=findInput(((ViewGroup)v).getChildAt(i));if(found!=null)return found;}return null;}
-    @Test public void blankSearchIsDisabledAndDelayedInputCannotCrossPresentations()throws Exception {
-        var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));int[] sent={0};
-        JSONObject proposal=new JSONObject().put("status","proposed").put("execute_allowed",true).put("action",new JSONObject().put("tool","set_text"));
-        panel.appTask(proposal,v->sent[0]++,()->{},()->{},()->{},()->{});
-        EditText input=findInput(panel);assertNotNull(input);TextView enter=find(panel,"검색창에 입력");assertFalse(enter.isEnabled());
-        input.setText("   ");assertFalse(enter.isEnabled());input.setText("서울");assertTrue(enter.isEnabled());enter.performClick();
-        panel.appTask(new JSONObject().put("status","protected"),v->fail(),()->{},()->{},()->{},()->{});
-        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(400));assertEquals(0,sent[0]);
-    }
     @Test public void alternativesOnlyExposeAvailableToolsAndOldActionsCannotBeReplayed()throws Exception {
         var panel=new TaskFlowOverlayView(RuntimeEnvironment.getApplication(),mock(TaskFlowOverlayView.Listener.class));int[] runs={0};
         panel.appTask(new JSONObject().put("status","proposed").put("message","‘검색’ 항목을 직접 눌러주세요.").put("target_label","검색").put("execute_allowed",true).put("action",new JSONObject().put("tool","tap")),v->runs[0]++,()->{},()->{},()->{},()->{});

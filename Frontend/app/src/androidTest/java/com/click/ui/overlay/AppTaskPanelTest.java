@@ -29,11 +29,23 @@ public class AppTaskPanelTest {
             });
         }
     }
-    @Test public void searchInputStaysLocalAndWaitsForItsOwnButton()throws Exception {
-        JSONObject result=proposal("set_text");String[] entered={null};TaskFlowOverlayView[] panel={null};
+    @Test public void searchGuideKeepsInputInTheApplication()throws Exception {
+        String message="표시한 검색창에 이렇게 입력해 주세요.\ndino";
+        JSONObject result=proposal("set_text").put("execute_allowed",false).put("message",message);
+        EditText[] field={null};
         try(ActivityScenario<HomeActivity> scenario=ActivityScenario.launch(HomeActivity.class)){
-            scenario.onActivity(activity->{panel[0]=new TaskFlowOverlayView(activity,new Answers());panel[0].appTask(result,v->entered[0]=v,()->{},()->{},()->{},()->{});activity.setContentView(panel[0]);assertTrue(panel[0].needsPublicGuideInput());EditText input=findInput(panel[0]);assertNotNull(input);input.setText("클릭 테스트");assertNull(entered[0]);find(panel[0],"검색창에 입력").performClick();});
-            android.os.SystemClock.sleep(450);InstrumentationRegistry.getInstrumentation().waitForIdleSync();assertEquals("클릭 테스트",entered[0]);
+            scenario.onActivity(activity->{
+                var body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);
+                field[0]=new EditText(activity);field[0].setSingleLine(true);field[0].setHint("검색");body.addView(field[0]);
+                var panel=new TaskFlowOverlayView(activity,new Answers());panel.appTask(result,v->fail(),()->{},()->{},()->{},()->{});
+                body.addView(panel);
+                activity.addContentView(body,new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.MATCH_PARENT));
+                assertTrue(field[0].requestFocus());
+                assertNotNull(find(panel,message));assertFalse(panel.needsPublicGuideInput());
+                assertNull(findInput(panel));assertNull(find(panel,"검색창에 입력"));
+            });
+            InstrumentationRegistry.getInstrumentation().sendStringSync("dino");
+            scenario.onActivity(activity->{assertTrue(field[0].hasFocus());assertEquals("dino",field[0].getText().toString());});
         }
     }
     @Test public void verifyingAndOcrOnlyTargetsHaveNoExecutionButton()throws Exception {

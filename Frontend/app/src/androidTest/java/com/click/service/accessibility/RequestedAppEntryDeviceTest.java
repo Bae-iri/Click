@@ -47,13 +47,13 @@ public class RequestedAppEntryDeviceTest {
             assertFalse("Entry must not stay on the launcher proposal",proposed.optJSONObject("action")!=null&&"open_app".equals(proposed.getJSONObject("action").optString("tool")));
             boolean searchAvailable=proposed.optJSONObject("action")!=null;
             if(searchAvailable){
-                String tool=proposed.getJSONObject("action").getString("tool");assertTrue(tool,tool.equals("tap")||tool.equals("set_text"));assertTrue(proposed.getBoolean("execute_allowed"));
+                String tool=proposed.getJSONObject("action").getString("tool");assertTrue(tool,tool.equals("tap")||tool.equals("set_text"));assertEquals(tool.equals("tap"),proposed.getBoolean("execute_allowed"));
                 if(tool.equals("tap")){
                     nativeAction(automation,target.packageName,proposed.getJSONObject("action").getString("target_id"),AccessibilityNodeInfo.ACTION_CLICK);
                     for(int i=0;i<30;i++){SystemClock.sleep(200);screen=read(automation,context,target.packageName);if(screen!=null&&screen.nodes.stream().anyMatch(AppTaskObservation::searchField))break;}
                     current.set(screen);instrumentation.runOnMainSync(()->controller[0].screenChanged(current.get()));SystemClock.sleep(500);instrumentation.waitForIdleSync();
                 }
-                assertEquals("set_text",result.get().getJSONObject("action").getString("tool"));assertEquals("물",result.get().getString("suggested_query"));
+                assertEquals("set_text",result.get().getJSONObject("action").getString("tool"));assertTrue(result.get().getString("message").contains("물"));assertFalse(result.get().getBoolean("execute_allowed"));
             }else{
                 assertEquals("needs_input",proposed.getString("status"));assertEquals("앱에서 검색창을 눌러주세요.",proposed.getString("message"));
                 // Some installed Coupang surfaces omit their header controls from accessibility.

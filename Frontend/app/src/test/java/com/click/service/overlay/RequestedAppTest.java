@@ -65,6 +65,10 @@ public class RequestedAppTest {
     @Test public void extractsOnlyExplicitSearchPhrase(){
         assertEquals("물",AppTaskSearchIntent.query("쿠팡에서 물 주문하고 싶어","쿠팡"));
         assertEquals("생수",AppTaskSearchIntent.query("쿠팡에서 생수를 찾아줘","쿠팡"));
+        assertEquals("가을",AppTaskSearchIntent.query("가을 검색해줘",null));
+        assertEquals("공룡",AppTaskSearchIntent.explicitInput("검색창에 공룡을 입력해 줘","검색"));
+        assertEquals("가을",AppTaskSearchIntent.explicitInput("검색창에 가을 입력해 줘","검색"));
+        assertNull(AppTaskSearchIntent.explicitInput("제목에 ‘치과 예약’을 입력해 줘","검색"));
         assertEquals("무선 이어폰",AppTaskSearchIntent.query("쿠팡에서 무선 이어폰 검색해줘","쿠팡"));
         for(String goal:List.of("쿠팡 열어줘","쿠팡에서 주문 내역 찾아줘","쿠팡에서 물 주문 취소해줘","쿠팡에서 결제하고 싶어","쿠팡에서 물 말고 우유 찾아줘"))assertNull(goal,AppTaskSearchIntent.query(goal,"쿠팡"));
     }
