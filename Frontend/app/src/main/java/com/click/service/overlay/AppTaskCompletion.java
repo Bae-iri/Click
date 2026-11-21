@@ -151,6 +151,38 @@ public final class AppTaskCompletion {
     }
 
     /** Only reject known unsafe evidence; an unseen future destination can bind. */
+    private static final java.util.regex.Pattern GOAL_CONTEXT=java.util.regex.Pattern.compile("^(?:\\S+\\s+)?\\S+에서\\s+");
+    private static final java.util.regex.Pattern GOAL_REQUEST=java.util.regex.Pattern.compile(
+        "\\s*(?:을|를|으로|로|에|이|가)?\\s*(?:열어|보여|이동|들어가|가\\s*줘|띄워|켜|선택|확인|찾아|진입|접속)\\S*\\s*$");
+    private static final java.util.regex.Pattern GOAL_SUFFIX=java.util.regex.Pattern.compile(
+        "\\s*(?:화면|메뉴|탭|페이지|설정|목록|창|screen|page|tab|menu|settings|section)$",java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern GOAL_ENGLISH=java.util.regex.Pattern.compile(
+        "^(?:please\\s+)?(?:open|go\\s+to|show(?:\\s+me)?|navigate\\s+to|switch\\s+to|bring\\s+up|take\\s+me\\s+to)\\s+(?:the\\s+)?(.+?)"
+        +"(?:\\s+(?:in|on|of)\\s+(?:the\\s+)?[\\w&.\\- ]{1,40}?(?:\\s+app)?)?[.!?]*$",java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static String compact(String text){return text==null?"":text.replaceAll("\\s+","").toLowerCase(Locale.ROOT);}
+    /** The goal's destination phrase and its suffix-stripped forms; same rule as the server's triage_targets. */
+    public static Set<String> destinationForms(String goal){
+        String text=goal==null?"":goal.trim().replaceAll("\\s+"," "),stripped;
+        java.util.regex.Matcher english=GOAL_ENGLISH.matcher(text);
+        if(english.matches())stripped=english.group(1).trim();
+        else{text=GOAL_CONTEXT.matcher(text).replaceFirst("");stripped=GOAL_REQUEST.matcher(text).replaceFirst("");if(stripped.equals(text))return Collections.emptySet();}
+        Set<String> forms=new LinkedHashSet<>();String form=stripped;
+        while(!form.isEmpty()){forms.add(compact(form));String shorter=GOAL_SUFFIX.matcher(form).replaceFirst("").trim();if(shorter.equals(form))break;form=shorter;}
+        return forms;
+    }
+    /**
+     * An actionable control named exactly like the goal's destination is the way there, so this
+     * screen is before the destination ("앱 알림" row on the "알림" page). Toggles and the selected
+     * tab act in place and are not entries elsewhere.
+     */
+    public static boolean goalEntryVisible(String goal,JSONObject screen){
+        Set<String> forms=destinationForms(goal);JSONArray nodes=screen==null?null:screen.optJSONArray("nodes");
+        if(forms.isEmpty()||nodes==null)return false;
+        for(int i=0;i<nodes.length();i++){JSONObject n=nodes.optJSONObject(i);if(n==null||!"accessibility".equals(n.optString("source","accessibility")))continue;
+            String label=compact(n.optString("label"));
+            if(n.optBoolean("clickable")&&!n.optBoolean("selected")&&!"toggle".equals(n.optString("role"))&&label.length()>=2&&forms.contains(label))return true;}
+        return false;
+    }
     public static boolean unsafeForGoal(String goal,JSONObject completion,JSONObject screen,ScreenSnapshot nativeScreen) {
         if(!valid(completion)||screen==null||!"public".equals(screen.optString("status")))return false;
         JSONArray checks=completion.optJSONArray("checks"),nodes=screen.optJSONArray("nodes");
@@ -158,9 +190,12 @@ public final class AppTaskCompletion {
         AppTaskSwitchGoal requested=AppTaskSwitchGoal.parse(goal);
         if(requested!=null&&(!requested.possible(checks)
                 ||check(completion,screen)==Verdict.MATCHED&&!requested.accepts(checks,nodes)))return true;
+        boolean beforeDestination=goalEntryVisible(goal,screen);
         for(int i=0;i<checks.length();i++){
             JSONObject c=checks.optJSONObject(i);
             if(!c.optString("package").equals(screen.optString("package")))continue;
+            // Plain page evidence cannot prove the destination while its own entry is still on screen.
+            if(beforeDestination&&c.isNull("checked")&&c.isNull("selected"))return true;
             // A false selected state needs an explicit request to deselect/close.
             // Otherwise an untouched tab could "prove" even a paraphrased open goal.
             if(Boolean.FALSE.equals(c.opt("selected"))&&!deselectionGoal(goal))return true;

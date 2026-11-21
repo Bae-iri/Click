@@ -1,0 +1,6 @@
+{"arm": "A", "at_ms": 1795238288431, "experience_ref": null, "goal_variant": "original", "runtime_ref": "8c0569d7846e5f8dd37493fc", "task_id": "settings_sound", "trial_id": "round3-v2:settings_sound:r1:A"}
+{"arm": "A", "at_ms": 1795238295160, "experience_ref": null, "goal_variant": "original", "runtime_ref": "8c0569d7846e5f8dd37493fc", "task_id": "settings_sound", "trial_id": "round3-v2:settings_sound:r1:A"}
+{"arm": "A", "at_ms": 1795238297149, "experience_ref": null, "goal_variant": "original", "runtime_ref": "269f922a2e796db1b2b3f96e", "task_id": "settings_font", "trial_id": "round3-v2:settings_font:r1:A"}
+{"arm": "A", "at_ms": 1795238327480, "experience_ref": null, "goal_variant": "original", "runtime_ref": "269f922a2e796db1b2b3f96e", "task_id": "settings_font", "trial_id": "round3-v2:settings_font:r1:A"}
+{"arm": "A", "at_ms": 1795238329532, "experience_ref": null, "goal_variant": "original", "runtime_ref": "ae170e9b90ebdc608cf70f6e", "task_id": "settings_app_notifications", "trial_id": "round3-v2:settings_app_notifications:r1:A"}
+{"arm": "A", "at_ms": 1795238340035, "experience_ref": null, "goal_variant": "original", "runtime_ref": "ae170e9b90ebdc608cf70f6e", "task_id": "settings_app_notifications", "trial_id": "round3-v2:settings_app_notifications:r1:A"}

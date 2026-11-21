@@ -88,6 +88,8 @@ public class MemoryDeviceExperimentTest {
     // Observation labels are broader than the actions authorized by this navigation-only pilot.
     private static final Set<String> NAVIGATION_LABELS=new HashSet<>(Arrays.asList(
         "설정","디스플레이","소리 및 진동","알림","알람","세계시각","스톱워치","타이머",
+        // Navigation-only rows of the two-step Settings goals (open a page, change nothing).
+        "글자 크기와 스타일","앱 알림",
         "Chrome 맞춤설정 및 제어","Chrome 설정","새 탭","홈","Shorts","구독","검색","YouTube 검색"));
     private static String publicLabel(CharSequence value){
         String label=AppTaskObservation.label(value==null?"":value.toString());
@@ -232,6 +234,7 @@ public class MemoryDeviceExperimentTest {
                 SystemClock.sleep(100);
             }
             long elapsed=SystemClock.elapsedRealtime()-started;int finalMatches=goalCount(session.automation,task);
+            JSONObject oracleDiagnostic=oracleDiagnostic(session.automation,task);
             if(finalMatches<0&&!result.optBoolean("oracle_success"))result.put("oracle_success",JSONObject.NULL);
             if(result.optBoolean("oracle_success")){
                 // A real user reads the panel before answering: give the runtime up to verifyWaitMs
@@ -257,6 +260,7 @@ public class MemoryDeviceExperimentTest {
             result.put("elapsed_ms",elapsed).put("outcome",result.optBoolean("oracle_success")?"goal_observed":current.error!=null?"controller_error"
                     :stoppedForOffer?"runtime_offer_without_goal":finalMatches<0?"oracle_unobservable":"budget_exhausted")
                 .put("runtime_verified_offer",current.runtimeVerifiedOffer)
+                .put("oracle_final_matches",finalMatches).put("oracle_diagnostic",oracleDiagnostic)
                 .put("false_verified_offer",finalMatches<0||finalMatches>1?JSONObject.NULL:current.runtimeVerifiedOffer&&finalMatches==0&&!result.optBoolean("oracle_success"))
                 .put("meta_arm",args.getString("metaArm","CURRENT")).put("condition",current.condition).put("first_step_memory_enabled",current.firstStep).put("fault_injected",current.injected).put("delayed_dispatch_accepted",current.delayedAccepted).put("recovery_count",current.controller.metaController().diagnostic().optInt("recovery_count")).put("observed_model_calls",current.modelCalls).put("observed_model_wait_ms",current.modelWait)
                 .put("proposals_by_source",current.proposalSources).put("approvals_by_source",current.approvalSources)
@@ -265,6 +269,7 @@ public class MemoryDeviceExperimentTest {
                 .put("terminal_runtime_status",current.latest==null?"none":current.latest.optString("status"))
                 .put("runtime_failure",current.error==null?JSONObject.NULL:current.error);
             synchronized(current.acceptedPublicTargets){result.put("accepted_native_public_targets",new JSONArray(current.acceptedPublicTargets));}
+            synchronized(current.rejectedTargetHashes){result.put("rejected_target_hashes",new JSONArray(current.rejectedTargetHashes));}
             String experience=current.memory.experienceId();
             post("/experiment/register",new JSONObject().put("runtime_task_id",current.runtimeTaskId).put("arm",arm)
                 .put("task_id",task.id).put("goal_variant",mirror?"mirror":"original").put("trial_id",trialId)
@@ -312,6 +317,7 @@ public class MemoryDeviceExperimentTest {
     private final class Driver implements AppTaskController.Listener {
         final Task task;final String goal,arm,runId;final AppTaskStore store;
         final List<String> acceptedPublicTargets=Collections.synchronizedList(new ArrayList<>());
+        final List<String> rejectedTargetHashes=Collections.synchronizedList(new ArrayList<>());
         final Set<String> approvalsSeen=new HashSet<>();final AtomicBoolean closed=new AtomicBoolean();
         final Set<JSONObject> seenDiagnostics=Collections.newSetFromMap(new IdentityHashMap<>());
         final JSONObject proposalSources=new JSONObject(),approvalSources=new JSONObject();
@@ -391,7 +397,7 @@ public class MemoryDeviceExperimentTest {
             boolean safeTap=samePublic&&"tap".equals(tool)&&NAVIGATION_LABELS.contains(publicTarget);
             boolean safeOpen="open_app".equals(tool)&&task.pkg.equals(selectedPackage)&&task.pkg.equals(action.optString("package"));
             boolean safeNavigation=samePublic&&("back".equals(tool)||("scroll_forward".equals(tool)||"scroll_backward".equals(tool))&&target!=null&&target.optBoolean("scrollable"));
-            if(!safeTap&&!safeOpen&&!safeNavigation){nativeRejections++;return false;}
+            if(!safeTap&&!safeOpen&&!safeNavigation){nativeRejections++;if(!publicTarget.isEmpty())rejectedTargetHashes.add(AppTaskObservation.hash(publicTarget).substring(0,12));return false;}
             if(safeTap&&!injected&&!condition.equals("normal")){
                 injected=true;
                 if(condition.equals("delayed_transition"))delayed.postDelayed(()->{
@@ -584,6 +590,32 @@ public class MemoryDeviceExperimentTest {
             // never search behind it for a node that satisfies the task.
             return chosen;
         }finally{for(AccessibilityWindowInfo window:windows)window.recycle();}
+    }
+    /** Label-free oracle diagnostics: which window was judged and whether the landmark exists at all. */
+    private static JSONObject oracleDiagnostic(UiAutomation automation,Task task){
+        JSONObject out=new JSONObject();AccessibilityNodeInfo root=goalRoot(automation);
+        try{
+            out.put("root_is_task_app",root!=null&&task.pkg.equals(String.valueOf(root.getPackageName())));
+            int[] counts=new int[2];if(root!=null)landmarkWalk(root,task,counts);
+            out.put("landmark_visible",counts[0]).put("landmark_any_visibility",counts[1]);
+            int windows=0;List<AccessibilityWindowInfo> all=automation.getWindows();
+            if(all!=null)for(AccessibilityWindowInfo w:all){AccessibilityNodeInfo r=w.getRoot();if(r!=null){int[] c=new int[2];landmarkWalk(r,task,c);if(c[1]>0)windows++;r.recycle();}w.recycle();}
+            out.put("windows_with_landmark",windows);
+            // Hashes only (no raw text): offline we test candidate landmark strings against them.
+            JSONArray hashes=new JSONArray();if(root!=null&&task.pkg.equals(String.valueOf(root.getPackageName())))labelHashes(root,hashes);
+            out.put("visible_label_hashes",hashes);
+        }catch(Exception ignored){}finally{if(root!=null)root.recycle();}
+        return out;
+    }
+    private static void labelHashes(AccessibilityNodeInfo node,JSONArray out){
+        if(out.length()>=80)return;
+        String label=nodePublicLabel(node);if(node.isVisibleToUser()&&!label.isEmpty())out.put(AppTaskObservation.hash(label).substring(0,12));
+        for(int i=0;i<node.getChildCount()&&out.length()<80;i++){AccessibilityNodeInfo child=node.getChild(i);if(child==null)continue;try{labelHashes(child,out);}finally{child.recycle();}}
+    }
+    private static void landmarkWalk(AccessibilityNodeInfo node,Task task,int[] counts){
+        if(!task.resultLabel.isEmpty()){String text=publicLabel(node.getText()),desc=publicLabel(node.getContentDescription());
+            if(task.resultLabel.equals(text)||task.resultLabel.equals(desc)){counts[1]++;if(node.isVisibleToUser())counts[0]++;}}
+        for(int i=0;i<node.getChildCount();i++){AccessibilityNodeInfo child=node.getChild(i);if(child==null)continue;try{landmarkWalk(child,task,counts);}finally{child.recycle();}}
     }
     private static int goalWalk(AccessibilityNodeInfo node,Task task){
         if(node.isVisibleToUser()&&task.pkg.equals(String.valueOf(node.getPackageName()))
