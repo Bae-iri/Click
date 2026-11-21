@@ -11,16 +11,16 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.os.Build;
 import android.graphics.text.LineBreakConfig;
-import android.graphics.Outline;
+import android.content.res.ColorStateList;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
-import android.view.ViewOutlineProvider;
 import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -36,21 +36,23 @@ import com.click.ui.overlay.SpeechBubbleDrawable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 /** A floating Clue speech bubble. Only the named controls beneath its spotlight accept input. */
 @SuppressLint("ViewConstructor") // Attached to an existing screen rather than inflated from XML.
 public final class ClueCoachView extends FrameLayout {
     private static final long IDLE_HINT_MS = 8000;
     private final FrameLayout host;
-    private final LinearLayout speaker, actions;
+    private final LinearLayout speaker, footer, actions;
+    private final View navigation;
     private final ScrollView bubble;
     private final ClueArtworkView clue;
     private final TextView message, previous;
-    private final ImageButton replay;
     private final TutorialNarrator narrator;
     private final Paint ink = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path mask = new Path();
     private final RectF hole = new RectF();
+    private final RectF halo = new RectF();
     private final Rect panelBounds = new Rect();
     private final Rect bounds = new Rect();
     private final Point origin = new Point();
@@ -59,8 +61,8 @@ public final class ClueCoachView extends FrameLayout {
     private View[] allowed = {};
     private Insets safe = Insets.NONE;
     private boolean below;
-    private int panelTop, panelBottom;
-    private boolean foreground, audioAvailable = true, emphasized, idleReached, reminded, muted, touching;
+    private int panelTop, panelBottom, navigationTop, footerTop;
+    private boolean foreground, audioAvailable = true, emphasized, idleReached, reminded, touching;
     private boolean pendingNarration;
     private View forwarded, primaryAction;
     private final int[] layerOrigin = new int[2], targetOrigin = new int[2];
@@ -68,9 +70,11 @@ public final class ClueCoachView extends FrameLayout {
     private final Runnable idle = () -> emphasize();
     private final ViewTreeObserver.OnPreDrawListener trackAnchor = this::updateHole;
 
-    public ClueCoachView(FrameLayout host, Runnable back, Runnable close) {
+    public ClueCoachView(FrameLayout host, Runnable back) {
         super(host.getContext());
         this.host = host;
+        View homeTab = host.findViewById(R.id.home_nav_home);
+        navigation = homeTab == null ? null : (View) homeTab.getParent();
         Context context = getContext();
         setId(R.id.tutorial_floating_host);
         setWillNotDraw(false);
@@ -88,61 +92,50 @@ public final class ClueCoachView extends FrameLayout {
         clue = new ClueArtworkView(context);
         clue.setId(R.id.tutorial_floating_control);
         boolean narrow = getResources().getConfiguration().screenWidthDp < 360;
-        speaker.addView(clue, new LinearLayout.LayoutParams(dp(narrow ? 58 : 76), dp(94)));
+        speaker.addView(clue, new LinearLayout.LayoutParams(dp(narrow ? 66 : 86), dp(narrow ? 80 : 100)));
 
         bubble = new ScrollView(context);
         bubble.setFocusable(false);
         bubble.setId(R.id.tutorial_explanation_scroll);
-        bubble.setBackground(new SpeechBubbleDrawable(Color.WHITE, getResources().getDisplayMetrics().density, false));
-        bubble.setOutlineProvider(new ViewOutlineProvider() {
-            @Override public void getOutline(View view, Outline outline) {
-                outline.setRoundRect(dp(14), 0, view.getWidth(), view.getHeight(), dp(18));
-            }
+        float density = getResources().getDisplayMetrics().density;
+        LayerDrawable flatBubble = new LayerDrawable(new Drawable[] {
+                new SpeechBubbleDrawable(0xFFB8CDED, density, false),
+                new SpeechBubbleDrawable(Color.WHITE, density, false)
         });
-        bubble.setElevation(dp(5));
-        bubble.setPadding(dp(27), dp(13), dp(13), dp(4));
-        bubble.setClipToPadding(true);
-        LinearLayout column = new LinearLayout(context);
-        column.setOrientation(LinearLayout.VERTICAL);
+        int edge = dp(1);
+        flatBubble.setLayerInset(1, edge, edge, edge, edge);
+        bubble.setBackground(flatBubble);
+        bubble.setOutlineProvider(null);
+        bubble.setVerticalScrollBarEnabled(false);
+        bubble.setPadding(dp(25), dp(15), dp(16), dp(15));
         message = ClickUi.sectionTitle(context, "");
         message.setId(R.id.tutorial_title);
         message.setTextSize(ClickTextScale.size(context, 18));
+        message.setTextLocale(Locale.KOREAN);
         message.setLineSpacing(dp(2), 1.12f);
         if (Build.VERSION.SDK_INT >= 33) message.setLineBreakWordStyle(LineBreakConfig.LINE_BREAK_WORD_STYLE_PHRASE);
         ViewCompat.setAccessibilityHeading(message, true);
-        column.addView(message, new LinearLayout.LayoutParams(-1, -2));
-        actions = new LinearLayout(context);
-        actions.setOrientation(LinearLayout.VERTICAL);
-        column.addView(actions, new LinearLayout.LayoutParams(-1, -2));
-
-        LinearLayout tools = new LinearLayout(context);
-        tools.setGravity(Gravity.CENTER_VERTICAL);
-        previous = link(R.string.tour_back, back);
-        previous.setId(R.id.tutorial_back);
-        tools.addView(previous, new LinearLayout.LayoutParams(-2, -2));
-        replay = new ImageButton(context);
-        replay.setId(R.id.tutorial_explanation_replay);
-        replay.setImageResource(R.drawable.ic_overlay_speaker);
-        replay.setBackgroundColor(Color.TRANSPARENT);
-        tools.addView(replay, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        tools.addView(new View(context), new LinearLayout.LayoutParams(0, 1, 1));
-        tools.addView(link(R.string.tour_close, close), new LinearLayout.LayoutParams(-2, -2));
-        column.addView(tools, new LinearLayout.LayoutParams(-1, -2));
-        bubble.addView(column);
+        bubble.addView(message, new ScrollView.LayoutParams(-1, -2));
         speaker.addView(bubble, new LinearLayout.LayoutParams(0, -2, 1));
         addView(speaker);
+
+        footer = new LinearLayout(context);
+        footer.setGravity(Gravity.BOTTOM);
+        previous = link(R.string.tour_back, back);
+        previous.setId(R.id.tutorial_back);
+        previous.setBackground(ClickUi.outlined(Color.WHITE, 0xFFD2DFF1, dp(18), dp(1)));
+        footer.addView(previous, new LinearLayout.LayoutParams(dp(64), dp(52)));
+        actions = new LinearLayout(context);
+        actions.setOrientation(LinearLayout.VERTICAL);
+        footer.addView(actions, new LinearLayout.LayoutParams(0, -2, 1));
+        addView(footer);
+
         narrator = new TutorialNarrator(context);
         narrator.setListener((speaking, unavailable) -> {
-            replay.setContentDescription(context.getString(speaking ? R.string.tour_stop_audio : R.string.tour_replay));
-            replay.setSelected(speaking);
             if (!speaking && idleReached && !reminded && foreground) {
                 removeCallbacks(repeat);
                 postDelayed(repeat, 900);
             }
-        });
-        replay.setOnClickListener(v -> {
-            muted = narrator.isSpeaking();
-            if (muted) narrator.stop(); else narrator.replay(message.getText().toString());
         });
 
         ViewCompat.setOnApplyWindowInsetsListener(this, (view, insets) -> {
@@ -157,7 +150,7 @@ public final class ClueCoachView extends FrameLayout {
 
     public void show(String words, int artwork, boolean canGoBack, View highlight, View... controls) {
         clearTimers();
-        emphasized = reminded = muted = false;
+        emphasized = reminded = false;
         primaryAction = null;
         restoreBackground();
         anchor = highlight;
@@ -170,6 +163,7 @@ public final class ClueCoachView extends FrameLayout {
         message.setText(words);
         clue.setImageResource(artwork);
         previous.setVisibility(canGoBack ? VISIBLE : GONE);
+        actions.setPadding(canGoBack ? dp(10) : 0, 0, 0, 0);
         actions.removeAllViews();
         bubble.scrollTo(0, 0);
         setAudioAvailable(true);
@@ -201,8 +195,6 @@ public final class ClueCoachView extends FrameLayout {
 
     public void setAudioAvailable(boolean available) {
         audioAvailable = available;
-        replay.setEnabled(available);
-        replay.setAlpha(available ? 1f : .45f);
         if (!available) narrator.stop();
         noteActivity();
     }
@@ -224,13 +216,13 @@ public final class ClueCoachView extends FrameLayout {
         if (!foreground || !audioAvailable || touching) return;
         emphasized = idleReached = true;
         if (primaryAction != null && allowed.length == 0)
-            primaryAction.setForeground(ClickUi.outlined(Color.TRANSPARENT, 0xFF123E87, dp(22), dp(4)));
+            primaryAction.setBackgroundTintList(ColorStateList.valueOf(0xFF245ED6));
         invalidate();
         repeatIfIdle();
     }
 
     private void repeatIfIdle() {
-        if (!idleReached || reminded || muted || !foreground || !audioAvailable || touching || narrator.isSpeaking()) return;
+        if (!idleReached || reminded || !foreground || !audioAvailable || touching || narrator.isSpeaking()) return;
         reminded = true;
         narrator.replay(message.getText().toString());
     }
@@ -239,11 +231,18 @@ public final class ClueCoachView extends FrameLayout {
         String text = getResources().getString(label);
         Button button = primary ? ClickUi.primaryButton(getContext(), text) : ClickUi.secondaryButton(getContext(), text);
         if (primary) { button.setId(R.id.tutorial_next); primaryAction = button; }
-        button.setTextSize(ClickTextScale.size(getContext(), 16));
-        button.setMinimumHeight(dp(48));
+        button.setTextSize(ClickTextScale.size(getContext(), primary ? 18 : 16));
+        button.setStateListAnimator(null);
+        button.setElevation(0);
+        button.setMinHeight(dp(52));
+        button.setMinimumHeight(dp(52));
         button.setPadding(dp(10), dp(9), dp(10), dp(9));
         button.setOnClickListener(v -> click.run());
-        actions.addView(button, ClickUi.wrap(dp(8)));
+        if (actions.getChildCount() > 0) {
+            View first = actions.getChildAt(0);
+            ((LinearLayout.LayoutParams) first.getLayoutParams()).topMargin = dp(6);
+        }
+        actions.addView(button, 0, new LinearLayout.LayoutParams(-1, -2));
     }
 
     private TextView link(int label, Runnable action) {
@@ -302,12 +301,22 @@ public final class ClueCoachView extends FrameLayout {
     }
 
     private boolean updateHole() {
+        int navTop = navigation != null && localBounds(navigation) ? bounds.top : 0;
+        boolean moved = navTop != navigationTop;
+        navigationTop = navTop;
         if (panel == null || !localBounds(panel)) bounds.setEmpty();
-        boolean moved = !panelBounds.equals(bounds);
+        moved |= !panelBounds.equals(bounds);
         panelBounds.set(bounds);
         boolean visible = anchor != null && localBounds(anchor);
-        if (visible) bounds.inset(-dp(3), -dp(3));
-        else bounds.setEmpty();
+        if (visible) {
+            if (anchor.getId() == R.id.home_nav_favorites) {
+                int half = Math.min(bounds.width() / 2, dp(38));
+                int center = bounds.centerX();
+                bounds.left = center - half;
+                bounds.right = center + half;
+            }
+            bounds.inset(-dp(2), -dp(2));
+        } else bounds.setEmpty();
         if (!moved && hole.left == bounds.left && hole.top == bounds.top
                 && hole.right == bounds.right && hole.bottom == bounds.bottom) return true;
         hole.set(bounds);
@@ -323,7 +332,9 @@ public final class ClueCoachView extends FrameLayout {
         if (action == MotionEvent.ACTION_DOWN) {
             forwarded = null;
             speaker.getHitRect(bounds);
-            touching = bounds.contains(x, y);
+            touching = bounds.contains(x, y)
+                    || (localBounds(previous) && bounds.contains(x, y))
+                    || (actions.getChildCount() > 0 && localBounds(actions) && bounds.contains(x, y));
             if (!touching) {
                 for (View target : allowed)
                     if (target.isEnabled() && localBounds(target) && bounds.contains(x, y)) {
@@ -358,36 +369,50 @@ public final class ClueCoachView extends FrameLayout {
         mask.reset();
         mask.setFillType(Path.FillType.EVEN_ODD);
         mask.addRect(0, 0, getWidth(), getHeight(), Path.Direction.CW);
-        float radius = dp(15);
+        boolean roundIcon = anchor != null && (anchor.getId() == R.id.home_settings
+                || anchor.getId() == R.id.overlay_microphone);
+        float radius = roundIcon ? Math.min(hole.width(), hole.height()) / 2f : dp(22);
         if (!hole.isEmpty()) mask.addRoundRect(hole, radius, radius, Path.Direction.CW);
         ink.setStyle(Paint.Style.FILL);
-        ink.setColor(emphasized ? 0xADFFFFFF : 0x87FFFFFF);
+        ink.setColor(0x80FFFFFF);
         canvas.drawPath(mask, ink);
         if (!hole.isEmpty()) {
             ink.setStyle(Paint.Style.STROKE);
-            if (emphasized) {
-                ink.setStrokeWidth(dp(9));
-                ink.setColor(Color.WHITE);
-                canvas.drawRoundRect(hole, radius, radius, ink);
-            }
-            ink.setStrokeWidth(dp(emphasized ? 6 : 3));
-            ink.setColor(emphasized ? 0xFF123E87 : 0xFF2468D8);
+            float spread = dp(emphasized ? 5 : 2);
+            halo.set(hole);
+            halo.inset(-spread, -spread);
+            ink.setStrokeWidth(spread * 2);
+            ink.setColor(emphasized ? 0x706FA5FF : 0x3078A9FF);
+            canvas.drawRoundRect(halo, radius + spread, radius + spread, ink);
+            ink.setStrokeWidth(dp(emphasized ? 3 : 2));
+            ink.setColor(emphasized ? 0xFF3071E8 : 0xFF5B91EF);
             canvas.drawRoundRect(hole, radius, radius, ink);
         }
     }
 
     @Override protected void onMeasure(int widthSpec, int heightSpec) {
         int w = MeasureSpec.getSize(widthSpec), h = MeasureSpec.getSize(heightSpec);
-        int margin = dp(12);
-        int width = Math.max(1, Math.min(dp(478), w - safe.left - safe.right - margin * 2));
-        int top = safe.top + margin, bottom = h - safe.bottom - margin;
+        int gap = dp(12), margin = dp(16);
+        int width = Math.max(1, Math.min(dp(440), w - safe.left - safe.right - margin * 2));
+        int top = safe.top + gap;
+        int safeBottom = h - safe.bottom;
+        int footerBottom = (navigationTop > top ? Math.min(navigationTop, safeBottom) : safeBottom) - gap;
+        footer.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(Math.max(1, footerBottom - top), MeasureSpec.AT_MOST));
+        footerTop = footerBottom - footer.getMeasuredHeight();
+        // Leave both the actual target and its bottom actions reachable, including above the IME.
+        if (!hole.isEmpty() && hole.bottom > footerTop - gap && hole.top < footerBottom + gap
+                && hole.top - top > footer.getMeasuredHeight() + gap) {
+            footerTop = (int) hole.top - gap - footer.getMeasuredHeight();
+        }
+        int bottom = footerTop - gap;
         panelTop = panelBounds.top;
         panelBottom = panelBounds.bottom;
-        if (Math.max(panelTop - top, bottom - panelBottom) < dp(124)) {
+        if (Math.max(panelTop - top, bottom - panelBottom) < dp(108)) {
             panelTop = (int) hole.top;
             panelBottom = (int) hole.bottom;
         }
-        int above = panelTop - margin - top, under = bottom - panelBottom - margin;
+        int above = Math.min(panelTop - gap, bottom) - top, under = bottom - panelBottom - gap;
         below = under >= above;
         int room = hole.isEmpty() ? bottom - top : Math.max(above, under);
         speaker.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
@@ -398,11 +423,12 @@ public final class ClueCoachView extends FrameLayout {
     @Override protected void onLayout(boolean changed, int l, int t, int r, int b) {
         int w = speaker.getMeasuredWidth(), h = speaker.getMeasuredHeight(), gap = dp(12);
         int x = safe.left + (getWidth() - safe.left - safe.right - w) / 2;
-        int bottom = getHeight() - safe.bottom - gap;
-        int y = hole.isEmpty() ? safe.top + Math.round((bottom - safe.top - h) * .68f)
+        int top = safe.top + gap, bottom = footerTop - gap;
+        int y = hole.isEmpty() ? top + Math.round((bottom - top - h) * .68f)
                 : below ? panelBottom + gap : panelTop - gap - h;
-        y = Math.max(safe.top + gap, Math.min(y, bottom - h));
+        y = Math.max(top, Math.min(y, bottom - h));
         speaker.layout(x, y, x + w, y + h);
+        footer.layout(x, footerTop, x + footer.getMeasuredWidth(), footerTop + footer.getMeasuredHeight());
     }
 
     @Override protected void onAttachedToWindow() {

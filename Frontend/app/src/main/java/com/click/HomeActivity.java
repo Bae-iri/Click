@@ -1,5 +1,6 @@
 package com.click;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -28,6 +29,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -46,6 +49,20 @@ import com.click.ui.home.HomeIconView;
 /** Main Click entry screen after accessibility onboarding. */
 public class HomeActivity extends AppCompatActivity {
     public static final String EXTRA_OPEN_LIBRARY = "com.click.extra.OPEN_LIBRARY";
+    static final String EXTRA_START_TUTORIAL = "com.click.extra.START_HOME_TUTORIAL";
+    static Intent tutorialIntent(Context context) {
+        return new Intent(context, HomeActivity.class).putExtra(EXTRA_START_TUTORIAL, true)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+    }
+    private HomeTutorial tutorial;
+    private final ActivityResultLauncher<String> tutorialMic = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> {
+                if (tutorial != null) tutorial.onMicrophonePermission(granted);
+            });
+    private final ActivityResultLauncher<Intent> tutorialSettings = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (tutorial != null) tutorial.onSettingsResult(result.getResultCode() == RESULT_OK);
+            });
     private static final int INK = 0xFF101A36;
     private static final int SECONDARY = 0xFF8190AA;
     private static final int BLUE = 0xFF3478FF;
@@ -88,7 +105,7 @@ public class HomeActivity extends AppCompatActivity {
         library = new RequestLibraryStore(this);
         guidanceChoices=new com.click.data.local.GuidancePreferences(this);
         recentQueue=new com.click.data.remote.VoiceQueueGateway(this);
-        if(savedInstanceState==null && !isTutorial())guidanceChoices.visitHome();
+        if(savedInstanceState==null)guidanceChoices.visitHome();
         regular = getResources().getFont(com.click.designpreview.R.font.pretendard_regular);
         medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
         semibold = getResources().getFont(com.click.designpreview.R.font.pretendard_semibold);
@@ -174,22 +191,59 @@ public class HomeActivity extends AppCompatActivity {
             reordering = savedInstanceState.getBoolean("library_reordering");
             showFavorites(savedInstanceState.getBoolean("favorites_visible"));
         }
-        openLibraryFromIntent(getIntent());
+        handleHomeEntry(getIntent(), savedInstanceState);
     }
 
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        openLibraryFromIntent(intent);
+        handleHomeEntry(intent, null);
     }
 
-    private void openLibraryFromIntent(Intent intent) {
-        if (intent == null || !intent.getBooleanExtra(EXTRA_OPEN_LIBRARY, false)) return;
-        intent.removeExtra(EXTRA_OPEN_LIBRARY);
-        recentVisible = false;
-        reordering = false;
-        showFavorites(true);
-        favoritesScroll.scrollTo(0, 0);
+    private void handleHomeEntry(Intent intent, Bundle saved) {
+        if (intent.getBooleanExtra(EXTRA_OPEN_LIBRARY, false)) {
+            intent.removeExtra(EXTRA_OPEN_LIBRARY);
+            if (tutorial != null) closeTutorial();
+            openLibraryTab(false);
+            return;
+        }
+        boolean requested = intent.getBooleanExtra(EXTRA_START_TUTORIAL, false);
+        intent.removeExtra(EXTRA_START_TUTORIAL);
+        Bundle practice = saved == null ? null : saved.getBundle(HomeTutorial.SAVED_STATE);
+        if (practice != null || requested || (saved == null && !guidanceChoices.hasSeenHomeTutorial()))
+            startTutorial(practice);
+    }
+
+    private void startTutorial(Bundle state) {
+        if (tutorial != null) return;
+        helpTiming.removeCallbacks(offerFirstHelp);
+        homeReadGeneration++;
+        tutorial = new HomeTutorial(this, state);
+        guidanceChoices.markHomeTutorialSeen();
+        if (getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) tutorial.resume();
+    }
+
+    void showTutorialHome() {
+        showFavorites(false);
+        homeScroll.scrollTo(0, 0);
+    }
+
+    void openTourSettings() {
+        tutorialSettings.launch(new Intent(this, MenuActivity.class).putExtra(MenuActivity.EXTRA_TOUR, true));
+    }
+
+    void requestTutorialMicrophone() { tutorialMic.launch(android.Manifest.permission.RECORD_AUDIO); }
+
+    void closeTutorial() {
+        HomeTutorial closing = tutorial;
+        tutorial = null;
+        closing.close();
+        showTutorialHome();
+        if (getLifecycle().getCurrentState().isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) {
+            refreshFavorites();
+            scheduleFirstHelp();
+            readRecentTask();
+        }
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
@@ -197,6 +251,7 @@ public class HomeActivity extends AppCompatActivity {
         state.putBoolean("favorites_visible", favoritesVisible);
         state.putBoolean("recent_visible", recentVisible);
         state.putBoolean("library_reordering", reordering);
+        if (tutorial != null) state.putBundle(HomeTutorial.SAVED_STATE, tutorial.save());
         super.onSaveInstanceState(state);
     }
 
@@ -212,21 +267,25 @@ public class HomeActivity extends AppCompatActivity {
             recreate();
             return;
         }
-        if (!isTutorial()) {
+        if (tutorial != null) tutorial.resume();
+        else {
             refreshFavorites();
             scheduleFirstHelp();readRecentTask();
         }
     }
 
     @Override protected void onPause() {
+        if (tutorial != null) tutorial.pause();
         homeReadGeneration++;helpTiming.removeCallbacks(offerFirstHelp);
         connectionWatcher.stop();
         super.onPause();
     }
     @Override public void onUserInteraction(){super.onUserInteraction();scheduleFirstHelp();}
-    protected boolean isTutorial() { return false; }
-    private void scheduleFirstHelp(){helpTiming.removeCallbacks(offerFirstHelp);if(!isTutorial()&&guidanceChoices!=null&&guidanceChoices.maySuggest())helpTiming.postDelayed(offerFirstHelp,12000);}
-    @Override protected void onDestroy(){helpTiming.removeCallbacksAndMessages(null);if(recentQueue!=null)recentQueue.close();super.onDestroy();}
+    private void scheduleFirstHelp(){helpTiming.removeCallbacks(offerFirstHelp);if(tutorial==null&&guidanceChoices!=null&&guidanceChoices.maySuggest())helpTiming.postDelayed(offerFirstHelp,12000);}
+    @Override protected void onDestroy(){
+        if (tutorial != null) { HomeTutorial closing = tutorial; tutorial = null; closing.close(); }
+        helpTiming.removeCallbacksAndMessages(null);if(recentQueue!=null)recentQueue.close();super.onDestroy();
+    }
     private void readRecentTask(){
         final int owner=++homeReadGeneration;
         recentQueue.read(new com.click.data.remote.VoiceQueueGateway.Callback(){
@@ -268,6 +327,7 @@ public class HomeActivity extends AppCompatActivity {
         settings.setClickable(true); settings.setFocusable(true);
         settings.setBackground(null);
         settings.setOnClickListener(view -> {
+            if (tutorial != null) { tutorial.openSettings(); return; }
             startActivity(new Intent(this, MenuActivity.class));
             overridePendingTransition(R.anim.slide_in_right, R.anim.slide_out_left);
         });
@@ -327,7 +387,10 @@ public class HomeActivity extends AppCompatActivity {
         });
         card.addView(requestInput, new LinearLayout.LayoutParams(0, -2, 1));
         View microphone = iconButton(HomeIconView.Kind.MICROPHONE, "말로 입력", R.id.home_microphone);
-        microphone.setOnClickListener(view -> startOverlayWithPermission(null, null, true));
+        microphone.setOnClickListener(view -> {
+            if (tutorial != null) tutorial.chooseVoice();
+            else startOverlayWithPermission(null, null, true);
+        });
         card.addView(microphone, new LinearLayout.LayoutParams(dp(44), dp(44)));
         sendRequest = iconButton(HomeIconView.Kind.SEND, "요청 보내기", R.id.home_request_send);
         sendRequest.setVisibility(View.GONE);
@@ -337,6 +400,7 @@ public class HomeActivity extends AppCompatActivity {
             @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
                 sendRequest.setVisibility(text.toString().trim().isEmpty() ? View.GONE : View.VISIBLE);
+                if (tutorial != null) tutorial.onTextEdited();
             }
             @Override public void afterTextChanged(Editable text) {}
         });
@@ -344,6 +408,7 @@ public class HomeActivity extends AppCompatActivity {
     }
 
     protected void submitHomeRequest() {
+        if (tutorial != null) { tutorial.submitHomeRequest(); return; }
         String request = requestInput.getText().toString().trim();
         if (request.isEmpty()) return;
         if (startOverlayWithPermission(request, null, false)) requestInput.setText("");
@@ -511,7 +576,10 @@ public class HomeActivity extends AppCompatActivity {
             tab.setBackground(new android.graphics.drawable.InsetDrawable(
                     new RippleDrawable(ColorStateList.valueOf(0x183478FF), index, null), 0, dp(8), 0, 0));
             tab.setPadding(dp(14), dp(12), dp(14), dp(4));
-            tab.setOnClickListener(view -> openLibraryTab(recent));
+            tab.setOnClickListener(view -> {
+                if (tutorial == null) openLibraryTab(recent);
+                else if (recent) tutorial.openRecent();
+            });
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
             if (i > 0) params.leftMargin = dp(4);
             tabs.addView(tab, params);
@@ -650,7 +718,7 @@ public class HomeActivity extends AppCompatActivity {
 
     private void openHelp(HomeHelpItem item) {
         if (item.task != null) startQuickHelp(item.task);
-        else if (item == HomeHelpItem.TUTORIAL) startActivity(new Intent(this, TutorialActivity.class));
+        else if (item == HomeHelpItem.TUTORIAL) startTutorial(null);
         else if (item == HomeHelpItem.ACCESSIBILITY)
             startActivity(new Intent(this, com.click.designpreview.PermissionGuideActivity.class));
         else showComingSoon(item.title + " 도움");
@@ -685,7 +753,9 @@ public class HomeActivity extends AppCompatActivity {
         homeTab = navigationItem(HomeIconView.Kind.HOME, "홈", R.id.home_nav_home);
         homeTab.setOnClickListener(view -> { showFavorites(false); homeScroll.smoothScrollTo(0, 0); });
         favoritesTab = navigationItem(HomeIconView.Kind.BOX, "보관함", R.id.home_nav_favorites);
-        favoritesTab.setOnClickListener(view -> openLibraryTab(false));
+        favoritesTab.setOnClickListener(view -> {
+            if (tutorial != null) tutorial.openSaved(); else openLibraryTab(false);
+        });
         for (View tab : new View[]{homeTab, favoritesTab})
             navigation.addView(tab, new LinearLayout.LayoutParams(0, dp(58), 1));
         selectNavigation(false);

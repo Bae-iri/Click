@@ -33,6 +33,8 @@ public class HomeRequestTest {
     @Before public void mockDeviceTokenStorage() {
         // Home now opens the account-scoped request library; Android Keystore is device-only.
         auth = mockConstruction(AuthTokenStore.class);
+        new com.click.data.local.GuidancePreferences(org.robolectric.RuntimeEnvironment.getApplication())
+                .markHomeTutorialSeen();
     }
 
     @After public void closeTokenStorageMock() {

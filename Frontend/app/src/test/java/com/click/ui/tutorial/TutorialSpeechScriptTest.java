@@ -9,7 +9,7 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.TextView;
 import com.click.R;
-import com.click.TutorialActivity;
+import com.click.HomeActivity;
 import com.click.data.local.AuthTokenStore;
 import com.click.data.local.RequestLibraryStore;
 import com.click.data.local.TouchAutomationSettings;
@@ -40,15 +40,15 @@ public class TutorialSpeechScriptTest {
     private MockedConstruction<TutorialNarrator> narrators;
     private MockedConstruction<DeviceSpeechInput> inputs;
     private MockedConstruction<AuthTokenStore> tokens;
-    private ActivityController<TutorialActivity> controller;
-    private TutorialActivity activity;
+    private ActivityController<HomeActivity> controller;
+    private HomeActivity activity;
     private TutorialNarrator narrator;
 
     @Before public void setup() {
         narrators = mockConstruction(TutorialNarrator.class);
         inputs = mockConstruction(DeviceSpeechInput.class);
         tokens = mockConstruction(AuthTokenStore.class);
-        controller = Robolectric.buildActivity(TutorialActivity.class).setup();
+        controller = Robolectric.buildActivity(HomeActivity.class).setup();
         activity = controller.get();
         narrator = narrators.constructed().get(0);
     }
@@ -81,7 +81,7 @@ public class TutorialSpeechScriptTest {
         assertEquals(string(R.string.tour_result), message());
         Bundle saved = new Bundle();
         controller.saveInstanceState(saved).pause().stop().destroy();
-        controller = Robolectric.buildActivity(TutorialActivity.class).setup(saved);
+        controller = Robolectric.buildActivity(HomeActivity.class).setup(saved);
         activity = controller.get();
         assertEquals(string(R.string.tour_result), message());
         assertTrue(((TextView) activity.findViewById(R.id.tutorial_font_preview)).getTextSize() > before);
@@ -96,11 +96,12 @@ public class TutorialSpeechScriptTest {
     @Test public void idleEmphasizesAndRepeatsExactlyOncePerStepAndNeverWhilePaused() {
         String welcome = string(R.string.tour_welcome);
         View start = activity.findViewById(R.id.tutorial_next);
+        var initialTint = start.getBackgroundTintList();
         waitSeconds(7);
         verify(narrator, never()).replay(anyString());
-        assertNull(start.getForeground());
+        assertEquals(initialTint, start.getBackgroundTintList());
         waitSeconds(1);
-        assertNotNull(start.getForeground());
+        assertEquals(0xFF245ED6, start.getBackgroundTintList().getDefaultColor());
         waitSeconds(30);
         verify(narrator, times(1)).replay(welcome);
         click(R.id.tutorial_next);

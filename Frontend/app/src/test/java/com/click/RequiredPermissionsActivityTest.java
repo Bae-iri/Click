@@ -92,13 +92,10 @@ public class RequiredPermissionsActivityTest {
             assertNull(activity.findViewById(R.id.permission_ready_clue));
             ShadowSettings.setCanDrawOverlays(true);
             controller.pause().resume();
-            assertTrue(contains(root(activity),"이제 클릭을 사용할 수 있어요!"));
-            assertClueIsVisible(activity);
-            controller.recreate(); activity=controller.get();
-            assertClueIsVisible(activity);
-            assertEquals("사용법 보기", button(root(activity)).getText().toString());
-            button(root(activity)).performClick();
-            assertEquals(TutorialActivity.class.getName(),shadowOf(activity).getNextStartedActivity().getComponent().getClassName());
+            Intent next = shadowOf(activity).getNextStartedActivity();
+            assertEquals(HomeActivity.class.getName(), next.getComponent().getClassName());
+            assertTrue(next.getBooleanExtra(HomeActivity.EXTRA_START_TUTORIAL, false));
+            assertNull(activity.findViewById(R.id.permission_ready_clue));
             assertTrue(activity.isFinishing());
         }
     }
@@ -120,11 +117,11 @@ public class RequiredPermissionsActivityTest {
         for(String target:new String[]{"settings","home"}) {
             try(var controller=Robolectric.buildActivity(RequiredPermissionsActivity.class,intent(target)).setup()) {
                 var activity=controller.get();
-                assertTrue(contains(root(activity),"이제 클릭을 사용할 수 있어요!"));
-                assertClueIsVisible(activity);
-                assertEquals("클릭 시작하기", button(root(activity)).getText().toString());
                 assertNull(shadowOf(activity).getLastRequestedPermission());
-                button(root(activity)).performClick();
+                if (target.equals("settings")) {
+                    assertClueIsVisible(activity);
+                    button(root(activity)).performClick();
+                } else assertNull(activity.findViewById(R.id.permission_ready_clue));
                 assertEquals((target.equals("settings")?MenuActivity.class:HomeActivity.class).getName(),
                     shadowOf(activity).getNextStartedActivity().getComponent().getClassName());
             }
@@ -134,9 +131,11 @@ public class RequiredPermissionsActivityTest {
     @Test public void lostAccessibilityConnectionPreventsReadyAndKeepsOnboardingDestination() {
         shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.RECORD_AUDIO);
         ShadowSettings.setCanDrawOverlays(true);
+        ShadowSettings.setCanDrawOverlays(false);
         try(var controller=Robolectric.buildActivity(RequiredPermissionsActivity.class,intent("tutorial")).setup()) {
-            assertClueIsVisible(controller.get());
+            assertTrue(contains(root(controller.get()),"필수 권한 3 / 3"));
             when(host.accessibilityConnected()).thenReturn(false);
+            ShadowSettings.setCanDrawOverlays(true);
             controller.pause().resume();
             assertTrue(contains(root(controller.get()),"필수 권한 1 / 3"));
             assertNull(controller.get().findViewById(R.id.permission_ready_clue));
@@ -168,7 +167,9 @@ public class RequiredPermissionsActivityTest {
     @Test public void reusedPermissionScreenUsesTheLatestReturnDestination() {
         shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.RECORD_AUDIO);
         ShadowSettings.setCanDrawOverlays(true);
+        ShadowSettings.setCanDrawOverlays(false);
         try(var controller=Robolectric.buildActivity(RequiredPermissionsActivity.class,intent("home")).setup()) {
+            ShadowSettings.setCanDrawOverlays(true);
             controller.get().onNewIntent(intent("settings"));
             button(root(controller.get())).performClick();
             assertEquals(MenuActivity.class.getName(),

@@ -112,9 +112,10 @@ public final class RequiredPermissionsActivity extends AppCompatActivity {
             body = "다른 앱에서도 클릭의 안내를 보여드리기 위한 권한이에요.\n설정 화면에서 클릭을 선택하고 표시 허용 스위치를 켜주세요.\n설정 후 뒤로 돌아와 주세요.";
             label = "표시 권한 설정하기";
         } else {
+            if (!"settings".equals(destination())) { openDestination(); return; }
             heading = "이제 클릭을 사용할 수 있어요!";
             body = "접근성, 마이크, 다른 앱 위에 표시가 모두 허용되었어요.";
-            label = "tutorial".equals(destination()) ? getString(R.string.tutorial_ready_start) : "클릭 시작하기";
+            label = "클릭 시작하기";
             if (readyPage == null) readyPage = new PermissionReadyView(this);
             readyPage.bind(heading, body, label, v -> advance());
             if (readyPage.getParent() == null) setContentView(readyPage);
@@ -156,14 +157,17 @@ public final class RequiredPermissionsActivity extends AppCompatActivity {
             openSettings(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
             return;
         }
+        openDestination();
+    }
+
+    private void openDestination() {
         navigating = true;
-        Class<?> target = "tutorial".equals(destination()) ? TutorialActivity.class
-                : "settings".equals(destination()) ? MenuActivity.class : HomeActivity.class;
-        Intent next = new Intent(this, target).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        if (target == TutorialActivity.class) {
-            next.putExtra(TutorialActivity.EXTRA_FROM_SIGN_UP, true);
+        Intent next;
+        if ("tutorial".equals(destination())) {
+            next = HomeActivity.tutorialIntent(this);
             new AccessibilityOnboardingState(this).markTutorialLaunched();
-        }
+        } else next = new Intent(this, "settings".equals(destination()) ? MenuActivity.class : HomeActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         startActivity(next);
         finish();
     }
