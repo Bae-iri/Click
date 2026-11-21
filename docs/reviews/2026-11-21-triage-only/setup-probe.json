@@ -1,0 +1,187 @@
+{
+  "schema_version": "memory-reuse.v1",
+  "model_calls": 0,
+  "checks": [
+    {
+      "task_id": "settings_display",
+      "app_id": "com.android.settings",
+      "ready": true,
+      "initial_state_hash": "58b0f1779e0478b84e8ca56df87de914869253741045e9280859a8545173f368",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 1709,
+        "snapshot_reads": 11,
+        "retry_count": 1,
+        "start_control_retry_count": 0,
+        "stable_reads": 5,
+        "stable_span_ms": 711,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.android.settings"
+        ]
+      }
+    },
+    {
+      "task_id": "settings_sound",
+      "app_id": "com.android.settings",
+      "ready": true,
+      "initial_state_hash": "58b0f1779e0478b84e8ca56df87de914869253741045e9280859a8545173f368",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 2118,
+        "snapshot_reads": 13,
+        "retry_count": 3,
+        "start_control_retry_count": 0,
+        "stable_reads": 5,
+        "stable_span_ms": 783,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.android.settings"
+        ]
+      }
+    },
+    {
+      "task_id": "settings_notifications",
+      "app_id": "com.android.settings",
+      "ready": true,
+      "initial_state_hash": "58b0f1779e0478b84e8ca56df87de914869253741045e9280859a8545173f368",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 1818,
+        "snapshot_reads": 11,
+        "retry_count": 3,
+        "start_control_retry_count": 0,
+        "stable_reads": 4,
+        "stable_span_ms": 608,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.android.settings"
+        ]
+      }
+    },
+    {
+      "task_id": "chrome_menu",
+      "app_id": "com.android.chrome",
+      "ready": true,
+      "initial_state_hash": "2cc86baa272faac7c164bbce6c60a072eae74eb82ba434498bc322914baf22ef",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 2320,
+        "snapshot_reads": 12,
+        "retry_count": 2,
+        "start_control_retry_count": 0,
+        "stable_reads": 5,
+        "stable_span_ms": 722,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.android.chrome"
+        ]
+      }
+    },
+    {
+      "task_id": "chrome_new_tab",
+      "app_id": "com.android.chrome",
+      "ready": true,
+      "initial_state_hash": "92db694585838abc3e95d3270fd418222b39443c79716cbe52f23ca964cc3e7b",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 2273,
+        "snapshot_reads": 12,
+        "retry_count": 3,
+        "start_control_retry_count": 0,
+        "stable_reads": 4,
+        "stable_span_ms": 602,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.android.chrome"
+        ]
+      }
+    },
+    {
+      "task_id": "chrome_settings",
+      "app_id": "com.android.chrome",
+      "ready": true,
+      "initial_state_hash": "92db694585838abc3e95d3270fd418222b39443c79716cbe52f23ca964cc3e7b",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 1792,
+        "snapshot_reads": 10,
+        "retry_count": 1,
+        "start_control_retry_count": 0,
+        "stable_reads": 4,
+        "stable_span_ms": 634,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.android.chrome"
+        ]
+      }
+    },
+    {
+      "task_id": "youtube_shorts",
+      "app_id": "com.google.android.youtube",
+      "ready": true,
+      "initial_state_hash": "ca83b14e8d8f618d5d4fbfb31dd0854a68165977dd866a69f7bb8e014e960438",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 3112,
+        "snapshot_reads": 16,
+        "retry_count": 3,
+        "start_control_retry_count": 0,
+        "stable_reads": 4,
+        "stable_span_ms": 644,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "no_snapshot",
+          "com.google.android.youtube"
+        ]
+      }
+    },
+    {
+      "task_id": "youtube_subscriptions",
+      "app_id": "com.google.android.youtube",
+      "ready": true,
+      "initial_state_hash": "ca83b14e8d8f618d5d4fbfb31dd0854a68165977dd866a69f7bb8e014e960438",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 2698,
+        "snapshot_reads": 15,
+        "retry_count": 3,
+        "start_control_retry_count": 0,
+        "stable_reads": 4,
+        "stable_span_ms": 642,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.google.android.youtube"
+        ]
+      }
+    },
+    {
+      "task_id": "youtube_search",
+      "app_id": "com.google.android.youtube",
+      "ready": true,
+      "initial_state_hash": "ca83b14e8d8f618d5d4fbfb31dd0854a68165977dd866a69f7bb8e014e960438",
+      "setup_trace": {
+        "deadline_ms": 10000,
+        "elapsed_ms": 2760,
+        "snapshot_reads": 15,
+        "retry_count": 3,
+        "start_control_retry_count": 0,
+        "stable_reads": 4,
+        "stable_span_ms": 624,
+        "oracle_unknown_reads": 0,
+        "observed_package_categories": [
+          "other_package",
+          "com.google.android.youtube"
+        ]
+      }
+    }
+  ]
+}

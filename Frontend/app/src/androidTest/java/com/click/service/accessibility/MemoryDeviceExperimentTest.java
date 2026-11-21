@@ -127,7 +127,8 @@ public class MemoryDeviceExperimentTest {
         boolean paperIdeas=Boolean.parseBoolean(args.getString("paperIdeasExperiment","false"));
         if(paperIdeas){Assert.assertFalse(integrated||firstStepCost);Assert.assertEquals(Arrays.asList("B","C"),arms);Assert.assertEquals("CURRENT",args.getString("metaArm","CURRENT"));}
         if(firstStepCost){Assert.assertFalse(integrated);Assert.assertEquals(Arrays.asList("A","B","C"),arms);Assert.assertEquals("CURRENT",args.getString("metaArm","CURRENT"));}
-        String[] schedule=paperIdeas?new String[]{"learn1","learn2","learn3","eval1"}:firstStepCost?new String[]{"learn1","learn2","learn3","learn4","eval1","eval2","eval3"}:integrated?new String[]{"learn1","learn2","eval_normal","eval_no_effect","eval_delayed"}:SESSIONS;
+        boolean triageOnly=paperIdeas&&"triage".equals(args.getString("paperIdeasArm","full"));
+        String[] schedule=triageOnly?new String[]{"rep1","rep2","rep3"}:paperIdeas?new String[]{"learn1","learn2","learn3","eval1"}:firstStepCost?new String[]{"learn1","learn2","learn3","learn4","eval1","eval2","eval3"}:integrated?new String[]{"learn1","learn2","eval_normal","eval_no_effect","eval_delayed"}:SESSIONS;
         AppTaskMetaController.Arm.valueOf(args.getString("metaArm","CURRENT"));
         if(integrated)Assert.assertEquals("Integrated comparison uses memory off/on only",Arrays.asList("A","B"),arms);
         int sessions=Integer.parseInt(args.getString("sessions",String.valueOf(schedule.length)));
@@ -150,7 +151,7 @@ public class MemoryDeviceExperimentTest {
         }
         write("manifest.json",new JSONObject().put("schema_version",VERSION).put("run_id",runId).put("tasks",manifest)
             .put("arms",new JSONArray(arms)).put("sessions",new JSONArray(Arrays.copyOf(schedule,sessions))).put("budget_ms",budget)
-            .put("meta_arm",args.getString("metaArm","CURRENT")).put("meta_memory_integration",integrated).put("first_step_cost_experiment",firstStepCost).put("paper_ideas_experiment",paperIdeas).put("scheduled_arm_orders",orders).put("arm_order_scheme","deterministic_rotation_and_reversal_not_random")
+            .put("meta_arm",args.getString("metaArm","CURRENT")).put("meta_memory_integration",integrated).put("first_step_cost_experiment",firstStepCost).put("paper_ideas_experiment",paperIdeas).put("paper_ideas_arm",args.getString("paperIdeasArm","full")).put("scheduled_arm_orders",orders).put("arm_order_scheme","deterministic_rotation_and_reversal_not_random")
             .put("memory_isolation","per_arm_device_store_and_facade_store").put("simulated_user","confirms_only_after_independent_oracle_700ms")
             .put("task_selection_frozen_before_run",true).toString(2),false);
         if(Boolean.parseBoolean(args.getString("clearOutput","true")))write("episodes.jsonl","",false);
@@ -298,7 +299,7 @@ public class MemoryDeviceExperimentTest {
         int modelCalls,nativeAcceptances,nativeRejections;long modelWait,startedAt,firstProposalAt=-1;
         final String condition;final boolean firstStep,rebind;boolean injected,delayedAccepted;final Handler delayed=new Handler(Looper.getMainLooper());
         Driver(Task task,String goal,String arm,AppTaskStore store,String runId,String sessionName){this.task=task;this.goal=goal;this.arm=arm;this.store=store;this.runId=runId;
-            boolean paper=Boolean.parseBoolean(args.getString("paperIdeasExperiment","false"));
+            boolean paper=Boolean.parseBoolean(args.getString("paperIdeasExperiment","false"))&&!"triage".equals(args.getString("paperIdeasArm","full"));
             firstStep=(Boolean.parseBoolean(args.getString("firstStepCostExperiment","false"))||paper)&&"C".equals(arm)&&sessionName.startsWith("eval");
             rebind=paper&&"C".equals(arm);
             condition=sessionName.equals("eval_no_effect")?"accepted_no_effect":sessionName.equals("eval_delayed")?"delayed_transition":"normal";}

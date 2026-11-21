@@ -293,6 +293,8 @@ _GOALS = {}
 COMPLETION = {}
 # Paper-ideas comparison (docs/reviews/2026-11-21-paper-ideas): arm -> T+M1+M3 enabled.
 PAPER = {}
+# Completion triage alone (docs/reviews/2026-11-21-triage-only): arm -> T enabled.
+TRIAGE = {}
 
 
 def _holds(check, screen):
@@ -374,7 +376,7 @@ def diagnostic_record(request, response, elapsed_ms, arm, registration):
         completion_bound=response.completion is not None and request.state.completion is None,
         completion_rejected=diagnostic.get('completion_rejected'),
         completion_grounding=diagnostic.get('completion_grounding'),
-        completion_policy=COMPLETION.get(arm, 'develop'), paper_ideas=PAPER.get(arm, False),
+        completion_policy=COMPLETION.get(arm, 'develop'), paper_ideas=PAPER.get(arm, False), completion_triage=TRIAGE.get(arm, False),
         reason_code=diagnostic.get('reason_code') if isinstance(diagnostic.get('reason_code'), str) else None,
         planning_mode=diagnostic.get('planning_mode') if isinstance(diagnostic.get('planning_mode'), str) else None,
         # Public control labels/roles only (catalogue apps' menus); never input values.
@@ -463,7 +465,7 @@ def make_handler(service, state, catalogue):
                         started = time.monotonic()
                         with completion_policy(COMPLETION.get(arm)):
                             response = service.step(request, user_id=arm if arm in MEMORY_ARMS else None,
-                                completion_triage=PAPER.get(arm, False))
+                                completion_triage=TRIAGE.get(arm, False))
                         apply_binding_rule(COMPLETION.get(arm), request, response)
                         elapsed = (time.monotonic() - started) * 1000
                     with state.lock:
@@ -493,11 +495,18 @@ def main(argv=None):
     parser.add_argument('--first-step-comparison', action='store_true', help='B and C both use exact production recall; device C opts into first-action recall')
     parser.add_argument('--paper-ideas', action='store_true',
         help='B=exact production memory, C=exact memory + completion triage (T) + neutral system rejections (M1) + merged replay expectation (M3); device C adds rebind (R) and first-step recall')
+    parser.add_argument('--triage-only', action='store_true',
+        help='B=exact production memory, C=B + completion triage (T) only')
     args = parser.parse_args(argv)
+    if args.triage_only:
+        if args.completion_comparison or args.first_step_comparison or args.paper_ideas:parser.error('Comparison modes are mutually exclusive')
+        SERVED['C'] = 'exact'
+        TRIAGE['C'] = True
     if args.paper_ideas:
         if args.completion_comparison or args.first_step_comparison:parser.error('Comparison modes are mutually exclusive')
         SERVED['C'] = 'exact'
         PAPER['C'] = True
+        TRIAGE['C'] = True
     if args.first_step_comparison:
         if args.completion_comparison:parser.error('Comparison modes are mutually exclusive')
         SERVED['C'] = 'exact'
