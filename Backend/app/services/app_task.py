@@ -90,9 +90,25 @@ def _search_open_goal(goal):
         and not re.search(r'입력|검색어|결과|찾아|그리고|다음|하고|열고|열어서|한 뒤|type|enter|query|results|then|and ',goal,re.I))
 
 
+_UNSELECT_GOAL = re.compile(r'해제|취소|끄|꺼|닫|접어|접기|unselect|deselect|disable|turn off|close|collapse', re.I)
+
+
+def _first_navigation_menu(request, goal, recalled):
+    """Only a fresh menu without plan history or observable destination evidence qualifies."""
+    state, screen = request.state, request.screen
+    if (request.recovery or request.path_prefix or screen.keyboard_visible or state.revision or state.subgoals
+            or state.attempts or state.completion or recalled and (recalled.evidence or recalled.tactics or recalled.action)):
+        return False
+    nodes = screen.nodes
+    return (_navigation_goal(goal) and not _UNSELECT_GOAL.search(goal)
+            and any(n.role == 'button' and n.clickable for n in nodes)
+            and all(n.source == 'accessibility' and n.role in {'button', 'list'} and not n.selected
+                    and n.checked is None and not n.editable and not n.has_value for n in nodes))
+
+
 def _unsafe_goal_check(goal,check,nodes):
     """A menu's presence is action availability, not reaching its destination."""
-    if check.selected is False and not re.search(r'해제|취소|끄|꺼|닫|접어|접기|unselect|deselect|disable|turn off|close|collapse',goal,re.I):
+    if check.selected is False and not _UNSELECT_GOAL.search(goal):
         return True
     if check.checked is not None or check.selected is not None:
         return False
@@ -203,7 +219,9 @@ class AppTaskService:
                 return response
         diagnostic={'called':False,'completion_provider':'gemini','failure_stage':'none','planning_mode':'result_only' if result_only else 'goal_first' if goal_first else 'next_action',**execution_diagnostic}
         response.diagnostic=diagnostic
-        try: model=model_name()
+        menu_model = os.getenv('APP_TASK_MENU_MODEL', '').strip()
+        use_menu_model = menu_model and goal_first and _first_navigation_menu(request, goal, recalled)
+        try: model=model_name(menu_model if use_menu_model else None)
         except ValueError:
             diagnostic.update(reason='invalid_model_configuration',reason_code='invalid_model_configuration',failure_stage='configuration',failure_kind='configuration');response.status='unavailable';return response
         diagnostic['model']=model
