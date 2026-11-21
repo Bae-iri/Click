@@ -67,7 +67,7 @@ public class AppTaskEvidenceLifecycleTest {
         callback.getValue().success(new JSONObject().put("status","confirm_result").put("subgoals",memory.state().getJSONArray("subgoals")));
         for(int i=0;i<5;i++){controller.refresh();controller.screenChanged(listener.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));}
         verify(gateway,times(1)).send(any(),any());assertFalse(memory.completionSupported());assertEquals(0,listener.executions);
-        listener.current=page(title("different","다른 목적 화면"));controller.screenChanged(listener.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));
+        listener.current=page(title("different","다른 목적 화면"));controller.screenChanged(listener.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(550));
         verify(gateway,times(2)).send(any(),any());controller.close();
     }
 

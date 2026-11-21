@@ -103,4 +103,76 @@ public class AppTaskDiagnosticsTest {
         record=AppTaskDiagnostics.receipt(request(),response,200,new java.io.IOException("INVALID_APP_TASK_RESPONSE"),0,1,1);
         assertEquals("unknown",record.getString("model_call_state"));assertFalse(record.has("recovery_context_used"));assertFalse(record.has("allowed_action_count"));
     }
+    @Test public void recoveryAttributionCopiesOnlyCompatibleClosedPolicyReasonPairs()throws Exception {
+        for(String[] pair:new String[][]{{"mc_v0","accepted_action_unconfirmed","3"},{"mc_v1","accepted_action_unconfirmed","3"},
+                {"mc_v1","observed_transition_unconfirmed","1"},{"mc_v1","observed_transition_unconfirmed","2"},
+                {"mc_v2","accepted_action_unconfirmed","3"},{"mc_v2","observed_transition_unconfirmed","1"},
+                {"mc_v2","observed_transition_unconfirmed","2"}}){
+            JSONObject diagnostic=new JSONObject().put("called",true).put("recovery_context_used",true)
+                .put("recovery_policy",pair[0]).put("recovery_reason",pair[1]).put("recovery_attempt",Integer.parseInt(pair[2]));
+            JSONObject record=AppTaskDiagnostics.receipt(request(),bound(new JSONObject().put("status","proposed").put("diagnostic",diagnostic)),200,null,0,1,1);
+            assertEquals(pair[0],record.getString("recovery_policy"));assertEquals(pair[1],record.getString("recovery_reason"));
+        }
+    }
+    @Test public void invalidRecoveryAttributionCannotLeakStringsOrMasqueradeAsProgress()throws Exception {
+        for(String invalid:java.util.List.of("used_false","used_string","policy","reason","missing_policy","missing_reason",
+                "v0_progress","progress_attempt3","v2_progress_attempt3","future_policy","attempt_float","attempt_bool","attempt_missing","attempt4")){
+            JSONObject diagnostic=new JSONObject().put("called",true).put("recovery_context_used",true)
+                .put("recovery_policy","mc_v1").put("recovery_reason","accepted_action_unconfirmed").put("recovery_attempt",1);
+            switch(invalid){
+                case "used_false" -> diagnostic.put("recovery_context_used",false);
+                case "used_string" -> diagnostic.put("recovery_context_used","true");
+                case "policy" -> diagnostic.put("recovery_policy","PRIVATE policy");
+                case "reason" -> diagnostic.put("recovery_reason","PRIVATE reason");
+                case "missing_policy" -> diagnostic.remove("recovery_policy");
+                case "missing_reason" -> diagnostic.remove("recovery_reason");
+                case "v0_progress" -> diagnostic.put("recovery_policy","mc_v0").put("recovery_reason","observed_transition_unconfirmed");
+                case "progress_attempt3" -> diagnostic.put("recovery_reason","observed_transition_unconfirmed").put("recovery_attempt",3);
+                case "v2_progress_attempt3" -> diagnostic.put("recovery_policy","mc_v2").put("recovery_reason","observed_transition_unconfirmed").put("recovery_attempt",3);
+                case "future_policy" -> diagnostic.put("recovery_policy","mc_v3");
+                case "attempt_float" -> diagnostic.put("recovery_attempt",1.0);
+                case "attempt_bool" -> diagnostic.put("recovery_attempt",true);
+                case "attempt_missing" -> diagnostic.remove("recovery_attempt");
+                case "attempt4" -> diagnostic.put("recovery_attempt",4);
+            }
+            JSONObject record=AppTaskDiagnostics.receipt(request(),bound(new JSONObject().put("status","proposed").put("diagnostic",diagnostic)),200,null,0,1,1);
+            assertFalse(invalid,record.has("recovery_policy"));assertFalse(invalid,record.has("recovery_reason"));assertFalse(record.toString().contains("PRIVATE"));
+        }
+        JSONObject diagnostic=new JSONObject().put("called",true).put("recovery_context_used",true).put("recovery_policy","mc_v1")
+            .put("recovery_reason","observed_transition_unconfirmed").put("recovery_attempt",1);
+        JSONObject response=bound(new JSONObject().put("diagnostic",diagnostic)).put("task_id","unrelated-task");
+        JSONObject unbound=AppTaskDiagnostics.receipt(request(),response,200,new java.io.IOException("INVALID_APP_TASK_RESPONSE"),0,1,1);
+        assertFalse(unbound.has("recovery_policy"));assertFalse(unbound.has("recovery_reason"));
+    }
+    @Test public void tokenUsageCopiesOnlyReportedBoundedIntegersWithoutInferringMissingCounts()throws Exception {
+        JSONObject diagnostic=new JSONObject().put("called",true).put("input_tokens",100).put("output_tokens",25L)
+            .put("thinking_tokens",0).put("total_tokens",125).put("usageMetadata",new JSONObject().put("private","PRIVATE provider body"));
+        JSONObject response=bound(new JSONObject().put("status","proposed").put("diagnostic",diagnostic));
+        JSONObject record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
+        assertEquals(100,record.getInt("input_tokens"));assertEquals(25,record.getInt("output_tokens"));
+        assertEquals(0,record.getInt("thinking_tokens"));assertEquals(125,record.getInt("total_tokens"));
+        assertFalse(record.has("usageMetadata"));assertFalse(record.toString().contains("PRIVATE"));
+        diagnostic.remove("output_tokens");diagnostic.remove("thinking_tokens");diagnostic.remove("total_tokens");
+        record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
+        assertEquals(100,record.getInt("input_tokens"));
+        assertFalse(record.has("output_tokens"));assertFalse(record.has("thinking_tokens"));assertFalse(record.has("total_tokens"));
+        JSONObject missing=AppTaskDiagnostics.receipt(request(),bound(new JSONObject().put("status","needs_input")),200,null,0,1,1);
+        for(String key:java.util.Set.of("input_tokens","output_tokens","thinking_tokens","total_tokens"))assertFalse(missing.has(key));
+    }
+    @Test public void malformedOutOfRangeAndUnboundTokenUsageNeverBecomesCostEvidence()throws Exception {
+        for(Object invalid:new Object[]{true,1.0,-1,1000001L,"12",JSONObject.NULL}){
+            JSONObject diagnostic=new JSONObject().put("called",true);
+            for(String key:java.util.Set.of("input_tokens","output_tokens","thinking_tokens","total_tokens"))diagnostic.put(key,invalid);
+            JSONObject record=AppTaskDiagnostics.receipt(request(),bound(new JSONObject().put("diagnostic",diagnostic)),200,null,0,1,1);
+            for(String key:java.util.Set.of("input_tokens","output_tokens","thinking_tokens","total_tokens"))assertFalse(key+" "+invalid,record.has(key));
+        }
+        JSONObject diagnostic=new JSONObject().put("called",true);
+        for(String key:java.util.Set.of("input_tokens","output_tokens","thinking_tokens","total_tokens"))diagnostic.put(key,1000000L);
+        JSONObject response=bound(new JSONObject().put("diagnostic",diagnostic));
+        JSONObject maximum=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
+        for(String key:java.util.Set.of("input_tokens","output_tokens","thinking_tokens","total_tokens"))assertEquals(1000000,maximum.getInt(key));
+        response.put("task_id","unrelated-task");
+        JSONObject unbound=AppTaskDiagnostics.receipt(request(),response,200,new java.io.IOException("INVALID_APP_TASK_RESPONSE"),0,1,1);
+        for(String key:java.util.Set.of("input_tokens","output_tokens","thinking_tokens","total_tokens"))assertFalse(unbound.has(key));
+    }
 }

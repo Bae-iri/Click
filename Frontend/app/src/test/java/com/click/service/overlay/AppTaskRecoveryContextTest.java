@@ -61,7 +61,7 @@ public class AppTaskRecoveryContextTest {
             executions++;if(executions==2)destination=true;return true;
         }
         void startUnconfirmed()throws Exception {controller.refresh();assertEquals(1,requests.size());reply(0,"target");
-            controller.execute(latest.getJSONObject("action").getString("id"),null);idle(5350);}
+            controller.execute(latest.getJSONObject("action").getString("id"),null);idle(8800);}
         void reply(int index,String target)throws Exception {
             JSONObject request=requests.get(index),screen=request.getJSONObject("screen"),node=AppTaskObservation.find(screen,target);
             assertNotNull(node);
@@ -95,9 +95,9 @@ public class AppTaskRecoveryContextTest {
             meta.startUnconfirmed();assertEquals(2,meta.requests.size());assertFalse(meta.requests.get(0).has("recovery"));
             JSONObject request=meta.requests.get(1),screen=request.getJSONObject("screen"),recovery=request.getJSONObject("recovery");
             assertEquals(Set.of("policy","reason","last_verdict","waited_ms","attempt","observation_id","last_action","blocked_actions"),keys(recovery));
-            assertEquals("mc_v0",recovery.getString("policy"));assertEquals("accepted_action_unconfirmed",recovery.getString("reason"));
+            assertEquals("mc_v2",recovery.getString("policy"));assertEquals("accepted_action_unconfirmed",recovery.getString("reason"));
             assertEquals("waiting",recovery.getString("last_verdict"));assertEquals(1,recovery.getInt("attempt"));
-            assertTrue(recovery.getLong("waited_ms")>=5000&&recovery.getLong("waited_ms")<=8000);
+            assertTrue(recovery.getLong("waited_ms")>=8000&&recovery.getLong("waited_ms")<=8500);
             assertEquals(screen.getString("observation_id"),recovery.getString("observation_id"));
             JSONObject last=recovery.getJSONObject("last_action");assertEquals(REF_FIELDS,keys(last));
             assertEquals("tap",last.getString("tool"));assertEquals(PKG,last.getString("package"));assertEquals("target",last.getString("target_id"));
@@ -111,7 +111,7 @@ public class AppTaskRecoveryContextTest {
         }
     }
 
-    @Test public void aNewVerifiedActionClearsActiveContextWithoutChangingRejectedHistory()throws Exception {
+    @Test public void ordinaryContinuationRetainsFailureContextAndItsOriginalActionReference()throws Exception {
         try(Harness meta=new Harness(AppTaskMetaController.Arm.META)){
             meta.startUnconfirmed();JSONObject failedScreen=meta.requests.get(1).getJSONObject("screen");
             JSONObject failedAction=action(failedScreen,"tap","screen_changed");
@@ -119,7 +119,11 @@ public class AppTaskRecoveryContextTest {
             meta.reply(1,"alternative");assertEquals("proposed",meta.latest.getString("status"));
             meta.controller.execute(meta.latest.getJSONObject("action").getString("id"),null);idle(500);
             assertEquals(2,meta.executions);assertEquals(3,meta.requests.size());
-            assertFalse(meta.requests.get(2).has("recovery"));
+            JSONObject continuation=meta.requests.get(2),recovery=continuation.getJSONObject("recovery");
+            assertEquals("mc_v2",recovery.getString("policy"));assertEquals("accepted_action_unconfirmed",recovery.getString("reason"));
+            assertEquals(2,recovery.getInt("attempt"));
+            assertEquals(continuation.getJSONObject("screen").getString("observation_id"),recovery.getString("observation_id"));
+            assertEquals(meta.requests.get(1).getJSONObject("recovery").getJSONObject("last_action").toString(),recovery.getJSONObject("last_action").toString());
             assertTrue(meta.controller.metaController().blocked(failedScreen,failedAction));
             assertEquals(1,meta.controller.metaController().diagnostic().getInt("recovery_count"));
         }
@@ -131,7 +135,7 @@ public class AppTaskRecoveryContextTest {
         String destination="org.example.selected";
         JSONObject open=new JSONObject().put("tool","open_app").put("package",destination).put("target_id",JSONObject.NULL)
             .put("input","PRIVATE_INPUT").put("bounds",new JSONArray().put(1).put(2).put(3).put(4));
-        assertEquals(AppTaskMetaController.Decision.REOBSERVE,meta.after(before,after,open,AppTaskVerifier.Verdict.WAITING,5050,10000));
+        assertEquals(AppTaskMetaController.Decision.REOBSERVE,meta.after(before,after,open,AppTaskVerifier.Verdict.WAITING,8050,10000));
         JSONObject changed=observation(PKG,"Beta route"),context=meta.recoveryContext(changed),ref=context.getJSONObject("last_action");
         assertEquals(destination,ref.getString("package"));assertTrue(ref.isNull("target_id"));assertEquals(REF_FIELDS,keys(ref));
         assertEquals(before.getString("fingerprint"),ref.getString("fingerprint"));
@@ -141,6 +145,7 @@ public class AppTaskRecoveryContextTest {
         context.getJSONObject("last_action").put("package","org.example.mutated");
         assertEquals(destination,meta.recoveryContext(changed).getJSONObject("last_action").getString("package"));
         meta.after(before,after,open,AppTaskVerifier.Verdict.VERIFIED,5500,10500);
-        assertNull(meta.recoveryContext(changed));assertTrue(meta.blocked(before,open));
+        assertNotNull(meta.recoveryContext(changed));assertTrue(meta.blocked(before,open));
+        meta.resetUserContext();assertNull(meta.recoveryContext(changed));assertTrue(meta.blocked(before,open));
     }
 }

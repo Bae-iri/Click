@@ -1,0 +1,40 @@
+{
+  "schema_version": "click.native-public-apps-support-assessment.v1",
+  "package": "com.google.android.documentsui",
+  "model_calls": 0,
+  "home_public": true,
+  "required_route": "Show roots -> Recent or Documents navigation root",
+  "supported_for_frozen_two_navigation_goals": false,
+  "criterion": "Each required GUI navigation step must be exported by unmodified production AppTaskObservation as public and contain a safely executable node.",
+  "reason": "Opening the actual public drawer repeatedly yields production status empty with no nodes; no eligible next navigation node can be bound. The home screen alone is public.",
+  "privacy_rule_changed": false,
+  "benchmark_observation_injected": false,
+  "private_files_opened": false,
+  "evidence": [
+    {
+      "file": "probe-homes.json",
+      "sha256": "01d648dd81e7c254459dc7317b227c79ae5bb668acda001a450eed8ae696b71c",
+      "projection_status": "public",
+      "node_count": 11,
+      "document_items_present": false
+    },
+    {
+      "file": "probe-files-roots-visible.json",
+      "sha256": "8bb79262bd84b8f9bb3e1706c90f0917228bf89839fa9343571bd2832858cedc",
+      "projection_status": "empty",
+      "node_count": 0,
+      "document_items_present": false
+    },
+    {
+      "file": "probe-files-roots.json",
+      "sha256": "8936baa2c1afb7c527522e1097d57538995f583cfb9da6df831d159e14babac7",
+      "projection_status": "empty",
+      "node_count": 0,
+      "document_items_present": false
+    },
+    {
+      "file": "files-current.png",
+      "sha256": "85d3aff37a50d33d4f0186e1e05db0ce8b1362a5183304e97c49f2bd8b750f0c"
+    }
+  ]
+}

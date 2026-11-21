@@ -1321,7 +1321,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     private void renderAppTask(JSONObject result,int[] bounds){
         if(appGuide==null||closing||appEntry!=null||execution.paused())return;final AppTaskController owner=appGuide;ensureTaskFlow();
         JSONObject action=result.optJSONObject("action");final String actionId=action==null?"":action.optString("id");
-        taskFlowView.appTask(result,value->{if(appGuide==owner)owner.execute(actionId,value);},()->{if(appGuide==owner)owner.refresh();},
+        taskFlowView.appTask(result,value->{if(appGuide==owner)owner.execute(actionId,value);},()->{if(appGuide==owner)owner.userRefresh();},
             ()->{if(appGuide==owner&&!execution.paused())showAppTaskTools();},()->{if(appGuide==owner&&!execution.paused())readAppTaskVisual();},()->{
                 if(appGuide!=owner||endingTask)return;
                 // Ending guidance does not prove an order or complete the server's agent session.
@@ -2452,7 +2452,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             if(TaskFlowAnswers.stop(command)){onStopRequested();return;}
             if(execution.paused())return;
             if(RepeatRequest.matches(command)){repeatLastGuide();return;}
-            if(normalized.matches("확인|현재화면확인|다음|다음화면확인"))appGuide.refresh();
+            if(normalized.matches("확인|현재화면확인|다음|다음화면확인"))appGuide.userRefresh();
             else enqueueNormalRequest(command);
             return;
         }

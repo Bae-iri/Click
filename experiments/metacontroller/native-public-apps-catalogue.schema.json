@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Frozen actual native public-app navigation catalogue",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "locale", "apps", "tasks"],
+  "properties": {
+    "schema_version": {"const": "click.native-public-apps.v1"},
+    "locale": {"type": "string", "minLength": 2, "maxLength": 40},
+    "apps": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"$ref": "#/$defs/app"}},
+    "tasks": {"type": "array", "minItems": 6, "maxItems": 6, "items": {"$ref": "#/$defs/task"}}
+  },
+  "$defs": {
+    "package": {"type": "string", "pattern": "^[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+$", "maxLength": 200},
+    "label": {"type": "string", "minLength": 1, "maxLength": 80},
+    "resource": {"type": "string", "maxLength": 300, "pattern": "^(?:[A-Za-z0-9_.]+:id/[A-Za-z0-9_./-]+)?$"},
+    "path": {"type": "array", "maxItems": 12, "items": {"$ref": "#/$defs/label"}},
+    "control": {
+      "type": "object", "additionalProperties": false, "required": ["label", "resource"],
+      "properties": {"label": {"$ref": "#/$defs/label"}, "resource": {"$ref": "#/$defs/resource"}}
+    },
+    "app": {
+      "type": "object", "additionalProperties": false,
+      "required": ["package", "label", "home_action", "public_labels", "public_resources", "navigation_controls"],
+      "properties": {
+        "package": {"$ref": "#/$defs/package"}, "label": {"$ref": "#/$defs/label"},
+        "home_action": {"enum": ["launcher", "android.settings.SETTINGS"]},
+        "public_labels": {"type": "array", "minItems": 1, "maxItems": 400, "uniqueItems": true, "items": {"type": "string", "maxLength": 80}},
+        "public_resources": {"type": "array", "minItems": 1, "maxItems": 400, "uniqueItems": true, "items": {"$ref": "#/$defs/resource"}},
+        "navigation_controls": {"type": "array", "minItems": 1, "maxItems": 200, "uniqueItems": true, "items": {"$ref": "#/$defs/control"}}
+      }
+    },
+    "oracle": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "label"],
+      "properties": {
+        "kind": {"enum": ["passive_title", "visible", "selected", "checked"]},
+        "label": {"$ref": "#/$defs/label"},
+        "resources": {"type": "array", "maxItems": 8, "uniqueItems": true, "items": {"$ref": "#/$defs/resource"}},
+        "expected": {"type": "boolean"}
+      },
+      "allOf": [{"if": {"properties": {"kind": {"enum": ["selected", "checked"]}}}, "then": {"required": ["expected"]}}]
+    },
+    "task": {
+      "type": "object", "additionalProperties": false,
+      "required": ["task_id", "package", "goal", "start_path", "gui_path", "oracle_checks"],
+      "properties": {
+        "task_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,79}$"},
+        "package": {"$ref": "#/$defs/package"},
+        "goal": {"type": "string", "minLength": 1, "maxLength": 200},
+        "start_path": {"$ref": "#/$defs/path"},
+        "gui_path": {"allOf": [{"$ref": "#/$defs/path"}, {"minItems": 1}]},
+        "oracle_checks": {"type": "array", "minItems": 1, "maxItems": 8, "items": {"$ref": "#/$defs/oracle"}},
+        "positive_intent": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.]{0,199}$"},
+        "positive_intent_path": {"$ref": "#/$defs/path"}
+      }
+    }
+  }
+}

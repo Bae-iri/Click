@@ -1,0 +1,57 @@
+{
+  "scope": "Capture-only known missing optional previous journal; raw preserved; episode request_traces and primary results unchanged",
+  "files": [
+    {
+      "raw": "client-receipts.jsonl",
+      "raw_sha256": "a97d4db67bd512025a0526ca4fd81fe93270d31f919a4c87479f82faae5b436e",
+      "derived": "derived-client-receipts.jsonl",
+      "derived_sha256": "fad4247e86d3189c175c9454636f14c61d8b81fe659bd351d48b88f23e7272d8",
+      "json_records": 76,
+      "excluded_diagnostics": [
+        {
+          "line_number": 1,
+          "text": "cat: no_backup/app-task-diagnostics/previous.jsonl: No such file or directory"
+        }
+      ]
+    },
+    {
+      "raw": "completion-events.jsonl",
+      "raw_sha256": "c1831d92b7034175b117b1e0cd559a9360c82420db18f5c1ba4b49606e5be177",
+      "derived": "derived-completion-events.jsonl",
+      "derived_sha256": "989aa59582440e35fc49e52e8c0c7585598536c4db0582ca699b79b33dc8da53",
+      "json_records": 481,
+      "excluded_diagnostics": [
+        {
+          "line_number": 1,
+          "text": "cat: no_backup/app-task-completion-diagnostics/previous.jsonl: No such file or directory"
+        }
+      ]
+    },
+    {
+      "raw": "normal-client-receipts.jsonl",
+      "raw_sha256": "5a9135c030cbfac2b3aef63c11783a318b4c5557b969227f675bc7ef0f7641c8",
+      "derived": "derived-normal-client-receipts.jsonl",
+      "derived_sha256": "73d22585d7979285534742fade7035c3308ff0c5b4c7acbfcc7553fd07884b91",
+      "json_records": 25,
+      "excluded_diagnostics": [
+        {
+          "line_number": 1,
+          "text": "cat: no_backup/app-task-diagnostics/previous.jsonl: No such file or directory"
+        }
+      ]
+    },
+    {
+      "raw": "normal-completion-events.jsonl",
+      "raw_sha256": "d309709eb38957ac6475ce9afe30655dd45903c46dfaf2517fb88998bbe47c2d",
+      "derived": "derived-normal-completion-events.jsonl",
+      "derived_sha256": "1e00c1bba0ca6feefce5d5166a6d4800370c52d69a66ae13ae1adad8ec1b2f6d",
+      "json_records": 180,
+      "excluded_diagnostics": [
+        {
+          "line_number": 1,
+          "text": "cat: no_backup/app-task-completion-diagnostics/previous.jsonl: No such file or directory"
+        }
+      ]
+    }
+  ]
+}

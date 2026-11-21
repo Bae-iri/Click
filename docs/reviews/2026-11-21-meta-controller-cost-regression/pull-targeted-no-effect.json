@@ -1,0 +1,65 @@
+{
+  "schema_version": "click.native-public-apps-strict-pull.v1",
+  "run_id": "native-public-apps-mcv2-nofx-20261121-r1",
+  "output_suffix": "mcv2-nofx-20261121-r1",
+  "phase": "targeted-no-effect",
+  "episode_count": 12,
+  "scoped_task_refs": [
+    "0a181483b3df33a7101379c3",
+    "0a60464c49e5d1c9e4e7684e",
+    "19034920b91af9b466898184",
+    "3ca68d86f23384f8d5693a6f",
+    "42f7625c92f42f3ae711f493",
+    "583faf98dc29f8ca99ef0968",
+    "a11c2ad1b713118adb6a482a",
+    "a13e9c6c29557d09c2efc2d8",
+    "a4a4466f03268c37d5a16525",
+    "cfacadd35bb1c5fed8987915",
+    "f3489cb4c59a582faf883dc0",
+    "ffb551649bdab67d84dcea83"
+  ],
+  "terminal_records": 26,
+  "terminal_records_outside_scope": 0,
+  "journals": {
+    "app-task-diagnostics": {
+      "files": [
+        "current.jsonl"
+      ],
+      "all_records": 102,
+      "scoped_records": 26
+    },
+    "app-task-completion-diagnostics": {
+      "files": [
+        "current.jsonl",
+        "previous.jsonl"
+      ],
+      "all_records": 610,
+      "scoped_records": 129
+    }
+  },
+  "artifact_sha256": {
+    "readiness.json": "61d7c4bca03b6472f52a886e7dc7592fade151905d277b3dbf5e7b8a3be5c988",
+    "guard-readiness.json": "02ac2ab418f0a5e809114639e5465a7a55bb29da9db442177ef67e36dc6559bd",
+    "manifest.json": "5da171bbd14d2dd5deb40af48e5c257985c7c34ca58e884bbed7da54373c8639",
+    "manifest-targeted-no-effect.json": "d24c262f5c21f246301f3f23bd36637ae4ef95f34218346c0833872a4764b5a7",
+    "episodes.jsonl": "a793ecdf38f2aeb83ce5ef3f02c45107ea889b6d0d607da47839d7c782d4f150",
+    "targeted-no-effect-episodes.jsonl": "a793ecdf38f2aeb83ce5ef3f02c45107ea889b6d0d607da47839d7c782d4f150",
+    "provider-terminal.jsonl": "acb6ad7d7ba1c7819523c014b5464f52eb033f1dc54c203740a58969a7b204dc",
+    "targeted-no-effect-provider-terminal.jsonl": "acb6ad7d7ba1c7819523c014b5464f52eb033f1dc54c203740a58969a7b204dc",
+    "provider-terminal-scoped.jsonl": "acb6ad7d7ba1c7819523c014b5464f52eb033f1dc54c203740a58969a7b204dc",
+    "journals/targeted-no-effect/app-task-diagnostics/current.jsonl": "7d985a4a56010d7fb35c537d53fcd3987378901583c63c02fc9471b01764eca5",
+    "app-task-diagnostics-current.jsonl": "7d985a4a56010d7fb35c537d53fcd3987378901583c63c02fc9471b01764eca5",
+    "client-receipts-all.jsonl": "7d985a4a56010d7fb35c537d53fcd3987378901583c63c02fc9471b01764eca5",
+    "targeted-no-effect-client-receipts-all.jsonl": "7d985a4a56010d7fb35c537d53fcd3987378901583c63c02fc9471b01764eca5",
+    "client-receipts.jsonl": "a13332b81189b7af3daa20f1fab1ced14d33cc001e684a3e169802c90166c2b6",
+    "targeted-no-effect-client-receipts.jsonl": "a13332b81189b7af3daa20f1fab1ced14d33cc001e684a3e169802c90166c2b6",
+    "journals/targeted-no-effect/app-task-completion-diagnostics/previous.jsonl": "320a936250af49c5a10a15bd4568d6eef29b5098dba14603662b46e85970d2c4",
+    "app-task-completion-diagnostics-previous.jsonl": "320a936250af49c5a10a15bd4568d6eef29b5098dba14603662b46e85970d2c4",
+    "journals/targeted-no-effect/app-task-completion-diagnostics/current.jsonl": "c06591f5159cc7aab5fcb52d099c99e8eba6b30deca05884ec99062cdae61aab",
+    "app-task-completion-diagnostics-current.jsonl": "c06591f5159cc7aab5fcb52d099c99e8eba6b30deca05884ec99062cdae61aab",
+    "completion-events-all.jsonl": "bf095f7bd4d00202983d6927c10506803384476797e6012716d2506e7f39e26a",
+    "targeted-no-effect-completion-events-all.jsonl": "bf095f7bd4d00202983d6927c10506803384476797e6012716d2506e7f39e26a",
+    "completion-events.jsonl": "04f9371df21962c9b24fc910bb32edd62d8c1cf1b651d1db8b70a6200f7fe45f",
+    "targeted-no-effect-completion-events.jsonl": "04f9371df21962c9b24fc910bb32edd62d8c1cf1b651d1db8b70a6200f7fe45f"
+  }
+}

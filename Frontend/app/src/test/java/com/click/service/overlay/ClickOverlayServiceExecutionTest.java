@@ -4180,6 +4180,24 @@ public class ClickOverlayServiceExecutionTest {
         method.setAccessible(true); method.invoke(service, text);
     }
 
+    @Test public void explicitAppPanelRefreshUsesTheUserRefreshBoundary()throws Exception {
+        prepareResultWithQueue();var owner=mock(AppTaskController.class);set("appGuide",owner);
+        Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);render.setAccessible(true);
+        render.invoke(service,new JSONObject().put("status","needs_input").put("message","현재 화면을 확인해 주세요."),null);
+        var refresh=org.mockito.ArgumentCaptor.forClass(Runnable.class);verify((TaskFlowOverlayView)get("taskFlowView")).appTask(any(),any(),refresh.capture(),any(),any(),any(),any());
+        refresh.getValue().run();verify(owner).userRefresh();verify(owner,never()).refresh();
+    }
+    @Test public void explicitAppVoiceRefreshUsesTheUserRefreshBoundary()throws Exception {
+        prepareResultWithQueue();var owner=mock(AppTaskController.class);set("appGuide",owner);recognized("현재 화면 확인");
+        verify(owner).userRefresh();verify(owner,never()).refresh();
+    }
+    @Test public void returningFromAppToolsDoesNotResetTheUserRefreshBoundary()throws Exception {
+        prepareResultWithQueue();var owner=mock(AppTaskController.class);set("appGuide",owner);when(owner.availableTools()).thenReturn(new JSONArray().put("back"));
+        invoke("showAppTaskTools");var back=org.mockito.ArgumentCaptor.forClass(Runnable.class);
+        verify((TaskFlowOverlayView)get("taskFlowView")).appTaskTools(any(JSONArray.class),any(),back.capture());back.getValue().run();
+        verify(owner).refresh();verify(owner,never()).userRefresh();
+    }
+
     @Test public void endingAppGuidanceDoesNotClaimAnUnverifiedOrderCompleted()throws Exception {
         var queue=prepareResultWithQueue();var owner=mock(AppTaskController.class);set("appGuide",owner);
         Method render=ClickOverlayService.class.getDeclaredMethod("renderAppTask",JSONObject.class,int[].class);render.setAccessible(true);

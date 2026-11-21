@@ -16,7 +16,7 @@ public final class AppTaskCompletionDiagnostics {
     public static final String VERSION="app-task-completion-event.v1";
     private static final int MAX_BYTES=256*1024;
     private static final Set<String> STAGES=Set.of("response","candidate_accepted","candidate_rejected","goal_check","evidence","verified","discarded","unavailable","unknown");
-    private static final Set<String> REASONS=Set.of("received","closed","finishing","not_observable","no_frame","changed_frame",
+    private static final Set<String> REASONS=Set.of("received","closed","finishing","not_observable","no_frame","changed_frame","changed_context",
         "missing_candidate","invalid_contract","unsafe_for_goal","same_candidate","immutable_finished","immutable_supported",
         "version_limit","replacement_unmatched","requirements_not_preserved","initial_prediction","observed_prediction_refined",
         "candidate_missing","ignored_frame","checked","first_frame","waiting_second_frame","second_frame",

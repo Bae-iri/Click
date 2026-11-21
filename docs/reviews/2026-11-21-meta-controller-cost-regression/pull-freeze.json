@@ -1,0 +1,44 @@
+{
+  "schema_version": "click.native-public-apps-strict-pull.v1",
+  "run_id": "native-public-apps-mcv2-nofx-20261121-r1",
+  "output_suffix": "mcv2-nofx-20261121-r1",
+  "phase": "freeze",
+  "episode_count": 0,
+  "scoped_task_refs": [],
+  "terminal_records": 0,
+  "terminal_records_outside_scope": 0,
+  "journals": {
+    "app-task-diagnostics": {
+      "files": [
+        "current.jsonl"
+      ],
+      "all_records": 76,
+      "scoped_records": 0
+    },
+    "app-task-completion-diagnostics": {
+      "files": [
+        "current.jsonl"
+      ],
+      "all_records": 481,
+      "scoped_records": 0
+    }
+  },
+  "artifact_sha256": {
+    "readiness.json": "61d7c4bca03b6472f52a886e7dc7592fade151905d277b3dbf5e7b8a3be5c988",
+    "guard-readiness.json": "02ac2ab418f0a5e809114639e5465a7a55bb29da9db442177ef67e36dc6559bd",
+    "manifest.json": "5da171bbd14d2dd5deb40af48e5c257985c7c34ca58e884bbed7da54373c8639",
+    "manifest-freeze.json": "625ec1582e3e128588f6c2f8aa4756524ec5ee9ea17e905db4945c26c7e65b1c",
+    "journals/freeze/app-task-diagnostics/current.jsonl": "fad4247e86d3189c175c9454636f14c61d8b81fe659bd351d48b88f23e7272d8",
+    "app-task-diagnostics-current.jsonl": "fad4247e86d3189c175c9454636f14c61d8b81fe659bd351d48b88f23e7272d8",
+    "client-receipts-all.jsonl": "fad4247e86d3189c175c9454636f14c61d8b81fe659bd351d48b88f23e7272d8",
+    "freeze-client-receipts-all.jsonl": "fad4247e86d3189c175c9454636f14c61d8b81fe659bd351d48b88f23e7272d8",
+    "client-receipts.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "freeze-client-receipts.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "journals/freeze/app-task-completion-diagnostics/current.jsonl": "989aa59582440e35fc49e52e8c0c7585598536c4db0582ca699b79b33dc8da53",
+    "app-task-completion-diagnostics-current.jsonl": "989aa59582440e35fc49e52e8c0c7585598536c4db0582ca699b79b33dc8da53",
+    "completion-events-all.jsonl": "989aa59582440e35fc49e52e8c0c7585598536c4db0582ca699b79b33dc8da53",
+    "freeze-completion-events-all.jsonl": "989aa59582440e35fc49e52e8c0c7585598536c4db0582ca699b79b33dc8da53",
+    "completion-events.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "freeze-completion-events.jsonl": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

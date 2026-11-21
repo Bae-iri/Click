@@ -1,0 +1,86 @@
+{
+  "schema_version": "click.native-public-apps-catalogue-derivation.v1",
+  "catalogue": "experiments/metacontroller/native-public-apps-catalogue-v1.json",
+  "catalogue_sha256": "85890e41222cc68426c400973e6955b063d752be2ee0a94ddc1ff065a4fd7d40",
+  "source": "actual_native_public_app_probes",
+  "model_calls": 0,
+  "labels_scope": "Union of public production projected labels plus public non-input non-document native labels for result evidence; resources from those exact controls. Execution remains the smaller explicit selector set.",
+  "unsafe_controls_executable": false,
+  "files_failed_outside_session_probes_retained_as_preparation_evidence": true,
+  "files_same_session_native_navigation_supported": true,
+  "chrome_launched": false,
+  "probes": [
+    {
+      "package": "com.android.settings",
+      "probe": "probe-settings-home-final.json",
+      "sha256": "4e5aff08cd0ff0d10a8af67ae338791776cdca37aa64682518b7965539688dde",
+      "production_public": true
+    },
+    {
+      "package": "com.android.settings",
+      "probe": "probe-settings-home-system-visible.json",
+      "sha256": "e97a47e4dc407b7045cc83b53fd569138c87ff0a58498403408f1a7a93461dad",
+      "production_public": true
+    },
+    {
+      "package": "com.android.settings",
+      "probe": "probe-settings-home-system-full.json",
+      "sha256": "1becbc1e959843181ae764c6dc29a8ed642fdf2cf68444df75c0c5c465abb8f7",
+      "production_public": true
+    },
+    {
+      "package": "com.android.settings",
+      "probe": "probe-settings-display-final.json",
+      "sha256": "325427d996de027d5db9f293595cce9554865fb0bb3a3c338e39ac78d9d833b1",
+      "production_public": true
+    },
+    {
+      "package": "com.android.settings",
+      "probe": "probe-settings-system-final.json",
+      "sha256": "8af92d6e0a4838f8a315ffcb0cb8b9c13367a5ef6dff0952931c77b7be555767",
+      "production_public": true
+    },
+    {
+      "package": "com.android.settings",
+      "probe": "probe-settings-language-final.json",
+      "sha256": "a3e907ed5c59129337d1fc8601b423a84c0a244eaad0e6f7fd27b175d460afff",
+      "production_public": true
+    },
+    {
+      "package": "com.google.android.deskclock",
+      "probe": "probe-clock-start.json",
+      "sha256": "c764302d44efb9f03c8c735edfc48a3acbdd0e786a85c437b05d90178073f5f2",
+      "production_public": true
+    },
+    {
+      "package": "com.google.android.deskclock",
+      "probe": "probe-clock-timer.json",
+      "sha256": "beeb20c33bcefc8ca03caa1cfeeb05afbb449f15e4d608c5c418e0f22820ce6d",
+      "production_public": true
+    },
+    {
+      "package": "com.google.android.deskclock",
+      "probe": "probe-clock-stopwatch.json",
+      "sha256": "582f127d39f9e35c4378d2027121faac7f34fd0e13a480b26f3b785c0f876bd0",
+      "production_public": true
+    },
+    {
+      "package": "com.google.android.documentsui",
+      "probe": "probe-files-roots-same-session.json",
+      "sha256": "d1310624b2476d908fe0c04d1b1adb7c769ad4fbea1db84239da42d4d39b52ba",
+      "production_public": true
+    },
+    {
+      "package": "com.google.android.documentsui",
+      "probe": "probe-files-recent-same-session.json",
+      "sha256": "97ce673303b58cbdbb7ebfc59cd17415a1b6bcecf73f649fc5a6862bdf4d2c9f",
+      "production_public": true
+    },
+    {
+      "package": "com.google.android.documentsui",
+      "probe": "probe-files-documents-same-session.json",
+      "sha256": "dc35a9043c1cd626300c5ca84186b6c49d25b4b7828af4c215ddbba9fe57cd6b",
+      "production_public": true
+    }
+  ]
+}

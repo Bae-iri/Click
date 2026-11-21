@@ -17,6 +17,12 @@ import static com.click.testing.AppTaskFixtures.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=34,application=Application.class)
 public class AppTaskCompletionDiagnosticsTest {
+    @Test public void changedSelectionContextIsDistinctFromFrameDriftWithoutRetainingItsContents()throws Exception {
+        JSONObject event=AppTaskCompletionDiagnostics.sanitize(new JSONObject().put("stage","discarded").put("reason","changed_context")
+            .put("selected_app","PRIVATE package").put("goal","PRIVATE goal"));
+        assertEquals("discarded",event.getString("stage"));assertEquals("changed_context",event.getString("reason"));
+        assertFalse(event.toString().contains("PRIVATE"));assertFalse(event.has("selected_app"));assertFalse(event.has("goal"));
+    }
     @Test public void eventsKeepOnlyHashedReferencesAndClosedBoundedFields()throws Exception {
         var nativeScreen=screen("org.example.app",node("org.example.app","private-node","PRIVATE label","button"));
         JSONObject observed=AppTaskObservation.capture(nativeScreen);
