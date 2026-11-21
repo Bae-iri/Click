@@ -19,6 +19,8 @@ PACKAGE = 'com.android.settings'
 
 @pytest.fixture(autouse=True)
 def controlled_sender_only(monkeypatch):
+    # The injected sender below reads and writes the Gemini wire format.
+    monkeypatch.setenv('APP_TASK_PROVIDER', 'gemini')
     monkeypatch.setenv('GEMINI_SETTINGS_MODEL', 'gemini-3.8-flash')
     monkeypatch.delenv('GEMINI_API_KEY', raising=False)
     def denied(*_args, **_kwargs):raise AssertionError('Live provider forbidden in recovery tests')
@@ -108,7 +110,8 @@ def test_recovery_reaches_the_single_planner_call_as_aliases_and_removes_only_bl
     assert result.diagnostic['recovery_blocked_action_count']==1 and result.diagnostic['recovery_attempt']==1
     properties=send.seen[0]['schema']['properties']
     assert 'c0' not in properties['target']['enum'] and 'c1' in properties['target']['enum']
-    assert 'c0' in properties['completion_checks']['items']['properties']['target']['enum']
+    variants = properties['completion_checks']['items']['anyOf']
+    assert any('c0' in variant['properties']['target']['enum'] for variant in variants)
     assert 'Recovery mode mc_v0' in send.seen[0]['prompt']
     assert all(n.id not in send.seen[0]['prompt'] for n in req.screen.nodes)
     assert req.screen.fingerprint not in send.seen[0]['prompt'] and req.screen.observation_id not in send.seen[0]['prompt']

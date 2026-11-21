@@ -127,7 +127,7 @@ def test_recovery_completion_keeps_current_screen_only_contract(monkeypatch):
 
 @pytest.mark.parametrize('decision,status,action,checked', [
     ('final_tab:c1', 'proposed', 'tap', True),
-    ('tap:c1', 'proposed', 'tap', False),
+    ('tap:c1', 'proposed', 'tap', True),
     ('proof:c0.selected_true', 'confirm_result', None, True),
     ('proof:c1.selected_true', 'unavailable', None, False),
     ('unsure', 'needs_input', None, False),

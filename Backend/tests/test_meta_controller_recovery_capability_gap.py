@@ -108,7 +108,8 @@ def test_frozen_execution_mask_reaches_planner_and_is_still_enforced_after_plann
     schema = captured[0]['payload']['generationConfig']['responseJsonSchema']['properties']
     assert captured[0]['search'] not in schema['target']['enum']
     assert captured[0]['display'] in schema['target']['enum']
-    proof_targets = schema['completion_checks']['items']['properties']['target']['enum']
+    item = schema['completion_checks']['items']
+    proof_targets = {alias for variant in item.get('anyOf', [item]) for alias in variant['properties']['target']['enum']}
     assert captured[0]['search'] in proof_targets and captured[0]['display'] in proof_targets
     assert 'tap' in schema['tool']['enum'] and {'ask', 'confirm'}.issubset(schema['tool']['enum'])
     assert 'set_text' not in schema['tool']['enum']

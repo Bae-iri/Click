@@ -16,6 +16,8 @@ from ai_agent.runtime.types import (
 
 def recovery_command(session_id, plan):
     messages = {
+        "INVALID_PLAN": "현재 화면에서 이어갈 순서를 확인하지 못했어요. 화면을 다시 확인할게요.",
+        "PLANNING_BUDGET_EXHAUSTED": "안내 순서를 여러 번 확인했지만 찾지 못했어요. 원하는 메뉴를 직접 열거나 새 안내를 시작해 주세요.",
         "TARGET_NOT_VISIBLE": f"{plan.target_label or '다음'} 항목이 현재 화면에 보이지 않아요. 안내 창을 접고 목록을 위로 밀어 아래 항목을 살펴보세요. 화면이 바뀌면 이어서 안내할게요.",
         "STATE_AMBIGUOUS": "현재 화면을 정확히 구분하지 못했어요. 화면 제목을 확인하거나 이전 화면으로 돌아간 뒤 다시 확인해 주세요.",
         "STATE_UNKNOWN": "‘다시 시도하기’를 눌러 안내를 이어가 주세요.",

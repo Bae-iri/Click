@@ -198,7 +198,8 @@ def test_brightness_change_does_not_complete_font_task():
         event=turns.event(accepted, at=1200, action=UserActionType.DRAG_COMPLETED))
     assert result.guide_command.command_type != CommandType.DONE
     assert not turns.session.task_completed
-    assert result.verification_result.evidence == 'awaiting_settled_observation'
+    assert result.verification_result.evidence == 'setting_value_signals_disagree'
+    assert not result.verification_result.count_attempt
 
 
 @pytest.mark.parametrize('problem', ['no_action', 'wrong_guide', 'wrong_target', 'old_observation', 'missing_value'])

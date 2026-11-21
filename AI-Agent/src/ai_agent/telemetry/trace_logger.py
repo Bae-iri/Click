@@ -32,14 +32,14 @@ ENUMS.update(stage={"observation", "candidate_generation", "configuration", "req
            "no_candidates", "invalid_candidates", "ambiguous_candidates", "input_too_large",
            "not_configured", "network_error", "provider_error", "timeout", "deadline_exceeded",
            "invalid_response", "low_confidence", "abstained", "waiting", "result_unobservable",
-           "settling", "ungrounded_replan", "unknown_failure"},
+           "settling", "ungrounded_replan", "invalid_plan", "planning_budget_exhausted", "unknown_failure"},
     required_change={"supported_screen", "safe_screen", "new_observation", "narrow_observation",
         "new_target_evidence", "valid_candidates", "user_clarification", "provider_configuration",
         "connection_restored", "provider_available", "fresh_time_budget", "valid_model_response",
-        "action_result_evidence", "settle_interval", "valid_plan", "diagnostic_review"})
+        "action_result_evidence", "settle_interval", "valid_plan", "new_episode", "diagnostic_review"})
 ENUMS["reason_code"].update({"UNSUPPORTED_SCREEN", "SENSITIVE_SCREEN", "CANDIDATE_LIMIT", "NO_CANDIDATES",
     "INVALID_CANDIDATES", "OBSERVATION_TOO_LARGE", "MODEL_NOT_CONFIGURED", "DEADLINE_EXCEEDED", "SELECTION_FAILED",
-    "REPLAN_START_NOT_VISIBLE"})
+    "REPLAN_START_NOT_VISIBLE", "INVALID_PLAN", "PLANNING_BUDGET_EXHAUSTED"})
 ENUMS["next_action"].update({"narrow_observation", "ask_user", "restore_connection", "restore_provider"})
 METRICS = {"count_attempt", "task_completed", "state_score", "score_gap", "recovery_count", "confidence", "element_count", "accessibility_node_count", "vision_element_count",
            "normalized_node_count", "actionable_node_count", "synthetic_vision_node_count",
@@ -50,7 +50,8 @@ METRICS.update({"retryable", "outcome_uncertain"})
 UI_SELECTION_STATUSES = {"selected", "disabled", "skipped", "ineligible", "no_candidates", "candidate_limit",
     "not_configured", "invalid_candidates", "input_too_large", "deadline_exceeded", "provider_error",
     "timeout", "invalid_response", "uncertain", "low_confidence", "abstained", "invalid_choice", "waiting",
-    "sensitive_screen", "unsupported_screen", "empty_observation", "network_error", "ambiguous_candidates", "ungrounded_replan"}
+    "sensitive_screen", "unsupported_screen", "empty_observation", "network_error", "ambiguous_candidates", "ungrounded_replan",
+    "invalid_plan", "planning_budget_exhausted"}
 UI_SELECTION_HOLD_REASONS = {"none", "raw_confidence_below_minimum",
     "normalized_probability_below_minimum", "both_below_minimum",
     "wait_for_result", "insufficient_evidence", "target_not_supported",

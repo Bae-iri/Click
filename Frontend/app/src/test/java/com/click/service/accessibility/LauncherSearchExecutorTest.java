@@ -34,7 +34,17 @@ public class LauncherSearchExecutorTest {
         return LauncherSearchExecutor.execute(service,null,()->{},root,before,fresh,new LauncherAppSearch.Step(kind,before.nodes.isEmpty()?null:before.nodes.get(0),true,"test"),Set.of("카메라"));
     }
     @Test public void matchingNativeAppIsClicked(){nativeIcon("TextView");var s=screen(icon("카메라","TextView"));assertTrue(execute(s,s,LauncherAppSearch.Kind.TAP_APP));verify(root).performAction(AccessibilityNodeInfo.ACTION_CLICK);}
-    @Test public void observedFolderCanBeOpened(){nativeIcon("FolderIcon");var s=screen(icon("도구","FolderIcon"));assertTrue(execute(s,s,LauncherAppSearch.Kind.TAP_FOLDER));}
+    @Test public void onlyFolderWithCurrentTargetPreviewCanBeOpened(){
+        nativeIcon("FolderIcon");
+        var folder=icon("도구","FolderIcon");
+        var preview=new AccessibilityNodeSnapshot("node_0_0","node_0",true,pkg,"카메라",null,"icon","TextView","button",
+                new int[]{120,220,150,250},true,true,false,false,false,null,7);
+        var confirmed=screen(folder,preview);
+        assertFalse(execute(screen(folder),screen(folder),LauncherAppSearch.Kind.TAP_FOLDER));
+        assertFalse(execute(confirmed,screen(folder),LauncherAppSearch.Kind.TAP_FOLDER));
+        assertTrue(execute(confirmed,confirmed,LauncherAppSearch.Kind.TAP_FOLDER));
+        verify(root,times(1)).performAction(AccessibilityNodeInfo.ACTION_CLICK);
+    }
     @Test public void changedLayoutOrWindowDoesNotClickOldCoordinates(){
         nativeIcon("TextView");var s=screen(icon("카메라","TextView"));
         assertFalse(execute(s,screen(icon("시계","TextView")),LauncherAppSearch.Kind.TAP_APP));

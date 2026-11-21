@@ -97,7 +97,8 @@ public final class AppTaskDiagnostics {
                 copyEnum(out,diagnostic,"failure_kind",FAILURE_KINDS);
                 copyEnum(out,diagnostic,"failure_stage",FAILURE_STAGES);
                 copyEnum(out,diagnostic,"reason_code",REASON_CODES);copyEnum(out,diagnostic,"reason_code",PROVIDER_CODES);
-                copyEnum(out,diagnostic,"completion_grounding",Set.of("deferred_actionable_proof","deferred_unobserved_result","deferred_invalid_contract","deferred_goal_not_satisfied"));
+                copyEnum(out,diagnostic,"completion_grounding",Set.of("deferred_actionable_proof","deferred_unobserved_result",
+                        "deferred_invalid_contract","deferred_goal_not_satisfied","deferred_goal_mismatch","grounded_native_goal","goal_future_page"));
                 copyEnum(out,diagnostic,"completion_deferred_reason",Set.of("completion_contract_invalid"));
                 Object budget=diagnostic.opt("provider_budget_ms");
                 if(budget instanceof Number){double n=((Number)budget).doubleValue();if(Double.isFinite(n)&&n>=0&&n<=9000)out.put("provider_budget_ms",n);}

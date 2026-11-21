@@ -204,6 +204,11 @@ def verify_transition(*, graph, previous_state_id, pending_transition_id, curren
             return result(Status.SUCCESS, transition.verification_predicate, count=True,
                           completed=transition.completes_task,
                           message='Requested target value changed in the requested direction.')
+        if changed != applied_changed:
+            # The accessibility control and the OS setting can update on different frames.
+            expired = observation_time - action_time >= graph.policy.observation_timeout_ms
+            return result(Status.UNKNOWN if expired else Status.WAITING_FOR_OBSERVATION,
+                          'setting_value_signals_disagree')
 
     # Failure needs two distinct post-action observations separated by a settling interval.
     # A missing timestamp is insufficient to declare failure, even if an event was supplied.

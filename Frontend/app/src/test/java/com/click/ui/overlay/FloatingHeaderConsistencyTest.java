@@ -21,6 +21,26 @@ import static org.mockito.Mockito.*;
 @RunWith(RobolectricTestRunner.class)
 @org.robolectric.annotation.Config(sdk = 34, application = android.app.Application.class)
 public class FloatingHeaderConsistencyTest {
+    @Test public void embeddedRequestUsesTheRealActionsAndRestoresNormalControlsOnTheNextScreen() {
+        var listener = mock(TaskFlowOverlayView.Listener.class);
+        var edited = new java.util.concurrent.atomic.AtomicBoolean();
+        var flow = new TaskFlowOverlayView(RuntimeEnvironment.getApplication(), listener);
+        flow.requestConfirmation("글자 크기 키워줘", "다시 입력하기", () -> edited.set(true));
+        flow.hideAuxiliaryControls();
+        TextView summary = flow.findViewWithTag("review_summary_text");
+        assertEquals("글자 크기 키워줘", summary.getText().toString());
+        FloatingPanelHeader header = flow.findViewWithTag("floating_header");
+        assertEquals(View.GONE, header.collapse.getVisibility());
+        header.edit.performClick(); assertTrue(edited.get());
+        verify(listener, never()).confirmRequirements();
+        flow.findViewById(com.click.R.id.task_flow_begin).performClick();
+        verify(listener).confirmRequirements();
+        flow.progress("글자 크기", null, "디스플레이를 눌러주세요.", false);
+        assertEquals(View.VISIBLE, header.collapse.getVisibility());
+        assertEquals(View.GONE, header.edit.getVisibility());
+        assertEquals("내용 수정", header.edit.getText().toString());
+    }
+
     @Test public void titlesKeepOneSizeAndTypefaceAcrossInputProcessingGuidanceAndResults() throws Exception {
         Context app = RuntimeEnvironment.getApplication();
         int originalLevel = com.click.ui.common.ClickTextScale.level(app);
