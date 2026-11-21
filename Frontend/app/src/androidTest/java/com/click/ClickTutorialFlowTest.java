@@ -37,45 +37,18 @@ import static org.junit.Assert.*;
 public class ClickTutorialFlowTest {
     private final Instrumentation device = InstrumentationRegistry.getInstrumentation();
 
-    @Test public void actualFloatingPanelsAndPhotosLeadThroughSettingsAndLibraryWithoutCoachButtons() throws Exception {
-        assertEquals("tour_text", device.getTargetContext().getResources().getResourceEntryName(R.string.tour_text));
-        assertEquals("task_flow_edit", device.getTargetContext().getResources().getResourceEntryName(R.id.task_flow_edit));
+    @Test public void acknowledgedRealTaskContinuesThroughSettingsAndLibraryWithoutCoachButtons() throws Exception {
         TouchAutomationSettings automation = new TouchAutomationSettings(device.getTargetContext());
         boolean initialMode = automation.isEnabled();
         new com.click.data.local.LocalAccountStore(device.getTargetContext()).saveProfile("테스트", "");
-        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.tutorialIntent(device.getTargetContext()))) {
-            words(R.string.tour_welcome);
-            assertNoCoachButtons();
-            capture(scenario, "welcome");
-            tap(R.id.home_settings); words(R.string.tour_welcome);
-            tap(R.id.tutorial_title); words(R.string.tour_pick);
-            tap(R.id.home_request_input); words(R.string.tour_text);
-            scenario.onActivity(a -> {
-                EditText editor = a.findViewById(R.id.home_request_input);
-                editor.setText("글자 크기 키워줘");
-                a.getSystemService(InputMethodManager.class).hideSoftInputFromWindow(editor.getWindowToken(), 0);
-            });
-            visible(v -> v.getId() == R.id.home_request_send
-                    && !ViewCompat.getRootWindowInsets(v).isVisible(WindowInsetsCompat.Type.ime()));
-            tap(R.id.home_request_send); words(R.string.tour_review);
-            visible(v -> v.getId() == R.id.tutorial_practice_panel && v instanceof com.click.ui.overlay.TaskFlowOverlayView);
-            capture(scenario, "review");
-            assertNoCoachButtons();
-            tap(v -> v instanceof TextView && "다시 입력하기".contentEquals(((TextView) v).getText())); words(R.string.tour_text);
-            scenario.onActivity(a -> {
-                assertTrue(a.findViewById(R.id.home_request_input).isShown());
-                assertFalse(a.findViewById(R.id.tutorial_practice_panel).isShown());
-            });
-            scenario.onActivity(a -> ((EditText) a.findViewById(R.id.home_request_input)).onEditorAction(EditorInfo.IME_ACTION_SEND));
-            words(R.string.tour_review); tap(v -> v instanceof TextView && "안내 시작하기".contentEquals(((TextView) v).getText()));
-            words(R.string.tour_floating); capture(scenario, "floating-guide");
-            tap(R.id.tutorial_title); words(R.string.tour_actual_screen);
-            assertPhoto(scenario); capture(scenario, "real-display-photo");
-            tap(R.id.tutorial_settings_photo_target); words(R.string.tour_font_photo);
-            assertPhoto(scenario); capture(scenario, "real-font-photo");
-            tap(R.id.tutorial_settings_photo_target); words(R.string.tour_result);
-            scenario.recreate(); words(R.string.tour_result); capture(scenario, "result");
-            tap(R.id.task_flow_result_satisfied); words(R.string.tour_settings);
+        var course = new com.click.data.local.LiveTutorialStore(device.getTargetContext());
+        String launch = course.begin("글자 크기 키워줘");
+        assertTrue(course.bindRequest(launch, "글자 크기 키워줘", "acknowledged-request"));
+        assertTrue(course.bindSession("acknowledged-request", "acknowledged-session"));
+        assertTrue(course.finish("acknowledged-request", "acknowledged-session", true));
+        try (ActivityScenario<HomeActivity> scenario = ActivityScenario.launch(HomeActivity.class)) {
+            words(R.string.tour_settings); assertNoCoachButtons();
+            scenario.recreate(); words(R.string.tour_settings);
             tap(R.id.home_settings);
             visible(v -> v.getId() == R.id.tutorial_title && ((TextView) v).getText().toString().contains("테스트님께서 직접"));
             visible(v -> v.getId() == R.id.menu_automation_toggle);
@@ -86,9 +59,9 @@ public class ClickTutorialFlowTest {
             tap(R.id.home_nav_favorites); words(R.string.tour_saved);
             tap(R.id.home_library_recent); words(R.string.tour_recent);
             assertSpotlight(R.id.home_nav_home, true);
-            capture(scenario, "recent");
             tap(R.id.home_nav_home);
             scenario.onActivity(a -> assertNull(a.findViewById(R.id.tutorial_floating_host)));
+            assertFalse(course.awaitingHomeTour());
             assertEquals(initialMode, automation.isEnabled());
         }
     }
@@ -150,16 +123,6 @@ public class ClickTutorialFlowTest {
                 assertNotNull(coach); assertNull(find(coach, v -> v instanceof android.widget.Button));
                 assertNull(a.findViewById(R.id.tutorial_next)); assertNull(a.findViewById(R.id.tutorial_back));
             }
-        });
-    }
-
-    private void assertPhoto(ActivityScenario<HomeActivity> scenario) {
-        scenario.onActivity(a -> {
-            ViewGroup photo = a.findViewById(R.id.tutorial_settings_photo);
-            assertTrue(photo instanceof com.click.ui.tutorial.SettingsScreenshotPracticeView);
-            var image = (android.widget.ImageView) photo.getChildAt(0);
-            assertTrue(image.getDrawable() instanceof android.graphics.drawable.BitmapDrawable);
-            assertEquals(1080, image.getDrawable().getIntrinsicWidth());
         });
     }
 

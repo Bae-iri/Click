@@ -65,6 +65,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     public static final String EXTRA_OPEN_MENU = "com.click.extra.OPEN_MENU";
     public static final String EXTRA_SELECTED_GOAL_TYPE = "com.click.extra.SELECTED_GOAL_TYPE";
     public static final String EXTRA_RESUME_REQUEST_ID="com.click.extra.RESUME_REQUEST_ID";
+    public static final String EXTRA_LIVE_TUTORIAL_ID="com.click.extra.LIVE_TUTORIAL_ID";
+    private LiveTutorialGuide liveTutorial;
     private com.click.ui.overlay.GuidanceSupportView guidanceSupport;
     private GuidancePersonalization guidancePersonalization;
     private boolean guidanceNeedsManualReview;
@@ -335,6 +337,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         deviceJournal=agentGateway.journal();
         registerReceiptConnectivity();
         queueGateway = new VoiceQueueGateway(this);
+        if (new com.click.data.local.LiveTutorialStore(this).running()) liveTutorialGuide();
         interactionGateway = new com.click.data.remote.InteractionGateway(this);
         quickHelpSelections = new QuickHelpSelectionStore(this);
         goalClassifier = loadGoalCatalog();
@@ -371,6 +374,8 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
             String resumeId=intent.getStringExtra(EXTRA_RESUME_REQUEST_ID);
             if(resumeId!=null){resumeRequestedTask(resumeId);return START_STICKY;}
             String initialRequest = intent.getStringExtra(EXTRA_INITIAL_GOAL);
+            String tutorialLaunch = intent.getStringExtra(EXTRA_LIVE_TUTORIAL_ID);
+            if (tutorialLaunch != null && !liveTutorialGuide().accept(tutorialLaunch, initialRequest)) return START_STICKY;
             String selectedType = intent.getStringExtra(EXTRA_SELECTED_GOAL_TYPE);
             boolean openVoice = intent.getBooleanExtra(EXTRA_OPEN_VOICE, false);
             if (selectedType != null) {
@@ -536,6 +541,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     public void onDestroy() {
         android.util.Log.i("ClickOverlay", "Service destroyed; explicitClose=" + closing);
         closing = true;
+        if (liveTutorial != null) liveTutorial.close();
         if(networkCallback!=null)try {getSystemService(android.net.ConnectivityManager.class).unregisterNetworkCallback(networkCallback);}catch(RuntimeException ignored){}
         networkCallback=null;
         clearMissingScreenWait();
@@ -684,7 +690,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
 
     private void updateFloatingVisibility() {
         if (overlayView == null || closing) return;
-        if(guidanceSupport!=null){overlayView.setVisibility(View.GONE);if(taskFlowView!=null)taskFlowView.setVisibility(View.GONE);return;}
+        if(guidanceSupport!=null){overlayView.setVisibility(View.GONE);if(taskFlowView!=null)taskFlowView.setVisibility(View.GONE);if(liveTutorial!=null)liveTutorial.close();return;}
         overlayView.setTaskPhase(taskFlowView == null ? null : taskFlowView.phaseLabel());
         boolean passive = taskFlowView != null && taskFlowView.isPassiveProgress();
         if (!passive) inspectingProgress = false;
@@ -698,6 +704,30 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 && (showTask || bubble && overlayView.getMode() == ClickOverlayLayout.Mode.COLLAPSED)
                 ? View.VISIBLE : View.GONE);
         if (bubble) placeProgressBubble();
+        if (hideForCapture) { if (liveTutorial != null) liveTutorial.close(); }
+        else refreshLiveTutorial();
+    }
+
+    private LiveTutorialGuide liveTutorialGuide() {
+        if (liveTutorial == null) liveTutorial = new LiveTutorialGuide(this, new LiveTutorialGuide.Host() {
+            public int windowType() { return overlayWindowType; }
+            public void add(View view, WindowManager.LayoutParams params) { addOverlayView(view, params); }
+            public void visibility(View view, int visibility) { setOverlayVisibility(view, visibility); }
+            public void remove(View view) {
+                overlayVisibility.remove(view);
+                if (windowManager != null && view.isAttachedToWindow()) {
+                    try { windowManager.removeViewImmediate(view); } catch (IllegalArgumentException ignored) { }
+                }
+            }
+        });
+        return liveTutorial;
+    }
+
+    private void refreshLiveTutorial() {
+        if (liveTutorial == null || closing || windowManager == null) return;
+        liveTutorial.update(activeVoiceRequestId, execution.sessionId(), taskFlowView, overlayView,
+                ClickAccessibilityService.keyboardBounds(), execution.acceptedGoal() == null ? null
+                        : execution.acceptedGoal().optString("goal_type", null));
     }
 
     private void collapseTaskFlow() {
@@ -992,6 +1022,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void clearTaskFlow() {
+        if (liveTutorial != null) liveTutorial.close();
         ringtoneResultCheck.bind(null);
         if(ringtoneResultPoll!=null){speechHandler.removeCallbacks(ringtoneResultPoll);ringtoneResultPoll=null;}
         dismissGuidanceSupport();
@@ -2223,6 +2254,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                     && (feedbackView == null || feedbackView.isAttachedToWindow())) {
             return;
         }
+        if (liveTutorial != null) liveTutorial.close();
         detachGuideOverlay();
         hideConfirmation();
         hideTrashTarget();
@@ -2790,6 +2822,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         }
         final int queuedGeneration = queueGeneration;
         String requestId = java.util.UUID.randomUUID().toString();
+        if (liveTutorial != null) liveTutorial.requestCreated(requestId, text.trim());
         // Record before sending so an immediate claim can never lose the explicit selection.
         if (selectedGoalType != null) quickHelpSelections.save(requestId, selectedGoalType);
         queueGateway.enqueue(requestId, text.trim(), new VoiceQueueGateway.Callback() {
@@ -2994,10 +3027,22 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
                 if (closing || generation != execution.generation() || !finishedId.equals(activeVoiceRequestId)) return;
                 presentQueueSnapshot(response);
                 quickHelpSelections.remove(finishedId);
+                boolean tutorialEnded = liveTutorial != null && liveTutorial.finish(finishedId, execution.sessionId(), completedSuccessfully);
                 activeVoiceRequestId = null;
                 execution.clearSession();
                 setTurnInFlight(false);
                 awaitingReplacement = response.awaitingReplacement;
+                if (tutorialEnded) {
+                    // Finish only the tutorial's request; closing CLICK would interrupt the rest of the queue.
+                    closing = true;
+                    clearTaskFlow();
+                    hideGuideOverlay(); hideConfirmation(); stopNarration();
+                    if (overlayView != null) overlayView.setVisibility(View.GONE);
+                    startActivity(new Intent(ClickOverlayService.this, com.click.HomeActivity.class)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
+                    stopSelf();
+                    return;
+                }
                 if (response.running != null && response.running.agentSessionId != null
                         && response.running.rawGoal != null) {
                     if (isCompletedQueueRequest(response.running)) { shutdownClick(); return; }
@@ -3108,6 +3153,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         guideStepTimer.clear();
         execution.newTask();adjustmentDelegation.clear();pendingApprovalProvenance=null;
         execution.bindSession(sessionId);
+        if (liveTutorial != null) liveTutorial.sessionStarted(activeVoiceRequestId, sessionId);
         restoredStartedSession = false;
         agentConfirmationId = null;
         automaticAdjustmentApprovalPending = false;
@@ -3657,6 +3703,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void shutdownClick() {
+        if (liveTutorial != null) liveTutorial.cancel();
         clearFeedback();
         if (closing) return;
         closing = true;
@@ -6004,7 +6051,9 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
         attachGuideOverlay();
         visionGuideScreen = null;
         nativeGuideScreen = lastSubmittedScreen;
-        guideOverlayView.showTarget(bounds, actionType, dragDirection);
+        if (liveTutorial != null) liveTutorial.target(bounds);
+        guideOverlayView.showTarget(liveTutorial != null && liveTutorial.hasWindow(activeVoiceRequestId, execution.sessionId())
+                ? null : bounds, actionType, dragDirection);
         setOverlayVisibility(guideOverlayView, View.VISIBLE);
     }
 
@@ -6024,6 +6073,7 @@ public final class ClickOverlayService extends Service implements ClickOverlayLa
     }
 
     private void hideGuideOverlay() {
+        if (liveTutorial != null) liveTutorial.target(null);
         visionGuideScreen = null;
         nativeGuideScreen = null;
         // Reattaching on every guide would raise the highlight above the logo.
