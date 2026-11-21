@@ -44,17 +44,23 @@ public final class AppTaskController {
         public final boolean plannedRoute;
         /** Re-ask once, on the same screen, after a provider timeout or transport failure. */
         public final boolean retryProviderFailure;
+        /** Derive the result condition from the goal's destination when no planner supplied one. */
+        public final boolean goalDerivedCompletion;
         public SpeedOptions(boolean memoryBeforeCompletion,boolean rememberedCompletion,boolean reofferPrediction,boolean rebindChangedFrame,boolean plannedRoute){
             this(memoryBeforeCompletion,rememberedCompletion,reofferPrediction,rebindChangedFrame,plannedRoute,false);}
         public SpeedOptions(boolean memoryBeforeCompletion,boolean rememberedCompletion,boolean reofferPrediction,boolean rebindChangedFrame,boolean plannedRoute,boolean retryProviderFailure){
-            this.memoryBeforeCompletion=memoryBeforeCompletion;this.rememberedCompletion=rememberedCompletion;this.reofferPrediction=reofferPrediction;this.rebindChangedFrame=rebindChangedFrame;this.plannedRoute=plannedRoute;this.retryProviderFailure=retryProviderFailure;}
-        public static final SpeedOptions ALL=new SpeedOptions(true,true,true,true,true,true),NONE=new SpeedOptions(false,false,false,false,false,false);
+            this(memoryBeforeCompletion,rememberedCompletion,reofferPrediction,rebindChangedFrame,plannedRoute,retryProviderFailure,false);}
+        public SpeedOptions(boolean memoryBeforeCompletion,boolean rememberedCompletion,boolean reofferPrediction,boolean rebindChangedFrame,boolean plannedRoute,boolean retryProviderFailure,boolean goalDerivedCompletion){
+            this.goalDerivedCompletion=goalDerivedCompletion;this.memoryBeforeCompletion=memoryBeforeCompletion;this.rememberedCompletion=rememberedCompletion;this.reofferPrediction=reofferPrediction;this.rebindChangedFrame=rebindChangedFrame;this.plannedRoute=plannedRoute;this.retryProviderFailure=retryProviderFailure;}
+        public static final SpeedOptions ALL=new SpeedOptions(true,true,true,true,true,true,true),NONE=new SpeedOptions(false,false,false,false,false,false,false);
         /**
          * Production default. Memory-first (removes the deliberate result-binding gate) and planned
          * routes (taps proposed from labels the model has not seen) stay off until a device A/B
          * (SpeedOptions.NONE vs ALL) shows a benefit; the result-proof paths only accept native proof.
          */
-        public static final SpeedOptions PRODUCTION=new SpeedOptions(false,true,true,true,false,true);
+        public static final SpeedOptions PRODUCTION=new SpeedOptions(false,true,true,true,false,true,true);
+        /** Same options with goal-derived completion switched; tests of the planner-delivered result path pin it off. */
+        public SpeedOptions withGoalDerived(boolean on){return new SpeedOptions(memoryBeforeCompletion,rememberedCompletion,reofferPrediction,rebindChangedFrame,plannedRoute,retryProviderFailure,on);}
     }
     private SpeedOptions speed=SpeedOptions.PRODUCTION;
     private String recallWaitFingerprint;private long recallWaitDeadline;
@@ -297,7 +303,7 @@ public final class AppTaskController {
         try{
             JSONObject current=capture(screen);
             if(discardUnsafeCompletion(current,screen))current=capture(screen);
-            if(reofferParkedCompletion(screen))current=capture(screen);
+            if(reofferParkedCompletion(screen)||seedGoalDerivedCompletion(current,screen))current=capture(screen);
             String fingerprint=current.getString("fingerprint");
             if(memory.finished()){proposal=null;show("completed","요청한 결과를 확인했어요.");return;}
             if(observeResult(current,screen)){cancelPlannerWait();return;}
@@ -668,6 +674,16 @@ public final class AppTaskController {
         JSONObject remembered=store.rememberedCompletion(memory.goal(),scope);
         if(!AppTaskCompletion.valid(remembered))return false;
         parkedCompletion=remembered;parkedRemembered=true;return true;
+    }
+    /** No planner condition after a step: check the goal's own destination title/tab, locally. */
+    private boolean seedGoalDerivedCompletion(JSONObject current,ScreenSnapshot screen)throws JSONException {
+        if(!speed.goalDerivedCompletion||!completionSupported||memory.finished()||memory.completionSupported()||memory.completion()!=null
+                ||parkedCompletion!=null||memory.actions()==0||screen==null||selectedPackage!=null&&!selectedPackage.equals(screen.packageName))return false;
+        JSONObject derived=AppTaskCompletion.goalDerivedCompletion(memory.goal(),current,selectedLabel);
+        if(derived==null)return false;
+        parkedCompletion=derived;parkedRemembered=false;
+        completionTrace("candidate_parked","goal_derived",derived,current,screen,null,"not_checked","not_checked",null,0,0);
+        return reofferParkedCompletion(screen);
     }
     /** A remembered, once-proved condition outranks a discarded model prediction. */
     private void park(JSONObject candidate){if(speed.reofferPrediction&&!parkedRemembered&&AppTaskCompletion.valid(candidate))parkedCompletion=candidate;}

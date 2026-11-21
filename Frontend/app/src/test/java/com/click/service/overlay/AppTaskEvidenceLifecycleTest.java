@@ -23,6 +23,7 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=34,application=Application.class,instrumentedPackages={"com.click"})
 @LooperMode(LooperMode.Mode.PAUSED)
+// Exercises the planner-delivered result path; goal-derived completion is covered by AppTaskSpeedExperimentTest.
 public class AppTaskEvidenceLifecycleTest {
     private static final String PKG="org.example.unseen";
     private static JSONObject result(String label)throws Exception{return AppTaskCompletionTest.completion(PKG,label);}
@@ -48,7 +49,7 @@ public class AppTaskEvidenceLifecycleTest {
         String task=memory.id(),plan=memory.state().getJSONArray("subgoals").toString();
         AppTaskMemory restored=new AppTaskMemory(memory.stored());assertFalse(restored.state().has("completion"));
         Listener listener=new Listener();listener.current=page(title("actual","실제 목적 제목"));AppGuideGateway gateway=mock(AppGuideGateway.class);
-        AppTaskController controller=new AppTaskController(gateway,restored,null,listener,true,false,true);
+        AppTaskController controller=new AppTaskController(gateway,restored,null,listener,true,false,true,AppTaskMetaController.Arm.CURRENT,true,AppTaskController.SpeedOptions.PRODUCTION.withGoalDerived(false));
         controller.refresh();ArgumentCaptor<JSONObject> request=ArgumentCaptor.forClass(JSONObject.class);ArgumentCaptor<AppGuideGateway.Callback> callback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);
         verify(gateway).send(request.capture(),callback.capture());assertFalse(request.getValue().getJSONObject("state").has("completion"));
         callback.getValue().success(new JSONObject().put("status","confirm_result").put("completion",result("실제 목적 제목")).put("subgoals",restored.state().getJSONArray("subgoals")));
@@ -62,7 +63,7 @@ public class AppTaskEvidenceLifecycleTest {
 
     @Test public void unchangingDestinationDoesNotPollForEvidenceAfterFailureOrEmptyResult()throws Exception{
         AppTaskMemory memory=new AppTaskMemory("목적 화면 열어줘");finishPlan(memory);Listener listener=new Listener();listener.current=page(title("result","목적 화면"));
-        AppGuideGateway gateway=mock(AppGuideGateway.class);AppTaskController controller=new AppTaskController(gateway,memory,null,listener,true,false,true);
+        AppGuideGateway gateway=mock(AppGuideGateway.class);AppTaskController controller=new AppTaskController(gateway,memory,null,listener,true,false,true,AppTaskMetaController.Arm.CURRENT,true,AppTaskController.SpeedOptions.PRODUCTION.withGoalDerived(false));
         controller.refresh();ArgumentCaptor<AppGuideGateway.Callback> callback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);verify(gateway).send(any(),callback.capture());
         callback.getValue().success(new JSONObject().put("status","confirm_result").put("subgoals",memory.state().getJSONArray("subgoals")));
         for(int i=0;i<5;i++){controller.refresh();controller.screenChanged(listener.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));}
@@ -75,7 +76,7 @@ public class AppTaskEvidenceLifecycleTest {
         AppTaskMemory memory=new AppTaskMemory("알림 켜줘");finishPlan(memory);
         Listener listener=new Listener();listener.current=page(title("title","알림"),node(PKG,"switch","사용","toggle",false));
         AppGuideGateway gateway=mock(AppGuideGateway.class);
-        AppTaskController controller=new AppTaskController(gateway,memory,null,listener,true,false,true);
+        AppTaskController controller=new AppTaskController(gateway,memory,null,listener,true,false,true,AppTaskMetaController.Arm.CURRENT,true,AppTaskController.SpeedOptions.PRODUCTION.withGoalDerived(false));
         try {
             controller.refresh();
             var callback=ArgumentCaptor.forClass(AppGuideGateway.Callback.class);

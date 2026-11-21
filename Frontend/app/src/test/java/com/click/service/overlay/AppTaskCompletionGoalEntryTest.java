@@ -52,4 +52,27 @@ public class AppTaskCompletionGoalEntryTest {
         assertFalse(AppTaskCompletion.goalEntryVisible("타이머 탭으로 이동해줘",clock));
         assertFalse(AppTaskCompletion.unsafeForGoal("타이머 탭으로 이동해줘",check("타이머","tab",true),clock,null));
     }
+
+    @Test public void goalDerivedConditionNeedsTheDestinationTitleItself()throws Exception{
+        JSONObject arrived=screen(node("t","앱 알림","text",false,false),node("f","전체","button",true,false));
+        JSONObject c=AppTaskCompletion.goalDerivedCompletion("앱 알림 화면을 열어줘",arrived,"설정");
+        assertNotNull(c);assertEquals("앱 알림",c.getJSONArray("checks").getJSONObject(0).getString("label"));
+        assertEquals(AppTaskCompletion.Verdict.MATCHED,AppTaskCompletion.checkForGoal("앱 알림 화면을 열어줘",c,arrived,null));
+        // Parent page: its title is a word inside the goal and the destination row is visible.
+        JSONObject parent=screen(node("t","알림","text",false,false),node("r","앱 알림","button",true,false));
+        assertNull(AppTaskCompletion.goalDerivedCompletion("앱 알림 화면을 열어줘",parent,"설정"));
+        // A menu row named like the goal is never a title; generic and app-name titles never bind.
+        assertNull(AppTaskCompletion.goalDerivedCompletion("디스플레이 화면을 열어줘",screen(node("r","디스플레이","button",true,false)),"설정"));
+        assertNull(AppTaskCompletion.goalDerivedCompletion("설정 화면을 열어줘",screen(node("t","설정","text",false,false)),"설정"));
+        // Two different matching destinations: leave it to the planner.
+        assertNull(AppTaskCompletion.goalDerivedCompletion("디스플레이 설정 화면을 열어줘",
+            screen(node("a","디스플레이","text",false,false),node("b","디스플레이 설정","text",false,false)),"설정"));
+    }
+    @Test public void goalDerivedConditionAcceptsOnlyTheSelectedRequestedTab()throws Exception{
+        JSONObject on=screen(node("a","알람","tab",true,false),node("b","스톱워치","tab",true,true));
+        JSONObject c=AppTaskCompletion.goalDerivedCompletion("시계에서 스톱워치 탭을 열어줘",on,"시계");
+        assertNotNull(c);assertTrue(c.getJSONArray("checks").getJSONObject(0).getBoolean("selected"));
+        JSONObject off=screen(node("a","알람","tab",true,true),node("b","스톱워치","tab",true,false));
+        assertNull(AppTaskCompletion.goalDerivedCompletion("시계에서 스톱워치 탭을 열어줘",off,"시계"));
+    }
 }
