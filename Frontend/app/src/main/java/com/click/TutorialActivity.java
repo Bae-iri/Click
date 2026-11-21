@@ -1,235 +1,360 @@
 package com.click;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.activity.OnBackPressedCallback;
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import com.click.designpreview.TutorialNarrator;
+import com.click.domain.goal.GoalCommandInterpreter;
+import com.click.domain.goal.RequirementReview;
+import com.click.service.overlay.DeviceSpeechInput;
+import com.click.service.overlay.SpeechErrorMessages;
+import com.click.service.overlay.SpeechInput;
 import com.click.ui.common.ClickTextScale;
 import com.click.ui.common.ClickUi;
-import com.click.ui.tutorial.TutorialExplanationView;
+import com.click.ui.overlay.ClickOverlayLayout;
+import com.click.ui.tutorial.ClueCoachView;
 
-/** Reversible explanation cards, following the accessibility guide's read-and-next flow. */
-public final class TutorialActivity extends AppCompatActivity {
+/** Uses the home controls in a separate activity so practice has its own draft and back stack. */
+public final class TutorialActivity extends HomeActivity implements ClickOverlayLayout.Callback {
     public static final String EXTRA_FROM_SIGN_UP = "from_sign_up";
-    private static final String PAGE_STATE = "tutorial_explanation_page_v1";
-    private static final int[] TITLES = {
-        R.string.tutorial_explain_open_title, R.string.tutorial_explain_input_title,
-        R.string.tutorial_explain_review_title, R.string.tutorial_explain_guidance_title,
-        R.string.tutorial_explain_result_title
-    };
-    private static final int[] DESCRIPTIONS = {
-        R.string.tutorial_explain_open_body, R.string.tutorial_explain_input_body,
-        R.string.tutorial_explain_review_body, R.string.tutorial_explain_guidance_body,
-        R.string.tutorial_explain_result_body
-    };
-    private int page;
-    private TutorialNarrator narrator;
-    private String spokenPage;
-    private TextView title, description, caption, count, previous, replay;
-    private Button next;
-    private View[] progressBars;
-    private FrameLayout example;
-    private ScrollView scroll;
+    private enum Step { WELCOME, INPUT, VOICE, TEXT, REVIEW, ADJUST, RESULT, SETTINGS, LIBRARY, SAVED, RECENT }
+    private Step step, inputMethod = Step.VOICE;
+    private ClueCoachView coach;
+    private EditText input;
+    private View inputCard, mic, send, settings, library;
+    private LinearLayout sample;
+    private TextView sentence;
+    private Button increase;
+    private ClickOverlayLayout voice;
+    private SpeechInput speech;
+    private boolean recording, processing;
+    private int captureGeneration;
+
+    private final ActivityResultLauncher<String> microphonePermission =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                if (step == Step.VOICE) coach.status(getString(granted ? R.string.tour_voice : R.string.tour_permission), true);
+            });
+    private final ActivityResultLauncher<Intent> settingsTour =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == MenuActivity.RESULT_CLOSE_TOUR) finishToHome();
+                else if (result.getResultCode() == Activity.RESULT_OK) show(Step.LIBRARY);
+                else show(Step.SETTINGS);
+            });
+
+    @Override protected boolean isTutorial() { return true; }
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
-        narrator = new TutorialNarrator(this);
-        if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
-        getWindow().setStatusBarColor(Color.TRANSPARENT);
-        getWindow().setNavigationBarColor(Color.WHITE);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-
-        FrameLayout canvas = new FrameLayout(this);
-        canvas.setBackgroundColor(Color.WHITE);
-        LinearLayout column = vertical();
-        canvas.addView(column, new FrameLayout.LayoutParams(
-                Math.min(getResources().getDisplayMetrics().widthPixels, dp(480)),
-                -1, Gravity.CENTER_HORIZONTAL));
-
-        LinearLayout header = new LinearLayout(this);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-        previous = link(getString(R.string.tutorial_explain_previous));
-        previous.setId(R.id.tutorial_back);
-        previous.setOnClickListener(v -> showPage(page - 1));
-        header.addView(previous, new LinearLayout.LayoutParams(-2, -2));
-        TextView name = text(getString(R.string.tutorial_explain_name), 17, ClickUi.BLUE, true);
-        name.setGravity(Gravity.CENTER);
-        header.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView close = link(getString(R.string.tutorial_explain_close));
-        close.setTag("tutorial_skip");
-        close.setOnClickListener(v -> finishToHome());
-        header.addView(close, new LinearLayout.LayoutParams(-2, -2));
-        column.addView(header, new LinearLayout.LayoutParams(-1, -2));
-
-        LinearLayout progress = new LinearLayout(this);
-        progress.setId(R.id.tutorial_explanation_progress);
-        progress.setGravity(Gravity.CENTER);
-        progress.setPadding(0, dp(12), 0, dp(8));
-        progressBars = new View[TITLES.length];
-        for (int i = 0; i < progressBars.length; i++) {
-            View bar = new View(this);
-            bar.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, dp(5), 1);
-            params.setMargins(dp(3), 0, dp(3), 0);
-            progress.addView(bar, params);
-            progressBars[i] = bar;
-        }
-        column.addView(progress, new LinearLayout.LayoutParams(-1, -2));
-        count = text("", 15, ClickUi.SUBTEXT, false);
-        count.setGravity(Gravity.END);
-        column.addView(count, new LinearLayout.LayoutParams(-1, -2));
-
-        scroll = new ScrollView(this);
-        scroll.setId(R.id.tutorial_explanation_scroll);
-        scroll.setFillViewport(true);
-        scroll.setVerticalScrollBarEnabled(false);
-        LinearLayout body = vertical();
-        body.setPadding(dp(2), dp(20), dp(2), dp(16));
-        title = text("", 24, ClickUi.TEXT, true);
-        title.setId(R.id.tutorial_title);
-        title.setLetterSpacing(-.025f);
-        if (Build.VERSION.SDK_INT >= 28) title.setAccessibilityHeading(true);
-        body.addView(title, new LinearLayout.LayoutParams(-1, -2));
-        description = text("", 18, 0xFF53657F, false);
-        description.setId(R.id.tutorial_explanation_description);
-        body.addView(description, spaced(12));
-        TextView exampleLabel = text(getString(R.string.tutorial_explain_example), 15, ClickUi.SUBTEXT, false);
-        body.addView(exampleLabel, spaced(24));
-        example = new FrameLayout(this);
-        example.setId(R.id.tutorial_phone_stage);
-        body.addView(example, spaced(8));
-        caption = text("", 16, 0xFF53657F, false);
-        caption.setId(R.id.tutorial_explanation_caption);
-        body.addView(caption, spaced(12));
-        scroll.addView(body, new ScrollView.LayoutParams(-1, -2));
-        column.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-
-        LinearLayout footer = vertical();
-        footer.setPadding(0, dp(6), 0, dp(12));
-        replay = link(getString(R.string.tutorial_explain_replay));
-        replay.setId(R.id.tutorial_explanation_replay);
-        replay.setGravity(Gravity.CENTER);
-        replay.setOnClickListener(v -> {
-            if (narrator.isSpeaking()) narrator.stop();
-            else narrator.replay(spokenPage);
-        });
-        narrator.setListener((speaking, unavailable) -> replay.setText(speaking
-                ? R.string.tutorial_explain_stop_speech : R.string.tutorial_explain_replay));
-        footer.addView(replay, new LinearLayout.LayoutParams(-1, -2));
-        next = ClickUi.primaryButton(this, "");
-        next.setId(R.id.tutorial_next);
-        next.setTextSize(ClickTextScale.size(this, 20));
-        next.setMinHeight(dp(60));
-        next.setPadding(dp(18), dp(16), dp(18), dp(16));
-        next.setOnClickListener(v -> {
-            if (page == TITLES.length - 1) finishToHome();
-            else showPage(page + 1);
-        });
-        footer.addView(next, new LinearLayout.LayoutParams(-1, -2));
-        column.addView(footer, new LinearLayout.LayoutParams(-1, -2));
-
-        setContentView(canvas);
-        ViewCompat.setOnApplyWindowInsetsListener(canvas, (view, insets) -> {
-            Insets system = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            column.setPadding(dp(22) + system.left, dp(8) + system.top,
-                    dp(22) + system.right, system.bottom);
-            return insets;
-        });
-        ViewCompat.requestApplyInsets(canvas);
-        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
-            @Override public void handleOnBackPressed() {
-                if (page > 0) showPage(page - 1);
-                else finishToHome();
+        FrameLayout root = findViewById(R.id.home_root);
+        inputCard = findViewById(R.id.home_start);
+        input = findViewById(R.id.home_request_input);
+        mic = findViewById(R.id.home_microphone);
+        send = findViewById(R.id.home_request_send);
+        settings = findViewById(R.id.home_settings);
+        library = findViewById(R.id.home_nav_favorites);
+        mic.setOnClickListener(v -> show(Step.VOICE));
+        bindEditor();
+        settings.setOnClickListener(v -> settingsTour.launch(new Intent(this, MenuActivity.class)
+                .putExtra(MenuActivity.EXTRA_TOUR, true)));
+        library.setOnClickListener(v -> show(Step.SAVED));
+        createSample(root);
+        coach = new ClueCoachView(root, this::back, this::finishToHome);
+        input.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                if (step == Step.TEXT) coach.onTextEdited();
             }
+            @Override public void afterTextChanged(Editable text) {}
         });
-        showPage(state == null ? 0 : state.getInt(PAGE_STATE, 0));
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() { back(); }
+        });
+        if (state != null && state.getBoolean("tour_typed")) inputMethod = Step.TEXT;
+        show(state == null ? Step.WELCOME : Step.valueOf(state.getString("clue_tour_step", Step.WELCOME.name())));
     }
 
-    private void showPage(int requestedPage) {
-        page = Math.max(0, Math.min(TITLES.length - 1, requestedPage));
-        narrator.stop();
-        title.setText(TITLES[page]);
-        description.setText(DESCRIPTIONS[page]);
-        count.setText(getString(R.string.click_tutorial_progress, page + 1, TITLES.length));
-        findViewById(R.id.tutorial_explanation_progress).setContentDescription(
-                getString(R.string.tutorial_explain_progress_description, page + 1, TITLES.length));
-        previous.setEnabled(page > 0);
-        previous.setAlpha(page > 0 ? 1f : .4f);
-        for (int i = 0; i < progressBars.length; i++) {
-            progressBars[i].setBackground(ClickUi.rounded(i <= page ? ClickUi.BLUE : ClickUi.BORDER, dp(3)));
+    @SuppressLint("ClickableViewAccessibility")
+    private void bindEditor() {
+        input.setOnClickListener(v -> { if (step == Step.INPUT) write(); });
+        input.setOnTouchListener((v, event) -> {
+            // An EditText can take focus without emitting a click on its first tap. Leave the
+            // actual gesture to the editor. TalkBack and keyboard clicks use the listener above.
+            if (step == Step.INPUT && event.getActionMasked() == MotionEvent.ACTION_DOWN) show(Step.TEXT);
+            return false;
+        });
+    }
+
+    private void createSample(FrameLayout root) {
+        sample = new LinearLayout(this);
+        sample.setOrientation(LinearLayout.VERTICAL);
+        sample.setGravity(Gravity.CENTER);
+        sample.setPadding(dp(18), dp(12), dp(18), dp(12));
+        sample.setBackground(ClickUi.outlined(Color.WHITE, ClickUi.BORDER, dp(22), dp(1)));
+        sample.setElevation(dp(9));
+        TextView label = ClickUi.body(this, getString(R.string.tour_preview));
+        label.setTextSize(ClickTextScale.size(this, 14));
+        sample.addView(label);
+        sentence = ClickUi.sectionTitle(this, getString(R.string.tour_preview_sentence));
+        sentence.setId(R.id.tutorial_font_preview);
+        sentence.setGravity(Gravity.CENTER);
+        sentence.setMinimumHeight(dp(54));
+        sample.addView(sentence, new LinearLayout.LayoutParams(-1, -2));
+        increase = ClickUi.secondaryButton(this, getString(R.string.tour_increase));
+        increase.setId(R.id.tutorial_increase);
+        increase.setTextSize(ClickTextScale.size(this, 17));
+        increase.setMinHeight(dp(48));
+        increase.setOnClickListener(v -> { if (step == Step.ADJUST) show(Step.RESULT); });
+        sample.addView(increase);
+        int width = Math.min(dp(324), getResources().getDisplayMetrics().widthPixels - dp(32));
+        root.addView(sample, new FrameLayout.LayoutParams(width, -2, Gravity.CENTER));
+    }
+
+    private void prepareVoice() {
+        if (voice != null) return;
+        voice = new ClickOverlayLayout(this);
+        voice.setRequestControlsVisible(false);
+        voice.openVoice();
+        int width = voice.getWindowWidth(ClickOverlayLayout.Mode.VOICE, getResources().getDisplayMetrics().widthPixels);
+        int height = voice.getWindowHeight(ClickOverlayLayout.Mode.VOICE, width, getResources().getDisplayMetrics().heightPixels / 2);
+        voice.setElevation(dp(9));
+        voice.setBackground(ClickUi.rounded(Color.WHITE, dp(22)));
+        FrameLayout root = findViewById(R.id.home_root);
+        FrameLayout.LayoutParams position = new FrameLayout.LayoutParams(width, height, Gravity.CENTER);
+        if (getResources().getConfiguration().screenHeightDp < 740 || getResources().getConfiguration().fontScale > 1.2f) {
+            position.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+            ViewCompat.setOnApplyWindowInsetsListener(voice, (view, insets) -> {
+                int top = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()).top + dp(8);
+                if (position.topMargin != top) { position.topMargin = top; view.requestLayout(); }
+                return insets;
+            });
         }
-        example.removeAllViews();
-        example.addView(new TutorialExplanationView(this, page), new FrameLayout.LayoutParams(-1, -2));
-        next.setText(page == TITLES.length - 1 ? R.string.tutorial_explain_finish : R.string.tutorial_explain_next);
-        caption.setText(page == TITLES.length - 1
-                ? R.string.tutorial_explain_finish_caption : R.string.tutorial_explain_caption);
-        // Every page is an explanation. No tap, recording, input or success gate is required.
-        next.setEnabled(true);
-        spokenPage = getString(TITLES[page]) + " " + getString(DESCRIPTIONS[page]);
-        if (page == 0 || page == TITLES.length - 1) spokenPage += " " + caption.getText();
-        scroll.post(() -> scroll.scrollTo(0, 0));
-        narrator.speak(spokenPage);
+        root.addView(voice, position);
+        ViewCompat.requestApplyInsets(voice);
+        voice.setCallback(this);
+    }
+
+    private void show(Step next) {
+        cancelCapture();
+        step = next;
+        if (step != Step.TEXT) hideKeyboard();
+        if (voice != null) voice.setVisibility(step == Step.VOICE ? View.VISIBLE : View.GONE);
+        boolean preview = step == Step.ADJUST || step == Step.RESULT;
+        sample.setVisibility(preview ? View.VISIBLE : View.GONE);
+        sentence.setTextSize(ClickTextScale.size(this, step == Step.RESULT ? 26 : 17));
+        increase.setVisibility(step == Step.RESULT ? View.GONE : View.VISIBLE);
+        if (step == Step.SAVED || step == Step.RECENT) openLibraryTab(step == Step.RECENT);
+        else if (findViewById(R.id.home_favorites_scroll).getVisibility() == View.VISIBLE)
+            findViewById(R.id.home_nav_home).performClick();
+
+        switch (step) {
+            case WELCOME:
+                describe(R.string.tour_welcome, null);
+                coach.action(R.string.tour_start, true, () -> show(Step.INPUT));
+                break;
+            case INPUT:
+                describe(R.string.tour_pick, inputCard, input, mic);
+                break;
+            case VOICE:
+                inputMethod = Step.VOICE;
+                prepareVoice();
+                View hold = voice.findViewById(R.id.overlay_microphone);
+                describe(R.string.tour_voice, hold, hold);
+                coach.keepPanelVisible(voice);
+                coach.action(R.string.tour_try_text, false, this::write);
+                break;
+            case TEXT:
+                inputMethod = Step.TEXT;
+                describe(R.string.tour_text, inputCard, input, send, mic);
+                coach.action(R.string.tour_sample, false, this::useExample);
+                break;
+            case REVIEW:
+                coach.show(getString(R.string.tour_review, input.getText().toString().trim()), guideArt(), true, inputCard);
+                coach.action(R.string.tour_begin_guide, true, () -> show(Step.ADJUST));
+                coach.action(R.string.tour_edit, false, () -> show(Step.INPUT));
+                break;
+            case ADJUST:
+                describe(R.string.tour_adjust, increase, increase);
+                coach.keepPanelVisible(sample);
+                break;
+            case RESULT:
+                describe(R.string.tour_result, sample);
+                coach.action(R.string.tour_satisfied, true, () -> show(Step.SETTINGS));
+                coach.action(R.string.tour_again, false, () -> show(Step.ADJUST));
+                break;
+            case SETTINGS:
+                describe(R.string.tour_settings, settings, settings);
+                break;
+            case LIBRARY:
+                describe(R.string.tour_library, library, library);
+                break;
+            case SAVED:
+                View recent = findViewById(R.id.home_library_recent);
+                recent.setOnClickListener(v -> show(Step.RECENT));
+                describe(R.string.tour_saved, recent, recent);
+                break;
+            case RECENT:
+                describe(R.string.tour_recent, findViewById(R.id.home_library_tabs));
+                coach.action(R.string.tour_finish, true, this::finishToHome);
+                break;
+        }
+    }
+
+    private void describe(int words, View anchor, View... controls) {
+        coach.show(getString(words), guideArt(), step != Step.WELCOME, anchor, controls);
+    }
+
+    private int guideArt() {
+        if (step == Step.WELCOME) return com.click.designpreview.R.drawable.clue2_signup;
+        if (step == Step.RESULT || step == Step.RECENT) return com.click.designpreview.R.drawable.clue4_complete;
+        return com.click.designpreview.R.drawable.clue3_tutorial;
+    }
+
+    private void write() {
+        show(Step.TEXT);
+        // The voice button that opened the editor is removed during this click. Give the
+        // editor focus after the old button and its scroll container finish the gesture.
+        input.post(() -> {
+            if (step == Step.TEXT && input.requestFocus())
+                getSystemService(InputMethodManager.class).showSoftInput(input, InputMethodManager.SHOW_IMPLICIT);
+        });
+    }
+
+    private void useExample() {
+        input.setText(R.string.tour_phrase);
+        show(Step.REVIEW);
+    }
+
+    @Override protected void submitHomeRequest() {
+        if (step == Step.TEXT) review(input.getText().toString());
+    }
+
+    private void review(String words) {
+        RequirementReview request = new RequirementReview(words);
+        if (!request.requestsLargerText() || GoalCommandInterpreter.requiresContextualInterpretation(words)) {
+            coach.status(getString(R.string.tour_retry), true);
+            return;
+        }
+        input.setText(words.trim());
+        show(Step.REVIEW);
+    }
+
+    @Override public void onMicrophonePressed() {
+        if (step != Step.VOICE || recording || processing) return;
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            microphonePermission.launch(Manifest.permission.RECORD_AUDIO);
+            return;
+        }
+        if (speech == null) speech = new DeviceSpeechInput(this);
+        int generation = ++captureGeneration;
+        recording = true;
+        coach.setAudioAvailable(false);
+        voice.setVoiceInputActive(true);
+        coach.status(getString(R.string.tour_listening), false);
+        speech.start(new SpeechInput.Callback() {
+            @Override public void onRecordingFinished() {
+                if (generation != captureGeneration) return;
+                recording = false;
+                processing = true;
+                voice.setVoiceInputActive(false);
+                voice.setVoiceInputProcessing(true);
+                coach.status(getString(R.string.tour_processing), false);
+            }
+            @Override public void onSuccess(String words) {
+                if (generation != captureGeneration) return;
+                cancelCapture();
+                review(words);
+            }
+            @Override public void onFailure(Throwable error) {
+                if (generation != captureGeneration) return;
+                cancelCapture();
+                coach.status(SpeechErrorMessages.message(error), true);
+            }
+        });
+    }
+    @Override public void onMicrophoneReleased() { if (recording) speech.finish(); }
+    @Override public void onMicrophoneClicked() {
+        if (recording) onMicrophoneReleased();
+        else onMicrophonePressed();
+    }
+    @Override public void onMicrophoneCancelled() {
+        cancelCapture();
+        if (step == Step.VOICE) coach.status(getString(R.string.tour_voice), false);
+    }
+
+    private void cancelCapture() {
+        captureGeneration++;
+        if (speech != null) speech.cancel();
+        recording = processing = false;
+        if (voice != null) {
+            voice.setVoiceInputActive(false);
+            voice.setVoiceInputProcessing(false);
+        }
+        if (coach != null) coach.setAudioAvailable(true);
+    }
+
+    // The coach exposes only the production panel's press-and-hold microphone.
+    @Override public void onModeChanged(ClickOverlayLayout.Mode from, ClickOverlayLayout.Mode to) {}
+    @Override public void onDragStarted() {}
+    @Override public void onDragBy(float x, float y) {}
+    @Override public void onDragEnded() {}
+    @Override public void onTextSubmitted(String text) {}
+    @Override public void onCloseRequested() { show(Step.INPUT); }
+
+    private void back() {
+        switch (step) {
+            case WELCOME: finishToHome(); break;
+            case INPUT: show(Step.WELCOME); break;
+            case VOICE: case TEXT: show(Step.INPUT); break;
+            case REVIEW: show(inputMethod); break;
+            case ADJUST: show(Step.REVIEW); break;
+            case RESULT: show(Step.ADJUST); break;
+            case SETTINGS: show(Step.RESULT); break;
+            case LIBRARY: show(Step.SETTINGS); break;
+            case SAVED: show(Step.LIBRARY); break;
+            case RECENT: show(Step.SAVED); break;
+        }
     }
 
     private void finishToHome() {
-        narrator.stop();
         startActivity(new Intent(this, HomeActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP));
         finish();
     }
-    @Override protected void onSaveInstanceState(@NonNull Bundle state) {
-        state.putInt(PAGE_STATE, page);
+    @Override protected void onSaveInstanceState(Bundle state) {
+        state.putString("clue_tour_step", step.name());
+        state.putBoolean("tour_typed", inputMethod == Step.TEXT);
         super.onSaveInstanceState(state);
     }
-    @Override protected void onResume() { super.onResume(); narrator.resume(); }
-    @Override protected void onPause() { narrator.pause(); super.onPause(); }
-    @Override protected void onDestroy() { narrator.close(); super.onDestroy(); }
-
-    private LinearLayout vertical() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        return layout;
+    @Override protected void onResume() { super.onResume(); if (coach != null) coach.resume(); }
+    @Override protected void onPause() {
+        if (recording || processing) onMicrophoneCancelled();
+        coach.pause();
+        super.onPause();
     }
-    private TextView text(String value, int size, int color, boolean strong) {
-        TextView view = new TextView(this);
-        view.setText(value);
-        view.setTextSize(ClickTextScale.size(this, size));
-        view.setTextColor(color);
-        view.setTypeface(getResources().getFont(strong
-                ? com.click.designpreview.R.font.pretendard_semibold
-                : com.click.designpreview.R.font.pretendard_regular));
-        view.setIncludeFontPadding(false);
-        view.setLineSpacing(dp(3), 1.12f);
-        return view;
+    @Override protected void onDestroy() {
+        cancelCapture();
+        if (speech != null) speech.close();
+        coach.close();
+        super.onDestroy();
     }
-    private TextView link(String value) {
-        TextView view = text(value, 16, ClickUi.BLUE_DARK, false);
-        view.setGravity(Gravity.CENTER);
-        view.setMinHeight(dp(48));
-        view.setPadding(dp(8), dp(12), dp(8), dp(12));
-        view.setFocusable(true);
-        view.setBackground(null);
-        return view;
-    }
-    private LinearLayout.LayoutParams spaced(int top) {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
-        params.topMargin = dp(top);
-        return params;
-    }
-    private int dp(int value) { return ClickUi.dp(this, value); }
+    private int dp(int n) { return ClickUi.dp(this, n); }
 }

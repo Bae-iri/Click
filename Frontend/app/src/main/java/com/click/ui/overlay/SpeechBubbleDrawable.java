@@ -9,14 +9,14 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 
 /** A side tail points toward the speaker and stays inside the measured bounds. */
-final class SpeechBubbleDrawable extends Drawable {
+public final class SpeechBubbleDrawable extends Drawable {
     static final int TAIL_DP = 14;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final float density;
     private final boolean outgoing;
 
-    SpeechBubbleDrawable(int color, float density, boolean outgoing) {
+    public SpeechBubbleDrawable(int color, float density, boolean outgoing) {
         paint.setColor(color);
         this.density = density;
         this.outgoing = outgoing;

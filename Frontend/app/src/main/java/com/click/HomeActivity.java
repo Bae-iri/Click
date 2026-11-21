@@ -44,7 +44,7 @@ import com.click.ui.common.ClickTextScale;
 import com.click.ui.home.HomeIconView;
 
 /** Main Click entry screen after accessibility onboarding. */
-public final class HomeActivity extends AppCompatActivity {
+public class HomeActivity extends AppCompatActivity {
     public static final String EXTRA_OPEN_LIBRARY = "com.click.extra.OPEN_LIBRARY";
     private static final int INK = 0xFF101A36;
     private static final int SECONDARY = 0xFF8190AA;
@@ -88,7 +88,7 @@ public final class HomeActivity extends AppCompatActivity {
         library = new RequestLibraryStore(this);
         guidanceChoices=new com.click.data.local.GuidancePreferences(this);
         recentQueue=new com.click.data.remote.VoiceQueueGateway(this);
-        if(savedInstanceState==null)guidanceChoices.visitHome();
+        if(savedInstanceState==null && !isTutorial())guidanceChoices.visitHome();
         regular = getResources().getFont(com.click.designpreview.R.font.pretendard_regular);
         medium = getResources().getFont(com.click.designpreview.R.font.pretendard_medium);
         semibold = getResources().getFont(com.click.designpreview.R.font.pretendard_semibold);
@@ -99,6 +99,7 @@ public final class HomeActivity extends AppCompatActivity {
                 | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
 
         FrameLayout root = new FrameLayout(this);
+        root.setId(R.id.home_root);
         root.setBackground(new com.click.designpreview.ClickBackgroundDrawable(getResources()));
         homeScroll = new ScrollView(this);
         homeScroll.setId(R.id.home_scroll);
@@ -211,8 +212,10 @@ public final class HomeActivity extends AppCompatActivity {
             recreate();
             return;
         }
-        refreshFavorites();
-        scheduleFirstHelp();readRecentTask();
+        if (!isTutorial()) {
+            refreshFavorites();
+            scheduleFirstHelp();readRecentTask();
+        }
     }
 
     @Override protected void onPause() {
@@ -221,7 +224,8 @@ public final class HomeActivity extends AppCompatActivity {
         super.onPause();
     }
     @Override public void onUserInteraction(){super.onUserInteraction();scheduleFirstHelp();}
-    private void scheduleFirstHelp(){helpTiming.removeCallbacks(offerFirstHelp);if(guidanceChoices!=null&&guidanceChoices.maySuggest())helpTiming.postDelayed(offerFirstHelp,12000);}
+    protected boolean isTutorial() { return false; }
+    private void scheduleFirstHelp(){helpTiming.removeCallbacks(offerFirstHelp);if(!isTutorial()&&guidanceChoices!=null&&guidanceChoices.maySuggest())helpTiming.postDelayed(offerFirstHelp,12000);}
     @Override protected void onDestroy(){helpTiming.removeCallbacksAndMessages(null);if(recentQueue!=null)recentQueue.close();super.onDestroy();}
     private void readRecentTask(){
         final int owner=++homeReadGeneration;
@@ -339,7 +343,7 @@ public final class HomeActivity extends AppCompatActivity {
         return card;
     }
 
-    private void submitHomeRequest() {
+    protected void submitHomeRequest() {
         String request = requestInput.getText().toString().trim();
         if (request.isEmpty()) return;
         if (startOverlayWithPermission(request, null, false)) requestInput.setText("");
@@ -488,12 +492,14 @@ public final class HomeActivity extends AppCompatActivity {
         add(favoritesPage, heading, 0);
 
         LinearLayout tabs = new LinearLayout(this);
+        tabs.setId(R.id.home_library_tabs);
         tabs.setPadding(dp(36), 0, dp(8), 0);
         String[] names = {"즐겨찾기", "최근 질문"};
         for (int i = 0; i < names.length; i++) {
             final boolean recent = i == 1;
             boolean selected = recentVisible == recent;
             TextView tab = text(names[i], 13, selected ? BLUE : SECONDARY, selected ? semibold : medium);
+            tab.setId(recent ? R.id.home_library_recent : R.id.home_library_saved);
             tab.setGravity(Gravity.CENTER); tab.setMinimumHeight(dp(48));
             tab.setSelected(selected); tab.setFocusable(true);
             tab.setContentDescription(names[i] + (selected ? ", 선택됨" : ""));
@@ -505,10 +511,7 @@ public final class HomeActivity extends AppCompatActivity {
             tab.setBackground(new android.graphics.drawable.InsetDrawable(
                     new RippleDrawable(ColorStateList.valueOf(0x183478FF), index, null), 0, dp(8), 0, 0));
             tab.setPadding(dp(14), dp(12), dp(14), dp(4));
-            tab.setOnClickListener(view -> {
-                recentVisible = recent; reordering = false;
-                renderFavoritesPage(); favoritesScroll.scrollTo(0, 0);
-            });
+            tab.setOnClickListener(view -> openLibraryTab(recent));
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2);
             if (i > 0) params.leftMargin = dp(4);
             tabs.addView(tab, params);
@@ -666,6 +669,13 @@ public final class HomeActivity extends AppCompatActivity {
         selectNavigation(visible);
     }
 
+    protected void openLibraryTab(boolean recent) {
+        recentVisible = recent;
+        reordering = false;
+        showFavorites(true);
+        favoritesScroll.scrollTo(0, 0);
+    }
+
     private LinearLayout bottomNavigation() {
         LinearLayout navigation = new LinearLayout(this);
         navigation.setGravity(Gravity.CENTER_VERTICAL);
@@ -675,7 +685,7 @@ public final class HomeActivity extends AppCompatActivity {
         homeTab = navigationItem(HomeIconView.Kind.HOME, "홈", R.id.home_nav_home);
         homeTab.setOnClickListener(view -> { showFavorites(false); homeScroll.smoothScrollTo(0, 0); });
         favoritesTab = navigationItem(HomeIconView.Kind.BOX, "보관함", R.id.home_nav_favorites);
-        favoritesTab.setOnClickListener(view -> { recentVisible = false; showFavorites(true); });
+        favoritesTab.setOnClickListener(view -> openLibraryTab(false));
         for (View tab : new View[]{homeTab, favoritesTab})
             navigation.addView(tab, new LinearLayout.LayoutParams(0, dp(58), 1));
         selectNavigation(false);
@@ -714,7 +724,7 @@ public final class HomeActivity extends AppCompatActivity {
                 .putExtra(com.click.designpreview.PermissionGuideActivity.EXTRA_RECONNECT,
                         PermissionStatus.isAccessibilityEnabled(this)));
     }
-    private void hideKeyboard() {
+    protected void hideKeyboard() {
         if (requestInput == null) return;
         getSystemService(InputMethodManager.class).hideSoftInputFromWindow(requestInput.getWindowToken(), 0);
         requestInput.clearFocus();

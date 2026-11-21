@@ -40,6 +40,11 @@ import com.click.ui.common.ClickTextScale;
 
 /** Account and settings menu using the same soft-blue visual system as the Click home screen. */
 public final class MenuActivity extends AppCompatActivity {
+    static final String EXTRA_TOUR = "com.click.extra.TOUR_SETTINGS";
+    static final int RESULT_CLOSE_TOUR = RESULT_FIRST_USER;
+    private com.click.ui.tutorial.ClueCoachView coach;
+    private View automationRow, displayRow;
+    private boolean showingDisplay;
     private static final int BLUE = 0xFF3478F6;
     private static final int INK = 0xFF101A36;
     private static final int SECONDARY = 0xFF7182A4;
@@ -97,7 +102,7 @@ public final class MenuActivity extends AppCompatActivity {
         addRow(settings, MenuIconView.Kind.SHIELD, "앱 권한 확인", "안내에 필요한 권한을 확인해요", false,
                 view -> showPermissionStatus());
         divider(settings);
-        addRow(settings, MenuIconView.Kind.AUTOMATION, "자동으로 도와주기", "화면 이동과 설정 조절을 도와드려요", false,
+        automationRow = addRow(settings, MenuIconView.Kind.AUTOMATION, "자동으로 도와주기", "화면 이동과 설정 조절을 도와드려요", false,
                 view -> showAutomationSettings());
         divider(settings);
         addRow(settings, MenuIconView.Kind.PERSONALIZE, "클릭 개선 참여", "사용 결과를 바탕으로 클릭을 더 편리하게 만들어요", false,
@@ -109,7 +114,7 @@ public final class MenuActivity extends AppCompatActivity {
 
         section(page, "클릭 설정");
         LinearLayout displaySettings = group();
-        addRow(displaySettings, MenuIconView.Kind.SETTINGS, "화면 설정", "글자 크기와 화면 표시 속도를 조절해요", false,
+        displayRow = addRow(displaySettings, MenuIconView.Kind.SETTINGS, "화면 설정", "글자 크기와 화면 표시 속도를 조절해요", false,
                 view -> startActivity(new Intent(this, DisplaySettingsActivity.class)));
         divider(displaySettings);
         addRow(displaySettings, MenuIconView.Kind.CLUE, "클루에 대해서", "클릭과 함께하는 펭귄 친구를 소개해요", false,
@@ -152,6 +157,17 @@ public final class MenuActivity extends AppCompatActivity {
         add(page, accountActions, 10);
 
         setContentView(root);
+        if (getIntent().getBooleanExtra(EXTRA_TOUR, false)) {
+            coach = new com.click.ui.tutorial.ClueCoachView(root, this::previousTourStep, () -> {
+                setResult(RESULT_CLOSE_TOUR);
+                finish();
+            });
+            automationRow.setOnClickListener(v -> showTourStep(true));
+            getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+                @Override public void handleOnBackPressed() { previousTourStep(); }
+            });
+            showTourStep(state != null && state.getBoolean("tour_display"));
+        }
         root.requestApplyInsets();
     }
 
@@ -306,7 +322,7 @@ public final class MenuActivity extends AppCompatActivity {
         add(page, heading, 24);
     }
 
-    private void addRow(LinearLayout group, MenuIconView.Kind kind, String label, String description, boolean danger,
+    private View addRow(LinearLayout group, MenuIconView.Kind kind, String label, String description, boolean danger,
                         View.OnClickListener listener) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -333,6 +349,7 @@ public final class MenuActivity extends AppCompatActivity {
         row.addView(new MenuIconView(MenuIconView.Kind.NEXT, false),
                 new LinearLayout.LayoutParams(dp(24), dp(32)));
         group.addView(row, new LinearLayout.LayoutParams(-1, -2));
+        return row;
     }
 
     private void divider(LinearLayout group) {
@@ -509,6 +526,7 @@ public final class MenuActivity extends AppCompatActivity {
 
     @Override protected void onResume() {
         super.onResume();
+        if (coach != null) { coach.resume(); return; }
         com.click.data.local.AccessibilityOnboardingState onboarding =
                 new com.click.data.local.AccessibilityOnboardingState(this);
         if (onboarding.isPending() && onboarding.returnsToSettings()
@@ -522,7 +540,33 @@ public final class MenuActivity extends AppCompatActivity {
         });
     }
 
+    private void showTourStep(boolean display) {
+        showingDisplay = display;
+        if (display) {
+            coach.show(getString(R.string.tour_settings_detail), com.click.designpreview.R.drawable.clue3_tutorial,
+                    true, displayRow);
+            coach.action(R.string.tour_next_library, true, () -> { setResult(RESULT_OK); finish(); });
+        } else {
+            coach.show(getString(R.string.tour_automation), com.click.designpreview.R.drawable.clue3_tutorial,
+                    true, automationRow, automationRow);
+        }
+    }
+
+    private void previousTourStep() {
+        if (showingDisplay) showTourStep(false);
+        else finish();
+    }
+
+    @Override protected void onSaveInstanceState(Bundle state) {
+        state.putBoolean("tour_display", showingDisplay);
+        super.onSaveInstanceState(state);
+    }
+    @Override protected void onPause() {
+        if (coach != null) coach.pause();
+        super.onPause();
+    }
     @Override protected void onDestroy() {
+        if (coach != null) coach.close();
         if (graphConsent != null) graphConsent.close();
         if (accountActions != null) accountActions.close();
         super.onDestroy();

@@ -20,7 +20,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.click.ui.common.ClickUi;
 import com.click.ui.common.ClickTextScale;
 
-/** Welcomes the user after accessibility is enabled, before the illustrated explanations. */
+/** Welcomes the user before practicing on the home screen with Clue. */
 public final class TutorialReadyActivity extends AppCompatActivity {
     private com.click.designpreview.TutorialNarrator narrator;
     @Override protected void onCreate(Bundle savedInstanceState) {
@@ -32,7 +32,7 @@ public final class TutorialReadyActivity extends AppCompatActivity {
             return;
         }
         narrator = new com.click.designpreview.TutorialNarrator(this);
-        narrator.speak("이제 클릭이 도와드릴 수 있어요! 사용법 보기를 누르면 그림과 설명으로 알려드릴게요.");
+        narrator.speak(getString(R.string.tutorial_ready_title) + " " + getString(R.string.tutorial_ready_description));
         if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.WHITE);

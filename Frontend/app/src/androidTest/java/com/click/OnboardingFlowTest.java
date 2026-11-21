@@ -791,7 +791,7 @@ public class OnboardingFlowTest {
         }
         try (ActivityScenario<OverlayTutorialActivity> s = ActivityScenario.launch(
                 OverlayTutorialActivity.class)) {
-            shown(instrumentation.getTargetContext().getString(R.string.tutorial_explain_open_title));
+            shown(instrumentation.getTargetContext().getString(R.string.tour_welcome));
             screenshot("overlay-tutorial");
         }
     }
