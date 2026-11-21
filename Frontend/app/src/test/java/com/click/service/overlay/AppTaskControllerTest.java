@@ -32,7 +32,7 @@ public class AppTaskControllerTest {
         assertEquals("tap",l.result.getJSONObject("action").getString("tool"));assertEquals("com.coupang.mobile",c.memory().scope());
         c.execute(old,null);assertEquals(0,l.executions);verify(gateway,never()).send(any(),any());c.close();
     }
-    @Test public void wrongContactsAppReturnsToPhoneAndDoesNotSearchOrComplete() throws Exception {
+    @Test public void firstPhoneEntryIsOfferedOnceAndUsesTheKeypadTabInsidePhone() throws Exception {
         var phone=new RequestedApp("org.phone","전화",null,true);
         var gateway=mock(AppGuideGateway.class);
         var listener=new Listener();
@@ -40,12 +40,15 @@ public class AppTaskControllerTest {
         var controller=new AppTaskController(gateway,memory,null,listener,false);
         try {
             controller.targetApp(phone);
-            for(String pkg:List.of("org.contacts",phone.packageName)) {
-                listener.current=screen(pkg,node(pkg,"node_0_1","연락처","tab",true),node(pkg,"node_0_2","키패드","tab",false));
-                controller.refresh();
-                assertEquals("open_app",listener.result.getJSONObject("action").getString("tool"));
-                assertEquals(phone.packageName,listener.result.getJSONObject("action").getString("package"));
-            }
+            listener.current=screen("org.contacts",node("org.contacts","node_0_1","연락처","tab",true));
+            controller.refresh();
+            JSONObject entry=listener.result.getJSONObject("action");
+            assertEquals("open_app",entry.getString("tool"));assertEquals(phone.packageName,entry.getString("package"));
+            controller.refresh();assertEquals(entry.getString("id"),listener.result.getJSONObject("action").getString("id"));
+            listener.current=screen(phone.packageName,node(phone.packageName,"node_0_1","연락처","tab",true),node(phone.packageName,"node_0_2","키패드","tab",false));
+            controller.refresh();
+            assertEquals("tap",listener.result.getJSONObject("action").getString("tool"));
+            assertEquals("키패드",listener.result.getString("target_label"));
             listener.current=screen(phone.packageName,node(phone.packageName,"node_0_1","키패드","tab",true),
                 node(phone.packageName,"node_0_2","검색","button"));
             controller.refresh();
@@ -54,12 +57,12 @@ public class AppTaskControllerTest {
             listener.current=screen(phone.packageName,node(phone.packageName,"node_0_1","설정","button"));
             controller.refresh();assertTrue(listener.result.isNull("action"));
             listener.current=screen("org.contacts",node("org.contacts","node_0_1","검색","button"));
-            controller.refresh();assertEquals("open_app",listener.result.getJSONObject("action").getString("tool"));
-            assertTrue(controller.takeAutomaticReturn());assertFalse(controller.takeAutomaticReturn());
+            controller.refresh();assertEquals("awaiting_screen",listener.result.getString("status"));
+            assertTrue(listener.result.isNull("action"));assertFalse(controller.takeAutomaticEntry());
             assertFalse(memory.finished());verify(gateway,never()).send(any(),any());
         } finally {controller.close();}
     }
-    @Test public void verificationAfterAnUnexpectedAppSwitchReentersTheSameTask() throws Exception {
+    @Test public void verificationSurvivesMissingAndForeignWindowsWithoutReopeningOrReplaying() throws Exception {
         String pkg="org.phone";
         var listener=new Listener();
         var gateway=mock(AppGuideGateway.class);
@@ -71,13 +74,34 @@ public class AppTaskControllerTest {
             controller.refresh();
             assertEquals("tap",listener.result.getJSONObject("action").getString("tool"));
             controller.execute((String)null);
+            listener.current=null;
+            controller.screenChanged(null);shadowOf(Looper.getMainLooper()).idle();
+            assertEquals("awaiting_screen",listener.result.getString("status"));
             listener.current=screen("org.contacts",node("org.contacts","node_0_1","설정","button"));
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));
-            assertEquals("open_app",listener.result.getJSONObject("action").getString("tool"));
-            assertEquals(pkg,listener.result.getJSONObject("action").getString("package"));
+            assertEquals("awaiting_screen",listener.result.getString("status"));assertTrue(listener.result.isNull("action"));
+            assertEquals(0,controller.availableTools().length());assertFalse(controller.takeAutomaticEntry());
             assertFalse(memory.finished());assertNotNull(memory.active());assertEquals(1,listener.executions);
+            assertEquals(0,memory.actions());
+            listener.current=screen(pkg,node(pkg,"node_0_2","목록","button"));
+            controller.screenChanged(listener.current);shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(400));
+            assertEquals(1,memory.actions());assertEquals(1,listener.executions);
+            assertEquals("verified",memory.state().getJSONArray("attempts").getJSONObject(0).getString("outcome"));
             verify(gateway,never()).send(any(),any());
         } finally {controller.close();}
+    }
+
+    @Test public void restoredTaskWaitsForItsWindowWithoutAnAppLaunch() throws Exception {
+        var memory=new AppTaskMemory("보관함 열어줘");memory.scope("org.library|4|34|app-task.v2");
+        var listener=new Listener();listener.current=screen("org.other",node("org.other","n","보관함","tab",true));
+        var gateway=mock(AppGuideGateway.class);
+        var c=new AppTaskController(gateway,new AppTaskMemory(memory.stored()),null,listener,true);
+        try{
+            c.targetApp("org.library","자료");c.refresh();c.userRefresh();
+            assertEquals("awaiting_screen",listener.result.getString("status"));assertTrue(listener.result.isNull("action"));
+            assertFalse(c.mayConfirmResult());assertFalse(c.takeAutomaticEntry());assertEquals(0,listener.executions);
+            verify(gateway,never()).send(any(),any());
+        }finally{c.close();}
     }
 
     @Test public void unknownAppOnLauncherDoesNotSendFoldersToPlanner() throws Exception {

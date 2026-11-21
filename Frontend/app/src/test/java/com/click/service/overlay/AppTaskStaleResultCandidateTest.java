@@ -151,9 +151,9 @@ public class AppTaskStaleResultCandidateTest {
             AppTaskController controller=new AppTaskController(gateway,memory,null,listener,false,false,true,arm);
             try{controller.refresh();assertEquals("checking_result",listener.latest.getString("status"));
                 shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(250));listener.window=43;
-                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(200));assertFalse(memory.completionSupported());
-                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(300));assertFalse(memory.completionSupported());
-                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));assertTrue(memory.completionSupported());
+                controller.screenChanged(listener.fresh());shadowOf(Looper.getMainLooper()).idle();
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(AppTaskTransitionDetector.STABLE_MS-1));assertFalse(memory.completionSupported());
+                shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1));assertTrue(memory.completionSupported());
                 assertEquals("verified",listener.latest.getJSONObject("result_assessment").getString("status"));assertEquals(0,listener.executions);verify(gateway,never()).send(any(),any());
             }finally{controller.close();}
         }

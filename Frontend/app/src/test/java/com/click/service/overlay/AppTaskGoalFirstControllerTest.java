@@ -41,7 +41,7 @@ public class AppTaskGoalFirstControllerTest {
     private static final class Harness implements AppTaskController.Listener,AutoCloseable {
         final AppGuideGateway gateway=mock(AppGuideGateway.class);final AppTaskMemory memory=new AppTaskMemory(GOAL);
         final AppTaskController controller;final List<JSONObject> requests=new ArrayList<>();final List<AppGuideGateway.Callback> callbacks=new ArrayList<>();
-        String title=TITLE,footer="Before";int window=42,executions;Boolean sync;boolean privateInput,presentedBusy;long clockOffset;JSONObject latest;Throwable failure;
+        String title=TITLE,footer="Before";int window=42,executions;Boolean sync;boolean privateInput,presentedBusy,accept=true;long clockOffset;JSONObject latest;Throwable failure;
         Harness(AppTaskMetaController.Arm arm,boolean supported)throws Exception {this(arm,supported,true);}
         Harness(AppTaskMetaController.Arm arm,boolean supported,boolean withPlan)throws Exception {
             if(withPlan)memory.plan(new JSONArray().put(new JSONObject().put("title","Open section"))
@@ -59,7 +59,7 @@ public class AppTaskGoalFirstControllerTest {
         }
         public boolean canObserve(){return true;}public void busy(boolean value){presentedBusy=value;}
         public void present(JSONObject response,ScreenSnapshot sent){latest=response;}public void failure(Throwable error){failure=error;}
-        public boolean execute(ScreenSnapshot before,JSONObject observed,JSONObject action,String input,String selected){executions++;return true;}
+        public boolean execute(ScreenSnapshot before,JSONObject observed,JSONObject action,String input,String selected){executions++;return accept;}
         public boolean inputMatches(String id,String hash){return false;}
         void send(){controller.refresh();assertEquals(1,requests.size());}
         JSONObject response(String assessment,JSONObject completion)throws Exception {
@@ -104,6 +104,35 @@ public class AppTaskGoalFirstControllerTest {
             idle(900);assertTrue(h.memory.completionSupported());
             h.sync=true;assertFalse(h.controller.mayConfirmResult());assertFalse(h.memory.completionSupported());
             idle(800);assertFalse(h.memory.finished());assertEquals(0,h.executions);assertNull(h.failure);
+        }
+    }
+    @Test public void switchRecoveryUsesTheCurrentControlAndStillAcceptsALateEffectWithoutRetapping()throws Exception{
+        for(boolean accepted:List.of(true,false))try(Harness h=new Harness(AppTaskMetaController.Arm.META,true)){
+            h.controller.enableOutcomes(true);h.sync=true;h.accept=accepted;
+            h.memory.installOutcome(AppTaskOutcomesTest.goal(AppTaskOutcomesTest.clause("page",TITLE),AppTaskOutcomesTest.clause("off","Auto sync")));
+            h.controller.refresh();
+            assertEquals("sync",h.latest.getJSONObject("action").getString("target_id"));assertTrue(h.requests.isEmpty());
+            h.controller.execute(h.latest.getJSONObject("action").getString("id"),null);
+            if(accepted){
+                idle(5);h.footer="Redrawn";h.controller.screenChanged(h.fresh());
+                idle(AppTaskTransitionDetector.STABLE_MS+5);
+            }else idle(1);
+            assertEquals(1,h.memory.actions());
+            assertEquals(accepted?"value_contradicted":"execution_rejected",h.memory.stored().getString("last_verification_reason"));
+            assertFalse(h.memory.completionSupported());assertEquals(1,h.executions);
+            h.sync=false;h.controller.screenChanged(h.fresh());idle(850);
+            assertTrue(h.memory.completionSupported());assertFalse(h.memory.finished());assertEquals(1,h.executions);assertNull(h.failure);
+        }
+    }
+    @Test public void acceptingRecordedProofNeedsAReadableCurrentWindow()throws Exception{
+        try(Harness h=new Harness(AppTaskMetaController.Arm.META,true)){
+            h.controller.enableOutcomes(true);h.sync=false;
+            h.memory.installOutcome(AppTaskOutcomesTest.goal(AppTaskOutcomesTest.clause("off","Auto sync")));
+            h.controller.refresh();idle(400);assertTrue(h.memory.completionSupported());
+            h.privateInput=true;assertFalse(h.controller.mayConfirmResult());idle(1);
+            assertEquals("needs_input",h.latest.getString("status"));assertFalse(h.memory.finished());
+            h.privateInput=false;h.clockOffset=-16000;assertFalse(h.controller.mayConfirmResult());
+            h.clockOffset=0;assertTrue(h.controller.mayConfirmResult());assertEquals(0,h.executions);
         }
     }
     @Test public void pendingPlanCanVerifyCurrentGoalInTheSamePlanningCallWithoutAnotherAction()throws Exception {
@@ -205,7 +234,7 @@ public class AppTaskGoalFirstControllerTest {
         try(Harness h=new Harness(AppTaskMetaController.Arm.CURRENT,true)){
             h.memory.completion(candidate(TITLE));h.title="Intermediate section";h.send();assertTrue(h.presentedBusy);
             h.title=TITLE;h.controller.screenChanged(h.fresh());idle(1);assertEquals("checking_result",h.latest.getString("status"));
-            idle(349);assertFalse(h.memory.completionSupported());idle(101);
+            idle(AppTaskTransitionDetector.STABLE_MS-2);assertFalse(h.memory.completionSupported());idle(1);
             assertTrue(h.memory.completionSupported());assertEquals("verified",h.latest.getJSONObject("result_assessment").getString("status"));
             assertFalse(h.presentedBusy);assertEquals(0,h.executions);verify(h.gateway,times(1)).send(any(),any());assertNull(h.failure);
         }

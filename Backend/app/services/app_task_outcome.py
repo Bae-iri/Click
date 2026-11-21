@@ -261,7 +261,7 @@ def binding_choices(contract, facts, controls):
             if known and alias not in known:
                 continue
             if (clause.kind == 'page' and flag == 'visible' and n.get('role') == 'text'
-                or clause.kind == 'selected' and n.get('role') == 'tab' and flag == 'selected'
+                or clause.kind in ('page', 'selected') and n.get('role') == 'tab' and flag == 'selected'
                 or clause.kind in ('on', 'off') and n.get('role') == 'toggle' and flag == 'checked'):
                 eligible.append(key)
         choices[f'r{index}'] = ['none', *eligible]
@@ -309,8 +309,9 @@ def covers(clauses, candidate, screen, bindings=None, *, observed=False):
             targets = {n.id for n in screen.nodes if n.source == 'accessibility' and normalized(n.label) in names
                        and any(c.package == screen.package and c.label == n.label and (not c.resource or c.resource == n.resource)
                                and (not c.role or c.role == n.role)
-                               and (clause.kind == 'page' and n.role == 'text' and not (n.clickable or n.editable or n.scrollable)
-                                    or clause.kind == 'selected' and n.role == 'tab' and c.selected is True and (not observed or n.selected is True))
+                               and c.checked is None
+                               and (clause.kind == 'page' and n.role == 'text' and c.selected is None and not (n.clickable or n.editable or n.scrollable)
+                                    or n.role == 'tab' and c.selected is True and (not observed or n.selected is True))
                                for c in candidate.checks)}
         else:
             return False

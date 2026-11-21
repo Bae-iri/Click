@@ -142,6 +142,19 @@ def test_wrong_state_can_bind_its_subject_without_becoming_completion_evidence(c
     assert bindings['r1'].label=='자동 동기화' and bindings['r1'].checked is False
 
 
+@pytest.mark.parametrize('selected', [True, False])
+def test_page_can_bind_a_native_tab_but_only_its_selected_state_proves_arrival(selected):
+    request = unseeded('보관함을 보여줘', [dict(label='보관함', role='tab', clickable=True, selected=selected)])
+    contract = OutcomeGoal(clauses=[OutcomeClause(kind='page', labels=['보관함'])], seal='0'*64)
+    fact = 'c0.selected_' + str(selected).lower()
+    evidence, bindings = outcome.expand_bindings(contract, {'r0': fact}, {'c0': request.screen.nodes[0]},
+                                                  {fact: ('c0', 'selected', selected)}, request.screen.package)
+    proof = TaskCompletion(checks=[bindings['r0']])
+    assert bindings['r0'].selected is True
+    assert evidence['proof'] == ([fact] if selected else [])
+    assert outcome.covers(contract.clauses, proof, request.screen, observed=True) == selected
+
+
 def test_public_title_uses_the_same_read_only_binder_from_goal_first(monkeypatch):
     request=unseeded('예전에 저장한 것들을 보여줘',[dict(label='보관함',role='text',native_heading=True)])
     clauses=[OutcomeClause(kind='page',labels=['Saved items'])]

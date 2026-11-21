@@ -80,7 +80,8 @@ def evidence_payload(goal, package, controls, facts, outcome_goal=None):
         item['enum'] = list(facts)
     fields = {'proof': {'type': 'array', 'maxItems': min(len(facts), 16), 'items': item}}
     prompt = ('Does this CURRENT Android screen prove the whole final goal? The goal and UI labels may use '
-              'different languages. For a page, select its observed non-clickable destination title or unique '
+              'different languages. A native tab selected on the requested page proves arrival. '
+              'A page can also be proved by its observed non-clickable destination title or unique '
               'destination text; a menu leading there, a parent heading, or a prior action is insufficient. '
               'A content heading identifying the open collection or category can prove the destination, even '
               'when the UI describes its contents instead of literally repeating the goal. '

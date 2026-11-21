@@ -18,6 +18,7 @@ import com.click.data.snapshot.ScreenSnapshot;
 import com.click.service.overlay.AppTaskCompletion;
 import com.click.service.overlay.AppTaskController;
 import com.click.service.overlay.AppTaskMemory;
+import com.click.service.overlay.AppTaskRecoveryTrial;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
@@ -170,6 +171,65 @@ public final class GoalOutcomeDeviceTest {
             return pkg.contentEquals(String.valueOf(root.getPackageName()))
                     ? new AccessibilitySnapshotCollector().collect(root, pkg, context, null) : null;
         } finally { root.recycle(); }
+    }
+
+    @Test public void confirmsClockPageAndRecoversAcrossARealForegroundSwitch() throws Exception {
+        assumeTrue("true".equals(InstrumentationRegistry.getArguments().getString("pageRecovery")));
+        connect();
+        launch("am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n " + CLOCK + "/.ClockPackage");
+        ScreenSnapshot entry=null;
+        for(int i=0;i<40&&entry==null;i++){
+            ScreenSnapshot current=snapshot(CLOCK);
+            if(current!=null&&selectedClockTab(current)!=null)entry=current;else SystemClock.sleep(100);
+        }
+        assertNotNull("Clock tabs unavailable",entry);
+        String original=selectedClockTab(entry);
+        int height=entry.screenHeight;
+        JSONArray results=new JSONArray();
+        try{
+            for(boolean interrupted:new boolean[]{false,true}){
+                tapClockTab("세계시각",height);awaitPublicClockTab("세계시각");
+                var trial=new AppTaskRecoveryTrial(context,CLOCK,"스톱워치",()->{
+                    ScreenSnapshot clock=snapshot(CLOCK);
+                    return clock!=null?clock:snapshot(PKG);
+                },()->tapClockTab("스톱워치",height));
+                try{
+                    long[] approved={0},returned={0};
+                    instrumentation.runOnMainSync(()->{
+                        trial.controller.refresh();
+                        assertEquals(String.valueOf(trial.panel),"proposed",trial.panel.optString("status"));
+                        approved[0]=SystemClock.elapsedRealtime();
+                        trial.controller.execute(trial.panel.optJSONObject("action").optString("id"),null);
+                        if(interrupted)open(Settings.ACTION_SETTINGS);
+                    });
+                    if(interrupted){
+                        awaitForeground(Settings.ACTION_SETTINGS);
+                        instrumentation.runOnMainSync(()->trial.controller.screenChanged(trial.fresh()));
+                        instrumentation.waitForIdleSync();
+                        assertEquals("awaiting_screen",trial.panel.optString("status"));assertTrue(trial.panel.isNull("action"));
+                        assertEquals(0,trial.verified);assertEquals(0,trial.controller.memory().actions());
+                        assertTrue(ui.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK));
+                        awaitPublicClockTab("스톱워치");
+                        returned[0]=SystemClock.elapsedRealtime();
+                        instrumentation.runOnMainSync(()->trial.controller.screenChanged(trial.fresh()));
+                    }
+                    long until=SystemClock.elapsedRealtime()+3500;
+                    while(trial.verified==0&&SystemClock.elapsedRealtime()<until)SystemClock.sleep(30);
+                    assertTrue("Missing native page proof: "+trial.panel,trial.verified>0);
+                    assertEquals(1,trial.taps);assertEquals(0,trial.launches);
+                    assertTrue(trial.controller.memory().completionSupported());
+                    JSONObject row=new JSONObject().put("interrupted",interrupted).put("approved_to_verified_ms",trial.verified-approved[0])
+                            .put("first_match_to_verified_ms",trial.verified-trial.firstMatch).put("taps",trial.taps).put("app_launches",trial.launches);
+                    if(interrupted)row.put("return_to_verified_ms",trial.verified-returned[0]);
+                    results.put(row);
+                    android.util.Log.i("ClickRecoveryTrial",row.toString());
+                }finally{instrumentation.runOnMainSync(trial.controller::close);}
+            }
+            Files.write(new File(context.getFilesDir(),"page-recovery.json").toPath(),results.toString(2).getBytes(StandardCharsets.UTF_8));
+        }finally{
+            if(snapshot(CLOCK)==null)launch("am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n " + CLOCK + "/.ClockPackage");
+            tapClockTab(original,height);
+        }
     }
 
     @Test public void inspectSelectedTabAfterRealClockNavigation() throws Exception {

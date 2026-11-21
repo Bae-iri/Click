@@ -40,9 +40,6 @@ public final class AppTaskMemory {
     public JSONObject state()throws JSONException{JSONObject state=new JSONObject().put("task_id",id()).put("revision",data.optInt("revision")).put("subgoals",data.getJSONArray("subgoals")).put("attempts",data.getJSONArray("attempts"));if(outcomeGoal()!=null)state.put("outcome_goal",new JSONObject(outcomeGoal().toString()));else if(completionSupported()&&completion()!=null)state.put("completion",completion());return state;}
     /** The local candidate is separate from the wire's supported completion contract. */
     JSONObject outcomeGoal(){return data.optJSONObject("outcome_goal");}
-    boolean hasPlanOrAttempts() throws JSONException {
-        return data.getJSONArray("subgoals").length() > 0 || data.getJSONArray("attempts").length() > 0;
-    }
     boolean installOutcome(JSONObject goal)throws JSONException {
         if(!AppTaskOutcomes.valid(goal)||finished())return false;
         if(outcomeGoal()!=null)return outcomeGoal().getString("seal").equals(goal.getString("seal"));
@@ -293,6 +290,12 @@ public final class AppTaskMemory {
         if(consent!=null&&!consent.equals(data.optString("experience_consent"))){data.put("experience_consent",consent).put("experience_sequence",0).put("experience_task_id",UUID.randomUUID().toString());}
     }
     public String scope(){return data.optString("route_scope",null);}
+    boolean enteredApp(String pkg) {
+        if (data.has("entered_app")) return pkg.equals(data.optString("entered_app"));
+        String previous = scope();
+        return pkg.equals(previous) || previous != null && previous.startsWith(pkg + "|");
+    }
+    void markAppEntered(String pkg) throws JSONException { data.put("entered_app",pkg); }
     public void scope(String scope)throws JSONException{data.put("route_scope",scope);}
     public void confirmResult()throws JSONException{data.put("completed",true);data.getJSONObject("completion_evidence").put("status","user_confirmed");evidenceEvent("user_confirmed",null,null,completion()==null?null:AppTaskCompletion.key(completion()));}
     public boolean routeDisputed(){return data.optBoolean("route_disputed");}
