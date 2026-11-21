@@ -1,0 +1,752 @@
+{
+  "apps": {
+    "0": [
+      {
+        "package": "com.android.settings",
+        "label": "Settings"
+      }
+    ],
+    "7": [
+      {
+        "package": "com.google.android.documentsui",
+        "label": "Files"
+      }
+    ],
+    "3": [
+      {
+        "package": "com.android.settings",
+        "label": "Settings"
+      }
+    ]
+  },
+  "screens": {
+    "0": {
+      "status": "public",
+      "package": "com.android.settings",
+      "observation_id": "23fe16e0-783f-4537-9bfd-67e5d1c21948",
+      "captured_at_ms": 1795230414649,
+      "fingerprint": "37a6012b9e458fca6333a5144151ddb1bab499cf5f74ee81b8e396ae6290790e",
+      "width": 1080,
+      "height": 2400,
+      "keyboard_visible": false,
+      "nodes": [
+        {
+          "id": "node_0_0_0",
+          "label": "Search Settings",
+          "resource": "com.android.settings:id/search_action_bar",
+          "role": "button",
+          "bounds": [
+            42,
+            84,
+            1038,
+            273
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1",
+          "label": "목록",
+          "resource": "com.android.settings:id/main_content_scrollable_container",
+          "role": "list",
+          "bounds": [
+            0,
+            294,
+            1080,
+            2400
+          ],
+          "clickable": false,
+          "editable": false,
+          "scrollable": true,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "962c75ce6bd8a59ba58d1e080e12fff05d50faf0174dedb880af0d9f88cc5dcb",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_0",
+          "label": "Google",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            310,
+            1080,
+            502
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_1",
+          "label": "Network & internet",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            544,
+            1080,
+            736
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_2",
+          "label": "Connected devices",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            741,
+            1080,
+            933
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_3",
+          "label": "Apps",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            975,
+            1080,
+            1167
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_4",
+          "label": "Notifications",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            1172,
+            1080,
+            1364
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_5",
+          "label": "Sound & vibration",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            1369,
+            1080,
+            1561
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_6",
+          "label": "Modes",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            1566,
+            1080,
+            1758
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_7",
+          "label": "Display & touch",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            1763,
+            1080,
+            1955
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_8",
+          "label": "Wallpaper & style",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            1960,
+            1080,
+            2152
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_9",
+          "label": "Storage",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            2194,
+            1080,
+            2386
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_10",
+          "label": "",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            2391,
+            1080,
+            2400
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        }
+      ]
+    },
+    "7": {
+      "status": "public",
+      "package": "com.google.android.documentsui",
+      "observation_id": "3bb42621-0b01-4237-addc-13c0ee88157e",
+      "captured_at_ms": 1795230490584,
+      "fingerprint": "d695fb90c90e0321d5099d1511134d977e7a46dfd80aa93537e6715dbe7c1788",
+      "width": 1080,
+      "height": 2400,
+      "keyboard_visible": false,
+      "nodes": [
+        {
+          "id": "node_0_0_0_0_1_0",
+          "label": "Recent",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            210,
+            735,
+            357
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_0_0_1_1",
+          "label": "Images",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            357,
+            735,
+            504
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_0_0_1_2",
+          "label": "Videos",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            504,
+            735,
+            651
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_0_0_1_3",
+          "label": "Audio",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            651,
+            735,
+            798
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_0_0_1_4",
+          "label": "Documents",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            798,
+            735,
+            945
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_0_0_1_5",
+          "label": "Downloads",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            945,
+            735,
+            1092
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_0_0_1_7",
+          "label": "sdk_gphone16k_arm64",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            1159,
+            735,
+            1306
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        }
+      ]
+    },
+    "3": {
+      "status": "public",
+      "package": "com.android.settings",
+      "observation_id": "2bad2c4e-d5ef-49c4-bf01-0cfc3e4f0c97",
+      "captured_at_ms": 1795230431143,
+      "fingerprint": "ffe39d091b93468de54afc83267d451a20e10b695e506d1b71d90542bff2a961",
+      "width": 1080,
+      "height": 2400,
+      "keyboard_visible": false,
+      "nodes": [
+        {
+          "id": "node_0_0_0",
+          "label": "Search Settings",
+          "resource": "com.android.settings:id/search_action_bar",
+          "role": "button",
+          "bounds": [
+            42,
+            84,
+            1038,
+            273
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1",
+          "label": "목록",
+          "resource": "com.android.settings:id/main_content_scrollable_container",
+          "role": "list",
+          "bounds": [
+            0,
+            294,
+            1080,
+            2400
+          ],
+          "clickable": false,
+          "editable": false,
+          "scrollable": true,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "a45e4528e71cc8207d3f415f133162e3a3de40c63fa9ef71a4ad0cb8ef58c4da",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_10",
+          "label": "Battery & charging",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            294,
+            1080,
+            477
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_11",
+          "label": "System",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            482,
+            1080,
+            674
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_12",
+          "label": "About emulated device",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            679,
+            1080,
+            871
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_13",
+          "label": "Security & privacy",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            913,
+            1080,
+            1105
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_14",
+          "label": "Location",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            1110,
+            1080,
+            1302
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_15",
+          "label": "Passwords & passkeys",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            1307,
+            1080,
+            1499
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_16",
+          "label": "Accounts and backup",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            1504,
+            1080,
+            1696
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_17",
+          "label": "Digital Wellbeing",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            1701,
+            1080,
+            1893
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_18",
+          "label": "Parental controls",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            1898,
+            1080,
+            2090
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_19",
+          "label": "Safety & emergency",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            2095,
+            1080,
+            2287
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        },
+        {
+          "id": "node_0_0_1_0_20",
+          "label": "Accessibility",
+          "resource": "",
+          "role": "button",
+          "bounds": [
+            0,
+            2329,
+            1080,
+            2400
+          ],
+          "clickable": true,
+          "editable": false,
+          "scrollable": false,
+          "selected": false,
+          "checked": null,
+          "has_value": false,
+          "viewport_hash": "",
+          "source": "accessibility"
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "frame": 0,
+      "goal": "설정에서 알림 화면 열어줘",
+      "expected": "Notifications"
+    },
+    {
+      "frame": 7,
+      "goal": "파일 앱에서 동영상 목록을 보여줘",
+      "expected": "Videos"
+    },
+    {
+      "frame": 3,
+      "goal": "설정에서 접근성 화면을 열어줘",
+      "expected": "Accessibility"
+    },
+    {
+      "frame": 7,
+      "goal": "파일 앱에서 다운로드 화면을 열어줘",
+      "expected": "Downloads"
+    },
+    {
+      "frame": 0,
+      "goal": "설정에서 소리 및 진동 화면을 열어줘",
+      "expected": "Sound & vibration"
+    },
+    {
+      "frame": 7,
+      "goal": "파일 앱에서 이미지 분류 화면을 열어줘",
+      "expected": "Images"
+    }
+  ]
+}
