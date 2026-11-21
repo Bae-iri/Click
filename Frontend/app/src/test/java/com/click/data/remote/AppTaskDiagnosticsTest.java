@@ -22,10 +22,10 @@ public class AppTaskDiagnosticsTest {
         String text=record.toString();assertFalse(text.contains("PRIVATE"));assertFalse(text.contains("private-"));assertFalse(text.contains("/private/path"));
     }
     @Test public void goalAssessmentIsTypedClosedAndBoundToTheResponseIdentity()throws Exception {
-        JSONObject diagnostic=new JSONObject().put("called",true).put("planning_mode","goal_first").put("goal_assessment","satisfied");
+        JSONObject diagnostic=new JSONObject().put("called",true).put("planning_mode","goal_first").put("goal_assessment","satisfied").put("completion_provider","jev");
         JSONObject response=bound(new JSONObject().put("status","confirm_result").put("diagnostic",diagnostic));
         JSONObject record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);
-        assertEquals("goal_first",record.getString("planning_mode"));assertEquals("satisfied",record.getString("goal_assessment"));
+        assertEquals("goal_first",record.getString("planning_mode"));assertEquals("satisfied",record.getString("goal_assessment"));assertEquals("jev",record.getString("completion_provider"));
         for(Object bad:new Object[]{true,"PRIVATE",1,JSONObject.NULL}){
             diagnostic.put("goal_assessment",bad);record=AppTaskDiagnostics.receipt(request(),response,200,null,0,1,1);assertFalse(record.has("goal_assessment"));
         }
