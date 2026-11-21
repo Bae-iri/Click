@@ -1,0 +1,12 @@
+{
+  "decided_at_utc": "2026-11-21T02:35:15.106885+00:00",
+  "primary_episodes_complete": 24,
+  "conditional_extension_eligible": false,
+  "conditional_episodes_executed": 0,
+  "conditional_episodes_not_run": 12,
+  "matched_actual_completion_provider_pairs": 2,
+  "no_overall_or_app_success_regression": false,
+  "decision": "DO_NOT_EXTEND",
+  "reason": "Observed overall and all-app quality regression prohibits exposure-only extension. Keep all24 and all44attempts; no selected reruns.",
+  "frozen_manifest_sha256": "902d3532a4aabdc51547963241a10e2bdb6d1f7f7a98d732e3914bb194bd1af6"
+}

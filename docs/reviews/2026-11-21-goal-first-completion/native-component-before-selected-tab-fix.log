@@ -1,0 +1,27 @@
+
+com.click.service.accessibility.MetaControllerGoalFirstNativeTest:
+Error in probeGoalFirstNative(com.click.service.accessibility.MetaControllerGoalFirstNativeTest):
+java.lang.AssertionError: Current native projection must expose the public predicate
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertNotNull(Assert.java:713)
+	at com.click.service.accessibility.MetaControllerGoalFirstNativeTest.uniqueNode(MetaControllerGoalFirstNativeTest.java:255)
+	at com.click.service.accessibility.MetaControllerGoalFirstNativeTest.prototype(MetaControllerGoalFirstNativeTest.java:244)
+	at com.click.service.accessibility.MetaControllerGoalFirstNativeTest.probeGoalFirstNative(MetaControllerGoalFirstNativeTest.java:72)
+
+
+Time: 25.123
+There was 1 failure:
+1) probeGoalFirstNative(com.click.service.accessibility.MetaControllerGoalFirstNativeTest)
+java.lang.AssertionError: Current native projection must expose the public predicate
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertNotNull(Assert.java:713)
+	at com.click.service.accessibility.MetaControllerGoalFirstNativeTest.uniqueNode(MetaControllerGoalFirstNativeTest.java:255)
+	at com.click.service.accessibility.MetaControllerGoalFirstNativeTest.prototype(MetaControllerGoalFirstNativeTest.java:244)
+	at com.click.service.accessibility.MetaControllerGoalFirstNativeTest.probeGoalFirstNative(MetaControllerGoalFirstNativeTest.java:72)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+

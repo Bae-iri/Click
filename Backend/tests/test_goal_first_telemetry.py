@@ -6,9 +6,9 @@ from tests.test_meta_controller_public_apps_experiment import request,response
 
 
 def test_goal_first_decision_survives_provider_and_client_audit_boundaries():
-    req=request();res=response(req);res.diagnostic.update(planning_mode='goal_first',goal_assessment='satisfied')
+    req=request();res=response(req);res.diagnostic.update(planning_mode='goal_first',goal_assessment='satisfied',completion_provider='jev')
     record={};_diagnostic_metadata(req,res,record,12)
-    assert record['planning_mode']=='goal_first' and record['goal_assessment']=='satisfied'
+    assert record['planning_mode']=='goal_first' and record['goal_assessment']=='satisfied' and record['completion_provider']=='jev'
     copied,invalid=_context_metadata(record)
     assert copied['goal_assessment']=='satisfied' and copied['planning_mode']=='goal_first' and not invalid
 

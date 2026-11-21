@@ -22,38 +22,25 @@ public class AuthRefreshRecoveryTest {
     @Test public void temporaryHttpFailuresPreserveCredentialsAndTheirTaskJournal() throws Exception {
         for(int status:new int[]{429,500,502,503,504,403,422}) {
             var tokens=tokens();
-            try(var calls=mockStatic(AuthGateway.class)) {
-                calls.when(()->AuthGateway.apiError(anyString(),any(HttpResult.class))).thenCallRealMethod();
-                calls.when(()->AuthGateway.refresh(tokens)).thenCallRealMethod();
-                calls.when(()->AuthGateway.post(eq("/api/v1/auth/refresh"),anyString(),isNull()))
-                    .thenReturn(new HttpResult(status,"{}",null));
-                try{AuthGateway.refresh(tokens);fail();}
-                catch(ApiException expected){assertEquals(status,expected.status);}
-                verify(tokens,never()).clear();
-                verify(tokens,never()).save(any());
-            }
+            ApiException expected=assertThrows(ApiException.class,()->AuthGateway.refresh(tokens,
+                body->new HttpResult(status,"{}",null)));
+            assertEquals(status,expected.status);
+            verify(tokens,never()).clear();
+            verify(tokens,never()).save(any());
         }
     }
     @Test public void offlineFailurePreservesCredentials() throws Exception {
         var tokens=tokens();
-        try(var calls=mockStatic(AuthGateway.class)) {
-                calls.when(()->AuthGateway.apiError(anyString(),any(HttpResult.class))).thenCallRealMethod();
-            calls.when(()->AuthGateway.refresh(tokens)).thenCallRealMethod();
-            calls.when(()->AuthGateway.post(eq("/api/v1/auth/refresh"),anyString(),isNull()))
-                .thenThrow(new IOException("offline"));
-            try{AuthGateway.refresh(tokens);fail();}catch(IOException expected){}
-            verify(tokens,never()).clear();
-        }
+        assertThrows(IOException.class,()->AuthGateway.refresh(tokens,body->{throw new IOException("offline");}));
+        verify(tokens,never()).clear();
+        verify(tokens,never()).save(any());
     }
     @Test public void explicitInvalidRefreshRevokesCredentials() throws Exception {
         var tokens=tokens();
-        try(var calls=mockStatic(AuthGateway.class)) {
-                calls.when(()->AuthGateway.apiError(anyString(),any(HttpResult.class))).thenCallRealMethod();
-            calls.when(()->AuthGateway.refresh(tokens)).thenCallRealMethod();
-            calls.when(()->AuthGateway.post(eq("/api/v1/auth/refresh"),anyString(),isNull()))
-                .thenReturn(new HttpResult(401,"{}",null));
-            try{AuthGateway.refresh(tokens);fail();}catch(ApiException expected){assertEquals(401,expected.status);}
-            verify(tokens).clear();
-        }
+        ApiException expected=assertThrows(ApiException.class,()->AuthGateway.refresh(tokens,
+            body->new HttpResult(401,"{}",null)));
+        assertEquals(401,expected.status);
+        verify(tokens).clear();
+        verify(tokens,never()).save(any());
     }
 }
